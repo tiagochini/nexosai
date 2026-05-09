@@ -22,6 +22,7 @@ import vslRouter from "../modules/vsl/vsl.routes.js";
 import emailDispatchRouter from "../modules/email-dispatch/email-dispatch.routes.js";
 import whatsappRouter from "../modules/whatsapp/whatsapp.routes.js";
 import leadCaptureRouter from "../modules/launch-sequence/lead-capture.routes.js";
+import waitlistRouter from "../modules/waitlist/waitlist.routes.js";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use("/vsls", vslRouter);
 router.use("/email-dispatch", emailDispatchRouter);
 router.use("/whatsapp", whatsappRouter);
 router.use("/lead-capture", leadCaptureRouter);
+router.use("/waitlist", waitlistRouter);
 
 export default router;

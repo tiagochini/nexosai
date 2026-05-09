@@ -26,3 +26,4 @@ export * from "./vsls";
 export * from "./email-dispatches";
 export * from "./whatsapp-dispatches";
 export * from "./sequence-contacts";
+export * from "./waitlist";
