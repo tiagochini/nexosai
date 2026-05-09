@@ -25,6 +25,7 @@ import leadCaptureRouter from "../modules/launch-sequence/lead-capture.routes.js
 import waitlistRouter from "../modules/waitlist/waitlist.routes.js";
 import recordingRouter from "../modules/recording/recording.routes.js";
 import adminRouter from "../modules/admin/admin.routes.js";
+import onboardingRouter from "../modules/onboarding/onboarding.routes.js";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use("/lead-capture", leadCaptureRouter);
 router.use("/waitlist", waitlistRouter);
 router.use("/recordings", recordingRouter);
 router.use("/admin", adminRouter);
+router.use("/onboarding", onboardingRouter);
 
 export default router;

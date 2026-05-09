@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   useListCampaigns,
   useGetCreditsBalance,
@@ -254,7 +254,9 @@ function AddClientDialog({ open, onClose, onSuccess }: { open: boolean; onClose:
 export default function Dashboard() {
   const { isAdmin, planSlug } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [showAddClient, setShowAddClient] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   // Role-based tab visibility
   const canSeeLauncher = isAdmin || planSlug === "solo" || planSlug === null;
@@ -274,6 +276,20 @@ export default function Dashboard() {
   const { data: campaignsData, isLoading: loadingCampaigns } = useListCampaigns({
     query: { queryKey: getListCampaignsQueryKey(), enabled: mode === "launcher" },
   });
+
+  // Auto-redirect to onboarding if solo plan and no campaigns
+  useEffect(() => {
+    if (onboardingChecked) return;
+    if (isAdmin || planSlug === "agency" || planSlug === null) return;
+    if (loadingCampaigns) return;
+    const campaigns = campaignsData?.campaigns ?? [];
+    if (campaigns.length === 0) {
+      setOnboardingChecked(true);
+      setLocation("/onboarding");
+    } else {
+      setOnboardingChecked(true);
+    }
+  }, [isAdmin, planSlug, campaignsData, loadingCampaigns, onboardingChecked, setLocation]);
   const { data: creditsData, isLoading: loadingCredits } = useGetCreditsBalance({
     query: { queryKey: getGetCreditsBalanceQueryKey(), enabled: mode === "launcher" },
   });

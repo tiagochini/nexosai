@@ -1,0 +1,480 @@
+import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Rocket, Package, Users, ChevronRight, Send, Loader2,
+  CheckCircle2, Sparkles, ArrowRight, Star,
+} from "lucide-react";
+import { toast } from "sonner";
+import nexosLogo from "/nexos-logo.png";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos";
+type UIStep = "path_select" | "conversation" | "complete";
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface ProductProposal {
+  id: string;
+  name: string;
+  category: string;
+  format: string;
+  targetAudience: string;
+  mainPain: string;
+  transformation: string;
+  estimatedPrice: number;
+  suggestedTrack: string;
+  whyViable: string;
+}
+
+interface AffiliateStrategy {
+  audienceSize: string;
+  mainChannel: string;
+  suggestedApproach: string;
+  revenueProjection: string;
+  firstSteps: string[];
+}
+
+// ── Path selector ─────────────────────────────────────────────────────────────
+const PATHS = [
+  {
+    id: "has_product" as OnboardingPath,
+    icon: Package,
+    title: "Tenho um produto",
+    subtitle: "Pronto ou em andamento",
+    desc: "Curso, mentoria, serviço, software ou produto físico. Vamos montar sua estratégia de lançamento com IA.",
+    badge: "Mais comum",
+    badgeColor: "text-primary border-primary/40 bg-primary/10",
+    glow: "hover:border-primary/60 hover:shadow-[0_0_30px_hsl(var(--primary)/0.15)]",
+  },
+  {
+    id: "building_product" as OnboardingPath,
+    icon: Sparkles,
+    title: "Tenho expertise mas não tenho produto",
+    subtitle: "Vamos criar juntos",
+    desc: "Nossa IA analisa suas habilidades e o mercado para propor 3 ideias de produto viáveis — você escolhe e construímos juntos.",
+    badge: "IA + Você",
+    badgeColor: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
+    glow: "hover:border-cyan-400/60 hover:shadow-[0_0_30px_hsl(175_100%_60%/0.12)]",
+  },
+  {
+    id: "affiliate_nexos" as OnboardingPath,
+    icon: Star,
+    title: "Quero lançar o NexOS AI",
+    subtitle: "Programa de afiliados",
+    desc: "Torne-se um afiliado parceiro e lance o NexOS AI para o seu público. Comissões recorrentes + suporte completo.",
+    badge: "Afiliado",
+    badgeColor: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
+    glow: "hover:border-yellow-400/60 hover:shadow-[0_0_30px_hsl(45_100%_60%/0.12)]",
+  },
+];
+
+// ── Chat bubble ───────────────────────────────────────────────────────────────
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+  return (
+    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+      {!isUser && (
+        <div className="w-8 h-8 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+          <img src={nexosLogo} alt="NexOS" className="w-5 h-5 object-contain" />
+        </div>
+      )}
+      <div className={`max-w-[85%] px-4 py-3 rounded-sm text-sm font-mono leading-relaxed whitespace-pre-wrap
+        ${isUser
+          ? "bg-primary/20 border border-primary/30 text-foreground ml-auto"
+          : "bg-card/80 border border-border/50 text-foreground"
+        }`}
+      >
+        {message.content}
+      </div>
+    </div>
+  );
+}
+
+// ── Product proposal card ─────────────────────────────────────────────────────
+function ProposalCard({ proposal, onSelect }: { proposal: ProductProposal; onSelect: (p: ProductProposal) => void }) {
+  return (
+    <div
+      className="border border-border/50 bg-card/60 p-4 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group relative overflow-hidden rounded-sm"
+      onClick={() => onSelect(proposal)}
+    >
+      <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h3 className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors">{proposal.name}</h3>
+        <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border-primary/40 text-primary bg-primary/10 shrink-0">
+          R$ {proposal.estimatedPrice.toLocaleString("pt-BR")}
+        </Badge>
+      </div>
+
+      <div className="space-y-1.5 text-[11px] font-mono text-muted-foreground">
+        <p><span className="text-foreground/70">Formato:</span> {proposal.format}</p>
+        <p><span className="text-foreground/70">Público:</span> {proposal.targetAudience}</p>
+        <p><span className="text-foreground/70">Transformação:</span> {proposal.transformation}</p>
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between">
+        <p className="text-[10px] font-mono text-success italic">{proposal.whyViable}</p>
+        <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2" />
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export default function Onboarding() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const [step, setStep] = useState<UIStep>("path_select");
+  const [path, setPath] = useState<OnboardingPath | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [sending, setSending] = useState(false);
+  const [proposals, setProposals] = useState<ProductProposal[] | null>(null);
+  const [affiliateStrategy, setAffiliateStrategy] = useState<AffiliateStrategy | null>(null);
+  const [conversationComplete, setConversationComplete] = useState(false);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // ── Select path and create campaign ──────────────────────────────────────────
+  const handlePathSelect = async (selectedPath: OnboardingPath) => {
+    setPath(selectedPath);
+    setStarting(true);
+    try {
+      const res = await customFetch<Response>("/api/onboarding/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: selectedPath }),
+      });
+      if (!res.ok) throw new Error("Falha ao iniciar");
+      const data = await res.json() as { campaign: { id: string }; path: string };
+      setCampaignId(data.campaign.id);
+      setStep("conversation");
+
+      // Initial AI greeting based on path
+      const greetings: Record<OnboardingPath, string> = {
+        has_product: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vou te ajudar a preparar tudo para o lançamento do seu produto.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?`,
+        building_product: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vai ser um prazer ajudar você a encontrar o produto ideal.\n\nVamos começar do seu perfil. Qual é a sua área de atuação ou especialidade principal? (ex: nutrição, finanças, tecnologia, fitness, educação...)`,
+        affiliate_nexos: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Bem-vindo ao programa de afiliados NexOS AI.\n\nComo afiliado, você vai lançar a plataforma para o seu público e ganhar comissões recorrentes por cada assinante ativo.\n\nPara montar sua estratégia, me conta: qual é o seu público atual? Tem seguidores, lista de email, grupo ou comunidade?`,
+      };
+      setMessages([{ role: "assistant", content: greetings[selectedPath] }]);
+    } catch {
+      toast.error("Erro ao iniciar. Tente novamente.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  // ── Send message ──────────────────────────────────────────────────────────────
+  const handleSend = async () => {
+    if (!inputValue.trim() || sending || !path || !campaignId) return;
+    const userMsg = inputValue.trim();
+    setInputValue("");
+    const newMessages = [...messages, { role: "user" as const, content: userMsg }];
+    setMessages(newMessages);
+    setSending(true);
+
+    try {
+      const history = newMessages.slice(0, -1); // exclude the last user message since we send it separately
+      let endpoint = "";
+      let body: Record<string, unknown> = { message: userMsg, history };
+
+      if (path === "has_product") {
+        endpoint = `/api/intake/${campaignId}/conversation`;
+      } else if (path === "building_product") {
+        endpoint = "/api/onboarding/product-finder/message";
+        body = { message: userMsg, history, campaignId };
+      } else {
+        endpoint = "/api/onboarding/affiliate-nexos/message";
+        body = { message: userMsg, history };
+      }
+
+      const res = await customFetch<Response>(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error("Falha na resposta da IA");
+      const data = await res.json() as {
+        aiMessage?: string;
+        message?: string;
+        productProposals?: ProductProposal[];
+        affiliateStrategy?: AffiliateStrategy;
+        isComplete?: boolean;
+      };
+
+      const aiText = data.aiMessage ?? data.message ?? "...";
+      setMessages((prev) => [...prev, { role: "assistant", content: aiText }]);
+
+      if (data.productProposals?.length) setProposals(data.productProposals);
+      if (data.affiliateStrategy) setAffiliateStrategy(data.affiliateStrategy);
+      if (data.isComplete) setConversationComplete(true);
+    } catch {
+      toast.error("Erro de comunicação com a IA. Tente novamente.");
+    } finally {
+      setSending(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  };
+
+  // ── Select product proposal ───────────────────────────────────────────────────
+  const handleProposalSelect = async (proposal: ProductProposal) => {
+    setProposals(null);
+    const msg = `Quero o produto "${proposal.name}" — ${proposal.format} para ${proposal.targetAudience}.`;
+    setInputValue(msg);
+    setTimeout(() => handleSend(), 50);
+  };
+
+  // ── Finish and go to campaign ─────────────────────────────────────────────────
+  const handleFinish = () => {
+    if (path === "has_product" && campaignId) {
+      setLocation(`/campaigns/${campaignId}/intake`);
+    } else if (campaignId) {
+      setLocation(`/campaigns/${campaignId}`);
+    } else {
+      setLocation("/");
+    }
+  };
+
+  // ── RENDER ────────────────────────────────────────────────────────────────────
+
+  if (step === "path_select") {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4">
+        <div className="w-full max-w-3xl animate-in fade-in duration-700">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <div className="flex justify-center mb-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+                <img src={nexosLogo} alt="NexOS" className="h-16 w-16 object-contain relative z-10" />
+              </div>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground mb-3">
+              Bem-vindo ao NexOS AI
+            </h1>
+            <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">
+              Qual é a sua situação hoje?
+            </p>
+          </div>
+
+          {/* Path cards */}
+          <div className="grid grid-cols-1 gap-4">
+            {PATHS.map((p) => {
+              const Icon = p.icon;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => handlePathSelect(p.id)}
+                  disabled={starting}
+                  className={`text-left w-full border border-border/50 bg-card/40 backdrop-blur-sm p-5 md:p-6 transition-all duration-200 relative overflow-hidden group ${p.glow} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {/* Corner accents */}
+                  <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/30 group-hover:border-primary transition-colors" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/30 group-hover:border-primary transition-colors" />
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-sm border border-border/50 bg-muted/20 flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:bg-primary/10 transition-all">
+                      {starting && path === p.id
+                        ? <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                        : <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="font-mono font-bold text-base text-foreground group-hover:text-primary transition-colors">
+                          {p.title}
+                        </h3>
+                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 ${p.badgeColor}`}>
+                          {p.badge}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] font-mono text-primary/70 uppercase tracking-widest mb-2">{p.subtitle}</p>
+                      <p className="text-xs text-muted-foreground font-mono leading-relaxed">{p.desc}</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 mt-3" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="text-center text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest mt-8">
+            Você pode mudar de caminho a qualquer momento
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "conversation") {
+    const pathMeta = PATHS.find((p) => p.id === path)!;
+
+    return (
+      <div className="flex flex-col h-[calc(100vh-9rem)] md:h-[calc(100vh-8rem)] max-w-3xl mx-auto">
+        {/* Chat header */}
+        <div className="border-b border-border/50 pb-4 mb-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+            <div>
+              <h2 className="font-mono font-bold text-sm text-foreground uppercase tracking-widest">
+                {path === "has_product" ? "Briefing Estratégico" : path === "building_product" ? "Product Discovery" : "Estratégia de Afiliado"}
+              </h2>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                {pathMeta.subtitle}
+              </p>
+            </div>
+          </div>
+          <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-1 ${pathMeta.badgeColor}`}>
+            {pathMeta.badge}
+          </Badge>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1 pb-4">
+          {messages.map((msg, i) => (
+            <ChatBubble key={i} message={msg} />
+          ))}
+
+          {/* Product proposals */}
+          {proposals && proposals.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground px-1">
+                Selecione a proposta que mais combina com você:
+              </p>
+              {proposals.map((p) => (
+                <ProposalCard key={p.id} proposal={p} onSelect={handleProposalSelect} />
+              ))}
+            </div>
+          )}
+
+          {/* Affiliate strategy card */}
+          {affiliateStrategy && (
+            <div className="border border-yellow-400/30 bg-yellow-400/5 p-4 rounded-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <Star className="h-4 w-4 text-yellow-400" />
+                <span className="font-mono font-bold text-xs uppercase tracking-widest text-yellow-400">Sua Estratégia de Afiliado</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
+                <div><span className="text-muted-foreground">Público: </span>{affiliateStrategy.audienceSize}</div>
+                <div><span className="text-muted-foreground">Canal: </span>{affiliateStrategy.mainChannel}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">Projeção: </span><span className="text-success">{affiliateStrategy.revenueProjection}</span></div>
+              </div>
+              {affiliateStrategy.firstSteps.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Primeiros passos:</p>
+                  <ul className="space-y-1">
+                    {affiliateStrategy.firstSteps.map((step, i) => (
+                      <li key={i} className="flex items-start gap-2 text-[11px] font-mono">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Complete CTA */}
+          {conversationComplete && (
+            <div className="border border-success/30 bg-success/5 p-4 rounded-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <span className="font-mono font-bold text-xs uppercase tracking-widest text-success">
+                  {path === "has_product" ? "Briefing concluído!" : path === "building_product" ? "Produto definido!" : "Estratégia pronta!"}
+                </span>
+              </div>
+              <Button
+                onClick={handleFinish}
+                className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
+              >
+                <ArrowRight className="h-4 w-4" />
+                {path === "has_product" ? "Acessar Intake Completo" : "Ir para Minha Campanha"}
+              </Button>
+            </div>
+          )}
+
+          {sending && (
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              </div>
+              <div className="bg-card/80 border border-border/50 px-4 py-3 rounded-sm">
+                <div className="flex gap-1 items-center">
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input */}
+        {!conversationComplete && (
+          <div className="border-t border-border/50 pt-4 shrink-0">
+            <div className="flex gap-2 items-end">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); }
+                }}
+                placeholder="Digite sua resposta… (Enter para enviar)"
+                disabled={sending}
+                rows={2}
+                className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-4 py-3 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
+              />
+              <Button
+                onClick={() => void handleSend()}
+                disabled={sending || !inputValue.trim()}
+                className="font-mono rounded-none h-[70px] px-4 btn-weapon-primary shrink-0"
+              >
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest mt-2 text-right">
+              Shift+Enter para nova linha
+            </p>
+          </div>
+        )}
+
+        {conversationComplete && !affiliateStrategy && !proposals && (
+          <div className="border-t border-border/50 pt-4 shrink-0">
+            <Button
+              onClick={handleFinish}
+              className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12"
+            >
+              <ArrowRight className="h-4 w-4" />
+              {path === "has_product" ? "Continuar para Intake Completo" : "Ir para Minha Campanha"}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}

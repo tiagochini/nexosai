@@ -13,6 +13,7 @@ import SequenceToday from "@/pages/sequences/today";
 import SequenceCopyStudio from "@/pages/sequences/copy";
 import SequenceAnalytics from "@/pages/sequences/analytics";
 import SequenceContacts from "@/pages/sequences/contacts";
+import Onboarding from "@/pages/onboarding";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -30,11 +31,18 @@ function HomeRoute() {
   return <Landing />;
 }
 
+function OnboardingRoute() {
+  const { token } = useAuth();
+  if (!token) return <Redirect to="/login" />;
+  return <AppLayout><Onboarding /></AppLayout>;
+}
+
 export default function AppRoutes() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/onboarding" component={OnboardingRoute} />
       <Route path="/" component={HomeRoute} />
       <Route path="/campaigns/new">
         {() => (

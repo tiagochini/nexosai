@@ -1,159 +1,413 @@
-import { useState, useEffect } from "react";
-import { useRoute, Link } from "wouter";
-import { useGetIntake, useSaveIntake, useGetIntakeScore, getGetIntakeQueryKey, getGetIntakeScoreQueryKey } from "@workspace/api-client-react";
+import { useState, useEffect, useRef } from "react";
+import { useRoute, Link, useLocation } from "wouter";
+import {
+  useGetIntake,
+  useSaveIntake,
+  useGetIntakeScore,
+  getGetIntakeQueryKey,
+  getGetIntakeScoreQueryKey,
+} from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Save, AlertCircle, Database } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  ArrowLeft, CheckCircle2, Loader2, Send, Database,
+  MessageSquare, LayoutList, ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
+import nexosLogo from "/nexos-logo.png";
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+function ChatBubble({ msg }: { msg: ChatMessage }) {
+  const isUser = msg.role === "user";
+  return (
+    <div className={`flex gap-2 md:gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+      {!isUser && (
+        <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+          <img src={nexosLogo} alt="AI" className="w-4 h-4 object-contain" />
+        </div>
+      )}
+      <div className={`max-w-[88%] px-3 md:px-4 py-2.5 md:py-3 rounded-sm text-xs md:text-sm font-mono leading-relaxed whitespace-pre-wrap
+        ${isUser
+          ? "bg-primary/20 border border-primary/30 text-foreground ml-auto"
+          : "bg-card/80 border border-border/50 text-foreground"
+        }`}
+      >
+        {msg.content}
+      </div>
+    </div>
+  );
+}
 
 export default function CampaignIntake() {
   const [match, params] = useRoute("/campaigns/:id/intake");
   const campaignId = params?.id || "";
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
+  const [view, setView] = useState<"chat" | "form">("chat");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [sending, setSending] = useState(false);
+  const [chatComplete, setChatComplete] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [finalizing, setFinalizing] = useState(false);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data, isLoading } = useGetIntake(campaignId, {
-    query: {
-      enabled: !!campaignId,
-      queryKey: getGetIntakeQueryKey(campaignId)
-    }
+    query: { enabled: !!campaignId, queryKey: getGetIntakeQueryKey(campaignId) },
   });
 
   const { data: scoreData } = useGetIntakeScore(campaignId, {
-    query: {
-      enabled: !!campaignId,
-      queryKey: getGetIntakeScoreQueryKey(campaignId)
-    }
+    query: { enabled: !!campaignId, queryKey: getGetIntakeScoreQueryKey(campaignId) },
   });
-
-  useEffect(() => {
-    if (data?.intakeData) {
-      setFormData(data.intakeData as Record<string, string>);
-    }
-  }, [data]);
 
   const saveMutation = useSaveIntake({
     mutation: {
       onSuccess: () => {
-        toast.success("Dados salvos e sincronizados com a IA.");
         queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
         queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
+        toast.success("Dados salvos.");
       },
-      onError: () => {
-        toast.error("Falha na sincronização de dados.");
-      }
-    }
+      onError: () => toast.error("Erro ao salvar."),
+    },
   });
 
-  const handleChange = (key: string, value: string) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+  // Load existing intake data into form
+  useEffect(() => {
+    if (data?.intakeData) {
+      setFormData(data.intakeData as Record<string, string>);
+      // If already has some data, check if chat was initialized
+      const d = data.intakeData as Record<string, string>;
+      if (messages.length === 0 && Object.keys(d).filter((k) => !k.startsWith("_")).length > 0) {
+        setMessages([{
+          role: "assistant",
+          content: "Bem-vindo de volta! Já temos alguns dados sobre sua campanha. Continue respondendo para completar o briefing, ou use a aba de formulário para editar campos específicos.",
+        }]);
+      }
+    }
+  }, [data]);
+
+  // Initial AI greeting if no messages
+  useEffect(() => {
+    if (!isLoading && messages.length === 0 && campaignId) {
+      const intakeData = data?.intakeData as Record<string, string> | undefined;
+      const hasProductName = intakeData?.["product.name"];
+
+      setMessages([{
+        role: "assistant",
+        content: hasProductName
+          ? `Ótimo! Já sei que você trabalha com "${hasProductName}". Vamos aprofundar os detalhes para a IA montar a melhor estratégia.\n\nMe conta: quem é o cliente ideal desse produto? Qual é a principal dor que ele resolve?`
+          : `Olá! Sou o especialista de intake do NexOS AI. Vou coletar as informações essenciais sobre seu produto e campanha através de uma conversa natural.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?`,
+      }]);
+    }
+  }, [isLoading, campaignId, data]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, sending]);
+
+  // ── Send message via conversational AI ────────────────────────────────────────
+  const handleSend = async () => {
+    if (!inputValue.trim() || sending) return;
+    const userMsg = inputValue.trim();
+    setInputValue("");
+
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMsg }];
+    setMessages(newMessages);
+    setSending(true);
+
+    try {
+      const history = newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+      const res = await customFetch<Response>(`/api/intake/${campaignId}/conversation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMsg, history }),
+      });
+
+      if (!res.ok) throw new Error("Erro na IA");
+
+      const result = await res.json() as {
+        aiMessage: string;
+        isComplete: boolean;
+        progress: number;
+        intakeData: Record<string, unknown>;
+      };
+
+      setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage }]);
+      setFormData(result.intakeData as Record<string, string>);
+      if (result.isComplete) setChatComplete(true);
+
+      queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
+      queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
+    } catch {
+      toast.error("Erro de comunicação com a IA.");
+    } finally {
+      setSending(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
   };
 
-  const handleSave = () => {
-    saveMutation.mutate({
-      campaignId,
-      data: {
-        intakeData: formData
+  // ── Finalize intake ────────────────────────────────────────────────────────────
+  const handleFinalize = async () => {
+    setFinalizing(true);
+    try {
+      const res = await customFetch<Response>(`/api/intake/${campaignId}/finalize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro ao finalizar");
       }
-    });
+      toast.success("Intake finalizado! Campanha pronta para execução.");
+      setLocation(`/campaigns/${campaignId}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao finalizar intake");
+    } finally {
+      setFinalizing(false);
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-8 max-w-4xl mx-auto">
+      <div className="space-y-6 max-w-4xl mx-auto">
         <Skeleton className="h-8 w-64 bg-muted/20" />
         <Skeleton className="h-96 w-full bg-muted/20" />
       </div>
     );
   }
 
-  const completeness = data?.completeness || 0;
+  const completeness = data?.completeness ?? 0;
+  const progress = typeof completeness === "number" ? completeness : (completeness as { progress?: number })?.progress ?? 0;
+  const isComplete = typeof completeness === "object" && (completeness as { valid?: boolean })?.valid;
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/50 pb-6 gap-6">
-        <div>
-          <Link href={`/campaigns/${campaignId}`}>
-            <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-3 w-3 mr-2" />
-              Retornar à Missão
-            </Button>
-          </Link>
-          <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground flex items-center gap-3">
-            Intake Estratégico
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">Alimentação de base de dados cognitiva</p>
-        </div>
-        
-        <div className="flex flex-col items-end gap-3 text-right bg-card/30 p-4 border border-border/40 min-w-[250px]">
-          <div className="flex justify-between w-full">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Progresso</span>
-            <span className="font-mono text-[10px] font-bold text-primary">{completeness}%</span>
+    <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
+      {/* ── Header ── */}
+      <div className="border-b border-border/50 pb-4">
+        <Link href={`/campaigns/${campaignId}`}>
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-3 w-3 mr-2" />Retornar à Missão
+          </Button>
+        </Link>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
+              Briefing Estratégico
+            </h1>
+            <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-widest">
+              A IA aprende sobre seu produto em conversa natural
+            </p>
           </div>
-          <Progress value={completeness} className="w-full h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
-          
-          {scoreData && (
-            <div className="w-full flex justify-between items-center mt-2 pt-2 border-t border-border/30">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Score IA</span>
-              <span className="font-mono text-xs uppercase font-bold text-success badge-glow-green px-2 py-0.5 border border-success/30 bg-success/10">
-                {scoreData.score} - {scoreData.label}
-              </span>
+          <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
+            <div className="flex justify-between items-center">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Completude</span>
+              <span className="font-mono text-[10px] font-bold text-primary">{progress}%</span>
+            </div>
+            <Progress
+              value={progress}
+              className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]"
+            />
+            {scoreData && (
+              <div className="flex justify-between items-center pt-1 border-t border-border/30">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Score IA</span>
+                <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-success/30 text-success bg-success/10">
+                  {scoreData.score} · {scoreData.label}
+                </Badge>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── View toggle ── */}
+      <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm w-fit">
+        {[
+          { id: "chat" as const, label: "Chat com IA", icon: MessageSquare },
+          { id: "form" as const, label: "Formulário", icon: LayoutList },
+        ].map((v) => (
+          <button
+            key={v.id}
+            onClick={() => setView(v.id)}
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 text-[10px] md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
+              ${view === v.id
+                ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+          >
+            <v.icon className="h-3.5 w-3.5" />{v.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ════════════════ CHAT VIEW ════════════════ */}
+      {view === "chat" && (
+        <div className="flex flex-col" style={{ height: "calc(100vh - 22rem)" }}>
+          <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2 shrink-0">
+            <Database className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+              Dados extraídos automaticamente da conversa e salvos em tempo real
+            </span>
+          </div>
+
+          {/* Chat messages */}
+          <div className="flex-1 overflow-y-auto space-y-3 p-4 border-x border-border/50">
+            {messages.map((msg, i) => <ChatBubble key={i} msg={msg} />)}
+
+            {sending && (
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
+                  <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                </div>
+                <div className="bg-card/80 border border-border/50 px-4 py-3 rounded-sm">
+                  <div className="flex gap-1 items-center">
+                    {[0, 150, 300].map((delay) => (
+                      <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Completion banner */}
+            {chatComplete && (
+              <div className="border border-success/30 bg-success/5 p-4 rounded-sm mt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <span className="font-mono font-bold text-xs uppercase tracking-widest text-success">
+                    Briefing completo! A IA tem tudo que precisa.
+                  </span>
+                </div>
+                <Button
+                  onClick={() => void handleFinalize()}
+                  disabled={finalizing}
+                  className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
+                >
+                  {finalizing
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
+                    : <><ChevronRight className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
+                </Button>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input */}
+          {!chatComplete && (
+            <div className="border border-t-0 border-border/50 p-3 shrink-0">
+              <div className="flex gap-2 items-end">
+                <textarea
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); }
+                  }}
+                  placeholder="Responda aqui… (Enter para enviar, Shift+Enter para nova linha)"
+                  disabled={sending}
+                  rows={2}
+                  className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
+                />
+                <Button
+                  onClick={() => void handleSend()}
+                  disabled={sending || !inputValue.trim()}
+                  className="font-mono rounded-none h-[66px] px-4 btn-weapon-primary shrink-0"
+                >
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Finalize button (when chat complete but not yet submitted) */}
+          {isComplete && !chatComplete && (
+            <div className="pt-3 shrink-0">
+              <Button
+                onClick={() => void handleFinalize()}
+                disabled={finalizing}
+                className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
+              >
+                {finalizing
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
+                  : <><ChevronRight className="h-4 w-4" />Finalizar Briefing e Iniciar Estratégia</>}
+              </Button>
             </div>
           )}
         </div>
-      </div>
+      )}
 
-      <div className="card-weapon border border-border/50 bg-card/60 backdrop-blur-md">
-        <div className="p-5 border-b border-border/50 bg-primary/5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-          <div className="flex items-center gap-3 text-primary font-mono text-[10px] uppercase tracking-widest">
-            <Database className="h-4 w-4" />
-            <span>Sincronização em tempo real ativa. A qualidade das respostas determina a letalidade da copy.</span>
+      {/* ════════════════ FORM VIEW ════════════════ */}
+      {view === "form" && (
+        <div className="space-y-4">
+          <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2">
+            <Database className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+              Edite campos individuais — os dados do chat já foram sincronizados
+            </span>
+          </div>
+
+          <div className="border border-border/50 bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-6">
+            {data?.questions?.map((q) => {
+              const placeholder = (q as unknown as { placeholder?: string }).placeholder ?? "Insira os dados...";
+              return (
+                <div key={q.key} className="space-y-2 group">
+                  <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30 group-focus-within:bg-primary transition-all" />
+                    {q.label} {q.required && <span className="text-primary">*</span>}
+                  </label>
+                  {q.type === "textarea" ? (
+                    <textarea
+                      value={formData[q.key] ?? ""}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
+                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm min-h-[100px] p-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all"
+                      placeholder={placeholder}
+                    />
+                  ) : (
+                    <input
+                      value={formData[q.key] ?? ""}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
+                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm h-11 px-3 text-foreground placeholder:text-muted-foreground/50 transition-all"
+                      placeholder={placeholder}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => saveMutation.mutate({ campaignId, data: { intakeData: formData } })}
+              disabled={saveMutation.isPending}
+              className="font-mono uppercase tracking-widest rounded-none border-border/50 h-11 text-xs"
+            >
+              {saveMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+            {isComplete && (
+              <Button
+                onClick={() => void handleFinalize()}
+                disabled={finalizing}
+                className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
+              >
+                {finalizing
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
+                  : <><ChevronRight className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
+              </Button>
+            )}
           </div>
         </div>
-
-        <div className="p-8 space-y-10">
-          {data?.questions?.map((q) => (
-            <div key={q.key} className="space-y-3 group">
-              <Label className="font-mono text-xs uppercase tracking-widest text-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
-                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 group-focus-within:bg-primary group-focus-within:shadow-[0_0_5px_hsl(var(--primary))] transition-all"></span>
-                {q.label} {q.required && <span className="text-primary">*</span>}
-              </Label>
-              {q.type === 'textarea' ? (
-                <Textarea 
-                  value={formData[q.key] || ""}
-                  onChange={(e) => handleChange(q.key, e.target.value)}
-                  className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary focus-visible:shadow-[0_0_10px_hsl(var(--primary)/0.2)] rounded-none min-h-[120px] p-4 transition-all"
-                  placeholder="Insira os dados..."
-                />
-              ) : (
-                <Input 
-                  value={formData[q.key] || ""}
-                  onChange={(e) => handleChange(q.key, e.target.value)}
-                  className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary focus-visible:shadow-[0_0_10px_hsl(var(--primary)/0.2)] rounded-none h-12 px-4 transition-all"
-                  placeholder="Insira os dados..."
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="p-6 border-t border-border/50 flex justify-end bg-background/30">
-          <Button 
-            onClick={handleSave} 
-            disabled={saveMutation.isPending}
-            className="font-mono uppercase tracking-widest rounded-none gap-2 font-bold px-8 h-12 btn-weapon-primary"
-          >
-            {saveMutation.isPending ? "Sincronizando..." : <><Save className="h-4 w-4" /> Registrar Inteligência</>}
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
