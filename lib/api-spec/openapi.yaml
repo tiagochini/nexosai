@@ -3,20 +3,25 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NexOS AI — Campaign execution and launch automation API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: campaigns
+  - name: intake
+  - name: launch-sequences
+  - name: sequence-items
+  - name: credits
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +29,1001 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Auth ──────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Tokens and workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenInput"
+      responses:
+        "200":
+          description: New access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+
+  # ─── Campaigns ─────────────────────────────────────────────────────────────
+  /campaigns:
+    get:
+      operationId: listCampaigns
+      tags: [campaigns]
+      summary: List campaigns
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaigns:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Campaign"
+                required: [campaigns]
+    post:
+      operationId: createCampaign
+      tags: [campaigns]
+      summary: Create campaign
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignInput"
+      responses:
+        "201":
+          description: Created campaign
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: "#/components/schemas/Campaign"
+                required: [campaign]
+
+  /campaigns/{campaignId}:
+    get:
+      operationId: getCampaign
+      tags: [campaigns]
+      summary: Get campaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/campaignId"
+      responses:
+        "200":
+          description: Campaign detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  campaign:
+                    $ref: "#/components/schemas/Campaign"
+                required: [campaign]
+
+  /campaigns/{campaignId}/execute:
+    post:
+      operationId: executeCampaign
+      tags: [campaigns]
+      summary: Execute campaign phase
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/campaignId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignExecuteInput"
+      responses:
+        "202":
+          description: Execution queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: string
+
+  # ─── Intake ────────────────────────────────────────────────────────────────
+  /intake/{campaignId}:
+    get:
+      operationId: getIntake
+      tags: [intake]
+      summary: Get intake data
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/campaignId"
+      responses:
+        "200":
+          description: Intake data and questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntakeResponse"
+    post:
+      operationId: saveIntake
+      tags: [intake]
+      summary: Save intake answers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/campaignId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntakeSaveInput"
+      responses:
+        "200":
+          description: Saved intake
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntakeResponse"
+
+  /intake/{campaignId}/score:
+    get:
+      operationId: getIntakeScore
+      tags: [intake]
+      summary: Get launch readiness score
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/campaignId"
+      responses:
+        "200":
+          description: Readiness score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntakeScore"
+
+  # ─── Launch Sequences ──────────────────────────────────────────────────────
+  /launch-sequences:
+    get:
+      operationId: listSequences
+      tags: [launch-sequences]
+      summary: List launch sequences
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sequence list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sequences:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LaunchSequence"
+                required: [sequences]
+    post:
+      operationId: createSequence
+      tags: [launch-sequences]
+      summary: Create launch sequence
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SequenceInput"
+      responses:
+        "201":
+          description: Created sequence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LaunchSequence"
+
+  /launch-sequences/{sequenceId}:
+    get:
+      operationId: getSequence
+      tags: [launch-sequences]
+      summary: Get sequence with items
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      responses:
+        "200":
+          description: Sequence detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sequence:
+                    $ref: "#/components/schemas/LaunchSequenceDetail"
+                required: [sequence]
+
+  /launch-sequences/{sequenceId}/generate:
+    post:
+      operationId: generateSequencePlan
+      tags: [launch-sequences]
+      summary: Generate AI sequence plan
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      responses:
+        "200":
+          description: Generated plan and items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  itemsCreated:
+                    type: integer
+                  sequence:
+                    $ref: "#/components/schemas/LaunchSequenceDetail"
+
+  /launch-sequences/{sequenceId}/activate:
+    post:
+      operationId: activateSequence
+      tags: [launch-sequences]
+      summary: Activate sequence
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SequenceActivationInput"
+      responses:
+        "200":
+          description: Activated sequence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sequence:
+                    $ref: "#/components/schemas/LaunchSequenceDetail"
+
+  /launch-sequences/{sequenceId}/calendar:
+    get:
+      operationId: getSequenceCalendar
+      tags: [launch-sequences]
+      summary: Day-by-day launch calendar
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      responses:
+        "200":
+          description: Calendar view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarResponse"
+
+  /launch-sequences/{sequenceId}/today:
+    get:
+      operationId: getSequenceToday
+      tags: [launch-sequences]
+      summary: Current day dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      responses:
+        "200":
+          description: Today view
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayResponse"
+
+  /launch-sequences/{sequenceId}/analytics:
+    get:
+      operationId: getSequenceAnalytics
+      tags: [launch-sequences]
+      summary: Sequence analytics and segments
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      responses:
+        "200":
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsResponse"
+
+  /launch-sequences/{sequenceId}/contacts:
+    get:
+      operationId: listSequenceContacts
+      tags: [launch-sequences]
+      summary: List contacts
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      responses:
+        "200":
+          description: Contacts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contacts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SequenceContact"
+                  total:
+                    type: integer
+                required: [contacts, total]
+    post:
+      operationId: addSequenceContacts
+      tags: [launch-sequences]
+      summary: Add contacts to sequence
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactsAddInput"
+      responses:
+        "201":
+          description: Added contacts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contacts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SequenceContact"
+                  total:
+                    type: integer
+
+  # ─── Sequence Items ────────────────────────────────────────────────────────
+  /launch-sequences/{sequenceId}/items/{itemId}/generate-copy:
+    post:
+      operationId: generateItemCopy
+      tags: [sequence-items]
+      summary: Generate AI copy for item
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/sequenceId"
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemCopyInput"
+      responses:
+        "200":
+          description: Generated copy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: "#/components/schemas/SequenceItem"
+
+  # ─── Credits ───────────────────────────────────────────────────────────────
+  /credits/balance:
+    get:
+      operationId: getCreditsBalance
+      tags: [credits]
+      summary: Get workspace credits balance
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditsBalance"
+
+# ─── Components ──────────────────────────────────────────────────────────────
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    campaignId:
+      name: campaignId
+      in: path
+      required: true
+      schema:
+        type: string
+    sequenceId:
+      name: sequenceId
+      in: path
+      required: true
+      schema:
+        type: string
+
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    # ─── Auth ───────────────────────────────────────────────────────────────
+    LoginInput:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    RegisterInput:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+        planSlug:
+          type: string
+      required: [email, password, name]
+
+    RefreshTokenInput:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required: [refreshToken]
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+        workspace:
+          $ref: "#/components/schemas/Workspace"
+      required: [accessToken, refreshToken, user, workspace]
+
+    MeResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        workspace:
+          $ref: "#/components/schemas/Workspace"
+      required: [user, workspace]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+      required: [id, email]
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        plan:
+          type: string
+        creditsBalance:
+          type: integer
+        campaignsUsed:
+          type: integer
+        campaignsLimit:
+          type: integer
+      required: [id, name]
+
+    # ─── Campaigns ──────────────────────────────────────────────────────────
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
+        track:
+          type: string
+        status:
+          type: string
+        revenueTarget:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, title, type, status]
+
+    CampaignInput:
+      type: object
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+          enum: [launch, evergreen, relaunch]
+        track:
+          type: string
+          enum: [six_digits, eight_digits, ten_digits]
+        revenueTarget:
+          type: string
+      required: [title, type, track]
+
+    CampaignExecuteInput:
+      type: object
+      properties:
+        phase:
+          type: string
+          enum: [strategy, content, launch, monitor]
+      required: [phase]
+
+    # ─── Intake ─────────────────────────────────────────────────────────────
+    IntakeSaveInput:
+      type: object
+      properties:
+        intakeData:
+          type: object
+          additionalProperties: {}
+      required: [intakeData]
+
+    IntakeResponse:
+      type: object
+      properties:
+        intakeData:
+          type: object
+          additionalProperties: {}
+        completeness:
+          type: integer
+        missingRequired:
+          type: array
+          items:
+            type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntakeQuestion"
+      required: [intakeData, completeness]
+
+    IntakeQuestion:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+        required:
+          type: boolean
+        category:
+          type: string
+      required: [key, label, type]
+
+    IntakeScore:
+      type: object
+      properties:
+        score:
+          type: integer
+        label:
+          type: string
+        details:
+          type: object
+          additionalProperties: {}
+      required: [score, label]
+
+    # ─── Launch Sequences ───────────────────────────────────────────────────
+    SequenceInput:
+      type: object
+      properties:
+        name:
+          type: string
+        model:
+          type: string
+          enum: [plf, formula_de_lancamento, semente, afiliado, perpetual, custom]
+        totalDays:
+          type: integer
+        productName:
+          type: string
+        productPrice:
+          type: string
+        revenueTarget:
+          type: string
+        cartOpenDate:
+          type: string
+        cartCloseDate:
+          type: string
+        campaignId:
+          type: string
+      required: [name, model, totalDays]
+
+    SequenceActivationInput:
+      type: object
+      properties:
+        startAt:
+          type: string
+        emailProvider:
+          type: string
+        emailListId:
+          type: string
+        whatsappEnabled:
+          type: boolean
+
+    LaunchSequence:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        model:
+          type: string
+        status:
+          type: string
+        totalDays:
+          type: integer
+        productName:
+          type: string
+        productPrice:
+          type: string
+        revenueTarget:
+          type: string
+        cartOpenDate:
+          type: ["string", "null"]
+        cartCloseDate:
+          type: ["string", "null"]
+        campaignId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, name, model, status, totalDays]
+
+    LaunchSequenceDetail:
+      allOf:
+        - $ref: "#/components/schemas/LaunchSequence"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/SequenceItem"
+            aiGeneratedPlan:
+              type: object
+              nullable: true
+              additionalProperties: {}
+            config:
+              type: object
+              nullable: true
+              additionalProperties: {}
+          required: [items]
+
+    SequenceItem:
+      type: object
+      properties:
+        id:
+          type: string
+        phase:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        dayIndex:
+          type: integer
+        channel:
+          type: string
+        mentalTrigger:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: {}
+        scheduledAt:
+          type: ["string", "null"]
+      required: [id, phase, name, dayIndex, channel, status]
+
+    ContactInput:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+      required: [email]
+
+    ContactsAddInput:
+      type: object
+      properties:
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactInput"
+      required: [contacts]
+
+    ItemCopyInput:
+      type: object
+      properties:
+        contactSegment:
+          type: string
+          enum: [hot, warm, cold]
+
+    # ─── Calendar ───────────────────────────────────────────────────────────
+    CalendarDay:
+      type: object
+      properties:
+        dayIndex:
+          type: integer
+        date:
+          type: ["string", "null"]
+        phaseLabel:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SequenceItem"
+        hasCopy:
+          type: boolean
+      required: [dayIndex, phaseLabel, items, hasCopy]
+
+    CalendarResponse:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalendarDay"
+        phases:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        milestones:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        summary:
+          type: object
+          nullable: true
+          additionalProperties: {}
+      required: [days]
+
+    # ─── Today ──────────────────────────────────────────────────────────────
+    TodayResponse:
+      type: object
+      properties:
+        currentDayIndex:
+          type: integer
+        currentPhaseLabel:
+          type: string
+        progress:
+          type: integer
+        today:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/SequenceItem"
+        tomorrow:
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/SequenceItem"
+        nextSevenDays:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalendarDay"
+        performance:
+          type: object
+          additionalProperties: {}
+        warnings:
+          type: array
+          items:
+            type: string
+      required: [currentDayIndex, progress]
+
+    # ─── Analytics ──────────────────────────────────────────────────────────
+    AnalyticsSegments:
+      type: object
+      properties:
+        hot:
+          type: integer
+        warm:
+          type: integer
+        cold:
+          type: integer
+        converted:
+          type: integer
+        unsubscribed:
+          type: integer
+      required: [hot, warm, cold, converted, unsubscribed]
+
+    AnalyticsData:
+      type: object
+      properties:
+        sequenceId:
+          type: string
+        segments:
+          $ref: "#/components/schemas/AnalyticsSegments"
+        byItem:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        adaptiveSuggestions:
+          type: array
+          items:
+            type: string
+        healthScore:
+          type: integer
+        engagementTrend:
+          type: string
+      required: [sequenceId, segments, healthScore]
+
+    AnalyticsResponse:
+      type: object
+      properties:
+        analytics:
+          $ref: "#/components/schemas/AnalyticsData"
+      required: [analytics]
+
+    # ─── Contacts ───────────────────────────────────────────────────────────
+    SequenceContact:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        segment:
+          type: string
+        engagementScore:
+          type: integer
+        itemsReceived:
+          type: integer
+        itemsOpened:
+          type: integer
+        conversions:
+          type: integer
+        createdAt:
+          type: string
+      required: [id, email, segment]
+
+    # ─── Credits ────────────────────────────────────────────────────────────
+    CreditsBalance:
+      type: object
+      properties:
+        balance:
+          type: integer
+        used:
+          type: integer
+        limit:
+          type: integer
+      required: [balance]
