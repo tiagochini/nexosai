@@ -18,21 +18,30 @@ const createCampaignSchema = z.object({
   title: z.string().min(3),
   type: z
     .enum([
+      // Closed-cart / event-driven
       "launch",
-      "branding",
+      "perpetual_launch",
+      "flash_sale",
+      "live_sale",
+      // Always-open cart / evergreen
+      "continuous_sales",
+      "subscription_growth",
+      // Relationship / authority
       "authority",
       "audience_growth",
-      "continuous_sales",
-      "regional_dominance",
+      "branding",
+      "creator_monetization",
+      // Activation / reengagement
       "upsell",
       "remarketing",
-      "creator_monetization",
-      "scale",
       "affiliate",
+      // Expansion
+      "scale",
+      "regional_dominance",
     ])
     .default("launch"),
   track: z
-    .enum(["six_digits", "eight_digits", "ten_digits"])
+    .enum(["six_digits", "eight_digits", "ten_digits", "not_applicable"])
     .default("six_digits"),
   locale: z.enum(["pt-BR", "en-US", "es-LA"]).default("pt-BR"),
   intakeData: z.record(z.string(), z.unknown()).default({}),

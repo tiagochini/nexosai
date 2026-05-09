@@ -5,6 +5,8 @@ import {
   getIntakeQuestions,
   saveIntakeData,
   validateIntakeCompleteness,
+  type CampaignType,
+  type CampaignTrack,
 } from "./intake.service.js";
 import { AppError } from "../../lib/errors.js";
 import { eq, and } from "drizzle-orm";
@@ -18,7 +20,7 @@ router.get("/:campaignId/questions", async (req, res): Promise<void> => {
 
   try {
     const [campaign] = await db
-      .select({ track: campaignsTable.track, status: campaignsTable.status })
+      .select({ type: campaignsTable.type, track: campaignsTable.track, status: campaignsTable.status })
       .from(campaignsTable)
       .where(
         and(
@@ -33,11 +35,13 @@ router.get("/:campaignId/questions", async (req, res): Promise<void> => {
       return;
     }
 
-    const track = (campaign.track ?? "six_digits") as "six_digits" | "eight_digits" | "ten_digits";
-    const questions = getIntakeQuestions(track);
+    const type = (campaign.type ?? "launch") as CampaignType;
+    const track = (campaign.track ?? "six_digits") as CampaignTrack;
+    const questions = getIntakeQuestions(type, track);
 
     res.json({
       campaignId,
+      type,
       track,
       questions,
       totalQuestions: questions.length,
@@ -74,8 +78,10 @@ router.post("/:campaignId", async (req, res): Promise<void> => {
       req.log,
     );
 
-    const track = (campaign.track ?? "six_digits") as "six_digits" | "eight_digits" | "ten_digits";
-    const completeness = validateIntakeCompleteness(track, parsed.data.intakeData);
+    const type = (campaign.type ?? "launch") as CampaignType;
+    const track = (campaign.track ?? "six_digits") as CampaignTrack;
+    const completeness = validateIntakeCompleteness(type, track, parsed.data.intakeData);
+    const questions = getIntakeQuestions(type, track);
 
     res.json({
       campaign,
@@ -83,9 +89,7 @@ router.post("/:campaignId", async (req, res): Promise<void> => {
         valid: completeness.valid,
         missingRequired: completeness.missingRequired,
         progress: Math.round(
-          ((Object.keys(parsed.data.intakeData).length /
-            getIntakeQuestions(track).length) *
-            100),
+          (Object.keys(parsed.data.intakeData).length / questions.length) * 100,
         ),
       },
     });
@@ -118,20 +122,22 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
       return;
     }
 
-    const track = (campaign.track ?? "six_digits") as "six_digits" | "eight_digits" | "ten_digits";
+    const type = (campaign.type ?? "launch") as CampaignType;
+    const track = (campaign.track ?? "six_digits") as CampaignTrack;
     const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
-    const completeness = validateIntakeCompleteness(track, intakeData);
-    const questions = getIntakeQuestions(track);
+    const completeness = validateIntakeCompleteness(type, track, intakeData);
+    const questions = getIntakeQuestions(type, track);
 
     res.json({
       campaignId,
+      type,
       track,
       intakeData,
       completeness: {
         valid: completeness.valid,
         missingRequired: completeness.missingRequired,
         progress: Math.round(
-          ((Object.keys(intakeData).length / questions.length) * 100),
+          (Object.keys(intakeData).length / questions.length) * 100,
         ),
       },
     });

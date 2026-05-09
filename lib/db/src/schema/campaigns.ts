@@ -13,23 +13,35 @@ import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
 
 export const campaignTypeEnum = pgEnum("campaign_type", [
+  // Closed-cart / event-driven
   "launch",
-  "branding",
+  "perpetual_launch",
+  "flash_sale",
+  "live_sale",
+  // Always-open cart / evergreen
+  "continuous_sales",
+  "subscription_growth",
+  // Relationship / authority
   "authority",
   "audience_growth",
-  "continuous_sales",
-  "regional_dominance",
+  "branding",
+  "creator_monetization",
+  // Activation / reengagement
   "upsell",
   "remarketing",
-  "creator_monetization",
-  "scale",
   "affiliate",
+  // Expansion
+  "scale",
+  "regional_dominance",
 ]);
 
 export const campaignTrackEnum = pgEnum("campaign_track", [
+  // Revenue tracks (launch campaigns)
   "six_digits",
   "eight_digits",
   "ten_digits",
+  // Non-revenue tracks
+  "not_applicable",
 ]);
 
 export const campaignStatusEnum = pgEnum("campaign_status", [

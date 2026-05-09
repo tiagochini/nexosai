@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -141,6 +141,16 @@ export async function updateCampaignStatus(
   }
   if (newStatus === "completed") {
     updateData.completedAt = new Date();
+  }
+
+  // Decrement workspace active campaign counter when terminal status reached
+  const terminalStatuses = ["completed", "cancelled"];
+  const wasAlreadyTerminal = terminalStatuses.includes(campaign.status);
+  if (terminalStatuses.includes(newStatus) && !wasAlreadyTerminal) {
+    await db
+      .update(workspacesTable)
+      .set({ activeCampaigns: sql`GREATEST(0, active_campaigns - 1)` })
+      .where(eq(workspacesTable.id, workspaceId));
   }
   if (data?.strategy) {
     updateData.strategyData = data.strategy as any;
