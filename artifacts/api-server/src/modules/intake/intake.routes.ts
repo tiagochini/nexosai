@@ -8,6 +8,17 @@ import {
   type CampaignType,
   type CampaignTrack,
 } from "./intake.service.js";
+import {
+  extractIntakeFromText,
+  processConversationalTurn,
+  finalizeIntake,
+  type ConversationTurn,
+} from "./intake.ai.js";
+import {
+  validateRevenueViability,
+  calculateReadinessScore,
+  recommendTrackFromRevenue,
+} from "./intake.scoring.js";
 import { AppError } from "../../lib/errors.js";
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
@@ -148,6 +159,178 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+// ─── Natural language extraction ──────────────────────────────────────────────
+
+const extractSchema = z.object({
+  text: z.string().min(10),
+});
+
+router.post("/:campaignId/extract", async (req, res): Promise<void> => {
+  const parsed = extractSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const result = await extractIntakeFromText(
+    req.params["campaignId"] as string,
+    req.auth.workspaceId,
+    parsed.data.text,
+    req.log
+  );
+
+  res.json(result);
+});
+
+// ─── Conversational turn ──────────────────────────────────────────────────────
+
+const conversationSchema = z.object({
+  message: z.string().min(1),
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+    .optional()
+    .default([]),
+});
+
+router.post("/:campaignId/conversation", async (req, res): Promise<void> => {
+  const parsed = conversationSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const result = await processConversationalTurn(
+    req.params["campaignId"] as string,
+    req.auth.workspaceId,
+    parsed.data.message,
+    parsed.data.history as ConversationTurn[],
+    req.log
+  );
+
+  res.json(result);
+});
+
+// ─── Readiness score ──────────────────────────────────────────────────────────
+
+router.get("/:campaignId/readiness", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)))
+    .limit(1);
+
+  if (!campaign) {
+    res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
+    return;
+  }
+
+  const type = (campaign.type ?? "launch") as CampaignType;
+  const track = (campaign.track ?? "six_digits") as CampaignTrack;
+  const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+
+  const readiness = calculateReadinessScore(type, track, intakeData);
+  const completeness = validateIntakeCompleteness(type, track, intakeData);
+  const questions = getIntakeQuestions(type, track);
+
+  res.json({
+    campaignId,
+    readiness,
+    completeness: {
+      valid: completeness.valid,
+      missingRequired: completeness.missingRequired,
+      progress: Math.round(
+        ((questions.length - completeness.missingRequired.length) / questions.length) * 100
+      ),
+    },
+  });
+});
+
+// ─── Revenue viability check ──────────────────────────────────────────────────
+
+const revenueSchema = z.object({
+  revenueTarget: z.number().positive(),
+  budget: z.number().positive(),
+  productPrice: z.number().positive(),
+  track: z.enum(["six_digits", "eight_digits", "ten_digits", "not_applicable"]).optional(),
+  launchDays: z.number().optional(),
+  hasAffiliate: z.boolean().optional(),
+});
+
+router.post("/:campaignId/validate-revenue", async (req, res): Promise<void> => {
+  const parsed = revenueSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const d = parsed.data;
+  const recommendedTrack = recommendTrackFromRevenue(d.revenueTarget);
+  const viability = validateRevenueViability({
+    revenueTarget: d.revenueTarget,
+    budget: d.budget,
+    productPrice: d.productPrice,
+    track: d.track ?? recommendedTrack,
+    launchDays: d.launchDays,
+    hasAffiliate: d.hasAffiliate,
+  });
+
+  res.json({ viability });
+});
+
+// ─── Track recommendation ─────────────────────────────────────────────────────
+
+router.get("/:campaignId/recommend-track", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)))
+    .limit(1);
+
+  if (!campaign) {
+    res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
+    return;
+  }
+
+  const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const revenueTarget = Number(intakeData["campaign.revenueTarget"] ?? campaign.revenueTarget ?? 0);
+  const budget = Number(intakeData["campaign.budget.total"] ?? intakeData["campaign.budget.traffic"] ?? 0);
+  const productPrice = Number(intakeData["product.price"] ?? 0);
+
+  const recommendedTrack = recommendTrackFromRevenue(revenueTarget);
+
+  let viability = null;
+  if (revenueTarget > 0 && budget > 0 && productPrice > 0) {
+    viability = validateRevenueViability({
+      revenueTarget,
+      budget,
+      productPrice,
+      track: recommendedTrack,
+    });
+  }
+
+  res.json({
+    currentTrack: campaign.track,
+    recommendedTrack,
+    revenueTarget,
+    viability,
+  });
+});
+
+// ─── Finalize intake ──────────────────────────────────────────────────────────
+
+router.post("/:campaignId/finalize", async (req, res): Promise<void> => {
+  const campaign = await finalizeIntake(
+    req.params["campaignId"] as string,
+    req.auth.workspaceId,
+    req.log
+  );
+  res.json({ campaign, message: "Intake finalizado — campanha pronta para execução" });
 });
 
 export default router;
