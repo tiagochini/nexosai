@@ -9,6 +9,7 @@ import intakeRouter from "../modules/intake/intake.routes.js";
 import agentsRouter from "../modules/agents/agents.routes.js";
 import contentRouter from "../modules/content/content.routes.js";
 import metricsRouter from "../modules/metrics/metrics.routes.js";
+import executionRouter from "../modules/orchestration/execution.routes.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/intake", intakeRouter);
 router.use("/campaigns", agentsRouter);
 router.use("/campaigns", contentRouter);
 router.use("/campaigns", metricsRouter);
+router.use("/campaigns", executionRouter);
 
 export default router;

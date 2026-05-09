@@ -41,7 +41,8 @@ export interface ContentGenerationResult {
 const CONTENT_GENERATION_ALLOWED_STATUSES = [
   "approved",
   "generating",
-  "active",
+  "executing",
+  "strategy_ready",
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

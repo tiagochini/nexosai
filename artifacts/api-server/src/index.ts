@@ -3,6 +3,7 @@ import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { initRealtime } from "./modules/realtime/realtime.service.js";
 import { getQueue, QUEUE_NAMES } from "./modules/queue/queue.service.js";
+import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 
 const rawPort = process.env["PORT"];
 
@@ -33,6 +34,8 @@ try {
   logger.warn({ err }, "Queue init failed — Redis may not be available, continuing without queues");
 }
 
+initOrchestrationWorker();
+
 httpServer.listen(port, (err?: Error) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -40,3 +43,12 @@ httpServer.listen(port, (err?: Error) => {
   }
   logger.info({ port }, "NexOS AI API Server listening");
 });
+
+async function shutdown(signal: string): Promise<void> {
+  logger.info({ signal }, "Shutdown signal received");
+  await closeOrchestrationWorker();
+  httpServer.close(() => process.exit(0));
+}
+
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));
