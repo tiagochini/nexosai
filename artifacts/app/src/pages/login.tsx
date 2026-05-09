@@ -5,8 +5,8 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Activity } from "lucide-react";
 import { toast } from "sonner";
+import nexosLogo from "/nexos-logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -35,10 +35,9 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8 text-primary">
-          <Activity className="h-12 w-12 mb-4" />
-          <h1 className="text-3xl font-mono font-bold tracking-tight uppercase">NexOS AI</h1>
-          <p className="text-muted-foreground text-sm uppercase tracking-widest mt-2">Missão Controle</p>
+        <div className="flex flex-col items-center mb-8">
+          <img src={nexosLogo} alt="NexOS AI" className="h-32 w-32 object-contain mb-2" style={{ imageRendering: "crisp-edges" }} />
+          <p className="text-muted-foreground text-sm uppercase tracking-widest font-mono">Missão Controle</p>
         </div>
 
         <div className="border border-border bg-card p-8 shadow-2xl relative">

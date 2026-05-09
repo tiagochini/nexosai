@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useGetCreditsBalance } from "@workspace/api-client-react";
-import { LogOut, Rocket, LayoutDashboard, ListTodo, Workflow, CreditCard, Activity, CalendarDays, Contact2 } from "lucide-react";
+import { LogOut, Rocket, LayoutDashboard, Workflow, CreditCard } from "lucide-react";
+import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -24,10 +25,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-background text-foreground font-sans">
       {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-card flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-border">
-          <div className="flex items-center gap-2 text-primary">
-            <Activity className="h-6 w-6" />
-            <span className="font-mono font-bold tracking-tight text-lg uppercase">NexOS AI</span>
+        <div className="h-16 flex items-center px-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 object-contain" />
+            <span className="font-mono font-bold tracking-tight text-base uppercase text-foreground">NexOS AI</span>
           </div>
         </div>
 
