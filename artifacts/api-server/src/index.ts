@@ -4,6 +4,7 @@ import { logger } from "./lib/logger.js";
 import { initRealtime } from "./modules/realtime/realtime.service.js";
 import { getQueue, QUEUE_NAMES } from "./modules/queue/queue.service.js";
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
+import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 
 const rawPort = process.env["PORT"];
 
@@ -35,6 +36,7 @@ try {
 }
 
 initOrchestrationWorker();
+startSocialScheduler();
 
 httpServer.listen(port, (err?: Error) => {
   if (err) {
@@ -46,6 +48,7 @@ httpServer.listen(port, (err?: Error) => {
 
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutdown signal received");
+  stopSocialScheduler();
   await closeOrchestrationWorker();
   httpServer.close(() => process.exit(0));
 }

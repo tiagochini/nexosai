@@ -13,4 +13,5 @@ export const env = {
   GEMINI_API_KEY: process.env["GEMINI_API_KEY"] ?? "",
   NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "nexos.ai",
   CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
+  APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
 } as const;

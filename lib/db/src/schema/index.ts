@@ -15,3 +15,4 @@ export * from "./content";
 export * from "./metrics";
 export * from "./workspace-memory";
 export * from "./critique-logs";
+export * from "./social-posts";
