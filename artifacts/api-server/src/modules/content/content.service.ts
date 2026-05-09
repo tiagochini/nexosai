@@ -39,10 +39,10 @@ export interface ContentGenerationResult {
 }
 
 const CONTENT_GENERATION_ALLOWED_STATUSES = [
-  "approved",
-  "generating",
-  "executing",
   "strategy_ready",
+  "generating",
+  "approved",
+  "awaiting_approval",
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ export async function generateCampaignContent(
 
   if (!CONTENT_GENERATION_ALLOWED_STATUSES.includes(campaign.status)) {
     throw new ValidationError(
-      `Campaign must be approved before content generation. Current status: ${campaign.status}`,
+      `Cannot generate content from status "${campaign.status}". Allowed: ${CONTENT_GENERATION_ALLOWED_STATUSES.join(", ")}.`,
     );
   }
 
@@ -1067,16 +1067,17 @@ export async function generateCampaignContent(
   }
 
   // ── Final status ─────────────────────────────────────────────────────────────
-  const finalStatus =
-    errors.length === 0
-      ? "active"
-      : errors.length < agentsRun.length
-        ? "active"
-        : "approved";
+  // After content generation: move to awaiting_approval so user can review and
+  // approve before launch. If ALL agents failed fall back to strategy_ready so
+  // the user can re-trigger content generation.
+  const allFailed = errors.length > 0 && agentsRun.length === 0;
+  const finalStatus: "awaiting_approval" | "strategy_ready" = allFailed
+    ? "strategy_ready"
+    : "awaiting_approval";
 
   await db
     .update(campaignsTable)
-    .set({ status: finalStatus as any })
+    .set({ status: finalStatus })
     .where(eq(campaignsTable.id, campaignId));
 
   await db.insert(auditLogsTable).values({

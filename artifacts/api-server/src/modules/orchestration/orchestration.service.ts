@@ -241,7 +241,7 @@ export async function triggerContentPhase(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  const allowedStatuses = ["strategy_ready", "approved", "generating"];
+  const allowedStatuses = ["strategy_ready", "approved", "generating", "awaiting_approval"];
   if (!allowedStatuses.includes(campaign.status)) {
     throw new ValidationError(
       `Cannot start content generation from status "${campaign.status}". Strategy phase must complete first.`,
@@ -348,7 +348,7 @@ export async function triggerNextPhase(
     return { ...result, action: "run_strategy" };
   }
 
-  if (["strategy_ready", "approved", "generating"].includes(status) && status !== "generating") {
+  if (status === "strategy_ready") {
     const result = await triggerContentPhase(campaignId, workspaceId, log);
     return { ...result, action: "generate_content" };
   }
