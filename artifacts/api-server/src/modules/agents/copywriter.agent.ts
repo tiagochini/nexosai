@@ -1,4 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgentWithCritique } from "./critique.runner.js";
+import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
@@ -248,6 +250,9 @@ export async function runCopywriterAgent(
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
 ): Promise<CopywriterOutput> {
+  const memCtx = await getMemoryContext(workspaceId, "copywriter", String(intakeData["product.category"] ?? ""));
+  const memBlock = buildMemoryContextBlock(memCtx);
+
   const avatarContext = profile
     ? `
 **Avatar primário:** ${profile.primaryAvatar.name}, ${profile.primaryAvatar.age}, ${profile.primaryAvatar.occupation}
@@ -265,15 +270,7 @@ export async function runCopywriterAgent(
 **Elevator pitch:** ${profile.positioning.elevatorPitch}`
     : "";
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "copywriter",
-    systemPrompt: COPYWRITER_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Escreva todo o copy da campanha — página de vendas completa, sequência de e-mails, scripts de WhatsApp e scripts de carrinho.
+  const userMessage = `Escreva todo o copy da campanha — página de vendas completa, sequência de e-mails, scripts de WhatsApp e scripts de carrinho.
 ${avatarContext}
 
 **Produto:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
@@ -327,22 +324,18 @@ ${JSON.stringify(
 - Sequência de carrinho: urgência crescente mas NUNCA fake
 - Use {{LINK_CAPTURA}}, {{LINK_PAGAMENTO}}, {{LINK_REMARKETING}} como placeholders de URL
 
-Retorne APENAS o JSON. Todo o copy em português do Brasil.`,
-      },
-    ],
+Retorne APENAS o JSON. Todo o copy em português do Brasil.`;
+
+  const critique = await runAgentWithCritique({
+    campaignId,
+    workspaceId,
+    agentRole: "copywriter",
+    systemPrompt: memBlock + COPYWRITER_PROMPT,
+    userMessage,
     log,
-    requiresApproval: true,
-    checkpointType: "content_approval",
-    thinkingMessages: [
-      "Absorvendo o avatar e suas dores mais profundas...",
-      "Construindo a narrativa central da página de vendas...",
-      "Escrevendo sequência de e-mails de pré-lançamento...",
-      "Criando scripts de abertura e fechamento de carrinho...",
-      "Redigindo mensagens de WhatsApp para cada fase...",
-      "Revisando escalada de urgência na sequência de carrinho...",
-      "Finalizando sequência de remarketing pós-fechamento...",
-    ],
   });
+
+  const result = { content: critique.refinedOutput };
 
   return parseAgentJSON<CopywriterOutput>(result.content, {
     campaignTitle: String(intakeData["product.name"] ?? ""),

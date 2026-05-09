@@ -1,4 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgentWithCritique } from "./critique.runner.js";
+import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
@@ -151,6 +153,9 @@ export async function runVSLScriptAgent(
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
 ): Promise<VSLOutput> {
+  const memCtx = await getMemoryContext(workspaceId, "vsl_script", String(intakeData["product.category"] ?? ""));
+  const memBlock = buildMemoryContextBlock(memCtx);
+
   const avatarContext = profile
     ? `
 **Avatar:** ${profile.primaryAvatar.name} — ${profile.primaryAvatar.age}, ${profile.primaryAvatar.occupation}
@@ -169,15 +174,7 @@ export async function runVSLScriptAgent(
 **Narrativa central:** ${strategy.campaignArchitecture.coreNarrative}
 **Gancho:** ${strategy.campaignArchitecture.emotionalHook}`;
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "copywriter",
-    systemPrompt: VSL_SCRIPT_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Escreva o roteiro VSL completo para esta campanha.
+  const userMessage = `Escreva o roteiro VSL completo para esta campanha.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")}
 **Preço:** R$${String(intakeData["product.price"] ?? "")}
@@ -196,21 +193,18 @@ ${avatarContext}
 - A apresentação da oferta deve fazer o preço parecer óbvio comparado ao valor
 - Escreva em português do Brasil coloquial e natural
 
-Retorne APENAS o JSON do roteiro completo.`,
-      },
-    ],
+Retorne APENAS o JSON do roteiro completo.`;
+
+  const critique = await runAgentWithCritique({
+    campaignId,
+    workspaceId,
+    agentRole: "copywriter",
+    systemPrompt: memBlock + VSL_SCRIPT_PROMPT,
+    userMessage,
     log,
-    requiresApproval: false,
-    thinkingMessages: [
-      "Construindo o hook de abertura irresistível...",
-      "Mergulhando na dor do avatar com especificidade...",
-      "Desenvolvendo a jornada e credibilidade do criador...",
-      "Revelando o mecanismo único e a solução...",
-      "Construindo prova e depoimentos na narrativa...",
-      "Estruturando o stack de oferta e ancoragem de preço...",
-      "Finalizando fechamento com urgência e garantia...",
-    ],
   });
+
+  const result = { content: critique.refinedOutput };
 
   return parseAgentJSON<VSLOutput>(result.content, {
     title: `VSL — ${String(intakeData["product.name"] ?? "")}`,

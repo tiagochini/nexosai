@@ -1,4 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgentWithCritique } from "./critique.runner.js";
+import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { Logger } from "pino";
 
 export interface ComplianceViolation {
@@ -153,6 +155,9 @@ export async function runComplianceAgent(
   adContent: Record<string, unknown> | undefined,
   log: Logger,
 ): Promise<ComplianceOutput> {
+  const memCtx = await getMemoryContext(workspaceId, "compliance");
+  const memBlock = buildMemoryContextBlock(memCtx);
+
   const contentSample = JSON.stringify({
     product: String(intakeData["product.name"] ?? ""),
     price: String(intakeData["product.price"] ?? ""),
@@ -175,15 +180,7 @@ export async function runComplianceAgent(
       : "ads not yet generated",
   }, null, 2);
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "compliance",
-    systemPrompt: COMPLIANCE_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Analise toda a copy desta campanha contra as regras de compliance aplicáveis no Brasil.
+  const userMessage = `Analise toda a copy desta campanha contra as regras de compliance aplicáveis no Brasil.
 
 **Contexto da campanha:**
 \`\`\`json
@@ -206,21 +203,18 @@ ${contentSample}
 
 Forneça versões corrigidas para CADA violação encontrada.
 
-Retorne APENAS o JSON de compliance.`,
-      },
-    ],
+Retorne APENAS o JSON de compliance.`;
+
+  const critique = await runAgentWithCritique({
+    campaignId,
+    workspaceId,
+    agentRole: "compliance",
+    systemPrompt: memBlock + COMPLIANCE_PROMPT,
+    userMessage,
     log,
-    requiresApproval: false,
-    thinkingMessages: [
-      "Verificando afirmações de resultado contra o CONAR...",
-      "Analisando copy de e-mails e página de vendas...",
-      "Revisando conformidade com políticas do Meta e Google...",
-      "Verificando depoimentos e prova social...",
-      "Analisando urgência e escassez — real ou artificial?...",
-      "Identificando disclaimers obrigatórios ausentes...",
-      "Gerando versões corrigidas para cada violação...",
-    ],
   });
+
+  const result = { content: critique.refinedOutput };
 
   return parseAgentJSON<ComplianceOutput>(result.content, {
     campaignTitle: String(intakeData["product.name"] ?? ""),

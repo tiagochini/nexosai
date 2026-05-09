@@ -1,4 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgentWithCritique } from "./critique.runner.js";
+import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
@@ -174,19 +176,14 @@ export async function runLandingPageAgent(
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
 ): Promise<LandingPageOutput> {
+  const memCtx = await getMemoryContext(workspaceId, "landing_page", String(intakeData["product.category"] ?? ""));
+  const memBlock = buildMemoryContextBlock(memCtx);
+
   const avatarContext = profile
     ? `Avatar: ${profile.primaryAvatar.name} | Desejo: ${profile.primaryAvatar.deepestDesire} | Objeções: ${profile.primaryAvatar.typicalObjections.slice(0, 3).join("; ")} | Tom: ${profile.primaryAvatar.languageStyle}`
     : "";
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "landing_page",
-    systemPrompt: LANDING_PAGE_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Projete a estrutura completa da página de vendas para esta campanha.
+  const userMessage = `Projete a estrutura completa da página de vendas para esta campanha.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
 **Canal de vendas:** ${String(intakeData["campaign.salesChannel"] ?? "sales_page")}
@@ -209,21 +206,18 @@ ${JSON.stringify(strategy.offerPositioning ?? {}, null, 2)}
 - Popup de exit intent com oferta de última chance
 - Mínimo 12 seções (da hero ao footer)
 
-Retorne APENAS o JSON da página completa.`,
-      },
-    ],
+Retorne APENAS o JSON da página completa.`;
+
+  const critique = await runAgentWithCritique({
+    campaignId,
+    workspaceId,
+    agentRole: "landing_page",
+    systemPrompt: memBlock + LANDING_PAGE_PROMPT,
+    userMessage,
     log,
-    requiresApproval: false,
-    thinkingMessages: [
-      "Estruturando o acima do fold para máxima conversão...",
-      "Projetando fluxo de consciência do avatar...",
-      "Desenvolvendo seções de problema e agitação...",
-      "Estruturando prova social e credibilidade...",
-      "Criando seções de oferta e ancoragem de preço...",
-      "Definindo mecanismos de urgência e escassez...",
-      "Otimizando para mobile e performance...",
-    ],
   });
+
+  const result = { content: critique.refinedOutput };
 
   return parseAgentJSON<LandingPageOutput>(result.content, {
     pageTitle: String(intakeData["product.name"] ?? ""),

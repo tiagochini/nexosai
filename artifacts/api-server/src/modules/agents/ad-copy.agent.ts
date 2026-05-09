@@ -1,4 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgentWithCritique } from "./critique.runner.js";
+import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput, AudienceSegment } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
@@ -187,6 +189,9 @@ export async function runAdCopyAgent(
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
 ): Promise<AdCopyOutput> {
+  const memCtx = await getMemoryContext(workspaceId, "ad_copy", String(intakeData["product.category"] ?? ""));
+  const memBlock = buildMemoryContextBlock(memCtx);
+
   const segmentsContext = profile?.segments.length
     ? `
 **Segmentos de audiência identificados:**
@@ -198,15 +203,7 @@ ${profile.segments
   .join("\n")}`
     : "";
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "copywriter",
-    systemPrompt: AD_COPY_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Crie o pacote completo de anúncios para a campanha — Meta Ads, Google Ads e TikTok Ads por segmento.
+  const userMessage = `Crie o pacote completo de anúncios para a campanha — Meta Ads, Google Ads e TikTok Ads por segmento.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
 **Budget total de tráfego:** R$${String(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.budget.total"] ?? 0)}
@@ -228,20 +225,18 @@ ${profile ? `${profile.primaryAvatar.name} — ${profile.primaryAvatar.deepestDe
 - Retargeting para: quem viu a página, quem adicionou ao carrinho, lookalike
 - Cada anúncio deve ter instrução visual clara
 
-Retorne APENAS o JSON do pacote de anúncios.`,
-      },
-    ],
+Retorne APENAS o JSON do pacote de anúncios.`;
+
+  const critique = await runAgentWithCritique({
+    campaignId,
+    workspaceId,
+    agentRole: "copywriter",
+    systemPrompt: memBlock + AD_COPY_PROMPT,
+    userMessage,
     log,
-    requiresApproval: false,
-    thinkingMessages: [
-      "Analisando segmentos e ângulos para cada público...",
-      "Escrevendo variações de Meta Ads com ângulos distintos...",
-      "Estruturando grupos de palavras-chave para Google Ads...",
-      "Criando hooks e scripts de TikTok Ads nativos...",
-      "Planejando sequências de retargeting por comportamento...",
-      "Definindo estratégia de distribuição de budget por fase...",
-    ],
   });
+
+  const result = { content: critique.refinedOutput };
 
   return parseAgentJSON<AdCopyOutput>(result.content, {
     campaignTitle: String(intakeData["product.name"] ?? ""),

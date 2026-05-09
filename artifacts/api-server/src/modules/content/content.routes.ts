@@ -12,6 +12,7 @@ import {
   rejectMediaBrief,
   optimizeCampaign,
 } from "./content.service.js";
+import { processContentPieceApproval } from "../memory/memory.service.js";
 import { ContentTypeSchema } from "@workspace/db";
 
 const router = Router();
@@ -95,6 +96,14 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
       req.auth.workspaceId,
       pieceId,
     );
+    // Fire-and-forget memory save — never blocks response
+    processContentPieceApproval(
+      req.auth.workspaceId,
+      campaignId,
+      pieceId,
+      piece.type ?? "copywriter",
+      true,
+    ).catch(() => undefined);
     res.json({ message: "Content piece approved", piece });
   } catch (err) {
     if (err instanceof AppError) {
@@ -126,6 +135,15 @@ router.post("/:campaignId/content/:pieceId/reject", async (req, res): Promise<vo
       pieceId,
       parsed.data.reason,
     );
+    // Fire-and-forget memory save — never blocks response
+    processContentPieceApproval(
+      req.auth.workspaceId,
+      campaignId,
+      pieceId,
+      piece.type ?? "copywriter",
+      false,
+      parsed.data.reason,
+    ).catch(() => undefined);
     res.json({ message: "Content piece rejected", piece });
   } catch (err) {
     if (err instanceof AppError) {

@@ -9,7 +9,9 @@
   },
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "seed:plans": "/home/runner/workspace/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs src/seed-plans.ts",
+    "seed:launches": "/home/runner/workspace/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/cli.mjs src/seed-public-launches.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

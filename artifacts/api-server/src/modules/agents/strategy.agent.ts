@@ -1,4 +1,5 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { Logger } from "pino";
 
 export interface StrategyOutput {
@@ -116,10 +117,14 @@ export async function runStrategyAgent(
   campaignId: string,
   workspaceId: string,
   intakeData: Record<string, unknown>,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for signature compatibility
   track: string,
   log: Logger,
   profile?: import("./profile-builder.agent.js").ProfileBuilderOutput,
 ): Promise<StrategyOutput> {
+  const memCtx = await getMemoryContext(workspaceId, "strategy", String(intakeData["product.category"] ?? ""));
+  const memBlock = buildMemoryContextBlock(memCtx);
+
   const intakeJson = JSON.stringify(intakeData, null, 2);
 
   const profileContext = profile
@@ -161,7 +166,7 @@ Use este perfil como base para aprofundar a estratégia. Não repita as mesmas i
     campaignId,
     workspaceId,
     agentRole: "strategy",
-    systemPrompt: STRATEGY_SYSTEM_PROMPT,
+    systemPrompt: memBlock + STRATEGY_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
