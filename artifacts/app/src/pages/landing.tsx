@@ -35,19 +35,19 @@ const SEGMENT_DATA = {
     groupLabel: "Grupo dos Lançadores",
     groupDesc: "Esquenta · Lançadores Solo",
     headline: "Seu primeiro lançamento de 6 dígitos.",
-    sub: "Sem equipe, sem agência, sem freelancer. Você coloca o briefing, a IA faz o resto — estratégia, copy, sequência de email e WhatsApp, tudo disparado no piloto automático.",
+    sub: "Sem equipe, sem agência, sem freelancer. Seu único trabalho é conversar com a IA — ela entende o que você quer lançar, levanta o que ainda não foi pensado, calcula margem, investimento e viabilidade, e monta tudo para sua aprovação.",
     bullets: [
-      "Lançamento rodando enquanto você dorme",
-      "Copy profissional gerado por IA em segundos",
-      "Sem contratar ninguém — só você e a plataforma",
-      "Da ideia ao carrinho em 7 dias",
+      "IA identifica e personaliza cada detalhe do seu lançamento",
+      "Custo, budget, margem e precificação calculados antes do go-live",
+      "Propostas sempre passam pela sua aprovação antes de serem executadas",
+      "Da conversa com a IA ao carrinho aberto em 7 dias",
     ],
     // 2x/day schedule — morning 9h + evening 20h
     esquentaSequence: [
       { slot: "Dia 1 · 09h", trigger: "Autoridade",    label: "PL1-M", content: "Bastidores: a origem do NexOS AI e o problema que ele resolve de verdade." },
       { slot: "Dia 1 · 20h", trigger: "Curiosidade",   label: "PL1-N", content: "O que seria possível se você não dependesse de equipe para lançar?" },
       { slot: "Dia 2 · 09h", trigger: "Reciprocidade", label: "PL2-M", content: "Checklist gratuito: os 7 passos de um lançamento de 6 dígitos automatizado." },
-      { slot: "Dia 2 · 20h", trigger: "Transformação", label: "PL2-N", content: "Caso real: do briefing ao carrinho em 7 dias — o lançamento que rodou sozinho." },
+      { slot: "Dia 2 · 20h", trigger: "Transformação", label: "PL2-N", content: "Caso real: do diagnóstico com IA ao carrinho em 7 dias — como o NexOS orquestrou cada etapa com aprovação do dono." },
       { slot: "Dia 3 · 09h", trigger: "Prova Social",  label: "PL3-M", content: "Números do lançamento: taxa de abertura, conversão por segmento, receita gerada." },
       { slot: "Dia 3 · 20h", trigger: "Antecipação",   label: "PL3-N", content: "Demo ao vivo da plataforma + perguntas e respostas no grupo." },
       { slot: "Dia 4 · 09h", trigger: "Escassez",      label: "ABR-M", content: "Carrinho aberto. Vagas limitadas. Link exclusivo para quem estava no grupo." },
@@ -74,7 +74,7 @@ const SEGMENT_DATA = {
       { slot: "Dia 1 · 20h", trigger: "Curiosidade",   label: "PL1-N", content: "Quanto sua agência deixa de ganhar hoje por não automatizar a operação?" },
       { slot: "Dia 2 · 09h", trigger: "Reciprocidade", label: "PL2-M", content: "Modelo de precificação white-label: como cobrar mais e entregar com menos headcount." },
       { slot: "Dia 2 · 20h", trigger: "Transformação", label: "PL2-N", content: "Caso real: agência que triplicou o número de clientes sem contratar ninguém." },
-      { slot: "Dia 3 · 09h", trigger: "Prova Social",  label: "PL3-M", content: "Painel multi-cliente ao vivo: como 5 clientes rodam em paralelo sem supervisão." },
+      { slot: "Dia 3 · 09h", trigger: "Prova Social",  label: "PL3-M", content: "Painel multi-cliente ao vivo: como 5 clientes rodam em paralelo com total visibilidade — a IA propõe, o gestor aprova, tudo rastreado." },
       { slot: "Dia 3 · 20h", trigger: "Antecipação",   label: "PL3-N", content: "Demo técnica do white-label + sessão de perguntas sobre operação e escala." },
       { slot: "Dia 4 · 09h", trigger: "Escassez",      label: "ABR-M", content: "Carrinho aberto. Agências têm condições diferenciadas. Link exclusivo para o grupo." },
       { slot: "Dia 4 · 20h", trigger: "Urgência",      label: "ABR-N", content: "Último aviso: carrinho fecha à meia-noite. Condições de agência encerram com ele." },
@@ -408,11 +408,11 @@ export default function Landing() {
             <h1 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
               Seu produto digital<br />
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">no ar em 7 dias.</span><br />
-              <span className="text-foreground/50 text-3xl md:text-4xl mt-2 block">100% automatizado por IA.</span>
+              <span className="text-foreground/50 text-3xl md:text-4xl mt-2 block">Orquestrado por IA, aprovado por você.</span>
             </h1>
             <p className="text-base text-muted-foreground leading-relaxed mb-8 max-w-lg">
-              NexOS AI gera estratégia, escreve copy por segmento, dispara email e WhatsApp no momento certo e monitora tudo —&nbsp;
-              <strong className="text-foreground">do briefing ao carrinho, no piloto automático.</strong>
+              A IA entende seu produto, calcula viabilidade, monta estratégia e executa a sequência —&nbsp;
+              <strong className="text-foreground">cada proposta passa pela sua aprovação antes de ir ao ar.</strong>
             </p>
             <div className="space-y-3 mb-8">
               {[
@@ -635,10 +635,10 @@ export default function Landing() {
             <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-primary/50 via-primary/20 to-transparent hidden md:block"></div>
             <div className="space-y-0">
               {[
-                { n: "01", icon: Clock,       label: "PL-Prep",  title: "Briefing em 10 minutos",  desc: "Você responde perguntas sobre produto, público e meta de receita. A IA começa a construir a estratégia enquanto você responde." },
-                { n: "02", icon: BrainCircuit,label: "Estratégia",title: "IA define tudo",          desc: "Claude escolhe trilha (6, 8 ou 10 dígitos), monta cronograma de 7 dias, define gatilhos mentais por fase e gera sequência completa." },
-                { n: "03", icon: Eye,          label: "Aprovação", title: "Você revisa, IA ajusta", desc: "Copy gerado por GPT-4o para cada fase e segmento. Você aprova ou solicita ajuste — tudo dentro da plataforma, em segundos." },
-                { n: "04", icon: Zap,          label: "Execução",  title: "Piloto automático",      desc: "Sequência ativa. NexOS dispara no horário certo, para o segmento certo, monitora engajamento e auto-otimiza se o score cair." },
+                { n: "01", icon: Clock,       label: "PL-Prep",  title: "Diagnóstico profundo com IA",  desc: "A IA conduz um atendimento personalizado: entende o produto, o público, as metas — e levanta o que você ainda não pensou. Calcula custo de entrega, investimento necessário, margem potencial e viabilidade financeira antes de montar qualquer estratégia." },
+                { n: "02", icon: BrainCircuit,label: "Estratégia",title: "Estratégia sob medida",          desc: "Com base no diagnóstico, Claude escolhe a trilha certa (6, 8 ou 10 dígitos), monta cronograma de 7 dias, define gatilhos por fase e gera a sequência completa — tudo calibrado para o seu lançamento específico." },
+                { n: "03", icon: Eye,          label: "Aprovação", title: "Você aprova, a IA ajusta", desc: "Toda proposta — copy, sequência, criativo, orçamento — passa pela sua revisão antes de ser executada. Feedback vira ajuste em segundos. Red flags são sinalizados proativamente antes de qualquer disparo." },
+                { n: "04", icon: Zap,          label: "Execução",  title: "Execução orquestrada",      desc: "Com tudo aprovado, NexOS dispara no horário certo, para o segmento certo. Monitora engajamento em tempo real e sugere otimizações quando o score cai — sempre com sua ciência antes de adaptar." },
               ].map((step, i) => (
                 <div key={i} className="flex gap-8 py-10 border-b border-border/30 last:border-0 group">
                   <div className="flex-shrink-0 w-16 h-16 border border-primary/30 bg-primary/5 flex items-center justify-center font-mono font-black text-2xl text-primary group-hover:border-primary/70 group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)] transition-all relative z-10">
