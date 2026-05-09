@@ -16,6 +16,7 @@ import billingRouter from "../modules/billing/billing.routes.js";
 import revenueRouter from "../modules/revenue/revenue.routes.js";
 import agencyRouter from "../modules/agency/agency.routes.js";
 import whitelabelRouter from "../modules/whitelabel/whitelabel.routes.js";
+import complianceRouter from "../modules/compliance/compliance.routes.js";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use("/billing", billingRouter);
 router.use("/revenue", revenueRouter);
 router.use("/agency", agencyRouter);
 router.use("/whitelabel", whitelabelRouter);
+router.use("/compliance", complianceRouter);
 
 export default router;

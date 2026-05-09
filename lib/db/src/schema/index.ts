@@ -20,3 +20,4 @@ export * from "./subscription-payments";
 export * from "./revenue-events";
 export * from "./agency-clients";
 export * from "./whitelabel-configs";
+export * from "./compliance-checks";
