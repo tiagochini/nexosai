@@ -266,7 +266,7 @@ export default function Onboarding() {
             <div className="flex justify-center mb-4">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-                <img src={nexosLogo} alt="NexOS" className="h-16 w-16 object-contain relative z-10" />
+                <img src={nexosLogo} alt="NexOS" className="h-24 w-24 md:h-28 md:w-28 object-contain relative z-10" />
               </div>
             </div>
             <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground mb-3">

@@ -14,6 +14,7 @@ import SequenceCopyStudio from "@/pages/sequences/copy";
 import SequenceAnalytics from "@/pages/sequences/analytics";
 import SequenceContacts from "@/pages/sequences/contacts";
 import Onboarding from "@/pages/onboarding";
+import CampaignsList from "@/pages/campaigns/list";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -44,6 +45,13 @@ export default function AppRoutes() {
       <Route path="/register" component={Register} />
       <Route path="/onboarding" component={OnboardingRoute} />
       <Route path="/" component={HomeRoute} />
+      <Route path="/campaigns">
+        {() => (
+          <ProtectedRoute>
+            <CampaignsList />
+          </ProtectedRoute>
+        )}
+      </Route>
       <Route path="/campaigns/new">
         {() => (
           <ProtectedRoute>

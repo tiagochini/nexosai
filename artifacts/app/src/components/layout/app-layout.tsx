@@ -32,7 +32,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
             <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
-            <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 object-contain relative z-10" />
+            <img src={nexosLogo} alt="NexOS AI" className="h-14 w-14 object-contain relative z-10" />
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-mono font-bold tracking-widest text-base uppercase text-foreground">NexOS</span>

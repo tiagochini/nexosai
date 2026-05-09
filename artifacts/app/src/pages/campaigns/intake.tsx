@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, CheckCircle2, Loader2, Send, Database,
-  MessageSquare, LayoutList, ChevronRight,
+  MessageSquare, LayoutList, ChevronRight, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -47,7 +47,7 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
 }
 
 export default function CampaignIntake() {
-  const [match, params] = useRoute("/campaigns/:id/intake");
+  const [, params] = useRoute("/campaigns/:id/intake");
   const campaignId = params?.id || "";
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -59,6 +59,8 @@ export default function CampaignIntake() {
   const [chatComplete, setChatComplete] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [finalizing, setFinalizing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const aiTriggered = useRef(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -86,37 +88,76 @@ export default function CampaignIntake() {
   useEffect(() => {
     if (data?.intakeData) {
       setFormData(data.intakeData as Record<string, string>);
-      // If already has some data, check if chat was initialized
-      const d = data.intakeData as Record<string, string>;
-      if (messages.length === 0 && Object.keys(d).filter((k) => !k.startsWith("_")).length > 0) {
-        setMessages([{
-          role: "assistant",
-          content: "Bem-vindo de volta! Já temos alguns dados sobre sua campanha. Continue respondendo para completar o briefing, ou use a aba de formulário para editar campos específicos.",
-        }]);
-      }
+      const comp = data.completeness;
+      setProgress(typeof comp === "number" ? comp : (comp as { progress?: number })?.progress ?? 0);
     }
   }, [data]);
 
-  // Initial AI greeting if no messages
+  // ── AI AUTO-TRIGGER on fresh campaign ─────────────────────────────────────────
+  // When intake page loads and there's no conversation history yet, auto-call the AI
+  // so the IA starts the conversation immediately without user needing to type first
   useEffect(() => {
-    if (!isLoading && messages.length === 0 && campaignId) {
-      const intakeData = data?.intakeData as Record<string, string> | undefined;
-      const hasProductName = intakeData?.["product.name"];
+    if (isLoading || !campaignId || aiTriggered.current) return;
+    aiTriggered.current = true;
 
-      setMessages([{
-        role: "assistant",
-        content: hasProductName
-          ? `Ótimo! Já sei que você trabalha com "${hasProductName}". Vamos aprofundar os detalhes para a IA montar a melhor estratégia.\n\nMe conta: quem é o cliente ideal desse produto? Qual é a principal dor que ele resolve?`
-          : `Olá! Sou o especialista de intake do NexOS AI. Vou coletar as informações essenciais sobre seu produto e campanha através de uma conversa natural.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?`,
-      }]);
-    }
+    const intakeD = (data?.intakeData ?? {}) as Record<string, unknown>;
+    const filledKeys = Object.keys(intakeD).filter(k => !k.startsWith("_"));
+
+    // Auto-trigger: send empty first message so AI starts speaking immediately
+    const autoTrigger = async () => {
+      setSending(true);
+      try {
+        const res = await customFetch<Response>(`/api/intake/${campaignId}/conversation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: filledKeys.length > 0 ? "continuar_intake" : "iniciar_intake",
+            history: [],
+          }),
+        });
+
+        if (!res.ok) {
+          // Fallback greeting if API fails
+          setMessages([{
+            role: "assistant",
+            content: "Olá! Sou o especialista de intake do NexOS AI. Vou coletar informações sobre seu produto através de uma conversa natural para que a IA monte a melhor estratégia de lançamento.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
+          }]);
+          return;
+        }
+
+        const result = await res.json() as {
+          aiMessage: string;
+          isComplete: boolean;
+          progress: number;
+          intakeData: Record<string, unknown>;
+        };
+
+        setMessages([{ role: "assistant", content: result.aiMessage }]);
+        if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
+        if (result.progress) setProgress(result.progress);
+        if (result.isComplete) setChatComplete(true);
+
+        queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
+        queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
+      } catch {
+        setMessages([{
+          role: "assistant",
+          content: "Olá! Sou o especialista de intake do NexOS AI. Vou coletar informações sobre seu produto através de uma conversa natural.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
+        }]);
+      } finally {
+        setSending(false);
+        setTimeout(() => inputRef.current?.focus(), 200);
+      }
+    };
+
+    void autoTrigger();
   }, [isLoading, campaignId, data]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
-  // ── Send message via conversational AI ────────────────────────────────────────
+  // ── Send message ──────────────────────────────────────────────────────────────
   const handleSend = async () => {
     if (!inputValue.trim() || sending) return;
     const userMsg = inputValue.trim();
@@ -144,7 +185,8 @@ export default function CampaignIntake() {
       };
 
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage }]);
-      setFormData(result.intakeData as Record<string, string>);
+      if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
+      if (result.progress != null) setProgress(result.progress);
       if (result.isComplete) setChatComplete(true);
 
       queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
@@ -169,7 +211,7 @@ export default function CampaignIntake() {
         const body = await res.json() as { error?: string };
         throw new Error(body.error ?? "Erro ao finalizar");
       }
-      toast.success("Intake finalizado! Campanha pronta para execução.");
+      toast.success("Intake finalizado! A IA está montando sua estratégia.");
       setLocation(`/campaigns/${campaignId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao finalizar intake");
@@ -178,49 +220,50 @@ export default function CampaignIntake() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && messages.length === 0) {
     return (
       <div className="space-y-6 max-w-4xl mx-auto">
         <Skeleton className="h-8 w-64 bg-muted/20" />
-        <Skeleton className="h-96 w-full bg-muted/20" />
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Inicializando IA de Intake...</p>
+        </div>
       </div>
     );
   }
 
-  const completeness = data?.completeness ?? 0;
-  const progress = typeof completeness === "number" ? completeness : (completeness as { progress?: number })?.progress ?? 0;
-  const isComplete = typeof completeness === "object" && (completeness as { valid?: boolean })?.valid;
+  const isComplete = typeof data?.completeness === "object" && (data?.completeness as { valid?: boolean })?.valid;
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-4 md:space-y-5 max-w-5xl mx-auto">
       {/* ── Header ── */}
       <div className="border-b border-border/50 pb-4">
         <Link href={`/campaigns/${campaignId}`}>
           <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3 mr-2" />Retornar à Missão
+            <ArrowLeft className="h-3 w-3 mr-2" />Retornar à Campanha
           </Button>
         </Link>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-              Briefing Estratégico
-            </h1>
-            <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-widest">
-              A IA aprende sobre seu produto em conversa natural
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+              <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
+                Briefing Estratégico
+              </h1>
+            </div>
+            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
+              A IA aprende sobre seu produto em conversa natural e extrai os dados automaticamente
             </p>
           </div>
           <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
             <div className="flex justify-between items-center">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Completude</span>
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Completude</span>
               <span className="font-mono text-[10px] font-bold text-primary">{progress}%</span>
             </div>
-            <Progress
-              value={progress}
-              className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]"
-            />
+            <Progress value={progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
             {scoreData && (
               <div className="flex justify-between items-center pt-1 border-t border-border/30">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Score IA</span>
+                <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Score IA</span>
                 <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-success/30 text-success bg-success/10">
                   {scoreData.score} · {scoreData.label}
                 </Badge>
@@ -236,15 +279,9 @@ export default function CampaignIntake() {
           { id: "chat" as const, label: "Chat com IA", icon: MessageSquare },
           { id: "form" as const, label: "Formulário", icon: LayoutList },
         ].map((v) => (
-          <button
-            key={v.id}
-            onClick={() => setView(v.id)}
+          <button key={v.id} onClick={() => setView(v.id)}
             className={`flex items-center gap-2 px-3 md:px-4 py-2 text-[10px] md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
-              ${view === v.id
-                ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-              }`}
-          >
+              ${view === v.id ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
             <v.icon className="h-3.5 w-3.5" />{v.label}
           </button>
         ))}
@@ -253,18 +290,37 @@ export default function CampaignIntake() {
       {/* ════════════════ CHAT VIEW ════════════════ */}
       {view === "chat" && (
         <div className="flex flex-col" style={{ height: "calc(100vh - 22rem)" }}>
+          {/* Info bar */}
           <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2 shrink-0">
-            <Database className="h-3.5 w-3.5 text-primary" />
+            <Database className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-              Dados extraídos automaticamente da conversa e salvos em tempo real
+              Dados extraídos automaticamente e salvos em tempo real · IA iniciada automaticamente
             </span>
           </div>
 
-          {/* Chat messages */}
+          {/* Messages */}
           <div className="flex-1 overflow-y-auto space-y-3 p-4 border-x border-border/50">
+            {/* Initial loading state while AI triggers */}
+            {messages.length === 0 && sending && (
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
+                  <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                </div>
+                <div className="bg-card/80 border border-border/50 px-4 py-3 rounded-sm">
+                  <div className="flex gap-1 items-center mb-1">
+                    {[0, 150, 300].map((delay) => (
+                      <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">IA inicializando sessão de intake...</span>
+                </div>
+              </div>
+            )}
+
             {messages.map((msg, i) => <ChatBubble key={i} msg={msg} />)}
 
-            {sending && (
+            {/* Sending indicator (after initial) */}
+            {sending && messages.length > 0 && (
               <div className="flex gap-3">
                 <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
                   <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
@@ -288,14 +344,10 @@ export default function CampaignIntake() {
                     Briefing completo! A IA tem tudo que precisa.
                   </span>
                 </div>
-                <Button
-                  onClick={() => void handleFinalize()}
-                  disabled={finalizing}
-                  className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
-                >
-                  {finalizing
-                    ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
-                    : <><ChevronRight className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
+                <Button onClick={() => void handleFinalize()} disabled={finalizing}
+                  className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11">
+                  {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
+                    : <><Zap className="h-4 w-4" />Finalizar e Iniciar Análise Estratégica</>}
                 </Button>
               </div>
             )}
@@ -310,36 +362,27 @@ export default function CampaignIntake() {
                   ref={inputRef}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); }
-                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
                   placeholder="Responda aqui… (Enter para enviar, Shift+Enter para nova linha)"
                   disabled={sending}
                   rows={2}
                   className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
                 />
-                <Button
-                  onClick={() => void handleSend()}
-                  disabled={sending || !inputValue.trim()}
-                  className="font-mono rounded-none h-[66px] px-4 btn-weapon-primary shrink-0"
-                >
+                <Button onClick={() => void handleSend()} disabled={sending || !inputValue.trim()}
+                  className="font-mono rounded-none h-[66px] px-4 btn-weapon-primary shrink-0">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Finalize button (when chat complete but not yet submitted) */}
+          {/* Finalize button (when intake is complete but chat didn't flag it) */}
           {isComplete && !chatComplete && (
-            <div className="pt-3 shrink-0">
-              <Button
-                onClick={() => void handleFinalize()}
-                disabled={finalizing}
-                className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
-              >
-                {finalizing
-                  ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
-                  : <><ChevronRight className="h-4 w-4" />Finalizar Briefing e Iniciar Estratégia</>}
+            <div className="pt-3 border-t border-border/50 shrink-0">
+              <Button onClick={() => void handleFinalize()} disabled={finalizing}
+                className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11">
+                {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
+                  : <><ChevronRight className="h-4 w-4" />Briefing Completo — Iniciar Estratégia</>}
               </Button>
             </div>
           )}
@@ -352,33 +395,29 @@ export default function CampaignIntake() {
           <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2">
             <Database className="h-3.5 w-3.5 text-primary" />
             <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-              Edite campos individuais — os dados do chat já foram sincronizados
+              Edite campos individuais — sincronizados com o chat em tempo real
             </span>
           </div>
 
-          <div className="border border-border/50 bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-6">
+          <div className="border border-border/50 bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-5">
             {data?.questions?.map((q) => {
               const placeholder = (q as unknown as { placeholder?: string }).placeholder ?? "Insira os dados...";
               return (
-                <div key={q.key} className="space-y-2 group">
-                  <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
+                <div key={q.key} className="space-y-1.5 group">
+                  <label className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
                     <span className="w-1 h-1 rounded-full bg-muted-foreground/30 group-focus-within:bg-primary transition-all" />
                     {q.label} {q.required && <span className="text-primary">*</span>}
                   </label>
                   {q.type === "textarea" ? (
-                    <textarea
-                      value={formData[q.key] ?? ""}
+                    <textarea value={formData[q.key] ?? ""}
                       onChange={(e) => setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
-                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm min-h-[100px] p-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all"
-                      placeholder={placeholder}
-                    />
+                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm min-h-[90px] p-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all"
+                      placeholder={placeholder} />
                   ) : (
-                    <input
-                      value={formData[q.key] ?? ""}
+                    <input value={formData[q.key] ?? ""}
                       onChange={(e) => setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
-                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm h-11 px-3 text-foreground placeholder:text-muted-foreground/50 transition-all"
-                      placeholder={placeholder}
-                    />
+                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm h-10 px-3 text-foreground placeholder:text-muted-foreground/50 transition-all"
+                      placeholder={placeholder} />
                   )}
                 </div>
               );
@@ -386,23 +425,17 @@ export default function CampaignIntake() {
           </div>
 
           <div className="flex flex-col md:flex-row gap-3">
-            <Button
-              variant="outline"
+            <Button variant="outline"
               onClick={() => saveMutation.mutate({ campaignId, data: { intakeData: formData } })}
               disabled={saveMutation.isPending}
-              className="font-mono uppercase tracking-widest rounded-none border-border/50 h-11 text-xs"
-            >
+              className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 text-xs">
               {saveMutation.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
             {isComplete && (
-              <Button
-                onClick={() => void handleFinalize()}
-                disabled={finalizing}
-                className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
-              >
-                {finalizing
-                  ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
-                  : <><ChevronRight className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
+              <Button onClick={() => void handleFinalize()} disabled={finalizing}
+                className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
+                {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
+                  : <><Zap className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
               </Button>
             )}
           </div>

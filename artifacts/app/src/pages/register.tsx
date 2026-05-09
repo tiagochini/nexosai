@@ -40,7 +40,7 @@ export default function Register() {
       <div className="w-full max-w-md relative z-10 animate-in fade-in blur-in duration-1000">
         <div className="flex flex-col items-center mb-8 relative">
           <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full w-32 h-32 m-auto"></div>
-          <img src={nexosLogo} alt="NexOS AI" className="h-32 w-32 object-contain mb-2 relative z-10" style={{ imageRendering: "crisp-edges", filter: "drop-shadow(0 0 15px hsl(var(--primary)/0.5))" }} />
+          <img src={nexosLogo} alt="NexOS AI" className="h-40 w-40 md:h-48 md:w-48 object-contain mb-2 relative z-10" style={{ imageRendering: "crisp-edges", filter: "drop-shadow(0 0 20px hsl(var(--primary)/0.6))" }} />
           <p className="text-primary text-sm uppercase tracking-[0.3em] font-mono mt-4 font-bold drop-shadow-[0_0_5px_hsl(var(--primary)/0.8)]">Novo Registro</p>
         </div>
 

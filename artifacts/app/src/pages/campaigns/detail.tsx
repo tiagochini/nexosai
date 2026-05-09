@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetCampaign,
@@ -5,29 +6,68 @@ import {
   CampaignExecuteInputPhase,
   getGetCampaignQueryKey,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import {
-  ArrowLeft, Play, FileText, FileSpreadsheet,
-  CheckCircle2, Clock, AlertCircle, Loader2, ChevronRight,
-} from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import {
+  ArrowLeft, Play, FileText, FileSpreadsheet, CheckCircle2,
+  Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
+  ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
+  AlertTriangle, Activity, Target, DollarSign, Users,
+} from "lucide-react";
 
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface AgentRun {
+  id: string;
+  agentRole: string;
+  status: string;
+  startedAt: string;
+  completedAt?: string;
+  tokensUsed?: number;
+  costUsd?: string;
+  errorMessage?: string;
+}
+interface Checkpoint {
+  id: string;
+  type: string;
+  status: string;
+  data: Record<string, unknown>;
+  createdAt: string;
+}
+interface ContentPiece {
+  id: string;
+  type: string;
+  platform?: string;
+  launchPhase?: string;
+  mentalTrigger?: string;
+  content: string;
+  status: string;
+  createdAt: string;
+}
+interface MetricAlert { id: string; title: string; severity: string; description: string; recommendation: string; }
+interface MetricsSummary {
+  healthScore: number;
+  grade: string;
+  summary: string;
+  totalRevenueBrl?: number;
+  avgRoas?: number;
+  avgCplBrl?: number;
+  totalSales?: number;
+  alertCount?: number;
+  history?: { dayIndex: number; revenueBrl: string; roas: string; cplBrl: string; healthScore: number }[];
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────────
 const STATUS_LABEL: Record<string, string> = {
-  draft: "Rascunho",
-  intake: "Intake em Andamento",
-  analyzing: "Analisando",
-  strategy_ready: "Estratégia Pronta",
-  generating: "Gerando Conteúdo",
-  awaiting_approval: "Aguardando Aprovação",
-  approved: "Aprovado",
-  executing: "Em Execução",
-  live: "Ao Vivo",
-  completed: "Concluído",
+  draft: "Rascunho", intake: "Intake", analyzing: "Analisando",
+  strategy_ready: "Estratégia Pronta", generating: "Gerando Conteúdo",
+  awaiting_approval: "Aguardando Aprovação", approved: "Aprovado",
+  executing: "Em Execução", live: "Ao Vivo", completed: "Concluído",
 };
-
 const STATUS_COLOR: Record<string, string> = {
   live: "text-success border-success/40 bg-success/10",
   executing: "text-primary border-primary/40 bg-primary/10",
@@ -40,59 +80,79 @@ const STATUS_COLOR: Record<string, string> = {
   draft: "text-muted-foreground border-border bg-muted/20",
   intake: "text-blue-400 border-blue-400/40 bg-blue-400/10",
 };
-
-// Next action definition per status
-interface NextAction {
-  label: string;
-  phase?: CampaignExecuteInputPhase;
-  href?: string;
-  description: string;
-}
-
-function getNextAction(status: string, campaignId: string): NextAction | null {
-  switch (status) {
-    case "draft":
-      return { label: "Iniciar Intake", href: `/campaigns/${campaignId}/intake`, description: "Preencha o briefing da campanha para liberar a IA." };
-    case "intake":
-      return { label: "Iniciar Intake", href: `/campaigns/${campaignId}/intake`, description: "Continue preenchendo o briefing para finalizar." };
-    case "strategy_ready":
-      return { phase: "content", label: "Gerar Conteúdo", description: "A estratégia está pronta. Inicie a geração de conteúdo." };
-    case "awaiting_approval":
-      return { label: "Ver Conteúdo para Aprovação", href: `/campaigns/${campaignId}/intake`, description: "Revise e aprove o conteúdo gerado pela IA." };
-    case "approved":
-      return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
-    case "executing":
-      return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
-    default:
-      return null;
-  }
-}
-
-// Timeline step for visualizing where the campaign is
-const PIPELINE: { id: string; label: string; statuses: string[] }[] = [
-  { id: "intake",    label: "01 · Briefing",   statuses: ["draft", "intake"] },
-  { id: "strategy",  label: "02 · Estratégia", statuses: ["analyzing", "strategy_ready"] },
-  { id: "content",   label: "03 · Conteúdo",   statuses: ["generating", "awaiting_approval", "approved"] },
-  { id: "launch",    label: "04 · Lançamento", statuses: ["executing", "live"] },
-  { id: "monitor",   label: "05 · Monitor",    statuses: ["completed"] },
+const AGENT_ROLE_LABEL: Record<string, string> = {
+  strategy: "Estrategista", command: "Comandante", copywriter: "Copywriter",
+  creative: "Diretor Criativo", analytics: "Analista", compliance: "Compliance",
+  profile_builder: "Profile Builder", intake: "Intake AI",
+};
+const ACTIVE_STATUSES = ["analyzing", "generating", "executing"];
+const PIPELINE = [
+  { id: "intake", label: "01 · Briefing", statuses: ["draft", "intake"] },
+  { id: "strategy", label: "02 · Estratégia", statuses: ["analyzing", "strategy_ready"] },
+  { id: "content", label: "03 · Conteúdo", statuses: ["generating", "awaiting_approval", "approved"] },
+  { id: "launch", label: "04 · Lançamento", statuses: ["executing", "live"] },
+  { id: "monitor", label: "05 · Monitor", statuses: ["completed"] },
 ];
 
 function getPipelineState(status: string, stepStatuses: string[]): "done" | "active" | "pending" {
-  const stepOrder = PIPELINE.map((s) => s.statuses).flat();
-  const currentIdx = stepOrder.indexOf(status);
-  const stepFirstIdx = Math.min(...stepStatuses.map((s) => stepOrder.indexOf(s)));
-  const stepLastIdx  = Math.max(...stepStatuses.map((s) => stepOrder.indexOf(s)));
-
-  if (currentIdx > stepLastIdx) return "done";
-  if (currentIdx >= stepFirstIdx && currentIdx <= stepLastIdx) return "active";
+  const order = PIPELINE.map((s) => s.statuses).flat();
+  const cur = order.indexOf(status);
+  const first = Math.min(...stepStatuses.map((s) => order.indexOf(s)));
+  const last = Math.max(...stepStatuses.map((s) => order.indexOf(s)));
+  if (cur > last) return "done";
+  if (cur >= first && cur <= last) return "active";
   return "pending";
 }
 
+// ── Mini components ────────────────────────────────────────────────────────────
+function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <Icon className="h-4 w-4 text-primary" />
+      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function StatusDot({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    completed: "bg-success", running: "bg-primary animate-pulse",
+    pending: "bg-yellow-400 animate-pulse", failed: "bg-destructive",
+    draft: "bg-muted-foreground", approved: "bg-success", rejected: "bg-destructive",
+    awaiting_review: "bg-yellow-400",
+  };
+  return <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${colors[status] ?? "bg-muted-foreground"}`} />;
+}
+
+function KpiCard({ label, value, sub, icon: Icon, color = "primary" }: {
+  label: string; value: string; sub?: string;
+  icon: React.ElementType; color?: "primary" | "success" | "yellow" | "cyan";
+}) {
+  const colorMap = {
+    primary: "text-primary border-primary/20 bg-primary/5",
+    success: "text-success border-success/20 bg-success/5",
+    yellow: "text-yellow-400 border-yellow-400/20 bg-yellow-400/5",
+    cyan: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5",
+  };
+  return (
+    <div className={`border p-4 ${colorMap[color]}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="font-mono text-[9px] uppercase tracking-widest opacity-70">{label}</span>
+      </div>
+      <div className="font-mono font-bold text-xl">{value}</div>
+      {sub && <div className="font-mono text-[10px] opacity-60 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function CampaignDetail() {
-  const [match, params] = useRoute("/campaigns/:id");
+  const [, params] = useRoute("/campaigns/:id");
   const campaignId = params?.id || "";
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas">("comando");
 
   const { data, isLoading } = useGetCampaign(campaignId, {
     query: {
@@ -101,29 +161,135 @@ export default function CampaignDetail() {
     },
   });
 
+  const campaign = data?.campaign;
+  const isActive = ACTIVE_STATUSES.includes(campaign?.status ?? "");
+  const refetchInterval = isActive ? 5000 : false;
+
+  // Auto-redirect draft/intake campaigns to intake chat immediately
+  useEffect(() => {
+    if (!campaign) return;
+    if (campaign.status === "draft" || campaign.status === "intake") {
+      setLocation(`/campaigns/${campaignId}/intake`);
+    }
+  }, [campaign?.status, campaignId, setLocation, campaign]);
+
+  // ── Agents query ──────────────────────────────────────────────────────────────
+  const { data: agentsData, isLoading: agentsLoading } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/agents`],
+    enabled: !!campaignId && activeTab === "agentes",
+    refetchInterval: isActive ? 5000 : false,
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/agents`);
+      if (!res.ok) return { agents: [], checkpoints: [] };
+      return res.json() as Promise<{ agents: AgentRun[]; checkpoints: Checkpoint[] }>;
+    },
+  });
+
+  // ── Content query ──────────────────────────────────────────────────────────────
+  const { data: contentData, isLoading: contentLoading } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/content`],
+    enabled: !!campaignId && activeTab === "conteudo",
+    refetchInterval: isActive ? 5000 : false,
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
+      if (!res.ok) return { pieces: [] };
+      return res.json() as Promise<{ pieces: ContentPiece[] }>;
+    },
+  });
+
+  // ── Metrics query ──────────────────────────────────────────────────────────────
+  const { data: metricsData, isLoading: metricsLoading } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/metrics/summary`],
+    enabled: !!campaignId && activeTab === "metricas",
+    refetchInterval: isActive ? 10000 : false,
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/metrics/summary`);
+      if (!res.ok) return null;
+      return res.json() as Promise<MetricsSummary>;
+    },
+  });
+
+  // ── Alerts query ──────────────────────────────────────────────────────────────
+  const { data: alertsData } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/alerts`],
+    enabled: !!campaignId && activeTab === "metricas",
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/alerts`);
+      if (!res.ok) return { alerts: [] };
+      return res.json() as Promise<{ alerts: MetricAlert[] }>;
+    },
+  });
+
+  // ── Execute campaign phase ─────────────────────────────────────────────────────
   const executeMutation = useExecuteCampaign({
     mutation: {
       onSuccess: () => {
-        toast.success("Fase iniciada com sucesso.");
+        toast.success("Fase iniciada. A IA está em execução.");
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
       onError: (err: unknown) => {
         const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-        toast.error(msg ?? "Falha ao iniciar fase. Verifique o status da campanha.");
+        toast.error(msg ?? "Falha ao iniciar fase.");
       },
     },
   });
 
+  // ── Approve/reject content ─────────────────────────────────────────────────────
+  const [contentActionLoading, setContentActionLoading] = useState<string | null>(null);
+  const handleContentAction = async (pieceId: string, action: "approve" | "reject") => {
+    setContentActionLoading(pieceId);
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${pieceId}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: "" }),
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro");
+      }
+      toast.success(action === "approve" ? "Conteúdo aprovado." : "Conteúdo rejeitado.");
+      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao processar ação");
+    } finally {
+      setContentActionLoading(null);
+    }
+  };
+
+  // ── Approve checkpoint ────────────────────────────────────────────────────────
+  const [checkpointLoading, setCheckpointLoading] = useState<string | null>(null);
+  const handleCheckpointApprove = async (checkpointId: string) => {
+    setCheckpointLoading(checkpointId);
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkpointId, approved: true }),
+      });
+      if (!res.ok) throw new Error("Erro");
+      toast.success("Checkpoint aprovado.");
+      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/agents`] });
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+    } catch {
+      toast.error("Erro ao aprovar checkpoint.");
+    } finally {
+      setCheckpointLoading(null);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 max-w-5xl mx-auto">
         <Skeleton className="h-8 w-64 bg-muted/20" />
+        <Skeleton className="h-32 w-full bg-muted/20" />
         <Skeleton className="h-64 w-full bg-muted/20" />
       </div>
     );
   }
 
-  if (!data?.campaign) {
+  if (!campaign) {
     return (
       <div className="p-16 text-center uppercase font-mono text-muted-foreground tracking-widest">
         Campanha não encontrada no registro
@@ -131,187 +297,502 @@ export default function CampaignDetail() {
     );
   }
 
-  const { campaign } = data;
-  const nextAction = getNextAction(campaign.status, campaignId);
+  // While redirecting draft/intake campaigns, show a minimal loading state
+  if (campaign.status === "draft" || campaign.status === "intake") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest">
+          Iniciando sessão com a IA de Intake...
+        </p>
+      </div>
+    );
+  }
 
-  const handleExecute = (phase: CampaignExecuteInputPhase) => {
-    executeMutation.mutate({ campaignId, data: { phase } });
+  const campaignRaw = campaign as unknown as Record<string, unknown>;
+  const intakeD = ((campaignRaw["intakeData"] ?? {}) as Record<string, unknown>);
+  const strategyD = ((campaignRaw["strategyData"] ?? {}) as Record<string, unknown>);
+  const offerD = ((campaignRaw["offerData"] ?? {}) as Record<string, unknown>);
+  const audienceD = ((campaignRaw["audienceData"] ?? {}) as Record<string, unknown>);
+  const targetingD = ((campaignRaw["targetingData"] ?? {}) as Record<string, unknown>);
+  const timelineD = ((campaignRaw["timelineData"] ?? {}) as Record<string, unknown>);
+
+  const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string } | null => {
+    switch (campaign.status) {
+      case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia aprovada. Inicie a geração de conteúdo com IA." };
+      case "awaiting_approval": return { href: undefined, label: "Aprovar Conteúdo", description: "Revise e aprove o conteúdo na aba Conteúdo abaixo.", phase: undefined };
+      case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
+      case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
+      default: return null;
+    }
   };
+  const nextAction = getNextAction();
+
+  const TABS = [
+    { id: "comando" as const, label: "Comando", icon: Zap },
+    { id: "agentes" as const, label: "Agentes", icon: Bot },
+    { id: "estrategia" as const, label: "Estratégia", icon: Target },
+    { id: "conteudo" as const, label: "Conteúdo", icon: Layers },
+    { id: "metricas" as const, label: "Métricas", icon: BarChart3 },
+  ];
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
       {/* ── Header ── */}
-      <div className="border-b border-border/50 pb-5">
-        <Link href="/">
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-4 -ml-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3 mr-2" />
-            Retornar ao Radar
+      <div className="border-b border-border/50 pb-4">
+        <Link href="/campaigns">
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-3 w-3 mr-2" />Retornar ao Radar
           </Button>
         </Link>
-
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              <h1 className="text-2xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground break-all">
+            <div className="flex flex-wrap items-center gap-3 mb-2">
+              <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground break-all">
                 {campaign.title}
               </h1>
-              <Badge
-                variant="outline"
-                className={`font-mono uppercase text-[10px] tracking-widest rounded-none px-3 py-1 border shrink-0 ${STATUS_COLOR[campaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}
-              >
+              <Badge variant="outline" className={`font-mono uppercase text-[9px] tracking-widest rounded-none px-2 py-1 border shrink-0 ${STATUS_COLOR[campaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
                 {STATUS_LABEL[campaign.status] ?? campaign.status}
               </Badge>
             </div>
-            <div className="flex flex-wrap gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-              <span className="bg-card px-3 py-1 border border-border/50">TIPO: {campaign.type}</span>
-              <span className="bg-card px-3 py-1 border border-border/50">ALVO: <span className="text-primary">{campaign.track}</span></span>
-              {campaign.revenueTarget && (
-                <span className="bg-card px-3 py-1 border border-border/50">META: R$ {campaign.revenueTarget}</span>
-              )}
+            <div className="flex flex-wrap gap-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+              <span className="bg-card px-2 py-1 border border-border/50">{campaign.type}</span>
+              <span className="bg-card px-2 py-1 border border-border/50">Track: <span className="text-primary">{campaign.track}</span></span>
+              {campaign.revenueTarget && <span className="bg-card px-2 py-1 border border-border/50 text-success">Meta: R$ {Number(campaign.revenueTarget).toLocaleString("pt-BR")}</span>}
+              {isActive && <span className="bg-primary/10 px-2 py-1 border border-primary/30 text-primary animate-pulse">IA em execução</span>}
             </div>
           </div>
-
           <div className="flex flex-wrap gap-2 shrink-0">
             <Link href={`/campaigns/${campaign.id}/intake`}>
-              <Button variant="outline" className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 hover:text-primary transition-all h-10 px-4 text-xs">
-                <FileText className="h-4 w-4" />
-                Briefing
+              <Button variant="outline" className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-[10px]">
+                <FileText className="h-3.5 w-3.5" />Briefing
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/sequences")}
-              className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 hover:text-primary transition-all h-10 px-4 text-xs"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Sequências
+            <Button variant="outline" onClick={() => setLocation("/sequences")} className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-[10px]">
+              <FileSpreadsheet className="h-3.5 w-3.5" />Sequências
             </Button>
           </div>
         </div>
       </div>
 
-      {/* ── Pipeline progress ── */}
-      <div className="border border-border/50 bg-card/40 p-4 md:p-6 relative overflow-hidden">
-        <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
-          Pipeline de Execução
-        </div>
+      {/* ── Pipeline ── */}
+      <div className="border border-border/50 bg-card/40 p-4 relative overflow-hidden">
+        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Pipeline de Execução</div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-0 md:items-center relative">
-          {/* Connecting line desktop */}
-          <div className="hidden md:block absolute top-5 left-0 right-0 h-px bg-border/40 z-0" />
-
+          <div className="hidden md:block absolute top-4 left-0 right-0 h-px bg-border/40 z-0" />
           {PIPELINE.map((step, idx) => {
             const state = getPipelineState(campaign.status, step.statuses);
             return (
               <div key={step.id} className="flex md:flex-col md:flex-1 items-center md:items-center gap-3 md:gap-2 relative z-10">
-                {/* Mobile connector */}
-                {idx > 0 && <div className="md:hidden w-px h-4 bg-border/40 ml-4" />}
-
-                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full border-2 flex items-center justify-center shrink-0 transition-all
-                  ${state === "done"   ? "border-success bg-success/20" :
-                    state === "active" ? "border-primary bg-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.4)]" :
-                                         "border-border/50 bg-muted/10"
-                  }`}
-                >
-                  {state === "done"   ? <CheckCircle2 className="h-4 w-4 text-success" /> :
-                   state === "active" ? <Loader2 className="h-4 w-4 text-primary animate-spin" /> :
-                                        <Clock className="h-4 w-4 text-muted-foreground/40" />}
+                {idx > 0 && <div className="md:hidden w-px h-3 bg-border/40 ml-4" />}
+                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all
+                  ${state === "done" ? "border-success bg-success/20" : state === "active" ? "border-primary bg-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "border-border/50 bg-muted/10"}`}>
+                  {state === "done" ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> :
+                   state === "active" ? <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" /> :
+                   <Clock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                 </div>
-                <span className={`text-[9px] md:text-[10px] font-mono uppercase tracking-widest md:text-center
-                  ${state === "done"   ? "text-success" :
-                    state === "active" ? "text-primary" :
-                                         "text-muted-foreground/50"
-                  }`}
-                >
-                  {step.label}
-                </span>
+                <span className={`text-[9px] font-mono uppercase tracking-widest md:text-center ${state === "done" ? "text-success" : state === "active" ? "text-primary" : "text-muted-foreground/40"}`}>{step.label}</span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* ── Next action card ── */}
-      {nextAction ? (
-        <div className="border border-primary/30 bg-card/40 p-5 md:p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-primary" />
-          <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-primary" />
-          <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-primary" />
-          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary" />
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm overflow-x-auto">
+        {TABS.map((tab) => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-[10px] font-mono uppercase tracking-widest transition-all rounded-sm whitespace-nowrap shrink-0
+              ${activeTab === tab.id ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
+            <tab.icon className="h-3 w-3" />{tab.label}
+          </button>
+        ))}
+      </div>
 
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="space-y-1">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                Próxima Ação
+      {/* ══════════════ COMANDO TAB ══════════════ */}
+      {activeTab === "comando" && (
+        <div className="space-y-4">
+          {/* Next action */}
+          {nextAction ? (
+            <div className="border border-primary/30 bg-card/40 p-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-primary" />
+              <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-primary" />
+              <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-primary" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary" />
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <div className="text-[9px] font-mono uppercase tracking-widest text-primary flex items-center gap-2 mb-1">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />Próxima Ação
+                  </div>
+                  <h3 className="font-mono font-bold text-lg text-foreground uppercase tracking-wide">{nextAction.label}</h3>
+                  <p className="text-xs text-muted-foreground font-mono mt-1">{nextAction.description}</p>
+                </div>
+                {nextAction.phase ? (
+                  <Button
+                    className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto"
+                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: nextAction.phase! } })}
+                    disabled={executeMutation.isPending}
+                  >
+                    {executeMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Processando...</> : <><Play className="h-4 w-4 fill-current" />{nextAction.label}</>}
+                  </Button>
+                ) : nextAction.label === "Aprovar Conteúdo" ? (
+                  <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto" onClick={() => setActiveTab("conteudo")}>
+                    <Layers className="h-4 w-4" />Ver Conteúdo
+                  </Button>
+                ) : null}
               </div>
-              <h3 className="font-mono font-bold text-lg text-foreground uppercase tracking-wide">{nextAction.label}</h3>
-              <p className="text-xs text-muted-foreground font-mono">{nextAction.description}</p>
             </div>
+          ) : (
+            <div className="border border-border/50 bg-card/40 p-5 flex items-center gap-4">
+              {campaign.status === "live" || campaign.status === "executing" ? (
+                <><div className="w-3 h-3 rounded-full bg-success animate-pulse shadow-[0_0_10px_hsl(var(--success))]" />
+                <div><div className="font-mono font-bold text-success uppercase tracking-widest">Campanha Ao Vivo</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Monitorando em tempo real</div></div></>
+              ) : campaign.status === "completed" ? (
+                <><CheckCircle2 className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div><div className="font-mono font-bold text-muted-foreground uppercase tracking-widest">Campanha Concluída</div>
+                  <div className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">Todos os dados disponíveis em Métricas</div></div></>
+              ) : (
+                <><AlertCircle className="h-5 w-5 text-yellow-400 shrink-0" />
+                <div><div className="font-mono font-bold text-yellow-400 uppercase tracking-widest">Aguardando ação</div></div></>
+              )}
+            </div>
+          )}
 
-            {nextAction.href ? (
-              <Link href={nextAction.href}>
-                <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto">
-                  <ChevronRight className="h-4 w-4" />
-                  {nextAction.label}
-                </Button>
-              </Link>
-            ) : nextAction.phase ? (
-              <Button
-                className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto"
-                onClick={() => handleExecute(nextAction.phase!)}
-                disabled={executeMutation.isPending}
-              >
-                {executeMutation.isPending
-                  ? <><Loader2 className="h-4 w-4 animate-spin" />Processando...</>
-                  : <><Play className="h-4 w-4 fill-current" />{nextAction.label}</>
-                }
-              </Button>
-            ) : null}
+          {/* Quick stats from intake */}
+          {Object.keys(intakeD).filter(k => !k.startsWith("_")).length > 0 && (
+            <div className="border border-border/50 bg-card/40 p-4">
+              <SectionHeader icon={FileText} label="Dados do Briefing (Intake)" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  ["Produto", intakeD["product.name"] as string],
+                  ["Descrição", intakeD["product.description"] as string],
+                  ["Categoria", intakeD["product.category"] as string],
+                  ["Preço", intakeD["product.price"] ? `R$ ${intakeD["product.price"]}` : null],
+                  ["Público", intakeD["audience.primaryPersona"] as string],
+                  ["Formato", intakeD["product.deliveryMethod"] as string],
+                  ["Tipo de campanha", intakeD["campaign.type"] as string],
+                  ["Plataforma de vendas", intakeD["offer.salesPlatform"] as string],
+                ].filter(([, v]) => !!v).map(([k, v]) => (
+                  <div key={k as string} className="space-y-0.5">
+                    <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k}</div>
+                    <div className="text-xs font-mono text-foreground">{String(v)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Metadata */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { label: "ID", value: campaign.id.split("-")[0].toUpperCase() },
+              { label: "Criado", value: campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString("pt-BR") : "—" },
+              { label: "Atualizado", value: campaign.updatedAt ? new Date(campaign.updatedAt).toLocaleDateString("pt-BR") : "—" },
+            ].map((item) => (
+              <div key={item.label} className="border border-border/50 bg-card/30 px-4 py-3">
+                <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{item.label}</div>
+                <div className="font-mono text-sm text-foreground mt-1 font-bold">{item.value}</div>
+              </div>
+            ))}
           </div>
         </div>
-      ) : (
-        <div className="border border-border/50 bg-card/40 p-6 flex items-center gap-4">
-          {campaign.status === "live" || campaign.status === "executing" ? (
-            <>
-              <div className="w-3 h-3 rounded-full bg-success animate-pulse shadow-[0_0_10px_hsl(var(--success))]" />
-              <div>
-                <div className="font-mono font-bold text-success uppercase tracking-widest">Campanha Ao Vivo</div>
-                <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Monitorando em tempo real</div>
-              </div>
-            </>
-          ) : campaign.status === "completed" ? (
-            <>
-              <CheckCircle2 className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div>
-                <div className="font-mono font-bold text-muted-foreground uppercase tracking-widest">Campanha Concluída</div>
-                <div className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">Todos os dados disponíveis no painel de métricas</div>
-              </div>
-            </>
+      )}
+
+      {/* ══════════════ AGENTES TAB ══════════════ */}
+      {activeTab === "agentes" && (
+        <div className="space-y-4">
+          {agentsLoading ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 bg-muted/20" />)}</div>
           ) : (
             <>
-              <AlertCircle className="h-5 w-5 text-yellow-400 shrink-0" />
-              <div>
-                <div className="font-mono font-bold text-yellow-400 uppercase tracking-widest">Aguardando ação</div>
-                <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Aguardando status: {campaign.status}</div>
-              </div>
+              {/* Pending checkpoints */}
+              {(agentsData?.checkpoints ?? []).filter(c => c.status === "awaiting_review").map(cp => (
+                <div key={cp.id} className="border border-yellow-400/30 bg-yellow-400/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div>
+                    <div className="text-[9px] font-mono uppercase tracking-widest text-yellow-400 flex items-center gap-2 mb-1">
+                      <AlertTriangle className="h-3 w-3" />Aprovação Necessária
+                    </div>
+                    <div className="font-mono text-sm font-bold uppercase tracking-wide">{cp.type.replace(/_/g, " ")}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{new Date(cp.createdAt).toLocaleString("pt-BR")}</div>
+                  </div>
+                  <Button
+                    className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-4 text-xs"
+                    disabled={checkpointLoading === cp.id}
+                    onClick={() => handleCheckpointApprove(cp.id)}
+                  >
+                    {checkpointLoading === cp.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                    Aprovar
+                  </Button>
+                </div>
+              ))}
+
+              {/* Agent runs */}
+              {(agentsData?.agents ?? []).length === 0 ? (
+                <div className="py-12 text-center font-mono text-xs text-muted-foreground uppercase tracking-widest">
+                  Nenhum agente executado ainda. Execute uma fase para acionar a IA.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <SectionHeader icon={Bot} label={`${agentsData?.agents.length ?? 0} Execuções de Agente`} />
+                  {[...(agentsData?.agents ?? [])].reverse().map(agent => (
+                    <div key={agent.id} className="border border-border/50 bg-card/30 p-3 flex flex-col md:flex-row md:items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <StatusDot status={agent.status} />
+                        <div className="min-w-0">
+                          <div className="font-mono text-xs font-bold uppercase tracking-wide">{AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}</div>
+                          <div className="text-[9px] text-muted-foreground font-mono uppercase tracking-widest">
+                            {new Date(agent.startedAt).toLocaleString("pt-BR")}
+                            {agent.completedAt && ` → ${new Date(agent.completedAt).toLocaleString("pt-BR")}`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {agent.tokensUsed && <span className="text-[9px] font-mono text-muted-foreground">{agent.tokensUsed.toLocaleString()} tokens</span>}
+                        {agent.costUsd && <span className="text-[9px] font-mono text-muted-foreground">US$ {Number(agent.costUsd).toFixed(4)}</span>}
+                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${agent.status === "completed" ? "border-success/40 text-success" : agent.status === "failed" ? "border-destructive/40 text-destructive" : "border-primary/40 text-primary"}`}>
+                          {agent.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>
       )}
 
-      {/* ── Metadata ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {[
-          { label: "ID da Campanha", value: campaign.id.split("-")[0].toUpperCase() },
-          { label: "Criado em", value: campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString("pt-BR") : "—" },
-          { label: "Atualizado em", value: campaign.updatedAt ? new Date(campaign.updatedAt).toLocaleDateString("pt-BR") : "—" },
-        ].map((item) => (
-          <div key={item.label} className="border border-border/50 bg-card/30 px-4 py-3">
-            <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{item.label}</div>
-            <div className="font-mono text-sm text-foreground mt-1 font-bold">{item.value}</div>
+      {/* ══════════════ ESTRATÉGIA TAB ══════════════ */}
+      {activeTab === "estrategia" && (
+        <div className="space-y-4">
+          {Object.keys(strategyD).length === 0 && Object.keys(offerD).length === 0 ? (
+            <div className="py-12 text-center">
+              <Target className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
+                Dados de estratégia ainda não gerados. Execute a fase de análise.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Strategy data */}
+              {Object.keys(strategyD).length > 0 && (
+                <div className="border border-border/50 bg-card/40 p-4 md:col-span-2">
+                  <SectionHeader icon={Target} label="Estratégia de Lançamento" />
+                  <div className="space-y-3">
+                    {Object.entries(strategyD).slice(0, 12).map(([k, v]) => (
+                      <div key={k} className="border-l-2 border-primary/30 pl-3">
+                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
+                        <div className="text-xs font-mono text-foreground mt-0.5 leading-relaxed">
+                          {typeof v === "string" ? v : typeof v === "object" ? JSON.stringify(v, null, 2).slice(0, 200) : String(v)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Offer data */}
+              {Object.keys(offerD).length > 0 && (
+                <div className="border border-border/50 bg-card/40 p-4">
+                  <SectionHeader icon={DollarSign} label="Oferta" />
+                  <div className="space-y-2">
+                    {Object.entries(offerD).slice(0, 8).map(([k, v]) => (
+                      <div key={k}>
+                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
+                        <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 100)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Audience data */}
+              {Object.keys(audienceD).length > 0 && (
+                <div className="border border-border/50 bg-card/40 p-4">
+                  <SectionHeader icon={Users} label="Audiência" />
+                  <div className="space-y-2">
+                    {Object.entries(audienceD).slice(0, 8).map(([k, v]) => (
+                      <div key={k}>
+                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
+                        <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 100)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Timeline */}
+              {Object.keys(timelineD).length > 0 && (
+                <div className="border border-border/50 bg-card/40 p-4 md:col-span-2">
+                  <SectionHeader icon={Activity} label="Timeline" />
+                  <div className="space-y-2">
+                    {Object.entries(timelineD).slice(0, 10).map(([k, v]) => (
+                      <div key={k} className="flex gap-3">
+                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70 w-24 shrink-0">{k.replace(/_/g, " ")}</div>
+                        <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 150)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══════════════ CONTEÚDO TAB ══════════════ */}
+      {activeTab === "conteudo" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <SectionHeader icon={Layers} label={`${contentData?.pieces?.length ?? 0} Peças de Conteúdo`} />
+            {["strategy_ready", "approved"].includes(campaign.status) && (
+              <Button
+                className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-[10px]"
+                onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
+                disabled={executeMutation.isPending}
+              >
+                <Zap className="h-3 w-3" />Gerar Conteúdo
+              </Button>
+            )}
           </div>
-        ))}
-      </div>
+          {contentLoading ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-32 bg-muted/20" />)}</div>
+          ) : (contentData?.pieces ?? []).length === 0 ? (
+            <div className="py-12 text-center">
+              <Layers className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-4">Nenhuma peça de conteúdo gerada ainda.</p>
+              {campaign.status === "strategy_ready" && (
+                <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary" onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })} disabled={executeMutation.isPending}>
+                  <Play className="h-4 w-4 fill-current" />Gerar Conteúdo Agora
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(contentData?.pieces ?? []).map(piece => (
+                <div key={piece.id} className="border border-border/50 bg-card/40 p-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-primary/40 text-primary">{piece.type}</Badge>
+                    {piece.platform && <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5">{piece.platform}</Badge>}
+                    {piece.launchPhase && <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-cyan-400/40 text-cyan-400">{piece.launchPhase}</Badge>}
+                    {piece.mentalTrigger && <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-yellow-400/40 text-yellow-400">{piece.mentalTrigger}</Badge>}
+                    <div className="ml-auto">
+                      <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${piece.status === "approved" ? "border-success/40 text-success" : piece.status === "rejected" ? "border-destructive/40 text-destructive" : "border-border text-muted-foreground"}`}>
+                        {piece.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <p className="text-xs font-mono text-foreground/80 leading-relaxed whitespace-pre-wrap mb-3 line-clamp-4">{piece.content}</p>
+                  {piece.status === "draft" && (
+                    <div className="flex gap-2">
+                      <Button size="sm" className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-[10px] bg-success/20 hover:bg-success/30 text-success border border-success/30 hover:border-success/50"
+                        disabled={contentActionLoading === piece.id}
+                        onClick={() => handleContentAction(piece.id, "approve")}>
+                        {contentActionLoading === piece.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Aprovar
+                      </Button>
+                      <Button size="sm" variant="outline"
+                        className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/10"
+                        disabled={contentActionLoading === piece.id}
+                        onClick={() => handleContentAction(piece.id, "reject")}>
+                        <XCircle className="h-3 w-3" />Rejeitar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-[10px] text-muted-foreground">
+                        <Eye className="h-3 w-3" />Ver Completo
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══════════════ MÉTRICAS TAB ══════════════ */}
+      {activeTab === "metricas" && (
+        <div className="space-y-4">
+          {metricsLoading ? (
+            <div className="space-y-3">{[1,2].map(i => <Skeleton key={i} className="h-24 bg-muted/20" />)}</div>
+          ) : !metricsData ? (
+            <div className="py-12 text-center">
+              <BarChart3 className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Nenhuma métrica registrada ainda.</p>
+              <p className="font-mono text-[10px] text-muted-foreground/60 mt-2">Métricas são ingeridas automaticamente durante a fase de execução ou via POST /api/campaigns/:id/metrics</p>
+            </div>
+          ) : (
+            <>
+              {/* Health score */}
+              <div className="border border-border/50 bg-card/40 p-5">
+                <SectionHeader icon={Activity} label="Health Score da Campanha" />
+                <div className="flex flex-col md:flex-row md:items-center gap-6">
+                  <div className="text-center">
+                    <div className={`text-5xl font-mono font-bold ${metricsData.healthScore >= 70 ? "text-success" : metricsData.healthScore >= 40 ? "text-yellow-400" : "text-destructive"}`}>
+                      {metricsData.healthScore}
+                    </div>
+                    <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">/ 100 pts</div>
+                    <Badge variant="outline" className="rounded-none font-mono text-[9px] mt-2 px-3 py-0.5">Grade {metricsData.grade}</Badge>
+                  </div>
+                  <div className="flex-1">
+                    <Progress value={metricsData.healthScore} className="h-2 rounded-none bg-muted/30 [&>div]:transition-all" />
+                    <p className="text-xs font-mono text-muted-foreground mt-3 leading-relaxed">{metricsData.summary}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard label="Receita Total" value={metricsData.totalRevenueBrl ? `R$ ${Number(metricsData.totalRevenueBrl).toLocaleString("pt-BR")}` : "—"} icon={DollarSign} color="success" />
+                <KpiCard label="ROAS Médio" value={metricsData.avgRoas ? `${Number(metricsData.avgRoas).toFixed(1)}x` : "—"} icon={TrendingUp} color="primary" />
+                <KpiCard label="CPL Médio" value={metricsData.avgCplBrl ? `R$ ${Number(metricsData.avgCplBrl).toFixed(2)}` : "—"} icon={Target} color="cyan" />
+                <KpiCard label="Total Vendas" value={metricsData.totalSales?.toString() ?? "—"} icon={Activity} color="yellow" />
+              </div>
+
+              {/* Alerts */}
+              {(alertsData?.alerts ?? []).length > 0 && (
+                <div className="border border-border/50 bg-card/40 p-4 space-y-3">
+                  <SectionHeader icon={AlertTriangle} label={`${alertsData!.alerts.length} Alertas Ativos`} />
+                  {alertsData!.alerts.map(alert => (
+                    <div key={alert.id} className={`border p-3 ${alert.severity === "critical" ? "border-destructive/40 bg-destructive/5" : "border-yellow-400/30 bg-yellow-400/5"}`}>
+                      <div className="font-mono text-xs font-bold mb-1">{alert.title}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{alert.description}</div>
+                      {alert.recommendation && <div className="text-[10px] text-primary font-mono mt-1">→ {alert.recommendation}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* History */}
+              {(metricsData.history ?? []).length > 0 && (
+                <div className="border border-border/50 bg-card/40 p-4">
+                  <SectionHeader icon={TrendingUp} label="Histórico Diário" />
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px] font-mono">
+                      <thead>
+                        <tr className="border-b border-border/50 text-muted-foreground uppercase tracking-widest">
+                          <th className="text-left py-2 pr-4">Dia</th>
+                          <th className="text-right py-2 pr-4">Receita</th>
+                          <th className="text-right py-2 pr-4">ROAS</th>
+                          <th className="text-right py-2 pr-4">CPL</th>
+                          <th className="text-right py-2">Health</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {metricsData.history!.map(row => (
+                          <tr key={row.dayIndex} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                            <td className="py-2 pr-4">D{row.dayIndex}</td>
+                            <td className="py-2 pr-4 text-right text-success">R$ {Number(row.revenueBrl).toLocaleString("pt-BR")}</td>
+                            <td className="py-2 pr-4 text-right">{Number(row.roas).toFixed(1)}x</td>
+                            <td className="py-2 pr-4 text-right">R$ {Number(row.cplBrl).toFixed(2)}</td>
+                            <td className={`py-2 text-right font-bold ${row.healthScore >= 70 ? "text-success" : row.healthScore >= 40 ? "text-yellow-400" : "text-destructive"}`}>{row.healthScore}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
