@@ -4,11 +4,23 @@ import { setAuthTokenGetter } from "@workspace/api-client-react/custom-fetch";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import type { User, Workspace } from "@workspace/api-client-react";
 
+interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  creditsMonthly: number;
+  maxCampaigns: number;
+  whiteLabel: boolean;
+}
+
 interface AuthContextType {
   token: string | null;
   setToken: (token: string | null) => void;
   user: User | null;
   workspace: Workspace | null;
+  plan: Plan | null;
+  planSlug: string | null;
+  isAdmin: boolean;
   logout: () => void;
 }
 
@@ -46,13 +58,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    if (isError) {
-      logout();
-    }
+    if (isError) logout();
   }, [isError]);
 
+  // The real API returns { user, workspace, plan } even though the generated
+  // type only declares { user, workspace }. Safe to cast here.
+  const raw = meData as (typeof meData & { plan?: Plan }) | undefined;
+  const plan = raw?.plan ?? null;
+  const planSlug = plan?.slug ?? null;
+  const isAdmin = (meData?.user?.email ?? "") === "admin@nexos.ai";
+
   return (
-    <AuthContext.Provider value={{ token, setToken, user: meData?.user || null, workspace: meData?.workspace || null, logout }}>
+    <AuthContext.Provider value={{
+      token,
+      setToken,
+      user: meData?.user ?? null,
+      workspace: meData?.workspace ?? null,
+      plan,
+      planSlug,
+      isAdmin,
+      logout,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -60,8 +86,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

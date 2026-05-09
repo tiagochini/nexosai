@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
   useListCampaigns,
@@ -88,9 +88,23 @@ function useAdminOverview(enabled: boolean) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const isAdmin = user?.email === "admin@nexos.ai";
-  const [mode, setMode] = useState<DashMode>("launcher");
+  const { isAdmin, planSlug } = useAuth();
+
+  // Determine which tabs this user may see
+  const canSeeLauncher = isAdmin || planSlug === "solo" || planSlug === null;
+  const canSeeAgency   = isAdmin || planSlug === "agency";
+  const canSeeAdmin    = isAdmin;
+
+  // Default mode: admin → launcher, agency-only → agency, solo → launcher
+  const defaultMode: DashMode = canSeeAgency && !canSeeLauncher ? "agency" : "launcher";
+  const [mode, setMode] = useState<DashMode>(defaultMode);
+
+  // Sync when planSlug loads (async from /me)
+  useEffect(() => {
+    if (planSlug === null) return;           // still loading
+    if (!isAdmin && planSlug === "agency") setMode("agency");
+    else setMode("launcher");
+  }, [planSlug, isAdmin]);
 
   const { data: campaignsData, isLoading: loadingCampaigns } = useListCampaigns({
     query: { queryKey: getListCampaignsQueryKey(), enabled: mode === "launcher" },
@@ -103,20 +117,46 @@ export default function Dashboard() {
   const { data: adminData, isLoading: loadingAdmin }         = useAdminOverview(mode === "admin" && isAdmin);
 
   const tabs: { id: DashMode; label: string; icon: React.ElementType }[] = [
-    { id: "launcher", label: "Eu — Lançador", icon: Rocket },
-    { id: "agency",   label: "Agência",        icon: Building2 },
-    ...(isAdmin ? [{ id: "admin" as DashMode, label: "Admin SaaS", icon: ShieldCheck }] : []),
+    ...(canSeeLauncher ? [{ id: "launcher" as DashMode, label: "Eu — Lançador", icon: Rocket }] : []),
+    ...(canSeeAgency   ? [{ id: "agency"   as DashMode, label: "Agência",        icon: Building2 }] : []),
+    ...(canSeeAdmin    ? [{ id: "admin"    as DashMode, label: "Admin SaaS",      icon: ShieldCheck }] : []),
   ];
+
+  // While plan is still loading (null) and user has token, show skeleton
+  if (planSlug === null && !isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className="border-b border-border/50 pb-5">
+          <Skeleton className="h-9 w-64 bg-muted/20" />
+          <Skeleton className="h-4 w-48 bg-muted/20 mt-2" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 bg-muted/20" />)}
+        </div>
+      </div>
+    );
+  }
+
+  const roleBadge = isAdmin
+    ? { label: "Owner · Admin SaaS", color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" }
+    : planSlug === "agency"
+    ? { label: "Agência",            color: "text-success border-success/30 bg-success/10" }
+    : { label: "Lançador",           color: "text-primary border-primary/30 bg-primary/10" };
 
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
       <div className="flex items-center justify-between border-b border-border/50 pb-5">
         <div>
-          <h1 className="text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Painel de Controle
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-widest">
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
+              Painel de Controle
+            </h1>
+            <span className={`text-[9px] font-mono uppercase tracking-widest px-2 py-1 border rounded-sm ${roleBadge.color}`}>
+              {roleBadge.label}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
             Central operacional NexOS
           </p>
         </div>
@@ -129,27 +169,29 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── Mode tabs ── */}
-      <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm w-fit">
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          const active = mode === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setMode(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-widest transition-all rounded-sm
-                ${active
-                  ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* ── Mode tabs — only render when user has more than 1 tab ── */}
+      {tabs.length > 1 && (
+        <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm w-fit">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const active = mode === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setMode(t.id)}
+                className={`flex items-center gap-2 px-4 py-2 text-xs font-mono uppercase tracking-widest transition-all rounded-sm
+                  ${active
+                    ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ════════════════════ TAB: LANÇADOR ════════════════════ */}
       {mode === "launcher" && (
