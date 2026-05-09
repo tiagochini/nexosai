@@ -7,6 +7,7 @@ import workspacesRouter from "../modules/workspaces/workspaces.routes.js";
 import campaignsRouter from "../modules/campaigns/campaigns.routes.js";
 import intakeRouter from "../modules/intake/intake.routes.js";
 import agentsRouter from "../modules/agents/agents.routes.js";
+import contentRouter from "../modules/content/content.routes.js";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/workspaces", workspacesRouter);
 router.use("/campaigns", campaignsRouter);
 router.use("/intake", intakeRouter);
 router.use("/campaigns", agentsRouter);
+router.use("/campaigns", contentRouter);
 
 export default router;
