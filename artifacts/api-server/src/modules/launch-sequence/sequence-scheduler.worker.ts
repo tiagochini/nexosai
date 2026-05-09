@@ -4,6 +4,7 @@ import {
   db,
   launchSequenceItemsTable,
   launchSequencesTable,
+  sequenceContactsTable,
   emailDispatchesTable,
   whatsappDispatchesTable,
 } from "@workspace/db";
@@ -108,21 +109,73 @@ export async function processScheduledItems(): Promise<void> {
         }
       }
 
-      // ── WhatsApp dispatch ─────────────────────────────────────────────────
-      if (channels.includes("whatsapp") && cfg["phoneNumbers"]) {
-        const phones = cfg["phoneNumbers"] as string[];
-        if (phones.length > 0) {
+      // ── WhatsApp dispatch (segment-aware for cart phases) ────────────────
+      if (channels.includes("whatsapp")) {
+        const isCartPhase = ["cart_open", "cart_middle", "cart_close"].includes(item.phase);
+
+        if (isCartPhase) {
+          // Segment-aware: send different messages to hot/warm/cold leads
           try {
-            const waDispatch = await createWhatsAppDispatch(sequence.workspaceId, {
-              type: "broadcast",
-              recipients: phones,
-              message: buildWhatsAppMessage(item, sequence),
-            });
-            await sendWhatsAppDispatch(sequence.workspaceId, waDispatch.id);
+            const contacts = await db
+              .select({ phone: sequenceContactsTable.phone, segment: sequenceContactsTable.segment })
+              .from(sequenceContactsTable)
+              .where(
+                and(
+                  eq(sequenceContactsTable.sequenceId, item.sequenceId),
+                  inArray(sequenceContactsTable.segment, ["hot", "warm", "cold"]),
+                ),
+              );
+
+            const bySegment = { hot: [] as string[], warm: [] as string[], cold: [] as string[] };
+            for (const c of contacts) {
+              if (c.phone && (c.segment === "hot" || c.segment === "warm" || c.segment === "cold")) {
+                bySegment[c.segment].push(c.phone);
+              }
+            }
+
+            const meta = (item.metadata as Record<string, unknown>) ?? {};
+            const generatedCopy = meta["generatedCopy"] as Record<string, { whatsapp?: { message: string } }> | undefined;
+
+            for (const seg of ["hot", "warm", "cold"] as const) {
+              const phones = bySegment[seg];
+              if (phones.length === 0) continue;
+
+              const segCopy = generatedCopy?.[seg];
+              const message = segCopy?.whatsapp?.message ?? buildWhatsAppMessageForSegment(item, sequence, seg);
+
+              try {
+                const waDispatch = await createWhatsAppDispatch(sequence.workspaceId, {
+                  type: "broadcast",
+                  recipients: phones,
+                  message,
+                });
+                await sendWhatsAppDispatch(sequence.workspaceId, waDispatch.id);
+                log.info({ itemId: item.id, seg, phones: phones.length }, `WhatsApp dispatched to ${seg} segment`);
+              } catch (err) {
+                log.warn({ err, itemId: item.id, seg }, "Segment WhatsApp dispatch failed");
+              }
+            }
+
             dispatched.push("whatsapp");
-            log.info({ itemId: item.id, dispatchId: waDispatch.id }, "WhatsApp dispatched");
           } catch (err) {
-            log.warn({ err, itemId: item.id }, "WhatsApp dispatch failed — continuing");
+            log.warn({ err, itemId: item.id }, "Segment-aware WhatsApp dispatch failed — continuing");
+          }
+        } else if (cfg["phoneNumbers"]) {
+          // Standard broadcast to all configured numbers
+          const phones = cfg["phoneNumbers"] as string[];
+          if (phones.length > 0) {
+            try {
+              const waDispatch = await createWhatsAppDispatch(sequence.workspaceId, {
+                type: "broadcast",
+                recipients: phones,
+                message: buildWhatsAppMessage(item, sequence),
+              });
+              await sendWhatsAppDispatch(sequence.workspaceId, waDispatch.id);
+              dispatched.push("whatsapp");
+              log.info({ itemId: item.id, dispatchId: waDispatch.id }, "WhatsApp dispatched");
+            } catch (err) {
+              log.warn({ err, itemId: item.id }, "WhatsApp dispatch failed — continuing");
+            }
           }
         }
       }
@@ -227,6 +280,36 @@ function buildWhatsAppMessage(
     .filter(Boolean)
     .join("\n")
     .substring(0, 1000);
+}
+
+function buildWhatsAppMessageForSegment(
+  item: typeof launchSequenceItemsTable.$inferSelect,
+  sequence: { name: string; productName: string | null; productPrice: string | null },
+  segment: "hot" | "warm" | "cold",
+): string {
+  const product = sequence.productName ?? "o produto";
+  const price = sequence.productPrice ? `R$${sequence.productPrice}` : "";
+
+  const templates: Record<"hot" | "warm" | "cold", Record<string, string>> = {
+    hot: {
+      cart_open: `🔓 *Acesso VIP liberado!*\n\nVocê foi um dos primeiros a abrir todos os conteúdos — por isso quero te dar acesso especial antes de todo mundo.\n\n👉 ${product}${price ? ` por ${price}` : ""} — garanta agora:\n{{CTA_URL}}\n\n_Somente para quem acompanhou tudo do início_ ⚡`,
+      cart_middle: `⚡ *Update exclusivo para você*\n\nJá temos dezenas de alunos confirmados em ${product}.\n\nAs vagas estão indo rápido — e você que acompanhou tudo merece garantir o seu lugar.\n\n👉 {{CTA_URL}}`,
+      cart_close: `🚨 *Últimas horas — para você que acompanhou tudo*\n\nO carrinho de ${product} fecha em poucas horas.\n\nVocê viu tudo, sabe o que está em jogo. Não deixe para depois.\n\n👉 Garantir agora: {{CTA_URL}}`,
+    },
+    warm: {
+      cart_open: `🔓 *Carrinho aberto — ${product}*\n\nChegou o momento! As inscrições para ${product} estão abertas.${price ? `\n\nInvestimento: ${price}` : ""}\n\nCom garantia total de satisfação.\n\n👉 Saiba mais: {{CTA_URL}}`,
+      cart_middle: `⏰ *Ainda dá tempo!*\n\nAs vagas para ${product} ainda estão disponíveis — mas estão acabando.\n\nNão fique de fora:\n👉 {{CTA_URL}}`,
+      cart_close: `🚨 *Última chamada — ${product}*\n\nO carrinho fecha hoje. Última chance de garantir ${product}${price ? ` por ${price}` : ""}.\n\n👉 {{CTA_URL}}\n\n_Após o fechamento não haverá novas turmas em breve._`,
+    },
+    cold: {
+      cart_open: `💡 *Uma pergunta rápida...*\n\nVocê sabia que ${product} está com inscrições abertas agora?\n\nSe você ainda tem dúvida se é para você, veja o que estamos entregando:\n👉 {{CTA_URL}}`,
+      cart_middle: `🤔 *Ainda na dúvida?*\n\nEntendo. Por isso separei um depoimento de quem estava no mesmo lugar que você e decidiu entrar em ${product}.\n\nVeja aqui: {{CTA_URL}}`,
+      cart_close: `⏳ *Última chance — depois disso acabou*\n\nO carrinho de ${product} fecha em poucas horas.\n\nSe você está na dúvida, essa é a última oportunidade.\n\n👉 {{CTA_URL}}\n\n_P.S.: Temos garantia total. Sem risco para você._`,
+    },
+  };
+
+  const msg = templates[segment][item.phase] ?? buildWhatsAppMessage(item, sequence);
+  return msg.substring(0, 1000);
 }
 
 // ── BullMQ worker ─────────────────────────────────────────────────────────────

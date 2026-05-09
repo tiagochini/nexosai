@@ -15,6 +15,9 @@ import {
   getSequenceContacts,
   getSequenceAnalytics,
   recordSequenceEngagement,
+  generateItemCopy,
+  getLaunchCalendar,
+  getLaunchToday,
 } from "./launch-sequence.service.js";
 
 const router = Router();
@@ -226,6 +229,48 @@ router.post("/:id/engagement", requireAuth, async (req, res): Promise<void> => {
     parsed.data,
   );
   res.json({ recorded: true });
+});
+
+// ─── Calendar (day-by-day view) ────────────────────────────────────────────────
+
+router.get("/:id/calendar", requireAuth, async (req, res): Promise<void> => {
+  const calendar = await getLaunchCalendar(
+    req.auth.workspaceId,
+    req.params["id"] as string,
+  );
+  res.json(calendar);
+});
+
+// ─── Today (current phase + today's dispatch) ──────────────────────────────────
+
+router.get("/:id/today", requireAuth, async (req, res): Promise<void> => {
+  const status = await getLaunchToday(
+    req.auth.workspaceId,
+    req.params["id"] as string,
+  );
+  res.json(status);
+});
+
+// ─── Per-item copy generation ──────────────────────────────────────────────────
+
+const generateCopySchema = z.object({
+  contactSegment: z.enum(["hot", "warm", "cold"]).optional(),
+});
+
+router.post("/:id/items/:itemId/generate-copy", requireAuth, async (req, res): Promise<void> => {
+  const parsed = generateCopySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const copy = await generateItemCopy(
+    req.auth.workspaceId,
+    req.params["id"] as string,
+    req.params["itemId"] as string,
+    parsed.data.contactSegment,
+    req.log,
+  );
+  res.json({ copy });
 });
 
 export default router;

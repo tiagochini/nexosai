@@ -8,6 +8,8 @@ import {
 } from "@workspace/db";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { runLaunchSequenceBuilderAgent } from "../agents/launch-sequence-builder.agent.js";
+import { runItemCopyAgent } from "../agents/item-copy.agent.js";
+import { deductCredits } from "../credits/credits.service.js";
 import { getSequenceAnalytics, recordEngagementEvent } from "./sequence-analytics.service.js";
 import type { Logger } from "pino";
 
@@ -465,4 +467,322 @@ export async function recordSequenceEngagement(
   if (!existing) throw new NotFoundError("Launch sequence not found");
 
   await recordEngagementEvent({ sequenceId, workspaceId, ...params });
+}
+
+// ─── Per-item copy generation ─────────────────────────────────────────────────
+
+export async function generateItemCopy(
+  workspaceId: string,
+  sequenceId: string,
+  itemId: string,
+  contactSegment: "hot" | "warm" | "cold" | undefined,
+  log: Logger,
+) {
+  const sequence = await getLaunchSequence(workspaceId, sequenceId);
+
+  const item = sequence.items.find((i) => i.id === itemId);
+  if (!item) throw new NotFoundError("Sequence item not found");
+
+  await deductCredits(workspaceId, "nurturing_message", log);
+
+  const copy = await runItemCopyAgent(
+    workspaceId,
+    {
+      itemId: item.id,
+      phase: item.phase,
+      name: item.name,
+      description: item.description ?? null,
+      contentType: item.contentType ?? null,
+      mentalTrigger: item.mentalTrigger ?? null,
+      copyHints: item.copyHints ?? null,
+      dayIndex: item.dayIndex,
+      deliveryChannels: (item.deliveryChannels as string[]) ?? [],
+      productName: sequence.productName ?? "Produto",
+      productPrice: sequence.productPrice ?? "0",
+      revenueTarget: sequence.revenueTarget ?? "0",
+      launchModel: sequence.model,
+      contactSegment,
+    },
+    log,
+  );
+
+  // Store the generated copy in the item's metadata
+  const existingMeta = (item.metadata as Record<string, unknown>) ?? {};
+  const segKey = contactSegment ?? "all";
+  await db
+    .update(launchSequenceItemsTable)
+    .set({
+      metadata: {
+        ...existingMeta,
+        generatedCopy: {
+          ...(existingMeta["generatedCopy"] as Record<string, unknown> ?? {}),
+          [segKey]: copy,
+        },
+      },
+      status: item.status === "pending" ? "content_ready" : item.status,
+    })
+    .where(eq(launchSequenceItemsTable.id, itemId));
+
+  return copy;
+}
+
+// ─── Launch calendar (day-by-day view) ────────────────────────────────────────
+
+export interface CalendarDay {
+  dayIndex: number;
+  date: string | null;
+  phase: string;
+  phaseLabel: string;
+  items: {
+    id: string;
+    name: string;
+    contentType: string | null;
+    channels: string[];
+    mentalTrigger: string | null;
+    status: string;
+    scheduledAt: string | null;
+    hasCopy: boolean;
+  }[];
+}
+
+const PHASE_LABELS: Record<string, string> = {
+  pre_capture: "Pré-Captura",
+  capture: "Captura",
+  plc1: "PLC 1 — A Oportunidade",
+  plc2: "PLC 2 — A Transformação",
+  plc3: "PLC 3 — A Experiência",
+  cart_open: "Abertura do Carrinho",
+  cart_middle: "Meio do Carrinho",
+  cart_close: "Fechamento do Carrinho",
+  post_purchase: "Pós-Compra",
+  post_launch: "Pós-Lançamento",
+  evergreen: "Evergreen",
+};
+
+export async function getLaunchCalendar(workspaceId: string, sequenceId: string) {
+  const sequence = await getLaunchSequence(workspaceId, sequenceId);
+  const cfg = (sequence.config as Record<string, unknown>) ?? {};
+  const activatedAt = cfg["activatedAt"] ? new Date(cfg["activatedAt"] as string) : null;
+
+  // Group items by dayIndex
+  const byDay = new Map<number, typeof sequence.items>();
+  for (const item of sequence.items) {
+    const day = item.dayIndex;
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day)!.push(item);
+  }
+
+  const days: CalendarDay[] = [];
+  const sortedDays = [...byDay.keys()].sort((a, b) => a - b);
+
+  for (const dayIndex of sortedDays) {
+    const items = byDay.get(dayIndex)!;
+    const primaryPhase = items[0]?.phase ?? "evergreen";
+
+    let date: string | null = null;
+    if (activatedAt) {
+      const d = new Date(activatedAt);
+      d.setDate(d.getDate() + dayIndex);
+      date = d.toISOString().slice(0, 10);
+    }
+
+    days.push({
+      dayIndex,
+      date,
+      phase: primaryPhase,
+      phaseLabel: PHASE_LABELS[primaryPhase] ?? primaryPhase,
+      items: items.map((i) => {
+        const meta = (i.metadata as Record<string, unknown>) ?? {};
+        return {
+          id: i.id,
+          name: i.name,
+          contentType: i.contentType ?? null,
+          channels: (i.deliveryChannels as string[]) ?? [],
+          mentalTrigger: i.mentalTrigger ?? null,
+          status: i.status,
+          scheduledAt: i.scheduledAt ? new Date(i.scheduledAt).toISOString() : null,
+          hasCopy: !!meta["generatedCopy"],
+        };
+      }),
+    });
+  }
+
+  const generatedPlan = sequence.aiGeneratedPlan as Record<string, unknown>;
+  const phases = (generatedPlan?.phases ?? []) as Array<{
+    phase: string;
+    label: string;
+    startDay: number;
+    endDay: number;
+    objective: string;
+    primaryTrigger: string;
+  }>;
+  const milestones = (generatedPlan?.keyMilestones ?? []) as Array<{
+    day: number;
+    event: string;
+    importance: string;
+  }>;
+
+  return {
+    sequenceId,
+    sequenceName: sequence.name,
+    model: sequence.model,
+    totalDays: sequence.totalDays,
+    status: sequence.status,
+    activatedAt: activatedAt?.toISOString() ?? null,
+    cartOpenDate: sequence.cartOpenDate ?? null,
+    cartCloseDate: sequence.cartCloseDate ?? null,
+    phases,
+    milestones,
+    calendar: days,
+    summary: {
+      totalItems: sequence.items.length,
+      dispatched: sequence.items.filter((i) => i.status === "dispatched").length,
+      scheduled: sequence.items.filter((i) => i.status === "scheduled").length,
+      pending: sequence.items.filter((i) => i.status === "pending").length,
+      withCopy: sequence.items.filter((i) => {
+        const meta = (i.metadata as Record<string, unknown>) ?? {};
+        return !!meta["generatedCopy"];
+      }).length,
+    },
+  };
+}
+
+// ─── Today's launch status (current phase + what fires today) ─────────────────
+
+export async function getLaunchToday(workspaceId: string, sequenceId: string) {
+  const sequence = await getLaunchSequence(workspaceId, sequenceId);
+  const cfg = (sequence.config as Record<string, unknown>) ?? {};
+  const activatedAt = cfg["activatedAt"] ? new Date(cfg["activatedAt"] as string) : null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let currentDayIndex: number | null = null;
+  if (activatedAt) {
+    const activated = new Date(activatedAt);
+    activated.setHours(0, 0, 0, 0);
+    const diffMs = today.getTime() - activated.getTime();
+    currentDayIndex = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  }
+
+  // Determine which items fire today, yesterday (for context), and tomorrow
+  const todayItems = currentDayIndex !== null
+    ? sequence.items.filter((i) => i.dayIndex === currentDayIndex)
+    : [];
+  const tomorrowItems = currentDayIndex !== null
+    ? sequence.items.filter((i) => i.dayIndex === currentDayIndex + 1)
+    : [];
+  const upcomingItems = currentDayIndex !== null
+    ? sequence.items.filter((i) => i.dayIndex > (currentDayIndex ?? 0) && i.dayIndex <= (currentDayIndex ?? 0) + 7)
+    : [];
+
+  const currentPhase = todayItems[0]?.phase ?? null;
+
+  // Phase progress (0-100%)
+  const allDays = [...new Set(sequence.items.map((i) => i.dayIndex))].sort((a, b) => a - b);
+  const totalUniqueDays = allDays.length;
+  const daysElapsed = currentDayIndex !== null
+    ? allDays.filter((d) => d <= currentDayIndex).length
+    : 0;
+  const progress = totalUniqueDays > 0 ? Math.round((daysElapsed / totalUniqueDays) * 100) : 0;
+
+  // Dispatched so far
+  const dispatched = sequence.items.filter((i) => i.status === "dispatched").length;
+  const total = sequence.items.length;
+
+  // Get analytics for quick stats
+  const analytics = await getSequenceAnalytics(workspaceId, sequenceId);
+
+  return {
+    sequenceId,
+    sequenceName: sequence.name,
+    model: sequence.model,
+    status: sequence.status,
+    activatedAt: activatedAt?.toISOString() ?? null,
+    currentDayIndex,
+    currentPhase,
+    currentPhaseLabel: currentPhase ? (PHASE_LABELS[currentPhase] ?? currentPhase) : null,
+    progress,
+    today: {
+      dayIndex: currentDayIndex,
+      date: today.toISOString().slice(0, 10),
+      items: todayItems.map((i) => ({
+        id: i.id,
+        name: i.name,
+        phase: i.phase,
+        channels: (i.deliveryChannels as string[]) ?? [],
+        status: i.status,
+        mentalTrigger: i.mentalTrigger,
+        scheduledAt: i.scheduledAt ? new Date(i.scheduledAt).toISOString() : null,
+      })),
+    },
+    tomorrow: {
+      dayIndex: currentDayIndex !== null ? currentDayIndex + 1 : null,
+      items: tomorrowItems.map((i) => ({
+        id: i.id,
+        name: i.name,
+        phase: i.phase,
+        channels: (i.deliveryChannels as string[]) ?? [],
+        mentalTrigger: i.mentalTrigger,
+      })),
+    },
+    nextSevenDays: upcomingItems.slice(0, 10).map((i) => ({
+      dayIndex: i.dayIndex,
+      name: i.name,
+      phase: i.phase,
+      channels: (i.deliveryChannels as string[]) ?? [],
+    })),
+    performance: {
+      dispatched,
+      total,
+      pctComplete: total > 0 ? Math.round((dispatched / total) * 100) : 0,
+      totalContacts: analytics.totalContacts,
+      hot: analytics.segments.hot,
+      warm: analytics.segments.warm,
+      cold: analytics.segments.cold,
+      converted: analytics.segments.converted,
+      healthScore: analytics.healthScore,
+      engagementTrend: analytics.engagementTrend,
+    },
+    warnings: buildLaunchWarnings(sequence, currentDayIndex, analytics),
+  };
+}
+
+function buildLaunchWarnings(
+  sequence: { items: Array<{ status: string; dayIndex: number; metadata: unknown }> },
+  currentDayIndex: number | null,
+  analytics: { healthScore: number; totalContacts: number; segments: { hot: number } },
+): string[] {
+  const warnings: string[] = [];
+
+  if (analytics.totalContacts === 0) {
+    warnings.push("Nenhum contato na sequência. Adicione leads antes de prosseguir.");
+  }
+
+  if (analytics.healthScore < 30 && analytics.totalContacts > 0) {
+    warnings.push(`Health score baixo (${analytics.healthScore}/100). Considere revisar o conteúdo ou reforçar com WhatsApp.`);
+  }
+
+  if (currentDayIndex !== null && currentDayIndex >= 0) {
+    const dueItems = sequence.items.filter(
+      (i) => i.dayIndex <= currentDayIndex && i.status === "scheduled",
+    );
+    if (dueItems.length > 0) {
+      warnings.push(`${dueItems.length} item(s) agendado(s) que ainda não foram disparados. Verifique as integrações.`);
+    }
+  }
+
+  const withoutCopy = sequence.items.filter((i) => {
+    const meta = (i.metadata as Record<string, unknown>) ?? {};
+    return !meta["generatedCopy"] && i.status !== "dispatched";
+  }).length;
+  if (withoutCopy > 5) {
+    warnings.push(`${withoutCopy} itens sem copy gerada. Use "Gerar Copy" para cada item antes de ativar.`);
+  }
+
+  if (analytics.segments.hot === 0 && analytics.totalContacts > 10) {
+    warnings.push("Nenhum lead quente ainda. Verifique se os eventos de engajamento estão chegando corretamente.");
+  }
+
+  return warnings;
 }

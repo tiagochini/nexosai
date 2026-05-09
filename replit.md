@@ -114,6 +114,10 @@ Launch tracks by revenue target:
 - Purchase → auto-conversion: Hotmart/Kiwify/Eduzz sale webhooks auto-mark matching sequence contacts as `converted` (segment + engagementScore=100 + engagement event) via `setImmediate` after revenue event is saved.
 - Campaign → sequence auto-activation: when campaign transitions to `executing`, all linked sequences in `draft`/`scheduled` with items are auto-activated (items scheduled from now+dayIndex, status→active, config.autoActivatedAt logged).
 - `updateLaunchSequence` now handles `campaignId` and `leadCaptureEnabled` patches.
+- **Per-item copy generation**: `POST /launch-sequences/:id/items/:itemId/generate-copy` — body `{contactSegment?: "hot"|"warm"|"cold"}`. Calls Copywriter AI agent, deducts 2 credits (`nurturing_message`), stores result in `item.metadata.generatedCopy[segment]`, sets status→`content_ready`. Agent: `item-copy.agent.ts`.
+- **Launch calendar**: `GET /launch-sequences/:id/calendar` — day-by-day view. Returns days grouped by `dayIndex` with date (if activated), phase label, items, and hasCopy flag. Also returns `phases`, `milestones`, and `summary` from the AI plan.
+- **Current phase / today**: `GET /launch-sequences/:id/today` — returns `currentDayIndex`, `currentPhaseLabel`, `progress` %, `today.items`, `tomorrow.items`, `nextSevenDays`, `performance` stats, `warnings[]`. Requires sequence to be active with `config.activatedAt` set.
+- **Segment-aware cart dispatch**: Scheduler detects `cart_open`/`cart_middle`/`cart_close` phases and routes WhatsApp by segment. Queries `sequenceContactsTable` for hot/warm/cold contacts → sends segment-specific copy (from `generatedCopy[seg]` or template fallback). hot=VIP/insider angle, warm=standard urgency, cold=reactivation/curiosity.
 
 ## Pointers
 
