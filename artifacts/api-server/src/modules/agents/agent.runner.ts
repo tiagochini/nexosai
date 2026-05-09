@@ -94,6 +94,19 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   let content = "";
   let creditsCharged = 0;
 
+  // Detect provider auth errors (no API key configured) for graceful dev fallback
+  function isProviderAuthError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : String(err);
+    return (
+      msg.includes("Could not resolve authentication method") ||
+      msg.includes("API key") ||
+      msg.includes("Incorrect API key") ||
+      msg.includes("OPENAI_API_KEY") ||
+      msg.includes("ANTHROPIC_API_KEY") ||
+      msg.includes("GEMINI_API_KEY")
+    );
+  }
+
   try {
     const result = await completeWithAgent(
       agentRole,
@@ -210,6 +223,33 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
     return { agentRecord: updated, content, creditsCharged, checkpointId };
   } catch (err) {
+    // Graceful degradation when AI provider is not configured (dev environment)
+    if (isProviderAuthError(err)) {
+      log.warn({ agentRole, campaignId }, "AI provider not configured — returning mock response for dev");
+
+      content = `[DEV MODE — ${agentRole}] Resposta simulada. Configure as chaves de API (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY) para respostas reais.`;
+
+      await db
+        .update(campaignAgentsTable)
+        .set({
+          status: "completed",
+          output: { content, metadata: { mock: true, reason: "no_api_key" } },
+          completedAt: new Date(),
+          creditsUsed: 0,
+        })
+        .where(eq(campaignAgentsTable.id, agentRecord!.id));
+
+      emitAgentCompleted(campaignId, agentRole, `${agentRole} simulado (dev mode — sem API key)`);
+
+      const [updated] = await db
+        .select()
+        .from(campaignAgentsTable)
+        .where(eq(campaignAgentsTable.id, agentRecord!.id))
+        .limit(1);
+
+      return { agentRecord: updated!, content, creditsCharged: 0 };
+    }
+
     await db
       .update(campaignAgentsTable)
       .set({
@@ -217,7 +257,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         errorMessage: err instanceof Error ? err.message : String(err),
         completedAt: new Date(),
       })
-      .where(eq(campaignAgentsTable.id, agentRecord.id));
+      .where(eq(campaignAgentsTable.id, agentRecord!.id));
 
     emitCampaignEvent({
       campaignId,
