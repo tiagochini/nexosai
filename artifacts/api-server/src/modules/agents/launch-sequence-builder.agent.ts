@@ -43,86 +43,34 @@ export interface SequenceBuilderInput {
   intakeData: Record<string, unknown>;
 }
 
-const SEQUENCE_BUILDER_PROMPT = `Você é o Agente Arquiteto de Sequência de Lançamento da NexOS AI.
+const SEQUENCE_BUILDER_PROMPT = `Você é o Agente Arquiteto de Sequência de Lançamento da NexOS AI especializado em PLF e Fórmula de Lançamento para o mercado brasileiro.
 
-Você domina profundamente o Product Launch Formula (Jeff Walker), a Fórmula de Lançamento (Erico Rocha) e todas as variações aplicadas ao mercado brasileiro de produtos digitais.
+## FASES PLF
+pre_capture(dias 0-6): aquecimento, autoridade
+capture(dias 7-13): lead magnet, lista
+plc1(dia 14): vídeo oportunidade — gatilho: curiosity+anticipation
+plc2(dia 16): vídeo transformação — gatilho: social_proof+authority
+plc3(dia 18): vídeo objeções — gatilho: community+reciprocity
+cart_open(dia 21): abertura carrinho — gatilho: urgency+scarcity
+cart_middle(dias 22-23): suporte, prova — gatilho: social_proof
+cart_close(dia 24): fechamento — gatilho: fear_of_loss+scarcity
+post_purchase: onboarding
 
-## OS MODELOS DE LANÇAMENTO
+**Retorne APENAS JSON válido** (sem texto extra):
 
-### PLF (Product Launch Formula) — Jeff Walker
-- **Pré-captura (dias -14 a -7):** Aquecimento silencioso, conteúdo de autoridade sem revelar o produto
-- **Captura (dias -7 a 0):** Lead magnet, página de espera, anúncios de captura
-- **PLC1 — A Oportunidade (dia 1):** Vídeo de 20-30min revelando a oportunidade. Gatilho: CURIOSIDADE + ANTECIPAÇÃO
-- **PLC2 — A Transformação (dia 3):** Vídeo mostrando jornada e prova social. Gatilho: PROVA SOCIAL + AUTORIDADE
-- **PLC3 — A Experiência (dia 5):** Vídeo entrando em objeções e comunidade. Gatilho: COMUNIDADE + RECIPROCIDADE
-- **Abertura do Carrinho (dia 7):** Oferta revelada, sequência de emails agressiva, WhatsApp. Gatilho: URGÊNCIA + ESCASSEZ
-- **Meio do Carrinho (dias 8-9):** Suporte, FAQ, depoimentos, bônus revelados. Gatilho: PROVA SOCIAL
-- **Fechamento (dia 10):** Últimas 24h, sequência final, countdown. Gatilho: ESCASSEZ + MEDO DE PERDA
-- **Pós-compra:** Upsell, onboarding
-
-### Fórmula de Lançamento (Erico Rocha) — Adaptações PT-BR
-- Uso intensivo de WhatsApp desde o pré-captura
-- Lives ao vivo em vez de vídeos gravados para PLC
-- Grupos de WhatsApp segmentados (leads, compradores)
-- Sequência de emails em PT-BR coloquial + emojis estratégicos
-- Reforço com Stories diários
-
-## GATILHOS MENTAIS POR FASE
-- authority: PLC1, conteúdo de expertise
-- social_proof: PLC2, depoimentos
-- reciprocity: PLC3, dar valor antes de pedir
-- community: PLC3, senso de pertencimento
-- anticipation: Pré-captura, PLC1, teaser
-- curiosity: Pré-captura, hooks
-- event: Abertura do carrinho
-- scarcity: Meio e fechamento (vagas limitadas)
-- urgency: Fechamento (tempo acabando)
-- fear_of_loss: Últimas 24h
-- transformation: PLC2, antes/depois
-- contrast: Abertura (compara com alternativas)
-
-## CANAIS DE ENTREGA PT-BR
-- email: Sequência principal
-- whatsapp: Broadcast, grupos
-- social: Instagram/Facebook posts e Stories
-- video: YouTube, VSL, lives
-
-**Retorne APENAS JSON válido** no formato exato:
-
-\`\`\`json
 {
-  "summary": "string",
+  "summary": "string curto",
   "model": "string",
   "totalDays": 0,
   "phases": [
-    {
-      "phase": "string — pre_capture|capture|plc1|plc2|plc3|cart_open|cart_middle|cart_close|post_purchase|post_launch",
-      "label": "string — ex: PLC 1 — A Oportunidade",
-      "startDay": 0,
-      "endDay": 0,
-      "objective": "string",
-      "primaryTrigger": "string"
-    }
+    {"phase":"pre_capture","label":"Pré-Captura","startDay":0,"endDay":6,"objective":"string","primaryTrigger":"curiosity"}
   ],
   "items": [
-    {
-      "phase": "string",
-      "name": "string — ex: Email de abertura do carrinho",
-      "description": "string",
-      "dayIndex": 0,
-      "mentalTrigger": "string",
-      "deliveryChannels": ["email", "whatsapp"],
-      "contentType": "string — email_sequence|whatsapp_broadcast|social_post|vsl_script|live_script|etc",
-      "objective": "string",
-      "copyHints": "string — dicas cruciais para escrever este item"
-    }
+    {"phase":"pre_capture","name":"string","description":"string curta","dayIndex":0,"mentalTrigger":"curiosity","deliveryChannels":["email"],"contentType":"social_post","objective":"string curta","copyHints":"string curta"}
   ],
-  "keyMilestones": [
-    { "day": 0, "event": "string", "importance": "string" }
-  ],
-  "strategicNotes": "string"
-}
-\`\`\``;
+  "keyMilestones": [{"day":0,"event":"string","importance":"high"}],
+  "strategicNotes": "string curto"
+}`;
 
 export async function runLaunchSequenceBuilderAgent(
   workspaceId: string,
@@ -158,12 +106,12 @@ ${input.launchStartDate ? `**Início:** ${input.launchStartDate}` : ""}
 ${input.cartOpenDate ? `**Abertura carrinho:** ${input.cartOpenDate}` : ""}
 ${input.cartCloseDate ? `**Fechamento carrinho:** ${input.cartCloseDate}` : ""}
 
-Gere TODOS os items da sequência, dia a dia. Mínimo 25 items.
-Inclua email + WhatsApp para cada momento crítico.
-Retorne APENAS o JSON.`;
+Gere os items da sequência, dia a dia. Mínimo 15 items, máximo 20.
+Inclua email + WhatsApp nos momentos críticos (pré-lançamento, abertura e fechamento do carrinho).
+Seja conciso nos campos de texto. Retorne APENAS o JSON.`;
 
   const result = await runAgent({
-    campaignId: `seq-${workspaceId}`,
+    campaignId: null,
     workspaceId,
     agentRole: "strategy",
     systemPrompt: memBlock + SEQUENCE_BUILDER_PROMPT,

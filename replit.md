@@ -99,7 +99,13 @@ Launch tracks by revenue target:
 - `deductCredits(workspaceId, action, log, campaignId?)` — log is 3rd arg, NOT optional
 - `runStrategyAgent(campaignId, workspaceId, intakeData, track, log, profile?)` — track is 4th arg
 - `runProfileBuilderAgent(campaignId, workspaceId, intakeData, campaignType, log)` — 5 required args
-- `runAgent(opts)` requires `messages: AIMessage[]` (not `userMessage`) + `campaignId` + `workspaceId`
+- `runAgent(opts)` requires `messages: AIMessage[]` (not `userMessage`) + `campaignId?` (optional) + `workspaceId`
+- `runAgent` `campaignId` is `string | null | undefined` — pass `null` for sequence-level agents (no `campaign_agents` row inserted, no UUID FK violation)
+- Replit AI integration model: `claude-opus-4-5` (NOT `claude-sonnet-4-6` or `claude-3-5-haiku-20241022` — those are unsupported/deprecated). Test with a tiny call before assuming a model works.
+- `parseAgentJSON` handles truncated LLM responses: tries code block extraction (with or without closing ```), then raw `{...}` extraction, then `repairTruncatedJson` (auto-closes unclosed braces/brackets). Always safe to call.
+- LLM responses at 4096 max_tokens are often truncated mid-JSON for large outputs. Keep prompts compact and limit items in sequence builder to ≤20 to stay within token budget.
+- Sequence contacts route: `POST /launch-sequences/:id/contacts` (NOT `/contacts/bulk`)
+- `GET /launch-sequences/:id/analytics` returns `{ analytics: { sequenceId, segments, byItem[], adaptiveSuggestions[], healthScore, engagementTrend } }` — top-level key is `analytics`, not spread
 - Launch sequence model values: `plf`, `formula_de_lancamento`, `semente`, `afiliado`, `perpetual`, `custom`
 - Mental trigger values: `authority`, `social_proof`, `reciprocity`, `community`, `scarcity`, `urgency`, `anticipation`, `event`, `transformation`, `fear_of_loss`, `curiosity`, `contrast`
 - WhatsApp dispatch requires workspace integration `whatsapp_business` with status `connected` + `accessToken` + `accountId` (phoneNumberId)

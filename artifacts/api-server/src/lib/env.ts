@@ -11,6 +11,8 @@ export const env = {
   ANTHROPIC_API_KEY: process.env["ANTHROPIC_API_KEY"] ?? "",
   OPENAI_API_KEY: process.env["OPENAI_API_KEY"] ?? "",
   GEMINI_API_KEY: process.env["GEMINI_API_KEY"] ?? "",
+  AI_INTEGRATIONS_ANTHROPIC_BASE_URL: process.env["AI_INTEGRATIONS_ANTHROPIC_BASE_URL"] ?? "",
+  AI_INTEGRATIONS_ANTHROPIC_API_KEY: process.env["AI_INTEGRATIONS_ANTHROPIC_API_KEY"] ?? "",
   NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "nexos.ai",
   CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
   APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,

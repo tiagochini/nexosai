@@ -213,7 +213,7 @@ Gere a copy completa para esta peça. Adapte o tom e a urgência ao segmento "${
 Retorne APENAS o JSON.`;
 
   const result = await runAgent({
-    campaignId: `seq-copy-${workspaceId}`,
+    campaignId: null,
     workspaceId,
     agentRole: "copywriter",
     systemPrompt: ITEM_COPY_PROMPT,

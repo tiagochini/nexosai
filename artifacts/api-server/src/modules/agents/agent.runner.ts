@@ -20,7 +20,7 @@ import { InsufficientCreditsError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
-  campaignId: string;
+  campaignId: string | null | undefined;
   workspaceId: string;
   agentRole: AgentRole;
   systemPrompt: string;
@@ -74,20 +74,27 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     throw new InsufficientCreditsError(MIN_CREDITS_REQUIRED, ws?.creditsBalance ?? 0);
   }
 
-  const [agentRecord] = await db
-    .insert(campaignAgentsTable)
-    .values({
-      campaignId,
-      agentType: agentRole,
-      status: "running",
-      startedAt: new Date(),
-    })
-    .returning();
+  // Only insert into campaign_agents when we have a real UUID campaign ID
+  const isValidCampaignId = campaignId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(campaignId);
 
-  emitAgentStarted(campaignId, agentRole);
+  let agentRecord: CampaignAgent | undefined;
+  if (isValidCampaignId) {
+    const [inserted] = await db
+      .insert(campaignAgentsTable)
+      .values({
+        campaignId: campaignId as string,
+        agentType: agentRole,
+        status: "running",
+        startedAt: new Date(),
+      })
+      .returning();
+    agentRecord = inserted;
+  }
+
+  emitAgentStarted(campaignId ?? "system", agentRole);
 
   for (const thought of thinkingMessages) {
-    emitAgentThinking(campaignId, agentRole, thought);
+    emitAgentThinking(campaignId ?? "system", agentRole, thought);
     await sleep(350);
   }
 
@@ -114,7 +121,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       messages,
       workspaceId,
       log,
-      campaignId,
+      campaignId ?? undefined,
     );
 
     content = result.content;
@@ -145,38 +152,40 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
     const newStatus = requiresApproval ? "waiting_approval" : "completed";
 
-    await db
-      .update(campaignAgentsTable)
-      .set({
-        status: newStatus,
-        output: {
-          content,
-          metadata: {
-            creditsCharged,
-            provider: result.provider,
-            model: result.model,
+    if (agentRecord) {
+      await db
+        .update(campaignAgentsTable)
+        .set({
+          status: newStatus,
+          output: {
+            content,
+            metadata: {
+              creditsCharged,
+              provider: result.provider,
+              model: result.model,
+            },
           },
-        },
-        completedAt: new Date(),
-        creditsUsed: creditsCharged,
-        tokensUsed: result.inputTokens + result.outputTokens,
-        aiProvider: result.provider,
-        model: result.model,
-      })
-      .where(eq(campaignAgentsTable.id, agentRecord.id));
+          completedAt: new Date(),
+          creditsUsed: creditsCharged,
+          tokensUsed: result.inputTokens + result.outputTokens,
+          aiProvider: result.provider,
+          model: result.model,
+        })
+        .where(eq(campaignAgentsTable.id, agentRecord.id));
 
-    await db.insert(auditLogsTable).values({
-      workspaceId,
-      campaignId,
-      agentId: agentRecord.id,
-      action: `agent.${agentRole}.completed`,
-      actor: "system",
-      data: { creditsCharged, provider: result.provider },
-    });
+      await db.insert(auditLogsTable).values({
+        workspaceId,
+        campaignId: isValidCampaignId ? (campaignId as string) : undefined,
+        agentId: agentRecord.id,
+        action: `agent.${agentRole}.completed`,
+        actor: "system",
+        data: { creditsCharged, provider: result.provider },
+      });
+    }
 
     let checkpointId: string | undefined;
 
-    if (requiresApproval && checkpointType) {
+    if (requiresApproval && checkpointType && isValidCampaignId && agentRecord) {
       const mappedType = (CHECKPOINT_TYPE_MAP[checkpointType] ?? "execution_approval") as
         | "strategy_approval"
         | "timeline_approval"
@@ -193,7 +202,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       const [checkpoint] = await db
         .insert(approvalCheckpointsTable)
         .values({
-          campaignId,
+          campaignId: campaignId as string,
           checkpointType: mappedType,
           status: "pending",
           data: { content: content.slice(0, 4000), agentRole, agentId: agentRecord.id },
@@ -202,7 +211,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
       checkpointId = checkpoint.id;
 
-      emitCheckpointCreated(campaignId, checkpointType, {
+      emitCheckpointCreated(campaignId as string, checkpointType, {
         checkpointId: checkpoint.id,
         agentRole,
         contentPreview: content.slice(0, 300),
@@ -210,18 +219,27 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     }
 
     emitAgentCompleted(
-      campaignId,
+      campaignId ?? "system",
       agentRole,
       `${agentRole} concluído — ${creditsCharged} créditos utilizados`,
     );
 
-    const [updated] = await db
-      .select()
-      .from(campaignAgentsTable)
-      .where(eq(campaignAgentsTable.id, agentRecord.id))
-      .limit(1);
+    if (agentRecord) {
+      const [updated] = await db
+        .select()
+        .from(campaignAgentsTable)
+        .where(eq(campaignAgentsTable.id, agentRecord.id))
+        .limit(1);
+      return { agentRecord: updated, content, creditsCharged, checkpointId };
+    }
 
-    return { agentRecord: updated, content, creditsCharged, checkpointId };
+    // No campaign_agents record (sequence-level agent) — return synthetic record
+    return {
+      agentRecord: { id: "none", campaignId: null, agentType: agentRole, status: "completed" } as unknown as CampaignAgent,
+      content,
+      creditsCharged,
+      checkpointId,
+    };
   } catch (err) {
     // Graceful degradation when AI provider is not configured (dev environment)
     if (isProviderAuthError(err)) {
@@ -229,38 +247,49 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
 
       content = `[DEV MODE — ${agentRole}] Resposta simulada. Configure as chaves de API (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY) para respostas reais.`;
 
+      if (agentRecord) {
+        await db
+          .update(campaignAgentsTable)
+          .set({
+            status: "completed",
+            output: { content, metadata: { mock: true, reason: "no_api_key" } },
+            completedAt: new Date(),
+            creditsUsed: 0,
+          })
+          .where(eq(campaignAgentsTable.id, agentRecord.id));
+      }
+
+      emitAgentCompleted(campaignId ?? "system", agentRole, `${agentRole} simulado (dev mode — sem API key)`);
+
+      if (agentRecord) {
+        const [updated] = await db
+          .select()
+          .from(campaignAgentsTable)
+          .where(eq(campaignAgentsTable.id, agentRecord.id))
+          .limit(1);
+        return { agentRecord: updated!, content, creditsCharged: 0 };
+      }
+
+      return {
+        agentRecord: { id: "none", campaignId: null, agentType: agentRole, status: "completed" } as unknown as CampaignAgent,
+        content,
+        creditsCharged: 0,
+      };
+    }
+
+    if (agentRecord) {
       await db
         .update(campaignAgentsTable)
         .set({
-          status: "completed",
-          output: { content, metadata: { mock: true, reason: "no_api_key" } },
+          status: "failed",
+          errorMessage: err instanceof Error ? err.message : String(err),
           completedAt: new Date(),
-          creditsUsed: 0,
         })
-        .where(eq(campaignAgentsTable.id, agentRecord!.id));
-
-      emitAgentCompleted(campaignId, agentRole, `${agentRole} simulado (dev mode — sem API key)`);
-
-      const [updated] = await db
-        .select()
-        .from(campaignAgentsTable)
-        .where(eq(campaignAgentsTable.id, agentRecord!.id))
-        .limit(1);
-
-      return { agentRecord: updated!, content, creditsCharged: 0 };
+        .where(eq(campaignAgentsTable.id, agentRecord.id));
     }
 
-    await db
-      .update(campaignAgentsTable)
-      .set({
-        status: "failed",
-        errorMessage: err instanceof Error ? err.message : String(err),
-        completedAt: new Date(),
-      })
-      .where(eq(campaignAgentsTable.id, agentRecord!.id));
-
     emitCampaignEvent({
-      campaignId,
+      campaignId: campaignId ?? "system",
       type: "agent_failed",
       agentType: agentRole,
       message: `${agentRole} falhou: ${err instanceof Error ? err.message : String(err)}`,
@@ -275,17 +304,76 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Repairs truncated JSON by auto-closing unclosed objects/arrays/strings.
+ * Handles the common case where an LLM response is cut off mid-generation.
+ */
+function repairTruncatedJson(raw: string): string {
+  const start = raw.indexOf("{");
+  if (start === -1) return raw;
+  let s = raw.slice(start);
+
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+  let lastValidEnd = 0;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]!;
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\" && inString) { escaped = true; continue; }
+    if (ch === '"') {
+      inString = !inString;
+      if (!inString) lastValidEnd = i + 1;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{" || ch === "[") { stack.push(ch); continue; }
+    if (ch === "}" || ch === "]") {
+      stack.pop();
+      if (stack.length === 0) lastValidEnd = i + 1;
+    }
+  }
+
+  // If JSON was complete, return as-is
+  if (stack.length === 0) return s;
+
+  // Truncate to last valid position if string is open (avoids broken string values)
+  if (inString) s = s.slice(0, lastValidEnd) + '"';
+
+  // Close unclosed structures in reverse order
+  for (let i = stack.length - 1; i >= 0; i--) {
+    s += stack[i] === "{" ? "}" : "]";
+  }
+  return s;
+}
+
 export function parseAgentJSON<T = Record<string, unknown>>(
   content: string,
   fallback: T,
 ): T {
-  const jsonMatch =
+  // Extract JSON from code block (with or without closing ```)
+  const codeBlockMatch =
     content.match(/```json\s*([\s\S]*?)```/) ??
-    content.match(/(\{[\s\S]*\})/);
-  if (!jsonMatch) return fallback;
+    content.match(/```(?:json)?\s*(\{[\s\S]*)/);
 
+  // Or find raw JSON object
+  const rawMatch = content.match(/\{[\s\S]*\}/) ?? content.match(/\{[\s\S]*/);
+
+  const candidate = codeBlockMatch
+    ? (codeBlockMatch[1] ?? "")
+    : (rawMatch?.[0] ?? "");
+
+  if (!candidate.trim()) return fallback;
+
+  // First try: parse as-is (complete JSON)
   try {
-    return JSON.parse(jsonMatch[1] ?? jsonMatch[0]) as T;
+    return JSON.parse(candidate) as T;
+  } catch { /* continue */ }
+
+  // Second try: repair truncated JSON
+  try {
+    return JSON.parse(repairTruncatedJson(candidate)) as T;
   } catch {
     return fallback;
   }

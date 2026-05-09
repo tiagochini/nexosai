@@ -69,9 +69,28 @@ let anthropicClient: Anthropic | null = null;
 let openaiClient: OpenAI | null = null;
 let geminiClient: GoogleGenerativeAI | null = null;
 
+// ─── Integration key fallback ─────────────────────────────────────────────────
+// When native provider keys are absent, route everything through the
+// Replit-managed Anthropic proxy (claude-sonnet-4-6 as universal fallback).
+
+const INTEGRATION_ANTHROPIC_MODEL = "claude-opus-4-5";
+
+function hasIntegrationKey(): boolean {
+  return !!(env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL && env.AI_INTEGRATIONS_ANTHROPIC_API_KEY);
+}
+
 function getAnthropic(): Anthropic {
   if (!anthropicClient) {
-    anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    if (env.ANTHROPIC_API_KEY) {
+      anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    } else if (hasIntegrationKey()) {
+      anthropicClient = new Anthropic({
+        apiKey: env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+        baseURL: env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+      });
+    } else {
+      anthropicClient = new Anthropic({ apiKey: "" });
+    }
   }
   return anthropicClient;
 }
@@ -96,8 +115,10 @@ async function callAnthropic(
   messages: AIMessage[],
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
   const client = getAnthropic();
+  // Use integration model when falling back to integration proxy
+  const effectiveModel = env.ANTHROPIC_API_KEY ? model : INTEGRATION_ANTHROPIC_MODEL;
   const response = await client.messages.create({
-    model,
+    model: effectiveModel,
     max_tokens: 4096,
     system: systemPrompt,
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -118,6 +139,11 @@ async function callOpenAI(
   systemPrompt: string,
   messages: AIMessage[],
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
+  // Fall back to Anthropic integration when OpenAI key is absent
+  if (!env.OPENAI_API_KEY && hasIntegrationKey()) {
+    return callAnthropic(INTEGRATION_ANTHROPIC_MODEL, systemPrompt, messages);
+  }
+
   const client = getOpenAI();
   const response = await client.chat.completions.create({
     model,
@@ -140,6 +166,11 @@ async function callGemini(
   systemPrompt: string,
   messages: AIMessage[],
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
+  // Fall back to Anthropic integration when Gemini key is absent
+  if (!env.GEMINI_API_KEY && hasIntegrationKey()) {
+    return callAnthropic(INTEGRATION_ANTHROPIC_MODEL, systemPrompt, messages);
+  }
+
   const client = getGemini();
   const geminiModel = client.getGenerativeModel({
     model,
