@@ -15,6 +15,12 @@ import SequenceAnalytics from "@/pages/sequences/analytics";
 import SequenceContacts from "@/pages/sequences/contacts";
 import Onboarding from "@/pages/onboarding";
 import CampaignsList from "@/pages/campaigns/list";
+import AgentsHub from "@/pages/agents/index";
+import AgentChat from "@/pages/agents/chat";
+import SocialPage from "@/pages/social/index";
+import VslsPage from "@/pages/vsls/index";
+import RevenuePage from "@/pages/revenue/index";
+import CompliancePage from "@/pages/compliance/index";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -129,6 +135,29 @@ export default function AppRoutes() {
           </ProtectedRoute>
         )}
       </Route>
+
+      {/* Agent Hub */}
+      <Route path="/agents/:role">
+        {() => <ProtectedRoute><AgentChat /></ProtectedRoute>}
+      </Route>
+      <Route path="/agents">
+        {() => <ProtectedRoute><AgentsHub /></ProtectedRoute>}
+      </Route>
+
+      {/* New modules */}
+      <Route path="/social">
+        {() => <ProtectedRoute><SocialPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/vsls">
+        {() => <ProtectedRoute><VslsPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/revenue">
+        {() => <ProtectedRoute><RevenuePage /></ProtectedRoute>}
+      </Route>
+      <Route path="/compliance">
+        {() => <ProtectedRoute><CompliancePage /></ProtectedRoute>}
+      </Route>
+
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,234 +1,13 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
-import { orchestrateCampaign } from "./command.agent.js";
 import { completeWithAgent, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { AppError } from "../../lib/errors.js";
-import { eq, and, desc } from "drizzle-orm";
-import {
-  db,
-  campaignAgentsTable,
-  approvalCheckpointsTable,
-  campaignsTable,
-  auditLogsTable,
-  workspacesTable,
-} from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { db, workspacesTable, auditLogsTable } from "@workspace/db";
 
 const router = Router();
 router.use(requireAuth);
-
-router.post("/:campaignId/orchestrate", async (req, res): Promise<void> => {
-  const campaignId = req.params["campaignId"] as string;
-
-  try {
-    const result = await orchestrateCampaign(
-      campaignId,
-      req.auth.workspaceId,
-      req.log,
-    );
-    res.json({ message: "Orchestration completed", result });
-  } catch (err) {
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
-    throw err;
-  }
-});
-
-router.get("/:campaignId/agents", async (req, res): Promise<void> => {
-  const campaignId = req.params["campaignId"] as string;
-
-  try {
-    const [campaign] = await db
-      .select({ id: campaignsTable.id })
-      .from(campaignsTable)
-      .where(
-        and(
-          eq(campaignsTable.id, campaignId),
-          eq(campaignsTable.workspaceId, req.auth.workspaceId),
-        ),
-      )
-      .limit(1);
-
-    if (!campaign) {
-      res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
-      return;
-    }
-
-    const agents = await db
-      .select()
-      .from(campaignAgentsTable)
-      .where(eq(campaignAgentsTable.campaignId, campaignId))
-      .orderBy(campaignAgentsTable.createdAt);
-
-    const checkpoints = await db
-      .select()
-      .from(approvalCheckpointsTable)
-      .where(eq(approvalCheckpointsTable.campaignId, campaignId))
-      .orderBy(desc(approvalCheckpointsTable.createdAt));
-
-    res.json({ agents, checkpoints });
-  } catch (err) {
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
-    throw err;
-  }
-});
-
-const approveSchema = z.object({
-  checkpointId: z.string().uuid(),
-  approved: z.boolean(),
-  feedback: z.string().optional(),
-});
-
-router.post("/:campaignId/approve", async (req, res): Promise<void> => {
-  const campaignId = req.params["campaignId"] as string;
-
-  const parsed = approveSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
-    return;
-  }
-
-  try {
-    const [campaign] = await db
-      .select({ id: campaignsTable.id })
-      .from(campaignsTable)
-      .where(
-        and(
-          eq(campaignsTable.id, campaignId),
-          eq(campaignsTable.workspaceId, req.auth.workspaceId),
-        ),
-      )
-      .limit(1);
-
-    if (!campaign) {
-      res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
-      return;
-    }
-
-    const [checkpoint] = await db
-      .select()
-      .from(approvalCheckpointsTable)
-      .where(
-        and(
-          eq(approvalCheckpointsTable.id, parsed.data.checkpointId),
-          eq(approvalCheckpointsTable.campaignId, campaignId),
-        ),
-      )
-      .limit(1);
-
-    if (!checkpoint) {
-      res.status(404).json({ error: "Checkpoint not found", code: "NOT_FOUND" });
-      return;
-    }
-
-    if (checkpoint.status !== "pending") {
-      res.status(400).json({
-        error: `Checkpoint already ${checkpoint.status}`,
-        code: "VALIDATION_ERROR",
-      });
-      return;
-    }
-
-    const newStatus = parsed.data.approved ? "approved" : "rejected";
-
-    const [updatedCheckpoint] = await db
-      .update(approvalCheckpointsTable)
-      .set({
-        status: newStatus,
-        approvedAt: parsed.data.approved ? new Date() : null,
-        userFeedback: parsed.data.feedback,
-      })
-      .where(eq(approvalCheckpointsTable.id, parsed.data.checkpointId))
-      .returning();
-
-    await db.insert(auditLogsTable).values({
-      workspaceId: req.auth.workspaceId,
-      campaignId,
-      action: parsed.data.approved ? "checkpoint.approved" : "checkpoint.rejected",
-      actor: "user",
-      data: {
-        checkpointId: parsed.data.checkpointId,
-        type: checkpoint.checkpointType,
-        feedback: parsed.data.feedback,
-      },
-    });
-
-    const pendingCheckpoints = await db
-      .select({ id: approvalCheckpointsTable.id })
-      .from(approvalCheckpointsTable)
-      .where(
-        and(
-          eq(approvalCheckpointsTable.campaignId, campaignId),
-          eq(approvalCheckpointsTable.status, "pending"),
-        ),
-      );
-
-    if (pendingCheckpoints.length === 0 && parsed.data.approved) {
-      await db
-        .update(campaignsTable)
-        .set({ status: "approved" })
-        .where(eq(campaignsTable.id, campaignId));
-    }
-
-    res.json({
-      checkpoint: updatedCheckpoint,
-      message: parsed.data.approved
-        ? "Checkpoint approved"
-        : "Checkpoint rejected",
-    });
-  } catch (err) {
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
-    throw err;
-  }
-});
-
-router.get("/:campaignId/checkpoints", async (req, res): Promise<void> => {
-  const campaignId = req.params["campaignId"] as string;
-
-  try {
-    const [campaign] = await db
-      .select({ id: campaignsTable.id })
-      .from(campaignsTable)
-      .where(
-        and(
-          eq(campaignsTable.id, campaignId),
-          eq(campaignsTable.workspaceId, req.auth.workspaceId),
-        ),
-      )
-      .limit(1);
-
-    if (!campaign) {
-      res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
-      return;
-    }
-
-    const checkpoints = await db
-      .select()
-      .from(approvalCheckpointsTable)
-      .where(eq(approvalCheckpointsTable.campaignId, campaignId))
-      .orderBy(desc(approvalCheckpointsTable.createdAt));
-
-    res.json({ checkpoints });
-  } catch (err) {
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
-    throw err;
-  }
-});
-
-// ── Direct conversation with any agent ───────────────────────────────────────
-// POST /api/agents/direct-chat — user can talk to any agent individually
-// No campaign_agents row inserted; purely conversational.
 
 const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
   command: `Você é o Comandante IA do NexOS — General de Operações de Lançamento Digital. Sua missão: orquestrar campanhas de lançamento de 6, 8 e 10 dígitos com precisão militar. Você pensa como Jeff Walker encontrando MacArthur: visão estratégica + execução impecável. Responda sempre em PT-BR. Seja direto, decisivo e cirúrgico. Quando perguntado algo, dê uma resposta completa e acionável, nunca vaga.`,
@@ -249,7 +28,7 @@ const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
   creator_growth: `Você é o Creator Growth Specialist do NexOS — cresce audiências orgânicas em Instagram, YouTube, TikTok e podcasts. Você domina criação de conteúdo, algoritmos, consistência e monetização. Responda sempre em PT-BR. Dê estratégias concretas de crescimento com timelines realistas.`,
 };
 
-const AGENT_ROLES = Object.keys(AGENT_SYSTEM_PROMPTS);
+const AGENT_ROLES = new Set(Object.keys(AGENT_SYSTEM_PROMPTS));
 
 const directChatSchema = z.object({
   agentRole: z.string().min(1),
@@ -262,6 +41,16 @@ const directChatSchema = z.object({
   contextMode: z.enum(["brainstorm", "review", "strategy", "question", "optimize"]).optional(),
 });
 
+// ── GET /api/agents — list all available agents ───────────────────────────────
+router.get("/", (_req, res): void => {
+  const agents = Object.keys(AGENT_SYSTEM_PROMPTS).map(role => ({
+    role,
+    available: true,
+  }));
+  res.json({ agents, total: agents.length });
+});
+
+// ── POST /api/agents/direct-chat — converse with any agent directly ───────────
 router.post("/direct-chat", async (req, res): Promise<void> => {
   const parsed = directChatSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -271,30 +60,31 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
 
   const { agentRole, message, history, campaignId, contextMode } = parsed.data;
 
-  if (!AGENT_ROLES.includes(agentRole)) {
-    res.status(400).json({ error: `Unknown agent role: ${agentRole}`, code: "VALIDATION_ERROR" });
+  if (!AGENT_ROLES.has(agentRole)) {
+    res.status(400).json({ error: `Agente desconhecido: ${agentRole}`, code: "VALIDATION_ERROR" });
     return;
   }
 
   try {
-    // Check credits
     const [ws] = await db
-      .select({ creditsBalance: workspacesTable.creditsBalance, name: workspacesTable.name })
+      .select({ creditsBalance: workspacesTable.creditsBalance })
       .from(workspacesTable)
       .where(eq(workspacesTable.id, req.auth.workspaceId))
       .limit(1);
 
     if (!ws || ws.creditsBalance < 3) {
-      res.status(402).json({ error: "Créditos insuficientes (mín 3)", code: "INSUFFICIENT_CREDITS" });
+      res.status(402).json({ error: "Créditos insuficientes (mín 3 por mensagem)", code: "INSUFFICIENT_CREDITS" });
       return;
     }
 
-    const modeNote = contextMode ? `\n\nMODO: ${contextMode.toUpperCase()} — adapte sua resposta a este contexto.` : "";
+    const modeNote = contextMode
+      ? `\n\nMODO: ${contextMode.toUpperCase()} — adapte sua resposta a este contexto de ${contextMode}.`
+      : "";
     const basePrompt = AGENT_SYSTEM_PROMPTS[agentRole] ?? "Você é um especialista em marketing digital. Responda em PT-BR.";
     const systemPrompt = basePrompt + modeNote;
 
     const messages = [
-      ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
+      ...history.map(h => ({ role: h.role as "user" | "assistant", content: h.content })),
       { role: "user" as const, content: message },
     ];
 
@@ -304,22 +94,26 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       messages,
       req.auth.workspaceId,
       req.log,
-      campaignId ?? undefined,
+      campaignId,
     );
 
-    // Deduct 3 credits per direct chat message (analytics_report cost)
+    // Deduct 3 credits
     await db
       .update(workspacesTable)
       .set({ creditsBalance: Math.max(0, ws.creditsBalance - 3) })
       .where(eq(workspacesTable.id, req.auth.workspaceId));
 
-    // Audit log
     await db.insert(auditLogsTable).values({
       workspaceId: req.auth.workspaceId,
       campaignId: campaignId ?? null,
       action: "agent.direct_chat",
       actor: "user",
-      data: { agentRole, contextMode, tokensUsed: result.inputTokens + result.outputTokens },
+      data: {
+        agentRole,
+        contextMode: contextMode ?? "question",
+        tokensUsed: result.inputTokens + result.outputTokens,
+        model: result.model,
+      },
     });
 
     res.json({

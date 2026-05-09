@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useGetCreditsBalance, getGetCreditsBalanceQueryKey } from "@workspace/api-client-react";
-import { LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu, X } from "lucide-react";
+import { LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu, X, Bot, Share2, Video, DollarSign, Shield, ChevronDown, ChevronRight } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
 import { RecordButton } from "@/components/recording/RecordButton";
@@ -19,10 +19,33 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     }
   });
 
-  const navigation = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
-    { name: "Campanhas", href: "/campaigns", icon: Rocket },
-    { name: "Sequências", href: "/sequences", icon: Workflow },
+  type NavItem = { name: string; href: string; icon: React.ElementType; badge?: string };
+  type NavGroup = { label: string; items: NavItem[] };
+
+  const navGroups: NavGroup[] = [
+    {
+      label: "Sistemas Principais",
+      items: [
+        { name: "Dashboard", href: "/", icon: LayoutDashboard },
+        { name: "Campanhas", href: "/campaigns", icon: Rocket },
+        { name: "Sequências", href: "/sequences", icon: Workflow },
+      ],
+    },
+    {
+      label: "Time de IA",
+      items: [
+        { name: "Agentes IA", href: "/agents", icon: Bot, badge: "16" },
+      ],
+    },
+    {
+      label: "Ferramentas",
+      items: [
+        { name: "VSL Studio", href: "/vsls", icon: Video },
+        { name: "Social Media", href: "/social", icon: Share2 },
+        { name: "Receita", href: "/revenue", icon: DollarSign },
+        { name: "Compliance", href: "/compliance", icon: Shield },
+      ],
+    },
   ];
 
   return (
@@ -42,27 +65,39 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       </div>
 
       {/* Nav */}
-      <nav className="px-4 pt-4 pb-2 flex flex-col gap-1 overflow-y-auto flex-1">
-        <div className="text-[10px] font-mono text-muted-foreground/70 uppercase tracking-widest mb-2 px-2">
-          Sistemas Principais
-        </div>
-        {navigation.map((item) => {
-          const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-          return (
-            <Link key={item.name} href={item.href} onClick={onNav}>
-              <div
-                className={`group flex items-center gap-3 px-3 py-2.5 text-sm font-mono tracking-wide transition-all cursor-pointer rounded-sm
-                  ${isActive
-                    ? "bg-gradient-to-r from-primary/10 to-transparent text-primary border-l-2 border-primary"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground border-l-2 border-transparent hover:border-primary/30"
-                  }`}
-              >
-                <item.icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary/70'}`} />
-                <span className="truncate">{item.name}</span>
-              </div>
-            </Link>
-          );
-        })}
+      <nav className="px-4 pt-4 pb-2 flex flex-col gap-4 overflow-y-auto flex-1">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1.5 px-2">
+              {group.label}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {group.items.map((item) => {
+                const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+                return (
+                  <Link key={item.name} href={item.href} onClick={onNav}>
+                    <div
+                      className={`group flex items-center gap-3 px-3 py-2.5 text-sm font-mono tracking-wide transition-all cursor-pointer rounded-sm
+                        ${isActive
+                          ? "bg-gradient-to-r from-primary/10 to-transparent text-primary border-l-2 border-primary"
+                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground border-l-2 border-transparent hover:border-primary/30"
+                        }`}
+                    >
+                      <item.icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-primary/70'}`} />
+                      <span className="truncate flex-1">{item.name}</span>
+                      {item.badge && (
+                        <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded-sm border shrink-0
+                          ${isActive ? "border-primary/40 bg-primary/15 text-primary" : "border-border/40 bg-muted/30 text-muted-foreground/60"}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Credits widget */}
