@@ -8,6 +8,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runStrategyAgent } from "./strategy.agent.js";
 import { runOfferAgent } from "./offer.agent.js";
 import { runLaunchManagerAgent } from "./launch-manager.agent.js";
+import { runFinancialProjectorAgent } from "./financial-projector.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { validateIntakeCompleteness } from "../intake/intake.service.js";
@@ -20,6 +21,7 @@ export interface OrchestrationResult {
   strategy?: Record<string, unknown>;
   offerAnalysis?: Record<string, unknown>;
   launchPlan?: Record<string, unknown>;
+  financialProjection?: Record<string, unknown>;
   checkpointsPending: string[];
   status: string;
 }
@@ -31,7 +33,8 @@ Sua função é analisar os dados de intake e determinar:
 2. Em qual ordem devem executar
 3. Quais ajustes estratégicos são necessários antes de delegar
 
-Você é a inteligência central. Os outros agentes executam. Você decide.
+Sequência padrão: strategy → offer → launch_manager → financial_projector
+O financial_projector SEMPRE roda por último — ele depende de strategy e launch_manager.
 
 **Retorne APENAS JSON válido:**
 
@@ -40,11 +43,12 @@ Você é a inteligência central. Os outros agentes executam. Você decide.
   "readinessScore": 0,
   "readinessVerdict": "ready|needs_info|blocked",
   "missingCriticalInfo": ["string"],
-  "agentSequence": ["strategy", "offer", "launch_manager"],
+  "agentSequence": ["strategy", "offer", "launch_manager", "financial_projector"],
   "specialInstructions": {
     "strategy": "string ou null",
     "offer": "string ou null",
-    "launch_manager": "string ou null"
+    "launch_manager": "string ou null",
+    "financial_projector": "string ou null"
   },
   "campaignComplexity": "standard|complex|enterprise",
   "estimatedCredits": 0,
@@ -77,10 +81,16 @@ export async function orchestrateCampaign(
     );
   }
 
-  const track = (campaign.track ?? "six_digits") as "six_digits" | "eight_digits" | "ten_digits";
+  const track = (campaign.track ?? "six_digits") as
+    | "six_digits"
+    | "eight_digits"
+    | "ten_digits";
   const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
 
-  const { valid, missingRequired } = validateIntakeCompleteness(track, intakeData);
+  const { valid, missingRequired } = validateIntakeCompleteness(
+    track,
+    intakeData,
+  );
 
   emitCampaignEvent({
     campaignId,
@@ -116,6 +126,7 @@ export async function orchestrateCampaign(
 **Track:** ${track}
 **Intake completo:** ${valid ? "SIM" : "NÃO"}
 **Campos faltando:** ${missingRequired.join(", ") || "nenhum"}
+**Produto físico:** ${intakeData["product.deliveryMethod"] !== "100_online" ? "SIM — incluir projeção logística por região" : "NÃO — produto digital"}
 
 **Dados de Intake:**
 \`\`\`json
@@ -139,10 +150,10 @@ Retorne o plano de orquestração em JSON.`,
     readinessScore: 70,
     readinessVerdict: "ready",
     missingCriticalInfo: missingRequired,
-    agentSequence: ["strategy", "offer", "launch_manager"],
+    agentSequence: ["strategy", "offer", "launch_manager", "financial_projector"],
     specialInstructions: {},
     campaignComplexity: "standard",
-    estimatedCredits: 150,
+    estimatedCredits: 200,
     commandNotes: "",
   });
 
@@ -166,30 +177,39 @@ Retorne o plano de orquestração em JSON.`,
   let strategy: Record<string, unknown> | undefined;
   let offerAnalysis: Record<string, unknown> | undefined;
   let launchPlan: Record<string, unknown> | undefined;
+  let financialProjection: Record<string, unknown> | undefined;
 
   const sequence: string[] = Array.isArray(commandPlan.agentSequence)
     ? commandPlan.agentSequence
-    : ["strategy", "offer", "launch_manager"];
+    : ["strategy", "offer", "launch_manager", "financial_projector"];
 
   for (const agentName of sequence) {
     try {
       if (agentName === "strategy") {
-        const result = await runStrategyAgent(campaignId, workspaceId, intakeData, track, log);
+        const result = await runStrategyAgent(
+          campaignId,
+          workspaceId,
+          intakeData,
+          track,
+          log,
+        );
         strategy = result as unknown as Record<string, unknown>;
         agentsRun.push("strategy");
         checkpointsPending.push("strategy_approval");
 
         await db
           .update(campaignsTable)
-          .set({
-            status: "strategy_ready",
-            strategyData: result as any,
-          })
+          .set({ status: "strategy_ready", strategyData: result as any })
           .where(eq(campaignsTable.id, campaignId));
       }
 
       if (agentName === "offer") {
-        const result = await runOfferAgent(campaignId, workspaceId, intakeData, log);
+        const result = await runOfferAgent(
+          campaignId,
+          workspaceId,
+          intakeData,
+          log,
+        );
         offerAnalysis = result as unknown as Record<string, unknown>;
         agentsRun.push("offer");
       }
@@ -212,9 +232,30 @@ Retorne o plano de orquestração em JSON.`,
           .set({ timelineData: result as any })
           .where(eq(campaignsTable.id, campaignId));
       }
-    } catch (err) {
-      log.error({ agentName, campaignId, err }, "Agent failed during orchestration");
 
+      if (agentName === "financial_projector" && strategy && launchPlan) {
+        const result = await runFinancialProjectorAgent(
+          campaignId,
+          workspaceId,
+          intakeData,
+          strategy as any,
+          launchPlan as any,
+          log,
+        );
+        financialProjection = result as unknown as Record<string, unknown>;
+        agentsRun.push("financial_projector");
+        checkpointsPending.push("budget_approval");
+
+        await db
+          .update(campaignsTable)
+          .set({ offerData: { financialProjection: result } as any })
+          .where(eq(campaignsTable.id, campaignId));
+      }
+    } catch (err) {
+      log.error(
+        { agentName, campaignId, err },
+        "Agent failed during orchestration",
+      );
       emitCampaignEvent({
         campaignId,
         type: "agent_failed",
@@ -225,7 +266,8 @@ Retorne o plano de orquestração em JSON.`,
     }
   }
 
-  const finalStatus = checkpointsPending.length > 0 ? "awaiting_approval" : "generating";
+  const finalStatus =
+    checkpointsPending.length > 0 ? "awaiting_approval" : "generating";
 
   await db
     .update(campaignsTable)
@@ -255,6 +297,7 @@ Retorne o plano de orquestração em JSON.`,
     strategy,
     offerAnalysis,
     launchPlan,
+    financialProjection,
     checkpointsPending,
     status: finalStatus,
   };
