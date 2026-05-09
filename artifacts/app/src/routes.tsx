@@ -15,6 +15,7 @@ import SequenceAnalytics from "@/pages/sequences/analytics";
 import SequenceContacts from "@/pages/sequences/contacts";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import Landing from "@/pages/landing";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function AppRoutes() {
   return (
     <Switch>
+      <Route path="/home" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/">
