@@ -12,6 +12,8 @@ import metricsRouter from "../modules/metrics/metrics.routes.js";
 import executionRouter from "../modules/orchestration/execution.routes.js";
 import memoryRouter from "../modules/memory/memory.routes.js";
 import socialRouter from "../modules/social/social.routes.js";
+import billingRouter from "../modules/billing/billing.routes.js";
+import revenueRouter from "../modules/revenue/revenue.routes.js";
 
 const router: IRouter = Router();
 
@@ -28,5 +30,7 @@ router.use("/campaigns", metricsRouter);
 router.use("/campaigns", executionRouter);
 router.use("/memory", memoryRouter);
 router.use("/social", socialRouter);
+router.use("/billing", billingRouter);
+router.use("/revenue", revenueRouter);
 
 export default router;
