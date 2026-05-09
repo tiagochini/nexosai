@@ -24,6 +24,7 @@ import whatsappRouter from "../modules/whatsapp/whatsapp.routes.js";
 import leadCaptureRouter from "../modules/launch-sequence/lead-capture.routes.js";
 import waitlistRouter from "../modules/waitlist/waitlist.routes.js";
 import recordingRouter from "../modules/recording/recording.routes.js";
+import adminRouter from "../modules/admin/admin.routes.js";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use("/whatsapp", whatsappRouter);
 router.use("/lead-capture", leadCaptureRouter);
 router.use("/waitlist", waitlistRouter);
 router.use("/recordings", recordingRouter);
+router.use("/admin", adminRouter);
 
 export default router;
