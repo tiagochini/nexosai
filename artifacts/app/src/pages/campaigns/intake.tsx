@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Save, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, Database } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CampaignIntake() {
@@ -41,12 +41,12 @@ export default function CampaignIntake() {
   const saveMutation = useSaveIntake({
     mutation: {
       onSuccess: () => {
-        toast.success("Dados salvos com sucesso.");
+        toast.success("Dados salvos e sincronizados com a IA.");
         queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
         queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
       },
       onError: () => {
-        toast.error("Falha ao salvar dados.");
+        toast.error("Falha na sincronização de dados.");
       }
     }
   });
@@ -66,9 +66,9 @@ export default function CampaignIntake() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8 p-8">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-8 max-w-4xl mx-auto">
+        <Skeleton className="h-8 w-64 bg-muted/20" />
+        <Skeleton className="h-96 w-full bg-muted/20" />
       </div>
     );
   }
@@ -76,67 +76,81 @@ export default function CampaignIntake() {
   const completeness = data?.completeness || 0;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between border-b border-border pb-6">
+    <div className="space-y-8 max-w-4xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/50 pb-6 gap-6">
         <div>
           <Link href={`/campaigns/${campaignId}`}>
-            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs mb-4 -ml-2 text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Detalhes da Missão
+            <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-3 w-3 mr-2" />
+              Retornar à Missão
             </Button>
           </Link>
-          <h1 className="text-3xl font-mono uppercase tracking-tight font-bold text-foreground">Intake Estratégico</h1>
-          <p className="text-sm text-muted-foreground mt-1 font-mono uppercase tracking-wider">Forneça o máximo de dados para a inteligência artificial</p>
+          <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground flex items-center gap-3">
+            Intake Estratégico
+          </h1>
+          <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">Alimentação de base de dados cognitiva</p>
         </div>
-        <div className="flex flex-col items-end gap-2 text-right">
-          <div className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Progresso: {completeness}%</div>
-          <Progress value={completeness} className="w-32 h-2 rounded-none bg-muted [&>div]:bg-primary" />
+        
+        <div className="flex flex-col items-end gap-3 text-right bg-card/30 p-4 border border-border/40 min-w-[250px]">
+          <div className="flex justify-between w-full">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Progresso</span>
+            <span className="font-mono text-[10px] font-bold text-primary">{completeness}%</span>
+          </div>
+          <Progress value={completeness} className="w-full h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
+          
           {scoreData && (
-            <div className="font-mono text-[10px] uppercase font-bold text-primary mt-1 border border-primary/20 px-2 py-1 bg-primary/10">
-              Score: {scoreData.score} - {scoreData.label}
+            <div className="w-full flex justify-between items-center mt-2 pt-2 border-t border-border/30">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Score IA</span>
+              <span className="font-mono text-xs uppercase font-bold text-success badge-glow-green px-2 py-0.5 border border-success/30 bg-success/10">
+                {scoreData.score} - {scoreData.label}
+              </span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="border border-border bg-card">
-        <div className="p-6 border-b border-border bg-muted/30">
-          <div className="flex items-center gap-2 text-muted-foreground font-mono text-xs uppercase tracking-wider">
-            <AlertCircle className="h-4 w-4 text-primary" />
-            Salvamos seu progresso progressivamente. Suas respostas definem a qualidade da copy.
+      <div className="card-weapon border border-border/50 bg-card/60 backdrop-blur-md">
+        <div className="p-5 border-b border-border/50 bg-primary/5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+          <div className="flex items-center gap-3 text-primary font-mono text-[10px] uppercase tracking-widest">
+            <Database className="h-4 w-4" />
+            <span>Sincronização em tempo real ativa. A qualidade das respostas determina a letalidade da copy.</span>
           </div>
         </div>
 
-        <div className="p-8 space-y-8">
+        <div className="p-8 space-y-10">
           {data?.questions?.map((q) => (
-            <div key={q.key} className="space-y-2">
-              <Label className="font-mono text-sm uppercase tracking-wider text-foreground">
-                {q.label} {q.required && <span className="text-destructive">*</span>}
+            <div key={q.key} className="space-y-3 group">
+              <Label className="font-mono text-xs uppercase tracking-widest text-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 group-focus-within:bg-primary group-focus-within:shadow-[0_0_5px_hsl(var(--primary))] transition-all"></span>
+                {q.label} {q.required && <span className="text-primary">*</span>}
               </Label>
               {q.type === 'textarea' ? (
                 <Textarea 
                   value={formData[q.key] || ""}
                   onChange={(e) => handleChange(q.key, e.target.value)}
-                  className="font-mono text-sm bg-background border-border rounded-none min-h-[100px]"
+                  className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary focus-visible:shadow-[0_0_10px_hsl(var(--primary)/0.2)] rounded-none min-h-[120px] p-4 transition-all"
+                  placeholder="Insira os dados..."
                 />
               ) : (
                 <Input 
                   value={formData[q.key] || ""}
                   onChange={(e) => handleChange(q.key, e.target.value)}
-                  className="font-mono text-sm bg-background border-border rounded-none"
+                  className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary focus-visible:shadow-[0_0_10px_hsl(var(--primary)/0.2)] rounded-none h-12 px-4 transition-all"
+                  placeholder="Insira os dados..."
                 />
               )}
             </div>
           ))}
         </div>
 
-        <div className="p-6 border-t border-border flex justify-end bg-muted/30">
+        <div className="p-6 border-t border-border/50 flex justify-end bg-background/30">
           <Button 
             onClick={handleSave} 
             disabled={saveMutation.isPending}
-            className="font-mono uppercase tracking-wider rounded-none gap-2 font-bold"
+            className="font-mono uppercase tracking-widest rounded-none gap-2 font-bold px-8 h-12 btn-weapon-primary"
           >
-            {saveMutation.isPending ? "Sincronizando..." : <><Save className="h-4 w-4" /> Salvar Progresso</>}
+            {saveMutation.isPending ? "Sincronizando..." : <><Save className="h-4 w-4" /> Registrar Inteligência</>}
           </Button>
         </div>
       </div>
