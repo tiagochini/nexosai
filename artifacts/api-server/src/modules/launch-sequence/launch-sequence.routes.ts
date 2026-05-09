@@ -36,6 +36,7 @@ const updateSchema = createSchema.partial().extend({
   status: z
     .enum(["draft", "scheduled", "active", "paused", "completed", "cancelled"])
     .optional(),
+  leadCaptureEnabled: z.boolean().optional(),
 });
 
 const itemPatchSchema = z.object({

@@ -114,7 +114,7 @@ export async function getLaunchSequence(workspaceId: string, sequenceId: string)
 export async function updateLaunchSequence(
   workspaceId: string,
   sequenceId: string,
-  patch: Partial<CreateSequenceInput & { status: string }>,
+  patch: Partial<CreateSequenceInput & { status: string; leadCaptureEnabled: boolean; campaignId: string | null }>,
 ) {
   const [existing] = await db
     .select({ id: launchSequencesTable.id })
@@ -139,6 +139,8 @@ export async function updateLaunchSequence(
       ...(patch.revenueTarget !== undefined && { revenueTarget: patch.revenueTarget }),
       ...(patch.productName !== undefined && { productName: patch.productName }),
       ...(patch.productPrice !== undefined && { productPrice: patch.productPrice }),
+      ...(patch.leadCaptureEnabled !== undefined && { leadCaptureEnabled: patch.leadCaptureEnabled }),
+      ...("campaignId" in patch && { campaignId: patch.campaignId ?? null }),
       ...(patch.status !== undefined && {
         status: patch.status as
           | "draft"

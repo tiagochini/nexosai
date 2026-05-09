@@ -1,9 +1,12 @@
 import crypto from "crypto";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   db,
   revenueEventsTable,
   webhookConfigsTable,
+  sequenceContactsTable,
+  sequenceEngagementTable,
+  launchSequencesTable,
   type RevenuePlatform,
   type RevenueEventType,
 } from "@workspace/db";
@@ -379,6 +382,82 @@ async function saveRevenueEvent(data: {
     isRecurring: data.isRecurring,
     webhookPayload: data.webhookPayload,
   });
+
+  // ── Auto-convert sequence contacts on confirmed sale ──────────────────────
+  if (
+    data.eventType === "sale" &&
+    status === "confirmed" &&
+    data.customerEmail
+  ) {
+    setImmediate(() =>
+      convertSequenceContactsByEmail(data.workspaceId, data.customerEmail!).catch((err) =>
+        logger.warn({ err }, "Failed to convert sequence contacts after sale"),
+      ),
+    );
+  }
+}
+
+// ─── Convert sequence contacts that match customerEmail ───────────────────────
+
+async function convertSequenceContactsByEmail(
+  workspaceId: string,
+  email: string,
+): Promise<void> {
+  // Find all active sequences for this workspace
+  const activeSequences = await db
+    .select({ id: launchSequencesTable.id })
+    .from(launchSequencesTable)
+    .where(
+      and(
+        eq(launchSequencesTable.workspaceId, workspaceId),
+        inArray(launchSequencesTable.status, ["active", "scheduled"]),
+      ),
+    );
+
+  if (activeSequences.length === 0) return;
+
+  const sequenceIds = activeSequences.map((s) => s.id);
+
+  // Find contacts with matching email that aren't already converted
+  const contacts = await db
+    .select({ id: sequenceContactsTable.id, sequenceId: sequenceContactsTable.sequenceId })
+    .from(sequenceContactsTable)
+    .where(
+      and(
+        eq(sequenceContactsTable.workspaceId, workspaceId),
+        eq(sequenceContactsTable.email, email),
+        inArray(sequenceContactsTable.sequenceId, sequenceIds),
+      ),
+    );
+
+  if (contacts.length === 0) return;
+
+  for (const contact of contacts) {
+    await db
+      .update(sequenceContactsTable)
+      .set({
+        segment: "converted",
+        conversions: 1,
+        engagementScore: 100,
+        updatedAt: new Date(),
+      })
+      .where(eq(sequenceContactsTable.id, contact.id));
+
+    await db.insert(sequenceEngagementTable).values({
+      sequenceId: contact.sequenceId,
+      contactId: contact.id,
+      workspaceId,
+      event: "convert",
+      channel: "checkout",
+      externalRef: email,
+      metadata: { source: "purchase_webhook" },
+    });
+  }
+
+  logger.info(
+    { workspaceId, email, converted: contacts.length },
+    "Sequence contacts auto-converted after purchase",
+  );
 }
 
 async function touchWebhookConfig(configId: string): Promise<void> {

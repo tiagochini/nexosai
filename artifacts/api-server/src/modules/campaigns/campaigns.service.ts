@@ -7,6 +7,8 @@ import {
   approvalCheckpointsTable,
   campaignAgentsTable,
   auditLogsTable,
+  launchSequencesTable,
+  launchSequenceItemsTable,
   type Campaign,
   type InsertCampaign,
 } from "@workspace/db";
@@ -143,6 +145,15 @@ export async function updateCampaignStatus(
     updateData.completedAt = new Date();
   }
 
+  // ── Auto-activate linked draft/scheduled sequences when campaign executes ──
+  if (newStatus === "executing") {
+    setImmediate(() =>
+      autoActivateLinkedSequences(campaignId, log).catch((err) =>
+        log.warn({ err, campaignId }, "Failed to auto-activate linked sequences"),
+      ),
+    );
+  }
+
   // Decrement workspace active campaign counter when terminal status reached
   const terminalStatuses = ["completed", "cancelled"];
   const wasAlreadyTerminal = terminalStatuses.includes(campaign.status);
@@ -221,4 +232,62 @@ export async function getCampaignWithAgents(
     .orderBy(desc(approvalCheckpointsTable.createdAt));
 
   return { campaign, agents, checkpoints };
+}
+
+// ─── Auto-activate linked sequences when campaign starts executing ─────────────
+
+async function autoActivateLinkedSequences(campaignId: string, log: Logger): Promise<void> {
+  const linkedSequences = await db
+    .select({
+      id: launchSequencesTable.id,
+      workspaceId: launchSequencesTable.workspaceId,
+      status: launchSequencesTable.status,
+      itemCount: sql<number>`(
+        SELECT COUNT(*) FROM launch_sequence_items
+        WHERE launch_sequence_items.sequence_id = ${launchSequencesTable.id}
+      )`,
+    })
+    .from(launchSequencesTable)
+    .where(
+      and(
+        eq(launchSequencesTable.campaignId, campaignId),
+        sql`${launchSequencesTable.status} IN ('draft', 'scheduled')`,
+      ),
+    );
+
+  if (linkedSequences.length === 0) return;
+
+  const now = new Date();
+
+  for (const seq of linkedSequences) {
+    if (Number(seq.itemCount) === 0) {
+      log.info({ sequenceId: seq.id }, "Skipping auto-activate: sequence has no items");
+      continue;
+    }
+
+    // Schedule all pending items starting from now
+    const items = await db
+      .select({ id: launchSequenceItemsTable.id, dayIndex: launchSequenceItemsTable.dayIndex })
+      .from(launchSequenceItemsTable)
+      .where(eq(launchSequenceItemsTable.sequenceId, seq.id));
+
+    for (const item of items) {
+      const scheduledAt = new Date(now);
+      scheduledAt.setDate(scheduledAt.getDate() + item.dayIndex);
+      await db
+        .update(launchSequenceItemsTable)
+        .set({ status: "scheduled", scheduledAt })
+        .where(eq(launchSequenceItemsTable.id, item.id));
+    }
+
+    await db
+      .update(launchSequencesTable)
+      .set({
+        status: "active",
+        config: sql`jsonb_set(COALESCE(config, '{}'), '{autoActivatedAt}', ${JSON.stringify(now.toISOString())}::jsonb)`,
+      })
+      .where(eq(launchSequencesTable.id, seq.id));
+
+    log.info({ campaignId, sequenceId: seq.id }, "Linked sequence auto-activated");
+  }
 }

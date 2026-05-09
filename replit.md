@@ -110,6 +110,10 @@ Launch tracks by revenue target:
 - Email engagement webhooks: `POST /email-dispatch/webhook/rd_station` and `/activecampaign` — maps open/click/unsubscribe/bounce events to sequence engagement table
 - WhatsApp AI auto-response: incoming webhook messages trigger `runWhatsAppResponseAgent` → classifies intent → sends response via Meta API (non-blocking setImmediate). `requiresHuman=true` emits Socket.io alert instead.
 - Sequence analytics: `GET /launch-sequences/:id/analytics` returns segments (hot/warm/cold/converted/unsubscribed), per-item open/click rates, health score, engagementTrend, adaptiveSuggestions from AI
+- Lead capture public endpoint: `POST /api/lead-capture/:sequenceId` — no auth required; validates `leadCaptureEnabled=true`, deduplicates by email, accepts UTM params + tags. `GET /api/lead-capture/:sequenceId` returns public sequence info.
+- Purchase → auto-conversion: Hotmart/Kiwify/Eduzz sale webhooks auto-mark matching sequence contacts as `converted` (segment + engagementScore=100 + engagement event) via `setImmediate` after revenue event is saved.
+- Campaign → sequence auto-activation: when campaign transitions to `executing`, all linked sequences in `draft`/`scheduled` with items are auto-activated (items scheduled from now+dayIndex, status→active, config.autoActivatedAt logged).
+- `updateLaunchSequence` now handles `campaignId` and `leadCaptureEnabled` patches.
 
 ## Pointers
 

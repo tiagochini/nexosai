@@ -7,6 +7,7 @@ import {
   pgEnum,
   jsonb,
   date,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
@@ -71,6 +72,7 @@ export const launchSequencesTable = pgTable("launch_sequences", {
   revenueTarget: text("revenue_target"),
   productName: text("product_name"),
   productPrice: text("product_price"),
+  leadCaptureEnabled: boolean("lead_capture_enabled").notNull().default(false),
   config: jsonb("config").notNull().default({}),
   aiGeneratedPlan: jsonb("ai_generated_plan").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true })
