@@ -5,6 +5,7 @@ export const waitlistTable = pgTable("waitlist", {
   name: text("name").notNull(),
   whatsapp: text("whatsapp").notNull(),
   email: text("email"),
+  segment: text("segment").notNull().default("individual"), // 'individual' | 'agency'
   source: text("source"),
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
   notified: boolean("notified").notNull().default(false),
