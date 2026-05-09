@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { useListCampaigns, getListCampaignsQueryKey } from "@workspace/api-client-react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Rocket, ChevronRight, Clock, CheckCircle2, Loader2, Play } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Plus, Rocket, ChevronRight, Clock, CheckCircle2,
+  Loader2, Play, Search, Filter, Zap, TrendingUp, BarChart3,
+} from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Rascunho", intake: "Intake", analyzing: "Analisando",
@@ -12,16 +17,16 @@ const STATUS_LABEL: Record<string, string> = {
   executing: "Em Execução", live: "Ao Vivo", completed: "Concluído",
 };
 const STATUS_COLOR: Record<string, string> = {
-  live: "text-success border-success/40 bg-success/10",
-  executing: "text-primary border-primary/40 bg-primary/10",
-  generating: "text-primary border-primary/40 bg-primary/10",
-  analyzing: "text-primary border-primary/40 bg-primary/10",
+  live:              "text-success border-success/40 bg-success/10",
+  executing:         "text-primary border-primary/40 bg-primary/10",
+  generating:        "text-primary border-primary/40 bg-primary/10",
+  analyzing:         "text-primary border-primary/40 bg-primary/10",
   awaiting_approval: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
-  approved: "text-green-400 border-green-400/40 bg-green-400/10",
-  strategy_ready: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
-  completed: "text-muted-foreground border-border bg-muted/20",
-  draft: "text-muted-foreground border-border bg-muted/20",
-  intake: "text-blue-400 border-blue-400/40 bg-blue-400/10",
+  approved:          "text-green-400 border-green-400/40 bg-green-400/10",
+  strategy_ready:    "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
+  completed:         "text-muted-foreground border-border bg-muted/20",
+  draft:             "text-muted-foreground border-border bg-muted/20",
+  intake:            "text-blue-400 border-blue-400/40 bg-blue-400/10",
 };
 const STATUS_ICON: Record<string, React.ElementType> = {
   live: Play, executing: Loader2, generating: Loader2, analyzing: Loader2,
@@ -29,23 +34,69 @@ const STATUS_ICON: Record<string, React.ElementType> = {
   completed: CheckCircle2, draft: Clock, intake: Loader2,
 };
 const TYPE_LABEL: Record<string, string> = {
-  launch: "Lançamento", perpetual_launch: "Lançamento Perpétuo", flash_sale: "Flash Sale",
-  live_sale: "Live Sale", continuous_sales: "Vendas Contínuas", subscription_growth: "Assinaturas",
-  authority: "Autoridade", audience_growth: "Crescimento de Audiência", affiliate: "Afiliado",
+  launch: "Lançamento", perpetual_launch: "Perpétuo", flash_sale: "Flash Sale",
+  live_sale: "Live Sale", continuous_sales: "Contínuo", subscription_growth: "Assinatura",
+  authority: "Autoridade", audience_growth: "Crescimento", affiliate: "Afiliado",
   branding: "Branding", upsell: "Upsell", remarketing: "Remarketing", scale: "Escala",
 };
-const TRACK_LABEL: Record<string, string> = {
-  six_digits: "6 Dígitos", eight_digits: "8 Dígitos", ten_digits: "10 Dígitos",
-  not_applicable: "—",
+const TRACK_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+  six_digits:    { label: "6 Díg",  color: "text-blue-400 border-blue-400/30 bg-blue-400/8",   icon: Rocket    },
+  eight_digits:  { label: "8 Díg",  color: "text-purple-400 border-purple-400/30 bg-purple-400/8", icon: TrendingUp },
+  ten_digits:    { label: "10 Díg", color: "text-red-400 border-red-400/30 bg-red-400/8",     icon: BarChart3 },
+  not_applicable:{ label: "—",      color: "text-muted-foreground border-border/30 bg-muted/10", icon: Rocket  },
 };
 
+// Pipeline steps used for progress visualization
+const PIPELINE_ORDER = [
+  "draft", "intake", "analyzing", "strategy_ready",
+  "generating", "awaiting_approval", "approved",
+  "executing", "live", "completed",
+];
+
+function PipelineBar({ status }: { status: string }) {
+  const idx     = PIPELINE_ORDER.indexOf(status);
+  const total   = PIPELINE_ORDER.length;
+  const pct     = total > 1 ? Math.round((idx / (total - 1)) * 100) : 0;
+  const isLive  = status === "live";
+  const isDone  = status === "completed";
+  const barColor = isDone ? "hsl(var(--success))" : isLive ? "hsl(var(--success))" : "hsl(var(--primary))";
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1 bg-muted/30 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: barColor, boxShadow: `0 0 4px ${barColor}` }}
+        />
+      </div>
+      <span className="font-mono text-[9px] text-muted-foreground/50 shrink-0 w-8 text-right">{pct}%</span>
+    </div>
+  );
+}
+
+type FilterStatus = "all" | "active" | "completed";
+
 export default function CampaignsList() {
-  const [, setLocation] = useLocation();
+  const [search, setSearch]     = useState("");
+  const [filter, setFilter]     = useState<FilterStatus>("all");
+
   const { data, isLoading } = useListCampaigns({
     query: { queryKey: getListCampaignsQueryKey() },
   });
 
-  const campaigns = data?.campaigns ?? [];
+  const allCampaigns = data?.campaigns ?? [];
+
+  const campaigns = allCampaigns.filter(c => {
+    const matchSearch = !search || c.title.toLowerCase().includes(search.toLowerCase());
+    const matchFilter =
+      filter === "all"       ? true :
+      filter === "active"    ? !["completed", "draft"].includes(c.status) :
+      filter === "completed" ? c.status === "completed" : true;
+    return matchSearch && matchFilter;
+  });
+
+  const active    = allCampaigns.filter(c => c.status === "live" || c.status === "executing").length;
+  const inProcess = allCampaigns.filter(c => !["draft", "completed", "live", "executing"].includes(c.status)).length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -53,97 +104,192 @@ export default function CampaignsList() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/50 pb-5">
         <div>
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Missões Ativas
+            Missões
           </h1>
-          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mt-1">
-            {campaigns.length} {campaigns.length === 1 ? "campanha registrada" : "campanhas registradas"}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
+              {allCampaigns.length} total
+            </span>
+            {active > 0 && (
+              <span className="flex items-center gap-1.5 text-[10px] font-mono text-success uppercase tracking-widest">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 5px hsl(var(--success))" }} />
+                {active} ao vivo
+              </span>
+            )}
+            {inProcess > 0 && (
+              <span className="text-[10px] font-mono text-primary uppercase tracking-widest">
+                {inProcess} em processo
+              </span>
+            )}
+          </div>
         </div>
         <Link href="/campaigns/new">
-          <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11 px-5">
-            <Plus className="h-4 w-4" />Nova Campanha
+          <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-5 text-xs shrink-0">
+            <Plus className="h-3.5 w-3.5" />Nova Missão
           </Button>
         </Link>
+      </div>
+
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar missões..."
+            className="font-mono text-sm rounded-none border-border/50 bg-background/60 focus-visible:ring-primary focus-visible:border-primary h-9 pl-9"
+          />
+        </div>
+        <div className="flex gap-1 border border-border/40 bg-card/30 p-0.5 rounded-sm">
+          {(["all", "active", "completed"] as FilterStatus[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-all rounded-sm ${
+                filter === f
+                  ? "bg-primary text-primary-foreground shadow-[0_0_10px_hsl(var(--primary)/0.3)]"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {f === "all" ? "Todas" : f === "active" ? "Ativas" : "Concluídas"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Loading */}
       {isLoading && (
         <div className="space-y-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 bg-muted/20" />)}
+          {[1,2,3].map(i => <Skeleton key={i} className="h-28 bg-muted/20" />)}
         </div>
       )}
 
       {/* Empty */}
       {!isLoading && campaigns.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="w-16 h-16 border border-border/50 bg-card/30 flex items-center justify-center">
-            <Rocket className="h-7 w-7 text-muted-foreground/40" />
+          <div className="relative">
+            <div className="w-16 h-16 border border-border/40 bg-card/30 flex items-center justify-center">
+              <Rocket className="h-7 w-7 text-muted-foreground/20" />
+            </div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 border-t border-r border-primary/40" />
+            <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b border-l border-primary/40" />
           </div>
-          <div className="text-center">
-            <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest mb-1">
-              Nenhuma campanha registrada
+          <div className="text-center space-y-1">
+            <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest">
+              {search ? `Nenhuma missão encontrada para "${search}"` : "Nenhuma campanha registrada"}
             </p>
-            <p className="font-mono text-[10px] text-muted-foreground/50 mb-5">
-              Crie sua primeira campanha para iniciar o lançamento
-            </p>
-            <Link href="/onboarding">
-              <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11">
-                <Plus className="h-4 w-4" />Iniciar Onboarding
+            {!search && (
+              <p className="font-mono text-[10px] text-muted-foreground/40">
+                Inicie sua primeira missão e a IA monta toda a estratégia
+              </p>
+            )}
+          </div>
+          {!search && (
+            <Link href="/campaigns/new">
+              <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 mt-2">
+                <Plus className="h-3.5 w-3.5" />Iniciar Primeira Missão
               </Button>
             </Link>
-          </div>
+          )}
         </div>
       )}
 
-      {/* Campaign list */}
+      {/* Campaign cards */}
       {!isLoading && campaigns.length > 0 && (
         <div className="space-y-3">
-          {campaigns.map(campaign => {
-            const Icon = STATUS_ICON[campaign.status] ?? Rocket;
-            const isAnimated = ["analyzing", "generating", "executing", "live"].includes(campaign.status);
+          {campaigns.map((campaign) => {
+            const StatusIcon = STATUS_ICON[campaign.status] ?? Rocket;
+            const isAnimated = ["analyzing", "generating", "executing"].includes(campaign.status);
+            const isLive = campaign.status === "live";
+            const trackMeta = TRACK_META[campaign.track ?? "not_applicable"] ?? TRACK_META["not_applicable"]!;
+            const TrackIcon = trackMeta.icon;
+
             return (
               <Link key={campaign.id} href={`/campaigns/${campaign.id}`}>
-                <div className="border border-border/50 bg-card/40 p-4 md:p-5 cursor-pointer hover:border-primary/50 hover:bg-card/60 transition-all group relative overflow-hidden">
-                  {/* Corner accents */}
-                  <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-primary/20 group-hover:border-primary transition-colors" />
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-primary/20 group-hover:border-primary transition-colors" />
+                <div className="border border-border/40 bg-card/40 backdrop-blur-sm hover:border-primary/40 hover:bg-card/60 transition-all group cursor-pointer relative overflow-hidden card-weapon">
+                  {/* Live glow */}
+                  {isLive && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-success/3 to-transparent pointer-events-none" />
+                  )}
+                  {/* Left accent bar */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-0.5 transition-all ${
+                    isLive ? "bg-success shadow-[0_0_8px_hsl(var(--success))]" :
+                    campaign.status === "awaiting_approval" ? "bg-yellow-400" :
+                    "bg-primary/30 group-hover:bg-primary/70"
+                  }`} />
 
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+                  <div className="pl-4 pr-4 md:pr-5 py-4 flex flex-col md:flex-row md:items-center gap-4">
                     {/* Status icon */}
                     <div className={`w-10 h-10 border flex items-center justify-center shrink-0 ${STATUS_COLOR[campaign.status] ?? "border-border text-muted-foreground"}`}>
-                      <Icon className={`h-4 w-4 ${isAnimated ? "animate-spin" : ""}`} />
+                      <StatusIcon className={`h-4 w-4 ${isAnimated ? "animate-spin" : ""} ${isLive ? "animate-pulse" : ""}`} />
                     </div>
 
-                    {/* Title + meta */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase tracking-wide truncate">
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 space-y-2">
+                      {/* Title row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase tracking-wide">
                           {campaign.title}
                         </span>
                         <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 border shrink-0 ${STATUS_COLOR[campaign.status] ?? ""}`}>
                           {STATUS_LABEL[campaign.status] ?? campaign.status}
                         </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">
-                        <span>{TYPE_LABEL[campaign.type] ?? campaign.type}</span>
-                        <span>·</span>
-                        <span>{campaign.track ? (TRACK_LABEL[campaign.track] ?? campaign.track) : "—"}</span>
-                        {campaign.revenueTarget && (
-                          <><span>·</span>
-                          <span className="text-success">Meta: R$ {Number(campaign.revenueTarget).toLocaleString("pt-BR")}</span></>
+                        {isLive && (
+                          <span className="flex items-center gap-1 font-mono text-[9px] text-success uppercase tracking-widest">
+                            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                            Live
+                          </span>
                         )}
-                        <span>·</span>
-                        <span>{campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString("pt-BR") : "—"}</span>
                       </div>
+
+                      {/* Meta row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`font-mono text-[9px] px-2 py-0.5 border ${trackMeta.color} flex items-center gap-1`}>
+                          <TrackIcon className="h-2.5 w-2.5" />
+                          {trackMeta.label}
+                        </span>
+                        <span className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-widest">
+                          {TYPE_LABEL[campaign.type] ?? campaign.type}
+                        </span>
+                        {campaign.revenueTarget && (
+                          <span className="font-mono text-[9px] text-success/80">
+                            Meta R$ {Number(campaign.revenueTarget).toLocaleString("pt-BR")}
+                          </span>
+                        )}
+                        <span className="font-mono text-[9px] text-muted-foreground/40">
+                          {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString("pt-BR") : "—"}
+                        </span>
+                      </div>
+
+                      {/* Pipeline progress */}
+                      <PipelineBar status={campaign.status} />
                     </div>
 
                     {/* Arrow */}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 hidden md:block" />
+                    <div className="shrink-0 hidden md:flex items-center gap-2">
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
+                        {campaign.status === "draft" || campaign.status === "intake" ? "Continuar Intake" :
+                         campaign.status === "awaiting_approval" ? "Revisar" : "Ver Missão"}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    </div>
                   </div>
                 </div>
               </Link>
             );
           })}
+        </div>
+      )}
+
+      {/* Bottom CTA when there are campaigns */}
+      {!isLoading && allCampaigns.length > 0 && (
+        <div className="flex justify-center pt-2">
+          <Link href="/campaigns/new">
+            <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline gap-2">
+              <Plus className="h-3 w-3" />Iniciar Nova Missão
+            </Button>
+          </Link>
         </div>
       )}
     </div>

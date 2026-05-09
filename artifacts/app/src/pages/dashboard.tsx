@@ -25,6 +25,7 @@ import {
   Rocket, Plus, Activity, AlertTriangle, ShieldCheck,
   Users, Building2, TrendingUp, CreditCard,
   UserCheck, UserX, Moon, Zap, ChevronRight, Wifi, Loader2,
+  Bot, Workflow, ArrowRight, CheckCircle2, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -252,7 +253,7 @@ function AddClientDialog({ open, onClose, onSuccess }: { open: boolean; onClose:
 
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { isAdmin, planSlug } = useAuth();
+  const { isAdmin, planSlug, plan } = useAuth();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [showAddClient, setShowAddClient] = useState(false);
@@ -396,31 +397,141 @@ export default function Dashboard() {
       {/* ════════════════════ TAB: LANÇADOR ════════════════════ */}
       {mode === "launcher" && (
         <div className="space-y-5">
+          {/* Stats row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard label="Campanhas Ativas" icon={<Activity className="h-4 w-4 text-primary" />} loading={loadingCampaigns} glow="primary">
-              <span className="text-4xl font-mono font-bold text-foreground">
-                {campaignsData?.campaigns?.filter((c) => c.status !== "completed").length ?? 0}
-              </span>
-            </StatCard>
-            <StatCard label="Créditos de IA" icon={<CreditCard className="h-4 w-4 text-primary" />} loading={loadingCredits} glow="primary">
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-mono font-bold text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]">
-                  {creditsData?.balance ?? 0}
+            <StatCard label="Missões em Progresso" icon={<Activity className="h-4 w-4 text-primary" />} loading={loadingCampaigns} glow="primary">
+              <div className="space-y-1.5">
+                <span className="text-4xl font-mono font-bold text-foreground">
+                  {campaignsData?.campaigns?.filter((c) => !["completed", "draft"].includes(c.status)).length ?? 0}
                 </span>
-                {creditsData?.balance != null && creditsData.balance < 50 && (
-                  <Badge variant="destructive" className="rounded-none font-mono text-[9px] uppercase tracking-widest animate-pulse">Crítico</Badge>
+                {(campaignsData?.campaigns?.filter(c => c.status === "live").length ?? 0) > 0 && (
+                  <div className="flex items-center gap-1.5 text-[9px] font-mono text-success uppercase tracking-widest">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                    {campaignsData!.campaigns!.filter(c => c.status === "live").length} ao vivo
+                  </div>
                 )}
               </div>
             </StatCard>
-            <StatCard label="Status Global" icon={<Wifi className="h-4 w-4 text-success" />} glow="success">
-              <div className="flex items-center gap-2 text-success font-mono font-bold text-xl uppercase tracking-widest">
-                Nominal<div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+
+            <StatCard label="Créditos de IA" icon={<CreditCard className="h-4 w-4 text-primary" />} loading={loadingCredits} glow="primary">
+              <Link href="/credits">
+                <div className="space-y-2 cursor-pointer group/cred">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-mono font-bold text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)] group-hover/cred:drop-shadow-[0_0_16px_hsl(var(--primary)/0.7)] transition-all">
+                      {(creditsData?.balance ?? 0).toLocaleString("pt-BR")}
+                    </span>
+                    {creditsData?.balance != null && creditsData.balance < 100 && (
+                      <Badge variant="destructive" className="rounded-none font-mono text-[9px] uppercase tracking-widest animate-pulse">Baixo</Badge>
+                    )}
+                  </div>
+                  <div className="h-1 w-full bg-muted/40 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${plan?.creditsMonthly ? Math.min(100, ((creditsData?.balance ?? 0) / plan.creditsMonthly) * 100) : 0}%`,
+                        background: "hsl(var(--primary))",
+                        boxShadow: "0 0 4px hsl(var(--primary) / 0.5)",
+                      }}
+                    />
+                  </div>
+                  <div className="text-[9px] font-mono text-muted-foreground/50">
+                    de {(plan?.creditsMonthly ?? 0).toLocaleString("pt-BR")} cr/mês · Ver histórico →
+                  </div>
+                </div>
+              </Link>
+            </StatCard>
+
+            <StatCard label="Status Operacional" icon={<Wifi className="h-4 w-4 text-success" />} glow="success">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-success font-mono font-bold text-xl uppercase tracking-widest">
+                  Nominal<div className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 8px hsl(var(--success))" }} />
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: "IA", ok: true },
+                    { label: "Queue", ok: true },
+                    { label: "DB", ok: true },
+                  ].map(s => (
+                    <div key={s.label} className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground/60">
+                      <CheckCircle2 className="h-2.5 w-2.5 text-success" />
+                      {s.label}
+                    </div>
+                  ))}
+                </div>
               </div>
             </StatCard>
           </div>
 
+          {/* Mission AI — next action widget */}
+          {!loadingCampaigns && (() => {
+            const campaigns = campaignsData?.campaigns ?? [];
+            const needsIntake     = campaigns.find(c => c.status === "intake" || c.status === "draft");
+            const needsApproval   = campaigns.find(c => c.status === "awaiting_approval");
+            const live            = campaigns.find(c => c.status === "live");
+            const hasNoCampaigns  = campaigns.length === 0;
+
+            const action = hasNoCampaigns
+              ? { icon: Rocket,        color: "text-primary",     bg: "border-primary/20 bg-primary/5",      title: "Inicie sua primeira missão", sub: "A IA monta toda a estratégia de lançamento para você", href: "/campaigns/new", cta: "Iniciar Missão" }
+              : needsApproval
+              ? { icon: CheckCircle2,  color: "text-yellow-400",  bg: "border-yellow-400/20 bg-yellow-400/5", title: `Aprovação pendente: ${needsApproval.title}`, sub: "Conteúdo gerado pela IA aguarda sua revisão e aprovação final", href: `/campaigns/${needsApproval.id}`, cta: "Revisar Conteúdo" }
+              : needsIntake
+              ? { icon: Bot,           color: "text-blue-400",    bg: "border-blue-400/20 bg-blue-400/5",    title: `Continue o intake: ${needsIntake.title}`, sub: "A IA está aguardando suas respostas para montar a estratégia", href: `/campaigns/${needsIntake.id}/intake`, cta: "Continuar Intake" }
+              : live
+              ? { icon: Play,          color: "text-success",     bg: "border-success/20 bg-success/5",      title: `Missão ao vivo: ${live.title}`, sub: "Monitoramento em tempo real — verifique métricas e ajustes da IA", href: `/campaigns/${live.id}`, cta: "Ver Dashboard" }
+              : { icon: Workflow,      color: "text-cyan-400",    bg: "border-cyan-400/20 bg-cyan-400/5",    title: "Configure sequências de automação", sub: "Email + WhatsApp automation para nutrir sua lista e converter", href: "/sequences", cta: "Ver Sequências" };
+
+            const Icon = action.icon;
+            return (
+              <div className={`border ${action.bg} p-4 flex items-center gap-4 relative overflow-hidden group`}>
+                <div className="absolute inset-0 bg-gradient-to-r from-current/3 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className={`w-10 h-10 border border-current/20 bg-current/10 flex items-center justify-center shrink-0 ${action.color}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50">Missão IA · Próxima Ação</span>
+                  </div>
+                  <div className={`font-mono font-bold text-sm truncate ${action.color}`}>{action.title}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/60 truncate mt-0.5">{action.sub}</div>
+                </div>
+                <Link href={action.href}>
+                  <Button variant="outline" size="sm" className={`rounded-none font-mono uppercase text-[10px] tracking-widest shrink-0 border-current/30 hover:bg-current/10 ${action.color} gap-2`}>
+                    {action.cta}<ArrowRight className="h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+            );
+          })()}
+
+          {/* Quick links row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { label: "Nova Missão",   href: "/campaigns/new", icon: Plus,     color: "hover:border-primary/40" },
+              { label: "Sequências",    href: "/sequences",      icon: Workflow, color: "hover:border-cyan-400/40" },
+              { label: "Agentes IA",   href: "/agents",         icon: Bot,      color: "hover:border-purple-400/40" },
+              { label: "Créditos",     href: "/credits",        icon: CreditCard, color: "hover:border-primary/40" },
+            ].map((ql) => {
+              const Icon = ql.icon;
+              return (
+                <Link key={ql.label} href={ql.href}>
+                  <div className={`border border-border/30 bg-card/30 ${ql.color} hover:bg-card/50 transition-all p-3 flex items-center gap-2.5 cursor-pointer group`}>
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0" />
+                    <span className="font-mono text-xs text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-widest truncate">{ql.label}</span>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto shrink-0 transition-colors" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Campaigns list */}
           <div className="space-y-3">
-            <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">Minhas Campanhas</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">Minhas Missões</h2>
+              <Link href="/campaigns">
+                <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">Ver todas →</span>
+              </Link>
+            </div>
             <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative overflow-hidden">
               <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/50 to-transparent pointer-events-none" />
               {loadingCampaigns ? (
@@ -435,37 +546,50 @@ export default function Dashboard() {
                   action={
                     <Link href="/campaigns/new">
                       <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-wider btn-weapon-outline mt-3">
-                        <Plus className="h-3.5 w-3.5 mr-2" />Criar primeira campanha
+                        <Plus className="h-3.5 w-3.5 mr-2" />Iniciar primeira missão
                       </Button>
                     </Link>
                   }
                 />
               ) : (
                 <div className="divide-y divide-border/50">
-                  {campaignsData.campaigns.map((c) => (
-                    <div key={c.id} className="px-4 md:px-5 py-4 flex items-center justify-between table-row-glow group gap-4">
+                  {campaignsData.campaigns.slice(0, 5).map((c) => (
+                    <div key={c.id} className="px-4 md:px-5 py-3.5 flex items-center justify-between table-row-glow group gap-4">
                       <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                        <div className={`w-1.5 h-6 shrink-0 ${c.status === "live" ? "bg-success shadow-[0_0_8px_hsl(var(--success))]" : "bg-primary/50"}`} />
+                        <div className={`w-1.5 h-6 shrink-0 ${
+                          c.status === "live"              ? "bg-success shadow-[0_0_8px_hsl(var(--success))]" :
+                          c.status === "awaiting_approval" ? "bg-yellow-400" :
+                          "bg-primary/40"
+                        }`} />
                         <div className="min-w-0">
                           <h3 className="font-bold font-mono text-sm group-hover:text-primary transition-colors truncate">{c.title}</h3>
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground bg-background/50 px-2 py-0.5 border border-border/40">{c.type}</span>
-                            {c.track && <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground bg-background/50 px-2 py-0.5 border border-border/40">{c.track}</span>}
+                          <div className="flex flex-wrap gap-1.5 mt-0.5">
+                            <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">{c.type}</span>
+                            {c.track && <><span className="text-muted-foreground/30">·</span><span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">{c.track}</span></>}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 md:gap-4 shrink-0">
-                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] tracking-widest uppercase px-2 md:px-3 py-1 hidden sm:flex ${STATUS_CLASS[c.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
+                      <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 hidden sm:flex ${STATUS_CLASS[c.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
                           {STATUS_LABEL[c.status] ?? c.status}
                         </Badge>
                         <Link href={`/campaigns/${c.id}`}>
-                          <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-wider btn-weapon-outline h-8 px-3">
-                            Ver<ChevronRight className="h-3.5 w-3.5 ml-1" />
+                          <Button variant="ghost" size="icon" className="rounded-sm h-7 w-7 hover:bg-primary/10 hover:text-primary">
+                            <ChevronRight className="h-3.5 w-3.5" />
                           </Button>
                         </Link>
                       </div>
                     </div>
                   ))}
+                  {(campaignsData.campaigns.length ?? 0) > 5 && (
+                    <div className="px-5 py-3 border-t border-border/30">
+                      <Link href="/campaigns">
+                        <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">
+                          + {campaignsData.campaigns.length - 5} mais missões →
+                        </span>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

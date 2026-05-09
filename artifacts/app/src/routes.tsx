@@ -21,6 +21,8 @@ import SocialPage from "@/pages/social/index";
 import VslsPage from "@/pages/vsls/index";
 import RevenuePage from "@/pages/revenue/index";
 import CompliancePage from "@/pages/compliance/index";
+import SettingsPage from "@/pages/settings";
+import CreditsPage from "@/pages/credits";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -156,6 +158,14 @@ export default function AppRoutes() {
       </Route>
       <Route path="/compliance">
         {() => <ProtectedRoute><CompliancePage /></ProtectedRoute>}
+      </Route>
+
+      {/* Account */}
+      <Route path="/settings">
+        {() => <ProtectedRoute><SettingsPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/credits">
+        {() => <ProtectedRoute><CreditsPage /></ProtectedRoute>}
       </Route>
 
       <Route component={NotFound} />
