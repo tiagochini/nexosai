@@ -12,3 +12,4 @@ export * from "./domains";
 export * from "./pages";
 export * from "./ai-provider-logs";
 export * from "./content";
+export * from "./metrics";
