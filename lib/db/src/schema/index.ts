@@ -18,3 +18,5 @@ export * from "./critique-logs";
 export * from "./social-posts";
 export * from "./subscription-payments";
 export * from "./revenue-events";
+export * from "./agency-clients";
+export * from "./whitelabel-configs";

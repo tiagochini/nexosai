@@ -14,6 +14,8 @@ import memoryRouter from "../modules/memory/memory.routes.js";
 import socialRouter from "../modules/social/social.routes.js";
 import billingRouter from "../modules/billing/billing.routes.js";
 import revenueRouter from "../modules/revenue/revenue.routes.js";
+import agencyRouter from "../modules/agency/agency.routes.js";
+import whitelabelRouter from "../modules/whitelabel/whitelabel.routes.js";
 
 const router: IRouter = Router();
 
@@ -32,5 +34,7 @@ router.use("/memory", memoryRouter);
 router.use("/social", socialRouter);
 router.use("/billing", billingRouter);
 router.use("/revenue", revenueRouter);
+router.use("/agency", agencyRouter);
+router.use("/whitelabel", whitelabelRouter);
 
 export default router;
