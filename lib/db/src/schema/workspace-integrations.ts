@@ -24,6 +24,7 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
   "kiwify",
   "mailchimp",
   "activecampaign",
+  "rd_station",
   "hubspot",
   "crypto_native",
   "custom_webhook",

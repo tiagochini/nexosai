@@ -17,6 +17,10 @@ import revenueRouter from "../modules/revenue/revenue.routes.js";
 import agencyRouter from "../modules/agency/agency.routes.js";
 import whitelabelRouter from "../modules/whitelabel/whitelabel.routes.js";
 import complianceRouter from "../modules/compliance/compliance.routes.js";
+import launchSequenceRouter from "../modules/launch-sequence/launch-sequence.routes.js";
+import vslRouter from "../modules/vsl/vsl.routes.js";
+import emailDispatchRouter from "../modules/email-dispatch/email-dispatch.routes.js";
+import whatsappRouter from "../modules/whatsapp/whatsapp.routes.js";
 
 const router: IRouter = Router();
 
@@ -38,5 +42,9 @@ router.use("/revenue", revenueRouter);
 router.use("/agency", agencyRouter);
 router.use("/whitelabel", whitelabelRouter);
 router.use("/compliance", complianceRouter);
+router.use("/launch-sequences", launchSequenceRouter);
+router.use("/vsls", vslRouter);
+router.use("/email-dispatch", emailDispatchRouter);
+router.use("/whatsapp", whatsappRouter);
 
 export default router;

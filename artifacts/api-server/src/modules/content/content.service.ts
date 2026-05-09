@@ -1193,6 +1193,8 @@ export async function getCampaignContent(
   campaignId: string,
   workspaceId: string,
   type?: string,
+  mentalTrigger?: string,
+  launchPhase?: string,
 ) {
   const [campaign] = await db
     .select({ id: campaignsTable.id })
@@ -1210,10 +1212,16 @@ export async function getCampaignContent(
   const conditions = [eq(contentPiecesTable.campaignId, campaignId)];
   if (type) {
     const { contentTypeValues } = await import("@workspace/db");
-    if (!contentTypeValues.includes(type as any)) {
+    if (!contentTypeValues.includes(type as never)) {
       throw new ValidationError(`Invalid type: ${type}`);
     }
-    conditions.push(eq(contentPiecesTable.type, type as any));
+    conditions.push(eq(contentPiecesTable.type, type as never));
+  }
+  if (mentalTrigger) {
+    conditions.push(eq(contentPiecesTable.mentalTrigger, mentalTrigger as never));
+  }
+  if (launchPhase) {
+    conditions.push(eq(contentPiecesTable.launchPhase, launchPhase));
   }
 
   const pieces = await db

@@ -56,6 +56,21 @@ export const mediaConceptStatusEnum = pgEnum("media_concept_status", [
   "produced",
 ]);
 
+export const mentalTriggerEnum = pgEnum("mental_trigger", [
+  "authority",
+  "social_proof",
+  "reciprocity",
+  "community",
+  "scarcity",
+  "urgency",
+  "anticipation",
+  "event",
+  "transformation",
+  "fear_of_loss",
+  "curiosity",
+  "contrast",
+]);
+
 export const contentPiecesTable = pgTable("content_pieces", {
   id: uuid("id").primaryKey().defaultRandom(),
   campaignId: uuid("campaign_id")
@@ -68,7 +83,10 @@ export const contentPiecesTable = pgTable("content_pieces", {
   status: contentStatusEnum("status").notNull().default("draft"),
   title: text("title").notNull(),
   phase: text("phase"),
+  launchPhase: text("launch_phase"),
   dayIndex: integer("day_index"),
+  mentalTrigger: mentalTriggerEnum("mental_trigger"),
+  sequenceItemId: uuid("sequence_item_id"),
   content: jsonb("content").notNull().default({}),
   aiProvider: text("ai_provider"),
   creditsUsed: integer("credits_used").notNull().default(0),

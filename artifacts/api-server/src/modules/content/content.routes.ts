@@ -22,6 +22,8 @@ router.use(requireAuth);
 router.get("/:campaignId/content", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
   const type = req.query["type"] as string | undefined;
+  const mentalTrigger = req.query["trigger"] as string | undefined;
+  const launchPhase = req.query["launchPhase"] as string | undefined;
 
   if (type) {
     const parsed = ContentTypeSchema.safeParse(type);
@@ -36,6 +38,8 @@ router.get("/:campaignId/content", async (req, res): Promise<void> => {
       campaignId,
       req.auth.workspaceId,
       type,
+      mentalTrigger,
+      launchPhase,
     );
     res.json(result);
   } catch (err) {

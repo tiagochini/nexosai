@@ -47,7 +47,7 @@ AI-powered operating system for campaign execution, launch automation and digita
 
 - `lib/db/src/schema/` — all Drizzle table definitions (one file per domain)
 - `lib/db/src/seed-plans.ts` — plan seeder
-- `artifacts/api-server/src/modules/` — domain modules (auth, credits, campaigns, workspaces, plans, ai-gateway, queue, realtime, orchestration, metrics, content, agents, intake)
+- `artifacts/api-server/src/modules/` — domain modules (auth, credits, campaigns, workspaces, plans, ai-gateway, queue, realtime, orchestration, metrics, content, agents, intake, launch-sequence, vsl, email-dispatch, whatsapp)
 - `artifacts/api-server/src/lib/` — shared utilities (env, errors, logger)
 - `artifacts/api-server/src/routes/` — route barrel (mounts all module routers)
 
@@ -92,6 +92,14 @@ Launch tracks by revenue target:
 - `z.record()` in zod/v4 requires two args: `z.record(z.string(), z.unknown())`
 - Redis ECONNREFUSED errors are suppressed in dev (ioredis/BullMQ internal — not a bug)
 - Intake module split: `intake.service.ts` (questions/save), `intake.ai.ts` (NL/conversational/finalize), `intake.scoring.ts` (readiness score/viability — pure functions)
+- `deductCredits(workspaceId, action, log, campaignId?)` — log is 3rd arg, NOT optional
+- `runStrategyAgent(campaignId, workspaceId, intakeData, track, log, profile?)` — track is 4th arg
+- `runProfileBuilderAgent(campaignId, workspaceId, intakeData, campaignType, log)` — 5 required args
+- `runAgent(opts)` requires `messages: AIMessage[]` (not `userMessage`) + `campaignId` + `workspaceId`
+- Launch sequence model values: `plf`, `formula_de_lancamento`, `semente`, `afiliado`, `perpetual`, `custom`
+- Mental trigger values: `authority`, `social_proof`, `reciprocity`, `community`, `scarcity`, `urgency`, `anticipation`, `event`, `transformation`, `fear_of_loss`, `curiosity`, `contrast`
+- WhatsApp dispatch requires workspace integration `whatsapp_business` with status `connected` + `accessToken` + `accountId` (phoneNumberId)
+- Email dispatch: `rd_station` and `activecampaign` providers fully integrated; others mock-send with warning log
 
 ## Pointers
 

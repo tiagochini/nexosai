@@ -85,7 +85,7 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
     provider: z.enum([
       "meta_ads", "instagram", "tiktok_ads", "google_ads",
       "whatsapp_business", "telegram", "stripe", "hotmart",
-      "eduzz", "kiwify", "mailchimp", "activecampaign", "hubspot",
+      "eduzz", "kiwify", "mailchimp", "activecampaign", "rd_station", "hubspot",
       "crypto_native", "custom_webhook",
     ]),
     accountId: z.string().optional(),
