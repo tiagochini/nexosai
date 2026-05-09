@@ -1,0 +1,16 @@
+export const env = {
+  PORT: process.env["PORT"] ?? "5000",
+  NODE_ENV: process.env["NODE_ENV"] ?? "development",
+  DATABASE_URL: process.env["DATABASE_URL"] ?? "",
+  SESSION_SECRET: process.env["SESSION_SECRET"] ?? "nexos-dev-secret",
+  JWT_SECRET: process.env["JWT_SECRET"] ?? process.env["SESSION_SECRET"] ?? "nexos-dev-secret",
+  JWT_REFRESH_SECRET: process.env["JWT_REFRESH_SECRET"] ?? (process.env["SESSION_SECRET"] ?? "nexos-refresh-secret") + "-refresh",
+  JWT_EXPIRES_IN: process.env["JWT_EXPIRES_IN"] ?? "15m",
+  JWT_REFRESH_EXPIRES_IN: process.env["JWT_REFRESH_EXPIRES_IN"] ?? "30d",
+  REDIS_URL: process.env["REDIS_URL"] ?? "redis://localhost:6379",
+  ANTHROPIC_API_KEY: process.env["ANTHROPIC_API_KEY"] ?? "",
+  OPENAI_API_KEY: process.env["OPENAI_API_KEY"] ?? "",
+  GEMINI_API_KEY: process.env["GEMINI_API_KEY"] ?? "",
+  NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "nexos.ai",
+  CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
+} as const;

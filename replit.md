@@ -1,45 +1,77 @@
-# [Project name]
+# NexOS AI
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+AI-powered operating system for campaign execution, launch automation and digital growth — transforming user intention into fully orchestrated campaign execution.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, proxied at /api)
 - `pnpm run typecheck` — full typecheck across all packages
+- `pnpm run typecheck:libs` — build composite libs (run before api-server typecheck when DB schema changes)
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- Seed plans: `cd lib/db && /home/runner/workspace/node_modules/.pnpm/node_modules/.bin/tsx src/seed-plans.ts`
 - Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
+- API: Express 5 (modular domain architecture — services, routes, middleware per domain)
+- DB: PostgreSQL + Drizzle ORM (lib/db)
+- Validation: Zod (zod/v4)
+- Auth: JWT (access 15m + refresh 30d) + bcryptjs
+- Real-time: Socket.io (WebSocket) at /api/socket.io
+- Jobs: BullMQ + Redis (graceful degradation when Redis unavailable)
+- AI: Multi-provider gateway (Anthropic → strategy/command/compliance, OpenAI → copy/creative/media, Gemini → analytics/optimization/video)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/db/src/schema/` — all Drizzle table definitions (one file per domain)
+- `lib/db/src/seed-plans.ts` — plan seeder
+- `artifacts/api-server/src/modules/` — domain modules (auth, credits, campaigns, workspaces, plans, ai-gateway, queue, realtime)
+- `artifacts/api-server/src/lib/` — shared utilities (env, errors, logger)
+- `artifacts/api-server/src/routes/` — route barrel (mounts all module routers)
 
-## Architecture decisions
+## Architecture Decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **Modular domain architecture**: each domain has its own service (business logic), routes (HTTP layer), and optionally middleware. No cross-module imports except through explicit interfaces.
+- **Decoupled payment gateways**: integrations with Stripe, Hotmart, etc. are workspace-level optional connections and never block campaign execution. `blocksExecution = false` is a hard rule for all payment gateways.
+- **Credit system based on actual AI costs**: credits are calculated from real provider token costs × margin multiplier (1.5x default). `AI_PROVIDER_COSTS` and `calculateCostUsd()` in `lib/db/src/schema/ai-provider-logs.ts` are the source of truth.
+- **Multi-provider AI routing**: each agent role maps to the optimal provider (Claude for strategy/reasoning, GPT-4o for copywriting/creative, Gemini for analytics/optimization). Defined in `ai-gateway.service.ts`.
+- **Campaign State Machine**: `VALID_STATUS_TRANSITIONS` in `campaigns.service.ts` enforces valid transitions. Campaigns cannot skip states or go backwards except through defined paths.
+- **Socket.io rooms**: clients join `campaign:{id}` rooms to receive real-time agent events. The Live Production Display streams via `emitAgentThinking()`, `emitAgentStarted()`, `emitAgentCompleted()`.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+NexOS AI sells to digital product launchers and agencies. Two plans:
+- **Solo** (R$297/mo + R$2500 onboarding): 3 campaigns, 1500 credits/month, 6-digit track
+- **Agency** (R$1497/mo + R$2500 onboarding): 10 campaigns, 5000 credits/month, all tracks, white-label
 
-## User preferences
+Launch tracks by revenue target:
+- **6-digit**: R$100k–R$999k in 7 days
+- **8-digit**: R$10M–R$99M in 7 days
+- **10-digit**: R$100M+ in 7 days
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+## User Preferences
+
+- Frontend: fintech-grade high-tech design aesthetic
+- No drag-and-drop — everything AI-generated
+- AI must align/approve before generating any video or image (pre-flight concept → low-res preview → user approval → high-res final)
+- All AI generations have an auditable log trail
+- Payment integration is NEVER a blocker for campaign execution
+- Multilingual: PT-BR first, EN-US and ES-LA modular
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Always run `pnpm run typecheck:libs` before `pnpm --filter @workspace/api-server run typecheck` when DB schema changes
+- BullMQ queue names cannot contain `:` — use `-` instead
+- Redis is optional in dev — queues and WebSocket degrade gracefully
+- Seed plans before first user registration (Solo plan must exist)
+- `z.record()` in zod/v4 requires two args: `z.record(z.string(), z.unknown())`
 
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- DB schema source of truth: `lib/db/src/schema/`
+- AI cost source of truth: `lib/db/src/schema/ai-provider-logs.ts` → `AI_PROVIDER_COSTS`
+- Credit action costs: `lib/db/src/schema/credits.ts` → `CREDIT_COSTS`

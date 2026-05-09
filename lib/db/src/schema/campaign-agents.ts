@@ -1,0 +1,72 @@
+import {
+  pgTable,
+  text,
+  uuid,
+  timestamp,
+  integer,
+  pgEnum,
+  jsonb,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+import { campaignsTable } from "./campaigns";
+
+export const agentTypeEnum = pgEnum("agent_type", [
+  "command",
+  "strategy",
+  "offer",
+  "copywriter",
+  "creative_director",
+  "video",
+  "media_buyer",
+  "targeting",
+  "landing_page",
+  "analytics",
+  "optimization",
+  "creator_growth",
+  "product_builder",
+  "compliance",
+  "affiliate_campaign",
+  "launch_manager",
+]);
+
+export const agentStatusEnum = pgEnum("agent_status", [
+  "pending",
+  "running",
+  "waiting_approval",
+  "approved",
+  "rejected",
+  "completed",
+  "failed",
+  "skipped",
+]);
+
+export const campaignAgentsTable = pgTable("campaign_agents", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  campaignId: uuid("campaign_id")
+    .notNull()
+    .references(() => campaignsTable.id, { onDelete: "cascade" }),
+  agentType: agentTypeEnum("agent_type").notNull(),
+  status: agentStatusEnum("status").notNull().default("pending"),
+  input: jsonb("input").notNull().default({}),
+  output: jsonb("output").notNull().default({}),
+  thoughts: text("thoughts"),
+  aiProvider: text("ai_provider"),
+  model: text("model"),
+  tokensUsed: integer("tokens_used"),
+  creditsUsed: integer("credits_used").notNull().default(0),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").notNull().default(0),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const insertCampaignAgentSchema = createInsertSchema(
+  campaignAgentsTable,
+).omit({ id: true, createdAt: true });
+
+export type InsertCampaignAgent = z.infer<typeof insertCampaignAgentSchema>;
+export type CampaignAgent = typeof campaignAgentsTable.$inferSelect;
