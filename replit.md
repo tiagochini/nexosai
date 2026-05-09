@@ -12,6 +12,25 @@ AI-powered operating system for campaign execution, launch automation and digita
 - Seed plans: `cd lib/db && /home/runner/workspace/node_modules/.pnpm/node_modules/.bin/tsx src/seed-plans.ts`
 - Required env: `DATABASE_URL` — Postgres connection string
 
+## Production Environment Variables
+
+**Required for production (will crash without these):**
+- `DATABASE_URL` — PostgreSQL connection string
+- `SESSION_SECRET` — used as JWT secret fallback (min 32 chars, random)
+
+**Optional but strongly recommended:**
+- `JWT_SECRET` — dedicated JWT signing key (defaults to SESSION_SECRET)
+- `REDIS_URL` — Redis connection URL for BullMQ queues + Socket.io (gracefully degraded if absent)
+- `ANTHROPIC_API_KEY` — Claude API key (strategy, compliance, intake AI)
+- `OPENAI_API_KEY` — GPT-4o API key (copy, creative, content)
+- `GEMINI_API_KEY` — Gemini API key (analytics, optimization)
+- `ALLOWED_ORIGINS` — comma-separated allowed CORS origins (e.g. `https://app.nexos.ai,https://nexos.ai`)
+- `APP_URL` — public base URL for OAuth callbacks and webhooks
+
+**Optional integrations:**
+- `NEXOS_BASE_DOMAIN` — base domain for white-label (default: `nexos.ai`)
+- `CREDIT_MARGIN_MULTIPLIER` — AI cost markup multiplier (default: `1.5`)
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
@@ -71,6 +90,8 @@ Launch tracks by revenue target:
 - Redis is optional in dev — queues and WebSocket degrade gracefully
 - Seed plans before first user registration (Solo plan must exist)
 - `z.record()` in zod/v4 requires two args: `z.record(z.string(), z.unknown())`
+- Redis ECONNREFUSED errors are suppressed in dev (ioredis/BullMQ internal — not a bug)
+- Intake module split: `intake.service.ts` (questions/save), `intake.ai.ts` (NL/conversational/finalize), `intake.scoring.ts` (readiness score/viability — pure functions)
 
 ## Pointers
 

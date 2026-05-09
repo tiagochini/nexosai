@@ -14,4 +14,19 @@ export const env = {
   NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "nexos.ai",
   CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
   APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
+  ALLOWED_ORIGINS: process.env["ALLOWED_ORIGINS"] ?? "",
 } as const;
+
+// ─── Production guard ──────────────────────────────────────────────────────────
+
+if (env.NODE_ENV === "production") {
+  const required: Array<keyof typeof env> = ["DATABASE_URL", "SESSION_SECRET"];
+  const missing = required.filter((k) => !env[k]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables for production: ${missing.join(", ")}`);
+  }
+
+  if (env.JWT_SECRET === "nexos-dev-secret") {
+    throw new Error("JWT_SECRET must be set to a secure value in production (SESSION_SECRET will be used as fallback)");
+  }
+}

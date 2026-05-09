@@ -260,7 +260,14 @@ export function initOrchestrationWorker(): Worker | null {
 
     worker.on("error", (err) => {
       // Redis connection errors during dev — expected when Redis is not running
-      if ((err as NodeJS.ErrnoException).code === "ECONNREFUSED") return;
+      const code = (err as NodeJS.ErrnoException).code;
+      const msg = err.message ?? "";
+      if (
+        code === "ECONNREFUSED" ||
+        msg.includes("ECONNREFUSED") ||
+        msg.includes("Connection is closed") ||
+        msg.includes("maxRetriesPerRequest")
+      ) return;
       logger.error({ err }, "Orchestration worker error");
     });
 

@@ -1,8 +1,26 @@
 import http from "http";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
+
+// ─── Suppress ioredis/BullMQ stderr noise in non-production ──────────────────
+// These errors (ECONNREFUSED, "Connection is closed", url.parse deprecation)
+// are emitted by ioredis internals before our event handlers run.
+// In production Redis is available so this never triggers.
+if (process.env["NODE_ENV"] !== "production") {
+  const originalStderrWrite = process.stderr.write.bind(process.stderr);
+  process.stderr.write = (data: string | Buffer, encoding?: unknown, callback?: unknown): boolean => {
+    const str = data.toString();
+    if (
+      str.includes("ECONNREFUSED") ||
+      str.includes("Connection is closed") ||
+      str.includes("url.parse()") ||
+      str.includes("DEP0169")
+    ) return true;
+    return originalStderrWrite(data as never, encoding as never, callback as never);
+  };
+}
 import { initRealtime } from "./modules/realtime/realtime.service.js";
-import { getQueue, QUEUE_NAMES } from "./modules/queue/queue.service.js";
+import { getQueue, closeAllQueues, QUEUE_NAMES } from "./modules/queue/queue.service.js";
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 
@@ -17,6 +35,28 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+// ─── Suppress noisy Redis/ioredis unhandled rejections in dev ─────────────────
+process.on("unhandledRejection", (reason) => {
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  if (
+    msg.includes("ECONNREFUSED") ||
+    msg.includes("Connection is closed") ||
+    msg.includes("connect ECONNREFUSED")
+  ) {
+    return; // Expected when Redis is not available in dev
+  }
+  logger.error({ reason }, "Unhandled promise rejection");
+});
+
+process.on("uncaughtException", (err) => {
+  const msg = err.message ?? "";
+  if (msg.includes("ECONNREFUSED") || msg.includes("Connection is closed")) {
+    return;
+  }
+  logger.fatal({ err }, "Uncaught exception — shutting down");
+  process.exit(1);
+});
 
 const httpServer = http.createServer(app);
 
@@ -50,8 +90,14 @@ async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutdown signal received");
   stopSocialScheduler();
   await closeOrchestrationWorker();
-  httpServer.close(() => process.exit(0));
+  await closeAllQueues();
+  httpServer.close(() => {
+    logger.info("HTTP server closed");
+    process.exit(0);
+  });
+  // Force exit after 10s if connections don't drain
+  setTimeout(() => process.exit(0), 10_000).unref();
 }
 
-process.once("SIGTERM", () => shutdown("SIGTERM"));
-process.once("SIGINT", () => shutdown("SIGINT"));
+process.once("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("SIGINT", () => void shutdown("SIGINT"));
