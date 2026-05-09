@@ -15,6 +15,14 @@ import { runCPLScriptAgent } from "../agents/cpl-script.agent.js";
 import { runWebinarScriptAgent } from "../agents/webinar-script.agent.js";
 import { runLiveScriptAgent } from "../agents/live-script.agent.js";
 import { runStoriesSequenceAgent } from "../agents/stories-sequence.agent.js";
+import { runCreativeDirectorAgent } from "../agents/creative-director.agent.js";
+import { runLandingPageAgent } from "../agents/landing-page.agent.js";
+import { runTargetingAgent } from "../agents/targeting.agent.js";
+import { runMediaBuyerAgent } from "../agents/media-buyer.agent.js";
+import { runVideoStrategyAgent } from "../agents/video-strategy.agent.js";
+import { runCreatorGrowthAgent } from "../agents/creator-growth.agent.js";
+import { runComplianceAgent } from "../agents/compliance.agent.js";
+import { runOptimizationAgent } from "../agents/optimization.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
@@ -35,6 +43,27 @@ const CONTENT_GENERATION_ALLOWED_STATUSES = [
   "generating",
   "active",
 ];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function emitAgentError(campaignId: string, agentType: string, err: unknown) {
+  emitCampaignEvent({
+    campaignId,
+    type: "agent_failed",
+    agentType,
+    message: `Agente ${agentType} falhou: ${err instanceof Error ? err.message : String(err)}`,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+function extractProfile(audienceData: unknown): ProfileBuilderOutput | undefined {
+  if (!audienceData || typeof audienceData !== "object") return undefined;
+  const d = audienceData as Record<string, unknown>;
+  if (!d["primaryAvatar"]) return undefined;
+  return audienceData as ProfileBuilderOutput;
+}
+
+// ── Main orchestrator ─────────────────────────────────────────────────────────
 
 export async function generateCampaignContent(
   campaignId: string,
@@ -80,6 +109,13 @@ export async function generateCampaignContent(
   let piecesGenerated = 0;
   let mediaBriefsGenerated = 0;
 
+  const campaignType = String(intakeData["campaign.type"] ?? campaign.type ?? "launch");
+  const salesChannel = String(intakeData["campaign.salesChannel"] ?? "sales_page");
+  const trafficBudget = Number(intakeData["campaign.budget.traffic"] ?? 0);
+  const hasTrafficBudget = trafficBudget > 0;
+  const isCreatorCampaign = ["audience_growth", "creator_monetization"].includes(campaignType);
+  const isVideoFocused = isCreatorCampaign || salesChannel === "youtube";
+
   await db
     .update(campaignsTable)
     .set({ status: "generating" })
@@ -88,7 +124,7 @@ export async function generateCampaignContent(
   emitCampaignEvent({
     campaignId,
     type: "phase_changed",
-    message: "Iniciando produção de conteúdo — 5 agentes em execução...",
+    message: "Iniciando produção de conteúdo — agentes em execução...",
     data: { phase: "content_production" },
     timestamp: new Date().toISOString(),
   });
@@ -98,10 +134,73 @@ export async function generateCampaignContent(
     campaignId,
     action: "content.generation.started",
     actor: "system",
-    data: { hasProfile: !!profile, hasStrategy: !!strategy, hasLaunchPlan: !!launchPlan },
+    data: {
+      hasProfile: !!profile,
+      hasStrategy: !!strategy,
+      hasLaunchPlan: !!launchPlan,
+      campaignType,
+      salesChannel,
+      hasTrafficBudget,
+    },
   });
 
-  // ── 1. Copywriter Agent ─────────────────────────────────────────────────────
+  // Capture copy and ad content references for compliance agent (set after generation)
+  let capturedCopyContent: Record<string, unknown> | undefined;
+  let capturedAdContent: Record<string, unknown> | undefined;
+
+  // ── 1. Creative Director (all campaigns — sets visual identity first) ─────────
+  try {
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_started",
+      agentType: "creative_director",
+      message: "Agente Creative Director — definindo identidade visual da campanha...",
+      timestamp: new Date().toISOString(),
+    });
+
+    const creativeOutput = await runCreativeDirectorAgent(
+      campaignId,
+      workspaceId,
+      intakeData,
+      profile,
+      log,
+    );
+
+    const [piece] = await db
+      .insert(contentPiecesTable)
+      .values({
+        campaignId,
+        workspaceId,
+        type: "creative_direction",
+        status: "draft",
+        title: `Direção Criativa — ${creativeOutput.campaignTitle}`,
+        content: creativeOutput as any,
+        aiProvider: "openai",
+        creditsUsed: 40,
+      })
+      .returning();
+
+    piecesGenerated++;
+    agentsRun.push("creative_director");
+
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_completed",
+      agentType: "creative_director",
+      message: `Creative Director concluído — identidade visual completa com ${Object.keys(creativeOutput.colorSystem).length} tokens de cor + tipografia + guia de estilo`,
+      data: { pieceId: piece?.id },
+      timestamp: new Date().toISOString(),
+    });
+
+    log.info({ campaignId, pieceId: piece?.id }, "Creative director agent completed");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push({ agent: "creative_director", error: msg });
+    log.error({ err, campaignId }, "Creative director agent failed");
+    emitAgentError(campaignId, "creative_director", err);
+  }
+
+  // ── 2. Copywriter Agent ──────────────────────────────────────────────────────
   try {
     emitCampaignEvent({
       campaignId,
@@ -120,6 +219,8 @@ export async function generateCampaignContent(
       launchPlan,
       log,
     );
+
+    capturedCopyContent = copyOutput as unknown as Record<string, unknown>;
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -155,7 +256,64 @@ export async function generateCampaignContent(
     emitAgentError(campaignId, "copywriter", err);
   }
 
-  // ── 2. Social Media Agent ───────────────────────────────────────────────────
+  // ── 3. Landing Page Agent (all campaigns with page-based sales) ──────────────
+  const hasLandingPage = !["challenge_funnel"].includes(campaignType);
+
+  if (hasLandingPage) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "landing_page",
+        message: "Agente Landing Page — estruturando página de vendas com CRO...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const lpOutput = await runLandingPageAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy,
+        profile,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "landing_page_structure",
+          status: "draft",
+          title: `Página de Vendas — ${lpOutput.sections.length} seções | ${lpOutput.pageType}`,
+          content: lpOutput as any,
+          aiProvider: "openai",
+          creditsUsed: 65,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("landing_page");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "landing_page",
+        message: `Landing Page concluída — ${lpOutput.sections.length} seções wireframadas com copy + specs técnicas`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id, sections: lpOutput.sections.length }, "Landing page agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "landing_page", error: msg });
+      log.error({ err, campaignId }, "Landing page agent failed");
+      emitAgentError(campaignId, "landing_page", err);
+    }
+  }
+
+  // ── 4. Social Media Agent ────────────────────────────────────────────────────
   try {
     emitCampaignEvent({
       campaignId,
@@ -209,7 +367,7 @@ export async function generateCampaignContent(
     emitAgentError(campaignId, "social_media", err);
   }
 
-  // ── 3. Ad Copy Agent ────────────────────────────────────────────────────────
+  // ── 5. Ad Copy Agent ─────────────────────────────────────────────────────────
   try {
     emitCampaignEvent({
       campaignId,
@@ -227,6 +385,8 @@ export async function generateCampaignContent(
       profile,
       log,
     );
+
+    capturedAdContent = adOutput as unknown as Record<string, unknown>;
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -262,8 +422,117 @@ export async function generateCampaignContent(
     emitAgentError(campaignId, "ad_copy", err);
   }
 
-  // ── 4. VSL Script Agent ─────────────────────────────────────────────────────
-  const campaignType = String(intakeData["campaign.type"] ?? campaign.type ?? "launch");
+  // ── 6. Targeting Agent (campaigns with traffic budget) ───────────────────────
+  if (hasTrafficBudget) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "targeting",
+        message: "Agente Targeting — configurando audiências no Meta, Google e TikTok...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const targetingOutput = await runTargetingAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        profile,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "targeting_config",
+          status: "draft",
+          title: `Configuração de Audiências — ${targetingOutput.metaAudiences.length} Meta + ${targetingOutput.googleAudiences.length} Google + ${targetingOutput.tiktokAudiences.length} TikTok`,
+          content: targetingOutput as any,
+          aiProvider: "openai",
+          creditsUsed: 55,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("targeting");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "targeting",
+        message: `Targeting concluído — ${targetingOutput.metaAudiences.length + targetingOutput.googleAudiences.length + targetingOutput.tiktokAudiences.length} audiências configuradas + UTMs prontos`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id }, "Targeting agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "targeting", error: msg });
+      log.error({ err, campaignId }, "Targeting agent failed");
+      emitAgentError(campaignId, "targeting", err);
+    }
+  }
+
+  // ── 7. Media Buyer Agent (campaigns with traffic budget) ─────────────────────
+  if (hasTrafficBudget) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "media_buyer",
+        message: "Agente Media Buyer — planejando veiculação e alocação diária de budget...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const mediaBuyerOutput = await runMediaBuyerAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy,
+        profile,
+        launchPlan,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "media_buying_plan",
+          status: "draft",
+          title: `Plano de Media Buying — R$${mediaBuyerOutput.totalBudget} | ${mediaBuyerOutput.dailyAllocations.length} dias`,
+          content: mediaBuyerOutput as any,
+          aiProvider: "openai",
+          creditsUsed: 60,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("media_buyer");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "media_buyer",
+        message: `Media Buyer concluído — budget diário + regras de escala + critérios de corte + plano de testes A/B`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id }, "Media buyer agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "media_buyer", error: msg });
+      log.error({ err, campaignId }, "Media buyer agent failed");
+      emitAgentError(campaignId, "media_buyer", err);
+    }
+  }
+
+  // ── 8. VSL Script Agent ──────────────────────────────────────────────────────
   const hasVSL = ["launch", "perpetual_launch", "continuous_sales", "live_sale"].includes(campaignType);
 
   if (hasVSL) {
@@ -320,7 +589,7 @@ export async function generateCampaignContent(
     }
   }
 
-  // ── 5. CPL Script Agent (launch, perpetual_launch, live_sale) ───────────────
+  // ── 9. CPL Script Agent ──────────────────────────────────────────────────────
   const hasCPL = ["launch", "perpetual_launch", "live_sale", "flash_sale"].includes(campaignType);
 
   if (hasCPL) {
@@ -378,9 +647,9 @@ export async function generateCampaignContent(
     }
   }
 
-  // ── 6. Webinar Script Agent (perpetual_launch, live_sale, authority) ─────────
+  // ── 10. Webinar Script Agent ─────────────────────────────────────────────────
   const hasWebinar = ["perpetual_launch", "live_sale", "authority", "subscription_growth"].includes(campaignType)
-    || String(intakeData["campaign.salesChannel"] ?? "") === "webinar";
+    || salesChannel === "webinar";
 
   if (hasWebinar) {
     try {
@@ -436,7 +705,7 @@ export async function generateCampaignContent(
     }
   }
 
-  // ── 7. Live Script Agent (launch, live_sale, flash_sale) ─────────────────────
+  // ── 11. Live Script Agent ────────────────────────────────────────────────────
   const hasLive = ["launch", "live_sale", "flash_sale", "perpetual_launch"].includes(campaignType);
 
   if (hasLive) {
@@ -494,7 +763,7 @@ export async function generateCampaignContent(
     }
   }
 
-  // ── 8. Stories Sequence Agent (all campaign types) ───────────────────────────
+  // ── 12. Stories Sequence Agent (all campaign types) ──────────────────────────
   try {
     emitCampaignEvent({
       campaignId,
@@ -548,7 +817,115 @@ export async function generateCampaignContent(
     emitAgentError(campaignId, "stories_sequence", err);
   }
 
-  // ── 9. Media Brief Agent ─────────────────────────────────────────────────────
+  // ── 13. Video Strategy Agent (creator/video campaigns) ───────────────────────
+  if (isVideoFocused) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "video_strategy",
+        message: "Agente Video Strategy — planejando estratégia de canal e série de vídeos...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const videoOutput = await runVideoStrategyAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        profile,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "video_strategy",
+          status: "draft",
+          title: `Estratégia de Vídeo — ${videoOutput.seriesPlanning.totalEpisodes} episódios | ${videoOutput.channelStrategy.primaryPlatform}`,
+          content: videoOutput as any,
+          aiProvider: "google",
+          creditsUsed: 50,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("video_strategy");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "video_strategy",
+        message: `Video Strategy concluído — série de ${videoOutput.seriesPlanning.totalEpisodes} episódios + SEO + short-form strategy`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id, episodes: videoOutput.seriesPlanning.totalEpisodes }, "Video strategy agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "video_strategy", error: msg });
+      log.error({ err, campaignId }, "Video strategy agent failed");
+      emitAgentError(campaignId, "video_strategy", err);
+    }
+  }
+
+  // ── 14. Creator Growth Agent (creator campaigns) ─────────────────────────────
+  if (isCreatorCampaign) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "creator_growth",
+        message: "Agente Creator Growth — elaborando plano de crescimento de audiência...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const growthOutput = await runCreatorGrowthAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        profile,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "creator_growth_plan",
+          status: "draft",
+          title: `Plano de Crescimento — ${growthOutput.growthStrategy.length} pilares | 12 semanas`,
+          content: growthOutput as any,
+          aiProvider: "google",
+          creditsUsed: 45,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("creator_growth");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "creator_growth",
+        message: `Creator Growth concluído — ${growthOutput.collaborationPlan.length} colaborações + plano 12 semanas + KPIs`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id }, "Creator growth agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "creator_growth", error: msg });
+      log.error({ err, campaignId }, "Creator growth agent failed");
+      emitAgentError(campaignId, "creator_growth", err);
+    }
+  }
+
+  // ── 15. Media Brief Agent ────────────────────────────────────────────────────
   try {
     emitCampaignEvent({
       campaignId,
@@ -581,7 +958,6 @@ export async function generateCampaignContent(
       })
       .returning();
 
-    // Save individual media briefs to mediaBriefsTable for approval flow
     const allConcepts = [
       ...mediaOutput.imageConcepts.map((c) => ({ ...c, kind: "image" as const })),
       ...mediaOutput.videoConcepts.map((c) => ({ ...c, kind: "video" as const })),
@@ -622,7 +998,74 @@ export async function generateCampaignContent(
     emitAgentError(campaignId, "media_brief", err);
   }
 
-  // ── Final status ────────────────────────────────────────────────────────────
+  // ── 16. Compliance Agent (LAST — reviews all copy generated above) ────────────
+  try {
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_started",
+      agentType: "compliance",
+      message: "Agente Compliance — verificando toda a copy contra CONAR, CDC e políticas de plataforma...",
+      timestamp: new Date().toISOString(),
+    });
+
+    const complianceOutput = await runComplianceAgent(
+      campaignId,
+      workspaceId,
+      intakeData,
+      capturedCopyContent,
+      capturedAdContent,
+      log,
+    );
+
+    const [piece] = await db
+      .insert(contentPiecesTable)
+      .values({
+        campaignId,
+        workspaceId,
+        type: "compliance_report",
+        status: complianceOutput.overallRiskLevel === "safe" || complianceOutput.overallRiskLevel === "low_risk"
+          ? "approved"
+          : "pending_approval",
+        title: `Relatório de Compliance — Score ${complianceOutput.complianceScore}/100 | ${complianceOutput.overallRiskLevel.toUpperCase()}`,
+        content: complianceOutput as any,
+        aiProvider: "anthropic",
+        creditsUsed: 50,
+      })
+      .returning();
+
+    piecesGenerated++;
+    agentsRun.push("compliance");
+
+    const violationCount = complianceOutput.violations.length;
+    const criticalCount = complianceOutput.violations.filter((v) => v.severity === "critical").length;
+
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_completed",
+      agentType: "compliance",
+      message: `Compliance concluído — Score: ${complianceOutput.complianceScore}/100 | ${violationCount} violações (${criticalCount} críticas) | Risco: ${complianceOutput.overallRiskLevel}`,
+      data: {
+        pieceId: piece?.id,
+        score: complianceOutput.complianceScore,
+        riskLevel: complianceOutput.overallRiskLevel,
+        violations: violationCount,
+        critical: criticalCount,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    log.info(
+      { campaignId, pieceId: piece?.id, score: complianceOutput.complianceScore, riskLevel: complianceOutput.overallRiskLevel },
+      "Compliance agent completed",
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push({ agent: "compliance", error: msg });
+    log.error({ err, campaignId }, "Compliance agent failed");
+    emitAgentError(campaignId, "compliance", err);
+  }
+
+  // ── Final status ─────────────────────────────────────────────────────────────
   const finalStatus =
     errors.length === 0
       ? "active"
@@ -646,7 +1089,7 @@ export async function generateCampaignContent(
   emitCampaignEvent({
     campaignId,
     type: "phase_changed",
-    message: `Produção de conteúdo concluída — ${piecesGenerated} peças geradas`,
+    message: `Produção de conteúdo concluída — ${piecesGenerated} peças geradas por ${agentsRun.length} agentes`,
     data: { agentsRun, piecesGenerated, mediaBriefsGenerated, errors: errors.length },
     timestamp: new Date().toISOString(),
   });
@@ -657,9 +1100,92 @@ export async function generateCampaignContent(
     mediaBriefsGenerated,
     agentsRun,
     errors,
-    status: errors.length === 0 ? "completed" : errors.length < 5 ? "partial" : "failed",
+    status: errors.length === 0 ? "completed" : errors.length < agentsRun.length ? "partial" : "failed",
   };
 }
+
+// ── Optimization (separate — needs live metrics) ──────────────────────────────
+
+export async function optimizeCampaign(
+  campaignId: string,
+  workspaceId: string,
+  currentMetrics: Record<string, unknown>,
+  log: Logger,
+): Promise<{ pieceId: string; output: ReturnType<typeof runOptimizationAgent> extends Promise<infer T> ? T : never }> {
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(
+      and(
+        eq(campaignsTable.id, campaignId),
+        eq(campaignsTable.workspaceId, workspaceId),
+      ),
+    )
+    .limit(1);
+
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+
+  emitCampaignEvent({
+    campaignId,
+    type: "agent_started",
+    agentType: "optimization",
+    message: "Agente Optimization — analisando performance e gerando recomendações...",
+    timestamp: new Date().toISOString(),
+  });
+
+  const optimizationOutput = await runOptimizationAgent(
+    campaignId,
+    workspaceId,
+    intakeData,
+    currentMetrics,
+    log,
+  );
+
+  const [piece] = await db
+    .insert(contentPiecesTable)
+    .values({
+      campaignId,
+      workspaceId,
+      type: "optimization_report",
+      status: "draft",
+      title: `Relatório de Otimização — Score ${optimizationOutput.overallHealthScore}/100 | ${optimizationOutput.healthTrend}`,
+      content: optimizationOutput as any,
+      aiProvider: "google",
+      creditsUsed: 35,
+    })
+    .returning();
+
+  emitCampaignEvent({
+    campaignId,
+    type: "agent_completed",
+    agentType: "optimization",
+    message: `Otimização concluída — ${optimizationOutput.recommendations.length} recomendações | ${optimizationOutput.recommendations.filter((r) => r.priority === "critical").length} críticas`,
+    data: {
+      pieceId: piece?.id,
+      score: optimizationOutput.overallHealthScore,
+      recommendations: optimizationOutput.recommendations.length,
+    },
+    timestamp: new Date().toISOString(),
+  });
+
+  await db.insert(auditLogsTable).values({
+    workspaceId,
+    campaignId,
+    action: "content.optimization.completed",
+    actor: "system",
+    data: {
+      score: optimizationOutput.overallHealthScore,
+      trend: optimizationOutput.healthTrend,
+      recommendations: optimizationOutput.recommendations.length,
+    },
+  });
+
+  return { pieceId: piece?.id ?? "", output: optimizationOutput as any };
+}
+
+// ── Read queries ──────────────────────────────────────────────────────────────
 
 export async function getCampaignContent(
   campaignId: string,
@@ -679,26 +1205,25 @@ export async function getCampaignContent(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  const query = db
+  const conditions = [eq(contentPiecesTable.campaignId, campaignId)];
+  if (type) {
+    const { contentTypeValues } = await import("@workspace/db");
+    if (!contentTypeValues.includes(type as any)) {
+      throw new ValidationError(`Invalid type: ${type}`);
+    }
+    conditions.push(eq(contentPiecesTable.type, type as any));
+  }
+
+  const pieces = await db
     .select()
     .from(contentPiecesTable)
-    .where(
-      and(
-        eq(contentPiecesTable.campaignId, campaignId),
-        eq(contentPiecesTable.workspaceId, workspaceId),
-        ...(type ? [eq(contentPiecesTable.type, type as any)] : []),
-      ),
-    )
+    .where(and(...conditions))
     .orderBy(desc(contentPiecesTable.createdAt));
 
-  const pieces = await query;
-  return pieces;
+  return { pieces, total: pieces.length };
 }
 
-export async function getCampaignMediaBriefs(
-  campaignId: string,
-  workspaceId: string,
-) {
+export async function getMediaBriefs(campaignId: string, workspaceId: string) {
   const [campaign] = await db
     .select({ id: campaignsTable.id })
     .from(campaignsTable)
@@ -712,42 +1237,40 @@ export async function getCampaignMediaBriefs(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  return db
+  const briefs = await db
     .select()
     .from(mediaBriefsTable)
     .where(eq(mediaBriefsTable.campaignId, campaignId))
     .orderBy(desc(mediaBriefsTable.createdAt));
+
+  return { briefs, total: briefs.length };
 }
+
+// Alias for route backwards compatibility
+export const getCampaignMediaBriefs = getMediaBriefs;
+
+// ── Approval / rejection ──────────────────────────────────────────────────────
 
 export async function approveContentPiece(
   campaignId: string,
   workspaceId: string,
   pieceId: string,
 ) {
-  await assertCampaignAccess(campaignId, workspaceId);
+  const [campaign] = await db
+    .select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
 
-  const [updated] = await db
+  const [piece] = await db
     .update(contentPiecesTable)
     .set({ status: "approved", approvedAt: new Date() })
-    .where(
-      and(
-        eq(contentPiecesTable.id, pieceId),
-        eq(contentPiecesTable.campaignId, campaignId),
-      ),
-    )
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
     .returning();
 
-  if (!updated) throw new NotFoundError("Content piece");
-
-  await db.insert(auditLogsTable).values({
-    workspaceId,
-    campaignId,
-    action: "content.piece.approved",
-    actor: "user",
-    data: { pieceId, type: updated.type },
-  });
-
-  return updated;
+  if (!piece) throw new NotFoundError("Content piece");
+  return piece;
 }
 
 export async function rejectContentPiece(
@@ -756,30 +1279,21 @@ export async function rejectContentPiece(
   pieceId: string,
   reason: string,
 ) {
-  await assertCampaignAccess(campaignId, workspaceId);
+  const [campaign] = await db
+    .select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
 
-  const [updated] = await db
+  const [piece] = await db
     .update(contentPiecesTable)
     .set({ status: "rejected", rejectedAt: new Date(), rejectionReason: reason })
-    .where(
-      and(
-        eq(contentPiecesTable.id, pieceId),
-        eq(contentPiecesTable.campaignId, campaignId),
-      ),
-    )
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
     .returning();
 
-  if (!updated) throw new NotFoundError("Content piece");
-
-  await db.insert(auditLogsTable).values({
-    workspaceId,
-    campaignId,
-    action: "content.piece.rejected",
-    actor: "user",
-    data: { pieceId, type: updated.type, reason },
-  });
-
-  return updated;
+  if (!piece) throw new NotFoundError("Content piece");
+  return piece;
 }
 
 export async function approveMediaBrief(
@@ -787,30 +1301,21 @@ export async function approveMediaBrief(
   workspaceId: string,
   briefId: string,
 ) {
-  await assertCampaignAccess(campaignId, workspaceId);
+  const [campaign] = await db
+    .select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
 
-  const [updated] = await db
+  const [brief] = await db
     .update(mediaBriefsTable)
     .set({ conceptStatus: "concept_approved", approvedAt: new Date() })
-    .where(
-      and(
-        eq(mediaBriefsTable.id, briefId),
-        eq(mediaBriefsTable.campaignId, campaignId),
-      ),
-    )
+    .where(and(eq(mediaBriefsTable.id, briefId), eq(mediaBriefsTable.campaignId, campaignId)))
     .returning();
 
-  if (!updated) throw new NotFoundError("Media brief");
-
-  await db.insert(auditLogsTable).values({
-    workspaceId,
-    campaignId,
-    action: "media.brief.approved",
-    actor: "user",
-    data: { briefId, mediaType: updated.mediaType },
-  });
-
-  return updated;
+  if (!brief) throw new NotFoundError("Media brief");
+  return brief;
 }
 
 export async function rejectMediaBrief(
@@ -819,64 +1324,19 @@ export async function rejectMediaBrief(
   briefId: string,
   feedback: string,
 ) {
-  await assertCampaignAccess(campaignId, workspaceId);
-
-  const [updated] = await db
-    .update(mediaBriefsTable)
-    .set({ conceptStatus: "concept_rejected", userFeedback: feedback })
-    .where(
-      and(
-        eq(mediaBriefsTable.id, briefId),
-        eq(mediaBriefsTable.campaignId, campaignId),
-      ),
-    )
-    .returning();
-
-  if (!updated) throw new NotFoundError("Media brief");
-
-  await db.insert(auditLogsTable).values({
-    workspaceId,
-    campaignId,
-    action: "media.brief.rejected",
-    actor: "user",
-    data: { briefId, feedback },
-  });
-
-  return updated;
-}
-
-async function assertCampaignAccess(campaignId: string, workspaceId: string) {
   const [campaign] = await db
     .select({ id: campaignsTable.id })
     .from(campaignsTable)
-    .where(
-      and(
-        eq(campaignsTable.id, campaignId),
-        eq(campaignsTable.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
-
   if (!campaign) throw new NotFoundError("Campaign");
-}
 
-function extractProfile(audienceData: unknown): ProfileBuilderOutput | undefined {
-  if (!audienceData || typeof audienceData !== "object") return undefined;
-  const d = audienceData as Record<string, unknown>;
-  if (!d["primaryAvatar"]) return undefined;
-  return audienceData as unknown as ProfileBuilderOutput;
-}
+  const [brief] = await db
+    .update(mediaBriefsTable)
+    .set({ conceptStatus: "concept_rejected", userFeedback: feedback })
+    .where(and(eq(mediaBriefsTable.id, briefId), eq(mediaBriefsTable.campaignId, campaignId)))
+    .returning();
 
-function emitAgentError(
-  campaignId: string,
-  agentType: string,
-  err: unknown,
-): void {
-  emitCampaignEvent({
-    campaignId,
-    type: "agent_failed",
-    agentType,
-    message: `${agentType} falhou: ${err instanceof Error ? err.message : String(err)}`,
-    timestamp: new Date().toISOString(),
-  });
+  if (!brief) throw new NotFoundError("Media brief");
+  return brief;
 }

@@ -29,6 +29,14 @@ export const contentTypeEnum = pgEnum("content_type", [
   "webinar_script",
   "live_script",
   "stories_sequence",
+  "landing_page_structure",
+  "creative_direction",
+  "targeting_config",
+  "media_buying_plan",
+  "video_strategy",
+  "creator_growth_plan",
+  "compliance_report",
+  "optimization_report",
 ]);
 
 export const contentStatusEnum = pgEnum("content_status", [
@@ -129,6 +137,14 @@ export const contentTypeValues = [
   "webinar_script",
   "live_script",
   "stories_sequence",
+  "landing_page_structure",
+  "creative_direction",
+  "targeting_config",
+  "media_buying_plan",
+  "video_strategy",
+  "creator_growth_plan",
+  "compliance_report",
+  "optimization_report",
 ] as const;
 
 export const ContentTypeSchema = z.enum(contentTypeValues);

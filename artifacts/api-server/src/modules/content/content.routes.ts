@@ -10,6 +10,7 @@ import {
   rejectContentPiece,
   approveMediaBrief,
   rejectMediaBrief,
+  optimizeCampaign,
 } from "./content.service.js";
 import { ContentTypeSchema } from "@workspace/db";
 
@@ -30,12 +31,12 @@ router.get("/:campaignId/content", async (req, res): Promise<void> => {
   }
 
   try {
-    const pieces = await getCampaignContent(
+    const result = await getCampaignContent(
       campaignId,
       req.auth.workspaceId,
       type,
     );
-    res.json({ pieces, total: pieces.length });
+    res.json(result);
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
@@ -50,8 +51,8 @@ router.get("/:campaignId/content/media-briefs", async (req, res): Promise<void> 
   const campaignId = req.params["campaignId"] as string;
 
   try {
-    const briefs = await getCampaignMediaBriefs(campaignId, req.auth.workspaceId);
-    res.json({ briefs, total: briefs.length });
+    const result = await getCampaignMediaBriefs(campaignId, req.auth.workspaceId);
+    res.json(result);
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
@@ -173,6 +174,41 @@ router.post("/:campaignId/content/media-briefs/:briefId/reject", async (req, res
       parsed.data.feedback,
     );
     res.json({ message: "Media brief concept rejected", brief });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// POST /campaigns/:campaignId/content/optimize — run optimization agent with live metrics
+const optimizeSchema = z.object({
+  metrics: z.record(z.string(), z.unknown()),
+});
+
+router.post("/:campaignId/content/optimize", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const parsed = optimizeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const result = await optimizeCampaign(
+      campaignId,
+      req.auth.workspaceId,
+      parsed.data.metrics,
+      req.log,
+    );
+    res.status(202).json({
+      message: "Optimization analysis completed",
+      pieceId: result.pieceId,
+      output: result.output,
+    });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
