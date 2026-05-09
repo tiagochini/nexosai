@@ -19,6 +19,7 @@ import AgentsHub from "@/pages/agents/index";
 import AgentChat from "@/pages/agents/chat";
 import SocialPage from "@/pages/social/index";
 import GroupPlannerPage from "@/pages/social/group-planner";
+import AgencyClientsPage from "@/pages/agency/clients";
 import VslsPage from "@/pages/vsls/index";
 import RevenuePage from "@/pages/revenue/index";
 import CompliancePage from "@/pages/compliance/index";
@@ -148,6 +149,9 @@ export default function AppRoutes() {
       </Route>
 
       {/* New modules */}
+      <Route path="/agency/clients">
+        {() => <ProtectedRoute><AgencyClientsPage /></ProtectedRoute>}
+      </Route>
       <Route path="/social/groups/:id">
         {() => <ProtectedRoute><GroupPlannerPage /></ProtectedRoute>}
       </Route>

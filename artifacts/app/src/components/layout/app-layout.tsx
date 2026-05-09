@@ -5,7 +5,7 @@ import { useGetCreditsBalance, getGetCreditsBalanceQueryKey } from "@workspace/a
 import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
-  ChevronDown, User, ExternalLink,
+  ChevronDown, User, Users, ExternalLink,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
@@ -55,10 +55,11 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: "Ferramentas",
       items: [
-        { name: "VSL Studio",    href: "/vsls",       icon: Video      },
-        { name: "Social Media",  href: "/social",     icon: Share2     },
-        { name: "Receita",       href: "/revenue",    icon: DollarSign },
-        { name: "Compliance",    href: "/compliance", icon: Shield     },
+        { name: "VSL Studio",    href: "/vsls",            icon: Video      },
+        { name: "Social Media",  href: "/social",          icon: Share2     },
+        { name: "Receita",       href: "/revenue",         icon: DollarSign },
+        { name: "Compliance",    href: "/compliance",      icon: Shield     },
+        { name: "Clientes",      href: "/agency/clients",  icon: Users      },
       ],
     },
     {

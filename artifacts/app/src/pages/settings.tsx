@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useGetCreditsBalance, getGetCreditsBalanceQueryKey, getGetMeQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,15 +12,17 @@ import { toast } from "sonner";
 import {
   User, Building2, ShieldCheck, CreditCard, Copy,
   CheckCircle2, Loader2, Eye, EyeOff, ExternalLink, Zap,
+  Wifi, WifiOff, Plus, XCircle, AlertTriangle, Link2,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 
-type Tab = "perfil" | "workspace" | "seguranca";
+type Tab = "perfil" | "workspace" | "seguranca" | "integracoes";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "perfil",    label: "Perfil",     icon: User      },
-  { id: "workspace", label: "Workspace",  icon: Building2 },
-  { id: "seguranca", label: "Segurança",  icon: ShieldCheck },
+  { id: "perfil",       label: "Perfil",       icon: User       },
+  { id: "workspace",    label: "Workspace",    icon: Building2  },
+  { id: "seguranca",    label: "Segurança",    icon: ShieldCheck },
+  { id: "integracoes",  label: "Integrações",  icon: Link2      },
 ];
 
 function SectionCard({ children, title, icon: Icon }: { children: React.ReactNode; title: string; icon: React.ElementType }) {
@@ -460,6 +462,388 @@ function SecurityTab() {
   );
 }
 
+// ── Integrations Tab ──────────────────────────────────────────────────────────
+
+type IntegrationProvider =
+  | "meta_ads" | "instagram" | "tiktok_ads" | "google_ads"
+  | "whatsapp_business" | "telegram" | "stripe" | "hotmart"
+  | "eduzz" | "kiwify" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot"
+  | "crypto_native" | "custom_webhook";
+
+interface WorkspaceIntegration {
+  id: string;
+  provider: IntegrationProvider;
+  status: "connected" | "disconnected" | "error";
+  accountId?: string;
+  accountName?: string;
+  isPaymentGateway: boolean;
+  blocksExecution: boolean;
+  createdAt: string;
+}
+
+interface ConnectModalState {
+  provider: IntegrationProvider;
+  label: string;
+}
+
+const INTEGRATION_CATALOG: {
+  provider: IntegrationProvider;
+  label: string;
+  description: string;
+  category: string;
+  color: string;
+  fields: { key: string; label: string; placeholder: string; type?: string }[];
+}[] = [
+  {
+    provider: "whatsapp_business",
+    label: "WhatsApp Business",
+    description: "Disparo automatizado de mensagens e auto-resposta com IA",
+    category: "Mensagens",
+    color: "text-green-400",
+    fields: [
+      { key: "accountId", label: "Phone Number ID", placeholder: "123456789012345" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
+      { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAxxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "rd_station",
+    label: "RD Station",
+    description: "E-mail marketing e automação de leads integrados ao lançamento",
+    category: "E-mail",
+    color: "text-blue-400",
+    fields: [
+      { key: "accountId", label: "Client ID", placeholder: "seu-client-id" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Workspace RD" },
+      { key: "accessToken", label: "API Token", placeholder: "rdst_xxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "activecampaign",
+    label: "ActiveCampaign",
+    description: "CRM e automação de e-mail com segmentação avançada",
+    category: "E-mail",
+    color: "text-blue-400",
+    fields: [
+      { key: "accountId", label: "Account Name", placeholder: "minhaempresa" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha AC" },
+      { key: "accessToken", label: "API Key", placeholder: "xxxxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "hotmart",
+    label: "Hotmart",
+    description: "Plataforma de produtos digitais — webhooks de venda automáticos",
+    category: "Pagamentos",
+    color: "text-orange-400",
+    fields: [
+      { key: "accountId", label: "Client ID", placeholder: "hotmart-client-id" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Hotmart Workspace" },
+      { key: "webhookUrl", label: "Webhook URL (gerada pelo sistema)", placeholder: "Auto-gerada" },
+    ],
+  },
+  {
+    provider: "kiwify",
+    label: "Kiwify",
+    description: "Checkout e gestão de produtos digitais — auto-conversão de leads",
+    category: "Pagamentos",
+    color: "text-orange-400",
+    fields: [
+      { key: "accountId", label: "Account ID", placeholder: "kiwify-account-id" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Kiwify" },
+      { key: "accessToken", label: "API Key", placeholder: "kwf_xxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "stripe",
+    label: "Stripe",
+    description: "Processamento de pagamentos internacionais",
+    category: "Pagamentos",
+    color: "text-purple-400",
+    fields: [
+      { key: "accountId", label: "Account ID", placeholder: "acct_xxxx" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Stripe Workspace" },
+      { key: "accessToken", label: "Secret Key", placeholder: "sk_live_xxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "meta_ads",
+    label: "Meta Ads",
+    description: "Facebook e Instagram Ads — gestão e otimização de campanhas",
+    category: "Mídia Paga",
+    color: "text-cyan-400",
+    fields: [
+      { key: "accountId", label: "Ad Account ID", placeholder: "act_123456789" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta Ads" },
+      { key: "accessToken", label: "Access Token", placeholder: "EAAxxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "google_ads",
+    label: "Google Ads",
+    description: "Campanhas de pesquisa e display no Google",
+    category: "Mídia Paga",
+    color: "text-cyan-400",
+    fields: [
+      { key: "accountId", label: "Customer ID", placeholder: "123-456-7890" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Google Ads" },
+      { key: "accessToken", label: "Developer Token", placeholder: "xxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "telegram",
+    label: "Telegram",
+    description: "Bot de automação e notificações via canal do Telegram",
+    category: "Mensagens",
+    color: "text-sky-400",
+    fields: [
+      { key: "accountId", label: "Bot Token", placeholder: "1234567890:AAFxxxx..." },
+      { key: "accountName", label: "Nome do Bot", placeholder: "@meubot" },
+    ],
+  },
+  {
+    provider: "hubspot",
+    label: "HubSpot",
+    description: "CRM e pipeline de vendas integrado com campanhas",
+    category: "CRM",
+    color: "text-orange-300",
+    fields: [
+      { key: "accountId", label: "Portal ID", placeholder: "12345678" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "HubSpot CRM" },
+      { key: "accessToken", label: "Private App Token", placeholder: "pat-xxxx...", type: "password" },
+    ],
+  },
+];
+
+const CATEGORIES = ["Mensagens", "E-mail", "Pagamentos", "Mídia Paga", "CRM"];
+
+function ConnectModal({
+  info,
+  onClose,
+  onConnect,
+}: {
+  info: ConnectModalState;
+  onClose: () => void;
+  onConnect: (provider: IntegrationProvider, fields: Record<string, string>) => void;
+}) {
+  const catalog = INTEGRATION_CATALOG.find(c => c.provider === info.provider);
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+
+  if (!catalog) return null;
+
+  const handleConnect = async () => {
+    setLoading(true);
+    try { onConnect(info.provider, fields); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="border border-border/70 bg-card w-full max-w-md shadow-2xl">
+        <div className="border-b border-border/50 px-5 py-4 flex items-center justify-between">
+          <div>
+            <h3 className="font-mono font-bold text-sm uppercase tracking-wide">Conectar {catalog.label}</h3>
+            <p className="text-[10px] font-mono text-muted-foreground/60 mt-0.5">{catalog.description}</p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground font-mono text-lg leading-none">×</button>
+        </div>
+        <div className="p-5 space-y-4">
+          {catalog.fields.map(f => (
+            <div key={f.key} className="space-y-1.5">
+              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
+              <input
+                type={f.type ?? "text"}
+                placeholder={f.placeholder}
+                value={fields[f.key] ?? ""}
+                onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
+                className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30"
+              />
+            </div>
+          ))}
+          <div className="bg-muted/10 border border-border/20 p-3">
+            <p className="font-mono text-[9px] text-muted-foreground/50 leading-relaxed">
+              As credenciais são armazenadas de forma segura e criptografadas. Nunca compartilhamos com terceiros.
+              Pagamentos nunca bloqueiam execução de campanhas.
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-border/50 px-5 py-4 flex gap-2 justify-end">
+          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline">Cancelar</Button>
+          <Button onClick={handleConnect} disabled={loading}
+            className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-primary gap-2">
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
+            Conectar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IntegracaoTab() {
+  const queryClient = useQueryClient();
+  const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string>("Todos");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/workspaces/me/integrations"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/workspaces/me/integrations");
+      if (!res.ok) return { integrations: [] };
+      return res.json() as Promise<{ integrations: WorkspaceIntegration[] }>;
+    },
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: async ({
+      provider, accountId, accountName, webhookUrl, metadata,
+    }: { provider: IntegrationProvider; accountId?: string; accountName?: string; webhookUrl?: string; metadata?: Record<string, unknown> }) => {
+      const res = await customFetch<Response>("/api/workspaces/me/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, accountId, accountName, webhookUrl, metadata }),
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro ao conectar");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Integração conectada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+      setConnectModal(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const integrations = data?.integrations ?? [];
+  const connectedProviders = new Set(integrations.map(i => i.provider));
+
+  const handleConnect = (provider: IntegrationProvider, fields: Record<string, string>) => {
+    const { accountId, accountName, webhookUrl, accessToken, ...rest } = fields;
+    const metadata: Record<string, unknown> = { ...rest };
+    if (accessToken) metadata["accessToken"] = accessToken;
+    connectMutation.mutate({
+      provider,
+      accountId: accountId || undefined,
+      accountName: accountName || undefined,
+      webhookUrl: webhookUrl || undefined,
+      metadata,
+    });
+  };
+
+  const filtered = activeCategory === "Todos"
+    ? INTEGRATION_CATALOG
+    : INTEGRATION_CATALOG.filter(c => c.category === activeCategory);
+
+  return (
+    <div className="space-y-6">
+      {connectModal && (
+        <ConnectModal
+          info={connectModal}
+          onClose={() => setConnectModal(null)}
+          onConnect={handleConnect}
+        />
+      )}
+
+      {/* Connected integrations */}
+      {integrations.length > 0 && (
+        <SectionCard title={`${integrations.length} Integração${integrations.length > 1 ? "ões" : ""} Ativa${integrations.length > 1 ? "s" : ""}`} icon={Wifi}>
+          <div className="space-y-2">
+            {integrations.map(intg => {
+              const catalog = INTEGRATION_CATALOG.find(c => c.provider === intg.provider);
+              return (
+                <div key={intg.id} className="flex items-center justify-between py-2.5 border-b border-border/20 last:border-0 gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${intg.status === "connected" ? "bg-success animate-pulse" : intg.status === "error" ? "bg-destructive" : "bg-muted-foreground/30"}`} />
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm font-bold truncate">{catalog?.label ?? intg.provider}</div>
+                      {intg.accountName && <div className="font-mono text-[10px] text-muted-foreground/60 truncate">{intg.accountName}</div>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {intg.isPaymentGateway && (
+                      <Badge variant="outline" className="rounded-none font-mono text-[9px] border-orange-400/30 text-orange-400">Pagamento</Badge>
+                    )}
+                    <Badge variant="outline" className={`rounded-none font-mono text-[9px] ${intg.status === "connected" ? "border-success/40 text-success" : intg.status === "error" ? "border-destructive/40 text-destructive" : "border-border/40 text-muted-foreground"}`}>
+                      {intg.status === "connected" ? "Conectado" : intg.status === "error" ? "Erro" : "Desconectado"}
+                    </Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {integrations.some(i => i.isPaymentGateway) && (
+            <div className="mt-4 flex items-center gap-2 text-[9px] font-mono text-muted-foreground/50">
+              <AlertTriangle className="h-3 w-3" />
+              Gateways de pagamento nunca bloqueiam execução de campanhas
+            </div>
+          )}
+        </SectionCard>
+      )}
+
+      {/* Category filter */}
+      <div className="flex gap-1 border-b border-border/40 overflow-x-auto">
+        {["Todos", ...CATEGORIES].map(cat => (
+          <button key={cat} onClick={() => setActiveCategory(cat)}
+            className={`px-3 py-2 text-[9px] font-mono uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+              ${activeCategory === cat ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Integration catalog */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-28 bg-muted/20" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filtered.map(intg => {
+            const isConnected = connectedProviders.has(intg.provider);
+            const existing = integrations.find(i => i.provider === intg.provider);
+            return (
+              <div key={intg.provider}
+                className={`border bg-card/30 p-4 relative transition-all ${isConnected ? "border-success/30 bg-success/5" : "border-border/50 hover:border-primary/30"}`}>
+                {isConnected && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  </div>
+                )}
+                <div className="mb-3">
+                  <div className={`font-mono font-bold text-sm mb-0.5 ${intg.color}`}>{intg.label}</div>
+                  <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{intg.category}</div>
+                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{intg.description}</p>
+                </div>
+                {isConnected ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3 w-3 text-success" />
+                    <span className="font-mono text-[10px] text-success">
+                      {existing?.accountName ? `Conectado: ${existing.accountName}` : "Conectado"}
+                    </span>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setConnectModal({ provider: intg.provider, label: intg.label })}
+                    className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 btn-weapon-outline"
+                  >
+                    <Plus className="h-2.5 w-2.5" />Conectar
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Settings() {
   const [tab, setTab] = useState<Tab>("perfil");
@@ -471,12 +855,12 @@ export default function Settings() {
           Configurações
         </h1>
         <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mt-1">
-          Perfil · Workspace · Segurança
+          Perfil · Workspace · Segurança · Integrações
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-0.5 border border-border/40 bg-card/30 p-0.5 rounded-sm w-fit">
+      <div className="flex flex-wrap gap-0.5 border border-border/40 bg-card/30 p-0.5 rounded-sm w-fit">
         {TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
@@ -497,9 +881,10 @@ export default function Settings() {
         })}
       </div>
 
-      {tab === "perfil"    && <ProfileTab />}
-      {tab === "workspace" && <WorkspaceTab />}
-      {tab === "seguranca" && <SecurityTab />}
+      {tab === "perfil"      && <ProfileTab />}
+      {tab === "workspace"   && <WorkspaceTab />}
+      {tab === "seguranca"   && <SecurityTab />}
+      {tab === "integracoes" && <IntegracaoTab />}
     </div>
   );
 }

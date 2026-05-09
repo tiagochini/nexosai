@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetCampaign,
@@ -6,6 +6,7 @@ import {
   CampaignExecuteInputPhase,
   getGetCampaignQueryKey,
 } from "@workspace/api-client-react";
+import { useCampaignSocket, type CampaignEvent } from "@/lib/socket";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -219,6 +220,31 @@ export default function CampaignDetail() {
       return res.json() as Promise<{ alerts: MetricAlert[] }>;
     },
   });
+
+  // ── Real-time agent streaming via Socket.io ────────────────────────────────────
+  const [liveEvents, setLiveEvents] = useState<CampaignEvent[]>([]);
+  const liveRef = useRef<HTMLDivElement>(null);
+
+  useCampaignSocket(
+    campaignId,
+    (event) => {
+      setLiveEvents((prev) => {
+        const next = [...prev, event].slice(-50); // keep last 50
+        return next;
+      });
+      // Auto-invalidate queries on meaningful events
+      if (event.type === "agent_completed" || event.type === "checkpoint_created" || event.type === "phase_changed") {
+        queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+        queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/agents`] });
+      }
+    },
+    isActive,
+  );
+
+  // Auto-scroll live feed
+  useEffect(() => {
+    if (liveRef.current) liveRef.current.scrollTop = liveRef.current.scrollHeight;
+  }, [liveEvents]);
 
   // ── Execute campaign phase ─────────────────────────────────────────────────────
   const executeMutation = useExecuteCampaign({
@@ -502,6 +528,57 @@ export default function CampaignDetail() {
       {/* ══════════════ AGENTES TAB ══════════════ */}
       {activeTab === "agentes" && (
         <div className="space-y-4">
+          {/* ─ Live feed (Socket.io) ─ */}
+          {isActive && (
+            <div className="border border-primary/30 bg-primary/5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
+              <div className="px-4 py-2.5 border-b border-primary/20 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ boxShadow: "0 0 6px hsl(var(--primary))" }} />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">Live Production Display</span>
+                <span className="font-mono text-[9px] text-muted-foreground/50 ml-auto">Socket.io · Tempo Real</span>
+              </div>
+              <div ref={liveRef} className="h-48 overflow-y-auto p-4 space-y-1.5 font-mono text-[11px]">
+                {liveEvents.length === 0 ? (
+                  <div className="flex items-center gap-2 text-muted-foreground/40 text-[10px]">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Aguardando eventos da IA...</span>
+                  </div>
+                ) : (
+                  liveEvents.map((ev, i) => {
+                    const color =
+                      ev.type === "agent_started"    ? "text-primary" :
+                      ev.type === "agent_thinking"   ? "text-cyan-400/80" :
+                      ev.type === "agent_completed"  ? "text-success" :
+                      ev.type === "agent_failed"     ? "text-destructive" :
+                      ev.type === "checkpoint_created" ? "text-yellow-400" :
+                      "text-muted-foreground/60";
+                    const prefix =
+                      ev.type === "agent_started"    ? "▶" :
+                      ev.type === "agent_thinking"   ? "·" :
+                      ev.type === "agent_completed"  ? "✓" :
+                      ev.type === "agent_failed"     ? "✗" :
+                      ev.type === "checkpoint_created" ? "!" :
+                      "·";
+                    return (
+                      <div key={i} className={`flex items-start gap-2 ${color}`}>
+                        <span className="shrink-0 w-3">{prefix}</span>
+                        <span className="text-muted-foreground/40 shrink-0 text-[9px] mt-0.5">
+                          {new Date(ev.timestamp).toLocaleTimeString("pt-BR")}
+                        </span>
+                        {ev.agentType && (
+                          <span className="shrink-0 uppercase tracking-wider text-[9px] font-bold opacity-80">
+                            [{AGENT_ROLE_LABEL[ev.agentType] ?? ev.agentType}]
+                          </span>
+                        )}
+                        <span className="leading-relaxed opacity-90">{ev.message}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
           {agentsLoading ? (
             <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 bg-muted/20" />)}</div>
           ) : (

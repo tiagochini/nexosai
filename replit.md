@@ -87,6 +87,12 @@ Launch tracks by revenue target:
 - Payment integration is NEVER a blocker for campaign execution
 - Multilingual: PT-BR first, EN-US and ES-LA modular
 
+## Frontend Status (Post-session)
+
+- **Socket.io real-time**: `artifacts/app/src/lib/socket.ts` — singleton `useCampaignSocket(campaignId, onEvent, enabled)` hook. Connects to `/api/socket.io`, auth via JWT from localStorage, joins `campaign:{id}` room, listens for `campaign:event`. Auto-scrolling live feed injected in Campaign Detail → Agentes tab (only visible when campaign is in active statuses).
+- **Integrações tab**: `artifacts/app/src/pages/settings.tsx` — 4th tab in Configurações. 10 providers in the catalog (WhatsApp Business, RD Station, ActiveCampaign, Hotmart, Kiwify, Stripe, Meta Ads, Google Ads, Telegram, HubSpot). Reads from `GET /api/workspaces/me/integrations`, writes via `POST /api/workspaces/me/integrations`. Connected integrations shown at top with live status badges.
+- **Agency Clients page**: `artifacts/app/src/pages/agency/clients.tsx` — `/agency/clients` route + sidebar link ("Clientes"). Full invite/manage/revoke flow. Plan guard shows upgrade prompt for non-Agency users. Uses `GET/POST/PATCH/DELETE /api/agency/*` endpoints.
+
 ## Gotchas
 
 - Always run `pnpm run typecheck:libs` before `pnpm --filter @workspace/api-server run typecheck` when DB schema changes
