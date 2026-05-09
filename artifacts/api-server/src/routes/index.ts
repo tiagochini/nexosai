@@ -5,6 +5,8 @@ import creditsRouter from "../modules/credits/credits.routes.js";
 import plansRouter from "../modules/plans/plans.routes.js";
 import workspacesRouter from "../modules/workspaces/workspaces.routes.js";
 import campaignsRouter from "../modules/campaigns/campaigns.routes.js";
+import intakeRouter from "../modules/intake/intake.routes.js";
+import agentsRouter from "../modules/agents/agents.routes.js";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use("/credits", creditsRouter);
 router.use("/plans", plansRouter);
 router.use("/workspaces", workspacesRouter);
 router.use("/campaigns", campaignsRouter);
+router.use("/intake", intakeRouter);
+router.use("/campaigns", agentsRouter);
 
 export default router;
