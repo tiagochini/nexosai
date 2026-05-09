@@ -25,6 +25,10 @@ export const contentTypeEnum = pgEnum("content_type", [
   "cart_open_announcement",
   "cart_close_urgency",
   "remarketing_sequence",
+  "cpl_script",
+  "webinar_script",
+  "live_script",
+  "stories_sequence",
 ]);
 
 export const contentStatusEnum = pgEnum("content_status", [
@@ -121,6 +125,10 @@ export const contentTypeValues = [
   "cart_open_announcement",
   "cart_close_urgency",
   "remarketing_sequence",
+  "cpl_script",
+  "webinar_script",
+  "live_script",
+  "stories_sequence",
 ] as const;
 
 export const ContentTypeSchema = z.enum(contentTypeValues);

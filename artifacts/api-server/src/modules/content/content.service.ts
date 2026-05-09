@@ -11,6 +11,10 @@ import { runSocialMediaAgent } from "../agents/social-media.agent.js";
 import { runAdCopyAgent } from "../agents/ad-copy.agent.js";
 import { runVSLScriptAgent } from "../agents/vsl-script.agent.js";
 import { runMediaBriefAgent } from "../agents/media-brief.agent.js";
+import { runCPLScriptAgent } from "../agents/cpl-script.agent.js";
+import { runWebinarScriptAgent } from "../agents/webinar-script.agent.js";
+import { runLiveScriptAgent } from "../agents/live-script.agent.js";
+import { runStoriesSequenceAgent } from "../agents/stories-sequence.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
@@ -316,7 +320,235 @@ export async function generateCampaignContent(
     }
   }
 
-  // ── 5. Media Brief Agent ────────────────────────────────────────────────────
+  // ── 5. CPL Script Agent (launch, perpetual_launch, live_sale) ───────────────
+  const hasCPL = ["launch", "perpetual_launch", "live_sale", "flash_sale"].includes(campaignType);
+
+  if (hasCPL) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "cpl_script",
+        message: "Agente CPL Script — escrevendo roteiros de pré-lançamento (CPL 1-4)...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const cplOutput = await runCPLScriptAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy,
+        profile,
+        launchPlan,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "cpl_script",
+          status: "draft",
+          title: `CPL — ${cplOutput.totalVideos} Vídeos de Pré-Lançamento`,
+          content: cplOutput as any,
+          aiProvider: "openai",
+          creditsUsed: 75,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("cpl_script");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "cpl_script",
+        message: `CPL concluído — ${cplOutput.totalVideos} roteiros de CPL prontos para gravar`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id, videos: cplOutput.totalVideos }, "CPL script agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "cpl_script", error: msg });
+      log.error({ err, campaignId }, "CPL script agent failed");
+      emitAgentError(campaignId, "cpl_script", err);
+    }
+  }
+
+  // ── 6. Webinar Script Agent (perpetual_launch, live_sale, authority) ─────────
+  const hasWebinar = ["perpetual_launch", "live_sale", "authority", "subscription_growth"].includes(campaignType)
+    || String(intakeData["campaign.salesChannel"] ?? "") === "webinar";
+
+  if (hasWebinar) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "webinar_script",
+        message: "Agente Webinar Script — escrevendo roteiro completo do webinar/masterclass...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const webinarOutput = await runWebinarScriptAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy,
+        profile,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "webinar_script",
+          status: "draft",
+          title: webinarOutput.title,
+          content: webinarOutput as any,
+          aiProvider: "openai",
+          creditsUsed: 80,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("webinar_script");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "webinar_script",
+        message: `Webinar concluído — ${webinarOutput.totalDuration} | ${webinarOutput.sections.length} seções + Q&A roteirizado`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id, duration: webinarOutput.totalDuration }, "Webinar script agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "webinar_script", error: msg });
+      log.error({ err, campaignId }, "Webinar script agent failed");
+      emitAgentError(campaignId, "webinar_script", err);
+    }
+  }
+
+  // ── 7. Live Script Agent (launch, live_sale, flash_sale) ─────────────────────
+  const hasLive = ["launch", "live_sale", "flash_sale", "perpetual_launch"].includes(campaignType);
+
+  if (hasLive) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "live_script",
+        message: "Agente Live Script — roteirizando live de abertura de carrinho...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const liveOutput = await runLiveScriptAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy,
+        profile,
+        launchPlan,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "live_script",
+          status: "draft",
+          title: liveOutput.title,
+          content: liveOutput as any,
+          aiProvider: "openai",
+          creditsUsed: 65,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("live_script");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "live_script",
+        message: `Live Script concluído — ${liveOutput.totalDuration} | ${liveOutput.segments.length} segmentos roteirizados`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id, duration: liveOutput.totalDuration }, "Live script agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "live_script", error: msg });
+      log.error({ err, campaignId }, "Live script agent failed");
+      emitAgentError(campaignId, "live_script", err);
+    }
+  }
+
+  // ── 8. Stories Sequence Agent (all campaign types) ───────────────────────────
+  try {
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_started",
+      agentType: "stories_sequence",
+      message: "Agente Stories Sequence — criando sequências narrativas frame a frame...",
+      timestamp: new Date().toISOString(),
+    });
+
+    const storiesOutput = await runStoriesSequenceAgent(
+      campaignId,
+      workspaceId,
+      intakeData,
+      strategy,
+      profile,
+      launchPlan,
+      log,
+    );
+
+    const [piece] = await db
+      .insert(contentPiecesTable)
+      .values({
+        campaignId,
+        workspaceId,
+        type: "stories_sequence",
+        status: "draft",
+        title: `Stories — ${storiesOutput.totalSequences} sequências narrativas`,
+        content: storiesOutput as any,
+        aiProvider: "openai",
+        creditsUsed: 45,
+      })
+      .returning();
+
+    piecesGenerated++;
+    agentsRun.push("stories_sequence");
+
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_completed",
+      agentType: "stories_sequence",
+      message: `Stories concluídos — ${storiesOutput.sequences.length} sequências com frames completos`,
+      data: { pieceId: piece?.id },
+      timestamp: new Date().toISOString(),
+    });
+
+    log.info({ campaignId, pieceId: piece?.id, sequences: storiesOutput.sequences.length }, "Stories sequence agent completed");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push({ agent: "stories_sequence", error: msg });
+    log.error({ err, campaignId }, "Stories sequence agent failed");
+    emitAgentError(campaignId, "stories_sequence", err);
+  }
+
+  // ── 9. Media Brief Agent ─────────────────────────────────────────────────────
   try {
     emitCampaignEvent({
       campaignId,
