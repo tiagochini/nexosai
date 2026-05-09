@@ -42,19 +42,32 @@ const SEGMENT_DATA = {
       "Propostas sempre passam pela sua aprovação antes de serem executadas",
       "Da conversa com a IA ao carrinho aberto em 7 dias",
     ],
-    // 2x/day schedule — morning 9h + evening 20h
+    // 10-day sequence — 2x/day (morning 9h + evening 20h)
+    // Days 1–7: esquenta (group warming) · Days 8–10: cart open period
     esquentaSequence: [
-      { slot: "Dia 1 · 09h", trigger: "Autoridade",    label: "PL1-M", content: "Bastidores: a origem do NexOS AI e o problema que ele resolve de verdade." },
-      { slot: "Dia 1 · 20h", trigger: "Curiosidade",   label: "PL1-N", content: "O que seria possível se você não dependesse de equipe para lançar?" },
-      { slot: "Dia 2 · 09h", trigger: "Reciprocidade", label: "PL2-M", content: "Checklist gratuito: os 7 passos de um lançamento de 6 dígitos automatizado." },
-      { slot: "Dia 2 · 20h", trigger: "Transformação", label: "PL2-N", content: "Caso real: do diagnóstico com IA ao carrinho em 7 dias — como o NexOS orquestrou cada etapa com aprovação do dono." },
-      { slot: "Dia 3 · 09h", trigger: "Prova Social",  label: "PL3-M", content: "Números do lançamento: taxa de abertura, conversão por segmento, receita gerada." },
-      { slot: "Dia 3 · 20h", trigger: "Antecipação",   label: "PL3-N", content: "Demo ao vivo da plataforma + perguntas e respostas no grupo." },
-      { slot: "Dia 4 · 09h", trigger: "Escassez",      label: "ABR-M", content: "Carrinho aberto. Vagas limitadas. Link exclusivo para quem estava no grupo." },
-      { slot: "Dia 4 · 20h", trigger: "Urgência",      label: "ABR-N", content: "Último aviso: carrinho fecha à meia-noite. Sem exceções. Sem segunda turma próxima." },
+      { slot: "Dia 1 · 09h", trigger: "Autoridade",    label: "PL1-M", content: "Bastidores: como surgiu o NexOS AI e o problema real que ele resolve — contado por quem construiu." },
+      { slot: "Dia 1 · 20h", trigger: "Curiosidade",   label: "PL1-N", content: "O que seria possível se você não dependesse de equipe, agência ou freelancer para lançar?" },
+      { slot: "Dia 2 · 09h", trigger: "Reciprocidade", label: "PL2-M", content: "Presente para o grupo: checklist completo dos 7 passos de um lançamento de 6 dígitos com IA." },
+      { slot: "Dia 2 · 20h", trigger: "Transformação", label: "PL2-N", content: "Caso real: diagnóstico + estratégia + copy aprovado em menos de 24h — como funcionou na prática." },
+      { slot: "Dia 3 · 09h", trigger: "Prova Social",  label: "PL3-M", content: "Números reais: taxa de abertura, conversão por segmento e receita gerada no primeiro lançamento com NexOS." },
+      { slot: "Dia 3 · 20h", trigger: "Antecipação",   label: "PL3-N", content: "Preview exclusivo: as telas, o diagnóstico da IA em funcionamento e a sequência pronta para aprovação." },
+      { slot: "Dia 4 · 09h", trigger: "Comunidade",    label: "PL4-M", content: "Quem está no grupo: perfis, produtos, metas. Você vai se identificar com alguém aqui dentro." },
+      { slot: "Dia 4 · 20h", trigger: "Curiosidade",   label: "PL4-N", content: "A trilha de 6 dígitos: o que a IA calcula antes de montar sua estratégia — e que a maioria dos lançadores ignora." },
+      { slot: "Dia 5 · 09h", trigger: "Autoridade",    label: "PL5-M", content: "Demo ao vivo: diagnóstico da IA em tempo real — produto real, números reais, estratégia gerada na hora." },
+      { slot: "Dia 5 · 20h", trigger: "Antecipação",   label: "PL5-N", content: "Q&A no grupo: perguntas abertas sobre o lançamento, a plataforma e a meta de receita." },
+      { slot: "Dia 6 · 09h", trigger: "Reciprocidade", label: "PL6-M", content: "Seguidores do @nexosai no Instagram: amanhã tem código exclusivo com bônus surpresa para o grupo." },
+      { slot: "Dia 6 · 20h", trigger: "Escassez",      label: "PL6-N", content: "Código liberado para o grupo: NEXOS — bônus exclusivo para quem segue o perfil do Instagram E está aqui dentro." },
+      { slot: "Dia 7 · 09h", trigger: "Antecipação",   label: "PL7-M", content: "Amanhã o carrinho abre. Últimas horas para ativar o código NEXOS e garantir o bônus." },
+      { slot: "Dia 7 · 20h", trigger: "Medo de perder", label: "PL7-N", content: "Carrinho abre em menos de 12h. Quem está com o código NEXOS tem prioridade na fila." },
+      { slot: "Dia 8 · 09h", trigger: "Urgência",      label: "ABR1-M", content: "🚨 Carrinho aberto agora. Use o código NEXOS e resgate o bônus. Vagas limitadas — carinho fecha em 72h." },
+      { slot: "Dia 8 · 20h", trigger: "Prova Social",  label: "ABR1-N", content: "Primeiros compradores entrando: veja quem já garantiu e o que os fez decidir agir hoje." },
+      { slot: "Dia 9 · 09h", trigger: "Urgência",      label: "ABR2-M", content: "48h de carrinho aberto. Código NEXOS ainda válido. Mais da metade das vagas já preenchidas." },
+      { slot: "Dia 9 · 20h", trigger: "Transformação", label: "ABR2-N", content: "Imagine seu próximo lançamento: IA cuidando da estratégia enquanto você foca no produto." },
+      { slot: "Dia 10 · 09h", trigger: "Escassez",     label: "FEC-M", content: "Último dia. Carrinho fecha hoje à meia-noite. Código NEXOS ativo — use agora ou perde o bônus." },
+      { slot: "Dia 10 · 20h", trigger: "Fechamento",   label: "FEC-N", content: "Encerrado. Lista fechada. Próxima turma sem data definida. Bem-vindo a quem garantiu a vaga." },
     ],
     successTitle: "Você está no grupo dos Lançadores.",
-    successBody: "Nos próximos dias você vai receber no WhatsApp bastidores, demos e provas de que é possível lançar sozinho com IA — duas mensagens por dia, no horário certo. Quando o carrinho abrir, você é o primeiro a saber.",
+    successBody: "Nos próximos 10 dias você recebe 2 mensagens por dia no WhatsApp: bastidores, demos, números reais e provas de que é possível lançar sozinho com IA. No dia 6 revelamos um código exclusivo para quem segue o @nexosai no Instagram — com bônus surpresa. Quando o carrinho abrir, você é o primeiro a saber.",
     color: "primary" as const,
   },
   agency: {
@@ -69,18 +82,28 @@ const SEGMENT_DATA = {
       "Entrega sem aumentar headcount",
       "Mais cliente = mais margem",
     ],
+    // 8-day sequence — 2x/day (morning 9h + evening 20h)
+    // Days 1–6: esquenta (group warming) · Days 7–8: cart open period
     esquentaSequence: [
-      { slot: "Dia 1 · 09h", trigger: "Autoridade",    label: "PL1-M", content: "Como agências líderes estão usando IA para multiplicar entregas sem contratar." },
-      { slot: "Dia 1 · 20h", trigger: "Curiosidade",   label: "PL1-N", content: "Quanto sua agência deixa de ganhar hoje por não automatizar a operação?" },
-      { slot: "Dia 2 · 09h", trigger: "Reciprocidade", label: "PL2-M", content: "Modelo de precificação white-label: como cobrar mais e entregar com menos headcount." },
-      { slot: "Dia 2 · 20h", trigger: "Transformação", label: "PL2-N", content: "Caso real: agência que triplicou o número de clientes sem contratar ninguém." },
+      { slot: "Dia 1 · 09h", trigger: "Autoridade",    label: "PL1-M", content: "Como agências líderes estão usando IA para multiplicar entregas e margem sem contratar mais ninguém." },
+      { slot: "Dia 1 · 20h", trigger: "Curiosidade",   label: "PL1-N", content: "Quanto sua agência deixa de ganhar hoje por não automatizar a operação de lançamento?" },
+      { slot: "Dia 2 · 09h", trigger: "Reciprocidade", label: "PL2-M", content: "Modelo de precificação white-label: como cobrar mais por lançamento e entregar com menos headcount." },
+      { slot: "Dia 2 · 20h", trigger: "Transformação", label: "PL2-N", content: "Caso real: agência que triplicou o número de clientes ativos sem contratar ninguém novo." },
       { slot: "Dia 3 · 09h", trigger: "Prova Social",  label: "PL3-M", content: "Painel multi-cliente ao vivo: como 5 clientes rodam em paralelo com total visibilidade — a IA propõe, o gestor aprova, tudo rastreado." },
-      { slot: "Dia 3 · 20h", trigger: "Antecipação",   label: "PL3-N", content: "Demo técnica do white-label + sessão de perguntas sobre operação e escala." },
-      { slot: "Dia 4 · 09h", trigger: "Escassez",      label: "ABR-M", content: "Carrinho aberto. Agências têm condições diferenciadas. Link exclusivo para o grupo." },
-      { slot: "Dia 4 · 20h", trigger: "Urgência",      label: "ABR-N", content: "Último aviso: carrinho fecha à meia-noite. Condições de agência encerram com ele." },
+      { slot: "Dia 3 · 20h", trigger: "Antecipação",   label: "PL3-N", content: "Preview técnico: white-label, painel multi-conta, relatório de performance por cliente." },
+      { slot: "Dia 4 · 09h", trigger: "Comunidade",    label: "PL4-M", content: "Agências que já entraram: segmentos, ticket médio e o que esperam da plataforma." },
+      { slot: "Dia 4 · 20h", trigger: "Curiosidade",   label: "PL4-N", content: "Simulação real: custo NexOS para uma agência vs quanto ela pode cobrar pelo serviço — os números." },
+      { slot: "Dia 5 · 09h", trigger: "Autoridade",    label: "PL5-M", content: "Demo técnica ao vivo: white-label em funcionamento, painel multi-cliente, relatório de campanha gerado por IA." },
+      { slot: "Dia 5 · 20h", trigger: "Reciprocidade", label: "PL5-N", content: "Seguidores do @nexosai no Instagram: amanhã tem código exclusivo com bônus para agências." },
+      { slot: "Dia 6 · 09h", trigger: "Escassez",      label: "PL6-M", content: "Código NEXOS liberado — bônus exclusivo para agências que seguem o perfil do Instagram e estão no grupo." },
+      { slot: "Dia 6 · 20h", trigger: "Antecipação",   label: "PL6-N", content: "Amanhã o carrinho abre. Condições diferenciadas para agências. Código NEXOS válido até o fechamento." },
+      { slot: "Dia 7 · 09h", trigger: "Urgência",      label: "ABR1-M", content: "🚨 Carrinho aberto. Condições especiais para agências ativas. Use NEXOS e garanta o bônus. 48h de janela." },
+      { slot: "Dia 7 · 20h", trigger: "Prova Social",  label: "ABR1-N", content: "Agências que já garantiram: veja os primeiros perfis e o que os convenceu a agir agora." },
+      { slot: "Dia 8 · 09h", trigger: "Escassez",      label: "FEC-M", content: "Menos de 12h. Vagas para agências limitadas. Código NEXOS ainda válido — último momento." },
+      { slot: "Dia 8 · 20h", trigger: "Fechamento",    label: "FEC-N", content: "Encerrado. Condições de agência fechadas. Próxima turma sem data. Bem-vindo a quem garantiu." },
     ],
     successTitle: "Você está no grupo das Agências.",
-    successBody: "Nos próximos dias você vai receber no WhatsApp conteúdo sobre escala com IA, precificação white-label e margem — duas mensagens por dia. Quando o carrinho abrir, você tem prioridade e condições diferenciadas.",
+    successBody: "Nos próximos 8 dias você recebe 2 mensagens por dia no WhatsApp: escala com IA, precificação white-label, demos ao vivo e casos reais. No dia 5 revelamos um código exclusivo para quem segue o @nexosai no Instagram — com bônus para agências. Quando o carrinho abrir, você tem prioridade e condições diferenciadas.",
     color: "success" as const,
   },
 };
@@ -606,9 +629,9 @@ export default function Landing() {
               ["Sequência automatizada completa", "Incluído"],
               ["Email + WhatsApp integrado e automático", "Incluído"],
               ["CRM + segmentação hot/warm/cold por IA", "Incluído"],
-              ["Ao vivo em 7 dias após o briefing", "Todo lançamento"],
+              ["7 a 10 dias de esquenta estruturado com IA", "Todo lançamento"],
+              ["Código Instagram = bônus exclusivo para o grupo", "Toda turma"],
               ["Uma plataforma, tudo centralizado", "Zero risco operacional"],
-              ["Só você e a IA — ponto", "Funciona sempre"],
             ].map(([item, tag], i) => (
               <div key={i} className="p-4 border-b border-border/20 last:border-0 flex items-center justify-between hover:bg-success/5 transition-colors">
                 <div className="flex items-center gap-3">
@@ -628,7 +651,7 @@ export default function Landing() {
           <div className="text-center mb-16">
             <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary mb-4">Como funciona</p>
             <h2 className="text-3xl md:text-4xl font-mono font-black uppercase tracking-tight">
-              Da ideia ao lançamento.<br />4 etapas. 7 dias.
+              Da ideia ao lançamento.<br />4 etapas. 7 a 10 dias.
             </h2>
           </div>
           <div className="relative">
