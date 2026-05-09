@@ -17,6 +17,8 @@ export const env = {
   CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
   APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
   ALLOWED_ORIGINS: process.env["ALLOWED_ORIGINS"] ?? "",
+  // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
+  LAUNCH_CAMPAIGN_DATE: process.env["LAUNCH_CAMPAIGN_DATE"] ?? "",
 } as const;
 
 // ─── Production guard ──────────────────────────────────────────────────────────

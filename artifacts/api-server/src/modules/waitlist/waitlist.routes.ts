@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { z } from "zod/v4";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, waitlistTable } from "@workspace/db";
+import { env } from "../../lib/env";
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.post("/", async (req, res): Promise<void> => {
   });
 });
 
-// GET /api/waitlist/count — public, returns counts by segment
+// GET /api/waitlist/count — public
 router.get("/count", async (_req, res): Promise<void> => {
   const rows = await db
     .select({
@@ -69,6 +70,31 @@ router.get("/count", async (_req, res): Promise<void> => {
   const bySegment = Object.fromEntries(rows.map(r => [r.segment, r.count]));
 
   res.json({ total, bySegment });
+});
+
+// GET /api/waitlist/launch-config — public
+// Returns the launch date if the owner has set LAUNCH_CAMPAIGN_DATE env var.
+// When null, the landing shows "Novo ciclo de adesões será aberto em breve".
+// Set this env var to an ISO date string (e.g. "2025-06-14T20:00:00-03:00")
+// to start the countdown clock on the landing page.
+router.get("/launch-config", async (_req, res): Promise<void> => {
+  const dateStr = env.LAUNCH_CAMPAIGN_DATE;
+
+  if (!dateStr) {
+    res.json({ launchDate: null, active: false });
+    return;
+  }
+
+  const launchDate = new Date(dateStr);
+  if (isNaN(launchDate.getTime())) {
+    res.json({ launchDate: null, active: false });
+    return;
+  }
+
+  res.json({
+    launchDate: launchDate.toISOString(),
+    active: true,
+  });
 });
 
 export default router;
