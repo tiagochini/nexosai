@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
 import { runStrategyAgent } from "./strategy.agent.js";
 import { runOfferAgent } from "./offer.agent.js";
 import { runLaunchManagerAgent } from "./launch-manager.agent.js";
@@ -17,6 +18,7 @@ export interface OrchestrationResult {
   type: string;
   track: string;
   agentsRun: string[];
+  profile?: Record<string, unknown>;
   strategy?: Record<string, unknown>;
   offerAnalysis?: Record<string, unknown>;
   launchPlan?: Record<string, unknown>;
@@ -296,12 +298,62 @@ Retorne o JSON de avaliação.`,
 
   const agentsRun: string[] = ["command"];
   const checkpointsPending: string[] = [];
+  let profile: ProfileBuilderOutput | undefined;
   let strategy: Record<string, unknown> | undefined;
   let offerAnalysis: Record<string, unknown> | undefined;
   let launchPlan: Record<string, unknown> | undefined;
   let financialProjection: Record<string, unknown> | undefined;
 
-  // ── 1. Strategy Agent (all campaign types) ──────────────────────────────────
+  // ── 1. Profile Builder Agent (all campaign types — runs first) ─────────────
+  // Builds deep product, avatar, segmentation and market intelligence.
+  // Its output feeds every downstream agent as enriched context.
+  try {
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_started",
+      agentType: "profile_builder",
+      message: "Construindo inteligência de perfil — produto, avatar e mercado...",
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await runProfileBuilderAgent(
+      campaignId,
+      workspaceId,
+      intakeData,
+      type,
+      log,
+    );
+    profile = result;
+    agentsRun.push("profile_builder");
+
+    // Save to audienceData (avatar + segments) and targetingData (market + positioning)
+    await db
+      .update(campaignsTable)
+      .set({
+        audienceData: {
+          primaryAvatar: result.primaryAvatar,
+          secondaryAvatars: result.secondaryAvatars,
+          segments: result.segments,
+          profileScore: result.profileScore,
+          validationWarnings: result.validationWarnings,
+          criticalInsights: result.criticalInsights,
+          profileStrengths: result.profileStrengths,
+        } as any,
+        targetingData: {
+          product: result.product,
+          marketIntelligence: result.marketIntelligence,
+          positioning: result.positioning,
+        } as any,
+      })
+      .where(eq(campaignsTable.id, campaignId));
+
+    log.info({ campaignId, profileScore: result.profileScore }, "Profile builder completed");
+  } catch (err) {
+    log.error({ err, campaignId }, "Profile builder failed — continuing without profile");
+    emitAgentError(campaignId, "profile_builder", err);
+  }
+
+  // ── 2. Strategy Agent (all campaign types) ──────────────────────────────────
   try {
     const result = await runStrategyAgent(
       campaignId,
@@ -309,6 +361,7 @@ Retorne o JSON de avaliação.`,
       intakeData,
       track,
       log,
+      profile, // pass profile as context — makes strategy much richer
     );
     strategy = result as unknown as Record<string, unknown>;
     agentsRun.push("strategy");
@@ -323,7 +376,7 @@ Retorne o JSON de avaliação.`,
     emitAgentError(campaignId, "strategy", err);
   }
 
-  // ── 2. Offer Agent (all types with a product for sale) ─────────────────────
+  // ── 3. Offer Agent (all types with a product for sale) ─────────────────────
   const typesWithOfferAnalysis: CampaignType[] = [
     "launch",
     "perpetual_launch",
@@ -346,7 +399,7 @@ Retorne o JSON de avaliação.`,
     }
   }
 
-  // ── 3. Type-specific Manager Agent ─────────────────────────────────────────
+  // ── 4. Type-specific Manager Agent ─────────────────────────────────────────
   if (strategy) {
     try {
       if (typeConfig.managerAgent === "launch_manager") {
@@ -406,7 +459,7 @@ Retorne o JSON de avaliação.`,
     }
   }
 
-  // ── 4. Financial Projector (types with financial model) ────────────────────
+  // ── 5. Financial Projector (types with financial model) ────────────────────
   if (typeConfig.hasFinancialProjection && strategy && launchPlan) {
     try {
       const result = await runFinancialProjectorAgent(
@@ -460,6 +513,7 @@ Retorne o JSON de avaliação.`,
     type,
     track,
     agentsRun,
+    profile: profile as unknown as Record<string, unknown> | undefined,
     strategy,
     offerAnalysis,
     launchPlan,
