@@ -430,11 +430,11 @@ export default function Landing() {
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="inline-flex items-center gap-2 border border-border/40 bg-card/30 px-4 py-2 font-mono text-xs text-muted-foreground">
                   <User className="h-3.5 w-3.5 text-primary" />
-                  <strong className="text-foreground">{(count.bySegment["individual"] ?? 0) + Math.floor(BASE * 0.6)}</strong>&nbsp;lançadores
+                  <strong className="text-foreground">{(count?.bySegment?.["individual"] ?? 0) + Math.floor(BASE * 0.6)}</strong>&nbsp;lançadores
                 </div>
                 <div className="inline-flex items-center gap-2 border border-border/40 bg-card/30 px-4 py-2 font-mono text-xs text-muted-foreground">
                   <Building2 className="h-3.5 w-3.5 text-success" />
-                  <strong className="text-foreground">{(count.bySegment["agency"] ?? 0) + Math.floor(BASE * 0.4)}</strong>&nbsp;agências
+                  <strong className="text-foreground">{(count?.bySegment?.["agency"] ?? 0) + Math.floor(BASE * 0.4)}</strong>&nbsp;agências
                 </div>
               </div>
             )}

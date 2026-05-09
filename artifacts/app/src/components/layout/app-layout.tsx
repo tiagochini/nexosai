@@ -1,9 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useGetCreditsBalance, getGetCreditsBalanceQueryKey } from "@workspace/api-client-react";
-import { LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, ShieldAlert } from "lucide-react";
+import { LogOut, Rocket, LayoutDashboard, Workflow, CreditCard } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
+import { RecordButton } from "@/components/recording/RecordButton";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, workspace, logout } = useAuth();
@@ -96,6 +97,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </aside>
+
+      {/* Recording button — floats over all authenticated pages */}
+      <RecordButton />
 
       {/* Main content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">

@@ -1,0 +1,295 @@
+import { eq, and } from "drizzle-orm";
+import { db, launchRecordingsTable } from "@workspace/db";
+import type { RecordingEvent } from "@workspace/db";
+import { ZipArchive } from "archiver";
+import type { Response } from "express";
+import { logger } from "../../lib/logger.js";
+
+function nowIso() { return new Date().toISOString(); }
+function eventId() { return crypto.randomUUID(); }
+
+// Elapsed active ms = (now - startedAt) - totalPausedMs - (if paused, ms since pausedAt)
+function calcActiveDuration(rec: typeof launchRecordingsTable.$inferSelect): number {
+  const started = new Date(rec.startedAt).getTime();
+  const now = Date.now();
+  let paused = rec.totalPausedMs;
+  if (rec.state === "paused" && rec.pausedAt) {
+    paused += now - new Date(rec.pausedAt).getTime();
+  }
+  return Math.max(0, now - started - paused);
+}
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+
+export async function startRecording(workspaceId: string, name: string, campaignId?: string) {
+  const [rec] = await db.insert(launchRecordingsTable).values({
+    workspaceId,
+    campaignId: campaignId ?? null,
+    name,
+    state: "recording",
+    events: [],
+    startedAt: new Date(),
+    totalPausedMs: 0,
+  }).returning();
+  logger.info({ recordingId: rec!.id }, "Recording started");
+  return rec!;
+}
+
+// ─── Add event ────────────────────────────────────────────────────────────────
+
+export async function addEvent(
+  recordingId: string,
+  workspaceId: string,
+  type: RecordingEvent["type"],
+  phase: string,
+  data: Record<string, unknown>,
+) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!rec || rec.state === "stopped") return null;
+
+  const event: RecordingEvent = {
+    id: eventId(),
+    type,
+    phase,
+    timestamp: nowIso(),
+    durationMs: calcActiveDuration(rec),
+    data,
+  };
+
+  const events = (rec.events as RecordingEvent[]).concat(event);
+  const [updated] = await db
+    .update(launchRecordingsTable)
+    .set({ events })
+    .where(eq(launchRecordingsTable.id, recordingId))
+    .returning();
+  return updated!;
+}
+
+// ─── Pause ────────────────────────────────────────────────────────────────────
+
+export async function pauseRecording(recordingId: string, workspaceId: string) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!rec || rec.state !== "recording") return null;
+
+  // Log the pause event before pausing
+  const pauseEvent: RecordingEvent = {
+    id: eventId(),
+    type: "recording_paused",
+    phase: "pausa",
+    timestamp: nowIso(),
+    durationMs: calcActiveDuration(rec),
+    data: { reason: "Aguardando abertura do carrinho" },
+  };
+
+  const [updated] = await db
+    .update(launchRecordingsTable)
+    .set({
+      state: "paused",
+      pausedAt: new Date(),
+      events: (rec.events as RecordingEvent[]).concat(pauseEvent),
+    })
+    .where(eq(launchRecordingsTable.id, recordingId))
+    .returning();
+  return updated!;
+}
+
+// ─── Resume ───────────────────────────────────────────────────────────────────
+
+export async function resumeRecording(recordingId: string, workspaceId: string) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!rec || rec.state !== "paused") return null;
+
+  const additionalPaused = rec.pausedAt ? Date.now() - new Date(rec.pausedAt).getTime() : 0;
+  const newTotalPaused = rec.totalPausedMs + additionalPaused;
+
+  const resumeEvent: RecordingEvent = {
+    id: eventId(),
+    type: "recording_resumed",
+    phase: "retomada",
+    timestamp: nowIso(),
+    durationMs: calcActiveDuration(rec),
+    data: { pausedMs: additionalPaused },
+  };
+
+  const [updated] = await db
+    .update(launchRecordingsTable)
+    .set({
+      state: "recording",
+      pausedAt: null,
+      totalPausedMs: newTotalPaused,
+      events: (rec.events as RecordingEvent[]).concat(resumeEvent),
+    })
+    .where(eq(launchRecordingsTable.id, recordingId))
+    .returning();
+  return updated!;
+}
+
+// ─── Stop ─────────────────────────────────────────────────────────────────────
+
+export async function stopRecording(recordingId: string, workspaceId: string) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!rec || rec.state === "stopped") return null;
+
+  let totalPaused = rec.totalPausedMs;
+  if (rec.state === "paused" && rec.pausedAt) {
+    totalPaused += Date.now() - new Date(rec.pausedAt).getTime();
+  }
+
+  const [updated] = await db
+    .update(launchRecordingsTable)
+    .set({ state: "stopped", stoppedAt: new Date(), totalPausedMs: totalPaused })
+    .where(eq(launchRecordingsTable.id, recordingId))
+    .returning();
+  return updated!;
+}
+
+// ─── List ─────────────────────────────────────────────────────────────────────
+
+export async function listRecordings(workspaceId: string) {
+  return db
+    .select({
+      id: launchRecordingsTable.id,
+      name: launchRecordingsTable.name,
+      state: launchRecordingsTable.state,
+      campaignId: launchRecordingsTable.campaignId,
+      startedAt: launchRecordingsTable.startedAt,
+      stoppedAt: launchRecordingsTable.stoppedAt,
+      totalPausedMs: launchRecordingsTable.totalPausedMs,
+    })
+    .from(launchRecordingsTable)
+    .where(eq(launchRecordingsTable.workspaceId, workspaceId))
+    .orderBy(launchRecordingsTable.createdAt);
+}
+
+// ─── Export ZIP ───────────────────────────────────────────────────────────────
+
+function fmtDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return [h, m, sec].map(v => String(v).padStart(2, "0")).join(":");
+}
+
+function buildSummaryMd(rec: typeof launchRecordingsTable.$inferSelect, activeDurationMs: number): string {
+  const events = rec.events as RecordingEvent[];
+  const lines: string[] = [
+    `# NexOS AI — Gravação de Lançamento`,
+    ``,
+    `**Nome:** ${rec.name}`,
+    `**Iniciado em:** ${new Date(rec.startedAt).toLocaleString("pt-BR")}`,
+    rec.stoppedAt ? `**Encerrado em:** ${new Date(rec.stoppedAt).toLocaleString("pt-BR")}` : "",
+    `**Duração ativa:** ${fmtDuration(activeDurationMs)}`,
+    `**Total de eventos:** ${events.length}`,
+    ``,
+    `---`,
+    ``,
+    `## Linha do Tempo`,
+    ``,
+  ];
+
+  for (const ev of events) {
+    const ts = new Date(ev.timestamp).toLocaleString("pt-BR");
+    const elapsed = fmtDuration(ev.durationMs);
+    lines.push(`### [${elapsed}] ${ev.type.replace(/_/g, " ").toUpperCase()}`);
+    lines.push(`- **Fase:** ${ev.phase}`);
+    lines.push(`- **Horário:** ${ts}`);
+    if (Object.keys(ev.data).length > 0) {
+      lines.push(`- **Dados:** \`${JSON.stringify(ev.data).slice(0, 200)}\``);
+    }
+    lines.push(``);
+  }
+
+  return lines.filter(l => l !== undefined).join("\n");
+}
+
+export async function exportZip(recordingId: string, workspaceId: string, res: Response) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!rec) { res.status(404).json({ error: "Gravação não encontrada" }); return; }
+
+  const events = rec.events as RecordingEvent[];
+  const activeDurationMs = calcActiveDuration(rec);
+
+  // Group events by category for separate files
+  const briefing = events.filter(e => e.type.startsWith("briefing"));
+  const strategy = events.filter(e => e.type === "strategy_generated");
+  const copy = events.filter(e => e.type === "copy_generated");
+  const approvals = events.filter(e => e.type === "approval_requested" || e.type === "approved");
+  const creatives = events.filter(e => e.type === "creative_delivered");
+  const budgets = events.filter(e => e.type === "budget_set");
+  const cart = events.filter(e => e.type === "cart_opened" || e.type === "cart_closed");
+  const metrics = events.filter(e => e.type === "metrics_snapshot");
+
+  const safeName = rec.name.replace(/[^a-z0-9]/gi, "_").slice(0, 40);
+  const dateStr = new Date(rec.startedAt).toISOString().slice(0, 10);
+  const filename = `nexos_lancamento_${safeName}_${dateStr}.zip`;
+
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  const archive = new ZipArchive({ zlib: { level: 9 } });
+  archive.pipe(res);
+
+  // Metadata
+  const meta = {
+    id: rec.id,
+    name: rec.name,
+    campaignId: rec.campaignId,
+    state: rec.state,
+    startedAt: rec.startedAt,
+    stoppedAt: rec.stoppedAt,
+    totalPausedMs: rec.totalPausedMs,
+    activeDurationMs,
+    activeDuration: fmtDuration(activeDurationMs),
+    totalEvents: events.length,
+    exportedAt: nowIso(),
+  };
+
+  archive.append(buildSummaryMd(rec, activeDurationMs), { name: "00-resumo.md" });
+  archive.append(JSON.stringify(meta, null, 2), { name: "01-metadata.json" });
+
+  if (briefing.length) archive.append(JSON.stringify(briefing, null, 2), { name: "02-briefing.json" });
+  if (strategy.length) archive.append(JSON.stringify(strategy, null, 2), { name: "03-estrategia.json" });
+
+  if (copy.length) {
+    archive.append(JSON.stringify(copy, null, 2), { name: "04-copy/copy-completo.json" });
+    for (const ev of copy) {
+      const d = ev.data as Record<string, unknown>;
+      const label = `${d["phase"] ?? "phase"}_${d["segment"] ?? "all"}`;
+      const content = typeof d["content"] === "string" ? d["content"] : JSON.stringify(d, null, 2);
+      archive.append(content, { name: `04-copy/${label}.txt` });
+    }
+  }
+
+  if (approvals.length) archive.append(JSON.stringify(approvals, null, 2), { name: "05-aprovacoes.json" });
+  if (creatives.length) archive.append(JSON.stringify(creatives, null, 2), { name: "06-criativos.json" });
+  if (budgets.length) archive.append(JSON.stringify(budgets, null, 2), { name: "07-orcamentos.json" });
+  if (cart.length) archive.append(JSON.stringify(cart, null, 2), { name: "08-carrinho.json" });
+  if (metrics.length) archive.append(JSON.stringify(metrics, null, 2), { name: "09-resultados.json" });
+
+  // Full timeline
+  archive.append(JSON.stringify(events, null, 2), { name: "10-timeline-completo.json" });
+
+  await archive.finalize();
+}
