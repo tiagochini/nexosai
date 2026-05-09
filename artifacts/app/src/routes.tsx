@@ -24,19 +24,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+function HomeRoute() {
+  const { token } = useAuth();
+  if (token) return <AppLayout><Dashboard /></AppLayout>;
+  return <Landing />;
+}
+
 export default function AppRoutes() {
   return (
     <Switch>
-      <Route path="/home" component={Landing} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      <Route path="/">
-        {() => (
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        )}
-      </Route>
+      <Route path="/" component={HomeRoute} />
       <Route path="/campaigns/new">
         {() => (
           <ProtectedRoute>
