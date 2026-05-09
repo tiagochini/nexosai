@@ -48,6 +48,10 @@ AI-powered operating system for campaign execution, launch automation and digita
 - `lib/db/src/schema/` — all Drizzle table definitions (one file per domain)
 - `lib/db/src/seed-plans.ts` — plan seeder
 - `artifacts/api-server/src/modules/` — domain modules (auth, credits, campaigns, workspaces, plans, ai-gateway, queue, realtime, orchestration, metrics, content, agents, intake, launch-sequence, vsl, email-dispatch, whatsapp)
+- `artifacts/api-server/src/modules/launch-sequence/sequence-scheduler.worker.ts` — automation engine (60s tick, BullMQ + setInterval fallback)
+- `artifacts/api-server/src/modules/launch-sequence/sequence-analytics.service.ts` — engagement stats, adaptive AI suggestions, contact segment recalc
+- `artifacts/api-server/src/modules/launch-sequence/sequence-realtime.ts` — Socket.io events for live automation dashboard
+- `artifacts/api-server/src/modules/agents/whatsapp-response.agent.ts` — AI auto-response (classify intent + generate reply)
 - `artifacts/api-server/src/lib/` — shared utilities (env, errors, logger)
 - `artifacts/api-server/src/routes/` — route barrel (mounts all module routers)
 
@@ -100,6 +104,12 @@ Launch tracks by revenue target:
 - Mental trigger values: `authority`, `social_proof`, `reciprocity`, `community`, `scarcity`, `urgency`, `anticipation`, `event`, `transformation`, `fear_of_loss`, `curiosity`, `contrast`
 - WhatsApp dispatch requires workspace integration `whatsapp_business` with status `connected` + `accessToken` + `accountId` (phoneNumberId)
 - Email dispatch: `rd_station` and `activecampaign` providers fully integrated; others mock-send with warning log
+- Sequence automation: `POST /launch-sequences/:id/activate` calculates scheduledAt per item (startAt + dayIndex), sets all to `scheduled`, stores dispatch config in `config` JSONB
+- Sequence scheduler: 60s repeatable job finds `status=scheduled AND scheduledAt<=now AND sequence.status=active` → auto-dispatches email+WhatsApp → marks `dispatched`
+- Sequence contacts: `hot` (score≥60), `warm` (score≥25), `cold` (<25). Score = openRatio×50 + clickRatio×50. Updated on every engagement event.
+- Email engagement webhooks: `POST /email-dispatch/webhook/rd_station` and `/activecampaign` — maps open/click/unsubscribe/bounce events to sequence engagement table
+- WhatsApp AI auto-response: incoming webhook messages trigger `runWhatsAppResponseAgent` → classifies intent → sends response via Meta API (non-blocking setImmediate). `requiresHuman=true` emits Socket.io alert instead.
+- Sequence analytics: `GET /launch-sequences/:id/analytics` returns segments (hot/warm/cold/converted/unsubscribed), per-item open/click rates, health score, engagementTrend, adaptiveSuggestions from AI
 
 ## Pointers
 

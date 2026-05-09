@@ -7,12 +7,21 @@ import {
   sendEmailDispatch,
   getEmailDispatches,
   getEmailDispatch,
+  handleEmailEngagementWebhook,
+  type EmailWebhookPayload,
 } from "./email-dispatch.service.js";
 
 const router = Router();
 
 const createSchema = z.object({
-  provider: z.enum(["rd_station", "activecampaign", "mailchimp", "sendgrid", "brevo", "custom_smtp"]),
+  provider: z.enum([
+    "rd_station",
+    "activecampaign",
+    "mailchimp",
+    "sendgrid",
+    "brevo",
+    "custom_smtp",
+  ]),
   campaignId: z.string().uuid().optional(),
   listId: z.string().min(1),
   listName: z.string().optional(),
@@ -59,13 +68,37 @@ router.post("/", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/:id", requireAuth, async (req, res): Promise<void> => {
-  const dispatch = await getEmailDispatch(req.auth.workspaceId, req.params["id"] as string);
+  const dispatch = await getEmailDispatch(
+    req.auth.workspaceId,
+    req.params["id"] as string,
+  );
   res.json({ dispatch });
 });
 
 router.post("/:id/send", requireAuth, async (req, res): Promise<void> => {
-  const dispatch = await sendEmailDispatch(req.auth.workspaceId, req.params["id"] as string);
+  const dispatch = await sendEmailDispatch(
+    req.auth.workspaceId,
+    req.params["id"] as string,
+  );
   res.json({ dispatch });
+});
+
+// ─── Engagement Webhooks (no auth — signed by provider) ─────────────────────
+
+router.post("/webhook/:provider", async (req, res): Promise<void> => {
+  const provider = req.params["provider"] as string;
+
+  if (!["rd_station", "activecampaign"].includes(provider)) {
+    res.status(400).json({ error: "Unknown provider" });
+    return;
+  }
+
+  const result = await handleEmailEngagementWebhook({
+    ...(req.body as Record<string, unknown>),
+    provider: provider as "rd_station" | "activecampaign",
+  } as EmailWebhookPayload);
+
+  res.json(result);
 });
 
 export default router;

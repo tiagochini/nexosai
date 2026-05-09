@@ -4,9 +4,13 @@ import {
   emailDispatchesTable,
   workspaceIntegrationsTable,
   contentPiecesTable,
+  launchSequenceItemsTable,
+  sequenceContactsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError, AppError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
+import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
+import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
 
 // ─── Provider API helpers ─────────────────────────────────────────────────────
 
@@ -34,13 +38,20 @@ async function getRdStationToken(workspaceId: string): Promise<string> {
       ),
     );
   if (!integration?.accessToken)
-    throw new ValidationError("RD Station não está conectado. Configure a integração em Configurações > Integrações.");
+    throw new ValidationError(
+      "RD Station não está conectado. Configure a integração em Configurações > Integrações.",
+    );
   return integration.accessToken;
 }
 
-async function getActiveCampaignCredentials(workspaceId: string): Promise<{ apiKey: string; accountUrl: string }> {
+async function getActiveCampaignCredentials(
+  workspaceId: string,
+): Promise<{ apiKey: string; accountUrl: string }> {
   const [integration] = await db
-    .select({ accessToken: workspaceIntegrationsTable.accessToken, metadata: workspaceIntegrationsTable.metadata })
+    .select({
+      accessToken: workspaceIntegrationsTable.accessToken,
+      metadata: workspaceIntegrationsTable.metadata,
+    })
     .from(workspaceIntegrationsTable)
     .where(
       and(
@@ -50,7 +61,9 @@ async function getActiveCampaignCredentials(workspaceId: string): Promise<{ apiK
       ),
     );
   if (!integration?.accessToken)
-    throw new ValidationError("ActiveCampaign não está conectado. Configure a integração em Configurações > Integrações.");
+    throw new ValidationError(
+      "ActiveCampaign não está conectado. Configure a integração em Configurações > Integrações.",
+    );
 
   const meta = (integration.metadata ?? {}) as Record<string, string>;
   return { apiKey: integration.accessToken, accountUrl: meta["accountUrl"] ?? "" };
@@ -61,22 +74,44 @@ async function fetchRdStationLists(token: string): Promise<EmailList[]> {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new AppError(502, "Erro ao buscar listas do RD Station");
-  const data = await res.json() as { segmentations?: Array<{ id: string; name: string; contacts?: number }> };
-  return (data.segmentations ?? []).map((s) => ({ id: String(s.id), name: s.name, subscriberCount: s.contacts }));
+  const data = (await res.json()) as {
+    segmentations?: Array<{ id: string; name: string; contacts?: number }>;
+  };
+  return (data.segmentations ?? []).map((s) => ({
+    id: String(s.id),
+    name: s.name,
+    subscriberCount: s.contacts,
+  }));
 }
 
-async function fetchActiveCampaignLists(apiKey: string, accountUrl: string): Promise<EmailList[]> {
+async function fetchActiveCampaignLists(
+  apiKey: string,
+  accountUrl: string,
+): Promise<EmailList[]> {
   const res = await fetch(`${accountUrl}/api/3/lists?limit=100`, {
     headers: { "Api-Token": apiKey },
   });
   if (!res.ok) throw new AppError(502, "Erro ao buscar listas do ActiveCampaign");
-  const data = await res.json() as { lists?: Array<{ id: string; name: string; subscriber_count?: number }> };
-  return (data.lists ?? []).map((l) => ({ id: String(l.id), name: l.name, subscriberCount: l.subscriber_count }));
+  const data = (await res.json()) as {
+    lists?: Array<{ id: string; name: string; subscriber_count?: number }>;
+  };
+  return (data.lists ?? []).map((l) => ({
+    id: String(l.id),
+    name: l.name,
+    subscriberCount: l.subscriber_count,
+  }));
 }
 
 async function sendViaRdStation(
   token: string,
-  payload: { subject: string; fromName: string; fromEmail: string; htmlContent: string; listId: string; scheduledAt?: string },
+  payload: {
+    subject: string;
+    fromName: string;
+    fromEmail: string;
+    htmlContent: string;
+    listId: string;
+    scheduledAt?: string;
+  },
 ): Promise<DispatchResult> {
   const body: Record<string, unknown> = {
     email_marketing: {
@@ -89,7 +124,9 @@ async function sendViaRdStation(
     },
   };
   if (payload.scheduledAt) {
-    (body["email_marketing"] as Record<string, unknown>)["schedule"] = { date_time: payload.scheduledAt };
+    (body["email_marketing"] as Record<string, unknown>)["schedule"] = {
+      date_time: payload.scheduledAt,
+    };
   }
 
   const res = await fetch("https://api.rd.services/platform/emails", {
@@ -104,7 +141,7 @@ async function sendViaRdStation(
     throw new AppError(502, `Erro ao enviar via RD Station: ${err}`);
   }
 
-  const result = await res.json() as { email_marketing?: { id?: string } };
+  const result = (await res.json()) as { email_marketing?: { id?: string } };
   return {
     externalCampaignId: String(result.email_marketing?.id ?? ""),
     recipientCount: 0,
@@ -115,7 +152,14 @@ async function sendViaRdStation(
 async function sendViaActiveCampaign(
   apiKey: string,
   accountUrl: string,
-  payload: { subject: string; fromName: string; fromEmail: string; htmlContent: string; listId: string; scheduledAt?: string },
+  payload: {
+    subject: string;
+    fromName: string;
+    fromEmail: string;
+    htmlContent: string;
+    listId: string;
+    scheduledAt?: string;
+  },
 ): Promise<DispatchResult> {
   const campaignBody = {
     campaign: {
@@ -144,7 +188,7 @@ async function sendViaActiveCampaign(
     throw new AppError(502, `Erro ao criar campanha no ActiveCampaign: ${err}`);
   }
 
-  const data = await res.json() as { campaign?: { id?: string } };
+  const data = (await res.json()) as { campaign?: { id?: string } };
   return {
     externalCampaignId: String(data.campaign?.id ?? ""),
     recipientCount: 0,
@@ -154,7 +198,10 @@ async function sendViaActiveCampaign(
 
 // ─── Service functions ────────────────────────────────────────────────────────
 
-export async function listEmailLists(workspaceId: string, provider: "rd_station" | "activecampaign") {
+export async function listEmailLists(
+  workspaceId: string,
+  provider: "rd_station" | "activecampaign",
+) {
   if (provider === "rd_station") {
     const token = await getRdStationToken(workspaceId);
     return fetchRdStationLists(token);
@@ -167,7 +214,13 @@ export async function createEmailDispatch(
   workspaceId: string,
   input: {
     campaignId?: string;
-    provider: "rd_station" | "activecampaign" | "mailchimp" | "sendgrid" | "brevo" | "custom_smtp";
+    provider:
+      | "rd_station"
+      | "activecampaign"
+      | "mailchimp"
+      | "sendgrid"
+      | "brevo"
+      | "custom_smtp";
     listId: string;
     listName?: string;
     subject: string;
@@ -262,7 +315,10 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
       result = await sendViaActiveCampaign(apiKey, accountUrl, payload);
     } else {
       result = { status: "sent", recipientCount: 0, externalCampaignId: "mock" };
-      logger.warn({ provider: dispatch.provider }, "Email provider not yet integrated — mock send");
+      logger.warn(
+        { provider: dispatch.provider },
+        "Email provider not yet integrated — mock send",
+      );
     }
 
     const [updated] = await db
@@ -280,7 +336,10 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
   } catch (err) {
     await db
       .update(emailDispatchesTable)
-      .set({ status: "failed", errorMessage: err instanceof Error ? err.message : String(err) })
+      .set({
+        status: "failed",
+        errorMessage: err instanceof Error ? err.message : String(err),
+      })
       .where(eq(emailDispatchesTable.id, dispatchId));
     throw err;
   }
@@ -309,4 +368,124 @@ export async function getEmailDispatch(workspaceId: string, dispatchId: string) 
     );
   if (!dispatch) throw new NotFoundError("Email dispatch not found");
   return dispatch;
+}
+
+// ─── Engagement Webhook ────────────────────────────────────────────────────────
+
+export interface EmailWebhookPayload {
+  provider: "rd_station" | "activecampaign";
+  event_type?: string;  // open | click | unsubscribe | bounce
+  event?: string;
+  email?: string;
+  campaign_id?: string;
+  link?: string;
+  [key: string]: unknown;
+}
+
+export async function handleEmailEngagementWebhook(
+  payload: EmailWebhookPayload,
+): Promise<{ processed: boolean; event?: string }> {
+  const log = logger.child({ component: "email-webhook", provider: payload.provider });
+
+  const rawEvent = String(payload.event_type ?? payload.event ?? "").toLowerCase();
+
+  const eventMap: Record<string, "open" | "click" | "convert" | "unsubscribe" | "bounced" | "delivered"> = {
+    open: "open",
+    email_opened: "open",
+    "email.opened": "open",
+    click: "click",
+    email_clicked: "click",
+    "email.clicked": "click",
+    unsubscribe: "unsubscribe",
+    email_unsubscribed: "unsubscribe",
+    "email.unsubscribed": "unsubscribe",
+    bounce: "bounced",
+    hard_bounce: "bounced",
+    email_bounced: "bounced",
+    "email.bounced": "bounced",
+    delivered: "delivered",
+    email_delivered: "delivered",
+  };
+
+  const engagementEvent = eventMap[rawEvent];
+  if (!engagementEvent) {
+    log.debug({ rawEvent }, "Unknown email webhook event — ignoring");
+    return { processed: false };
+  }
+
+  const externalCampaignId = String(
+    payload.campaign_id ?? payload["campaign_id"] ?? payload["email_marketing_id"] ?? "",
+  );
+
+  let sequenceId: string | null = null;
+  let itemId: string | null = null;
+  let workspaceId: string | null = null;
+  let contactId: string | null = null;
+
+  if (externalCampaignId) {
+    const [dispatch] = await db
+      .select({
+        id: emailDispatchesTable.id,
+        workspaceId: emailDispatchesTable.workspaceId,
+        campaignId: emailDispatchesTable.campaignId,
+      })
+      .from(emailDispatchesTable)
+      .where(eq(emailDispatchesTable.externalCampaignId, externalCampaignId));
+
+    if (dispatch) {
+      workspaceId = dispatch.workspaceId;
+
+      const [item] = await db
+        .select({
+          id: launchSequenceItemsTable.id,
+          sequenceId: launchSequenceItemsTable.sequenceId,
+        })
+        .from(launchSequenceItemsTable)
+        .where(eq(launchSequenceItemsTable.status, "dispatched"))
+        .limit(1);
+
+      if (item) {
+        itemId = item.id;
+        sequenceId = item.sequenceId;
+      }
+    }
+  }
+
+  if (!workspaceId || !sequenceId) {
+    log.debug({ externalCampaignId }, "Could not match webhook to a sequence — logging only");
+    return { processed: true, event: engagementEvent };
+  }
+
+  const contactEmail = String(payload.email ?? "");
+  if (contactEmail) {
+    const [contact] = await db
+      .select({ id: sequenceContactsTable.id })
+      .from(sequenceContactsTable)
+      .where(eq(sequenceContactsTable.email, contactEmail))
+      .limit(1);
+    if (contact) contactId = contact.id;
+  }
+
+  await recordEngagementEvent({
+    sequenceId,
+    workspaceId,
+    itemId: itemId ?? undefined,
+    contactId: contactId ?? undefined,
+    event: engagementEvent,
+    channel: "email",
+    externalRef: externalCampaignId,
+    metadata: { link: payload.link, email: contactEmail },
+  });
+
+  emitSequenceEvent({
+    sequenceId,
+    workspaceId,
+    type: "engagement_received",
+    itemId: itemId ?? undefined,
+    message: `Email ${engagementEvent} recebido${contactEmail ? ` de ${contactEmail}` : ""}`,
+    data: { event: engagementEvent, channel: "email" },
+  });
+
+  log.info({ sequenceId, itemId, event: engagementEvent }, "Email engagement recorded");
+  return { processed: true, event: engagementEvent };
 }

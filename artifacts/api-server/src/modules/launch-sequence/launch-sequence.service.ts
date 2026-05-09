@@ -1,12 +1,14 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   db,
   launchSequencesTable,
   launchSequenceItemsTable,
   campaignsTable,
+  sequenceContactsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { runLaunchSequenceBuilderAgent } from "../agents/launch-sequence-builder.agent.js";
+import { getSequenceAnalytics, recordEngagementEvent } from "./sequence-analytics.service.js";
 import type { Logger } from "pino";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,7 +26,24 @@ export interface CreateSequenceInput {
   productPrice?: string;
 }
 
-// ─── Service ──────────────────────────────────────────────────────────────────
+export interface ActivateSequenceInput {
+  emailListId?: string;
+  emailProvider?: "rd_station" | "activecampaign";
+  emailFromName?: string;
+  emailFromEmail?: string;
+  phoneNumbers?: string[];
+  startAt?: string;
+}
+
+export interface ContactInput {
+  name?: string;
+  email?: string;
+  phone?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+// ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 export async function createLaunchSequence(
   workspaceId: string,
@@ -120,7 +139,15 @@ export async function updateLaunchSequence(
       ...(patch.revenueTarget !== undefined && { revenueTarget: patch.revenueTarget }),
       ...(patch.productName !== undefined && { productName: patch.productName }),
       ...(patch.productPrice !== undefined && { productPrice: patch.productPrice }),
-      ...(patch.status !== undefined && { status: patch.status as "draft" | "scheduled" | "active" | "paused" | "completed" | "cancelled" }),
+      ...(patch.status !== undefined && {
+        status: patch.status as
+          | "draft"
+          | "scheduled"
+          | "active"
+          | "paused"
+          | "completed"
+          | "cancelled",
+      }),
     })
     .where(eq(launchSequencesTable.id, sequenceId))
     .returning();
@@ -140,10 +167,10 @@ export async function deleteLaunchSequence(workspaceId: string, sequenceId: stri
     );
   if (!existing) throw new NotFoundError("Launch sequence not found");
 
-  await db
-    .delete(launchSequencesTable)
-    .where(eq(launchSequencesTable.id, sequenceId));
+  await db.delete(launchSequencesTable).where(eq(launchSequencesTable.id, sequenceId));
 }
+
+// ─── AI Plan Generation ────────────────────────────────────────────────────────
 
 export async function generateSequencePlan(
   workspaceId: string,
@@ -172,7 +199,8 @@ export async function generateSequencePlan(
       totalDays: sequence.totalDays,
       productName: sequence.productName ?? String(intakeData["product.name"] ?? ""),
       productPrice: sequence.productPrice ?? String(intakeData["product.price"] ?? ""),
-      revenueTarget: sequence.revenueTarget ?? String(intakeData["campaign.revenueTarget"] ?? ""),
+      revenueTarget:
+        sequence.revenueTarget ?? String(intakeData["campaign.revenueTarget"] ?? ""),
       launchStartDate: sequence.launchStartDate ?? undefined,
       cartOpenDate: sequence.cartOpenDate ?? undefined,
       cartCloseDate: sequence.cartCloseDate ?? undefined,
@@ -190,7 +218,18 @@ export async function generateSequencePlan(
       plan.items.map((item) => ({
         sequenceId,
         workspaceId,
-        phase: item.phase as "pre_capture" | "capture" | "plc1" | "plc2" | "plc3" | "cart_open" | "cart_middle" | "cart_close" | "post_purchase" | "post_launch" | "evergreen",
+        phase: item.phase as
+          | "pre_capture"
+          | "capture"
+          | "plc1"
+          | "plc2"
+          | "plc3"
+          | "cart_open"
+          | "cart_middle"
+          | "cart_close"
+          | "post_purchase"
+          | "post_launch"
+          | "evergreen",
         name: item.name,
         description: item.description,
         dayIndex: item.dayIndex,
@@ -205,17 +244,106 @@ export async function generateSequencePlan(
 
   await db
     .update(launchSequencesTable)
-    .set({ aiGeneratedPlan: plan as unknown as Record<string, unknown>, status: "scheduled" })
+    .set({
+      aiGeneratedPlan: plan as unknown as Record<string, unknown>,
+      status: "scheduled",
+    })
     .where(eq(launchSequencesTable.id, sequenceId));
 
   return getLaunchSequence(workspaceId, sequenceId);
 }
 
+// ─── Activation ────────────────────────────────────────────────────────────────
+
+export async function activateSequence(
+  workspaceId: string,
+  sequenceId: string,
+  input: ActivateSequenceInput,
+) {
+  const sequence = await getLaunchSequence(workspaceId, sequenceId);
+
+  if (!["draft", "scheduled"].includes(sequence.status)) {
+    throw new ValidationError("Sequência já está ativa, pausada ou concluída");
+  }
+
+  if (sequence.items.length === 0) {
+    throw new ValidationError("Gere o plano da sequência antes de ativar");
+  }
+
+  const startAt = input.startAt ? new Date(input.startAt) : new Date();
+
+  const config: Record<string, unknown> = {
+    ...((sequence.config as Record<string, unknown>) ?? {}),
+    activatedAt: startAt.toISOString(),
+    ...(input.emailListId !== undefined && { emailListId: input.emailListId }),
+    ...(input.emailProvider !== undefined && { emailProvider: input.emailProvider }),
+    ...(input.emailFromName !== undefined && { emailFromName: input.emailFromName }),
+    ...(input.emailFromEmail !== undefined && { emailFromEmail: input.emailFromEmail }),
+    ...(input.phoneNumbers !== undefined && { phoneNumbers: input.phoneNumbers }),
+  };
+
+  for (const item of sequence.items) {
+    const scheduledAt = new Date(startAt);
+    scheduledAt.setDate(scheduledAt.getDate() + item.dayIndex);
+
+    await db
+      .update(launchSequenceItemsTable)
+      .set({ status: "scheduled", scheduledAt })
+      .where(eq(launchSequenceItemsTable.id, item.id));
+  }
+
+  await db
+    .update(launchSequencesTable)
+    .set({ status: "active", config })
+    .where(eq(launchSequencesTable.id, sequenceId));
+
+  return getLaunchSequence(workspaceId, sequenceId);
+}
+
+export async function pauseSequence(workspaceId: string, sequenceId: string) {
+  const [existing] = await db
+    .select({ status: launchSequencesTable.status })
+    .from(launchSequencesTable)
+    .where(
+      and(
+        eq(launchSequencesTable.id, sequenceId),
+        eq(launchSequencesTable.workspaceId, workspaceId),
+      ),
+    );
+  if (!existing) throw new NotFoundError("Launch sequence not found");
+  if (existing.status !== "active")
+    throw new ValidationError("Só sequências ativas podem ser pausadas");
+
+  await db
+    .update(launchSequencesTable)
+    .set({ status: "paused" })
+    .where(eq(launchSequencesTable.id, sequenceId));
+
+  await db
+    .update(launchSequenceItemsTable)
+    .set({ status: "pending" })
+    .where(
+      and(
+        eq(launchSequenceItemsTable.sequenceId, sequenceId),
+        inArray(launchSequenceItemsTable.status, ["scheduled"]),
+      ),
+    );
+
+  return getLaunchSequence(workspaceId, sequenceId);
+}
+
+// ─── Items ────────────────────────────────────────────────────────────────────
+
 export async function updateSequenceItem(
   workspaceId: string,
   sequenceId: string,
   itemId: string,
-  patch: { status?: string; scheduledAt?: string; contentPieceId?: string; copyHints?: string },
+  patch: {
+    status?: string;
+    scheduledAt?: string;
+    contentPieceId?: string;
+    copyHints?: string;
+  },
 ) {
   const [existing] = await db
     .select({ id: launchSequenceItemsTable.id })
@@ -232,7 +360,15 @@ export async function updateSequenceItem(
   const [updated] = await db
     .update(launchSequenceItemsTable)
     .set({
-      ...(patch.status !== undefined && { status: patch.status as "pending" | "content_generating" | "content_ready" | "scheduled" | "dispatched" | "skipped" }),
+      ...(patch.status !== undefined && {
+        status: patch.status as
+          | "pending"
+          | "content_generating"
+          | "content_ready"
+          | "scheduled"
+          | "dispatched"
+          | "skipped",
+      }),
       ...(patch.scheduledAt !== undefined && { scheduledAt: new Date(patch.scheduledAt) }),
       ...(patch.contentPieceId !== undefined && { contentPieceId: patch.contentPieceId }),
       ...(patch.copyHints !== undefined && { copyHints: patch.copyHints }),
@@ -241,4 +377,90 @@ export async function updateSequenceItem(
     .returning();
 
   return updated!;
+}
+
+// ─── Contacts ─────────────────────────────────────────────────────────────────
+
+export async function addSequenceContacts(
+  workspaceId: string,
+  sequenceId: string,
+  contacts: ContactInput[],
+) {
+  const [existing] = await db
+    .select({ id: launchSequencesTable.id })
+    .from(launchSequencesTable)
+    .where(
+      and(
+        eq(launchSequencesTable.id, sequenceId),
+        eq(launchSequencesTable.workspaceId, workspaceId),
+      ),
+    );
+  if (!existing) throw new NotFoundError("Launch sequence not found");
+  if (contacts.length === 0) throw new ValidationError("Informe ao menos 1 contato");
+
+  const inserted = await db
+    .insert(sequenceContactsTable)
+    .values(
+      contacts.map((c) => ({
+        sequenceId,
+        workspaceId,
+        name: c.name ?? null,
+        email: c.email ?? null,
+        phone: c.phone ?? null,
+        tags: c.tags ?? [],
+        metadata: c.metadata ?? {},
+      })),
+    )
+    .returning();
+
+  return inserted;
+}
+
+export async function getSequenceContacts(workspaceId: string, sequenceId: string) {
+  const [existing] = await db
+    .select({ id: launchSequencesTable.id })
+    .from(launchSequencesTable)
+    .where(
+      and(
+        eq(launchSequencesTable.id, sequenceId),
+        eq(launchSequencesTable.workspaceId, workspaceId),
+      ),
+    );
+  if (!existing) throw new NotFoundError("Launch sequence not found");
+
+  return db
+    .select()
+    .from(sequenceContactsTable)
+    .where(eq(sequenceContactsTable.sequenceId, sequenceId))
+    .orderBy(desc(sequenceContactsTable.engagementScore));
+}
+
+// ─── Analytics & Engagement ───────────────────────────────────────────────────
+
+export { getSequenceAnalytics };
+
+export async function recordSequenceEngagement(
+  workspaceId: string,
+  sequenceId: string,
+  params: {
+    itemId?: string;
+    contactId?: string;
+    event: "delivered" | "open" | "click" | "convert" | "reply" | "unsubscribe" | "bounced";
+    channel?: string;
+    externalRef?: string;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  const [existing] = await db
+    .select({ id: launchSequencesTable.id })
+    .from(launchSequencesTable)
+    .where(
+      and(
+        eq(launchSequencesTable.id, sequenceId),
+        eq(launchSequencesTable.workspaceId, workspaceId),
+      ),
+    );
+  if (!existing) throw new NotFoundError("Launch sequence not found");
+
+  await recordEngagementEvent({ sequenceId, workspaceId, ...params });
 }

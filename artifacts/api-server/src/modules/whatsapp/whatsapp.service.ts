@@ -4,9 +4,14 @@ import {
   whatsappDispatchesTable,
   workspaceIntegrationsTable,
   contentPiecesTable,
+  launchSequenceItemsTable,
+  sequenceContactsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError, AppError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
+import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
+import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
+import { runWhatsAppResponseAgent } from "../agents/whatsapp-response.agent.js";
 
 // ─── Meta WhatsApp Business API ───────────────────────────────────────────────
 
@@ -79,7 +84,7 @@ async function sendMetaTextMessage(
     throw new AppError(502, `Erro ao enviar WhatsApp: ${err}`);
   }
 
-  const data = await res.json() as { messages?: Array<{ id: string }> };
+  const data = (await res.json()) as { messages?: Array<{ id: string }> };
   return {
     messageId: data.messages?.[0]?.id ?? "",
     recipientPhone,
@@ -92,9 +97,15 @@ async function sendMetaTemplateMessage(
   templateName: string,
   params: Record<string, string>,
 ): Promise<MetaSendResult> {
-  const components = Object.keys(params).length > 0
-    ? [{ type: "body", parameters: Object.values(params).map((v) => ({ type: "text", text: v })) }]
-    : [];
+  const components =
+    Object.keys(params).length > 0
+      ? [
+          {
+            type: "body",
+            parameters: Object.values(params).map((v) => ({ type: "text", text: v })),
+          },
+        ]
+      : [];
 
   const res = await fetch(
     `https://graph.facebook.com/v21.0/${creds.phoneNumberId}/messages`,
@@ -122,7 +133,7 @@ async function sendMetaTemplateMessage(
     throw new AppError(502, `Erro ao enviar template WhatsApp: ${err}`);
   }
 
-  const data = await res.json() as { messages?: Array<{ id: string }> };
+  const data = (await res.json()) as { messages?: Array<{ id: string }> };
   return { messageId: data.messages?.[0]?.id ?? "", recipientPhone };
 }
 
@@ -321,33 +332,159 @@ export async function getWhatsAppDispatch(workspaceId: string, dispatchId: strin
   return dispatch;
 }
 
+// ─── Webhook (Meta Cloud API) ─────────────────────────────────────────────────
+
 export async function handleWhatsAppWebhook(payload: unknown) {
   const p = payload as Record<string, unknown>;
+  const log = logger.child({ component: "whatsapp-webhook" });
+
   const entry = (p["entry"] as Array<Record<string, unknown>>)?.[0];
   const changes = (entry?.["changes"] as Array<Record<string, unknown>>)?.[0];
   const value = changes?.["value"] as Record<string, unknown>;
-  const statuses = value?.["statuses"] as Array<Record<string, unknown>>;
-
-  if (!statuses?.length) return { processed: 0 };
 
   let processed = 0;
-  for (const s of statuses) {
-    const msgId = String(s["id"] ?? "");
-    const status = String(s["status"] ?? "");
-    if (!msgId || !status) continue;
 
-    const statusMap: Record<string, "sent" | "delivered" | "read" | "failed"> = {
-      sent: "sent",
-      delivered: "delivered",
-      read: "read",
-      failed: "failed",
-    };
+  // ── Delivery status updates ──────────────────────────────────────────────
+  const statuses = value?.["statuses"] as Array<Record<string, unknown>> | undefined;
+  if (statuses?.length) {
+    for (const s of statuses) {
+      const msgId = String(s["id"] ?? "");
+      const status = String(s["status"] ?? "");
+      if (!msgId || !status) continue;
 
-    const mapped = statusMap[status];
-    if (!mapped) continue;
+      const statusMap: Record<string, "sent" | "delivered" | "read" | "failed"> = {
+        sent: "sent",
+        delivered: "delivered",
+        read: "read",
+        failed: "failed",
+      };
 
-    logger.info({ msgId, status: mapped }, "WhatsApp delivery status update");
-    processed++;
+      const mapped = statusMap[status];
+      if (!mapped) continue;
+
+      if (mapped === "delivered" || mapped === "read") {
+        const [dispatch] = await db
+          .select({ workspaceId: whatsappDispatchesTable.workspaceId })
+          .from(whatsappDispatchesTable)
+          .where(
+            eq(
+              whatsappDispatchesTable.externalMessageIds,
+              [msgId] as unknown as string[],
+            ),
+          )
+          .limit(1);
+
+        if (dispatch) {
+          const [item] = await db
+            .select({ id: launchSequenceItemsTable.id, sequenceId: launchSequenceItemsTable.sequenceId })
+            .from(launchSequenceItemsTable)
+            .where(eq(launchSequenceItemsTable.status, "dispatched"))
+            .limit(1);
+
+          if (item) {
+            await recordEngagementEvent({
+              sequenceId: item.sequenceId,
+              workspaceId: dispatch.workspaceId,
+              itemId: item.id,
+              event: mapped === "read" ? "open" : "delivered",
+              channel: "whatsapp",
+              externalRef: msgId,
+            });
+          }
+        }
+      }
+
+      log.info({ msgId, status: mapped }, "WhatsApp delivery status update");
+      processed++;
+    }
+  }
+
+  // ── Incoming messages → AI auto-response ────────────────────────────────
+  const messages = value?.["messages"] as Array<Record<string, unknown>> | undefined;
+  if (messages?.length) {
+    const phoneNumberId = String(value?.["metadata"]
+      ? (value["metadata"] as Record<string, unknown>)["phone_number_id"]
+      : "");
+
+    for (const msg of messages) {
+      const from = String(msg["from"] ?? "");
+      const msgType = String(msg["type"] ?? "");
+      const body =
+        msgType === "text"
+          ? String((msg["text"] as Record<string, unknown>)?.["body"] ?? "")
+          : "";
+
+      if (!body || !from) continue;
+      processed++;
+
+      log.info({ from, body: body.substring(0, 50) }, "Incoming WhatsApp message");
+
+      const [integration] = await db
+        .select({
+          workspaceId: workspaceIntegrationsTable.workspaceId,
+          accessToken: workspaceIntegrationsTable.accessToken,
+        })
+        .from(workspaceIntegrationsTable)
+        .where(
+          and(
+            eq(workspaceIntegrationsTable.accountId, phoneNumberId),
+            eq(workspaceIntegrationsTable.provider, "whatsapp_business"),
+            eq(workspaceIntegrationsTable.status, "connected"),
+          ),
+        )
+        .limit(1);
+
+      if (!integration) continue;
+
+      const [contact] = await db
+        .select({ id: sequenceContactsTable.id, sequenceId: sequenceContactsTable.sequenceId })
+        .from(sequenceContactsTable)
+        .where(eq(sequenceContactsTable.phone, from))
+        .limit(1);
+
+      if (contact) {
+        await recordEngagementEvent({
+          sequenceId: contact.sequenceId,
+          workspaceId: integration.workspaceId,
+          contactId: contact.id,
+          event: "reply",
+          channel: "whatsapp",
+          metadata: { body },
+        });
+      }
+
+      setImmediate(async () => {
+        try {
+          const aiResult = await runWhatsAppResponseAgent(
+            integration.workspaceId,
+            { from, body },
+            log,
+          );
+
+          if (!aiResult.shouldRespond || !aiResult.response) return;
+
+          if (aiResult.requiresHuman) {
+            emitSequenceEvent({
+              sequenceId: contact?.sequenceId ?? "unknown",
+              workspaceId: integration.workspaceId,
+              type: "engagement_received",
+              message: `⚠️ Mensagem de ${from} requer atenção humana: "${body.substring(0, 80)}"`,
+              data: { from, body, intent: aiResult.intent, requiresHuman: true },
+            });
+            return;
+          }
+
+          const creds: WhatsAppCredentials = {
+            accessToken: integration.accessToken!,
+            phoneNumberId,
+          };
+          await sendMetaTextMessage(creds, from, aiResult.response);
+          log.info({ from, intent: aiResult.intent }, "WhatsApp AI auto-response sent");
+        } catch (err) {
+          log.warn({ err, from }, "WhatsApp AI auto-response failed");
+        }
+      });
+    }
   }
 
   return { processed };
