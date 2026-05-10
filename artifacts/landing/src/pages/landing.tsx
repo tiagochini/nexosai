@@ -452,44 +452,82 @@ function ProofSection() {
   );
 }
 
-// ─── Section 8: FEAR — Urgência ──────────────────────────────────────────────
+// ─── Section 8: URGÊNCIA — Janela de 24h ─────────────────────────────────────
 function UrgencySection() {
   const { ref, inView } = useInView(0.2);
-  const cards = [
-    { gatilho: "Esperar o momento perfeito", impacto: "O momento perfeito era ontem. O segundo melhor é agora." },
-    { gatilho: "Fazer mais um lançamento manual", impacto: "40 horas de trabalho que a IA faz em 47 minutos." },
-    { gatilho: "Deixar pra próxima semana", impacto: "Vagas esgotam. Você entra na fila. Concorrente sai na frente." },
+
+  const fatos = [
+    {
+      num: "01",
+      titulo: "Na abertura do carrinho",
+      desc: "O NexOS AI vai custar o que vale: vários mil reais. Esse é o preço justo para 29 agentes executando seu lançamento 24h por dia.",
+      cor: "text-muted-foreground",
+    },
+    {
+      num: "02",
+      titulo: "Nas primeiras 24 horas",
+      desc: "Quem está na lista recebe uma oferta de Fundador. Um preço que não existirá mais depois dessas 24h. Nunca mais. É a única vez.",
+      cor: "text-primary",
+    },
+    {
+      num: "03",
+      titulo: "Depois das 24h",
+      desc: "Oferta de Fundador encerra. Preço cheio. Sem exceção, sem conversa, sem cupom. Quem não estava na lista nunca vai saber quanto perdeu.",
+      cor: "text-destructive/70",
+    },
   ];
+
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
-      <div className="max-w-5xl mx-auto px-6 w-full text-center">
+      <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">O RELÓGIO ESTÁ CORRENDO</div>
-          <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-8">
-            Cada dia sem automação<br />é dinheiro que<br />
-            <span className="text-primary">você queima.</span>
+
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">A MATEMÁTICA DO CARRINHO</div>
+          <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
+            Estar na lista<br />não é sobre acesso.<br />
+            <span className="text-primary">É sobre o preço das 24h.</span>
           </h2>
-          <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
-            Enquanto você lê isso, 3 lançadores acabaram de solicitar acesso.<br />
-            <strong className="text-foreground">As 47 vagas dos testes privados estão fechando. Depois disso: lista de espera.</strong>
+          <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-12">
+            Quando o carrinho abrir, vai ter dois preços: o de quem estava esperando — e o de todo mundo. A diferença vai ser grande. E definitiva.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-3xl mx-auto mb-12">
-            {cards.map((item, i) => (
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            {fatos.map((item, i) => (
               <div
                 key={i}
-                className={`border border-primary/15 bg-primary/5 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                style={{ transitionDelay: `${i * 120}ms` }}
+                className={`border ${i === 1 ? "border-primary/40 bg-primary/8" : "border-border/30 bg-card/20"} p-7 flex flex-col gap-4 transition-all duration-600 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+                style={{ transitionDelay: `${i * 150}ms` }}
               >
-                <div className="font-mono text-xs text-primary font-bold uppercase tracking-widest mb-2">{item.gatilho}</div>
-                <div className="font-mono text-sm text-muted-foreground leading-relaxed">{item.impacto}</div>
+                <div className="font-mono font-black text-5xl text-foreground/10 leading-none">{item.num}</div>
+                <div>
+                  <div className={`font-mono font-black text-sm uppercase tracking-widest mb-2 ${item.cor}`}>{item.titulo}</div>
+                  <p className="font-mono text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                </div>
+                {i === 1 && (
+                  <div className="mt-auto border border-primary/30 bg-primary/5 px-3 py-2">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">
+                      ← Só para quem está na lista
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-          <a href="/comprar">
-            <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 px-12 gap-3">
-              GARANTIR MINHA VAGA AGORA <ArrowRight className="h-4 w-4" />
-            </Button>
-          </a>
+
+          <div className="border border-destructive/20 bg-destructive/5 px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <div className="font-mono text-xs uppercase tracking-widest text-destructive/70 font-bold mb-1">A única forma de garantir o preço de Fundador</div>
+              <p className="font-mono text-sm text-muted-foreground leading-relaxed">
+                Entrar na lista agora. Quando o carrinho abrir, você recebe o link antes de qualquer pessoa — com a oferta que só dura 24h.
+              </p>
+            </div>
+            <a href="#oferta" className="shrink-0">
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 px-10 gap-3 whitespace-nowrap">
+                GARANTIR PREÇO DE FUNDADOR <ArrowRight className="h-4 w-4" />
+              </Button>
+            </a>
+          </div>
+
         </div>
       </div>
       <ScrollHint />
@@ -551,16 +589,16 @@ function OfferSection() {
       <div className="max-w-5xl mx-auto px-6 w-full py-20">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
 
-          {/* Header — ancoragem de contraste */}
+          {/* Header — ancoragem + 24h hook */}
           <div className="text-center mb-14">
-            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">ACESSO EXCLUSIVO · 47 VAGAS</div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">OFERTA DE FUNDADOR · 47 VAGAS</div>
             <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
-              Tudo que o mercado<br />cobra R$83k/mês.<br />
-              <span className="text-primary">O NexOS AI não custa nem perto disso.</span>
+              Na abertura do carrinho,<br />o preço será o que vale.<br />
+              <span className="text-primary">Nas 24h de Fundador: muito menos.</span>
             </h2>
             <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              O valor real do NexOS AI é revelado individualmente para quem garante uma vaga nos testes privados.{" "}
-              <strong className="text-foreground">Não por mistério. Porque quem chega aqui já entendeu o valor — e o preço vai ser o menor obstáculo.</strong>
+              Não vamos revelar o investimento antes da abertura — porque quem vê o que o NexOS AI faz, acha barato de qualquer jeito.{" "}
+              <strong className="text-foreground">Mas quem está nessa lista recebe a oferta de Fundador antes de qualquer pessoa. Por 24 horas. Só essa vez. Nunca mais.</strong>
             </p>
           </div>
 
@@ -577,23 +615,29 @@ function OfferSection() {
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-primary/20 pt-5">
-                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-2">Valor de mercado equivalente</div>
-                <div className="font-mono font-black text-3xl text-destructive/70 line-through mb-1">R$31.000 – R$83.000/mês</div>
-                <div className="font-mono text-xs text-muted-foreground">Se você contratar isso tudo separado.</div>
+              <div className="border-t border-primary/20 pt-5 space-y-3">
+                <div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Custo se contratar separado</div>
+                  <div className="font-mono font-black text-2xl text-destructive/60 line-through">R$31.000 – R$83.000/mês</div>
+                </div>
+                <div className="border border-primary/30 bg-primary/5 px-4 py-3">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">Preço de Fundador (24h)</div>
+                  <div className="font-mono font-black text-2xl text-foreground">Revelado na abertura do carrinho</div>
+                  <div className="font-mono text-[11px] text-muted-foreground mt-1">Só para quem está nessa lista. Nunca mais esse valor.</div>
+                </div>
               </div>
             </div>
 
             {/* Right — Formulário de acesso */}
             <div className="border border-border/30 bg-card/20 p-7 flex flex-col">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold mb-1">
-                Garantir minha vaga
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-1">
+                ← Entrada na lista de Fundadores
               </div>
               <h3 className="font-mono font-black uppercase text-xl tracking-tight text-foreground mb-2">
-                Descubra o valor. Agora.
+                Garanta o preço das 24h.
               </h3>
               <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
-                Preencha abaixo. Em segundos você é redirecionado para a página de acesso — com o investimento completo, sem surpresas. Só 47 vagas. Depois dessa, lista de espera sem previsão.
+                Preencha abaixo. Na hora que o carrinho abrir, você é o primeiro a saber — com o link direto para a oferta de Fundador. Depois das 24h, essa oferta fecha para sempre. Sem replay, sem reabertura, sem exceção.
               </p>
 
               {joined ? (
