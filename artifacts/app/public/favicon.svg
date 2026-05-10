@@ -1,3 +1,17 @@
 <svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+  <rect width="180" height="180" rx="24" fill="#080b18"/>
+  <rect width="180" height="180" rx="24" fill="url(#bg_grad)" opacity="0.4"/>
+  <text x="90" y="116" font-family="monospace, sans-serif" font-size="96" font-weight="900" fill="none" stroke="url(#n_grad)" stroke-width="2" text-anchor="middle" dominant-baseline="auto">N</text>
+  <text x="90" y="116" font-family="monospace, sans-serif" font-size="96" font-weight="900" fill="url(#n_grad)" text-anchor="middle" dominant-baseline="auto" opacity="0.9">N</text>
+  <defs>
+    <linearGradient id="bg_grad" x1="0" y1="0" x2="180" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="n_grad" x1="40" y1="30" x2="140" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
 </svg>

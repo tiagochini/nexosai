@@ -7,6 +7,7 @@ import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
+  Brain, Receipt,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
@@ -78,8 +79,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       label: "Conta",
       items: [
         { name: "Créditos de IA",  href: "/credits",  icon: CreditCard },
+        { name: "Memória de IA",   href: "/memory",   icon: Brain      },
+        { name: "Plano & Fatura",  href: "/billing",  icon: Receipt    },
         { name: "Configurações",   href: "/settings", icon: Settings   },
-        ...(isAdmin ? [{ name: "Admin SaaS", href: "/admin", icon: ShieldCheck }] : []),
       ],
     },
   ];
@@ -89,16 +91,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="h-20 shrink-0 flex items-center px-6 border-b border-border/50">
+      <div className="h-24 shrink-0 flex items-center px-5 border-b border-border/50">
         <Link href="/" onClick={onNav}>
-          <div className="flex items-center gap-3 cursor-pointer">
+          <div className="flex items-center gap-3.5 cursor-pointer group">
             <div className="relative shrink-0">
-              <img src={nexosLogo} alt="NexOS" className="h-9 w-9 object-contain" />
-              <div className="absolute -inset-1 bg-primary/10 blur-sm rounded-full -z-10" />
+              <img src={nexosLogo} alt="NexOS" className="h-14 w-14 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)] group-hover:drop-shadow-[0_0_18px_hsl(var(--primary)/0.7)] transition-all duration-300" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.45))" }} />
+              <div className="absolute -inset-2 bg-primary/8 blur-xl rounded-full -z-10" />
             </div>
             <div>
-              <div className="font-mono font-black text-sm uppercase tracking-widest text-foreground">NexOS</div>
-              <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-primary">AI Platform</div>
+              <div className="font-mono font-black text-base uppercase tracking-[0.15em] text-foreground leading-tight">NexOS</div>
+              <div className="font-mono text-[8px] uppercase tracking-[0.35em] text-primary/80 leading-tight">AI Platform</div>
+              <div className="font-mono text-[7px] uppercase tracking-widest text-muted-foreground/30 leading-tight mt-0.5">Operações Inteligentes</div>
             </div>
           </div>
         </Link>
@@ -290,9 +293,17 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
 
       <div className="flex-1 flex items-center justify-center md:justify-start md:ml-0 gap-2">
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer md:hidden">
-            <img src={nexosLogo} alt="NexOS" className="h-7 w-7 object-contain" />
-            <span className="font-mono font-black text-sm uppercase tracking-widest">NexOS AI</span>
+          <div className="flex items-center gap-2.5 cursor-pointer md:hidden group">
+            <img
+              src={nexosLogo}
+              alt="NexOS"
+              className="h-10 w-10 object-contain transition-all duration-300"
+              style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)/0.5))" }}
+            />
+            <div>
+              <div className="font-mono font-black text-sm uppercase tracking-[0.15em] leading-tight">NexOS AI</div>
+              <div className="font-mono text-[7px] uppercase tracking-widest text-primary/70 leading-tight">Plataforma de Lançamento</div>
+            </div>
           </div>
         </Link>
         <div className="hidden md:block text-[9px] font-mono uppercase tracking-widest text-muted-foreground/40">

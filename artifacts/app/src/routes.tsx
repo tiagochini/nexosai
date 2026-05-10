@@ -28,6 +28,8 @@ import AffiliatePage from "@/pages/affiliate/index";
 import CompliancePage from "@/pages/compliance/index";
 import SettingsPage from "@/pages/settings";
 import CreditsPage from "@/pages/credits";
+import BillingPage from "@/pages/billing/index";
+import MemoryPage from "@/pages/memory/index";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -186,6 +188,12 @@ export default function AppRoutes() {
       </Route>
       <Route path="/credits">
         {() => <ProtectedRoute><CreditsPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/billing">
+        {() => <ProtectedRoute><BillingPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/memory">
+        {() => <ProtectedRoute><MemoryPage /></ProtectedRoute>}
       </Route>
 
       <Route component={NotFound} />
