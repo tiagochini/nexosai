@@ -18,10 +18,11 @@ import {
   ArrowLeft, CheckCircle2, Loader2, Send, Database,
   MessageSquare, LayoutList, ChevronRight, Zap,
   Rocket, RefreshCw, Radio, TrendingUp, BarChart3,
-  Users, Mail, Check, X,
+  Users, Mail, Check, X, BarChart2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
+import { BudgetSimulator } from "@/components/budget-simulator";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -181,6 +182,9 @@ export default function CampaignIntake() {
     reason: string | null;
   } | null>(null);
   const [confirmingType, setConfirmingType] = useState(false);
+
+  // Budget simulator panel
+  const [showSimulator, setShowSimulator] = useState(false);
 
   const aiTriggered = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -459,18 +463,64 @@ export default function CampaignIntake() {
       </div>
 
       {/* ── View toggle ── */}
-      <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm w-fit">
-        {[
-          { id: "chat" as const, label: "Chat com IA", icon: MessageSquare },
-          { id: "form" as const, label: "Formulário", icon: LayoutList },
-        ].map((v) => (
-          <button key={v.id} onClick={() => setView(v.id)}
-            className={`flex items-center gap-2 px-3 md:px-4 py-2 text-xs md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
-              ${view === v.id ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
-            <v.icon className="h-3.5 w-3.5" />{v.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm">
+          {[
+            { id: "chat" as const, label: "Chat com IA", icon: MessageSquare },
+            { id: "form" as const, label: "Formulário", icon: LayoutList },
+          ].map((v) => (
+            <button key={v.id} onClick={() => setView(v.id)}
+              className={`flex items-center gap-2 px-3 md:px-4 py-2 text-xs md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
+                ${view === v.id ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
+              <v.icon className="h-3.5 w-3.5" />{v.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Budget simulator toggle — appears when budget + price detected */}
+        {(() => {
+          const rawData = data?.intakeData as Record<string, unknown> | undefined;
+          const detectedBudget = Number(rawData?.["campaign.budget.total"] ?? rawData?.["campaign.budget"] ?? 0);
+          const detectedPrice = Number(rawData?.["product.price"] ?? rawData?.["product.preco"] ?? 0);
+          if (detectedBudget > 0 && detectedPrice > 0) {
+            return (
+              <button
+                onClick={() => setShowSimulator((s) => !s)}
+                className={`flex items-center gap-2 px-3 py-2 text-xs font-mono uppercase tracking-widest border transition-all rounded-sm
+                  ${showSimulator
+                    ? "border-primary/60 bg-primary/10 text-primary"
+                    : "border-border/50 bg-card/40 text-muted-foreground hover:text-foreground hover:border-primary/30"}`}
+              >
+                <BarChart2 className="h-3.5 w-3.5" />
+                Simulação de Budget
+                {showSimulator ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            );
+          }
+          return null;
+        })()}
       </div>
+
+      {/* ── Budget Simulator Panel ── */}
+      {(() => {
+        const rawData = data?.intakeData as Record<string, unknown> | undefined;
+        const detectedBudget = Number(rawData?.["campaign.budget.total"] ?? rawData?.["campaign.budget"] ?? 0);
+        const detectedPrice = Number(rawData?.["product.price"] ?? rawData?.["product.preco"] ?? 0);
+        const detectedCategory = (rawData?.["product.category"] as string | undefined) ?? "infoproduct";
+        const detectedType = (data as unknown as { type?: string } | undefined)?.type ?? "launch";
+
+        if (!showSimulator || detectedBudget <= 0 || detectedPrice <= 0) return null;
+
+        return (
+          <BudgetSimulator
+            campaignId={campaignId}
+            budget={detectedBudget}
+            productPrice={detectedPrice}
+            campaignType={detectedType}
+            productCategory={detectedCategory}
+          />
+        );
+      })()}
 
       {/* ════════════════ CHAT VIEW ════════════════ */}
       {view === "chat" && (

@@ -15,6 +15,11 @@ import {
   type ConversationTurn,
 } from "./intake.ai.js";
 import {
+  simulateBudget,
+  type ProductCategory,
+  type CampaignModelType,
+} from "./intake.simulation.js";
+import {
   validateRevenueViability,
   calculateReadinessScore,
   recommendTrackFromRevenue,
@@ -343,6 +348,57 @@ router.get("/:campaignId/recommend-track", async (req, res): Promise<void> => {
     revenueTarget,
     viability,
   });
+});
+
+// ─── Budget simulation ────────────────────────────────────────────────────────
+
+const simulateSchema = z.object({
+  budget: z.number().positive(),
+  productPrice: z.number().positive(),
+  campaignType: z.string().optional(),
+  productCategory: z.string().optional(),
+});
+
+router.post("/:campaignId/simulate-budget", async (req, res): Promise<void> => {
+  const parsed = simulateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const campaignId = req.params["campaignId"] as string;
+
+  try {
+    const [campaign] = await db
+      .select({ type: campaignsTable.type, intakeData: campaignsTable.intakeData })
+      .from(campaignsTable)
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)))
+      .limit(1);
+
+    if (!campaign) {
+      res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
+      return;
+    }
+
+    const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+    const campaignType = (parsed.data.campaignType ?? campaign.type ?? "launch") as CampaignModelType;
+    const productCategory = (parsed.data.productCategory ?? intakeData["product.category"] ?? "infoproduct") as ProductCategory;
+
+    const simulation = simulateBudget(
+      parsed.data.budget,
+      parsed.data.productPrice,
+      campaignType,
+      productCategory,
+    );
+
+    res.json({ simulation });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
 });
 
 // ─── Confirm campaign type (AI-proposed) ─────────────────────────────────────
