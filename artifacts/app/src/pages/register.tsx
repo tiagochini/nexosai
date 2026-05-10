@@ -51,7 +51,8 @@ export default function Register() {
   const registerMutation = useRegister({
     mutation: {
       onSuccess: (data) => {
-        setToken(data.accessToken);
+        const raw = data as typeof data & { refreshToken?: string };
+        setToken(data.accessToken, raw.refreshToken);
         toast.success("Conta criada com sucesso!");
         setLocation("/onboarding");
       },

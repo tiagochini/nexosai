@@ -7,7 +7,8 @@ import {
   getGetIntakeQueryKey,
   getGetIntakeScoreQueryKey,
 } from "@workspace/api-client-react";
-import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
+import { globalSilentRefresh } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -93,9 +94,30 @@ export default function CampaignIntake() {
     }
   }, [data]);
 
+  // ── Helper: call conversation endpoint with auto-refresh on 401 ──────────────
+  const callConversation = async (body: object): Promise<{
+    aiMessage: string; isComplete: boolean; progress: number; intakeData: Record<string, unknown>;
+  }> => {
+    const doFetch = () => customFetch<{
+      aiMessage: string; isComplete: boolean; progress: number; intakeData: Record<string, unknown>;
+    }>(`/api/intake/${campaignId}/conversation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    try {
+      return await doFetch();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        const refreshed = await globalSilentRefresh();
+        if (refreshed) return await doFetch(); // retry once with new token
+      }
+      throw err;
+    }
+  };
+
   // ── AI AUTO-TRIGGER on fresh campaign ─────────────────────────────────────────
-  // When intake page loads and there's no conversation history yet, auto-call the AI
-  // so the IA starts the conversation immediately without user needing to type first
   useEffect(() => {
     if (isLoading || !campaignId || aiTriggered.current) return;
     aiTriggered.current = true;
@@ -103,46 +125,23 @@ export default function CampaignIntake() {
     const intakeD = (data?.intakeData ?? {}) as Record<string, unknown>;
     const filledKeys = Object.keys(intakeD).filter(k => !k.startsWith("_"));
 
-    // Auto-trigger: send empty first message so AI starts speaking immediately
     const autoTrigger = async () => {
       setSending(true);
       try {
-        const res = await customFetch<Response>(`/api/intake/${campaignId}/conversation`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: filledKeys.length > 0 ? "continuar_intake" : "iniciar_intake",
-            history: [],
-          }),
+        const result = await callConversation({
+          message: filledKeys.length > 0 ? "continuar_intake" : "iniciar_intake",
+          history: [],
         });
-
-        if (!res.ok) {
-          // Fallback greeting if API fails
-          setMessages([{
-            role: "assistant",
-            content: "Olá! Sou o especialista de intake do NexOS AI. Vou coletar informações sobre seu produto através de uma conversa natural para que a IA monte a melhor estratégia de lançamento.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
-          }]);
-          return;
-        }
-
-        const result = await res.json() as {
-          aiMessage: string;
-          isComplete: boolean;
-          progress: number;
-          intakeData: Record<string, unknown>;
-        };
-
         setMessages([{ role: "assistant", content: result.aiMessage }]);
         if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
         if (result.progress) setProgress(result.progress);
         if (result.isComplete) setChatComplete(true);
-
         queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
         queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
       } catch {
         setMessages([{
           role: "assistant",
-          content: "Olá! Sou o especialista de intake do NexOS AI. Vou coletar informações sobre seu produto através de uma conversa natural.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
+          content: "Olá! Sou o especialista de intake do NexOS AI. Vou coletar informações sobre seu produto em conversa natural.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
         }]);
       } finally {
         setSending(false);
@@ -169,20 +168,7 @@ export default function CampaignIntake() {
 
     try {
       const history = newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
-      const res = await customFetch<Response>(`/api/intake/${campaignId}/conversation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, history }),
-      });
-
-      if (!res.ok) throw new Error("Erro na IA");
-
-      const result = await res.json() as {
-        aiMessage: string;
-        isComplete: boolean;
-        progress: number;
-        intakeData: Record<string, unknown>;
-      };
+      const result = await callConversation({ message: userMsg, history });
 
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
@@ -191,8 +177,20 @@ export default function CampaignIntake() {
 
       queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
       queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
-    } catch {
-      toast.error("Erro de comunicação com a IA.");
+    } catch (err) {
+      const is401 = err instanceof ApiError && err.status === 401;
+      if (is401) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant" as const,
+            content: "⚠️ Sua sessão expirou enquanto você escrevia. A página será recarregada automaticamente para reconectar.",
+          },
+        ]);
+        setTimeout(() => window.location.reload(), 2500);
+      } else {
+        toast.error("Erro de comunicação com a IA. Tente novamente.");
+      }
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);

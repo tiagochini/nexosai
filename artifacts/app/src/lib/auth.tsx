@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { setAuthTokenGetter } from "@workspace/api-client-react/custom-fetch";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
@@ -15,31 +15,93 @@ interface Plan {
 
 interface AuthContextType {
   token: string | null;
-  setToken: (token: string | null) => void;
+  setToken: (token: string | null, refreshToken?: string | null) => void;
   user: User | null;
   workspace: Workspace | null;
   plan: Plan | null;
   planSlug: string | null;
   isAdmin: boolean;
   logout: () => void;
+  silentRefresh: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setTokenState] = useState<string | null>(() => localStorage.getItem("accessToken"));
-  const [, setLocation] = useLocation();
+// ── Token storage helpers ─────────────────────────────────────────────────────
+function saveTokens(access: string, refresh?: string | null) {
+  localStorage.setItem("accessToken", access);
+  if (refresh) localStorage.setItem("refreshToken", refresh);
+}
 
+function clearTokens() {
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+}
+
+// ── Silent refresh (module-level so custom-fetch can call it) ─────────────────
+type RefreshFn = () => Promise<boolean>;
+let _globalRefresh: RefreshFn | null = null;
+export function setGlobalRefresh(fn: RefreshFn | null) { _globalRefresh = fn; }
+export async function globalSilentRefresh(): Promise<boolean> {
+  return _globalRefresh ? _globalRefresh() : false;
+}
+
+// ACCESS_TTL = 15 minutes. Refresh proactively 3 minutes before expiry → 12 min interval.
+const REFRESH_INTERVAL_MS = 12 * 60 * 1000;
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [token, setTokenState] = useState<string | null>(
+    () => localStorage.getItem("accessToken"),
+  );
+  const [, setLocation] = useLocation();
+  const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Silent refresh implementation ─────────────────────────────────────────
+  const silentRefresh = async (): Promise<boolean> => {
+    const rt = localStorage.getItem("refreshToken");
+    if (!rt) return false;
+    try {
+      const res = await fetch("/api/auth/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: rt }),
+      });
+      if (!res.ok) return false;
+      const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
+      if (!data.accessToken) return false;
+      saveTokens(data.accessToken, data.refreshToken ?? rt);
+      setTokenState(data.accessToken);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Register global refresh so intake / other pages can call it without prop drilling
+  useEffect(() => {
+    setGlobalRefresh(silentRefresh);
+    return () => setGlobalRefresh(null);
+  });
+
+  // ── Auth token getter — auto-refreshes if localStorage is out of date ─────
   useEffect(() => {
     setAuthTokenGetter(() => localStorage.getItem("accessToken"));
   }, []);
 
-  const setToken = (newToken: string | null) => {
+  // ── Proactive refresh every 12 min while logged in ────────────────────────
+  useEffect(() => {
+    if (!token) return;
+    refreshTimer.current = setInterval(() => { void silentRefresh(); }, REFRESH_INTERVAL_MS);
+    return () => { if (refreshTimer.current) clearInterval(refreshTimer.current); };
+  }, [!!token]);
+
+  // ── setToken — call with optional refreshToken ────────────────────────────
+  const setToken = (newToken: string | null, refreshToken?: string | null) => {
     if (newToken) {
-      localStorage.setItem("accessToken", newToken);
+      saveTokens(newToken, refreshToken);
       setTokenState(newToken);
     } else {
-      localStorage.removeItem("accessToken");
+      clearTokens();
       setTokenState(null);
     }
   };
@@ -54,15 +116,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       enabled: !!token,
       retry: false,
       queryKey: getGetMeQueryKey(),
-    }
+    },
   });
 
+  // On /me failure: try refresh once, only logout if refresh also fails
   useEffect(() => {
-    if (isError) logout();
+    if (!isError) return;
+    void (async () => {
+      const ok = await silentRefresh();
+      if (!ok) logout();
+    })();
   }, [isError]);
 
-  // The real API returns { user, workspace, plan } even though the generated
-  // type only declares { user, workspace }. Safe to cast here.
   const raw = meData as (typeof meData & { plan?: Plan }) | undefined;
   const plan = raw?.plan ?? null;
   const planSlug = plan?.slug ?? null;
@@ -78,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       planSlug,
       isAdmin,
       logout,
+      silentRefresh,
     }}>
       {children}
     </AuthContext.Provider>

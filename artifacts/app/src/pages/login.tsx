@@ -19,7 +19,8 @@ export default function Login() {
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (data) => {
-        setToken(data.accessToken);
+        const raw = data as typeof data & { refreshToken?: string };
+        setToken(data.accessToken, raw.refreshToken);
         toast.success("Acesso autorizado.");
         setLocation("/");
       },

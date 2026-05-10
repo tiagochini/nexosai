@@ -135,6 +135,7 @@ function CheckoutForm({
       const data = await res.json() as {
         success?: boolean;
         accessToken?: string;
+        refreshToken?: string;
         isNewUser?: boolean;
         error?: string;
       };
@@ -142,6 +143,7 @@ function CheckoutForm({
         setError(data.error ?? "Erro ao processar. Tente novamente.");
         return;
       }
+      if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
       onSuccess(data.accessToken!, data.isNewUser ?? true);
     } catch {
       setError("Erro de conexão. Verifique sua internet e tente novamente.");
@@ -299,7 +301,8 @@ export default function CheckoutPage() {
   const { setToken } = useAuth();
   const [, navigate] = useLocation();
 
-  const handleSuccess = (accessToken: string, newUser: boolean) => {
+  const handleSuccess = (accessToken: string, newUser: boolean, refreshToken?: string) => {
+    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
     setIsNew(newUser);
     setDone(true);
     localStorage.setItem("accessToken", accessToken);
