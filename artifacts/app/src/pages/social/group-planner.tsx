@@ -221,7 +221,7 @@ function MessageCard({
           </span>
         </div>
         {message?.dispatchedAt && (
-          <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 text-success border-success/40 bg-success/10 shrink-0">
+          <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 text-success border-success/40 bg-success/10 shrink-0">
             <CheckCircle2 className="h-2.5 w-2.5 mr-1" />Disparado
           </Badge>
         )}
@@ -235,14 +235,14 @@ function MessageCard({
         ) : (
           <div className="bg-muted/10 border border-dashed border-border/30 p-4 text-center">
             <Sparkles className={`h-5 w-5 mx-auto mb-1.5 ${phaseDef.color}`} />
-            <p className="font-mono text-[10px] text-muted-foreground/50">Mensagem não gerada ainda</p>
+            <p className="font-mono text-xs text-muted-foreground/50">Mensagem não gerada ainda</p>
           </div>
         )}
 
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => onGenerate(phaseIdx, msgDef.id, msgDef.prompt)}
             disabled={generating}
-            className={`rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 border-current/30 hover:bg-current/10 ${phaseDef.color}`}>
+            className={`rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-current/30 hover:bg-current/10 ${phaseDef.color}`}>
             {generating ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
             {generating ? "Gerando..." : message?.content ? "Regenerar" : "Gerar com IA"}
           </Button>
@@ -250,14 +250,14 @@ function MessageCard({
           {message?.content && (
             <>
               <Button size="sm" variant="outline" onClick={copyMsg}
-                className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
+                className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
                 {copied ? <CheckCircle2 className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
                 {copied ? "Copiado!" : "Copiar"}
               </Button>
 
               {!message.dispatchedAt && (
                 <Button size="sm" variant="outline" onClick={() => onMarkDispatched(phaseIdx, msgDef.id)}
-                  className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 border-success/30 text-success hover:bg-success/10">
+                  className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-success/30 text-success hover:bg-success/10">
                   <CheckCircle2 className="h-2.5 w-2.5" />Marcar Disparado
                 </Button>
               )}
@@ -266,7 +266,7 @@ function MessageCard({
         </div>
 
         {message?.generatedAt && (
-          <div className="text-[9px] font-mono text-muted-foreground/30 uppercase tracking-widest">
+          <div className="text-[11px] font-mono text-muted-foreground/30 uppercase tracking-widest">
             Gerado em {new Date(message.generatedAt).toLocaleString("pt-BR")}
             {message.dispatchedAt && ` · Disparado em ${new Date(message.dispatchedAt).toLocaleString("pt-BR")}`}
           </div>
@@ -320,7 +320,7 @@ export default function GroupPlannerPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center gap-3">
           <Link href="/social">
-            <Button variant="ghost" size="sm" className="rounded-none font-mono text-[10px] uppercase tracking-widest gap-2 text-muted-foreground">
+            <Button variant="ghost" size="sm" className="rounded-none font-mono text-xs uppercase tracking-widest gap-2 text-muted-foreground">
               <ChevronLeft className="h-3.5 w-3.5" />Voltar
             </Button>
           </Link>
@@ -328,9 +328,9 @@ export default function GroupPlannerPage() {
         <div className="border border-border/50 bg-card/40 py-16 text-center">
           <AlertTriangle className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
           <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest mb-1">Grupo não encontrado</p>
-          <p className="font-mono text-[10px] text-muted-foreground/50 mb-4">Este grupo pode ter sido removido ou o link está incorreto</p>
+          <p className="font-mono text-xs text-muted-foreground/50 mb-4">Este grupo pode ter sido removido ou o link está incorreto</p>
           <Link href="/social">
-            <Button className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline" variant="outline">
+            <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline" variant="outline">
               Ver Todos os Grupos
             </Button>
           </Link>
@@ -354,7 +354,7 @@ export default function GroupPlannerPage() {
       {/* Header */}
       <div>
         <Link href="/social">
-          <Button variant="ghost" size="sm" className="rounded-none font-mono text-[10px] uppercase tracking-widest gap-2 text-muted-foreground mb-4 -ml-2">
+          <Button variant="ghost" size="sm" className="rounded-none font-mono text-xs uppercase tracking-widest gap-2 text-muted-foreground mb-4 -ml-2">
             <ChevronLeft className="h-3.5 w-3.5" />Social Launch Hub
           </Button>
         </Link>
@@ -362,24 +362,24 @@ export default function GroupPlannerPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${group.platform === "whatsapp" ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-blue-400 border-blue-400/40 bg-blue-400/10"}`}>
+                <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${group.platform === "whatsapp" ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-blue-400 border-blue-400/40 bg-blue-400/10"}`}>
                   {group.platform === "whatsapp" ? "WhatsApp" : "Telegram"}
                 </Badge>
                 {group.memberCount && (
-                  <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 text-muted-foreground border-border/40">
+                  <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 text-muted-foreground border-border/40">
                     <Users className="h-2.5 w-2.5 mr-1" />{group.memberCount.toLocaleString()} membros
                   </Badge>
                 )}
               </div>
               <h1 className="text-xl md:text-2xl font-mono uppercase tracking-tighter font-bold">{group.name}</h1>
-              <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mt-0.5">
+              <p className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest mt-0.5">
                 Fase atual: {PHASE_DEFS[group.currentPhase]?.emoji} {PHASE_DEFS[group.currentPhase]?.label} · {PHASE_DEFS[group.currentPhase]?.days}
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {group.link && (
                 <Button size="sm" variant="outline" onClick={() => window.open(group.link, "_blank")}
-                  className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline gap-2 h-8">
+                  className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8">
                   <ExternalLink className="h-3 w-3" />Abrir Grupo
                 </Button>
               )}
@@ -407,10 +407,10 @@ export default function GroupPlannerPage() {
                   {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
                   {isDone && <CheckCircle2 className="h-3 w-3 text-success" />}
                 </div>
-                <div className={`font-mono text-[9px] font-bold uppercase tracking-widest truncate ${isActive ? p.color : isDone ? "text-success" : "text-muted-foreground/60"}`}>
+                <div className={`font-mono text-[11px] font-bold uppercase tracking-widest truncate ${isActive ? p.color : isDone ? "text-success" : "text-muted-foreground/60"}`}>
                   {p.label}
                 </div>
-                <div className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">{p.days}</div>
+                <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">{p.days}</div>
                 <div className="mt-1.5 flex gap-0.5">
                   {p.messageDefs.map(d => {
                     const m = phaseMessages.find(msg => msg.id === d.id);
@@ -434,20 +434,20 @@ export default function GroupPlannerPage() {
               <div className="flex items-center gap-2">
                 <span className="text-xl">{currentPhaseDef.emoji}</span>
                 <h2 className={`font-mono font-bold text-base uppercase tracking-wider ${currentPhaseDef.color}`}>{currentPhaseDef.label}</h2>
-                <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${currentPhaseDef.color} ${currentPhaseDef.borderColor}`}>
+                <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${currentPhaseDef.color} ${currentPhaseDef.borderColor}`}>
                   {currentPhaseDef.days}
                 </Badge>
               </div>
-              <p className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{currentPhaseDef.description}</p>
-              <div className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground/50">
+              <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{currentPhaseDef.description}</p>
+              <div className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground/50">
                 <Zap className="h-2.5 w-2.5" />
                 <span className="uppercase tracking-widest">{currentPhaseDef.objective}</span>
               </div>
             </div>
             <div className="text-right space-y-1 shrink-0">
               <div className={`font-mono text-lg font-bold ${currentPhaseDef.color}`}>{generatedCount}/{totalMessages}</div>
-              <div className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">mensagens geradas</div>
-              <div className="font-mono text-[9px] text-success uppercase tracking-widest">{dispatchedCount} disparadas</div>
+              <div className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">mensagens geradas</div>
+              <div className="font-mono text-[11px] text-success uppercase tracking-widest">{dispatchedCount} disparadas</div>
             </div>
           </div>
         </div>
@@ -478,7 +478,7 @@ export default function GroupPlannerPage() {
             <div className="font-mono text-xs font-bold text-foreground/70 uppercase tracking-wide">
               {isCurrentPhase ? "Fase Atual" : activePhase < group.currentPhase ? "Fase Concluída" : "Próxima Fase"}
             </div>
-            <div className="font-mono text-[10px] text-muted-foreground/50">
+            <div className="font-mono text-xs text-muted-foreground/50">
               {isCurrentPhase && !isLastPhase && "Gere e dispare todas as mensagens antes de avançar para a próxima fase"}
               {isCurrentPhase && isLastPhase && "Esta é a fase final — após o encerramento, o grupo deve ser fechado"}
               {!isCurrentPhase && activePhase < group.currentPhase && "Esta fase já foi concluída e avançada"}
@@ -488,7 +488,7 @@ export default function GroupPlannerPage() {
           <div className="flex gap-2 flex-wrap">
             {isCurrentPhase && !isLastPhase && (
               <Button onClick={advancePhase}
-                className={`rounded-none font-mono uppercase text-[10px] tracking-widest gap-2 h-9 btn-weapon-primary`}>
+                className={`rounded-none font-mono uppercase text-xs tracking-widest gap-2 h-9 btn-weapon-primary`}>
                 <ArrowRight className="h-3.5 w-3.5" />Avançar para {PHASE_DEFS[activePhase + 1]?.label}
               </Button>
             )}

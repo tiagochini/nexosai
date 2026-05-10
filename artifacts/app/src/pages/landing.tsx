@@ -128,10 +128,10 @@ function PhaseBanner() {
       <div className="max-w-6xl mx-auto px-6 h-10 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-          <span className="font-mono text-[9px] uppercase tracking-[0.25em] text-primary font-bold">
+          <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary font-bold">
             Fase atual: {current.label}
           </span>
-          <span className="font-mono text-[9px] tracking-widest text-muted-foreground/60 hidden sm:inline">
+          <span className="font-mono text-[11px] tracking-widest text-muted-foreground/60 hidden sm:inline">
             · {current.sublabel}
           </span>
         </div>
@@ -141,7 +141,7 @@ function PhaseBanner() {
             const active = phase.id === CURRENT_PHASE;
             return (
               <div key={phase.id} className="flex items-center">
-                <div className={`flex items-center gap-1.5 px-3 py-1 font-mono text-[8px] uppercase tracking-widest transition-all ${
+                <div className={`flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] uppercase tracking-widest transition-all ${
                   active ? "text-primary font-bold" : done ? "text-muted-foreground/30 line-through" : "text-muted-foreground/25"
                 }`}>
                   {active && <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
@@ -168,7 +168,7 @@ function SegmentPicker({ onSelect }: { onSelect: (s: Segment) => void }) {
           <Lock className="h-3.5 w-3.5 text-primary" />
           <h3 className="font-mono font-bold uppercase tracking-widest text-sm text-foreground">Lista de Espera</h3>
         </div>
-        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Primeiro — quem é você?</p>
+        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Primeiro — quem é você?</p>
       </div>
 
       {(["individual", "agency"] as Segment[]).map(seg => {
@@ -190,7 +190,7 @@ function SegmentPicker({ onSelect }: { onSelect: (s: Segment) => void }) {
               <div className={`font-mono font-bold text-sm uppercase tracking-wider text-foreground mb-1 group-hover:text-${color} transition-colors`}>
                 {isAgency ? "Sou Agência / Gestor" : "Sou Produtor / Lançador"}
               </div>
-              <div className="font-mono text-[10px] text-muted-foreground leading-relaxed">
+              <div className="font-mono text-xs text-muted-foreground leading-relaxed">
                 {isAgency ? "Lanço para clientes ou gerencio operações de lançamento" : "Tenho produto digital e quero lançar sozinho, sem equipe"}
               </div>
             </div>
@@ -231,21 +231,21 @@ function WaitlistForm({ segment, onBack, onSuccess }: { segment: Segment; onBack
     <div className="space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <div className={`inline-flex items-center gap-1.5 border border-${color}/30 bg-${color}/5 px-3 py-1 font-mono text-[9px] uppercase tracking-widest text-${color} mb-2`}>
+          <div className={`inline-flex items-center gap-1.5 border border-${color}/30 bg-${color}/5 px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-${color} mb-2`}>
             {segment === "agency" ? <Building2 className="h-3 w-3" /> : <User className="h-3 w-3" />}
             {d.badge}
           </div>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{d.groupDesc}</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{d.groupDesc}</p>
         </div>
-        <button onClick={onBack} className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-1">← Voltar</button>
+        <button onClick={onBack} className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-1">← Voltar</button>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="wl-name" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Seu nome</Label>
+          <Label htmlFor="wl-name" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Seu nome</Label>
           <Input id="wl-name" required placeholder="Como você se chama?" value={name} onChange={e => setName(e.target.value)} className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary font-sans h-12" />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="wl-wa" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">WhatsApp (com DDD)</Label>
+          <Label htmlFor="wl-wa" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">WhatsApp (com DDD)</Label>
           <Input id="wl-wa" required placeholder="(11) 99999-9999" value={whatsapp} onChange={e => setWhatsapp(formatWhatsApp(e.target.value))} className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary font-mono h-12" />
         </div>
         <Button type="submit" disabled={loading} className={`w-full h-14 rounded-none font-mono uppercase tracking-widest font-black text-sm gap-3 mt-2 ${segment === "agency" ? "bg-success hover:bg-success/90 text-success-foreground" : "btn-weapon-primary"}`}>
@@ -253,7 +253,7 @@ function WaitlistForm({ segment, onBack, onSuccess }: { segment: Segment; onBack
             <>Entrar na Lista de Espera <ArrowRight className="h-4 w-4" /></>
           )}
         </Button>
-        <p className="text-center text-[10px] font-mono uppercase tracking-widest text-muted-foreground opacity-60">Sem spam · 2 mensagens/dia no grupo · Só conteúdo de lançamento</p>
+        <p className="text-center text-xs font-mono uppercase tracking-widest text-muted-foreground opacity-60">Sem spam · 2 mensagens/dia no grupo · Só conteúdo de lançamento</p>
       </form>
     </div>
   );
@@ -277,15 +277,15 @@ function SuccessState({ segment }: { segment: Segment }) {
       <div className={`border border-${color}/20 bg-${color}/5 p-4 space-y-3`}>
         <div className="flex items-center gap-2 mb-1">
           <MessageSquare className={`h-3.5 w-3.5 text-${color}`} />
-          <p className={`font-mono text-[9px] uppercase tracking-widest text-${color} font-bold`}>Preview da sequência — 2x ao dia</p>
+          <p className={`font-mono text-[11px] uppercase tracking-widest text-${color} font-bold`}>Preview da sequência — 2x ao dia</p>
         </div>
         {preview.map((item, i) => (
           <div key={i} className="flex items-start gap-3">
-            <span className={`font-mono text-[8px] uppercase tracking-widest text-${color}/60 mt-0.5 w-16 shrink-0`}>{item.slot}</span>
-            <span className="font-mono text-[10px] text-muted-foreground leading-relaxed">{item.content}</span>
+            <span className={`font-mono text-[11px] uppercase tracking-widest text-${color}/60 mt-0.5 w-16 shrink-0`}>{item.slot}</span>
+            <span className="font-mono text-xs text-muted-foreground leading-relaxed">{item.content}</span>
           </div>
         ))}
-        <p className={`font-mono text-[9px] text-${color}/50 pt-1`}>+ {d.esquentaSequence.length - 4} mensagens até a abertura...</p>
+        <p className={`font-mono text-[11px] text-${color}/50 pt-1`}>+ {d.esquentaSequence.length - 4} mensagens até a abertura...</p>
       </div>
     </div>
   );
@@ -357,7 +357,7 @@ function CountdownTimer({ launchDate }: { launchDate: Date | null }) {
         <p className="font-mono font-black uppercase tracking-widest text-lg text-primary">
           será aberto em breve.
         </p>
-        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 pt-2">
+        <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60 pt-2">
           Entre na lista de espera para ser notificado primeiro
         </p>
       </div>
@@ -376,7 +376,7 @@ function CountdownTimer({ launchDate }: { launchDate: Date | null }) {
           <span className="font-mono font-black text-4xl text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]">
             {String(v).padStart(2, "0")}
           </span>
-          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mt-1">{l}</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mt-1">{l}</span>
         </div>
       ))}
     </div>
@@ -425,7 +425,7 @@ export default function Landing() {
       <section className="relative min-h-screen flex items-center justify-center pt-28 overflow-hidden auth-bg-gradient">
         <div className="relative z-10 max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center py-16">
           <div>
-            <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-8 font-mono text-[10px] uppercase tracking-[0.3em] text-primary">
+            <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-8 font-mono text-xs uppercase tracking-[0.3em] text-primary">
               <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
               Automated Launch · Pré-lançamento em andamento
             </div>
@@ -461,7 +461,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/10 px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-primary mb-6">
+              <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-primary mb-6">
                 <Cpu className="h-3 w-3" />
                 Meta · Prova de Conceito
               </div>
@@ -485,8 +485,8 @@ export default function Landing() {
                 <div key={i} className="flex items-start gap-3 border border-border/30 bg-background/50 p-3 hover:border-primary/30 transition-colors">
                   <item.icon className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-mono text-[10px] uppercase tracking-widest text-foreground font-bold">{item.label}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{item.value}</div>
+                    <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold">{item.label}</div>
+                    <div className="font-mono text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.value}</div>
                   </div>
                 </div>
               ))}
@@ -498,7 +498,7 @@ export default function Landing() {
       {/* ─── SEQUÊNCIA VISÍVEL — 2x ao dia por segmento ──────────────────── */}
       <section className="py-24 max-w-5xl mx-auto px-6">
         <div className="text-center mb-16">
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary mb-4">A Sequência em Andamento</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-4">A Sequência em Andamento</p>
           <h2 className="text-3xl md:text-4xl font-mono font-black uppercase tracking-tight">
             O que você vai receber<br />depois de entrar na lista.
           </h2>
@@ -518,7 +518,7 @@ export default function Landing() {
                   <Icon className={`h-4 w-4 text-${color}`} />
                   <div>
                     <div className={`font-mono text-xs uppercase tracking-widest text-${color} font-bold`}>{d.badge}</div>
-                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{d.groupLabel} · 2 msgs/dia</div>
+                    <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{d.groupLabel} · 2 msgs/dia</div>
                   </div>
                 </div>
                 <div className="divide-y divide-border/20 relative">
@@ -529,22 +529,22 @@ export default function Landing() {
                     return (
                       <div key={i} className={`p-4 flex items-start gap-3 ${isAbertura ? `bg-${color}/5` : isEvening ? "bg-muted/20" : ""}`}>
                         <div className="text-right shrink-0 w-16">
-                          <div className={`font-mono text-[8px] uppercase tracking-widest leading-none ${isAbertura ? `text-${color} font-bold` : "text-muted-foreground/50"}`}>
+                          <div className={`font-mono text-[11px] uppercase tracking-widest leading-none ${isAbertura ? `text-${color} font-bold` : "text-muted-foreground/50"}`}>
                             {item.slot.split(" · ")[0]}
                           </div>
-                          <div className={`font-mono text-[9px] font-bold ${isAbertura ? `text-${color}` : isEvening ? "text-muted-foreground/40" : "text-primary/50"}`}>
+                          <div className={`font-mono text-[11px] font-bold ${isAbertura ? `text-${color}` : isEvening ? "text-muted-foreground/40" : "text-primary/50"}`}>
                             {item.slot.split(" · ")[1]}
                           </div>
                         </div>
                         <div className={`w-px self-stretch ${isAbertura ? `bg-${color}/40` : "bg-border/30"} shrink-0`}></div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                            <span className={`font-mono text-[8px] uppercase tracking-widest px-1.5 py-0.5 border ${
+                            <span className={`font-mono text-[11px] uppercase tracking-widest px-1.5 py-0.5 border ${
                               isAbertura ? `border-${color}/40 text-${color} bg-${color}/10` : "border-border/30 text-muted-foreground/50"
                             }`}>{item.label}</span>
-                            <span className="font-mono text-[8px] text-muted-foreground/40">· {item.trigger}</span>
+                            <span className="font-mono text-[11px] text-muted-foreground/40">· {item.trigger}</span>
                           </div>
-                          <p className="font-mono text-[10px] text-foreground leading-relaxed">{item.content}</p>
+                          <p className="font-mono text-xs text-foreground leading-relaxed">{item.content}</p>
                         </div>
                       </div>
                     );
@@ -560,18 +560,18 @@ export default function Landing() {
       <section className="border-y border-border/40 bg-card/30 backdrop-blur-sm py-12">
         <div className="max-w-xl mx-auto px-6 text-center space-y-5">
           {launchLoaded && !launchDate ? (
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary">Abertura do ciclo</p>
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-primary">Abertura do ciclo</p>
           ) : (
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary">Abertura do carrinho em</p>
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-primary">Abertura do carrinho em</p>
           )}
           <CountdownTimer launchDate={launchDate} />
           {!launchDate && launchLoaded && (
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+            <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">
               Entre na lista · Você será notificado quando o esquenta começar
             </p>
           )}
           {launchDate && (
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+            <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">
               Quem não estiver na lista não recebe o link · Sem segunda chance
             </p>
           )}
@@ -581,7 +581,7 @@ export default function Landing() {
       {/* ─── TRANSFORMAÇÃO ───────────────────────────────────────────────── */}
       <section className="py-24 max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary mb-4">O que você passa a ter</p>
+          <p className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-4">O que você passa a ter</p>
           <h2 className="text-3xl md:text-4xl font-mono font-black uppercase tracking-tight">
             A transformação real<br />do lançamento automatizado.
           </h2>
@@ -605,7 +605,7 @@ export default function Landing() {
                   <div className="w-1.5 h-1.5 rounded-full bg-destructive/50 shrink-0"></div>
                   <span className="font-mono text-sm text-muted-foreground line-through decoration-destructive/30">{item}</span>
                 </div>
-                <span className="font-mono text-[10px] text-destructive/60 shrink-0">{cost}</span>
+                <span className="font-mono text-xs text-destructive/60 shrink-0">{cost}</span>
               </div>
             ))}
           </div>
@@ -627,7 +627,7 @@ export default function Landing() {
                   <CheckCircle2 className="h-4 w-4 text-success shrink-0 drop-shadow-[0_0_5px_hsl(var(--success)/0.4)]" />
                   <span className="font-mono text-sm text-foreground">{item}</span>
                 </div>
-                <span className="font-mono text-[10px] text-success/70 shrink-0">{tag}</span>
+                <span className="font-mono text-xs text-success/70 shrink-0">{tag}</span>
               </div>
             ))}
           </div>
@@ -638,7 +638,7 @@ export default function Landing() {
       <section className="py-24 border-t border-border/30 bg-card/20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary mb-4">Como funciona</p>
+            <p className="font-mono text-xs uppercase tracking-[0.3em] text-primary mb-4">Como funciona</p>
             <h2 className="text-3xl md:text-4xl font-mono font-black uppercase tracking-tight">
               Da ideia ao lançamento.<br />4 etapas. 7 a 10 dias.
             </h2>
@@ -660,7 +660,7 @@ export default function Landing() {
                     <div className="flex items-center gap-3 mb-2">
                       <step.icon className="h-4 w-4 text-primary" />
                       <span className="font-mono font-bold uppercase tracking-wider text-sm text-foreground">{step.title}</span>
-                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 border border-primary/20 px-2 py-0.5">{step.label}</span>
+                      <span className="font-mono text-[11px] uppercase tracking-widest text-primary/50 border border-primary/20 px-2 py-0.5">{step.label}</span>
                     </div>
                     <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
                   </div>
@@ -675,7 +675,7 @@ export default function Landing() {
       <section className="py-32 relative overflow-hidden auth-bg-gradient">
         <div className="relative z-10 max-w-4xl mx-auto px-6">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 border border-yellow-500/30 bg-yellow-500/5 px-4 py-2 mb-8 font-mono text-[10px] uppercase tracking-[0.3em] text-yellow-400">
+            <div className="inline-flex items-center gap-2 border border-yellow-500/30 bg-yellow-500/5 px-4 py-2 mb-8 font-mono text-xs uppercase tracking-[0.3em] text-yellow-400">
               <AlertTriangle className="h-3 w-3" />
               Vagas limitadas · Carrinho abre uma única vez · Fecha em 24h
             </div>

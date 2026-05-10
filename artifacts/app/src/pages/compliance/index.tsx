@@ -90,7 +90,7 @@ export default function CompliancePage() {
           <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Compliance</h1>
         </div>
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
           Verificação automática de conformidade legal · CONAR · Meta Ads Policy · LGPD · CVM
         </p>
       </div>
@@ -105,7 +105,7 @@ export default function CompliancePage() {
             { label: "Score Médio", value: statsData.avgScore ? `${statsData.avgScore}/100` : "—", icon: BarChart3, color: "text-cyan-400 border-cyan-400/20 bg-cyan-400/5" },
           ].map(kpi => (
             <div key={kpi.label} className={`border p-4 ${kpi.color}`}>
-              <div className="flex items-center gap-2 mb-2"><kpi.icon className="h-3.5 w-3.5" /><span className="text-[9px] font-mono uppercase tracking-widest opacity-70">{kpi.label}</span></div>
+              <div className="flex items-center gap-2 mb-2"><kpi.icon className="h-3.5 w-3.5" /><span className="text-[11px] font-mono uppercase tracking-widest opacity-70">{kpi.label}</span></div>
               <div className="font-mono font-bold text-xl">{kpi.value}</div>
             </div>
           ))}
@@ -116,7 +116,7 @@ export default function CompliancePage() {
       <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm w-fit">
         {[{ id: "checks" as const, label: "Histórico" }, { id: "new" as const, label: "Nova Verificação" }].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all rounded-sm
+            className={`px-4 py-2 text-xs font-mono uppercase tracking-widest transition-all rounded-sm
               ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
             {tab.label}
           </button>
@@ -130,13 +130,13 @@ export default function CompliancePage() {
           <h2 className="font-mono font-bold text-sm uppercase tracking-widest text-primary">Analisar Conteúdo</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Título do Conteúdo *</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Título do Conteúdo *</label>
               <input value={checkForm.contentTitle} onChange={e => setCheckForm(p => ({...p, contentTitle: e.target.value}))}
                 placeholder="VSL Principal · Anúncio Top Funil..."
                 className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none rounded-none h-9 px-3 text-foreground placeholder:text-muted-foreground/50" />
             </div>
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Tipo</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Tipo</label>
               <select value={checkForm.contentType} onChange={e => setCheckForm(p => ({...p, contentType: e.target.value}))}
                 className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none rounded-none h-9 px-3 text-foreground">
                 <option value="ad">Anúncio</option>
@@ -148,7 +148,7 @@ export default function CompliancePage() {
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Plataforma</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Plataforma</label>
               <select value={checkForm.platform} onChange={e => setCheckForm(p => ({...p, platform: e.target.value}))}
                 className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none rounded-none h-9 px-3 text-foreground">
                 {Object.entries(PLATFORM_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -156,7 +156,7 @@ export default function CompliancePage() {
             </div>
           </div>
           <div>
-            <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Conteúdo a Verificar *</label>
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Conteúdo a Verificar *</label>
             <textarea value={checkForm.contentText} onChange={e => setCheckForm(p => ({...p, contentText: e.target.value}))}
               placeholder="Cole o texto do anúncio, copy ou script que deseja verificar..."
               rows={5}
@@ -178,7 +178,7 @@ export default function CompliancePage() {
             <div className="py-16 text-center">
               <Shield className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Nenhuma verificação realizada</p>
-              <Button size="sm" onClick={() => setActiveTab("new")} className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-[10px] mt-2">
+              <Button size="sm" onClick={() => setActiveTab("new")} className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs mt-2">
                 <Zap className="h-3.5 w-3.5" />Verificar Primeiro Conteúdo
               </Button>
             </div>
@@ -190,17 +190,17 @@ export default function CompliancePage() {
                    check.status === "rejected" ? <XCircle className="h-4 w-4 text-destructive shrink-0" /> :
                    <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0" />}
                   <span className="font-mono font-bold text-sm uppercase tracking-wide">{check.contentTitle}</span>
-                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${STATUS_COLOR[check.status] ?? ""}`}>{check.status}</Badge>
-                  {check.riskLevel && <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${RISK_COLOR[check.riskLevel] ?? ""}`}>{check.riskLevel}</Badge>}
-                  <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-border/40 text-muted-foreground ml-auto">{PLATFORM_LABEL[check.platform] ?? check.platform}</Badge>
+                  <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${STATUS_COLOR[check.status] ?? ""}`}>{check.status}</Badge>
+                  {check.riskLevel && <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${RISK_COLOR[check.riskLevel] ?? ""}`}>{check.riskLevel}</Badge>}
+                  <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-border/40 text-muted-foreground ml-auto">{PLATFORM_LABEL[check.platform] ?? check.platform}</Badge>
                 </div>
                 {check.overallScore !== undefined && (
-                  <div className="text-[10px] font-mono text-muted-foreground mb-2">Score: <span className={check.overallScore >= 70 ? "text-success" : check.overallScore >= 40 ? "text-yellow-400" : "text-destructive"}>{check.overallScore}/100</span></div>
+                  <div className="text-xs font-mono text-muted-foreground mb-2">Score: <span className={check.overallScore >= 70 ? "text-success" : check.overallScore >= 40 ? "text-yellow-400" : "text-destructive"}>{check.overallScore}/100</span></div>
                 )}
                 {(check.violations ?? []).length > 0 && (
                   <div className="space-y-1 mb-2">
                     {check.violations!.slice(0, 3).map((v, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[10px] font-mono text-destructive/80">
+                      <div key={i} className="flex items-start gap-2 text-xs font-mono text-destructive/80">
                         <XCircle className="h-3 w-3 mt-0.5 shrink-0" />{v}
                       </div>
                     ))}
@@ -209,13 +209,13 @@ export default function CompliancePage() {
                 {(check.suggestions ?? []).length > 0 && (
                   <div className="space-y-1">
                     {check.suggestions!.slice(0, 2).map((s, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[10px] font-mono text-primary/80">
+                      <div key={i} className="flex items-start gap-2 text-xs font-mono text-primary/80">
                         <CheckCircle2 className="h-3 w-3 mt-0.5 shrink-0" />{s}
                       </div>
                     ))}
                   </div>
                 )}
-                <div className="text-[8px] font-mono text-muted-foreground/40 mt-2 uppercase tracking-widest">{new Date(check.createdAt).toLocaleString("pt-BR")}</div>
+                <div className="text-[11px] font-mono text-muted-foreground/40 mt-2 uppercase tracking-widest">{new Date(check.createdAt).toLocaleString("pt-BR")}</div>
               </div>
             ))
           )}

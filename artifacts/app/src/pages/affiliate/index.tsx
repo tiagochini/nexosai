@@ -50,10 +50,10 @@ function StatCard({
     <div className={`border p-4 ${colorMap[color]}`}>
       <div className="flex items-center gap-2 mb-2">
         <Icon className="h-3.5 w-3.5 opacity-80" />
-        <span className="font-mono text-[9px] uppercase tracking-widest opacity-60">{label}</span>
+        <span className="font-mono text-[11px] uppercase tracking-widest opacity-60">{label}</span>
       </div>
       <div className="font-mono font-bold text-2xl text-foreground">{value}</div>
-      {sub && <div className="font-mono text-[10px] opacity-50 mt-1">{sub}</div>}
+      {sub && <div className="font-mono text-xs opacity-50 mt-1">{sub}</div>}
     </div>
   );
 }
@@ -153,7 +153,7 @@ export default function AffiliatePage() {
             <Star className="h-5 w-5 text-yellow-400" />
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Programa de Afiliados</h1>
           </div>
-          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+          <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
             Lance o NexOS AI para o seu público e ganhe comissões recorrentes
           </p>
         </div>
@@ -180,7 +180,7 @@ export default function AffiliatePage() {
             ].map(item => (
               <div key={item.label} className="border border-yellow-400/20 bg-yellow-400/5 p-3">
                 <div className="font-mono font-bold text-sm text-yellow-400">{item.value}</div>
-                <div className="font-mono text-[9px] text-yellow-400/50 uppercase tracking-widest mt-1">{item.label}</div>
+                <div className="font-mono text-[11px] text-yellow-400/50 uppercase tracking-widest mt-1">{item.label}</div>
               </div>
             ))}
           </div>
@@ -256,11 +256,11 @@ export default function AffiliatePage() {
             <div className="flex items-center gap-2 mb-1">
               <Star className="h-5 w-5 text-yellow-400" />
               <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Painel de Afiliado</h1>
-              <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 text-success border-success/40 bg-success/10">
+              <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 text-success border-success/40 bg-success/10">
                 Ativo
               </Badge>
             </div>
-            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
               Programa NexOS AI · R$ {COMMISSION_BRL.toLocaleString("pt-BR")}/conversão
             </p>
           </div>
@@ -269,20 +269,20 @@ export default function AffiliatePage() {
 
       {/* Referral link */}
       <div className="border border-yellow-400/30 bg-yellow-400/5 p-4 space-y-3">
-        <div className="font-mono text-[9px] uppercase tracking-widest text-yellow-400/70">Seu link exclusivo de afiliado</div>
+        <div className="font-mono text-[11px] uppercase tracking-widest text-yellow-400/70">Seu link exclusivo de afiliado</div>
         <div className="flex gap-2">
           <div className="flex-1 font-mono text-sm bg-background/60 border border-yellow-400/30 px-3 py-2 text-foreground/80 truncate">
             {referralLink}
           </div>
           <Button
             onClick={() => handleCopy(referralLink)}
-            className="rounded-none font-mono uppercase text-[10px] tracking-widest gap-2 h-10 px-4 shrink-0 bg-yellow-400/20 border border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/30"
+            className="rounded-none font-mono uppercase text-xs tracking-widest gap-2 h-10 px-4 shrink-0 bg-yellow-400/20 border border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/30"
           >
             {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? "Copiado!" : "Copiar"}
           </Button>
         </div>
-        <div className="flex items-center gap-2 text-[9px] font-mono text-yellow-400/50 uppercase tracking-widest">
+        <div className="flex items-center gap-2 text-[11px] font-mono text-yellow-400/50 uppercase tracking-widest">
           <span>Código: {referralCode}</span>
         </div>
       </div>
@@ -356,7 +356,7 @@ export default function AffiliatePage() {
               { label: "Receita por clique (RPC)", value: affiliate.totalClicks > 0 ? `R$ ${((affiliate.totalConversions * COMMISSION_BRL) / affiliate.totalClicks).toFixed(2)}` : "—" },
             ].map(item => (
               <div key={item.label} className="flex justify-between items-center">
-                <span className="font-mono text-[10px] text-muted-foreground">{item.label}</span>
+                <span className="font-mono text-xs text-muted-foreground">{item.label}</span>
                 <span className="font-mono font-bold text-xs text-primary">{item.value}</span>
               </div>
             ))}
@@ -380,7 +380,7 @@ export default function AffiliatePage() {
             >
               <Icon className="h-4 w-4 mb-2" />
               <div className="font-mono text-xs font-bold uppercase tracking-widest mb-1">{item.label}</div>
-              <div className="font-mono text-[10px] text-muted-foreground/60">{item.desc}</div>
+              <div className="font-mono text-xs text-muted-foreground/60">{item.desc}</div>
             </button>
           );
         })}
@@ -399,7 +399,7 @@ export default function AffiliatePage() {
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest px-2 shrink-0 text-primary border-primary/30">
+        <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-2 shrink-0 text-primary border-primary/30">
           Em breve
         </Badge>
       </div>

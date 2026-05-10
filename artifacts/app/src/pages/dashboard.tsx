@@ -139,7 +139,7 @@ function KpiCard({
       >
         <div className="flex items-center gap-2 mb-3">
           <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-          <span className="font-mono text-[9px] uppercase tracking-widest opacity-60 flex-1">{label}</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest opacity-60 flex-1">{label}</span>
           {hasBreakdown && (
             expanded
               ? <ChevronUp className="h-3 w-3 opacity-40" />
@@ -151,7 +151,7 @@ function KpiCard({
         ) : (
           <>
             <div className="font-mono font-bold text-2xl text-foreground">{value}</div>
-            {sub && <div className="font-mono text-[10px] opacity-50 mt-1">{sub}</div>}
+            {sub && <div className="font-mono text-xs opacity-50 mt-1">{sub}</div>}
           </>
         )}
       </div>
@@ -159,8 +159,8 @@ function KpiCard({
         <div className="border-t border-current/10 px-4 py-3 space-y-1.5">
           {breakdown.map(item => (
             <div key={item.label} className="flex items-center justify-between">
-              <span className="font-mono text-[9px] uppercase tracking-widest opacity-50">{item.label}</span>
-              <span className="font-mono text-[10px] font-bold">{item.value}</span>
+              <span className="font-mono text-[11px] uppercase tracking-widest opacity-50">{item.label}</span>
+              <span className="font-mono text-xs font-bold">{item.value}</span>
             </div>
           ))}
         </div>
@@ -190,7 +190,7 @@ function ExecutionFlowchart({ campaigns }: { campaigns: Array<{ id: string; stat
 
   return (
     <div className="border border-border/50 bg-card/30 p-4 overflow-x-auto">
-      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-4">
+      <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-4">
         Fluxo de Execução · Visão Geral
       </div>
       <div className="flex items-center gap-0 min-w-max">
@@ -204,13 +204,13 @@ function ExecutionFlowchart({ campaigns }: { campaigns: Array<{ id: string; stat
                 ${isActive ? `${node.color} cursor-pointer hover:opacity-80` : "border-border/20 bg-muted/5 text-muted-foreground/30"}`}
             >
               <Icon className="h-4 w-4" />
-              <span className="font-mono text-[8px] uppercase tracking-widest font-bold">{node.label}</span>
+              <span className="font-mono text-[11px] uppercase tracking-widest font-bold">{node.label}</span>
               {isActive ? (
-                <Badge variant="outline" className="rounded-none font-mono text-[8px] px-1 py-0 border-current/40 bg-current/10">
+                <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1 py-0 border-current/40 bg-current/10">
                   {node.count}
                 </Badge>
               ) : (
-                <span className="font-mono text-[8px] opacity-30">—</span>
+                <span className="font-mono text-[11px] opacity-30">—</span>
               )}
             </div>
           );
@@ -263,7 +263,7 @@ function PipelineProgress({ status }: { status: string }) {
                 isActive ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.6)]" :
                            "bg-muted/20"
               }`} />
-              <span className={`font-mono text-[8px] uppercase tracking-widest hidden sm:block ${
+              <span className={`font-mono text-[11px] uppercase tracking-widest hidden sm:block ${
                 isActive ? "text-primary font-bold" :
                 isDone   ? "text-muted-foreground/60" :
                            "text-muted-foreground/30"
@@ -273,8 +273,8 @@ function PipelineProgress({ status }: { status: string }) {
         })}
       </div>
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] text-muted-foreground/50">{pct}% concluído</span>
-        <span className={`font-mono text-[9px] uppercase tracking-widest ${STATUS_COLOR[status]?.split(" ")[0] ?? "text-primary"}`}>
+        <span className="font-mono text-xs text-muted-foreground/50">{pct}% concluído</span>
+        <span className={`font-mono text-[11px] uppercase tracking-widest ${STATUS_COLOR[status]?.split(" ")[0] ?? "text-primary"}`}>
           {STATUS_LABEL[status] ?? status}
         </span>
       </div>
@@ -454,11 +454,11 @@ export default function Dashboard() {
             {liveCampaigns > 0 && (
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 8px hsl(var(--success))" }} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-success font-bold">{liveCampaigns} ao vivo</span>
+                <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">{liveCampaigns} ao vivo</span>
               </div>
             )}
           </div>
-          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+          <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
             {workspace?.name ?? "Workspace"} · {plan?.name ?? "NexOS AI"}
             {planSlug && <span className="ml-2 px-2 py-0.5 border border-primary/20 text-primary bg-primary/10">{planSlug.toUpperCase()}</span>}
           </p>
@@ -482,7 +482,7 @@ export default function Dashboard() {
           <div className="p-5">
             <div className="flex items-center gap-2 mb-4">
               <Bot className="h-4 w-4 text-primary" />
-              <span className="font-mono text-[9px] uppercase tracking-widest text-primary font-bold">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">
                 Bem-vindo ao NexOS AI — Modo Guiado Ativo
               </span>
             </div>
@@ -493,12 +493,12 @@ export default function Dashboard() {
                 { step: "03", label: "Ativar modo Expert", desc: "Libere todas as ferramentas", href: null, cta: null, done: false },
               ].map(item => (
                 <div key={item.step} className="border border-border/40 bg-card/40 p-3 space-y-2">
-                  <div className="font-mono text-[8px] uppercase tracking-widest text-primary">{item.step}</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-primary">{item.step}</div>
                   <div className="font-mono text-xs font-bold text-foreground leading-tight">{item.label}</div>
-                  <div className="font-mono text-[9px] text-muted-foreground">{item.desc}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground">{item.desc}</div>
                   {item.href && (
                     <Link href={item.href}>
-                      <Button size="sm" className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 px-3 btn-weapon-primary mt-1">
+                      <Button size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 px-3 btn-weapon-primary mt-1">
                         {item.cta} <ChevronRight className="h-2.5 w-2.5 ml-1" />
                       </Button>
                     </Link>
@@ -519,7 +519,7 @@ export default function Dashboard() {
           <div className="p-5">
             <div className="flex items-start justify-between gap-4 mb-5">
               <div className="min-w-0">
-                <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">
+                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">
                   Missão em Progresso
                 </div>
                 <h2 className="font-mono font-bold text-lg uppercase tracking-tight truncate text-foreground">
@@ -527,12 +527,12 @@ export default function Dashboard() {
                 </h2>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   {(activeCampaign as unknown as Record<string,string>)["type"] && (
-                    <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">
+                    <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">
                       {(activeCampaign as unknown as Record<string,string>)["type"]}
                     </span>
                   )}
                   {(activeCampaign as unknown as Record<string,string>)["track"] && (
-                    <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                    <span className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
                       · Track {(activeCampaign as unknown as Record<string,string>)["track"]}
                     </span>
                   )}
@@ -540,15 +540,15 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {pendingCheckpoints.length > 0 && (
-                  <Badge variant="outline" className="rounded-none font-mono text-[9px] border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse">
+                  <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse">
                     {pendingCheckpoints.length} Aprovação
                   </Badge>
                 )}
-                <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-1 ${STATUS_COLOR[activeCampaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
+                <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-1 ${STATUS_COLOR[activeCampaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
                   {STATUS_LABEL[activeCampaign.status] ?? activeCampaign.status}
                 </Badge>
                 <Link href={`/campaigns/${activeCampaign.id}`}>
-                  <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
+                  <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
                     Abrir<ChevronRight className="h-2.5 w-2.5" />
                   </Button>
                 </Link>
@@ -636,15 +636,15 @@ export default function Dashboard() {
           <ActionIcon className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
+          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
             Próxima Ação Recomendada pela IA
           </div>
           <div className={`font-mono font-bold text-sm truncate ${action.color}`}>{action.title}</div>
-          <div className="font-mono text-[10px] text-muted-foreground/60 truncate mt-0.5">{action.sub}</div>
+          <div className="font-mono text-xs text-muted-foreground/60 truncate mt-0.5">{action.sub}</div>
         </div>
         <Link href={action.href}>
           <Button variant="outline" size="sm"
-            className={`rounded-none font-mono uppercase text-[9px] tracking-widest shrink-0 border-current/30 hover:bg-current/10 ${action.color} gap-2 h-8`}>
+            className={`rounded-none font-mono uppercase text-[11px] tracking-widest shrink-0 border-current/30 hover:bg-current/10 ${action.color} gap-2 h-8`}>
             {action.cta}<ArrowRight className="h-3 w-3" />
           </Button>
         </Link>
@@ -658,11 +658,11 @@ export default function Dashboard() {
           <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Atividade dos Agentes IA</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Atividade dos Agentes IA</span>
             </div>
             {activeCampaign && (
               <Link href={`/campaigns/${activeCampaign.id}`}>
-                <span className="font-mono text-[9px] text-primary hover:underline uppercase tracking-widest">Ver Todos →</span>
+                <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">Ver Todos →</span>
               </Link>
             )}
           </div>
@@ -670,14 +670,14 @@ export default function Dashboard() {
             {!activeCampaign ? (
               <div className="py-8 text-center">
                 <Bot className="h-6 w-6 text-muted-foreground/20 mx-auto mb-2" />
-                <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
+                <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest">
                   Nenhuma campanha ativa
                 </p>
               </div>
             ) : recentAgents.length === 0 ? (
               <div className="py-8 text-center">
                 <Loader2 className="h-5 w-5 text-muted-foreground/20 mx-auto mb-2 animate-spin" />
-                <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
+                <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest">
                   Aguardando execução dos agentes
                 </p>
               </div>
@@ -695,13 +695,13 @@ export default function Dashboard() {
                     <div className="font-mono text-xs font-bold text-foreground/80 truncate">
                       {AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}
                     </div>
-                    <div className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                    <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
                       {agent.completedAt
                         ? `Concluído · ${new Date(agent.completedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
                         : `Iniciado · ${new Date(agent.startedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
                     </div>
                   </div>
-                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] shrink-0 ${
+                  <Badge variant="outline" className={`rounded-none font-mono text-[11px] shrink-0 ${
                     agent.status === "completed" ? "border-success/40 text-success" :
                     agent.status === "running"   ? "border-primary/40 text-primary" :
                     agent.status === "failed"    ? "border-destructive/40 text-destructive" :
@@ -720,10 +720,10 @@ export default function Dashboard() {
           <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Workflow className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Sequências de Automação</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Sequências de Automação</span>
             </div>
             <Link href="/sequences">
-              <span className="font-mono text-[9px] text-primary hover:underline uppercase tracking-widest">Ver Todas →</span>
+              <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">Ver Todas →</span>
             </Link>
           </div>
           <div className="divide-y divide-border/20">
@@ -734,11 +734,11 @@ export default function Dashboard() {
             ) : !(sequencesData?.sequences?.length) ? (
               <div className="py-8 text-center">
                 <Workflow className="h-6 w-6 text-muted-foreground/20 mx-auto mb-2" />
-                <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-3">
+                <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest mb-3">
                   Nenhuma sequência criada
                 </p>
                 <Link href="/sequences/new">
-                  <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[9px] tracking-widest btn-weapon-outline gap-1.5">
+                  <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest btn-weapon-outline gap-1.5">
                     <Plus className="h-3 w-3" />Criar Sequência
                   </Button>
                 </Link>
@@ -758,11 +758,11 @@ export default function Dashboard() {
                       <div className="font-mono text-xs font-bold text-foreground/80 truncate group-hover:text-primary transition-colors">
                         {seq.name}
                       </div>
-                      <div className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                      <div className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
                         {MODEL_LABEL[seq.model] ?? seq.model} · {seq.totalDays} dias
                       </div>
                     </div>
-                    <Badge variant="outline" className={`rounded-none font-mono text-[9px] shrink-0 ${
+                    <Badge variant="outline" className={`rounded-none font-mono text-[11px] shrink-0 ${
                       seq.status === "active" || seq.status === "live" ? "border-success/40 text-success" :
                       seq.status === "draft"    ? "border-border/40 text-muted-foreground" :
                       "border-primary/40 text-primary"
@@ -782,12 +782,12 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Rocket className="h-3.5 w-3.5 text-muted-foreground/60" />
-            <h2 className="text-[10px] font-mono uppercase tracking-widest font-bold text-muted-foreground">
+            <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">
               Todas as Missões · {campaigns.length}
             </h2>
           </div>
           <Link href="/campaigns">
-            <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">Ver todas →</span>
+            <span className="font-mono text-xs text-primary hover:underline uppercase tracking-widest">Ver todas →</span>
           </Link>
         </div>
 
@@ -800,11 +800,11 @@ export default function Dashboard() {
           ) : !campaigns.length ? (
             <div className="py-12 text-center flex flex-col items-center gap-3">
               <AlertTriangle className="h-6 w-6 text-muted-foreground/30" />
-              <p className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
+              <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
                 Nenhuma missão ainda
               </p>
               <Link href="/campaigns/new">
-                <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline gap-1.5">
+                <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-1.5">
                   <Plus className="h-3 w-3" />Iniciar primeira missão
                 </Button>
               </Link>
@@ -826,12 +826,12 @@ export default function Dashboard() {
                         {c.title}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                        {cr["type"] && <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest">{cr["type"]}</span>}
-                        {cr["track"] && <><span className="text-muted-foreground/30">·</span><span className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">{cr["track"]}</span></>}
+                        {cr["type"] && <span className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest">{cr["type"]}</span>}
+                        {cr["track"] && <><span className="text-muted-foreground/30">·</span><span className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">{cr["track"]}</span></>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest hidden sm:flex ${STATUS_COLOR[c.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
+                      <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest hidden sm:flex ${STATUS_COLOR[c.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
                         {STATUS_LABEL[c.status] ?? c.status}
                       </Badge>
                       <Link href={`/campaigns/${c.id}`}>
@@ -846,7 +846,7 @@ export default function Dashboard() {
               {campaigns.length > 7 && (
                 <div className="px-4 py-3">
                   <Link href="/campaigns">
-                    <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">
+                    <span className="font-mono text-xs text-primary hover:underline uppercase tracking-widest">
                       + {campaigns.length - 7} mais missões →
                     </span>
                   </Link>
@@ -873,7 +873,7 @@ export default function Dashboard() {
             <Link key={ql.label} href={ql.href}>
               <div className={`border border-border/30 bg-card/20 p-3 flex items-center gap-2.5 cursor-pointer group transition-all ${ql.color}`}>
                 <Icon className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-current transition-colors shrink-0" />
-                <span className="font-mono text-[10px] text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-widest truncate">
+                <span className="font-mono text-xs text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-widest truncate">
                   {ql.label}
                 </span>
                 <ChevronRight className="h-3 w-3 text-muted-foreground/20 group-hover:text-current ml-auto shrink-0 transition-colors" />
@@ -925,11 +925,11 @@ function WeeklyReportCard({
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <Calendar className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
                 {isMonday ? "📊 Relatório Semanal — " : "Semana "}Semana {weekNum} · {today.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
               </span>
               {isMonday && (
-                <Badge variant="outline" className="rounded-none font-mono text-[9px] px-1.5 text-primary border-primary/40 bg-primary/10">
+                <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 text-primary border-primary/40 bg-primary/10">
                   Nova semana
                 </Badge>
               )}
@@ -937,7 +937,7 @@ function WeeklyReportCard({
             <h3 className="font-mono font-bold text-sm uppercase tracking-tight">Performance Semanal</h3>
           </div>
           <Link href="/revenue">
-            <Button variant="ghost" size="sm" className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1 text-primary hover:bg-primary/10 shrink-0">
+            <Button variant="ghost" size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1 text-primary hover:bg-primary/10 shrink-0">
               Ver Detalhes <ChevronRight className="h-2.5 w-2.5" />
             </Button>
           </Link>
@@ -951,7 +951,7 @@ function WeeklyReportCard({
             { label: "Sequências ativas", value: String(activeSequences), color: "text-yellow-400" },
           ].map(item => (
             <div key={item.label} className="border border-border/20 bg-background/30 px-3 py-2">
-              <div className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50 mb-1">{item.label}</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-1">{item.label}</div>
               <div className={`font-mono font-bold text-lg ${item.color}`}>{item.value}</div>
             </div>
           ))}
@@ -960,8 +960,8 @@ function WeeklyReportCard({
         {/* Health score bar */}
         <div className="mb-3">
           <div className="flex justify-between mb-1">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60">Health Score da Semana</span>
-            <span className={`font-mono text-[9px] font-bold ${trendColor}`}>{healthScore}/100</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60">Health Score da Semana</span>
+            <span className={`font-mono text-[11px] font-bold ${trendColor}`}>{healthScore}/100</span>
           </div>
           <div className="h-1 bg-muted/20 overflow-hidden">
             <div
@@ -974,11 +974,11 @@ function WeeklyReportCard({
         {/* AI insight */}
         <div className="flex items-start gap-2 bg-muted/10 border border-border/20 px-3 py-2">
           <TrendingUp className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${trendColor}`} />
-          <p className="font-mono text-[10px] text-muted-foreground leading-relaxed">{aiInsight}</p>
+          <p className="font-mono text-xs text-muted-foreground leading-relaxed">{aiInsight}</p>
         </div>
 
         {isMonday && (
-          <div className="mt-3 flex items-center gap-2 text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+          <div className="mt-3 flex items-center gap-2 text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">
             <Mail className="h-3 w-3" />
             Relatório enviado para o seu email esta manhã
           </div>

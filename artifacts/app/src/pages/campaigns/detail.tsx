@@ -141,7 +141,7 @@ function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: 
   return (
     <div className="flex items-center gap-2 mb-4">
       <Icon className="h-4 w-4 text-primary" />
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
+      <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -170,10 +170,10 @@ function KpiCard({ label, value, sub, icon: Icon, color = "primary" }: {
     <div className={`border p-4 ${colorMap[color]}`}>
       <div className="flex items-center gap-2 mb-2">
         <Icon className="h-3.5 w-3.5 shrink-0" />
-        <span className="font-mono text-[9px] uppercase tracking-widest opacity-70">{label}</span>
+        <span className="font-mono text-[11px] uppercase tracking-widest opacity-70">{label}</span>
       </div>
       <div className="font-mono font-bold text-xl">{value}</div>
-      {sub && <div className="font-mono text-[10px] opacity-60 mt-0.5">{sub}</div>}
+      {sub && <div className="font-mono text-xs opacity-60 mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -398,7 +398,7 @@ export default function CampaignDetail() {
       {/* ── Header ── */}
       <div className="border-b border-border/50 pb-4">
         <Link href="/campaigns">
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />Retornar ao Radar
           </Button>
         </Link>
@@ -408,11 +408,11 @@ export default function CampaignDetail() {
               <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground break-all">
                 {campaign.title}
               </h1>
-              <Badge variant="outline" className={`font-mono uppercase text-[9px] tracking-widest rounded-none px-2 py-1 border shrink-0 ${STATUS_COLOR[campaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
+              <Badge variant="outline" className={`font-mono uppercase text-[11px] tracking-widest rounded-none px-2 py-1 border shrink-0 ${STATUS_COLOR[campaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
                 {STATUS_LABEL[campaign.status] ?? campaign.status}
               </Badge>
             </div>
-            <div className="flex flex-wrap gap-2 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
+            <div className="flex flex-wrap gap-2 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
               <span className="bg-card px-2 py-1 border border-border/50">{campaign.type}</span>
               <span className="bg-card px-2 py-1 border border-border/50">Track: <span className="text-primary">{campaign.track}</span></span>
               {campaign.revenueTarget && <span className="bg-card px-2 py-1 border border-border/50 text-success">Meta: R$ {Number(campaign.revenueTarget).toLocaleString("pt-BR")}</span>}
@@ -421,11 +421,11 @@ export default function CampaignDetail() {
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             <Link href={`/campaigns/${campaign.id}/intake`}>
-              <Button variant="outline" className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-[10px]">
+              <Button variant="outline" className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-xs">
                 <FileText className="h-3.5 w-3.5" />Briefing
               </Button>
             </Link>
-            <Button variant="outline" onClick={() => setLocation("/sequences")} className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-[10px]">
+            <Button variant="outline" onClick={() => setLocation("/sequences")} className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-xs">
               <FileSpreadsheet className="h-3.5 w-3.5" />Sequências
             </Button>
           </div>
@@ -434,7 +434,7 @@ export default function CampaignDetail() {
 
       {/* ── Pipeline ── */}
       <div className="border border-border/50 bg-card/40 p-4 relative overflow-hidden">
-        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Pipeline de Execução</div>
+        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Pipeline de Execução</div>
         <div className="flex flex-col md:flex-row gap-2 md:gap-0 md:items-center relative">
           <div className="hidden md:block absolute top-4 left-0 right-0 h-px bg-border/40 z-0" />
           {PIPELINE.map((step, idx) => {
@@ -448,7 +448,7 @@ export default function CampaignDetail() {
                    state === "active" ? <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" /> :
                    <Clock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                 </div>
-                <span className={`text-[9px] font-mono uppercase tracking-widest md:text-center ${state === "done" ? "text-success" : state === "active" ? "text-primary" : "text-muted-foreground/40"}`}>{step.label}</span>
+                <span className={`text-[11px] font-mono uppercase tracking-widest md:text-center ${state === "done" ? "text-success" : state === "active" ? "text-primary" : "text-muted-foreground/40"}`}>{step.label}</span>
               </div>
             );
           })}
@@ -459,7 +459,7 @@ export default function CampaignDetail() {
       <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm overflow-x-auto">
         {TABS.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[10px] font-mono uppercase tracking-widest transition-all rounded-sm whitespace-nowrap shrink-0
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all rounded-sm whitespace-nowrap shrink-0
               ${activeTab === tab.id ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
             <tab.icon className="h-3 w-3" />{tab.label}
           </button>
@@ -478,7 +478,7 @@ export default function CampaignDetail() {
               <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary" />
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <div className="text-[9px] font-mono uppercase tracking-widest text-primary flex items-center gap-2 mb-1">
+                  <div className="text-[11px] font-mono uppercase tracking-widest text-primary flex items-center gap-2 mb-1">
                     <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />Próxima Ação
                   </div>
                   <h3 className="font-mono font-bold text-lg text-foreground uppercase tracking-wide">{nextAction.label}</h3>
@@ -506,11 +506,11 @@ export default function CampaignDetail() {
               {campaign.status === "live" || campaign.status === "executing" ? (
                 <><div className="w-3 h-3 rounded-full bg-success animate-pulse shadow-[0_0_10px_hsl(var(--success))]" />
                 <div><div className="font-mono font-bold text-success uppercase tracking-widest">Campanha Ao Vivo</div>
-                  <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Monitorando em tempo real</div></div></>
+                  <div className="text-xs text-muted-foreground font-mono mt-0.5">Monitorando em tempo real</div></div></>
               ) : campaign.status === "completed" ? (
                 <><CheckCircle2 className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div><div className="font-mono font-bold text-muted-foreground uppercase tracking-widest">Campanha Concluída</div>
-                  <div className="text-[10px] text-muted-foreground/60 font-mono mt-0.5">Todos os dados disponíveis em Métricas</div></div></>
+                  <div className="text-xs text-muted-foreground/60 font-mono mt-0.5">Todos os dados disponíveis em Métricas</div></div></>
               ) : (
                 <><AlertCircle className="h-5 w-5 text-yellow-400 shrink-0" />
                 <div><div className="font-mono font-bold text-yellow-400 uppercase tracking-widest">Aguardando ação</div></div></>
@@ -534,7 +534,7 @@ export default function CampaignDetail() {
                   ["Plataforma de vendas", intakeD["offer.salesPlatform"] as string],
                 ].filter(([, v]) => !!v).map(([k, v]) => (
                   <div key={k as string} className="space-y-0.5">
-                    <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k}</div>
+                    <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{k}</div>
                     <div className="text-xs font-mono text-foreground">{String(v)}</div>
                   </div>
                 ))}
@@ -550,7 +550,7 @@ export default function CampaignDetail() {
               { label: "Atualizado", value: campaign.updatedAt ? new Date(campaign.updatedAt).toLocaleDateString("pt-BR") : "—" },
             ].map((item) => (
               <div key={item.label} className="border border-border/50 bg-card/30 px-4 py-3">
-                <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{item.label}</div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{item.label}</div>
                 <div className="font-mono text-sm text-foreground mt-1 font-bold">{item.value}</div>
               </div>
             ))}
@@ -567,12 +567,12 @@ export default function CampaignDetail() {
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
               <div className="px-4 py-2.5 border-b border-primary/20 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ boxShadow: "0 0 6px hsl(var(--primary))" }} />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">Live Production Display</span>
-                <span className="font-mono text-[9px] text-muted-foreground/50 ml-auto">Socket.io · Tempo Real</span>
+                <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">Live Production Display</span>
+                <span className="font-mono text-[11px] text-muted-foreground/50 ml-auto">Socket.io · Tempo Real</span>
               </div>
               <div ref={liveRef} className="h-48 overflow-y-auto p-4 space-y-1.5 font-mono text-[11px]">
                 {liveEvents.length === 0 ? (
-                  <div className="flex items-center gap-2 text-muted-foreground/40 text-[10px]">
+                  <div className="flex items-center gap-2 text-muted-foreground/40 text-xs">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     <span>Aguardando eventos da IA...</span>
                   </div>
@@ -595,11 +595,11 @@ export default function CampaignDetail() {
                     return (
                       <div key={i} className={`flex items-start gap-2 ${color}`}>
                         <span className="shrink-0 w-3">{prefix}</span>
-                        <span className="text-muted-foreground/40 shrink-0 text-[9px] mt-0.5">
+                        <span className="text-muted-foreground/40 shrink-0 text-[11px] mt-0.5">
                           {new Date(ev.timestamp).toLocaleTimeString("pt-BR")}
                         </span>
                         {ev.agentType && (
-                          <span className="shrink-0 uppercase tracking-wider text-[9px] font-bold opacity-80">
+                          <span className="shrink-0 uppercase tracking-wider text-[11px] font-bold opacity-80">
                             [{AGENT_ROLE_LABEL[ev.agentType] ?? ev.agentType}]
                           </span>
                         )}
@@ -620,11 +620,11 @@ export default function CampaignDetail() {
               {(agentsData?.checkpoints ?? []).filter(c => c.status === "awaiting_review").map(cp => (
                 <div key={cp.id} className="border border-yellow-400/30 bg-yellow-400/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <div>
-                    <div className="text-[9px] font-mono uppercase tracking-widest text-yellow-400 flex items-center gap-2 mb-1">
+                    <div className="text-[11px] font-mono uppercase tracking-widest text-yellow-400 flex items-center gap-2 mb-1">
                       <AlertTriangle className="h-3 w-3" />Aprovação Necessária
                     </div>
                     <div className="font-mono text-sm font-bold uppercase tracking-wide">{cp.type.replace(/_/g, " ")}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{new Date(cp.createdAt).toLocaleString("pt-BR")}</div>
+                    <div className="text-xs text-muted-foreground font-mono mt-0.5">{new Date(cp.createdAt).toLocaleString("pt-BR")}</div>
                   </div>
                   <Button
                     className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-4 text-xs"
@@ -651,16 +651,16 @@ export default function CampaignDetail() {
                         <StatusDot status={agent.status} />
                         <div className="min-w-0">
                           <div className="font-mono text-xs font-bold uppercase tracking-wide">{AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}</div>
-                          <div className="text-[9px] text-muted-foreground font-mono uppercase tracking-widest">
+                          <div className="text-[11px] text-muted-foreground font-mono uppercase tracking-widest">
                             {new Date(agent.startedAt).toLocaleString("pt-BR")}
                             {agent.completedAt && ` → ${new Date(agent.completedAt).toLocaleString("pt-BR")}`}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        {agent.tokensUsed && <span className="text-[9px] font-mono text-muted-foreground">{agent.tokensUsed.toLocaleString()} tokens</span>}
-                        {agent.costUsd && <span className="text-[9px] font-mono text-muted-foreground">US$ {Number(agent.costUsd).toFixed(4)}</span>}
-                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${agent.status === "completed" ? "border-success/40 text-success" : agent.status === "failed" ? "border-destructive/40 text-destructive" : "border-primary/40 text-primary"}`}>
+                        {agent.tokensUsed && <span className="text-[11px] font-mono text-muted-foreground">{agent.tokensUsed.toLocaleString()} tokens</span>}
+                        {agent.costUsd && <span className="text-[11px] font-mono text-muted-foreground">US$ {Number(agent.costUsd).toFixed(4)}</span>}
+                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${agent.status === "completed" ? "border-success/40 text-success" : agent.status === "failed" ? "border-destructive/40 text-destructive" : "border-primary/40 text-primary"}`}>
                           {agent.status}
                         </Badge>
                       </div>
@@ -692,7 +692,7 @@ export default function CampaignDetail() {
                   <div className="space-y-3">
                     {Object.entries(strategyD).slice(0, 12).map(([k, v]) => (
                       <div key={k} className="border-l-2 border-primary/30 pl-3">
-                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
+                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
                         <div className="text-xs font-mono text-foreground mt-0.5 leading-relaxed">
                           {typeof v === "string" ? v : typeof v === "object" ? JSON.stringify(v, null, 2).slice(0, 200) : String(v)}
                         </div>
@@ -708,7 +708,7 @@ export default function CampaignDetail() {
                   <div className="space-y-2">
                     {Object.entries(offerD).slice(0, 8).map(([k, v]) => (
                       <div key={k}>
-                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
+                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
                         <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 100)}</div>
                       </div>
                     ))}
@@ -722,7 +722,7 @@ export default function CampaignDetail() {
                   <div className="space-y-2">
                     {Object.entries(audienceD).slice(0, 8).map(([k, v]) => (
                       <div key={k}>
-                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
+                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
                         <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 100)}</div>
                       </div>
                     ))}
@@ -736,7 +736,7 @@ export default function CampaignDetail() {
                   <div className="space-y-2">
                     {Object.entries(timelineD).slice(0, 10).map(([k, v]) => (
                       <div key={k} className="flex gap-3">
-                        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70 w-24 shrink-0">{k.replace(/_/g, " ")}</div>
+                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70 w-24 shrink-0">{k.replace(/_/g, " ")}</div>
                         <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 150)}</div>
                       </div>
                     ))}
@@ -755,7 +755,7 @@ export default function CampaignDetail() {
             <SectionHeader icon={Layers} label={`${contentData?.pieces?.length ?? 0} Peças de Conteúdo`} />
             {["strategy_ready", "approved"].includes(campaign.status) && (
               <Button
-                className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-[10px]"
+                className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs"
                 onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
                 disabled={executeMutation.isPending}
               >
@@ -780,12 +780,12 @@ export default function CampaignDetail() {
               {(contentData?.pieces ?? []).map(piece => (
                 <div key={piece.id} className="border border-border/50 bg-card/40 p-4">
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-primary/40 text-primary">{piece.type}</Badge>
-                    {piece.platform && <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5">{piece.platform}</Badge>}
-                    {piece.launchPhase && <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-cyan-400/40 text-cyan-400">{piece.launchPhase}</Badge>}
-                    {piece.mentalTrigger && <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-yellow-400/40 text-yellow-400">{piece.mentalTrigger}</Badge>}
+                    <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-primary/40 text-primary">{piece.type}</Badge>
+                    {piece.platform && <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5">{piece.platform}</Badge>}
+                    {piece.launchPhase && <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-cyan-400/40 text-cyan-400">{piece.launchPhase}</Badge>}
+                    {piece.mentalTrigger && <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-yellow-400/40 text-yellow-400">{piece.mentalTrigger}</Badge>}
                     <div className="ml-auto">
-                      <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${piece.status === "approved" ? "border-success/40 text-success" : piece.status === "rejected" ? "border-destructive/40 text-destructive" : "border-border text-muted-foreground"}`}>
+                      <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${piece.status === "approved" ? "border-success/40 text-success" : piece.status === "rejected" ? "border-destructive/40 text-destructive" : "border-border text-muted-foreground"}`}>
                         {piece.status}
                       </Badge>
                     </div>
@@ -793,18 +793,18 @@ export default function CampaignDetail() {
                   <p className="text-xs font-mono text-foreground/80 leading-relaxed whitespace-pre-wrap mb-3 line-clamp-4">{piece.content}</p>
                   {piece.status === "draft" && (
                     <div className="flex gap-2">
-                      <Button size="sm" className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-[10px] bg-success/20 hover:bg-success/30 text-success border border-success/30 hover:border-success/50"
+                      <Button size="sm" className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-xs bg-success/20 hover:bg-success/30 text-success border border-success/30 hover:border-success/50"
                         disabled={contentActionLoading === piece.id}
                         onClick={() => handleContentAction(piece.id, "approve")}>
                         {contentActionLoading === piece.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Aprovar
                       </Button>
                       <Button size="sm" variant="outline"
-                        className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/10"
+                        className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
                         disabled={contentActionLoading === piece.id}
                         onClick={() => handleContentAction(piece.id, "reject")}>
                         <XCircle className="h-3 w-3" />Rejeitar
                       </Button>
-                      <Button size="sm" variant="ghost" className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-[10px] text-muted-foreground">
+                      <Button size="sm" variant="ghost" className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-xs text-muted-foreground">
                         <Eye className="h-3 w-3" />Ver Completo
                       </Button>
                     </div>
@@ -825,7 +825,7 @@ export default function CampaignDetail() {
             <div className="py-12 text-center">
               <BarChart3 className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Nenhuma métrica registrada ainda.</p>
-              <p className="font-mono text-[10px] text-muted-foreground/60 mt-2">Métricas são ingeridas automaticamente durante a fase de execução ou via POST /api/campaigns/:id/metrics</p>
+              <p className="font-mono text-xs text-muted-foreground/60 mt-2">Métricas são ingeridas automaticamente durante a fase de execução ou via POST /api/campaigns/:id/metrics</p>
             </div>
           ) : (
             <>
@@ -837,8 +837,8 @@ export default function CampaignDetail() {
                     <div className={`text-5xl font-mono font-bold ${metricsData.healthScore >= 70 ? "text-success" : metricsData.healthScore >= 40 ? "text-yellow-400" : "text-destructive"}`}>
                       {metricsData.healthScore}
                     </div>
-                    <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-1">/ 100 pts</div>
-                    <Badge variant="outline" className="rounded-none font-mono text-[9px] mt-2 px-3 py-0.5">Grade {metricsData.grade}</Badge>
+                    <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground mt-1">/ 100 pts</div>
+                    <Badge variant="outline" className="rounded-none font-mono text-[11px] mt-2 px-3 py-0.5">Grade {metricsData.grade}</Badge>
                   </div>
                   <div className="flex-1">
                     <Progress value={metricsData.healthScore} className="h-2 rounded-none bg-muted/30 [&>div]:transition-all" />
@@ -862,8 +862,8 @@ export default function CampaignDetail() {
                   {alertsData!.alerts.map(alert => (
                     <div key={alert.id} className={`border p-3 ${alert.severity === "critical" ? "border-destructive/40 bg-destructive/5" : "border-yellow-400/30 bg-yellow-400/5"}`}>
                       <div className="font-mono text-xs font-bold mb-1">{alert.title}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">{alert.description}</div>
-                      {alert.recommendation && <div className="text-[10px] text-primary font-mono mt-1">→ {alert.recommendation}</div>}
+                      <div className="text-xs text-muted-foreground font-mono">{alert.description}</div>
+                      {alert.recommendation && <div className="text-xs text-primary font-mono mt-1">→ {alert.recommendation}</div>}
                     </div>
                   ))}
                 </div>
@@ -874,7 +874,7 @@ export default function CampaignDetail() {
                 <div className="border border-border/50 bg-card/40 p-4">
                   <SectionHeader icon={TrendingUp} label="Histórico Diário" />
                   <div className="overflow-x-auto">
-                    <table className="w-full text-[10px] font-mono">
+                    <table className="w-full text-xs font-mono">
                       <thead>
                         <tr className="border-b border-border/50 text-muted-foreground uppercase tracking-widest">
                           <th className="text-left py-2 pr-4">Dia</th>

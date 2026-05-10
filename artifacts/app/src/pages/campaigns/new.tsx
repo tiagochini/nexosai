@@ -74,14 +74,14 @@ function StepIndicator({ current }: { current: Step }) {
         return (
           <div key={s.id} className="flex items-center">
             <div className={`flex items-center gap-2 px-3 py-1.5 ${active ? "text-primary" : done ? "text-success" : "text-muted-foreground/40"}`}>
-              <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-[9px] font-mono font-bold border transition-all ${
+              <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-[11px] font-mono font-bold border transition-all ${
                 active ? "border-primary bg-primary/10 text-primary" :
                 done   ? "border-success bg-success/10 text-success" :
                          "border-border/30 text-muted-foreground/30"
               }`}>
                 {done ? <Check className="h-3 w-3" /> : s.num}
               </div>
-              <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:block">{s.label}</span>
+              <span className="font-mono text-xs uppercase tracking-widest hidden sm:block">{s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
               <div className={`w-6 h-px ${i < idx ? "bg-success/50" : "bg-border/30"}`} />
@@ -132,7 +132,7 @@ export default function NewCampaign() {
       {/* Header */}
       <div className="border-b border-border/50 pb-5">
         <Link href="/campaigns">
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-4 -ml-2 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-4 -ml-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />Voltar às Missões
           </Button>
         </Link>
@@ -182,10 +182,10 @@ export default function NewCampaign() {
                   <div className={`font-mono font-bold text-2xl uppercase tracking-tighter mb-0.5 ${active ? t.textColor : "text-foreground"}`}>
                     {t.label}
                   </div>
-                  <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-5">{t.sub}</div>
+                  <div className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-5">{t.sub}</div>
                   <div className="mt-auto border-t border-border/20 pt-4">
                     <div className="font-mono text-sm font-bold text-foreground">{t.range}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">em {t.days}</div>
+                    <div className="font-mono text-xs text-muted-foreground/50 mt-0.5">em {t.days}</div>
                   </div>
                 </button>
               );
@@ -209,7 +209,7 @@ export default function NewCampaign() {
           <div className="flex items-center gap-3">
             <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Qual modelo de operação?</p>
             {selectedTrack && (
-              <span className={`font-mono text-[9px] px-2 py-0.5 border uppercase tracking-widest ${selectedTrack.textColor} border-current/30 bg-current/5`}>
+              <span className={`font-mono text-[11px] px-2 py-0.5 border uppercase tracking-widest ${selectedTrack.textColor} border-current/30 bg-current/5`}>
                 {selectedTrack.label}
               </span>
             )}
@@ -231,7 +231,7 @@ export default function NewCampaign() {
                   <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
                   <div className="flex-1 min-w-0">
                     <div className={`font-mono text-sm font-bold ${active ? "text-primary" : "text-foreground"}`}>{t.label}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">{t.sub}</div>
+                    <div className="font-mono text-xs text-muted-foreground/50 mt-0.5">{t.sub}</div>
                   </div>
                   {active && <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />}
                 </button>
@@ -255,12 +255,12 @@ export default function NewCampaign() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="flex flex-wrap gap-2">
               {selectedTrack && (
-                <span className={`font-mono text-[9px] px-2 py-0.5 border uppercase tracking-widest ${selectedTrack.textColor} border-current/30 bg-current/5`}>
+                <span className={`font-mono text-[11px] px-2 py-0.5 border uppercase tracking-widest ${selectedTrack.textColor} border-current/30 bg-current/5`}>
                   {selectedTrack.label}
                 </span>
               )}
               {selectedType && (
-                <span className="font-mono text-[9px] px-2 py-0.5 border border-primary/30 bg-primary/8 text-primary uppercase tracking-widest">
+                <span className="font-mono text-[11px] px-2 py-0.5 border border-primary/30 bg-primary/8 text-primary uppercase tracking-widest">
                   {selectedType.label}
                 </span>
               )}
@@ -284,7 +284,7 @@ export default function NewCampaign() {
                   className="font-mono bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary h-12 text-base rounded-none px-4"
                   placeholder="Ex: Lançamento Produto Alpha — Q3 2025"
                 />
-                <p className="font-mono text-[10px] text-muted-foreground/40">Nome interno. Pode alterar depois.</p>
+                <p className="font-mono text-xs text-muted-foreground/40">Nome interno. Pode alterar depois.</p>
               </div>
 
               <div className="space-y-2 relative z-10 pt-4 border-t border-border/30">
@@ -301,13 +301,13 @@ export default function NewCampaign() {
                     placeholder="500.000,00"
                   />
                 </div>
-                <p className="font-mono text-[10px] text-muted-foreground/40">
+                <p className="font-mono text-xs text-muted-foreground/40">
                   A IA calibra a estratégia da trilha {selectedTrack?.label} com esse valor.
                 </p>
               </div>
 
               <div className="relative z-10 pt-4 border-t border-border/20">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-3">O que acontece após iniciar</div>
+                <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/50 mb-3">O que acontece após iniciar</div>
                 <div className="space-y-2">
                   {[
                     "Intake IA: conversa para entender seu produto e mercado",
@@ -316,8 +316,8 @@ export default function NewCampaign() {
                     "Missão vai ao ar com monitoramento em tempo real",
                   ].map((s, i) => (
                     <div key={s} className="flex items-start gap-3">
-                      <span className="font-mono text-[9px] text-primary/50 w-4 shrink-0 mt-0.5">{String(i + 1).padStart(2, "0")}</span>
-                      <span className="font-mono text-[10px] text-muted-foreground/60">{s}</span>
+                      <span className="font-mono text-[11px] text-primary/50 w-4 shrink-0 mt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="font-mono text-xs text-muted-foreground/60">{s}</span>
                     </div>
                   ))}
                 </div>

@@ -70,7 +70,7 @@ function ResultItem({
       <div className="flex-1 min-w-0">
         <div className="font-mono text-sm text-foreground truncate">{result.label}</div>
         {result.sub && (
-          <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider truncate">{result.sub}</div>
+          <div className="font-mono text-xs text-muted-foreground/60 uppercase tracking-wider truncate">{result.sub}</div>
         )}
       </div>
       <ChevronRight className={`h-3.5 w-3.5 shrink-0 transition-opacity ${active ? "opacity-100 text-primary" : "opacity-0 group-hover:opacity-40"}`} />
@@ -175,7 +175,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             placeholder="Buscar campanhas, agentes, páginas..."
             className="border-0 bg-transparent focus-visible:ring-0 font-mono text-sm placeholder:text-muted-foreground/40 p-0 h-auto"
           />
-          <kbd className="font-mono text-[9px] px-1.5 py-0.5 border border-border/40 rounded text-muted-foreground shrink-0">ESC</kbd>
+          <kbd className="font-mono text-[11px] px-1.5 py-0.5 border border-border/40 rounded text-muted-foreground shrink-0">ESC</kbd>
         </div>
 
         {/* Results */}
@@ -188,7 +188,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
           ) : sections ? (
             sections.filter(s => s.items.length > 0).map((section) => (
               <div key={section.label}>
-                <div className="px-4 py-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50">
+                <div className="px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">
                   {section.label}
                 </div>
                 {section.items.map((result) => {
@@ -210,8 +210,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         <div className="px-4 py-2 border-t border-border/30 flex items-center gap-3 bg-muted/5">
           {[["↑↓", "navegar"], ["↵", "ir"], ["esc", "fechar"]].map(([key, label]) => (
             <div key={key} className="flex items-center gap-1.5">
-              <kbd className="font-mono text-[9px] px-1.5 py-0.5 border border-border/40 rounded bg-background/50">{key}</kbd>
-              <span className="font-mono text-[9px] text-muted-foreground/40">{label}</span>
+              <kbd className="font-mono text-[11px] px-1.5 py-0.5 border border-border/40 rounded bg-background/50">{key}</kbd>
+              <span className="font-mono text-[11px] text-muted-foreground/40">{label}</span>
             </div>
           ))}
         </div>

@@ -69,7 +69,7 @@ function PipelineBar({ status }: { status: string }) {
           style={{ width: `${pct}%`, background: barColor, boxShadow: `0 0 4px ${barColor}` }}
         />
       </div>
-      <span className="font-mono text-[9px] text-muted-foreground/50 shrink-0 w-8 text-right">{pct}%</span>
+      <span className="font-mono text-[11px] text-muted-foreground/50 shrink-0 w-8 text-right">{pct}%</span>
     </div>
   );
 }
@@ -111,13 +111,13 @@ export default function CampaignsList() {
               {allCampaigns.length} total
             </span>
             {active > 0 && (
-              <span className="flex items-center gap-1.5 text-[10px] font-mono text-success uppercase tracking-widest">
+              <span className="flex items-center gap-1.5 text-xs font-mono text-success uppercase tracking-widest">
                 <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 5px hsl(var(--success))" }} />
                 {active} ao vivo
               </span>
             )}
             {inProcess > 0 && (
-              <span className="text-[10px] font-mono text-primary uppercase tracking-widest">
+              <span className="text-xs font-mono text-primary uppercase tracking-widest">
                 {inProcess} em processo
               </span>
             )}
@@ -146,7 +146,7 @@ export default function CampaignsList() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 font-mono text-[10px] uppercase tracking-widest transition-all rounded-sm ${
+              className={`px-3 py-1.5 font-mono text-xs uppercase tracking-widest transition-all rounded-sm ${
                 filter === f
                   ? "bg-primary text-primary-foreground shadow-[0_0_10px_hsl(var(--primary)/0.3)]"
                   : "text-muted-foreground hover:text-foreground"
@@ -180,7 +180,7 @@ export default function CampaignsList() {
               {search ? `Nenhuma missão encontrada para "${search}"` : "Nenhuma campanha registrada"}
             </p>
             {!search && (
-              <p className="font-mono text-[10px] text-muted-foreground/40">
+              <p className="font-mono text-xs text-muted-foreground/40">
                 Inicie sua primeira missão e a IA monta toda a estratégia
               </p>
             )}
@@ -232,11 +232,11 @@ export default function CampaignsList() {
                         <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase tracking-wide">
                           {campaign.title}
                         </span>
-                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 border shrink-0 ${STATUS_COLOR[campaign.status] ?? ""}`}>
+                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 border shrink-0 ${STATUS_COLOR[campaign.status] ?? ""}`}>
                           {STATUS_LABEL[campaign.status] ?? campaign.status}
                         </Badge>
                         {isLive && (
-                          <span className="flex items-center gap-1 font-mono text-[9px] text-success uppercase tracking-widest">
+                          <span className="flex items-center gap-1 font-mono text-[11px] text-success uppercase tracking-widest">
                             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                             Live
                           </span>
@@ -245,19 +245,19 @@ export default function CampaignsList() {
 
                       {/* Meta row */}
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`font-mono text-[9px] px-2 py-0.5 border ${trackMeta.color} flex items-center gap-1`}>
+                        <span className={`font-mono text-[11px] px-2 py-0.5 border ${trackMeta.color} flex items-center gap-1`}>
                           <TrackIcon className="h-2.5 w-2.5" />
                           {trackMeta.label}
                         </span>
-                        <span className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-widest">
+                        <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">
                           {TYPE_LABEL[campaign.type] ?? campaign.type}
                         </span>
                         {campaign.revenueTarget && (
-                          <span className="font-mono text-[9px] text-success/80">
+                          <span className="font-mono text-[11px] text-success/80">
                             Meta R$ {Number(campaign.revenueTarget).toLocaleString("pt-BR")}
                           </span>
                         )}
-                        <span className="font-mono text-[9px] text-muted-foreground/40">
+                        <span className="font-mono text-[11px] text-muted-foreground/40">
                           {campaign.createdAt ? new Date(campaign.createdAt).toLocaleDateString("pt-BR") : "—"}
                         </span>
                       </div>
@@ -268,7 +268,7 @@ export default function CampaignsList() {
 
                     {/* Arrow */}
                     <div className="shrink-0 hidden md:flex items-center gap-2">
-                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
+                      <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
                         {campaign.status === "draft" || campaign.status === "intake" ? "Continuar Intake" :
                          campaign.status === "awaiting_approval" ? "Revisar" : "Ver Missão"}
                       </div>
@@ -286,7 +286,7 @@ export default function CampaignsList() {
       {!isLoading && allCampaigns.length > 0 && (
         <div className="flex justify-center pt-2">
           <Link href="/campaigns/new">
-            <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline gap-2">
+            <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2">
               <Plus className="h-3 w-3" />Iniciar Nova Missão
             </Button>
           </Link>

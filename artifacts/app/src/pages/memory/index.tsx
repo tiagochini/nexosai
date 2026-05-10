@@ -62,7 +62,7 @@ function QualityBar({ score }: { score?: number }) {
       <div className="w-16 h-1 bg-muted/20 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${score}%` }} />
       </div>
-      <span className="font-mono text-[8px] text-muted-foreground/50">{score}</span>
+      <span className="font-mono text-[11px] text-muted-foreground/50">{score}</span>
     </div>
   );
 }
@@ -124,7 +124,7 @@ export default function MemoryPage() {
             Memória de IA
           </h1>
         </div>
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
           Conhecimento acumulado pelos agentes ao longo das suas campanhas
         </p>
       </div>
@@ -132,7 +132,7 @@ export default function MemoryPage() {
       {/* ── Info banner ── */}
       <div className="border border-primary/20 bg-primary/5 p-4 flex items-start gap-3">
         <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-        <p className="font-mono text-[9px] text-muted-foreground/80 leading-relaxed">
+        <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">
           Cada agente armazena aqui o que aprendeu sobre seu negócio, mercado e audiência.
           Quanto mais você usa a plataforma, mais preciso e personalizado fica o output de cada agente.
           Memórias de referência pública não podem ser deletadas.
@@ -147,17 +147,17 @@ export default function MemoryPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="border border-border/50 bg-card/40 p-3">
-            <div className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50">Total</div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Total</div>
             <div className="font-mono text-2xl font-bold text-primary mt-1">{stats?.total ?? 0}</div>
-            <div className="font-mono text-[8px] text-muted-foreground/40">memórias ativas</div>
+            <div className="font-mono text-[11px] text-muted-foreground/40">memórias ativas</div>
           </div>
           {Object.entries(stats?.byType ?? {}).slice(0, 3).map(([type, count]) => {
             const badge = TYPE_BADGE[type];
             return (
               <div key={type} className="border border-border/50 bg-card/40 p-3">
-                <div className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50">{badge?.label ?? type}</div>
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{badge?.label ?? type}</div>
                 <div className={`font-mono text-2xl font-bold mt-1 ${badge?.className.split(" ")[0] ?? "text-primary"}`}>{count as number}</div>
-                <div className="font-mono text-[8px] text-muted-foreground/40">entradas</div>
+                <div className="font-mono text-[11px] text-muted-foreground/40">entradas</div>
               </div>
             );
           })}
@@ -170,7 +170,7 @@ export default function MemoryPage() {
         <select
           value={filterAgent}
           onChange={e => setFilterAgent(e.target.value)}
-          className="font-mono text-[10px] uppercase tracking-widest bg-card/40 border border-border/50 px-2.5 py-1.5 text-foreground focus:outline-none focus:border-primary/50 rounded-none"
+          className="font-mono text-xs uppercase tracking-widest bg-card/40 border border-border/50 px-2.5 py-1.5 text-foreground focus:outline-none focus:border-primary/50 rounded-none"
         >
           <option value="">Todos os agentes</option>
           {allAgents.map(role => (
@@ -180,7 +180,7 @@ export default function MemoryPage() {
         <select
           value={filterType}
           onChange={e => setFilterType(e.target.value)}
-          className="font-mono text-[10px] uppercase tracking-widest bg-card/40 border border-border/50 px-2.5 py-1.5 text-foreground focus:outline-none focus:border-primary/50 rounded-none"
+          className="font-mono text-xs uppercase tracking-widest bg-card/40 border border-border/50 px-2.5 py-1.5 text-foreground focus:outline-none focus:border-primary/50 rounded-none"
         >
           <option value="">Todos os tipos</option>
           {allTypes.map(t => (
@@ -190,12 +190,12 @@ export default function MemoryPage() {
         {(filterAgent || filterType) && (
           <button
             onClick={() => { setFilterAgent(""); setFilterType(""); }}
-            className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 hover:text-primary flex items-center gap-1 transition-colors"
+            className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 hover:text-primary flex items-center gap-1 transition-colors"
           >
             <RefreshCw className="h-2.5 w-2.5" />Limpar
           </button>
         )}
-        <span className="ml-auto font-mono text-[9px] text-muted-foreground/50">{memories.length} {memories.length === 1 ? "entrada" : "entradas"}</span>
+        <span className="ml-auto font-mono text-[11px] text-muted-foreground/50">{memories.length} {memories.length === 1 ? "entrada" : "entradas"}</span>
       </div>
 
       {/* ── Memory list ── */}
@@ -206,10 +206,10 @@ export default function MemoryPage() {
       ) : memories.length === 0 ? (
         <div className="border border-border/30 bg-muted/10 p-10 text-center">
           <Brain className="h-8 w-8 text-muted-foreground/20 mx-auto mb-3" />
-          <p className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
+          <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
             {filterAgent || filterType ? "Nenhuma memória com esses filtros" : "Nenhuma memória armazenada ainda"}
           </p>
-          <p className="font-mono text-[9px] text-muted-foreground/30 mt-1">
+          <p className="font-mono text-[11px] text-muted-foreground/30 mt-1">
             Execute campanhas com os agentes para acumular memória contextual
           </p>
         </div>
@@ -235,7 +235,7 @@ export default function MemoryPage() {
                   {/* Title + agent */}
                   <div className="flex-1 min-w-0">
                     <div className="font-mono text-xs font-bold truncate text-foreground">{mem.title}</div>
-                    <div className="font-mono text-[8px] text-muted-foreground/50 uppercase tracking-widest">
+                    <div className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">
                       {agentLabel}
                       {mem.productNiche && ` · ${mem.productNiche}`}
                     </div>
@@ -245,7 +245,7 @@ export default function MemoryPage() {
                   <div className="flex items-center gap-3 shrink-0">
                     <QualityBar score={mem.qualityScore ?? undefined} />
                     {mem.usageCount > 0 && (
-                      <span className="font-mono text-[8px] text-muted-foreground/40 hidden sm:block">
+                      <span className="font-mono text-[11px] text-muted-foreground/40 hidden sm:block">
                         {mem.usageCount}× usado
                       </span>
                     )}
@@ -272,7 +272,7 @@ export default function MemoryPage() {
                 {/* Expanded content */}
                 {isExpanded && (
                   <div className="border-t border-border/30 px-4 py-3 bg-muted/5 space-y-2">
-                    <p className="font-mono text-[9px] text-muted-foreground leading-relaxed">{mem.summary}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{mem.summary}</p>
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {(mem.tags ?? []).map(tag => (
                         <span key={tag} className="font-mono text-[7px] border border-border/40 bg-muted/20 px-1.5 py-0.5 text-muted-foreground/60 uppercase tracking-widest">
@@ -281,12 +281,12 @@ export default function MemoryPage() {
                       ))}
                     </div>
                     <div className="flex items-center gap-4 pt-1">
-                      <span className="font-mono text-[8px] text-muted-foreground/40 flex items-center gap-1">
+                      <span className="font-mono text-[11px] text-muted-foreground/40 flex items-center gap-1">
                         <Clock className="h-2.5 w-2.5" />
                         {new Date(mem.createdAt).toLocaleDateString("pt-BR")}
                       </span>
                       {mem.lastUsedAt && (
-                        <span className="font-mono text-[8px] text-muted-foreground/40 flex items-center gap-1">
+                        <span className="font-mono text-[11px] text-muted-foreground/40 flex items-center gap-1">
                           <TrendingUp className="h-2.5 w-2.5" />
                           Último uso: {new Date(mem.lastUsedAt).toLocaleDateString("pt-BR")}
                         </span>

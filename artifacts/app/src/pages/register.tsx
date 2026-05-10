@@ -15,7 +15,7 @@ function FieldStatus({ ok, msg }: { ok: boolean | null; msg: string }) {
   return (
     <div className={`flex items-center gap-1.5 mt-1 ${ok ? "text-success" : "text-destructive"}`}>
       {ok ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
-      <span className="font-mono text-[10px] uppercase tracking-widest">{msg}</span>
+      <span className="font-mono text-xs uppercase tracking-widest">{msg}</span>
     </div>
   );
 }
@@ -289,7 +289,7 @@ export default function Register() {
             </Button>
 
             {!canSubmit && (name || email || password) && (
-              <p className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest text-center">
+              <p className="text-xs font-mono text-muted-foreground/50 uppercase tracking-widest text-center">
                 Preencha todos os campos obrigatórios e confirme email e senha para continuar
               </p>
             )}

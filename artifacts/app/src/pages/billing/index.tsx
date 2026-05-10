@@ -135,7 +135,7 @@ export default function BillingPage() {
             Plano & Faturamento
           </h1>
         </div>
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
           Gestão de assinatura, histórico de pagamentos e upgrade de plano
         </p>
       </div>
@@ -145,7 +145,7 @@ export default function BillingPage() {
         <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/40" />
         <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/40" />
         <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/60 to-transparent" />
-        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">Assinatura Atual</div>
+        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">Assinatura Atual</div>
         {loadingStatus ? (
           <div className="space-y-2"><Skeleton className="h-8 w-48 bg-muted/20" /><Skeleton className="h-4 w-64 bg-muted/20" /></div>
         ) : (
@@ -156,7 +156,7 @@ export default function BillingPage() {
                   {status?.planName ?? currentPlan?.name ?? "NexOS AI"}
                 </h2>
                 {status?.status && (
-                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 ${STATUS_BADGE[status.status]?.className ?? "text-primary border-primary/40"}`}>
+                  <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 ${STATUS_BADGE[status.status]?.className ?? "text-primary border-primary/40"}`}>
                     {STATUS_BADGE[status.status]?.label ?? status.status}
                   </Badge>
                 )}
@@ -168,7 +168,7 @@ export default function BillingPage() {
                   { label: "Próxima cobrança", value: status?.nextBillingDate ? new Date(status.nextBillingDate).toLocaleDateString("pt-BR") : "—" },
                 ].map(item => (
                   <div key={item.label} className="border border-border/30 bg-muted/10 p-2.5">
-                    <div className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50">{item.label}</div>
+                    <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{item.label}</div>
                     <div className="font-mono text-xs font-bold mt-0.5">{item.value}</div>
                   </div>
                 ))}
@@ -180,7 +180,7 @@ export default function BillingPage() {
 
       {/* ── Plan Comparison ── */}
       <div>
-        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">Planos Disponíveis</div>
+        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">Planos Disponíveis</div>
         {loadingPlans ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[1,2].map(i => <Skeleton key={i} className="h-64 bg-muted/20" />)}
@@ -210,7 +210,7 @@ export default function BillingPage() {
                 >
                   <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-current/30" />
                   {isCurrent && (
-                    <Badge variant="outline" className="absolute top-3 right-3 rounded-none font-mono text-[8px] text-success border-success/40 bg-success/10">
+                    <Badge variant="outline" className="absolute top-3 right-3 rounded-none font-mono text-[11px] text-success border-success/40 bg-success/10">
                       Plano Atual
                     </Badge>
                   )}
@@ -220,7 +220,7 @@ export default function BillingPage() {
                       R${(plan.monthlyPriceBrl / 100).toLocaleString("pt-BR")}
                       <span className="text-xs text-muted-foreground font-normal">/mês</span>
                     </div>
-                    <div className="font-mono text-[9px] text-muted-foreground/60 mt-0.5">
+                    <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
                       + R${(plan.onboardingFeeBrl / 100).toLocaleString("pt-BR")} onboarding (único)
                     </div>
                   </div>
@@ -239,19 +239,19 @@ export default function BillingPage() {
                     {plan.features.map(f => (
                       <li key={f} className="flex items-start gap-2">
                         <CheckCircle2 className="h-3 w-3 text-success shrink-0 mt-0.5" />
-                        <span className="font-mono text-[9px] text-muted-foreground leading-relaxed">{f}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground leading-relaxed">{f}</span>
                       </li>
                     ))}
                     {plan.isWhiteLabel && (
                       <li className="flex items-start gap-2">
                         <CheckCircle2 className="h-3 w-3 text-success shrink-0 mt-0.5" />
-                        <span className="font-mono text-[9px] text-muted-foreground">White-label incluso</span>
+                        <span className="font-mono text-[11px] text-muted-foreground">White-label incluso</span>
                       </li>
                     )}
                   </ul>
                   {!isCurrent && isSelected && (
                     <div className="mt-3 border-t border-border/30 pt-3">
-                      <div className="font-mono text-[9px] text-primary uppercase tracking-widest flex items-center gap-1">
+                      <div className="font-mono text-[11px] text-primary uppercase tracking-widest flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3" /> Selecionado para upgrade
                       </div>
                     </div>
@@ -273,7 +273,7 @@ export default function BillingPage() {
                     ${isCurrent ? "border-success/40 bg-success/5" : isSelected ? "border-primary/60 bg-primary/5" : "border-border/50 bg-card/40 hover:border-primary/30"}`}
                 >
                   {isCurrent && (
-                    <Badge variant="outline" className="absolute top-3 right-3 rounded-none font-mono text-[8px] text-success border-success/40 bg-success/10">
+                    <Badge variant="outline" className="absolute top-3 right-3 rounded-none font-mono text-[11px] text-success border-success/40 bg-success/10">
                       Atual
                     </Badge>
                   )}
@@ -302,7 +302,7 @@ export default function BillingPage() {
       {/* ── Upgrade CTA ── */}
       {selectedPlanId && (
         <div className="border border-primary/30 bg-primary/5 p-5">
-          <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3">
             Método de Pagamento · {targetPlan?.name ?? "Plano selecionado"}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
@@ -313,8 +313,8 @@ export default function BillingPage() {
                 className={`border p-3 text-left transition-all
                   ${selectedMethod === m.value ? "border-primary bg-primary/10 text-primary" : "border-border/40 hover:border-primary/30 text-muted-foreground"}`}
               >
-                <div className="font-mono text-[10px] font-bold uppercase tracking-widest">{m.label}</div>
-                <div className="font-mono text-[8px] opacity-60 mt-0.5">{m.sub}</div>
+                <div className="font-mono text-xs font-bold uppercase tracking-widest">{m.label}</div>
+                <div className="font-mono text-[11px] opacity-60 mt-0.5">{m.sub}</div>
               </button>
             ))}
           </div>
@@ -333,7 +333,7 @@ export default function BillingPage() {
             )}
             Iniciar Pagamento via {METHOD_LABEL[selectedMethod] ?? selectedMethod}
           </Button>
-          <p className="font-mono text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-2 text-center">
+          <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-2 text-center">
             Pagamento não bloqueia execução de campanhas · Ativação imediata após confirmação
           </p>
         </div>
@@ -341,7 +341,7 @@ export default function BillingPage() {
 
       {/* ── Payment History ── */}
       <div>
-        <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3 flex items-center gap-2">
+        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-3 flex items-center gap-2">
           <Receipt className="h-3 w-3" />Histórico de Pagamentos
         </div>
         {loadingHistory ? (
@@ -349,7 +349,7 @@ export default function BillingPage() {
         ) : payments.length === 0 ? (
           <div className="border border-border/30 bg-muted/10 p-6 text-center">
             <Clock className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Nenhum pagamento registrado ainda</p>
+            <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Nenhum pagamento registrado ainda</p>
           </div>
         ) : (
           <div className="border border-border/50 divide-y divide-border/30">
@@ -361,7 +361,7 @@ export default function BillingPage() {
                     <CreditCard className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                     <div>
                       <div className="font-mono text-xs font-bold">{p.description ?? METHOD_LABEL[p.method] ?? p.method}</div>
-                      <div className="font-mono text-[9px] text-muted-foreground/50">
+                      <div className="font-mono text-[11px] text-muted-foreground/50">
                         {new Date(p.createdAt).toLocaleDateString("pt-BR")}
                         {p.paidAt && ` · Pago em ${new Date(p.paidAt).toLocaleDateString("pt-BR")}`}
                       </div>
@@ -372,7 +372,7 @@ export default function BillingPage() {
                       R${(p.amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </span>
                     {badge && (
-                      <Badge variant="outline" className={`rounded-none font-mono text-[8px] ${badge.className}`}>
+                      <Badge variant="outline" className={`rounded-none font-mono text-[11px] ${badge.className}`}>
                         {badge.label}
                       </Badge>
                     )}
@@ -387,7 +387,7 @@ export default function BillingPage() {
       {/* ── Support ── */}
       <div className="border border-border/30 bg-muted/10 p-4 flex items-center gap-3">
         <Shield className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-        <p className="font-mono text-[9px] text-muted-foreground/60 leading-relaxed">
+        <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">
           Problemas com pagamento? Entre em contato: <span className="text-primary">suporte@nexos.ai</span> · Pagamentos nunca bloqueiam execução de campanhas ativas.
         </p>
       </div>

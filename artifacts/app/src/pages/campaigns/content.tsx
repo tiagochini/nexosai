@@ -143,19 +143,19 @@ function ContentCard({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-1.5 py-0 ${platformColor}`}>
+              <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0 ${platformColor}`}>
                 {PLATFORM_LABEL[piece.platform]}
               </Badge>
-              <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">
+              <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">
                 Dia {piece.dayIndex}
               </span>
               {piece.segment && piece.segment !== "all" && (
-                <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-1.5 py-0 ${SEGMENT_COLOR[piece.segment]}`}>
+                <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0 ${SEGMENT_COLOR[piece.segment]}`}>
                   {SEGMENT_LABEL[piece.segment]}
                 </Badge>
               )}
               {piece.status !== "pending" && (
-                <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-1.5 py-0 ${
+                <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0 ${
                   piece.status === "approved" ? "text-success border-success/40 bg-success/10" :
                   piece.status === "rejected" ? "text-destructive border-destructive/40 bg-destructive/10" :
                   "text-blue-400 border-blue-400/40 bg-blue-400/10"
@@ -175,7 +175,7 @@ function ContentCard({
         {piece.body.length > 120 && (
           <button
             onClick={() => setExpanded(v => !v)}
-            className="font-mono text-[9px] uppercase tracking-widest text-primary hover:text-primary/80 mb-3 flex items-center gap-1"
+            className="font-mono text-[11px] uppercase tracking-widest text-primary hover:text-primary/80 mb-3 flex items-center gap-1"
           >
             {expanded ? "Menos" : "Ver tudo"} <ChevronRight className={`h-2.5 w-2.5 transition-transform ${expanded ? "rotate-90" : ""}`} />
           </button>
@@ -183,8 +183,8 @@ function ContentCard({
 
         {piece.callToAction && (
           <div className="mb-3 flex items-center gap-2">
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50">CTA:</span>
-            <span className="font-mono text-[10px] text-primary border border-primary/30 bg-primary/5 px-2 py-0.5">{piece.callToAction}</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">CTA:</span>
+            <span className="font-mono text-xs text-primary border border-primary/30 bg-primary/5 px-2 py-0.5">{piece.callToAction}</span>
           </div>
         )}
 
@@ -192,12 +192,12 @@ function ContentCard({
         {(piece.estimatedReach || piece.estimatedCost) && (
           <div className="flex gap-4 mb-3">
             {piece.estimatedReach && (
-              <div className="text-[9px] font-mono text-muted-foreground/50">
+              <div className="text-[11px] font-mono text-muted-foreground/50">
                 Alcance est. <span className="text-foreground/70">{piece.estimatedReach.toLocaleString("pt-BR")}</span>
               </div>
             )}
             {piece.estimatedCost && piece.estimatedCost > 0 && (
-              <div className="text-[9px] font-mono text-muted-foreground/50">
+              <div className="text-[11px] font-mono text-muted-foreground/50">
                 Budget <span className="text-yellow-400">R$ {(piece.estimatedCost / 100).toLocaleString("pt-BR")}</span>
               </div>
             )}
@@ -211,7 +211,7 @@ function ContentCard({
               size="sm"
               onClick={() => onApprove(piece.id)}
               disabled={isLoading}
-              className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 bg-success/10 border border-success/40 text-success hover:bg-success/20"
+              className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 bg-success/10 border border-success/40 text-success hover:bg-success/20"
             >
               {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
               Aprovar
@@ -223,7 +223,7 @@ function ContentCard({
               variant="ghost"
               onClick={() => onReject(piece.id)}
               disabled={isLoading}
-              className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               <XCircle className="h-3 w-3" />Rejeitar
             </Button>
@@ -232,7 +232,7 @@ function ContentCard({
             size="sm"
             variant="ghost"
             onClick={() => onEdit(piece)}
-            className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+            className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-muted-foreground hover:text-foreground"
           >
             <Edit3 className="h-3 w-3" />Editar
           </Button>
@@ -241,7 +241,7 @@ function ContentCard({
             variant="ghost"
             onClick={() => onAiRewrite(piece.id)}
             disabled={isLoading}
-            className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
+            className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
           >
             <Sparkles className="h-3 w-3" />IA Reescrever
           </Button>
@@ -269,7 +269,7 @@ function EditModal({ piece, onClose, onSave }: { piece: ContentPiece; onClose: (
             </button>
           </div>
           <div className="space-y-2">
-            <label className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Conteúdo</label>
+            <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Conteúdo</label>
             <textarea
               value={body}
               onChange={e => setBody(e.target.value)}
@@ -279,7 +279,7 @@ function EditModal({ piece, onClose, onSave }: { piece: ContentPiece; onClose: (
           </div>
           {piece.callToAction !== undefined && (
             <div className="space-y-2">
-              <label className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Call to Action</label>
+              <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Call to Action</label>
               <input
                 value={cta}
                 onChange={e => setCta(e.target.value)}
@@ -433,7 +433,7 @@ export default function ContentApproval() {
         <div className="border-b border-border/50 pb-5">
           <div className="flex items-center gap-2 mb-3">
             <Link href={`/campaigns/${campaignId}`}>
-              <button className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+              <button className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
                 <ChevronLeft className="h-3 w-3" />Campanha
               </button>
             </Link>
@@ -444,7 +444,7 @@ export default function ContentApproval() {
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
                 <h1 className="text-2xl font-mono uppercase tracking-tighter font-bold">Aprovação de Conteúdo</h1>
               </div>
-              <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
                 {campaign?.title ?? "Campanha"} · {pieces.length} peças · {pct}% aprovadas
               </p>
             </div>
@@ -474,7 +474,7 @@ export default function ContentApproval() {
                 style={{ width: `${pct}%`, boxShadow: "0 0 8px hsl(var(--success)/0.5)" }}
               />
             </div>
-            <div className="flex gap-4 text-[9px] font-mono uppercase tracking-widest">
+            <div className="flex gap-4 text-[11px] font-mono uppercase tracking-widest">
               <span className="text-success">{approvedCount} aprovadas</span>
               <span className="text-muted-foreground/50">{pendingCount} pendentes</span>
               {rejectedCount > 0 && <span className="text-destructive">{rejectedCount} rejeitadas</span>}
@@ -490,7 +490,7 @@ export default function ContentApproval() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2 text-[10px] font-mono uppercase tracking-widest transition-all whitespace-nowrap
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap
                   ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}
               >
                 <Icon className="h-3 w-3" />{tab.label}
@@ -512,7 +512,7 @@ export default function ContentApproval() {
                       <PIcon className="h-3 w-3" />
                     </div>
                     <span className="font-mono text-xs uppercase tracking-widest font-bold">{PLATFORM_LABEL[platform]}</span>
-                    <span className="font-mono text-[9px] text-muted-foreground/50">
+                    <span className="font-mono text-[11px] text-muted-foreground/50">
                       {platformPieces.filter(p => p.status === "approved").length}/{platformPieces.length} aprovadas
                     </span>
                   </div>
@@ -555,7 +555,7 @@ export default function ContentApproval() {
                     </div>
                     <div>
                       <div className="font-mono text-xs font-bold uppercase tracking-widest">{phaseLabel}</div>
-                      <div className="font-mono text-[9px] text-muted-foreground/50">{dayPieces.length} peça{dayPieces.length !== 1 ? "s" : ""} programada{dayPieces.length !== 1 ? "s" : ""}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground/50">{dayPieces.length} peça{dayPieces.length !== 1 ? "s" : ""} programada{dayPieces.length !== 1 ? "s" : ""}</div>
                     </div>
                   </div>
                   <div className="ml-11 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -583,10 +583,10 @@ export default function ContentApproval() {
             {Object.entries(bySegment).map(([segment, segPieces]) => (
               <div key={segment}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-1 uppercase tracking-widest ${SEGMENT_COLOR[segment]}`}>
+                  <Badge variant="outline" className={`rounded-none font-mono text-xs px-2 py-1 uppercase tracking-widest ${SEGMENT_COLOR[segment]}`}>
                     {SEGMENT_LABEL[segment] ?? segment}
                   </Badge>
-                  <span className="font-mono text-[9px] text-muted-foreground/50">
+                  <span className="font-mono text-[11px] text-muted-foreground/50">
                     {segPieces.length} peça{segPieces.length !== 1 ? "s" : ""}
                   </span>
                 </div>

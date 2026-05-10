@@ -101,7 +101,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             <div>
               <div className="font-mono font-black text-2xl uppercase tracking-[0.12em] text-foreground leading-tight">NexOS</div>
               <div className="font-mono text-sm uppercase tracking-[0.3em] text-primary leading-tight">AI Platform</div>
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">Operações Inteligentes</div>
+              <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">Operações Inteligentes</div>
             </div>
           </div>
         </Link>
@@ -112,7 +112,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         {visibleGroups.map((group) => (
           <div key={group.label}>
             <div className="px-2 mb-2">
-              <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-muted-foreground/40">
+              <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground/40">
                 {group.label}
               </span>
             </div>
@@ -140,12 +140,12 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                         {item.name}
                       </span>
                       {item.badge && (
-                        <span className="text-[8px] font-mono bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-sm shrink-0">
+                        <span className="text-[11px] font-mono bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-sm shrink-0">
                           {item.badge}
                         </span>
                       )}
                       {item.href === "/admin" && (
-                        <span className="text-[8px] font-mono bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-sm shrink-0">
+                        <span className="text-[11px] font-mono bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-sm shrink-0">
                           Owner
                         </span>
                       )}
@@ -160,14 +160,14 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         {/* Mode toggle */}
         <div>
           <div className="px-2 mb-2">
-            <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-muted-foreground/40">
+            <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground/40">
               Modo de Interface
             </span>
           </div>
           <div className="flex gap-1 border border-border/40 bg-muted/10 p-0.5">
             <button
               onClick={() => setMode("guided")}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[9px] uppercase tracking-widest transition-all
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[11px] uppercase tracking-widest transition-all
                 ${mode === "guided"
                   ? "bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
                   : "text-muted-foreground hover:text-foreground"}`}
@@ -177,7 +177,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             </button>
             <button
               onClick={() => setMode("expert")}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[9px] uppercase tracking-widest transition-all
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[11px] uppercase tracking-widest transition-all
                 ${mode === "expert"
                   ? "bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
                   : "text-muted-foreground hover:text-foreground"}`}
@@ -187,12 +187,12 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             </button>
           </div>
           {mode === "guided" && (
-            <p className="font-mono text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
+            <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
               Modo guiado: fluxo simplificado
             </p>
           )}
           {mode === "expert" && (
-            <p className="font-mono text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
+            <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
               Modo expert: acesso total à plataforma
             </p>
           )}
@@ -202,9 +202,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       {/* Credits bar */}
       <div className="px-4 py-3 border-t border-border/30 mx-3 mb-1">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50">Créditos IA</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Créditos IA</span>
           <Link href="/credits" onClick={onNav}>
-            <span className="font-mono text-[8px] text-primary hover:underline uppercase tracking-widest">
+            <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">
               {balance.toLocaleString("pt-BR")} cr
             </span>
           </Link>
@@ -216,7 +216,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           />
         </div>
         {isLow && (
-          <div className="mt-1 font-mono text-[8px] text-destructive uppercase tracking-widest animate-pulse">
+          <div className="mt-1 font-mono text-[11px] text-destructive uppercase tracking-widest animate-pulse">
             Créditos baixos!
           </div>
         )}
@@ -232,7 +232,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <div className="font-mono text-xs text-foreground font-semibold truncate">{user?.name ?? "Usuário"}</div>
-                <div className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest truncate">
+                <div className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest truncate">
                   {plan?.name ?? "NexOS AI"}
                   {isAdmin && " · Owner"}
                 </div>
@@ -306,7 +306,7 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
             </div>
           </div>
         </Link>
-        <div className="hidden md:block text-[9px] font-mono uppercase tracking-widest text-muted-foreground/40">
+        <div className="hidden md:block text-[11px] font-mono uppercase tracking-widest text-muted-foreground/40">
           {workspace?.name}
         </div>
       </div>

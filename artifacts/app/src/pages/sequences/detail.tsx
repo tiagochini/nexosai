@@ -97,18 +97,18 @@ export default function SequenceDetail() {
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/50 pb-6 gap-6">
         <div>
           <Link href="/sequences">
-            <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-3 w-3 mr-2" />
               Todas as Sequências
             </Button>
           </Link>
           <div className="flex items-center gap-5">
             <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground drop-shadow-sm">{sequence.name}</h1>
-            <Badge variant="outline" className={`font-mono uppercase text-[10px] tracking-widest rounded-none px-3 py-1 border ${getStatusColor(sequence.status)}`}>
+            <Badge variant="outline" className={`font-mono uppercase text-xs tracking-widest rounded-none px-3 py-1 border ${getStatusColor(sequence.status)}`}>
               {sequence.status}
             </Badge>
           </div>
-          <div className="flex gap-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground mt-4 flex-wrap">
+          <div className="flex gap-4 text-xs font-mono uppercase tracking-widest text-muted-foreground mt-4 flex-wrap">
             <span className="bg-card px-3 py-1 border border-border/50 shadow-sm">DIAS: {sequence.totalDays}</span>
             <span className="bg-card px-3 py-1 border border-border/50 shadow-sm">MODELO: <span className="text-primary font-bold">{sequence.model}</span></span>
           </div>
@@ -137,8 +137,8 @@ export default function SequenceDetail() {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="mt-8 border-t border-border/50 pt-4">
-                  <AlertDialogCancel className="rounded-none font-mono uppercase text-[10px] tracking-widest border-border/50 hover:bg-muted/20">Abortar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleGeneratePlan} className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-primary">
+                  <AlertDialogCancel className="rounded-none font-mono uppercase text-xs tracking-widest border-border/50 hover:bg-muted/20">Abortar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleGeneratePlan} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary">
                     Autorizar Operação
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -161,27 +161,27 @@ export default function SequenceDetail() {
           </div>
         </Link>
         <Link href={`/sequences/${sequenceId}/calendar`}>
-          <div className="px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
+          <div className="px-6 py-4 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
             Calendário
           </div>
         </Link>
         <Link href={`/sequences/${sequenceId}/today`}>
-          <div className="px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
+          <div className="px-6 py-4 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
             Operação Dia
           </div>
         </Link>
         <Link href={`/sequences/${sequenceId}/copy`}>
-          <div className="px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
+          <div className="px-6 py-4 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
             Estúdio Copy
           </div>
         </Link>
         <Link href={`/sequences/${sequenceId}/analytics`}>
-          <div className="px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
+          <div className="px-6 py-4 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
             Métricas
           </div>
         </Link>
         <Link href={`/sequences/${sequenceId}/contacts`}>
-          <div className="px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
+          <div className="px-6 py-4 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground hover:bg-muted/10 cursor-pointer shrink-0 transition-colors">
             Base Contatos
           </div>
         </Link>
@@ -194,7 +194,7 @@ export default function SequenceDetail() {
             <FileText className="h-8 w-8 text-muted-foreground/50" />
           </div>
           <p className="font-mono text-sm uppercase tracking-widest text-foreground font-bold mb-2">Matriz de itens vazia</p>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground max-w-md leading-relaxed">
+          <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground max-w-md leading-relaxed">
             A estrutura desta sequência não contém disparos programados. Utilize o botão superior para gerar o plano de ataque completo via IA tática.
           </p>
         </div>
@@ -202,7 +202,7 @@ export default function SequenceDetail() {
         <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative">
           <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/30 to-transparent"></div>
           
-          <div className="grid grid-cols-12 gap-4 p-4 border-b border-border/50 bg-muted/20 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <div className="grid grid-cols-12 gap-4 p-4 border-b border-border/50 bg-muted/20 font-mono text-xs font-bold uppercase tracking-widest text-muted-foreground">
             <div className="col-span-1 pl-2">Dia</div>
             <div className="col-span-2">Fase</div>
             <div className="col-span-5">Mensagem / Pauta</div>
@@ -214,17 +214,17 @@ export default function SequenceDetail() {
             {sequence.items?.map((item) => (
               <div key={item.id} className="grid grid-cols-12 gap-4 p-4 items-center table-row-glow font-mono text-sm group">
                 <div className="col-span-1 font-bold text-primary pl-2">D{item.dayIndex}</div>
-                <div className="col-span-2 uppercase text-[10px] tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">{item.phase}</div>
+                <div className="col-span-2 uppercase text-xs tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">{item.phase}</div>
                 <div className="col-span-5 truncate pr-4">
                   <div className="font-bold truncate text-foreground group-hover:text-primary transition-colors">{item.name}</div>
-                  <div className="text-[10px] text-muted-foreground truncate uppercase tracking-widest mt-1">{item.description}</div>
+                  <div className="text-xs text-muted-foreground truncate uppercase tracking-widest mt-1">{item.description}</div>
                 </div>
                 <div className="col-span-2">
-                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] tracking-widest uppercase border ${channelColors[item.channel] || 'text-foreground border-border bg-muted/10'}`}>
+                  <Badge variant="outline" className={`rounded-none font-mono text-[11px] tracking-widest uppercase border ${channelColors[item.channel] || 'text-foreground border-border bg-muted/10'}`}>
                     {item.channel}
                   </Badge>
                 </div>
-                <div className="col-span-2 text-[10px] uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
+                <div className="col-span-2 text-xs uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors">
                   {item.mentalTrigger?.replace(/_/g, ' ')}
                 </div>
               </div>

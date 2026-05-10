@@ -299,7 +299,7 @@ function useGroups(workspaceId: string) {
 function TabBtn({ id, label, active, onClick }: { id: string; label: string; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className={`px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest transition-all rounded-none border-b-2 whitespace-nowrap
+      className={`px-4 py-2.5 text-xs font-mono uppercase tracking-widest transition-all rounded-none border-b-2 whitespace-nowrap
         ${active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border/50"}`}>
       {label}
     </button>
@@ -324,10 +324,10 @@ function PlatformCard({ p, posts, onGenerate, generating }: {
           </div>
           <div>
             <div className="font-mono font-bold text-sm uppercase tracking-wide">{p.label}</div>
-            <div className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest">{p.contentTypes.join(" · ")}</div>
+            <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest">{p.contentTypes.join(" · ")}</div>
           </div>
           <div className="ml-auto">
-            <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 text-muted-foreground border-border/40">
+            <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 text-muted-foreground border-border/40">
               {platformPosts.length} posts
             </Badge>
           </div>
@@ -335,15 +335,15 @@ function PlatformCard({ p, posts, onGenerate, generating }: {
 
         <div className="space-y-1.5 mb-4">
           {p.strategy.map((step, i) => (
-            <div key={i} className="flex items-start gap-2 text-[10px] font-mono text-muted-foreground/70">
-              <span className={`shrink-0 font-bold text-[9px] mt-0.5 ${p.color.split(" ")[0]}`}>{String(i + 1).padStart(2, "0")}</span>
+            <div key={i} className="flex items-start gap-2 text-xs font-mono text-muted-foreground/70">
+              <span className={`shrink-0 font-bold text-[11px] mt-0.5 ${p.color.split(" ")[0]}`}>{String(i + 1).padStart(2, "0")}</span>
               <span>{step}</span>
             </div>
           ))}
         </div>
 
         <Button onClick={onGenerate} disabled={generating}
-          className={`w-full rounded-none font-mono uppercase text-[10px] tracking-widest h-9 gap-2 btn-weapon-outline border-current/30 ${p.color.split(" ")[0]}`}
+          className={`w-full rounded-none font-mono uppercase text-xs tracking-widest h-9 gap-2 btn-weapon-outline border-current/30 ${p.color.split(" ")[0]}`}
           variant="outline">
           {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
           {generating ? "Gerando..." : "Gerar Conteúdo com IA"}
@@ -365,18 +365,18 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
         <div className="border-b border-border/50 px-5 py-4 flex items-center justify-between">
           <div>
             <h3 className="font-mono font-bold text-sm uppercase tracking-wide">Novo Grupo de Lançamento</h3>
-            <p className="text-[10px] font-mono text-muted-foreground/60 uppercase tracking-widest mt-0.5">Configure o grupo de aquecimento</p>
+            <p className="text-xs font-mono text-muted-foreground/60 uppercase tracking-widest mt-0.5">Configure o grupo de aquecimento</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors font-mono text-lg leading-none">×</button>
         </div>
         <div className="p-5 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">Nome do Grupo *</label>
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">Nome do Grupo *</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Grupo VIP - Lançamento Método X"
               className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">Plataforma *</label>
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">Plataforma *</label>
             <div className="grid grid-cols-2 gap-2">
               {(["whatsapp", "telegram"] as const).map(p => (
                 <button key={p} onClick={() => setPlatform(p)}
@@ -387,25 +387,25 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">Link do Grupo (opcional)</label>
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">Link do Grupo (opcional)</label>
             <input value={link} onChange={e => setLink(e.target.value)} placeholder="https://chat.whatsapp.com/..."
               className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">Número de Membros (opcional)</label>
+            <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">Número de Membros (opcional)</label>
             <input type="number" value={memberCount} onChange={e => setMemberCount(e.target.value)} placeholder="Ex: 2500"
               className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono rounded-none focus:outline-none focus:border-primary/60 transition-colors placeholder:text-muted-foreground/30" />
           </div>
         </div>
         <div className="border-t border-border/50 px-5 py-4 flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline">
+          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline">
             Cancelar
           </Button>
           <Button onClick={() => {
             if (!name.trim()) { toast.error("Nome do grupo é obrigatório"); return; }
             onCreate({ name: name.trim(), platform, link: link || undefined, memberCount: memberCount ? parseInt(memberCount) : undefined });
             onClose();
-          }} className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-primary gap-2">
+          }} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
             <Plus className="h-3.5 w-3.5" />Criar Grupo
           </Button>
         </div>
@@ -505,13 +505,13 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
               <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
               <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Social Launch Hub</h1>
             </div>
-            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
               Estratégia multiplataforma · Grupos de aquecimento · Suporte por mensagem privada
             </p>
           </div>
           {activeTab === "groups" && (
             <Button onClick={() => setShowCreateGroup(true)}
-              className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-primary gap-2 shrink-0">
+              className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 shrink-0">
               <Plus className="h-3.5 w-3.5" />Novo Grupo
             </Button>
           )}
@@ -548,18 +548,18 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
               <div className="border border-border/30 bg-card/30 py-12 text-center">
                 <Calendar className="h-7 w-7 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-1">Nenhum post gerado ainda</p>
-                <p className="font-mono text-[10px] text-muted-foreground/40">Clique em "Gerar Conteúdo com IA" em qualquer plataforma acima</p>
+                <p className="font-mono text-xs text-muted-foreground/40">Clique em "Gerar Conteúdo com IA" em qualquer plataforma acima</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {(postsData?.posts ?? []).slice(0, 10).map(post => (
                   <div key={post.id} className="border border-border/40 bg-card/30 p-4 flex items-start gap-4">
                     <div className="flex flex-wrap items-center gap-2 mb-0 shrink-0">
-                      <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${PLATFORM_COLOR[post.platform] ?? "text-muted-foreground border-border/50"}`}>{post.platform}</Badge>
-                      <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${POST_STATUS_COLOR[post.status] ?? ""}`}>{post.status}</Badge>
+                      <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${PLATFORM_COLOR[post.platform] ?? "text-muted-foreground border-border/50"}`}>{post.platform}</Badge>
+                      <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${POST_STATUS_COLOR[post.status] ?? ""}`}>{post.status}</Badge>
                     </div>
                     {post.caption && <p className="text-xs font-mono text-foreground/70 leading-relaxed line-clamp-2 flex-1">{post.caption}</p>}
-                    <div className="flex items-center gap-2 shrink-0 text-[9px] font-mono text-muted-foreground/50">
+                    <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono text-muted-foreground/50">
                       {post.impressions && <span><Eye className="h-2.5 w-2.5 inline mr-1" />{post.impressions.toLocaleString()}</span>}
                     </div>
                   </div>
@@ -578,7 +578,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
             <Zap className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <div className="space-y-1">
               <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Como funciona</div>
-              <p className="font-mono text-[10px] text-muted-foreground/80 leading-relaxed">
+              <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed">
                 Crie grupos de WhatsApp ou Telegram para aquecer seus leads antes da abertura do carrinho.
                 O sistema gera as mensagens de cada fase com IA e você dispara quando quiser.
                 No encerramento, o grupo é fechado com agradecimento e entrega do link de acesso.
@@ -591,9 +591,9 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
             <div className="border border-border/30 bg-card/30 py-16 text-center">
               <Users className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-1">Nenhum grupo criado ainda</p>
-              <p className="font-mono text-[10px] text-muted-foreground/40 mb-4">Crie um grupo para começar a planejar o aquecimento do seu lançamento</p>
+              <p className="font-mono text-xs text-muted-foreground/40 mb-4">Crie um grupo para começar a planejar o aquecimento do seu lançamento</p>
               <Button onClick={() => setShowCreateGroup(true)}
-                className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-primary gap-2">
+                className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
                 <Plus className="h-3.5 w-3.5" />Criar Primeiro Grupo
               </Button>
             </div>
@@ -609,17 +609,17 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <h3 className="font-mono font-bold text-sm uppercase tracking-wide">{group.name}</h3>
-                            <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${group.platform === "whatsapp" ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-blue-400 border-blue-400/40 bg-blue-400/10"}`}>
+                            <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${group.platform === "whatsapp" ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-blue-400 border-blue-400/40 bg-blue-400/10"}`}>
                               {group.platform === "whatsapp" ? "WhatsApp" : "Telegram"}
                             </Badge>
                           </div>
-                          <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest">
+                          <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest">
                             {group.memberCount ? `${group.memberCount.toLocaleString()} membros · ` : ""}
                             Criado {new Date(group.createdAt).toLocaleDateString("pt-BR")}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${phase?.color}`}>
+                          <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${phase?.color}`}>
                             {phase?.emoji} {phase?.label}
                           </Badge>
                         </div>
@@ -635,18 +635,18 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
 
                       <div className="flex items-center gap-2">
                         <Link href={`/social/groups/${group.id}`}>
-                          <Button size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-primary gap-2 h-8">
+                          <Button size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-8">
                             Gerenciar Grupo<ChevronRight className="h-3 w-3" />
                           </Button>
                         </Link>
                         {group.link && (
                           <Button size="sm" variant="outline" onClick={() => window.open(group.link, "_blank")}
-                            className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline gap-2 h-8">
+                            className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8">
                             <ExternalLink className="h-3 w-3" />Abrir Grupo
                           </Button>
                         )}
                         <Button size="sm" variant="ghost" onClick={() => removeGroup(group.id)}
-                          className="rounded-none font-mono uppercase text-[10px] tracking-widest h-8 text-muted-foreground/40 hover:text-destructive ml-auto">
+                          className="rounded-none font-mono uppercase text-xs tracking-widest h-8 text-muted-foreground/40 hover:text-destructive ml-auto">
                           <XCircle className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -667,7 +667,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
             <MessageSquare className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <div className="font-mono text-xs font-bold text-cyan-400 uppercase tracking-wide">DM Assist — Suporte por Mensagem Privada</div>
-              <p className="font-mono text-[10px] text-muted-foreground/80 leading-relaxed">
+              <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed">
                 Templates prontos para os cenários mais comuns de suporte durante o lançamento.
                 Personalize com o nome do lead, copie e envie pelo WhatsApp, Instagram DM ou Telegram.
                 Use IA para personalizar ainda mais cada mensagem.
@@ -686,22 +686,22 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
                     </div>
                     <div>
                       <div className={`font-mono font-bold text-xs uppercase tracking-wide ${scenario.color}`}>{scenario.label}</div>
-                      <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest">{scenario.description}</div>
+                      <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest">{scenario.description}</div>
                     </div>
                   </div>
                   <div className="p-4 space-y-3">
                     <div className="bg-background/50 border border-border/30 p-3 rounded-sm">
-                      <pre className="text-[10px] font-mono text-foreground/70 whitespace-pre-wrap leading-relaxed">{scenario.template}</pre>
+                      <pre className="text-xs font-mono text-foreground/70 whitespace-pre-wrap leading-relaxed">{scenario.template}</pre>
                     </div>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => copyTemplate(scenario.id, scenario.template)}
-                        className="rounded-none font-mono uppercase text-[9px] tracking-widest btn-weapon-outline gap-1.5 h-7 flex-1">
+                        className="rounded-none font-mono uppercase text-[11px] tracking-widest btn-weapon-outline gap-1.5 h-7 flex-1">
                         {copiedId === scenario.id ? <CheckCircle2 className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
                         {copiedId === scenario.id ? "Copiado!" : "Copiar Template"}
                       </Button>
                       <Link href="/agents/copywriter">
                         <Button size="sm" variant="outline"
-                          className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 border-purple-400/30 text-purple-400 hover:bg-purple-400/10">
+                          className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-purple-400/30 text-purple-400 hover:bg-purple-400/10">
                           <Bot className="h-2.5 w-2.5" />Personalizar IA
                         </Button>
                       </Link>
@@ -717,8 +717,8 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
             <div className="flex gap-3">
               <Target className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <div className="font-mono text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">Dica Profissional</div>
-                <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">
+                <div className="font-mono text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">Dica Profissional</div>
+                <p className="font-mono text-xs text-muted-foreground/50 leading-relaxed">
                   Configure mensagens de boas-vindas automáticas no WhatsApp Business para quem entra em contato durante o lançamento.
                   Use a integração WhatsApp Business nas configurações para automatizar respostas com IA.
                 </p>

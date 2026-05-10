@@ -15,10 +15,10 @@ export default function SequencesList() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-      case 'live': return <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest bg-success/10 text-success border-success/40 badge-glow-green">Operante</Badge>;
-      case 'draft': return <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest bg-muted/20 text-muted-foreground border-border/50">Rascunho</Badge>;
-      case 'generating': return <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary/40 badge-glow-blue animate-pulse-slow">Gerando</Badge>;
-      default: return <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest bg-primary/10 text-primary border-primary/40 badge-glow-primary">{status}</Badge>;
+      case 'live': return <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest bg-success/10 text-success border-success/40 badge-glow-green">Operante</Badge>;
+      case 'draft': return <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest bg-muted/20 text-muted-foreground border-border/50">Rascunho</Badge>;
+      case 'generating': return <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest bg-primary/10 text-primary border-primary/40 badge-glow-blue animate-pulse-slow">Gerando</Badge>;
+      default: return <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest bg-primary/10 text-primary border-primary/40 badge-glow-primary">{status}</Badge>;
     }
   };
 
@@ -82,7 +82,7 @@ export default function SequencesList() {
                   </div>
                   <div>
                     <h3 className="font-bold font-mono uppercase tracking-wider text-lg group-hover:text-primary transition-colors">{seq.name}</h3>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-muted-foreground mt-2 uppercase font-mono tracking-widest">
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground mt-2 uppercase font-mono tracking-widest">
                       <span className="flex items-center gap-2 border border-border/50 px-2 py-1 bg-background/30 shadow-sm">
                         <span className="opacity-50">Modelo:</span> <span className="text-primary font-bold">{getModelName(seq.model)}</span>
                       </span>
@@ -96,25 +96,25 @@ export default function SequencesList() {
                   {getStatusBadge(seq.status)}
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={`/sequences/${seq.id}`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-8 px-3 btn-weapon-outline">
+                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 btn-weapon-outline">
                         <Eye className="h-3 w-3 mr-2" />
                         Detalhes
                       </Button>
                     </Link>
                     <Link href={`/sequences/${seq.id}/calendar`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-8 px-3 btn-weapon-outline">
+                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 btn-weapon-outline">
                         <Calendar className="h-3 w-3 mr-2" />
                         Calendário
                       </Button>
                     </Link>
                     <Link href={`/sequences/${seq.id}/today`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-8 px-3 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all">
+                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all">
                         <Activity className="h-3 w-3 mr-2" />
                         Operação
                       </Button>
                     </Link>
                     <Link href={`/sequences/${seq.id}/analytics`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-8 px-3 btn-weapon-outline">
+                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 btn-weapon-outline">
                         <BarChart className="h-3 w-3 mr-2" />
                         Métricas
                       </Button>

@@ -44,7 +44,7 @@ function FieldRow({ label, sublabel, children }: { label: string; sublabel?: str
     <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-8 py-4 border-b border-border/30 last:border-0">
       <div className="md:w-48 shrink-0">
         <div className="font-mono text-xs text-foreground/90 font-semibold">{label}</div>
-        {sublabel && <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">{sublabel}</div>}
+        {sublabel && <div className="font-mono text-xs text-muted-foreground/60 mt-0.5">{sublabel}</div>}
       </div>
       <div className="flex-1 min-w-0">{children}</div>
     </div>
@@ -100,7 +100,7 @@ function ProfileTab() {
             </div>
             <div>
               <div className="font-mono text-sm text-foreground/80">{user?.name ?? "—"}</div>
-              <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{user?.email}</div>
+              <div className="font-mono text-xs text-muted-foreground uppercase tracking-wider mt-0.5">{user?.email}</div>
             </div>
           </div>
         </FieldRow>
@@ -230,7 +230,7 @@ function WorkspaceTab() {
             <Badge variant="outline" className="rounded-none font-mono text-xs uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
               {plan?.name ?? "—"}
             </Badge>
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
               {total > 0 ? `${total} créditos/mês` : ""}
             </span>
           </div>
@@ -261,9 +261,9 @@ function WorkspaceTab() {
               />
             </div>
             <div className="flex justify-between">
-              <span className="font-mono text-[10px] text-muted-foreground">{usedPct}% utilizado</span>
+              <span className="font-mono text-xs text-muted-foreground">{usedPct}% utilizado</span>
               {remaining < total * 0.15 && (
-                <span className="font-mono text-[10px] text-destructive animate-pulse">⚠ Créditos baixos</span>
+                <span className="font-mono text-xs text-destructive animate-pulse">⚠ Créditos baixos</span>
               )}
             </div>
           </div>
@@ -295,7 +295,7 @@ function WorkspaceTab() {
                       </div>
                     </div>
                     {isCurrent && (
-                      <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
+                      <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
                         Ativo
                       </Badge>
                     )}
@@ -313,7 +313,7 @@ function WorkspaceTab() {
                     ))}
                   </div>
                   {!isCurrent && (
-                    <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest w-full btn-weapon-outline">
+                    <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest w-full btn-weapon-outline">
                       <ExternalLink className="h-3 w-3 mr-1.5" />
                       Mudar para este plano
                     </Button>
@@ -410,7 +410,7 @@ function SecurityTab() {
                       <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : "bg-muted/30"}`} />
                     ))}
                   </div>
-                  <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wider">{strengthLabel}</span>
+                  <span className="font-mono text-xs text-muted-foreground uppercase tracking-wider">{strengthLabel}</span>
                 </div>
               )}
             </div>
@@ -428,7 +428,7 @@ function SecurityTab() {
               required
             />
             {confirm && confirm !== next && (
-              <p className="font-mono text-[10px] text-destructive mt-1">As senhas não coincidem.</p>
+              <p className="font-mono text-xs text-destructive mt-1">As senhas não coincidem.</p>
             )}
           </FieldRow>
 
@@ -644,14 +644,14 @@ function ConnectModal({
         <div className="border-b border-border/50 px-5 py-4 flex items-center justify-between">
           <div>
             <h3 className="font-mono font-bold text-sm uppercase tracking-wide">Conectar {catalog.label}</h3>
-            <p className="text-[10px] font-mono text-muted-foreground/60 mt-0.5">{catalog.description}</p>
+            <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">{catalog.description}</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground font-mono text-lg leading-none">×</button>
         </div>
         <div className="p-5 space-y-4">
           {catalog.fields.map(f => (
             <div key={f.key} className="space-y-1.5">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
               <input
                 type={f.type ?? "text"}
                 placeholder={f.placeholder}
@@ -662,16 +662,16 @@ function ConnectModal({
             </div>
           ))}
           <div className="bg-muted/10 border border-border/20 p-3">
-            <p className="font-mono text-[9px] text-muted-foreground/50 leading-relaxed">
+            <p className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed">
               As credenciais são armazenadas de forma segura e criptografadas. Nunca compartilhamos com terceiros.
               Pagamentos nunca bloqueiam execução de campanhas.
             </p>
           </div>
         </div>
         <div className="border-t border-border/50 px-5 py-4 flex gap-2 justify-end">
-          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline">Cancelar</Button>
+          <Button variant="outline" onClick={onClose} className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline">Cancelar</Button>
           <Button onClick={handleConnect} disabled={loading}
-            className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-primary gap-2">
+            className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5" />}
             Conectar
           </Button>
@@ -760,14 +760,14 @@ function IntegracaoTab() {
                     <div className={`w-2 h-2 rounded-full shrink-0 ${intg.status === "connected" ? "bg-success animate-pulse" : intg.status === "error" ? "bg-destructive" : "bg-muted-foreground/30"}`} />
                     <div className="min-w-0">
                       <div className="font-mono text-sm font-bold truncate">{catalog?.label ?? intg.provider}</div>
-                      {intg.accountName && <div className="font-mono text-[10px] text-muted-foreground/60 truncate">{intg.accountName}</div>}
+                      {intg.accountName && <div className="font-mono text-xs text-muted-foreground/60 truncate">{intg.accountName}</div>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {intg.isPaymentGateway && (
-                      <Badge variant="outline" className="rounded-none font-mono text-[9px] border-orange-400/30 text-orange-400">Pagamento</Badge>
+                      <Badge variant="outline" className="rounded-none font-mono text-[11px] border-orange-400/30 text-orange-400">Pagamento</Badge>
                     )}
-                    <Badge variant="outline" className={`rounded-none font-mono text-[9px] ${intg.status === "connected" ? "border-success/40 text-success" : intg.status === "error" ? "border-destructive/40 text-destructive" : "border-border/40 text-muted-foreground"}`}>
+                    <Badge variant="outline" className={`rounded-none font-mono text-[11px] ${intg.status === "connected" ? "border-success/40 text-success" : intg.status === "error" ? "border-destructive/40 text-destructive" : "border-border/40 text-muted-foreground"}`}>
                       {intg.status === "connected" ? "Conectado" : intg.status === "error" ? "Erro" : "Desconectado"}
                     </Badge>
                   </div>
@@ -776,7 +776,7 @@ function IntegracaoTab() {
             })}
           </div>
           {integrations.some(i => i.isPaymentGateway) && (
-            <div className="mt-4 flex items-center gap-2 text-[9px] font-mono text-muted-foreground/50">
+            <div className="mt-4 flex items-center gap-2 text-[11px] font-mono text-muted-foreground/50">
               <AlertTriangle className="h-3 w-3" />
               Gateways de pagamento nunca bloqueiam execução de campanhas
             </div>
@@ -788,7 +788,7 @@ function IntegracaoTab() {
       <div className="flex gap-1 border-b border-border/40 overflow-x-auto">
         {["Todos", ...CATEGORIES].map(cat => (
           <button key={cat} onClick={() => setActiveCategory(cat)}
-            className={`px-3 py-2 text-[9px] font-mono uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
+            className={`px-3 py-2 text-[11px] font-mono uppercase tracking-widest transition-all border-b-2 whitespace-nowrap
               ${activeCategory === cat ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
             {cat}
           </button>
@@ -815,13 +815,13 @@ function IntegracaoTab() {
                 )}
                 <div className="mb-3">
                   <div className={`font-mono font-bold text-sm mb-0.5 ${intg.color}`}>{intg.label}</div>
-                  <div className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{intg.category}</div>
+                  <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{intg.category}</div>
                   <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{intg.description}</p>
                 </div>
                 {isConnected ? (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-3 w-3 text-success" />
-                    <span className="font-mono text-[10px] text-success">
+                    <span className="font-mono text-xs text-success">
                       {existing?.accountName ? `Conectado: ${existing.accountName}` : "Conectado"}
                     </span>
                   </div>
@@ -830,7 +830,7 @@ function IntegracaoTab() {
                     size="sm"
                     variant="outline"
                     onClick={() => setConnectModal({ provider: intg.provider, label: intg.label })}
-                    className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 btn-weapon-outline"
+                    className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline"
                   >
                     <Plus className="h-2.5 w-2.5" />Conectar
                   </Button>

@@ -57,7 +57,7 @@ const SEGMENT_CONFIG = {
 function FrozenCountdown({ totalDays }: { totalDays: number }) {
   return (
     <div className="space-y-2">
-      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-3 flex items-center gap-1.5">
+      <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-3 flex items-center gap-1.5">
         <Clock className="h-3 w-3" /> Previsão de abertura
       </div>
       <div className="grid grid-cols-4 gap-1.5">
@@ -71,11 +71,11 @@ function FrozenCountdown({ totalDays }: { totalDays: number }) {
             <span className="font-mono font-black text-3xl md:text-4xl text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)]">
               {String(v).padStart(2, "0")}
             </span>
-            <span className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground mt-1">{l}</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mt-1">{l}</span>
           </div>
         ))}
       </div>
-      <p className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest text-center pt-1">
+      <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest text-center pt-1">
         Contagem inicia com o aquecimento · Carrinho abre 24h antes do fim
       </p>
     </div>
@@ -108,7 +108,7 @@ function WhatsAppButton({ segment }: { segment: Segment }) {
         <Lock className="h-4 w-4" />
         Grupo do WhatsApp — Em breve
       </Button>
-      <p className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest text-center">
+      <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest text-center">
         Link será liberado quando o aquecimento começar · Você receberá no WhatsApp
       </p>
     </div>
@@ -169,10 +169,10 @@ function AiChat({ segment }: { segment: Segment }) {
           <div className="font-mono font-bold text-xs uppercase tracking-widest text-foreground">IA NexOS · Pré-vendas</div>
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-            <span className="font-mono text-[8px] uppercase tracking-widest text-success">Online agora</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-success">Online agora</span>
           </div>
         </div>
-        <div className="ml-auto font-mono text-[8px] uppercase tracking-widest text-muted-foreground/40 flex items-center gap-1">
+        <div className="ml-auto font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 flex items-center gap-1">
           <Bot className="h-3 w-3" />Claude · NexOS AI
         </div>
       </div>
@@ -209,7 +209,7 @@ function AiChat({ segment }: { segment: Segment }) {
             </div>
             <div className="border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Pensando...</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">Pensando...</span>
             </div>
           </div>
         )}
@@ -235,7 +235,7 @@ function AiChat({ segment }: { segment: Segment }) {
             <Send className="h-4 w-4" />
           </Button>
         </div>
-        <p className="font-mono text-[8px] text-muted-foreground/30 uppercase tracking-widest mt-2">
+        <p className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest mt-2">
           IA especializada no fechamento · Cronograma de lançamento · Planos e preços
         </p>
       </div>
@@ -250,7 +250,7 @@ function LaunchTimeline({ segment }: { segment: Segment }) {
 
   return (
     <div className="space-y-1.5">
-      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-3 flex items-center gap-1.5">
+      <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/50 mb-3 flex items-center gap-1.5">
         <Calendar className="h-3 w-3" /> Cronograma do lançamento
       </div>
       {cfg.phases.map((phase, i) => {
@@ -270,14 +270,14 @@ function LaunchTimeline({ segment }: { segment: Segment }) {
                 <Icon className={`h-3.5 w-3.5 ${isLast ? "text-primary" : "text-muted-foreground/50"}`} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">{phase.day}</div>
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40">{phase.day}</div>
                 <div className={`font-mono text-xs font-bold uppercase tracking-wider ${isLast ? "text-primary" : "text-foreground"}`}>{phase.label}</div>
               </div>
               {isOpen ? <ChevronUp className="h-3 w-3 text-muted-foreground/40 shrink-0" /> : <ChevronDown className="h-3 w-3 text-muted-foreground/40 shrink-0" />}
             </button>
             {isOpen && (
               <div className="border-t border-border/30 px-3 py-2.5 bg-muted/5">
-                <p className="font-mono text-[10px] text-muted-foreground leading-relaxed">{phase.desc}</p>
+                <p className="font-mono text-xs text-muted-foreground leading-relaxed">{phase.desc}</p>
               </div>
             )}
           </div>
@@ -357,7 +357,7 @@ export default function PreparacaoPage() {
 
             {/* WhatsApp button */}
             <div className="border border-border/50 bg-card/40 p-4 space-y-3">
-              <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
+              <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/50 flex items-center gap-1.5">
                 <MessageSquare className="h-3 w-3" /> Grupo do WhatsApp
               </div>
               <WhatsAppButton segment={segment} />
@@ -376,7 +376,7 @@ export default function PreparacaoPage() {
         <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
           Fique de olho no WhatsApp cadastrado · 2 mensagens/dia · Sem spam
         </p>
-        <p className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest mt-1">
+        <p className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest mt-1">
           NexOS AI · contato@nexos.ai
         </p>
       </div>

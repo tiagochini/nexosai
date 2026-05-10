@@ -51,7 +51,7 @@ export default function NewSequence() {
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="border-b border-border/50 pb-6">
         <Link href="/sequences">
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />
             Abortar Operação
           </Button>

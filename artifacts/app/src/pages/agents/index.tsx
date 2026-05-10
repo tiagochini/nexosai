@@ -174,9 +174,9 @@ export default function AgentsHub() {
           { label: "Créditos/msg", value: "3", sub: "custo fixo" },
         ].map((stat) => (
           <div key={stat.label} className="border border-border/50 bg-card/40 p-3">
-            <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70">{stat.label}</div>
+            <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{stat.label}</div>
             <div className="text-xl font-mono font-bold text-primary mt-0.5">{stat.value}</div>
-            <div className="text-[9px] font-mono text-muted-foreground/50">{stat.sub}</div>
+            <div className="text-[11px] font-mono text-muted-foreground/50">{stat.sub}</div>
           </div>
         ))}
       </div>
@@ -189,7 +189,7 @@ export default function AgentsHub() {
           <div key={cat}>
             <div className="flex items-center gap-3 mb-4">
               <div className="h-px flex-1 bg-border/40" />
-              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground px-3">{cat}</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground px-3">{cat}</span>
               <div className="h-px flex-1 bg-border/40" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -212,23 +212,23 @@ export default function AgentsHub() {
                             <div className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase tracking-wide">
                               {agent.name}
                             </div>
-                            <div className="text-[9px] font-mono text-muted-foreground/70 uppercase tracking-widest">{agent.tagline}</div>
+                            <div className="text-[11px] font-mono text-muted-foreground/70 uppercase tracking-widest">{agent.tagline}</div>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`rounded-none font-mono text-[8px] px-1.5 py-0.5 shrink-0 border ${pBadge.className}`}>
+                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0.5 shrink-0 border ${pBadge.className}`}>
                           {pBadge.label}
                         </Badge>
                       </div>
 
                       {/* Description */}
-                      <p className="text-[10px] text-muted-foreground font-mono leading-relaxed mb-3 line-clamp-2">
+                      <p className="text-xs text-muted-foreground font-mono leading-relaxed mb-3 line-clamp-2">
                         {agent.description}
                       </p>
 
                       {/* Specialties */}
                       <div className="flex flex-wrap gap-1 mb-3">
                         {agent.specialties.map(s => (
-                          <span key={s} className="text-[8px] font-mono uppercase tracking-widest bg-muted/30 border border-border/50 px-1.5 py-0.5 text-muted-foreground/70">
+                          <span key={s} className="text-[11px] font-mono uppercase tracking-widest bg-muted/30 border border-border/50 px-1.5 py-0.5 text-muted-foreground/70">
                             {s}
                           </span>
                         ))}
@@ -238,9 +238,9 @@ export default function AgentsHub() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <Bot className="h-3 w-3 text-primary/60" />
-                          <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest">3 créditos/msg</span>
+                          <span className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest">3 créditos/msg</span>
                         </div>
-                        <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase tracking-widest text-primary group-hover:gap-2 transition-all">
+                        <div className="flex items-center gap-1 text-xs font-mono font-bold uppercase tracking-widest text-primary group-hover:gap-2 transition-all">
                           Conversar <ChevronRight className="h-3 w-3" />
                         </div>
                       </div>

@@ -171,7 +171,7 @@ export default function RevenuePage() {
             <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Receita & Vendas</h1>
           </div>
-          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+          <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
             Hotmart · Kiwify · Eduzz · Stripe · Tempo Real
           </p>
         </div>
@@ -194,7 +194,7 @@ export default function RevenuePage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-[10px] font-mono uppercase tracking-widest transition-all whitespace-nowrap
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap
                 ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}
             >
               <Icon className="h-3 w-3" />{tab.label}
@@ -212,7 +212,7 @@ export default function RevenuePage() {
             <div className="py-16 text-center border border-dashed border-border/30">
               <DollarSign className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Nenhuma receita registrada ainda</p>
-              <p className="font-mono text-[10px] text-muted-foreground/50 max-w-xs mx-auto">Configure os webhooks das suas plataformas de venda para começar a monitorar receita em tempo real</p>
+              <p className="font-mono text-xs text-muted-foreground/50 max-w-xs mx-auto">Configure os webhooks das suas plataformas de venda para começar a monitorar receita em tempo real</p>
               <Button onClick={() => setActiveTab("webhooks")} className="mt-4 rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-9 text-xs">
                 <Link2 className="h-3.5 w-3.5" />Configurar Webhooks
               </Button>
@@ -229,7 +229,7 @@ export default function RevenuePage() {
                   <div key={kpi.label} className={`border p-4 ${kpi.color}`}>
                     <div className="flex items-center gap-2 mb-2">
                       <kpi.icon className="h-3.5 w-3.5" />
-                      <span className="text-[9px] font-mono uppercase tracking-widest opacity-70">{kpi.label}</span>
+                      <span className="text-[11px] font-mono uppercase tracking-widest opacity-70">{kpi.label}</span>
                     </div>
                     <div className="font-mono font-bold text-xl text-foreground">{kpi.value}</div>
                   </div>
@@ -237,18 +237,18 @@ export default function RevenuePage() {
               </div>
 
               <div className="border border-border/50 bg-card/40 p-4">
-                <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Receita Por Plataforma</div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Receita Por Plataforma</div>
                 <div className="space-y-3">
                   {Object.entries(summaryData.byPlatform).map(([platform, amount]) => {
                     const pct = Math.round((amount / summaryData.total) * 100);
                     return (
                       <div key={platform} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${PLATFORM_COLOR[platform] ?? "border-border/50 text-muted-foreground"}`}>
+                          <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${PLATFORM_COLOR[platform] ?? "border-border/50 text-muted-foreground"}`}>
                             {PLATFORM_LABEL[platform] ?? platform}
                           </Badge>
                           <div className="flex items-center gap-3">
-                            <span className="font-mono text-[9px] text-muted-foreground/50">{pct}%</span>
+                            <span className="font-mono text-[11px] text-muted-foreground/50">{pct}%</span>
                             <span className="font-mono text-sm text-success font-bold">
                               R$ {(amount / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                             </span>
@@ -277,7 +277,7 @@ export default function RevenuePage() {
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all
+                  className={`px-3 py-1.5 text-xs font-mono uppercase tracking-widest transition-all
                     ${period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   {PERIOD_LABELS[p]}
@@ -289,7 +289,7 @@ export default function RevenuePage() {
                 <button
                   key={t}
                   onClick={() => setChartType(t)}
-                  className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all
+                  className={`px-3 py-1.5 text-xs font-mono uppercase tracking-widest transition-all
                     ${chartType === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   {l}
@@ -300,7 +300,7 @@ export default function RevenuePage() {
 
           {/* Chart */}
           <div className="border border-border/50 bg-card/40 p-4">
-            <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
+            <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
               Receita diária — {PERIOD_LABELS[period]}
             </div>
             <div style={{ height: 280 }}>
@@ -334,7 +334,7 @@ export default function RevenuePage() {
 
           {/* Cumulative */}
           <div className="border border-border/50 bg-card/40 p-4">
-            <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
+            <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-4">
               Receita acumulada — {PERIOD_LABELS[period]}
             </div>
             <div style={{ height: 180 }}>
@@ -367,7 +367,7 @@ export default function RevenuePage() {
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest transition-all
+                  className={`px-3 py-1.5 text-xs font-mono uppercase tracking-widest transition-all
                     ${period === p ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   {PERIOD_LABELS[p]}
@@ -379,7 +379,7 @@ export default function RevenuePage() {
               disabled={events.length === 0}
               variant="outline"
               size="sm"
-              className="rounded-none font-mono uppercase tracking-widest gap-2 h-8 text-[10px] btn-weapon-outline"
+              className="rounded-none font-mono uppercase tracking-widest gap-2 h-8 text-xs btn-weapon-outline"
             >
               <Download className="h-3 w-3" />CSV
             </Button>
@@ -396,13 +396,13 @@ export default function RevenuePage() {
             events.slice(0, 50).map(event => (
               <div key={event.id} className="border border-border/50 bg-card/40 px-4 py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 shrink-0 ${PLATFORM_COLOR[event.platform] ?? "border-border/50 text-muted-foreground"}`}>
+                  <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 shrink-0 ${PLATFORM_COLOR[event.platform] ?? "border-border/50 text-muted-foreground"}`}>
                     {PLATFORM_LABEL[event.platform] ?? event.platform}
                   </Badge>
-                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 shrink-0 ${event.eventType === "sale" ? "text-success border-success/40 bg-success/5" : "text-destructive border-destructive/40 bg-destructive/5"}`}>
+                  <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 shrink-0 ${event.eventType === "sale" ? "text-success border-success/40 bg-success/5" : "text-destructive border-destructive/40 bg-destructive/5"}`}>
                     {EVENT_LABEL[event.eventType] ?? event.eventType}
                   </Badge>
-                  <span className="text-[10px] font-mono text-muted-foreground/70 truncate">
+                  <span className="text-xs font-mono text-muted-foreground/70 truncate">
                     {event.productName ?? event.customerEmail ?? "—"}
                   </span>
                 </div>
@@ -410,7 +410,7 @@ export default function RevenuePage() {
                   <span className={`font-mono font-bold text-sm ${event.eventType === "sale" ? "text-success" : "text-destructive"}`}>
                     {event.eventType === "refund" ? "-" : "+"}R$ {Number(event.amountBrl).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
-                  <span className="text-[9px] font-mono text-muted-foreground/60">
+                  <span className="text-[11px] font-mono text-muted-foreground/60">
                     {new Date(event.createdAt).toLocaleDateString("pt-BR")}
                   </span>
                 </div>
@@ -424,29 +424,29 @@ export default function RevenuePage() {
       {activeTab === "webhooks" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
               Configure webhooks para receber eventos de venda em tempo real
             </p>
             <Button size="sm" onClick={() => setAddingWebhook(true)}
-              className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-[10px]">
+              className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs">
               <Plus className="h-3.5 w-3.5" />Adicionar
             </Button>
           </div>
 
           {addingWebhook && (
             <div className="border border-primary/30 bg-card/40 p-4 space-y-3">
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground block">Plataforma</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground block">Plataforma</label>
               <select value={webhookPlatform} onChange={e => setWebhookPlatform(e.target.value)}
                 className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none rounded-none h-9 px-3 text-foreground">
                 {Object.entries(PLATFORM_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => createWebhookMutation.mutate()} disabled={createWebhookMutation.isPending}
-                  className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-[10px]">
+                  className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs">
                   {createWebhookMutation.isPending ? <><Loader2 className="h-3 w-3 animate-spin" />Salvando...</> : <><Zap className="h-3 w-3" />Configurar</>}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setAddingWebhook(false)}
-                  className="font-mono uppercase tracking-widest rounded-none h-9 px-4 text-[10px] text-muted-foreground">
+                  className="font-mono uppercase tracking-widest rounded-none h-9 px-4 text-xs text-muted-foreground">
                   Cancelar
                 </Button>
               </div>
@@ -464,16 +464,16 @@ export default function RevenuePage() {
             (webhooksData?.configs ?? []).map(config => (
               <div key={config.id} className="border border-border/50 bg-card/40 p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${PLATFORM_COLOR[config.platform] ?? "border-border/50"}`}>
+                  <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${PLATFORM_COLOR[config.platform] ?? "border-border/50"}`}>
                     {PLATFORM_LABEL[config.platform] ?? config.platform}
                   </Badge>
                   {config.endpointUrl && (
-                    <code className="text-[9px] font-mono text-muted-foreground/70 bg-muted/20 px-2 py-1 truncate max-w-[300px]">
+                    <code className="text-[11px] font-mono text-muted-foreground/70 bg-muted/20 px-2 py-1 truncate max-w-[300px]">
                       {config.endpointUrl}
                     </code>
                   )}
                 </div>
-                <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${config.isActive ? "text-success border-success/40 bg-success/10" : "text-muted-foreground border-border/50"}`}>
+                <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${config.isActive ? "text-success border-success/40 bg-success/10" : "text-muted-foreground border-border/50"}`}>
                   {config.isActive ? "Ativo" : "Inativo"}
                 </Badge>
               </div>

@@ -51,7 +51,7 @@ function NameDialog({ onStart, onCancel }: { onStart: (name: string) => void; on
         <div className="w-2 h-2 rounded-full bg-destructive animate-pulse"></div>
         <span className="font-mono text-xs uppercase tracking-widest text-foreground font-bold">Iniciar Gravação</span>
       </div>
-      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Nome do lançamento</p>
+      <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-3">Nome do lançamento</p>
       <input
         autoFocus
         value={name}
@@ -63,13 +63,13 @@ function NameDialog({ onStart, onCancel }: { onStart: (name: string) => void; on
       <div className="flex gap-2">
         <button
           onClick={() => { if (name.trim()) onStart(name.trim()); }}
-          className="flex-1 h-9 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-mono text-[10px] uppercase tracking-widest font-bold flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 h-9 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-mono text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 transition-colors"
         >
           <Circle className="h-3 w-3 fill-current" /> Gravar
         </button>
         <button
           onClick={onCancel}
-          className="h-9 px-4 border border-border/50 text-muted-foreground hover:text-foreground font-mono text-[10px] uppercase tracking-widest transition-colors"
+          className="h-9 px-4 border border-border/50 text-muted-foreground hover:text-foreground font-mono text-xs uppercase tracking-widest transition-colors"
         >
           Cancelar
         </button>
@@ -204,7 +204,7 @@ export function RecordButton() {
           title="Gravar Lançamento"
         >
           <Circle className="h-3.5 w-3.5 fill-destructive/30 group-hover:fill-destructive transition-colors" />
-          <span className="font-mono text-[10px] uppercase tracking-widest font-bold">Gravar Lançamento</span>
+          <span className="font-mono text-xs uppercase tracking-widest font-bold">Gravar Lançamento</span>
         </button>
       </div>
     );
@@ -231,12 +231,12 @@ export function RecordButton() {
         }`}>
           <div className="flex items-center gap-2">
             {state === "recording" && <div className="w-2 h-2 rounded-full bg-destructive animate-pulse"></div>}
-            <span className={`font-mono text-[10px] uppercase tracking-widest font-black ${
+            <span className={`font-mono text-xs uppercase tracking-widest font-black ${
               state === "recording" ? "text-destructive" :
               state === "paused"    ? "text-yellow-400" : "text-success"
             }`}>{stateLabel}</span>
             {state !== "stopped" && (
-              <span className="font-mono text-[10px] text-muted-foreground/70">{fmtElapsed(elapsed)}</span>
+              <span className="font-mono text-xs text-muted-foreground/70">{fmtElapsed(elapsed)}</span>
             )}
           </div>
           <div className="flex items-center gap-1">
@@ -255,7 +255,7 @@ export function RecordButton() {
             <div className="px-4 py-3 border-b border-border/30">
               <div className="flex items-center gap-2 mb-1">
                 <Video className="h-3.5 w-3.5 text-muted-foreground/50" />
-                <p className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-widest truncate">
+                <p className="font-mono text-xs text-muted-foreground/70 uppercase tracking-widest truncate">
                   {recording?.name}
                 </p>
               </div>
@@ -265,7 +265,7 @@ export function RecordButton() {
                 </p>
               )}
               {state === "paused" && (
-                <p className="font-mono text-[10px] text-yellow-400/70 mt-1">
+                <p className="font-mono text-xs text-yellow-400/70 mt-1">
                   Gravação pausada — aguardando abertura do carrinho
                 </p>
               )}
@@ -277,13 +277,13 @@ export function RecordButton() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handlePause}
-                    className="h-9 border border-yellow-400/40 bg-yellow-400/5 text-yellow-400 hover:bg-yellow-400/15 font-mono text-[9px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    className="h-9 border border-yellow-400/40 bg-yellow-400/5 text-yellow-400 hover:bg-yellow-400/15 font-mono text-[11px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <Pause className="h-3 w-3" /> Pausar
                   </button>
                   <button
                     onClick={handleStop}
-                    className="h-9 border border-border/40 text-muted-foreground hover:border-destructive/40 hover:text-destructive font-mono text-[9px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    className="h-9 border border-border/40 text-muted-foreground hover:border-destructive/40 hover:text-destructive font-mono text-[11px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <Square className="h-3 w-3" /> Encerrar
                   </button>
@@ -294,13 +294,13 @@ export function RecordButton() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handleResume}
-                    className="h-9 border border-success/40 bg-success/5 text-success hover:bg-success/15 font-mono text-[9px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    className="h-9 border border-success/40 bg-success/5 text-success hover:bg-success/15 font-mono text-[11px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <Play className="h-3 w-3" /> Retomar
                   </button>
                   <button
                     onClick={handleStop}
-                    className="h-9 border border-border/40 text-muted-foreground hover:border-destructive/40 hover:text-destructive font-mono text-[9px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    className="h-9 border border-border/40 text-muted-foreground hover:border-destructive/40 hover:text-destructive font-mono text-[11px] uppercase tracking-widest font-bold flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <Square className="h-3 w-3" /> Encerrar
                   </button>
@@ -312,14 +312,14 @@ export function RecordButton() {
                   <button
                     onClick={handleDownload}
                     disabled={downloading}
-                    className="w-full h-10 bg-success hover:bg-success/90 text-success-foreground font-mono text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+                    className="w-full h-10 bg-success hover:bg-success/90 text-success-foreground font-mono text-xs uppercase tracking-widest font-black flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
                   >
                     <Download className="h-3.5 w-3.5" />
                     {downloading ? "Gerando ZIP..." : "Baixar ZIP"}
                   </button>
                   <button
                     onClick={handleDiscard}
-                    className="w-full h-8 border border-border/30 text-muted-foreground/50 hover:text-muted-foreground font-mono text-[9px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors"
+                    className="w-full h-8 border border-border/30 text-muted-foreground/50 hover:text-muted-foreground font-mono text-[11px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <X className="h-3 w-3" /> Descartar
                   </button>

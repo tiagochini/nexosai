@@ -76,11 +76,11 @@ export default function AdminPage() {
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">
             Admin SaaS · NexOS AI
           </h1>
-          <Badge variant="outline" className="rounded-none font-mono text-[9px] border-yellow-400/30 text-yellow-400 bg-yellow-400/10">
+          <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/30 text-yellow-400 bg-yellow-400/10">
             Owner
           </Badge>
         </div>
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mt-1">
+        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">
           Visão geral da plataforma · {data?.total ?? 0} usuários registrados
         </p>
       </div>
@@ -97,7 +97,7 @@ export default function AdminPage() {
             return (
               <div key={key} className="border border-border/50 bg-card/40 p-4 relative overflow-hidden card-weapon group">
                 <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/40 pointer-events-none" />
-                <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-3">{meta.label}</div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-3">{meta.label}</div>
                 <div className="flex items-end justify-between">
                   <span className="text-3xl font-mono font-bold text-foreground">{data?.byStatus?.[key] ?? 0}</span>
                   <Icon className={`h-5 w-5 opacity-70 ${
@@ -106,7 +106,7 @@ export default function AdminPage() {
                     key === "pausado"        ? "text-yellow-400" : "text-muted-foreground"
                   }`} />
                 </div>
-                <div className="text-[9px] text-muted-foreground/50 font-mono mt-2 leading-tight">{meta.desc}</div>
+                <div className="text-[11px] text-muted-foreground/50 font-mono mt-2 leading-tight">{meta.desc}</div>
               </div>
             );
           })}
@@ -126,7 +126,7 @@ export default function AdminPage() {
             <div key={s.label} className="border border-border/50 bg-card/40 p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Icon className={`h-3.5 w-3.5 ${s.color}`} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/70">{s.label}</span>
+                <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">{s.label}</span>
               </div>
               <div className={`font-mono font-bold text-2xl ${s.color}`}>
                 {isLoading ? <Skeleton className="h-7 w-12 bg-muted/20" /> : s.value}
@@ -139,7 +139,7 @@ export default function AdminPage() {
       {/* Users Table */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-[10px] font-mono uppercase tracking-widest font-bold text-muted-foreground flex items-center gap-2">
+          <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground flex items-center gap-2">
             <Users className="h-3.5 w-3.5" />
             Todos os Usuários — {data?.total ?? 0} registros
           </h2>
@@ -147,7 +147,7 @@ export default function AdminPage() {
 
         <div className="border border-border/50 bg-card/40 overflow-hidden">
           {/* Column headers */}
-          <div className="hidden md:grid grid-cols-[1fr_90px_70px_80px_120px] text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 border-b border-border/50 bg-muted/10 px-5 py-2.5 gap-4">
+          <div className="hidden md:grid grid-cols-[1fr_90px_70px_80px_120px] text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 border-b border-border/50 bg-muted/10 px-5 py-2.5 gap-4">
             <span>Usuário / Workspace</span>
             <span className="text-right">Plano</span>
             <span className="text-right">Camp.</span>
@@ -178,20 +178,20 @@ export default function AdminPage() {
                       <div className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">
                         {u.userName}
                       </div>
-                      <div className="text-[10px] text-muted-foreground font-mono truncate flex items-center gap-2">
+                      <div className="text-xs text-muted-foreground font-mono truncate flex items-center gap-2">
                         <span>{u.email}</span>
                         {u.workspaceName && (
                           <><span className="text-muted-foreground/30">·</span>
                           <span className="text-muted-foreground/50">{u.workspaceName}</span></>
                         )}
                       </div>
-                      <div className="text-[9px] text-muted-foreground/40 font-mono mt-0.5">
+                      <div className="text-[11px] text-muted-foreground/40 font-mono mt-0.5">
                         Criado {new Date(u.createdAt).toLocaleDateString("pt-BR")}
                       </div>
                     </div>
 
                     <div className="hidden md:flex justify-end">
-                      <span className={`text-[9px] font-mono uppercase tracking-widest px-2 py-1 border ${u.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
+                      <span className={`text-[11px] font-mono uppercase tracking-widest px-2 py-1 border ${u.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
                         {u.planSlug}
                       </span>
                     </div>
@@ -206,7 +206,7 @@ export default function AdminPage() {
 
                     <div className="flex justify-end items-center gap-1.5">
                       {meta && (
-                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 ${meta.color}`}>
+                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 ${meta.color}`}>
                           <Icon className="h-2.5 w-2.5 mr-1 shrink-0" />
                           {meta.label}
                         </Badge>

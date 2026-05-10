@@ -94,22 +94,22 @@ export default function VslsPage() {
   if (selectedVsl) {
     return (
       <div className="space-y-5 max-w-5xl mx-auto">
-        <Button variant="ghost" size="sm" onClick={() => setSelectedVsl(null)} className="font-mono uppercase text-[10px] tracking-widest -ml-2 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="sm" onClick={() => setSelectedVsl(null)} className="font-mono uppercase text-xs tracking-widest -ml-2 text-muted-foreground hover:text-foreground">
           ← Voltar para VSLs
         </Button>
         <div className="flex flex-wrap items-center gap-3 border-b border-border/50 pb-4">
           <h1 className="font-mono font-bold text-xl uppercase tracking-wide flex-1">{selectedVsl.title}</h1>
-          <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${STATUS_COLOR[selectedVsl.status] ?? ""}`}>{selectedVsl.status}</Badge>
-          <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-border/50">{FORMAT_LABEL[selectedVsl.format] ?? selectedVsl.format}</Badge>
+          <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${STATUS_COLOR[selectedVsl.status] ?? ""}`}>{selectedVsl.status}</Badge>
+          <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-border/50">{FORMAT_LABEL[selectedVsl.format] ?? selectedVsl.format}</Badge>
           {selectedVsl.status === "draft" && (
             <Button size="sm" onClick={() => generateMutation.mutate(selectedVsl.id)} disabled={generateMutation.isPending}
-              className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-[10px]">
+              className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs">
               {generateMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando...</> : <><Zap className="h-3.5 w-3.5" />Gerar com IA</>}
             </Button>
           )}
           {selectedVsl.status === "awaiting_approval" && (
             <Button size="sm" onClick={() => approveMutation.mutate(selectedVsl.id)} disabled={approveMutation.isPending}
-              className="font-mono uppercase tracking-widest rounded-none gap-2 h-9 px-4 text-[10px] bg-success/20 text-success border border-success/30">
+              className="font-mono uppercase tracking-widest rounded-none gap-2 h-9 px-4 text-xs bg-success/20 text-success border border-success/30">
               <CheckCircle2 className="h-3.5 w-3.5" />Aprovar VSL
             </Button>
           )}
@@ -124,12 +124,12 @@ export default function VslsPage() {
             (selectedVsl.sections ?? []).sort((a,b) => a.orderIndex - b.orderIndex).map(section => (
               <div key={section.id} className={`border bg-card/40 p-4 ${section.status === "approved" ? "border-success/30" : "border-border/50"}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest">#{section.orderIndex + 1}</span>
+                  <span className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest">#{section.orderIndex + 1}</span>
                   <span className="font-mono text-xs font-bold uppercase tracking-wide">{section.title}</span>
-                  <Badge variant="outline" className="rounded-none font-mono text-[8px] px-1.5 py-0.5 border-border/40 text-muted-foreground ml-auto">{section.sectionType}</Badge>
+                  <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 py-0.5 border-border/40 text-muted-foreground ml-auto">{section.sectionType}</Badge>
                 </div>
                 {section.script && (
-                  <p className="text-[10px] font-mono text-foreground/80 leading-relaxed whitespace-pre-wrap mt-2 border-t border-border/30 pt-2">{section.script}</p>
+                  <p className="text-xs font-mono text-foreground/80 leading-relaxed whitespace-pre-wrap mt-2 border-t border-border/30 pt-2">{section.script}</p>
                 )}
               </div>
             ))
@@ -148,7 +148,7 @@ export default function VslsPage() {
             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">VSL Studio</h1>
           </div>
-          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Roteiros de video de vendas gerados por IA · VSL, Webinar, Masterclass</p>
+          <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Roteiros de video de vendas gerados por IA · VSL, Webinar, Masterclass</p>
         </div>
         <Button onClick={() => setCreating(true)} className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11 px-5">
           <Plus className="h-4 w-4" />Nova VSL
@@ -163,30 +163,30 @@ export default function VslsPage() {
           <h2 className="font-mono font-bold text-sm uppercase tracking-widest">Nova VSL</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Título *</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Título *</label>
               <Input value={form.title} onChange={e => setForm(p => ({...p, title: e.target.value}))} placeholder="VSL Principal do Produto X" className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary rounded-none h-9" />
             </div>
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Formato</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Formato</label>
               <select value={form.format} onChange={e => setForm(p => ({...p, format: e.target.value}))}
                 className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none rounded-none h-9 px-3 text-foreground">
                 {Object.entries(FORMAT_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Nome do Produto</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Nome do Produto</label>
               <Input value={form.productName} onChange={e => setForm(p => ({...p, productName: e.target.value}))} placeholder="Curso X" className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary rounded-none h-9" />
             </div>
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Preço</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Preço</label>
               <Input value={form.productPrice} onChange={e => setForm(p => ({...p, productPrice: e.target.value}))} placeholder="R$ 997" className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary rounded-none h-9" />
             </div>
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Público-alvo</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Público-alvo</label>
               <Input value={form.targetAudience} onChange={e => setForm(p => ({...p, targetAudience: e.target.value}))} placeholder="Empreendedores iniciantes" className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary rounded-none h-9" />
             </div>
             <div>
-              <label className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Promessa Principal</label>
+              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1 block">Promessa Principal</label>
               <Input value={form.mainPromise} onChange={e => setForm(p => ({...p, mainPromise: e.target.value}))} placeholder="Faturar R$10k em 30 dias" className="font-mono text-sm bg-background/50 border-border/50 focus-visible:ring-primary rounded-none h-9" />
             </div>
           </div>
@@ -207,7 +207,7 @@ export default function VslsPage() {
         <div className="py-16 text-center">
           <Video className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Nenhuma VSL criada ainda</p>
-          <p className="font-mono text-[10px] text-muted-foreground/50">Crie sua primeira VSL e deixe a IA gerar o roteiro completo</p>
+          <p className="font-mono text-xs text-muted-foreground/50">Crie sua primeira VSL e deixe a IA gerar o roteiro completo</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -221,10 +221,10 @@ export default function VslsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase">{vsl.title}</span>
-                    <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 ${STATUS_COLOR[vsl.status] ?? ""}`}>{vsl.status}</Badge>
-                    <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-border/40 text-muted-foreground">{FORMAT_LABEL[vsl.format] ?? vsl.format}</Badge>
+                    <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${STATUS_COLOR[vsl.status] ?? ""}`}>{vsl.status}</Badge>
+                    <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-border/40 text-muted-foreground">{FORMAT_LABEL[vsl.format] ?? vsl.format}</Badge>
                   </div>
-                  <div className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-widest">
+                  <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest">
                     {new Date(vsl.createdAt).toLocaleDateString("pt-BR")}
                     {vsl.sections && ` · ${vsl.sections.length} seções`}
                   </div>

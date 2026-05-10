@@ -169,7 +169,7 @@ export default function AgentChat() {
       {/* Header */}
       <div className="shrink-0 pb-4 border-b border-border/50 mb-4">
         <Link href="/agents">
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />Time de Agentes
           </Button>
         </Link>
@@ -180,18 +180,18 @@ export default function AgentChat() {
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h1 className="font-mono font-bold text-xl uppercase tracking-wide text-foreground">{agent.name}</h1>
-              <Badge variant="outline" className={`rounded-none font-mono text-[9px] px-2 py-0.5 border ${PROVIDER_BADGE_CLASS[agent.provider]}`}>{agent.provider}</Badge>
-              <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-border/50 text-muted-foreground">3 cr/msg</Badge>
+              <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 border ${PROVIDER_BADGE_CLASS[agent.provider]}`}>{agent.provider}</Badge>
+              <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-border/50 text-muted-foreground">3 cr/msg</Badge>
             </div>
-            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">{agent.tagline} · {agent.description}</p>
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">{agent.tagline} · {agent.description}</p>
           </div>
           <div className="flex gap-2 shrink-0">
             {messages.length > 0 && (
               <>
-                <Button variant="ghost" size="sm" onClick={exportChat} className="font-mono text-[10px] uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" onClick={exportChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
                   <Download className="h-3 w-3 mr-1.5" />Exportar
                 </Button>
-                <Button variant="ghost" size="sm" onClick={clearChat} className="font-mono text-[10px] uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" onClick={clearChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
                   <RefreshCw className="h-3 w-3 mr-1.5" />Limpar
                 </Button>
               </>
@@ -206,7 +206,7 @@ export default function AgentChat() {
         <div className="flex gap-1 border border-border/50 bg-card/40 p-0.5 rounded-sm">
           {(Object.keys(MODE_LABELS) as ContextMode[]).map(m => (
             <button key={m} onClick={() => setContextMode(m)}
-              className={`px-2.5 py-1.5 text-[9px] font-mono uppercase tracking-widest transition-all rounded-sm
+              className={`px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-widest transition-all rounded-sm
                 ${contextMode === m ? `${accent.bg} ${accent.text} border ${accent.border}` : "text-muted-foreground hover:text-foreground"}`}>
               {MODE_LABELS[m]}
             </button>
@@ -216,7 +216,7 @@ export default function AgentChat() {
         {/* Campaign context */}
         {(campaignsData?.campaigns ?? []).length > 0 && (
           <select value={selectedCampaign} onChange={e => setSelectedCampaign(e.target.value)}
-            className="text-[9px] font-mono uppercase tracking-widest bg-card/40 border border-border/50 px-3 py-1.5 text-muted-foreground rounded-sm focus:border-primary/50 focus:outline-none">
+            className="text-[11px] font-mono uppercase tracking-widest bg-card/40 border border-border/50 px-3 py-1.5 text-muted-foreground rounded-sm focus:border-primary/50 focus:outline-none">
             <option value="">Sem contexto de campanha</option>
             {(campaignsData?.campaigns ?? []).map(c => (
               <option key={c.id} value={c.id}>{c.title}</option>
@@ -235,13 +235,13 @@ export default function AgentChat() {
             </div>
             <div className="text-center">
               <p className="font-mono text-sm text-foreground font-bold uppercase tracking-wide mb-1">{agent.name}</p>
-              <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Escolha uma sugestão ou escreva sua pergunta</p>
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Escolha uma sugestão ou escreva sua pergunta</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 w-full max-w-xl">
               {agent.suggestions.map(s => (
                 <button key={s} onClick={() => void sendMessage(s)}
                   className="text-left border border-border/50 bg-card/30 hover:border-primary/40 hover:bg-card/60 p-3 transition-all group">
-                  <span className="text-[10px] font-mono text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">{s}</span>
+                  <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">{s}</span>
                 </button>
               ))}
             </div>
@@ -266,7 +266,7 @@ export default function AgentChat() {
               <div className={`max-w-[85%] px-4 py-3 text-xs font-mono leading-relaxed whitespace-pre-wrap border
                 ${isUser ? "bg-primary/15 border-primary/25 text-foreground" : "bg-card/70 border-border/40 text-foreground"}`}>
                 {msg.content}
-                <div className="mt-2 text-[8px] text-muted-foreground/50 uppercase tracking-widest">
+                <div className="mt-2 text-[11px] text-muted-foreground/50 uppercase tracking-widest">
                   {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
@@ -308,10 +308,10 @@ export default function AgentChat() {
           </Button>
         </div>
         <div className="flex justify-between items-center mt-1.5 px-1">
-          <span className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+          <span className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">
             Modo: {MODE_LABELS[contextMode]} · {selectedCampaign ? "Com contexto de campanha" : "Sem contexto"}
           </span>
-          <span className="text-[9px] font-mono text-muted-foreground/40">3 créditos por mensagem</span>
+          <span className="text-[11px] font-mono text-muted-foreground/40">3 créditos por mensagem</span>
         </div>
       </div>
     </div>

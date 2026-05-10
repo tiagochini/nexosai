@@ -87,7 +87,7 @@ function CreditGauge({ balance, total }: { balance: number; total: number }) {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-mono font-bold text-2xl text-foreground leading-none">{Math.round(pct)}%</span>
-              <span className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mt-0.5">restante</span>
+              <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mt-0.5">restante</span>
             </div>
           </div>
         </div>
@@ -95,7 +95,7 @@ function CreditGauge({ balance, total }: { balance: number; total: number }) {
         {/* Stats */}
         <div className="flex-1 space-y-4">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Saldo Disponível</div>
+            <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-1">Saldo Disponível</div>
             <div className="flex items-baseline gap-2">
               <span
                 className="font-mono font-bold text-5xl"
@@ -105,7 +105,7 @@ function CreditGauge({ balance, total }: { balance: number; total: number }) {
               </span>
               <span className="font-mono text-sm text-muted-foreground">Cr</span>
               {isLow && (
-                <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest text-destructive border-destructive/40 bg-destructive/10 animate-pulse ml-2">
+                <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest text-destructive border-destructive/40 bg-destructive/10 animate-pulse ml-2">
                   Crítico
                 </Badge>
               )}
@@ -113,11 +113,11 @@ function CreditGauge({ balance, total }: { balance: number; total: number }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="border border-border/30 bg-background/40 p-3">
-              <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Total Mensal</div>
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Total Mensal</div>
               <div className="font-mono font-bold text-lg text-foreground">{total.toLocaleString("pt-BR")}</div>
             </div>
             <div className="border border-border/30 bg-background/40 p-3">
-              <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Utilizados</div>
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Utilizados</div>
               <div className="font-mono font-bold text-lg text-muted-foreground">{used.toLocaleString("pt-BR")}</div>
             </div>
           </div>
@@ -145,7 +145,7 @@ function CostReference() {
     <div className="border border-border/50 bg-card/40 backdrop-blur-sm card-weapon overflow-hidden">
       <div className="px-5 py-3 border-b border-border/40 flex items-center gap-2">
         <Zap className="h-3.5 w-3.5 text-primary" />
-        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Custo por Ação de IA</span>
+        <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Custo por Ação de IA</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y divide-x-0 sm:divide-y-0 sm:grid-flow-row">
         {costs.map((c, i) => {
@@ -159,7 +159,7 @@ function CostReference() {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <span className="font-mono font-bold text-sm text-foreground">{c.cost}</span>
-                <span className="font-mono text-[9px] text-muted-foreground">Cr</span>
+                <span className="font-mono text-[11px] text-muted-foreground">Cr</span>
               </div>
             </div>
           );
@@ -206,7 +206,7 @@ export default function CreditsPage() {
           </p>
         </div>
         <Link href="/settings?tab=workspace">
-          <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline shrink-0">
+          <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline shrink-0">
             <ArrowUpRight className="h-3 w-3 mr-1.5" />
             Ver Planos
           </Button>
@@ -232,7 +232,7 @@ export default function CreditsPage() {
             <div key={s.label} className="border border-border/40 bg-card/30 p-4 card-weapon">
               <div className="flex items-center gap-2 mb-2">
                 <Icon className={`h-3.5 w-3.5 ${s.color}`} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{s.label}</span>
+                <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{s.label}</span>
               </div>
               <div className={`font-mono font-bold text-2xl ${s.color}`}>
                 {s.value.toLocaleString("pt-BR")}
@@ -247,9 +247,9 @@ export default function CreditsPage() {
         <div className="px-5 py-3 border-b border-border/40 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 text-primary" />
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Histórico de Uso</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Histórico de Uso</span>
           </div>
-          <span className="font-mono text-[9px] text-muted-foreground">{transactions.length} transações</span>
+          <span className="font-mono text-[11px] text-muted-foreground">{transactions.length} transações</span>
         </div>
 
         {loadingHistory ? (
@@ -260,7 +260,7 @@ export default function CreditsPage() {
           <div className="flex flex-col items-center py-16 gap-2">
             <Zap className="h-8 w-8 text-muted-foreground/20" />
             <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest">Nenhuma transação ainda</p>
-            <p className="font-mono text-[10px] text-muted-foreground/40">Use os agentes de IA para ver o histórico aqui</p>
+            <p className="font-mono text-xs text-muted-foreground/40">Use os agentes de IA para ver o histórico aqui</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -268,7 +268,7 @@ export default function CreditsPage() {
               <thead>
                 <tr className="border-b border-border/30 bg-muted/10">
                   {["Ação", "Créditos", "Saldo Antes", "Saldo Depois", "Data"].map(h => (
-                    <th key={h} className="px-4 py-2 text-left font-mono text-[9px] uppercase tracking-widest text-muted-foreground/70">{h}</th>
+                    <th key={h} className="px-4 py-2 text-left font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -297,7 +297,7 @@ export default function CreditsPage() {
                         <span className="font-mono text-xs text-muted-foreground">{tx.balanceAfter}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-mono text-[10px] text-muted-foreground/60">{formatDate(tx.createdAt)}</span>
+                        <span className="font-mono text-xs text-muted-foreground/60">{formatDate(tx.createdAt)}</span>
                       </td>
                     </tr>
                   );

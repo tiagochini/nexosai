@@ -239,7 +239,7 @@ export default function CampaignIntake() {
       {/* ── Header ── */}
       <div className="border-b border-border/50 pb-4">
         <Link href={`/campaigns/${campaignId}`}>
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-[10px] tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />Retornar à Campanha
           </Button>
         </Link>
@@ -251,20 +251,20 @@ export default function CampaignIntake() {
                 Briefing Estratégico
               </h1>
             </div>
-            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest">
+            <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
               A IA aprende sobre seu produto em conversa natural e extrai os dados automaticamente
             </p>
           </div>
           <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
             <div className="flex justify-between items-center">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Completude</span>
-              <span className="font-mono text-[10px] font-bold text-primary">{progress}%</span>
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Completude</span>
+              <span className="font-mono text-xs font-bold text-primary">{progress}%</span>
             </div>
             <Progress value={progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
             {scoreData && (
               <div className="flex justify-between items-center pt-1 border-t border-border/30">
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Score IA</span>
-                <Badge variant="outline" className="rounded-none font-mono text-[9px] px-2 py-0.5 border-success/30 text-success bg-success/10">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Score IA</span>
+                <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-success/30 text-success bg-success/10">
                   {scoreData.score} · {scoreData.label}
                 </Badge>
               </div>
@@ -280,7 +280,7 @@ export default function CampaignIntake() {
           { id: "form" as const, label: "Formulário", icon: LayoutList },
         ].map((v) => (
           <button key={v.id} onClick={() => setView(v.id)}
-            className={`flex items-center gap-2 px-3 md:px-4 py-2 text-[10px] md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
+            className={`flex items-center gap-2 px-3 md:px-4 py-2 text-xs md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
               ${view === v.id ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
             <v.icon className="h-3.5 w-3.5" />{v.label}
           </button>
@@ -293,7 +293,7 @@ export default function CampaignIntake() {
           {/* Info bar */}
           <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2 shrink-0">
             <Database className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
               Dados extraídos automaticamente e salvos em tempo real · IA iniciada automaticamente
             </span>
           </div>
@@ -312,7 +312,7 @@ export default function CampaignIntake() {
                       <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
                     ))}
                   </div>
-                  <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">IA inicializando sessão de intake...</span>
+                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">IA inicializando sessão de intake...</span>
                 </div>
               </div>
             )}
@@ -394,7 +394,7 @@ export default function CampaignIntake() {
         <div className="space-y-4">
           <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2">
             <Database className="h-3.5 w-3.5 text-primary" />
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
               Edite campos individuais — sincronizados com o chat em tempo real
             </span>
           </div>
@@ -404,7 +404,7 @@ export default function CampaignIntake() {
               const placeholder = (q as unknown as { placeholder?: string }).placeholder ?? "Insira os dados...";
               return (
                 <div key={q.key} className="space-y-1.5 group">
-                  <label className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
+                  <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
                     <span className="w-1 h-1 rounded-full bg-muted-foreground/30 group-focus-within:bg-primary transition-all" />
                     {q.label} {q.required && <span className="text-primary">*</span>}
                   </label>

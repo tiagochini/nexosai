@@ -111,7 +111,7 @@ function ProposalCard({ proposal, onSelect }: { proposal: ProductProposal; onSel
 
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3 className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors">{proposal.name}</h3>
-        <Badge variant="outline" className="rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border-primary/40 text-primary bg-primary/10 shrink-0">
+        <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border-primary/40 text-primary bg-primary/10 shrink-0">
           R$ {proposal.estimatedPrice.toLocaleString("pt-BR")}
         </Badge>
       </div>
@@ -123,7 +123,7 @@ function ProposalCard({ proposal, onSelect }: { proposal: ProductProposal; onSel
       </div>
 
       <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between">
-        <p className="text-[10px] font-mono text-success italic">{proposal.whyViable}</p>
+        <p className="text-xs font-mono text-success italic">{proposal.whyViable}</p>
         <ChevronRight className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2" />
       </div>
     </div>
@@ -309,7 +309,7 @@ export default function Onboarding() {
                         <h3 className="font-mono font-bold text-base text-foreground group-hover:text-primary transition-colors">
                           {p.title}
                         </h3>
-                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 ${p.badgeColor}`}>
+                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 ${p.badgeColor}`}>
                           {p.badge}
                         </Badge>
                       </div>
@@ -323,7 +323,7 @@ export default function Onboarding() {
             })}
           </div>
 
-          <p className="text-center text-[10px] font-mono text-muted-foreground/50 uppercase tracking-widest mt-8">
+          <p className="text-center text-xs font-mono text-muted-foreground/50 uppercase tracking-widest mt-8">
             Você pode mudar de caminho a qualquer momento
           </p>
         </div>
@@ -344,12 +344,12 @@ export default function Onboarding() {
               <h2 className="font-mono font-bold text-sm text-foreground uppercase tracking-widest">
                 {path === "has_product" ? "Briefing Estratégico" : path === "building_product" ? "Product Discovery" : "Estratégia de Afiliado"}
               </h2>
-              <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+              <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
                 {pathMeta.subtitle}
               </p>
             </div>
           </div>
-          <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-1 ${pathMeta.badgeColor}`}>
+          <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-1 ${pathMeta.badgeColor}`}>
             {pathMeta.badge}
           </Badge>
         </div>
@@ -363,7 +363,7 @@ export default function Onboarding() {
           {/* Product proposals */}
           {proposals && proposals.length > 0 && (
             <div className="space-y-3">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground px-1">
+              <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground px-1">
                 Selecione a proposta que mais combina com você:
               </p>
               {proposals.map((p) => (
@@ -386,7 +386,7 @@ export default function Onboarding() {
               </div>
               {affiliateStrategy.firstSteps.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Primeiros passos:</p>
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">Primeiros passos:</p>
                   <ul className="space-y-1">
                     {affiliateStrategy.firstSteps.map((step, i) => (
                       <li key={i} className="flex items-start gap-2 text-[11px] font-mono">
@@ -460,7 +460,7 @@ export default function Onboarding() {
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
-            <p className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest mt-2 text-right">
+            <p className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest mt-2 text-right">
               Shift+Enter para nova linha
             </p>
           </div>
@@ -524,7 +524,7 @@ export default function Onboarding() {
         <div className="text-center">
           <div className="inline-flex items-center gap-2 border border-success/40 bg-success/10 px-3 py-1.5 mb-4">
             <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-            <span className="font-mono text-[10px] uppercase tracking-widest text-success">Plano Gerado pela IA</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-success">Plano Gerado pela IA</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-mono font-bold uppercase tracking-tighter text-foreground mb-2">
             Seu Lançamento em 7 Dias
@@ -540,9 +540,9 @@ export default function Onboarding() {
             const Icon = d.icon;
             return (
               <div key={d.day} className={`border p-2 text-center ${d.color}`}>
-                <div className="font-mono text-[8px] uppercase tracking-widest opacity-60 mb-1.5">D{d.day}</div>
+                <div className="font-mono text-[11px] uppercase tracking-widest opacity-60 mb-1.5">D{d.day}</div>
                 <Icon className="h-3.5 w-3.5 mx-auto mb-1.5" />
-                <div className="font-mono text-[8px] font-bold uppercase leading-tight hidden sm:block">{d.phase}</div>
+                <div className="font-mono text-[11px] font-bold uppercase leading-tight hidden sm:block">{d.phase}</div>
               </div>
             );
           })}
@@ -555,9 +555,9 @@ export default function Onboarding() {
             return (
               <div key={d.day} className={`border px-4 py-2.5 flex items-center gap-4 ${d.color}`}>
                 <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-mono text-[9px] font-bold w-6 shrink-0">{d.day}</span>
-                <span className="font-mono text-[9px] uppercase tracking-widest opacity-60 w-24 shrink-0 hidden md:block">{d.phase}</span>
-                <span className="font-mono text-[10px] text-foreground leading-relaxed">{d.activity}</span>
+                <span className="font-mono text-[11px] font-bold w-6 shrink-0">{d.day}</span>
+                <span className="font-mono text-[11px] uppercase tracking-widest opacity-60 w-24 shrink-0 hidden md:block">{d.phase}</span>
+                <span className="font-mono text-xs text-foreground leading-relaxed">{d.activity}</span>
               </div>
             );
           })}
@@ -568,15 +568,15 @@ export default function Onboarding() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
                 Sistema de 29 Agentes IA
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="font-mono text-[8px] uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">
                 16 chat direto
               </span>
-              <span className="font-mono text-[8px] uppercase tracking-widest text-cyan-400 border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5">
                 13 autônomos
               </span>
             </div>
@@ -584,13 +584,13 @@ export default function Onboarding() {
 
           {/* Direct-chat agents by category */}
           <div>
-            <p className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50 mb-2">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2">
               Disponíveis para consulta direta
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
               {CHAT_AGENTS.map((agent) => (
                 <div key={agent.label} className={`border border-current/15 bg-current/5 px-2 py-1.5 ${agent.color}`}>
-                  <span className="font-mono text-[8px] font-bold uppercase tracking-wide leading-tight block">{agent.label}</span>
+                  <span className="font-mono text-[11px] font-bold uppercase tracking-wide leading-tight block">{agent.label}</span>
                   <span className="font-mono text-[7px] text-muted-foreground/50 uppercase">{agent.cat}</span>
                 </div>
               ))}
@@ -599,12 +599,12 @@ export default function Onboarding() {
 
           {/* Autonomous agents */}
           <div>
-            <p className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50 mb-2">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2">
               Executados automaticamente durante campanhas
             </p>
             <div className="flex flex-wrap gap-1">
               {AUTO_AGENTS.map((name) => (
-                <span key={name} className="font-mono text-[8px] border border-cyan-400/20 bg-cyan-400/5 text-cyan-400/70 px-2 py-1 uppercase tracking-wide">
+                <span key={name} className="font-mono text-[11px] border border-cyan-400/20 bg-cyan-400/5 text-cyan-400/70 px-2 py-1 uppercase tracking-wide">
                   {name}
                 </span>
               ))}
@@ -622,14 +622,14 @@ export default function Onboarding() {
             <div key={track.label} className={`border px-3 py-2.5 text-center relative ${track.color} ${track.active ? "bg-primary/5" : "opacity-40"}`}>
               {track.active && (
                 <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                  <Badge variant="outline" className="rounded-none font-mono text-[8px] px-1.5 border-primary/40 text-primary bg-background">
+                  <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 border-primary/40 text-primary bg-background">
                     Seu track
                   </Badge>
                 </div>
               )}
-              <div className="font-mono text-[8px] uppercase tracking-widest opacity-60 mb-1">{track.label}</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest opacity-60 mb-1">{track.label}</div>
               <div className="font-mono text-xs font-bold">{track.value}</div>
-              <div className="font-mono text-[8px] text-muted-foreground">em 7 dias</div>
+              <div className="font-mono text-[11px] text-muted-foreground">em 7 dias</div>
             </div>
           ))}
         </div>
@@ -641,7 +641,7 @@ export default function Onboarding() {
           <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary" />
           <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary" />
           <div className="text-center">
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-3">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-3">
               Próximo passo: Briefing Completo com a IA
             </div>
             <Button
@@ -651,7 +651,7 @@ export default function Onboarding() {
               <Rocket className="h-4 w-4" />
               {path === "has_product" ? "Iniciar Briefing Estratégico" : "Ir para Minha Campanha"}
             </Button>
-            <p className="font-mono text-[9px] text-muted-foreground/50 mt-2">
+            <p className="font-mono text-[11px] text-muted-foreground/50 mt-2">
               A IA conduz você pelo restante do processo — leva ~8 minutos
             </p>
           </div>
