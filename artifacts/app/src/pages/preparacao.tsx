@@ -234,7 +234,7 @@ function AiChat({ segment }: { segment: Segment }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-            placeholder="Pergunte sobre o NexOS AI, planos, lançamento..."
+            placeholder={jeffTyping ? "Aguarde o Jeff terminar de digitar..." : "Pergunte sobre o NexOS AI, planos, lançamento..."}
             className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary font-sans text-sm h-11 flex-1"
             disabled={loading || jeffTyping}
           />

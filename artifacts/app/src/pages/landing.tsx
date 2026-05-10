@@ -8,6 +8,7 @@ import {
   ArrowRight, CheckCircle2, BarChart3, Mail, MessageSquare,
   BrainCircuit, Clock, Lock, Users, AlertTriangle,
   Building2, User, ChevronRight, Zap, Eye, Cpu, Radio,
+  ChevronDown, ChevronUp, Shield, Target, Layers, Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -222,7 +223,11 @@ function WaitlistForm({ segment, onBack, onSuccess }: { segment: Segment; onBack
         body: JSON.stringify({ name: name.trim(), whatsapp: whatsapp.replace(/\D/g, ""), segment, source: "landing" }),
       });
       const json = await res.json();
-      if (res.ok || json.joined) { onSuccess(); } else { toast.error("Erro ao entrar na lista. Tente novamente."); }
+      if (res.ok || json.joined) {
+        localStorage.setItem("nexos_joined", "true");
+        localStorage.setItem("nexos_segment", segment);
+        onSuccess();
+      } else { toast.error("Erro ao entrar na lista. Tente novamente."); }
     } catch { toast.error("Erro de conexão. Tente novamente."); }
     finally { setLoading(false); }
   };
@@ -288,6 +293,204 @@ function SuccessState({ segment }: { segment: Segment }) {
         <p className={`font-mono text-[11px] text-${color}/50 pt-1`}>+ {d.esquentaSequence.length - 4} mensagens até a abertura...</p>
       </div>
     </div>
+  );
+}
+
+// ─── Post-registration hero replacement ───────────────────────────────────────
+
+function PostRegistrationHero({ segment }: { segment: Segment }) {
+  const d = SEGMENT_DATA[segment];
+  const color = d.color;
+  const Icon = segment === "agency" ? Building2 : User;
+  return (
+    <div className="relative">
+      <div className="border border-primary/30 bg-card/40 backdrop-blur-xl p-8 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-primary"></div>
+        <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary"></div>
+        <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary"></div>
+        <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary"></div>
+        <div className="flex items-center gap-4 mb-5">
+          <div className={`w-12 h-12 border border-${color}/30 bg-${color}/10 flex items-center justify-center`}>
+            <CheckCircle2 className={`h-6 w-6 text-${color} drop-shadow-[0_0_10px_hsl(var(--${color})/0.6)]`} />
+          </div>
+          <div>
+            <div className={`font-mono text-[11px] uppercase tracking-widest text-${color} font-bold mb-0.5`}>
+              <Icon className="h-3 w-3 inline mr-1" />{d.badge}
+            </div>
+            <div className="font-mono font-black uppercase tracking-wide text-sm text-foreground">
+              Você está dentro da lista.
+            </div>
+          </div>
+        </div>
+        <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-5">
+          {d.successBody}
+        </p>
+        <div className="border-t border-border/30 pt-4">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 text-center">
+            Explore abaixo como o NexOS vai automatizar cada etapa do seu lançamento
+          </p>
+          <div className="flex justify-center mt-3">
+            <div className="flex flex-col items-center gap-1 animate-bounce">
+              <ChevronDown className="h-5 w-5 text-primary/50" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Features deep-dive (clicáveis pós-cadastro) ──────────────────────────────
+
+const FEATURES = [
+  {
+    icon: BrainCircuit,
+    label: "Diagnóstico com IA",
+    tag: "Intake · Passo 1",
+    summary: "A IA entende seu produto antes de qualquer execução.",
+    detail: `Ao iniciar um lançamento, o NexOS conduz uma conversa estruturada de até 20 perguntas sobre o produto, o público, as metas e o histórico do criador. Com base nas respostas, ele calcula automaticamente:\n\n• Viabilidade financeira — margem de contribuição, custo de entrega, break-even\n• Investimento mínimo recomendado em tráfego para a trilha escolhida\n• Score de prontidão do produto (0–100) com red flags sinalizados antes de avançar\n• Tipo de lançamento mais adequado: PLF, Semente, Perpétuo ou Afiliado\n\nNada avança para estratégia sem o diagnóstico aprovado. É a IA fazendo o trabalho de um estrategista sênior em minutos.`,
+  },
+  {
+    icon: Target,
+    label: "Estratégia gerada automaticamente",
+    tag: "Strategy · Passo 2",
+    summary: "Claude monta o plano completo do lançamento.",
+    detail: `Após o diagnóstico, o agente de estratégia (Claude) define:\n\n• Trilha de receita: 6 dígitos (R$100k–R$999k), 8 dígitos (R$10M+) ou 10 dígitos (R$100M+)\n• Cronograma de 7 a 10 dias dividido em fases: Pré-lançamento → Esquenta → Carrinho → Fechamento\n• Gatilhos mentais por fase: autoridade, curiosidade, prova social, urgência, escassez — sequenciados pelo comportamento esperado do lead\n• Estrutura de copy por plataforma: WhatsApp, email e social\n\nTudo isso é apresentado para a sua aprovação antes de qualquer execução. Você vê o plano completo, pode solicitar ajustes e só então confirma.`,
+  },
+  {
+    icon: Mail,
+    label: "Copy por segmento de lead",
+    tag: "Copywriting · Agente GPT-4o",
+    summary: "Mensagens diferentes para leads quentes, mornos e frios.",
+    detail: `O agente de copy (GPT-4o) escreve versões específicas de cada mensagem para três perfis:\n\n• Hot (score ≥ 60): Insider VIP — copy de oferta direta, exclusividade, acesso privilegiado\n• Warm (score ≥ 25): Urgência padrão — benefícios + prazo + prova social\n• Cold (score < 25): Curiosidade + reativação — gatilho de dor ou transformação, sem pressão\n\nO score de cada lead é calculado em tempo real: abertura de email vale 50 pontos, clique vale 50. O NexOS recalcula o segmento de cada contato após cada interação e ajusta o próximo disparo automaticamente — sem nenhuma ação manual.`,
+  },
+  {
+    icon: MessageSquare,
+    label: "Sequência WhatsApp + Email automática",
+    tag: "Launch Sequence · Scheduler",
+    summary: "Disparos nos horários certos, toda vez, sem falhar.",
+    detail: `Depois de aprovada a estratégia, o NexOS agenda cada mensagem para o momento exato. O scheduler interno verifica a cada 60 segundos quais itens estão prontos para disparo com base no calendário do lançamento.\n\n• WhatsApp Business: envia via Meta API para leads com alto engajamento. Mensagens formatadas com quebras de linha, emojis e CTAs calibrados por fase\n• Email: integrado com RD Station e ActiveCampaign. Assuntos testados por IA, preview text otimizado, horário de maior abertura por segmento\n• Calendário de lançamento: cada item tem um dayIndex (dia relativo à ativação) — quando você ativa a sequência, todas as datas são calculadas automaticamente\n\nVocê pode ver o calendário completo, dia a dia, com o status de cada mensagem (agendada, enviada, erro).`,
+  },
+  {
+    icon: Users,
+    label: "Segmentação hot / warm / cold em tempo real",
+    tag: "CRM · Segmentação automática",
+    summary: "Cada lead tem um score que muda a cada interação.",
+    detail: `O NexOS mantém um score de engajamento (0–100) para cada contato na sequência:\n\n• Score = (taxa de abertura × 50) + (taxa de clique × 50)\n• Hot (≥ 60): lead ativo, engajado, pronto para oferta\n• Warm (≥ 25): interesse moderado, precisa de mais prova e urgência\n• Cold (< 25): pouco engajamento, abordagem de reativação\n\nAlém dos três segmentos principais, o NexOS rastreia:\n• Convertidos: compraram — removidos dos disparos de venda, entram no pós-venda\n• Descadastrados: clicaram em unsubscribe — nunca mais recebem mensagem\n\nO recálculo acontece automaticamente após cada evento de abertura, clique ou compra — confirmado pelos webhooks de email ou pelos eventos de venda do Hotmart/Kiwify.`,
+  },
+  {
+    icon: Shield,
+    label: "Aprovação antes de ir ao ar",
+    tag: "Approval · Controle total",
+    summary: "Nada sai sem você ver e aprovar.",
+    detail: `Toda proposta gerada pelo NexOS passa por uma tela de aprovação antes de ser executada. Isso inclui:\n\n• Copy de email e WhatsApp por fase\n• Criativos e peças visuais (gerados pela IA com pré-voo de conceito)\n• Orçamento de tráfego e distribuição por canal\n• Estratégia geral e cronograma do lançamento\n\nO fluxo de aprovação:\n1. IA gera a proposta\n2. Você recebe para revisão (notificação + painel)\n3. Aprova com um clique, solicita ajuste (a IA reescreve em segundos) ou rejeita\n4. Red flags são sinalizados proativamente: inconsistências de copy, budget acima do esperado, timing inadequado\n\nVocê tem controle total, sem precisar fazer o trabalho manual.`,
+  },
+  {
+    icon: Activity,
+    label: "Dashboard de performance em tempo real",
+    tag: "Métricas · Health Score",
+    summary: "Health score automático com alertas e otimização por IA.",
+    detail: `O NexOS mantém um health score de 0–100 para cada campanha ativa, calculado a partir de 5 componentes:\n\n• Receita realizada vs meta (35 pontos)\n• ROAS — retorno sobre investimento em tráfego (25 pontos)\n• CPL — custo por lead captado (20 pontos)\n• Taxa de abertura de email (10 pontos)\n• Tendência das últimas 24h — subindo ou caindo (10 pontos)\n\nAlertas automáticos são gerados nos thresholds críticos. Se o health score cair abaixo de 30, o agente de otimização (Gemini) é acionado automaticamente e apresenta sugestões de ajuste — mudança de copy, redistribuição de budget, mudança de segmentação — sempre com sua aprovação antes de qualquer execução.`,
+  },
+  {
+    icon: Layers,
+    label: "Carrinho com urgência real e automática",
+    tag: "Cart · Abertura e Fechamento",
+    summary: "Abre e fecha no horário exato, com copy diferente por perfil.",
+    detail: `O NexOS controla a abertura e o fechamento do carrinho sem intervenção manual. No momento de abertura:\n\n• Leads hot recebem copy VIP de abertura: insider, acesso privilegiado, bônus exclusivo\n• Leads warm recebem urgência padrão: prazo + benefícios + prova social recente\n• Leads cold recebem curiosidade de reativação: dor + transformação, sem pressão de oferta direta\n\nDurante o período de carrinho aberto (24h padrão):\n• Mensagens intermediárias no dia 2 reforçam a urgência por segmento\n• Na última hora antes do fechamento, disparo automático para todos os não-convertidos\n• No fechamento, mensagem de encerramento com confirmação de próxima turma\n\nTudo isso acontece automaticamente, nos horários definidos pela estratégia, sem você precisar disparar nada manualmente.`,
+  },
+];
+
+function FeaturesDeepDive() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  return (
+    <section className="py-20 max-w-5xl mx-auto px-6">
+      <div className="text-center mb-12">
+        <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-6 font-mono text-xs uppercase tracking-[0.3em] text-primary">
+          <Zap className="h-3 w-3" />
+          Como o NexOS faz isso automaticamente
+        </div>
+        <h2 className="text-3xl md:text-4xl font-mono font-black uppercase tracking-tight text-foreground mb-4">
+          Cada etapa do lançamento.<br />
+          <span className="text-primary">Orquestrada pela plataforma.</span>
+        </h2>
+        <p className="text-muted-foreground text-sm max-w-xl mx-auto leading-relaxed">
+          Clique em cada funcionalidade para entender exatamente como o NexOS executa — o que acontece nos bastidores, qual agente de IA atua e o que você precisa fazer (só aprovar).
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {FEATURES.map((feat, i) => {
+          const Icon = feat.icon;
+          const isOpen = openIdx === i;
+          return (
+            <div
+              key={i}
+              className={`border transition-all duration-200 overflow-hidden cursor-pointer ${
+                isOpen
+                  ? "border-primary/40 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.08)]"
+                  : "border-border/40 bg-card/30 hover:border-primary/25 hover:bg-primary/3"
+              }`}
+              onClick={() => setOpenIdx(isOpen ? null : i)}
+            >
+              <div className="flex items-center gap-4 p-5">
+                <div className={`w-10 h-10 border flex items-center justify-center shrink-0 transition-all ${
+                  isOpen ? "border-primary/50 bg-primary/10" : "border-border/40 bg-muted/30"
+                }`}>
+                  <Icon className={`h-5 w-5 transition-colors ${isOpen ? "text-primary" : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className={`font-mono font-bold text-sm uppercase tracking-wide transition-colors ${isOpen ? "text-foreground" : "text-foreground/80"}`}>
+                      {feat.label}
+                    </span>
+                    <span className={`font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border transition-colors ${
+                      isOpen ? "border-primary/30 text-primary bg-primary/5" : "border-border/30 text-muted-foreground/50"
+                    }`}>
+                      {feat.tag}
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs text-muted-foreground mt-0.5 leading-relaxed">{feat.summary}</p>
+                </div>
+                <div className={`shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                  <ChevronDown className={`h-4 w-4 ${isOpen ? "text-primary" : "text-muted-foreground/40"}`} />
+                </div>
+              </div>
+
+              {isOpen && (
+                <div className="px-5 pb-5 border-t border-primary/15">
+                  <div className="pt-4 pl-14">
+                    {feat.detail.split("\n").map((line, li) => {
+                      if (line.startsWith("•")) {
+                        return (
+                          <div key={li} className="flex items-start gap-2 mb-1.5">
+                            <div className="w-1 h-1 rounded-full bg-primary mt-2 shrink-0" />
+                            <span className="font-mono text-xs text-muted-foreground leading-relaxed">{line.slice(2)}</span>
+                          </div>
+                        );
+                      }
+                      if (line.match(/^\d+\./)) {
+                        return (
+                          <div key={li} className="flex items-start gap-2 mb-1.5">
+                            <span className="font-mono text-[11px] text-primary/70 shrink-0 w-4">{line.split(".")[0]}.</span>
+                            <span className="font-mono text-xs text-muted-foreground leading-relaxed">{line.slice(line.indexOf(".") + 2)}</span>
+                          </div>
+                        );
+                      }
+                      if (line === "") return <div key={li} className="h-3" />;
+                      return (
+                        <p key={li} className="font-mono text-xs text-muted-foreground leading-relaxed mb-1">{line}</p>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -388,6 +591,8 @@ function CountdownTimer({ launchDate }: { launchDate: Date | null }) {
 export default function Landing() {
   const [launchDate, setLaunchDate] = useState<Date | null>(null);
   const [launchLoaded, setLaunchLoaded] = useState(false);
+  const [alreadyJoined, setAlreadyJoined] = useState(false);
+  const [joinedSegment, setJoinedSegment] = useState<Segment>("individual");
 
   useEffect(() => {
     fetch("/api/waitlist/launch-config")
@@ -397,6 +602,11 @@ export default function Landing() {
         setLaunchLoaded(true);
       })
       .catch(() => setLaunchLoaded(true));
+
+    const joined = localStorage.getItem("nexos_joined") === "true";
+    const seg = (localStorage.getItem("nexos_segment") ?? "individual") as Segment;
+    setAlreadyJoined(joined);
+    setJoinedSegment(seg);
   }, []);
 
   return (
@@ -438,20 +648,25 @@ export default function Landing() {
               A IA entende seu produto, calcula viabilidade, monta estratégia e executa a sequência —&nbsp;
               <strong className="text-foreground">cada proposta passa pela sua aprovação antes de ir ao ar.</strong>
             </p>
-            <div className="space-y-3 mb-8">
-              {[
-                "Carrinho aberto por apenas 24 horas",
-                "Dois grupos de esquenta — lançadores e agências",
-                "2 mensagens por dia · conteúdo de lançamento estruturado",
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 font-mono text-sm text-muted-foreground">
-                  <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0" />
-                  {item}
-                </div>
-              ))}
-            </div>
+            {!alreadyJoined && (
+              <div className="space-y-3 mb-8">
+                {[
+                  "Carrinho aberto por apenas 24 horas",
+                  "Dois grupos de esquenta — lançadores e agências",
+                  "2 mensagens por dia · conteúdo de lançamento estruturado",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 font-mono text-sm text-muted-foreground">
+                    <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <HeroCard />
+          {alreadyJoined
+            ? <PostRegistrationHero segment={joinedSegment} />
+            : <HeroCard />
+          }
         </div>
         <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-background to-transparent"></div>
       </section>
@@ -578,6 +793,9 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ─── FEATURES CLICÁVEIS (pós-cadastro) ──────────────────────────── */}
+      <FeaturesDeepDive />
+
       {/* ─── TRANSFORMAÇÃO ───────────────────────────────────────────────── */}
       <section className="py-24 max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
@@ -674,22 +892,52 @@ export default function Landing() {
       {/* ─── FINAL CTA ───────────────────────────────────────────────────── */}
       <section className="py-32 relative overflow-hidden auth-bg-gradient">
         <div className="relative z-10 max-w-4xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 border border-yellow-500/30 bg-yellow-500/5 px-4 py-2 mb-8 font-mono text-xs uppercase tracking-[0.3em] text-yellow-400">
-              <AlertTriangle className="h-3 w-3" />
-              Vagas limitadas · Carrinho abre uma única vez · Fecha em 24h
+          {alreadyJoined ? (
+            <div className="text-center space-y-8">
+              <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 font-mono text-xs uppercase tracking-[0.3em] text-primary">
+                <CheckCircle2 className="h-3 w-3" />
+                Você já está na lista de espera
+              </div>
+              <h2 className="text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-none">
+                Fique de olho no<br />
+                <span className="text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">WhatsApp cadastrado.</span>
+              </h2>
+              <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                Quando o esquenta começar, você recebe 2 mensagens por dia com bastidores, demos e os números reais do lançamento. No Dia 6 revelamos o código NEXOS — exclusivo para quem acompanhar.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/preparacao">
+                  <Button className="btn-weapon-primary font-mono uppercase tracking-widest font-bold gap-2 h-14 px-8">
+                    Falar com o Jeff agora <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button variant="outline" className="font-mono uppercase tracking-widest text-xs h-14 px-8 rounded-none border-border/50">
+                    Já tenho acesso → Entrar
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <h2 className="text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
-              Entre na lista agora.<br />
-              <span className="text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">O esquenta começa em breve.</span>
-            </h2>
-            <p className="text-base text-muted-foreground max-w-xl mx-auto mb-4 leading-relaxed">
-              Dois grupos separados por perfil. Conteúdo de lançamento estruturado — 2 mensagens por dia, gatilho mental definido por IA. Quando o carrinho abrir por 24h, quem não estiver na lista não recebe o link.
-            </p>
-          </div>
-          <div className="max-w-md mx-auto">
-            <HeroCard />
-          </div>
+          ) : (
+            <>
+              <div className="text-center mb-16">
+                <div className="inline-flex items-center gap-2 border border-yellow-500/30 bg-yellow-500/5 px-4 py-2 mb-8 font-mono text-xs uppercase tracking-[0.3em] text-yellow-400">
+                  <AlertTriangle className="h-3 w-3" />
+                  Vagas limitadas · Carrinho abre uma única vez · Fecha em 24h
+                </div>
+                <h2 className="text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
+                  Entre na lista agora.<br />
+                  <span className="text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">O esquenta começa em breve.</span>
+                </h2>
+                <p className="text-base text-muted-foreground max-w-xl mx-auto mb-4 leading-relaxed">
+                  Dois grupos separados por perfil. Conteúdo de lançamento estruturado — 2 mensagens por dia, gatilho mental definido por IA. Quando o carrinho abrir por 24h, quem não estiver na lista não recebe o link.
+                </p>
+              </div>
+              <div className="max-w-md mx-auto">
+                <HeroCard />
+              </div>
+            </>
+          )}
         </div>
         <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-background to-transparent"></div>
       </section>
