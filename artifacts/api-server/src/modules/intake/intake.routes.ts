@@ -345,6 +345,55 @@ router.get("/:campaignId/recommend-track", async (req, res): Promise<void> => {
   });
 });
 
+// ─── Confirm campaign type (AI-proposed) ─────────────────────────────────────
+
+const confirmTypeSchema = z.object({
+  type: z.enum([
+    "launch", "perpetual_launch", "flash_sale", "live_sale", "continuous_sales",
+    "subscription_growth", "authority", "audience_growth", "branding",
+    "creator_monetization", "upsell", "remarketing", "affiliate", "scale", "regional_dominance",
+  ]),
+  track: z.enum(["six_digits", "eight_digits", "ten_digits", "not_applicable"]),
+});
+
+router.post("/:campaignId/confirm-type", async (req, res): Promise<void> => {
+  const parsed = confirmTypeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const campaignId = req.params["campaignId"] as string;
+
+  try {
+    const [campaign] = await db
+      .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
+      .from(campaignsTable)
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)))
+      .limit(1);
+
+    if (!campaign) {
+      res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(campaignsTable)
+      .set({ type: parsed.data.type, track: parsed.data.track, updatedAt: new Date() })
+      .where(eq(campaignsTable.id, campaignId))
+      .returning();
+
+    req.log.info({ campaignId, type: parsed.data.type, track: parsed.data.track }, "Campaign type confirmed by user from AI proposal");
+    res.json({ campaign: updated, message: "Modelo confirmado" });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
 // ─── Finalize intake ──────────────────────────────────────────────────────────
 
 router.post("/:campaignId/finalize", async (req, res): Promise<void> => {

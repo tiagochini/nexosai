@@ -155,29 +155,74 @@ export async function extractIntakeFromText(
 
 // ─── Conversational intake ─────────────────────────────────────────────────────
 
-const CONVERSATION_SYSTEM = `Você é o NexOS Intake Specialist — um consultor de lançamentos digitais experiente que faz o onboarding de novos clientes através de conversa natural.
+const CONVERSATION_SYSTEM = `Você é o NexOS Intake Specialist — consultor sênior de lançamentos digitais que faz o onboarding através de conversa natural.
 
-CONTEXTO:
-- Você ajuda o criador a preencher os dados da campanha conversando, não com formulários
-- Você extrai informações estruturadas das respostas e salva automaticamente
-- Faça UMA pergunta de cada vez — a mais importante que ainda não foi respondida
-- Seja direto, especialista e encorajador. Fale em PT-BR
+FASES OBRIGATÓRIAS (siga esta ordem):
+
+FASE 1 — PRODUTO
+Entenda: nome do produto, o que entrega, categoria, preço, como é entregue, prova social.
+Campos: product.name, product.description, product.category, product.price, product.deliveryMethod, product.socialProof
+
+FASE 2 — AUDIÊNCIA
+Entenda: quem é o avatar, quais são as dores, desejos, quem decide a compra (B2B?), onde fica.
+Campos: audience.description, audience.painPoints, audience.desires, audience.decisionMaker (se aplicável), audience.location
+
+FASE 3 — METAS E ORÇAMENTO
+Pergunte sobre metas de resultado. Use estas perguntas em sequência:
+1. "Quantas vendas você quer fazer nessa campanha?" OU "Qual é sua meta de faturamento?"
+2. Se não souber a meta: "Qual é o orçamento total disponível para lançar esse produto?"
+Campos: campaign.revenueTarget, campaign.budget.total, campaign.budget.traffic
+
+FASE 4 — PROPOSTA DO MODELO (apenas após ter Fase 1 + 2 + parte da Fase 3)
+Com base no produto, audiência e metas/orçamento, proponha o modelo de campanha IDEAL.
+Modelos disponíveis:
+- "launch": Lançamento com carrinho aberto por tempo limitado (PLF/Fórmula). Melhor para quem quer resultado concentrado e tem audiência ou vai construir uma.
+- "perpetual_launch": Funil perpétuo/evergreen que vende 24h sem datas fixas. Ideal para quem quer renda recorrente automática.
+- "flash_sale": Queima relâmpago 24-72h com desconto/bônus. Bom para quem tem base e quer gerar caixa rápido.
+- "live_sale": Vendas ao vivo com a câmera. Para quem tem facilidade com lives e quer converter audiência ao vivo.
+- "continuous_sales": Vendas contínuas/diárias sem pico. Para quem prefere crescimento estável.
+- "authority": Construção de autoridade e marca pessoal sem venda direta.
+- "audience_growth": Crescimento de audiência antes de monetizar.
+- "subscription_growth": Clube de assinatura/membros com recorrência mensal.
+- "affiliate": Promoção de produto de terceiros como afiliado.
+
+Tracks:
+- "six_digits": R$100k–R$999k em 7 dias
+- "eight_digits": R$10M–R$99M em 7 dias
+- "ten_digits": R$100M+ em 7 dias
+- "not_applicable": Para modelos não baseados em lançamento concentrado
+
+Quando propuser o modelo, use o formato:
+{
+  "proposedType": "launch",
+  "proposedTrack": "six_digits",
+  "proposedReason": "Explicação curta (2-3 frases) do porquê esse modelo é o ideal para o caso"
+}
+Na aiMessage, explique o porquê e peça confirmação. Exemplo: "Com base no que você me contou, o modelo ideal é um Lançamento (PLF) na trilha 6 Dígitos porque [razão]. Confirma que seguimos por esse caminho?"
+
+FASE 5 — PERGUNTAS ESPECÍFICAS DO MODELO (apenas após o usuário confirmar o modelo)
+Faça as perguntas específicas do modelo escolhido que ainda faltam.
 
 REGRAS:
-1. Extraia dados da mensagem do usuário
-2. Identifique qual campo importante ainda está faltando
-3. Faça a próxima pergunta de forma natural e contextualizada
-4. Nunca repita perguntas já respondidas
+- Faça UMA pergunta de cada vez, a mais importante que falta
+- Nunca repita perguntas já respondidas
+- Seja direto, especialista e encorajador. Fale em PT-BR
+- Só passe para a Fase 4 quando tiver produto + audiência + pelo menos metas OU orçamento
+- Só passe para a Fase 5 quando o usuário confirmar o modelo proposto
 
 Responda SEMPRE neste JSON exato:
 {
   "extracted": { "field.id": value },
-  "aiMessage": "Sua resposta natural em PT-BR + próxima pergunta",
-  "nextQuestionId": "id da próxima pergunta que você fez",
-  "isComplete": false
+  "aiMessage": "Sua resposta natural em PT-BR + próxima pergunta ou proposta",
+  "nextQuestionId": "id da próxima pergunta ou null se propondo modelo",
+  "isComplete": false,
+  "proposedType": null,
+  "proposedTrack": null,
+  "proposedReason": null
 }
 
-Se todos os campos obrigatórios estiverem preenchidos, retorne "isComplete": true e uma mensagem de conclusão.`;
+Só inclua proposedType/proposedTrack/proposedReason quando estiver na Fase 4.
+Se todos os campos obrigatórios do modelo confirmado estiverem preenchidos, retorne "isComplete": true.`;
 
 export interface ConversationTurn {
   role: "user" | "assistant";
@@ -198,6 +243,9 @@ export async function processConversationalTurn(
   progress: number;
   missingRequired: string[];
   intakeData: Record<string, unknown>;
+  proposedType: string | null;
+  proposedTrack: string | null;
+  proposedReason: string | null;
 }> {
   const [campaign] = await db
     .select()
@@ -243,6 +291,9 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}`.slice(0, 1200); // hard cap 
   let aiMessage = "Desculpe, houve um problema. Tente novamente.";
   let nextQuestionId: string | null = nextMissing;
   let isComplete = false;
+  let proposedType: string | null = null;
+  let proposedTrack: string | null = null;
+  let proposedReason: string | null = null;
 
   try {
     const result = await completeWithAgent(
@@ -261,11 +312,17 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}`.slice(0, 1200); // hard cap 
         aiMessage?: string;
         nextQuestionId?: string;
         isComplete?: boolean;
+        proposedType?: string;
+        proposedTrack?: string;
+        proposedReason?: string;
       };
       extracted = parsed.extracted ?? {};
       aiMessage = parsed.aiMessage ?? aiMessage;
       nextQuestionId = parsed.nextQuestionId ?? null;
       isComplete = parsed.isComplete ?? false;
+      proposedType = (parsed.proposedType as string) ?? null;
+      proposedTrack = (parsed.proposedTrack as string) ?? null;
+      proposedReason = (parsed.proposedReason as string) ?? null;
     } else {
       // AI responded in natural language (dev fallback)
       aiMessage = result.content.replace(/^\[DEV MODE.*?\]/, "").trim() ||
@@ -313,6 +370,9 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}`.slice(0, 1200); // hard cap 
     progress,
     missingRequired: newCompleteness.missingRequired,
     intakeData: mergedData,
+    proposedType,
+    proposedTrack,
+    proposedReason,
   };
 }
 

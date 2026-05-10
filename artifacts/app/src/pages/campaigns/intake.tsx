@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, CheckCircle2, Loader2, Send, Database,
   MessageSquare, LayoutList, ChevronRight, Zap,
+  Rocket, RefreshCw, Radio, TrendingUp, BarChart3,
+  Users, Mail, Check, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -25,6 +27,36 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+interface ConversationResult {
+  aiMessage: string;
+  isComplete: boolean;
+  progress: number;
+  intakeData: Record<string, unknown>;
+  proposedType: string | null;
+  proposedTrack: string | null;
+  proposedReason: string | null;
+}
+
+// ── Campaign type/track label maps ─────────────────────────────────────────────
+const TYPE_LABELS: Record<string, { label: string; tag: string; icon: React.ElementType; color: string }> = {
+  launch:              { label: "Lançamento",      tag: "PLF / Fórmula",       icon: Rocket,     color: "text-blue-400" },
+  perpetual_launch:    { label: "Perpétuo",         tag: "Evergreen",           icon: RefreshCw,  color: "text-emerald-400" },
+  flash_sale:          { label: "Flash Sale",       tag: "24h a 72h",           icon: Zap,        color: "text-yellow-400" },
+  live_sale:           { label: "Live Sale",        tag: "Vendas ao vivo",      icon: Radio,      color: "text-pink-400" },
+  continuous_sales:    { label: "Contínuo",         tag: "Vendas diárias",      icon: TrendingUp, color: "text-cyan-400" },
+  subscription_growth: { label: "Assinatura",       tag: "Clube / Membros",     icon: Mail,       color: "text-violet-400" },
+  authority:           { label: "Autoridade",       tag: "Branding",            icon: BarChart3,  color: "text-orange-400" },
+  audience_growth:     { label: "Crescimento",      tag: "Audiência orgânica",  icon: Users,      color: "text-teal-400" },
+  affiliate:           { label: "Afiliado",         tag: "Produto de terceiros", icon: Users,     color: "text-lime-400" },
+};
+
+const TRACK_LABELS: Record<string, { label: string; range: string }> = {
+  six_digits:      { label: "6 Dígitos",  range: "R$ 100k – 999k" },
+  eight_digits:    { label: "8 Dígitos",  range: "R$ 10M – 99M" },
+  ten_digits:      { label: "10 Dígitos", range: "R$ 100M+" },
+  not_applicable:  { label: "Crescimento", range: "Sem meta de faturamento concentrado" },
+};
 
 function ChatBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === "user";
@@ -47,6 +79,86 @@ function ChatBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
+// ── Type Proposal Card ─────────────────────────────────────────────────────────
+function TypeProposalCard({
+  proposedType,
+  proposedTrack,
+  proposedReason,
+  onConfirm,
+  onReject,
+  confirming,
+}: {
+  proposedType: string;
+  proposedTrack: string;
+  proposedReason: string | null;
+  onConfirm: () => void;
+  onReject: () => void;
+  confirming: boolean;
+}) {
+  const typeInfo = TYPE_LABELS[proposedType];
+  const trackInfo = TRACK_LABELS[proposedTrack];
+  if (!typeInfo || !trackInfo) return null;
+  const Icon = typeInfo.icon;
+
+  return (
+    <div className="border border-primary/40 bg-primary/5 p-4 rounded-sm animate-in slide-in-from-bottom-3 duration-300 relative">
+      <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/50" />
+      <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/50" />
+      <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary/50" />
+      <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/50" />
+
+      <div className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-3">
+        Modelo Recomendado pela IA
+      </div>
+
+      <div className="flex items-start gap-3 mb-3">
+        <div className={`w-10 h-10 border border-current/30 bg-current/5 flex items-center justify-center shrink-0 ${typeInfo.color}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <div className={`font-mono font-bold text-base uppercase tracking-tighter ${typeInfo.color}`}>
+            {typeInfo.label}
+          </div>
+          <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">
+            {typeInfo.tag}
+          </div>
+          <div className="font-mono text-xs text-muted-foreground/80 mt-1">
+            Trilha: <span className="text-foreground font-bold">{trackInfo.label}</span>
+            <span className="text-muted-foreground/50 ml-1">({trackInfo.range})</span>
+          </div>
+        </div>
+      </div>
+
+      {proposedReason && (
+        <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed mb-4 border-t border-border/30 pt-3">
+          {proposedReason}
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <Button
+          onClick={onConfirm}
+          disabled={confirming}
+          className="flex-1 rounded-none font-mono uppercase tracking-widest h-10 gap-2 btn-weapon-primary text-xs"
+        >
+          {confirming
+            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Confirmando...</>
+            : <><Check className="h-3.5 w-3.5" />Confirmar esse modelo</>
+          }
+        </Button>
+        <Button
+          onClick={onReject}
+          disabled={confirming}
+          variant="outline"
+          className="rounded-none font-mono uppercase tracking-widest h-10 px-4 gap-2 text-xs border-border/50"
+        >
+          <X className="h-3.5 w-3.5" />Quero outro
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function CampaignIntake() {
   const [, params] = useRoute("/campaigns/:id/intake");
   const campaignId = params?.id || "";
@@ -61,8 +173,16 @@ export default function CampaignIntake() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [finalizing, setFinalizing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const aiTriggered = useRef(false);
 
+  // Pending type proposal from AI
+  const [pendingProposal, setPendingProposal] = useState<{
+    type: string;
+    track: string;
+    reason: string | null;
+  } | null>(null);
+  const [confirmingType, setConfirmingType] = useState(false);
+
+  const aiTriggered = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -102,23 +222,22 @@ export default function CampaignIntake() {
   }, [data]);
 
   // ── Helper: call conversation endpoint with auto-refresh on 401 ──────────────
-  const callConversation = async (body: object): Promise<{
-    aiMessage: string; isComplete: boolean; progress: number; intakeData: Record<string, unknown>;
-  }> => {
-    const doFetch = () => customFetch<{
-      aiMessage: string; isComplete: boolean; progress: number; intakeData: Record<string, unknown>;
-    }>(`/api/intake/${campaignId}/conversation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+  const callConversation = async (body: object): Promise<ConversationResult> => {
+    const doFetch = () => customFetch<ConversationResult>(
+      `/api/intake/${campaignId}/conversation`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
 
     try {
       return await doFetch();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         const refreshed = await globalSilentRefresh();
-        if (refreshed) return await doFetch(); // retry once with new token
+        if (refreshed) return await doFetch();
       }
       throw err;
     }
@@ -143,12 +262,15 @@ export default function CampaignIntake() {
         if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
         if (result.progress) setProgress(result.progress);
         if (result.isComplete) setChatComplete(true);
+        if (result.proposedType && result.proposedTrack) {
+          setPendingProposal({ type: result.proposedType, track: result.proposedTrack, reason: result.proposedReason });
+        }
         queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
         queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
       } catch {
         setMessages([{
           role: "assistant",
-          content: "Olá! Sou o especialista de intake do NexOS AI. Vou coletar informações sobre seu produto em conversa natural.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
+          content: "Olá! Sou o especialista de intake do NexOS AI. Vou entender seu produto em conversa natural e definir juntos o melhor modelo de campanha.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
         }]);
       } finally {
         setSending(false);
@@ -161,7 +283,59 @@ export default function CampaignIntake() {
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sending]);
+  }, [messages, sending, pendingProposal]);
+
+  // ── Confirm proposed type ─────────────────────────────────────────────────────
+  const handleConfirmType = async () => {
+    if (!pendingProposal) return;
+    setConfirmingType(true);
+    try {
+      await customFetch(`/api/intake/${campaignId}/confirm-type`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: pendingProposal.type, track: pendingProposal.track }),
+      });
+      setPendingProposal(null);
+      queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
+
+      // Continue conversation with confirmation
+      setSending(true);
+      const result = await callConversation({
+        message: `Confirmo o modelo: ${pendingProposal.type} na trilha ${pendingProposal.track}`,
+        history: messages.map(m => ({ role: m.role, content: m.content })).slice(-12),
+      });
+      setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage }]);
+      if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
+      if (result.progress != null) setProgress(result.progress);
+      if (result.isComplete) setChatComplete(true);
+    } catch {
+      toast.error("Erro ao confirmar modelo. Tente novamente.");
+    } finally {
+      setConfirmingType(false);
+      setSending(false);
+      setTimeout(() => inputRef.current?.focus(), 200);
+    }
+  };
+
+  const handleRejectType = async () => {
+    setPendingProposal(null);
+    setSending(true);
+    try {
+      const result = await callConversation({
+        message: "Quero considerar outras opções de modelo de campanha. Pode me explicar as alternativas que fariam sentido para o meu caso?",
+        history: messages.map(m => ({ role: m.role, content: m.content })).slice(-12),
+      });
+      setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage }]);
+      if (result.proposedType && result.proposedTrack) {
+        setPendingProposal({ type: result.proposedType, track: result.proposedTrack, reason: result.proposedReason });
+      }
+    } catch {
+      toast.error("Erro. Tente novamente.");
+    } finally {
+      setSending(false);
+      setTimeout(() => inputRef.current?.focus(), 200);
+    }
+  };
 
   // ── Send message ──────────────────────────────────────────────────────────────
   const handleSend = async () => {
@@ -172,6 +346,7 @@ export default function CampaignIntake() {
     const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMsg }];
     setMessages(newMessages);
     setSending(true);
+    setPendingProposal(null); // clear any pending proposal when user types
 
     try {
       const history = newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
@@ -181,6 +356,15 @@ export default function CampaignIntake() {
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
       if (result.progress != null) setProgress(result.progress);
       if (result.isComplete) setChatComplete(true);
+
+      // If AI proposed a type, show the proposal card
+      if (result.proposedType && result.proposedTrack) {
+        setPendingProposal({
+          type: result.proposedType,
+          track: result.proposedTrack,
+          reason: result.proposedReason,
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
       queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
@@ -208,15 +392,11 @@ export default function CampaignIntake() {
   const handleFinalize = async () => {
     setFinalizing(true);
     try {
-      const res = await customFetch<Response>(`/api/intake/${campaignId}/finalize`, {
+      await customFetch(`/api/intake/${campaignId}/finalize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao finalizar");
-      }
-      toast.success("Intake finalizado! A IA está montando sua estratégia.");
+      toast.success("Briefing finalizado! A IA está montando sua estratégia.");
       setLocation(`/campaigns/${campaignId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao finalizar intake");
@@ -231,7 +411,7 @@ export default function CampaignIntake() {
         <Skeleton className="h-8 w-64 bg-muted/20" />
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
-          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Inicializando IA de Intake...</p>
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Inicializando Briefing IA...</p>
         </div>
       </div>
     );
@@ -257,7 +437,7 @@ export default function CampaignIntake() {
               </h1>
             </div>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
-              A IA aprende sobre seu produto em conversa natural e extrai os dados automaticamente
+              A IA entende seu produto, define o modelo ideal e extrai os dados automaticamente
             </p>
           </div>
           <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
@@ -299,7 +479,7 @@ export default function CampaignIntake() {
           <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2 shrink-0">
             <Database className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Dados extraídos automaticamente e salvos em tempo real · IA iniciada automaticamente
+              Produto → Audiência → Metas → Modelo ideal → Perguntas específicas
             </span>
           </div>
 
@@ -317,7 +497,7 @@ export default function CampaignIntake() {
                       <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
                     ))}
                   </div>
-                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">IA inicializando sessão de intake...</span>
+                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Iniciando briefing com IA...</span>
                 </div>
               </div>
             )}
@@ -338,6 +518,18 @@ export default function CampaignIntake() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Type proposal card — AI recommends a model */}
+            {pendingProposal && !sending && (
+              <TypeProposalCard
+                proposedType={pendingProposal.type}
+                proposedTrack={pendingProposal.track}
+                proposedReason={pendingProposal.reason}
+                onConfirm={() => void handleConfirmType()}
+                onReject={() => void handleRejectType()}
+                confirming={confirmingType}
+              />
             )}
 
             {/* Completion banner */}
@@ -369,11 +561,11 @@ export default function CampaignIntake() {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
                   placeholder="Responda aqui… (Enter para enviar, Shift+Enter para nova linha)"
-                  disabled={sending}
+                  disabled={sending || confirmingType}
                   rows={2}
                   className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
                 />
-                <Button onClick={() => void handleSend()} disabled={sending || !inputValue.trim()}
+                <Button onClick={() => void handleSend()} disabled={sending || !inputValue.trim() || confirmingType}
                   className="font-mono rounded-none h-[66px] px-4 btn-weapon-primary shrink-0">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
