@@ -118,16 +118,26 @@ function WhatsAppButton({ segment }: { segment: Segment }) {
 // ── AI Chat ───────────────────────────────────────────────────────────────────
 function AiChat({ segment }: { segment: Segment }) {
   const cfg = SEGMENT_CONFIG[segment];
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    { role: "assistant", content: cfg.aiGreeting },
-  ]);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [jeffTyping, setJeffTyping] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Simulate Jeff typing the opening greeting on mount
+  useEffect(() => {
+    const delay = 1800 + Math.random() * 800; // 1.8s–2.6s
+    const timer = setTimeout(() => {
+      setJeffTyping(false);
+      setMessages([{ role: "assistant", content: cfg.aiGreeting }]);
+    }, delay);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, jeffTyping]);
 
   const send = async () => {
     const text = input.trim();
@@ -196,13 +206,20 @@ function AiChat({ segment }: { segment: Segment }) {
             </div>
           </div>
         ))}
-        {loading && (
+        {(loading || jeffTyping) && (
           <div className="flex gap-3">
             <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 font-mono font-black text-xs text-primary">
               J
             </div>
             <div className="border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
-              <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+              {loading
+                ? <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+                : <span className="flex gap-1 items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:300ms]" />
+                  </span>
+              }
               <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">Jeff está digitando...</span>
             </div>
           </div>
@@ -219,11 +236,11 @@ function AiChat({ segment }: { segment: Segment }) {
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
             placeholder="Pergunte sobre o NexOS AI, planos, lançamento..."
             className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary font-sans text-sm h-11 flex-1"
-            disabled={loading}
+            disabled={loading || jeffTyping}
           />
           <Button
             onClick={() => void send()}
-            disabled={loading || !input.trim()}
+            disabled={loading || jeffTyping || !input.trim()}
             className="rounded-none h-11 px-4 btn-weapon-primary shrink-0"
           >
             <Send className="h-4 w-4" />
