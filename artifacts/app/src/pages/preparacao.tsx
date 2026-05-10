@@ -25,31 +25,31 @@ const SEGMENT_CONFIG = {
     badge: "Lançador Solo",
     groupName: "Grupo dos Lançadores",
     headline: "Você está dentro!",
-    sub: "Nos próximos dias você recebe o aquecimento completo antes do carrinho abrir. Enquanto isso, a IA de pré-vendas está aqui para responder qualquer dúvida.",
+    sub: "Prepare-se — o que vem por aí vai mudar a forma como você enxerga lançamentos digitais. Enquanto isso, o Jeff, nosso especialista, está disponível agora para responder qualquer dúvida.",
     color: "primary" as const,
     totalDays: 10,
     phases: [
-      { day: "Dias 1–7",  label: "Aquecimento",   desc: "2 msgs/dia no WhatsApp — 09h e 20h. Bastidores, demos, gatilhos sequenciados.", icon: Zap },
-      { day: "Dia 6",     label: "Código NEXOS",  desc: "Código exclusivo revelado para quem segue @nexosai. Bônus: apostila + acompanhamento.", icon: Star },
-      { day: "Dia 8",     label: "Carrinho Abre", desc: "72h de janela. Vagas limitadas. Sem prorrogação.", icon: Radio },
-      { day: "Dia 10",    label: "Encerramento",  desc: "Carrinho fecha à meia-noite. Próxima turma sem data.", icon: Lock },
+      { day: "Em breve",  label: "Conteúdo exclusivo", desc: "Você vai receber acesso a conteúdo que não está disponível em nenhum outro lugar.", icon: Zap },
+      { day: "Em breve",  label: "Código NEXOS",       desc: "Bônus exclusivo para quem acompanhar de perto. Fique de olho.", icon: Star },
+      { day: "Em breve",  label: "Janela de acesso",   desc: "Vagas limitadas. Sem prorrogação.", icon: Radio },
+      { day: "Em breve",  label: "Encerramento",       desc: "Quem não entrar na janela espera a próxima turma — sem data prevista.", icon: Lock },
     ],
-    aiGreeting: "Olá! Sou a IA de pré-vendas do NexOS AI. Estou aqui para tirar qualquer dúvida sobre a plataforma, o lançamento ou o que você pode esperar do grupo de aquecimento. O que quer saber?",
+    aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas.\n\nA automação do processo de vendas da NexOS te economiza dinheiro, tempo e otimiza seu retorno — vamos avaliar o efeito de todos os benefícios da NexOS em seu projeto de marketing digital:\n\nO que você vende hoje, ou o que pretende lançar?",
   },
   agency: {
     badge: "Agência / Gestor",
     groupName: "Grupo das Agências",
     headline: "Você está dentro!",
-    sub: "Você entrou no grupo das agências. Nos próximos dias o aquecimento vai direto no WhatsApp — 2 mensagens por dia com cases, demos e números reais de escala.",
+    sub: "Prepare-se — nos próximos dias você vai ver de perto como a NexOS opera por dentro. Enquanto isso, o Jeff — nosso especialista — está disponível agora.",
     color: "success" as const,
     totalDays: 8,
     phases: [
-      { day: "Dias 1–6",  label: "Aquecimento",   desc: "2 msgs/dia — white-label, multi-cliente, demos técnicas e simulações de margem.", icon: Zap },
-      { day: "Dia 5",     label: "Código NEXOS",  desc: "Código exclusivo para agências. Bônus: apostila + onboarding guiado no 1º cliente.", icon: Star },
-      { day: "Dia 7",     label: "Carrinho Abre", desc: "48h de janela com condições especiais para agências.", icon: Radio },
-      { day: "Dia 8",     label: "Encerramento",  desc: "Carrinho fecha. Sem exceções.", icon: Lock },
+      { day: "Em breve",  label: "Conteúdo exclusivo", desc: "Cases e demonstrações reais de como agências estão escalando com IA.", icon: Zap },
+      { day: "Em breve",  label: "Código NEXOS",       desc: "Bônus exclusivo para agências. Fique de olho.", icon: Star },
+      { day: "Em breve",  label: "Janela de acesso",   desc: "Condições especiais para agências. Vagas limitadas.", icon: Radio },
+      { day: "Em breve",  label: "Encerramento",       desc: "Carrinho fecha. Sem exceções.", icon: Lock },
     ],
-    aiGreeting: "Olá! Sou a IA de pré-vendas do NexOS AI. Estou aqui para tirar dúvidas sobre o plano Agency, white-label, gestão de múltiplos clientes ou qualquer aspecto técnico da plataforma. Pode perguntar!",
+    aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas.\n\nA automação do processo de vendas da NexOS te economiza dinheiro, tempo e otimiza o retorno dos seus clientes — vamos avaliar o efeito de todos os benefícios da NexOS na operação da sua agência:\n\nQuantos clientes ativos você gerencia hoje, e qual o maior gargalo operacional da sua equipe?",
   },
 };
 
@@ -162,18 +162,15 @@ function AiChat({ segment }: { segment: Segment }) {
     <div className="flex flex-col h-full border border-primary/20 bg-card/40 overflow-hidden">
       {/* Chat header */}
       <div className="border-b border-border/50 px-4 py-3 flex items-center gap-3 shrink-0 bg-muted/5">
-        <div className="w-8 h-8 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
-          <img src={nexosLogo} alt="AI" className="w-5 h-5 object-contain" />
+        <div className="w-9 h-9 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 font-mono font-black text-primary text-sm">
+          J
         </div>
         <div>
-          <div className="font-mono font-bold text-xs uppercase tracking-widest text-foreground">IA NexOS · Pré-vendas</div>
+          <div className="font-mono font-bold text-xs uppercase tracking-widest text-foreground">Jeff · Especialista NexOS</div>
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-            <span className="font-mono text-[11px] uppercase tracking-widest text-success">Online agora</span>
+            <span className="font-mono text-[11px] uppercase tracking-widest text-success">Disponível agora</span>
           </div>
-        </div>
-        <div className="ml-auto font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 flex items-center gap-1">
-          <Bot className="h-3 w-3" />Claude · NexOS AI
         </div>
       </div>
 
@@ -182,15 +179,12 @@ function AiChat({ segment }: { segment: Segment }) {
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
             {/* Avatar */}
-            <div className={`w-7 h-7 rounded-sm border flex items-center justify-center shrink-0 ${
+            <div className={`w-7 h-7 rounded-sm border flex items-center justify-center shrink-0 font-mono font-black text-xs ${
               msg.role === "assistant"
-                ? "border-primary/40 bg-primary/10"
-                : "border-border/50 bg-muted/20"
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border/50 bg-muted/20 text-muted-foreground"
             }`}>
-              {msg.role === "assistant"
-                ? <img src={nexosLogo} alt="AI" className="w-4 h-4 object-contain" />
-                : <User className="h-3.5 w-3.5 text-muted-foreground" />
-              }
+              {msg.role === "assistant" ? "J" : <User className="h-3.5 w-3.5" />}
             </div>
             {/* Bubble */}
             <div className={`max-w-[80%] px-4 py-3 text-sm leading-relaxed font-sans ${
@@ -204,12 +198,12 @@ function AiChat({ segment }: { segment: Segment }) {
         ))}
         {loading && (
           <div className="flex gap-3">
-            <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
-              <img src={nexosLogo} alt="AI" className="w-4 h-4 object-contain" />
+            <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 font-mono font-black text-xs text-primary">
+              J
             </div>
             <div className="border border-primary/20 bg-primary/5 px-4 py-3 flex items-center gap-2">
               <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">Pensando...</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">Jeff está digitando...</span>
             </div>
           </div>
         )}
@@ -236,7 +230,7 @@ function AiChat({ segment }: { segment: Segment }) {
           </Button>
         </div>
         <p className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest mt-2">
-          IA especializada no fechamento · Cronograma de lançamento · Planos e preços
+          Jeff · Especialista NexOS · Responde agora
         </p>
       </div>
     </div>
@@ -374,7 +368,7 @@ export default function PreparacaoPage() {
       {/* ── Bottom strip ── */}
       <div className="border-t border-border/30 bg-muted/5 py-6 px-6 text-center">
         <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
-          Fique de olho no WhatsApp cadastrado · 2 mensagens/dia · Sem spam
+          Fique de olho no WhatsApp cadastrado · O Jeff está aqui agora para qualquer dúvida
         </p>
         <p className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest mt-1">
           NexOS AI · contato@nexos.ai
