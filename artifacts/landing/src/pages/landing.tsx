@@ -161,26 +161,28 @@ function FearTravaSection() {
   );
 }
 
-// ─── Section 3: FEAR — Custo de terceiros ─────────────────────────────────────
+// ─── Section 3: ANCORAGEM — Custo real do mercado ─────────────────────────────
 function FearCustoSection() {
   const { ref, inView } = useInView(0.2);
   const alternativas = [
-    { nome: "Agência de lançamento completa", preco: "R$15.000 a R$50.000/mês", nota: "Contratos de 6 meses. Resultados em 90 dias." },
-    { nome: "Copywriter sênior dedicado", preco: "R$8.000 a R$15.000/mês", nota: "Entrega 2 a 3 copies por semana. No máximo." },
-    { nome: "Gestor de tráfego + automação", preco: "R$5.000 a R$12.000/mês", nota: "Só tráfego. Automação é outro fornecedor." },
-    { nome: "Social media + suporte", preco: "R$3.000 a R$6.000/mês", nota: "Posts genéricos. Não entende lançamento." },
+    { nome: "Agência de lançamento completa", preco: "R$15k–R$50k/mês", nota: "Contrato mínimo 6 meses. Resultado em 90 dias." },
+    { nome: "Copywriter sênior dedicado", preco: "R$8k–R$15k/mês", nota: "2 a 3 copies por semana. No máximo." },
+    { nome: "Gestor de tráfego + automação", preco: "R$5k–R$12k/mês", nota: "Só tráfego. Automação é outro fornecedor." },
+    { nome: "Social media + suporte", preco: "R$3k–R$6k/mês", nota: "Posts genéricos. Não entende lançamento." },
   ];
+  const total = { low: "R$31.000", high: "R$83.000" };
+
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">FAÇA AS CONTAS</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
-            Quer execução<br />de verdade?<br />
-            <span className="text-yellow-400/80">O mercado cobra caro. E ainda falha.</span>
+            Execução de lançamento<br />do jeito convencional<br />
+            <span className="text-destructive/80">custa isso por mês:</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="space-y-3">
               {alternativas.map((item, i) => (
                 <div
                   key={i}
@@ -191,21 +193,40 @@ function FearCustoSection() {
                     <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-bold">{item.nome}</div>
                     <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">{item.nota}</div>
                   </div>
-                  <div className="font-mono font-black text-sm text-destructive/70 text-right ml-4 shrink-0">{item.preco}</div>
+                  <div className="font-mono font-black text-sm text-destructive/60 text-right ml-4 shrink-0">{item.preco}</div>
                 </div>
               ))}
-            </div>
-            <div className="border border-primary/30 bg-primary/5 p-8 flex flex-col justify-center">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-4">NexOS AI — tudo isso</div>
-              <div className="font-mono font-black text-5xl text-primary mb-3">R$3.990</div>
-              <div className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
-                R$3.990 = 29 agentes de IA executando estratégia, copy, segmentação, WhatsApp, Email, carrinho. Funcionando em 24h.
+              <div className={`flex items-center justify-between border border-destructive/40 bg-destructive/5 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"}`}
+                style={{ transitionDelay: "420ms" }}>
+                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-black">Total por mês</div>
+                <div className="font-mono font-black text-base text-destructive text-right ml-4 shrink-0">{total.low} a {total.high}</div>
               </div>
-              <a href="/comprar">
+            </div>
+
+            {/* Anchoring reveal — NO price shown */}
+            <div className={`border border-primary/30 bg-primary/5 p-8 flex flex-col justify-center transition-all duration-700 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
+              style={{ transitionDelay: "200ms" }}>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">NexOS AI faz tudo isso</div>
+              <p className="font-mono font-black text-2xl text-foreground leading-snug mb-4">
+                Estratégia. Copy. Segmentação.<br />WhatsApp. Email. Carrinho.<br />
+                <span className="text-primary">29 agentes. 24 horas.</span>
+              </p>
+              <div className="border-l-2 border-primary/50 pl-4 mb-6">
+                <p className="font-mono text-sm text-muted-foreground leading-relaxed">
+                  O NexOS AI não vai custar {total.low} por mês.<br />
+                  Não vai custar {total.high} por mês.<br />
+                  <strong className="text-foreground">Nem de longe.</strong><br /><br />
+                  Mas o investimento real? Só quem garantir<br />uma das 47 vagas vai descobrir.
+                </p>
+              </div>
+              <a href="#oferta">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 w-full">
-                  QUERO OS 29 AGENTES AGORA <ArrowRight className="h-4 w-4" />
+                  QUERO SABER O VALOR <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center mt-3">
+                47 vagas · Acesso revelado individualmente
+              </p>
             </div>
           </div>
         </div>
@@ -476,13 +497,14 @@ function UrgencySection() {
   );
 }
 
-// ─── Section 9: OFERTA FINAL ──────────────────────────────────────────────────
+// ─── Section 9: OFERTA FINAL — Sem preço, ancoragem + formulário ──────────────
 function OfferSection() {
   const { ref, inView } = useInView(0.15);
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [loading, setLoading] = useState(false);
   const [joined, setJoined] = useState(false);
+
   const formatWA = (v: string) => {
     const d = v.replace(/\D/g, "");
     if (d.length <= 2) return d;
@@ -513,99 +535,130 @@ function OfferSection() {
     finally { setLoading(false); }
   };
 
-  const features = [
-    "29 agentes de IA trabalhando 24h no seu lançamento",
-    "Estratégia completa montada em 47 minutos",
-    "Copy de página, emails e WhatsApp gerados automaticamente",
-    "Segmentação inteligente em tempo real da sua base",
-    "Disparos automáticos WhatsApp Business API",
-    "Sequências de email com 12 variações por campanha",
-    "Abertura e fechamento de carrinho 100% automático",
-    "Suporte prioritário via grupo exclusivo de testadores",
+  const includes = [
+    "29 agentes de IA executando 24h no seu lançamento",
+    "Estratégia completa gerada em 47 minutos",
+    "23 emails + 18 mensagens WhatsApp por campanha",
+    "Segmentação comportamental em tempo real",
+    "Abertura e fechamento automático de carrinho",
+    "Dashboard ao vivo com health score e alertas",
+    "Acesso prioritário a todos os novos agentes",
+    "Grupo privado de testadores com suporte direto",
   ];
 
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-primary/20" id="oferta">
       <div className="max-w-5xl mx-auto px-6 w-full py-20">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
 
-            {/* Left — Offer */}
-            <div>
-              <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">SUA OFERTA</div>
-              <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
-                Testes Privados<br />
-                <span className="text-primary">NexOS AI.</span>
-              </h2>
-              <div className="border border-primary/30 bg-primary/5 p-6 mb-6">
-                <div className="font-mono font-black text-6xl text-foreground mb-1">
-                  R$3.990
-                </div>
-                <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-4">
-                  47 vagas restantes · Acesso liberado em 24h · Sem fidelidade
-                </div>
-                <ul className="space-y-2">
-                  {features.map((feat) => (
-                    <li key={feat} className="flex items-center gap-2.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="font-mono text-xs text-foreground/80">{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <a href="/comprar">
-                <Button className="w-full btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 gap-3">
-                  QUERO MINHA VAGA NOS TESTES <ArrowRight className="h-4 w-4" />
-                </Button>
-              </a>
-              <div className="flex items-center justify-center gap-2 mt-3 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40">
-                <Shield className="h-3 w-3" />
-                Sem fidelidade. Cancela quando quiser. Acesso em 24h.
+          {/* Header — ancoragem de contraste */}
+          <div className="text-center mb-14">
+            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">ACESSO EXCLUSIVO · 47 VAGAS</div>
+            <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
+              Tudo que o mercado<br />cobra R$83k/mês.<br />
+              <span className="text-primary">O NexOS AI não custa nem perto disso.</span>
+            </h2>
+            <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              O valor real do NexOS AI é revelado individualmente para quem garante uma vaga nos testes privados.{" "}
+              <strong className="text-foreground">Não por mistério. Porque quem chega aqui já entendeu o valor — e o preço vai ser o menor obstáculo.</strong>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            {/* Left — O que está incluso */}
+            <div className="border border-primary/20 bg-primary/5 p-7">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">O que você recebe</div>
+              <ul className="space-y-2.5 mb-8">
+                {includes.map((feat) => (
+                  <li key={feat} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                    <span className="font-mono text-xs text-foreground/80 leading-relaxed">{feat}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-primary/20 pt-5">
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-2">Valor de mercado equivalente</div>
+                <div className="font-mono font-black text-3xl text-destructive/70 line-through mb-1">R$31.000 – R$83.000/mês</div>
+                <div className="font-mono text-xs text-muted-foreground">Se você contratar isso tudo separado.</div>
               </div>
             </div>
 
-            {/* Right — Waitlist for esquenta */}
-            <div className="border border-border/30 bg-card/20 p-7">
+            {/* Right — Formulário de acesso */}
+            <div className="border border-border/30 bg-card/20 p-7 flex flex-col">
               <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold mb-1">
-                Bônus: Esquenta de 7 Dias
+                Garantir minha vaga
               </div>
               <h3 className="font-mono font-black uppercase text-xl tracking-tight text-foreground mb-2">
-                Entre antes de todo mundo.
+                Descubra o valor. Agora.
               </h3>
               <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
-                Ao entrar nos testes, você recebe acesso imediato ao Esquenta. 7 dias de conteúdo exclusivo mostrando os bastidores dos 29 agentes antes de rodar seu primeiro lançamento.
+                Preencha abaixo. Em segundos você é redirecionado para a página de acesso — com o investimento completo, sem surpresas. Só 47 vagas. Depois dessa, lista de espera sem previsão.
               </p>
+
               {joined ? (
-                <div className="flex items-center gap-3 border border-primary/30 bg-primary/5 px-4 py-4">
+                <div className="flex items-center gap-3 border border-primary/30 bg-primary/5 px-4 py-5 mt-auto">
                   <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                   <div>
-                    <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">Você está dentro!</div>
-                    <div className="font-mono text-[11px] text-muted-foreground">Redirecionando para falar com o Jeff...</div>
+                    <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">Vaga garantida!</div>
+                    <div className="font-mono text-[11px] text-muted-foreground">Redirecionando para sua página de acesso...</div>
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleWaitlist} className="space-y-3">
+                <form onSubmit={handleWaitlist} className="space-y-3 flex-1 flex flex-col">
                   <div className="space-y-1">
                     <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Seu nome</Label>
-                    <Input required value={name} onChange={e => setName(e.target.value)} placeholder="Como você se chama?"
-                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-sans" />
+                    <Input
+                      required
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      placeholder="Como você se chama?"
+                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-sans"
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">WhatsApp (com DDD)</Label>
-                    <Input required value={whatsapp} onChange={e => setWhatsapp(formatWA(e.target.value))} placeholder="(11) 99999-9999"
-                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-mono" />
+                    <Input
+                      required
+                      value={whatsapp}
+                      onChange={e => setWhatsapp(formatWA(e.target.value))}
+                      placeholder="(11) 99999-9999"
+                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-mono"
+                    />
                   </div>
-                  <Button type="submit" disabled={loading} variant="outline"
-                    className="w-full h-11 rounded-none font-mono uppercase tracking-widest text-xs font-bold border-border/50 gap-2">
-                    {loading ? "Entrando..." : <><ChevronRight className="h-3.5 w-3.5" /> Garantir minha vaga no esquenta</>}
-                  </Button>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center">
-                    Sem spam · Só conteúdo de lançamento
-                  </p>
+                  <div className="mt-auto pt-2">
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 gap-2"
+                    >
+                      {loading
+                        ? "Verificando vagas..."
+                        : <><ArrowRight className="h-4 w-4" /> VER O INVESTIMENTO E GARANTIR VAGA</>}
+                    </Button>
+                    <div className="flex items-center justify-center gap-2 mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
+                      <Shield className="h-3 w-3" />
+                      Sem spam · Acesso imediato · Cancela quando quiser
+                    </div>
+                  </div>
                 </form>
               )}
             </div>
           </div>
+
+          {/* Urgency bar */}
+          <div className="mt-8 border border-destructive/20 bg-destructive/5 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
+              <span className="font-mono text-xs text-foreground/80">
+                <strong>47 vagas nos testes privados.</strong> Quando fechar: lista de espera sem data.
+              </span>
+            </div>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 shrink-0">
+              Cada hora = um concorrente mais automatizado
+            </span>
+          </div>
+
         </div>
       </div>
     </Section>
