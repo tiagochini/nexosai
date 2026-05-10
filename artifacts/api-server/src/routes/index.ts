@@ -29,6 +29,7 @@ import recordingRouter from "../modules/recording/recording.routes.js";
 import adminRouter from "../modules/admin/admin.routes.js";
 import onboardingRouter from "../modules/onboarding/onboarding.routes.js";
 import weeklyReportRouter from "../modules/weekly-report/weekly-report.routes.js";
+import demoRouter from "../modules/demo/demo.routes.js";
 
 const router: IRouter = Router();
 
@@ -62,5 +63,6 @@ router.use("/recordings", recordingRouter);
 router.use("/admin", adminRouter);
 router.use("/onboarding", onboardingRouter);
 router.use("/reports", weeklyReportRouter);
+router.use("/demo", demoRouter);
 
 export default router;

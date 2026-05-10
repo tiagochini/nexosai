@@ -10,6 +10,7 @@ import {
   ChevronRight, X, Layers,
 } from "lucide-react";
 import { toast } from "sonner";
+import { LiveDemoSection, SimulatorSection } from "@/components/landing-demo-sections";
 
 // ─── Scroll-snap section wrapper ──────────────────────────────────────────────
 function useInView(threshold = 0.3) {
@@ -638,6 +639,8 @@ export default function Landing() {
       <FearExecucaoSection />
       <SolutionSection />
       <HowItWorksSection />
+      <LiveDemoSection />
+      <SimulatorSection />
       <ProofSection />
       <UrgencySection />
       <OfferSection />
