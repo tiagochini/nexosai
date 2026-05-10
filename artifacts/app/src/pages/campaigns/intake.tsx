@@ -85,12 +85,19 @@ export default function CampaignIntake() {
     },
   });
 
-  // Load existing intake data into form
+  // Load existing intake data + restore conversation history
   useEffect(() => {
-    if (data?.intakeData) {
-      setFormData(data.intakeData as Record<string, string>);
-      const comp = data.completeness;
-      setProgress(typeof comp === "number" ? comp : (comp as { progress?: number })?.progress ?? 0);
+    if (!data?.intakeData) return;
+    setFormData(data.intakeData as Record<string, string>);
+    const comp = data.completeness;
+    setProgress(typeof comp === "number" ? comp : (comp as { progress?: number })?.progress ?? 0);
+
+    // Restore saved conversation history from the DB
+    const raw = data.intakeData as Record<string, unknown>;
+    const savedHistory = raw._conversationHistory;
+    if (Array.isArray(savedHistory) && savedHistory.length > 0) {
+      setMessages(savedHistory as ChatMessage[]);
+      aiTriggered.current = true; // history exists — don't fire auto-trigger greeting
     }
   }, [data]);
 

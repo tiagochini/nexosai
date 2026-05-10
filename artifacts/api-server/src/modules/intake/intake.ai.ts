@@ -276,32 +276,31 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}`.slice(0, 1200); // hard cap 
       : "Ótimo! Todos os dados foram coletados.";
   }
 
-  // Save extracted fields
-  if (Object.keys(extracted).length > 0) {
-    const merged = { ...currentIntake, ...extracted };
-    await saveIntakeData(campaignId, workspaceId, merged, log);
+  // ── Always persist conversation history ──────────────────────────────────────
+  const HIST_KEY = "_conversationHistory";
+  const prevHistory = Array.isArray(currentIntake[HIST_KEY])
+    ? (currentIntake[HIST_KEY] as Array<{ role: string; content: string }>)
+    : [];
+  const updatedHistory = [
+    ...prevHistory,
+    { role: "user", content: userMessage },
+    { role: "assistant", content: aiMessage },
+  ].slice(-40); // keep last 40 turns (20 exchanges)
 
-    // Re-check completeness after save
-    const newCompleteness = validateIntakeCompleteness(type, track, merged);
-    isComplete = isComplete || newCompleteness.valid;
+  // Merge extracted fields + updated history and save
+  const mergedData = {
+    ...currentIntake,
+    ...(Object.keys(extracted).length > 0 ? extracted : {}),
+    [HIST_KEY]: updatedHistory,
+  };
+  await saveIntakeData(campaignId, workspaceId, mergedData, log);
 
-    const progress = Math.round(
-      ((questions.length - newCompleteness.missingRequired.length) / questions.length) * 100
-    );
-
-    return {
-      extracted,
-      aiMessage,
-      nextQuestionId,
-      isComplete,
-      progress,
-      missingRequired: newCompleteness.missingRequired,
-      intakeData: merged,
-    };
-  }
+  // Re-check completeness with new data
+  const newCompleteness = validateIntakeCompleteness(type, track, mergedData);
+  isComplete = isComplete || newCompleteness.valid;
 
   const progress = Math.round(
-    ((questions.length - missingRequired.length) / questions.length) * 100
+    ((questions.length - newCompleteness.missingRequired.length) / questions.length) * 100
   );
 
   return {
@@ -310,8 +309,8 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}`.slice(0, 1200); // hard cap 
     nextQuestionId,
     isComplete,
     progress,
-    missingRequired,
-    intakeData: currentIntake,
+    missingRequired: newCompleteness.missingRequired,
+    intakeData: mergedData,
   };
 }
 

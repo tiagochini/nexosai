@@ -90,6 +90,29 @@ const MODE_LABELS: Record<ContextMode, string> = {
   brainstorm: "Brainstorm", review: "Revisão", strategy: "Estratégia", question: "Pergunta", optimize: "Otimizar",
 };
 
+// ── localStorage helpers ──────────────────────────────────────────────────────
+const CHAT_MAX_STORED = 60; // max messages to persist per agent
+
+function chatStorageKey(role: string, campaignId: string) {
+  return `nexos-chat-${role}${campaignId ? `-${campaignId}` : ""}`;
+}
+
+function loadChatHistory(role: string, campaignId: string): ChatMsg[] {
+  try {
+    const raw = localStorage.getItem(chatStorageKey(role, campaignId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Array<{ role: string; content: string; timestamp: string }>;
+    return parsed.map(m => ({ ...m, role: m.role as "user" | "assistant", timestamp: new Date(m.timestamp) }));
+  } catch { return []; }
+}
+
+function saveChatHistory(role: string, campaignId: string, msgs: ChatMsg[]) {
+  try {
+    const toStore = msgs.slice(-CHAT_MAX_STORED);
+    localStorage.setItem(chatStorageKey(role, campaignId), JSON.stringify(toStore));
+  } catch { /* storage full — ignore */ }
+}
+
 export default function AgentChat() {
   const [, params] = useRoute("/agents/:role");
   const role = params?.role ?? "command";
@@ -110,48 +133,52 @@ export default function AgentChat() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Restore history when role or campaign changes
   useEffect(() => {
-    setMessages([]);
-    inputRef.current?.focus();
-  }, [role]);
+    const saved = loadChatHistory(role, selectedCampaign);
+    setMessages(saved);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, [role, selectedCampaign]);
 
   const sendMessage = async (overrideMsg?: string) => {
     const text = (overrideMsg ?? input).trim();
     if (!text || sending) return;
     setInput("");
     const newMsg: ChatMsg = { role: "user", content: text, timestamp: new Date() };
-    setMessages(prev => [...prev, newMsg]);
+    const withUser = [...messages, newMsg];
+    setMessages(withUser);
     setSending(true);
 
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const res = await customFetch<Response>("/api/agents/direct-chat", {
+      const res = await customFetch<{ response: string; tokensUsed: number; creditsCharged: number }>("/api/agents/direct-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentRole: role, message: text,
-          history, contextMode,
+          history: history.slice(-12), // last 12 turns to stay within context
+          contextMode,
           ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json() as { error?: string };
-        throw new Error(err.error ?? "Erro na comunicação com o agente");
-      }
-
-      const data = await res.json() as { response: string; tokensUsed: number; creditsCharged: number };
-      setMessages(prev => [...prev, { role: "assistant", content: data.response, timestamp: new Date() }]);
+      const aiMsg: ChatMsg = { role: "assistant", content: res.response, timestamp: new Date() };
+      const withAi = [...withUser, aiMsg];
+      setMessages(withAi);
+      saveChatHistory(role, selectedCampaign, withAi);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro de comunicação");
-      setMessages(prev => prev.filter((_, i) => i !== prev.length - 1));
+      setMessages(messages); // revert
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
-  const clearChat = () => setMessages([]);
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(chatStorageKey(role, selectedCampaign));
+  };
 
   const exportChat = () => {
     const text = messages.map(m => `[${m.role === "user" ? "Você" : agent.name}] ${m.content}`).join("\n\n");

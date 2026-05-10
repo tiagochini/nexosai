@@ -130,6 +130,33 @@ function ProposalCard({ proposal, onSelect }: { proposal: ProductProposal; onSel
   );
 }
 
+// ── localStorage persistence ──────────────────────────────────────────────────
+const ONBOARDING_KEY = "nexos-onboarding-state";
+
+interface OnboardingState {
+  path: OnboardingPath;
+  campaignId: string;
+  step: UIStep;
+  messages: ChatMessage[];
+  conversationComplete: boolean;
+}
+
+function loadOnboardingState(): OnboardingState | null {
+  try {
+    const raw = localStorage.getItem(ONBOARDING_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as OnboardingState;
+  } catch { return null; }
+}
+
+function saveOnboardingState(state: OnboardingState) {
+  try { localStorage.setItem(ONBOARDING_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+}
+
+function clearOnboardingState() {
+  localStorage.removeItem(ONBOARDING_KEY);
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Onboarding() {
   const { user } = useAuth();
@@ -151,6 +178,18 @@ export default function Onboarding() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Restore saved onboarding state on mount
+  useEffect(() => {
+    const saved = loadOnboardingState();
+    if (saved && saved.messages.length > 0 && saved.campaignId) {
+      setPath(saved.path);
+      setCampaignId(saved.campaignId);
+      setStep(saved.step);
+      setMessages(saved.messages);
+      setConversationComplete(saved.conversationComplete);
+    }
+  }, []);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -167,7 +206,8 @@ export default function Onboarding() {
       });
       if (!res.ok) throw new Error("Falha ao iniciar");
       const data = await res.json() as { campaign: { id: string }; path: string };
-      setCampaignId(data.campaign.id);
+      const cid = data.campaign.id;
+      setCampaignId(cid);
       setStep("conversation");
 
       // Initial AI greeting based on path
@@ -176,7 +216,9 @@ export default function Onboarding() {
         building_product: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vai ser um prazer ajudar você a encontrar o produto ideal.\n\nVamos começar do seu perfil. Qual é a sua área de atuação ou especialidade principal? (ex: nutrição, finanças, tecnologia, fitness, educação...)`,
         affiliate_nexos: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Bem-vindo ao programa de afiliados NexOS AI.\n\nComo afiliado, você vai lançar a plataforma para o seu público e ganhar comissões recorrentes por cada assinante ativo.\n\nPara montar sua estratégia, me conta: qual é o seu público atual? Tem seguidores, lista de email, grupo ou comunidade?`,
       };
-      setMessages([{ role: "assistant", content: greetings[selectedPath] }]);
+      const initMsgs = [{ role: "assistant" as const, content: greetings[selectedPath] }];
+      setMessages(initMsgs);
+      saveOnboardingState({ path: selectedPath, campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false });
     } catch {
       toast.error("Erro ao iniciar. Tente novamente.");
     } finally {
@@ -224,11 +266,18 @@ export default function Onboarding() {
       };
 
       const aiText = data.aiMessage ?? data.message ?? "...";
-      setMessages((prev) => [...prev, { role: "assistant", content: aiText }]);
+      const withAi: ChatMessage[] = [...newMessages, { role: "assistant", content: aiText }];
+      setMessages(withAi);
 
+      const complete = data.isComplete ?? false;
       if (data.productProposals?.length) setProposals(data.productProposals);
       if (data.affiliateStrategy) setAffiliateStrategy(data.affiliateStrategy);
-      if (data.isComplete) setConversationComplete(true);
+      if (complete) setConversationComplete(true);
+
+      // Persist updated conversation
+      if (path && campaignId) {
+        saveOnboardingState({ path, campaignId, step, messages: withAi, conversationComplete: complete });
+      }
     } catch {
       toast.error("Erro de comunicação com a IA. Tente novamente.");
     } finally {
@@ -251,6 +300,7 @@ export default function Onboarding() {
   };
 
   const handleLaunch = () => {
+    clearOnboardingState(); // wipe saved state — onboarding is complete
     if (path === "has_product" && campaignId) {
       setLocation(`/campaigns/${campaignId}/intake`);
     } else if (campaignId) {

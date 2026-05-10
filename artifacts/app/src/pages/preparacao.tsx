@@ -118,18 +118,31 @@ function WhatsAppButton({ segment }: { segment: Segment }) {
 // ── AI Chat ───────────────────────────────────────────────────────────────────
 function AiChat({ segment }: { segment: Segment }) {
   const cfg = SEGMENT_CONFIG[segment];
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const storageKey = `nexos-jeff-${segment}`;
+
+  const loadSaved = (): ChatMsg[] => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      return raw ? (JSON.parse(raw) as ChatMsg[]) : [];
+    } catch { return []; }
+  };
+
+  const savedMsgs = loadSaved();
+  const [messages, setMessages] = useState<ChatMsg[]>(savedMsgs);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [jeffTyping, setJeffTyping] = useState(true);
+  const [jeffTyping, setJeffTyping] = useState(savedMsgs.length === 0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Simulate Jeff typing the opening greeting on mount
+  // Only show typing animation + greeting if no saved history
   useEffect(() => {
-    const delay = 1800 + Math.random() * 800; // 1.8s–2.6s
+    if (savedMsgs.length > 0) return; // already restored
+    const delay = 1800 + Math.random() * 800;
     const timer = setTimeout(() => {
       setJeffTyping(false);
-      setMessages([{ role: "assistant", content: cfg.aiGreeting }]);
+      const initMsgs: ChatMsg[] = [{ role: "assistant", content: cfg.aiGreeting }];
+      setMessages(initMsgs);
+      try { localStorage.setItem(storageKey, JSON.stringify(initMsgs)); } catch { /* ignore */ }
     }, delay);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,8 +158,8 @@ function AiChat({ segment }: { segment: Segment }) {
     setInput("");
 
     const userMsg: ChatMsg = { role: "user", content: text };
-    const updated = [...messages, userMsg];
-    setMessages(updated);
+    const withUser = [...messages, userMsg];
+    setMessages(withUser);
     setLoading(true);
 
     try {
@@ -156,11 +169,14 @@ function AiChat({ segment }: { segment: Segment }) {
         body: JSON.stringify({
           message: text,
           segment,
-          history: updated.slice(-12).slice(0, -1), // last 12 msgs excluding the one we just sent
+          history: withUser.slice(-12).slice(0, -1),
         }),
       });
       const data = await res.json() as { reply?: string; error?: string };
-      setMessages(prev => [...prev, { role: "assistant", content: data.reply ?? "Ops, tive um problema. Tente novamente!" }]);
+      const aiReply = data.reply ?? "Ops, tive um problema. Tente novamente!";
+      const withAi: ChatMsg[] = [...withUser, { role: "assistant", content: aiReply }];
+      setMessages(withAi);
+      try { localStorage.setItem(storageKey, JSON.stringify(withAi.slice(-40))); } catch { /* ignore */ }
     } catch {
       toast.error("Erro de conexão. Tente novamente.");
     } finally {
