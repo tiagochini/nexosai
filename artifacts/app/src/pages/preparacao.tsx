@@ -317,7 +317,7 @@ export default function PreparacaoPage() {
         <div className="max-w-6xl mx-auto px-6 h-28 flex items-center justify-between">
           <div className="flex items-center gap-5">
             <img src={nexosLogo} alt="NexOS AI" className="h-20 w-20 object-contain" style={{ filter: "drop-shadow(0 0 18px hsl(var(--primary)/0.65))" }} />
-            <div>
+            <div className="hidden sm:block">
               <div className="font-mono font-black text-2xl tracking-[0.15em] uppercase leading-tight">NexOS <span className="text-primary">AI</span></div>
               <div className="font-mono text-xs uppercase tracking-[0.3em] text-primary/70 leading-tight">Plataforma de Lançamento</div>
             </div>
