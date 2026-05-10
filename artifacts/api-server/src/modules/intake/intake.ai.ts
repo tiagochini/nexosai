@@ -46,6 +46,8 @@ Campos possíveis:
 - audience.description: string (avatar ideal)
 - audience.painPoints: string
 - audience.desires: string
+- audience.decisionMaker: "self"|"business_owner"|"manager"|"teacher_educator"|"hr_department"|"couple_family"|"committee"
+- audience.buyerVsUser: string (quem paga vs quem usa, ex: "escola paga, professor usa")
 - audience.sophisticationLevel: "unaware"|"problem_aware"|"solution_aware"|"product_aware"|"most_aware"
 - audience.location: "brazil_nationwide"|"brazil_southeast"|"brazil_northeast"|"latin_america"|"portugal"|"global_ptbr"
 - creator.name: string
