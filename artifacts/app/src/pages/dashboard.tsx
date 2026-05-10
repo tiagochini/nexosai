@@ -538,7 +538,7 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 {pendingCheckpoints.length > 0 && (
                   <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse">
                     {pendingCheckpoints.length} Aprovação
@@ -547,11 +547,19 @@ export default function Dashboard() {
                 <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-1 ${STATUS_COLOR[activeCampaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
                   {STATUS_LABEL[activeCampaign.status] ?? activeCampaign.status}
                 </Badge>
-                <Link href={`/campaigns/${activeCampaign.id}`}>
-                  <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
-                    Abrir<ChevronRight className="h-2.5 w-2.5" />
-                  </Button>
-                </Link>
+                {(activeCampaign.status === "intake" || activeCampaign.status === "draft") ? (
+                  <Link href={`/campaigns/${activeCampaign.id}/intake`}>
+                    <Button size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-primary">
+                      Continuar Briefing<ChevronRight className="h-2.5 w-2.5" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href={`/campaigns/${activeCampaign.id}`}>
+                    <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
+                      Abrir<ChevronRight className="h-2.5 w-2.5" />
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
             <PipelineProgress status={activeCampaign.status} />

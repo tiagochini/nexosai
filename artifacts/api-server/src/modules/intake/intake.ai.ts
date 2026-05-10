@@ -273,18 +273,22 @@ export async function processConversationalTurn(
     .map((k) => `${k}: ${String(currentIntake[k]).slice(0, 80)}`)
     .join("\n");
 
+  const isResume = userMessage === "continuar_intake";
+
   const contextNote = `ESTADO DO INTAKE:
 Tipo: ${type} | Track: ${track}
 Preenchidos (${answeredFields.length}): ${answeredFields.join(", ") || "nenhum"}
 Faltando obrigatórios: ${missingRequired.slice(0, 8).join(", ") || "COMPLETO"}
 Próxima pergunta: ${nextQuestion ? `"${nextQuestion.label}" [id:${nextQuestion.id}]` : "TODAS RESPONDIDAS"}
-Resumo preenchidos:\n${filledSummary || "(vazio)"}`.slice(0, 1200); // hard cap at 1200 chars
+Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO ESPECIAL: O usuário está RETOMANDO um briefing iniciado anteriormente. Apresente um resumo claro e objetivo do que já foi coletado (produto, audiência, metas já preenchidas), indique em qual fase estamos (${answeredFields.length === 0 ? "Fase 1 — Produto" : missingRequired.length === 0 ? "Completo" : "progresso parcial"}), e pergunte a próxima questão que falta de forma natural. Não comece do zero.` : ""}`.slice(0, 1400); // hard cap
 
   // Build messages for AI
+  const actualUserMessage = isResume ? "Olá, estou retomando meu briefing. O que já foi preenchido e qual é o próximo passo?" : userMessage;
+
   const messages = [
     { role: "user" as const, content: contextNote },
     ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
-    { role: "user" as const, content: userMessage },
+    { role: "user" as const, content: actualUserMessage },
   ];
 
   let extracted: Record<string, unknown> = {};

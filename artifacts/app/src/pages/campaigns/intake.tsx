@@ -209,6 +209,9 @@ export default function CampaignIntake() {
     },
   });
 
+  // Track if user is returning to an in-progress intake
+  const [isReturning, setIsReturning] = useState(false);
+
   // Load existing intake data + restore conversation history
   useEffect(() => {
     if (!data?.intakeData) return;
@@ -219,9 +222,14 @@ export default function CampaignIntake() {
     // Restore saved conversation history from the DB
     const raw = data.intakeData as Record<string, unknown>;
     const savedHistory = raw._conversationHistory;
+    const filledKeys = Object.keys(raw).filter(k => !k.startsWith("_") && raw[k]);
     if (Array.isArray(savedHistory) && savedHistory.length > 0) {
       setMessages(savedHistory as ChatMessage[]);
       aiTriggered.current = true; // history exists — don't fire auto-trigger greeting
+      setIsReturning(true);
+    } else if (filledKeys.length > 0) {
+      // Has data but no history — auto-trigger will fire continuar_intake, mark as returning
+      setIsReturning(true);
     }
   }, [data]);
 
@@ -525,13 +533,51 @@ export default function CampaignIntake() {
       {/* ════════════════ CHAT VIEW ════════════════ */}
       {view === "chat" && (
         <div className="flex flex-col" style={{ height: "calc(100vh - 22rem)" }}>
-          {/* Info bar */}
-          <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2 shrink-0">
-            <Database className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Produto → Audiência → Metas → Modelo ideal → Perguntas específicas
-            </span>
-          </div>
+          {/* Info bar / "onde você parou" summary */}
+          {isReturning && progress > 0 ? (
+            <div className="border border-blue-400/30 bg-blue-400/5 px-3 py-2.5 shrink-0 space-y-1.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                  <span className="font-mono text-[11px] uppercase tracking-widest text-blue-400 font-bold">
+                    Retomando briefing · {progress}% concluído
+                  </span>
+                </div>
+                <span className="font-mono text-[11px] text-muted-foreground/60">
+                  {progress < 25 ? "Fase 1 — Produto" :
+                   progress < 50 ? "Fase 2 — Audiência" :
+                   progress < 70 ? "Fase 3 — Metas & Orçamento" :
+                   progress < 90 ? "Fase 4 — Modelo de Campanha" :
+                   "Fase 5 — Perguntas Específicas"}
+                </span>
+              </div>
+              {(() => {
+                const highlights: { label: string; value: string }[] = [];
+                const fd = formData;
+                if (fd["product.name"] || fd["product.nome"]) highlights.push({ label: "Produto", value: String(fd["product.name"] ?? fd["product.nome"]) });
+                if (fd["product.price"] || fd["product.preco"]) highlights.push({ label: "Preço", value: `R$${Number(fd["product.price"] ?? fd["product.preco"]).toLocaleString("pt-BR")}` });
+                if (fd["audience.avatar"] || fd["audience.target"]) highlights.push({ label: "Público", value: String(fd["audience.avatar"] ?? fd["audience.target"]).slice(0, 40) + (String(fd["audience.avatar"] ?? fd["audience.target"]).length > 40 ? "…" : "") });
+                if (fd["campaign.budget.total"] || fd["campaign.budget"]) highlights.push({ label: "Budget", value: `R$${Number(fd["campaign.budget.total"] ?? fd["campaign.budget"]).toLocaleString("pt-BR")}` });
+                if (highlights.length === 0) return null;
+                return (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1">
+                    {highlights.map(h => (
+                      <span key={h.label} className="font-mono text-[11px] text-muted-foreground">
+                        <span className="text-foreground/60">{h.label}:</span> <span className="text-foreground/90 font-bold">{h.value}</span>
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2 shrink-0">
+              <Database className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+                Produto → Audiência → Metas → Modelo ideal → Perguntas específicas
+              </span>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto space-y-3 p-4 border-x border-border/50">
