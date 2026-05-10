@@ -91,17 +91,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="h-28 shrink-0 flex items-center px-4 border-b border-border/50">
+      <div className="h-36 shrink-0 flex items-center px-4 border-b border-border/50">
         <Link href="/" onClick={onNav}>
           <div className="flex items-center gap-4 cursor-pointer group">
             <div className="relative shrink-0">
-              <img src={nexosLogo} alt="NexOS" className="h-20 w-20 object-contain transition-all duration-300" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.55))" }} />
+              <img src={nexosLogo} alt="NexOS" className="h-28 w-28 object-contain transition-all duration-300" style={{ filter: "drop-shadow(0 0 18px hsl(var(--primary)/0.6))" }} />
               <div className="absolute -inset-3 bg-primary/6 blur-xl rounded-full -z-10" />
             </div>
             <div>
-              <div className="font-mono font-black text-lg uppercase tracking-[0.12em] text-foreground leading-tight">NexOS</div>
-              <div className="font-mono text-xs uppercase tracking-[0.3em] text-primary leading-tight">AI Platform</div>
-              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">Operações Inteligentes</div>
+              <div className="font-mono font-black text-2xl uppercase tracking-[0.12em] text-foreground leading-tight">NexOS</div>
+              <div className="font-mono text-sm uppercase tracking-[0.3em] text-primary leading-tight">AI Platform</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">Operações Inteligentes</div>
             </div>
           </div>
         </Link>
@@ -297,12 +297,12 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
             <img
               src={nexosLogo}
               alt="NexOS"
-              className="h-14 w-14 object-contain transition-all duration-300"
-              style={{ filter: "drop-shadow(0 0 12px hsl(var(--primary)/0.6))" }}
+              className="h-20 w-20 object-contain transition-all duration-300"
+              style={{ filter: "drop-shadow(0 0 16px hsl(var(--primary)/0.65))" }}
             />
             <div>
-              <div className="font-mono font-black text-base uppercase tracking-[0.15em] leading-tight">NexOS <span className="text-primary">AI</span></div>
-              <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-primary/70 leading-tight">Plataforma de Lançamento</div>
+              <div className="font-mono font-black text-xl uppercase tracking-[0.15em] leading-tight">NexOS <span className="text-primary">AI</span></div>
+              <div className="font-mono text-xs uppercase tracking-[0.25em] text-primary/70 leading-tight">Plataforma de Lançamento</div>
             </div>
           </div>
         </Link>
