@@ -497,6 +497,7 @@ function FeaturesDeepDive() {
 // ─── Hero card ────────────────────────────────────────────────────────────────
 
 function HeroCard() {
+  const [showWaitlist, setShowWaitlist] = useState(false);
   const [segment, setSegment] = useState<Segment | null>(null);
   const [, navigate] = useLocation();
 
@@ -511,13 +512,61 @@ function HeroCard() {
         <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary"></div>
         <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary"></div>
         <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary"></div>
-        {segment
+
+        {showWaitlist && !segment
+          ? <SegmentPicker onSelect={setSegment} />
+          : showWaitlist && segment
           ? <WaitlistForm segment={segment} onBack={() => setSegment(null)} onSuccess={() => handleSuccess(segment)} />
-          : <SegmentPicker onSelect={setSegment} />}
+          : (
+            <div className="space-y-5">
+              <div>
+                <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-primary mb-4">
+                  <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
+                  Testes privados · Acesso disponível agora
+                </div>
+                <h3 className="font-mono font-black uppercase tracking-wide text-base text-foreground mb-2">
+                  Aderir à NexOS AI
+                </h3>
+                <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                  Crie sua conta agora e comece a operar com os 29 agentes de IA. Acesso completo à plataforma de lançamento.
+                </p>
+              </div>
+
+              <div className="border border-border/30 bg-background/30 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Acesso completo</div>
+                  <div className="font-mono font-black text-2xl text-foreground mt-0.5">R$3.990</div>
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground/60 text-right leading-relaxed">
+                  Pagamento único<br />Créditos não expiram
+                </div>
+              </div>
+
+              <Link href="/comprar">
+                <Button className="w-full h-14 rounded-none btn-weapon-primary font-mono uppercase tracking-widest font-black text-sm gap-3">
+                  Aderir à Plataforma <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+
+              <div className="relative flex items-center gap-3">
+                <div className="flex-1 border-t border-border/30"></div>
+                <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40">ou</span>
+                <div className="flex-1 border-t border-border/30"></div>
+              </div>
+
+              <button
+                onClick={() => setShowWaitlist(true)}
+                className="w-full font-mono text-xs uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors py-1"
+              >
+                Entrar na lista de espera do esquenta →
+              </button>
+            </div>
+          )
+        }
       </div>
       <div className="mt-4 flex items-center gap-2 justify-center font-mono text-xs uppercase tracking-widest text-muted-foreground/50">
-        <Clock className="h-3 w-3" />
-        Carrinho abre uma única vez · Fecha em 24h · Sem exceções
+        <Lock className="h-3 w-3" />
+        Fase de testes privada · Dados protegidos
       </div>
     </div>
   );
@@ -920,17 +969,32 @@ export default function Landing() {
             </div>
           ) : (
             <>
-              <div className="text-center mb-16">
-                <div className="inline-flex items-center gap-2 border border-yellow-500/30 bg-yellow-500/5 px-4 py-2 mb-8 font-mono text-xs uppercase tracking-[0.3em] text-yellow-400">
-                  <AlertTriangle className="h-3 w-3" />
-                  Vagas limitadas · Carrinho abre uma única vez · Fecha em 24h
+              <div className="text-center mb-12">
+                <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-8 font-mono text-xs uppercase tracking-[0.3em] text-primary">
+                  <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
+                  Testes privados · Acesso disponível agora
                 </div>
                 <h2 className="text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
-                  Entre na lista agora.<br />
-                  <span className="text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">O esquenta começa em breve.</span>
+                  Aderir à NexOS AI.<br />
+                  <span className="text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">Plataforma de Lançamento.</span>
                 </h2>
-                <p className="text-base text-muted-foreground max-w-xl mx-auto mb-4 leading-relaxed">
-                  Dois grupos separados por perfil. Conteúdo de lançamento estruturado — 2 mensagens por dia, gatilho mental definido por IA. Quando o carrinho abrir por 24h, quem não estiver na lista não recebe o link.
+                <p className="text-base text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
+                  Acesso completo aos 29 agentes de IA. Diagnóstico, estratégia, copy, sequência WhatsApp + Email e dashboard de performance — tudo operado e aprovado por você.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
+                  <Link href="/comprar">
+                    <Button className="btn-weapon-primary font-mono uppercase tracking-widest font-bold gap-2 h-14 px-10 rounded-none text-sm">
+                      Aderir à Plataforma <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button variant="outline" className="font-mono uppercase tracking-widest text-xs h-14 px-8 rounded-none border-border/50">
+                      Já tenho acesso → Entrar
+                    </Button>
+                  </Link>
+                </div>
+                <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40">
+                  Pagamento único · R$3.990 · Créditos não expiram · Acesso imediato
                 </p>
               </div>
               <div className="max-w-md mx-auto">

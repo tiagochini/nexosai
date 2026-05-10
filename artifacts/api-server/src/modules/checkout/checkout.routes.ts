@@ -10,11 +10,13 @@ import { logger } from "../../lib/logger.js";
 const router = Router();
 
 const simulateSchema = z.object({
-  name: z.string().min(2).max(200),
+  name: z.string().min(1).max(200),
   email: z.email(),
   password: z.string().min(6),
-  plan: z.enum(["solo", "agency"]).default("solo"),
-  // Test-mode payment fields — all optional, any value accepted
+  // Optional credit pack — determines starting credits (non-expiring)
+  creditPackId: z.string().optional(),
+  creditPackCredits: z.number().int().min(0).optional(),
+  // Test-mode payment fields — ignored, any value accepted
   testCard: z.object({
     number: z.string().optional(),
     expiry: z.string().optional(),
@@ -36,8 +38,8 @@ function signRefresh(payload: { userId: string }): string {
 }
 
 // POST /api/checkout/simulate
-// Test-mode purchase: creates account + assigns plan + returns JWT.
-// Any card data is accepted in test mode.
+// Test-mode purchase — creates or logs in account, ignores email verification,
+// payment data is fully simulated. Returns JWT for immediate access.
 router.post("/simulate", async (req, res): Promise<void> => {
   let parsed;
   try {
@@ -47,21 +49,24 @@ router.post("/simulate", async (req, res): Promise<void> => {
     return;
   }
 
-  const { name, email, password, plan } = parsed;
+  const { name, email, password, creditPackCredits } = parsed;
 
-  // Fetch the target plan
-  const [targetPlan] = await db
+  // Always use the "solo" plan as the base access tier (DB constraint)
+  const [basePlan] = await db
     .select()
     .from(plansTable)
-    .where(eq(plansTable.slug, plan))
+    .where(eq(plansTable.slug, "solo"))
     .limit(1);
 
-  if (!targetPlan) {
-    res.status(500).json({ error: "Plano não encontrado. Contate o suporte." });
+  if (!basePlan) {
+    res.status(500).json({ error: "Plano base não encontrado. Execute o seed de planos." });
     return;
   }
 
-  // Check if user already exists
+  // Starting credits: plan base + optional pack credits (no expiry, cumulative)
+  const startingCredits = basePlan.creditsMonthly + (creditPackCredits ?? 0);
+
+  // Check if user already exists — test mode: no blocking, just log them in
   const [existingUser] = await db
     .select()
     .from(usersTable)
@@ -72,33 +77,40 @@ router.post("/simulate", async (req, res): Promise<void> => {
   let workspaceId: string;
 
   if (existingUser) {
-    // User already registered — upgrade their plan and log them in
-    const [existingWorkspace] = await db
+    // Already registered — locate or create workspace, top up credits
+    let [existingWorkspace] = await db
       .select()
       .from(workspacesTable)
       .where(eq(workspacesTable.ownerId, existingUser.id))
       .limit(1);
 
     if (!existingWorkspace) {
-      res.status(500).json({ error: "Workspace não encontrado. Contate o suporte." });
-      return;
+      // Workspace missing (edge case) — create one
+      const slug = `${existingUser.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-") ?? "user"}-${Date.now()}`;
+      [existingWorkspace] = await db
+        .insert(workspacesTable)
+        .values({
+          ownerId: existingUser.id,
+          planId: basePlan.id,
+          name: `${existingUser.name ?? email}'s Workspace`,
+          slug,
+          creditsBalance: startingCredits,
+        })
+        .returning();
+    } else {
+      // Top up credits
+      await db
+        .update(workspacesTable)
+        .set({ creditsBalance: existingWorkspace.creditsBalance + (creditPackCredits ?? 0) })
+        .where(eq(workspacesTable.id, existingWorkspace.id));
     }
-
-    // Upgrade plan + top up credits
-    await db
-      .update(workspacesTable)
-      .set({
-        planId: targetPlan.id,
-        creditsBalance: targetPlan.creditsMonthly,
-      })
-      .where(eq(workspacesTable.id, existingWorkspace.id));
 
     userId = existingUser.id;
     workspaceId = existingWorkspace.id;
-    logger.info({ userId, plan }, "checkout: existing user plan upgraded");
+    logger.info({ userId, creditPackCredits }, "checkout: existing user re-access");
   } else {
     // New user — create account + workspace
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     const [newUser] = await db
       .insert(usersTable)
@@ -116,28 +128,27 @@ router.post("/simulate", async (req, res): Promise<void> => {
       .insert(workspacesTable)
       .values({
         ownerId: newUser.id,
-        planId: targetPlan.id,
+        planId: basePlan.id,
         name: `${name}'s Workspace`,
         slug,
-        creditsBalance: targetPlan.creditsMonthly,
+        creditsBalance: startingCredits,
       })
       .returning();
 
     userId = newUser.id;
     workspaceId = newWorkspace.id;
-    logger.info({ userId, workspaceId, plan }, "checkout: new user created");
+    logger.info({ userId, workspaceId, startingCredits }, "checkout: new user created");
   }
 
   const payload = { userId, workspaceId, email: email.toLowerCase() };
 
   res.json({
     success: true,
-    plan: targetPlan.slug,
-    planName: targetPlan.name,
     accessToken: signAccess(payload),
     refreshToken: signRefresh({ userId }),
     expiresIn: 15 * 60,
     isNewUser: !existingUser,
+    startingCredits,
   });
 });
 
