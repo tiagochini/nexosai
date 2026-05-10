@@ -8,12 +8,12 @@ import { Scene5 } from './video_scenes/Scene5';
 import { Scene6 } from './video_scenes/Scene6';
 
 export const SCENE_DURATIONS = {
-  tension: 5000,
-  pain: 6000,
-  shift: 6000,
-  platform: 6000,
-  process: 7000,
-  close: 6000,
+  tension: 8000,   // Scene 1 — opening question, needs time to read
+  pain: 12000,     // Scene 2 — 5 words × 2.2s + entrance
+  shift: 8000,     // Scene 3 — light flood + logo reveal
+  platform: 8000,  // Scene 4 — 29 agents + orbital nodes
+  process: 10000,  // Scene 5 — 3 steps, each has 1.9s gap + "7 dias"
+  close: 8000,     // Scene 6 — tagline + logo + URL
 };
 
 const bgVideo = `${import.meta.env.BASE_URL}videos/bg_cinematic.mp4`;

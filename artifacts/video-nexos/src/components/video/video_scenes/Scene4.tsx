@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { sceneTransitions, springs, staggerConfigs } from '@/lib/video/animations';
-
-const agentsIcon = `${import.meta.env.BASE_URL}images/agents_node.png`;
+import { sceneTransitions, springs } from '@/lib/video/animations';
 
 export function Scene4() {
   const [phase, setPhase] = useState(0);
@@ -10,62 +8,87 @@ export function Scene4() {
   useEffect(() => {
     const timers = [
       setTimeout(() => setPhase(1), 500),
-      setTimeout(() => setPhase(2), 1500),
+      setTimeout(() => setPhase(2), 2000),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
 
   return (
     <motion.div
-      className="absolute inset-0 flex items-center justify-center bg-bg-dark"
+      className="absolute inset-0 flex flex-col items-center justify-center bg-bg-dark"
       {...sceneTransitions.morphExpand}
     >
-      <div className="grid grid-cols-2 gap-20 items-center px-20 w-full max-w-7xl">
+      <div className="flex flex-col items-center justify-center text-center w-full px-16 gap-12">
+
+        {/* Headline */}
         <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={phase >= 1 ? { opacity: 1, x: 0 } : {}}
-          transition={springs.smooth}
+          initial={{ opacity: 0, y: -40 }}
+          animate={phase >= 1 ? { opacity: 1, y: 0 } : {}}
+          transition={{ ...springs.smooth, duration: 0.8 }}
+          className="flex flex-col items-center"
         >
-          <h2 className="text-[6vw] font-black text-white leading-none mb-4">
-            29 <span className="text-primary text-[4vw] block">Agentes Especializados</span>
+          <h2
+            className="font-black text-white leading-none text-center"
+            style={{ fontSize: 'clamp(3rem, 8vw, 9rem)' }}
+          >
+            29
           </h2>
-          <p className="text-[1.8vw] text-text-muted max-w-md">
-            Trabalhando 24/7 para construir cada detalhe do seu lançamento.
+          <span
+            className="text-primary font-black uppercase tracking-widest text-center"
+            style={{ fontSize: 'clamp(1.2rem, 3.5vw, 4rem)' }}
+          >
+            Agentes Especializados
+          </span>
+          <p
+            className="text-text-muted text-center mt-4 max-w-lg"
+            style={{ fontSize: 'clamp(0.9rem, 1.8vw, 2rem)' }}
+          >
+            Trabalhando 24/7 para construir cada detalhe do seu lançamento — estratégia, copy, sequências e análise.
           </p>
         </motion.div>
 
+        {/* Orbital nodes centered */}
         <motion.div
-          className="relative aspect-square flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+          className="relative flex items-center justify-center"
+          style={{ width: '40vw', height: '40vw', maxWidth: '420px', maxHeight: '420px' }}
+          initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
           animate={phase >= 2 ? { opacity: 1, scale: 1, rotate: 0 } : {}}
           transition={springs.bouncy}
         >
-          <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-          <img 
-            src={agentsIcon} 
-            className="w-full h-full object-contain relative z-10" 
-            alt="AI Agents"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-          />
-          
+          <div className="absolute inset-0 bg-primary/15 rounded-full blur-3xl animate-pulse" />
+
+          {/* Center circle */}
+          <div
+            className="absolute rounded-full border-2 border-primary/40 bg-primary/10 flex items-center justify-center"
+            style={{ width: '35%', height: '35%' }}
+          >
+            <span className="font-black text-primary" style={{ fontSize: 'clamp(1rem, 3vw, 3rem)' }}>AI</span>
+          </div>
+
+          {/* Orbit ring */}
+          <div className="absolute inset-0 rounded-full border border-primary/20" />
+
           {/* Orbital nodes */}
-          {[...Array(6)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-4 h-4 bg-secondary rounded-full"
-              animate={{
-                x: Math.cos((i * 60) * Math.PI / 180) * 200,
-                y: Math.sin((i * 60) * Math.PI / 180) * 200,
-                scale: [1, 1.5, 1],
-                opacity: [0.3, 1, 0.3]
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                delay: i * 0.2
-              }}
-            />
-          ))}
+          {[...Array(8)].map((_, i) => {
+            const angle = (i * 45) * Math.PI / 180;
+            const r = 48;
+            return (
+              <motion.div
+                key={i}
+                className="absolute w-5 h-5 bg-secondary rounded-full shadow-lg"
+                style={{
+                  left: `calc(50% + ${Math.cos(angle) * r}% - 10px)`,
+                  top: `calc(50% + ${Math.sin(angle) * r}% - 10px)`,
+                  boxShadow: '0 0 12px var(--color-secondary)',
+                }}
+                animate={{
+                  scale: [0.8, 1.4, 0.8],
+                  opacity: [0.4, 1, 0.4],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.3 }}
+              />
+            );
+          })}
         </motion.div>
       </div>
     </motion.div>

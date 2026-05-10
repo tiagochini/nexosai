@@ -1,58 +1,66 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { charVariants, charContainerVariants, sceneTransitions } from '@/lib/video/animations';
+import { motion, AnimatePresence } from 'framer-motion';
+import { sceneTransitions } from '@/lib/video/animations';
+
+const lines = [
+  { text: "Você já perdeu vendas online", color: "white" },
+  { text: "por não entender como", color: "white" },
+  { text: "funciona um lançamento?", color: "var(--color-primary)" },
+];
 
 export function Scene1() {
-  const [phase, setPhase] = useState(0);
+  const [visibleLines, setVisibleLines] = useState(0);
 
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 500),
-      setTimeout(() => setPhase(2), 3500),
+      setTimeout(() => setVisibleLines(1), 500),
+      setTimeout(() => setVisibleLines(2), 2000),
+      setTimeout(() => setVisibleLines(3), 3500),
     ];
     return () => timers.forEach(clearTimeout);
   }, []);
-
-  const text = "Você já perdeu um lançamento por falta de equipe?";
 
   return (
     <motion.div
       className="absolute inset-0 flex items-center justify-center bg-bg-dark"
       {...sceneTransitions.fadeBlur}
     >
-      <div className="relative z-10 text-center px-12 max-w-4xl">
-        <motion.h1
-          className="text-[5vw] font-bold text-white tracking-tight leading-tight"
-          variants={charContainerVariants}
-          initial="hidden"
-          animate={phase >= 1 ? "visible" : "hidden"}
-        >
-          {text.split(' ').map((word, i) => (
-            <span key={i} className="inline-block mr-[0.5em] whitespace-nowrap">
-              {word.split('').map((char, j) => (
-                <motion.span
-                  key={j}
-                  variants={charVariants}
-                  className="inline-block"
-                >
-                  {char}
-                </motion.span>
-              ))}
-            </span>
-          ))}
-        </motion.h1>
+      <div className="relative z-10 flex flex-col items-center justify-center text-center w-full px-16 gap-4">
+        {lines.map((line, i) => (
+          <AnimatePresence key={i}>
+            {visibleLines > i && (
+              <motion.h1
+                initial={{ opacity: 0, y: 40, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                className="font-black text-center leading-tight tracking-tight"
+                style={{
+                  fontSize: 'clamp(2.2rem, 6.5vw, 7.5rem)',
+                  color: line.color,
+                  textShadow: i === 2 ? '0 0 80px rgba(108,71,255,0.5)' : 'none',
+                }}
+              >
+                {line.text}
+              </motion.h1>
+            )}
+          </AnimatePresence>
+        ))}
       </div>
 
-      {/* Glitch lines */}
+      {/* Scan line */}
       <motion.div
-        className="absolute inset-0 pointer-events-none opacity-10"
-        animate={{
-          background: [
-            'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(108, 71, 255, 0.1) 2px)',
-            'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(108, 71, 255, 0.1) 3px)',
-          ]
+        className="absolute left-0 right-0 h-[2px] bg-primary/30 pointer-events-none"
+        animate={{ top: ['0%', '100%'] }}
+        style={{ top: '0%' }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+      />
+
+      {/* Subtle glitch overlay */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(108,71,255,0.04) 4px)',
         }}
-        transition={{ duration: 0.1, repeat: Infinity }}
       />
     </motion.div>
   );
