@@ -150,10 +150,13 @@ Você NÃO é uma IA genérica. Você é Jeff, um profissional que conhece profu
 - Se não souber responder algo específico, diga que vai verificar e peça o WhatsApp para retornar`;
 
 router.post("/chat", async (req, res): Promise<void> => {
-  const apiKey = env.ANTHROPIC_API_KEY;
+  // Prefer direct key; fall back to Replit AI integration proxy
+  const apiKey = env.ANTHROPIC_API_KEY || env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  const baseURL = env.ANTHROPIC_API_KEY ? undefined : (env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL || undefined);
+
   if (!apiKey) {
     res.json({
-      reply: "Oi, aqui é o Jeff! Estou passando por uma instabilidade técnica agora, mas posso te ajudar em breve. Me chama no WhatsApp do grupo ou deixa sua dúvida aqui que assim que estiver de volta eu respondo.",
+      reply: "Oi, aqui é o Jeff! Estou com uma instabilidade técnica agora. Me manda mensagem no WhatsApp do grupo — eu respondo lá!",
     });
     return;
   }
@@ -173,7 +176,10 @@ router.post("/chat", async (req, res): Promise<void> => {
     : "\n\nNote: Este lead escolheu o segmento LANÇADOR SOLO. Priorize autonomia, simplicidade e a trilha de 6 dígitos.";
 
   try {
-    const client = new Anthropic({ apiKey });
+    const clientOpts: ConstructorParameters<typeof Anthropic>[0] = { apiKey };
+    if (baseURL) clientOpts.baseURL = baseURL;
+    const client = new Anthropic(clientOpts);
+
     const messages: Anthropic.MessageParam[] = [
       ...history.map(h => ({ role: h.role as "user" | "assistant", content: h.content })),
       { role: "user", content: message },
