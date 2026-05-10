@@ -11,6 +11,7 @@ import {
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useMode } from "@/lib/mode";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,9 +60,40 @@ const STATUS_COLOR: Record<string, string> = {
   intake:            "text-blue-400 border-blue-400/40 bg-blue-400/10",
 };
 const AGENT_ROLE_LABEL: Record<string, string> = {
-  strategy: "Estrategista", command: "Comandante", copywriter: "Copywriter",
-  creative: "Diretor Criativo", analytics: "Analista", compliance: "Compliance",
-  profile_builder: "Profile Builder", intake: "Intake AI",
+  command:               "Comandante IA",
+  strategy:              "Estrategista",
+  launch_manager:        "Gerente de Lançamento",
+  offer:                 "Especialista em Oferta",
+  product_builder:       "Product Builder",
+  copywriter:            "Copywriter",
+  creative_director:     "Diretor Criativo",
+  creative:              "Diretor Criativo",
+  landing_page:          "Landing Page Expert",
+  targeting:             "Targeting Expert",
+  media_buyer:           "Media Buyer",
+  affiliate_campaign:    "Especialista em Afiliados",
+  analytics:             "Analista de Performance",
+  optimization:          "Otimizador IA",
+  video:                 "Estrategista de Vídeo",
+  video_strategy:        "Estrategista de Vídeo",
+  creator_growth:        "Creator Growth",
+  compliance:            "Compliance Officer",
+  profile_builder:       "Profile Builder",
+  intake:                "Intake IA",
+  ad_copy:               "Copy de Anúncios",
+  cpl_script:            "Script CPL",
+  vsl_script:            "Roteiro VSL",
+  webinar_script:        "Roteiro Webinar",
+  live_script:           "Roteiro Live",
+  stories_sequence:      "Sequência Stories",
+  media_brief:           "Brief de Mídia",
+  financial_projector:   "Projetor Financeiro",
+  launch_sequence_builder: "Builder de Sequências",
+  social_media:          "Social Media IA",
+  whatsapp_response:     "Auto-Resposta WhatsApp",
+  perpetual_launch_manager: "Lançamento Perpétuo",
+  continuous_sales_manager: "Gestor de Vendas Contínuas",
+  item_copy:             "Copy de Item",
 };
 const PIPELINE_ORDER = [
   "draft", "intake", "analyzing", "strategy_ready",
@@ -324,6 +356,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [expandedKpi, setExpandedKpi] = useState<string | null>(null);
+  const { isExpert, isGuided } = useMode();
 
   // ── Data fetching ──
   const { data: campaignsData, isLoading: loadingCampaigns } = useListCampaigns({
@@ -438,6 +471,44 @@ export default function Dashboard() {
           </Button>
         </Link>
       </div>
+
+      {/* ── Guided Mode: Primeiros Passos ── */}
+      {isGuided && campaigns.length === 0 && (
+        <div className="border border-primary/30 bg-primary/5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary" />
+          <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary" />
+          <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary" />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Bot className="h-4 w-4 text-primary" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-primary font-bold">
+                Bem-vindo ao NexOS AI — Modo Guiado Ativo
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { step: "01", label: "Criar sua primeira campanha", desc: "A IA monta toda a estratégia", href: "/campaigns/new", cta: "Começar agora", done: false },
+                { step: "02", label: "Conversar com os Agentes IA", desc: "29 especialistas disponíveis", href: "/agents", cta: "Ver agentes", done: false },
+                { step: "03", label: "Ativar modo Expert", desc: "Libere todas as ferramentas", href: null, cta: null, done: false },
+              ].map(item => (
+                <div key={item.step} className="border border-border/40 bg-card/40 p-3 space-y-2">
+                  <div className="font-mono text-[8px] uppercase tracking-widest text-primary">{item.step}</div>
+                  <div className="font-mono text-xs font-bold text-foreground leading-tight">{item.label}</div>
+                  <div className="font-mono text-[9px] text-muted-foreground">{item.desc}</div>
+                  {item.href && (
+                    <Link href={item.href}>
+                      <Button size="sm" className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 px-3 btn-weapon-primary mt-1">
+                        {item.cta} <ChevronRight className="h-2.5 w-2.5 ml-1" />
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Active Mission Panel ── */}
       {activeCampaign && (

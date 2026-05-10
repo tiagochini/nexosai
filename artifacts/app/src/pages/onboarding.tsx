@@ -493,13 +493,29 @@ export default function Onboarding() {
       { day: 7, phase: "Fechamento", activity: "Carrinho fecha às 23:59 + sequência de última hora", icon: CheckCircle2, color: "border-orange-400/40 bg-orange-400/10 text-orange-400" },
     ];
 
-    const AI_AGENTS = [
-      { label: "Estrategista", desc: "Analisa mercado, define posicionamento e track", icon: Target, color: "text-primary" },
-      { label: "Copywriter", desc: "Cria toda a copy: emails, VSL, anúncios, WhatsApp", icon: Mail, color: "text-cyan-400" },
-      { label: "Diretor Criativo", desc: "Conceitos visuais e roteiros de vídeo", icon: Sparkles, color: "text-purple-400" },
-      { label: "Compliance", desc: "Valida cada peça — legal, ética e plataforma", icon: Shield, color: "text-yellow-400" },
-      { label: "Analista", desc: "Monitora métricas em tempo real e otimiza", icon: TrendingUp, color: "text-success" },
-      { label: "Agente WhatsApp", desc: "Responde leads com IA, classifica intenção de compra", icon: MessageSquare, color: "text-green-400" },
+    const CHAT_AGENTS = [
+      { label: "Comandante IA",          color: "text-primary",     cat: "Estratégia" },
+      { label: "Estrategista",           color: "text-primary",     cat: "Estratégia" },
+      { label: "Gerente de Lançamento",  color: "text-primary",     cat: "Estratégia" },
+      { label: "Especialista em Oferta", color: "text-primary",     cat: "Estratégia" },
+      { label: "Product Builder",        color: "text-primary",     cat: "Estratégia" },
+      { label: "Copywriter",             color: "text-cyan-400",    cat: "Conteúdo" },
+      { label: "Diretor Criativo",       color: "text-cyan-400",    cat: "Conteúdo" },
+      { label: "Landing Page Expert",    color: "text-cyan-400",    cat: "Conteúdo" },
+      { label: "Targeting Expert",       color: "text-yellow-400",  cat: "Audiência" },
+      { label: "Media Buyer",            color: "text-yellow-400",  cat: "Audiência" },
+      { label: "Especialista Afiliados", color: "text-yellow-400",  cat: "Audiência" },
+      { label: "Analista de Performance",color: "text-success",     cat: "Performance" },
+      { label: "Otimizador IA",          color: "text-success",     cat: "Performance" },
+      { label: "Estrategista de Vídeo",  color: "text-success",     cat: "Performance" },
+      { label: "Creator Growth",         color: "text-success",     cat: "Performance" },
+      { label: "Compliance Officer",     color: "text-orange-400",  cat: "Qualidade" },
+    ];
+    const AUTO_AGENTS = [
+      "VSL Script", "Roteiro Webinar", "Roteiro Live", "Copy de Anúncios",
+      "Script CPL", "Sequência Stories", "Brief de Mídia", "Profile Builder",
+      "Projetor Financeiro", "Builder de Sequências", "Social Media IA",
+      "Auto-Resposta WhatsApp", "Lançamento Perpétuo",
     ];
 
     return (
@@ -548,28 +564,51 @@ export default function Onboarding() {
         </div>
 
         {/* AI Agents grid */}
-        <div className="border border-border/50 bg-card/40 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Bot className="h-3.5 w-3.5 text-primary" />
-            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-              {AI_AGENTS.length} Agentes IA em Ação Simultânea
-            </span>
+        <div className="border border-border/50 bg-card/40 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="h-3.5 w-3.5 text-primary" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                Sistema de 29 Agentes IA
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[8px] uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-2 py-0.5">
+                16 chat direto
+              </span>
+              <span className="font-mono text-[8px] uppercase tracking-widest text-cyan-400 border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5">
+                13 autônomos
+              </span>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {AI_AGENTS.map((agent) => {
-              const Icon = agent.icon;
-              return (
-                <div key={agent.label} className="flex items-start gap-2.5">
-                  <div className={`w-6 h-6 border border-current/20 bg-current/10 flex items-center justify-center shrink-0 mt-0.5 ${agent.color}`}>
-                    <Icon className="h-3 w-3" />
-                  </div>
-                  <div>
-                    <span className={`font-mono text-[10px] font-bold block ${agent.color}`}>{agent.label}</span>
-                    <span className="font-mono text-[9px] text-muted-foreground leading-relaxed">{agent.desc}</span>
-                  </div>
+
+          {/* Direct-chat agents by category */}
+          <div>
+            <p className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50 mb-2">
+              Disponíveis para consulta direta
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+              {CHAT_AGENTS.map((agent) => (
+                <div key={agent.label} className={`border border-current/15 bg-current/5 px-2 py-1.5 ${agent.color}`}>
+                  <span className="font-mono text-[8px] font-bold uppercase tracking-wide leading-tight block">{agent.label}</span>
+                  <span className="font-mono text-[7px] text-muted-foreground/50 uppercase">{agent.cat}</span>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+
+          {/* Autonomous agents */}
+          <div>
+            <p className="font-mono text-[8px] uppercase tracking-widest text-muted-foreground/50 mb-2">
+              Executados automaticamente durante campanhas
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {AUTO_AGENTS.map((name) => (
+                <span key={name} className="font-mono text-[8px] border border-cyan-400/20 bg-cyan-400/5 text-cyan-400/70 px-2 py-1 uppercase tracking-wide">
+                  {name}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 

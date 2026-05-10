@@ -53,7 +53,7 @@ export default function Register() {
       onSuccess: (data) => {
         setToken(data.accessToken);
         toast.success("Conta criada com sucesso!");
-        setLocation("/");
+        setLocation("/onboarding");
       },
       onError: () => {
         toast.error("Falha ao criar acesso. Email pode já estar em uso.");

@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useMode } from "@/lib/mode";
 import { useGetCreditsBalance, getGetCreditsBalanceQueryKey } from "@workspace/api-client-react";
 import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
-  ChevronDown, User, Users, ExternalLink, ShieldCheck, Star,
+  ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { GlobalSearch, useGlobalSearch } from "@/components/global-search";
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const { user, workspace, plan, planSlug, isAdmin, logout } = useAuth();
   const [location] = useLocation();
+  const { mode, setMode, isExpert } = useMode();
 
   const { data: creditsData } = useGetCreditsBalance({
     query: {
@@ -37,7 +39,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const isAgency = planSlug === "agency" || isAdmin;
 
   type NavItem  = { name: string; href: string; icon: React.ElementType; badge?: string };
-  type NavGroup = { label: string; items: NavItem[] };
+  type NavGroup = { label: string; items: NavItem[]; expertOnly?: boolean };
 
   const navGroups: NavGroup[] = [
     {
@@ -45,20 +47,21 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       items: [
         { name: "Dashboard",  href: "/",          icon: LayoutDashboard },
         { name: "Campanhas",  href: "/campaigns", icon: Rocket },
-        { name: "Sequências", href: "/sequences", icon: Workflow },
       ],
     },
     {
       label: "Time de IA",
       items: [
-        { name: "Agentes IA", href: "/agents", icon: Bot, badge: "16" },
+        { name: "Agentes IA", href: "/agents", icon: Bot, badge: "29" },
       ],
     },
     {
       label: "Ferramentas",
+      expertOnly: true,
       items: [
         { name: "VSL Studio",   href: "/vsls",       icon: Video      },
         { name: "Social Media", href: "/social",     icon: Share2     },
+        { name: "Sequências",   href: "/sequences",  icon: Workflow   },
         { name: "Receita",      href: "/revenue",    icon: DollarSign },
         { name: "Compliance",   href: "/compliance", icon: Shield     },
         ...(isAgency ? [{ name: "Clientes", href: "/agency/clients", icon: Users }] : []),
@@ -66,6 +69,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     },
     {
       label: "Crescimento",
+      expertOnly: true,
       items: [
         { name: "Afiliados",    href: "/affiliate", icon: Star },
       ],
@@ -79,6 +83,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       ],
     },
   ];
+
+  const visibleGroups = navGroups.filter(g => !g.expertOnly || isExpert);
 
   return (
     <div className="flex flex-col h-full">
@@ -100,7 +106,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 
       {/* Nav groups */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5 scrollbar-thin scrollbar-thumb-border/30">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <div key={group.label}>
             <div className="px-2 mb-2">
               <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-muted-foreground/40">
@@ -147,6 +153,47 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             </div>
           </div>
         ))}
+
+        {/* Mode toggle */}
+        <div>
+          <div className="px-2 mb-2">
+            <span className="font-mono text-[8px] uppercase tracking-[0.25em] text-muted-foreground/40">
+              Modo de Interface
+            </span>
+          </div>
+          <div className="flex gap-1 border border-border/40 bg-muted/10 p-0.5">
+            <button
+              onClick={() => setMode("guided")}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[9px] uppercase tracking-widest transition-all
+                ${mode === "guided"
+                  ? "bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+                  : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Gauge className="h-2.5 w-2.5" />
+              Guiado
+            </button>
+            <button
+              onClick={() => setMode("expert")}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[9px] uppercase tracking-widest transition-all
+                ${mode === "expert"
+                  ? "bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+                  : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Zap className="h-2.5 w-2.5" />
+              Expert
+            </button>
+          </div>
+          {mode === "guided" && (
+            <p className="font-mono text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
+              Modo guiado: fluxo simplificado
+            </p>
+          )}
+          {mode === "expert" && (
+            <p className="font-mono text-[8px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
+              Modo expert: acesso total à plataforma
+            </p>
+          )}
+        </div>
       </nav>
 
       {/* Credits bar */}
