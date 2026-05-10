@@ -31,6 +31,7 @@ import CreditsPage from "@/pages/credits";
 import BillingPage from "@/pages/billing/index";
 import MemoryPage from "@/pages/memory/index";
 import PreparacaoPage from "@/pages/preparacao";
+import CheckoutPage from "@/pages/checkout";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -197,6 +198,7 @@ export default function AppRoutes() {
         {() => <ProtectedRoute><MemoryPage /></ProtectedRoute>}
       </Route>
       <Route path="/preparacao" component={PreparacaoPage} />
+      <Route path="/comprar" component={CheckoutPage} />
 
       <Route component={NotFound} />
     </Switch>

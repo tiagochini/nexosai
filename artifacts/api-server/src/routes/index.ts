@@ -24,6 +24,7 @@ import emailDispatchRouter from "../modules/email-dispatch/email-dispatch.routes
 import whatsappRouter from "../modules/whatsapp/whatsapp.routes.js";
 import leadCaptureRouter from "../modules/launch-sequence/lead-capture.routes.js";
 import waitlistRouter from "../modules/waitlist/waitlist.routes.js";
+import checkoutRouter from "../modules/checkout/checkout.routes.js";
 import recordingRouter from "../modules/recording/recording.routes.js";
 import adminRouter from "../modules/admin/admin.routes.js";
 import onboardingRouter from "../modules/onboarding/onboarding.routes.js";
@@ -56,6 +57,7 @@ router.use("/email-dispatch", emailDispatchRouter);
 router.use("/whatsapp", whatsappRouter);
 router.use("/lead-capture", leadCaptureRouter);
 router.use("/waitlist", waitlistRouter);
+router.use("/checkout", checkoutRouter);
 router.use("/recordings", recordingRouter);
 router.use("/admin", adminRouter);
 router.use("/onboarding", onboardingRouter);
