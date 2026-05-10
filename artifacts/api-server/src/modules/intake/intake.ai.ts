@@ -211,20 +211,24 @@ export async function processConversationalTurn(
   const questions = getIntakeQuestions(type, track);
   const completeness = validateIntakeCompleteness(type, track, currentIntake);
 
-  // Build context for AI
+  // Build context for AI — keep it compact to avoid token overflow
   const missingRequired = completeness.missingRequired;
   const answeredFields = Object.keys(currentIntake).filter((k) => !k.startsWith("_"));
   const nextMissing = missingRequired[0] ?? null;
   const nextQuestion = questions.find((q) => q.id === nextMissing);
 
-  const contextNote = `
-ESTADO ATUAL DO INTAKE:
-Tipo de campanha: ${type} | Track: ${track}
-Campos preenchidos: ${answeredFields.join(", ") || "nenhum"}
-Campos obrigatórios faltando: ${missingRequired.join(", ") || "nenhum — intake completo!"}
-Próxima pergunta prioritária: ${nextQuestion ? `"${nextQuestion.label}" (id: ${nextQuestion.id})` : "TODAS RESPONDIDAS"}
+  // Only include a compact summary of filled fields (not full JSON) to limit token usage
+  const filledSummary = answeredFields
+    .slice(0, 20) // cap at 20 fields to keep prompt short
+    .map((k) => `${k}: ${String(currentIntake[k]).slice(0, 80)}`)
+    .join("\n");
 
-Dados atuais: ${JSON.stringify(currentIntake, null, 2)}`;
+  const contextNote = `ESTADO DO INTAKE:
+Tipo: ${type} | Track: ${track}
+Preenchidos (${answeredFields.length}): ${answeredFields.join(", ") || "nenhum"}
+Faltando obrigatórios: ${missingRequired.slice(0, 8).join(", ") || "COMPLETO"}
+Próxima pergunta: ${nextQuestion ? `"${nextQuestion.label}" [id:${nextQuestion.id}]` : "TODAS RESPONDIDAS"}
+Resumo preenchidos:\n${filledSummary || "(vazio)"}`.slice(0, 1200); // hard cap at 1200 chars
 
   // Build messages for AI
   const messages = [

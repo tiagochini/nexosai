@@ -201,15 +201,38 @@ router.post("/:campaignId/conversation", async (req, res): Promise<void> => {
     return;
   }
 
-  const result = await processConversationalTurn(
-    req.params["campaignId"] as string,
-    req.auth.workspaceId,
-    parsed.data.message,
-    parsed.data.history as ConversationTurn[],
-    req.log
-  );
+  try {
+    // Limit history to last 12 turns (6 pairs) to avoid context overflow
+    const fullHistory = parsed.data.history as ConversationTurn[];
+    const trimmedHistory = fullHistory.slice(-12);
 
-  res.json(result);
+    const result = await processConversationalTurn(
+      req.params["campaignId"] as string,
+      req.auth.workspaceId,
+      parsed.data.message,
+      trimmedHistory,
+      req.log
+    );
+
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Conversation turn failed");
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    // Return a graceful fallback instead of a raw 500, so the frontend can continue
+    res.status(200).json({
+      extracted: {},
+      aiMessage: "Tive uma dificuldade técnica neste momento. Pode repetir sua última resposta?",
+      nextQuestionId: null,
+      isComplete: false,
+      progress: 0,
+      missingRequired: [],
+      intakeData: {},
+      _error: true,
+    });
+  }
 });
 
 // ─── Readiness score ──────────────────────────────────────────────────────────
