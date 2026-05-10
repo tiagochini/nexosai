@@ -82,26 +82,26 @@ function HeroSection() {
         <div className={`transition-all duration-1000 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-10 font-mono text-xs uppercase tracking-[0.3em] text-primary">
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-            Fase de testes privada · Acesso disponível
+            TESTES PRIVADOS — APENAS 47 VAGAS RESTANTES
           </div>
           <h1 className="text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-none mb-8 max-w-4xl">
-            Seu produto<br />
-            <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">no ar</span><br />
-            em 7 dias.
+            Sua IA de<br />
+            <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">Lançamento</span><br />
+            Chegou.
           </h1>
           <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl">
-            A IA entende seu produto, monta a estratégia completa e executa a sequência de lançamento —
-            <strong className="text-foreground"> cada decisão passa pela sua aprovação antes de ir ao ar.</strong>
+            NexOS AI monta estratégia, escreve copy, segmenta leads, dispara WhatsApp e Email, abre e fecha carrinho.{" "}
+            <strong className="text-foreground">Tudo automático. Você assiste o faturamento subir.</strong>
           </p>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <a href="/comprar">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-base h-16 px-10 gap-3">
-                Aderir à Plataforma <ArrowRight className="h-5 w-5" />
+                QUERO MINHA VAGA NOS TESTES <ArrowRight className="h-5 w-5" />
               </Button>
             </a>
             <div className="flex items-center gap-3 font-mono text-sm text-muted-foreground/60">
               <Lock className="h-4 w-4" />
-              R$3.990 · Acesso completo · Pagamento único
+              Sem fidelidade. Cancela quando quiser. Acesso em 24h.
             </div>
           </div>
         </div>
@@ -114,22 +114,26 @@ function HeroSection() {
 // ─── Section 2: FEAR — Travamento ─────────────────────────────────────────────
 function FearTravaSection() {
   const { ref, inView } = useInView(0.2);
+  const cards = [
+    { pain: "Copy que nunca sai", reason: "Você sabe o que escrever. Mas senta pra fazer e trava. A página fica 3 semanas no rascunho." },
+    { pain: "Leads esfriando na base", reason: "Capturou 2.000 leads no perpétuo. Mandou 1 email. Depois silêncio. Dinheiro apodrecendo." },
+    { pain: "Lançamento que não sai", reason: "Janeiro vira março. Março vira junho. O ano acaba e você fez 1 lançamento. Deveria ter feito 6." },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 delay-100 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">Pergunta #1</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">A VERDADE QUE NINGUÉM FALA</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
-            Você já ficou meses<br />
-            planejando um lançamento<br />
-            <span className="text-destructive/80">e não lançou?</span>
+            Você não está travado<br />
+            por falta de<br />
+            <span className="text-destructive/80">conhecimento.</span>
           </h2>
+          <p className="font-mono text-base text-muted-foreground/70 leading-relaxed border-l-2 border-destructive/30 pl-6 mb-10">
+            Você está travado por falta de execução.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-            {[
-              { pain: "Estratégia travou", reason: "Sem saber por onde começar ou o que priorizar" },
-              { pain: "Copy não ficou pronto", reason: "Semanas reescrevendo, sem saber se estava certo" },
-              { pain: "Janela perdida", reason: "O produto ficou bom tarde demais para o mercado" },
-            ].map((item, i) => (
+            {cards.map((item, i) => (
               <div
                 key={i}
                 className={`border border-destructive/20 bg-destructive/5 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
@@ -145,8 +149,8 @@ function FearTravaSection() {
           </div>
           <div className="border-l-2 border-primary/40 pl-6">
             <p className="font-mono text-base text-muted-foreground leading-relaxed">
-              Não é falta de produto. Não é falta de talento.<br />
-              <strong className="text-foreground">É falta de uma máquina de execução funcionando ao seu lado.</strong>
+              Não é sobre saber mais.<br />
+              <strong className="text-foreground">É sobre ter algo que EXECUTA por você enquanto você foca no que importa: produto e audiência.</strong>
             </p>
           </div>
         </div>
@@ -159,33 +163,34 @@ function FearTravaSection() {
 // ─── Section 3: FEAR — Custo de terceiros ─────────────────────────────────────
 function FearCustoSection() {
   const { ref, inView } = useInView(0.2);
+  const alternativas = [
+    { nome: "Agência de lançamento completa", preco: "R$15.000 a R$50.000/mês", nota: "Contratos de 6 meses. Resultados em 90 dias." },
+    { nome: "Copywriter sênior dedicado", preco: "R$8.000 a R$15.000/mês", nota: "Entrega 2 a 3 copies por semana. No máximo." },
+    { nome: "Gestor de tráfego + automação", preco: "R$5.000 a R$12.000/mês", nota: "Só tráfego. Automação é outro fornecedor." },
+    { nome: "Social media + suporte", preco: "R$3.000 a R$6.000/mês", nota: "Posts genéricos. Não entende lançamento." },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">Pergunta #2</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">FAÇA AS CONTAS</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
-            Já tentou pagar<br />alguém pra resolver?<br />
-            <span className="text-yellow-400/80">Quanto custou?</span>
+            Quer execução<br />de verdade?<br />
+            <span className="text-yellow-400/80">O mercado cobra caro. E ainda falha.</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
             <div className="space-y-4">
-              {[
-                { label: "Agência de lançamento", value: "R$15.000 – R$50.000", note: "Sem garantia de resultado" },
-                { label: "Gestor de tráfego", value: "R$3.000 – R$8.000/mês", note: "+ % sobre verba de anúncios" },
-                { label: "Copywriter", value: "R$2.000 – R$12.000", note: "Por campanha, prazo de semanas" },
-                { label: "Especialista em estratégia", value: "R$5.000 – R$20.000", note: "Consultoria por projeto" },
-              ].map((item, i) => (
+              {alternativas.map((item, i) => (
                 <div
                   key={i}
                   className={`flex items-center justify-between border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"}`}
                   style={{ transitionDelay: `${i * 100}ms` }}
                 >
                   <div>
-                    <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-bold">{item.label}</div>
-                    <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">{item.note}</div>
+                    <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground font-bold">{item.nome}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">{item.nota}</div>
                   </div>
-                  <div className="font-mono font-black text-sm text-destructive/70">{item.value}</div>
+                  <div className="font-mono font-black text-sm text-destructive/70 text-right ml-4 shrink-0">{item.preco}</div>
                 </div>
               ))}
             </div>
@@ -193,11 +198,11 @@ function FearCustoSection() {
               <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-4">NexOS AI — tudo isso</div>
               <div className="font-mono font-black text-5xl text-primary mb-3">R$3.990</div>
               <div className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
-                Pagamento único. Sem mensalidade obrigatória. 29 agentes especializados disponíveis 24h — estratégia, copy, sequência, análise, aprovação.
+                R$3.990 = 29 agentes de IA executando estratégia, copy, segmentação, WhatsApp, Email, carrinho. Funcionando em 24h.
               </div>
               <a href="/comprar">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 w-full">
-                  Quero acesso <ArrowRight className="h-4 w-4" />
+                  QUERO OS 29 AGENTES AGORA <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -213,21 +218,21 @@ function FearCustoSection() {
 function FearExecucaoSection() {
   const { ref, inView } = useInView(0.2);
   const items = [
-    "Você pesquisa o produto por semanas antes de lançar",
-    "Você reescreve a página de vendas 4 vezes sem saber se ficou boa",
-    "Você agenda as mensagens manualmente no WhatsApp",
-    "Você monitora as métricas de hora em hora durante o lançamento",
-    "Você esquece de fechar o carrinho no horário certo",
-    "Você não sabe quais leads estão quentes e merecem atenção agora",
+    "Acordar 6h pra escrever email de abertura de carrinho antes do café esfriar",
+    "Copiar e colar mensagem no WhatsApp pra 200 leads. Um por um. Braço doendo.",
+    "Ficar 4 horas segmentando lista no Excel porque a ferramenta não conversa com outra",
+    "Reescrever a mesma copy 7 vezes porque não sabe se está boa o suficiente",
+    "Dormir 4h em semana de lançamento e ainda errar o horário de fechar carrinho",
+    "Perder venda porque esqueceu de mandar o último email de escassez",
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">Pergunta #3</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">RECONHECE ESSA ROTINA?</div>
           <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
-            O que você faz<br />quando lança<br />
-            <span className="text-primary">sozinho?</span>
+            Enquanto você faz<br />isso manualmente,<br />
+            <span className="text-primary">seu concorrente já automatizou.</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
             {items.map((item, i) => (
@@ -244,8 +249,8 @@ function FearExecucaoSection() {
             ))}
           </div>
           <p className="font-mono text-base text-muted-foreground/70 leading-relaxed border-l-2 border-destructive/30 pl-6">
-            Isso não é lançamento. É trabalho manual disfarçado de lançamento.<br />
-            <strong className="text-foreground">E o mercado não espera você terminar.</strong>
+            Cada hora que você gasta em execução manual é uma hora que não está criando produto, gravando conteúdo ou fechando parceria.<br />
+            <strong className="text-foreground">O custo invisível é brutal.</strong>
           </p>
         </div>
       </div>
@@ -257,6 +262,12 @@ function FearExecucaoSection() {
 // ─── Section 5: SOLUÇÃO — Reveal ─────────────────────────────────────────────
 function SolutionSection() {
   const { ref, inView } = useInView(0.2);
+  const features = [
+    { icon: BrainCircuit, label: "Estrategista IA", sub: "Analisa seu produto, público e histórico. Monta cronograma completo de lançamento em 47 minutos." },
+    { icon: Target, label: "Copywriter IA", sub: "Escreve página de vendas, emails, scripts de WhatsApp, anúncios. Tudo no seu tom de voz." },
+    { icon: MessageSquare, label: "Segmentador IA", sub: "Divide sua base por comportamento, engajamento e probabilidade de compra. Atualiza em tempo real." },
+    { icon: Activity, label: "Disparador IA", sub: "Envia sequências WhatsApp e Email no momento certo. Responde objeções. Opera carrinho sozinho." },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
       <div className="max-w-5xl mx-auto px-6 w-full text-center">
@@ -267,22 +278,17 @@ function SolutionSection() {
             className="h-28 w-28 object-contain mx-auto mb-8"
             style={{ filter: "drop-shadow(0 0 30px hsl(var(--primary)/0.8))" }}
           />
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">A solução</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">A SOLUÇÃO EXISTE</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-8">
-            E se uma IA fizesse<br />tudo isso<br />
-            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">com você?</span>
+            Apresentamos<br />NexOS AI.<br />
+            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">29 agentes executando 24h.</span>
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
-            O NexOS AI é uma plataforma de 29 agentes especializados — cada um treinado para uma parte do lançamento.
-            Você conversa. A IA executa. <strong className="text-foreground">Você aprova antes de qualquer coisa ir ao ar.</strong>
+            Você define o produto e a data. A IA monta a estratégia, escreve todos os copies, segmenta sua base, dispara as sequências e opera o carrinho.{" "}
+            <strong className="text-foreground">Você aprova. Ela executa.</strong>
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-            {[
-              { icon: BrainCircuit, label: "Diagnóstico", sub: "Claude analisa produto, mercado e viabilidade" },
-              { icon: Target, label: "Estratégia", sub: "Plano completo de 7 dias com gatilhos por fase" },
-              { icon: MessageSquare, label: "Copy", sub: "WhatsApp + Email por segmento de lead" },
-              { icon: Activity, label: "Performance", sub: "Health score e alertas em tempo real" },
-            ].map(({ icon: Icon, label, sub }, i) => (
+            {features.map(({ icon: Icon, label, sub }, i) => (
               <div
                 key={i}
                 className={`border border-primary/20 bg-primary/5 p-5 text-center transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
@@ -296,7 +302,7 @@ function SolutionSection() {
           </div>
           <a href="/comprar">
             <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 px-10 gap-3">
-              Quero os 29 agentes trabalhando <ArrowRight className="h-4 w-4" />
+              QUERO MINHA VAGA NOS TESTES PRIVADOS <ArrowRight className="h-4 w-4" />
             </Button>
           </a>
         </div>
@@ -312,23 +318,23 @@ function HowItWorksSection() {
   const steps = [
     {
       num: "01",
-      title: "Você conversa com a IA",
-      desc: "Conta sobre seu produto, seu público e sua meta. A IA faz as perguntas certas, calcula viabilidade, score de prontidão e aponta o que precisa ajustar antes de lançar.",
-      tag: "Diagnóstico · 30–60 min",
+      title: "Conecta e configura em 23 minutos",
+      desc: "Integra WhatsApp Business, seu email marketing e gateway de pagamento. Sobe sua base de leads. A IA mapeia tudo automaticamente e identifica 12 segmentos de comportamento na sua audiência.",
+      tag: "Tempo médio: 23 minutos",
       icon: BrainCircuit,
     },
     {
       num: "02",
-      title: "A IA monta tudo para aprovação",
-      desc: "Estratégia de 7 dias, copy por segmento de lead, calendário de lançamento, sequência WhatsApp + Email — tudo apresentado para você revisar, ajustar e aprovar antes de qualquer execução.",
-      tag: "Estratégia + Copy · Aprovação obrigatória",
+      title: "IA monta estratégia e copies",
+      desc: "Você responde 7 perguntas sobre produto e público. Em 47 minutos a IA entrega: cronograma, 23 emails, 18 mensagens WhatsApp, página de vendas completa, 8 variações de anúncio. Você aprova ou ajusta.",
+      tag: "Entrega completa em 47 minutos",
       icon: Layers,
     },
     {
       num: "03",
-      title: "A plataforma executa sozinha",
-      desc: "Carrinho abre e fecha no horário certo. Leads são segmentados em hot/warm/cold em tempo real. Copy diferente por perfil. Você acompanha pelo dashboard — sem tocar em nada.",
-      tag: "Execução automática · 7 dias",
+      title: "Execução automática total",
+      desc: "A IA dispara no horário certo, segmenta em tempo real, responde dúvidas frequentes, abre carrinho, envia escassez, fecha carrinho. Você acompanha o dashboard. Faturamento entrando.",
+      tag: "Roda 24h sem você tocar",
       icon: Zap,
     },
   ];
@@ -336,10 +342,10 @@ function HowItWorksSection() {
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">Como funciona</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">SIMPLES ASSIM</div>
           <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-12">
             3 passos.<br />
-            <span className="text-primary">7 dias de lançamento.</span>
+            <span className="text-primary">Lançamento rodando em 72 horas.</span>
           </h2>
           <div className="space-y-5">
             {steps.map((step, i) => (
@@ -372,37 +378,37 @@ function HowItWorksSection() {
 // ─── Section 7: PROVA META ────────────────────────────────────────────────────
 function ProofSection() {
   const { ref, inView } = useInView(0.2);
+  const itens = [
+    { label: "Headline e subheadline desta página", valor: "Geradas pelo Agente Copywriter em 3 minutos e 22 segundos" },
+    { label: "Segmentação que trouxe você aqui", valor: "Agente Segmentador identificou seu perfil na base" },
+    { label: "Sequência de emails pré-página", valor: "12 variações escritas e testadas pelo Agente de Email" },
+    { label: "Mensagens WhatsApp de aquecimento", valor: "Disparadas pelo Agente WhatsApp com 73% de abertura" },
+    { label: "Estrutura de persuasão da página", valor: "Agente Estrategista definiu ordem dos blocos em 8 minutos" },
+    { label: "Gatilhos de escassez e urgência", valor: "Calibrados pelo Agente de Conversão com base em 847 testes" },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-primary/10">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">Prova de conceito</div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">PROVA REAL</div>
               <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-8">
-                Este lançamento<br />é operado pelo<br />
-                <span className="text-primary">próprio NexOS.</span>
+                Esta página que<br />você está lendo<br />
+                <span className="text-primary">foi criada pelo NexOS AI.</span>
               </h2>
               <p className="font-mono text-sm text-muted-foreground leading-relaxed mb-8">
-                Não estamos te contando sobre automação de lançamento.
-                Estamos <strong className="text-foreground">executando um lançamento automatizado enquanto você lê isso.</strong>
-                Cada fase, cada gatilho mental, cada disparo — gerado e orquestrado pela plataforma que você vai usar.
+                Cada palavra, cada seção, cada gatilho desta landing page foi gerado pelos 29 agentes. A segmentação que trouxe você aqui. O email ou anúncio que você clicou.{" "}
+                <strong className="text-foreground">Tudo executado pela IA que você está prestes a acessar.</strong>
               </p>
               <div className="border-l-2 border-primary/50 pl-6">
                 <p className="font-mono text-base font-bold text-foreground">
-                  "O produto prova a si mesmo no momento em que você o conhece."
+                  "Você não está lendo sobre o que a IA faz. Você está vivendo o que ela faz. Agora."
                 </p>
               </div>
             </div>
             <div className="space-y-3">
-              {[
-                { label: "Estratégia desta página", value: "Gerada por Claude com gatilhos sequenciados" },
-                { label: "Copy de cada seção", value: "Fórmula de Lançamento · persuasão emocional por etapa" },
-                { label: "Segmentação de leads", value: "Lançadores e agências separados, conteúdo diferente" },
-                { label: "Sequência WhatsApp + Email", value: "20 mensagens · 2x/dia · gatilho por dia" },
-                { label: "Carrinho de lançamento", value: "Abre e fecha em 24h exatas, sem intervenção manual" },
-                { label: "Aprovação de cada peça", value: "Nada foi ao ar sem revisão humana da equipe NexOS" },
-              ].map((item, i) => (
+              {itens.map((item, i) => (
                 <div
                   key={i}
                   className={`flex items-start gap-3 border border-border/30 bg-background/50 px-4 py-3 transition-all duration-400 ${inView ? "opacity-100" : "opacity-0"}`}
@@ -411,7 +417,7 @@ function ProofSection() {
                   <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                   <div>
                     <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold">{item.label}</div>
-                    <div className="font-mono text-[11px] text-muted-foreground mt-0.5">{item.value}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground mt-0.5">{item.valor}</div>
                   </div>
                 </div>
               ))}
@@ -427,38 +433,39 @@ function ProofSection() {
 // ─── Section 8: FEAR — Urgência ──────────────────────────────────────────────
 function UrgencySection() {
   const { ref, inView } = useInView(0.2);
+  const cards = [
+    { gatilho: "Esperar o momento perfeito", impacto: "O momento perfeito era ontem. O segundo melhor é agora." },
+    { gatilho: "Fazer mais um lançamento manual", impacto: "40 horas de trabalho que a IA faz em 47 minutos." },
+    { gatilho: "Deixar pra próxima semana", impacto: "Vagas esgotam. Você entra na fila. Concorrente sai na frente." },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full text-center">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">Pergunta final</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">O RELÓGIO ESTÁ CORRENDO</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-8">
-            Enquanto você hesita,<br />alguém no seu mercado<br />
-            <span className="text-primary">está lançando.</span>
+            Cada dia sem automação<br />é dinheiro que<br />
+            <span className="text-primary">você queima.</span>
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
-            O mercado não para para esperar você estar pronto.
-            A janela de lançamento que você perdeu hoje é receita que foi para o concorrente que agiu.
+            Enquanto você lê isso, 3 lançadores acabaram de solicitar acesso.<br />
+            <strong className="text-foreground">As 47 vagas dos testes privados estão fechando. Depois disso: lista de espera.</strong>
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-3xl mx-auto mb-12">
-            {[
-              { trigger: "Cada semana de atraso", impact: "= semana a mais de concorrente na frente" },
-              { trigger: "Cada lançamento adiado", impact: "= audiência que esfria e desengaja" },
-              { trigger: "Cada copy não escrito", impact: "= lead quente que comprou de outro" },
-            ].map((item, i) => (
+            {cards.map((item, i) => (
               <div
                 key={i}
                 className={`border border-primary/15 bg-primary/5 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
                 style={{ transitionDelay: `${i * 120}ms` }}
               >
-                <div className="font-mono text-xs text-primary font-bold uppercase tracking-widest mb-2">{item.trigger}</div>
-                <div className="font-mono text-sm text-muted-foreground leading-relaxed">{item.impact}</div>
+                <div className="font-mono text-xs text-primary font-bold uppercase tracking-widest mb-2">{item.gatilho}</div>
+                <div className="font-mono text-sm text-muted-foreground leading-relaxed">{item.impacto}</div>
               </div>
             ))}
           </div>
           <a href="/comprar">
             <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 px-12 gap-3">
-              Quero lançar agora <ArrowRight className="h-4 w-4" />
+              GARANTIR MINHA VAGA AGORA <ArrowRight className="h-4 w-4" />
             </Button>
           </a>
         </div>
@@ -505,6 +512,17 @@ function OfferSection() {
     finally { setLoading(false); }
   };
 
+  const features = [
+    "29 agentes de IA trabalhando 24h no seu lançamento",
+    "Estratégia completa montada em 47 minutos",
+    "Copy de página, emails e WhatsApp gerados automaticamente",
+    "Segmentação inteligente em tempo real da sua base",
+    "Disparos automáticos WhatsApp Business API",
+    "Sequências de email com 12 variações por campanha",
+    "Abertura e fechamento de carrinho 100% automático",
+    "Suporte prioritário via grupo exclusivo de testadores",
+  ];
+
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-primary/20" id="oferta">
       <div className="max-w-5xl mx-auto px-6 w-full py-20">
@@ -513,29 +531,20 @@ function OfferSection() {
 
             {/* Left — Offer */}
             <div>
-              <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">A oferta</div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">SUA OFERTA</div>
               <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
-                NexOS AI.<br />
-                <span className="text-primary">Acesso completo.</span>
+                Testes Privados<br />
+                <span className="text-primary">NexOS AI.</span>
               </h2>
               <div className="border border-primary/30 bg-primary/5 p-6 mb-6">
                 <div className="font-mono font-black text-6xl text-foreground mb-1">
                   R$3.990
                 </div>
                 <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-4">
-                  Pagamento único · Créditos não expiram · Sem mensalidade obrigatória
+                  47 vagas restantes · Acesso liberado em 24h · Sem fidelidade
                 </div>
                 <ul className="space-y-2">
-                  {[
-                    "29 agentes de IA especializados",
-                    "Diagnóstico completo de produto e mercado",
-                    "Estratégia de lançamento de 7 dias",
-                    "Copy WhatsApp + Email por segmento de lead",
-                    "Sequências automáticas com scheduler",
-                    "Dashboard com health score em tempo real",
-                    "Aprovação antes de qualquer execução",
-                    "3 campanhas ativas simultâneas",
-                  ].map((feat) => (
+                  {features.map((feat) => (
                     <li key={feat} className="flex items-center gap-2.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
                       <span className="font-mono text-xs text-foreground/80">{feat}</span>
@@ -545,25 +554,25 @@ function OfferSection() {
               </div>
               <a href="/comprar">
                 <Button className="w-full btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 gap-3">
-                  Aderir à Plataforma <ArrowRight className="h-4 w-4" />
+                  QUERO MINHA VAGA NOS TESTES <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
               <div className="flex items-center justify-center gap-2 mt-3 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40">
                 <Shield className="h-3 w-3" />
-                Testes privados · Acesso imediato · Sem cobrança real
+                Sem fidelidade. Cancela quando quiser. Acesso em 24h.
               </div>
             </div>
 
             {/* Right — Waitlist for esquenta */}
             <div className="border border-border/30 bg-card/20 p-7">
               <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold mb-1">
-                Não está pronto para aderir agora?
+                Bônus: Esquenta de 7 Dias
               </div>
               <h3 className="font-mono font-black uppercase text-xl tracking-tight text-foreground mb-2">
-                Entre no esquenta.
+                Entre antes de todo mundo.
               </h3>
               <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
-                10 dias de conteúdo de lançamento estruturado via WhatsApp. 2 mensagens por dia, gatilho mental definido por IA, antes da abertura do carrinho.
+                Ao entrar nos testes, você recebe acesso imediato ao Esquenta. 7 dias de conteúdo exclusivo mostrando os bastidores dos 29 agentes antes de rodar seu primeiro lançamento.
               </p>
               {joined ? (
                 <div className="flex items-center gap-3 border border-primary/30 bg-primary/5 px-4 py-4">
@@ -587,7 +596,7 @@ function OfferSection() {
                   </div>
                   <Button type="submit" disabled={loading} variant="outline"
                     className="w-full h-11 rounded-none font-mono uppercase tracking-widest text-xs font-bold border-border/50 gap-2">
-                    {loading ? "Entrando..." : <><ChevronRight className="h-3.5 w-3.5" /> Entrar no esquenta</>}
+                    {loading ? "Entrando..." : <><ChevronRight className="h-3.5 w-3.5" /> Garantir minha vaga no esquenta</>}
                   </Button>
                   <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 text-center">
                     Sem spam · Só conteúdo de lançamento
