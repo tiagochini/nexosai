@@ -1,0 +1,31 @@
+kind = "video"
+previewPath = "/video-nexos/"
+title = "NexOS AI Marketing Video"
+version = "1.0.0"
+id = "artifacts/video-nexos"
+router = "path"
+
+[[integratedSkills]]
+name = "video-js"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/video-nexos/" ]
+localPort = 25078
+
+[services.development]
+run = "pnpm --filter @workspace/video-nexos run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/video-nexos", "run", "build" ]
+publicDir = "artifacts/video-nexos/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25078"
+BASE_PATH = "/video-nexos/"

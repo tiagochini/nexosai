@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "dQRvRFF2gW3AHWPIOmGGF"
+uri = "file://artifacts/video-nexos/public/images/agents_node.png"
+type = "image"
+title = "ai_agents_node"
+
+[[generated]]
+id = "zvdu-aK3EYkpDHvAvfThI"
+uri = "file://artifacts/video-nexos/public/images/launch_rocket.png"
+type = "image"
+title = "launch_rocket"
+
+[[generated]]
+id = "jsAZaFNQMtcXTRPxOMF7o"
+uri = "file://artifacts/video-nexos/public/images/diagnostic_grid.png"
+type = "image"
+title = "diagnostic_grid"
