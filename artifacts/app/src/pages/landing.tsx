@@ -406,10 +406,13 @@ export default function Landing() {
 
       {/* NAV */}
       <nav className="fixed top-0 inset-x-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={nexosLogo} alt="NexOS AI" className="h-8 w-8 object-contain" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)/0.6))" }} />
-            <span className="font-mono font-bold text-sm tracking-widest uppercase">NexOS <span className="text-primary">AI</span></span>
+        <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img src={nexosLogo} alt="NexOS AI" className="h-16 w-16 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
+            <div>
+              <div className="font-mono font-black text-xl tracking-[0.15em] uppercase leading-tight">NexOS <span className="text-primary">AI</span></div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/70 leading-tight">Plataforma de Lançamento</div>
+            </div>
           </div>
           <Link href="/login">
             <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground">Já tenho acesso</Button>

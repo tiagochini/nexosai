@@ -91,17 +91,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="h-24 shrink-0 flex items-center px-5 border-b border-border/50">
+      <div className="h-28 shrink-0 flex items-center px-4 border-b border-border/50">
         <Link href="/" onClick={onNav}>
-          <div className="flex items-center gap-3.5 cursor-pointer group">
+          <div className="flex items-center gap-4 cursor-pointer group">
             <div className="relative shrink-0">
-              <img src={nexosLogo} alt="NexOS" className="h-14 w-14 object-contain drop-shadow-[0_0_12px_hsl(var(--primary)/0.5)] group-hover:drop-shadow-[0_0_18px_hsl(var(--primary)/0.7)] transition-all duration-300" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.45))" }} />
-              <div className="absolute -inset-2 bg-primary/8 blur-xl rounded-full -z-10" />
+              <img src={nexosLogo} alt="NexOS" className="h-20 w-20 object-contain transition-all duration-300" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.55))" }} />
+              <div className="absolute -inset-3 bg-primary/6 blur-xl rounded-full -z-10" />
             </div>
             <div>
-              <div className="font-mono font-black text-base uppercase tracking-[0.15em] text-foreground leading-tight">NexOS</div>
-              <div className="font-mono text-[8px] uppercase tracking-[0.35em] text-primary/80 leading-tight">AI Platform</div>
-              <div className="font-mono text-[7px] uppercase tracking-widest text-muted-foreground/30 leading-tight mt-0.5">Operações Inteligentes</div>
+              <div className="font-mono font-black text-lg uppercase tracking-[0.12em] text-foreground leading-tight">NexOS</div>
+              <div className="font-mono text-xs uppercase tracking-[0.3em] text-primary leading-tight">AI Platform</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">Operações Inteligentes</div>
             </div>
           </div>
         </Link>
@@ -293,16 +293,16 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
 
       <div className="flex-1 flex items-center justify-center md:justify-start md:ml-0 gap-2">
         <Link href="/">
-          <div className="flex items-center gap-2.5 cursor-pointer md:hidden group">
+          <div className="flex items-center gap-3 cursor-pointer md:hidden group">
             <img
               src={nexosLogo}
               alt="NexOS"
-              className="h-10 w-10 object-contain transition-all duration-300"
-              style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)/0.5))" }}
+              className="h-14 w-14 object-contain transition-all duration-300"
+              style={{ filter: "drop-shadow(0 0 12px hsl(var(--primary)/0.6))" }}
             />
             <div>
-              <div className="font-mono font-black text-sm uppercase tracking-[0.15em] leading-tight">NexOS AI</div>
-              <div className="font-mono text-[7px] uppercase tracking-widest text-primary/70 leading-tight">Plataforma de Lançamento</div>
+              <div className="font-mono font-black text-base uppercase tracking-[0.15em] leading-tight">NexOS <span className="text-primary">AI</span></div>
+              <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-primary/70 leading-tight">Plataforma de Lançamento</div>
             </div>
           </div>
         </Link>
