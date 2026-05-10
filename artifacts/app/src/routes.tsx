@@ -23,6 +23,8 @@ import AgencyClientsPage from "@/pages/agency/clients";
 import AdminPage from "@/pages/admin/index";
 import VslsPage from "@/pages/vsls/index";
 import RevenuePage from "@/pages/revenue/index";
+import ContentApproval from "@/pages/campaigns/content";
+import AffiliatePage from "@/pages/affiliate/index";
 import CompliancePage from "@/pages/compliance/index";
 import SettingsPage from "@/pages/settings";
 import CreditsPage from "@/pages/credits";
@@ -76,6 +78,9 @@ export default function AppRoutes() {
             <CampaignIntake />
           </ProtectedRoute>
         )}
+      </Route>
+      <Route path="/campaigns/:id/content">
+        {() => <ProtectedRoute><ContentApproval /></ProtectedRoute>}
       </Route>
       <Route path="/campaigns/:id">
         {() => (
@@ -167,6 +172,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/revenue">
         {() => <ProtectedRoute><RevenuePage /></ProtectedRoute>}
+      </Route>
+      <Route path="/affiliate">
+        {() => <ProtectedRoute><AffiliatePage /></ProtectedRoute>}
       </Route>
       <Route path="/compliance">
         {() => <ProtectedRoute><CompliancePage /></ProtectedRoute>}

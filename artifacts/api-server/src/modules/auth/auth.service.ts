@@ -26,6 +26,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   name: string;
+  phone?: string;
   locale?: "pt-BR" | "en-US" | "es-LA";
 }
 
@@ -78,6 +79,7 @@ export async function registerUser(
       email: input.email.toLowerCase(),
       passwordHash,
       name: input.name,
+      phone: input.phone ?? null,
       locale: input.locale ?? "pt-BR",
     })
     .returning();

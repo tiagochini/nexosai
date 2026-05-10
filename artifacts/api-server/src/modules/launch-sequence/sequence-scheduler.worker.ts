@@ -14,6 +14,7 @@ import { sendEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
 import { sendWhatsAppDispatch, createWhatsAppDispatch } from "../whatsapp/whatsapp.service.js";
 import { createEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
 import { emitSequenceEvent } from "./sequence-realtime.js";
+import { sendWeeklyReportsToAll } from "../weekly-report/weekly-report.service.js";
 
 const QUEUE_NAME = "sequence-scheduler";
 
@@ -33,10 +34,29 @@ let fallbackInterval: NodeJS.Timeout | null = null;
 
 // ── Core processor ────────────────────────────────────────────────────────────
 
+// ── Weekly report: fires once on Monday between 08:00–08:01 UTC ───────────────
+let lastWeeklyReportDate: string | null = null;
+
+async function maybeFireWeeklyReport(now: Date): Promise<void> {
+  const log = logger.child({ component: "weekly-report-scheduler" });
+  const isMonday = now.getUTCDay() === 1;
+  const isReportHour = now.getUTCHours() === 8;
+  const todayKey = now.toISOString().slice(0, 10); // YYYY-MM-DD
+  if (isMonday && isReportHour && lastWeeklyReportDate !== todayKey) {
+    lastWeeklyReportDate = todayKey;
+    log.info({ date: todayKey }, "Firing weekly reports (Monday 08:00 UTC)");
+    await sendWeeklyReportsToAll();
+  }
+}
+
 export async function processScheduledItems(): Promise<void> {
   const log = logger.child({ component: "sequence-scheduler" });
 
   const now = new Date();
+
+  await maybeFireWeeklyReport(now).catch((err) =>
+    log.warn({ err }, "Weekly report tick failed — non-blocking"),
+  );
 
   const dueItems = await db
     .select({

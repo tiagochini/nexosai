@@ -12,6 +12,7 @@ const registerSchema = z.object({
   email: z.email(),
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(2, "Name must be at least 2 characters"),
+  phone: z.string().optional(),
   locale: z.enum(["pt-BR", "en-US", "es-LA"]).default("pt-BR"),
 });
 

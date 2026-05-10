@@ -346,7 +346,7 @@ export default function CampaignDetail() {
   const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string } | null => {
     switch (campaign.status) {
       case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia aprovada. Inicie a geração de conteúdo com IA." };
-      case "awaiting_approval": return { href: undefined, label: "Aprovar Conteúdo", description: "Revise e aprove o conteúdo na aba Conteúdo abaixo.", phase: undefined };
+      case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A IA gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
       case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
       default: return null;
@@ -461,10 +461,12 @@ export default function CampaignDetail() {
                   >
                     {executeMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Processando...</> : <><Play className="h-4 w-4 fill-current" />{nextAction.label}</>}
                   </Button>
-                ) : nextAction.label === "Aprovar Conteúdo" ? (
-                  <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto" onClick={() => setActiveTab("conteudo")}>
-                    <Layers className="h-4 w-4" />Ver Conteúdo
-                  </Button>
+                ) : nextAction.href ? (
+                  <Link href={nextAction.href}>
+                    <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto">
+                      <Layers className="h-4 w-4" />{nextAction.label}
+                    </Button>
+                  </Link>
                 ) : null}
               </div>
             </div>

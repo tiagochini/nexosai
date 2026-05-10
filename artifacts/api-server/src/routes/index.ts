@@ -27,6 +27,7 @@ import waitlistRouter from "../modules/waitlist/waitlist.routes.js";
 import recordingRouter from "../modules/recording/recording.routes.js";
 import adminRouter from "../modules/admin/admin.routes.js";
 import onboardingRouter from "../modules/onboarding/onboarding.routes.js";
+import weeklyReportRouter from "../modules/weekly-report/weekly-report.routes.js";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use("/waitlist", waitlistRouter);
 router.use("/recordings", recordingRouter);
 router.use("/admin", adminRouter);
 router.use("/onboarding", onboardingRouter);
+router.use("/reports", weeklyReportRouter);
 
 export default router;

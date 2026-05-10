@@ -16,8 +16,10 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
+  phone: text("phone"),
   locale: localeEnum("locale").notNull().default("pt-BR"),
   emailVerified: boolean("email_verified").notNull().default(false),
+  phoneVerified: boolean("phone_verified").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -38,6 +40,7 @@ export const registerUserSchema = z.object({
   email: z.email(),
   password: z.string().min(8),
   name: z.string().min(2),
+  phone: z.string().optional(),
   locale: z.enum(["pt-BR", "en-US", "es-LA"]).default("pt-BR"),
 });
 

@@ -92,6 +92,17 @@ Launch tracks by revenue target:
 - **Socket.io real-time**: `artifacts/app/src/lib/socket.ts` — singleton `useCampaignSocket(campaignId, onEvent, enabled)` hook. Connects to `/api/socket.io`, auth via JWT from localStorage, joins `campaign:{id}` room, listens for `campaign:event`. Auto-scrolling live feed injected in Campaign Detail → Agentes tab (only visible when campaign is in active statuses).
 - **Integrações tab**: `artifacts/app/src/pages/settings.tsx` — 4th tab in Configurações. 10 providers in the catalog (WhatsApp Business, RD Station, ActiveCampaign, Hotmart, Kiwify, Stripe, Meta Ads, Google Ads, Telegram, HubSpot). Reads from `GET /api/workspaces/me/integrations`, writes via `POST /api/workspaces/me/integrations`. Connected integrations shown at top with live status badges.
 - **Agency Clients page**: `artifacts/app/src/pages/agency/clients.tsx` — `/agency/clients` route + sidebar link ("Clientes"). Full invite/manage/revoke flow. Plan guard shows upgrade prompt for non-Agency users. Uses `GET/POST/PATCH/DELETE /api/agency/*` endpoints.
+- **Onboarding plan preview**: `artifacts/app/src/pages/onboarding.tsx` — After conversation completes, step transitions to `plan_preview` (7-day visual timeline, AI agents grid, revenue track projections). Then CTA navigates to intake or campaign.
+- **Dashboard expandable KPIs**: `artifacts/app/src/pages/dashboard.tsx` — KpiCard now supports `breakdown`, `expanded`, `onToggle` props. Click to expand each KPI and see per-item breakdown. State managed by `expandedKpi: string | null`.
+- **Dashboard Execution Flowchart**: `ExecutionFlowchart` component renders campaign pipeline as 5 clickable nodes (Briefing → Estratégia → Conteúdo → Lançamento → Resultados). Node highlights if campaigns exist in that state. Clicking a node navigates to that campaign.
+- **Content Approval page**: `artifacts/app/src/pages/campaigns/content.tsx` — route `/campaigns/:id/content` (before `/:id` to avoid conflict). 3 tabs: Por Plataforma, Cronograma, Segmentação. Approve/reject/edit/AI-rewrite per piece. Campaign detail links here when status=`awaiting_approval`.
+- **Affiliate page**: `artifacts/app/src/pages/affiliate/index.tsx` — `/affiliate`. Join flow + active dashboard with referral link, KPI stats, 52-week teaser.
+- **Revenue page**: `artifacts/app/src/pages/revenue/index.tsx` — Evolução chart tab with recharts AreaChart/BarChart, period selector (7d/30d/90d/all), cumulative chart, CSV export. WeeklyReportCard with health score + AI insight.
+
+## Backend Status (Post-session)
+
+- **Weekly report service**: `artifacts/api-server/src/modules/weekly-report/` — `weekly-report.service.ts` composes HTML email with metrics (revenue, sales, campaigns, credits, health score, AI insight). `weekly-report.routes.ts` exposes `POST /api/reports/send` (auth required, sends to workspace owner). Scheduler in `sequence-scheduler.worker.ts` fires `sendWeeklyReportsToAll()` every Monday at 08:00 UTC via `maybeFireWeeklyReport()` — non-blocking, idempotent (keyed by date string). No SMTP configured → logs compose preview only; wire `nodemailer`/SMTP env vars to enable real delivery.
+- **Auth**: DB schema has `phone` + `phoneVerified` columns. Register accepts optional `phone`. Login and register pages fully rebuilt with confirmations, show/hide toggles, live validation.
 
 ## Gotchas
 
