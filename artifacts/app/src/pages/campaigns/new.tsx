@@ -46,15 +46,87 @@ const TRACKS = [
 ];
 
 const TYPES = [
-  { id: "launch",              label: "Lançamento",    sub: "PLF / Fórmula",       icon: Rocket    },
-  { id: "perpetual_launch",    label: "Perpétuo",      sub: "Evergreen",            icon: RefreshCw },
-  { id: "flash_sale",          label: "Flash Sale",    sub: "72h de urgência",      icon: Zap       },
-  { id: "live_sale",           label: "Live Sale",     sub: "Live de vendas",       icon: Radio     },
-  { id: "continuous_sales",    label: "Contínuo",      sub: "Fluxo constante",      icon: TrendingUp},
-  { id: "affiliate",           label: "Afiliado",      sub: "Produto de terceiros", icon: Users     },
-  { id: "authority",           label: "Autoridade",    sub: "Branding & posição",   icon: BarChart3 },
-  { id: "audience_growth",     label: "Crescimento",   sub: "Audiência orgânica",   icon: Youtube   },
-  { id: "subscription_growth", label: "Assinatura",    sub: "Clube / Membros",      icon: Mail      },
+  {
+    id: "launch",
+    label: "Lançamento",
+    tag: "PLF / Fórmula",
+    icon: Rocket,
+    desc: "Abre carrinho por tempo limitado após aquecimento da audiência.",
+    detail: "Você cria antecipação com conteúdo e CPL, abre o carrinho por 7–10 dias e fecha com urgência. É o modelo mais usado no mercado digital brasileiro para produtos acima de R$500. Ideal para quem tem ou vai construir uma audiência antes de vender.",
+    when: "Você quer um resultado concentrado em uma janela de tempo com máximo de faturamento.",
+  },
+  {
+    id: "perpetual_launch",
+    label: "Perpétuo",
+    tag: "Evergreen",
+    icon: RefreshCw,
+    desc: "Funil automático que vende o tempo todo, sem datas fixas.",
+    detail: "O produto fica sempre disponível. A IA monta um funil de e-mail e WhatsApp que converte novos leads automaticamente — sem você precisar estar presente. Funciona 24h por dia.",
+    when: "Você quer renda recorrente sem depender de eventos ou lançamentos ao vivo.",
+  },
+  {
+    id: "flash_sale",
+    label: "Flash Sale",
+    tag: "24h a 72h",
+    icon: Zap,
+    desc: "Promoção relâmpago com desconto ou bônus por tempo curtíssimo.",
+    detail: "Você cria uma janela de 24 a 72 horas com oferta especial — desconto, bônus exclusivo ou condição única. A IA gera toda a comunicação de urgência: e-mails, mensagens WhatsApp e copy para stories. Alto impacto em curto prazo.",
+    when: "Você tem uma base de contatos e quer gerar caixa rápido sem montar um lançamento completo.",
+  },
+  {
+    id: "live_sale",
+    label: "Live Sale",
+    tag: "Vendas ao vivo",
+    icon: Radio,
+    desc: "Você apresenta ao vivo e vende durante a transmissão.",
+    detail: "A IA prepara o roteiro completo da live, os gatilhos por momento, os materiais de apoio (chat scripts, CTA timings) e a sequência de follow-up para quem assistiu mas não comprou.",
+    when: "Você tem facilidade com câmera e quer converter audiência ao vivo com alto ticket.",
+  },
+  {
+    id: "continuous_sales",
+    label: "Contínuo",
+    tag: "Vendas diárias",
+    icon: TrendingUp,
+    desc: "Conteúdo constante que alimenta o funil e converte no ritmo da audiência.",
+    detail: "Sem pico de lançamento. Você publica conteúdo regularmente e o funil converte quem está pronto. A IA planeja o calendário editorial, as sequências de nutrição e os momentos de oferta ao longo do mês.",
+    when: "Você prefere crescimento estável a resultados concentrados. Bom para infoprodutos com ticket menor.",
+  },
+  {
+    id: "affiliate",
+    label: "Afiliado",
+    tag: "Produto de terceiros",
+    icon: Users,
+    desc: "Você promove o produto de outra pessoa e recebe comissão por cada venda.",
+    detail: "Você não precisa ter produto próprio. A IA adapta toda a estratégia para o seu papel de afiliado — tráfego, conteúdo de recomendação, sequências de e-mail e WhatsApp com seu link de afiliado.",
+    when: "Você ainda não tem produto próprio ou quer diversificar renda promovendo produtos que já vende.",
+  },
+  {
+    id: "authority",
+    label: "Autoridade",
+    tag: "Branding e posição",
+    icon: BarChart3,
+    desc: "Constrói sua marca pessoal para que suas próximas ofertas vendam mais fácil.",
+    detail: "Não é uma campanha de venda direta. O objetivo é posicionar você como referência no nicho — conteúdo estratégico, presença nas redes, parcerias. Quando você lançar algo depois, a audiência já confia em você.",
+    when: "Você está entrando em um mercado novo ou quer aumentar o ticket dos seus produtos com autoridade.",
+  },
+  {
+    id: "audience_growth",
+    label: "Crescimento",
+    tag: "Audiência orgânica",
+    icon: Youtube,
+    desc: "Expande seguidores, lista de e-mail e comunidade sem oferta direta.",
+    detail: "Foco 100% em aquisição de audiência qualificada. A IA planeja conteúdo para crescer no Instagram, YouTube, TikTok ou e-mail. Sem vender agora — você acumula audiência para monetizar depois.",
+    when: "Você tem zero ou pouca audiência e precisa construir uma base antes de lançar.",
+  },
+  {
+    id: "subscription_growth",
+    label: "Assinatura",
+    tag: "Clube / Membros",
+    icon: Mail,
+    desc: "Vende acesso mensal a um clube, comunidade ou conteúdo recorrente.",
+    detail: "Recorrência mensal: o cliente paga todo mês para continuar tendo acesso. A IA monta a captação (funil de entrada), onboarding dos novos membros e estratégia de retenção para reduzir cancelamentos.",
+    when: "Você tem conteúdo ou comunidade que gera valor contínuo e quer previsibilidade de receita.",
+  },
 ];
 
 type Step = "track" | "type" | "details";
@@ -205,7 +277,7 @@ export default function NewCampaign() {
 
       {/* ── STEP 2 — TYPE ────────────────────────────────────────────────────── */}
       {step === "type" && (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center gap-3">
             <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Qual modelo de operação?</p>
             {selectedTrack && (
@@ -214,7 +286,8 @@ export default function NewCampaign() {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {TYPES.map((t) => {
               const Icon = t.icon;
               const active = type === t.id;
@@ -222,22 +295,56 @@ export default function NewCampaign() {
                 <button
                   key={t.id}
                   onClick={() => setType(t.id)}
-                  className={`flex items-start gap-3 p-4 border text-left transition-all group ${
+                  className={`flex flex-col gap-2 p-4 border text-left transition-all group relative ${
                     active
-                      ? "border-primary/50 bg-primary/8 shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
+                      ? "border-primary/60 bg-primary/8 shadow-[0_0_24px_hsl(var(--primary)/0.12)]"
                       : "border-border/40 bg-card/30 hover:border-border/70 hover:bg-card/50"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-mono text-sm font-bold ${active ? "text-primary" : "text-foreground"}`}>{t.label}</div>
-                    <div className="font-mono text-xs text-muted-foreground/50 mt-0.5">{t.sub}</div>
+                  {active && (
+                    <div className="absolute top-2.5 right-2.5">
+                      <Check className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground/40 group-hover:text-muted-foreground"}`} />
+                    <div className="flex flex-col">
+                      <span className={`font-mono text-sm font-bold leading-tight ${active ? "text-primary" : "text-foreground"}`}>
+                        {t.label}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-wider">{t.tag}</span>
+                    </div>
                   </div>
-                  {active && <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />}
+                  <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
+                    {t.desc}
+                  </p>
                 </button>
               );
             })}
           </div>
+
+          {/* Info panel — appears when a type is selected */}
+          {selectedType && (
+            <div className="border border-primary/25 bg-primary/5 p-5 relative animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/40" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/40" />
+              <div className="flex items-start gap-3 mb-3">
+                <selectedType.icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <span className="font-mono text-sm font-bold text-primary">{selectedType.label}</span>
+                  <span className="font-mono text-[10px] text-primary/50 ml-2 uppercase tracking-wider">{selectedType.tag}</span>
+                </div>
+              </div>
+              <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed mb-3">
+                {selectedType.detail}
+              </p>
+              <div className="border-t border-border/20 pt-3 flex gap-2 items-start">
+                <span className="font-mono text-[10px] text-primary/50 uppercase tracking-widest shrink-0 mt-0.5">Ideal quando</span>
+                <p className="font-mono text-xs text-muted-foreground/60 leading-relaxed">{selectedType.when}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between">
             <Button variant="ghost" onClick={() => setStep("track")} className="rounded-none font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-3.5 w-3.5 mr-2" />Voltar
