@@ -30,6 +30,7 @@ import SettingsPage from "@/pages/settings";
 import CreditsPage from "@/pages/credits";
 import BillingPage from "@/pages/billing/index";
 import MemoryPage from "@/pages/memory/index";
+import PreparacaoPage from "@/pages/preparacao";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
@@ -195,6 +196,7 @@ export default function AppRoutes() {
       <Route path="/memory">
         {() => <ProtectedRoute><MemoryPage /></ProtectedRoute>}
       </Route>
+      <Route path="/preparacao" component={PreparacaoPage} />
 
       <Route component={NotFound} />
     </Switch>

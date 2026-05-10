@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -295,7 +295,12 @@ function SuccessState({ segment }: { segment: Segment }) {
 
 function HeroCard() {
   const [segment, setSegment] = useState<Segment | null>(null);
-  const [joined, setJoined] = useState(false);
+  const [, navigate] = useLocation();
+
+  const handleSuccess = (seg: Segment) => {
+    navigate(`/preparacao?segment=${seg}`);
+  };
+
   return (
     <div className="relative">
       <div className="border border-primary/20 bg-card/40 backdrop-blur-xl p-8 relative overflow-hidden hover:border-primary/40 transition-all duration-300 hover:shadow-[0_0_40px_hsl(var(--primary)/0.1)]">
@@ -303,13 +308,11 @@ function HeroCard() {
         <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary"></div>
         <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary"></div>
         <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary"></div>
-        {joined && segment
-          ? <SuccessState segment={segment} />
-          : segment
-          ? <WaitlistForm segment={segment} onBack={() => setSegment(null)} onSuccess={() => setJoined(true)} />
+        {segment
+          ? <WaitlistForm segment={segment} onBack={() => setSegment(null)} onSuccess={() => handleSuccess(segment)} />
           : <SegmentPicker onSelect={setSegment} />}
       </div>
-      <div className="mt-4 flex items-center gap-2 justify-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">
+      <div className="mt-4 flex items-center gap-2 justify-center font-mono text-xs uppercase tracking-widest text-muted-foreground/50">
         <Clock className="h-3 w-3" />
         Carrinho abre uma única vez · Fecha em 24h · Sem exceções
       </div>
@@ -436,7 +439,7 @@ export default function Landing() {
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">no ar em 7 dias.</span><br />
               <span className="text-foreground/50 text-3xl md:text-4xl mt-2 block">Orquestrado por IA, aprovado por você.</span>
             </h1>
-            <p className="text-base text-muted-foreground leading-relaxed mb-8 max-w-lg">
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-lg">
               A IA entende seu produto, calcula viabilidade, monta estratégia e executa a sequência —&nbsp;
               <strong className="text-foreground">cada proposta passa pela sua aprovação antes de ir ao ar.</strong>
             </p>
@@ -446,8 +449,8 @@ export default function Landing() {
                 "Dois grupos de esquenta — lançadores e agências",
                 "2 mensagens por dia · conteúdo de lançamento estruturado",
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 font-mono text-xs text-muted-foreground">
-                  <AlertTriangle className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                <div key={i} className="flex items-center gap-3 font-mono text-sm text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0" />
                   {item}
                 </div>
               ))}
