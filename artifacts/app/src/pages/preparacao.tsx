@@ -34,7 +34,7 @@ const SEGMENT_CONFIG = {
       { day: "Em breve",  label: "Janela de acesso",   desc: "Vagas limitadas. Sem prorrogação.", icon: Radio },
       { day: "Em breve",  label: "Encerramento",       desc: "Quem não entrar na janela espera a próxima turma — sem data prevista.", icon: Lock },
     ],
-    aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas.\n\nA automação do processo de vendas da NexOS te economiza dinheiro, tempo e otimiza seu retorno — vamos avaliar o efeito de todos os benefícios da NexOS em seu projeto de marketing digital:\n\nO que você vende hoje, ou o que pretende lançar?",
+    aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas.\n\nA automação do processo de vendas da NexOS te economiza dinheiro, tempo e otimiza seu retorno — vamos avaliar juntos o impacto que isso pode ter no seu projeto.\n\nPrimeiro: você já tentou lançar alguma vez, ou ainda está esperando o momento certo para começar?",
   },
   agency: {
     badge: "Agência / Gestor",
@@ -49,7 +49,7 @@ const SEGMENT_CONFIG = {
       { day: "Em breve",  label: "Janela de acesso",   desc: "Condições especiais para agências. Vagas limitadas.", icon: Radio },
       { day: "Em breve",  label: "Encerramento",       desc: "Carrinho fecha. Sem exceções.", icon: Lock },
     ],
-    aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas.\n\nA automação do processo de vendas da NexOS te economiza dinheiro, tempo e otimiza o retorno dos seus clientes — vamos avaliar o efeito de todos os benefícios da NexOS na operação da sua agência:\n\nQuantos clientes ativos você gerencia hoje, e qual o maior gargalo operacional da sua equipe?",
+    aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas.\n\nA automação do processo de vendas da NexOS economiza dinheiro, tempo e otimiza o retorno de cada cliente que você gerencia — vamos avaliar juntos o impacto real na sua operação.\n\nMe conta: há quanto tempo você sonha em escalar os lançamentos dos seus clientes sem precisar aumentar a equipe?",
   },
 };
 
