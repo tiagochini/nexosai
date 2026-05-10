@@ -1,763 +1,688 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   useListCampaigns,
+  useListSequences,
   useGetCreditsBalance,
   getListCampaignsQueryKey,
   getGetCreditsBalanceQueryKey,
+  getListSequencesQueryKey,
 } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Rocket, Plus, Activity, AlertTriangle, ShieldCheck,
-  Users, Building2, TrendingUp, CreditCard,
-  UserCheck, UserX, Moon, Zap, ChevronRight, Wifi, Loader2,
-  Bot, Workflow, ArrowRight, CheckCircle2, Play,
+  Rocket, Plus, CreditCard, ChevronRight, Bot, Workflow,
+  ArrowRight, CheckCircle2, Play, Zap, AlertTriangle,
+  DollarSign, Activity, TrendingUp, Target, Users,
+  BarChart3, Calendar, Loader2,
 } from "lucide-react";
-import { toast } from "sonner";
 
-type DashMode = "launcher" | "agency" | "admin";
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface RevenueSummary {
+  total: number;
+  byPlatform: Record<string, number>;
+  transactionCount: number;
+  avgTicket: number;
+}
+interface AgentRun {
+  id: string; agentRole: string; status: string;
+  startedAt: string; completedAt?: string;
+}
+interface Checkpoint {
+  id: string; type: string; status: string; createdAt: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
-  draft: "Rascunho", intake: "Intake", analyzing: "Analisando",
-  strategy_ready: "Estratégia Pronta", generating: "Gerando",
+  draft: "Rascunho", intake: "Briefing com IA", analyzing: "Analisando",
+  strategy_ready: "Estratégia Pronta", generating: "Gerando Conteúdo",
   awaiting_approval: "Aguardando Aprovação", approved: "Aprovado",
   executing: "Em Execução", live: "Ao Vivo", completed: "Concluído",
 };
-const STATUS_CLASS: Record<string, string> = {
-  live: "text-success border-success/40 bg-success/10",
-  executing: "text-primary border-primary/40 bg-primary/10",
+const STATUS_COLOR: Record<string, string> = {
+  live:              "text-success border-success/40 bg-success/10",
+  executing:         "text-primary border-primary/40 bg-primary/10",
+  generating:        "text-primary border-primary/40 bg-primary/10",
+  analyzing:         "text-primary border-primary/40 bg-primary/10",
   awaiting_approval: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
-  draft: "text-muted-foreground border-border bg-muted/20",
-  intake: "text-blue-400 border-blue-400/40 bg-blue-400/10",
+  approved:          "text-green-400 border-green-400/40 bg-green-400/10",
+  strategy_ready:    "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
+  completed:         "text-muted-foreground border-border bg-muted/20",
+  draft:             "text-muted-foreground border-border bg-muted/20",
+  intake:            "text-blue-400 border-blue-400/40 bg-blue-400/10",
+};
+const AGENT_ROLE_LABEL: Record<string, string> = {
+  strategy: "Estrategista", command: "Comandante", copywriter: "Copywriter",
+  creative: "Diretor Criativo", analytics: "Analista", compliance: "Compliance",
+  profile_builder: "Profile Builder", intake: "Intake AI",
+};
+const PIPELINE_ORDER = [
+  "draft", "intake", "analyzing", "strategy_ready",
+  "generating", "awaiting_approval", "approved",
+  "executing", "live", "completed",
+];
+const PIPELINE_STEPS = [
+  { id: "intake",    label: "Briefing",    statuses: ["draft", "intake"] },
+  { id: "strategy",  label: "Estratégia",  statuses: ["analyzing", "strategy_ready"] },
+  { id: "content",   label: "Conteúdo",    statuses: ["generating", "awaiting_approval", "approved"] },
+  { id: "launch",    label: "Lançamento",  statuses: ["executing", "live"] },
+  { id: "monitor",   label: "Monitorar",   statuses: ["completed"] },
+];
+const MODEL_LABEL: Record<string, string> = {
+  plf: "PLF", formula_de_lancamento: "Fórmula de Lançamento",
+  semente: "Semente", afiliado: "Afiliado", perpetual: "Perpétuo", custom: "Custom",
 };
 
-type SaasStatus = "novo" | "ativo_lancando" | "ativo" | "pausado" | "hibernado";
-const SAAS_META: Record<SaasStatus, { label: string; color: string; icon: React.ElementType; desc: string }> = {
-  novo:          { label: "Novo",          color: "text-blue-400 border-blue-400/40 bg-blue-400/10",       icon: Zap,       desc: "Registrado há menos de 14 dias, sem campanha" },
-  ativo_lancando:{ label: "Lançando",      color: "text-success border-success/40 bg-success/10",          icon: Rocket,    desc: "Campanha executando ou ao vivo" },
-  ativo:         { label: "Ativo",         color: "text-primary border-primary/40 bg-primary/10",          icon: UserCheck, desc: "Usa a plataforma, sem lançamento ativo" },
-  pausado:       { label: "Pausado",       color: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10", icon: UserX,     desc: "Assinatura suspensa, não cancelou" },
-  hibernado:     { label: "Hibernado",     color: "text-muted-foreground border-border/50 bg-muted/20",    icon: Moon,      desc: "Paga mas não usa há mais de 14 dias" },
-};
+// ─── Mini Components ──────────────────────────────────────────────────────────
 
-// ── API response types ─────────────────────────────────────────────────────────
-interface AgencyStatsData {
-  totalClients: number;
-  activeClients: number;
-  pendingClients: number;
-  totalCampaigns: number;
-  totalActiveCampaigns: number;
-}
-interface AgencyClient { id: string; clientName?: string; clientEmail: string; status: string }
-interface AdminUser {
-  workspaceId: string; workspaceName: string; userId: string; userName: string;
-  email: string; planName: string; planSlug: string; saasStatus: string;
-  totalCampaigns: number; creditsBalance: number; createdAt: string;
-}
-interface AdminOverview { total: number; byStatus: Record<string, number>; users: AdminUser[] }
-
-// ── Custom hooks ──────────────────────────────────────────────────────────────
-function useAgencyStats(enabled: boolean) {
-  return useQuery({
-    queryKey: ["/api/agency/stats"] as const,
-    enabled,
-    queryFn: async (): Promise<AgencyStatsData> => {
-      const res = await customFetch<Response>("/api/agency/stats");
-      if (!res.ok) return { totalClients: 0, activeClients: 0, pendingClients: 0, totalCampaigns: 0, totalActiveCampaigns: 0 };
-      return res.json() as Promise<AgencyStatsData>;
-    },
-  });
-}
-function useAgencyClients(enabled: boolean) {
-  return useQuery({
-    queryKey: ["/api/agency/clients"] as const,
-    enabled,
-    queryFn: async (): Promise<{ clients: AgencyClient[] }> => {
-      const res = await customFetch<Response>("/api/agency/clients");
-      if (!res.ok) return { clients: [] };
-      return res.json() as Promise<{ clients: AgencyClient[] }>;
-    },
-  });
-}
-function useAdminOverview(enabled: boolean) {
-  return useQuery({
-    queryKey: ["/api/admin/overview"] as const,
-    enabled,
-    queryFn: async (): Promise<AdminOverview> => {
-      const res = await customFetch<Response>("/api/admin/overview");
-      if (!res.ok) throw new Error("Acesso negado");
-      return res.json() as Promise<AdminOverview>;
-    },
-  });
-}
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({
-  label, icon, children, loading, glow = "primary",
+function KpiCard({
+  label, value, sub, icon: Icon, color = "primary", href, loading,
 }: {
-  label: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  loading?: boolean;
-  glow?: "primary" | "success";
+  label: string; value: string | number; sub?: string;
+  icon: React.ElementType; color?: "primary" | "success" | "yellow" | "cyan";
+  href?: string; loading?: boolean;
 }) {
-  return (
-    <div className={`border border-border/50 bg-card/40 backdrop-blur-sm p-5 relative overflow-hidden group card-weapon`}>
-      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
-        bg-gradient-to-br ${glow === "success" ? "from-success/5" : "from-primary/5"} to-transparent`} />
-      <div className="flex items-center justify-between mb-3 relative z-10">
-        <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{label}</span>
-        {icon}
-      </div>
-      <div className="relative z-10">
-        {loading ? <Skeleton className="h-10 w-24 bg-muted/20" /> : children}
-      </div>
-    </div>
-  );
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState({ icon, message, action }: { icon: React.ReactNode; message: string; action?: React.ReactNode }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3">
-      {icon}
-      <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground/70">{message}</p>
-      {action}
-    </div>
-  );
-}
-
-// ── Add Client Dialog ─────────────────────────────────────────────────────────
-function AddClientDialog({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }) {
-  const [email, setEmail] = useState("");
-  const [name, setName]   = useState("");
-  const [loading, setLoading] = useState(false);
-  const emailRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (open) {
-      setEmail(""); setName(""); setLoading(false);
-      setTimeout(() => emailRef.current?.focus(), 100);
-    }
-  }, [open]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setLoading(true);
-    try {
-      const res = await customFetch<Response>("/api/agency/clients/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientEmail: email.trim(), clientName: name.trim() || undefined }),
-      });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao convidar cliente");
-      }
-      toast.success(`Convite enviado para ${email.trim()}`);
-      onSuccess();
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao enviar convite");
-    } finally {
-      setLoading(false);
-    }
+  const colorMap = {
+    primary: "border-primary/20 bg-primary/5 text-primary",
+    success:  "border-success/20 bg-success/5 text-success",
+    yellow:   "border-yellow-400/20 bg-yellow-400/5 text-yellow-400",
+    cyan:     "border-cyan-400/20 bg-cyan-400/5 text-cyan-400",
   };
+  const inner = (
+    <div className={`border p-4 h-full group transition-all ${colorMap[color]} ${href ? "cursor-pointer hover:opacity-80" : ""}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
+        <span className="font-mono text-[9px] uppercase tracking-widest opacity-60">{label}</span>
+      </div>
+      {loading ? (
+        <Skeleton className="h-9 w-24 bg-muted/20" />
+      ) : (
+        <>
+          <div className="font-mono font-bold text-2xl text-foreground">{value}</div>
+          {sub && <div className="font-mono text-[10px] opacity-50 mt-1">{sub}</div>}
+        </>
+      )}
+    </div>
+  );
+  return href ? <Link href={href}>{inner}</Link> : inner;
+}
+
+function PipelineProgress({ status }: { status: string }) {
+  const currentIdx = PIPELINE_ORDER.indexOf(status);
+  const total = PIPELINE_ORDER.length - 1;
+  const pct = total > 0 ? Math.round((currentIdx / total) * 100) : 0;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md rounded-none border border-primary/30 bg-card/95 backdrop-blur-xl p-0 gap-0">
-        {/* Corner accents */}
-        <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-primary pointer-events-none" />
-        <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-primary pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-primary pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary pointer-events-none" />
-
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-            <DialogTitle className="font-mono uppercase tracking-widest text-sm text-primary">
-              Adicionar Cliente
-            </DialogTitle>
-          </div>
-          <DialogDescription className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-            Envie um convite de acesso para o cliente. Ele poderá aceitar e vincular sua conta.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          <div className="space-y-2">
-            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-              E-mail do Cliente <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              ref={emailRef}
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="cliente@empresa.com"
-              className="font-mono h-11 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-              Nome do Cliente <span className="text-muted-foreground/50">(opcional)</span>
-            </Label>
-            <Input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="João Silva / Empresa ABC"
-              className="font-mono h-11 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary"
-            />
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 rounded-none font-mono uppercase tracking-widest text-xs border-border/50 h-11"
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading || !email.trim()}
-              className="flex-1 rounded-none font-mono uppercase tracking-widest text-xs btn-weapon-primary h-11"
-            >
-              {loading ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />Enviando...</> : <>Enviar Convite</>}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <div className="space-y-3">
+      {/* Step indicators */}
+      <div className="flex gap-0">
+        {PIPELINE_STEPS.map((step, i) => {
+          const stepStatuses = step.statuses;
+          const stepMin = Math.min(...stepStatuses.map(s => PIPELINE_ORDER.indexOf(s)));
+          const stepMax = Math.max(...stepStatuses.map(s => PIPELINE_ORDER.indexOf(s)));
+          const isDone    = currentIdx > stepMax;
+          const isActive  = currentIdx >= stepMin && currentIdx <= stepMax;
+          const isPending = currentIdx < stepMin;
+          return (
+            <div key={step.id} className="flex-1 flex flex-col gap-1">
+              <div className={`h-1 transition-all ${
+                isDone   ? "bg-success" :
+                isActive ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.6)]" :
+                           "bg-muted/20"
+              }`} />
+              <span className={`font-mono text-[8px] uppercase tracking-widest hidden sm:block ${
+                isActive ? "text-primary font-bold" :
+                isDone   ? "text-muted-foreground/60" :
+                           "text-muted-foreground/30"
+              }`}>{step.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[10px] text-muted-foreground/50">{pct}% concluído</span>
+        <span className={`font-mono text-[9px] uppercase tracking-widest ${STATUS_COLOR[status]?.split(" ")[0] ?? "text-primary"}`}>
+          {STATUS_LABEL[status] ?? status}
+        </span>
+      </div>
+    </div>
   );
 }
 
-// ── Main dashboard ────────────────────────────────────────────────────────────
+// ─── Smart Next Action ────────────────────────────────────────────────────────
+
+function nextAction(campaigns: { id: string; title: string; status: string }[]) {
+  if (!campaigns.length) {
+    return {
+      icon: Rocket, color: "text-primary", bg: "border-primary/20 bg-primary/5",
+      title: "Inicie sua primeira missão de lançamento",
+      sub: "A IA monta toda a estratégia, cria o conteúdo e executa automaticamente",
+      href: "/campaigns/new", cta: "Criar Campanha",
+    };
+  }
+  const live        = campaigns.find(c => c.status === "live");
+  const executing   = campaigns.find(c => c.status === "executing");
+  const approval    = campaigns.find(c => c.status === "awaiting_approval");
+  const generating  = campaigns.find(c => c.status === "generating");
+  const analyzing   = campaigns.find(c => c.status === "analyzing");
+  const intake      = campaigns.find(c => c.status === "intake" || c.status === "draft");
+  const ready       = campaigns.find(c => c.status === "strategy_ready");
+  const approved    = campaigns.find(c => c.status === "approved");
+
+  if (live) return {
+    icon: Play, color: "text-success", bg: "border-success/20 bg-success/5",
+    title: `Campanha ao vivo: "${live.title}"`,
+    sub: "Acompanhe métricas em tempo real e aplique ajustes da IA",
+    href: `/campaigns/${live.id}`, cta: "Ver Métricas",
+  };
+  if (approval) return {
+    icon: CheckCircle2, color: "text-yellow-400", bg: "border-yellow-400/20 bg-yellow-400/5",
+    title: `Conteúdo aguarda sua aprovação: "${approval.title}"`,
+    sub: "A IA gerou o conteúdo completo. Revise e aprove para lançar.",
+    href: `/campaigns/${approval.id}`, cta: "Revisar Agora",
+  };
+  if (approved) return {
+    icon: Zap, color: "text-green-400", bg: "border-green-400/20 bg-green-400/5",
+    title: `Pronto para lançar: "${approved.title}"`,
+    sub: "Conteúdo aprovado. Execute o lançamento agora.",
+    href: `/campaigns/${approved.id}`, cta: "Lançar",
+  };
+  if (executing || generating || analyzing) {
+    const c = executing ?? generating ?? analyzing!;
+    return {
+      icon: Bot, color: "text-primary", bg: "border-primary/20 bg-primary/5",
+      title: `IA em execução: "${c.title}"`,
+      sub: "Os agentes estão trabalhando. Acompanhe na aba Agentes.",
+      href: `/campaigns/${c.id}`, cta: "Ver Agentes",
+    };
+  }
+  if (ready) return {
+    icon: Target, color: "text-cyan-400", bg: "border-cyan-400/20 bg-cyan-400/5",
+    title: `Estratégia pronta para "${ready.title}"`,
+    sub: "Estratégia criada. Inicie a geração de conteúdo com IA.",
+    href: `/campaigns/${ready.id}`, cta: "Gerar Conteúdo",
+  };
+  if (intake) return {
+    icon: Bot, color: "text-blue-400", bg: "border-blue-400/20 bg-blue-400/5",
+    title: `Continue o briefing: "${intake.title}"`,
+    sub: "A IA está aguardando suas respostas para montar a estratégia de lançamento.",
+    href: `/campaigns/${intake.id}/intake`, cta: "Continuar Briefing",
+  };
+  return {
+    icon: Workflow, color: "text-cyan-400", bg: "border-cyan-400/20 bg-cyan-400/5",
+    title: "Configure sequências de automação para seu lançamento",
+    sub: "Email + WhatsApp automatizados para nutrir e converter sua lista",
+    href: "/sequences", cta: "Ver Sequências",
+  };
+}
+
+// ─── Main Dashboard ───────────────────────────────────────────────────────────
+
 export default function Dashboard() {
-  const { isAdmin, planSlug, plan } = useAuth();
-  const queryClient = useQueryClient();
+  const { user, workspace, plan, planSlug, isAdmin } = useAuth();
   const [, setLocation] = useLocation();
-  const [showAddClient, setShowAddClient] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
 
-  // Role-based tab visibility
-  const canSeeLauncher = isAdmin || planSlug === "solo" || planSlug === null;
-  const canSeeAgency   = isAdmin || planSlug === "agency";
-  const canSeeAdmin    = isAdmin;
-
-  const defaultMode: DashMode = canSeeAgency && !canSeeLauncher ? "agency" : "launcher";
-  const [mode, setMode] = useState<DashMode>(defaultMode);
-
-  // Sync mode once plan loads (async)
-  useEffect(() => {
-    if (planSlug === null) return;
-    if (!isAdmin && planSlug === "agency") setMode("agency");
-    else if (!isAdmin) setMode("launcher");
-  }, [planSlug, isAdmin]);
-
+  // ── Data fetching ──
   const { data: campaignsData, isLoading: loadingCampaigns } = useListCampaigns({
-    query: { queryKey: getListCampaignsQueryKey(), enabled: mode === "launcher" },
+    query: { queryKey: getListCampaignsQueryKey() },
   });
 
-  // Auto-redirect to onboarding if solo plan and no campaigns
+  const { data: creditsData, isLoading: loadingCredits } = useGetCreditsBalance({
+    query: { queryKey: getGetCreditsBalanceQueryKey() },
+  });
+
+  const { data: sequencesData, isLoading: loadingSequences } = useListSequences({
+    query: { queryKey: getListSequencesQueryKey() },
+  });
+
+  const { data: revenueData, isLoading: loadingRevenue } = useQuery({
+    queryKey: ["/api/revenue/summary"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/revenue/summary");
+      if (!res.ok) return null;
+      return res.json() as Promise<RevenueSummary>;
+    },
+  });
+
+  const campaigns = campaignsData?.campaigns ?? [];
+
+  // Active campaign = first non-completed, non-draft
+  const activeCampaign = campaigns.find(c =>
+    !["completed", "draft"].includes(c.status)
+  ) ?? campaigns[0];
+
+  const { data: agentsData } = useQuery({
+    queryKey: [`/api/campaigns/${activeCampaign?.id}/agents`],
+    enabled: !!activeCampaign?.id,
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${activeCampaign!.id}/agents`);
+      if (!res.ok) return { agents: [], checkpoints: [] };
+      return res.json() as Promise<{ agents: AgentRun[]; checkpoints: Checkpoint[] }>;
+    },
+  });
+
+  // ── Auto-redirect to onboarding for new solo users ──
   useEffect(() => {
     if (onboardingChecked) return;
-    if (isAdmin || planSlug === "agency" || planSlug === null) return;
+    if (isAdmin || planSlug === "agency") return;
     if (loadingCampaigns) return;
-    const campaigns = campaignsData?.campaigns ?? [];
-    if (campaigns.length === 0) {
+    if (campaigns.length === 0 && planSlug !== null) {
       setOnboardingChecked(true);
       setLocation("/onboarding");
     } else {
       setOnboardingChecked(true);
     }
-  }, [isAdmin, planSlug, campaignsData, loadingCampaigns, onboardingChecked, setLocation]);
-  const { data: creditsData, isLoading: loadingCredits } = useGetCreditsBalance({
-    query: { queryKey: getGetCreditsBalanceQueryKey(), enabled: mode === "launcher" },
-  });
-  const { data: agencyStats,   isLoading: loadingAgencyStats } = useAgencyStats(mode === "agency");
-  const { data: agencyClients, isLoading: loadingClients }     = useAgencyClients(mode === "agency");
-  const { data: adminData,     isLoading: loadingAdmin }       = useAdminOverview(mode === "admin" && isAdmin);
+  }, [isAdmin, planSlug, campaigns, loadingCampaigns, onboardingChecked, setLocation]);
 
-  const tabs: { id: DashMode; label: string; icon: React.ElementType }[] = [
-    ...(canSeeLauncher ? [{ id: "launcher" as DashMode, label: "Meu Lançamento", icon: Rocket }] : []),
-    ...(canSeeAgency   ? [{ id: "agency"   as DashMode, label: "Agência",        icon: Building2 }] : []),
-    ...(canSeeAdmin    ? [{ id: "admin"    as DashMode, label: "Admin SaaS",     icon: ShieldCheck }] : []),
-  ];
+  // ── Derived state ──
+  const activeCampaigns = campaigns.filter(c => !["completed"].includes(c.status)).length;
+  const liveCampaigns   = campaigns.filter(c => c.status === "live").length;
+  const activeSequences = (sequencesData?.sequences ?? []).filter(s => s.status === "active" || s.status === "live").length;
+  const totalCredits    = plan?.creditsMonthly ?? 0;
+  const creditsBalance  = creditsData?.balance ?? 0;
+  const creditsPct      = totalCredits > 0 ? Math.min(100, Math.round((creditsBalance / totalCredits) * 100)) : 0;
+  const creditsLow      = creditsPct < 15;
+  const revenueTotal    = revenueData?.total ?? 0;
+  const action          = nextAction(campaigns);
+  const ActionIcon      = action.icon;
 
-  // Loading state while plan loads
-  if (planSlug === null && !isAdmin) {
+  const recentAgents = [...(agentsData?.agents ?? [])].reverse().slice(0, 6);
+  const pendingCheckpoints = (agentsData?.checkpoints ?? []).filter(c => c.status === "awaiting_review");
+
+  // Loading skeleton
+  if (loadingCampaigns && !onboardingChecked) {
     return (
-      <div className="space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         <div className="border-b border-border/50 pb-5">
-          <Skeleton className="h-9 w-64 bg-muted/20" />
+          <Skeleton className="h-9 w-72 bg-muted/20" />
           <Skeleton className="h-4 w-48 bg-muted/20 mt-2" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 bg-muted/20" />)}
+        <Skeleton className="h-36 bg-muted/20" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 bg-muted/20" />)}
         </div>
       </div>
     );
   }
 
-  const roleBadge = isAdmin
-    ? { label: "Owner · Admin SaaS", color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" }
-    : planSlug === "agency"
-    ? { label: "Agência",            color: "text-success border-success/30 bg-success/10" }
-    : { label: "Lançador",           color: "text-primary border-primary/30 bg-primary/10" };
-
   return (
-    <div className="space-y-5">
-      <AddClientDialog
-        open={showAddClient}
-        onClose={() => setShowAddClient(false)}
-        onSuccess={() => {
-          void queryClient.invalidateQueries({ queryKey: ["/api/agency/clients"] });
-          void queryClient.invalidateQueries({ queryKey: ["/api/agency/stats"] });
-        }}
-      />
+    <div className="max-w-6xl mx-auto space-y-5">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between border-b border-border/50 pb-5 gap-4">
+      <div className="border-b border-border/50 pb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3 mb-1">
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-              Painel de Controle
+              Central de Lançamento
             </h1>
-            <span className={`text-[9px] font-mono uppercase tracking-widest px-2 py-1 border rounded-sm shrink-0 ${roleBadge.color}`}>
-              {roleBadge.label}
-            </span>
+            {liveCampaigns > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 8px hsl(var(--success))" }} />
+                <span className="font-mono text-[9px] uppercase tracking-widest text-success font-bold">{liveCampaigns} ao vivo</span>
+              </div>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
-            Central operacional NexOS
+          <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            {workspace?.name ?? "Workspace"} · {plan?.name ?? "NexOS AI"}
+            {planSlug && <span className="ml-2 px-2 py-0.5 border border-primary/20 text-primary bg-primary/10">{planSlug.toUpperCase()}</span>}
           </p>
         </div>
-
-        {/* Context-sensitive primary action */}
-        {mode === "launcher" && (
-          <Link href="/campaigns/new">
-            <Button className="font-mono uppercase tracking-widest font-bold rounded-none gap-2 btn-weapon-primary px-4 md:px-5 shrink-0 text-xs md:text-sm">
-              <Plus className="h-4 w-4" /><span className="hidden sm:inline">Nova Campanha</span><span className="sm:hidden">Nova</span>
-            </Button>
-          </Link>
-        )}
-        {mode === "agency" && (
-          <Button
-            onClick={() => setShowAddClient(true)}
-            className="font-mono uppercase tracking-widest font-bold rounded-none gap-2 btn-weapon-primary px-4 md:px-5 shrink-0 text-xs md:text-sm"
-          >
-            <Plus className="h-4 w-4" /><span className="hidden sm:inline">Adicionar Cliente</span><span className="sm:hidden">Adicionar</span>
+        <Link href="/campaigns/new">
+          <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary text-xs px-4 shrink-0">
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Nova Campanha</span>
+            <span className="sm:hidden">Nova</span>
           </Button>
-        )}
+        </Link>
       </div>
 
-      {/* ── Mode tabs — only when multiple tabs ── */}
-      {tabs.length > 1 && (
-        <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm w-fit flex-wrap">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const active = mode === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setMode(t.id)}
-                className={`flex items-center gap-2 px-3 md:px-4 py-2 text-[10px] md:text-xs font-mono uppercase tracking-widest transition-all rounded-sm
-                  ${active
-                    ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                  }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ════════════════════ TAB: LANÇADOR ════════════════════ */}
-      {mode === "launcher" && (
-        <div className="space-y-5">
-          {/* Stats row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard label="Missões em Progresso" icon={<Activity className="h-4 w-4 text-primary" />} loading={loadingCampaigns} glow="primary">
-              <div className="space-y-1.5">
-                <span className="text-4xl font-mono font-bold text-foreground">
-                  {campaignsData?.campaigns?.filter((c) => !["completed", "draft"].includes(c.status)).length ?? 0}
-                </span>
-                {(campaignsData?.campaigns?.filter(c => c.status === "live").length ?? 0) > 0 && (
-                  <div className="flex items-center gap-1.5 text-[9px] font-mono text-success uppercase tracking-widest">
-                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                    {campaignsData!.campaigns!.filter(c => c.status === "live").length} ao vivo
-                  </div>
-                )}
-              </div>
-            </StatCard>
-
-            <StatCard label="Créditos de IA" icon={<CreditCard className="h-4 w-4 text-primary" />} loading={loadingCredits} glow="primary">
-              <Link href="/credits">
-                <div className="space-y-2 cursor-pointer group/cred">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-mono font-bold text-primary drop-shadow-[0_0_10px_hsl(var(--primary)/0.5)] group-hover/cred:drop-shadow-[0_0_16px_hsl(var(--primary)/0.7)] transition-all">
-                      {(creditsData?.balance ?? 0).toLocaleString("pt-BR")}
+      {/* ── Active Mission Panel ── */}
+      {activeCampaign && (
+        <div className="border border-border/50 bg-card/40 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/40 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/40 pointer-events-none" />
+          <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/60 to-transparent pointer-events-none" />
+          <div className="p-5">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div className="min-w-0">
+                <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">
+                  Missão em Progresso
+                </div>
+                <h2 className="font-mono font-bold text-lg uppercase tracking-tight truncate text-foreground">
+                  {activeCampaign.title}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  {(activeCampaign as unknown as Record<string,string>)["type"] && (
+                    <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">
+                      {(activeCampaign as unknown as Record<string,string>)["type"]}
                     </span>
-                    {creditsData?.balance != null && creditsData.balance < 100 && (
-                      <Badge variant="destructive" className="rounded-none font-mono text-[9px] uppercase tracking-widest animate-pulse">Baixo</Badge>
-                    )}
-                  </div>
-                  <div className="h-1 w-full bg-muted/40 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${plan?.creditsMonthly ? Math.min(100, ((creditsData?.balance ?? 0) / plan.creditsMonthly) * 100) : 0}%`,
-                        background: "hsl(var(--primary))",
-                        boxShadow: "0 0 4px hsl(var(--primary) / 0.5)",
-                      }}
-                    />
-                  </div>
-                  <div className="text-[9px] font-mono text-muted-foreground/50">
-                    de {(plan?.creditsMonthly ?? 0).toLocaleString("pt-BR")} cr/mês · Ver histórico →
-                  </div>
-                </div>
-              </Link>
-            </StatCard>
-
-            <StatCard label="Status Operacional" icon={<Wifi className="h-4 w-4 text-success" />} glow="success">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-success font-mono font-bold text-xl uppercase tracking-widest">
-                  Nominal<div className="w-2 h-2 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 8px hsl(var(--success))" }} />
-                </div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {[
-                    { label: "IA", ok: true },
-                    { label: "Queue", ok: true },
-                    { label: "DB", ok: true },
-                  ].map(s => (
-                    <div key={s.label} className="flex items-center gap-1 text-[9px] font-mono text-muted-foreground/60">
-                      <CheckCircle2 className="h-2.5 w-2.5 text-success" />
-                      {s.label}
-                    </div>
-                  ))}
+                  )}
+                  {(activeCampaign as unknown as Record<string,string>)["track"] && (
+                    <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                      · Track {(activeCampaign as unknown as Record<string,string>)["track"]}
+                    </span>
+                  )}
                 </div>
               </div>
-            </StatCard>
-          </div>
-
-          {/* Mission AI — next action widget */}
-          {!loadingCampaigns && (() => {
-            const campaigns = campaignsData?.campaigns ?? [];
-            const needsIntake     = campaigns.find(c => c.status === "intake" || c.status === "draft");
-            const needsApproval   = campaigns.find(c => c.status === "awaiting_approval");
-            const live            = campaigns.find(c => c.status === "live");
-            const hasNoCampaigns  = campaigns.length === 0;
-
-            const action = hasNoCampaigns
-              ? { icon: Rocket,        color: "text-primary",     bg: "border-primary/20 bg-primary/5",      title: "Inicie sua primeira missão", sub: "A IA monta toda a estratégia de lançamento para você", href: "/campaigns/new", cta: "Iniciar Missão" }
-              : needsApproval
-              ? { icon: CheckCircle2,  color: "text-yellow-400",  bg: "border-yellow-400/20 bg-yellow-400/5", title: `Aprovação pendente: ${needsApproval.title}`, sub: "Conteúdo gerado pela IA aguarda sua revisão e aprovação final", href: `/campaigns/${needsApproval.id}`, cta: "Revisar Conteúdo" }
-              : needsIntake
-              ? { icon: Bot,           color: "text-blue-400",    bg: "border-blue-400/20 bg-blue-400/5",    title: `Continue o intake: ${needsIntake.title}`, sub: "A IA está aguardando suas respostas para montar a estratégia", href: `/campaigns/${needsIntake.id}/intake`, cta: "Continuar Intake" }
-              : live
-              ? { icon: Play,          color: "text-success",     bg: "border-success/20 bg-success/5",      title: `Missão ao vivo: ${live.title}`, sub: "Monitoramento em tempo real — verifique métricas e ajustes da IA", href: `/campaigns/${live.id}`, cta: "Ver Dashboard" }
-              : { icon: Workflow,      color: "text-cyan-400",    bg: "border-cyan-400/20 bg-cyan-400/5",    title: "Configure sequências de automação", sub: "Email + WhatsApp automation para nutrir sua lista e converter", href: "/sequences", cta: "Ver Sequências" };
-
-            const Icon = action.icon;
-            return (
-              <div className={`border ${action.bg} p-4 flex items-center gap-4 relative overflow-hidden group`}>
-                <div className="absolute inset-0 bg-gradient-to-r from-current/3 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className={`w-10 h-10 border border-current/20 bg-current/10 flex items-center justify-center shrink-0 ${action.color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50">Missão IA · Próxima Ação</span>
-                  </div>
-                  <div className={`font-mono font-bold text-sm truncate ${action.color}`}>{action.title}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground/60 truncate mt-0.5">{action.sub}</div>
-                </div>
-                <Link href={action.href}>
-                  <Button variant="outline" size="sm" className={`rounded-none font-mono uppercase text-[10px] tracking-widest shrink-0 border-current/30 hover:bg-current/10 ${action.color} gap-2`}>
-                    {action.cta}<ArrowRight className="h-3 w-3" />
+              <div className="flex items-center gap-2 shrink-0">
+                {pendingCheckpoints.length > 0 && (
+                  <Badge variant="outline" className="rounded-none font-mono text-[9px] border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse">
+                    {pendingCheckpoints.length} Aprovação
+                  </Badge>
+                )}
+                <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-1 ${STATUS_COLOR[activeCampaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
+                  {STATUS_LABEL[activeCampaign.status] ?? activeCampaign.status}
+                </Badge>
+                <Link href={`/campaigns/${activeCampaign.id}`}>
+                  <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-[9px] tracking-widest h-7 gap-1.5 btn-weapon-outline">
+                    Abrir<ChevronRight className="h-2.5 w-2.5" />
                   </Button>
                 </Link>
               </div>
-            );
-          })()}
+            </div>
+            <PipelineProgress status={activeCampaign.status} />
+          </div>
+        </div>
+      )}
 
-          {/* Quick links row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              { label: "Nova Missão",   href: "/campaigns/new", icon: Plus,     color: "hover:border-primary/40" },
-              { label: "Sequências",    href: "/sequences",      icon: Workflow, color: "hover:border-cyan-400/40" },
-              { label: "Agentes IA",   href: "/agents",         icon: Bot,      color: "hover:border-purple-400/40" },
-              { label: "Créditos",     href: "/credits",        icon: CreditCard, color: "hover:border-primary/40" },
-            ].map((ql) => {
-              const Icon = ql.icon;
-              return (
-                <Link key={ql.label} href={ql.href}>
-                  <div className={`border border-border/30 bg-card/30 ${ql.color} hover:bg-card/50 transition-all p-3 flex items-center gap-2.5 cursor-pointer group`}>
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-primary transition-colors shrink-0" />
-                    <span className="font-mono text-xs text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-widest truncate">{ql.label}</span>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-primary ml-auto shrink-0 transition-colors" />
+      {/* ── KPI Row ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard
+          label="Créditos de IA"
+          value={creditsBalance.toLocaleString("pt-BR")}
+          sub={`${creditsPct}% de ${totalCredits.toLocaleString("pt-BR")} cr/mês`}
+          icon={CreditCard}
+          color={creditsLow ? "yellow" : "primary"}
+          href="/credits"
+          loading={loadingCredits}
+        />
+        <KpiCard
+          label="Receita do Produto"
+          value={revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "—"}
+          sub={revenueData?.transactionCount ? `${revenueData.transactionCount} vendas` : "Configure webhooks →"}
+          icon={DollarSign}
+          color="success"
+          href="/revenue"
+          loading={loadingRevenue}
+        />
+        <KpiCard
+          label="Sequências Ativas"
+          value={activeSequences}
+          sub={`${(sequencesData?.sequences ?? []).length} total configuradas`}
+          icon={Workflow}
+          color="cyan"
+          href="/sequences"
+          loading={loadingSequences}
+        />
+        <KpiCard
+          label="Missões em Andamento"
+          value={activeCampaigns}
+          sub={liveCampaigns > 0 ? `${liveCampaigns} ao vivo agora` : "Campanhas em progresso"}
+          icon={Rocket}
+          color={liveCampaigns > 0 ? "success" : "primary"}
+          href="/campaigns"
+          loading={loadingCampaigns}
+        />
+      </div>
+
+      {/* ── Smart Next Action ── */}
+      <div className={`border ${action.bg} p-4 flex items-center gap-4 relative overflow-hidden group`}>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-current/[0.02] pointer-events-none" />
+        <div className={`w-10 h-10 border border-current/20 bg-current/10 flex items-center justify-center shrink-0 ${action.color}`}>
+          <ActionIcon className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
+            Próxima Ação Recomendada pela IA
+          </div>
+          <div className={`font-mono font-bold text-sm truncate ${action.color}`}>{action.title}</div>
+          <div className="font-mono text-[10px] text-muted-foreground/60 truncate mt-0.5">{action.sub}</div>
+        </div>
+        <Link href={action.href}>
+          <Button variant="outline" size="sm"
+            className={`rounded-none font-mono uppercase text-[9px] tracking-widest shrink-0 border-current/30 hover:bg-current/10 ${action.color} gap-2 h-8`}>
+            {action.cta}<ArrowRight className="h-3 w-3" />
+          </Button>
+        </Link>
+      </div>
+
+      {/* ── Two Column: AI Activity + Sequences ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* AI Activity Feed */}
+        <div className="border border-border/50 bg-card/40 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="h-3.5 w-3.5 text-primary" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Atividade dos Agentes IA</span>
+            </div>
+            {activeCampaign && (
+              <Link href={`/campaigns/${activeCampaign.id}`}>
+                <span className="font-mono text-[9px] text-primary hover:underline uppercase tracking-widest">Ver Todos →</span>
+              </Link>
+            )}
+          </div>
+          <div className="divide-y divide-border/20">
+            {!activeCampaign ? (
+              <div className="py-8 text-center">
+                <Bot className="h-6 w-6 text-muted-foreground/20 mx-auto mb-2" />
+                <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
+                  Nenhuma campanha ativa
+                </p>
+              </div>
+            ) : recentAgents.length === 0 ? (
+              <div className="py-8 text-center">
+                <Loader2 className="h-5 w-5 text-muted-foreground/20 mx-auto mb-2 animate-spin" />
+                <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
+                  Aguardando execução dos agentes
+                </p>
+              </div>
+            ) : (
+              recentAgents.map(agent => (
+                <div key={agent.id} className="px-4 py-3 flex items-center gap-3">
+                  <span className={`text-xs font-mono shrink-0 ${
+                    agent.status === "completed" ? "text-success" :
+                    agent.status === "running"   ? "text-primary animate-pulse" :
+                    agent.status === "failed"    ? "text-destructive" : "text-muted-foreground/40"
+                  }`}>
+                    {agent.status === "completed" ? "✓" : agent.status === "running" ? "▶" : agent.status === "failed" ? "✗" : "·"}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mono text-xs font-bold text-foreground/80 truncate">
+                      {AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}
+                    </div>
+                    <div className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                      {agent.completedAt
+                        ? `Concluído · ${new Date(agent.completedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                        : `Iniciado · ${new Date(agent.startedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className={`rounded-none font-mono text-[9px] shrink-0 ${
+                    agent.status === "completed" ? "border-success/40 text-success" :
+                    agent.status === "running"   ? "border-primary/40 text-primary" :
+                    agent.status === "failed"    ? "border-destructive/40 text-destructive" :
+                    "border-border/40 text-muted-foreground"
+                  }`}>
+                    {agent.status}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Sequences Summary */}
+        <div className="border border-border/50 bg-card/40 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Workflow className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Sequências de Automação</span>
+            </div>
+            <Link href="/sequences">
+              <span className="font-mono text-[9px] text-primary hover:underline uppercase tracking-widest">Ver Todas →</span>
+            </Link>
+          </div>
+          <div className="divide-y divide-border/20">
+            {loadingSequences ? (
+              <div className="p-6 space-y-3">
+                {[1,2,3].map(i => <Skeleton key={i} className="h-12 bg-muted/20" />)}
+              </div>
+            ) : !(sequencesData?.sequences?.length) ? (
+              <div className="py-8 text-center">
+                <Workflow className="h-6 w-6 text-muted-foreground/20 mx-auto mb-2" />
+                <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-3">
+                  Nenhuma sequência criada
+                </p>
+                <Link href="/sequences/new">
+                  <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[9px] tracking-widest btn-weapon-outline gap-1.5">
+                    <Plus className="h-3 w-3" />Criar Sequência
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              (sequencesData.sequences as unknown as Array<{
+                id: string; name: string; status: string; model: string; totalDays: number;
+              }>).slice(0, 5).map(seq => (
+                <Link key={seq.id} href={`/sequences/${seq.id}`}>
+                  <div className="px-4 py-3 flex items-center gap-3 hover:bg-muted/5 transition-colors group cursor-pointer">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${
+                      seq.status === "active" || seq.status === "live" ? "bg-success animate-pulse" :
+                      seq.status === "generating" ? "bg-primary animate-pulse" :
+                      "bg-muted-foreground/30"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono text-xs font-bold text-foreground/80 truncate group-hover:text-primary transition-colors">
+                        {seq.name}
+                      </div>
+                      <div className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                        {MODEL_LABEL[seq.model] ?? seq.model} · {seq.totalDays} dias
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={`rounded-none font-mono text-[9px] shrink-0 ${
+                      seq.status === "active" || seq.status === "live" ? "border-success/40 text-success" :
+                      seq.status === "draft"    ? "border-border/40 text-muted-foreground" :
+                      "border-primary/40 text-primary"
+                    }`}>
+                      {seq.status === "active" || seq.status === "live" ? "Ativa" : seq.status === "draft" ? "Rascunho" : seq.status}
+                    </Badge>
                   </div>
                 </Link>
-              );
-            })}
+              ))
+            )}
           </div>
+        </div>
+      </div>
 
-          {/* Campaigns list */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">Minhas Missões</h2>
-              <Link href="/campaigns">
-                <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">Ver todas →</span>
+      {/* ── Campaigns List ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-3.5 w-3.5 text-muted-foreground/60" />
+            <h2 className="text-[10px] font-mono uppercase tracking-widest font-bold text-muted-foreground">
+              Todas as Missões · {campaigns.length}
+            </h2>
+          </div>
+          <Link href="/campaigns">
+            <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">Ver todas →</span>
+          </Link>
+        </div>
+
+        <div className="border border-border/50 bg-card/40 relative overflow-hidden">
+          <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/40 to-transparent pointer-events-none" />
+          {loadingCampaigns ? (
+            <div className="p-8 space-y-3">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-14 bg-muted/20" />)}
+            </div>
+          ) : !campaigns.length ? (
+            <div className="py-12 text-center flex flex-col items-center gap-3">
+              <AlertTriangle className="h-6 w-6 text-muted-foreground/30" />
+              <p className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
+                Nenhuma missão ainda
+              </p>
+              <Link href="/campaigns/new">
+                <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline gap-1.5">
+                  <Plus className="h-3 w-3" />Iniciar primeira missão
+                </Button>
               </Link>
             </div>
-            <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative overflow-hidden">
-              <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/50 to-transparent pointer-events-none" />
-              {loadingCampaigns ? (
-                <div className="p-8 space-y-3">
-                  <Skeleton className="h-14 w-full bg-muted/20" />
-                  <Skeleton className="h-14 w-full bg-muted/20" />
-                </div>
-              ) : !campaignsData?.campaigns?.length ? (
-                <EmptyState
-                  icon={<AlertTriangle className="h-5 w-5 text-muted-foreground/50" />}
-                  message="Nenhuma campanha criada ainda."
-                  action={
-                    <Link href="/campaigns/new">
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-wider btn-weapon-outline mt-3">
-                        <Plus className="h-3.5 w-3.5 mr-2" />Iniciar primeira missão
-                      </Button>
-                    </Link>
-                  }
-                />
-              ) : (
-                <div className="divide-y divide-border/50">
-                  {campaignsData.campaigns.slice(0, 5).map((c) => (
-                    <div key={c.id} className="px-4 md:px-5 py-3.5 flex items-center justify-between table-row-glow group gap-4">
-                      <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                        <div className={`w-1.5 h-6 shrink-0 ${
-                          c.status === "live"              ? "bg-success shadow-[0_0_8px_hsl(var(--success))]" :
-                          c.status === "awaiting_approval" ? "bg-yellow-400" :
-                          "bg-primary/40"
-                        }`} />
-                        <div className="min-w-0">
-                          <h3 className="font-bold font-mono text-sm group-hover:text-primary transition-colors truncate">{c.title}</h3>
-                          <div className="flex flex-wrap gap-1.5 mt-0.5">
-                            <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">{c.type}</span>
-                            {c.track && <><span className="text-muted-foreground/30">·</span><span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">{c.track}</span></>}
-                          </div>
-                        </div>
+          ) : (
+            <div className="divide-y divide-border/30">
+              {campaigns.slice(0, 7).map(c => {
+                const cr = c as unknown as Record<string, string>;
+                return (
+                  <div key={c.id} className="px-4 py-3.5 flex items-center gap-4 group hover:bg-muted/5 transition-colors">
+                    <div className={`w-1.5 h-6 shrink-0 transition-all ${
+                      c.status === "live"              ? "bg-success shadow-[0_0_8px_hsl(var(--success))]" :
+                      c.status === "awaiting_approval" ? "bg-yellow-400" :
+                      ["analyzing","generating","executing"].includes(c.status) ? "bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" :
+                      "bg-muted/30"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono text-sm font-bold group-hover:text-primary transition-colors truncate">
+                        {c.title}
                       </div>
-                      <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 hidden sm:flex ${STATUS_CLASS[c.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
-                          {STATUS_LABEL[c.status] ?? c.status}
-                        </Badge>
-                        <Link href={`/campaigns/${c.id}`}>
-                          <Button variant="ghost" size="icon" className="rounded-sm h-7 w-7 hover:bg-primary/10 hover:text-primary">
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          </Button>
-                        </Link>
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                        {cr["type"] && <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest">{cr["type"]}</span>}
+                        {cr["track"] && <><span className="text-muted-foreground/30">·</span><span className="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">{cr["track"]}</span></>}
                       </div>
                     </div>
-                  ))}
-                  {(campaignsData.campaigns.length ?? 0) > 5 && (
-                    <div className="px-5 py-3 border-t border-border/30">
-                      <Link href="/campaigns">
-                        <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">
-                          + {campaignsData.campaigns.length - 5} mais missões →
-                        </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest hidden sm:flex ${STATUS_COLOR[c.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
+                        {STATUS_LABEL[c.status] ?? c.status}
+                      </Badge>
+                      <Link href={`/campaigns/${c.id}`}>
+                        <Button variant="ghost" size="icon" className="rounded-sm h-7 w-7 hover:bg-primary/10 hover:text-primary">
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </Button>
                       </Link>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ════════════════════ TAB: AGÊNCIA ════════════════════ */}
-      {mode === "agency" && (
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard label="Clientes Ativos" icon={<Users className="h-4 w-4 text-primary" />} loading={loadingAgencyStats} glow="primary">
-              <span className="text-4xl font-mono font-bold text-foreground">{agencyStats?.activeClients ?? 0}</span>
-            </StatCard>
-            <StatCard label="Lançamentos Ativos" icon={<Rocket className="h-4 w-4 text-success" />} loading={loadingAgencyStats} glow="success">
-              <span className="text-4xl font-mono font-bold text-success drop-shadow-[0_0_10px_hsl(var(--success)/0.5)]">{agencyStats?.totalActiveCampaigns ?? 0}</span>
-            </StatCard>
-            <StatCard label="Pendentes de Aceite" icon={<TrendingUp className="h-4 w-4 text-primary" />} loading={loadingAgencyStats} glow="primary">
-              <span className="text-4xl font-mono font-bold text-yellow-400">{agencyStats?.pendingClients ?? 0}</span>
-            </StatCard>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">Clientes da Agência</h2>
-              <button
-                onClick={() => setShowAddClient(true)}
-                className="text-[10px] font-mono uppercase tracking-widest text-primary hover:underline flex items-center gap-1"
-              >
-                <Plus className="h-3 w-3" />Adicionar
-              </button>
-            </div>
-            <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative overflow-hidden">
-              <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-success/50 to-transparent pointer-events-none" />
-              {loadingClients ? (
-                <div className="p-8 space-y-3">
-                  <Skeleton className="h-14 w-full bg-muted/20" /><Skeleton className="h-14 w-full bg-muted/20" />
-                </div>
-              ) : !agencyClients?.clients?.length ? (
-                <EmptyState
-                  icon={<Users className="h-5 w-5 text-muted-foreground/50" />}
-                  message="Nenhum cliente adicionado ainda."
-                  action={
-                    <Button
-                      variant="outline" size="sm"
-                      className="rounded-none font-mono uppercase text-xs tracking-wider btn-weapon-outline mt-3"
-                      onClick={() => setShowAddClient(true)}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-2" />Adicionar primeiro cliente
-                    </Button>
-                  }
-                />
-              ) : (
-                <div className="divide-y divide-border/50">
-                  {agencyClients.clients.map((client) => (
-                    <div key={client.id} className="px-4 md:px-5 py-4 flex items-center justify-between table-row-glow group gap-4">
-                      <div className="flex items-center gap-3 md:gap-4 min-w-0">
-                        <div className="w-8 h-8 shrink-0 rounded-sm border border-border/50 bg-muted/20 flex items-center justify-center">
-                          <span className="text-xs font-mono font-bold text-primary">
-                            {(client.clientName ?? client.clientEmail).slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-bold font-mono text-sm group-hover:text-primary transition-colors truncate">
-                            {client.clientName ?? client.clientEmail}
-                          </h3>
-                          <p className="text-[10px] text-muted-foreground font-mono truncate">{client.clientEmail}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                        <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 md:px-3 py-1 hidden sm:flex ${
-                          client.status === "active"  ? "text-success border-success/40 bg-success/10" :
-                          client.status === "pending" ? "text-yellow-400 border-yellow-400/40 bg-yellow-400/10" :
-                          "text-muted-foreground border-border bg-muted/20"
-                        }`}>
-                          {client.status === "active" ? "Ativo" : client.status === "pending" ? "Pendente" : client.status}
-                        </Badge>
-                        <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-wider btn-weapon-outline h-8 px-3">
-                          Ver<ChevronRight className="h-3.5 w-3.5 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ════════════════════ TAB: ADMIN SAAS ════════════════════ */}
-      {mode === "admin" && isAdmin && (
-        <div className="space-y-5">
-          {loadingAdmin ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 bg-muted/20" />)}
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {(Object.entries(SAAS_META) as [SaasStatus, typeof SAAS_META[SaasStatus]][]).map(([key, meta]) => {
-                  const Icon = meta.icon;
-                  return (
-                    <div key={key} className="border border-border/50 bg-card/40 p-4 relative overflow-hidden group card-weapon">
-                      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-2">{meta.label}</div>
-                      <div className="flex items-end justify-between">
-                        <span className="text-3xl font-mono font-bold text-foreground">{adminData?.byStatus?.[key] ?? 0}</span>
-                        <Icon className={`h-5 w-5 opacity-70 ${
-                          key === "ativo_lancando" ? "text-success" :
-                          key === "novo"           ? "text-blue-400" :
-                          key === "pausado"        ? "text-yellow-400" : "text-muted-foreground"
-                        }`} />
-                      </div>
-                      <div className="text-[9px] text-muted-foreground/60 font-mono mt-2 leading-tight">{meta.desc}</div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="space-y-3">
-                <h2 className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">
-                  Todos os Usuários — {adminData?.total ?? 0} total
-                </h2>
-                <div className="border border-border/50 bg-card/40 overflow-hidden">
-                  <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_110px] text-[9px] font-mono uppercase tracking-widest text-muted-foreground/70 border-b border-border/50 bg-muted/10 px-4 py-2 gap-4">
-                    <span>Usuário</span>
-                    <span className="text-right">Plano</span>
-                    <span className="text-right">Camp.</span>
-                    <span className="text-right">Créditos</span>
-                    <span className="text-right">Status</span>
                   </div>
-                  {!adminData?.users?.length ? (
-                    <EmptyState icon={<Users className="h-5 w-5 text-muted-foreground/50" />} message="Nenhum usuário registrado." />
-                  ) : (
-                    <div className="divide-y divide-border/30 max-h-[500px] overflow-y-auto">
-                      {adminData.users.map((u) => {
-                        const meta = SAAS_META[u.saasStatus as SaasStatus];
-                        return (
-                          <div key={u.workspaceId} className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_80px_80px_80px_110px] items-center px-4 py-3 gap-4 table-row-glow group">
-                            <div className="min-w-0">
-                              <div className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">{u.userName}</div>
-                              <div className="text-[10px] text-muted-foreground font-mono truncate">{u.email}</div>
-                            </div>
-                            <div className="hidden md:block text-right">
-                              <span className={`text-[9px] font-mono uppercase tracking-widest px-2 py-1 border ${u.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
-                                {u.planSlug}
-                              </span>
-                            </div>
-                            <div className="hidden md:block text-right font-mono text-sm text-foreground">{u.totalCampaigns}</div>
-                            <div className="hidden md:block text-right font-mono text-sm text-foreground">{u.creditsBalance}</div>
-                            <div className="text-right">
-                              {meta && (
-                                <Badge variant="outline" className={`rounded-none font-mono text-[9px] uppercase tracking-widest px-2 py-1 ${meta.color}`}>
-                                  {meta.label}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                );
+              })}
+              {campaigns.length > 7 && (
+                <div className="px-4 py-3">
+                  <Link href="/campaigns">
+                    <span className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest">
+                      + {campaigns.length - 7} mais missões →
+                    </span>
+                  </Link>
                 </div>
-              </div>
-            </>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
+
+      {/* ── Quick Access Grid ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { label: "Agentes IA",      href: "/agents",      icon: Bot,       color: "hover:border-purple-400/40 hover:text-purple-400" },
+          { label: "VSL Studio",      href: "/vsls",        icon: BarChart3, color: "hover:border-cyan-400/40 hover:text-cyan-400" },
+          { label: "Compliance",      href: "/compliance",  icon: Activity,  color: "hover:border-green-400/40 hover:text-green-400" },
+          { label: "Configurações",   href: "/settings",    icon: Target,    color: "hover:border-primary/40 hover:text-primary" },
+        ].map(ql => {
+          const Icon = ql.icon;
+          return (
+            <Link key={ql.label} href={ql.href}>
+              <div className={`border border-border/30 bg-card/20 p-3 flex items-center gap-2.5 cursor-pointer group transition-all ${ql.color}`}>
+                <Icon className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-current transition-colors shrink-0" />
+                <span className="font-mono text-[10px] text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-widest truncate">
+                  {ql.label}
+                </span>
+                <ChevronRight className="h-3 w-3 text-muted-foreground/20 group-hover:text-current ml-auto shrink-0 transition-colors" />
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
     </div>
   );
 }
