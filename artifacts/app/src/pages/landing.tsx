@@ -386,13 +386,10 @@ function CountdownTimer({ launchDate }: { launchDate: Date | null }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function Landing() {
-  const [count, setCount] = useState<{ total: number; bySegment: Record<string, number> } | null>(null);
   const [launchDate, setLaunchDate] = useState<Date | null>(null);
   const [launchLoaded, setLaunchLoaded] = useState(false);
-  const BASE = 47;
 
   useEffect(() => {
-    fetch("/api/waitlist/count").then(r => r.json()).then(setCount).catch(() => null);
     fetch("/api/waitlist/launch-config")
       .then(r => r.json())
       .then(d => {
@@ -401,8 +398,6 @@ export default function Landing() {
       })
       .catch(() => setLaunchLoaded(true));
   }, []);
-
-  const total = (count?.total ?? 0) + BASE;
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -455,18 +450,6 @@ export default function Landing() {
                 </div>
               ))}
             </div>
-            {count !== null && (
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="inline-flex items-center gap-2 border border-border/40 bg-card/30 px-4 py-2 font-mono text-xs text-muted-foreground">
-                  <User className="h-3.5 w-3.5 text-primary" />
-                  <strong className="text-foreground">{(count?.bySegment?.["individual"] ?? 0) + Math.floor(BASE * 0.6)}</strong>&nbsp;lançadores
-                </div>
-                <div className="inline-flex items-center gap-2 border border-border/40 bg-card/30 px-4 py-2 font-mono text-xs text-muted-foreground">
-                  <Building2 className="h-3.5 w-3.5 text-success" />
-                  <strong className="text-foreground">{(count?.bySegment?.["agency"] ?? 0) + Math.floor(BASE * 0.4)}</strong>&nbsp;agências
-                </div>
-              </div>
-            )}
           </div>
           <HeroCard />
         </div>
@@ -703,12 +686,6 @@ export default function Landing() {
             <p className="text-base text-muted-foreground max-w-xl mx-auto mb-4 leading-relaxed">
               Dois grupos separados por perfil. Conteúdo de lançamento estruturado — 2 mensagens por dia, gatilho mental definido por IA. Quando o carrinho abrir por 24h, quem não estiver na lista não recebe o link.
             </p>
-            {total > 0 && (
-              <div className="inline-flex items-center gap-2 border border-border/40 bg-card/30 px-4 py-2 font-mono text-xs text-muted-foreground mb-10">
-                <Users className="h-3.5 w-3.5 text-primary" />
-                <strong className="text-foreground">{total}</strong>&nbsp;pessoas já na lista
-              </div>
-            )}
           </div>
           <div className="max-w-md mx-auto">
             <HeroCard />
