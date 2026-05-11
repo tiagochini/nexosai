@@ -32,6 +32,7 @@ import BillingPage from "@/pages/billing/index";
 import MemoryPage from "@/pages/memory/index";
 import PreparacaoPage from "@/pages/preparacao";
 import AberturaPage from "@/pages/abertura";
+import ConversaoPage from "@/pages/conversao";
 import CheckoutPage from "@/pages/checkout";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -200,6 +201,7 @@ export default function AppRoutes() {
       </Route>
       <Route path="/preparacao" component={PreparacaoPage} />
       <Route path="/abertura" component={AberturaPage} />
+      <Route path="/conversao" component={ConversaoPage} />
       <Route path="/comprar" component={CheckoutPage} />
 
       <Route component={NotFound} />
