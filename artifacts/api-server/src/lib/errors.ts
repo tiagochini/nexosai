@@ -3,6 +3,7 @@ export class AppError extends Error {
     public readonly statusCode: number,
     message: string,
     public readonly code?: string,
+    public readonly data?: unknown,
   ) {
     super(message);
     this.name = "AppError";
@@ -34,11 +35,17 @@ export class ConflictError extends AppError {
 }
 
 export class InsufficientCreditsError extends AppError {
-  constructor(required: number, available: number) {
+  constructor(
+    required: number,
+    available: number,
+    extra?: { phaseCost?: number; buffer?: number; shortage?: number; campaignType?: string; estimatedTotal?: number },
+  ) {
+    const shortage = required - available;
     super(
       402,
-      `Insufficient credits. Required: ${required}, Available: ${available}`,
+      `Créditos insuficientes. Saldo: ${available} cr. Necessário: ${required} cr. Compre mais ${shortage} crédito${shortage !== 1 ? "s" : ""} para continuar.`,
       "INSUFFICIENT_CREDITS",
+      { balance: available, required, shortage, ...extra },
     );
   }
 }

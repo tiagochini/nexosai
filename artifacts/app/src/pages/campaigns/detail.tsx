@@ -18,8 +18,9 @@ import {
   ArrowLeft, Play, FileText, FileSpreadsheet, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
-  AlertTriangle, Activity, Target, DollarSign, Users,
+  AlertTriangle, Activity, Target, DollarSign, Users, BookOpen,
 } from "lucide-react";
+import { CampaignBrief } from "@/components/campaign-brief";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -285,8 +286,18 @@ export default function CampaignDetail() {
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
       onError: (err: unknown) => {
-        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-        toast.error(msg ?? "Falha ao iniciar fase.");
+        const errData = (err as { response?: { data?: { error?: string; code?: string; data?: { shortage?: number; balance?: number; required?: number } } } })?.response?.data;
+        const code = errData?.code;
+        const msg = errData?.error;
+        if (code === "INSUFFICIENT_CREDITS" && errData?.data) {
+          const { shortage = 0, balance = 0, required = 0 } = errData.data;
+          toast.error(`Créditos insuficientes — faltam ${shortage} cr (saldo: ${balance}, necessário: ${required})`, {
+            description: "Acesse Configurações → Créditos para comprar mais.",
+            duration: 8000,
+          });
+        } else {
+          toast.error(msg ?? "Falha ao iniciar fase.");
+        }
       },
     },
   });
@@ -388,7 +399,7 @@ export default function CampaignDetail() {
   const TABS = [
     { id: "comando" as const, label: "Comando", icon: Zap },
     { id: "agentes" as const, label: "Agentes", icon: Bot },
-    { id: "estrategia" as const, label: "Estratégia", icon: Target },
+    { id: "estrategia" as const, label: "Proposta", icon: BookOpen },
     { id: "conteudo" as const, label: "Conteúdo", icon: Layers },
     { id: "metricas" as const, label: "Métricas", icon: BarChart3 },
   ];
@@ -673,79 +684,14 @@ export default function CampaignDetail() {
         </div>
       )}
 
-      {/* ══════════════ ESTRATÉGIA TAB ══════════════ */}
+      {/* ══════════════ PROPOSTA / ESTRATÉGIA TAB ══════════════ */}
       {activeTab === "estrategia" && (
-        <div className="space-y-4">
-          {Object.keys(strategyD).length === 0 && Object.keys(offerD).length === 0 ? (
-            <div className="py-12 text-center">
-              <Target className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
-                Dados de estratégia ainda não gerados. Execute a fase de análise.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Strategy data */}
-              {Object.keys(strategyD).length > 0 && (
-                <div className="border border-border/50 bg-card/40 p-4 md:col-span-2">
-                  <SectionHeader icon={Target} label="Estratégia de Lançamento" />
-                  <div className="space-y-3">
-                    {Object.entries(strategyD).slice(0, 12).map(([k, v]) => (
-                      <div key={k} className="border-l-2 border-primary/30 pl-3">
-                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
-                        <div className="text-xs font-mono text-foreground mt-0.5 leading-relaxed">
-                          {typeof v === "string" ? v : typeof v === "object" ? JSON.stringify(v, null, 2).slice(0, 200) : String(v)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Offer data */}
-              {Object.keys(offerD).length > 0 && (
-                <div className="border border-border/50 bg-card/40 p-4">
-                  <SectionHeader icon={DollarSign} label="Oferta" />
-                  <div className="space-y-2">
-                    {Object.entries(offerD).slice(0, 8).map(([k, v]) => (
-                      <div key={k}>
-                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
-                        <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 100)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Audience data */}
-              {Object.keys(audienceD).length > 0 && (
-                <div className="border border-border/50 bg-card/40 p-4">
-                  <SectionHeader icon={Users} label="Audiência" />
-                  <div className="space-y-2">
-                    {Object.entries(audienceD).slice(0, 8).map(([k, v]) => (
-                      <div key={k}>
-                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{k.replace(/_/g, " ")}</div>
-                        <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 100)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Timeline */}
-              {Object.keys(timelineD).length > 0 && (
-                <div className="border border-border/50 bg-card/40 p-4 md:col-span-2">
-                  <SectionHeader icon={Activity} label="Timeline" />
-                  <div className="space-y-2">
-                    {Object.entries(timelineD).slice(0, 10).map(([k, v]) => (
-                      <div key={k} className="flex gap-3">
-                        <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70 w-24 shrink-0">{k.replace(/_/g, " ")}</div>
-                        <div className="text-xs font-mono text-foreground">{typeof v === "string" ? v : JSON.stringify(v).slice(0, 150)}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <CampaignBrief
+          campaign={campaign as Parameters<typeof CampaignBrief>[0]["campaign"]}
+          showApproveButton={campaign.status === "strategy_ready"}
+          approveLoading={executeMutation.isPending}
+          onApprove={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
+        />
       )}
 
       {/* ══════════════ CONTEÚDO TAB ══════════════ */}

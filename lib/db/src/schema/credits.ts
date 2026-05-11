@@ -224,6 +224,25 @@ export const CAMPAIGN_CREDIT_ESTIMATES: Record<
   },
 };
 
+// ─── Credit Pricing in BRL ────────────────────────────────────────────────────
+// Price per credit for top-up purchases (outside of plan allowance).
+// Plan credits are ~33% cheaper (included in monthly subscription).
+// R$0.15/credit × 420 typical launch = R$63 per campaign
+// Plans give credits at effective R$0.10/credit (Solo: 2000 cr = R$297 → R$0.149/cr)
+export const CREDIT_PRICE_BRL = 0.15;
+
+// Minimum credit buffer required before starting a new campaign phase.
+// Ensures the user always has headroom for at least a light next campaign.
+export const CAMPAIGN_CREDIT_BUFFER = 150;
+
+// Credit packs available for purchase (BRL, no subscription required)
+export const CREDIT_PACKS = [
+  { id: "pack_500", credits: 500, priceBrl: 79, label: "Starter", perCredit: 0.158 },
+  { id: "pack_1000", credits: 1000, priceBrl: 149, label: "Popular", perCredit: 0.149, highlight: true },
+  { id: "pack_2500", credits: 2500, priceBrl: 349, label: "Pro", perCredit: 0.140 },
+  { id: "pack_5000", credits: 5000, priceBrl: 649, label: "Agency", perCredit: 0.130 },
+] as const;
+
 // Helper: get credit estimate for a campaign type
 export function getCampaignCreditEstimate(
   campaignType: string,
