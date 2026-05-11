@@ -186,7 +186,9 @@ export default function CampaignDetail() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas">("comando");
-  const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[] }[] | null>(null);
+  const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
+  const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
+  const [bypassLaunchLoading, setBypassLaunchLoading] = useState(false);
 
   const { data, isLoading } = useGetCampaign(campaignId, {
     query: {
@@ -297,7 +299,9 @@ export default function CampaignDetail() {
             duration: 8000,
           });
         } else if (code === "MISSING_INTEGRATIONS") {
-          setMissingIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[] }) => m));
+          setMissingIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[]; reason?: string }) => m));
+        } else if (code === "PARTIAL_INTEGRATIONS") {
+          setPartialIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[]; reason?: string }) => m));
         } else {
           toast.error(msg ?? "Falha ao iniciar fase.");
         }
@@ -326,6 +330,28 @@ export default function CampaignDetail() {
       toast.error(err instanceof Error ? err.message : "Erro ao processar ação");
     } finally {
       setContentActionLoading(null);
+    }
+  };
+
+  // ── Launch with bypass (after partial-integrations confirmation) ──────────────
+  const handleBypassLaunch = async () => {
+    setBypassLaunchLoading(true);
+    setPartialIntegrations(null);
+    try {
+      const res = await customFetch<Response>(
+        `/api/campaigns/${campaignId}/execute/launch?skipIntegrationWarning=true`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+      );
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro ao lançar");
+      }
+      toast.success("Lançamento iniciado. A IA está em execução.");
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao lançar campanha.");
+    } finally {
+      setBypassLaunchLoading(false);
     }
   };
 
@@ -410,43 +436,92 @@ export default function CampaignDetail() {
   return (
     <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
 
-      {/* ── Missing Integrations Modal ── */}
+      {/* ── Missing Integrations Modal (hard block) ── */}
       {missingIntegrations && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="border border-yellow-400/40 bg-card w-full max-w-md shadow-2xl">
-            <div className="border-b border-yellow-400/20 px-5 py-4 flex items-start justify-between gap-3">
+          <div className="border border-destructive/50 bg-card w-full max-w-md shadow-2xl">
+            <div className="border-b border-destructive/20 px-5 py-4 flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-yellow-400 shrink-0" />
+                <XCircle className="h-5 w-5 text-destructive shrink-0" />
                 <div>
-                  <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-yellow-400">Integrações Obrigatórias</h3>
-                  <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Configure os canais abaixo para lançar sua campanha.</p>
+                  <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-destructive">Canais Obrigatórios Ausentes</h3>
+                  <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Conecte ao menos um canal de mensagens e um de e-mail para lançar.</p>
                 </div>
               </div>
               <button onClick={() => setMissingIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-3">
               {missingIntegrations.map(m => (
-                <div key={m.category} className="border border-yellow-400/20 bg-yellow-400/5 p-4">
-                  <div className="font-mono text-xs font-bold uppercase tracking-widest text-yellow-400 mb-2">{m.category}</div>
-                  <p className="text-xs font-mono text-muted-foreground/70 mb-3">
-                    Conecte um dos seguintes: <span className="text-foreground/80">{m.providers.join(" · ")}</span>
+                <div key={m.category} className="border border-destructive/20 bg-destructive/5 p-4">
+                  <div className="font-mono text-xs font-bold uppercase tracking-widest text-destructive mb-1">{m.category}</div>
+                  <p className="text-xs font-mono text-muted-foreground/70">
+                    {m.reason && <span className="block text-muted-foreground/50 mb-1">{m.reason}</span>}
+                    Conecte: <span className="text-foreground/80">{m.providers.join(" · ")}</span>
                   </p>
                 </div>
               ))}
-              <p className="text-xs font-mono text-muted-foreground/50 text-center">
-                A campanha não pode ser lançada sem esses canais conectados.
-              </p>
             </div>
             <div className="border-t border-border/50 px-5 py-4 flex gap-3">
-              <Link href="/integracoes">
-                <Button className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
-                  <Link2 className="h-4 w-4" />Configurar Integrações
+              <Link href="/integracoes" className="flex-1">
+                <Button className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
+                  <Link2 className="h-4 w-4" />Configurar Agora
                 </Button>
               </Link>
               <Button variant="outline" onClick={() => setMissingIntegrations(null)} className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-4">
                 Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Partial Integrations Modal (soft confirmation) ── */}
+      {partialIntegrations && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="border border-yellow-400/40 bg-card w-full max-w-lg shadow-2xl">
+            <div className="border-b border-yellow-400/20 px-5 py-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-400 shrink-0" />
+                <div>
+                  <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-yellow-400">Cobertura de Canais Incompleta</h3>
+                  <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Você pode lançar agora ou completar as integrações para máxima performance.</p>
+                </div>
+              </div>
+              <button onClick={() => setPartialIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs font-mono text-muted-foreground/70 border border-yellow-400/20 bg-yellow-400/5 px-4 py-3">
+                <span className="text-yellow-400 font-bold">Atenção:</span> Sem todos os canais conectados, a IA operará com alcance reduzido. Canais ausentes não receberão disparo automático.
+              </p>
+              {partialIntegrations.map(m => (
+                <div key={m.category} className="border border-border/40 bg-muted/10 px-4 py-3 flex items-start gap-3">
+                  <AlertTriangle className="h-3.5 w-3.5 text-yellow-400/70 mt-0.5 shrink-0" />
+                  <div>
+                    <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground/80 mb-0.5">{m.category}</div>
+                    {m.reason && <p className="text-xs font-mono text-muted-foreground/50 mb-1">{m.reason}</p>}
+                    <p className="text-xs font-mono text-muted-foreground/70">Opções: <span className="text-foreground/60">{m.providers.join(" · ")}</span></p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-border/50 px-5 py-4 flex flex-col sm:flex-row gap-3">
+              <Link href="/integracoes" className="flex-1">
+                <Button className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10" onClick={() => setPartialIntegrations(null)}>
+                  <Link2 className="h-4 w-4" />Completar Integrações
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                onClick={handleBypassLaunch}
+                disabled={bypassLaunchLoading}
+                className="flex-1 font-mono uppercase tracking-widest rounded-none border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10 h-10 gap-2"
+              >
+                {bypassLaunchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                Lançar Assim Mesmo
               </Button>
             </div>
           </div>

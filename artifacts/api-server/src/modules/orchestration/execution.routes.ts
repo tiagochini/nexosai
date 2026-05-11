@@ -173,9 +173,15 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
 // Blocks campaign launch if NO messaging AND NO email channels are connected.
 type DbIntegrationProvider = "meta_ads" | "instagram" | "tiktok_ads" | "google_ads" | "whatsapp_business" | "telegram" | "stripe" | "hotmart" | "eduzz" | "kiwify" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot" | "crypto_native" | "custom_webhook";
 
-async function checkIntegrationsForLaunch(workspaceId: string): Promise<void> {
+type IntegrationCheckResult =
+  | { status: "ok" }
+  | { status: "partial"; missing: { category: string; providers: string[]; reason: string }[] }
+  | { status: "blocked"; missing: { category: string; providers: string[]; reason: string }[] };
+
+async function checkIntegrationsForLaunch(workspaceId: string): Promise<IntegrationCheckResult> {
   const MESSAGING_PROVIDERS: DbIntegrationProvider[] = ["whatsapp_business", "telegram"];
   const EMAIL_PROVIDERS: DbIntegrationProvider[] = ["rd_station", "activecampaign"];
+  const SOCIAL_PROVIDERS: DbIntegrationProvider[] = ["instagram", "tiktok_ads", "meta_ads"];
 
   const connected = await db
     .select({ provider: workspaceIntegrationsTable.provider })
@@ -187,47 +193,80 @@ async function checkIntegrationsForLaunch(workspaceId: string): Promise<void> {
         inArray(workspaceIntegrationsTable.provider, [
           ...MESSAGING_PROVIDERS,
           ...EMAIL_PROVIDERS,
+          ...SOCIAL_PROVIDERS,
         ] as DbIntegrationProvider[]),
       ),
     );
 
   const connectedProviders = connected.map((r) => r.provider as string);
   const hasMessaging = MESSAGING_PROVIDERS.some((p) => connectedProviders.includes(p));
-  // Resend is configured via env var (not stored as workspace integration)
   const hasEmail = EMAIL_PROVIDERS.some((p) => connectedProviders.includes(p)) || !!env.RESEND_API_KEY;
+  const hasSocial = SOCIAL_PROVIDERS.some((p) => connectedProviders.includes(p));
 
-  if (hasMessaging && hasEmail) return;
+  // All critical channels present → fully OK
+  if (hasMessaging && hasEmail) return { status: "ok" };
 
   const missing: { category: string; providers: string[]; reason: string }[] = [];
   if (!hasMessaging) {
     missing.push({
       category: "Mensagens",
       providers: ["WhatsApp Business", "Telegram"],
-      reason: "Necessário para disparar sequências de mensagens durante o lançamento",
+      reason: "Disparo de sequências de mensagens durante o lançamento",
     });
   }
   if (!hasEmail) {
     missing.push({
       category: "E-mail",
       providers: ["RD Station", "ActiveCampaign", "Resend"],
-      reason: "Necessário para enviar a sequência de e-mails de lançamento",
+      reason: "Sequência de e-mails de lançamento",
+    });
+  }
+  if (!hasSocial) {
+    missing.push({
+      category: "Rede Social",
+      providers: ["Instagram", "Facebook/Meta Ads", "TikTok"],
+      reason: "Auto-post de conteúdo e remarketing pago",
     });
   }
 
-  throw new AppError(
-    422,
-    `Conecte pelo menos um canal de ${missing.map((m) => m.category).join(" e ")} antes de lançar.`,
-    "MISSING_INTEGRATIONS",
-    { missing, connectUrl: "/integracoes" },
-  );
+  // Has at least one core channel (messaging OR email) → partial warning, not a hard block
+  if (hasMessaging || hasEmail) {
+    return { status: "partial", missing };
+  }
+
+  // Zero core channels → hard block
+  return { status: "blocked", missing };
 }
 
 // POST /campaigns/:campaignId/execute/launch
+// Query param: ?skipIntegrationWarning=true  →  bypasses soft (partial) check
 router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
+  const skipWarning = req.query["skipIntegrationWarning"] === "true";
 
   try {
-    await checkIntegrationsForLaunch(req.auth.workspaceId);
+    const integrationCheck = await checkIntegrationsForLaunch(req.auth.workspaceId);
+
+    if (integrationCheck.status === "blocked") {
+      // Hard block: zero core channels — cannot launch at all
+      throw new AppError(
+        422,
+        `Conecte pelo menos WhatsApp/Telegram OU RD Station/ActiveCampaign antes de lançar.`,
+        "MISSING_INTEGRATIONS",
+        { missing: integrationCheck.missing, connectUrl: "/integracoes" },
+      );
+    }
+
+    if (integrationCheck.status === "partial" && !skipWarning) {
+      // Soft warning: has some channels but not all — ask for confirmation
+      res.status(428).json({
+        error: "Algumas integrações recomendadas não estão conectadas.",
+        code: "PARTIAL_INTEGRATIONS",
+        data: { missing: integrationCheck.missing, connectUrl: "/integracoes" },
+      });
+      return;
+    }
+
     await checkCreditsForPhase(req.auth.workspaceId, campaignId, "launch");
     const result = await triggerExecutionPhase(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({
