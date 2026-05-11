@@ -218,32 +218,39 @@ export async function generateSequencePlan(
     .where(eq(launchSequenceItemsTable.sequenceId, sequenceId));
 
   if (plan.items.length > 0) {
-    await db.insert(launchSequenceItemsTable).values(
-      plan.items.map((item) => ({
-        sequenceId,
-        workspaceId,
-        phase: item.phase as
-          | "pre_capture"
-          | "capture"
-          | "plc1"
-          | "plc2"
-          | "plc3"
-          | "cart_open"
-          | "cart_middle"
-          | "cart_close"
-          | "post_purchase"
-          | "post_launch"
-          | "evergreen",
-        name: item.name,
-        description: item.description,
-        dayIndex: item.dayIndex,
-        mentalTrigger: item.mentalTrigger,
-        deliveryChannels: item.deliveryChannels,
-        contentType: item.contentType,
-        objective: item.objective,
-        copyHints: item.copyHints,
-      })),
-    );
+    log.info({ count: plan.items.length, sequenceId }, "Inserting sequence items");
+    try {
+      const inserted = await db.insert(launchSequenceItemsTable).values(
+        plan.items.map((item) => ({
+          sequenceId,
+          workspaceId,
+          phase: item.phase as
+            | "pre_capture"
+            | "capture"
+            | "plc1"
+            | "plc2"
+            | "plc3"
+            | "cart_open"
+            | "cart_middle"
+            | "cart_close"
+            | "post_purchase"
+            | "post_launch"
+            | "evergreen",
+          name: item.name ?? "Untitled",
+          description: item.description ?? null,
+          dayIndex: typeof item.dayIndex === "number" ? item.dayIndex : 0,
+          mentalTrigger: item.mentalTrigger ?? null,
+          deliveryChannels: Array.isArray(item.deliveryChannels) ? item.deliveryChannels : ["email"],
+          contentType: item.contentType ?? null,
+          objective: item.objective ?? null,
+          copyHints: item.copyHints ?? null,
+        })),
+      ).returning({ id: launchSequenceItemsTable.id });
+      log.info({ inserted: inserted.length, sequenceId }, "Sequence items inserted successfully");
+    } catch (err) {
+      log.error({ err, sequenceId, itemCount: plan.items.length }, "Failed to insert sequence items");
+      throw err;
+    }
   }
 
   await db

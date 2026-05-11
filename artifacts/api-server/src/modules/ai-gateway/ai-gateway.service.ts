@@ -113,13 +113,14 @@ async function callAnthropic(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
+  maxTokens = 4096,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
   const client = getAnthropic();
   // Use integration model when falling back to integration proxy
   const effectiveModel = env.ANTHROPIC_API_KEY ? model : INTEGRATION_ANTHROPIC_MODEL;
   const response = await client.messages.create({
     model: effectiveModel,
-    max_tokens: 4096,
+    max_tokens: maxTokens,
     system: systemPrompt,
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   });

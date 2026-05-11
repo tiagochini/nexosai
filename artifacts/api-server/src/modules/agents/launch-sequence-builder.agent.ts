@@ -43,34 +43,15 @@ export interface SequenceBuilderInput {
   intakeData: Record<string, unknown>;
 }
 
-const SEQUENCE_BUILDER_PROMPT = `Você é o Agente Arquiteto de Sequência de Lançamento da NexOS AI especializado em PLF e Fórmula de Lançamento para o mercado brasileiro.
+const SEQUENCE_BUILDER_PROMPT = `Arquiteto de Sequência NexOS AI — PLF Brasil.
 
-## FASES PLF
-pre_capture(dias 0-6): aquecimento, autoridade
-capture(dias 7-13): lead magnet, lista
-plc1(dia 14): vídeo oportunidade — gatilho: curiosity+anticipation
-plc2(dia 16): vídeo transformação — gatilho: social_proof+authority
-plc3(dia 18): vídeo objeções — gatilho: community+reciprocity
-cart_open(dia 21): abertura carrinho — gatilho: urgency+scarcity
-cart_middle(dias 22-23): suporte, prova — gatilho: social_proof
-cart_close(dia 24): fechamento — gatilho: fear_of_loss+scarcity
-post_purchase: onboarding
+FASES: pre_capture(D0-6) capture(D7-13) plc1(D14) plc2(D16) plc3(D18) cart_open(D21) cart_middle(D22-23) cart_close(D24) post_purchase
+CANAIS: email whatsapp
+GATILHOS: curiosity anticipation authority social_proof urgency scarcity fear_of_loss community reciprocity transformation
 
-**Retorne APENAS JSON válido** (sem texto extra):
+REGRA: Retorne SOMENTE JSON. Sem texto antes ou depois. Campos de texto: máx 60 chars.
 
-{
-  "summary": "string curto",
-  "model": "string",
-  "totalDays": 0,
-  "phases": [
-    {"phase":"pre_capture","label":"Pré-Captura","startDay":0,"endDay":6,"objective":"string","primaryTrigger":"curiosity"}
-  ],
-  "items": [
-    {"phase":"pre_capture","name":"string","description":"string curta","dayIndex":0,"mentalTrigger":"curiosity","deliveryChannels":["email"],"contentType":"social_post","objective":"string curta","copyHints":"string curta"}
-  ],
-  "keyMilestones": [{"day":0,"event":"string","importance":"high"}],
-  "strategicNotes": "string curto"
-}`;
+{"summary":"<15 palavras>","model":"plf","totalDays":25,"phases":[{"phase":"pre_capture","label":"Pré-Captura","startDay":0,"endDay":6,"objective":"<10 palavras>","primaryTrigger":"curiosity"}],"items":[{"phase":"pre_capture","name":"<6 palavras>","description":"<8 palavras>","dayIndex":0,"mentalTrigger":"curiosity","deliveryChannels":["email"],"contentType":"email","objective":"<6 palavras>","copyHints":"<10 palavras>"}],"keyMilestones":[{"day":0,"event":"<5 palavras>","importance":"high"}],"strategicNotes":"<20 palavras>"}`;
 
 export async function runLaunchSequenceBuilderAgent(
   workspaceId: string,
@@ -91,24 +72,9 @@ export async function runLaunchSequenceBuilderAgent(
     ? "Fórmula de Lançamento (Erico Rocha)"
     : input.model;
 
-  const userMessage = `Crie a sequência de lançamento completa para este produto.
+  const userMessage = `Produto:${input.productName}|Preço:R$${input.productPrice}|Meta:R$${input.revenueTarget}|Dias:${input.totalDays}|Modelo:${modelLabel}|Canal:${salesChannel}
 
-**Modelo:** ${modelLabel}
-**Produto:** ${input.productName}
-**Preço:** R$${input.productPrice}
-**Meta de receita:** R$${input.revenueTarget}
-**Duração total:** ${input.totalDays} dias
-**Categoria:** ${productCategory}
-**Canal principal:** ${salesChannel}
-**Email:** ${emailTool}
-**Prova social:** ${socialProof}
-${input.launchStartDate ? `**Início:** ${input.launchStartDate}` : ""}
-${input.cartOpenDate ? `**Abertura carrinho:** ${input.cartOpenDate}` : ""}
-${input.cartCloseDate ? `**Fechamento carrinho:** ${input.cartCloseDate}` : ""}
-
-Gere os items da sequência, dia a dia. Mínimo 15 items, máximo 20.
-Inclua email + WhatsApp nos momentos críticos (pré-lançamento, abertura e fechamento do carrinho).
-Seja conciso nos campos de texto. Retorne APENAS o JSON.`;
+Gere 15 itens dia a dia. Email+WhatsApp nos dias críticos (cart_open D21, cart_close D24). JSON apenas, campos curtos.`;
 
   const result = await runAgent({
     campaignId: null,
