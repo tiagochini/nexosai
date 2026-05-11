@@ -297,6 +297,24 @@ function clearOnboardingState() {
   localStorage.removeItem(ONBOARDING_KEY);
 }
 
+// ── Simulator pre-fill helpers ────────────────────────────────────────────────
+interface SimulatorData {
+  firstName: string;
+  productName: string;
+  productType: string;
+  email: string;
+  whatsapp: string;
+  simulatedAt: string;
+}
+
+function loadSimulatorData(): SimulatorData | null {
+  try {
+    const raw = localStorage.getItem("nexos_simulator_data");
+    if (!raw) return null;
+    return JSON.parse(raw) as SimulatorData;
+  } catch { return null; }
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Onboarding() {
   const { user } = useAuth();
@@ -306,6 +324,7 @@ export default function Onboarding() {
   const [path, setPath] = useState<OnboardingPath | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [simulatorBanner, setSimulatorBanner] = useState<SimulatorData | null>(null);
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -320,7 +339,7 @@ export default function Onboarding() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Restore saved onboarding state on mount
+  // Restore saved onboarding state on mount + check simulator pre-fill
   useEffect(() => {
     const saved = loadOnboardingState();
     if (saved && saved.messages.length > 0 && saved.campaignId) {
@@ -330,6 +349,10 @@ export default function Onboarding() {
       setMessages(saved.messages);
       setConversationComplete(saved.conversationComplete);
       if (saved.audienceSubPath) setAudienceSubPath(saved.audienceSubPath);
+    } else {
+      // Check for simulator data from the landing page
+      const sim = loadSimulatorData();
+      if (sim) setSimulatorBanner(sim);
     }
   }, []);
 
@@ -636,6 +659,24 @@ export default function Onboarding() {
               Qual é a sua situação hoje?
             </p>
           </div>
+
+          {/* Simulator pre-fill banner */}
+          {simulatorBanner && (
+            <div className="mb-6 border border-primary/40 bg-primary/5 p-4 relative">
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary" />
+              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary" />
+              <div className="flex items-start gap-3">
+                <Rocket className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">Simulação detectada</div>
+                  <p className="font-mono text-xs text-foreground leading-relaxed">
+                    Você simulou o lançamento de <strong>{simulatorBanner.productName}</strong> antes de criar sua conta. Selecione "Tenho um produto" e a IA vai usar esses dados para configurar tudo automaticamente.
+                  </p>
+                </div>
+                <button onClick={() => { localStorage.removeItem("nexos_simulator_data"); setSimulatorBanner(null); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0">✕</button>
+              </div>
+            </div>
+          )}
 
           {/* Path cards */}
           <div className="grid grid-cols-1 gap-4">

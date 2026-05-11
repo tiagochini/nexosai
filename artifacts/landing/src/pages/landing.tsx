@@ -7,7 +7,7 @@ import {
   ArrowRight, CheckCircle2, ArrowDown,
   BrainCircuit, Mail, MessageSquare,
   Lock, Shield, Zap, Target, Activity,
-  X, Layers, Clock, TrendingDown,
+  X, Layers, Clock, TrendingDown, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LiveDemoSection, SimulatorSection } from "@/components/landing-demo-sections";
@@ -52,8 +52,13 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <a href="/landing/simulador">
+            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-primary/80 hover:text-primary border border-primary/20 hover:border-primary/40 h-9 px-4 gap-1.5">
+              <Zap className="h-3 w-3" />Simular meu lançamento
+            </Button>
+          </a>
           <a href="/login">
-            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground">Já tenho acesso</Button>
+            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground hidden sm:flex">Já tenho acesso</Button>
           </a>
           <a href="#oferta">
             <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-xs tracking-widest font-bold h-9 px-5">Quero saber o valor</Button>
