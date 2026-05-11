@@ -32,6 +32,7 @@ import weeklyReportRouter from "../modules/weekly-report/weekly-report.routes.js
 import demoRouter from "../modules/demo/demo.routes.js";
 import clientProfilesRouter from "../modules/client-profiles/client-profiles.routes.js";
 import simulatorRouter from "../modules/simulator/simulator.routes.js";
+import serverEventsRouter from "../modules/server-events/server-events.routes.js";
 
 const router: IRouter = Router();
 
@@ -68,5 +69,6 @@ router.use("/reports", weeklyReportRouter);
 router.use("/demo", demoRouter);
 router.use("/client-profiles", clientProfilesRouter);
 router.use("/simulator", simulatorRouter);
+router.use("/events", serverEventsRouter);
 
 export default router;

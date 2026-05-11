@@ -1,4 +1,4 @@
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, gte, count } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -9,6 +9,9 @@ import {
   auditLogsTable,
   launchSequencesTable,
   launchSequenceItemsTable,
+  sequenceContactsTable,
+  revenueEventsTable,
+  sequenceEngagementTable,
   type Campaign,
   type InsertCampaign,
 } from "@workspace/db";
@@ -290,4 +293,109 @@ async function autoActivateLinkedSequences(campaignId: string, log: Logger): Pro
 
     log.info({ campaignId, sequenceId: seq.id }, "Linked sequence auto-activated");
   }
+}
+
+// ── Live Stats (scarcity / urgency data) ──────────────────────────────────────
+
+export interface CampaignLiveStats {
+  campaignId: string;
+  totalLeads: number;
+  leadsLast24h: number;
+  leadsLastHour: number;
+  totalSales: number;
+  revenueBrlLast24h: number;
+  totalRevenueBrl: number;
+  engagementEventsLast24h: number;
+  activeSequences: number;
+  updatedAt: string;
+}
+
+export async function getCampaignLiveStats(
+  campaignId: string,
+  workspaceId: string,
+): Promise<CampaignLiveStats> {
+  const campaign = await getCampaign(campaignId, workspaceId);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const now = new Date();
+  const h24ago = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const h1ago = new Date(now.getTime() - 60 * 60 * 1000);
+
+  // Linked sequence IDs
+  const sequences = await db
+    .select({ id: launchSequencesTable.id, status: launchSequencesTable.status })
+    .from(launchSequencesTable)
+    .where(
+      and(
+        eq(launchSequencesTable.campaignId, campaignId),
+        eq(launchSequencesTable.workspaceId, workspaceId),
+      ),
+    );
+
+  const sequenceIds = sequences.map((s) => s.id);
+  const activeSequences = sequences.filter((s) => s.status === "active").length;
+
+  // Lead counts from sequence contacts
+  let totalLeads = 0;
+  let leadsLast24h = 0;
+  let leadsLastHour = 0;
+  let engagementEventsLast24h = 0;
+
+  if (sequenceIds.length > 0) {
+    const contacts = await db
+      .select({ createdAt: sequenceContactsTable.createdAt })
+      .from(sequenceContactsTable)
+      .where(sql`${sequenceContactsTable.sequenceId} = ANY(${sql.raw(`ARRAY[${sequenceIds.map((id) => `'${id}'`).join(",")}]::uuid[]`)})`)
+      ;
+
+    totalLeads = contacts.length;
+    leadsLast24h = contacts.filter((c) => c.createdAt >= h24ago).length;
+    leadsLastHour = contacts.filter((c) => c.createdAt >= h1ago).length;
+
+    const engRows = await db
+      .select({ cnt: count() })
+      .from(sequenceEngagementTable)
+      .where(
+        and(
+          sql`${sequenceEngagementTable.sequenceId} = ANY(${sql.raw(`ARRAY[${sequenceIds.map((id) => `'${id}'`).join(",")}]::uuid[]`)})`,
+          gte(sequenceEngagementTable.createdAt, h24ago),
+        ),
+      );
+    engagementEventsLast24h = Number(engRows[0]?.cnt ?? 0);
+  }
+
+  // Revenue from revenue events
+  const revenueRows = await db
+    .select({
+      grossAmountCents: revenueEventsTable.grossAmountCents,
+      eventType: revenueEventsTable.eventType,
+      createdAt: revenueEventsTable.createdAt,
+    })
+    .from(revenueEventsTable)
+    .where(
+      and(
+        eq(revenueEventsTable.campaignId, campaignId),
+        eq(revenueEventsTable.status, "confirmed"),
+      ),
+    );
+
+  const sales = revenueRows.filter((r) => r.eventType === "sale");
+  const totalSales = sales.length;
+  const totalRevenueBrl = sales.reduce((sum, r) => sum + r.grossAmountCents / 100, 0);
+  const revenueBrlLast24h = sales
+    .filter((r) => r.createdAt >= h24ago)
+    .reduce((sum, r) => sum + r.grossAmountCents / 100, 0);
+
+  return {
+    campaignId,
+    totalLeads,
+    leadsLast24h,
+    leadsLastHour,
+    totalSales,
+    revenueBrlLast24h,
+    totalRevenueBrl,
+    engagementEventsLast24h,
+    activeSequences,
+    updatedAt: now.toISOString(),
+  };
 }

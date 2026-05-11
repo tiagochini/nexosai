@@ -190,6 +190,19 @@ Launch tracks by revenue target:
 - **Current phase / today**: `GET /launch-sequences/:id/today` — returns `currentDayIndex`, `currentPhaseLabel`, `progress` %, `today.items`, `tomorrow.items`, `nextSevenDays`, `performance` stats, `warnings[]`. Requires sequence to be active with `config.activatedAt` set.
 - **Segment-aware cart dispatch**: Scheduler detects `cart_open`/`cart_middle`/`cart_close` phases and routes WhatsApp by segment. Queries `sequenceContactsTable` for hot/warm/cold contacts → sends segment-specific copy (from `generatedCopy[seg]` or template fallback). hot=VIP/insider angle, warm=standard urgency, cold=reactivation/curiosity.
 
+## Growth Intelligence (Post-session)
+
+- **UTM Intelligence** (`lead-capture.routes.ts`): Auto-reads UTMs from both body and query params (`?utm_source=`, `?utm_medium=`, etc.) + `utmTerm`. Stored in `metadata.utm` (structured object) + flat keys. `getSequenceAnalytics()` returns `utmBreakdown[]` (source, count, converted) sorted by volume.
+- **Live-stats endpoint** (`GET /api/campaigns/:id/live-stats`): Real-time counters for scarcity copy — `totalLeads`, `leadsLast24h`, `leadsLastHour`, `totalSales`, `revenueBrlLast24h`, `totalRevenueBrl`, `engagementEventsLast24h`, `activeSequences`. Queries sequence contacts + revenue events linked to campaign.
+- **Viral loop / referral system** (`lead-capture.routes.ts`): Each captured lead gets a unique 8-char alphanumeric `referralCode`. Accept `?ref=CODE` or `body.referralCode` to track referrer. `metadata.referredBy` stores inbound code. Referrer's `metadata.referralCount` auto-incremented non-blocking. `GET /api/lead-capture/:sequenceId/referral/:code` returns referrer name + referredCount + captureUrl. Analytics returns `referralStats` + `topReferrers`.
+- **Send time optimization** (`sequence-analytics.service.ts`): On every `open` engagement event, UTC hour is appended to `contact.metadata.engagementHours` (capped at 20). Mode of that array → `metadata.preferredSendHour`. Analytics returns `sendTimeInsight` with `preferredHour`, `preferredHourLabel`, `topHours[]`.
+- **Creative fatigue detection** (`metrics.service.ts`): On every metric ingest, fetches historical peak CTR across all prior days. If current CTR < 70% of peak (and peak > 0.5% to avoid noise), generates a `kpi_breach` alert titled "Fadiga criativa detectada: CTR caiu X% do pico" with recommendation to refresh creatives.
+- **Server-side events / Meta CAPI + TikTok Events API** (`artifacts/api-server/src/modules/server-events/`):
+  - `server-events.service.ts`: `sendMetaCAPIEvent()` hashes PII (SHA-256) and POSTs to Graph API v20. `sendTikTokEvent()` POSTs to TikTok Business API v1.3. `fireServerEvent()` fires both platforms concurrently for canonical events (Lead, Purchase, PageView, etc.).
+  - `server-events.routes.ts`: public endpoints — `POST /api/events/:workspaceId/track` and `POST /api/events/sequence/:sequenceId/track`. Fire-and-forget (`setImmediate`), never blocks HTTP response.
+  - Registered in `routes/index.ts` at `/api/events`.
+- **LGPD audit trail** (`lead-capture.routes.ts`): Each lead capture stores `metadata.lgpd` (consentAt ISO timestamp, captureIp, consentText, source, userAgent). Writes a non-blocking `lead.captured` row to `auditLogsTable` with full context (sequenceId, contactId, utm, referralCode, IP, consentText).
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

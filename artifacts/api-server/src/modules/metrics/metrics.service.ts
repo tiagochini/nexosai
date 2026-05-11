@@ -149,6 +149,7 @@ function generateAlertCandidates(
   projectedRevenue: number,
   targetRoas: number,
   benchmarkCpl: number,
+  historicalPeakCtr: number = 0,
 ): AlertCandidate[] {
   const alerts: AlertCandidate[] = [];
 
@@ -247,6 +248,28 @@ function generateAlertCandidates(
     });
   }
 
+  // ── Creative fatigue detection ─────────────────────────────────────────────
+  // Alert when CTR drops >30% from historical peak (requires at least 3 days of history)
+  const FATIGUE_THRESHOLD = 0.70; // current must be < 70% of peak to trigger
+  const MIN_PEAK_CTR = 0.005; // ignore if peak was below 0.5% (avoid noise)
+  if (
+    historicalPeakCtr > MIN_PEAK_CTR &&
+    metric.ctr != null &&
+    metric.ctr < historicalPeakCtr * FATIGUE_THRESHOLD
+  ) {
+    const dropPct = Math.round((1 - metric.ctr / historicalPeakCtr) * 100);
+    alerts.push({
+      alertType: "kpi_breach",
+      severity: dropPct >= 50 ? "critical" : "warning",
+      title: `Fadiga criativa detectada: CTR caiu ${dropPct}% do pico`,
+      description: `CTR atual de ${(metric.ctr * 100).toFixed(2)}% está ${dropPct}% abaixo do pico histórico de ${(historicalPeakCtr * 100).toFixed(2)}%. Os criativos perderam impacto.`,
+      recommendation: "Renove criativos com novos ângulos e gatilhos diferentes. Teste headlines com curiosidade vs. prova social. Pause os anúncios com menor CTR e ative variações de criativos virgens.",
+      metricKey: "ctr",
+      metricValue: metric.ctr,
+      thresholdValue: historicalPeakCtr * FATIGUE_THRESHOLD,
+    });
+  }
+
   return alerts;
 }
 
@@ -294,7 +317,7 @@ export async function ingestMetrics(
 
   // Get previous day's health score for trend calculation
   const [prevMetric] = await db
-    .select({ healthScore: campaignMetricsTable.healthScore })
+    .select({ healthScore: campaignMetricsTable.healthScore, ctr: campaignMetricsTable.ctr })
     .from(campaignMetricsTable)
     .where(and(
       eq(campaignMetricsTable.campaignId, campaignId),
@@ -302,6 +325,19 @@ export async function ingestMetrics(
     ))
     .orderBy(desc(campaignMetricsTable.dayIndex))
     .limit(1);
+
+  // Peak CTR across all historical metrics (for creative fatigue detection)
+  const historicalCtrRows = await db
+    .select({ ctr: campaignMetricsTable.ctr })
+    .from(campaignMetricsTable)
+    .where(and(
+      eq(campaignMetricsTable.campaignId, campaignId),
+      lte(campaignMetricsTable.dayIndex, input.dayIndex - 1),
+    ));
+  const historicalPeakCtr = historicalCtrRows.reduce((max, row) => {
+    const c = row.ctr != null ? Number(row.ctr) : 0;
+    return c > max ? c : max;
+  }, 0);
 
   // Calculate health score
   const health = calculateHealthScore(
@@ -377,6 +413,7 @@ export async function ingestMetrics(
     projectedRevenue,
     targetRoas,
     benchmarkCpl,
+    historicalPeakCtr,
   );
 
   const savedAlerts = [];

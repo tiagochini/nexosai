@@ -24,6 +24,20 @@ export interface ItemAnalytics {
   status: string;
 }
 
+export interface UtmSource {
+  source: string;
+  count: number;
+  openRate: number;
+  clickRate: number;
+  converted: number;
+}
+
+export interface SendTimeInsight {
+  preferredHour: number;
+  preferredHourLabel: string;
+  topHours: { hour: number; label: string; opens: number }[];
+}
+
 export interface SequenceAnalytics {
   sequenceId: string;
   sequenceName: string;
@@ -42,6 +56,9 @@ export interface SequenceAnalytics {
   byItem: ItemAnalytics[];
   adaptiveSuggestions: string[];
   healthScore: number;
+  utmBreakdown: UtmSource[];
+  referralStats: { totalReferrals: number; topReferrers: { name: string; count: number }[] };
+  sendTimeInsight: SendTimeInsight | null;
 }
 
 export async function getSequenceAnalytics(
@@ -67,7 +84,12 @@ export async function getSequenceAnalytics(
     .orderBy(launchSequenceItemsTable.dayIndex);
 
   const contacts = await db
-    .select({ segment: sequenceContactsTable.segment })
+    .select({
+      id: sequenceContactsTable.id,
+      name: sequenceContactsTable.name,
+      segment: sequenceContactsTable.segment,
+      metadata: sequenceContactsTable.metadata,
+    })
     .from(sequenceContactsTable)
     .where(eq(sequenceContactsTable.sequenceId, sequenceId));
 
@@ -165,6 +187,71 @@ export async function getSequenceAnalytics(
     byItem,
   );
 
+  // ── UTM Breakdown ──────────────────────────────────────────────────────────
+  const utmMap = new Map<string, { count: number; contactIds: string[] }>();
+  for (const c of contacts) {
+    const meta = (c.metadata as Record<string, unknown>) ?? {};
+    const utmObj = meta["utm"] as Record<string, string> | undefined;
+    const src = utmObj?.["utm_source"] ?? (meta["utm_source"] as string | undefined) ?? "direct";
+    if (!utmMap.has(src)) utmMap.set(src, { count: 0, contactIds: [] });
+    const entry = utmMap.get(src)!;
+    entry.count++;
+    entry.contactIds.push(c.id);
+  }
+
+  const utmBreakdown: UtmSource[] = [];
+  for (const [source, { count, contactIds }] of utmMap.entries()) {
+    const idSet = new Set(contactIds);
+    const srcConverted = contacts.filter((c) => idSet.has(c.id) && c.segment === "converted").length;
+    utmBreakdown.push({
+      source,
+      count,
+      openRate: overallOpenRate, // approximation without per-contact engagement joins
+      clickRate: overallClickRate,
+      converted: srcConverted,
+    });
+  }
+  utmBreakdown.sort((a, b) => b.count - a.count);
+
+  // ── Referral Stats ─────────────────────────────────────────────────────────
+  const referrerCounts = new Map<string, { name: string; count: number }>();
+  for (const c of contacts) {
+    const meta = (c.metadata as Record<string, unknown>) ?? {};
+    const code = meta["referralCode"] as string | undefined;
+    const count = Number(meta["referralCount"] ?? 0);
+    if (code && count > 0) {
+      referrerCounts.set(code, { name: c.name ?? "Participante", count });
+    }
+  }
+  const totalReferrals = contacts.filter((c) => {
+    const meta = (c.metadata as Record<string, unknown>) ?? {};
+    return !!meta["referredBy"];
+  }).length;
+  const topReferrers = Array.from(referrerCounts.values()).sort((a, b) => b.count - a.count).slice(0, 10);
+
+  // ── Send Time Insight ──────────────────────────────────────────────────────
+  const hourCounts = new Map<number, number>();
+  for (const c of contacts) {
+    const meta = (c.metadata as Record<string, unknown>) ?? {};
+    const hours = meta["engagementHours"] as number[] | undefined;
+    if (hours) {
+      for (const h of hours) hourCounts.set(h, (hourCounts.get(h) ?? 0) + 1);
+    }
+  }
+
+  let sendTimeInsight: SendTimeInsight | null = null;
+  if (hourCounts.size > 0) {
+    const sorted = Array.from(hourCounts.entries()).sort((a, b) => b[1] - a[1]);
+    const [bestHour, bestCount] = sorted[0]!;
+    const hourLabel = (h: number) =>
+      `${String(h).padStart(2, "0")}:00–${String((h + 1) % 24).padStart(2, "0")}:00`;
+    sendTimeInsight = {
+      preferredHour: bestHour,
+      preferredHourLabel: hourLabel(bestHour),
+      topHours: sorted.slice(0, 5).map(([hour, opens]) => ({ hour, label: hourLabel(hour), opens })),
+    };
+  }
+
   return {
     sequenceId,
     sequenceName: sequence.name,
@@ -177,6 +264,9 @@ export async function getSequenceAnalytics(
     byItem,
     adaptiveSuggestions,
     healthScore,
+    utmBreakdown,
+    referralStats: { totalReferrals, topReferrers },
+    sendTimeInsight,
   };
 }
 
@@ -291,6 +381,16 @@ async function updateContactSegment(
 
   if (latestEvent === "open") {
     updates["itemsOpened"] = sql`${sequenceContactsTable.itemsOpened} + 1`;
+    // ── Send time optimization: track engagement hour ──────────────────────
+    const currentHour = new Date().getUTCHours();
+    const existingMeta = (contact.metadata as Record<string, unknown>) ?? {};
+    const prevHours = (existingMeta["engagementHours"] as number[] | undefined) ?? [];
+    const updatedHours = [...prevHours, currentHour].slice(-20); // keep last 20 opens
+    // Calculate preferred hour (mode)
+    const hMap = new Map<number, number>();
+    for (const h of updatedHours) hMap.set(h, (hMap.get(h) ?? 0) + 1);
+    const preferredSendHour = [...hMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? currentHour;
+    updates["metadata"] = { ...existingMeta, engagementHours: updatedHours, preferredSendHour };
   } else if (latestEvent === "click") {
     updates["itemsClicked"] = sql`${sequenceContactsTable.itemsClicked} + 1`;
   } else if (latestEvent === "delivered") {
