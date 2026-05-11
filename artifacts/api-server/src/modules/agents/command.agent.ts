@@ -11,6 +11,7 @@ import { runFinancialProjectorAgent } from "./financial-projector.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { validateIntakeCompleteness, type CampaignType, type CampaignTrack } from "../intake/intake.service.js";
+import { getCampaignCreditEstimate } from "@workspace/db";
 import type { Logger } from "pino";
 
 export interface OrchestrationResult {
@@ -149,34 +150,59 @@ const CAMPAIGN_TYPE_CONFIG: Record<
   },
 };
 
-const COMMAND_SYSTEM_PROMPT = `Você é o Command Agent da NexOS AI — o orquestrador central de toda execução de campanha.
-
-Você recebe o tipo de campanha, o intake e decide:
-1. Se o intake está completo o suficiente para avançar
-2. Ajustes estratégicos que os outros agentes devem considerar
-3. Estimativa de créditos que serão consumidos
-
-Você NÃO decide a sequência de agentes — o sistema já define isso por tipo de campanha.
-Você avalia a prontidão e dá instruções especiais para os agentes que vão rodar.
-
-**Retorne APENAS JSON válido:**
-
-\`\`\`json
-{
-  "readinessScore": 0,
-  "readinessVerdict": "ready|needs_info|blocked",
-  "missingCriticalInfo": ["string"],
-  "specialInstructions": {
-    "strategy": "string ou null",
-    "offer": "string ou null",
-    "manager": "string ou null",
-    "financial_projector": "string ou null"
-  },
-  "campaignComplexity": "standard|complex|enterprise",
-  "estimatedCredits": 0,
-  "commandNotes": "string — observações críticas para o cliente sobre esta campanha"
+// Prompt built dynamically to include calibrated credit estimates for the campaign type
+function buildCommandSystemPrompt(type: string, hasTraffic: boolean): string {
+  const estimate = getCampaignCreditEstimate(type);
+  const contentNote = hasTraffic
+    ? "com budget de tráfego (targeting + media_buyer ativos)"
+    : "sem budget de tráfego declarado";
+  const monitoringEstimate = Math.max(0, estimate.typical - 45 - 150 - 37);
+  const fence = "```";
+  return (
+    `Você é o Command Agent da NexOS AI — o orquestrador central de toda execução de campanha.\n` +
+    `\n` +
+    `Você recebe o tipo de campanha, o intake e decide:\n` +
+    `1. Se o intake está completo o suficiente para avançar\n` +
+    `2. Ajustes estratégicos que os outros agentes devem considerar\n` +
+    `3. Estimativa CALIBRADA de créditos que serão consumidos\n` +
+    `\n` +
+    `## Custos reais desta campanha (${estimate.label}, ${contentNote}):\n` +
+    `  Estratégia: 45 cr (command + profile_builder + strategy + offer + launch_manager + financial_projector)\n` +
+    `  Conteúdo: 145-161 cr (16 agentes; critique loop 3 turnos em copywriter/ad_copy/landing_page/compliance)\n` +
+    `  Sequência: 37 cr (sequence_builder=7 + 15 itens x item_copy=2)\n` +
+    `  Monitoramento: 75-190 cr (WhatsApp AI 2cr/msg + optimization trigger 3cr/ciclo)\n` +
+    `\n` +
+    `  FAIXA ESTIMADA PARA ESTE TIPO ("${estimate.label}"):\n` +
+    `    Minimo: ${estimate.min} créditos (sem tráfego pago, volume WhatsApp baixo)\n` +
+    `    Tipico: ${estimate.typical} créditos (operação normal de lançamento)\n` +
+    `    Maximo: ${estimate.max} créditos (tráfego pago + WhatsApp intenso + múltiplas otimizações)\n` +
+    `\n` +
+    `**Retorne APENAS JSON valido (sem texto antes ou depois):**\n` +
+    `\n` +
+    fence + `json\n` +
+    `{\n` +
+    `  "readinessScore": 0,\n` +
+    `  "readinessVerdict": "ready|needs_info|blocked",\n` +
+    `  "missingCriticalInfo": ["string"],\n` +
+    `  "specialInstructions": {\n` +
+    `    "strategy": "string ou null",\n` +
+    `    "offer": "string ou null",\n` +
+    `    "manager": "string ou null",\n` +
+    `    "financial_projector": "string ou null"\n` +
+    `  },\n` +
+    `  "campaignComplexity": "standard|complex|enterprise",\n` +
+    `  "estimatedCredits": ${estimate.typical},\n` +
+    `  "creditBreakdown": {\n` +
+    `    "strategy": 45,\n` +
+    `    "content": 150,\n` +
+    `    "sequence": 37,\n` +
+    `    "monitoring": ${monitoringEstimate}\n` +
+    `  },\n` +
+    `  "commandNotes": "string — observações criticas para o cliente sobre esta campanha"\n` +
+    `}\n` +
+    fence
+  );
 }
-\`\`\``;
 
 export async function orchestrateCampaign(
   campaignId: string,
@@ -207,6 +233,9 @@ export async function orchestrateCampaign(
   const track = (campaign.track ?? "six_digits") as CampaignTrack;
   const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
   const typeConfig = CAMPAIGN_TYPE_CONFIG[type] ?? CAMPAIGN_TYPE_CONFIG.launch;
+  const hasTraffic = Boolean(
+    intakeData["campaign.trafficBudget"] || intakeData["campaign.paidTraffic"],
+  );
 
   const { valid, missingRequired } = validateIntakeCompleteness(
     type,
@@ -240,7 +269,7 @@ export async function orchestrateCampaign(
     campaignId,
     workspaceId,
     agentRole: "command",
-    systemPrompt: COMMAND_SYSTEM_PROMPT,
+    systemPrompt: buildCommandSystemPrompt(type, hasTraffic),
     messages: [
       {
         role: "user",

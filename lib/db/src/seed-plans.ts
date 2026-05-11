@@ -1,28 +1,38 @@
 import { db, plansTable } from "./index.js";
 import { sql } from "drizzle-orm";
 
+// ── Credit calibration (updated to match actual AI costs) ────────────────────
+// Full lifecycle per campaign: strategy(45) + content(145-161) + sequence(37)
+//   + monitoring/WhatsApp (75-190 depending on volume)
+// Typical launch campaign: ~420 credits
+// Light campaign (no traffic): ~290 credits
+//
+// Solo (3 campaigns): 3 × 420 = 1260 typical → 2000 gives ~37% buffer
+// Agency (10 campaigns): 10 × 420 = 4200 typical → 6500 gives ~55% buffer
+
 const plans = [
   {
     name: "Solo",
     slug: "solo" as const,
     priceMonthly: "297.00",
     priceOnboarding: "2500.00",
-    creditsMonthly: 1500,
+    creditsMonthly: 2000,
     maxCampaigns: 3,
     maxVideosPerCampaign: 5,
     maxDomains: 1,
     whiteLabel: false,
     multiNurturingChannels: false,
     features: [
-      "Up to 3 simultaneous campaigns",
-      "6-digit launch track",
-      "1 custom domain",
-      "WhatsApp OR Telegram nurturing",
-      "AI content generation",
-      "Landing page builder",
-      "Campaign analytics",
-      "1,500 monthly credits",
-      "Up to 5 videos per campaign",
+      "Até 3 campanhas simultâneas",
+      "Track de 6 dígitos",
+      "1 domínio customizado",
+      "Nurturing via WhatsApp OU Telegram",
+      "Geração de conteúdo com IA (16 agentes)",
+      "Sequência de lançamento PLF automatizada",
+      "Landing page gerada por IA",
+      "Análise de campanhas com IA",
+      "2.000 créditos mensais (~4-5 campanhas completas)",
+      "Até 5 vídeos por campanha",
     ],
   },
   {
@@ -30,23 +40,23 @@ const plans = [
     slug: "agency" as const,
     priceMonthly: "1497.00",
     priceOnboarding: "2500.00",
-    creditsMonthly: 5000,
+    creditsMonthly: 6500,
     maxCampaigns: 10,
     maxVideosPerCampaign: 5,
     maxDomains: 10,
     whiteLabel: true,
     multiNurturingChannels: true,
     features: [
-      "Up to 10 simultaneous campaigns",
-      "All launch tracks (6/8/10-digit)",
-      "10 custom domains",
-      "WhatsApp AND Telegram nurturing",
-      "White-label 'Powered by NexOS'",
-      "Multi-client dashboard",
-      "All AI modules including Creator Engine",
-      "5,000 monthly credits",
-      "Up to 5 videos per campaign",
-      "Priority support",
+      "Até 10 campanhas simultâneas",
+      "Todos os tracks (6, 8 e 10 dígitos)",
+      "10 domínios customizados",
+      "Nurturing via WhatsApp E Telegram (multicanal)",
+      "White-label 'Desenvolvido com NexOS'",
+      "Dashboard multi-cliente",
+      "Todos os módulos de IA incluindo Creator Engine",
+      "6.500 créditos mensais (~14-15 campanhas completas)",
+      "Até 5 vídeos por campanha",
+      "Suporte prioritário",
     ],
   },
 ];
