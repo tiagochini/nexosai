@@ -138,8 +138,8 @@ export async function initiatePayment(opts: {
 
   if (!plan) throw new NotFoundError("Plano não encontrado");
 
-  const amountCents = Math.round(Number(plan.priceMonthly) * 100);
-  const description = `NexOS AI — Plano ${plan.name}`;
+  const amountCents = Math.round(Number(plan.priceMonthly) * 100); // price_monthly = preço de acesso único
+  const description = `NexOS AI — Acesso ${plan.name} (vitalício)`;
   const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0]!;

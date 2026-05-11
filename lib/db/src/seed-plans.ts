@@ -1,61 +1,73 @@
 import { db, plansTable } from "./index.js";
 import { sql } from "drizzle-orm";
 
-// ── Credit forcing logic ───────────────────────────────────────────────────────
-// Typical launch campaign = 420 credits.
-// Plan credits are calibrated to cover exactly 2 typical launches, so the
-// 3rd campaign (which is within the plan's campaign limit) always requires
-// a credit pack purchase. This is the core upsell forcing mechanism.
+// ── Modelo de negócio NexOS AI ────────────────────────────────────────────────
 //
-// Solo  (3 campaigns): 900 cr → 900/420 = 2.1 launches included
-//   → campaign 3 = mandatory pack purchase
-//   → heavy user (630 cr/launch): campaign 2 already needs a pack
+// NÃO É ASSINATURA MENSAL. É ACESSO ÚNICO (lifetime deal).
 //
-// Agency (10 campaigns): 2000 cr → 2000/420 = 4.8 launches included
-//   → campaigns 5-10 = mandatory pack purchases (up to 6 pack purchases/mo)
-//   → heavy user (630 cr/launch): campaigns 4-10 all need packs
+// Solo — R$3.990 (preço de lançamento) / R$5.000 (regular)
+//   Inclui: acesso vitalício à plataforma + 900 créditos (= 2 lançamentos completos)
+//   A partir do 3º lançamento: cliente compra packs de créditos
+//   Até 3 campanhas simultâneas, track 6 dígitos, 5 vídeos/campanha
 //
-// Packs are presented POST-ONBOARDING after the client sees their first results.
-// Onboarding allocation: 900 cr (Solo) / 2000 cr (Agency) — sufficient for
-// the client to complete 2 full launches before hitting the wall.
+// Agency — R$9.990 (preço de lançamento) / R$14.000 (regular)
+//   Inclui: acesso vitalício + 2.000 créditos (= ~4-5 lançamentos)
+//   Multi-cliente, white-label, todos os tracks, 10 campanhas
+//   A partir do 5º lançamento: packs de créditos
+//
+// PACKS (ofertados pós-lançamento, quando o cliente já viu resultado):
+//   500 cr  → R$85   (~1 lançamento)
+//   1500 cr → R$239  (~3 lançamentos) ← mais vendido
+//   3500 cr → R$529  (~8 lançamentos)
+//   7000 cr → R$979  (~16 lançamentos)
+//
+// Margem bruta nos packs: ~81%
+// (custo real de IA por campanha ~R$14, receita do pack por campanha ~R$71)
+//
+// CAMPO priceMonthly = preço de acesso único em reais (sem centavos decimais extras)
+// CAMPO creditsMonthly = créditos incluídos no acesso (não são mensais)
+// CAMPO priceOnboarding = não usado neste modelo (zerado)
 
 const plans = [
   {
     name: "Solo",
     slug: "solo" as const,
-    priceMonthly: "297.00",
-    priceOnboarding: "2500.00",
-    creditsMonthly: 900,
+    priceMonthly: "3990.00",       // preço de acesso único (lançamento)
+    priceOnboarding: "0.00",       // sem taxa separada de onboarding
+    creditsMonthly: 900,           // 900 cr incluídos = 2 lançamentos completos
     maxCampaigns: 3,
     maxVideosPerCampaign: 5,
     maxDomains: 1,
     whiteLabel: false,
     multiNurturingChannels: false,
     features: [
+      "Acesso vitalício à plataforma",
+      "900 créditos incluídos (2 lançamentos completos)",
       "Até 3 campanhas simultâneas",
-      "Track de 6 dígitos",
+      "Track de 6 dígitos (R$100k–R$999k em 7 dias)",
       "1 domínio customizado",
       "Nurturing via WhatsApp OU Telegram",
-      "Geração de conteúdo com IA (16 agentes)",
+      "16 agentes de IA especializados",
       "Sequência de lançamento PLF automatizada",
       "Landing page gerada por IA",
-      "Análise de campanhas com IA",
-      "900 créditos mensais (~2 lançamentos completos)",
       "Até 5 vídeos por campanha",
+      "Relatório semanal de performance",
     ],
   },
   {
     name: "Agency",
     slug: "agency" as const,
-    priceMonthly: "1497.00",
-    priceOnboarding: "2500.00",
-    creditsMonthly: 2000,
+    priceMonthly: "9990.00",       // preço de acesso único (lançamento)
+    priceOnboarding: "0.00",
+    creditsMonthly: 2000,          // 2000 cr incluídos = ~4-5 lançamentos
     maxCampaigns: 10,
     maxVideosPerCampaign: 5,
     maxDomains: 10,
     whiteLabel: true,
     multiNurturingChannels: true,
     features: [
+      "Acesso vitalício à plataforma",
+      "2.000 créditos incluídos (~4-5 lançamentos completos)",
       "Até 10 campanhas simultâneas",
       "Todos os tracks (6, 8 e 10 dígitos)",
       "10 domínios customizados",
@@ -63,7 +75,6 @@ const plans = [
       "White-label 'Desenvolvido com NexOS'",
       "Dashboard multi-cliente",
       "Todos os módulos de IA incluindo Creator Engine",
-      "2.000 créditos mensais (~4-5 lançamentos completos)",
       "Até 5 vídeos por campanha",
       "Suporte prioritário",
     ],
@@ -71,7 +82,7 @@ const plans = [
 ];
 
 async function seed() {
-  console.log("Seeding plans...");
+  console.log("Seeding plans (modelo acesso único)...");
   for (const plan of plans) {
     await db
       .insert(plansTable)
@@ -81,6 +92,7 @@ async function seed() {
         set: {
           name: sql`excluded.name`,
           priceMonthly: sql`excluded.price_monthly`,
+          priceOnboarding: sql`excluded.price_onboarding`,
           creditsMonthly: sql`excluded.credits_monthly`,
           maxCampaigns: sql`excluded.max_campaigns`,
           features: sql`excluded.features`,
@@ -88,7 +100,7 @@ async function seed() {
           multiNurturingChannels: sql`excluded.multi_nurturing_channels`,
         },
       });
-    console.log(`  ✓ Plan '${plan.name}' seeded (${plan.creditsMonthly} cr/mo)`);
+    console.log(`  ✓ Plan '${plan.name}' — R$${plan.priceMonthly} acesso único, ${plan.creditsMonthly} cr incluídos`);
   }
   console.log("Plans seeded successfully.");
   process.exit(0);

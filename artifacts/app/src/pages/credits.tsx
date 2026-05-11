@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Zap, Clock, TrendingDown, TrendingUp, BarChart3,
   Bot, FileText, Shield, Video, Mail, MessageSquare,
-  ArrowUpRight, Cpu, ChevronRight,
+  ArrowUpRight, Cpu, ChevronRight, Package,
 } from "lucide-react";
 
 interface Transaction {
@@ -37,6 +37,7 @@ const ACTION_META: Record<string, { label: string; icon: React.ElementType; colo
   agent_direct_chat:      { label: "Chat com Agente",     icon: Cpu,           color: "text-primary" },
   sequence_plan:          { label: "Plano de Sequência",  icon: Bot,           color: "text-purple-400" },
   credit_topup:           { label: "Recarga de Créditos", icon: Zap,           color: "text-success" },
+  purchase:               { label: "Pack de Créditos",    icon: Package,       color: "text-success" },
 };
 
 function getActionMeta(action: string) {
@@ -49,17 +50,27 @@ function formatDate(iso: string) {
   });
 }
 
-function CreditGauge({ balance, total }: { balance: number; total: number }) {
-  const pct = total > 0 ? Math.min(100, (balance / total) * 100) : 0;
-  const used = total - balance;
-  const isLow = pct < 15;
-  const isMedium = pct < 35;
+// Créditos incluídos no plano (acesso único, não mensais)
+const PLAN_CREDITS: Record<string, number> = {
+  solo: 900,
+  agency: 2000,
+};
+
+function CreditGauge({ balance, included }: { balance: number; included: number }) {
+  const pct = included > 0 ? Math.min(100, (balance / included) * 100) : 0;
+  const used = Math.max(0, included - balance);
+  const isLow = balance < 150;
+  const isMedium = balance < 400;
 
   const gaugeColor = isLow
     ? "hsl(var(--destructive))"
     : isMedium
     ? "hsl(45 100% 50%)"
     : "hsl(var(--primary))";
+
+  // Lançamentos restantes estimados (420 cr por lançamento típico)
+  const launchesLeft = Math.floor(balance / 420);
+  const launchesUsed = Math.floor(used / 420);
 
   return (
     <div className="border border-border/50 bg-card/40 backdrop-blur-sm card-weapon p-6 relative overflow-hidden">
@@ -96,7 +107,7 @@ function CreditGauge({ balance, total }: { balance: number; total: number }) {
         <div className="flex-1 space-y-4">
           <div>
             <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground mb-1">Saldo Disponível</div>
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-2 flex-wrap">
               <span
                 className="font-mono font-bold text-5xl"
                 style={{ color: gaugeColor, textShadow: `0 0 20px ${gaugeColor}` }}
@@ -106,21 +117,38 @@ function CreditGauge({ balance, total }: { balance: number; total: number }) {
               <span className="font-mono text-sm text-muted-foreground">Cr</span>
               {isLow && (
                 <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest text-destructive border-destructive/40 bg-destructive/10 animate-pulse ml-2">
-                  Crítico
+                  Baixo — recarregue
                 </Badge>
               )}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="border border-border/30 bg-background/40 p-3">
-              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Total Mensal</div>
-              <div className="font-mono font-bold text-lg text-foreground">{total.toLocaleString("pt-BR")}</div>
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Incluídos</div>
+              <div className="font-mono font-bold text-lg text-foreground">{included.toLocaleString("pt-BR")}</div>
             </div>
             <div className="border border-border/30 bg-background/40 p-3">
               <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Utilizados</div>
               <div className="font-mono font-bold text-lg text-muted-foreground">{used.toLocaleString("pt-BR")}</div>
             </div>
+            <div className="border border-border/30 bg-background/40 p-3">
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Lançamentos ok</div>
+              <div className="font-mono font-bold text-lg text-foreground">{launchesLeft} <span className="text-xs text-muted-foreground font-normal">restantes</span></div>
+            </div>
+            <div className="border border-border/30 bg-background/40 p-3">
+              <div className="font-mono text-[11px] text-muted-foreground uppercase tracking-widest mb-1">Lançamentos feitos</div>
+              <div className="font-mono font-bold text-lg text-muted-foreground">{launchesUsed}</div>
+            </div>
           </div>
+          {isLow && (
+            <Link href="/billing">
+              <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-9">
+                <Zap className="h-3.5 w-3.5" />
+                Comprar Pack de Créditos
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </div>
@@ -129,36 +157,40 @@ function CreditGauge({ balance, total }: { balance: number; total: number }) {
 
 function CostReference() {
   const costs = [
-    { action: "Chat com Agente",        cost: 3,  icon: Cpu },
-    { action: "Intake IA (por msg)",    cost: 2,  icon: MessageSquare },
-    { action: "Finalizar Intake",       cost: 5,  icon: FileText },
-    { action: "Estratégia Completa",    cost: 25, icon: Bot },
-    { action: "Geração de Conteúdo",    cost: 15, icon: FileText },
-    { action: "Compliance Check",       cost: 5,  icon: Shield },
-    { action: "Relatório de Analytics", cost: 10, icon: BarChart3 },
-    { action: "VSL Script",             cost: 20, icon: Video },
-    { action: "Plano de Sequência",     cost: 30, icon: Bot },
-    { action: "Copy de Nurturing",      cost: 2,  icon: Mail },
+    { action: "Estratégia Completa",    cost: 45,  icon: Bot },
+    { action: "Geração de Conteúdo",    cost: 161, icon: FileText },
+    { action: "Sequência PLF (15 msg)", cost: 37,  icon: Mail },
+    { action: "Lançamento típico total",cost: 420, icon: Zap },
+    { action: "Copy de Nurturing",      cost: 2,   icon: Mail },
+    { action: "Relatório de Analytics", cost: 5,   icon: BarChart3 },
+    { action: "VSL Script",             cost: 8,   icon: Video },
+    { action: "Chat com Agente",        cost: 3,   icon: Cpu },
+    { action: "Compliance Check",       cost: 32,  icon: Shield },
+    { action: "Plano de Sequência",     cost: 7,   icon: Bot },
   ];
 
   return (
     <div className="border border-border/50 bg-card/40 backdrop-blur-sm card-weapon overflow-hidden">
-      <div className="px-5 py-3 border-b border-border/40 flex items-center gap-2">
-        <Zap className="h-3.5 w-3.5 text-primary" />
-        <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Custo por Ação de IA</span>
+      <div className="px-5 py-3 border-b border-border/40 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Zap className="h-3.5 w-3.5 text-primary" />
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Custo por Ação de IA</span>
+        </div>
+        <span className="font-mono text-[11px] text-muted-foreground/50">1 cr ≈ R$0,17</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y divide-x-0 sm:divide-y-0 sm:grid-flow-row">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
         {costs.map((c, i) => {
           const Icon = c.icon;
           const isOdd = i % 2 === 1;
+          const isHighlight = c.action.includes("total");
           return (
-            <div key={c.action} className={`flex items-center justify-between px-4 py-3 border-b border-border/20 last:border-0 ${isOdd ? "sm:border-l border-border/20" : ""}`}>
+            <div key={c.action} className={`flex items-center justify-between px-4 py-3 border-b border-border/20 last:border-0 ${isOdd ? "sm:border-l border-border/20" : ""} ${isHighlight ? "bg-primary/5" : ""}`}>
               <div className="flex items-center gap-2">
-                <Icon className="h-3.5 w-3.5 text-primary/60 shrink-0" />
-                <span className="font-mono text-xs text-muted-foreground">{c.action}</span>
+                <Icon className={`h-3.5 w-3.5 shrink-0 ${isHighlight ? "text-primary" : "text-primary/60"}`} />
+                <span className={`font-mono text-xs ${isHighlight ? "text-foreground font-bold" : "text-muted-foreground"}`}>{c.action}</span>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <span className="font-mono font-bold text-sm text-foreground">{c.cost}</span>
+                <span className={`font-mono font-bold text-sm ${isHighlight ? "text-primary" : "text-foreground"}`}>{c.cost}</span>
                 <span className="font-mono text-[11px] text-muted-foreground">Cr</span>
               </div>
             </div>
@@ -170,7 +202,7 @@ function CostReference() {
 }
 
 export default function CreditsPage() {
-  const { plan } = useAuth();
+  const { plan, planSlug } = useAuth();
 
   const { data: balanceData, isLoading: loadingBalance } = useGetCreditsBalance({
     query: { queryKey: getGetCreditsBalanceQueryKey() },
@@ -186,7 +218,8 @@ export default function CreditsPage() {
   });
 
   const balance = balanceData?.balance ?? 0;
-  const total = plan?.creditsMonthly ?? 1500;
+  // Créditos incluídos no plano (não são mensais — são do acesso único)
+  const included = PLAN_CREDITS[planSlug ?? "solo"] ?? plan?.creditsMonthly ?? 900;
   const transactions = historyData?.transactions ?? [];
 
   const debits  = transactions.filter(t => t.amount < 0);
@@ -205,10 +238,10 @@ export default function CreditsPage() {
             Saldo · Histórico · Custo por Ação
           </p>
         </div>
-        <Link href="/settings?tab=workspace">
-          <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline shrink-0">
-            <ArrowUpRight className="h-3 w-3 mr-1.5" />
-            Ver Planos
+        <Link href="/billing">
+          <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline shrink-0 gap-2">
+            <Package className="h-3 w-3" />
+            Comprar Pack
           </Button>
         </Link>
       </div>
@@ -217,15 +250,15 @@ export default function CreditsPage() {
       {loadingBalance ? (
         <Skeleton className="h-44 bg-muted/20" />
       ) : (
-        <CreditGauge balance={balance} total={total} />
+        <CreditGauge balance={balance} included={included} />
       )}
 
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Transações",    value: transactions.length, icon: Clock,       color: "text-foreground" },
-          { label: "Total Gasto",   value: totalSpent,          icon: TrendingDown, color: "text-destructive" },
-          { label: "Recargas",      value: topUps.length,       icon: TrendingUp,   color: "text-success" },
+          { label: "Transações",  value: transactions.length, icon: Clock,       color: "text-foreground" },
+          { label: "Total Gasto", value: totalSpent,          icon: TrendingDown, color: "text-destructive" },
+          { label: "Recargas",    value: topUps.length,       icon: TrendingUp,   color: "text-success" },
         ].map((s) => {
           const Icon = s.icon;
           return (
@@ -260,7 +293,7 @@ export default function CreditsPage() {
           <div className="flex flex-col items-center py-16 gap-2">
             <Zap className="h-8 w-8 text-muted-foreground/20" />
             <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest">Nenhuma transação ainda</p>
-            <p className="font-mono text-xs text-muted-foreground/40">Use os agentes de IA para ver o histórico aqui</p>
+            <p className="font-mono text-xs text-muted-foreground/40">Execute um lançamento para ver o histórico aqui</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -311,16 +344,16 @@ export default function CreditsPage() {
       {/* Cost reference */}
       <CostReference />
 
-      {/* CTA to agents */}
+      {/* CTA */}
       <div className="border border-primary/20 bg-primary/5 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="font-mono font-bold text-sm uppercase tracking-widest text-primary mb-1">Time de IA disponível</div>
-          <div className="font-mono text-xs text-muted-foreground">16 agentes especializados prontos para brainstorm, estratégia e execução</div>
+          <div className="font-mono font-bold text-sm uppercase tracking-widest text-primary mb-1">Precisa de mais créditos?</div>
+          <div className="font-mono text-xs text-muted-foreground">Packs a partir de R$85 — sem mensalidade, sem prazo de validade</div>
         </div>
-        <Link href="/agents">
+        <Link href="/billing">
           <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary shrink-0 gap-2">
-            <Bot className="h-3.5 w-3.5" />
-            Acessar Agentes
+            <Package className="h-3.5 w-3.5" />
+            Ver Packs
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </Link>
