@@ -242,7 +242,7 @@ export async function getSequenceAnalytics(
   let sendTimeInsight: SendTimeInsight | null = null;
   if (hourCounts.size > 0) {
     const sorted = Array.from(hourCounts.entries()).sort((a, b) => b[1] - a[1]);
-    const [bestHour, bestCount] = sorted[0]!;
+    const [bestHour] = sorted[0]!;
     const hourLabel = (h: number) =>
       `${String(h).padStart(2, "0")}:00–${String((h + 1) % 24).padStart(2, "0")}:00`;
     sendTimeInsight = {

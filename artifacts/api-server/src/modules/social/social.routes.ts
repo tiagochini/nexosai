@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import crypto from "crypto";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { AppError } from "../../lib/errors.js";
-import { logger } from "../../lib/logger.js";
+
 import {
   getOAuthUrl,
   verifyOAuthState,

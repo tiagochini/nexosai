@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod/v4";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db, launchSequencesTable, sequenceContactsTable, auditLogsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 

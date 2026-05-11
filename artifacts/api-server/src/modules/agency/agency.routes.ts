@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
-import { AppError } from "../../lib/errors.js";
+
 import {
   inviteClient,
   acceptInvite,

@@ -1,4 +1,4 @@
-import { eq, and, desc, gte, sql } from "drizzle-orm";
+import { eq, and, desc, gte } from "drizzle-orm";
 import {
   db,
   revenueEventsTable,

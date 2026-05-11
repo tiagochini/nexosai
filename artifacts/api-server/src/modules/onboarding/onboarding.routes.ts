@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { db, campaignsTable, workspacesTable } from "@workspace/db";
 import { eq, count } from "drizzle-orm";
-import { AppError } from "../../lib/errors.js";
+
 import { createCampaign } from "../campaigns/campaigns.service.js";
 import { saveIntakeData } from "../intake/intake.service.js";
 import {
