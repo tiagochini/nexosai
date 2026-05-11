@@ -9,7 +9,8 @@ import {
   Rocket, Package, ChevronRight, Send, Loader2,
   CheckCircle2, Sparkles, ArrowRight, Star, Bot,
   Mail, MessageSquare, Target, TrendingUp, Shield,
-  Users, Video, BarChart2,
+  Users, Video, BarChart2, Link2, Wifi, WifiOff,
+  Phone, CreditCard, Megaphone, ExternalLink, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -17,7 +18,7 @@ import nexosLogo from "/nexos-logo.png";
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos" | "has_audience";
 type AudienceSubPath = "micro_launch" | "members_area" | "product_from_audience";
-type UIStep = "path_select" | "audience_subpath" | "conversation" | "plan_preview";
+type UIStep = "path_select" | "audience_subpath" | "conversation" | "plan_preview" | "integration_setup";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -58,6 +59,118 @@ interface AudienceMonetizationPlan {
   revenueProjection: string;
   whyItWorks: string;
 }
+
+// ── Integration catalog (subset relevant for onboarding) ──────────────────────
+interface IntegrationItem {
+  provider: string;
+  label: string;
+  description: string;
+  benefit: Record<OnboardingPath, string>;
+  category: "mensagens" | "email" | "pagamento" | "social";
+  icon: React.ElementType;
+  iconColor: string;
+  required: boolean;
+}
+
+const INTEGRATION_CATALOG: IntegrationItem[] = [
+  {
+    provider: "whatsapp_business",
+    label: "WhatsApp Business",
+    description: "Disparo automático de mensagens segmentadas para leads quentes, mornos e frios.",
+    benefit: {
+      has_product:        "Sequências de WhatsApp com gatilhos mentais disparadas nos horários certos do lançamento",
+      building_product:   "Notificações de lançamento e nurturing direto no WhatsApp da sua audiência",
+      affiliate_nexos:    "Distribuição automática de conteúdo e links de afiliado para seus contatos",
+      has_audience:       "Mensagens de abertura de carrinho enviadas para os fãs mais engajados primeiro",
+    },
+    category: "mensagens",
+    icon: Phone,
+    iconColor: "text-green-400",
+    required: true,
+  },
+  {
+    provider: "rd_station",
+    label: "RD Station",
+    description: "E-mail marketing e automação de leads com integração total ao lançamento.",
+    benefit: {
+      has_product:        "23 emails de lançamento disparados automaticamente — captação, nurturing e escassez",
+      building_product:   "Sequência de e-mails para validar sua ideia de produto com sua base",
+      affiliate_nexos:    "Automação de e-mail para aquecimento e conversão de afiliados",
+      has_audience:       "E-mails de pré-lançamento para monetizar sua lista existente",
+    },
+    category: "email",
+    icon: Mail,
+    iconColor: "text-blue-400",
+    required: true,
+  },
+  {
+    provider: "activecampaign",
+    label: "ActiveCampaign",
+    description: "CRM e automação avançada de e-mail com segmentação comportamental.",
+    benefit: {
+      has_product:        "Automações de e-mail baseadas em comportamento (abriu, clicou, comprou)",
+      building_product:   "CRM integrado para acompanhar leads durante a descoberta do produto",
+      affiliate_nexos:    "Tags automáticas por engajamento para priorizar os afiliados mais quentes",
+      has_audience:       "Segmentação de audiência por comportamento para máxima conversão",
+    },
+    category: "email",
+    icon: Mail,
+    iconColor: "text-blue-400",
+    required: false,
+  },
+  {
+    provider: "hotmart",
+    label: "Hotmart",
+    description: "Plataforma de produtos digitais — compra automática converte o contato para cliente.",
+    benefit: {
+      has_product:        "Quando alguém compra no Hotmart, o NexOS move o contato para segmento 'convertido' automaticamente",
+      building_product:   "Lance seu novo produto diretamente na Hotmart com checkout já integrado",
+      affiliate_nexos:    "Rastreamento automático de vendas dos afiliados com comissões registradas",
+      has_audience:       "Venda o produto do micro-lançamento no Hotmart com funil totalmente automatizado",
+    },
+    category: "pagamento",
+    icon: CreditCard,
+    iconColor: "text-orange-400",
+    required: false,
+  },
+  {
+    provider: "kiwify",
+    label: "Kiwify",
+    description: "Checkout e gestão de produtos digitais com conversão automática de leads.",
+    benefit: {
+      has_product:        "Compras no Kiwify trigam automações de pós-venda no NexOS instantaneamente",
+      building_product:   "Checkout rápido para o seu produto novo com upsell configurado pela IA",
+      affiliate_nexos:    "Monitoramento de vendas de afiliados com atualização de segmentos em tempo real",
+      has_audience:       "Carrinho de alta conversão para o micro-lançamento com pós-venda automatizado",
+    },
+    category: "pagamento",
+    icon: CreditCard,
+    iconColor: "text-orange-400",
+    required: false,
+  },
+  {
+    provider: "meta_ads",
+    label: "Meta Ads",
+    description: "Facebook e Instagram Ads — remarketing automático para leads que não converteram.",
+    benefit: {
+      has_product:        "Remarketing automático para leads que não abriram emails ou clicaram em links",
+      building_product:   "Audiências de interesse para validar a ideia do produto antes de construir",
+      affiliate_nexos:    "Anúncios de afiliado otimizados automaticamente pelo agente Media Buyer",
+      has_audience:       "Amplificar conteúdo orgânico com tráfego pago sincronizado ao calendário de lançamento",
+    },
+    category: "social",
+    icon: Megaphone,
+    iconColor: "text-cyan-400",
+    required: false,
+  },
+];
+
+const PATH_INTEGRATIONS: Record<OnboardingPath, string[]> = {
+  has_product:      ["whatsapp_business", "rd_station", "activecampaign", "hotmart", "kiwify"],
+  building_product: ["whatsapp_business", "rd_station"],
+  affiliate_nexos:  ["whatsapp_business", "rd_station"],
+  has_audience:     ["whatsapp_business", "rd_station", "meta_ads"],
+};
 
 // ── Path selector ─────────────────────────────────────────────────────────────
 const PATHS = [
@@ -367,9 +480,39 @@ export default function Onboarding() {
     setTimeout(() => handleSend(), 50);
   };
 
+  // ── Integration wizard state ──────────────────────────────────────────────────
+  const [connectedIntegrations, setConnectedIntegrations] = useState<string[]>([]);
+  const [loadingIntegrations, setLoadingIntegrations] = useState(false);
+  const [refreshingIntegrations, setRefreshingIntegrations] = useState(false);
+
+  const fetchConnectedIntegrations = async (silent = false) => {
+    if (!silent) setLoadingIntegrations(true);
+    else setRefreshingIntegrations(true);
+    try {
+      const res = await customFetch<Response>("/api/workspaces/me/integrations");
+      if (res.ok) {
+        const data = await res.json() as { integrations: { provider: string; status: string }[] };
+        setConnectedIntegrations(
+          (data.integrations ?? [])
+            .filter((i) => i.status === "connected")
+            .map((i) => i.provider)
+        );
+      }
+    } catch { /* silent */ }
+    finally {
+      setLoadingIntegrations(false);
+      setRefreshingIntegrations(false);
+    }
+  };
+
   // ── Show plan preview then navigate ──────────────────────────────────────────
   const handleFinish = () => {
     setStep("plan_preview");
+  };
+
+  const handleGoToIntegrations = () => {
+    setStep("integration_setup");
+    void fetchConnectedIntegrations();
   };
 
   const handleLaunch = () => {
@@ -724,6 +867,202 @@ export default function Onboarding() {
     );
   }
 
+  // ── INTEGRATION SETUP ────────────────────────────────────────────────────────
+  if (step === "integration_setup") {
+    const relevantProviders = PATH_INTEGRATIONS[path ?? "has_product"] ?? [];
+    const relevantIntegrations = INTEGRATION_CATALOG.filter((i) =>
+      relevantProviders.includes(i.provider)
+    );
+
+    const requiredConnected = relevantIntegrations
+      .filter((i) => i.required)
+      .every((i) => connectedIntegrations.includes(i.provider));
+
+    const totalConnected = relevantIntegrations.filter((i) =>
+      connectedIntegrations.includes(i.provider)
+    ).length;
+
+    const categoryLabels: Record<string, string> = {
+      mensagens: "Mensagens",
+      email: "E-mail Marketing",
+      pagamento: "Gateway de Pagamento",
+      social: "Mídia Paga",
+    };
+
+    const categoriesInUse = [...new Set(relevantIntegrations.map((i) => i.category))];
+
+    return (
+      <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500 py-4">
+        {/* Header */}
+        <div className="text-center">
+          <div className="inline-flex items-center gap-2 border border-primary/40 bg-primary/10 px-3 py-1.5 mb-4">
+            <Link2 className="h-3.5 w-3.5 text-primary" />
+            <span className="font-mono text-xs uppercase tracking-widest text-primary">Passo 1 de 2 — Conectar Integrações</span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-mono font-bold uppercase tracking-tighter text-foreground mb-2">
+            Conecta em 23 minutos
+          </h2>
+          <p className="text-xs font-mono text-muted-foreground max-w-xl mx-auto">
+            Integre as ferramentas que você já usa — o NexOS vai operar nelas automaticamente durante o lançamento. Você pode conectar agora ou depois em Configurações.
+          </p>
+        </div>
+
+        {/* Progress strip */}
+        <div className="flex items-center gap-3 border border-border/40 bg-card/40 px-4 py-3">
+          <div className="flex gap-1">
+            {relevantIntegrations.map((i) => (
+              <div
+                key={i.provider}
+                className={`h-1.5 w-6 rounded-full transition-colors ${connectedIntegrations.includes(i.provider) ? "bg-green-400" : "bg-border/60"}`}
+              />
+            ))}
+          </div>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {loadingIntegrations ? "Verificando..." : `${totalConnected} de ${relevantIntegrations.length} conectadas`}
+          </span>
+          <button
+            onClick={() => void fetchConnectedIntegrations(true)}
+            disabled={refreshingIntegrations}
+            className="ml-auto text-muted-foreground/50 hover:text-primary transition-colors disabled:opacity-40"
+            title="Verificar novamente"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshingIntegrations ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+
+        {/* Integrations by category */}
+        {loadingIntegrations ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((k) => (
+              <div key={k} className="border border-border/30 bg-card/20 p-4 animate-pulse h-24" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {categoriesInUse.map((cat) => {
+              const items = relevantIntegrations.filter((i) => i.category === cat);
+              return (
+                <div key={cat}>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 mb-2 pl-1">
+                    {categoryLabels[cat] ?? cat}
+                  </div>
+                  <div className="space-y-2">
+                    {items.map((integration) => {
+                      const Icon = integration.icon;
+                      const isConnected = connectedIntegrations.includes(integration.provider);
+                      return (
+                        <div
+                          key={integration.provider}
+                          className={`border bg-card/40 p-4 flex items-start gap-4 transition-colors ${
+                            isConnected
+                              ? "border-green-400/40 bg-green-400/5"
+                              : "border-border/50 hover:border-primary/30"
+                          }`}
+                        >
+                          {/* Icon */}
+                          <div className={`w-10 h-10 rounded-sm border flex items-center justify-center shrink-0 ${
+                            isConnected ? "border-green-400/40 bg-green-400/10" : "border-border/50 bg-muted/20"
+                          }`}>
+                            <Icon className={`h-5 w-5 ${isConnected ? "text-green-400" : integration.iconColor}`} />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                              <span className="font-mono font-bold text-sm text-foreground">
+                                {integration.label}
+                              </span>
+                              {integration.required && (
+                                <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/5">
+                                  Recomendada
+                                </Badge>
+                              )}
+                              {isConnected && (
+                                <div className="flex items-center gap-1">
+                                  <Wifi className="h-3 w-3 text-green-400" />
+                                  <span className="font-mono text-[10px] uppercase tracking-widest text-green-400">Conectada</span>
+                                </div>
+                              )}
+                            </div>
+                            <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed mb-1">
+                              {integration.description}
+                            </p>
+                            <p className="font-mono text-[11px] text-primary/70 italic leading-relaxed">
+                              → {integration.benefit[path ?? "has_product"]}
+                            </p>
+                          </div>
+
+                          {/* Action */}
+                          <div className="shrink-0">
+                            {isConnected ? (
+                              <div className="flex items-center gap-1.5 border border-green-400/30 bg-green-400/5 px-3 py-1.5">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                                <span className="font-mono text-[11px] text-green-400 uppercase tracking-widest">Ativo</span>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-none font-mono text-[11px] uppercase tracking-widest gap-1.5 border-primary/40 text-primary hover:bg-primary/10"
+                                onClick={() => window.open("/configuracoes?tab=integracoes", "_blank")}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Conectar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Tip */}
+        <div className="border border-border/30 bg-card/20 px-4 py-3 flex items-start gap-3">
+          <WifiOff className="h-4 w-4 text-muted-foreground/40 shrink-0 mt-0.5" />
+          <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">
+            Sem integração conectada o NexOS ainda funciona — gera toda a estratégia e copy, mas o disparo automático fica desativado. Você pode conectar depois em{" "}
+            <span
+              className="text-primary cursor-pointer underline underline-offset-2"
+              onClick={() => window.open("/configuracoes?tab=integracoes", "_blank")}
+            >
+              Configurações → Integrações
+            </span>.
+          </p>
+        </div>
+
+        {/* CTA */}
+        <div className="border border-primary/30 bg-primary/5 p-5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary" />
+          <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary" />
+          <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary" />
+          <div className="text-center space-y-3">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+              {requiredConnected
+                ? "Integrações essenciais conectadas — pronto para lançar"
+                : "Você pode conectar agora ou continuar e configurar depois"}
+            </div>
+            <Button
+              onClick={handleLaunch}
+              className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 text-sm"
+            >
+              <Rocket className="h-4 w-4" />
+              {path === "has_product" ? "Iniciar Briefing Estratégico" : "Ir para Minha Campanha"}
+            </Button>
+            <p className="font-mono text-[11px] text-muted-foreground/50">
+              Você pode conectar integrações a qualquer momento em Configurações
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // ── PLAN PREVIEW ─────────────────────────────────────────────────────────────
   if (step === "plan_preview") {
     const DAY_PLAN = [
@@ -883,20 +1222,23 @@ export default function Onboarding() {
           <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary" />
           <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary" />
           <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary" />
-          <div className="text-center">
-            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-3">
-              Próximo passo: Briefing Completo com a IA
+          <div className="text-center space-y-3">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+              Próximo passo: Conectar integrações para o lançamento automático
             </div>
             <Button
-              onClick={handleLaunch}
+              onClick={handleGoToIntegrations}
               className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 text-sm"
             >
-              <Rocket className="h-4 w-4" />
-              {path === "has_product" ? "Iniciar Briefing Estratégico" : "Ir para Minha Campanha"}
+              <Link2 className="h-4 w-4" />
+              Conectar Integrações
             </Button>
-            <p className="font-mono text-[11px] text-muted-foreground/50 mt-2">
-              A IA conduz você pelo restante do processo — leva ~8 minutos
-            </p>
+            <button
+              onClick={handleLaunch}
+              className="font-mono text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors uppercase tracking-widest underline underline-offset-2"
+            >
+              Pular por agora e ir para a campanha
+            </button>
           </div>
         </div>
       </div>

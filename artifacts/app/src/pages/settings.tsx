@@ -846,7 +846,15 @@ function IntegracaoTab() {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Settings() {
-  const [tab, setTab] = useState<Tab>("perfil");
+  const initialTab = (): Tab => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab") as Tab | null;
+      if (t && TABS.some((x) => x.id === t)) return t;
+    } catch { /* ignore */ }
+    return "perfil";
+  };
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
