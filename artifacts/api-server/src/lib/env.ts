@@ -19,6 +19,11 @@ export const env = {
   ALLOWED_ORIGINS: process.env["ALLOWED_ORIGINS"] ?? "",
   // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
   LAUNCH_CAMPAIGN_DATE: process.env["LAUNCH_CAMPAIGN_DATE"] ?? "",
+  // Simulator / lead funnel config
+  SIMULATOR_CART_OPEN: process.env["SIMULATOR_CART_OPEN"] === "true",
+  SIMULATOR_CHECKOUT_URL: process.env["SIMULATOR_CHECKOUT_URL"] ?? "",
+  SIMULATOR_WHATSAPP_URL: process.env["SIMULATOR_WHATSAPP_URL"] ?? "",
+  SIMULATOR_TELEGRAM_URL: process.env["SIMULATOR_TELEGRAM_URL"] ?? "",
 } as const;
 
 // ─── Production guard ──────────────────────────────────────────────────────────

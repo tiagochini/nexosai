@@ -2,10 +2,41 @@ import { useState, useEffect, useRef } from "react";
 import {
   ArrowRight, Loader2, CheckCircle2, Heart, MessageCircle,
   Send, Bookmark, Music2, ThumbsUp, Share2, Mail, MoreHorizontal,
-  ChevronRight, Instagram, Zap, Target, TrendingUp, Users,
-  Play, Shield, Clock, Layers,
+  ChevronRight, Zap, TrendingUp, Users,
+  Play, Shield, Clock, Layers, MessageSquare, ShoppingCart, ExternalLink,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+
+interface SimulatorConfig {
+  cartOpen: boolean;
+  checkoutUrl: string | null;
+  whatsappUrl: string | null;
+  telegramUrl: string | null;
+}
+
+async function fetchSimulatorConfig(): Promise<SimulatorConfig> {
+  try {
+    const res = await fetch("/api/simulator/config");
+    if (!res.ok) throw new Error("config fetch failed");
+    return await res.json() as SimulatorConfig;
+  } catch {
+    return { cartOpen: false, checkoutUrl: null, whatsappUrl: null, telegramUrl: null };
+  }
+}
+
+async function postSimulatorLead(lead: LeadData): Promise<void> {
+  try {
+    await fetch("/api/simulator/lead", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lead),
+    });
+  } catch {
+    // Never break the UX over a save failure
+  }
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -547,12 +578,24 @@ function DayRevealStep({ lead, onFinish }: { lead: LeadData; onFinish: () => voi
 // ── Summary + CTA Step ─────────────────────────────────────────────────────────
 
 function SummaryStep({ lead }: { lead: LeadData }) {
+  const [config, setConfig] = useState<SimulatorConfig | null>(null);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+
+  useEffect(() => {
+    fetchSimulatorConfig().then(c => { setConfig(c); setLoadingConfig(false); });
+  }, []);
+
   const totalReach = DAY_CONFIGS.reduce((s, d) => s + d.reachEstimate, 0);
   const totalLeads = DAY_CONFIGS.reduce((s, d) => s + d.leadsEstimate, 0);
   const totalPieces = 21;
   const manualHours = 23;
-
   const signupUrl = `/app/register?ref=sim&nome=${encodeURIComponent(lead.firstName)}&email=${encodeURIComponent(lead.email)}&produto=${encodeURIComponent(lead.productName)}&tipo=${lead.productType}`;
+
+  const cartOpen = config?.cartOpen ?? false;
+  const checkoutUrl = config?.checkoutUrl ?? signupUrl;
+  const whatsappUrl = config?.whatsappUrl ?? null;
+  const telegramUrl = config?.telegramUrl ?? null;
+  const hasGroup = whatsappUrl || telegramUrl;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -630,22 +673,97 @@ function SummaryStep({ lead }: { lead: LeadData }) {
           <p className="font-mono text-[11px] text-primary font-bold">Tudo isso acontece dentro da NexOS AI, automaticamente.</p>
         </div>
 
-        {/* CTA */}
-        <div className="space-y-3">
-          <a href={signupUrl} className="block w-full">
-            <button className="w-full h-16 font-mono uppercase tracking-widest text-base font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
-              style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(261,80%,60%) 100%)", color: "white", borderRadius: 4 }}>
-              <Zap className="h-5 w-5" />
-              Quero lançar {lead.productName} de verdade
-              <ArrowRight className="h-5 w-5" />
-            </button>
-          </a>
-          <div className="flex items-center justify-center gap-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
-            <span className="flex items-center gap-1"><Shield className="h-3 w-3" />Sem cartão agora</span>
-            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Começa em minutos</span>
-            <span className="flex items-center gap-1"><Layers className="h-3 w-3" />Campanha já iniciada</span>
+        {/* ── CTA block — cart-aware ── */}
+        {loadingConfig ? (
+          <div className="h-16 border border-border/30 bg-muted/10 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 text-primary animate-spin" />
           </div>
-        </div>
+        ) : cartOpen ? (
+          /* CART OPEN: buy now */
+          <div className="space-y-3">
+            <div className="border border-success/40 bg-success/5 px-4 py-2 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
+              <span className="font-mono text-[11px] text-success font-bold uppercase tracking-widest">Carrinho aberto agora</span>
+            </div>
+            <a href={checkoutUrl} className="block w-full" target="_blank" rel="noopener noreferrer">
+              <button className="w-full h-16 font-mono uppercase tracking-widest text-base font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, hsl(142,76%,36%) 0%, hsl(142,70%,45%) 100%)", color: "white", borderRadius: 4 }}>
+                <ShoppingCart className="h-5 w-5" />
+                Garantir minha vaga — {lead.productName}
+                <ExternalLink className="h-4 w-4" />
+              </button>
+            </a>
+            <div className="flex items-center justify-center gap-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
+              <span className="flex items-center gap-1"><Shield className="h-3 w-3" />Pagamento seguro</span>
+              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Acesso imediato</span>
+              <span className="flex items-center gap-1"><Layers className="h-3 w-3" />Campanha já criada</span>
+            </div>
+            {hasGroup && (
+              <div className="pt-2 space-y-2">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 text-center">Ou fique por dentro antes de decidir</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {whatsappUrl && (
+                    <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                      className="border border-green-500/30 bg-green-500/5 hover:bg-green-500/10 text-green-400 font-mono text-[11px] font-bold uppercase tracking-widest h-10 flex items-center justify-center gap-2 transition-all">
+                      <MessageSquare className="h-3.5 w-3.5" />WhatsApp
+                    </a>
+                  )}
+                  {telegramUrl && (
+                    <a href={telegramUrl} target="_blank" rel="noopener noreferrer"
+                      className="border border-blue-400/30 bg-blue-400/5 hover:bg-blue-400/10 text-blue-400 font-mono text-[11px] font-bold uppercase tracking-widest h-10 flex items-center justify-center gap-2 transition-all">
+                      <Send className="h-3.5 w-3.5" />Telegram
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* CART CLOSED: join group or get notified */
+          <div className="space-y-3">
+            <div className="border border-yellow-400/30 bg-yellow-400/5 px-4 py-3">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Carrinho ainda não aberto</div>
+              <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+                O {lead.productName} ainda não está disponível para venda. Entre no grupo VIP para ser avisado na hora exata da abertura — com acesso antecipado e condições exclusivas.
+              </p>
+            </div>
+            {hasGroup ? (
+              <div className="space-y-2">
+                {whatsappUrl && (
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
+                    <button className="w-full h-14 font-mono uppercase tracking-widest text-sm font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
+                      style={{ background: "linear-gradient(135deg, #128c7e 0%, #25d366 100%)", color: "white", borderRadius: 4 }}>
+                      <MessageSquare className="h-5 w-5" />
+                      Entrar no grupo VIP — WhatsApp
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </a>
+                )}
+                {telegramUrl && (
+                  <a href={telegramUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
+                    <button className="w-full h-12 font-mono uppercase tracking-widest text-sm font-bold flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98] border border-blue-400/50 bg-blue-400/10 text-blue-400">
+                      <Send className="h-4 w-4" />
+                      Entrar no Telegram
+                    </button>
+                  </a>
+                )}
+              </div>
+            ) : (
+              <a href={signupUrl} className="block w-full">
+                <button className="w-full h-14 font-mono uppercase tracking-widest text-sm font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(261,80%,60%) 100%)", color: "white", borderRadius: 4 }}>
+                  <Zap className="h-5 w-5" />
+                  Criar conta e ser avisado na abertura
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </a>
+            )}
+            <div className="flex items-center justify-center gap-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
+              <span className="flex items-center gap-1"><Shield className="h-3 w-3" />Sem spam</span>
+              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />Acesso antecipado</span>
+            </div>
+          </div>
+        )}
 
         {/* Footer nudge */}
         <div className="border border-border/30 bg-muted/5 px-4 py-3 flex items-center gap-3">
@@ -684,6 +802,8 @@ function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
   const submit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
+    // Save to backend (fire-and-forget — never blocks the UX)
+    void postSimulatorLead(form);
     // Save to localStorage for app pre-fill
     localStorage.setItem("nexos_simulator_data", JSON.stringify({
       ...form,

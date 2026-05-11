@@ -105,14 +105,21 @@ function HeroSection() {
             <strong className="text-foreground">Tudo executado por IA enquanto você foca no que só você pode fazer.</strong>
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <a href="#oferta">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-base h-16 px-10 gap-3">
-                QUERO ENTENDER COMO FUNCIONA <ArrowRight className="h-5 w-5" />
-              </Button>
-            </a>
-            <div className="flex items-center gap-3 font-mono text-sm text-muted-foreground/50">
-              <Lock className="h-4 w-4" />
+          <div className="flex flex-col gap-4 items-start">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a href="/landing/simulador">
+                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-base h-16 px-10 gap-3">
+                  <Zap className="h-5 w-5" />SIMULAR MEU LANÇAMENTO
+                </Button>
+              </a>
+              <a href="#oferta">
+                <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-base h-16 px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60">
+                  VER O INVESTIMENTO <ArrowRight className="h-4 w-4" />
+                </Button>
+              </a>
+            </div>
+            <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground/40">
+              <Lock className="h-3.5 w-3.5" />
               Acesso por lista — carrinho abre em data única
             </div>
           </div>
