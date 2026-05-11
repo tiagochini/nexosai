@@ -87,6 +87,21 @@ Launch tracks by revenue target:
 - Payment integration is NEVER a blocker for campaign execution
 - Multilingual: PT-BR first, EN-US and ES-LA modular
 
+## AI Integration Status (Post-session)
+
+- **Replit AI Integrations active**: All 3 provisioned — Anthropic, OpenAI, Gemini via `AI_INTEGRATIONS_*` env vars.
+- **ai-gateway.service.ts updated**:
+  - `getAnthropic()`: uses `AI_INTEGRATIONS_ANTHROPIC_*` when no native key → model auto-switches to `claude-sonnet-4-6`
+  - `getOpenAI()`: uses `AI_INTEGRATIONS_OPENAI_*` when no native key → model auto-switches to `gpt-5.4` with `max_completion_tokens` (not `max_tokens`)
+  - `getGemini()`: uses `AI_INTEGRATIONS_GEMINI_API_KEY` when no native key → model `gemini-3-flash-preview`. Falls back to Anthropic integration when no Gemini access.
+  - All fallback chains: Anthropic → OpenAI integration → Anthropic integration → error
+- **env.ts**: Added `AI_INTEGRATIONS_OPENAI_BASE_URL`, `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_GEMINI_BASE_URL`, `AI_INTEGRATIONS_GEMINI_API_KEY`
+
+## Social Auto-Post Status (Post-session)
+
+- **`social.autopost.service.ts`**: Fire-and-forget post to Instagram/Facebook on content approval. Triggered from `content.routes.ts` after `approveCampaignContent()`. Maps content piece types to platforms, looks up connected workspace integrations, calls `publishToInstagram`/`publishToFacebook`, logs results to `social_posts` table.
+- **Content approval pipeline**: `POST /campaigns/:campaignId/content/:pieceId/approve` now triggers both memory save AND social auto-post (both fire-and-forget, never block HTTP response).
+
 ## Frontend Status (Post-session)
 
 - **Socket.io real-time**: `artifacts/app/src/lib/socket.ts` — singleton `useCampaignSocket(campaignId, onEvent, enabled)` hook. Connects to `/api/socket.io`, auth via JWT from localStorage, joins `campaign:{id}` room, listens for `campaign:event`. Auto-scrolling live feed injected in Campaign Detail → Agentes tab (only visible when campaign is in active statuses).
@@ -98,6 +113,7 @@ Launch tracks by revenue target:
 - **Content Approval page**: `artifacts/app/src/pages/campaigns/content.tsx` — route `/campaigns/:id/content` (before `/:id` to avoid conflict). 3 tabs: Por Plataforma, Cronograma, Segmentação. Approve/reject/edit/AI-rewrite per piece. Campaign detail links here when status=`awaiting_approval`.
 - **Affiliate page**: `artifacts/app/src/pages/affiliate/index.tsx` — `/affiliate`. Join flow + active dashboard with referral link, KPI stats, 52-week teaser.
 - **Revenue page**: `artifacts/app/src/pages/revenue/index.tsx` — Evolução chart tab with recharts AreaChart/BarChart, period selector (7d/30d/90d/all), cumulative chart, CSV export. WeeklyReportCard with health score + AI insight.
+- **Dashboard Integration Health Panel**: `IntegrationHealthPanel` component in `dashboard.tsx` — shows WhatsApp/Instagram/Facebook/RD Station connection status. Displays "Full Auto" badge (green) when all connected, yellow warning with count + "Conectar" CTA when missing integrations. Fetches from `GET /api/workspaces/me/integrations`, cached 60s.
 
 ## Backend Status (Post-session)
 
@@ -124,7 +140,7 @@ Launch tracks by revenue target:
 - `runProfileBuilderAgent(campaignId, workspaceId, intakeData, campaignType, log)` — 5 required args
 - `runAgent(opts)` requires `messages: AIMessage[]` (not `userMessage`) + `campaignId?` (optional) + `workspaceId`
 - `runAgent` `campaignId` is `string | null | undefined` — pass `null` for sequence-level agents (no `campaign_agents` row inserted, no UUID FK violation)
-- Replit AI integration model: `claude-opus-4-5` (NOT `claude-sonnet-4-6` or `claude-3-5-haiku-20241022` — those are unsupported/deprecated). Test with a tiny call before assuming a model works.
+- Replit AI integrations: Anthropic uses `claude-sonnet-4-6`, OpenAI uses `gpt-5.4` (requires `max_completion_tokens` NOT `max_tokens`), Gemini uses `gemini-3-flash-preview`. All 3 are provisioned via `AI_INTEGRATIONS_*` env vars. When native keys are present they take precedence. `callOpenAI()` auto-detects gpt-5.x models and switches the token param.
 - `parseAgentJSON` handles truncated LLM responses: tries code block extraction (with or without closing ```), then raw `{...}` extraction, then `repairTruncatedJson` (auto-closes unclosed braces/brackets). Always safe to call.
 - LLM responses at 4096 max_tokens are often truncated mid-JSON for large outputs. Keep prompts compact and limit items in sequence builder to ≤20 to stay within token budget.
 - Sequence contacts route: `POST /launch-sequences/:id/contacts` (NOT `/contacts/bulk`)

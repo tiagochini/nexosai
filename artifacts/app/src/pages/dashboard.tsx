@@ -20,7 +20,8 @@ import {
   ArrowRight, CheckCircle2, Play, Zap, AlertTriangle,
   DollarSign, Activity, TrendingUp, Target, Users,
   BarChart3, Calendar, Loader2, Star, Mail, ChevronDown, ChevronUp,
-  FileText, Layers, Eye, BarChart2,
+  FileText, Layers, Eye, BarChart2, Link2, Wifi, WifiOff,
+  MessageSquare, Instagram, Facebook, Phone,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -278,6 +279,87 @@ function PipelineProgress({ status }: { status: string }) {
           {STATUS_LABEL[status] ?? status}
         </span>
       </div>
+    </div>
+  );
+}
+
+// ─── Integration Health Panel ─────────────────────────────────────────────────
+
+interface IntegrationStatus {
+  provider: string;
+  status: string;
+}
+
+const CRITICAL_INTEGRATIONS = [
+  { provider: "whatsapp_business", label: "WhatsApp", icon: MessageSquare, color: "text-green-400" },
+  { provider: "instagram",         label: "Instagram", icon: Instagram,     color: "text-pink-400"  },
+  { provider: "facebook",          label: "Facebook",  icon: Facebook,      color: "text-blue-400"  },
+  { provider: "rd_station",        label: "RD Station", icon: Mail,         color: "text-orange-400" },
+];
+
+function IntegrationHealthPanel() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/workspaces/me/integrations"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/workspaces/me/integrations");
+      if (!res.ok) return { integrations: [] as IntegrationStatus[] };
+      return res.json() as Promise<{ integrations: IntegrationStatus[] }>;
+    },
+    staleTime: 60_000,
+  });
+
+  const integrations = data?.integrations ?? [];
+  const connected = integrations.filter(i => i.status === "connected").map(i => i.provider);
+  const connectedCount = CRITICAL_INTEGRATIONS.filter(i => connected.includes(i.provider)).length;
+  const isFullAuto = connectedCount === CRITICAL_INTEGRATIONS.length;
+  const missingCount = CRITICAL_INTEGRATIONS.length - connectedCount;
+
+  if (isLoading) return null;
+
+  return (
+    <div className={`border flex items-center gap-3 px-4 py-3 transition-colors ${
+      isFullAuto
+        ? "border-success/30 bg-success/5"
+        : missingCount > 2
+          ? "border-yellow-400/20 bg-yellow-400/5"
+          : "border-border/40 bg-card/30"
+    }`}>
+      {/* Status badge */}
+      <div className={`flex items-center gap-1.5 shrink-0 ${isFullAuto ? "text-success" : "text-yellow-400"}`}>
+        {isFullAuto
+          ? <Wifi className="h-3.5 w-3.5" />
+          : <WifiOff className="h-3.5 w-3.5" />}
+        <span className="font-mono text-[11px] uppercase tracking-widest font-bold">
+          {isFullAuto ? "Full Auto" : `${connectedCount}/${CRITICAL_INTEGRATIONS.length} conectadas`}
+        </span>
+      </div>
+
+      <div className="w-px h-4 bg-border/40 shrink-0" />
+
+      {/* Integration icons */}
+      <div className="flex items-center gap-2 flex-1 flex-wrap">
+        {CRITICAL_INTEGRATIONS.map(({ provider, label, icon: Icon, color }) => {
+          const isConn = connected.includes(provider);
+          return (
+            <div key={provider} className={`flex items-center gap-1 ${isConn ? color : "text-muted-foreground/30"}`}>
+              <Icon className="h-3 w-3" />
+              <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">{label}</span>
+              {isConn && <span className="font-mono text-[10px] text-success">✓</span>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CTA if missing */}
+      {!isFullAuto && (
+        <Link href="/configuracoes?tab=integracoes" className="shrink-0">
+          <Button size="sm" variant="outline"
+            className="rounded-none font-mono text-[10px] uppercase tracking-widest h-6 px-2 border-primary/30 text-primary hover:bg-primary/10 gap-1">
+            <Link2 className="h-2.5 w-2.5" />
+            Conectar
+          </Button>
+        </Link>
+      )}
     </div>
   );
 }
@@ -633,6 +715,9 @@ export default function Dashboard() {
           onToggle={() => setExpandedKpi(expandedKpi === "campaigns" ? null : "campaigns")}
         />
       </div>
+
+      {/* ── Integration Health / Full Auto Status ── */}
+      <IntegrationHealthPanel />
 
       {/* ── Execution Flowchart ── */}
       {campaigns.length > 0 && <ExecutionFlowchart campaigns={campaigns} />}

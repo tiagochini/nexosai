@@ -13,6 +13,7 @@ import {
   optimizeCampaign,
 } from "./content.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
+import { autoPostApprovedContent } from "../social/social.autopost.service.js";
 import { ContentTypeSchema } from "@workspace/db";
 
 const router = Router();
@@ -100,7 +101,7 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
       req.auth.workspaceId,
       pieceId,
     );
-    // Fire-and-forget memory save — never blocks response
+    // Fire-and-forget: memory save + social auto-post — never blocks response
     processContentPieceApproval(
       req.auth.workspaceId,
       campaignId,
@@ -108,6 +109,7 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
       piece.type ?? "copywriter",
       true,
     ).catch(() => undefined);
+    autoPostApprovedContent(req.auth.workspaceId, campaignId, pieceId).catch(() => undefined);
     res.json({ message: "Content piece approved", piece });
   } catch (err) {
     if (err instanceof AppError) {

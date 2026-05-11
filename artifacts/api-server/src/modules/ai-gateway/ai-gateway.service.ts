@@ -28,26 +28,39 @@ export type AgentRole =
   | "affiliate_campaign"
   | "launch_manager";
 
+// ─── Model selection ──────────────────────────────────────────────────────────
+// Integration path (no native key): use Replit-provisioned models
+// Native key path: keep provider-original names for backward compat
+
+const ANTHROPIC_NATIVE_MODEL = "claude-3-5-sonnet-20241022";
+const ANTHROPIC_INTEGRATION_MODEL = "claude-sonnet-4-6";
+
+const OPENAI_NATIVE_MODEL = "gpt-4o";
+const OPENAI_INTEGRATION_MODEL = "gpt-5.4";
+
+const GEMINI_NATIVE_MODEL = "gemini-1.5-pro";
+const GEMINI_FLASH_NATIVE = "gemini-1.5-flash";
+
 const AGENT_PROVIDER_MAP: Record<
   AgentRole,
   { provider: "anthropic" | "openai" | "gemini"; model: string }
 > = {
-  command: { provider: "anthropic", model: "claude-3-5-sonnet-20241022" },
-  strategy: { provider: "anthropic", model: "claude-3-5-sonnet-20241022" },
-  launch_manager: { provider: "anthropic", model: "claude-3-5-sonnet-20241022" },
-  offer: { provider: "anthropic", model: "claude-3-5-sonnet-20241022" },
-  compliance: { provider: "anthropic", model: "claude-3-5-sonnet-20241022" },
-  product_builder: { provider: "anthropic", model: "claude-3-5-sonnet-20241022" },
-  copywriter: { provider: "openai", model: "gpt-4o" },
-  creative_director: { provider: "openai", model: "gpt-4o" },
-  media_buyer: { provider: "openai", model: "gpt-4o" },
-  targeting: { provider: "openai", model: "gpt-4o" },
-  landing_page: { provider: "openai", model: "gpt-4o" },
-  affiliate_campaign: { provider: "openai", model: "gpt-4o" },
-  analytics: { provider: "gemini", model: "gemini-1.5-pro" },
-  optimization: { provider: "gemini", model: "gemini-1.5-pro" },
-  video: { provider: "gemini", model: "gemini-1.5-pro" },
-  creator_growth: { provider: "gemini", model: "gemini-1.5-flash" },
+  command:           { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  strategy:          { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  launch_manager:    { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  offer:             { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  compliance:        { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  product_builder:   { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  copywriter:        { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  creative_director: { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  media_buyer:       { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  targeting:         { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  landing_page:      { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  affiliate_campaign:{ provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  analytics:         { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  optimization:      { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  video:             { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  creator_growth:    { provider: "gemini",    model: GEMINI_FLASH_NATIVE },
 };
 
 export interface AIMessage {
@@ -69,27 +82,27 @@ let anthropicClient: Anthropic | null = null;
 let openaiClient: OpenAI | null = null;
 let geminiClient: GoogleGenerativeAI | null = null;
 
-// ─── Integration key fallback ─────────────────────────────────────────────────
-// When native provider keys are absent, route everything through the
-// Replit-managed Anthropic proxy (claude-sonnet-4-6 as universal fallback).
+// ─── Integration helpers ──────────────────────────────────────────────────────
 
-const INTEGRATION_ANTHROPIC_MODEL = "claude-opus-4-5";
-
-function hasIntegrationKey(): boolean {
+function hasAnthropicIntegration(): boolean {
   return !!(env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL && env.AI_INTEGRATIONS_ANTHROPIC_API_KEY);
+}
+
+function hasOpenAIIntegration(): boolean {
+  return !!(env.AI_INTEGRATIONS_OPENAI_BASE_URL && env.AI_INTEGRATIONS_OPENAI_API_KEY);
 }
 
 function getAnthropic(): Anthropic {
   if (!anthropicClient) {
     if (env.ANTHROPIC_API_KEY) {
       anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-    } else if (hasIntegrationKey()) {
+    } else if (hasAnthropicIntegration()) {
       anthropicClient = new Anthropic({
         apiKey: env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
         baseURL: env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
       });
     } else {
-      anthropicClient = new Anthropic({ apiKey: "" });
+      anthropicClient = new Anthropic({ apiKey: "missing" });
     }
   }
   return anthropicClient;
@@ -97,14 +110,30 @@ function getAnthropic(): Anthropic {
 
 function getOpenAI(): OpenAI {
   if (!openaiClient) {
-    openaiClient = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    if (env.OPENAI_API_KEY) {
+      openaiClient = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    } else if (hasOpenAIIntegration()) {
+      openaiClient = new OpenAI({
+        apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      });
+    } else {
+      openaiClient = new OpenAI({ apiKey: "missing" });
+    }
   }
   return openaiClient;
 }
 
 function getGemini(): GoogleGenerativeAI {
   if (!geminiClient) {
-    geminiClient = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+    if (env.GEMINI_API_KEY) {
+      geminiClient = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+    } else if (env.AI_INTEGRATIONS_GEMINI_API_KEY) {
+      // Use integration API key with default endpoint (proxy handles routing)
+      geminiClient = new GoogleGenerativeAI(env.AI_INTEGRATIONS_GEMINI_API_KEY);
+    } else {
+      geminiClient = new GoogleGenerativeAI("missing");
+    }
   }
   return geminiClient;
 }
@@ -113,11 +142,11 @@ async function callAnthropic(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
-  maxTokens = 4096,
+  maxTokens = 8192,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
   const client = getAnthropic();
-  // Use integration model when falling back to integration proxy
-  const effectiveModel = env.ANTHROPIC_API_KEY ? model : INTEGRATION_ANTHROPIC_MODEL;
+  // Use integration-compatible model when using integration proxy
+  const effectiveModel = env.ANTHROPIC_API_KEY ? model : ANTHROPIC_INTEGRATION_MODEL;
   const response = await client.messages.create({
     model: effectiveModel,
     max_tokens: maxTokens,
@@ -140,19 +169,31 @@ async function callOpenAI(
   systemPrompt: string,
   messages: AIMessage[],
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
-  // Fall back to Anthropic integration when OpenAI key is absent
-  if (!env.OPENAI_API_KEY && hasIntegrationKey()) {
-    return callAnthropic(INTEGRATION_ANTHROPIC_MODEL, systemPrompt, messages);
+  const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
+
+  // If no OpenAI access at all, fall back to Anthropic integration
+  if (!env.OPENAI_API_KEY && !hasOpenAIIntegration()) {
+    if (hasAnthropicIntegration()) {
+      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages);
+    }
   }
 
   const client = getOpenAI();
+  const effectiveModel = usingIntegration ? OPENAI_INTEGRATION_MODEL : model;
+
+  // gpt-5.x family uses max_completion_tokens; older models use max_tokens
+  const isGpt5 = effectiveModel.startsWith("gpt-5") || effectiveModel.startsWith("o4") || effectiveModel.startsWith("o3");
+  const completionParams = isGpt5
+    ? { max_completion_tokens: 8192 }
+    : { max_tokens: 4096 };
+
   const response = await client.chat.completions.create({
-    model,
+    model: effectiveModel,
     messages: [
       { role: "system", content: systemPrompt },
       ...messages.map((m) => ({ role: m.role, content: m.content })),
     ],
-    max_tokens: 4096,
+    ...completionParams,
   });
 
   return {
@@ -167,14 +208,17 @@ async function callGemini(
   systemPrompt: string,
   messages: AIMessage[],
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
-  // Fall back to Anthropic integration when Gemini key is absent
-  if (!env.GEMINI_API_KEY && hasIntegrationKey()) {
-    return callAnthropic(INTEGRATION_ANTHROPIC_MODEL, systemPrompt, messages);
+  const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
+
+  // No Gemini access: fall back to Anthropic (already handles integration)
+  if (!hasGeminiAccess) {
+    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages);
   }
 
   const client = getGemini();
+  const effectiveModel = env.GEMINI_API_KEY ? model : "gemini-3-flash-preview";
   const geminiModel = client.getGenerativeModel({
-    model,
+    model: effectiveModel,
     systemInstruction: systemPrompt,
   });
 
