@@ -162,6 +162,9 @@ export async function runLaunchManagerAgent(
         content: `Construa o plano de lançamento completo com base nos dados abaixo.
 
 **Track:** ${track}
+**Data de início do planejamento:** ${new Date().toLocaleDateString("pt-BR", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/Sao_Paulo" })} — o Dia 1 do lançamento DEVE ser igual ou posterior a esta data.
+
+⚠️ ATENÇÃO CRÍTICA: Todas as datas que você sugerir (início de fases, datas de abertura de carrinho, datas de fechamento) DEVEM ser no futuro — nunca em 2024 ou em meses passados de 2025 ou anteriores. O sistema registrará automaticamente datas passadas como erro.
 
 **Dados de Intake:**
 \`\`\`json
@@ -173,7 +176,7 @@ ${JSON.stringify(intakeData, null, 2)}
 ${JSON.stringify(strategy, null, 2)}
 \`\`\`
 
-Retorne APENAS o JSON do plano de lançamento. Seja operacionalmente preciso — cada fase, cada dia, cada KPI.`,
+Retorne APENAS o JSON do plano de lançamento. Seja operacionalmente preciso — cada fase, cada dia, cada KPI. O plano deve iniciar a partir de hoje.`,
       },
     ],
     log,

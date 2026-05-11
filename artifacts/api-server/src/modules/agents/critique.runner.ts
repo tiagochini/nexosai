@@ -27,6 +27,19 @@ export interface CritiqueResult {
 // Turn 3: Refine incorporating critique
 // Cost: ~2.2x tokens of a single call — only applied to high-stakes agents
 
+function buildTemporalBlock(): string {
+  const now = new Date();
+  const isoDate = now.toISOString().split("T")[0]!;
+  const dateStr = now.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "America/Sao_Paulo",
+  });
+  return `## CONTEXTO TEMPORAL OBRIGATÓRIO\n\n**Data de hoje:** ${dateStr} (${isoDate})\n\n> REGRA CRÍTICA: Todas as datas sugeridas DEVEM ser iguais ou posteriores a ${isoDate}. NUNCA sugira datas passadas.\n\n---\n\n`;
+}
+
 export async function runAgentWithCritique(opts: {
   campaignId: string;
   workspaceId: string;
@@ -36,6 +49,9 @@ export async function runAgentWithCritique(opts: {
   log: Logger;
 }): Promise<CritiqueResult> {
   const { campaignId, workspaceId, agentRole, systemPrompt, userMessage, log } = opts;
+
+  // Always inject current date so the critique loop never references past dates
+  const enrichedSystemPrompt = buildTemporalBlock() + systemPrompt;
 
   const checklist = AGENT_CRITIQUE_CHECKLIST[agentRole] ?? [];
   const checklistText = checklist.map((q, i) => `${i + 1}. ${q}`).join("\n");
@@ -48,7 +64,7 @@ export async function runAgentWithCritique(opts: {
 
   const turn1Messages: AIMessage[] = [{ role: "user", content: userMessage }];
 
-  const turn1 = await completeWithAgent(agentRole, systemPrompt, turn1Messages, workspaceId, log, campaignId);
+  const turn1 = await completeWithAgent(agentRole, enrichedSystemPrompt, turn1Messages, workspaceId, log, campaignId);
   totalCredits += turn1.creditsCharged;
   totalTokens += turn1.inputTokens + turn1.outputTokens;
 
@@ -134,7 +150,7 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
     { role: "user", content: refineMessage },
   ];
 
-  const turn3 = await completeWithAgent(agentRole, systemPrompt, turn3Messages, workspaceId, log, campaignId);
+  const turn3 = await completeWithAgent(agentRole, enrichedSystemPrompt, turn3Messages, workspaceId, log, campaignId);
   totalCredits += turn3.creditsCharged;
   totalTokens += turn3.inputTokens + turn3.outputTokens;
 

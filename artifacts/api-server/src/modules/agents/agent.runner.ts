@@ -50,6 +50,29 @@ const CHECKPOINT_TYPE_MAP: Record<string, string> = {
   budget_approval: "budget_approval",
 };
 
+/** Returns a temporal context block that is prepended to every agent system prompt. */
+function buildTemporalContextBlock(): string {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "America/Sao_Paulo",
+  });
+  const isoDate = now.toISOString().split("T")[0]; // YYYY-MM-DD
+  return `## CONTEXTO TEMPORAL OBRIGATÓRIO
+
+**Data de hoje:** ${dateStr} (${isoDate})
+**Fuso horário de referência:** America/Sao_Paulo (BRT/BRST)
+
+> REGRA CRÍTICA: Todas as datas, cronogramas, timelines e planos de lançamento que você gerar DEVEM ser iguais ou posteriores a ${isoDate}. NUNCA sugira datas passadas. Se precisar de uma data de início, use a data de hoje como Dia 1.
+
+---
+
+`;
+}
+
 export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const {
     campaignId,
@@ -62,6 +85,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     checkpointType,
     thinkingMessages = [],
   } = opts;
+
+  // Always inject current date so agents never suggest past dates
+  const enrichedSystemPrompt = buildTemporalContextBlock() + systemPrompt;
 
   const [ws] = await db
     .select({ creditsBalance: workspacesTable.creditsBalance })
@@ -117,7 +143,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   try {
     const result = await completeWithAgent(
       agentRole,
-      systemPrompt,
+      enrichedSystemPrompt,
       messages,
       workspaceId,
       log,
