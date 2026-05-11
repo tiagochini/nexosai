@@ -1,14 +1,23 @@
 import { db, plansTable } from "./index.js";
 import { sql } from "drizzle-orm";
 
-// ── Credit calibration (updated to match actual AI costs) ────────────────────
-// Full lifecycle per campaign: strategy(45) + content(145-161) + sequence(37)
-//   + monitoring/WhatsApp (75-190 depending on volume)
-// Typical launch campaign: ~420 credits
-// Light campaign (no traffic): ~290 credits
+// ── Credit forcing logic ───────────────────────────────────────────────────────
+// Typical launch campaign = 420 credits.
+// Plan credits are calibrated to cover exactly 2 typical launches, so the
+// 3rd campaign (which is within the plan's campaign limit) always requires
+// a credit pack purchase. This is the core upsell forcing mechanism.
 //
-// Solo (3 campaigns): 3 × 420 = 1260 typical → 2000 gives ~37% buffer
-// Agency (10 campaigns): 10 × 420 = 4200 typical → 6500 gives ~55% buffer
+// Solo  (3 campaigns): 900 cr → 900/420 = 2.1 launches included
+//   → campaign 3 = mandatory pack purchase
+//   → heavy user (630 cr/launch): campaign 2 already needs a pack
+//
+// Agency (10 campaigns): 2000 cr → 2000/420 = 4.8 launches included
+//   → campaigns 5-10 = mandatory pack purchases (up to 6 pack purchases/mo)
+//   → heavy user (630 cr/launch): campaigns 4-10 all need packs
+//
+// Packs are presented POST-ONBOARDING after the client sees their first results.
+// Onboarding allocation: 900 cr (Solo) / 2000 cr (Agency) — sufficient for
+// the client to complete 2 full launches before hitting the wall.
 
 const plans = [
   {
@@ -16,7 +25,7 @@ const plans = [
     slug: "solo" as const,
     priceMonthly: "297.00",
     priceOnboarding: "2500.00",
-    creditsMonthly: 2000,
+    creditsMonthly: 900,
     maxCampaigns: 3,
     maxVideosPerCampaign: 5,
     maxDomains: 1,
@@ -31,7 +40,7 @@ const plans = [
       "Sequência de lançamento PLF automatizada",
       "Landing page gerada por IA",
       "Análise de campanhas com IA",
-      "2.000 créditos mensais (~4-5 campanhas completas)",
+      "900 créditos mensais (~2 lançamentos completos)",
       "Até 5 vídeos por campanha",
     ],
   },
@@ -40,7 +49,7 @@ const plans = [
     slug: "agency" as const,
     priceMonthly: "1497.00",
     priceOnboarding: "2500.00",
-    creditsMonthly: 6500,
+    creditsMonthly: 2000,
     maxCampaigns: 10,
     maxVideosPerCampaign: 5,
     maxDomains: 10,
@@ -54,7 +63,7 @@ const plans = [
       "White-label 'Desenvolvido com NexOS'",
       "Dashboard multi-cliente",
       "Todos os módulos de IA incluindo Creator Engine",
-      "6.500 créditos mensais (~14-15 campanhas completas)",
+      "2.000 créditos mensais (~4-5 lançamentos completos)",
       "Até 5 vídeos por campanha",
       "Suporte prioritário",
     ],
@@ -79,7 +88,7 @@ async function seed() {
           multiNurturingChannels: sql`excluded.multi_nurturing_channels`,
         },
       });
-    console.log(`  ✓ Plan '${plan.name}' seeded`);
+    console.log(`  ✓ Plan '${plan.name}' seeded (${plan.creditsMonthly} cr/mo)`);
   }
   console.log("Plans seeded successfully.");
   process.exit(0);

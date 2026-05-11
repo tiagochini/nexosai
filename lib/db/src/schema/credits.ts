@@ -70,10 +70,10 @@ export type CreditTransaction = typeof creditTransactionsTable.$inferSelect;
 // token usage × CREDIT_MARGIN_MULTIPLIER — these flat values are for auxiliary
 // actions or legacy references only.
 //
-// Calibration basis (1 credit ≈ R$0.002 | CREDITS_PER_USD=100 | margin=1.5×):
-//   anthropic/claude-3-5-sonnet:  input $3/M,  output $15/M
-//   openai/gpt-4o:                input $2.5/M, output $10/M
-//   gemini/gemini-1.5-pro:        input $1.25/M, output $5/M
+// Calibration basis (1 credit ≈ R$0.002 real AI cost | margin=1.5×):
+//   CREDITS_PER_USD=100 → face: $0.01/credit → actual AI cost: $0.0067/credit
+//   At R$5/USD: actual AI cost ≈ R$0.033/credit
+//   Pack sell price: R$0.17/credit → gross margin ≈ 81%
 //
 // Critique-loop agents (copywriter, ad_copy, landing_page, compliance) run 3 AI
 // turns each, which triples their effective credit cost vs. single-turn agents.
@@ -85,7 +85,6 @@ export const CREDIT_COSTS: Record<string, number> = {
   creative_brief: 10,           // creative_director: ~3k in + 3.5k out → $0.063 → ~10 cr
 
   // ── Content phase agents (openai/gpt-4o) ─────────────────────────────────
-  // Single-turn agents
   copy_generation: 30,          // copywriter WITH critique (3 turns): ~$0.190 → ~29 cr
   landing_page_generation: 28,  // landing_page WITH critique (3 turns): ~$0.175 → ~27 cr
   ad_creation: 24,              // ad_copy WITH critique (3 turns): ~$0.155 → ~24 cr
@@ -93,7 +92,6 @@ export const CREDIT_COSTS: Record<string, number> = {
 
   // ── Compliance (anthropic, critique loop, most expensive) ─────────────────
   campaign_execution: 32,       // compliance WITH critique (3 turns): ~$0.205 → ~31 cr
-                                 // also used by critique.runner.ts as a generic label
 
   // ── Cheap / auxiliary actions ──────────────────────────────────────────────
   nurturing_message: 2,         // item-copy per sequence item (flat, intentionally low)
@@ -225,22 +223,74 @@ export const CAMPAIGN_CREDIT_ESTIMATES: Record<
 };
 
 // ─── Credit Pricing in BRL ────────────────────────────────────────────────────
-// Price per credit for top-up purchases (outside of plan allowance).
-// Plan credits are ~33% cheaper (included in monthly subscription).
-// R$0.15/credit × 420 typical launch = R$63 per campaign
-// Plans give credits at effective R$0.10/credit (Solo: 2000 cr = R$297 → R$0.149/cr)
-export const CREDIT_PRICE_BRL = 0.15;
+//
+// MARGIN STRUCTURE (at USD/BRL = 5.00):
+//   Real AI cost per credit = $0.01 / 1.5 (margin) = $0.00667 USD = R$0.033
+//   Pack sell price = R$0.17/credit average
+//   → Gross margin on packs ≈ 80-81%
+//   → On a typical 420-credit launch: real AI cost ≈ R$14 | pack revenue = R$71 | profit = R$57
+//
+// PLAN CREDIT LOGIC — FORCING MECHANISM:
+//   Solo (3 campaigns, R$297/mo): 900 credits → enough for exactly 2 typical launches (900/420 = 2.1)
+//     The 3rd campaign ALWAYS forces a pack purchase. Even with light use (290 cr min), 900/290 = 3.1 — barely.
+//     Heavy users (max 630 cr): 900/630 = 1.4 → need packs after campaign 1.
+//   Agency (10 campaigns, R$1497/mo): 2000 credits → enough for ~4 typical launches (2000/420 = 4.7)
+//     For all 10 campaigns: 10×420 = 4200 needed → always short ~2200 cr → forces 1-2 pack purchases/mo.
+//     Heavy use (max 630 cr): 2000/630 = 3.2 → packs needed from campaign 4 onwards.
+//
+// PACK ACQUISITION TIMING:
+//   Packs are offered AFTER the launch (post-onboarding), once the client has seen results.
+//   This is intentional: they convert on value, not on necessity at sign-up.
+
+export const CREDIT_PRICE_BRL = 0.17;
 
 // Minimum credit buffer required before starting a new campaign phase.
-// Ensures the user always has headroom for at least a light next campaign.
-export const CAMPAIGN_CREDIT_BUFFER = 150;
+export const CAMPAIGN_CREDIT_BUFFER = 100;
 
-// Credit packs available for purchase (BRL, no subscription required)
+// ─── Credit Packs ─────────────────────────────────────────────────────────────
+// Sized by launch equivalents so the client understands what they're buying.
+// "1 extra launch" ≈ 420 cr. Pack names reflect the use case, not just the volume.
+//
+// Pricing rationale:
+//   500 cr  → 1.2 launches  → R$85  → R$0.170/cr → 80% margin
+//   1500 cr → 3.6 launches  → R$239 → R$0.159/cr → 81% margin  ← sweet spot
+//   3500 cr → 8.3 launches  → R$529 → R$0.151/cr → 82% margin
+//   7000 cr → 16.7 launches → R$979 → R$0.140/cr → 83% margin
+
 export const CREDIT_PACKS = [
-  { id: "pack_500", credits: 500, priceBrl: 79, label: "Starter", perCredit: 0.158 },
-  { id: "pack_1000", credits: 1000, priceBrl: 149, label: "Popular", perCredit: 0.149, highlight: true },
-  { id: "pack_2500", credits: 2500, priceBrl: 349, label: "Pro", perCredit: 0.140 },
-  { id: "pack_5000", credits: 5000, priceBrl: 649, label: "Agency", perCredit: 0.130 },
+  {
+    id: "pack_500",
+    credits: 500,
+    priceBrl: 85,
+    label: "Lançamento Extra",
+    description: "~1 lançamento completo",
+    perCredit: 0.170,
+  },
+  {
+    id: "pack_1500",
+    credits: 1500,
+    priceBrl: 239,
+    label: "Trimestral",
+    description: "~3 lançamentos completos",
+    perCredit: 0.159,
+    highlight: true,
+  },
+  {
+    id: "pack_3500",
+    credits: 3500,
+    priceBrl: 529,
+    label: "Semestral",
+    description: "~8 lançamentos completos",
+    perCredit: 0.151,
+  },
+  {
+    id: "pack_7000",
+    credits: 7000,
+    priceBrl: 979,
+    label: "Anual",
+    description: "~16 lançamentos completos",
+    perCredit: 0.140,
+  },
 ] as const;
 
 // Helper: get credit estimate for a campaign type
