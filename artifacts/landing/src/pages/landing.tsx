@@ -5,9 +5,8 @@ import { Label } from "@/components/ui/label";
 import nexosLogo from "/nexos-logo.png";
 import {
   ArrowRight, CheckCircle2, ArrowDown,
-  BrainCircuit, Mail, MessageSquare,
-  Lock, Shield, Zap, Target, Activity,
-  X, Layers, Clock, TrendingDown, Play,
+  BrainCircuit, Lock, Shield, Zap, Target, Activity,
+  Layers, Clock, TrendingDown, Users, TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LiveDemoSection, SimulatorSection } from "@/components/landing-demo-sections";
@@ -125,6 +124,26 @@ function HeroSection() {
           </div>
         </div>
       </div>
+
+      {/* Stats strip */}
+      <div className="absolute bottom-16 left-0 right-0 border-t border-border/15 bg-background/40 backdrop-blur-md py-3">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between gap-2">
+          {[
+            { n: "29", label: "Agentes IA" },
+            { n: "6", label: "Modelos" },
+            { n: "3", label: "Tracks" },
+            { n: "14+", label: "Integrações", hide: false },
+            { n: "Meta CAPI", label: "Server Events", hide: true },
+            { n: "100 pts", label: "Health Score", hide: true },
+          ].map(({ n, label, hide }) => (
+            <div key={label} className={`flex flex-col items-center ${hide ? "hidden md:flex" : ""}`}>
+              <div className="font-mono font-black text-sm md:text-base text-primary leading-none">{n}</div>
+              <div className="font-mono text-[8px] md:text-[9px] uppercase tracking-widest text-muted-foreground/50 mt-0.5">{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <ScrollHint />
     </Section>
   );
@@ -234,7 +253,7 @@ function CustoRealSection() {
               <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">O NexOS AI substitui tudo isso</div>
               <p className="font-mono font-black text-2xl text-foreground leading-snug mb-6">
                 Estratégia. Copy. Segmentação.<br />WhatsApp. Email. Carrinho.<br />
-                <span className="text-primary">29 agentes. 24 horas por dia.</span>
+                <span className="text-primary">29 agentes. 6 modelos. 24 horas por dia.</span>
               </p>
               <div className="border-l-2 border-primary/50 pl-4 mb-6">
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
@@ -312,10 +331,12 @@ function RotinaSection() {
 function SolutionSection() {
   const { ref, inView } = useInView(0.2);
   const features = [
-    { icon: BrainCircuit, label: "Estrategista IA", sub: "Analisa produto e público. Monta cronograma completo de lançamento em 47 minutos." },
-    { icon: Target,        label: "Copywriter IA",   sub: "Escreve todos os copies: emails, WhatsApp, página de vendas, anúncios. No seu tom." },
-    { icon: MessageSquare, label: "Segmentador IA",  sub: "Divide a base por comportamento e probabilidade de compra. Atualiza em tempo real." },
-    { icon: Activity,      label: "Disparador IA",   sub: "Envia no momento certo, responde objeções, abre e fecha carrinho automaticamente." },
+    { icon: BrainCircuit, label: "Estrategista IA",  sub: "Escolhe o modelo e track certos. Cronograma completo em 47 minutos." },
+    { icon: Target,        label: "Copywriter IA",    sub: "Emails, WhatsApp, página de vendas, anúncios. No seu tom. Pronto para aprovação." },
+    { icon: Users,         label: "Segmentador IA",   sub: "Classifica base em hot/warm/cold por comportamento. Score atualizado em tempo real." },
+    { icon: Activity,      label: "Disparador IA",    sub: "Envia no horário ideal por contato, responde objeções, abre e fecha carrinho." },
+    { icon: TrendingUp,    label: "Analytics IA",     sub: "Health score 100pts, detecção de fadiga criativa, relatório semanal automático." },
+    { icon: Shield,        label: "Compliance IA",    sub: "Auditoria LGPD automática, trilha completa por lead, conformidade em cada peça." },
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
@@ -330,13 +351,13 @@ function SolutionSection() {
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">APRESENTANDO</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-8">
             NexOS AI.<br />
-            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">29 agentes. 24 horas. Um lançamento.</span>
+            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">29 agentes. 6 modelos. 3 tracks.</span>
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
-            Você define o produto e a data. A IA monta a estratégia, escreve todos os copies, segmenta a base, dispara as sequências e opera o carrinho.{" "}
+            Você define o produto e a meta de faturamento. A IA escolhe o modelo certo, monta a estratégia, escreve os copies, segmenta a base, dispara as sequências e opera o carrinho.{" "}
             <strong className="text-foreground">Você aprova. Ela executa.</strong>
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
             {features.map(({ icon: Icon, label, sub }, i) => (
               <div
                 key={i}
@@ -356,6 +377,77 @@ function SolutionSection() {
   );
 }
 
+// ─── Section 5b: MODELOS & TRACKS ────────────────────────────────────────────
+// Objetivo: mostrar que a IA não usa template genérico — escolhe o modelo certo
+// para o produto, público e meta de faturamento de cada usuário.
+function ModelosSection() {
+  const { ref, inView } = useInView(0.2);
+
+  const modelos = [
+    { code: "PLF",  nome: "Product Launch Formula", desc: "Sequência de CPLs, aquecimento por autoridade, abertura com urgência máxima. O modelo mais replicado do mundo." },
+    { code: "FRM",  nome: "Fórmula de Lançamento",  desc: "Adaptação da PLF para o mercado brasileiro. Copy emocional, provas sociais densas, sequência de aquecimento intensa." },
+    { code: "SEM",  nome: "Lançamento Semente",      desc: "Valide o produto com uma turma piloto antes de escalar. Ideal para quem está lançando pela primeira vez ou testando nova oferta." },
+    { code: "AFI",  nome: "Lançamento de Afiliado",  desc: "Ative uma rede de afiliados com copy, links rastreáveis e sequências prontas. Escale o alcance sem escalar o custo." },
+    { code: "PRP",  nome: "Perpétuo",                desc: "Funil evergreen 24/7. Captação, aquecimento e venda acontecem automaticamente todos os dias sem abrir e fechar carrinho." },
+    { code: "CUS",  nome: "Custom",                  desc: "IA monta uma estratégia sob medida para casos fora do padrão. Sem template engessado. Inteligência pura sobre o seu cenário." },
+  ];
+
+  const tracks = [
+    { label: "6 Dígitos", range: "R$100k – R$999k", sub: "Meta em 7 dias", plano: "Solo + Agency" },
+    { label: "8 Dígitos", range: "R$10M – R$99M",   sub: "Meta em 7 dias", plano: "Agency" },
+    { label: "10 Dígitos", range: "R$100M+",         sub: "Meta em 7 dias", plano: "Agency" },
+  ];
+
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESTRATÉGIA SOB MEDIDA</div>
+          <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-3">
+            6 modelos.<br />
+            <span className="text-primary">A IA escolhe o certo para você.</span>
+          </h2>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Não existe um lançamento universal. O NexOS AI analisa produto, público e meta de faturamento — e configura automaticamente o modelo e track mais adequados para o seu caso.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+            {modelos.map((m, i) => (
+              <div
+                key={m.code}
+                className={`border border-border/30 bg-card/20 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${100 + i * 80}ms` }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-mono text-[9px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5 uppercase tracking-widest shrink-0">{m.code}</span>
+                  <span className="font-mono text-xs font-black uppercase tracking-wide text-foreground leading-tight">{m.nome}</span>
+                </div>
+                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{m.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {tracks.map((t, i) => (
+              <div
+                key={t.label}
+                className={`border border-primary/20 bg-primary/5 p-5 text-center transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                style={{ transitionDelay: `${580 + i * 80}ms` }}
+              >
+                <div className="font-mono font-black text-lg text-primary mb-0.5">{t.label}</div>
+                <div className="font-mono font-black text-sm text-foreground mb-1">{t.range}</div>
+                <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">{t.sub}</div>
+                <div className="font-mono text-[9px] text-primary/60 uppercase tracking-widest mt-0.5">{t.plano}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
 // ─── Section 6: COMO FUNCIONA ─────────────────────────────────────────────────
 function ComoFuncionaSection() {
   const { ref, inView } = useInView(0.2);
@@ -363,15 +455,15 @@ function ComoFuncionaSection() {
     {
       num: "01",
       title: "Conecta em 23 minutos",
-      desc: "Integra WhatsApp Business, email marketing e gateway de pagamento. Sobe a base de leads. A IA mapeia comportamentos e identifica segmentos na sua audiência automaticamente.",
-      tag: "Tempo médio: 23 minutos",
+      desc: "14+ integrações nativas: WhatsApp Business, Telegram, RD Station, ActiveCampaign, Resend, Instagram, TikTok, Meta Ads, Google Ads, Hotmart, Kiwify e Stripe. Sobe a base. A IA mapeia comportamentos e classifica cada lead em hot, warm ou cold automaticamente.",
+      tag: "14+ integrações nativas",
       icon: BrainCircuit,
     },
     {
       num: "02",
-      title: "IA monta estratégia e copies",
-      desc: "Você responde 7 perguntas sobre produto e público. Em 47 minutos a IA entrega: cronograma completo, 23 emails, 18 mensagens WhatsApp, página de vendas e 8 variações de anúncio. Você aprova ou ajusta.",
-      tag: "Estratégia completa em 47 minutos",
+      title: "IA escolhe o modelo e monta tudo",
+      desc: "Você responde 7 perguntas sobre produto, público e meta de faturamento. A IA escolhe o modelo ideal (PLF, Fórmula, Semente, Afiliado, Perpétuo ou Custom) e o track certo (6, 8 ou 10 dígitos). Em 47 minutos: cronograma, emails, WhatsApp, página de vendas e variações de anúncio. Você aprova ou ajusta.",
+      tag: "6 modelos · 3 tracks · 47 minutos",
       icon: Layers,
     },
     {
@@ -618,14 +710,16 @@ function OfferSection() {
   };
 
   const includes = [
-    "29 agentes de IA executando 24h no seu lançamento",
-    "Estratégia completa gerada em 47 minutos",
-    "23 emails + 18 mensagens WhatsApp por campanha",
-    "Segmentação comportamental em tempo real",
-    "Abertura e fechamento automático de carrinho",
-    "Dashboard ao vivo com health score e alertas",
-    "Acesso prioritário a todos os novos agentes",
-    "Onboarding individual + grupo privado de Fundadores",
+    "29 agentes de IA em 6 modelos de lançamento e 3 tracks de faturamento",
+    "Estratégia completa + cronograma gerado em 47 minutos pela IA",
+    "Sequências automatizadas (email + WhatsApp) com segmentação hot/warm/cold",
+    "Segmentação comportamental em tempo real com score por lead",
+    "Abertura e fechamento de carrinho automático com escassez dinâmica",
+    "Server-side events: Meta CAPI + TikTok Events API para atribuição precisa",
+    "LGPD automático com trilha de auditoria + loop viral de indicação por lead",
+    "Dashboard ao vivo: health score 100pts, alertas de CTR, fadiga criativa",
+    "Otimização automática de horário de envio por lead (send time intelligence)",
+    "Acesso prioritário a novos agentes + onboarding + grupo privado de Fundadores",
   ];
 
   return (
@@ -776,6 +870,7 @@ export default function Landing() {
       <CustoRealSection />
       <RotinaSection />
       <SolutionSection />
+      <ModelosSection />
       <ComoFuncionaSection />
       <LiveDemoSection />
       <SimulatorSection />
