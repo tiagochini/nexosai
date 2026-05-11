@@ -131,7 +131,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const raw = meData as (typeof meData & { plan?: Plan }) | undefined;
   const plan = raw?.plan ?? null;
   const planSlug = plan?.slug ?? null;
-  const isAdmin = (meData?.user?.email ?? "") === "admin@nexos.ai";
+  const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai"]);
+  const isAdmin = ADMIN_EMAILS.has(meData?.user?.email ?? "");
 
   return (
     <AuthContext.Provider value={{

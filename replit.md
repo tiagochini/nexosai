@@ -103,6 +103,12 @@ Launch tracks by revenue target:
 
 - **Weekly report service**: `artifacts/api-server/src/modules/weekly-report/` — `weekly-report.service.ts` composes HTML email with metrics (revenue, sales, campaigns, credits, health score, AI insight). `weekly-report.routes.ts` exposes `POST /api/reports/send` (auth required, sends to workspace owner). Scheduler in `sequence-scheduler.worker.ts` fires `sendWeeklyReportsToAll()` every Monday at 08:00 UTC via `maybeFireWeeklyReport()` — non-blocking, idempotent (keyed by date string). No SMTP configured → logs compose preview only; wire `nodemailer`/SMTP env vars to enable real delivery.
 - **Auth**: DB schema has `phone` + `phoneVerified` columns. Register accepts optional `phone`. Login and register pages fully rebuilt with confirmations, show/hide toggles, live validation.
+- **Admin access fixed**: `ADMIN_EMAILS` set in `admin.routes.ts` includes both `admin@nexos.ai` and `founder@nexos.ai`. Frontend `auth.tsx` `isAdmin` check uses a Set (same two emails).
+- **Admin financials endpoint**: `GET /api/admin/financials` — returns access revenue, pack revenue, AI costs (USD + BRL), margin %, conversion funnel, 7d/30d signups + revenue, low-credit upsell list (balance < 150), last 10 payments. `getAdminFinancials()` in `admin.service.ts`.
+- **Owner Command Center**: `artifacts/app/src/pages/admin/index.tsx` rebuilt with 4 tabs: Visão Geral (KPI strip + SaaS status + growth), Financeiro (revenue breakdown + margin bar + funnel + recent payments), Oportunidades (low-credit upsell list + hibernated re-engagement), Usuários (full table).
+- **Agents Hub expanded**: `artifacts/app/src/pages/agents/index.tsx` — 29 agents organized in 6 categories (Estratégia/Conteúdo/Audiência/Vídeo/Analytics/Automação). Each card shows provider badge (Claude/GPT-4o/Gemini), specialties, description and direct chat link.
+- **Preparação page updated**: `WHATSAPP_LINKS` replaced with `GROUP_LINKS` supporting both WhatsApp (`https://chat.whatsapp.com/…`) and Telegram (`https://t.me/+…`) per segment. `WhatsAppButton` replaced with `GroupButtons` — shows both platform buttons when configured, two disabled placeholders when null.
+- **Checkout pricing fixed**: `CREDIT_PACKS` updated to new pricing: Boost 500cr/R$85, Starter 1500cr/R$239, Pro 3500cr/R$529, Elite 7000cr/R$979. Old 1500cr/R$150 and 3000cr/R$240 removed.
 
 ## Gotchas
 

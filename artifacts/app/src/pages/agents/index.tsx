@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Brain, Zap, Target, Pen, Eye, ShoppingCart, Users, BarChart3,
   TrendingUp, Video, Star, Shield, Rocket, Megaphone, Globe, MessageCircle,
-  ChevronRight, Bot,
+  ChevronRight, Bot, FileText, Radio, Mail, DollarSign, Layers,
+  Cpu, Mic, Play, BarChart2, RefreshCw, Hash,
 } from "lucide-react";
 
-// ── Agent catalog ─────────────────────────────────────────────────────────────
 interface AgentDef {
   role: string;
   name: string;
@@ -21,7 +21,7 @@ interface AgentDef {
 }
 
 const AGENTS: AgentDef[] = [
-  // ESTRATÉGIA & COMANDO
+  // ── ESTRATÉGIA & COMANDO ──────────────────────────────────────────────────
   {
     role: "command", name: "Comandante IA", tagline: "General das Operações",
     description: "Orquestra toda a operação de lançamento. Pensa estrategicamente sobre cada etapa e alinha todos os agentes para o objetivo final.",
@@ -57,7 +57,15 @@ const AGENTS: AgentDef[] = [
     accent: "border-primary/40 hover:border-primary",
     specialties: ["Validação", "Formato", "Escopo", "Precificação"],
   },
-  // COPYWRITING & CONTEÚDO
+  {
+    role: "perpetual_launch_manager", name: "Gerente de Perpétuo", tagline: "Motor de Vendas 24/7",
+    description: "Gerencia lançamentos perpétuos com evergreen funnels, otimização contínua e automações de nurturing de longo prazo.",
+    category: "Estratégia", provider: "Claude", icon: RefreshCw,
+    accent: "border-primary/40 hover:border-primary",
+    specialties: ["Evergreen", "Funil Perpétuo", "Automação", "LTV"],
+  },
+
+  // ── COPYWRITING & CONTEÚDO ────────────────────────────────────────────────
   {
     role: "copywriter", name: "Copywriter", tagline: "Mestre das Palavras",
     description: "Escreve copy de venda que converte. Domina AIDA, PAS, storytelling emocional, emails, páginas e scripts.",
@@ -79,7 +87,29 @@ const AGENTS: AgentDef[] = [
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["VSL Page", "Squeeze Page", "Copy", "UX"],
   },
-  // AUDIÊNCIA & MÍDIA
+  {
+    role: "ad_copy", name: "Copy de Anúncios", tagline: "Criativo de Performance",
+    description: "Cria copies de anúncios que param o scroll. Especialista em headlines de impacto, ganchos e CTAs para Meta Ads e Google Ads.",
+    category: "Conteúdo", provider: "GPT-4o", icon: Megaphone,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Meta Ads", "Google Ads", "Hook", "CTA"],
+  },
+  {
+    role: "social_media", name: "Social Media IA", tagline: "Calendário de Conteúdo",
+    description: "Cria calendários completos de conteúdo para Instagram, TikTok, YouTube e Facebook. Captions, hashtags e estratégia de engajamento.",
+    category: "Conteúdo", provider: "GPT-4o", icon: Hash,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Instagram", "TikTok", "YouTube", "Calendário"],
+  },
+  {
+    role: "stories_sequence", name: "Sequência de Stories", tagline: "Narrativa em Frames",
+    description: "Cria roteiros completos de stories para lançamento — sequência narrativa com ganchos, revelações e chamadas para ação.",
+    category: "Conteúdo", provider: "GPT-4o", icon: Layers,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Stories", "Narrativa", "Instagram", "Sequência"],
+  },
+
+  // ── AUDIÊNCIA & MÍDIA ─────────────────────────────────────────────────────
   {
     role: "targeting", name: "Targeting Expert", tagline: "Caçador de Públicos",
     description: "Encontra os públicos certos nas plataformas certas. Cria arquiteturas de segmentação precisas: interesses, comportamentos e lookalikes.",
@@ -90,7 +120,7 @@ const AGENTS: AgentDef[] = [
   {
     role: "media_buyer", name: "Media Buyer", tagline: "Maximizador de ROAS",
     description: "Maximiza ROAS em Meta Ads, Google Ads, TikTok e YouTube. Estrutura de campanha, criativos e otimização de budget.",
-    category: "Audiência", provider: "GPT-4o", icon: Megaphone,
+    category: "Audiência", provider: "GPT-4o", icon: BarChart2,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["ROAS", "Budget", "Criativos", "Escala"],
   },
@@ -99,171 +129,216 @@ const AGENTS: AgentDef[] = [
     description: "Estrutura programas de afiliados para explosão de alcance. Comissionamento, materiais de apoio e reativação.",
     category: "Audiência", provider: "GPT-4o", icon: Users,
     accent: "border-yellow-500/40 hover:border-yellow-500",
-    specialties: ["Programa", "Comissão", "Materiais", "Ranking"],
+    specialties: ["Comissão", "Materiais", "Reativação", "Escala"],
   },
-  // PERFORMANCE & ANÁLISE
   {
-    role: "analytics", name: "Analista de Performance", tagline: "Intérprete de Dados",
-    description: "Interpreta dados e extrai insights acionáveis. ROAS, CPL, LTV, cohort analysis e attribution modeling.",
-    category: "Performance", provider: "Gemini", icon: BarChart3,
+    role: "media_brief", name: "Brief de Mídia", tagline: "Guia para o Time de Tráfego",
+    description: "Gera briefs completos para o time de tráfego pago: objetivos, públicos, criativos, budgets e KPIs esperados por fase.",
+    category: "Audiência", provider: "GPT-4o", icon: FileText,
+    accent: "border-yellow-500/40 hover:border-yellow-500",
+    specialties: ["Brief", "Criativos", "Budget", "KPIs"],
+  },
+
+  // ── VÍDEO & SCRIPTS ───────────────────────────────────────────────────────
+  {
+    role: "vsl_script", name: "Roteirista VSL", tagline: "Script de Alta Conversão",
+    description: "Escreve roteiros completos de VSL (Video Sales Letter) com estrutura AIDA, provas sociais e fechamento irresistível.",
+    category: "Vídeo", provider: "GPT-4o", icon: Video,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["VSL", "AIDA", "Storytelling", "Fechamento"],
+  },
+  {
+    role: "cpl_script", name: "Script CPL", tagline: "Conteúdo de Pré-Lançamento",
+    description: "Roteiros para vídeos CPL (Conteúdo de Pré-Lançamento) com educação, autoridade e antecipação progressiva.",
+    category: "Vídeo", provider: "GPT-4o", icon: Play,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["CPL", "Pré-Lançamento", "Educação", "Antecipação"],
+  },
+  {
+    role: "webinar_script", name: "Roteirista Webinar", tagline: "Apresentação de Vendas",
+    description: "Roteiros completos para webinários de venda — estrutura de apresentação, slides, transição para oferta e Q&A estratégico.",
+    category: "Vídeo", provider: "GPT-4o", icon: Mic,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["Webinar", "Slides", "Pitch", "Q&A"],
+  },
+  {
+    role: "live_script", name: "Roteirista de Live", tagline: "Venda ao Vivo",
+    description: "Roteiros para lives de lançamento — abertura de impacto, entrega de valor, quebra de objeções e fechamento ao vivo.",
+    category: "Vídeo", provider: "GPT-4o", icon: Radio,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["Live", "Abertura", "Objeções", "Fechamento"],
+  },
+  {
+    role: "video_strategy", name: "Estrategista de Vídeo", tagline: "Arquitetura do Conteúdo em Vídeo",
+    description: "Define a estratégia completa de vídeo para o lançamento: quais vídeos produzir, sequência, duração e objetivo de cada um.",
+    category: "Vídeo", provider: "Claude", icon: Cpu,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["Estratégia", "Sequência", "YouTube", "Orgânico"],
+  },
+  {
+    role: "creator_growth", name: "Creator Growth", tagline: "Monetização de Audiência",
+    description: "Estratégias para creators monetizarem sua audiência — lançamentos, membros, produtos derivados e crescimento de canal.",
+    category: "Vídeo", provider: "Claude", icon: TrendingUp,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["Criadores", "Monetização", "Membros", "Crescimento"],
+  },
+
+  // ── PERFORMANCE & ANALYTICS ───────────────────────────────────────────────
+  {
+    role: "analytics", name: "Analista de Performance", tagline: "Intérprete dos Números",
+    description: "Analisa métricas de campanha em profundidade. Identifica o que está funcionando, o que travar e onde está o dinheiro.",
+    category: "Analytics", provider: "Gemini", icon: BarChart3,
     accent: "border-green-500/40 hover:border-green-500",
-    specialties: ["KPIs", "ROAS", "CPL", "Funil"],
+    specialties: ["Métricas", "ROAS", "CAC", "LTV"],
   },
   {
-    role: "optimization", name: "Otimizador", tagline: "Motor de Melhoria Contínua",
-    description: "Melhora continuamente resultados com testes estruturados. Identifica gargalos e implementa mudanças de alto impacto.",
-    category: "Performance", provider: "Gemini", icon: TrendingUp,
+    role: "optimization", name: "Otimizador IA", tagline: "Motor de Melhoria Contínua",
+    description: "Detecta gargalos de conversão e sugere otimizações em tempo real. Prioriza ações de maior impacto no resultado.",
+    category: "Analytics", provider: "Gemini", icon: TrendingUp,
     accent: "border-green-500/40 hover:border-green-500",
-    specialties: ["A/B Test", "Gargalos", "ROI", "Escala"],
+    specialties: ["Conversão", "A/B", "Funil", "Otimização"],
   },
   {
-    role: "video", name: "Estrategista de Vídeo", tagline: "Diretor de Conteúdo Visual",
-    description: "Define estratégias de VSL, YouTube, Reels, TikTok e Lives. Scripts, hooks, estruturas narrativas e direção.",
-    category: "Performance", provider: "Gemini", icon: Video,
+    role: "financial_projector", name: "Projetor Financeiro", tagline: "Simulador de Resultados",
+    description: "Projeta receita esperada, break-even, ROI e fluxo de caixa do lançamento com base no histórico e benchmarks do mercado.",
+    category: "Analytics", provider: "Gemini", icon: DollarSign,
     accent: "border-green-500/40 hover:border-green-500",
-    specialties: ["VSL", "Reels", "Lives", "YouTube"],
+    specialties: ["Projeção", "ROI", "Break-even", "Fluxo de Caixa"],
   },
   {
-    role: "creator_growth", name: "Creator Growth", tagline: "Arquiteto de Audiência",
-    description: "Cresce audiências orgânicas em Instagram, YouTube, TikTok e podcasts. Algoritmos, consistência e monetização.",
-    category: "Performance", provider: "Gemini", icon: Star,
+    role: "compliance", name: "Compliance Officer", tagline: "Guardião da Conformidade",
+    description: "Verifica conformidade com LGPD, CONAR, regulamentos de publicidade digital e políticas das plataformas.",
+    category: "Analytics", provider: "Gemini", icon: Shield,
     accent: "border-green-500/40 hover:border-green-500",
-    specialties: ["Instagram", "YouTube", "TikTok", "Orgânico"],
+    specialties: ["LGPD", "CONAR", "Políticas", "Risco"],
   },
-  // QUALIDADE
+
+  // ── AUTOMAÇÃO ────────────────────────────────────────────────────────────
   {
-    role: "compliance", name: "Compliance Officer", tagline: "Guardião Legal",
-    description: "Garante que seu lançamento não viola CONAR, Meta Ads Policy, Google Ads Policy, LGPD e CVM.",
-    category: "Qualidade", provider: "Claude", icon: Shield,
-    accent: "border-red-500/40 hover:border-red-500",
-    specialties: ["CONAR", "Meta Policy", "LGPD", "CVM"],
+    role: "launch_sequence_builder", name: "Builder de Sequências", tagline: "Arquiteto de Automações",
+    description: "Cria sequências completas de lançamento com email + WhatsApp — fases, timing, mensagens e segmentação por engajamento.",
+    category: "Automação", provider: "Claude", icon: Mail,
+    accent: "border-orange-500/40 hover:border-orange-500",
+    specialties: ["Sequência", "Email", "WhatsApp", "Automação"],
+  },
+  {
+    role: "continuous_sales_manager", name: "Gestor de Vendas Contínuas", tagline: "Receita Previsível",
+    description: "Gerencia o ciclo de vendas contínuas pós-lançamento — nurturing, recompra, upsell e expansão de LTV.",
+    category: "Automação", provider: "Claude", icon: RefreshCw,
+    accent: "border-orange-500/40 hover:border-orange-500",
+    specialties: ["Nurturing", "Recompra", "Upsell", "LTV"],
+  },
+  {
+    role: "whatsapp_response", name: "Auto-Resposta WhatsApp", tagline: "Atendimento Inteligente",
+    description: "Classifica mensagens recebidas no WhatsApp e gera respostas contextuais. Detecta intenção de compra, objeções e urgências.",
+    category: "Automação", provider: "Claude", icon: MessageCircle,
+    accent: "border-orange-500/40 hover:border-orange-500",
+    specialties: ["WhatsApp", "Atendimento", "Intenção", "Auto-Resposta"],
   },
 ];
 
-const CATEGORIES = ["Estratégia", "Conteúdo", "Audiência", "Performance", "Qualidade"];
+const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação"];
 
-const PROVIDER_BADGE: Record<string, { label: string; className: string }> = {
-  Claude:  { label: "Claude",  className: "text-primary border-primary/40 bg-primary/10" },
-  "GPT-4o": { label: "GPT-4o", className: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10" },
-  Gemini:  { label: "Gemini",  className: "text-green-400 border-green-400/40 bg-green-400/10" },
+const PROVIDER_COLOR: Record<string, string> = {
+  "Claude":  "text-orange-400 border-orange-400/30 bg-orange-400/8",
+  "GPT-4o":  "text-cyan-400 border-cyan-400/30 bg-cyan-400/8",
+  "Gemini":  "text-green-400 border-green-400/30 bg-green-400/8",
 };
 
 export default function AgentsHub() {
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto space-y-6">
+
       {/* Header */}
-      <div className="border-b border-border/50 pb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-          <h1 className="text-2xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Time de Especialistas IA
+      <div className="border-b border-border/50 pb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Bot className="h-4 w-4 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
+            Hub de Agentes IA
           </h1>
         </div>
-        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest max-w-2xl">
-          {AGENTS.length} agentes especializados disponíveis para consulta individual · Brainstorm, revisão, estratégia e geração de conteúdo sob demanda
+        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">
+          {AGENTS.length} agentes especializados · Claude · GPT-4o · Gemini · Cada agente, uma expertise
         </p>
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-        {[
-          { label: "Total Agentes", value: String(AGENTS.length), sub: "especialistas" },
-          { label: "Claude AI", value: String(AGENTS.filter(a => a.provider === "Claude").length), sub: "estratégia" },
-          { label: "GPT-4o", value: String(AGENTS.filter(a => a.provider === "GPT-4o").length), sub: "conteúdo" },
-          { label: "Gemini", value: String(AGENTS.filter(a => a.provider === "Gemini").length), sub: "performance" },
-          { label: "Créditos/msg", value: "3", sub: "custo fixo" },
-        ].map((stat) => (
-          <div key={stat.label} className="border border-border/50 bg-card/40 p-3">
-            <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{stat.label}</div>
-            <div className="text-xl font-mono font-bold text-primary mt-0.5">{stat.value}</div>
-            <div className="text-[11px] font-mono text-muted-foreground/50">{stat.sub}</div>
+      {/* Stats strip */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+        {Object.entries(
+          AGENTS.reduce((acc, a) => { acc[a.category] = (acc[a.category] ?? 0) + 1; return acc; }, {} as Record<string, number>)
+        ).map(([cat, n]) => (
+          <div key={cat} className="border border-border/30 bg-card/30 p-2.5 text-center">
+            <div className="font-mono text-xs font-bold text-primary">{n}</div>
+            <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest mt-0.5 truncate">{cat}</div>
           </div>
         ))}
       </div>
 
-      {/* Agent grid by category */}
-      {CATEGORIES.map((cat) => {
-        const agents = AGENTS.filter(a => a.category === cat);
-        if (agents.length === 0) return null;
+      {/* Grid */}
+      {CATEGORIES.filter(c => c !== "Todos").map(category => {
+        const agents = AGENTS.filter(a => a.category === category);
         return (
-          <div key={cat}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-px flex-1 bg-border/40" />
-              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground px-3">{cat}</span>
-              <div className="h-px flex-1 bg-border/40" />
+          <div key={category}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 font-bold">{category}</div>
+              <div className="flex-1 h-px bg-border/30" />
+              <div className="font-mono text-[11px] text-muted-foreground/40">{agents.length} agentes</div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {agents.map((agent) => {
-                const pBadge = PROVIDER_BADGE[agent.provider];
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {agents.map(agent => {
+                const Icon = agent.icon;
                 return (
-                  <Link key={agent.role} href={`/agents/${agent.role}`}>
-                    <div className={`border bg-card/40 p-4 cursor-pointer transition-all duration-200 group relative overflow-hidden ${agent.accent}`}>
-                      {/* Corners */}
-                      <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary/20 group-hover:border-primary transition-colors" />
-                      <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary/20 group-hover:border-primary transition-colors" />
-
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 border border-primary/20 bg-primary/5 flex items-center justify-center shrink-0 group-hover:border-primary/50 group-hover:bg-primary/10 transition-all">
-                            <agent.icon className="h-4 w-4 text-primary" />
+                  <div
+                    key={agent.role}
+                    className={`border bg-card/40 p-4 cursor-pointer transition-all group relative overflow-hidden ${agent.accent}`}
+                  >
+                    <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-current/20 pointer-events-none" />
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 border border-border/30 bg-muted/20">
+                          <Icon className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-mono font-bold text-sm text-foreground leading-tight group-hover:text-primary transition-colors">
+                            {agent.name}
                           </div>
-                          <div>
-                            <div className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase tracking-wide">
-                              {agent.name}
-                            </div>
-                            <div className="text-[11px] font-mono text-muted-foreground/70 uppercase tracking-widest">{agent.tagline}</div>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0.5 shrink-0 border ${pBadge.className}`}>
-                          {pBadge.label}
-                        </Badge>
-                      </div>
-
-                      {/* Description */}
-                      <p className="text-xs text-muted-foreground font-mono leading-relaxed mb-3 line-clamp-2">
-                        {agent.description}
-                      </p>
-
-                      {/* Specialties */}
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {agent.specialties.map(s => (
-                          <span key={s} className="text-[11px] font-mono uppercase tracking-widest bg-muted/30 border border-border/50 px-1.5 py-0.5 text-muted-foreground/70">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* CTA */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Bot className="h-3 w-3 text-primary/60" />
-                          <span className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest">3 créditos/msg</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs font-mono font-bold uppercase tracking-widest text-primary group-hover:gap-2 transition-all">
-                          Conversar <ChevronRight className="h-3 w-3" />
+                          <div className="font-mono text-[11px] text-muted-foreground/60">{agent.tagline}</div>
                         </div>
                       </div>
+                      <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 shrink-0 ${PROVIDER_COLOR[agent.provider]}`}>
+                        {agent.provider}
+                      </Badge>
                     </div>
-                  </Link>
+
+                    <p className="font-mono text-[11px] text-muted-foreground leading-relaxed mb-3 line-clamp-2">
+                      {agent.description}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {agent.specialties.map(s => (
+                        <span key={s} className="font-mono text-[10px] uppercase tracking-widest border border-border/30 bg-muted/10 px-1.5 py-0.5 text-muted-foreground/60">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+
+                    <Link href={`/agents/${agent.role}`}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full rounded-none font-mono uppercase text-[11px] tracking-widest btn-weapon-outline gap-2 group-hover:border-primary/50 group-hover:text-primary transition-colors h-8"
+                      >
+                        Conversar com Agente
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
                 );
               })}
             </div>
           </div>
         );
       })}
-
-      {/* Bottom CTA */}
-      <div className="border border-primary/20 bg-card/40 p-6 text-center">
-        <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
-          Você também pode acionar agentes diretamente na execução de campanhas
-        </p>
-        <Link href="/campaigns">
-          <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-5 text-xs mt-2">
-            <Rocket className="h-3.5 w-3.5" />Ver Campanhas Ativas
-          </Button>
-        </Link>
-      </div>
     </div>
   );
 }

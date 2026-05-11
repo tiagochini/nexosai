@@ -16,9 +16,16 @@ type Segment = "individual" | "agency";
 interface ChatMsg { role: "user" | "assistant"; content: string }
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const WHATSAPP_LINKS: Record<Segment, string | null> = {
-  individual: null, // substituir pelo link real do grupo
-  agency: null,
+// Preencha os links reais dos grupos antes de ativar a campanha:
+const GROUP_LINKS: Record<Segment, { whatsapp: string | null; telegram: string | null }> = {
+  individual: {
+    whatsapp: null, // ex: "https://chat.whatsapp.com/XXXXXXXXX"
+    telegram:  null, // ex: "https://t.me/+XXXXXXXXX"
+  },
+  agency: {
+    whatsapp: null,
+    telegram:  null,
+  },
 };
 
 const SEGMENT_CONFIG = {
@@ -106,34 +113,57 @@ const SEGMENT_CONFIG = {
   },
 };
 
-// ── WhatsApp join button ───────────────────────────────────────────────────────
-function WhatsAppButton({ segment }: { segment: Segment }) {
-  const link = WHATSAPP_LINKS[segment];
-  const cfg = SEGMENT_CONFIG[segment];
+// ── Group join buttons (WhatsApp + Telegram) ──────────────────────────────────
+function GroupButtons({ segment }: { segment: Segment }) {
+  const links = GROUP_LINKS[segment];
+  const cfg   = SEGMENT_CONFIG[segment];
+  const hasAny = links.whatsapp || links.telegram;
 
-  if (link) {
+  if (hasAny) {
     return (
-      <a href={link} target="_blank" rel="noopener noreferrer">
-        <Button className="w-full h-14 rounded-none font-mono uppercase tracking-widest font-black text-sm gap-3 bg-[#25D366] hover:bg-[#1fad55] text-white">
-          <MessageSquare className="h-5 w-5" />
-          Entrar no {cfg.groupName}
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-      </a>
+      <div className="space-y-2">
+        {links.whatsapp && (
+          <a href={links.whatsapp} target="_blank" rel="noopener noreferrer">
+            <Button className="w-full h-14 rounded-none font-mono uppercase tracking-widest font-black text-sm gap-3 bg-[#25D366] hover:bg-[#1fad55] text-white">
+              <MessageSquare className="h-5 w-5" />
+              Entrar no {cfg.groupName} — WhatsApp
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </a>
+        )}
+        {links.telegram && (
+          <a href={links.telegram} target="_blank" rel="noopener noreferrer">
+            <Button className="w-full h-14 rounded-none font-mono uppercase tracking-widest font-black text-sm gap-3 bg-[#229ED9] hover:bg-[#1a87bb] text-white">
+              <Send className="h-5 w-5" />
+              Entrar no {cfg.groupName} — Telegram
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </a>
+        )}
+      </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <Button
-        disabled
-        className="w-full h-14 rounded-none font-mono uppercase tracking-widest font-black text-sm gap-3 opacity-60 bg-[#25D366]/30 text-white cursor-not-allowed"
-      >
-        <Lock className="h-4 w-4" />
-        Grupo do WhatsApp — Em breve
-      </Button>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          disabled
+          className="w-full h-12 rounded-none font-mono uppercase tracking-widest text-xs gap-2 opacity-50 bg-[#25D366]/20 text-white cursor-not-allowed border border-[#25D366]/20"
+        >
+          <MessageSquare className="h-4 w-4" />
+          WhatsApp — Em breve
+        </Button>
+        <Button
+          disabled
+          className="w-full h-12 rounded-none font-mono uppercase tracking-widest text-xs gap-2 opacity-50 bg-[#229ED9]/20 text-white cursor-not-allowed border border-[#229ED9]/20"
+        >
+          <Send className="h-4 w-4" />
+          Telegram — Em breve
+        </Button>
+      </div>
       <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest text-center">
-        O link será enviado para o WhatsApp cadastrado
+        Os links serão disponibilizados quando o aquecimento iniciar
       </p>
     </div>
   );
@@ -472,7 +502,7 @@ export default function PreparacaoPage() {
               <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5">
                 <MessageSquare className="h-3 w-3" /> Passo 1 — entre no grupo
               </div>
-              <WhatsAppButton segment={segment} />
+              <GroupButtons segment={segment} />
             </div>
 
             {/* Funil */}
