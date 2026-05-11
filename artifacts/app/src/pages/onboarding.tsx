@@ -9,13 +9,15 @@ import {
   Rocket, Package, ChevronRight, Send, Loader2,
   CheckCircle2, Sparkles, ArrowRight, Star, Bot,
   Mail, MessageSquare, Target, TrendingUp, Shield,
+  Users, Video, BarChart2,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos";
-type UIStep = "path_select" | "conversation" | "plan_preview";
+type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos" | "has_audience";
+type AudienceSubPath = "micro_launch" | "members_area" | "product_from_audience";
+type UIStep = "path_select" | "audience_subpath" | "conversation" | "plan_preview";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -41,6 +43,20 @@ interface AffiliateStrategy {
   suggestedApproach: string;
   revenueProjection: string;
   firstSteps: string[];
+}
+
+interface AudienceMonetizationPlan {
+  approachTitle: string;
+  subPath: AudienceSubPath;
+  audienceSummary: string;
+  platformFocus: string;
+  monetizationModel: string;
+  suggestedProductName: string;
+  priceRange: string;
+  launchTimeline: string;
+  firstSteps: string[];
+  revenueProjection: string;
+  whyItWorks: string;
 }
 
 // ── Path selector ─────────────────────────────────────────────────────────────
@@ -74,6 +90,16 @@ const PATHS = [
     badge: "Afiliado",
     badgeColor: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
     glow: "hover:border-yellow-400/60 hover:shadow-[0_0_30px_hsl(45_100%_60%/0.12)]",
+  },
+  {
+    id: "has_audience" as OnboardingPath,
+    icon: Users,
+    title: "Tenho audiência, quero monetizar",
+    subtitle: "Creator economy · micro-lançamento · membros",
+    desc: "Você já tem seguidores, canal ou comunidade. A IA descobre o modelo certo — micro-lançamento, área de membros ou produto derivado — e executa tudo.",
+    badge: "Creator",
+    badgeColor: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
+    glow: "hover:border-emerald-400/60 hover:shadow-[0_0_30px_hsl(160_84%_39%/0.12)]",
   },
 ];
 
@@ -139,6 +165,7 @@ interface OnboardingState {
   step: UIStep;
   messages: ChatMessage[];
   conversationComplete: boolean;
+  audienceSubPath?: AudienceSubPath;
 }
 
 function loadOnboardingState(): OnboardingState | null {
@@ -173,6 +200,8 @@ export default function Onboarding() {
   const [sending, setSending] = useState(false);
   const [proposals, setProposals] = useState<ProductProposal[] | null>(null);
   const [affiliateStrategy, setAffiliateStrategy] = useState<AffiliateStrategy | null>(null);
+  const [audienceMonetizationPlan, setAudienceMonetizationPlan] = useState<AudienceMonetizationPlan | null>(null);
+  const [audienceSubPath, setAudienceSubPath] = useState<AudienceSubPath | null>(null);
   const [conversationComplete, setConversationComplete] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -187,6 +216,7 @@ export default function Onboarding() {
       setStep(saved.step);
       setMessages(saved.messages);
       setConversationComplete(saved.conversationComplete);
+      if (saved.audienceSubPath) setAudienceSubPath(saved.audienceSubPath);
     }
   }, []);
 
@@ -196,6 +226,11 @@ export default function Onboarding() {
 
   // ── Select path and create campaign ──────────────────────────────────────────
   const handlePathSelect = async (selectedPath: OnboardingPath) => {
+    if (selectedPath === "has_audience") {
+      setPath(selectedPath);
+      setStep("audience_subpath");
+      return;
+    }
     setPath(selectedPath);
     setStarting(true);
     try {
@@ -210,15 +245,48 @@ export default function Onboarding() {
       setCampaignId(cid);
       setStep("conversation");
 
-      // Initial AI greeting based on path
       const greetings: Record<OnboardingPath, string> = {
         has_product: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vou te ajudar a preparar tudo para o lançamento do seu produto.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?`,
         building_product: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Vai ser um prazer ajudar você a encontrar o produto ideal.\n\nVamos começar do seu perfil. Qual é a sua área de atuação ou especialidade principal? (ex: nutrição, finanças, tecnologia, fitness, educação...)`,
         affiliate_nexos: `Olá${user?.name ? `, ${user.name.split(" ")[0]}` : ""}! Bem-vindo ao programa de afiliados NexOS AI.\n\nComo afiliado, você vai lançar a plataforma para o seu público e ganhar comissões recorrentes por cada assinante ativo.\n\nPara montar sua estratégia, me conta: qual é o seu público atual? Tem seguidores, lista de email, grupo ou comunidade?`,
+        has_audience: "",
       };
       const initMsgs = [{ role: "assistant" as const, content: greetings[selectedPath] }];
       setMessages(initMsgs);
       saveOnboardingState({ path: selectedPath, campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false });
+    } catch {
+      toast.error("Erro ao iniciar. Tente novamente.");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  // ── Select audience sub-path and create campaign ───────────────────────────
+  const handleAudienceSubPathSelect = async (subPath: AudienceSubPath) => {
+    setAudienceSubPath(subPath);
+    setStarting(true);
+    try {
+      const res = await customFetch<Response>("/api/onboarding/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: "has_audience", audienceSubPath: subPath }),
+      });
+      if (!res.ok) throw new Error("Falha ao iniciar");
+      const data = await res.json() as { campaign: { id: string } };
+      const cid = data.campaign.id;
+      setCampaignId(cid);
+      setStep("conversation");
+
+      const firstName = user?.name ? `, ${user.name.split(" ")[0]}` : "";
+      const subPathGreetings: Record<AudienceSubPath, string> = {
+        micro_launch: `Olá${firstName}! Excelente escolha — micro-lançamento é a forma mais rápida de monetizar uma audiência existente.\n\nPrimeira pergunta: em qual plataforma você está mais ativo? (YouTube, Instagram, TikTok, Kwai, Telegram, outros?)`,
+        members_area: `Olá${firstName}! Área de membros é o modelo de renda recorrente mais poderoso para creators.\n\nMe conta: em qual plataforma você publica seu conteúdo hoje e quantos seguidores ou inscritos você tem aproximadamente?`,
+        product_from_audience: `Olá${firstName}! Transformar audiência em produto é o jeito mais inteligente de monetizar — você já tem a lista quente.\n\nPrimeira pergunta: qual plataforma é o seu principal canal e qual é o nicho do seu conteúdo?`,
+      };
+
+      const initMsgs = [{ role: "assistant" as const, content: subPathGreetings[subPath] }];
+      setMessages(initMsgs);
+      saveOnboardingState({ path: "has_audience", campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false, audienceSubPath: subPath });
     } catch {
       toast.error("Erro ao iniciar. Tente novamente.");
     } finally {
@@ -245,6 +313,9 @@ export default function Onboarding() {
       } else if (path === "building_product") {
         endpoint = "/api/onboarding/product-finder/message";
         body = { message: userMsg, history, campaignId };
+      } else if (path === "has_audience") {
+        endpoint = "/api/onboarding/audience-monetization/message";
+        body = { message: userMsg, history, subPath: audienceSubPath ?? "micro_launch", campaignId };
       } else {
         endpoint = "/api/onboarding/affiliate-nexos/message";
         body = { message: userMsg, history };
@@ -262,6 +333,7 @@ export default function Onboarding() {
         message?: string;
         productProposals?: ProductProposal[];
         affiliateStrategy?: AffiliateStrategy;
+        plan?: AudienceMonetizationPlan;
         isComplete?: boolean;
       };
 
@@ -272,11 +344,12 @@ export default function Onboarding() {
       const complete = data.isComplete ?? false;
       if (data.productProposals?.length) setProposals(data.productProposals);
       if (data.affiliateStrategy) setAffiliateStrategy(data.affiliateStrategy);
+      if (data.plan) setAudienceMonetizationPlan(data.plan);
       if (complete) setConversationComplete(true);
 
       // Persist updated conversation
       if (path && campaignId) {
-        saveOnboardingState({ path, campaignId, step, messages: withAi, conversationComplete: complete });
+        saveOnboardingState({ path, campaignId, step, messages: withAi, conversationComplete: complete, audienceSubPath: audienceSubPath ?? undefined });
       }
     } catch {
       toast.error("Erro de comunicação com a IA. Tente novamente.");
@@ -311,6 +384,95 @@ export default function Onboarding() {
   };
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
+
+  if (step === "audience_subpath") {
+    const SUB_PATHS: { id: AudienceSubPath; icon: typeof Video; title: string; subtitle: string; desc: string; badge: string }[] = [
+      {
+        id: "micro_launch",
+        icon: Rocket,
+        title: "Micro-lançamento por conteúdo",
+        subtitle: "0 a 7 dias do zero ao faturamento",
+        desc: "Crie um produto de entrada (R$97–R$497) baseado no conteúdo que você já publica. A IA monta a oferta, escreve o copy e conduz o lançamento pelo seu canal.",
+        badge: "Mais rápido",
+      },
+      {
+        id: "members_area",
+        icon: Users,
+        title: "Área de membros perpétua",
+        subtitle: "Renda recorrente todo mês",
+        desc: "Transforme sua audiência engajada em assinantes pagantes. Conteúdo exclusivo, comunidade fechada e renda previsível mês a mês.",
+        badge: "Recorrência",
+      },
+      {
+        id: "product_from_audience",
+        icon: BarChart2,
+        title: "Produto derivado da audiência",
+        subtitle: "Lançamento PLF completo",
+        desc: "Sua audiência já é sua lista quente. A IA analisa o público, cria o produto ideal, monta a sequência de lançamento completa e executa automaticamente.",
+        badge: "Lançamento completo",
+      },
+    ];
+
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4">
+        <div className="w-full max-w-3xl animate-in fade-in duration-700">
+          <div className="text-center mb-10">
+            <button
+              onClick={() => { setStep("path_select"); setPath(null); }}
+              className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest hover:text-foreground transition-colors mb-6 flex items-center gap-1.5 mx-auto"
+            >
+              <ChevronRight className="h-3 w-3 rotate-180" /> Voltar
+            </button>
+            <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-3 py-1 border-emerald-400/40 text-emerald-400 bg-emerald-400/10 mb-4">
+              Creator Economy
+            </Badge>
+            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground mb-3">
+              Como quer monetizar sua audiência?
+            </h1>
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+              Escolha o modelo — a IA executa tudo a partir daqui
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {SUB_PATHS.map((sp) => {
+              const Icon = sp.icon;
+              return (
+                <button
+                  key={sp.id}
+                  onClick={() => void handleAudienceSubPathSelect(sp.id)}
+                  disabled={starting}
+                  className="text-left w-full border border-border/50 bg-card/40 backdrop-blur-sm p-5 md:p-6 transition-all duration-200 relative overflow-hidden group hover:border-emerald-400/60 hover:shadow-[0_0_30px_hsl(160_84%_39%/0.12)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-emerald-400/30 group-hover:border-emerald-400 transition-colors" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-emerald-400/30 group-hover:border-emerald-400 transition-colors" />
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-sm border border-border/50 bg-muted/20 flex items-center justify-center shrink-0 group-hover:border-emerald-400/40 group-hover:bg-emerald-400/10 transition-all">
+                      {starting && audienceSubPath === sp.id
+                        ? <Loader2 className="h-5 w-5 text-emerald-400 animate-spin" />
+                        : <Icon className="h-5 w-5 text-muted-foreground group-hover:text-emerald-400 transition-colors" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="font-mono font-bold text-base text-foreground group-hover:text-emerald-400 transition-colors">{sp.title}</h3>
+                        <Badge variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border-emerald-400/40 text-emerald-400 bg-emerald-400/10">
+                          {sp.badge}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] font-mono text-emerald-400/70 uppercase tracking-widest mb-2">{sp.subtitle}</p>
+                      <p className="text-xs text-muted-foreground font-mono leading-relaxed">{sp.desc}</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all shrink-0 mt-3" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "path_select") {
     return (
@@ -392,7 +554,7 @@ export default function Onboarding() {
             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
             <div>
               <h2 className="font-mono font-bold text-sm text-foreground uppercase tracking-widest">
-                {path === "has_product" ? "Briefing Estratégico" : path === "building_product" ? "Product Discovery" : "Estratégia de Afiliado"}
+                {path === "has_product" ? "Briefing Estratégico" : path === "building_product" ? "Product Discovery" : path === "has_audience" ? "Creator Monetization" : "Estratégia de Afiliado"}
               </h2>
               <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
                 {pathMeta.subtitle}
@@ -450,13 +612,44 @@ export default function Onboarding() {
             </div>
           )}
 
+          {/* Audience monetization plan card */}
+          {audienceMonetizationPlan && (
+            <div className="border border-emerald-400/30 bg-emerald-400/5 p-4 rounded-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-emerald-400" />
+                <span className="font-mono font-bold text-xs uppercase tracking-widest text-emerald-400">{audienceMonetizationPlan.approachTitle}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5 text-[11px] font-mono">
+                <div><span className="text-muted-foreground">Plataforma: </span>{audienceMonetizationPlan.platformFocus}</div>
+                <div><span className="text-muted-foreground">Produto: </span>{audienceMonetizationPlan.suggestedProductName}</div>
+                <div><span className="text-muted-foreground">Preço: </span>{audienceMonetizationPlan.priceRange}</div>
+                <div><span className="text-muted-foreground">Prazo: </span>{audienceMonetizationPlan.launchTimeline}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">Projeção: </span><span className="text-emerald-400">{audienceMonetizationPlan.revenueProjection}</span></div>
+              </div>
+              {audienceMonetizationPlan.firstSteps.length > 0 && (
+                <div>
+                  <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-2">Primeiros passos:</p>
+                  <ul className="space-y-1">
+                    {audienceMonetizationPlan.firstSteps.map((s, i) => (
+                      <li key={i} className="flex items-start gap-2 text-[11px] font-mono">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-[11px] font-mono text-muted-foreground/60 italic">{audienceMonetizationPlan.whyItWorks}</p>
+            </div>
+          )}
+
           {/* Complete CTA */}
           {conversationComplete && (
             <div className="border border-success/30 bg-success/5 p-4 rounded-sm">
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle2 className="h-4 w-4 text-success" />
                 <span className="font-mono font-bold text-xs uppercase tracking-widest text-success">
-                  {path === "has_product" ? "Briefing concluído!" : path === "building_product" ? "Produto definido!" : "Estratégia pronta!"}
+                  {path === "has_product" ? "Briefing concluído!" : path === "building_product" ? "Produto definido!" : path === "has_audience" ? "Estratégia de monetização pronta!" : "Estratégia pronta!"}
                 </span>
               </div>
               <Button

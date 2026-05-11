@@ -11,6 +11,10 @@ import {
   processAffiliateNexosTurn,
   type ProductFinderTurn,
 } from "./product-finder.agent.js";
+import {
+  processAudienceMonetizationTurn,
+  type AudienceMonetizationTurn,
+} from "./audience-monetization.agent.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -47,8 +51,9 @@ router.get("/status", async (req, res): Promise<void> => {
 // Creates the first campaign based on the chosen path
 
 const startSchema = z.object({
-  path: z.enum(["has_product", "building_product", "affiliate_nexos"]),
+  path: z.enum(["has_product", "building_product", "affiliate_nexos", "has_audience"]),
   title: z.string().optional(),
+  audienceSubPath: z.enum(["micro_launch", "members_area", "product_from_audience"]).optional(),
 });
 
 router.post("/start", async (req, res): Promise<void> => {
@@ -76,8 +81,7 @@ router.post("/start", async (req, res): Promise<void> => {
       track: "six_digits",
       intakeData: { _onboardingPath: "building_product" },
     }, req.log);
-  } else {
-    // affiliate_nexos — special affiliate campaign for NexOS AI itself
+  } else if (path === "affiliate_nexos") {
     campaign = await createCampaign(req.auth.workspaceId, {
       title: "Afiliado NexOS AI",
       type: "affiliate",
@@ -88,6 +92,23 @@ router.post("/start", async (req, res): Promise<void> => {
         "product.description": "Plataforma de automação de lançamentos digitais com IA — executa estratégia, gera conteúdo e coordena toda a operação",
         "product.category": "software",
         "product.deliveryMethod": "100_online",
+      },
+    }, req.log);
+  } else {
+    // has_audience — creator monetization path
+    const subPath = parsed.data.audienceSubPath ?? "micro_launch";
+    const titleMap: Record<string, string> = {
+      micro_launch: "Micro-Lançamento de Audiência",
+      members_area: "Área de Membros",
+      product_from_audience: "Produto da Audiência",
+    };
+    campaign = await createCampaign(req.auth.workspaceId, {
+      title: titleMap[subPath] ?? "Monetização de Audiência",
+      type: "creator_monetization",
+      track: "six_digits",
+      intakeData: {
+        _onboardingPath: "has_audience",
+        _audienceSubPath: subPath,
       },
     }, req.log);
   }
@@ -157,6 +178,43 @@ router.post("/affiliate-nexos/message", async (req, res): Promise<void> => {
     parsed.data.history as ProductFinderTurn[],
     req.log
   );
+
+  res.json(result);
+});
+
+// ─── Audience monetization conversation ───────────────────────────────────────
+
+const audienceSchema = z.object({
+  message:       z.string().min(1),
+  history:       z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).optional().default([]),
+  subPath:       z.enum(["micro_launch", "members_area", "product_from_audience"]).default("micro_launch"),
+  campaignId:    z.string().uuid().optional(),
+});
+
+router.post("/audience-monetization/message", async (req, res): Promise<void> => {
+  const parsed = audienceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const { message, history, subPath, campaignId } = parsed.data;
+
+  const result = await processAudienceMonetizationTurn(
+    req.auth.workspaceId,
+    message,
+    history as AudienceMonetizationTurn[],
+    subPath,
+    req.log
+  );
+
+  if (result.isComplete && result.intakeSnapshot && campaignId) {
+    try {
+      await saveIntakeData(campaignId, req.auth.workspaceId, result.intakeSnapshot, req.log);
+    } catch (err) {
+      req.log.warn({ err, campaignId }, "Could not save intake snapshot from audience monetization");
+    }
+  }
 
   res.json(result);
 });

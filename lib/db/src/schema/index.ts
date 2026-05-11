@@ -28,3 +28,4 @@ export * from "./whatsapp-dispatches";
 export * from "./sequence-contacts";
 export * from "./waitlist";
 export * from "./launch-recordings";
+export * from "./client-profiles";

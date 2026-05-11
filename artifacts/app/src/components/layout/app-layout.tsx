@@ -65,7 +65,10 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         { name: "Sequências",   href: "/sequences",  icon: Workflow   },
         { name: "Receita",      href: "/revenue",    icon: DollarSign },
         { name: "Compliance",   href: "/compliance", icon: Shield     },
-        ...(isAgency ? [{ name: "Clientes", href: "/agency/clients", icon: Users }] : []),
+        ...(isAgency ? [
+          { name: "Clientes",       href: "/agency/clients",   icon: Users },
+          { name: "Perfis de Cliente", href: "/agency/profiles", icon: Users },
+        ] : []),
       ],
     },
     {
