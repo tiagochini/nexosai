@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams, Link, useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -581,6 +581,8 @@ export default function ContentApproval() {
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
   const [previewFilter, setPreviewFilter] = useState<Platform | "all">("all");
 
+  const [, setLocation] = useLocation();
+
   const { data: campaignData, isLoading } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}`],
     queryFn: async () => {
@@ -589,6 +591,30 @@ export default function ContentApproval() {
       return res.json() as Promise<{ campaign: { id: string; title: string; status: string } }>;
     },
     enabled: !!campaignId,
+  });
+
+  // Transition campaign from awaiting_approval → approved when user approves all content
+  const approveCampaignMutation = useMutation({
+    mutationFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "approved" }),
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro ao aprovar campanha");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Conteúdo aprovado! Campanha pronta para lançamento.");
+      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
+      setLocation(`/campaigns/${campaignId}`);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message ?? "Erro ao aprovar campanha");
+    },
   });
 
   const campaign = campaignData?.campaign;
@@ -709,11 +735,16 @@ export default function ContentApproval() {
                 </Button>
               )}
               {approvedCount === pieces.length && (
-                <Link href={`/campaigns/${campaignId}`}>
-                  <Button className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-9 text-xs">
-                    <Send className="h-3.5 w-3.5" />Lançar Campanha<ArrowRight className="h-3 w-3" />
-                  </Button>
-                </Link>
+                <Button
+                  onClick={() => approveCampaignMutation.mutate()}
+                  disabled={approveCampaignMutation.isPending}
+                  className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-9 text-xs"
+                >
+                  {approveCampaignMutation.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Send className="h-3.5 w-3.5" />}
+                  Aprovar e Lançar<ArrowRight className="h-3 w-3" />
+                </Button>
               )}
             </div>
           </div>
