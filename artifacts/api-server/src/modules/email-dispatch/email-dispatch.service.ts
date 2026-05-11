@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { NotFoundError, ValidationError, AppError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
+import { env } from "../../lib/env.js";
 import { recordEngagementEvent } from "../launch-sequence/sequence-analytics.service.js";
 import { emitSequenceEvent } from "../launch-sequence/sequence-realtime.js";
 
@@ -147,6 +148,52 @@ async function sendViaRdStation(
     recipientCount: 0,
     status: payload.scheduledAt ? "scheduled" : "sent",
   };
+}
+
+async function sendViaResend(
+  fromName: string,
+  fromEmail: string,
+  payload: { subject: string; htmlContent: string; listId: string; scheduledAt?: string },
+): Promise<DispatchResult> {
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) throw new AppError(503, "RESEND_API_KEY não configurado. Adicione a variável de ambiente.");
+
+  const from = `${fromName} <${fromEmail || env.RESEND_FROM_EMAIL}>`;
+
+  // Use Resend Audiences broadcast when listId looks like a UUID; else direct send
+  const isAudienceId = /^[0-9a-f-]{36}$/i.test(payload.listId);
+  if (isAudienceId) {
+    const res = await fetch(`https://api.resend.com/broadcasts`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        audience_id: payload.listId,
+        from,
+        subject: payload.subject,
+        html: payload.htmlContent,
+        scheduled_at: payload.scheduledAt ?? undefined,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new AppError(502, `Resend broadcast error: ${err}`);
+    }
+    const data = (await res.json()) as { id?: string };
+    return { externalCampaignId: data.id, recipientCount: 0, status: payload.scheduledAt ? "scheduled" : "sent" };
+  }
+
+  // Transactional fallback to a single address (list management via Resend Audiences)
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: [payload.listId], subject: payload.subject, html: payload.htmlContent }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new AppError(502, `Resend send error: ${err}`);
+  }
+  const data = (await res.json()) as { id?: string };
+  return { externalCampaignId: data.id, recipientCount: 1, status: "sent" };
 }
 
 async function sendViaActiveCampaign(
@@ -313,6 +360,9 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
     } else if (dispatch.provider === "activecampaign") {
       const { apiKey, accountUrl } = await getActiveCampaignCredentials(workspaceId);
       result = await sendViaActiveCampaign(apiKey, accountUrl, payload);
+    } else if (env.RESEND_API_KEY && ["mailchimp", "sendgrid", "brevo", "custom_smtp"].includes(dispatch.provider)) {
+      // Fallback: use Resend when configured and native provider not wired
+      result = await sendViaResend(dispatch.fromName, dispatch.fromEmail, payload);
     } else {
       result = { status: "sent", recipientCount: 0, externalCampaignId: "mock" };
       logger.warn(

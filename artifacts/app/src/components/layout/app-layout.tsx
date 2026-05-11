@@ -7,7 +7,7 @@ import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
-  Brain, Receipt,
+  Brain, Receipt, Link2,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
@@ -76,6 +76,12 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       expertOnly: true,
       items: [
         { name: "Afiliados",    href: "/affiliate", icon: Star },
+      ],
+    },
+    {
+      label: "Automações",
+      items: [
+        { name: "Integrações",     href: "/integracoes", icon: Link2, badge: "!" },
       ],
     },
     {

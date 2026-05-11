@@ -163,13 +163,28 @@ const INTEGRATION_CATALOG: IntegrationItem[] = [
     iconColor: "text-cyan-400",
     required: false,
   },
+  {
+    provider: "tiktok",
+    label: "TikTok",
+    description: "Auto-post de vídeos e reels no TikTok sincronizados ao calendário de lançamento.",
+    benefit: {
+      has_product:        "Vídeos de lançamento postados automaticamente no TikTok nos horários de maior alcance",
+      building_product:   "Conteúdo de validação do produto publicado no TikTok para atrair primeiros compradores",
+      affiliate_nexos:    "Vídeos de afiliado gerados pela IA e postados no TikTok com links de rastreamento",
+      has_audience:       "Reels de pré-lançamento disparados automaticamente para engajar sua audiência no TikTok",
+    },
+    category: "social",
+    icon: Video,
+    iconColor: "text-pink-400",
+    required: false,
+  },
 ];
 
 const PATH_INTEGRATIONS: Record<OnboardingPath, string[]> = {
-  has_product:      ["whatsapp_business", "rd_station", "activecampaign", "hotmart", "kiwify"],
-  building_product: ["whatsapp_business", "rd_station"],
-  affiliate_nexos:  ["whatsapp_business", "rd_station"],
-  has_audience:     ["whatsapp_business", "rd_station", "meta_ads"],
+  has_product:      ["whatsapp_business", "rd_station", "activecampaign", "hotmart", "kiwify", "tiktok"],
+  building_product: ["whatsapp_business", "rd_station", "tiktok"],
+  affiliate_nexos:  ["whatsapp_business", "rd_station", "tiktok"],
+  has_audience:     ["whatsapp_business", "rd_station", "meta_ads", "tiktok"],
 };
 
 // ── Path selector ─────────────────────────────────────────────────────────────

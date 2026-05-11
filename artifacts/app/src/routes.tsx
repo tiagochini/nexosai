@@ -38,6 +38,7 @@ import CheckoutPage from "@/pages/checkout";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
+import IntegracoesPage from "@/pages/integracoes/index";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -188,6 +189,11 @@ export default function AppRoutes() {
       </Route>
       <Route path="/compliance">
         {() => <ProtectedRoute><CompliancePage /></ProtectedRoute>}
+      </Route>
+
+      {/* Integrações */}
+      <Route path="/integracoes">
+        {() => <ProtectedRoute><IntegracoesPage /></ProtectedRoute>}
       </Route>
 
       {/* Account */}

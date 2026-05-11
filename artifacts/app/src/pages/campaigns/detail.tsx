@@ -18,7 +18,7 @@ import {
   ArrowLeft, Play, FileText, FileSpreadsheet, CheckCircle2,
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
-  AlertTriangle, Activity, Target, DollarSign, Users, BookOpen,
+  AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
 } from "lucide-react";
 import { CampaignBrief } from "@/components/campaign-brief";
 
@@ -186,6 +186,7 @@ export default function CampaignDetail() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas">("comando");
+  const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[] }[] | null>(null);
 
   const { data, isLoading } = useGetCampaign(campaignId, {
     query: {
@@ -286,15 +287,17 @@ export default function CampaignDetail() {
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
       onError: (err: unknown) => {
-        const errData = (err as { response?: { data?: { error?: string; code?: string; data?: { shortage?: number; balance?: number; required?: number } } } })?.response?.data;
+        const errData = (err as { response?: { data?: { error?: string; code?: string; data?: { shortage?: number; balance?: number; required?: number; missing?: { category: string; providers: string[] }[] } } } })?.response?.data;
         const code = errData?.code;
         const msg = errData?.error;
         if (code === "INSUFFICIENT_CREDITS" && errData?.data) {
           const { shortage = 0, balance = 0, required = 0 } = errData.data;
           toast.error(`Créditos insuficientes — faltam ${shortage} cr (saldo: ${balance}, necessário: ${required})`, {
-            description: "Acesse Configurações → Créditos para comprar mais.",
+            description: "Acesse Créditos de IA para comprar mais.",
             duration: 8000,
           });
+        } else if (code === "MISSING_INTEGRATIONS") {
+          setMissingIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[] }) => m));
         } else {
           toast.error(msg ?? "Falha ao iniciar fase.");
         }
@@ -406,6 +409,50 @@ export default function CampaignDetail() {
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
+
+      {/* ── Missing Integrations Modal ── */}
+      {missingIntegrations && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="border border-yellow-400/40 bg-card w-full max-w-md shadow-2xl">
+            <div className="border-b border-yellow-400/20 px-5 py-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-400 shrink-0" />
+                <div>
+                  <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-yellow-400">Integrações Obrigatórias</h3>
+                  <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Configure os canais abaixo para lançar sua campanha.</p>
+                </div>
+              </div>
+              <button onClick={() => setMissingIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {missingIntegrations.map(m => (
+                <div key={m.category} className="border border-yellow-400/20 bg-yellow-400/5 p-4">
+                  <div className="font-mono text-xs font-bold uppercase tracking-widest text-yellow-400 mb-2">{m.category}</div>
+                  <p className="text-xs font-mono text-muted-foreground/70 mb-3">
+                    Conecte um dos seguintes: <span className="text-foreground/80">{m.providers.join(" · ")}</span>
+                  </p>
+                </div>
+              ))}
+              <p className="text-xs font-mono text-muted-foreground/50 text-center">
+                A campanha não pode ser lançada sem esses canais conectados.
+              </p>
+            </div>
+            <div className="border-t border-border/50 px-5 py-4 flex gap-3">
+              <Link href="/integracoes">
+                <Button className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
+                  <Link2 className="h-4 w-4" />Configurar Integrações
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={() => setMissingIntegrations(null)} className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-4">
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="border-b border-border/50 pb-4">
         <Link href="/campaigns">

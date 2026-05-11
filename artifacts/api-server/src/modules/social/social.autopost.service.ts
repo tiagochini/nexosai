@@ -6,7 +6,7 @@ import {
   socialPostsTable,
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
-import { publishToInstagram, publishToFacebook } from "./social.publisher.js";
+import { publishToInstagram, publishToFacebook, publishToTikTok } from "./social.publisher.js";
 import type { SocialPost, WorkspaceIntegration } from "@workspace/db";
 
 // Maps content piece types → social platforms to publish
@@ -17,10 +17,13 @@ const CONTENT_TYPE_PLATFORMS: Record<string, string[]> = {
   facebook_post:   ["facebook"],
   facebook_video:  ["facebook"],
   feed_image:      ["instagram", "facebook"],
-  feed_video:      ["instagram", "facebook"],
+  feed_video:      ["instagram", "facebook", "tiktok"],
   story:           ["instagram"],
-  reel:            ["instagram"],
+  reel:            ["instagram", "tiktok"],
   carousel:        ["instagram"],
+  tiktok_video:    ["tiktok"],
+  tiktok_reel:     ["tiktok"],
+  short_video:     ["tiktok", "instagram"],
 };
 
 const CONTENT_TYPE_POST_TYPE: Record<string, string> = {
@@ -34,6 +37,9 @@ const CONTENT_TYPE_POST_TYPE: Record<string, string> = {
   story:           "story",
   reel:            "reel",
   carousel:        "carousel",
+  tiktok_video:    "feed_video",
+  tiktok_reel:     "reel",
+  short_video:     "reel",
 };
 
 /**
@@ -121,6 +127,8 @@ export async function autoPostApprovedContent(
         result = await publishToInstagram(mockPost, integration);
       } else if (platform === "facebook") {
         result = await publishToFacebook(mockPost, integration);
+      } else if (platform === "tiktok") {
+        result = await publishToTikTok(mockPost, integration);
       } else {
         continue;
       }

@@ -465,10 +465,10 @@ function SecurityTab() {
 // ── Integrations Tab ──────────────────────────────────────────────────────────
 
 type IntegrationProvider =
-  | "meta_ads" | "instagram" | "tiktok_ads" | "google_ads"
+  | "meta_ads" | "instagram" | "tiktok" | "tiktok_ads" | "google_ads"
   | "whatsapp_business" | "telegram" | "stripe" | "hotmart"
   | "eduzz" | "kiwify" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot"
-  | "crypto_native" | "custom_webhook";
+  | "resend" | "crypto_native" | "custom_webhook";
 
 interface WorkspaceIntegration {
   id: string;
@@ -613,9 +613,57 @@ const INTEGRATION_CATALOG: {
       { key: "accessToken", label: "Private App Token", placeholder: "pat-xxxx...", type: "password" },
     ],
   },
+  {
+    provider: "tiktok",
+    label: "TikTok",
+    description: "Auto-post de vídeos orgânicos e reels no TikTok sincronizados ao calendário de lançamento",
+    category: "Social Orgânico",
+    color: "text-pink-400",
+    fields: [
+      { key: "accountId", label: "TikTok Account ID", placeholder: "6912345678901234567" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "@meucanal" },
+      { key: "accessToken", label: "Access Token", placeholder: "act.xxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "tiktok_ads",
+    label: "TikTok Ads",
+    description: "Gestão de campanhas pagas no TikTok — anúncios sincronizados ao lançamento",
+    category: "Mídia Paga",
+    color: "text-pink-400",
+    fields: [
+      { key: "accountId", label: "Advertiser ID", placeholder: "6912345678901234567" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "TikTok Ads" },
+      { key: "accessToken", label: "Access Token", placeholder: "act.xxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "instagram",
+    label: "Instagram",
+    description: "Auto-post de conteúdo orgânico e stories sincronizados ao calendário de lançamento",
+    category: "Social Orgânico",
+    color: "text-pink-300",
+    fields: [
+      { key: "accountId", label: "Instagram Account ID", placeholder: "17841400000000000" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "@meucanal" },
+      { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAxxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "resend",
+    label: "Resend",
+    description: "E-mail transacional e broadcast de alta entregabilidade via Resend",
+    category: "E-mail",
+    color: "text-violet-400",
+    fields: [
+      { key: "accountId", label: "Audience ID (Resend)", placeholder: "78261eea-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Meu Workspace Resend" },
+      { key: "accessToken", label: "API Key", placeholder: "re_xxxx...", type: "password" },
+    ],
+  },
 ];
 
-const CATEGORIES = ["Mensagens", "E-mail", "Pagamentos", "Mídia Paga", "CRM"];
+const CATEGORIES = ["Mensagens", "E-mail", "Pagamentos", "Mídia Paga", "Social Orgânico", "CRM"];
 
 function ConnectModal({
   info,

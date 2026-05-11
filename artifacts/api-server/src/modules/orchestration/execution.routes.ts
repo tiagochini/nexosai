@@ -13,10 +13,12 @@ import {
   db,
   campaignsTable,
   workspacesTable,
+  workspaceIntegrationsTable,
   getCampaignCreditEstimate,
   CAMPAIGN_CREDIT_BUFFER,
 } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import { env } from "../../lib/env.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -167,11 +169,65 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
   }
 });
 
+// ── Integration gate for launch ──────────────────────────────────────────────
+// Blocks campaign launch if NO messaging AND NO email channels are connected.
+type DbIntegrationProvider = "meta_ads" | "instagram" | "tiktok_ads" | "google_ads" | "whatsapp_business" | "telegram" | "stripe" | "hotmart" | "eduzz" | "kiwify" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot" | "crypto_native" | "custom_webhook";
+
+async function checkIntegrationsForLaunch(workspaceId: string): Promise<void> {
+  const MESSAGING_PROVIDERS: DbIntegrationProvider[] = ["whatsapp_business", "telegram"];
+  const EMAIL_PROVIDERS: DbIntegrationProvider[] = ["rd_station", "activecampaign"];
+
+  const connected = await db
+    .select({ provider: workspaceIntegrationsTable.provider })
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        eq(workspaceIntegrationsTable.status, "connected"),
+        inArray(workspaceIntegrationsTable.provider, [
+          ...MESSAGING_PROVIDERS,
+          ...EMAIL_PROVIDERS,
+        ] as DbIntegrationProvider[]),
+      ),
+    );
+
+  const connectedProviders = connected.map((r) => r.provider as string);
+  const hasMessaging = MESSAGING_PROVIDERS.some((p) => connectedProviders.includes(p));
+  // Resend is configured via env var (not stored as workspace integration)
+  const hasEmail = EMAIL_PROVIDERS.some((p) => connectedProviders.includes(p)) || !!env.RESEND_API_KEY;
+
+  if (hasMessaging && hasEmail) return;
+
+  const missing: { category: string; providers: string[]; reason: string }[] = [];
+  if (!hasMessaging) {
+    missing.push({
+      category: "Mensagens",
+      providers: ["WhatsApp Business", "Telegram"],
+      reason: "Necessário para disparar sequências de mensagens durante o lançamento",
+    });
+  }
+  if (!hasEmail) {
+    missing.push({
+      category: "E-mail",
+      providers: ["RD Station", "ActiveCampaign", "Resend"],
+      reason: "Necessário para enviar a sequência de e-mails de lançamento",
+    });
+  }
+
+  throw new AppError(
+    422,
+    `Conecte pelo menos um canal de ${missing.map((m) => m.category).join(" e ")} antes de lançar.`,
+    "MISSING_INTEGRATIONS",
+    { missing, connectUrl: "/integracoes" },
+  );
+}
+
 // POST /campaigns/:campaignId/execute/launch
 router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
 
   try {
+    await checkIntegrationsForLaunch(req.auth.workspaceId);
     await checkCreditsForPhase(req.auth.workspaceId, campaignId, "launch");
     const result = await triggerExecutionPhase(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({

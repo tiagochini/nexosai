@@ -21,7 +21,7 @@ import {
   DollarSign, Activity, TrendingUp, Target, Users,
   BarChart3, Calendar, Loader2, Star, Mail, ChevronDown, ChevronUp,
   FileText, Layers, Eye, BarChart2, Link2, Wifi, WifiOff,
-  MessageSquare, Instagram, Facebook, Phone,
+  MessageSquare, Instagram, Facebook, Phone, Music2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -291,10 +291,11 @@ interface IntegrationStatus {
 }
 
 const CRITICAL_INTEGRATIONS = [
-  { provider: "whatsapp_business", label: "WhatsApp", icon: MessageSquare, color: "text-green-400" },
-  { provider: "instagram",         label: "Instagram", icon: Instagram,     color: "text-pink-400"  },
-  { provider: "facebook",          label: "Facebook",  icon: Facebook,      color: "text-blue-400"  },
-  { provider: "rd_station",        label: "RD Station", icon: Mail,         color: "text-orange-400" },
+  { provider: "whatsapp_business", label: "WhatsApp",  icon: MessageSquare, color: "text-green-400"  },
+  { provider: "instagram",         label: "Instagram", icon: Instagram,     color: "text-pink-400"   },
+  { provider: "tiktok",            label: "TikTok",    icon: Music2,        color: "text-pink-300"   },
+  { provider: "facebook",          label: "Facebook",  icon: Facebook,      color: "text-blue-400"   },
+  { provider: "rd_station",        label: "RD Station",icon: Mail,          color: "text-orange-400" },
 ];
 
 function IntegrationHealthPanel() {
@@ -352,7 +353,7 @@ function IntegrationHealthPanel() {
 
       {/* CTA if missing */}
       {!isFullAuto && (
-        <Link href="/configuracoes?tab=integracoes" className="shrink-0">
+        <Link href="/integracoes" className="shrink-0">
           <Button size="sm" variant="outline"
             className="rounded-none font-mono text-[10px] uppercase tracking-widest h-6 px-2 border-primary/30 text-primary hover:bg-primary/10 gap-1">
             <Link2 className="h-2.5 w-2.5" />

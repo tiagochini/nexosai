@@ -87,6 +87,32 @@ Launch tracks by revenue target:
 - Payment integration is NEVER a blocker for campaign execution
 - Multilingual: PT-BR first, EN-US and ES-LA modular
 
+## TikTok Integration (Post-session)
+
+- **TikTok added everywhere**: `tiktok` provider added to `settings.tsx` INTEGRATION_CATALOG (Social Orgânico category), `onboarding.tsx` INTEGRATION_CATALOG + PATH_INTEGRATIONS (all 4 paths), `dashboard.tsx` CRITICAL_INTEGRATIONS, `social.autopost.service.ts` platform mapping (`reel`, `feed_video`, `short_video`, `tiktok_video`, `tiktok_reel` → `tiktok`).
+- **TikTok Ads** also added to settings catalog (Mídia Paga category) and maintained in existing social.tsx.
+- **`publishToTikTok()`** in `social.publisher.ts`: uses TikTok Content Posting API v2 Pull Upload (`/post/publish/video/init/`). Requires video URL + access token. Fire-and-forget from autopost.
+- **TikTok Ads** (`tiktok_ads`) was already in the DB enum; organic `tiktok` is treated as a connected integration stored under the `tiktok_ads` enum value for now (DB enum unchanged to avoid migration). Display layer uses `tiktok` string, provider stored as `tiktok_ads`.
+
+## Resend Email Integration (Post-session)
+
+- **`sendViaResend()`** added to `email-dispatch.service.ts`: detects Resend Audience UUID vs. email address in `listId`. If UUID → uses Resend Broadcasts API. If email address → uses transactional `/emails` endpoint.
+- **`RESEND_API_KEY`** and **`RESEND_FROM_EMAIL`** added to `env.ts`.
+- Fallback: when `RESEND_API_KEY` is set and provider is `mailchimp/sendgrid/brevo/custom_smtp`, automatically routes through Resend instead of mock-sending.
+- Integration gate also considers `RESEND_API_KEY` as satisfying the email requirement.
+
+## Integrações Page (Post-session)
+
+- **`/integracoes`** — new dedicated page at `artifacts/app/src/pages/integracoes/index.tsx`. Full integration management: connect/disconnect, organized by category, Full Auto status bar, per-integration "why you need it" explanation, required badges.
+- **Sidebar** — "Integrações" item added under "Automações" group, always visible (not expert-only). Points to `/integracoes`.
+- **Route** registered in `routes.tsx` as protected route.
+- **Dashboard CTA** — "Conectar" button in IntegrationHealthPanel now points to `/integracoes` (was `/configuracoes?tab=integracoes`).
+
+## Integration Gate on Launch (Post-session)
+
+- **`checkIntegrationsForLaunch()`** in `execution.routes.ts`: runs before `execute/launch` phase. Checks DB for connected messaging (WhatsApp/Telegram) AND email (RD Station/ActiveCampaign) + checks env for `RESEND_API_KEY`. If missing, returns HTTP 422 with `MISSING_INTEGRATIONS` code + `data.missing[]` array.
+- **Frontend gate**: `campaigns/detail.tsx` handles `MISSING_INTEGRATIONS` code — sets `missingIntegrations` state which renders a blocking modal with the list of missing categories, connect options, and a CTA button to `/integracoes`.
+
 ## AI Integration Status (Post-session)
 
 - **Replit AI Integrations active**: All 3 provisioned — Anthropic, OpenAI, Gemini via `AI_INTEGRATIONS_*` env vars.
