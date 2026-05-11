@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import nexosLogo from "/nexos-logo.png";
 import {
   CheckCircle2, ArrowRight, Lock, Shield,
-  Clock, Zap, BrainCircuit, Target, Activity,
-  MessageSquare, X, AlertTriangle, TrendingDown,
-  Users, Star, ChevronRight, BarChart2,
+  Clock, Zap, AlertTriangle, X,
+  TrendingDown, Users, BarChart2, Activity, ChevronRight, Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -14,13 +13,11 @@ const CART_CONFIG = {
   precoFundadorSufixo: "/mês",
   precoCheio:          "R$1.497",
   precoCheioSufixo:    "/mês",
-  horasFundador:       24,
+  horasFundador:       24,       // janela real em horas
   cartUrl:             "/comprar",
-  vagas:               47,
-  vagasRestantes:      31,     // atualizar conforme entradas
 };
 
-// ─── Countdown ────────────────────────────────────────────────────────────────
+// ─── Countdown real de 24h ────────────────────────────────────────────────────
 function useCountdown(hours: number) {
   const key = "nexos_cart_open_ts";
   const getOrSetTs = () => {
@@ -48,168 +45,115 @@ function useCountdown(hours: number) {
 
 function Digit({ v, label }: { v: number; label: string }) {
   return (
-    <div className="flex flex-col items-center border border-primary/40 bg-primary/5 py-3 px-3 min-w-[64px]">
-      <span className="font-mono font-black text-3xl md:text-4xl text-primary drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)] tabular-nums leading-none">
+    <div className="flex flex-col items-center border border-primary/40 bg-primary/5 py-4 px-4 min-w-[72px]">
+      <span className="font-mono font-black text-4xl md:text-5xl text-primary drop-shadow-[0_0_14px_hsl(var(--primary)/0.6)] tabular-nums leading-none">
         {String(v).padStart(2, "0")}
       </span>
-      <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 mt-1">{label}</span>
+      <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 mt-1.5">{label}</span>
     </div>
   );
 }
 
-// ─── Atividade social ao vivo (simulada) ──────────────────────────────────────
-const CITIES = ["São Paulo", "Belo Horizonte", "Curitiba", "Fortaleza", "Recife", "Florianópolis", "Porto Alegre", "Goiânia"];
-function useSocialFeed() {
-  const [feed, setFeed] = useState<{ name: string; city: string; ago: number }[]>([]);
-  useEffect(() => {
-    const names = ["Carlos M.", "Amanda R.", "Felipe S.", "Juliana T.", "Rodrigo A.", "Mariana L.", "Bruno C.", "Patrícia N."];
-    const addEntry = () => {
-      const entry = {
-        name: names[Math.floor(Math.random() * names.length)],
-        city: CITIES[Math.floor(Math.random() * CITIES.length)],
-        ago: Math.floor(Math.random() * 12) + 1,
-      };
-      setFeed(prev => [entry, ...prev].slice(0, 3));
-    };
-    addEntry();
-    const id = setInterval(addEntry, 18_000 + Math.random() * 12_000);
-    return () => clearInterval(id);
-  }, []);
-  return feed;
-}
-
 // ─── SEÇÃO 1: HERO ────────────────────────────────────────────────────────────
 function HeroSection({ h, m, s, expired }: { h: number; m: number; s: number; expired: boolean }) {
-  const feed = useSocialFeed();
-  const { precoFundador, precoFundadorSufixo, cartUrl, vagasRestantes } = CART_CONFIG;
+  const { precoFundador, precoFundadorSufixo, cartUrl } = CART_CONFIG;
 
   return (
     <section className="pt-20 pb-16 px-6 auth-bg-gradient">
-      <div className="max-w-5xl mx-auto pt-8">
+      <div className="max-w-5xl mx-auto pt-10">
 
-        {/* Badge */}
         <div className="inline-flex items-center gap-2 border border-destructive/40 bg-destructive/5 px-4 py-2 mb-8 font-mono text-xs uppercase tracking-[0.25em] text-destructive">
           <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse shrink-0" />
-          {expired ? "Oferta de Fundador encerrada" : `Carrinho aberto · ${vagasRestantes} vagas restantes · Fundador por 24h`}
+          {expired
+            ? "A janela de Fundador encerrou — preço cheio ativo"
+            : "Carrinho aberto · Preço de Fundador · 24h e fecha para sempre"
+          }
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 items-start">
-          <div>
-            <h1 className="text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
-              O carrinho<br />
-              <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">abriu.</span>
-            </h1>
-            <p className="font-mono text-base text-muted-foreground leading-relaxed mb-8 max-w-xl">
-              Você estava na lista. Chegou antes de todo mundo.{" "}
-              <strong className="text-foreground">Agora tem {CART_CONFIG.horasFundador}h para garantir o preço de Fundador</strong>{" "}
-              — um valor que não vai mais existir depois dessas 24 horas. Sem replay, sem reabertura, sem cupom.
+        <h1 className="text-6xl md:text-9xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
+          O carrinho<br />
+          <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
+            abriu.
+          </span>
+        </h1>
+
+        <p className="font-mono text-base md:text-lg text-muted-foreground leading-relaxed mb-4 max-w-2xl">
+          Você estava na lista de espera. Chegou antes de todo mundo.{" "}
+          <strong className="text-foreground">
+            Agora tem {CART_CONFIG.horasFundador} horas para garantir o preço de Fundador.
+          </strong>
+        </p>
+        <p className="font-mono text-sm text-muted-foreground leading-relaxed mb-10 max-w-2xl">
+          Esse carrinho abre <strong className="text-foreground">uma única vez</strong> neste preço. Não existe reabertura, cupom futuro, condição especial posterior, nem negociação. Quando o contador chegar a zero, esse valor sai do ar para sempre.
+        </p>
+
+        {/* Countdown */}
+        {!expired ? (
+          <div className="mb-10">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5" /> Tempo restante para o preço de Fundador
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <Digit v={h} label="horas" />
+              <span className="font-mono font-black text-4xl text-primary/30">:</span>
+              <Digit v={m} label="min" />
+              <span className="font-mono font-black text-4xl text-primary/30">:</span>
+              <Digit v={s} label="seg" />
+            </div>
+            <p className="font-mono text-xs text-destructive/70 uppercase tracking-widest">
+              Cada segundo que passa é um segundo a menos para garantir este preço
             </p>
-
-            {/* Price + CTA */}
-            {!expired && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6">
-                <div>
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">Preço de Fundador</div>
-                  <div className="font-mono font-black text-5xl text-primary drop-shadow-[0_0_16px_hsl(var(--primary)/0.5)]">
-                    {precoFundador}
-                    <span className="text-2xl font-normal ml-1 text-muted-foreground">{precoFundadorSufixo}</span>
-                  </div>
-                </div>
-                <a href={cartUrl}>
-                  <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-base h-16 px-10 gap-3">
-                    GARANTIR AGORA <ArrowRight className="h-5 w-5" />
-                  </Button>
-                </a>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground/40">
-              <Shield className="h-3 w-3" />
-              Sem fidelidade · Cancela quando quiser · Acesso liberado em até 24h
-            </div>
           </div>
+        ) : (
+          <div className="mb-10 border border-destructive/30 bg-destructive/5 inline-flex items-center gap-3 px-5 py-4">
+            <X className="h-4 w-4 text-destructive/70 shrink-0" />
+            <span className="font-mono text-sm text-foreground">A janela de Fundador encerrou. O acesso continua disponível no preço cheio.</span>
+          </div>
+        )}
 
-          {/* Countdown + social proof */}
-          <div className="space-y-4 min-w-[260px]">
-            {!expired ? (
-              <div className="border border-border/40 bg-card/30 p-5">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-3 flex items-center gap-1.5">
-                  <Clock className="h-3 w-3" /> Oferta de Fundador encerra em
-                </div>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Digit v={h} label="h" />
-                  <span className="font-mono font-black text-2xl text-primary/40">:</span>
-                  <Digit v={m} label="min" />
-                  <span className="font-mono font-black text-2xl text-primary/40">:</span>
-                  <Digit v={s} label="seg" />
-                </div>
-                <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-                  Depois disso: preço cheio. Sem exceções.
-                </div>
-              </div>
-            ) : (
-              <div className="border border-destructive/30 bg-destructive/5 p-5 flex items-start gap-3">
-                <X className="h-4 w-4 text-destructive/70 shrink-0 mt-0.5" />
-                <span className="font-mono text-xs text-foreground">Janela de Fundador encerrada. Preço cheio ativo.</span>
-              </div>
-            )}
-
-            {/* Vagas */}
-            <div className="border border-border/40 bg-card/30 p-4">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-2 flex items-center gap-1.5">
-                <Users className="h-3 w-3" /> Vagas restantes
-              </div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="font-mono font-black text-3xl text-foreground">{vagasRestantes}</div>
-                <div className="font-mono text-xs text-muted-foreground">de {CART_CONFIG.vagas}</div>
-              </div>
-              <div className="w-full bg-border/30 h-1.5 rounded-none">
-                <div
-                  className="bg-primary h-1.5 transition-all"
-                  style={{ width: `${((CART_CONFIG.vagas - vagasRestantes) / CART_CONFIG.vagas) * 100}%` }}
-                />
-              </div>
-              <div className="font-mono text-[10px] text-muted-foreground/40 mt-1.5">
-                {CART_CONFIG.vagas - vagasRestantes} garantidas · {vagasRestantes} restantes
+        {/* Price + CTA */}
+        {!expired && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">Preço de Fundador — agora</div>
+              <div className="font-mono font-black text-5xl md:text-6xl text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)]">
+                {precoFundador}
+                <span className="text-2xl font-normal ml-2 text-muted-foreground">{precoFundadorSufixo}</span>
               </div>
             </div>
-
-            {/* Social feed */}
-            {feed.length > 0 && (
-              <div className="space-y-1.5">
-                {feed.map((entry, i) => (
-                  <div key={i} className="border border-primary/15 bg-primary/5 px-3 py-2 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-                    <span className="font-mono text-[10px] text-muted-foreground leading-snug">
-                      <strong className="text-foreground">{entry.name}</strong> de {entry.city} garantiu há {entry.ago}min
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <a href={cartUrl}>
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-base h-16 px-10 gap-3">
+                GARANTIR AGORA <ArrowRight className="h-5 w-5" />
+              </Button>
+            </a>
           </div>
+        )}
+
+        <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground/40">
+          <Shield className="h-3.5 w-3.5" />
+          Sem fidelidade · Cancela quando quiser · Acesso liberado em até 24h
         </div>
       </div>
     </section>
   );
 }
 
-// ─── SEÇÃO 2: TRANSFORMAÇÃO — Antes vs Depois ─────────────────────────────────
+// ─── SEÇÃO 2: TRANSFORMAÇÃO — Antes vs Depois ────────────────────────────────
 function TransformacaoSection() {
   const antes = [
     "Janeiro vira março. Março vira junho. O ano passa com 1 lançamento feito.",
-    "40h de trabalho por lançamento. Copy, segmentação, disparos, carrinho — tudo manual.",
-    "Acordar às 6h pra escrever email de abertura antes do café esfriar.",
-    "Copiar mensagem no WhatsApp pra 200 leads. Um por um. Braço doendo.",
+    "40h de trabalho por lançamento — copy, segmentação, disparos, carrinho, tudo manual.",
+    "Acordar cedo pra escrever email de abertura antes do café esfriar.",
     "Reescrever a mesma copy 7 vezes sem saber se está boa o suficiente.",
     "Perder venda porque esqueceu de mandar o último email de escassez.",
+    "Base de leads esfriando enquanto você ainda está montando a sequência.",
   ];
   const depois = [
     "Você responde 7 perguntas. Em 47 minutos, estratégia completa montada.",
     "23 emails + 18 mensagens WhatsApp gerados e agendados automaticamente.",
-    "Carrinho abre e fecha no horário. Sem você tocar em nada.",
-    "Base segmentada em tempo real: hot, warm, cold. Cada grupo recebe copy diferente.",
-    "Dashboard ao vivo mostra faturamento entrando. Você assiste.",
+    "Carrinho abre e fecha no horário exato. Sem você tocar em nada.",
+    "Base segmentada em tempo real: hot, warm, cold — cada grupo recebe copy diferente.",
+    "Dashboard ao vivo mostra faturamento entrando. Você acompanha.",
     "IA responde objeções no WhatsApp enquanto você dorme.",
   ];
 
@@ -222,24 +166,22 @@ function TransformacaoSection() {
           <span className="text-primary">A outra começa quando você entra.</span>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Antes */}
           <div className="border border-destructive/20 bg-destructive/5 p-7">
             <div className="flex items-center gap-2 mb-5">
-              <X className="h-4 w-4 text-destructive/70" />
-              <div className="font-mono text-xs uppercase tracking-widest text-destructive/70 font-bold">Antes do NexOS AI</div>
+              <X className="h-4 w-4 text-destructive/60" />
+              <div className="font-mono text-xs uppercase tracking-widest text-destructive/70 font-bold">Hoje, sem o NexOS AI</div>
             </div>
             <ul className="space-y-3">
               {antes.map((item, i) => (
                 <li key={i} className="flex items-start gap-2.5">
-                  <div className="w-4 h-4 border border-destructive/30 bg-destructive/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <div className="w-1.5 h-0.5 bg-destructive/50 rounded-none" />
+                  <div className="w-4 h-4 border border-destructive/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-1.5 h-0.5 bg-destructive/50" />
                   </div>
                   <span className="font-mono text-xs text-muted-foreground leading-relaxed">{item}</span>
                 </li>
               ))}
             </ul>
           </div>
-          {/* Depois */}
           <div className="border border-primary/30 bg-primary/5 p-7">
             <div className="flex items-center gap-2 mb-5">
               <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -265,26 +207,26 @@ function CustoInacaoSection() {
   const itens = [
     {
       rotulo: "1 lançamento manual por mês",
-      custo: "40h do seu tempo",
-      equivalente: "Se seu tempo vale R$200/h → R$8.000 desperdiçados",
+      custo: "40h do seu tempo × 12 meses = 480h/ano",
+      detalhe: "Se o seu tempo vale R$200/h → R$96.000 desperdiçados executando o que a IA faria por você",
       icon: Clock,
     },
     {
       rotulo: "Leads esfriando na base",
-      custo: "Taxa de conversão caindo 30% por semana",
-      equivalente: "Base de 2.000 leads sem nurturing = dinheiro apodrecendo",
+      custo: "Taxa de conversão cai 30% a cada semana sem nurturing",
+      detalhe: "Uma base de 2.000 leads sem sequência automatizada é dinheiro apodrecendo em silêncio",
       icon: TrendingDown,
     },
     {
-      rotulo: "Copy feita sem teste",
-      custo: "1 a 3% de conversão quando poderia ser 4 a 8%",
-      equivalente: "Em R$10k de tráfego: diferença de R$300 a R$500 em vendas",
+      rotulo: "Copy feita sem otimização",
+      custo: "1–3% de conversão quando poderia ser 4–8%",
+      detalhe: "Em R$10k de tráfego: a diferença entre copy manual e copy otimizada por IA é R$300–R$500 em vendas",
       icon: BarChart2,
     },
     {
       rotulo: "Concorrente que já automatizou",
-      custo: "Lança 6x ao ano enquanto você lança 1x",
-      equivalente: "Cada mês de atraso = 1 lançamento que ele fez e você não",
+      custo: "Ele lança 6× ao ano. Você lança 1×.",
+      detalhe: "Cada mês de atraso é 1 lançamento que ele fez e você não. Em 12 meses, ele está 5 lançamentos à frente",
       icon: Activity,
     },
   ];
@@ -298,10 +240,10 @@ function CustoInacaoSection() {
           <span className="text-destructive/80">Ele só não aparece na fatura.</span>
         </h2>
         <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-          O problema de não automatizar não é que você perde dinheiro diretamente. É que você perde tempo, velocidade e posicionamento — e isso se acumula silenciosamente todo mês.
+          O custo da inação não é direto — é composto. Tempo perdido, leads esfriando, concorrentes acelerando, lançamentos adiados. Todo mês sem automação é um mês que você nunca recupera.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-          {itens.map(({ rotulo, custo, equivalente, icon: Icon }, i) => (
+          {itens.map(({ rotulo, custo, detalhe, icon: Icon }, i) => (
             <div key={i} className="border border-border/30 bg-card/20 p-6">
               <div className="flex items-start gap-3 mb-3">
                 <Icon className="h-5 w-5 text-destructive/50 shrink-0 mt-0.5" />
@@ -311,7 +253,7 @@ function CustoInacaoSection() {
                 </div>
               </div>
               <div className="border-l-2 border-border/40 pl-3 ml-8">
-                <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{equivalente}</p>
+                <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{detalhe}</p>
               </div>
             </div>
           ))}
@@ -319,8 +261,8 @@ function CustoInacaoSection() {
         <div className="border border-primary/20 bg-primary/5 px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <Zap className="h-5 w-5 text-primary shrink-0" />
           <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">O custo invisível da inação é maior do que o investimento no NexOS AI.</strong>{" "}
-            A diferença é que um aparece no extrato e o outro não. Você só percebe quando olha pro ano todo e vê que fez metade do que planejou.
+            <strong className="text-foreground">O custo invisível da inação supera o investimento no NexOS AI todo mês.</strong>{" "}
+            A diferença é que um aparece na sua conta bancária e o outro não. Você só percebe quando olha pro ano inteiro e vê que fez metade do que planejou.
           </p>
         </div>
       </div>
@@ -328,67 +270,60 @@ function CustoInacaoSection() {
   );
 }
 
-// ─── SEÇÃO 4: ANCHOR — Comparação honesta ─────────────────────────────────────
+// ─── SEÇÃO 4: ANCHOR ──────────────────────────────────────────────────────────
 function AnchorSection() {
-  const alternativas = [
-    {
-      label: "O curso de lançamento mais famoso do Brasil",
-      detalhe: "R$10.000 para aprender a fazer você mesmo. Você assiste às aulas. Depois monta, escreve, dispara, gerencia — tudo sozinho. Acesso expira em 1 ano.",
-      preco: "R$10.000",
-      sufixo: "acesso por 1 ano · você executa tudo",
-      destaque: true,
-    },
-    {
-      label: "Agência de lançamento completa",
-      detalhe: "Contrato mínimo de 6 meses. Você ainda precisa aprovar cada entrega, participar de reuniões semanais, gerenciar o relacionamento.",
-      preco: "R$15k–R$50k",
-      sufixo: "por mês · contrato de 6 meses",
-      destaque: false,
-    },
-    {
-      label: "Copywriter sênior + gestor + automação",
-      detalhe: "3 fornecedores. 3 pontos de falha. Você no meio coordenando. E ainda não há integração entre eles.",
-      preco: "R$13k–R$27k",
-      sufixo: "por mês · 3 fornecedores separados",
-      destaque: false,
-    },
-  ];
-
   return (
     <section className="border-t border-border/20 bg-background py-16 px-6">
       <div className="max-w-5xl mx-auto">
         <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">A COMPARAÇÃO QUE MUDA TUDO</div>
         <h2 className="text-4xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-4">
-          Pagar R$10.000 para<br />aprender a fazer você mesmo.<br />
-          <span className="text-primary">Ou ter a IA fazendo por você.</span>
+          Pagar R$10.000 para<br />aprender a lançar você mesmo.<br />
+          <span className="text-primary">Ou ter a IA lançando por você.</span>
         </h2>
         <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-          O maior curso de lançamento do Brasil é excelente. Ensina tudo. Mas depois que você aprende — você ainda precisa <em>executar</em>. Estratégia, copy, segmentação, disparos, carrinho, análise. Semanas de trabalho por lançamento. O NexOS AI não te ensina. <strong className="text-foreground">Ele executa.</strong>
+          O curso de lançamento mais famoso do Brasil custa R$10.000 e te dá acesso por 1 ano. Você assiste às aulas, aprende cada etapa, e então <strong className="text-foreground">executa tudo sozinho</strong> — estratégia, copy, segmentação, disparos, carrinho. Semanas de trabalho por lançamento.
         </p>
-        <div className="space-y-3 mb-10">
-          {alternativas.map((item, i) => (
-            <div key={i} className={`border ${item.destaque ? "border-primary/20 bg-primary/5" : "border-border/30 bg-card/20"} p-6`}>
+        <div className="space-y-4 mb-10">
+          {[
+            {
+              label: "O curso mais famoso de lançamentos do Brasil",
+              detalhe: "Você aprende. Você executa. R$10.000 para ter o conhecimento — a execução ainda é sua.",
+              preco: "R$10.000",
+              sufixo: "acesso por 1 ano · você executa tudo",
+            },
+            {
+              label: "Agência de lançamento completa",
+              detalhe: "Contrato mínimo de 6 meses. Reuniões semanais. Você ainda gerencia o relacionamento com 3 a 5 fornecedores.",
+              preco: "R$15k–R$50k",
+              sufixo: "por mês · contrato longo",
+            },
+            {
+              label: "Copywriter + gestor de tráfego + automação",
+              detalhe: "3 fornecedores separados. 3 pontos de falha. Você no meio coordenando tudo. Sem integração real entre eles.",
+              preco: "R$13k–R$27k",
+              sufixo: "por mês · 3 fornecedores",
+            },
+          ].map((item, i) => (
+            <div key={i} className="border border-border/30 bg-card/20 p-6">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-1.5">{item.label}</div>
                   <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{item.detalhe}</p>
                 </div>
                 <div className="text-right shrink-0 sm:ml-6">
-                  <div className="font-mono font-black text-xl text-destructive/70 line-through">{item.preco}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest max-w-[160px] text-right">{item.sufixo}</div>
+                  <div className="font-mono font-black text-xl text-destructive/60 line-through">{item.preco}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest max-w-[160px] text-right">{item.sufixo}</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-
-        {/* O ponto real */}
         <div className="border-l-4 border-primary pl-6">
           <p className="font-mono text-base text-foreground font-bold leading-relaxed mb-2">
-            A questão não é se essas alternativas funcionam.
+            Em todas as alternativas acima, você ainda é o executor.
           </p>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-            É que em todas elas — <em>você ainda é o executor</em>. Você aprende, você coordena, você gerencia. O NexOS AI é a única opção onde a IA é quem executa — e você só aprova. Essa diferença vale muito mais do que a diferença de preço.
+            Você aprende, coordena, gerencia — ou paga alguém para fazer e ainda precisa gerenciar esse alguém. No NexOS AI, a IA executa. Você aprova. Essa diferença vale muito mais do que a diferença de preço entre qualquer uma das opções acima e o preço de Fundador de hoje.
           </p>
         </div>
       </div>
@@ -396,13 +331,29 @@ function AnchorSection() {
   );
 }
 
-// ─── SEÇÃO 5: COMUNIDADE DOS FUNDADORES ───────────────────────────────────────
+// ─── SEÇÃO 5: COMUNIDADE DOS FUNDADORES ──────────────────────────────────────
 function ComunidadeSection() {
   const beneficios = [
-    { icon: Star,         titulo: "Status de Fundador permanente",     desc: "Seu acesso fica marcado como Fundador na plataforma. Quando novos usuários entrarem pagando mais, você mantém o preço e o status para sempre." },
-    { icon: Users,        titulo: "Grupo privado dos Fundadores",      desc: "Canal direto com o time. Nenhum usuário comum tem acesso. Você reporta bugs, sugere features e influencia o roadmap antes de todo mundo." },
-    { icon: Zap,          titulo: "Acesso antecipado a novos agentes", desc: "Cada novo agente que lançarmos vai pra você primeiro. Você testa, dá feedback e já opera com ele enquanto o resto da base ainda está esperando." },
-    { icon: ChevronRight, titulo: "Onboarding individual com o time",  desc: "Não é um vídeo gravado. É uma sessão ao vivo para configurar sua primeira campanha. Você sai do onboarding com tudo rodando." },
+    {
+      icon: Star,
+      titulo: "Status de Fundador permanente",
+      desc: "Seu acesso fica marcado como Fundador na plataforma — para sempre. Quando novos usuários entrarem pagando o preço cheio, você mantém o preço e o status. Sem renegociação futura.",
+    },
+    {
+      icon: Users,
+      titulo: "Grupo privado dos Fundadores",
+      desc: "Canal direto com o time de produto. Nenhum usuário comum tem acesso. Você reporta, sugere e influencia o roadmap antes de todo mundo. Suas campanhas moldam o que a IA aprende.",
+    },
+    {
+      icon: Zap,
+      titulo: "Acesso antecipado a novos agentes",
+      desc: "Cada novo agente que lançarmos vai para os Fundadores primeiro. Você testa, opera e já usa enquanto o restante da base ainda está na fila de espera.",
+    },
+    {
+      icon: ChevronRight,
+      titulo: "Onboarding individual com o time",
+      desc: "Não é vídeo gravado. É uma sessão ao vivo para configurar sua primeira campanha. Você sai do onboarding com tudo rodando — não só com acesso.",
+    },
   ];
 
   return (
@@ -414,7 +365,7 @@ function ComunidadeSection() {
           <span className="text-primary">É o que o preço traz junto.</span>
         </h2>
         <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-          Fundadores não são clientes comuns com desconto. São as pessoas que constroem o NexOS AI com a gente. Esse status não volta — quando o carrinho fechar, a próxima turma entra no preço cheio, sem acesso ao grupo, sem onboarding individual, sem influência no roadmap.
+          Fundadores não são clientes comuns com desconto. São as pessoas que constroem o NexOS AI junto com a gente. Esse status não tem segunda chance — quando esse carrinho fechar, a próxima turma entra no preço cheio, sem grupo privado, sem onboarding individual, sem influência no roadmap.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {beneficios.map(({ icon: Icon, titulo, desc }, i) => (
@@ -434,16 +385,16 @@ function ComunidadeSection() {
   );
 }
 
-// ─── SEÇÃO 6: COMPROMETIMENTO + OFERTA ────────────────────────────────────────
+// ─── SEÇÃO 6: COMPROMETIMENTO + OFERTA FINAL ─────────────────────────────────
 function OfertaSection({ expired }: { expired: boolean }) {
-  const { precoCheio, precoCheioSufixo, precoFundador, precoFundadorSufixo, cartUrl, vagasRestantes, vagas } = CART_CONFIG;
+  const { precoCheio, precoCheioSufixo, precoFundador, precoFundadorSufixo, cartUrl } = CART_CONFIG;
   const includes = [
     "29 agentes de IA executando 24h no seu lançamento",
     "Estratégia completa gerada em 47 minutos",
     "23 emails + 18 mensagens WhatsApp por campanha",
-    "Segmentação comportamental em tempo real",
+    "Segmentação comportamental atualizada em tempo real",
     "Abertura e fechamento automático de carrinho",
-    "Dashboard ao vivo com health score e alertas",
+    "Dashboard ao vivo com health score e alertas de risco",
     "Acesso prioritário a todos os novos agentes",
     "Onboarding individual + grupo privado de Fundadores",
   ];
@@ -455,23 +406,24 @@ function OfertaSection({ expired }: { expired: boolean }) {
         {/* Comprometimento */}
         <div className="border border-primary/20 bg-primary/5 px-7 py-6 mb-12">
           <p className="font-mono text-base text-foreground leading-relaxed">
-            <strong>Você não chegou aqui por acaso.</strong> Você entrou na lista porque já decidiu que precisa disso. A única decisão que falta agora é:{" "}
-            <strong className="text-primary">fazer isso hoje, com o preço de Fundador</strong> — ou fazer isso depois, pagando mais, sem o status, sem o grupo, sem o onboarding individual. A IA vai lançar o seu produto de qualquer jeito. A questão é quanto você vai pagar por isso.
+            <strong>Você não chegou até aqui por acaso.</strong> Você entrou na lista, acompanhou o aquecimento, tirou dúvidas — porque já decidiu que precisa disso. A única decisão que sobrou é:{" "}
+            <strong className="text-primary">fazer hoje com o preço de Fundador</strong> — ou depois, sem esse preço, sem o grupo, sem o onboarding individual.{" "}
+            A IA vai lançar seu produto de qualquer jeito. A questão é o quanto você vai pagar por isso.
           </p>
         </div>
 
         <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4 text-center">
-          {expired ? "OFERTA DE FUNDADOR ENCERRADA" : `OFERTA DE FUNDADOR · ${vagasRestantes} VAGAS RESTANTES`}
+          {expired ? "OFERTA DE FUNDADOR ENCERRADA" : "OFERTA DE FUNDADOR · ÚNICA E DEFINITIVA"}
         </div>
         <h2 className="text-4xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-10 text-center">
           {expired
             ? <><span className="text-destructive/80">A janela fechou.</span><br />Preço cheio ativo.</>
-            : <>Esse é o momento.<br /><span className="text-primary">Garanta agora.</span></>
+            : <>Esse é o momento.<br /><span className="text-primary">Esse é o único momento.</span></>
           }
         </h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Incluso */}
+          {/* O que está incluso */}
           <div className="border border-primary/20 bg-primary/5 p-7">
             <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">Tudo que está incluso</div>
             <ul className="space-y-2.5 mb-8">
@@ -482,10 +434,10 @@ function OfertaSection({ expired }: { expired: boolean }) {
                 </li>
               ))}
             </ul>
-            <div className="border-t border-primary/20 pt-5 space-y-2">
+            <div className="border-t border-primary/20 pt-5 space-y-1">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Custo equivalente no mercado</div>
               <div className="font-mono font-black text-2xl text-destructive/60 line-through">R$31.000 – R$83.000/mês</div>
-              <div className="font-mono text-[10px] text-muted-foreground/40">Se você contratar tudo separado</div>
+              <div className="font-mono text-[10px] text-muted-foreground/40">Contratando tudo separado</div>
             </div>
           </div>
 
@@ -494,37 +446,27 @@ function OfertaSection({ expired }: { expired: boolean }) {
             {/* Preço cheio */}
             <div className={`border p-6 ${expired ? "border-primary/30 bg-primary/5" : "border-border/30 bg-card/20"}`}>
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-                {expired ? "Preço atual" : "Preço após as 24h de Fundador"}
+                {expired ? "Preço atual" : "Preço após o encerramento da janela"}
               </div>
               <div className={`font-mono font-black text-4xl mb-1 ${expired ? "text-foreground" : "text-muted-foreground/40 line-through"}`}>
-                {precoCheio}<span className="text-lg font-normal ml-1">{precoCheioSufixo}</span>
+                {precoCheio}<span className="text-xl font-normal ml-1">{precoCheioSufixo}</span>
               </div>
-              {!expired && <div className="font-mono text-[10px] text-muted-foreground/40">Ativo após encerramento da janela</div>}
+              {!expired && <div className="font-mono text-[10px] text-muted-foreground/40">Entra em vigor assim que o contador zerar</div>}
             </div>
 
             {/* Preço Fundador */}
             {!expired && (
               <div className="border-2 border-primary bg-primary/5 p-6 relative overflow-hidden">
                 <div className="absolute top-0 right-0 bg-primary px-3 py-1">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-primary-foreground font-bold">24H · FUNDADOR</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-primary-foreground font-bold">ÚNICO · FUNDADOR</span>
                 </div>
                 <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-2 mt-1">Preço de Fundador — agora</div>
                 <div className="font-mono font-black text-5xl md:text-6xl text-primary drop-shadow-[0_0_20px_hsl(var(--primary)/0.5)] mb-1">
-                  {precoFundador}<span className="text-2xl font-normal ml-1 text-muted-foreground">{precoFundadorSufixo}</span>
+                  {precoFundador}
+                  <span className="text-2xl font-normal ml-2 text-muted-foreground">{precoFundadorSufixo}</span>
                 </div>
-                <div className="font-mono text-xs text-muted-foreground mt-2">Nunca mais este valor. Sem cupom. Sem reabertura. Sem negociação.</div>
-              </div>
-            )}
-
-            {/* Vagas */}
-            {!expired && (
-              <div className="border border-border/30 bg-card/20 px-4 py-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Vagas de Fundador</span>
-                  <span className="font-mono text-xs font-bold text-foreground">{vagasRestantes} de {vagas}</span>
-                </div>
-                <div className="w-full bg-border/30 h-1">
-                  <div className="bg-destructive h-1" style={{ width: `${((vagas - vagasRestantes) / vagas) * 100}%` }} />
+                <div className="font-mono text-xs text-muted-foreground mt-2">
+                  Este valor não volta. Nunca. Sem cupom futuro, sem reabertura, sem exceção.
                 </div>
               </div>
             )}
@@ -546,7 +488,7 @@ function OfertaSection({ expired }: { expired: boolean }) {
               <div className="border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-destructive/70 shrink-0 mt-0.5" />
                 <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                  Oferta de Fundador encerrada. Não há nova janela com essas condições prevista. O acesso ainda está disponível no preço cheio.
+                  A oferta de Fundador encerrou definitivamente. Não há previsão de nova condição especial. O acesso ainda está disponível no preço cheio.
                 </p>
               </div>
             )}
@@ -557,31 +499,31 @@ function OfertaSection({ expired }: { expired: boolean }) {
   );
 }
 
-// ─── STICKY BAR (sempre visível no rodapé) ────────────────────────────────────
+// ─── STICKY BAR ───────────────────────────────────────────────────────────────
 function StickyBar({ h, m, s, expired }: { h: number; m: number; s: number; expired: boolean }) {
   const { precoFundador, precoFundadorSufixo, cartUrl } = CART_CONFIG;
   const fmt = (v: number) => String(v).padStart(2, "0");
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 border-t border-primary/30 bg-background/95 backdrop-blur-xl">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div className="fixed bottom-0 inset-x-0 z-50 border-t border-primary/30 bg-background/96 backdrop-blur-xl">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         {!expired ? (
           <>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
                 <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground hidden sm:inline">Fundador encerra em</span>
               </div>
-              <div className="font-mono font-black text-lg text-primary tabular-nums">
+              <div className="font-mono font-black text-xl text-primary tabular-nums shrink-0">
                 {fmt(h)}:{fmt(m)}:{fmt(s)}
               </div>
-              <div className="hidden sm:block border-l border-border/40 pl-4">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-primary">{precoFundador}</span>
-                <span className="font-mono text-[10px] text-muted-foreground">{precoFundadorSufixo}</span>
+              <div className="hidden md:block border-l border-border/40 pl-4 shrink-0">
+                <span className="font-mono text-sm font-black text-primary">{precoFundador}</span>
+                <span className="font-mono text-xs text-muted-foreground ml-0.5">{precoFundadorSufixo}</span>
               </div>
             </div>
-            <a href={cartUrl}>
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-10 px-6 gap-2">
+            <a href={cartUrl} className="shrink-0">
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-10 px-5 gap-2">
                 GARANTIR ACESSO <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </a>
@@ -639,7 +581,6 @@ export default function AberturaPage() {
         </div>
       </nav>
 
-      {/* ── Seções ── */}
       <HeroSection h={h} m={m} s={s} expired={expired} />
       <TransformacaoSection />
       <CustoInacaoSection />
@@ -647,14 +588,12 @@ export default function AberturaPage() {
       <ComunidadeSection />
       <OfertaSection expired={expired} />
 
-      {/* ── Footer ── */}
       <div className="border-t border-border/30 bg-muted/5 py-5 px-6 text-center mb-16">
         <p className="font-mono text-[10px] text-muted-foreground/30 uppercase tracking-widest">
           NexOS AI · Plataforma de Lançamento com IA · contato@nexos.ai
         </p>
       </div>
 
-      {/* ── Sticky bar ── */}
       <StickyBar h={h} m={m} s={s} expired={expired} />
     </div>
   );
