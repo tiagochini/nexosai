@@ -7,9 +7,11 @@ export interface SocialPost {
   day: number;
   phase: string;
   phaseName: string;
-  platforms: ("instagram" | "tiktok" | "youtube_shorts" | "linkedin" | "twitter" | "facebook")[];
-  postType: "feed" | "reels" | "stories" | "carousel" | "live" | "thread" | "short";
+  platforms: ("instagram" | "tiktok" | "youtube_shorts" | "youtube" | "linkedin" | "twitter" | "facebook")[];
+  postType: "feed" | "reels" | "stories" | "carousel" | "live" | "thread" | "short" | "native_video";
   caption: string;
+  facebookCaption?: string;
+  tiktokHook?: string;
   hashtags: string[];
   visualDirection: string;
   videoScript?: string;
@@ -30,25 +32,44 @@ export interface SocialMediaOutput {
     postingFrequency: string;
     primaryFormats: string[];
     audienceNotes: string;
+    keyPhases?: string[];
   }[];
   calendar: SocialPost[];
   highlightPosts: {
     type: string;
     day: number;
     reason: string;
+    platforms?: string[];
   }[];
   hashtagStrategy: {
     branded: string[];
     niche: string[];
     broad: string[];
+    tiktokSpecific?: string[];
     avoid: string[];
   };
+  crossPlatformSynergy?: string;
   socialMediaNotes: string;
 }
 
-const SOCIAL_MEDIA_PROMPT = `Você é o Agente de Social Media da NexOS AI — especialista em estratégia de conteúdo para lançamentos digitais.
+const SOCIAL_MEDIA_PROMPT = `Você é o Agente de Social Media da NexOS AI — especialista em estratégia de conteúdo multi-plataforma para lançamentos digitais.
 
-Você cria calendários de conteúdo que constroem audiência, criam antecipação e convertem — sem parecer spam e sem ser genérico.
+Você cria calendários de conteúdo que constroem audiência, criam antecipação e convertem em TODAS as plataformas relevantes — sem parecer spam e sem ser genérico.
+
+## REQUISITO ABSOLUTO DE PLATAFORMAS
+
+**TODO lançamento digital DEVE ter presença ativa em pelo menos 4 plataformas:**
+
+| Plataforma | Papel no lançamento | Obrigatoriedade |
+|---|---|---|
+| Instagram | Alcance orgânico (Reels) + proximidade (Stories) + autoridade (Carrossel) | **OBRIGATÓRIO** |
+| Facebook | Distribuição para audiência +30 anos + grupos de nicho + posts de prova social | **OBRIGATÓRIO** |
+| TikTok | Alcance novo (topo de funil) + conteúdo educacional nativo + viralização | **OBRIGATÓRIO** |
+| WhatsApp | Conversão direta via listas e grupos — operado pela launch sequence | Via sequência |
+| YouTube | VSL + Shorts de autoridade | Recomendado |
+| LinkedIn | B2B e posicionamento de expertise | Se avatar B2B |
+
+**NUNCA gere um calendário só com Instagram.** Isso é erro primário. O lançamento acontece em múltiplas frentes simultaneamente.
 
 ## PRINCÍPIOS DO CONTEÚDO DE LANÇAMENTO
 
@@ -63,16 +84,23 @@ Você cria calendários de conteúdo que constroem audiência, criam antecipaç�
 - Carrinho fechando: últimas horas, última chance, decisão
 
 **Formatos por plataforma:**
-- Instagram: Reels (alcance), Stories (proximidade), Feed (autoridade), Carrossel (educação)
-- TikTok: Vídeos nativos (entretenimento + educação), Lives (conversão)
-- YouTube: Shorts (alcance), Lives (conversão)
-- LinkedIn: Artigos e posts de texto (autoridade B2B)
+- **Instagram**: Reels (alcance orgânico), Stories (proximidade + enquetes), Feed/Carrossel (autoridade + educação), Lives (conversão ao vivo)
+- **Facebook**: Posts nativos de texto longo (prova social + narrativa), Compartilhamento em grupos do nicho, Reels do Facebook (idêntico ao Instagram Reels — reposte), Lives (mais audiência +30 anos), Stories
+- **TikTok**: Vídeos nativos curtos 15-60s (entretenimento + educação, gancho nos primeiros 3s), Duetos/Stitch com conteúdo viral do nicho, Lives de conversão pré-fechamento
+- **YouTube**: Shorts (alcance + topo de funil), VSL completa (conversão), Lives de lançamento
+- **LinkedIn**: Artigos longos (autoridade B2B), Posts de carrossel com insights, Reações de comunidade
+
+**Regra de adaptação por plataforma:**
+- O MESMO conteúdo adaptado muda de formato, não de mensagem
+- Instagram Reels de abertura do carrinho → Facebook Reels (repost) + TikTok versão nativa + YouTube Short
+- Nunca copie e cole — adapte o gancho e o CTA para o comportamento de cada plataforma
 
 **O conteúdo nunca é só "postar". Cada post tem:**
 1. Objetivo claro
 2. Tática de engajamento específica (pergunta, enquete, desafio, comentar X)
 3. Direção visual precisa
 4. Horário estratégico de postagem
+5. Plataforma(s) correta(s)
 
 **Retorne APENAS JSON válido** no formato exato abaixo.
 
@@ -83,11 +111,12 @@ Você cria calendários de conteúdo que constroem audiência, criam antecipaç�
   "contentPillars": ["string — os temas centrais que guiam todo o conteúdo"],
   "platformStrategy": [
     {
-      "platform": "instagram|tiktok|youtube|linkedin|twitter|facebook",
-      "role": "string — qual é o papel desta plataforma na campanha",
+      "platform": "instagram|facebook|tiktok|youtube|linkedin|twitter",
+      "role": "string — qual é o papel específico desta plataforma no lançamento",
       "postingFrequency": "string — quantas vezes por dia/semana",
-      "primaryFormats": ["string"],
-      "audienceNotes": "string — comportamento da audiência nesta plataforma"
+      "primaryFormats": ["string — formatos principais nesta plataforma"],
+      "audienceNotes": "string — comportamento da audiência desta plataforma",
+      "keyPhases": ["string — em quais fases esta plataforma é mais crítica"]
     }
   ],
   "calendar": [
@@ -95,12 +124,14 @@ Você cria calendários de conteúdo que constroem audiência, criam antecipaç�
       "day": 0,
       "phase": "string",
       "phaseName": "string",
-      "platforms": ["instagram"],
-      "postType": "feed|reels|stories|carousel|live|thread|short",
-      "caption": "string — caption completa e pronta para postar",
+      "platforms": ["instagram", "facebook", "tiktok"],
+      "postType": "feed|reels|stories|carousel|live|thread|short|native_video",
+      "caption": "string — caption completa e pronta para postar (adaptada para a plataforma principal)",
+      "facebookCaption": "string ou null — versão para Facebook se diferente (texto mais longo, narrativo)",
+      "tiktokHook": "string ou null — os primeiros 3 segundos do vídeo TikTok (obrigatório para vídeos)",
       "hashtags": ["string"],
       "visualDirection": "string — instrução precisa para o designer/editor",
-      "videoScript": "string ou null — roteiro se for vídeo",
+      "videoScript": "string ou null — roteiro se for vídeo (vale para Reels + TikTok + YouTube Short)",
       "carouselSlides": null,
       "postingTime": "string — horário recomendado (ex: 19h30)",
       "engagementTactic": "string — como estimular engajamento neste post",
@@ -112,16 +143,19 @@ Você cria calendários de conteúdo que constroem audiência, criam antecipaç�
     {
       "type": "string — tipo de post destaque (ex: reveal da oferta)",
       "day": 0,
-      "reason": "string — por que este post é crítico"
+      "reason": "string — por que este post é crítico",
+      "platforms": ["instagram", "facebook", "tiktok"]
     }
   ],
   "hashtagStrategy": {
     "branded": ["string — hashtags da marca"],
     "niche": ["string — hashtags do nicho (100k-1M usos)"],
     "broad": ["string — hashtags amplas (1M+ usos)"],
+    "tiktokSpecific": ["string — hashtags e trends do TikTok para o nicho"],
     "avoid": ["string — hashtags a evitar e por quê"]
   },
-  "socialMediaNotes": "string — observações estratégicas sobre o calendário"
+  "crossPlatformSynergy": "string — como as plataformas se reforçam mutuamente ao longo do lançamento",
+  "socialMediaNotes": "string — observações estratégicas sobre o calendário multi-plataforma"
 }
 \`\`\``;
 
@@ -134,13 +168,19 @@ export async function runSocialMediaAgent(
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
 ): Promise<SocialMediaOutput> {
+  const avatarPlatforms = profile?.primaryAvatar.whereTheyHangOut ?? [];
+  const hasB2BAvatar = profile?.primaryAvatar.occupation?.toLowerCase().includes("gestor") ||
+    profile?.primaryAvatar.occupation?.toLowerCase().includes("empresário") ||
+    profile?.primaryAvatar.occupation?.toLowerCase().includes("diretor");
+
   const avatarContext = profile
     ? `
-**Avatar:** ${profile.primaryAvatar.name} | ${profile.primaryAvatar.whereTheyHangOut.join(", ")}
+**Avatar:** ${profile.primaryAvatar.name} | Onde está: ${avatarPlatforms.join(", ")}
 **Conteúdo que consomem:** ${profile.primaryAvatar.contentTheyConsume.join(", ")}
 **Linguagem:** ${profile.primaryAvatar.languageStyle}
 **Big Idea:** ${profile.positioning.campaignBigIdea}
-**Pilares de conteúdo da estratégia:** ${strategy.campaignArchitecture.contentPillars.join(", ")}`
+**Pilares de conteúdo da estratégia:** ${strategy.campaignArchitecture.contentPillars.join(", ")}
+**Avatar B2B:** ${hasB2BAvatar ? "Sim — incluir LinkedIn como plataforma relevante" : "Não — LinkedIn secundário"}`
     : `**Pilares de conteúdo:** ${strategy.campaignArchitecture.contentPillars.join(", ")}`;
 
   const totalDays =
@@ -155,7 +195,7 @@ export async function runSocialMediaAgent(
     messages: [
       {
         role: "user",
-        content: `Crie o calendário completo de social media para a campanha.
+        content: `Crie o calendário COMPLETO de social media multi-plataforma para a campanha.
 
 ${avatarContext}
 
@@ -182,13 +222,18 @@ ${JSON.stringify(
 **Narrativa central da campanha:** ${strategy.campaignArchitecture.coreNarrative}
 **Gancho emocional:** ${strategy.campaignArchitecture.emotionalHook}
 
-**IMPORTANTE:**
-- Cada post deve ter caption COMPLETA e pronta para publicar
-- Mínimo 1 post por dia, dias críticos (abertura, fechamento, últimas 24h) têm 2-3 posts
-- Inclua posts de Stories todos os dias
-- Os Reels dos dias de pico (abertura do carrinho, último dia) devem ter roteiro completo
+**REQUISITOS OBRIGATÓRIOS:**
+- Cada entrada do calendário DEVE incluir múltiplas plataformas — MÍNIMO Instagram + Facebook + TikTok em cada dia
+- Nos dias críticos (abertura do carrinho, últimas 24h, fechamento) inclua 3-4 posts diferentes para plataformas diferentes
+- Forneça \`facebookCaption\` com texto adaptado (mais longo, narrativo) para Facebook sempre que o post for texto
+- Forneça \`tiktokHook\` (os primeiros 3 segundos) para TODOS os posts em vídeo
+- Stories do Instagram E do Facebook todos os dias
+- TikTok nativo todos os dias da fase de captura e aquecimento
+- Live no dia da abertura do carrinho (Instagram + Facebook simultâneo)
+- A estratégia de plataformas deve cobrir no mínimo: Instagram, Facebook, TikTok, WhatsApp (via sequências)
+- Captions COMPLETAS e prontas para publicar — não esboços
 
-Retorne APENAS o JSON do calendário completo.`,
+Retorne APENAS o JSON do calendário multi-plataforma completo.`,
       },
     ],
     log,

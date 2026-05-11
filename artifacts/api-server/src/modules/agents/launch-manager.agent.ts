@@ -12,6 +12,14 @@ export interface LaunchPhase {
   primaryActions: string[];
   contentTypes: string[];
   channels: string[];
+  channelActions?: {
+    instagram?: string;
+    facebook?: string;
+    tiktok?: string;
+    whatsapp?: string;
+    email?: string;
+    youtube?: string | null;
+  };
   kpis: string[];
   criticalTasks: string[];
   warningSignals: string[];
@@ -73,6 +81,14 @@ Igual ao acima mas com:
 
 **Seja operacionalmente preciso.** Cada fase tem início, fim, objetivo e KPI claro.
 
+**Multi-plataforma é obrigatório.** Todo lançamento opera em Instagram + Facebook + TikTok + WhatsApp + Email simultaneamente. Cada fase deve listar TODOS os canais ativos com suas ações específicas. Um lançamento que só menciona e-mail e WhatsApp está incompleto.
+
+**Canais mínimos por fase:**
+- **Captura / Aquecimento**: Instagram Reels + TikTok (alcance), Facebook posts + grupos (distribuição), Email (lista), WhatsApp (grupos de interesse)
+- **Autoridade / Desejo**: Instagram Carrossel + Stories, Facebook posts longos com prova social, TikTok educacional, Email sequência de valor
+- **Abertura do carrinho**: TODAS as plataformas ao mesmo tempo — Instagram + Facebook Live, TikTok ao vivo, Email blast, WhatsApp broadcast, Stories de contagem
+- **Fechamento / Cart Close**: Stories urgência (Instagram + Facebook), TikTok last-chance, Email de última hora, WhatsApp escassez real
+
 **Sinais de alerta são obrigatórios.** O criador precisa saber quando um dia está abaixo do esperado.
 
 **Contingências são parte do plano.** Um bom lançamento tem plano B para os 3 cenários críticos.
@@ -96,8 +112,16 @@ Igual ao acima mas com:
       "objective": "string",
       "emotionalGoal": "string — estado emocional que o avatar deve estar ao final",
       "primaryActions": ["string"],
-      "contentTypes": ["string"],
-      "channels": ["string"],
+      "contentTypes": ["string — lista todos os formatos: Reels, TikTok nativo, Facebook post, Stories, Email, WhatsApp broadcast, etc."],
+      "channels": ["instagram", "facebook", "tiktok", "whatsapp", "email"],
+      "channelActions": {
+        "instagram": "string — ação específica no Instagram nesta fase",
+        "facebook": "string — ação específica no Facebook nesta fase",
+        "tiktok": "string — ação específica no TikTok nesta fase",
+        "whatsapp": "string — ação via launch sequence nesta fase",
+        "email": "string — ação via sequência de email nesta fase",
+        "youtube": "string ou null — YouTube Shorts/Live se aplicável"
+      },
       "kpis": ["string"],
       "criticalTasks": ["string"],
       "warningSignals": ["string — o que indica que essa fase está em risco"]

@@ -49,6 +49,30 @@ export interface CartScript {
   scarcityElement: string;
 }
 
+export interface FacebookPost {
+  day: number;
+  phase: string;
+  type: "organic_post" | "group_share" | "live_announcement" | "story";
+  text: string;
+  cta?: string;
+  attachmentSuggestion?: string;
+  groupStrategy?: string;
+  postingTime: string;
+  objective: string;
+}
+
+export interface TikTokContent {
+  day: number;
+  phase: string;
+  hook: string;
+  script: string;
+  overlayText: string[];
+  cta: string;
+  musicStyle: string;
+  duration: string;
+  objective: string;
+}
+
 export interface CopywriterOutput {
   campaignTitle: string;
   emailSequence: {
@@ -67,6 +91,12 @@ export interface CopywriterOutput {
   whatsapp: {
     broadcasts: WhatsAppMessage[];
     groupMessages: WhatsAppMessage[];
+  };
+  facebook: {
+    organicPosts: FacebookPost[];
+  };
+  tiktok: {
+    contentPlan: TikTokContent[];
   };
   cartScripts: CartScript[];
   remarketingSequence: EmailMessage[];
@@ -213,11 +243,41 @@ Mensagens de WhatsApp são conversas, não newsletters.
       }
     ]
   },
+  "facebook": {
+    "organicPosts": [
+      {
+        "day": 0,
+        "phase": "string",
+        "type": "organic_post|group_share|live_announcement|story",
+        "text": "string — texto completo do post para Facebook (pode ser mais longo que Instagram, narrativo, pessoal)",
+        "cta": "string ou null — chamada para ação no final do post",
+        "attachmentSuggestion": "string ou null — sugestão de imagem, vídeo ou link a anexar",
+        "groupStrategy": "string ou null — se deve ser compartilhado em grupos e quais",
+        "postingTime": "string",
+        "objective": "string — o que este post precisa fazer"
+      }
+    ]
+  },
+  "tiktok": {
+    "contentPlan": [
+      {
+        "day": 0,
+        "phase": "string",
+        "hook": "string — os primeiros 3 segundos do vídeo (frase de abertura que PARA o scroll)",
+        "script": "string — roteiro completo do vídeo TikTok (linguagem falada, nativa, não corporativa)",
+        "overlayText": ["string — textos de overlay que aparecem na tela em sequência"],
+        "cta": "string — o que o usuário deve fazer ao final",
+        "musicStyle": "string — tipo de trilha (trending, emocional, energética...)",
+        "duration": "string — duração ideal (ex: 30s, 45s, 60s)",
+        "objective": "string — o que este vídeo precisa fazer no funil"
+      }
+    ]
+  },
   "cartScripts": [
     {
       "phase": "cart_open|cart_close",
       "hoursRelative": 0,
-      "channel": "email|whatsapp|telegram",
+      "channel": "email|whatsapp|telegram|facebook|instagram",
       "subject": "string ou null",
       "message": "string",
       "urgencyLevel": "low|medium|high|critical",
@@ -317,10 +377,12 @@ ${JSON.stringify(
 )}
 \`\`\`
 
-**IMPORTANTE:**
+**REQUISITOS OBRIGATÓRIOS — MULTI-PLATAFORMA:**
 - Escreva e-mails COMPLETOS — não esboços
 - A página de vendas deve ter TODAS as seções com copy real
 - WhatsApp deve ser coloquial e humano, sem parecer robô
+- **Facebook orgânico**: mínimo 5 posts completos ao longo da campanha — textos mais longos e narrativos que o Instagram, adequados para a audiência +30 do Facebook. Inclua pelo menos: 1 post de captura de atenção, 2 posts de autoridade/prova social, 1 anúncio de abertura do carrinho, 1 post de urgência/fechamento
+- **TikTok**: mínimo 4 roteiros completos — linguagem nativa, hook poderoso nos primeiros 3 segundos, sem parecer propaganda corporativa. Inclua pelo menos: 1 vídeo de descoberta/topo de funil, 1 educacional, 1 de bastidores/prova social, 1 de urgência pré-fechamento
 - Sequência de carrinho: urgência crescente mas NUNCA fake
 - Use {{LINK_CAPTURA}}, {{LINK_PAGAMENTO}}, {{LINK_REMARKETING}} como placeholders de URL
 
@@ -342,6 +404,8 @@ Retorne APENAS o JSON. Todo o copy em português do Brasil.`;
     emailSequence: { preLaunch: [], cartOpen: [], cartClose: [], remarketing: [] },
     salesPage: { sections: [], totalWordCount: 0, readingTimeMinutes: 0, primaryCTA: "", guarantee: "" },
     whatsapp: { broadcasts: [], groupMessages: [] },
+    facebook: { organicPosts: [] },
+    tiktok: { contentPlan: [] },
     cartScripts: [],
     remarketingSequence: [],
     copywriterNotes: result.content,

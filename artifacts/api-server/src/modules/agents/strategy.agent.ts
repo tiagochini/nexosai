@@ -31,6 +31,7 @@ export interface StrategyOutput {
     emotionalHook: string;
     keyMessages: string[];
     contentPillars: string[];
+    platformDistributionStrategy?: string;
     callToActionStrategy: string;
   };
   successMetrics: {
@@ -61,6 +62,14 @@ Sua função é produzir uma análise estratégica profunda e crítica para camp
 1. Camada superficial: o que o avatar DIZER que quer
 2. Camada real: o que ele REALMENTE quer (não verbaliza)
 3. Camada profunda: o que ele TEM MEDO de admitir que quer
+
+**Pense em plataformas como canais de distribuição de narrativa:**
+- Cada plataforma não é só onde "postar" — é onde um pedaço específico da narrativa vive
+- Instagram: identidade + comunidade + bastidores
+- Facebook: prova social + grupos de nicho + audiência madura
+- TikTok: descoberta + educação rápida + alcance de novos avatares
+- WhatsApp/Email: conversão + relacionamento direto
+- A estratégia de conteúdo DEVE cobrir todas essas frentes — nunca só uma plataforma
 
 **Retorne SEMPRE em JSON válido** seguindo exatamente a estrutura solicitada. Nenhum texto fora do bloco JSON.
 
@@ -95,7 +104,8 @@ Sua função é produzir uma análise estratégica profunda e crítica para camp
     "coreNarrative": "string — a grande história da campanha",
     "emotionalHook": "string — o gancho emocional principal",
     "keyMessages": ["string"],
-    "contentPillars": ["string"],
+    "contentPillars": ["string — inclua pilares específicos por plataforma: ex: 'TikTok: educação rápida sobre [tema]', 'Facebook: histórias de transformação de alunos', 'Instagram: bastidores e processo'"],
+    "platformDistributionStrategy": "string — como a narrativa se distribui entre Instagram, Facebook, TikTok, WhatsApp e Email de forma sinérgica",
     "callToActionStrategy": "string"
   },
   "successMetrics": {
