@@ -5,7 +5,9 @@ import {
   Brain, Zap, Target, Pen, Eye, ShoppingCart, Users, BarChart3,
   TrendingUp, Video, Star, Shield, Rocket, Megaphone, Globe, MessageCircle,
   ChevronRight, Bot, FileText, Radio, Mail, DollarSign, Layers,
-  Cpu, Mic, Play, BarChart2, RefreshCw, Hash,
+  Cpu, Mic, Play, BarChart2, RefreshCw, Hash, Flame, AlertTriangle,
+  Crosshair, Clock, BarChart, Scissors, Search, FlaskConical,
+  Award, Camera, Repeat2, Sparkles, Filter, BookOpen, LineChart,
 } from "lucide-react";
 
 interface AgentDef {
@@ -18,6 +20,7 @@ interface AgentDef {
   specialties: string[];
   icon: React.ElementType;
   accent: string;
+  isNew?: boolean;
 }
 
 const AGENTS: AgentDef[] = [
@@ -34,7 +37,7 @@ const AGENTS: AgentDef[] = [
     description: "Cria estratégias de lançamento de 6 a 10 dígitos com base em dados, psicologia do consumidor e posicionamento de mercado.",
     category: "Estratégia", provider: "Claude", icon: Brain,
     accent: "border-primary/40 hover:border-primary",
-    specialties: ["PLF", "Posicionamento", "Narrativa", "Concorrência"],
+    specialties: ["PLF", "Big Domino", "Narrativa", "Concorrência"],
   },
   {
     role: "launch_manager", name: "Gerente de Lançamento", tagline: "Coordenador de Fases",
@@ -63,6 +66,22 @@ const AGENTS: AgentDef[] = [
     category: "Estratégia", provider: "Claude", icon: RefreshCw,
     accent: "border-primary/40 hover:border-primary",
     specialties: ["Evergreen", "Funil Perpétuo", "Automação", "LTV"],
+  },
+  {
+    role: "market_intel", name: "Inteligência de Mercado", tagline: "Desmontador de Concorrentes",
+    description: "Engenharia reversa de estratégias de concorrentes, mapeamento de gaps de posicionamento e identificação de arbitragens de plataforma, conteúdo e preço.",
+    category: "Estratégia", provider: "Claude", icon: Search,
+    accent: "border-primary/40 hover:border-primary",
+    specialties: ["Concorrência", "Gaps", "Arbitragem", "Posicionamento"],
+    isNew: true,
+  },
+  {
+    role: "pricing_psychologist", name: "Psicólogo de Preço", tagline: "Arquiteto de Valor",
+    description: "Otimiza precificação com ancoragem, efeito decoy, psicologia de parcelamento e value stack. Projeta a garantia como acelerador de conversão.",
+    category: "Estratégia", provider: "Claude", icon: DollarSign,
+    accent: "border-primary/40 hover:border-primary",
+    specialties: ["Ancoragem", "Decoy", "Parcelamento", "Value Stack"],
+    isNew: true,
   },
 
   // ── COPYWRITING & CONTEÚDO ────────────────────────────────────────────────
@@ -108,6 +127,54 @@ const AGENTS: AgentDef[] = [
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["Stories", "Narrativa", "Instagram", "Sequência"],
   },
+  {
+    role: "hook_factory", name: "Hook Factory", tagline: "Fábrica de Ganchos",
+    description: "Gera 20+ hooks calibrados por plataforma, avatar e tipo (curiosidade, identidade, controvérsia, resultado, método). Os primeiros 3 segundos que param o scroll.",
+    category: "Conteúdo", provider: "GPT-4o", icon: Flame,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["TikTok", "Reels", "CTR", "Pattern Interrupt"],
+    isNew: true,
+  },
+  {
+    role: "objection_killer", name: "Objection Killer", tagline: "Destruidor de Objeções",
+    description: "Mapeia sistematicamente cada objeção do avatar, identifica o medo subjacente real e gera copy de inoculação — você levanta a objeção antes que o prospect a use.",
+    category: "Conteúdo", provider: "Claude", icon: Crosshair,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Inoculação", "Preço", "Confiança", "Timing"],
+    isNew: true,
+  },
+  {
+    role: "email_architect", name: "Email Architect", tagline: "Arquiteto de Sequências",
+    description: "Projeta sequências completas de email com arco narrativo: do indiferente ao comprador. Bodys completos por fase, subjects e previews calibrados.",
+    category: "Conteúdo", provider: "Claude", icon: Mail,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Sequência", "Open Rate", "Narrativa", "Segmentação"],
+    isNew: true,
+  },
+  {
+    role: "content_calendar", name: "Calendário de Conteúdo", tagline: "Jornada de 30 Dias",
+    description: "Cria calendários narrativos de lançamento: cada post tem papel específico na mudança de estado do lead. Captions completas, conceitos visuais e calendário de produção.",
+    category: "Conteúdo", provider: "GPT-4o", icon: BookOpen,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["30 Dias", "Orgânico", "Narrativa", "Produção"],
+    isNew: true,
+  },
+  {
+    role: "scarcity_engineer", name: "Scarcity Engineer", tagline: "Engenheiro de Urgência",
+    description: "Projeta mecanismos de escassez autêntica e urgência que convertem. Diferencia escassez real de falsa (que destrói credibilidade) e entrega o copy de fechamento por fase.",
+    category: "Conteúdo", provider: "Claude", icon: Clock,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Urgência", "Autenticidade", "Fechamento", "Deadline"],
+    isNew: true,
+  },
+  {
+    role: "testimonial_curator", name: "Curador de Prova Social", tagline: "Arquiteto de Credibilidade",
+    description: "Projeta estratégia completa de prova social: o que coletar, como pedir, onde colocar. Cada depoimento mapeado a uma objeção específica.",
+    category: "Conteúdo", provider: "Claude", icon: Award,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Depoimentos", "Casos", "UGC", "Credibilidade"],
+    isNew: true,
+  },
 
   // ── AUDIÊNCIA & MÍDIA ─────────────────────────────────────────────────────
   {
@@ -137,6 +204,22 @@ const AGENTS: AgentDef[] = [
     category: "Audiência", provider: "GPT-4o", icon: FileText,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["Brief", "Criativos", "Budget", "KPIs"],
+  },
+  {
+    role: "ad_critic", name: "Crítico de Anúncios", tagline: "Juiz dos Criativos",
+    description: "Avalia criativos antes de investir budget. Nota por dimensão (hook, clareza, CTA, fit, política), veredicto claro e reescrita do hook quando necessário.",
+    category: "Audiência", provider: "GPT-4o", icon: Filter,
+    accent: "border-yellow-500/40 hover:border-yellow-500",
+    specialties: ["Hook Score", "Política", "CTR", "Veredicto"],
+    isNew: true,
+  },
+  {
+    role: "reengagement", name: "Re-engagement Agent", tagline: "Ressuscitador de Leads",
+    description: "Reativa audiências frias segmentadas por razão de frieza. Projeta ângulos específicos para cada grupo e sequências de win-back que funcionam de verdade.",
+    category: "Audiência", provider: "Claude", icon: Repeat2,
+    accent: "border-yellow-500/40 hover:border-yellow-500",
+    specialties: ["Leads Frios", "Win-Back", "Segmentação", "Ângulos"],
+    isNew: true,
   },
 
   // ── VÍDEO & SCRIPTS ───────────────────────────────────────────────────────
@@ -169,7 +252,7 @@ const AGENTS: AgentDef[] = [
     specialties: ["Live", "Abertura", "Objeções", "Fechamento"],
   },
   {
-    role: "video_strategy", name: "Estrategista de Vídeo", tagline: "Arquitetura do Conteúdo em Vídeo",
+    role: "video_strategy", name: "Estrategista de Vídeo", tagline: "Arquitetura do Vídeo",
     description: "Define a estratégia completa de vídeo para o lançamento: quais vídeos produzir, sequência, duração e objetivo de cada um.",
     category: "Vídeo", provider: "Claude", icon: Cpu,
     accent: "border-purple-500/40 hover:border-purple-500",
@@ -181,6 +264,14 @@ const AGENTS: AgentDef[] = [
     category: "Vídeo", provider: "Claude", icon: TrendingUp,
     accent: "border-purple-500/40 hover:border-purple-500",
     specialties: ["Criadores", "Monetização", "Membros", "Crescimento"],
+  },
+  {
+    role: "video_hook", name: "Video Hook Specialist", tagline: "Primeiros 3 Segundos",
+    description: "Gera 15+ hooks de vídeo calibrados por plataforma — frame zero, gancho verbal, texto na tela e conceito de filmagem. Pensa como o algoritmo e como o avatar.",
+    category: "Vídeo", provider: "GPT-4o", icon: Camera,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["Frame Zero", "Stop Rate", "TikTok", "Reels"],
+    isNew: true,
   },
 
   // ── PERFORMANCE & ANALYTICS ───────────────────────────────────────────────
@@ -201,7 +292,7 @@ const AGENTS: AgentDef[] = [
   {
     role: "financial_projector", name: "Projetor Financeiro", tagline: "Simulador de Resultados",
     description: "Projeta receita esperada, break-even, ROI e fluxo de caixa do lançamento com base no histórico e benchmarks do mercado.",
-    category: "Analytics", provider: "Gemini", icon: DollarSign,
+    category: "Analytics", provider: "Gemini", icon: LineChart,
     accent: "border-green-500/40 hover:border-green-500",
     specialties: ["Projeção", "ROI", "Break-even", "Fluxo de Caixa"],
   },
@@ -212,8 +303,32 @@ const AGENTS: AgentDef[] = [
     accent: "border-green-500/40 hover:border-green-500",
     specialties: ["LGPD", "CONAR", "Políticas", "Risco"],
   },
+  {
+    role: "ab_test_designer", name: "A/B Test Designer", tagline: "Cientista do Marketing",
+    description: "Projeta experimentos com hipóteses rigorosas, tamanhos de amostra calculados e métricas corretas. Marketing tratado como ciência.",
+    category: "Analytics", provider: "Gemini", icon: FlaskConical,
+    accent: "border-green-500/40 hover:border-green-500",
+    specialties: ["Hipóteses", "Amostragem", "Métricas", "Significância"],
+    isNew: true,
+  },
+  {
+    role: "launch_debriefing", name: "Debriefing de Lançamento", tagline: "Analista Pós-Lançamento",
+    description: "Análise pós-lançamento brutalmente honesta: o que funcionou, o que falhou, causa raiz real e aprendizados institucionalizáveis para o próximo.",
+    category: "Analytics", provider: "Gemini", icon: BarChart,
+    accent: "border-green-500/40 hover:border-green-500",
+    specialties: ["Causa Raiz", "Aprendizados", "ROAS", "Benchmark"],
+    isNew: true,
+  },
+  {
+    role: "crisis_response", name: "Gestão de Crises", tagline: "Resposta em 2 Horas",
+    description: "Protocolo completo para crises de reputação: avaliação de severidade, ações imediatas, declarações públicas prontas e plano de recuperação de 30 dias.",
+    category: "Analytics", provider: "Claude", icon: AlertTriangle,
+    accent: "border-green-500/40 hover:border-green-500",
+    specialties: ["Velocidade", "Reputação", "Declarações", "Recuperação"],
+    isNew: true,
+  },
 
-  // ── AUTOMAÇÃO ────────────────────────────────────────────────────────────
+  // ── AUTOMAÇÃO & MONETIZAÇÃO ───────────────────────────────────────────────
   {
     role: "launch_sequence_builder", name: "Builder de Sequências", tagline: "Arquiteto de Automações",
     description: "Cria sequências completas de lançamento com email + WhatsApp — fases, timing, mensagens e segmentação por engajamento.",
@@ -235,6 +350,14 @@ const AGENTS: AgentDef[] = [
     accent: "border-orange-500/40 hover:border-orange-500",
     specialties: ["WhatsApp", "Atendimento", "Intenção", "Auto-Resposta"],
   },
+  {
+    role: "upsell_architect", name: "Upsell Architect", tagline: "Motor de LTV",
+    description: "Projeta order bumps, OTOs, downsells e cross-sells genuinamente úteis. Calcula impacto em LTV por 100 compradores e escreve o pitch completo de cada oferta.",
+    category: "Automação", provider: "Claude", icon: Sparkles,
+    accent: "border-orange-500/40 hover:border-orange-500",
+    specialties: ["Order Bump", "OTO", "Downsell", "LTV"],
+    isNew: true,
+  },
 ];
 
 const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação"];
@@ -246,6 +369,8 @@ const PROVIDER_COLOR: Record<string, string> = {
 };
 
 export default function AgentsHub() {
+  const newCount = AGENTS.filter(a => a.isNew).length;
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
 
@@ -256,14 +381,30 @@ export default function AgentsHub() {
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
             Hub de Agentes IA
           </h1>
+          {newCount > 0 && (
+            <Badge className="rounded-none font-mono text-[10px] bg-primary/15 text-primary border border-primary/30 px-2">
+              +{newCount} novos
+            </Badge>
+          )}
         </div>
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">
-          {AGENTS.length} agentes especializados · Claude · GPT-4o · Gemini · Cada agente, uma expertise
+          {AGENTS.length} agentes especializados · Framework ReAct (Reason + Act) · Claude · GPT-4o · Gemini
         </p>
       </div>
 
+      {/* ReAct badge */}
+      <div className="border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
+        <Brain className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <div>
+          <div className="font-mono text-xs font-bold text-primary uppercase tracking-widest">Framework ReAct Ativo</div>
+          <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
+            Cada agente opera no ciclo OBSERVE → REASON → ACT → OUTPUT. Além de gerar conteúdo, os agentes emitem diretivas de ação acionáveis (pausar criativos, escalar budget, disparar sequências, alertar humano) com confiança, urgência e parâmetros.
+          </div>
+        </div>
+      </div>
+
       {/* Stats strip */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
         {Object.entries(
           AGENTS.reduce((acc, a) => { acc[a.category] = (acc[a.category] ?? 0) + 1; return acc; }, {} as Record<string, number>)
         ).map(([cat, n]) => (
@@ -293,6 +434,11 @@ export default function AgentsHub() {
                       className={`border bg-card/40 p-4 cursor-pointer transition-all group relative overflow-hidden h-full flex flex-col ${agent.accent}`}
                     >
                       <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-current/20 pointer-events-none" />
+                      {agent.isNew && (
+                        <div className="absolute top-2 right-2">
+                          <span className="font-mono text-[9px] uppercase tracking-widest bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5">NOVO</span>
+                        </div>
+                      )}
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2.5">
                           <div className="p-1.5 border border-border/30 bg-muted/20">
@@ -305,9 +451,11 @@ export default function AgentsHub() {
                             <div className="font-mono text-[11px] text-muted-foreground/60">{agent.tagline}</div>
                           </div>
                         </div>
-                        <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 shrink-0 ${PROVIDER_COLOR[agent.provider]}`}>
-                          {agent.provider}
-                        </Badge>
+                        {!agent.isNew && (
+                          <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 shrink-0 ${PROVIDER_COLOR[agent.provider]}`}>
+                            {agent.provider}
+                          </Badge>
+                        )}
                       </div>
 
                       <p className="font-mono text-[11px] text-muted-foreground leading-relaxed mb-3 line-clamp-2 flex-1">

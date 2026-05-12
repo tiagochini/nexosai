@@ -40,7 +40,23 @@ export type AgentRole =
   | "financial_projector"
   | "launch_sequence_builder"
   | "continuous_sales_manager"
-  | "whatsapp_response";
+  | "whatsapp_response"
+  // ── New ReAct-capable specialized agents ──────────────────────────────────
+  | "hook_factory"
+  | "objection_killer"
+  | "scarcity_engineer"
+  | "email_architect"
+  | "pricing_psychologist"
+  | "ad_critic"
+  | "reengagement"
+  | "upsell_architect"
+  | "crisis_response"
+  | "launch_debriefing"
+  | "content_calendar"
+  | "video_hook"
+  | "market_intel"
+  | "ab_test_designer"
+  | "testimonial_curator";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -89,6 +105,22 @@ const AGENT_PROVIDER_MAP: Record<
   launch_sequence_builder:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   continuous_sales_manager: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   whatsapp_response:        { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── New ReAct-capable specialized agents ──────────────────────────────────
+  hook_factory:         { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  objection_killer:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  scarcity_engineer:    { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  email_architect:      { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  pricing_psychologist: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  ad_critic:            { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  reengagement:         { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  upsell_architect:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  crisis_response:      { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  launch_debriefing:    { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  content_calendar:     { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  video_hook:           { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  market_intel:         { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  ab_test_designer:     { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  testimonial_curator:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

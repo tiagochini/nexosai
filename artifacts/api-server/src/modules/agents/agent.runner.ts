@@ -109,7 +109,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       .insert(campaignAgentsTable)
       .values({
         campaignId: campaignId as string,
-        agentType: agentRole,
+        agentType: agentRole as any,
         status: "running",
         startedAt: new Date(),
       })
