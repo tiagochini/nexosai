@@ -47,13 +47,13 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           <img src={nexosLogo} alt="NexOS AI" className="h-14 w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
           <div className="hidden sm:block">
             <div className="font-mono font-black text-xl tracking-[0.15em] uppercase">NexOS <span className="text-primary">AI</span></div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">Plataforma de Lançamento</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">Automação de Vendas em Volume</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <a href="/landing/simulador">
             <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-primary/80 hover:text-primary border border-primary/20 hover:border-primary/40 h-9 px-4 gap-1.5">
-              <Zap className="h-3 w-3" />Simular meu lançamento
+              <Zap className="h-3 w-3" />Simular minha meta de vendas
             </Button>
           </a>
           <a href="/login">
@@ -88,38 +88,38 @@ function HeroSection() {
 
           <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-10 font-mono text-xs uppercase tracking-[0.3em] text-primary">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Acesso restrito — carrinho abre uma única vez
+            Demonstração ao vivo — veja a IA vendendo em tempo real
           </div>
 
           <h1 className="text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-none mb-8 max-w-5xl">
-            E se o seu próximo<br />
-            lançamento rodasse<br />
+            Você está vendendo<br />
+            menos do que<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              sem você fazer nada?
+              você poderia.
             </span>
           </h1>
 
           <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl">
-            Estratégia. Copy. Segmentação. WhatsApp. Email. Carrinho.<br />
-            <strong className="text-foreground">Tudo executado por IA enquanto você foca no que só você pode fazer.</strong>
+            A maioria das pessoas que tem um produto ou serviço fatura <strong className="text-foreground">uma fração do que poderia</strong> — não por falta de esforço, mas porque vender em volume exige uma operação que uma pessoa só não consegue sustentar.<br /><br />
+            <strong className="text-foreground">O NexOS AI é essa operação. Rodando 24h. Por uma fração do custo.</strong>
           </p>
 
           <div className="flex flex-col gap-4 items-start">
             <div className="flex flex-col sm:flex-row gap-3">
               <a href="/landing/simulador">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-base h-16 px-10 gap-3">
-                  <Zap className="h-5 w-5" />SIMULAR MEU LANÇAMENTO
+                  <Zap className="h-5 w-5" />SIMULAR MINHA META DE VENDAS
                 </Button>
               </a>
               <a href="#oferta">
                 <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-base h-16 px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60">
-                  VER O INVESTIMENTO <ArrowRight className="h-4 w-4" />
+                  QUERO VENDER MAIS <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
             <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground/40">
               <Lock className="h-3.5 w-3.5" />
-              Acesso por lista — carrinho abre em data única
+              Acesso por lista — vagas limitadas na abertura
             </div>
           </div>
         </div>
@@ -129,12 +129,12 @@ function HeroSection() {
       <div className="absolute bottom-16 left-0 right-0 border-t border-border/15 bg-background/40 backdrop-blur-md py-3">
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between gap-2">
           {[
-            { n: "29", label: "Agentes IA" },
-            { n: "6", label: "Modelos" },
-            { n: "3", label: "Tracks" },
-            { n: "14+", label: "Integrações", hide: false },
-            { n: "Meta CAPI", label: "Server Events", hide: true },
-            { n: "100 pts", label: "Health Score", hide: true },
+            { n: "R$41k",  label: "Em 6 dias" },
+            { n: "R$78k",  label: "Em 7 dias" },
+            { n: "R$134k", label: "Projeção top" },
+            { n: "44",     label: "Agentes IA", hide: false },
+            { n: "100%",   label: "Automatizado", hide: true },
+            { n: "24h",    label: "Sem parar", hide: true },
           ].map(({ n, label, hide }) => (
             <div key={label} className={`flex flex-col items-center ${hide ? "hidden md:flex" : ""}`}>
               <div className="font-mono font-black text-sm md:text-base text-primary leading-none">{n}</div>
@@ -156,20 +156,20 @@ function FeriadaSection() {
   const { ref, inView } = useInView(0.2);
   const dores = [
     {
-      situacao: "Você sabe exatamente o que precisa fazer.",
-      realidade: "Mas senta pra escrever e a página fica em branco. A copy que deveria ter 4 horas para ficou 3 semanas na sua cabeça. O produto continua sem lançar. A conta continua a mesma.",
+      situacao: "Você tem um produto bom e sabe que as pessoas comprariam.",
+      realidade: "Mas escrever tudo que precisa — a sequência de mensagens, os emails, as páginas — leva semanas. Enquanto isso, o produto continua na prateleira e a conta continua igual.",
     },
     {
-      situacao: "Você tem uma base de leads aquecidos.",
-      realidade: "Desde o último contato, passou mais tempo do que você quer admitir. Cada semana parada custa aproximadamente 7% de taxa de abertura. Eles estão esquecendo quem você é — agora.",
+      situacao: "Você tem contatos. Pessoas que já demonstraram interesse.",
+      realidade: "Cada semana sem contato é -7% de chance de elas comprarem. Depois de 6 semanas sem falar com elas, você vai precisar gastar dinheiro em anúncio pra reconquistar quem já era seu.",
     },
     {
-      situacao: "Você planejou 6 lançamentos no começo do ano.",
-      realidade: "Quantos aconteceram? Um. Dois, se foi um ano bom. Cada lançamento que não saiu foi receita que seu concorrente fez — com a mesma audiência que você divide com ele.",
+      situacao: "Você quer vender todo mês, não uma vez por ano.",
+      realidade: "Para ter consistência nas vendas você precisa de uma operação que funcione enquanto você dorme, viaja ou trabalha em outra coisa. Isso não é possível fazendo tudo na mão.",
     },
     {
-      situacao: "Você contratou ajuda para o último lançamento.",
-      realidade: "Copywriter atrasou a entrega. Gestor de tráfego não entendia o produto. Você acabou reescrevendo tudo às 2h da manhã antes de abrir o carrinho. E mesmo assim, deixou dinheiro na mesa.",
+      situacao: "Você contratou pessoas para te ajudar a vender mais.",
+      realidade: "Cada um entregou um pedaço. Ninguém assumiu o todo. Você ficou coordenando, revisando, corrigindo — e ainda assim a meta não foi batida. A conta do time venceu antes das vendas.",
     },
   ];
 
@@ -177,14 +177,14 @@ function FeriadaSection() {
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 delay-100 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">O QUE ESTÁ ACONTECENDO AGORA</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">POR QUE VOCÊ NÃO ESTÁ VENDENDO NO VOLUME QUE PODERIA</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
-            O problema não é<br />
-            falta de conhecimento.<br />
-            <span className="text-destructive/80">É falta de execução.</span>
+            Você tem produto.<br />
+            Você tem audiência.<br />
+            <span className="text-destructive/80">O dinheiro não está entrando.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-12">
-            Você já fez cursos. Já assistiu dezenas de conteúdos. Sabe montar um lançamento. O problema é que saber e <em>executar</em> são coisas completamente diferentes — e a execução consome tudo.
+            Chegar em R$100k, R$500k ou R$1M não é mistério. É operação. E operação exige sequências certas, disparos no momento certo, respostas automáticas, carrinho funcionando, dados em tempo real. <strong className="text-foreground">Uma pessoa só não aguenta sustentar isso sozinha — e é por isso que a maioria vende muito menos do que poderia.</strong>
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {dores.map((item, i) => (
@@ -294,21 +294,21 @@ function CustoRealSection() {
 function RotinaSection() {
   const { ref, inView } = useInView(0.2);
   const itens = [
-    "Acordar cedo pra escrever o email de abertura antes do café esfriar",
-    "Copiar e colar mensagem no WhatsApp pra 200 leads. Um por um.",
-    "4 horas segmentando lista no Excel porque as ferramentas não conversam",
-    "Reescrever a mesma copy 7 vezes sem saber se está boa o suficiente",
-    "Dormir 4h em semana de lançamento e ainda errar o horário de fechar carrinho",
-    "Perder venda porque esqueceu de mandar o último email de escassez",
+    "Escrever email por email — cada mensagem leva horas, a campanha nunca sai toda de uma vez",
+    "Mandar mensagem no WhatsApp para centenas de pessoas. Uma por uma. Na mão.",
+    "Perder o momento certo de falar com um lead quente porque você estava ocupado com outra coisa",
+    "Não saber se a copy está boa o suficiente e adiando a campanha por semanas",
+    "Dormir 4h na semana que deveria vender mais — e ainda assim errar alguma coisa",
+    "Deixar dinheiro na mesa porque o email de urgência não saiu no horário certo",
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">A ROTINA QUE VOCÊ CONHECE</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">O CUSTO INVISÍVEL DE VENDER NA MÃO</div>
           <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
-            Enquanto você executa<br />isso manualmente,<br />
-            <span className="text-primary">seu concorrente já automatizou.</span>
+            Cada hora que você gasta<br />em execução manual<br />
+            <span className="text-primary">é uma venda que não aconteceu.</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
             {itens.map((item, i) => (
@@ -325,8 +325,8 @@ function RotinaSection() {
             ))}
           </div>
           <p className="font-mono text-base text-muted-foreground/70 leading-relaxed border-l-2 border-destructive/30 pl-6">
-            Cada hora em execução manual é uma hora que você não está criando produto, gravando conteúdo ou construindo audiência.<br />
-            <strong className="text-foreground">E esse custo invisível se acumula todo mês.</strong>
+            Quem fatura R$100k, R$500k ou mais em um ciclo de vendas não é necessariamente mais talentoso que você.<br />
+            Eles simplesmente param de fazer essas coisas na mão antes. <strong className="text-foreground">E começam a vender em volume.</strong>
           </p>
         </div>
       </div>
@@ -341,12 +341,12 @@ function RotinaSection() {
 function SolutionSection() {
   const { ref, inView } = useInView(0.2);
   const features = [
-    { icon: BrainCircuit, label: "Estrategista IA",  sub: "Escolhe o modelo e track certos. Cronograma completo em 47 minutos." },
-    { icon: Target,        label: "Copywriter IA",    sub: "Emails, WhatsApp, página de vendas, anúncios. No seu tom. Pronto para aprovação." },
-    { icon: Users,         label: "Segmentador IA",   sub: "Classifica base em hot/warm/cold por comportamento. Score atualizado em tempo real." },
-    { icon: Activity,      label: "Disparador IA",    sub: "Envia no horário ideal por contato, responde objeções, abre e fecha carrinho." },
-    { icon: TrendingUp,    label: "Analytics IA",     sub: "Health score 100pts, detecção de fadiga criativa, relatório semanal automático." },
-    { icon: Shield,        label: "Compliance IA",    sub: "Auditoria LGPD automática, trilha completa por lead, conformidade em cada peça." },
+    { icon: BrainCircuit, label: "Estrategista IA",  sub: "Analisa seu produto e sua meta de faturamento. Monta o plano completo de vendas em 47 minutos." },
+    { icon: Target,        label: "Vendedor IA",      sub: "Escreve emails, mensagens de WhatsApp, página de vendas e anúncios no seu tom. Você só aprova." },
+    { icon: Users,         label: "Segmentador IA",   sub: "Classifica cada contato pelo nível de interesse e envia a mensagem certa para cada pessoa, na hora certa." },
+    { icon: Activity,      label: "Disparador IA",    sub: "Envia automaticamente, responde dúvidas, abre e fecha o período de vendas. Zero intervenção manual." },
+    { icon: TrendingUp,    label: "Analytics IA",     sub: "Mede o desempenho em tempo real, detecta queda de resultado e sugere ajustes antes que você perca vendas." },
+    { icon: Shield,        label: "Compliance IA",    sub: "Garante que cada mensagem enviada segue as regras de privacidade (LGPD) sem você precisar se preocupar." },
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
@@ -361,11 +361,11 @@ function SolutionSection() {
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">APRESENTANDO</div>
           <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-8">
             NexOS AI.<br />
-            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">29 agentes. 6 modelos. 3 tracks.</span>
+            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">Sua operação de vendas em volume.</span>
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
-            Você define o produto e a meta de faturamento. A IA escolhe o modelo certo, monta a estratégia, escreve os copies, segmenta a base, dispara as sequências e opera o carrinho.{" "}
-            <strong className="text-foreground">Você aprova. Ela executa.</strong>
+            Você define o produto e quanto quer faturar. A IA monta toda a operação — estratégia, textos de venda, segmentação de contatos, sequências de mensagens, monitoramento e otimização.{" "}
+            <strong className="text-foreground">Você aprova. Ela executa. As vendas entram.</strong>
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
             {features.map(({ icon: Icon, label, sub }, i) => (
@@ -412,13 +412,13 @@ function ModelosSection() {
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESTRATÉGIA SOB MEDIDA</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESTRATÉGIA SOB MEDIDA PARA A SUA SITUAÇÃO</div>
           <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-3">
-            6 modelos.<br />
-            <span className="text-primary">A IA escolhe o certo para você.</span>
+            6 formas de<br />
+            <span className="text-primary">fazer as vendas entrarem.</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Não existe um lançamento universal. O NexOS AI analisa produto, público e meta de faturamento — e configura automaticamente o modelo e track mais adequados para o seu caso.
+            Não existe uma estratégia única para todo mundo. O NexOS AI analisa seu produto, seu público e sua meta financeira — e monta automaticamente a estratégia mais adequada para o seu caso.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
@@ -465,22 +465,22 @@ function ComoFuncionaSection() {
     {
       num: "01",
       title: "Conecta em 23 minutos",
-      desc: "14+ integrações nativas: WhatsApp Business, Telegram, RD Station, ActiveCampaign, Resend, Instagram, TikTok, Meta Ads, Google Ads, Hotmart, Kiwify e Stripe. Sobe a base. A IA mapeia comportamentos e classifica cada lead em hot, warm ou cold automaticamente.",
-      tag: "14+ integrações nativas",
+      desc: "Conecta o WhatsApp, o email e as redes sociais que você já usa. Importa sua lista de contatos. A IA identifica automaticamente quem está mais propenso a comprar e organiza sua base por nível de interesse — sem você precisar fazer nada.",
+      tag: "14+ ferramentas conectadas",
       icon: BrainCircuit,
     },
     {
       num: "02",
-      title: "IA escolhe o modelo e monta tudo",
-      desc: "Você responde 7 perguntas sobre produto, público e meta de faturamento. A IA escolhe o modelo ideal (PLF, Fórmula, Semente, Afiliado, Perpétuo ou Custom) e o track certo (6, 8 ou 10 dígitos). Em 47 minutos: cronograma, emails, WhatsApp, página de vendas e variações de anúncio. Você aprova ou ajusta.",
-      tag: "6 modelos · 3 tracks · 47 minutos",
+      title: "IA monta toda a operação de vendas",
+      desc: "Você responde 7 perguntas sobre seu produto e quanto quer faturar. Em 47 minutos a IA entrega: plano completo de vendas, sequência de emails, mensagens de WhatsApp, texto da página de vendas e variações de anúncio. Você lê, aprova ou ajusta. Ela executa.",
+      tag: "47 minutos do zero ao plano completo",
       icon: Layers,
     },
     {
       num: "03",
-      title: "Execução automática total",
-      desc: "A IA dispara no horário certo, segmenta em tempo real, responde dúvidas frequentes, abre carrinho, envia escassez, fecha carrinho. Você acompanha o dashboard. O faturamento entra.",
-      tag: "Roda 24h sem você tocar",
+      title: "Vendas acontecem no piloto automático",
+      desc: "A IA envia cada mensagem no horário certo para cada contato, responde as dúvidas mais frequentes, abre o período de vendas, manda os lembretes de urgência e fecha automaticamente. Você acompanha no painel. O dinheiro entra na sua conta.",
+      tag: "Rodando 24h. Sem intervenção.",
       icon: Zap,
     },
   ];
@@ -488,10 +488,10 @@ function ComoFuncionaSection() {
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">DE ZERO AO LANÇAMENTO</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">COMO FUNCIONA NA PRÁTICA</div>
           <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-12">
             3 passos.<br />
-            <span className="text-primary">Lançamento rodando em 72 horas.</span>
+            <span className="text-primary">Vendas rodando em 72 horas.</span>
           </h2>
           <div className="space-y-5">
             {steps.map((step, i) => (
@@ -533,26 +533,26 @@ function ProvaSection() {
     {
       nome: "Renata Coelho",
       cargo: "Terapeuta holística · Belo Horizonte",
-      antes: "312 contatos na lista. 8 meses sem lançar por falta de tempo para escrever a sequência.",
+      antes: "312 contatos no WhatsApp. 8 meses sem vender porque nunca conseguia tempo para escrever todas as mensagens.",
       resultado: "R$41.200",
       prazo: "em 6 dias",
-      detalhe: "A IA escolheu lançamento semente, escreveu toda a sequência de pré-lançamento e os emails de carrinho. Renata aprovou tudo em 40 minutos. Nunca mais tocou no processo.",
+      detalhe: "A IA escreveu todas as mensagens, montou a sequência completa e enviou no horário certo para cada contato. Renata aprovou tudo em 40 minutos. As vendas entraram enquanto ela atendia pacientes.",
     },
     {
       nome: "Marcos Tavares",
       cargo: "Personal trainer online · São Paulo",
-      antes: "Tentou lançar 3 vezes. Parou no meio das 3 — sempre na fase de copy e sequência de WhatsApp.",
+      antes: "Tentou vender 3 vezes. Parou no meio das 3 — sempre travava na hora de escrever as mensagens de vendas.",
       resultado: "R$78.400",
       prazo: "em 7 dias",
-      detalhe: "A diferença foi a IA completar o que ele sempre abandonava. O email de fechamento de carrinho que ele nunca conseguia escrever foi o que mais converteu.",
+      detalhe: "A IA completou o que ele sempre abandonava. A última mensagem de urgência — que ele nunca conseguia escrever — foi a que mais gerou vendas.",
     },
     {
       nome: "Luciana Faria",
       cargo: "Professora de inglês · Recife",
-      antes: "218 alunos de inglês no WhatsApp. Nunca tinha feito uma venda online. Sem produto digital pronto.",
+      antes: "218 alunos no WhatsApp. Nunca tinha vendido nada online. Sem produto formatado.",
       resultado: "R$33.900",
       prazo: "em 5 dias",
-      detalhe: "A IA estruturou o produto, escolheu o modelo semente e escreveu a sequência. Luciana aprendeu como um lançamento funciona enquanto o dinheiro entrava.",
+      detalhe: "A IA ajudou a formatar o produto, montou toda a sequência de vendas e disparou para a lista. Luciana descobriu como vender em volume enquanto o dinheiro já entrava.",
     },
   ];
 
@@ -560,13 +560,13 @@ function ProvaSection() {
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">RESULTADOS REAIS. NOMES REAIS.</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESSES RESULTADOS FORAM GERADOS PELO NEXOS AI</div>
           <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-4">
-            Não são prints de tela.<br />
-            <span className="text-primary">São campanhas que a IA executou.</span>
+            Pessoas reais.<br />
+            <span className="text-primary">Dinheiro real entrando na conta.</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-12">
-            Cada resultado abaixo veio de produto real, lista real, IA executando tudo. Sem agência, sem copywriter contratado, sem semanas de preparação.
+            Nenhum desses resultados veio de agência, equipe de marketing ou anos de experiência. Veio do NexOS AI executando — enquanto essas pessoas focavam no que só elas podiam fazer.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -597,15 +597,108 @@ function ProvaSection() {
             <div>
               <div className="font-mono text-xs font-black text-foreground uppercase tracking-widest mb-1">O que esses 3 casos têm em comum</div>
               <p className="font-mono text-sm text-muted-foreground">
-                Nenhum deles esperou o momento perfeito, a lista ideal ou ter tempo. <strong className="text-foreground">A IA executou enquanto eles aprendiam.</strong>
+                Nenhum deles tinha uma operação de marketing montada. <strong className="text-foreground">A IA executou enquanto elas descobriam como vender em volume.</strong>
               </p>
             </div>
             <a href="#oferta" className="shrink-0">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 whitespace-nowrap text-xs px-6">
-                QUERO FAZER IGUAL <ArrowRight className="h-4 w-4" />
+                QUERO VENDER ASSIM <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section 7c: AO VIVO — Demonstração ao vivo do app ───────────────────────
+// Objetivo: gerar antecipação para o evento ao vivo onde a IA será demonstrada
+// executando em tempo real. A maior prova social = os próprios participantes.
+function AoVivoSection() {
+  const { ref, inView } = useInView(0.2);
+  const momentos = [
+    {
+      icone: "01",
+      titulo: "Você vê a IA recebendo o produto",
+      desc: "Na live, um produto real é inserido no NexOS AI em tempo real. Sem preparação, sem roteiro. O produto entra, a IA analisa e começa a trabalhar.",
+    },
+    {
+      icone: "02",
+      titulo: "A estratégia de vendas aparece ao vivo",
+      desc: "Em menos de 1 hora, a IA monta o plano completo de vendas: mensagens, sequências, cronograma, estratégia de preço. Você assiste acontecendo.",
+    },
+    {
+      icone: "03",
+      titulo: "Os primeiros contatos recebem as mensagens",
+      desc: "A automação é ativada ao vivo. Os primeiros disparos saem durante a própria demonstração. Você vê a lista sendo trabalhada em tempo real.",
+    },
+    {
+      icone: "04",
+      titulo: "A maior prova social é você mesmo",
+      desc: "Quem estiver assistindo a live chegou até lá porque o NexOS AI executou um plano de vendas para esse evento. Você é o resultado do que o app faz.",
+    },
+  ];
+
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">EVENTO AO VIVO · DATA A CONFIRMAR</div>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+            <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none">
+              Veja a IA vendendo<br />
+              <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">em tempo real. Ao vivo.</span>
+            </h2>
+            <div className="font-mono text-xs text-muted-foreground/60 max-w-xs leading-relaxed shrink-0">
+              Não é vídeo gravado. Não é demonstração ensaiada.<br />É o app rodando ao vivo com produto real.
+            </div>
+          </div>
+
+          {/* Live preview badge */}
+          <div className={`flex items-center gap-3 border border-primary/30 bg-primary/5 px-5 py-4 mb-10 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "100ms" }}>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="font-mono text-xs font-black uppercase tracking-widest text-primary">Ao Vivo</span>
+            </div>
+            <div className="w-px h-4 bg-border/40" />
+            <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+              Durante o evento você vai assistir o NexOS AI montando e executando uma campanha de vendas completa — da estratégia ao primeiro disparo — sem corte, sem edição, sem roteiro.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+            {momentos.map((m, i) => (
+              <div
+                key={i}
+                className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${200 + i * 100}ms` }}
+              >
+                <div className="font-mono font-black text-5xl text-primary/10 leading-none mb-4">{m.icone}</div>
+                <div className="font-mono text-xs font-black uppercase tracking-widest text-foreground mb-2">{m.titulo}</div>
+                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{m.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Meta-proof statement */}
+          <div className={`border border-primary/40 bg-primary/8 px-7 py-6 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "620ms" }}>
+            <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary mb-3">A PROVA MAIS PODEROSA</div>
+            <p className="font-mono text-base text-foreground leading-relaxed font-bold">
+              Se você está lendo isso, foi porque o NexOS AI executou uma campanha de vendas para te trazer até aqui.
+            </p>
+            <p className="font-mono text-sm text-muted-foreground leading-relaxed mt-2">
+              O evento, as mensagens, o email que você recebeu, o anúncio que você viu — tudo foi gerado e disparado pela IA. Você já é a prova de que funciona. Agora é sua vez de usar isso para vender o que você tem.
+            </p>
+            <a href="#oferta" className="inline-block mt-5">
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs px-8">
+                GARANTIR MINHA VAGA NA LIVE <ArrowRight className="h-4 w-4" />
+              </Button>
+            </a>
+          </div>
+
         </div>
       </div>
       <ScrollHint />
@@ -824,16 +917,16 @@ function OfferSection() {
   };
 
   const includes = [
-    "29 agentes de IA em 6 modelos de lançamento e 3 tracks de faturamento",
-    "Estratégia completa + cronograma gerado em 47 minutos pela IA",
-    "Sequências automatizadas (email + WhatsApp) com segmentação hot/warm/cold",
-    "Segmentação comportamental em tempo real com score por lead",
-    "Abertura e fechamento de carrinho automático com escassez dinâmica",
-    "Server-side events: Meta CAPI + TikTok Events API para atribuição precisa",
-    "LGPD automático com trilha de auditoria + loop viral de indicação por lead",
-    "Dashboard ao vivo: health score 100pts, alertas de CTR, fadiga criativa",
-    "Otimização automática de horário de envio por lead (send time intelligence)",
-    "Acesso prioritário a novos agentes + onboarding + grupo privado de Fundadores",
+    "44 agentes de IA especializados em vendas, copy, tráfego e automação",
+    "Plano completo de vendas gerado em 47 minutos — estratégia, mensagens, cronograma",
+    "Sequências automáticas de email e WhatsApp com o timing certo para cada contato",
+    "Abertura e fechamento do período de vendas 100% automatizado com urgência real",
+    "Identificação automática de quem está pronto para comprar na sua lista",
+    "Rastreamento preciso de vendas: Meta Ads, Google, TikTok com dados reais do servidor",
+    "Todos os dados de cada contato dentro da lei de privacidade (LGPD) — automático",
+    "Painel de resultados em tempo real com alertas quando algo precisa de atenção",
+    "IA que aprende qual horário cada contato prefere receber mensagens e ajusta automaticamente",
+    "Acesso antecipado a novas funcionalidades + onboarding + grupo privado de Fundadores",
   ];
 
   return (
@@ -989,6 +1082,7 @@ export default function Landing() {
       <LiveDemoSection />
       <SimulatorSection />
       <ProvaSection />
+      <AoVivoSection />
       <EmJogoSection />
       <JanelaSection />
       <OfferSection />
