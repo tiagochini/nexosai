@@ -368,11 +368,16 @@ export function LiveDemoSection() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CATEGORY_OPTIONS = [
-  { value: "infoproduct", label: "Infoproduto" },
-  { value: "mentorship",  label: "Mentoria" },
-  { value: "software",    label: "Software / SaaS" },
-  { value: "service",     label: "Serviço" },
-  { value: "event",       label: "Evento / Live" },
+  { value: "infoproduct",    label: "Infoproduto / Curso" },
+  { value: "mentorship",     label: "Mentoria" },
+  { value: "software",       label: "Software / SaaS" },
+  { value: "service",        label: "Serviço / Consultoria" },
+  { value: "event",          label: "Evento / Live" },
+  { value: "physical",       label: "Produto Físico" },
+  { value: "academia",       label: "Academia / Fitness" },
+  { value: "health_beauty",  label: "Saúde e Beleza" },
+  { value: "ecommerce",      label: "Loja Virtual" },
+  { value: "community",      label: "Comunidade / Clube" },
 ];
 
 const TYPE_OPTIONS = [

@@ -40,7 +40,10 @@ async function postSimulatorLead(lead: LeadData): Promise<void> {
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type ProductType = "curso" | "mentoria" | "evento" | "software" | "comunidade";
+type ProductType =
+  | "curso" | "mentoria" | "evento" | "software" | "comunidade"
+  | "produto_fisico" | "servico" | "academia" | "saude_beleza"
+  | "loja_virtual" | "livro" | "podcast" | "outro";
 type Step = "form" | "loading" | "reveal" | "summary";
 
 interface LeadData {
@@ -49,6 +52,7 @@ interface LeadData {
   productType: ProductType;
   email: string;
   whatsapp: string;
+  countryCode: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -57,15 +61,55 @@ const fmtNum = (n: number) =>
   n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
 const PRODUCT_LABELS: Record<ProductType, string> = {
-  curso: "Curso Digital", mentoria: "Mentoria", evento: "Evento Online",
-  software: "Software / SaaS", comunidade: "Comunidade / Clube",
+  curso:          "Curso Digital",
+  mentoria:       "Mentoria",
+  evento:         "Evento Online",
+  software:       "Software / SaaS",
+  comunidade:     "Comunidade / Clube",
+  produto_fisico: "Produto Físico",
+  servico:        "Serviço / Consultoria",
+  academia:       "Academia / Fitness",
+  saude_beleza:   "Saúde e Beleza",
+  loja_virtual:   "Loja Virtual / E-commerce",
+  livro:          "Livro / E-book",
+  podcast:        "Podcast / Áudio",
+  outro:          "Outro",
 };
 
-function phoneMask(v: string) {
-  return v.replace(/\D/g, "")
-    .replace(/^(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d)/, "$1-$2")
-    .slice(0, 15);
+const COUNTRY_CODES = [
+  { code: "+55",  label: "🇧🇷 +55"  },
+  { code: "+1",   label: "🇺🇸 +1"   },
+  { code: "+351", label: "🇵🇹 +351" },
+  { code: "+34",  label: "🇪🇸 +34"  },
+  { code: "+54",  label: "🇦🇷 +54"  },
+  { code: "+56",  label: "🇨🇱 +56"  },
+  { code: "+57",  label: "🇨🇴 +57"  },
+  { code: "+52",  label: "🇲🇽 +52"  },
+  { code: "+598", label: "🇺🇾 +598" },
+  { code: "+595", label: "🇵🇾 +595" },
+  { code: "+591", label: "🇧🇴 +591" },
+  { code: "+593", label: "🇪🇨 +593" },
+  { code: "+51",  label: "🇵🇪 +51"  },
+  { code: "+58",  label: "🇻🇪 +58"  },
+  { code: "+44",  label: "🇬🇧 +44"  },
+  { code: "+49",  label: "🇩🇪 +49"  },
+  { code: "+33",  label: "🇫🇷 +33"  },
+  { code: "+39",  label: "🇮🇹 +39"  },
+  { code: "+61",  label: "🇦🇺 +61"  },
+  { code: "+81",  label: "🇯🇵 +81"  },
+  { code: "+27",  label: "🇿🇦 +27"  },
+  { code: "+971", label: "🇦🇪 +971" },
+];
+
+function phoneMask(v: string, countryCode = "+55") {
+  const d = v.replace(/\D/g, "");
+  if (countryCode === "+55") {
+    return d
+      .replace(/^(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2")
+      .slice(0, 15);
+  }
+  return d.slice(0, 15);
 }
 
 // ── Day config (what gets shown each day) ─────────────────────────────────────
@@ -780,13 +824,13 @@ function SummaryStep({ lead }: { lead: LeadData }) {
 // ── Lead Form Step ─────────────────────────────────────────────────────────────
 
 function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
-  const [form, setForm] = useState<LeadData>({ firstName: "", productName: "", productType: "curso", email: "", whatsapp: "" });
+  const [form, setForm] = useState<LeadData>({ firstName: "", productName: "", productType: "curso", email: "", whatsapp: "", countryCode: "+55" });
   const [errors, setErrors] = useState<Partial<LeadData>>({});
 
   const set = (k: keyof LeadData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const v = k === "whatsapp" ? phoneMask(e.target.value) : e.target.value;
+    const v = k === "whatsapp" ? phoneMask(e.target.value, form.countryCode) : e.target.value;
     setForm(f => ({ ...f, [k]: v }));
-    setErrors(er => ({ ...er, [k]: "" }));
+    if (k !== "countryCode") setErrors(er => ({ ...er, [k]: "" }));
   };
 
   const validate = () => {
@@ -832,10 +876,10 @@ function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
             <h1 className="text-3xl font-mono font-black uppercase tracking-tighter leading-tight">
               Veja como ficaria<br />
               seu lançamento<br />
-              <span className="text-primary">com IA</span>
+              <span className="text-primary">com NEXOS AI</span>
             </h1>
             <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
-              Sem orçamento. Sem promessas. Só as <strong className="text-foreground">entregas reais</strong> que a IA geraria para o seu produto.
+              Sem orçamento. Sem promessas. Só as <strong className="text-foreground">entregas reais</strong> que a NEXOS AI geraria para o seu produto.
             </p>
           </div>
 
@@ -889,7 +933,7 @@ function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
                 />
                 {errors.firstName && <div className="font-mono text-[10px] text-destructive mt-0.5">{errors.firstName}</div>}
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">E-mail *</label>
                 <input
                   type="email"
@@ -900,15 +944,27 @@ function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
                 />
                 {errors.email && <div className="font-mono text-[10px] text-destructive mt-0.5">{errors.email}</div>}
               </div>
-              <div>
+              <div className="col-span-2">
                 <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">WhatsApp *</label>
-                <input
-                  type="tel"
-                  value={form.whatsapp}
-                  onChange={set("whatsapp")}
-                  placeholder="(11) 99999-9999"
-                  className="w-full h-11 bg-background/60 border border-border/50 focus:border-primary/60 focus:outline-none px-3 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 transition-colors"
-                />
+                <div className="flex gap-1.5">
+                  <select
+                    value={form.countryCode}
+                    onChange={set("countryCode") as React.ChangeEventHandler<HTMLSelectElement>}
+                    className="h-11 bg-background/60 border border-border/50 focus:border-primary/60 focus:outline-none px-2 font-mono text-xs text-foreground transition-colors shrink-0"
+                    style={{ width: "7.5rem" }}
+                  >
+                    {COUNTRY_CODES.map(c => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={form.whatsapp}
+                    onChange={set("whatsapp")}
+                    placeholder={form.countryCode === "+55" ? "(11) 99999-9999" : "número completo"}
+                    className="flex-1 h-11 bg-background/60 border border-border/50 focus:border-primary/60 focus:outline-none px-3 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 transition-colors"
+                  />
+                </div>
                 {errors.whatsapp && <div className="font-mono text-[10px] text-destructive mt-0.5">{errors.whatsapp}</div>}
               </div>
             </div>
@@ -948,7 +1004,7 @@ export default function SimulatorPage() {
     const email = params.get("email");
     const tel = params.get("tel");
     if (nome && produto) {
-      setLead({ firstName: nome, productName: produto, productType: "curso", email: email ?? "", whatsapp: tel ?? "" });
+      setLead({ firstName: nome, productName: produto, productType: "curso", email: email ?? "", whatsapp: tel ?? "", countryCode: "+55" });
       if (email && tel) setStep("loading");
     }
   }, []);
