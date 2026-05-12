@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useRoute, Link } from "wouter";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useListCampaigns, getListCampaignsQueryKey } from "@workspace/api-client-react";
@@ -161,6 +162,8 @@ export default function AgentChat() {
   const role = params?.role ?? "command";
   const agent = AGENT_INFO[role] ?? AGENT_INFO.command!;
   const accent = ACCENT_CLASSES[agent.accentColor] ?? ACCENT_CLASSES.primary!;
+
+  const isMobile = useIsMobile();
 
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
@@ -425,18 +428,26 @@ export default function AgentChat() {
           <textarea ref={inputRef} value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
-              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                void sendMessage();
+              if (e.key === "Enter") {
+                // Mobile: plain Enter sends (no Ctrl available on virtual keyboard)
+                // Desktop: Ctrl+Enter or Meta+Enter sends; plain Enter = new line
+                if (isMobile || e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  void sendMessage();
+                }
               }
-              // plain Enter = new line (default textarea behavior — no override needed)
             }}
             placeholder={`Fale com ${agent.name}…`}
-            disabled={sending} rows={4}
-            className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[80px]"
+            disabled={sending} rows={isMobile ? 3 : 4}
+            className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[64px]"
           />
           <div className="flex flex-col gap-1.5 shrink-0">
             <Button
+              onPointerDown={e => {
+                // Prevent the textarea from losing focus (and the mobile keyboard
+                // from dismissing + reshaping the layout) before the click fires.
+                e.preventDefault();
+              }}
               onClick={() => {
                 if (!input.trim()) {
                   inputRef.current?.focus();
@@ -445,26 +456,30 @@ export default function AgentChat() {
                 void sendMessage();
               }}
               disabled={sending}
-              title="Enviar (Ctrl+Enter)"
+              title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
               className={`font-mono rounded-none h-10 px-4 ${accent.bg} ${accent.border} border hover:brightness-125`}>
               {sending ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} /> : <Send className={`h-4 w-4 ${accent.text}`} />}
             </Button>
-            <Button variant="outline" size="sm" title="Nova linha (Enter)"
-              onClick={() => {
-                setInput(v => v + "\n");
-                setTimeout(() => inputRef.current?.focus(), 0);
-              }}
-              disabled={sending}
-              className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border">
-              <CornerDownLeft className="h-4 w-4" />
-            </Button>
+            {!isMobile && (
+              <Button variant="outline" size="sm" title="Nova linha (Enter)"
+                onClick={() => {
+                  setInput(v => v + "\n");
+                  setTimeout(() => inputRef.current?.focus(), 0);
+                }}
+                disabled={sending}
+                className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border">
+                <CornerDownLeft className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
         <div className="flex justify-between items-center mt-1.5 px-1">
           <span className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">
             Modo: {MODE_LABELS[contextMode]} · {selectedCampaign ? "Com contexto de campanha" : "Sem contexto"}
           </span>
-          <span className="text-[11px] font-mono text-muted-foreground/40">Enter = nova linha · Ctrl+Enter = enviar · 3 cr/msg</span>
+          <span className="text-[11px] font-mono text-muted-foreground/40">
+            {isMobile ? "Enter = enviar · 3 cr/msg" : "Enter = nova linha · Ctrl+Enter = enviar · 3 cr/msg"}
+          </span>
         </div>
       </div>
     </div>
