@@ -17,6 +17,7 @@ export type AgentRole =
   | "copywriter"
   | "creative_director"
   | "video"
+  | "video_strategy"
   | "media_buyer"
   | "targeting"
   | "landing_page"
@@ -26,7 +27,20 @@ export type AgentRole =
   | "product_builder"
   | "compliance"
   | "affiliate_campaign"
-  | "launch_manager";
+  | "launch_manager"
+  | "perpetual_launch_manager"
+  | "ad_copy"
+  | "social_media"
+  | "stories_sequence"
+  | "media_brief"
+  | "vsl_script"
+  | "cpl_script"
+  | "webinar_script"
+  | "live_script"
+  | "financial_projector"
+  | "launch_sequence_builder"
+  | "continuous_sales_manager"
+  | "whatsapp_response";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -57,10 +71,24 @@ const AGENT_PROVIDER_MAP: Record<
   targeting:         { provider: "openai",    model: OPENAI_NATIVE_MODEL },
   landing_page:      { provider: "openai",    model: OPENAI_NATIVE_MODEL },
   affiliate_campaign:{ provider: "openai",    model: OPENAI_NATIVE_MODEL },
-  analytics:         { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
-  optimization:      { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
-  video:             { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
-  creator_growth:    { provider: "gemini",    model: GEMINI_FLASH_NATIVE },
+  analytics:                { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  optimization:             { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  video:                    { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  video_strategy:           { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  creator_growth:           { provider: "gemini",    model: GEMINI_FLASH_NATIVE },
+  perpetual_launch_manager: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  ad_copy:                  { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  social_media:             { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  stories_sequence:         { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  media_brief:              { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  vsl_script:               { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  cpl_script:               { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  webinar_script:           { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  live_script:              { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  financial_projector:      { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  launch_sequence_builder:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  continuous_sales_manager: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  whatsapp_response:        { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

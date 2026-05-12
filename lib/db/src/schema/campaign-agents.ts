@@ -18,6 +18,7 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "copywriter",
   "creative_director",
   "video",
+  "video_strategy",
   "media_buyer",
   "targeting",
   "landing_page",
@@ -28,6 +29,19 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "compliance",
   "affiliate_campaign",
   "launch_manager",
+  "perpetual_launch_manager",
+  "ad_copy",
+  "social_media",
+  "stories_sequence",
+  "media_brief",
+  "vsl_script",
+  "cpl_script",
+  "webinar_script",
+  "live_script",
+  "financial_projector",
+  "launch_sequence_builder",
+  "continuous_sales_manager",
+  "whatsapp_response",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [
