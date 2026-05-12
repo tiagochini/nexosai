@@ -46,6 +46,18 @@ export interface StrategyOutput {
     mitigations: string[];
   };
   strategistNotes: string;
+  triggerMap?: {
+    preLaunch: { primaryTrigger: string; triggerStack: string[]; triggerLogic: string };
+    cartOpen: { primaryTrigger: string; triggerStack: string[]; triggerLogic: string };
+    cartClose: { primaryTrigger: string; triggerStack: string[]; triggerLogic: string };
+    remarketing: { primaryTrigger: string; triggerStack: string[]; triggerLogic: string };
+    dominantTrigger: string;
+    dominantTriggerJustification: string;
+    triggerStackSequence: string[];
+    socialProofBlueprint: string;
+    antiRequisiteAngles: string[];
+    transformationBridge: string;
+  };
 }
 
 const STRATEGY_SYSTEM_PROMPT = `Você é o Agente de Estratégia da NexOS AI — o mais experiente estrategista de lançamentos digitais do Brasil.
@@ -119,7 +131,35 @@ Sua função é produzir uma análise estratégica profunda e crítica para camp
     "mainRisks": ["string"],
     "mitigations": ["string"]
   },
-  "strategistNotes": "string — observações críticas adicionais que o criador PRECISA ouvir"
+  "strategistNotes": "string — observações críticas adicionais que o criador PRECISA ouvir",
+  "triggerMap": {
+    "preLaunch": {
+      "primaryTrigger": "autoridade|curiosidade|antecipacao|prova_social|reciprocidade|comunidade|transformacao",
+      "triggerStack": ["string — gatilhos em ordem de ativação nesta fase"],
+      "triggerLogic": "string — por que estes gatilhos nesta ordem para este produto/avatar"
+    },
+    "cartOpen": {
+      "primaryTrigger": "string",
+      "triggerStack": ["string"],
+      "triggerLogic": "string"
+    },
+    "cartClose": {
+      "primaryTrigger": "urgencia|medo_perda|escassez",
+      "triggerStack": ["string"],
+      "triggerLogic": "string"
+    },
+    "remarketing": {
+      "primaryTrigger": "contraste|reciprocidade|curiosidade|medo_perda",
+      "triggerStack": ["string"],
+      "triggerLogic": "string"
+    },
+    "dominantTrigger": "string — o gatilho mais poderoso para este produto e avatar",
+    "dominantTriggerJustification": "string — por que este é o mais poderoso dado o perfil psicográfico",
+    "triggerStackSequence": ["string — sequência exata de ativação dos gatilhos do dia 1 ao fechamento"],
+    "socialProofBlueprint": "string — instrução: que prova social coletar, que formato, que resultados mostrar, como torná-la irrefutável",
+    "antiRequisiteAngles": ["string — ângulos mesmo-sem que quebram objeções antes de serem ditas"],
+    "transformationBridge": "string — estado emocional exato do avatar antes vs depois do resultado"
+  }
 }
 \`\`\``;
 
@@ -249,5 +289,6 @@ Retorne APENAS o JSON da estratégia, nada mais.`,
       mitigations: [],
     },
     strategistNotes: "",
+    triggerMap: undefined,
   });
 }

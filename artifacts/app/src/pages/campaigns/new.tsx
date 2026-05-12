@@ -29,14 +29,14 @@ const GOAL_OPTIONS: GoalOption[] = [
   {
     id: "launch",
     icon: Rocket,
-    title: "Quero fazer um lançamento e faturar alto",
-    desc: "A IA monta toda a estratégia para você alcançar R$100k+ em 7 dias de carrinho aberto. Plano completo, copy e execução inclusos.",
+    title: "Quero faturar alto num lançamento de carrinho aberto",
+    desc: "A IA monta a estratégia completa para R$100k+ em 7 dias. Mesmo sem copywriter, sem agência e mesmo que você nunca tenha lançado antes.",
     badge: "6 Dígitos",
     badgeTextColor: "text-primary",
     badgeBorderColor: "border-primary/40",
     badgeBgColor: "bg-primary/10",
     targetLabel: "R$100k – R$999k em 7 dias",
-    ideal: "Ideal para produto digital com audiência existente",
+    ideal: "Mesmo sem lista grande · Mesmo sem experiência",
     type: "launch" as CampaignInputType,
     track: "six_digits" as CampaignInputTrack,
     nameSuggestion: "Meu Lançamento",
@@ -44,14 +44,14 @@ const GOAL_OPTIONS: GoalOption[] = [
   {
     id: "perpetual",
     icon: RefreshCw,
-    title: "Quero vendas todos os dias no piloto automático",
-    desc: "Sistema de vendas perpétuas — o produto continua vendendo enquanto você dorme, sem precisar de novos lançamentos.",
+    title: "Quero vendas todos os dias sem abrir e fechar carrinho",
+    desc: "Funil perpétuo automatizado — o produto vende enquanto você dorme, sem depender de datas, energia ou novos lançamentos.",
     badge: "Perpétuo",
     badgeTextColor: "text-emerald-400",
     badgeBorderColor: "border-emerald-400/40",
     badgeBgColor: "bg-emerald-400/10",
-    targetLabel: "Renda recorrente e automática",
-    ideal: "Ideal para infoproduto digital com margem alta",
+    targetLabel: "Renda automática todos os dias",
+    ideal: "Mesmo sem time · Mesmo sem rotina de lançamento",
     type: "perpetual_launch" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
     nameSuggestion: "Funil Perpétuo",
@@ -59,14 +59,14 @@ const GOAL_OPTIONS: GoalOption[] = [
   {
     id: "flash",
     icon: Zap,
-    title: "Quero gerar caixa rápido com uma promoção",
-    desc: "Flash Sale de 24h a 72h para sua lista atual. Resultado imediato sem precisar de grande estrutura ou mídia paga.",
+    title: "Quero gerar caixa rápido com uma promoção de 48-72h",
+    desc: "Flash Sale para sua lista atual. Resultado em dias, não semanas. Sem estrutura pesada, sem tráfego pago obrigatório.",
     badge: "Flash Sale",
     badgeTextColor: "text-yellow-400",
     badgeBorderColor: "border-yellow-400/40",
     badgeBgColor: "bg-yellow-400/10",
     targetLabel: "Resultado em até 72 horas",
-    ideal: "Ideal para quem já tem lista ou audiência aquecida",
+    ideal: "Mesmo com lista pequena · Mesmo sem anúncios",
     type: "flash_sale" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
     nameSuggestion: "Flash Sale",
@@ -74,14 +74,14 @@ const GOAL_OPTIONS: GoalOption[] = [
   {
     id: "audience",
     icon: Users,
-    title: "Quero captar leads e crescer minha audiência",
-    desc: "Estratégia de crescimento orgânico e pago para construir sua base antes do grande lançamento. Sem produto pronto? Sem problema.",
+    title: "Quero construir minha base antes de lançar",
+    desc: "Estratégia de captação orgânica e paga para encher a lista antes do grande lançamento. Sem produto pronto ainda? Começa aqui.",
     badge: "Crescimento",
     badgeTextColor: "text-cyan-400",
     badgeBorderColor: "border-cyan-400/40",
     badgeBgColor: "bg-cyan-400/10",
-    targetLabel: "Mais leads, seguidores e alcance",
-    ideal: "Ideal para quem está começando do zero",
+    targetLabel: "Leads, seguidores e base qualificada",
+    ideal: "Mesmo do zero · Mesmo sem produto finalizado",
     type: "audience_growth" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
     nameSuggestion: "Crescimento de Audiência",
@@ -184,6 +184,10 @@ export default function NewCampaign() {
                 <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed mb-3">
                   {goal.desc}
                 </p>
+
+                <div className="font-mono text-[10px] text-muted-foreground/40 mb-3 italic">
+                  {goal.ideal}
+                </div>
 
                 <div className="flex items-center justify-between pt-2.5 border-t border-border/30">
                   <span className={`font-mono text-[11px] font-bold ${goal.badgeTextColor} uppercase tracking-widest`}>

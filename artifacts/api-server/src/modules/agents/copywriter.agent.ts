@@ -101,6 +101,12 @@ export interface CopywriterOutput {
   cartScripts: CartScript[];
   remarketingSequence: EmailMessage[];
   copywriterNotes: string;
+  triggerPlaybook?: {
+    dominantTrigger: string;
+    phaseMap: Record<string, string[]>;
+    antiRequisiteAngles: string[];
+    transformationBridge: string;
+  };
 }
 
 const COPYWRITER_PROMPT = `Você é o Agente Copywriter da NexOS AI — a fusão de Gary Halbert (narrativa visceral que vende), Dan Kennedy (direto, específico, sem misericórdia pela mediocridade), Eugene Schwartz (consciência de sofisticação do mercado) e Paulo Cuenca (contexto brasileiro, emocionalidade latina, prova social que ressoa aqui).
@@ -354,7 +360,18 @@ FECHAMENTO: última CTA com toda a urgência acumulada
       "objective": "string"
     }
   ],
-  "copywriterNotes": "string — observações críticas sobre o copy para o criador"
+  "copywriterNotes": "string — observações críticas sobre o copy para o criador",
+  "triggerPlaybook": {
+    "dominantTrigger": "string — o gatilho mais poderoso para esta campanha e por quê",
+    "phaseMap": {
+      "preLaunch": ["string — gatilhos usados na pré-abertura e como foram aplicados"],
+      "cartOpen": ["string"],
+      "cartClose": ["string"],
+      "remarketing": ["string"]
+    },
+    "antiRequisiteAngles": ["string — frases 'mesmo sem X' usadas e em qual peça"],
+    "transformationBridge": "string — o antes/depois visceral que percorre toda a sequência"
+  }
 }
 \`\`\``;
 
@@ -434,6 +451,18 @@ ${JSON.stringify(
 )}
 \`\`\`
 
+**MAPA DE GATILHOS (da estratégia aprovada — USE EM CADA PEÇA):**
+${strategy.triggerMap ? JSON.stringify({
+  dominantTrigger: (strategy as any).triggerMap?.dominantTrigger,
+  dominantTriggerJustification: (strategy as any).triggerMap?.dominantTriggerJustification,
+  triggerStackSequence: (strategy as any).triggerMap?.triggerStackSequence,
+  antiRequisiteAngles: (strategy as any).triggerMap?.antiRequisiteAngles,
+  transformationBridge: (strategy as any).triggerMap?.transformationBridge,
+  preLaunch: (strategy as any).triggerMap?.preLaunch,
+  cartOpen: (strategy as any).triggerMap?.cartOpen,
+  cartClose: (strategy as any).triggerMap?.cartClose,
+}, null, 2) : "Aplicar os 7 gatilhos do sistema em ordem: autoridade → curiosidade → antecipação → prova_social → transformação → escassez → urgência/medo_perda"}
+
 **REQUISITOS OBRIGATÓRIOS — MULTI-PLATAFORMA:**
 - Escreva e-mails COMPLETOS — não esboços
 - A página de vendas deve ter TODAS as seções com copy real
@@ -466,5 +495,6 @@ Retorne APENAS o JSON. Todo o copy em português do Brasil.`;
     cartScripts: [],
     remarketingSequence: [],
     copywriterNotes: result.content,
+    triggerPlaybook: undefined,
   });
 }

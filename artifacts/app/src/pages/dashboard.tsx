@@ -576,35 +576,44 @@ export default function Dashboard() {
           <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary/60" />
           <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary/60" />
           <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/60" />
-          {/* Glow */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
           <div className="p-6 md:p-8 relative z-10">
-            {/* Headline */}
-            <div className="flex items-center gap-2 mb-2">
+
+            <div className="flex items-center gap-2 mb-3">
               <Bot className="h-4 w-4 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">
-                NexOS AI · Pronto para começar
+                NexOS AI · 29 agentes prontos para trabalhar
               </span>
             </div>
+
             <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tight text-foreground mb-2 leading-tight">
-              Sua primeira campanha começa aqui.
+              Sua próxima receita começa com uma conversa de 3 minutos.
             </h2>
-            <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed mb-6 max-w-xl">
-              Responda 3 minutos de perguntas e a IA monta o plano completo — estratégia, copy, cronograma e execução. Você só aprova.
+            <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed mb-5 max-w-2xl">
+              Conta para a IA o que você quer vender. Em menos de uma hora, você tem estratégia, copy completo, sequência de WhatsApp, emails e cronograma prontos para aprovar.{" "}
+              <strong className="text-foreground">Sem copywriter. Sem agência. Sem esperar.</strong>
             </p>
 
-            {/* Social proof strip */}
-            <div className="flex flex-wrap gap-4 mb-7">
+            {/* Social proof + anti-requisite strip */}
+            <div className="flex flex-wrap gap-x-5 gap-y-2 mb-6">
               {[
-                { value: "29", label: "Agentes IA especializados" },
-                { value: "100%", label: "Estratégia gerada automaticamente" },
-                { value: "7 dias", label: "Do briefing ao lançamento" },
+                { value: "R$41.200", label: "lançamento de 312 leads" },
+                { value: "7 dias", label: "do briefing ao carrinho aberto" },
+                { value: "29 agentes", label: "trabalhando ao mesmo tempo" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-baseline gap-1.5">
-                  <span className="font-mono font-black text-lg text-primary">{stat.value}</span>
+                  <span className="font-mono font-black text-base text-primary">{stat.value}</span>
                   <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">{stat.label}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Fear of loss strip */}
+            <div className="flex items-center gap-2 mb-6 border border-destructive/20 bg-destructive/5 px-3 py-2 w-fit">
+              <div className="w-1.5 h-1.5 rounded-full bg-destructive/60 animate-pulse shrink-0" />
+              <span className="font-mono text-[11px] text-destructive/70 uppercase tracking-widest">
+                Cada semana sem lançar é receita que não volta — sua base esfria enquanto você planeja
+              </span>
             </div>
 
             {/* CTA */}
@@ -612,7 +621,7 @@ export default function Dashboard() {
               <Link href="/campaigns/new">
                 <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary h-11 px-7 text-sm">
                   <Rocket className="h-4 w-4" />
-                  Criar meu primeiro lançamento
+                  Criar minha primeira campanha
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
@@ -627,9 +636,9 @@ export default function Dashboard() {
             {/* Steps mini-preview */}
             <div className="mt-6 pt-5 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { step: "01", label: "Briefing rápido", desc: "A IA entrevista você sobre seu produto e metas em ~3 min" },
-                { step: "02", label: "Plano estratégico", desc: "Estrategista gera o plano completo com cronograma e canais" },
-                { step: "03", label: "Conteúdo + lançamento", desc: "Copywriter produz tudo. Você aprova. A campanha vai ao ar." },
+                { step: "01", label: "Briefing (≈3 min)", desc: "A IA conversa com você sobre produto, público e meta. Sem formulário chato." },
+                { step: "02", label: "Plano completo gerado", desc: "Estratégia, copy, cronograma de emails e WhatsApp — tudo pronto para você aprovar." },
+                { step: "03", label: "Execução automática", desc: "Você aprova. A IA dispara, segmenta, abre carrinho e fecha. Você acompanha o faturamento." },
               ].map(item => (
                 <div key={item.step} className="flex gap-3">
                   <span className="font-mono text-[11px] text-primary/40 tracking-widest shrink-0 mt-0.5 font-bold">{item.step}</span>
