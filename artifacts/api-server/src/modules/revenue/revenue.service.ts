@@ -194,9 +194,14 @@ export async function getRevenueEvents(
     eventType?: string;
     limit?: number;
     offset?: number;
+    daysBack?: number;
   } = {}
 ) {
   const conditions = [eq(revenueEventsTable.workspaceId, workspaceId)];
+  if (opts.daysBack) {
+    const since = new Date(Date.now() - opts.daysBack * 24 * 60 * 60 * 1000);
+    conditions.push(gte(revenueEventsTable.createdAt, since));
+  }
 
   const events = await db
     .select()

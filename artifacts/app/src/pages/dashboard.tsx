@@ -31,6 +31,11 @@ interface RevenueSummary {
   byPlatform: Record<string, number>;
   transactionCount: number;
   avgTicket: number;
+  dailyRevenue?: Array<{ date: string; gross: number; net: number; sales: number }>;
+}
+interface WeeklyRevenueSummary {
+  total: number;
+  transactionCount: number;
 }
 interface AgentRun {
   id: string; agentRole: string; status: string;
@@ -460,6 +465,15 @@ export default function Dashboard() {
       const res = await customFetch<Response>("/api/revenue/summary");
       if (!res.ok) return null;
       return res.json() as Promise<RevenueSummary>;
+    },
+  });
+
+  const { data: weeklyRevenueData } = useQuery({
+    queryKey: ["/api/revenue/summary", "7d"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/revenue/summary?days=7");
+      if (!res.ok) return null;
+      return res.json() as Promise<WeeklyRevenueSummary>;
     },
   });
 
@@ -954,7 +968,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Weekly Report Card ── */}
-      <WeeklyReportCard revenue={revenueData} activeCampaigns={activeCampaigns} activeSequences={activeSequences} />
+      <WeeklyReportCard revenue={revenueData} weeklyRevenue={weeklyRevenueData} activeCampaigns={activeCampaigns} activeSequences={activeSequences} />
 
       {/* ── Quick Access Grid ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -986,9 +1000,10 @@ export default function Dashboard() {
 // ─── Weekly Report Card ───────────────────────────────────────────────────────
 
 function WeeklyReportCard({
-  revenue, activeCampaigns, activeSequences,
+  revenue, weeklyRevenue, activeCampaigns, activeSequences,
 }: {
   revenue: RevenueSummary | null | undefined;
+  weeklyRevenue: WeeklyRevenueSummary | null | undefined;
   activeCampaigns: number;
   activeSequences: number;
 }) {
@@ -997,18 +1012,23 @@ function WeeklyReportCard({
   const isMonday  = dayOfWeek === 1;
   const weekNum   = getISOWeek(today);
 
-  // Simulated weekly delta (in real app: compare to last week's API data)
-  const weekRevenue   = revenue?.total ? Math.round(revenue.total * 0.35) : 0;
-  const weekSales     = revenue?.transactionCount ? Math.round(revenue.transactionCount * 0.3) : 0;
-  const healthScore   = activeCampaigns > 0 ? Math.min(100, 60 + activeCampaigns * 8 + activeSequences * 5) : 42;
-  const trend         = healthScore >= 70 ? "up" : healthScore >= 50 ? "neutral" : "down";
-  const trendColor    = trend === "up" ? "text-success" : trend === "neutral" ? "text-yellow-400" : "text-destructive";
+  // Real 7-day revenue from dedicated API query
+  const weekRevenue = weeklyRevenue?.total ?? 0;
+  const weekSales   = weeklyRevenue?.transactionCount ?? 0;
+
+  // Health score: 0 campaigns = bad; +10 per active campaign, +5 per active sequence, capped at 100
+  // Only signals operational health — no invented financial metrics
+  const healthScore = activeCampaigns > 0
+    ? Math.min(100, 50 + activeCampaigns * 10 + Math.min(activeSequences, 5) * 5)
+    : 30;
+  const trend      = healthScore >= 70 ? "up" : healthScore >= 50 ? "neutral" : "down";
+  const trendColor = trend === "up" ? "text-success" : trend === "neutral" ? "text-yellow-400" : "text-destructive";
 
   const aiInsight =
     activeCampaigns === 0
       ? "Nenhuma campanha ativa esta semana. Inicie uma missão para ativar os agentes."
       : weekRevenue > 0
-        ? `Receita desta semana acima da média. ROAS estimado em ${(Math.random() * 2 + 2).toFixed(1)}x. Continue aquecendo a lista para o fechamento.`
+        ? `R$ ${(weekRevenue / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} em receita nos últimos 7 dias — ${weekSales} venda${weekSales !== 1 ? "s" : ""}. Continue executando as sequências ativas.`
         : `${activeCampaigns} campanha${activeCampaigns > 1 ? "s" : ""} ativa${activeCampaigns > 1 ? "s" : ""}. Configure webhooks de receita para monitoramento completo.`;
 
   return (

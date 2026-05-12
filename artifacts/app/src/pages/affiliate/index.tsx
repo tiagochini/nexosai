@@ -128,10 +128,6 @@ export default function AffiliatePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Generate a deterministic-looking referral code from user
-  const mockCode = `NEXOS-${(user?.name ?? "USER").toUpperCase().replace(/\s+/g, "").slice(0, 5)}-${(workspace?.id ?? "WS").slice(-4).toUpperCase()}`;
-  const mockLink = `https://nexos.ai/r/${mockCode}`;
-
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
@@ -240,8 +236,8 @@ export default function AffiliatePage() {
   }
 
   // ── Active affiliate dashboard ────────────────────────────────────────────────
-  const referralLink = affiliate.referralLink || mockLink;
-  const referralCode = affiliate.referralCode || mockCode;
+  const referralLink = affiliate.referralLink ?? "";
+  const referralCode = affiliate.referralCode ?? "";
 
   const conversionRate = affiliate.totalClicks > 0
     ? ((affiliate.totalConversions / affiliate.totalClicks) * 100).toFixed(1)

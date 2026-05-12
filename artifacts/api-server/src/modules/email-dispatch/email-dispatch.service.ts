@@ -364,10 +364,10 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
       // Fallback: use Resend when configured and native provider not wired
       result = await sendViaResend(dispatch.fromName, dispatch.fromEmail, payload);
     } else {
-      result = { status: "sent", recipientCount: 0, externalCampaignId: "mock" };
-      logger.warn(
-        { provider: dispatch.provider },
-        "Email provider not yet integrated — mock send",
+      throw new AppError(
+        422,
+        `Provedor de email '${dispatch.provider}' não configurado. Conecte RD Station, ActiveCampaign ou defina RESEND_API_KEY.`,
+        "EMAIL_PROVIDER_NOT_CONFIGURED",
       );
     }
 

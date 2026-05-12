@@ -40,18 +40,6 @@ interface ContentPiece extends PreviewPiece {
   hashtags?: string[];
 }
 
-interface ContentPlan {
-  campaignId: string;
-  campaignTitle: string;
-  campaignStatus: string;
-  totalPieces: number;
-  approved: number;
-  rejected: number;
-  pending: number;
-  pieces: ContentPiece[];
-  startDate?: string;
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const PLATFORM_ICON: Record<Platform, React.ElementType> = {
@@ -81,173 +69,6 @@ const SEGMENT_COLOR: Record<string, string> = {
   all: "text-muted-foreground border-border/40 bg-muted/10",
 };
 
-// ── Mock content generator ─────────────────────────────────────────────────────
-
-function generateMockPlan(campaignTitle: string): ContentPlan {
-  const pieces: ContentPiece[] = [
-    // Day 0 — Antecipação
-    {
-      id: "1", platform: "instagram", type: "post", dayIndex: 0,
-      title: "Teaser de Lançamento", status: "pending", segment: "all", estimatedReach: 1600,
-      visualDirection: "Fundo dark com partículas de luz dourada, texto 'Algo grande está chegando' em fonte bold",
-      hashtags: ["#lançamento", "#digital", "#empreendedorismo", "#resultado"],
-      body: "Algo grande está chegando. 🔥\n\nDurante os próximos 7 dias vou revelar o método que me ajudou a sair do zero para os 6 dígitos em um único lançamento.\n\nSiga de perto. Não vai querer perder isso.",
-      callToAction: "Ative as notificações agora",
-    },
-    {
-      id: "2", platform: "facebook", type: "post", dayIndex: 0,
-      title: "Teaser Facebook — Pré-Lançamento", status: "pending", segment: "all", estimatedReach: 2800,
-      visualDirection: "Arte clean com logo e countdown até o lançamento",
-      body: "Nos próximos 7 dias, vou compartilhar tudo que aprendi nos últimos 3 anos trabalhando com lançamentos digitais.\n\nSe você quer aprender a vender mais no digital — fica aqui comigo essa semana.\n\nSalva esse post e ativa as notificações 🔔",
-      callToAction: "Curtir para acompanhar",
-    },
-    {
-      id: "3", platform: "tiktok", type: "native_video", dayIndex: 0,
-      title: "TikTok Gancho — Revelar Segredo", status: "pending", segment: "all", estimatedReach: 8400,
-      tiktokHook: "POV: você vai descobrir o que separa os lançamentos de 6 dígitos dos que não vendem",
-      visualDirection: "Vídeo vertical, rosto na câmera, ambiente profissional desfocado, corte dinâmico a cada 3 segundos",
-      body: "POV: você vai descobrir o que separa os lançamentos de 6 dígitos dos que não vendem nada.\n\nFica aqui essa semana que eu vou te contar tudo.\n\n#lancamento #marketing #digital #resultado",
-      callToAction: "Seguir para ver o próximo",
-    },
-    {
-      id: "4", platform: "email", type: "email", dayIndex: 0,
-      title: "Algo está chegando (abertura da lista)", status: "pending", segment: "all",
-      body: "Olá {nome},\n\nNos próximos 7 dias vou compartilhar algo que mudou completamente minha forma de trabalhar com lançamentos digitais.\n\nFique de olho na sua caixa de entrada — cada email vai valer.\n\nAté logo,\n{nome_do_produtor}",
-      callToAction: "Confirmar que recebeu →",
-    },
-
-    // Day 1 — Autoridade
-    {
-      id: "5", platform: "instagram", type: "story", dayIndex: 1,
-      title: "Story — Prova Social Dia 1", status: "pending", segment: "all", estimatedReach: 900,
-      body: "Você sabia que 87% dos lançamentos falham por falta de estratégia?\n\nNos últimos 3 anos trabalhei com +200 produtores. Vi os que venderam e os que não venderam.\n\nAmanhã conto o que separa os dois.",
-      callToAction: "Swipe up →",
-    },
-    {
-      id: "6", platform: "whatsapp", type: "message", dayIndex: 1,
-      title: "Aquecimento — Lista VIP", status: "pending", segment: "hot", estimatedReach: 340,
-      body: "Oi {nome} 👋\n\nAmanhã começa algo especial. Você está na lista VIP, então vai receber em primeira mão.\n\nPrepara o café e fica de olho amanhã cedo.",
-    },
-    {
-      id: "7", platform: "tiktok", type: "native_video", dayIndex: 1,
-      title: "TikTok — Erro Que Quase Me Quebrou", status: "pending", segment: "all", estimatedReach: 12000,
-      tiktokHook: "Eu perdi R$47.000 em um lançamento. Aqui está o que aprendi",
-      visualDirection: "Talking head sério, cortes rápidos, números em tela (R$47.000, R$3.200), fundo de escritório",
-      body: "Eu perdi R$47.000 em um lançamento. Aqui está o que aprendi:\n\n1. Tráfego sem aquecimento = desperdício\n2. Oferta sem contexto = sem venda\n3. Estratégia sem dados = aposta\n\nNo próximo vídeo: como corrigir cada um deles 👇",
-    },
-
-    // Day 2 — Conteúdo de Valor
-    {
-      id: "8", platform: "instagram", type: "post", dayIndex: 2,
-      title: "Carrossel — Os 3 Pilares do Lançamento", status: "pending", segment: "all", estimatedReach: 2100,
-      visualDirection: "Carrossel com 6 slides, fundo escuro com gradiente roxo, ícones minimalistas por pilar",
-      hashtags: ["#estrategia", "#lancamento", "#marketing", "#empreendedorismo", "#vendas"],
-      body: "Slide 1: Os 3 pilares de todo lançamento que passa dos 6 dígitos\n\nSlide 2: Pilar 1 — Audiência Aquecida\n→ Sem audiência preparada, qualquer oferta falha\n\nSlide 3: Pilar 2 — Prova de Transformação\n→ Resultados reais de alunos valem mais que qualquer argumento\n\nSlide 4: Pilar 3 — Momento de Decisão\n→ Criar o contexto certo para a compra acontecer\n\nSlide 5: Qual deles você está ignorando?\n\nSlide 6: Comenta aqui 👇",
-      callToAction: "Salva para consultar depois",
-    },
-    {
-      id: "9", platform: "email", type: "email", dayIndex: 2,
-      title: "O Erro que Quase Me Quebrou (Conteúdo)", status: "approved", segment: "warm",
-      body: "Olá {nome},\n\nEm 2021 eu investi R$ 47.000 em tráfego para um lançamento que vendeu R$ 3.200.\n\nEu errei na estratégia. Hoje eu conto o que aprendi com isso — e como você pode evitar o mesmo caminho.\n\n[Ler o artigo completo]\n\nNos vemos amanhã,\n{nome}",
-      callToAction: "Ler o método completo →",
-    },
-    {
-      id: "10", platform: "facebook", type: "post", dayIndex: 2,
-      title: "Facebook — Carrossel Os 3 Pilares", status: "pending", segment: "all", estimatedReach: 3200,
-      visualDirection: "Post com link para artigo, imagem de destaque com os 3 pilares listados visualmente",
-      body: "Depois de trabalhar em mais de 200 lançamentos, identifiquei os 3 pilares que separam quem bate 6 dígitos de quem não vende.\n\nEscrevi um artigo completo com cada um deles:\n\n✅ Audiência Aquecida\n✅ Prova de Transformação  \n✅ Momento de Decisão\n\nQual desses pilares você sente que ainda está fraco no seu negócio? Comenta abaixo 👇",
-    },
-
-    // Day 3 — TikTok Viral
-    {
-      id: "11", platform: "tiktok", type: "native_video", dayIndex: 3,
-      title: "TikTok — Quanto Ganha Um Lançamento Digital?", status: "pending", segment: "all", estimatedReach: 18000,
-      tiktokHook: "Quanto dá para faturar em um lançamento digital? A resposta vai te surpreender",
-      visualDirection: "Talking head com tela dividida mostrando números reais, animação de crescimento, música motivacional de fundo",
-      body: "Quanto dá para faturar em um lançamento digital? A resposta vai te surpreender.\n\nR$10k? R$50k? R$500k?\n\nDepende de 3 variáveis que vou revelar no próximo vídeo.\n\nSalva esse e me segue para não perder 👆",
-    },
-    {
-      id: "12", platform: "instagram", type: "reel", dayIndex: 3,
-      title: "Reels — Fórmula do Lançamento de 6 Dígitos", status: "pending", segment: "all", estimatedReach: 4200,
-      tiktokHook: "A fórmula exata que usei para faturar 6 dígitos em 7 dias",
-      visualDirection: "Reel dinâmico, cortes rápidos, texto animado na tela, fundo com gradiente premium",
-      hashtags: ["#reels", "#lancamento", "#empreendedor", "#faturamento", "#digital"],
-      body: "A fórmula exata que usei para faturar 6 dígitos em 7 dias:\n\nDia 1-2: Antecipação + Curiosidade\nDia 3-4: Conteúdo de Valor + Autoridade\nDia 5: Abertura do Carrinho\nDia 6: Meio do Carrinho (Prova)\nDia 7: Fechamento com Urgência\n\nSalva esse Reel! 📌",
-    },
-
-    // Day 5 — Abertura do Carrinho
-    {
-      id: "13", platform: "email", type: "email", dayIndex: 5,
-      title: "🚀 ABRIU — Acesso Liberado", status: "pending", segment: "hot",
-      body: "Olá {nome},\n\n✅ O acesso acabou de abrir.\n\nSe você acompanhou tudo essa semana, sabe que esse método muda o jogo.\n\nMas o preço de lançamento fecha em 72h.\n\n[QUERO MEU ACESSO AGORA →]",
-      callToAction: "Garantir acesso →",
-    },
-    {
-      id: "14", platform: "instagram", type: "post", dayIndex: 5,
-      title: "Instagram — Abertura Oficial do Carrinho", status: "pending", segment: "all", estimatedReach: 3800,
-      visualDirection: "Arte impactante com 'ABRIU' em destaque, cores vibrantes verde e dourado, elementos de countdown",
-      hashtags: ["#abriu", "#lancamento", "#oportunidade", "#resultado", "#agora"],
-      body: "🚀 ABRIU.\n\nDepois de uma semana de conteúdo, você já sabe o que esse método pode fazer pelo seu lançamento.\n\nAgora é a hora de agir.\n\n⚡ Preço de lançamento válido por 72h\n✅ Acesso imediato\n🔒 Garantia de 7 dias\n\nLink na bio 👆",
-      callToAction: "Link na bio →",
-    },
-    {
-      id: "15", platform: "facebook", type: "ad", dayIndex: 5,
-      title: "Facebook Ads — Retargeting Abertura", status: "pending", segment: "warm", estimatedReach: 4500, estimatedCost: 25000,
-      visualDirection: "Criativo de anúncio com urgência: timer countdown, depoimento em destaque, CTA em laranja",
-      body: "Você viu o conteúdo dessa semana.\nAgora é a hora de agir.\n\n🔥 {nome_do_produto} está com preço de lançamento.\nEsse preço não vai se repetir.\n\n✅ Acesso imediato\n✅ Garantia de 7 dias\n⚡ Só até domingo à meia-noite\n\n[Garantir minha vaga →]",
-      callToAction: "Garantir minha vaga →",
-    },
-    {
-      id: "16", platform: "tiktok", type: "native_video", dayIndex: 5,
-      title: "TikTok — Abertura Urgência", status: "pending", segment: "all", estimatedReach: 22000,
-      tiktokHook: "Acabou de abrir. 72 horas para pegar pelo preço de lançamento",
-      visualDirection: "Talking head animado, elementos de urgência (timer, emoji de foguete), cortes super rápidos",
-      body: "Acabou de abrir. 72 horas para pegar pelo preço de lançamento.\n\nDepois disso, o preço sobe.\n\nLink na bio se você quer entrar agora 🔥\n\n#abriu #lancamento #agora #resultado",
-    },
-    {
-      id: "17", platform: "whatsapp", type: "message", dayIndex: 5,
-      title: "WhatsApp — Abertura VIP", status: "pending", segment: "hot", estimatedReach: 340,
-      body: "🚀 {nome}!\n\nO acesso acabou de abrir.\n\nComo você está na lista VIP, você tem prioridade. Mas o preço de lançamento é por tempo limitado.\n\n👇 Acesse agora:\n[LINK]",
-      callToAction: "Acessar agora",
-    },
-
-    // Day 7 — Fechamento
-    {
-      id: "18", platform: "whatsapp", type: "message", dayIndex: 7,
-      title: "Último Dia — Urgência VIP", status: "pending", segment: "hot", estimatedReach: 340,
-      body: "⚠️ {nome}, faltam só 4h.\n\nO preço de lançamento fecha à meia-noite de hoje.\n\nDepois disso só entra quem pagar o preço cheio (50% mais caro).\n\nSe você quer entrar, agora é a hora 👇\n[LINK]",
-    },
-    {
-      id: "19", platform: "email", type: "email", dayIndex: 7,
-      title: "Último aviso — Fecha à meia-noite", status: "pending", segment: "cold",
-      body: "Olá {nome},\n\nEssa é minha última mensagem sobre {nome_do_produto}.\n\nÀ meia-noite de hoje o preço sobe.\n\nSe você chegou até aqui, sabe que esse método funciona. Agora é com você.\n\n[QUERO ENTRAR — ÚLTIMAS HORAS →]",
-      callToAction: "Último acesso →",
-    },
-    {
-      id: "20", platform: "tiktok", type: "native_video", dayIndex: 7,
-      title: "TikTok — Última Chance", status: "pending", segment: "all", estimatedReach: 15000,
-      tiktokHook: "Fecha em 4 horas. Última chance de entrar pelo preço de lançamento",
-      visualDirection: "Timer na tela contando regressivamente, expressão séria de urgência real, ambiente dimmed",
-      body: "Fecha em 4 horas. Última chance de entrar pelo preço de lançamento.\n\nDepois disso o preço sobe e não volta mais.\n\nLink na bio se você ainda não entrou.\n\n#fechamento #ultimachance #lancamento",
-    },
-    {
-      id: "21", platform: "instagram", type: "story", dayIndex: 7,
-      title: "Story — Countdown Final 4h", status: "pending", segment: "all", estimatedReach: 1100,
-      body: "⚡ FECHA EM 4H\n\nSe você está esperando o momento certo, esse é ele.\n\nSwipe up e garanta agora →",
-      callToAction: "Swipe up — últimas horas",
-    },
-  ];
-
-  const pending  = pieces.filter(p => p.status === "pending").length;
-  const approved = pieces.filter(p => p.status === "approved").length;
-
-  return {
-    campaignId: "mock", campaignTitle,
-    campaignStatus: "awaiting_approval",
-    totalPieces: pieces.length, approved, rejected: 0, pending,
-    pieces,
-  };
-}
 
 // ── Flowchart Phase Data ───────────────────────────────────────────────────────
 
@@ -701,23 +522,11 @@ export default function ContentApproval() {
     ? apiContentData.pieces.map((p, i) => mapApiPiece(p, i))
     : null;
 
-  const basePieces = realPieces ?? generateMockPlan(campaign?.title ?? "Campanha").pieces;
-  const plan: ContentPlan = localPieces
-    ? { ...generateMockPlan(campaign?.title ?? "Campanha"), pieces: localPieces }
-    : {
-        ...generateMockPlan(campaign?.title ?? "Campanha"),
-        pieces: basePieces,
-        totalPieces: basePieces.length,
-        approved: basePieces.filter(p => p.status === "approved").length,
-        rejected: basePieces.filter(p => p.status === "rejected").length,
-        pending: basePieces.filter(p => p.status === "pending").length,
-      };
-
-  const pieces = plan.pieces;
+  const pieces: ContentPiece[] = localPieces ?? realPieces ?? [];
   const approvedCount = pieces.filter(p => p.status === "approved").length;
   const pendingCount  = pieces.filter(p => p.status === "pending").length;
   const rejectedCount = pieces.filter(p => p.status === "rejected").length;
-  const pct = Math.round((approvedCount / pieces.length) * 100);
+  const pct = pieces.length > 0 ? Math.round((approvedCount / pieces.length) * 100) : 0;
 
   const setPieces = (fn: (prev: ContentPiece[]) => ContentPiece[]) => {
     setLocalPieces(prev => fn(prev ?? pieces));
@@ -725,63 +534,67 @@ export default function ContentApproval() {
 
   const handleApprove = async (id: string) => {
     setLoadingPiece(id);
-    if (realPieces) {
-      try {
-        const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/approve`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ feedback: "" }),
-        });
-        if (!res.ok) throw new Error("Erro");
-        queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-        toast.success("Peça aprovada");
-      } catch {
-        toast.error("Erro ao aprovar peça");
-      } finally {
-        setLoadingPiece(null);
-      }
-    } else {
-      await new Promise(r => setTimeout(r, 300));
-      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "approved" } : p));
-      setLoadingPiece(null);
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: "" }),
+      });
+      if (!res.ok) throw new Error("Erro");
+      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       toast.success("Peça aprovada");
+    } catch {
+      toast.error("Erro ao aprovar peça");
+    } finally {
+      setLoadingPiece(null);
     }
   };
   const handleReject = async (id: string) => {
-    if (realPieces) {
-      try {
-        const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/reject`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ feedback: "" }),
-        });
-        if (!res.ok) throw new Error("Erro");
-        queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-        toast.info("Peça rejeitada");
-      } catch {
-        toast.error("Erro ao rejeitar peça");
-      }
-    } else {
-      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "rejected" } : p));
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: "" }),
+      });
+      if (!res.ok) throw new Error("Erro");
+      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       toast.info("Peça rejeitada");
+    } catch {
+      toast.error("Erro ao rejeitar peça");
     }
   };
   const handleAiRewrite = async (id: string) => {
     setLoadingPiece(id);
-    toast.info("IA reescrevendo...");
-    await new Promise(r => setTimeout(r, 1800));
-    setPieces(prev => prev.map(p => p.id !== id ? p : { ...p, body: p.body + "\n\n[Versão reescrita pela IA — clique em Editar para refinar]" }));
-    setLoadingPiece(null);
-    toast.success("IA reescreveu. Revise e aprove.");
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/rewrite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Erro");
+      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+      toast.success("IA reescreveu. Revise e aprove.");
+    } catch {
+      toast.error("Erro ao reescrever com IA");
+    } finally {
+      setLoadingPiece(null);
+    }
   };
   const handleSaveEdit = (id: string, body: string, cta: string) => {
     setPieces(prev => prev.map(p => p.id === id ? { ...p, body, callToAction: cta, status: "approved" } : p));
     setEditingPiece(null);
     toast.success("Peça editada e aprovada");
   };
-  const handleApproveAll = () => {
-    setPieces(prev => prev.map(p => p.status === "pending" ? { ...p, status: "approved" } : p));
-    toast.success(`${pendingCount} peças aprovadas`);
+  const handleApproveAll = async () => {
+    const pendingIds = pieces.filter(p => p.status === "pending").map(p => p.id);
+    for (const id of pendingIds) {
+      await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: "" }),
+      }).catch(() => null);
+    }
+    queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+    toast.success(`${pendingIds.length} peças aprovadas`);
   };
 
   const byPlatform = pieces.reduce<Record<string, ContentPiece[]>>((acc, p) => {
@@ -813,6 +626,42 @@ export default function ContentApproval() {
       <div className="max-w-5xl mx-auto space-y-6">
         <Skeleton className="h-10 w-64 bg-muted/20" />
         <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-48 bg-muted/20" />)}</div>
+      </div>
+    );
+  }
+
+  if (pieces.length === 0) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-5">
+        <div className="border-b border-border/50 pb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Link href={`/campaigns/${campaignId}`}>
+              <button className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+                <ChevronLeft className="h-3 w-3" />Campanha
+              </button>
+            </Link>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-mono uppercase tracking-tighter font-bold">
+            Aprovação de Conteúdo
+          </h1>
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mt-1">
+            {campaign?.title ?? "Campanha"}
+          </p>
+        </div>
+        <div className="py-16 text-center border border-dashed border-border/30">
+          <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
+            Conteúdo ainda não gerado
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
+            Execute a fase de geração de conteúdo na campanha para que os agentes de IA criem as peças de copy e visual.
+          </p>
+          <Link href={`/campaigns/${campaignId}`}>
+            <Button className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs">
+              <ChevronLeft className="h-3.5 w-3.5" />Voltar à Campanha
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }

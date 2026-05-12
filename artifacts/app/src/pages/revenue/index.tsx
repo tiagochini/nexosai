@@ -21,6 +21,7 @@ interface RevenueSummary {
   byPlatform: Record<string, number>;
   transactionCount: number;
   avgTicket: number;
+  dailyRevenue: Array<{ date: string; gross: number; net: number; sales: number }>;
 }
 interface RevenueEvent {
   id: string; platform: string; eventType: string;
@@ -49,22 +50,18 @@ const EVENT_LABEL: Record<string, string> = {
 
 type PeriodKey = "7d" | "30d" | "90d" | "all";
 const PERIOD_LABELS: Record<PeriodKey, string> = { "7d": "7 dias", "30d": "30 dias", "90d": "90 dias", "all": "Tudo" };
+const PERIOD_DAYS: Record<PeriodKey, number> = { "7d": 7, "30d": 30, "90d": 90, "all": 365 };
 
-// ── Generate mock chart data ──────────────────────────────────────────────────
-function generateChartData(period: PeriodKey, total: number): Array<{ label: string; value: number; cumulative: number }> {
-  const days = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 30;
-  const data: Array<{ label: string; value: number; cumulative: number }> = [];
-  const base = total / (days || 1);
-  for (let i = days; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const label = date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-    const variance = 0.3 + Math.random() * 1.4;
-    const value = total > 0 ? Math.round((base * variance) / 100) * 100 : 0;
-    const prev = data.length > 0 ? data[data.length - 1].cumulative : 0;
-    data.push({ label, value, cumulative: prev + value });
-  }
-  return data;
+// ── Build chart data from real daily revenue ──────────────────────────────────
+function buildChartData(
+  dailyRevenue: Array<{ date: string; gross: number; net: number; sales: number }>
+): Array<{ label: string; value: number; cumulative: number }> {
+  let cumulative = 0;
+  return dailyRevenue.map(d => {
+    cumulative += d.gross;
+    const label = new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    return { label, value: d.gross, cumulative };
+  });
 }
 
 // ── Custom tooltip ────────────────────────────────────────────────────────────
@@ -107,9 +104,10 @@ export default function RevenuePage() {
   const queryClient = useQueryClient();
 
   const { data: summaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ["/api/revenue/summary"],
+    queryKey: ["/api/revenue/summary", period],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/revenue/summary");
+      const days = PERIOD_DAYS[period];
+      const res = await customFetch<Response>(`/api/revenue/summary?days=${days}`);
       if (!res.ok) return null;
       return res.json() as Promise<RevenueSummary>;
     },
@@ -117,9 +115,10 @@ export default function RevenuePage() {
 
   const { data: eventsData, isLoading: eventsLoading } = useQuery({
     queryKey: ["/api/revenue/events", period],
-    enabled: activeTab === "events" || activeTab === "chart",
+    enabled: activeTab === "events",
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/revenue/events?limit=200");
+      const days = PERIOD_DAYS[period];
+      const res = await customFetch<Response>(`/api/revenue/events?limit=500&days=${days}`);
       if (!res.ok) return { events: [] };
       return res.json() as Promise<{ events: RevenueEvent[] }>;
     },
@@ -152,7 +151,7 @@ export default function RevenuePage() {
     onError: () => toast.error("Erro ao configurar webhook"),
   });
 
-  const chartData = generateChartData(period, summaryData?.total ?? 0);
+  const chartData = buildChartData(summaryData?.dailyRevenue ?? []);
   const events = eventsData?.events ?? [];
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [

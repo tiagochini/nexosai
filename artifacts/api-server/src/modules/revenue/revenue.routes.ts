@@ -58,13 +58,29 @@ router.delete("/webhook-configs/:id", requireAuth, async (req, res): Promise<voi
 // ─── Revenue analytics ────────────────────────────────────────────────────────
 
 router.get("/summary", requireAuth, async (req, res): Promise<void> => {
-  const days = parseInt(req.query["days"] as string ?? "30", 10);
-  const summary = await getRevenueSummary(req.auth.workspaceId, days);
-  res.json(summary);
+  const rawDays = req.query["days"] as string | undefined;
+  const days = rawDays ? parseInt(rawDays, 10) : 30;
+  const raw = await getRevenueSummary(req.auth.workspaceId, isNaN(days) ? 30 : days);
+
+  // Build display-friendly byPlatform (gross cents per platform)
+  const byPlatform: Record<string, number> = {};
+  for (const [platform, v] of Object.entries(raw.byPlatform)) {
+    byPlatform[platform] = v.gross;
+  }
+  const avgTicket = raw.totalSales > 0 ? Math.round(raw.totalGross / raw.totalSales) : 0;
+
+  res.json({
+    ...raw,
+    // Display-friendly aliases consumed by frontend
+    total: raw.totalGross,
+    transactionCount: raw.totalSales,
+    avgTicket,
+    byPlatform,
+  });
 });
 
 router.get("/events", requireAuth, async (req, res): Promise<void> => {
-  const { platform, campaignId, eventType, limit, offset } = req.query as Record<string, string>;
+  const { platform, campaignId, eventType, limit, offset, days } = req.query as Record<string, string>;
 
   const events = await getRevenueEvents(req.auth.workspaceId, {
     platform,
@@ -72,6 +88,7 @@ router.get("/events", requireAuth, async (req, res): Promise<void> => {
     eventType,
     limit: limit ? parseInt(limit, 10) : undefined,
     offset: offset ? parseInt(offset, 10) : undefined,
+    daysBack: days ? parseInt(days, 10) : undefined,
   });
 
   res.json({ events });
