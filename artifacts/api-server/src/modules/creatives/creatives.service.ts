@@ -1,4 +1,5 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
+import OpenAI from "openai";
 import {
   db,
   campaignCreativesTable,
@@ -6,25 +7,45 @@ import {
   type CampaignCreative,
   type CreativeConcept,
 } from "@workspace/db";
-import { runCreativeConceptAgent } from "../agents/creative-concept.agent.js";
+import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
+import { parseAgentJSON } from "../agents/agent.runner.js";
 import { deductCredits } from "../credits/credits.service.js";
-import { getOpenAI } from "../ai-gateway/ai-gateway-internal.js";
-import { NotFoundError } from "../../lib/errors.js";
+import { NotFoundError, AppError } from "../../lib/errors.js";
+import { env } from "../../lib/env.js";
 import type { Logger } from "pino";
 
 const FORMAT_TO_DALLE_SIZE: Record<string, "1024x1024" | "1792x1024" | "1024x1792"> = {
-  feed_square: "1024x1024",
-  feed_portrait: "1024x1792",
-  stories: "1024x1792",
-  banner: "1792x1024",
+  feed_square:    "1024x1024",
+  feed_portrait:  "1024x1792",
+  stories:        "1024x1792",
+  banner:         "1792x1024",
   carousel_slide: "1024x1024",
 };
 
-export async function listCreatives(campaignId: string, workspaceId: string): Promise<CampaignCreative[]> {
+function buildOpenAIClient(): OpenAI {
+  if (env.OPENAI_API_KEY) return new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  if (env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+    return new OpenAI({
+      apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+  }
+  throw new AppError(503, "OPENAI_API_KEY não configurado — DALL-E 3 indisponível", "AI_UNAVAILABLE");
+}
+
+export async function listCreatives(
+  campaignId: string,
+  workspaceId: string,
+): Promise<CampaignCreative[]> {
   return db
     .select()
     .from(campaignCreativesTable)
-    .where(eq(campaignCreativesTable.campaignId, campaignId))
+    .where(
+      and(
+        eq(campaignCreativesTable.campaignId, campaignId),
+        eq(campaignCreativesTable.workspaceId, workspaceId),
+      ),
+    )
     .orderBy(desc(campaignCreativesTable.createdAt));
 }
 
@@ -39,29 +60,66 @@ export async function generateConcept(
   const [campaign] = await db
     .select()
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
-
   if (!campaign) throw new NotFoundError("Campanha");
 
   const intakeData = (campaign.intakeData as Record<string, unknown>) ?? {};
-  const productName = String(intakeData["product.name"] ?? campaign.title ?? "Produto");
-  const productDescription = String(intakeData["product.description"] ?? intakeData["product.category"] ?? "");
-  const targetAudience = String(intakeData["audience.description"] ?? intakeData["audience.primary"] ?? "Empreendedores digitais");
+  const productName = String(
+    intakeData["product.name"] ?? intakeData["productName"] ?? campaign.title ?? "Produto",
+  );
+  const productDescription = String(
+    intakeData["product.description"] ?? intakeData["product.category"] ?? "",
+  );
+  const targetAudience = String(
+    intakeData["audience.description"] ??
+      intakeData["audience.primary"] ??
+      intakeData["targetAudience"] ??
+      "Empreendedores digitais",
+  );
 
   await deductCredits(workspaceId, "creative_brief", log, campaignId);
 
-  const concept = await runCreativeConceptAgent(
-    campaignId,
+  const systemPrompt = `Você é o Creative Director da NexOS AI, especialista em criativos visuais de alta conversão para o mercado digital brasileiro.
+Crie um conceito criativo completo para ${platform.toUpperCase()} no formato ${format.replace(/_/g, " ")}.
+
+Retorne APENAS um JSON válido, sem texto extra, no formato:
+{
+  "headline": "título impactante (máx 8 palavras)",
+  "subHeadline": "subtítulo de apoio (máx 15 palavras)",
+  "visualDescription": "descrição detalhada da cena visual — elementos, composição, iluminação, emoções, pessoas",
+  "colorPalette": ["#hex1", "#hex2", "#hex3"],
+  "cta": "texto do CTA (máx 5 palavras)",
+  "mentalTrigger": "authority|transformation|scarcity|curiosity|social_proof|urgency",
+  "angle": "ângulo persuasivo único em 1 frase curta",
+  "mood": "atmosfera visual — ex: energético, sofisticado, aspiracional",
+  "platform": "${platform}",
+  "format": "${format}",
+  "dallePrompt": "prompt DALL-E 3 em inglês, ultra-detalhado, estilo fotográfico profissional, SEM TEXTO nem letras na imagem",
+  "rationale": "explicação em 2 frases de por que estas escolhas maximizam conversão"
+}`;
+
+  const userContent = `Produto: ${productName}
+${productDescription ? `Descrição: ${productDescription}` : ""}
+Público-alvo: ${targetAudience}
+Plataforma: ${platform} | Formato: ${format}
+${requestNote ? `Briefing adicional do usuário: ${requestNote}` : ""}
+
+Crie um conceito criativo de alta conversão.`;
+
+  const result = await completeWithAgent(
+    "creative_director",
+    systemPrompt,
+    [{ role: "user", content: userContent }],
     workspaceId,
-    platform,
-    format,
-    productName,
-    productDescription,
-    targetAudience,
-    requestNote,
     log,
+    campaignId,
   );
+
+  const concept = parseAgentJSON<CreativeConcept>(result.content, {} as CreativeConcept);
+  if (!concept || !concept.headline) {
+    throw new AppError(500, "Falha ao gerar conceito criativo — resposta inválida da IA", "AI_PARSE_ERROR");
+  }
 
   const [creative] = await db
     .insert(campaignCreativesTable)
@@ -77,6 +135,7 @@ export async function generateConcept(
     })
     .returning();
 
+  log.info({ campaignId, creativeId: creative.id, platform, format }, "Creative concept generated");
   return creative;
 }
 
@@ -88,47 +147,48 @@ export async function approveConceptAndGeneratePreview(
   const [creative] = await db
     .select()
     .from(campaignCreativesTable)
-    .where(eq(campaignCreativesTable.id, creativeId))
+    .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId)))
     .limit(1);
-
   if (!creative) throw new NotFoundError("Criativo");
-  if (!creative.concept) throw new Error("Conceito não encontrado");
+  if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+
+  await deductCredits(workspaceId, "video_low_res", log, creative.campaignId);
 
   await db
     .update(campaignCreativesTable)
     .set({ status: "preview_generating", conceptApprovedAt: new Date() })
     .where(eq(campaignCreativesTable.id, creativeId));
 
-  await deductCredits(workspaceId, "video_low_res", log, creative.campaignId);
+  setImmediate(async () => {
+    try {
+      const imageUrl = await generateDalleImage(
+        creative.concept!.dallePrompt,
+        creative.format,
+        "standard",
+        log,
+      );
+      await db
+        .update(campaignCreativesTable)
+        .set({ status: "preview_ready", previewUrl: imageUrl, imageExpired: false })
+        .where(eq(campaignCreativesTable.id, creativeId));
+    } catch (err) {
+      log.warn({ creativeId, err }, "DALL-E preview generation failed");
+      await db
+        .update(campaignCreativesTable)
+        .set({
+          status: "concept_ready",
+          metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
+        })
+        .where(eq(campaignCreativesTable.id, creativeId));
+    }
+  });
 
-  try {
-    const imageUrl = await generateDalleImage(
-      creative.concept.dallePrompt,
-      creative.format,
-      "standard",
-      log,
-    );
-
-    const [updated] = await db
-      .update(campaignCreativesTable)
-      .set({ status: "preview_ready", previewUrl: imageUrl, imageExpired: false })
-      .where(eq(campaignCreativesTable.id, creativeId))
-      .returning();
-
-    return updated;
-  } catch (err) {
-    log.warn({ err }, "DALL-E preview generation failed — storing concept-only state");
-    const [updated] = await db
-      .update(campaignCreativesTable)
-      .set({
-        status: "preview_ready",
-        previewUrl: null,
-        metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
-      })
-      .where(eq(campaignCreativesTable.id, creativeId))
-      .returning();
-    return updated;
-  }
+  const [updated] = await db
+    .select()
+    .from(campaignCreativesTable)
+    .where(eq(campaignCreativesTable.id, creativeId))
+    .limit(1);
+  return updated;
 }
 
 export async function approvePreviewAndGenerateFinal(
@@ -139,65 +199,72 @@ export async function approvePreviewAndGenerateFinal(
   const [creative] = await db
     .select()
     .from(campaignCreativesTable)
-    .where(eq(campaignCreativesTable.id, creativeId))
+    .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId)))
     .limit(1);
-
   if (!creative) throw new NotFoundError("Criativo");
-  if (!creative.concept) throw new Error("Conceito não encontrado");
+  if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
+
+  await deductCredits(workspaceId, "video_high_res", log, creative.campaignId);
 
   await db
     .update(campaignCreativesTable)
     .set({ status: "final_generating", previewApprovedAt: new Date() })
     .where(eq(campaignCreativesTable.id, creativeId));
 
-  await deductCredits(workspaceId, "video_high_res", log, creative.campaignId);
+  setImmediate(async () => {
+    try {
+      const imageUrl = await generateDalleImage(
+        creative.concept!.dallePrompt,
+        creative.format,
+        "hd",
+        log,
+      );
+      await db
+        .update(campaignCreativesTable)
+        .set({
+          status: "approved",
+          finalUrl: imageUrl,
+          approvedAt: new Date(),
+          imageExpired: false,
+        })
+        .where(eq(campaignCreativesTable.id, creativeId));
+    } catch (err) {
+      log.warn({ creativeId, err }, "DALL-E HD generation failed");
+      await db
+        .update(campaignCreativesTable)
+        .set({
+          status: "approved",
+          finalUrl: null,
+          approvedAt: new Date(),
+          metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
+        })
+        .where(eq(campaignCreativesTable.id, creativeId));
+    }
+  });
 
-  try {
-    const imageUrl = await generateDalleImage(
-      creative.concept.dallePrompt,
-      creative.format,
-      "hd",
-      log,
-    );
-
-    const [updated] = await db
-      .update(campaignCreativesTable)
-      .set({
-        status: "approved",
-        finalUrl: imageUrl,
-        approvedAt: new Date(),
-        imageExpired: false,
-      })
-      .where(eq(campaignCreativesTable.id, creativeId))
-      .returning();
-
-    return updated;
-  } catch (err) {
-    log.warn({ err }, "DALL-E final generation failed");
-    const [updated] = await db
-      .update(campaignCreativesTable)
-      .set({
-        status: "approved",
-        finalUrl: null,
-        approvedAt: new Date(),
-        metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
-      })
-      .where(eq(campaignCreativesTable.id, creativeId))
-      .returning();
-    return updated;
-  }
+  const [updated] = await db
+    .select()
+    .from(campaignCreativesTable)
+    .where(eq(campaignCreativesTable.id, creativeId))
+    .limit(1);
+  return updated;
 }
 
 export async function rejectCreative(
   creativeId: string,
+  workspaceId: string,
   reason: string,
 ): Promise<CampaignCreative> {
   const [updated] = await db
     .update(campaignCreativesTable)
-    .set({ status: "rejected", rejectionReason: reason })
-    .where(eq(campaignCreativesTable.id, creativeId))
+    .set({ status: "rejected", rejectionReason: reason || null })
+    .where(
+      and(
+        eq(campaignCreativesTable.id, creativeId),
+        eq(campaignCreativesTable.workspaceId, workspaceId),
+      ),
+    )
     .returning();
-
   if (!updated) throw new NotFoundError("Criativo");
   return updated;
 }
@@ -211,30 +278,55 @@ export async function regenerateImage(
   const [creative] = await db
     .select()
     .from(campaignCreativesTable)
-    .where(eq(campaignCreativesTable.id, creativeId))
+    .where(and(eq(campaignCreativesTable.id, creativeId), eq(campaignCreativesTable.workspaceId, workspaceId)))
     .limit(1);
-
   if (!creative) throw new NotFoundError("Criativo");
-  if (!creative.concept) throw new Error("Conceito não encontrado");
+  if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
 
   const creditAction = quality === "hd" ? "video_high_res" : "video_low_res";
   await deductCredits(workspaceId, creditAction, log, creative.campaignId);
 
-  const imageUrl = await generateDalleImage(
-    creative.concept.dallePrompt,
-    creative.format,
-    quality,
-    log,
-  );
+  const targetStatus = quality === "hd" ? "final_generating" : "preview_generating";
+  await db
+    .update(campaignCreativesTable)
+    .set({ status: targetStatus as any, metadata: {} })
+    .where(eq(campaignCreativesTable.id, creativeId));
 
-  const targetField = quality === "hd" ? { finalUrl: imageUrl } : { previewUrl: imageUrl };
+  setImmediate(async () => {
+    try {
+      const imageUrl = await generateDalleImage(
+        creative.concept!.dallePrompt,
+        creative.format,
+        quality,
+        log,
+      );
+      const finalStatus = quality === "hd" ? "approved" : "preview_ready";
+      const updateData: Record<string, unknown> =
+        quality === "hd"
+          ? { status: finalStatus, finalUrl: imageUrl, approvedAt: new Date(), imageExpired: false }
+          : { status: finalStatus, previewUrl: imageUrl, imageExpired: false };
+      await db
+        .update(campaignCreativesTable)
+        .set(updateData as any)
+        .where(eq(campaignCreativesTable.id, creativeId));
+    } catch (err) {
+      log.warn({ creativeId, err }, "DALL-E regeneration failed");
+      const rollback = quality === "hd" ? "preview_ready" : "concept_ready";
+      await db
+        .update(campaignCreativesTable)
+        .set({
+          status: rollback as any,
+          metadata: { imageError: err instanceof Error ? err.message : "generation_failed" },
+        })
+        .where(eq(campaignCreativesTable.id, creativeId));
+    }
+  });
 
   const [updated] = await db
-    .update(campaignCreativesTable)
-    .set({ ...targetField, imageExpired: false })
+    .select()
+    .from(campaignCreativesTable)
     .where(eq(campaignCreativesTable.id, creativeId))
-    .returning();
-
+    .limit(1);
   return updated;
 }
 
@@ -245,13 +337,13 @@ async function generateDalleImage(
   log: Logger,
 ): Promise<string> {
   const size = FORMAT_TO_DALLE_SIZE[format] ?? "1024x1024";
-  const openai = getOpenAI();
+  const openai = buildOpenAIClient();
 
   log.info({ format, size, quality }, "Generating DALL-E 3 image");
 
   const response = await openai.images.generate({
     model: "dall-e-3",
-    prompt: `${prompt}. IMPORTANT: No text, words, letters, or numbers should appear anywhere in the image. Pure visual only.`,
+    prompt: `${prompt}. IMPORTANT: No text, words, letters, or numbers anywhere in the image. Pure visual composition only.`,
     n: 1,
     size,
     quality,

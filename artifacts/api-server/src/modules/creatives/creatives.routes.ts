@@ -81,8 +81,9 @@ router.post("/:campaignId/creatives/:creativeId/approve-preview", async (req, re
 // POST /campaigns/:id/creatives/:creativeId/reject
 router.post("/:campaignId/creatives/:creativeId/reject", async (req, res) => {
   const { creativeId } = req.params;
+  const workspaceId = req.auth.workspaceId;
   const body = z.object({ reason: z.string().optional().default("") }).parse(req.body);
-  const creative = await rejectCreative(creativeId, body.reason);
+  const creative = await rejectCreative(creativeId, workspaceId, body.reason);
   res.json({ creative });
 });
 
