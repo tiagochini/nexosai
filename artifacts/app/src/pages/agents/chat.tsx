@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Send, Loader2, Bot, Brain, Zap, Target, Pen, Eye,
   ShoppingCart, Users, BarChart3, TrendingUp, Video, Star,
-  Shield, Rocket, Megaphone, Globe, RefreshCw, Download,
+  Shield, Rocket, Megaphone, Globe, RefreshCw, Download, CornerDownLeft,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 
@@ -340,21 +340,39 @@ export default function AgentChat() {
         <div className="flex gap-2 items-end">
           <textarea ref={inputRef} value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-            placeholder={`Fale com ${agent.name}… (Enter para enviar, Shift+Enter nova linha)`}
-            disabled={sending} rows={2}
-            className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
+            onKeyDown={e => {
+              if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                void sendMessage();
+              }
+              // plain Enter = new line (default textarea behavior — no override needed)
+            }}
+            placeholder={`Fale com ${agent.name}…`}
+            disabled={sending} rows={4}
+            className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[80px]"
           />
-          <Button onClick={() => void sendMessage()} disabled={sending || !input.trim()}
-            className={`font-mono rounded-none h-[66px] px-4 shrink-0 ${accent.bg} ${accent.border} border hover:brightness-125`}>
-            {sending ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} /> : <Send className={`h-4 w-4 ${accent.text}`} />}
-          </Button>
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <Button onClick={() => void sendMessage()} disabled={sending || !input.trim()}
+              title="Enviar (Ctrl+Enter)"
+              className={`font-mono rounded-none h-10 px-4 ${accent.bg} ${accent.border} border hover:brightness-125`}>
+              {sending ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} /> : <Send className={`h-4 w-4 ${accent.text}`} />}
+            </Button>
+            <Button variant="outline" size="sm" title="Nova linha (Enter)"
+              onClick={() => {
+                setInput(v => v + "\n");
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+              disabled={sending}
+              className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border">
+              <CornerDownLeft className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="flex justify-between items-center mt-1.5 px-1">
           <span className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">
             Modo: {MODE_LABELS[contextMode]} · {selectedCampaign ? "Com contexto de campanha" : "Sem contexto"}
           </span>
-          <span className="text-[11px] font-mono text-muted-foreground/40">3 créditos por mensagem</span>
+          <span className="text-[11px] font-mono text-muted-foreground/40">Enter = nova linha · Ctrl+Enter = enviar · 3 cr/msg</span>
         </div>
       </div>
     </div>

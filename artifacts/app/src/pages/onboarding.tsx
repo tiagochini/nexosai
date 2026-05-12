@@ -10,7 +10,7 @@ import {
   CheckCircle2, Sparkles, ArrowRight, Star, Bot,
   Mail, MessageSquare, Target, TrendingUp, Shield,
   Users, Video, BarChart2, Link2, Wifi, WifiOff,
-  Phone, CreditCard, Megaphone, ExternalLink, RefreshCw,
+  Phone, CreditCard, Megaphone, ExternalLink, RefreshCw, CornerDownLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -891,23 +891,40 @@ export default function Onboarding() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); }
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    void handleSend();
+                  }
+                  // plain Enter = new line (default textarea behavior)
                 }}
-                placeholder="Digite sua resposta… (Enter para enviar)"
+                placeholder="Digite sua resposta…"
                 disabled={sending}
-                rows={2}
-                className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-4 py-3 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
+                rows={4}
+                className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-4 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[80px]"
               />
-              <Button
-                onClick={() => void handleSend()}
-                disabled={sending || !inputValue.trim()}
-                className="font-mono rounded-none h-[70px] px-4 btn-weapon-primary shrink-0"
-              >
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <Button
+                  onClick={() => void handleSend()}
+                  disabled={sending || !inputValue.trim()}
+                  title="Enviar (Ctrl+Enter)"
+                  className="font-mono rounded-none h-10 px-4 btn-weapon-primary"
+                >
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+                <Button variant="outline" size="sm" title="Nova linha (Enter)"
+                  onClick={() => {
+                    setInputValue(v => v + "\n");
+                    setTimeout(() => inputRef.current?.focus(), 0);
+                  }}
+                  disabled={sending}
+                  className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+                >
+                  <CornerDownLeft className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <p className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest mt-2 text-right">
-              Shift+Enter para nova linha
+              Enter = nova linha · Ctrl+Enter = enviar
             </p>
           </div>
         )}
