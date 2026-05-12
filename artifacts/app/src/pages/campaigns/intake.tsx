@@ -282,7 +282,7 @@ export default function CampaignIntake() {
       } catch {
         setMessages([{
           role: "assistant",
-          content: "Olá! Sou o especialista de intake do NexOS AI. Vou entender seu produto em conversa natural e definir juntos o melhor modelo de campanha.\n\nComeça me contando: qual é o nome do seu produto e o que ele entrega para o cliente?",
+          content: "Oi! Aqui é o especialista de briefing do NexOS. 👋\n\nVou fazer algumas perguntas simples sobre o seu produto para montar o plano de lançamento — não precisa ser técnico, pode responder com suas próprias palavras.\n\nPrimeira pergunta: qual é o nome do seu produto e o que ele ensina ou entrega para quem compra?",
         }]);
       } finally {
         setSending(false);
@@ -572,11 +572,19 @@ export default function CampaignIntake() {
               })()}
             </div>
           ) : (
-            <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2 shrink-0">
-              <Database className="h-3.5 w-3.5 text-primary shrink-0" />
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-                Produto → Audiência → Metas → Modelo ideal → Perguntas específicas
-              </span>
+            <div className="border border-primary/20 bg-primary/5 px-4 py-3 flex items-start gap-3 shrink-0">
+              <div className="w-6 h-6 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Database className="h-3 w-3 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-[11px] text-primary font-bold uppercase tracking-widest mb-0.5">
+                  Como funciona o briefing
+                </div>
+                <span className="text-xs font-mono text-muted-foreground/70 leading-relaxed">
+                  A IA vai fazer perguntas simples sobre seu produto, seu público e seus objetivos.
+                  Responda com suas palavras — não precisa ser técnico. Em ~3 minutos, ela monta tudo.
+                </span>
+              </div>
             </div>
           )}
 
@@ -663,7 +671,7 @@ export default function CampaignIntake() {
                     }
                     // plain Enter = new line (default textarea behavior)
                   }}
-                  placeholder="Responda aqui…"
+                  placeholder="Digite sua resposta aqui... (seja simples e direto, a IA entende tudo)"
                   disabled={sending || confirmingType}
                   rows={4}
                   className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[80px]"

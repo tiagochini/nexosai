@@ -125,7 +125,7 @@ export default function CampaignsList() {
         </div>
         <Link href="/campaigns/new">
           <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-5 text-xs shrink-0">
-            <Plus className="h-3.5 w-3.5" />Nova Missão
+            <Plus className="h-3.5 w-3.5" />Nova Campanha
           </Button>
         </Link>
       </div>
@@ -167,32 +167,65 @@ export default function CampaignsList() {
 
       {/* Empty */}
       {!isLoading && campaigns.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 border border-border/40 bg-card/30 flex items-center justify-center">
-              <Rocket className="h-7 w-7 text-muted-foreground/20" />
-            </div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 border-t border-r border-primary/40" />
-            <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b border-l border-primary/40" />
-          </div>
-          <div className="text-center space-y-1">
+        search ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Rocket className="h-8 w-8 text-muted-foreground/20" />
             <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest">
-              {search ? `Nenhuma missão encontrada para "${search}"` : "Nenhuma campanha registrada"}
+              Nenhum resultado para &ldquo;{search}&rdquo;
             </p>
-            {!search && (
-              <p className="font-mono text-xs text-muted-foreground/40">
-                Inicie sua primeira missão e a IA monta toda a estratégia
-              </p>
-            )}
           </div>
-          {!search && (
-            <Link href="/campaigns/new">
-              <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 mt-2">
-                <Plus className="h-3.5 w-3.5" />Iniciar Primeira Missão
-              </Button>
-            </Link>
-          )}
-        </div>
+        ) : (
+          <div className="border border-primary/20 bg-primary/5 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/40" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary/40" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary/40" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/40" />
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/4 via-transparent to-transparent pointer-events-none" />
+
+            <div className="p-8 md:p-10 relative z-10 flex flex-col md:flex-row gap-8 items-start">
+              {/* Left: headline + CTA */}
+              <div className="flex-1 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-primary" />
+                  <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Pronto para começar</span>
+                </div>
+                <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tight text-foreground leading-tight">
+                  Nenhum lançamento ainda.
+                  <br />
+                  <span className="text-primary">A IA está esperando por você.</span>
+                </h2>
+                <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed max-w-md">
+                  Em menos de 3 minutos de briefing, a IA monta o plano completo do seu lançamento — estratégia, copy, cronograma e execução automatizada.
+                </p>
+                <Link href="/campaigns/new">
+                  <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary h-11 px-7 mt-2 text-sm">
+                    <Plus className="h-4 w-4" />
+                    Criar meu primeiro lançamento
+                    <TrendingUp className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Right: what happens */}
+              <div className="shrink-0 w-full md:w-56 space-y-2.5">
+                <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 mb-3">O que acontece agora:</p>
+                {[
+                  { num: "01", text: "Você escolhe seu objetivo" },
+                  { num: "02", text: "A IA faz um briefing rápido" },
+                  { num: "03", text: "Plano estratégico gerado" },
+                  { num: "04", text: "Conteúdo pronto para aprovar" },
+                  { num: "05", text: "Campanha vai ao ar" },
+                ].map(item => (
+                  <div key={item.num} className="flex items-center gap-3">
+                    <span className="font-mono text-[10px] text-primary/40 tracking-widest w-5 shrink-0 font-bold">{item.num}</span>
+                    <div className="flex-1 h-px bg-border/20" />
+                    <span className="font-mono text-[11px] text-muted-foreground/60">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
       )}
 
       {/* Campaign cards */}

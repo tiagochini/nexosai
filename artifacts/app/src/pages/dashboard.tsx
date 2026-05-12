@@ -569,37 +569,74 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* ── Guided Mode: Primeiros Passos ── */}
-      {isGuided && campaigns.length === 0 && (
+      {/* ── Welcome Hero: shown when user has no campaigns yet ── */}
+      {campaigns.length === 0 && (
         <div className="border border-primary/30 bg-primary/5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary" />
-          <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary" />
-          <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary" />
-          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary" />
-          <div className="p-5">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/60" />
+          <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary/60" />
+          <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary/60" />
+          <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/60" />
+          {/* Glow */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+          <div className="p-6 md:p-8 relative z-10">
+            {/* Headline */}
+            <div className="flex items-center gap-2 mb-2">
               <Bot className="h-4 w-4 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">
-                Bem-vindo ao NexOS AI — Modo Guiado Ativo
+                NexOS AI · Pronto para começar
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tight text-foreground mb-2 leading-tight">
+              Sua primeira campanha começa aqui.
+            </h2>
+            <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed mb-6 max-w-xl">
+              Responda 3 minutos de perguntas e a IA monta o plano completo — estratégia, copy, cronograma e execução. Você só aprova.
+            </p>
+
+            {/* Social proof strip */}
+            <div className="flex flex-wrap gap-4 mb-7">
               {[
-                { step: "01", label: "Criar sua primeira campanha", desc: "A IA monta toda a estratégia", href: "/campaigns/new", cta: "Começar agora", done: false },
-                { step: "02", label: "Conversar com os Agentes IA", desc: "29 especialistas disponíveis", href: "/agents", cta: "Ver agentes", done: false },
-                { step: "03", label: "Ativar modo Expert", desc: "Libere todas as ferramentas", href: null, cta: null, done: false },
+                { value: "29", label: "Agentes IA especializados" },
+                { value: "100%", label: "Estratégia gerada automaticamente" },
+                { value: "7 dias", label: "Do briefing ao lançamento" },
+              ].map(stat => (
+                <div key={stat.label} className="flex items-baseline gap-1.5">
+                  <span className="font-mono font-black text-lg text-primary">{stat.value}</span>
+                  <span className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest">{stat.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link href="/campaigns/new">
+                <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary h-11 px-7 text-sm">
+                  <Rocket className="h-4 w-4" />
+                  Criar meu primeiro lançamento
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </Link>
+              <Link href="/agents">
+                <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest h-11 px-5 text-xs border-border/50 hover:border-primary/50 hover:text-primary gap-2">
+                  <Bot className="h-3.5 w-3.5" />
+                  Conversar com os Agentes IA
+                </Button>
+              </Link>
+            </div>
+
+            {/* Steps mini-preview */}
+            <div className="mt-6 pt-5 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { step: "01", label: "Briefing rápido", desc: "A IA entrevista você sobre seu produto e metas em ~3 min" },
+                { step: "02", label: "Plano estratégico", desc: "Estrategista gera o plano completo com cronograma e canais" },
+                { step: "03", label: "Conteúdo + lançamento", desc: "Copywriter produz tudo. Você aprova. A campanha vai ao ar." },
               ].map(item => (
-                <div key={item.step} className="border border-border/40 bg-card/40 p-3 space-y-2">
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-primary">{item.step}</div>
-                  <div className="font-mono text-xs font-bold text-foreground leading-tight">{item.label}</div>
-                  <div className="font-mono text-[11px] text-muted-foreground">{item.desc}</div>
-                  {item.href && (
-                    <Link href={item.href}>
-                      <Button size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 px-3 btn-weapon-primary mt-1">
-                        {item.cta} <ChevronRight className="h-2.5 w-2.5 ml-1" />
-                      </Button>
-                    </Link>
-                  )}
+                <div key={item.step} className="flex gap-3">
+                  <span className="font-mono text-[11px] text-primary/40 tracking-widest shrink-0 mt-0.5 font-bold">{item.step}</span>
+                  <div>
+                    <div className="font-mono text-xs font-bold text-foreground/80 uppercase tracking-widest mb-0.5">{item.label}</div>
+                    <p className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed">{item.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>

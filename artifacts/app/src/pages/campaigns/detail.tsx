@@ -450,11 +450,22 @@ export default function CampaignDetail() {
   // While redirecting draft/intake campaigns, show a minimal loading state
   if (campaign.status === "draft" || campaign.status === "intake") {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        <p className="font-mono text-sm text-muted-foreground uppercase tracking-widest">
-          Iniciando sessão com a IA de Intake...
-        </p>
+      <div className="flex flex-col items-center justify-center py-24 gap-5">
+        <div className="relative">
+          <div className="w-14 h-14 border border-primary/30 bg-primary/5 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 text-primary animate-spin" />
+          </div>
+          <div className="absolute -top-1 -left-1 w-3 h-3 border-t border-l border-primary/40" />
+          <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b border-r border-primary/40" />
+        </div>
+        <div className="text-center space-y-1">
+          <p className="font-mono text-sm text-foreground font-bold uppercase tracking-widest">
+            Abrindo o briefing com IA...
+          </p>
+          <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
+            Em alguns segundos a IA vai iniciar a conversa
+          </p>
+        </div>
       </div>
     );
   }

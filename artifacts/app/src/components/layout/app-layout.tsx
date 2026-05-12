@@ -170,7 +170,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         <div>
           <div className="px-2 mb-2">
             <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground/40">
-              Modo de Interface
+              Modo de Uso
             </span>
           </div>
           <div className="flex gap-1 border border-border/40 bg-muted/10 p-0.5">
@@ -182,7 +182,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Gauge className="h-2.5 w-2.5" />
-              Guiado
+              Iniciante
             </button>
             <button
               onClick={() => setMode("expert")}
@@ -192,17 +192,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Zap className="h-2.5 w-2.5" />
-              Expert
+              Avançado
             </button>
           </div>
           {mode === "guided" && (
             <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              Modo guiado: fluxo simplificado
+              Menu simplificado · foco no lançamento
             </p>
           )}
           {mode === "expert" && (
             <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              Modo expert: acesso total à plataforma
+              Acesso completo a todas as ferramentas
             </p>
           )}
         </div>
