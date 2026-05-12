@@ -9,7 +9,7 @@ import {
   CheckCircle2, XCircle, Loader2, Link2, AlertTriangle,
   Wifi, WifiOff, ChevronRight, ExternalLink, Zap,
   MessageSquare, Mail, CreditCard, BarChart2, Instagram,
-  Phone, Music2, Video, X,
+  Music2, X, Info, ShieldAlert, ChevronDown, ChevronUp,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -31,6 +31,17 @@ interface WorkspaceIntegration {
   createdAt: string;
 }
 
+interface SetupStep { title: string; detail: string; url?: string }
+interface SetupGuide {
+  warning?: string;
+  prereqs: string[];
+  steps: SetupStep[];
+  docsUrl?: string;
+  docsLabel?: string;
+}
+interface FieldDef {
+  key: string; label: string; placeholder: string; type?: string; hint?: string;
+}
 interface CatalogEntry {
   provider: Provider;
   label: string;
@@ -40,29 +51,49 @@ interface CatalogEntry {
   color: string;
   icon: React.ElementType;
   required: boolean;
-  fields: { key: string; label: string; placeholder: string; type?: string }[];
+  fields: FieldDef[];
+  guide: SetupGuide;
 }
 
 // ── Catalog ───────────────────────────────────────────────────────────────────
 const CATALOG: CatalogEntry[] = [
   {
     provider: "whatsapp_business",
-    label: "WhatsApp Business",
-    description: "Disparo automatizado de mensagens e auto-resposta com IA",
+    label: "WhatsApp Business API",
+    description: "Disparo automatizado de mensagens e auto-resposta com IA durante o lançamento",
     why: "Obrigatório para disparar sequências de mensagens durante o lançamento. Sem isso o NexOS não consegue executar uma campanha completa.",
     category: "Mensagens",
     color: "text-green-400",
     icon: MessageSquare,
     required: true,
     fields: [
-      { key: "accountId", label: "Phone Number ID", placeholder: "123456789012345" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
-      { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAxxxx...", type: "password" },
+      { key: "accountId",   label: "Phone Number ID",     placeholder: "123456789012345",
+        hint: "Não é o número de telefone em si — é o ID numérico de 15 dígitos encontrado no Meta Business Suite → WhatsApp → Números de telefone." },
+      { key: "accountName", label: "Nome da Conta",       placeholder: "Minha Empresa" },
+      { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAxxxx...", type: "password",
+        hint: "Token de acesso permanente gerado em Meta Developers → Seu App → WhatsApp → Configuração da API → Generate Token." },
     ],
+    guide: {
+      warning: "Requer WhatsApp Business API — não funciona com o aplicativo WhatsApp comum ou WhatsApp Business App.",
+      prereqs: [
+        "Conta verificada no Meta Business Suite (business.facebook.com)",
+        "Número de telefone dedicado — não pode ser seu WhatsApp pessoal ou do WhatsApp Business App",
+        "App criado no Meta Developers com a API do WhatsApp ativada",
+      ],
+      steps: [
+        { title: "Acesse o Meta Business Suite", detail: "Vá em business.facebook.com → Configurações → WhatsApp.", url: "https://business.facebook.com" },
+        { title: "Encontre o Phone Number ID", detail: "No menu WhatsApp → Números de Telefone. Clique no número → copie o campo 'Phone Number ID' (não é o número de telefone)." },
+        { title: "Crie o App no Meta Developers", detail: "Acesse developers.facebook.com → Meus Apps → Criar App → escolha 'Business'.", url: "https://developers.facebook.com" },
+        { title: "Ative o WhatsApp no App", detail: "No painel do app → Adicionar produto → WhatsApp → Configurar. Associe sua conta do Meta Business." },
+        { title: "Gere o Access Token", detail: "Em WhatsApp → Configuração da API → clique em 'Generate Token'. Copie o token permanente (começa com EAA...)." },
+      ],
+      docsUrl: "https://developers.facebook.com/docs/whatsapp/getting-started",
+      docsLabel: "Documentação oficial Meta",
+    },
   },
   {
     provider: "telegram",
-    label: "Telegram",
+    label: "Telegram Bot",
     description: "Bot de automação e notificações via canal do Telegram",
     why: "Alternativa ao WhatsApp para disparo automático de mensagens e notificações do lançamento.",
     category: "Mensagens",
@@ -70,24 +101,47 @@ const CATALOG: CatalogEntry[] = [
     icon: MessageSquare,
     required: false,
     fields: [
-      { key: "accountId", label: "Bot Token", placeholder: "1234567890:AAFxxxx..." },
-      { key: "accountName", label: "Nome do Bot", placeholder: "@meubot" },
+      { key: "accountId",   label: "Bot Token",    placeholder: "1234567890:AAFxxxx...",
+        hint: "Gerado pelo @BotFather no Telegram. Formato: 1234567890:AAFxxxxxxxxxx" },
+      { key: "accountName", label: "Nome do Bot",  placeholder: "@meubot" },
     ],
+    guide: {
+      prereqs: ["Conta no Telegram (qualquer conta serve)"],
+      steps: [
+        { title: "Abra o Telegram e busque @BotFather", detail: "No Telegram, pesquise por @BotFather e inicie a conversa." },
+        { title: "Crie um novo bot", detail: "Digite /newbot e siga as instruções. Escolha um nome e um username (deve terminar em 'bot')." },
+        { title: "Copie o Bot Token", detail: "O BotFather vai te enviar um token no formato: 1234567890:AAFxxxxxxxxxx. Cole aqui." },
+      ],
+      docsUrl: "https://core.telegram.org/bots#how-do-i-create-a-bot",
+      docsLabel: "Como criar um bot no Telegram",
+    },
   },
   {
     provider: "rd_station",
     label: "RD Station",
     description: "E-mail marketing e automação de leads integrados ao lançamento",
-    why: "Obrigatório para enviar a sequência de e-mails de lançamento. Conecete RD Station, ActiveCampaign ou Resend.",
+    why: "Obrigatório para enviar a sequência de e-mails de lançamento. Conecte RD Station, ActiveCampaign ou Resend.",
     category: "E-mail",
     color: "text-blue-400",
     icon: Mail,
     required: true,
     fields: [
-      { key: "accountId", label: "Client ID", placeholder: "seu-client-id" },
+      { key: "accountId",   label: "Client ID",    placeholder: "seu-client-id",
+        hint: "Encontrado em RD Station → Configurações → Integrações → API Pública → Client ID." },
       { key: "accountName", label: "Nome da Conta", placeholder: "Workspace RD" },
-      { key: "accessToken", label: "API Token", placeholder: "rdst_xxxx...", type: "password" },
+      { key: "accessToken", label: "API Token",     placeholder: "rdst_xxxx...", type: "password",
+        hint: "Token privado de API em RD Station → Configurações → Integrações → API Pública." },
     ],
+    guide: {
+      prereqs: ["Conta ativa no RD Station Marketing", "Plano que inclui acesso à API (Marketing ou superior)"],
+      steps: [
+        { title: "Acesse as configurações do RD Station", detail: "Vá em Configurações → Integrações → API Pública.", url: "https://app.rdstation.com.br/integrations" },
+        { title: "Copie o Client ID", detail: "Na seção API Pública, você verá o Client ID. Copie e cole no campo acima." },
+        { title: "Gere o Token de API", detail: "Na mesma tela, clique em 'Gerar Token' se não houver um. Copie o token gerado." },
+      ],
+      docsUrl: "https://developers.rdstation.com/pt-BR/authentication",
+      docsLabel: "Docs RD Station API",
+    },
   },
   {
     provider: "activecampaign",
@@ -99,29 +153,54 @@ const CATALOG: CatalogEntry[] = [
     icon: Mail,
     required: false,
     fields: [
-      { key: "accountId", label: "Account Name", placeholder: "minhaempresa" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Minha AC" },
-      { key: "accessToken", label: "API Key", placeholder: "xxxxxx...", type: "password" },
+      { key: "accountId",   label: "Account Name (subdomínio)", placeholder: "minhaempresa",
+        hint: "É o subdomínio da sua conta. Se você acessa minhaempresa.activehosted.com, o Account Name é 'minhaempresa'." },
+      { key: "accountName", label: "Nome da Conta",              placeholder: "Minha AC" },
+      { key: "accessToken", label: "API Key",                    placeholder: "xxxxxx...", type: "password",
+        hint: "Em ActiveCampaign → Settings → Developer → API Access → API Key." },
     ],
+    guide: {
+      prereqs: ["Conta ativa no ActiveCampaign"],
+      steps: [
+        { title: "Acesse as configurações de desenvolvedor", detail: "No ActiveCampaign, vá em Settings (engrenagem) → Developer.", url: "https://www.activecampaign.com/settings/developer" },
+        { title: "Copie o Account Name", detail: "Na seção API Access, você verá a URL base. Ex: https://minhaempresa.api-us1.com — o Account Name é 'minhaempresa'." },
+        { title: "Copie a API Key", detail: "Na mesma tela, copie a API Key. Nunca compartilhe essa chave." },
+      ],
+      docsUrl: "https://developers.activecampaign.com/reference/authentication",
+      docsLabel: "Docs ActiveCampaign API",
+    },
   },
   {
     provider: "resend",
     label: "Resend",
-    description: "E-mail transacional de alta entregabilidade",
-    why: "Opção mais simples para envio de e-mails. Basta a API Key do Resend.",
+    description: "E-mail transacional de alta entregabilidade — opção mais simples",
+    why: "Opção mais simples para envio de e-mails. Basta a API Key do Resend — sem configuração complexa.",
     category: "E-mail",
     color: "text-violet-400",
     icon: Mail,
     required: false,
     fields: [
-      { key: "accountId", label: "Audience ID", placeholder: "78261eea-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Meu Workspace Resend" },
-      { key: "accessToken", label: "API Key", placeholder: "re_xxxx...", type: "password" },
+      { key: "accountId",   label: "Audience ID (para broadcasts)", placeholder: "78261eea-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+        hint: "UUID da sua Audience no Resend. Encontrado em Resend → Audiences → clique na audience → copie o ID." },
+      { key: "accountName", label: "Nome da Conta",   placeholder: "Meu Workspace Resend" },
+      { key: "accessToken", label: "API Key",         placeholder: "re_xxxx...", type: "password",
+        hint: "Gerada em Resend → API Keys → Create API Key. Começa com 're_'." },
     ],
+    guide: {
+      prereqs: ["Conta no Resend (resend.com — plano gratuito disponível)", "Domínio de e-mail verificado no Resend"],
+      steps: [
+        { title: "Crie uma conta no Resend", detail: "Acesse resend.com e crie sua conta gratuitamente.", url: "https://resend.com/signup" },
+        { title: "Verifique seu domínio", detail: "Em Resend → Domains → Add Domain. Adicione os registros DNS indicados no seu provedor de domínio." },
+        { title: "Crie uma API Key", detail: "Em Resend → API Keys → Create API Key. Dê um nome descritivo e copie a chave gerada (começa com 're_')." },
+        { title: "Copie o Audience ID (opcional)", detail: "Em Resend → Audiences → clique na sua audience → copie o UUID. Necessário apenas para broadcasts." },
+      ],
+      docsUrl: "https://resend.com/docs",
+      docsLabel: "Docs Resend",
+    },
   },
   {
     provider: "instagram",
-    label: "Instagram",
+    label: "Instagram Business",
     description: "Auto-post de conteúdo orgânico sincronizado ao calendário",
     why: "Publica automaticamente posts, stories e reels gerados pela IA nos horários certos do lançamento.",
     category: "Social Orgânico",
@@ -129,14 +208,32 @@ const CATALOG: CatalogEntry[] = [
     icon: Instagram,
     required: false,
     fields: [
-      { key: "accountId", label: "Instagram Account ID", placeholder: "17841400000000000" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "@meucanal" },
-      { key: "accessToken", label: "Access Token (Meta)", placeholder: "EAAxxxx...", type: "password" },
+      { key: "accountId",   label: "Instagram Account ID", placeholder: "17841400000000000",
+        hint: "ID numérico da conta Instagram Business. Encontrado em Meta Business Suite → Instagram → Contas → clique na conta → copie o ID." },
+      { key: "accountName", label: "Nome da Conta",         placeholder: "@meucanal" },
+      { key: "accessToken", label: "Access Token (Meta)",   placeholder: "EAAxxxx...", type: "password",
+        hint: "Token de acesso com permissão instagram_basic e instagram_content_publish. Gerado em Meta Developers → Graph API Explorer." },
     ],
+    guide: {
+      warning: "Requer conta Instagram Business ou Creator — não funciona com perfis pessoais.",
+      prereqs: [
+        "Conta Instagram convertida para Business ou Creator",
+        "Conta Instagram vinculada a uma Página do Facebook",
+        "App no Meta Developers com permissões instagram_basic e instagram_content_publish",
+      ],
+      steps: [
+        { title: "Converta sua conta para Business", detail: "No Instagram → Configurações → Conta → Mudar para conta profissional → Empresa." },
+        { title: "Vincule a uma Página do Facebook", detail: "No Meta Business Suite → Instagram → Contas → conecte seu Instagram." },
+        { title: "Encontre o Account ID", detail: "No Meta Business Suite → Instagram → clique na conta → o ID numérico está na URL ou nas configurações." },
+        { title: "Gere o Access Token", detail: "Em Meta Developers → Graph API Explorer → selecione seu app → adicione permissões instagram_basic e instagram_content_publish → gere o token.", url: "https://developers.facebook.com/tools/explorer" },
+      ],
+      docsUrl: "https://developers.facebook.com/docs/instagram-api/getting-started",
+      docsLabel: "Docs Instagram API",
+    },
   },
   {
     provider: "tiktok",
-    label: "TikTok",
+    label: "TikTok Business",
     description: "Auto-post de vídeos e reels no TikTok sincronizados ao lançamento",
     why: "Publica vídeos gerados pela IA no TikTok automaticamente. Essencial para lançamentos que dependem de audiência jovem e vídeos curtos.",
     category: "Social Orgânico",
@@ -144,10 +241,24 @@ const CATALOG: CatalogEntry[] = [
     icon: Music2,
     required: false,
     fields: [
-      { key: "accountId", label: "TikTok Account ID", placeholder: "6912345678901234567" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "@meucanal" },
-      { key: "accessToken", label: "Access Token", placeholder: "act.xxxx...", type: "password" },
+      { key: "accountId",   label: "Open ID (TikTok Account ID)", placeholder: "6912345678901234567",
+        hint: "ID único da sua conta TikTok Business. Obtido via TikTok Login Kit após autorizar o app." },
+      { key: "accountName", label: "Nome da Conta",               placeholder: "@meucanal" },
+      { key: "accessToken", label: "Access Token",                placeholder: "act.xxxx...", type: "password",
+        hint: "Token OAuth obtido após autorizar o app no TikTok Developers. Em TikTok Developers → Manage Apps → seu app → Test Users." },
     ],
+    guide: {
+      warning: "Requer conta TikTok Business e app aprovado no TikTok Developers.",
+      prereqs: ["Conta TikTok convertida para Business", "App criado e aprovado em developers.tiktok.com"],
+      steps: [
+        { title: "Crie um app no TikTok Developers", detail: "Acesse developers.tiktok.com → Manage Apps → Create App → escolha Content Posting API.", url: "https://developers.tiktok.com" },
+        { title: "Autorize o app na sua conta", detail: "Em seu app → Test Users → adicione sua conta TikTok Business como usuário de teste." },
+        { title: "Obtenha o Access Token", detail: "Use o fluxo de autorização OAuth do TikTok ou a ferramenta de teste no painel do desenvolvedor para gerar o token." },
+        { title: "Copie o Open ID", detail: "Após autorizar, o Open ID da conta fica disponível na resposta da autenticação ou no painel do app." },
+      ],
+      docsUrl: "https://developers.tiktok.com/doc/content-posting-api-get-started",
+      docsLabel: "Docs TikTok Content API",
+    },
   },
   {
     provider: "hotmart",
@@ -159,9 +270,20 @@ const CATALOG: CatalogEntry[] = [
     icon: CreditCard,
     required: false,
     fields: [
-      { key: "accountId", label: "Client ID", placeholder: "hotmart-client-id" },
+      { key: "accountId",   label: "Client ID",     placeholder: "hotmart-client-id",
+        hint: "Encontrado em Hotmart → Ferramentas → API → Credenciais → Client ID." },
       { key: "accountName", label: "Nome da Conta", placeholder: "Hotmart Workspace" },
     ],
+    guide: {
+      prereqs: ["Conta ativa no Hotmart com produtos cadastrados"],
+      steps: [
+        { title: "Acesse as credenciais de API", detail: "No Hotmart, vá em Ferramentas → Desenvolvedores → API → Credenciais.", url: "https://app.hotmart.com/tools/developer/api-credentials" },
+        { title: "Copie o Client ID", detail: "Na tela de credenciais, copie o Client ID e cole acima." },
+        { title: "Configure o Webhook", detail: "Para conversões em tempo real, configure o webhook do NexOS em Hotmart → Ferramentas → Webhooks." },
+      ],
+      docsUrl: "https://developers.hotmart.com",
+      docsLabel: "Docs Hotmart API",
+    },
   },
   {
     provider: "kiwify",
@@ -173,10 +295,20 @@ const CATALOG: CatalogEntry[] = [
     icon: CreditCard,
     required: false,
     fields: [
-      { key: "accountId", label: "Account ID", placeholder: "kiwify-account-id" },
+      { key: "accountId",   label: "Account ID",    placeholder: "kiwify-account-id",
+        hint: "ID da sua conta Kiwify. Encontrado em Kiwify → Configurações → Conta → Account ID." },
       { key: "accountName", label: "Nome da Conta", placeholder: "Minha Kiwify" },
-      { key: "accessToken", label: "API Key", placeholder: "kwf_xxxx...", type: "password" },
+      { key: "accessToken", label: "API Key",       placeholder: "kwf_xxxx...", type: "password",
+        hint: "Em Kiwify → Configurações → Desenvolvedor → API Keys → gere ou copie a chave." },
     ],
+    guide: {
+      prereqs: ["Conta ativa no Kiwify com ao menos um produto"],
+      steps: [
+        { title: "Acesse as configurações da conta", detail: "No Kiwify, clique no seu perfil → Configurações → aba Conta.", url: "https://dashboard.kiwify.com.br" },
+        { title: "Copie o Account ID", detail: "Na aba Conta, copie o Account ID exibido." },
+        { title: "Gere uma API Key", detail: "Em Configurações → Desenvolvedor → API Keys → clique em Criar chave." },
+      ],
+    },
   },
   {
     provider: "meta_ads",
@@ -188,10 +320,22 @@ const CATALOG: CatalogEntry[] = [
     icon: BarChart2,
     required: false,
     fields: [
-      { key: "accountId", label: "Ad Account ID", placeholder: "act_123456789" },
+      { key: "accountId",   label: "Ad Account ID", placeholder: "act_123456789",
+        hint: "Formato: act_XXXXXXXXX. Encontrado em Facebook Ads Manager → canto superior esquerdo → nome da conta." },
       { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta Ads" },
-      { key: "accessToken", label: "Access Token", placeholder: "EAAxxxx...", type: "password" },
+      { key: "accessToken", label: "Access Token",  placeholder: "EAAxxxx...", type: "password",
+        hint: "Token de acesso com permissão ads_management. Gerado em Meta Business Suite → Usuários do Sistema → Gerar token." },
     ],
+    guide: {
+      prereqs: ["Conta de Anúncios ativa no Meta Ads Manager", "Acesso ao Meta Business Suite"],
+      steps: [
+        { title: "Encontre o Ad Account ID", detail: "No Ads Manager, o ID aparece no canto superior esquerdo ao lado do nome da conta. Formato: act_XXXXXXXXX.", url: "https://www.facebook.com/adsmanager" },
+        { title: "Crie um usuário do sistema", detail: "Em Meta Business Suite → Configurações → Usuários do Sistema → Adicionar. Defina como Administrador." },
+        { title: "Gere o Access Token", detail: "Na tela do usuário do sistema → Gerar novo token → selecione seu App → marque ads_management e ads_read → Gerar token." },
+      ],
+      docsUrl: "https://developers.facebook.com/docs/marketing-api/get-started",
+      docsLabel: "Docs Meta Marketing API",
+    },
   },
   {
     provider: "tiktok_ads",
@@ -203,10 +347,22 @@ const CATALOG: CatalogEntry[] = [
     icon: Music2,
     required: false,
     fields: [
-      { key: "accountId", label: "Advertiser ID", placeholder: "6912345678901234567" },
+      { key: "accountId",   label: "Advertiser ID", placeholder: "6912345678901234567",
+        hint: "ID do anunciante no TikTok Ads Manager. Encontrado em TikTok Ads → canto superior direito → nome da conta → ID." },
       { key: "accountName", label: "Nome da Conta", placeholder: "TikTok Ads" },
-      { key: "accessToken", label: "Access Token", placeholder: "act.xxxx...", type: "password" },
+      { key: "accessToken", label: "Access Token",  placeholder: "act.xxxx...", type: "password",
+        hint: "Long-term access token gerado em TikTok Developers → Marketing API → Authentication." },
     ],
+    guide: {
+      prereqs: ["Conta de Anúncios ativa no TikTok Ads Manager", "App aprovado no TikTok Developers"],
+      steps: [
+        { title: "Encontre o Advertiser ID", detail: "No TikTok Ads Manager, clique no nome da conta no canto superior direito. O ID numérico aparece abaixo do nome.", url: "https://ads.tiktok.com" },
+        { title: "Crie um app de marketing", detail: "Em developers.tiktok.com → Manage Apps → Create App → Marketing API.", url: "https://developers.tiktok.com" },
+        { title: "Gere o Access Token", detail: "Em seu app de Marketing API → Authentication → gere um Long-Term Access Token para o anunciante." },
+      ],
+      docsUrl: "https://ads.tiktok.com/marketing_api/docs",
+      docsLabel: "Docs TikTok Marketing API",
+    },
   },
   {
     provider: "google_ads",
@@ -218,10 +374,22 @@ const CATALOG: CatalogEntry[] = [
     icon: BarChart2,
     required: false,
     fields: [
-      { key: "accountId", label: "Customer ID", placeholder: "123-456-7890" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Google Ads" },
-      { key: "accessToken", label: "Developer Token", placeholder: "xxxx...", type: "password" },
+      { key: "accountId",   label: "Customer ID",     placeholder: "123-456-7890",
+        hint: "ID de 10 dígitos no formato XXX-XXX-XXXX. Aparece no canto superior direito do Google Ads ao lado do nome da conta." },
+      { key: "accountName", label: "Nome da Conta",   placeholder: "Google Ads" },
+      { key: "accessToken", label: "Developer Token", placeholder: "xxxx...", type: "password",
+        hint: "Token de desenvolvedor obtido em Google Ads API Center (google.com/apis/ads/developer). Requer aprovação do Google." },
     ],
+    guide: {
+      prereqs: ["Conta ativa no Google Ads", "Acesso ao Google Cloud Console para criar credenciais OAuth"],
+      steps: [
+        { title: "Encontre o Customer ID", detail: "No Google Ads, o ID de 10 dígitos fica no canto superior direito. Formato: XXX-XXX-XXXX.", url: "https://ads.google.com" },
+        { title: "Acesse o API Center", detail: "Em Google Ads → Ferramentas → API Center. Solicite um Developer Token se ainda não tiver.", url: "https://ads.google.com/aw/apicenter" },
+        { title: "Aguarde aprovação", detail: "O Google pode levar alguns dias para aprovar o Developer Token. Após aprovado, copie e cole acima." },
+      ],
+      docsUrl: "https://developers.google.com/google-ads/api/docs/get-started/introduction",
+      docsLabel: "Docs Google Ads API",
+    },
   },
   {
     provider: "hubspot",
@@ -233,10 +401,23 @@ const CATALOG: CatalogEntry[] = [
     icon: BarChart2,
     required: false,
     fields: [
-      { key: "accountId", label: "Portal ID", placeholder: "12345678" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "HubSpot CRM" },
-      { key: "accessToken", label: "Private App Token", placeholder: "pat-xxxx...", type: "password" },
+      { key: "accountId",   label: "Portal ID",           placeholder: "12345678",
+        hint: "ID numérico do seu portal HubSpot. Aparece no canto superior direito do HubSpot, ao lado do nome da conta." },
+      { key: "accountName", label: "Nome da Conta",        placeholder: "HubSpot CRM" },
+      { key: "accessToken", label: "Private App Token",    placeholder: "pat-xxxx...", type: "password",
+        hint: "Token de app privado criado em HubSpot → Configurações → Integrações → Apps Privados → Criar app privado." },
     ],
+    guide: {
+      prereqs: ["Conta ativa no HubSpot (plano gratuito ou pago)"],
+      steps: [
+        { title: "Encontre o Portal ID", detail: "No HubSpot, clique no nome da conta no canto superior direito. O Portal ID numérico aparece abaixo.", url: "https://app.hubspot.com" },
+        { title: "Crie um App Privado", detail: "Em HubSpot → Configurações → Integrações → Apps Privados → Criar app privado." },
+        { title: "Defina as permissões", detail: "Marque os escopos: crm.objects.contacts.write, crm.objects.deals.write, crm.lists.write." },
+        { title: "Copie o token gerado", detail: "Após criar o app, copie o token que começa com 'pat-'. Ele só é exibido uma vez." },
+      ],
+      docsUrl: "https://developers.hubspot.com/docs/api/private-apps",
+      docsLabel: "Docs HubSpot Private Apps",
+    },
   },
 ];
 
@@ -244,9 +425,7 @@ const CATEGORIES = ["Mensagens", "E-mail", "Social Orgânico", "Pagamentos", "M�
 
 // ── Connect Modal ─────────────────────────────────────────────────────────────
 function ConnectModal({
-  entry,
-  onClose,
-  onConnect,
+  entry, onClose, onConnect,
 }: {
   entry: CatalogEntry;
   onClose: () => void;
@@ -254,6 +433,8 @@ function ConnectModal({
 }) {
   const [fields, setFields] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const { guide } = entry;
 
   const handleConnect = () => {
     setLoading(true);
@@ -262,46 +443,139 @@ function ConnectModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="border border-border/70 bg-card w-full max-w-md shadow-2xl">
-        <div className="border-b border-border/50 px-5 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="border border-border/70 bg-card w-full max-w-lg shadow-2xl flex flex-col max-h-[92vh]">
+
+        {/* ── Header ── */}
+        <div className="border-b border-border/50 px-5 py-4 flex items-start justify-between shrink-0">
           <div>
-            <h3 className="font-mono font-bold text-sm uppercase tracking-wide">Conectar {entry.label}</h3>
-            <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">{entry.description}</p>
+            <h3 className="font-mono font-bold text-sm uppercase tracking-widest">Conectar {entry.label}</h3>
+            <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 leading-relaxed">{entry.description}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 ml-3 shrink-0 mt-0.5">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="px-5 py-4 bg-primary/5 border-b border-border/30">
-          <div className="flex items-start gap-2">
+        <div className="overflow-y-auto flex-1">
+
+          {/* ── Why section ── */}
+          <div className="px-5 py-3 bg-primary/5 border-b border-border/30 flex items-start gap-2">
             <Zap className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-            <p className="text-xs font-mono text-muted-foreground/70">{entry.why}</p>
+            <p className="text-[11px] font-mono text-muted-foreground/75 leading-relaxed">{entry.why}</p>
+          </div>
+
+          {/* ── Warning (e.g. WhatsApp must be API, not app) ── */}
+          {guide.warning && (
+            <div className="px-5 py-3 bg-yellow-400/8 border-b border-yellow-400/25 flex items-start gap-2">
+              <ShieldAlert className="h-3.5 w-3.5 text-yellow-400 mt-0.5 shrink-0" />
+              <p className="text-[11px] font-mono text-yellow-300/90 leading-relaxed font-medium">{guide.warning}</p>
+            </div>
+          )}
+
+          {/* ── Prerequisites ── */}
+          {guide.prereqs.length > 0 && (
+            <div className="px-5 py-4 border-b border-border/30 space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Antes de começar — você precisa ter:</div>
+              {guide.prereqs.map((p, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-4 h-4 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="font-mono text-[9px] text-primary font-bold">{i + 1}</span>
+                  </div>
+                  <p className="font-mono text-[11px] text-foreground/75 leading-relaxed">{p}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Step-by-step guide (collapsible) ── */}
+          <div className="border-b border-border/30">
+            <button
+              onClick={() => setGuideOpen(v => !v)}
+              className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/10 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Info className="h-3.5 w-3.5 text-cyan-400" />
+                <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold">
+                  Passo a passo — como configurar
+                </span>
+              </div>
+              {guideOpen
+                ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+                : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
+            </button>
+
+            {guideOpen && (
+              <div className="px-5 pb-4 space-y-3 bg-muted/5">
+                {guide.steps.map((s, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-5 h-5 border border-cyan-400/30 bg-cyan-400/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <span className="font-mono text-[9px] text-cyan-400 font-bold">{i + 1}</span>
+                    </div>
+                    <div>
+                      <div className="font-mono text-[11px] font-bold text-foreground">{s.title}</div>
+                      <p className="font-mono text-[10px] text-muted-foreground/65 leading-relaxed mt-0.5">{s.detail}</p>
+                      {s.url && (
+                        <a href={s.url} target="_blank" rel="noopener noreferrer"
+                          className="font-mono text-[10px] text-primary hover:underline flex items-center gap-1 mt-0.5">
+                          Abrir <ExternalLink className="h-2.5 w-2.5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {guide.docsUrl && (
+                  <a href={guide.docsUrl} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground/50 hover:text-primary transition-colors mt-1">
+                    <ExternalLink className="h-2.5 w-2.5" />
+                    {guide.docsLabel ?? "Documentação oficial"}
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── Fields ── */}
+          <div className="p-5 space-y-5">
+            {entry.fields.map(f => (
+              <div key={f.key} className="space-y-1.5">
+                <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
+                <input
+                  type={f.type ?? "text"}
+                  placeholder={f.placeholder}
+                  value={fields[f.key] ?? ""}
+                  onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  autoComplete="off"
+                  className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-primary/50 rounded-none"
+                />
+                {f.hint && (
+                  <div className="flex items-start gap-1.5 mt-1">
+                    <Info className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+                    <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">{f.hint}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Password field disclaimer */}
+            {entry.fields.some(f => f.type === "password") && (
+              <div className="flex items-start gap-1.5 border border-border/30 bg-muted/10 px-3 py-2">
+                <Info className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+                <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">
+                  Campos de token/senha ficam em branco mesmo se você já conectou antes. Se precisar atualizar, insira o novo valor. Para manter o atual, deixe em branco e o NexOS mantém o token salvo.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
-          {entry.fields.map(f => (
-            <div key={f.key} className="space-y-1.5">
-              <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
-              <input
-                type={f.type ?? "text"}
-                placeholder={f.placeholder}
-                value={fields[f.key] ?? ""}
-                onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
-                className="w-full bg-background border border-border/50 px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary/50 rounded-none"
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="border-t border-border/50 px-5 py-4 flex gap-3">
-          <Button onClick={handleConnect} disabled={loading} className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9">
+        {/* ── Footer ── */}
+        <div className="border-t border-border/50 px-5 py-4 flex gap-3 shrink-0">
+          <Button onClick={handleConnect} disabled={loading} className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
             Conectar
           </Button>
-          <Button variant="outline" onClick={onClose} className="font-mono uppercase tracking-widest rounded-none border-border/50 h-9 px-4">
+          <Button variant="outline" onClick={onClose} className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-5">
             Cancelar
           </Button>
         </div>
