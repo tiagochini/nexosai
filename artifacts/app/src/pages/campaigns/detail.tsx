@@ -622,6 +622,11 @@ export default function CampaignDetail() {
                 <FileText className="h-3.5 w-3.5" />Briefing
               </Button>
             </Link>
+            <Link href={`/campaigns/${campaign.id}/creatives`}>
+              <Button variant="outline" className="font-mono uppercase tracking-widest rounded-none gap-2 border-primary/40 hover:border-primary text-primary hover:bg-primary/10 h-9 px-3 text-xs">
+                <Layers className="h-3.5 w-3.5" />Criativos
+              </Button>
+            </Link>
             <Button variant="outline" onClick={() => setLocation("/sequences")} className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-xs">
               <FileSpreadsheet className="h-3.5 w-3.5" />Sequências
             </Button>
