@@ -591,7 +591,7 @@ export default function CampaignDetail() {
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">
-              <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground break-all">
+              <h1 className="text-xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground break-words">
                 {campaign.title}
               </h1>
               <Badge variant="outline" className={`font-mono uppercase text-[11px] tracking-widest rounded-none px-2 py-1 border shrink-0 ${STATUS_COLOR[campaign.status] ?? "text-primary border-primary/40 bg-primary/10"}`}>
@@ -642,12 +642,13 @@ export default function CampaignDetail() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm overflow-x-auto">
+      <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 rounded-sm overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all rounded-sm whitespace-nowrap shrink-0
+            className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-mono uppercase tracking-widest transition-all rounded-sm whitespace-nowrap shrink-0 flex-1 justify-center
               ${activeTab === tab.id ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)]" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
-            <tab.icon className="h-3 w-3" />{tab.label}
+            <tab.icon className="h-3 w-3 shrink-0" />
+            <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
       </div>

@@ -600,12 +600,12 @@ export default function Dashboard() {
           <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/40 pointer-events-none" />
           <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/60 to-transparent pointer-events-none" />
           <div className="p-5">
-            <div className="flex items-start justify-between gap-4 mb-5">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
               <div className="min-w-0">
                 <div className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/60 mb-1">
                   Missão em Progresso
                 </div>
-                <h2 className="font-mono font-bold text-lg uppercase tracking-tight truncate text-foreground">
+                <h2 className="font-mono font-bold text-base sm:text-lg uppercase tracking-tight text-foreground break-words">
                   {activeCampaign.title}
                 </h2>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -621,7 +621,7 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              <div className="flex items-center gap-2 flex-wrap">
                 {pendingCheckpoints.length > 0 && (
                   <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse">
                     {pendingCheckpoints.length} Aprovação
@@ -633,7 +633,7 @@ export default function Dashboard() {
                 {(activeCampaign.status === "intake" || activeCampaign.status === "draft") ? (
                   <Link href={`/campaigns/${activeCampaign.id}/intake`}>
                     <Button size="sm" className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-primary">
-                      Continuar Briefing<ChevronRight className="h-2.5 w-2.5" />
+                      Briefing<ChevronRight className="h-2.5 w-2.5" />
                     </Button>
                   </Link>
                 ) : (
@@ -724,21 +724,23 @@ export default function Dashboard() {
       {campaigns.length > 0 && <ExecutionFlowchart campaigns={campaigns} />}
 
       {/* ── Smart Next Action ── */}
-      <div className={`border ${action.bg} p-4 flex items-center gap-4 relative overflow-hidden group`}>
+      <div className={`border ${action.bg} p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 relative overflow-hidden group`}>
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-current/[0.02] pointer-events-none" />
-        <div className={`w-10 h-10 border border-current/20 bg-current/10 flex items-center justify-center shrink-0 ${action.color}`}>
-          <ActionIcon className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
-            Próxima Ação Recomendada pela IA
+        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 border border-current/20 bg-current/10 flex items-center justify-center shrink-0 ${action.color}`}>
+            <ActionIcon className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <div className={`font-mono font-bold text-sm truncate ${action.color}`}>{action.title}</div>
-          <div className="font-mono text-xs text-muted-foreground/60 truncate mt-0.5">{action.sub}</div>
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
+              Próxima Ação Recomendada pela IA
+            </div>
+            <div className={`font-mono font-bold text-sm leading-snug ${action.color}`}>{action.title}</div>
+            <div className="font-mono text-xs text-muted-foreground/60 mt-0.5 leading-snug line-clamp-2 sm:line-clamp-1">{action.sub}</div>
+          </div>
         </div>
-        <Link href={action.href}>
+        <Link href={action.href} className="shrink-0">
           <Button variant="outline" size="sm"
-            className={`rounded-none font-mono uppercase text-[11px] tracking-widest shrink-0 border-current/30 hover:bg-current/10 ${action.color} gap-2 h-8`}>
+            className={`rounded-none font-mono uppercase text-[11px] tracking-widest w-full sm:w-auto border-current/30 hover:bg-current/10 ${action.color} gap-2 h-8`}>
             {action.cta}<ArrowRight className="h-3 w-3" />
           </Button>
         </Link>

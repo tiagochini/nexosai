@@ -916,7 +916,7 @@ export default function Settings() {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-0.5 border border-border/40 bg-card/30 p-0.5 rounded-sm w-fit">
+      <div className="flex gap-0.5 border border-border/40 bg-card/30 p-0.5 w-full overflow-x-auto scrollbar-none">
         {TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
@@ -924,14 +924,14 @@ export default function Settings() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 font-mono text-xs uppercase tracking-widest transition-all rounded-sm
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 font-mono text-[10px] sm:text-xs uppercase tracking-widest transition-all flex-1 justify-center whitespace-nowrap
                 ${active
                   ? "bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                 }`}
             >
-              <Icon className="h-3.5 w-3.5" />
-              {t.label}
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
           );
         })}

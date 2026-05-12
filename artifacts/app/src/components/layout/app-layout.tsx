@@ -302,16 +302,16 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
 
       <div className="flex-1 flex items-center justify-center md:justify-start md:ml-0 gap-2">
         <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer md:hidden group">
+          <div className="flex items-center gap-2 cursor-pointer md:hidden group">
             <img
               src={nexosLogo}
               alt="NexOS"
-              className="h-20 w-20 object-contain transition-all duration-300"
-              style={{ filter: "drop-shadow(0 0 16px hsl(var(--primary)/0.65))" }}
+              className="h-9 w-9 object-contain transition-all duration-300"
+              style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.65))" }}
             />
             <div>
-              <div className="font-mono font-black text-xl uppercase tracking-[0.15em] leading-tight">NexOS <span className="text-primary">AI</span></div>
-              <div className="font-mono text-xs uppercase tracking-[0.25em] text-primary/70 leading-tight">Plataforma de Lançamento</div>
+              <div className="font-mono font-black text-base uppercase tracking-[0.15em] leading-tight">NexOS <span className="text-primary">AI</span></div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary/60 leading-tight">Plataforma</div>
             </div>
           </div>
         </Link>

@@ -172,15 +172,15 @@ export default function AffiliatePage() {
             <div className="font-mono text-sm text-yellow-400/70 uppercase tracking-widest">por conversão ativa</div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 text-center">
             {[
               { label: "Comissão recorrente", value: "Mensal" },
               { label: "Suporte completo", value: "Incluso" },
-              { label: "Materiais de marketing", value: "Prontos" },
+              { label: "Materiais", value: "Prontos" },
             ].map(item => (
-              <div key={item.label} className="border border-yellow-400/20 bg-yellow-400/5 p-3">
+              <div key={item.label} className="border border-yellow-400/20 bg-yellow-400/5 p-2 sm:p-3">
                 <div className="font-mono font-bold text-sm text-yellow-400">{item.value}</div>
-                <div className="font-mono text-[11px] text-yellow-400/50 uppercase tracking-widest mt-1">{item.label}</div>
+                <div className="font-mono text-[10px] sm:text-[11px] text-yellow-400/50 uppercase tracking-widest mt-1 leading-tight">{item.label}</div>
               </div>
             ))}
           </div>

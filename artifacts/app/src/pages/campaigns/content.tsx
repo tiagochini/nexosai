@@ -841,19 +841,19 @@ export default function ContentApproval() {
               </button>
             </Link>
           </div>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
-                <h1 className="text-2xl font-mono uppercase tracking-tighter font-bold">Aprovação de Conteúdo</h1>
+                <h1 className="text-xl sm:text-2xl font-mono uppercase tracking-tighter font-bold">Aprovação de Conteúdo</h1>
               </div>
-              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest line-clamp-1">
                 {campaign?.title ?? "Campanha"} · {pieces.length} peças · {pct}% aprovadas
               </p>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex flex-wrap gap-2 shrink-0">
               {pendingCount > 0 && (
-                <Button onClick={handleApproveAll} className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-9 text-xs">
+                <Button onClick={handleApproveAll} className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none">
                   <CheckCircle2 className="h-3.5 w-3.5" />Aprovar Tudo ({pendingCount})
                 </Button>
               )}
@@ -861,12 +861,12 @@ export default function ContentApproval() {
                 <Button
                   onClick={() => approveCampaignMutation.mutate()}
                   disabled={approveCampaignMutation.isPending}
-                  className="rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-9 text-xs"
+                  className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none"
                 >
                   {approveCampaignMutation.isPending
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     : <Send className="h-3.5 w-3.5" />}
-                  Aprovar e Lançar<ArrowRight className="h-3 w-3" />
+                  Lançar<ArrowRight className="h-3 w-3" />
                 </Button>
               )}
             </div>
@@ -890,14 +890,15 @@ export default function ContentApproval() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border border-border/50 bg-card/40 p-1 w-full overflow-x-auto">
+        <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 w-full overflow-x-auto scrollbar-none">
           {TABS.map(tab => {
             const Icon = tab.icon;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap flex-1 justify-center
+                className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap flex-1 justify-center
                   ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
-                <Icon className="h-3 w-3" />{tab.label}
+                <Icon className="h-3 w-3 shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
           })}

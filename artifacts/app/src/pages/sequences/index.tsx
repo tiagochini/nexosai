@@ -36,16 +36,16 @@ export default function SequencesList() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between border-b border-border/50 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/50 pb-5">
         <div>
-          <h1 className="text-4xl font-mono uppercase tracking-tighter font-bold text-foreground flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
             Matriz de Sequências
           </h1>
-          <p className="text-sm text-muted-foreground mt-2 font-mono uppercase tracking-widest">Canais de disparo e automação programada</p>
+          <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-widest">Canais de disparo e automação programada</p>
         </div>
         <Link href="/sequences/new">
-          <Button className="font-mono uppercase tracking-widest font-bold rounded-none gap-2 btn-weapon-primary px-6">
-            <Plus className="h-4 w-4" />
+          <Button className="font-mono uppercase tracking-widest font-bold rounded-none gap-2 btn-weapon-primary h-10 px-5 text-xs w-full sm:w-auto">
+            <Plus className="h-3.5 w-3.5" />
             Nova Sequência
           </Button>
         </Link>
@@ -74,52 +74,48 @@ export default function SequencesList() {
         ) : (
           <div className="divide-y divide-border/50">
             {data?.sequences?.map(seq => (
-              <div key={seq.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between table-row-glow group gap-4 relative">
-                <div className="flex items-start gap-5">
-                  <div className="w-10 h-10 border border-border/50 bg-background/50 flex items-center justify-center shrink-0 relative">
+              <div key={seq.id} className="p-4 sm:p-6 flex flex-col gap-3 table-row-glow group relative">
+                <div className="flex items-start gap-3 sm:gap-5">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 border border-border/50 bg-background/50 flex items-center justify-center shrink-0 relative">
                     <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <Workflow className="h-4 w-4 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-bold font-mono uppercase tracking-wider text-lg group-hover:text-primary transition-colors">{seq.name}</h3>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground mt-2 uppercase font-mono tracking-widest">
-                      <span className="flex items-center gap-2 border border-border/50 px-2 py-1 bg-background/30 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className="font-bold font-mono uppercase tracking-wider text-base group-hover:text-primary transition-colors">{seq.name}</h3>
+                      {getStatusBadge(seq.status)}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground uppercase font-mono tracking-widest">
+                      <span className="flex items-center gap-1.5 border border-border/50 px-2 py-0.5 bg-background/30">
                         <span className="opacity-50">Modelo:</span> <span className="text-primary font-bold">{getModelName(seq.model)}</span>
                       </span>
-                      <span className="flex items-center gap-2 border border-border/50 px-2 py-1 bg-background/30 shadow-sm">
+                      <span className="flex items-center gap-1.5 border border-border/50 px-2 py-0.5 bg-background/30">
                         <span className="opacity-50">Duração:</span> <span className="text-foreground font-bold">{seq.totalDays} dias</span>
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 pt-4 md:pt-0">
-                  {getStatusBadge(seq.status)}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link href={`/sequences/${seq.id}`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 btn-weapon-outline">
-                        <Eye className="h-3 w-3 mr-2" />
-                        Detalhes
-                      </Button>
-                    </Link>
-                    <Link href={`/sequences/${seq.id}/calendar`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 btn-weapon-outline">
-                        <Calendar className="h-3 w-3 mr-2" />
-                        Calendário
-                      </Button>
-                    </Link>
-                    <Link href={`/sequences/${seq.id}/today`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all">
-                        <Activity className="h-3 w-3 mr-2" />
-                        Operação
-                      </Button>
-                    </Link>
-                    <Link href={`/sequences/${seq.id}/analytics`}>
-                      <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest h-8 px-3 btn-weapon-outline">
-                        <BarChart className="h-3 w-3 mr-2" />
-                        Métricas
-                      </Button>
-                    </Link>
-                  </div>
+                <div className="flex flex-wrap gap-1.5 pl-12 sm:pl-15">
+                  <Link href={`/sequences/${seq.id}`}>
+                    <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-7 px-2.5 btn-weapon-outline">
+                      <Eye className="h-3 w-3 mr-1.5" />Detalhes
+                    </Button>
+                  </Link>
+                  <Link href={`/sequences/${seq.id}/calendar`}>
+                    <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-7 px-2.5 btn-weapon-outline">
+                      <Calendar className="h-3 w-3 mr-1.5" />Calendário
+                    </Button>
+                  </Link>
+                  <Link href={`/sequences/${seq.id}/today`}>
+                    <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-7 px-2.5 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all">
+                      <Activity className="h-3 w-3 mr-1.5" />Operação
+                    </Button>
+                  </Link>
+                  <Link href={`/sequences/${seq.id}/analytics`}>
+                    <Button variant="outline" size="sm" className="rounded-none font-mono uppercase text-[10px] tracking-widest h-7 px-2.5 btn-weapon-outline">
+                      <BarChart className="h-3 w-3 mr-1.5" />Métricas
+                    </Button>
+                  </Link>
                 </div>
               </div>
             ))}
