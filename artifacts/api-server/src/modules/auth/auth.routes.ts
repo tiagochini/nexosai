@@ -13,7 +13,7 @@ const registerSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().optional(),
-  locale: z.enum(["pt-BR", "en-US", "es-LA"]).default("pt-BR"),
+  locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).default("pt-BR"),
 });
 
 const loginSchema = z.object({
@@ -80,6 +80,30 @@ router.post("/refresh", async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+const updateProfileSchema = z.object({
+  locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).optional(),
+  name: z.string().min(2).optional(),
+});
+
+router.patch("/me", requireAuth, async (req, res): Promise<void> => {
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { locale, name } = parsed.data;
+  if (!locale && !name) {
+    res.status(400).json({ error: "Nenhum campo para atualizar", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const updates: Record<string, unknown> = {};
+  if (locale) updates.locale = locale;
+  if (name) updates.name = name;
+
+  await db.update(usersTable).set(updates).where(eq(usersTable.id, req.auth.userId));
+  res.json({ ok: true });
 });
 
 router.get("/me", requireAuth, async (req, res): Promise<void> => {

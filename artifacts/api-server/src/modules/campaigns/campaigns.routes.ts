@@ -44,7 +44,7 @@ const createCampaignSchema = z.object({
   track: z
     .enum(["six_digits", "eight_digits", "ten_digits", "not_applicable"])
     .default("six_digits"),
-  locale: z.enum(["pt-BR", "en-US", "es-LA"]).default("pt-BR"),
+  locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).default("pt-BR"),
   intakeData: z.record(z.string(), z.unknown()).default({}),
 });
 

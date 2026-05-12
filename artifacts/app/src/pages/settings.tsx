@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   User, Building2, ShieldCheck, CreditCard, Copy,
   CheckCircle2, Loader2, Eye, EyeOff, ExternalLink, Zap,
-  Wifi, WifiOff, Plus, XCircle, AlertTriangle, Link2,
+  Wifi, WifiOff, Plus, XCircle, AlertTriangle, Link2, Globe,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 
@@ -51,13 +51,24 @@ function FieldRow({ label, sublabel, children }: { label: string; sublabel?: str
   );
 }
 
+type Locale = "pt-BR" | "en-US" | "en-AU" | "es-LA";
+
+const LOCALE_OPTIONS: { value: Locale; label: string; flag: string; sublabel: string }[] = [
+  { value: "pt-BR", label: "Português (BR)",  flag: "🇧🇷", sublabel: "Brasil" },
+  { value: "en-US", label: "English (US)",    flag: "🇺🇸", sublabel: "United States" },
+  { value: "en-AU", label: "English (AU)",    flag: "🇦🇺", sublabel: "Australia" },
+  { value: "es-LA", label: "Español (LA)",    flag: "🇲🇽", sublabel: "Latinoamérica" },
+];
+
 // ── Profile Tab ───────────────────────────────────────────────────────────────
 function ProfileTab() {
   const { user, workspace } = useAuth();
   const queryClient = useQueryClient();
   const [name, setName] = useState(user?.name ?? "");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [savingLocale, setSavingLocale] = useState(false);
   const [copied, setCopied] = useState(false);
+  const currentLocale = (user as { locale?: Locale } | null)?.locale ?? "pt-BR";
 
   useEffect(() => { setName(user?.name ?? ""); }, [user?.name]);
 
@@ -77,6 +88,24 @@ function ProfileTab() {
       toast.error("Erro ao salvar nome.");
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleSetLocale = async (locale: Locale) => {
+    if (locale === currentLocale || savingLocale) return;
+    setSavingLocale(true);
+    try {
+      await customFetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      });
+      toast.success("Idioma atualizado com sucesso.");
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+    } catch {
+      toast.error("Erro ao salvar idioma.");
+    } finally {
+      setSavingLocale(false);
     }
   };
 
@@ -127,6 +156,41 @@ function ProfileTab() {
           <div className="font-mono text-sm text-muted-foreground h-10 flex items-center px-3 border border-border/30 bg-muted/10">
             {user?.email ?? "—"}
           </div>
+        </FieldRow>
+
+        <FieldRow label="Idioma" sublabel="Idioma da plataforma">
+          <div className="flex flex-wrap gap-2">
+            {LOCALE_OPTIONS.map(opt => {
+              const isActive = currentLocale === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => void handleSetLocale(opt.value)}
+                  disabled={savingLocale}
+                  className={`flex items-center gap-2.5 px-3 py-2 border font-mono text-xs transition-all rounded-none ${
+                    isActive
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/40 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  <span className="text-base leading-none">{opt.flag}</span>
+                  <div className="text-left">
+                    <div className="font-semibold leading-tight">{opt.label}</div>
+                    <div className="text-[10px] uppercase tracking-wider opacity-60">{opt.sublabel}</div>
+                  </div>
+                  {isActive && (
+                    savingLocale
+                      ? <Loader2 className="h-3 w-3 animate-spin ml-1" />
+                      : <CheckCircle2 className="h-3 w-3 text-primary ml-1" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <p className="font-mono text-[11px] text-muted-foreground/50 mt-2 uppercase tracking-widest">
+            <Globe className="inline h-3 w-3 mr-1 opacity-60" />
+            Define o idioma das cópias e relatórios gerados pela IA
+          </p>
         </FieldRow>
       </SectionCard>
 

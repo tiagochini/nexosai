@@ -27,7 +27,7 @@ export interface RegisterInput {
   password: string;
   name: string;
   phone?: string;
-  locale?: "pt-BR" | "en-US" | "es-LA";
+  locale?: "pt-BR" | "en-US" | "en-AU" | "es-LA";
 }
 
 export interface LoginInput {

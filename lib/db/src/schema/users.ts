@@ -9,7 +9,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const localeEnum = pgEnum("locale", ["pt-BR", "en-US", "es-LA"]);
+export const localeEnum = pgEnum("locale", ["pt-BR", "en-US", "en-AU", "es-LA"]);
 
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -41,7 +41,7 @@ export const registerUserSchema = z.object({
   password: z.string().min(8),
   name: z.string().min(2),
   phone: z.string().optional(),
-  locale: z.enum(["pt-BR", "en-US", "es-LA"]).default("pt-BR"),
+  locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).default("pt-BR"),
 });
 
 export const loginUserSchema = z.object({
