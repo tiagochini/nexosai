@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRoute, Link, useLocation } from "wouter";
+import { useRoute, Link, useLocation, useSearch } from "wouter";
 import {
   useGetCampaign,
   useExecuteCampaign,
@@ -187,10 +187,12 @@ export default function CampaignDetail() {
   const campaignId = params?.id || "";
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas">("comando");
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [bypassLaunchLoading, setBypassLaunchLoading] = useState(false);
+  const autoLaunchFired = useRef(false);
 
   const { data, isLoading } = useGetCampaign(campaignId, {
     query: {
@@ -361,6 +363,18 @@ export default function CampaignDetail() {
       },
     },
   });
+
+  // Auto-trigger launch when redirected from content approval with ?autolaunch=1
+  useEffect(() => {
+    if (!campaign) return;
+    const qs = new URLSearchParams(searchString);
+    if (qs.get("autolaunch") !== "1") return;
+    if (autoLaunchFired.current) return;
+    if (campaign.status !== "approved") return;
+    autoLaunchFired.current = true;
+    window.history.replaceState(null, "", `/campaigns/${campaignId}`);
+    executeMutation.mutate({ campaignId, data: { phase: "launch" as CampaignExecuteInputPhase } });
+  }, [campaign?.status, searchString, campaignId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Approve/reject content ─────────────────────────────────────────────────────
   const [contentActionLoading, setContentActionLoading] = useState<string | null>(null);

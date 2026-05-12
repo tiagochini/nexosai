@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link, useLocation } from "wouter";
+import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
@@ -507,9 +507,9 @@ export default function ContentApproval() {
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Conteúdo aprovado! Campanha pronta para lançamento.");
+      toast.success("Conteúdo aprovado! Iniciando lançamento...");
       queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
-      setLocation(`/campaigns/${campaignId}`);
+      setLocation(`/campaigns/${campaignId}?autolaunch=1`);
     },
     onError: (err: Error) => {
       toast.error(err.message ?? "Erro ao aprovar campanha");
