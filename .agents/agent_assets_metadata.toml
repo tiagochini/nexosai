@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "dQRvRFF2gW3AHWPIOmGGF"
@@ -18,3 +17,9 @@ id = "jsAZaFNQMtcXTRPxOMF7o"
 uri = "file://artifacts/video-nexos/public/images/diagnostic_grid.png"
 type = "image"
 title = "diagnostic_grid"
+
+[[outputs]]
+id = "AQQ5sBmzcHyazMze0m2Az"
+uri = "file://NexOS_AI_Audit_Report_2026.pdf"
+type = "pdf"
+title = "NexOS AI — Relatório de Auditoria Técnica 2026 (PT-BR + EN-US)"
