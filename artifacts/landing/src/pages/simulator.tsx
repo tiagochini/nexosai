@@ -134,6 +134,7 @@ const DAY_CONFIGS: DayConfig[] = [
   { day: 5, phase: "Abertura do Carrinho", phaseColor: "text-success",    reachEstimate: 22000, leadsEstimate: 440, groupJoins: 312, label: "Dia 5", report: "CARRINHO ABERTO. 22k alcance simultâneo. Primeiras vendas chegando. Retargeting ativo em todas as plataformas." },
   { day: 6, phase: "Meio do Carrinho",     phaseColor: "text-yellow-400", reachEstimate: 680,   leadsEstimate: 204, groupJoins: 178, label: "Dia 6", report: "Sequência de objeções disparada. WhatsApp VIP com 87% leitura. Escassez progressiva ativada." },
   { day: 7, phase: "Fechamento",           phaseColor: "text-red-400",    reachEstimate: 1400,  leadsEstimate: 168, groupJoins: 142, label: "Dia 7", report: "ÚLTIMA CHANCE. Urgência máxima em todas as plataformas. Last call disparado. Conversão final em andamento." },
+  { day: 8, phase: "Remarketing · Oferta Final", phaseColor: "text-orange-500", reachEstimate: 4200, leadsEstimate: 89, groupJoins: 0, label: "Dia 8", report: "Segmento de quem visitou mas não comprou reativado (est. 1.240 pessoas). Produto reofertado sem bônus e sem onboarding ao vivo — só acesso ao conteúdo, preço reduzido. Sequência de e-mail exclusiva para esse segmento." },
 ];
 
 // ── Platform Mockup Components ─────────────────────────────────────────────────
@@ -673,10 +674,44 @@ function DayRevealStep({ lead, onFinish }: { lead: LeadData; onFinish: () => voi
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
               <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">
-                Publicando em <strong className="text-foreground">TikTok · Instagram · Facebook</strong> · 2 horários por plataforma
+                {day.day === 8
+                  ? <>Segmento: <strong className="text-foreground">não-compradores</strong> · via TikTok · Instagram · Facebook</>
+                  : <>Publicando em <strong className="text-foreground">TikTok · Instagram · Facebook</strong> · 2 horários por plataforma</>}
               </span>
             </div>
           </div>
+
+          {/* Remarketing degraded-offer card (Day 8 only) */}
+          {day.day === 8 && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-600 border border-orange-500/30 bg-orange-500/5 px-4 py-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-orange-400 font-bold">Oferta degradada · só para não-compradores</span>
+              </div>
+              <p className="font-mono text-[11px] text-muted-foreground/75 leading-relaxed">
+                A NEXOS AI segmenta automaticamente quem viu mas não comprou e relança o produto com um pacote menor — preço reduzido, sem os bônus do lançamento original.
+              </p>
+              <div className="space-y-1.5">
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-2">O que foi removido nesta oferta:</div>
+                {[
+                  { icon: "✗", label: "Onboarding ao vivo",               kept: false },
+                  { icon: "✗", label: "Suporte prioritário por WhatsApp",  kept: false },
+                  { icon: "✗", label: "Acesso ao grupo exclusivo VIP",     kept: false },
+                  { icon: "✓", label: "Acesso ao conteúdo principal",      kept: true  },
+                  { icon: "✓", label: "Suporte básico por e-mail",         kept: true  },
+                ].map(f => (
+                  <div key={f.label} className="flex items-center gap-2">
+                    <span className={`font-mono text-[11px] font-bold shrink-0 ${f.kept ? "text-success" : "text-red-400"}`}>{f.icon}</span>
+                    <span className={`font-mono text-[11px] ${f.kept ? "text-foreground/80" : "text-muted-foreground/40 line-through"}`}>{f.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-orange-500/20 pt-3 flex items-center justify-between">
+                <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">Público-alvo</span>
+                <span className="font-mono text-[11px] font-bold text-orange-400">~1.240 visitantes não-compradores</span>
+              </div>
+            </div>
+          )}
 
           {/* TikTok post */}
           <div className={`transition-all duration-700 ${revealedPosts >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
@@ -807,7 +842,7 @@ function SummaryStep({ lead }: { lead: LeadData }) {
   const totalLeads = DAY_CONFIGS.reduce((s, d) => s + d.leadsEstimate, 0);
   const totalPieces = 21;
   const manualHours = 23;
-  const signupUrl = `/app/register?ref=sim&nome=${encodeURIComponent(lead.firstName)}&email=${encodeURIComponent(lead.email)}&produto=${encodeURIComponent(lead.productName)}&tipo=${lead.productType}`;
+  const signupUrl = `/register?ref=sim&nome=${encodeURIComponent(lead.firstName)}&email=${encodeURIComponent(lead.email)}&produto=${encodeURIComponent(lead.productName)}&tipo=${lead.productType}`;
 
   const cartOpen = config?.cartOpen ?? false;
   const checkoutUrl = config?.checkoutUrl ?? signupUrl;
@@ -903,13 +938,12 @@ function SummaryStep({ lead }: { lead: LeadData }) {
               <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
               <span className="font-mono text-[11px] text-success font-bold uppercase tracking-widest">Carrinho aberto agora</span>
             </div>
-            <a href={checkoutUrl} className="block w-full" target="_blank" rel="noopener noreferrer">
-              <button className="w-full h-16 font-mono uppercase tracking-widest text-base font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ background: "linear-gradient(135deg, hsl(142,76%,36%) 0%, hsl(142,70%,45%) 100%)", color: "white", borderRadius: 4 }}>
-                <ShoppingCart className="h-5 w-5" />
-                Garantir minha vaga — {lead.productName}
-                <ExternalLink className="h-4 w-4" />
-              </button>
+            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer"
+              className="w-full h-16 font-mono uppercase tracking-widest text-base font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, hsl(142,76%,36%) 0%, hsl(142,70%,45%) 100%)", color: "white", borderRadius: 4, display: "flex" }}>
+              <ShoppingCart className="h-5 w-5" />
+              Garantir minha vaga — {lead.productName}
+              <ExternalLink className="h-4 w-4" />
             </a>
             <div className="flex items-center justify-center gap-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
               <span className="flex items-center gap-1"><Shield className="h-3 w-3" />Pagamento seguro</span>
@@ -948,33 +982,32 @@ function SummaryStep({ lead }: { lead: LeadData }) {
             {hasGroup ? (
               <div className="space-y-2">
                 {whatsappUrl && (
-                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
-                    <button className="w-full h-14 font-mono uppercase tracking-widest text-sm font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
-                      style={{ background: "linear-gradient(135deg, #128c7e 0%, #25d366 100%)", color: "white", borderRadius: 4 }}>
-                      <MessageSquare className="h-5 w-5" />
-                      Entrar no grupo VIP — WhatsApp
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
+                  <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+                    className="w-full h-14 font-mono uppercase tracking-widest text-sm font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
+                    style={{ background: "linear-gradient(135deg, #128c7e 0%, #25d366 100%)", color: "white", borderRadius: 4, display: "flex" }}>
+                    <MessageSquare className="h-5 w-5" />
+                    Entrar no grupo VIP — WhatsApp
+                    <ArrowRight className="h-4 w-4" />
                   </a>
                 )}
                 {telegramUrl && (
-                  <a href={telegramUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
-                    <button className="w-full h-12 font-mono uppercase tracking-widest text-sm font-bold flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98] border border-blue-400/50 bg-blue-400/10 text-blue-400">
-                      <Send className="h-4 w-4" />
-                      Entrar no Telegram
-                    </button>
+                  <a href={telegramUrl} target="_blank" rel="noopener noreferrer"
+                    className="w-full h-12 font-mono uppercase tracking-widest text-sm font-bold flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98] border border-blue-400/50 bg-blue-400/10 text-blue-400"
+                    style={{ display: "flex", borderRadius: 4 }}>
+                    <Send className="h-4 w-4" />
+                    Entrar no Telegram
                   </a>
                 )}
               </div>
             ) : (
-              <a href={signupUrl} className="block w-full">
-                <button className="w-full h-14 font-mono uppercase tracking-widest text-sm font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(261,80%,60%) 100%)", color: "white", borderRadius: 4 }}>
-                  <Zap className="h-5 w-5" />
-                  Criar conta e ser avisado na abertura
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </a>
+              <button
+                onClick={() => { window.location.href = signupUrl; }}
+                className="w-full h-14 font-mono uppercase tracking-widest text-sm font-black flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(261,80%,60%) 100%)", color: "white", borderRadius: 4 }}>
+                <Zap className="h-5 w-5" />
+                Criar conta e ser avisado na abertura
+                <ArrowRight className="h-4 w-4" />
+              </button>
             )}
             <div className="flex items-center justify-center gap-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
               <span className="flex items-center gap-1"><Shield className="h-3 w-3" />Sem spam</span>
