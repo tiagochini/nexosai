@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { setAuthTokenGetter } from "@workspace/api-client-react/custom-fetch";
+import { setAuthTokenGetter, setUnauthorizedHandler } from "@workspace/api-client-react/custom-fetch";
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import type { User, Workspace } from "@workspace/api-client-react";
 
@@ -83,9 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setGlobalRefresh(null);
   });
 
-  // ── Auth token getter — auto-refreshes if localStorage is out of date ─────
+  // ── Auth token getter + 401 auto-retry handler ────────────────────────────
   useEffect(() => {
     setAuthTokenGetter(() => localStorage.getItem("accessToken"));
+    setUnauthorizedHandler(silentRefresh);
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   // ── Proactive refresh every 12 min while logged in ────────────────────────

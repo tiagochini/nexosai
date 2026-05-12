@@ -143,7 +143,10 @@ export default function AgentChat() {
   const sendMessage = async (overrideMsg?: string) => {
     const text = (overrideMsg ?? input).trim();
     if (!text || sending) return;
-    setInput("");
+
+    // Only clear input after we know the message was received — never before.
+    // This way, if the request fails (401 token expiry, network error, etc.),
+    // the user's text is preserved and they can retry without retyping.
     const newMsg: ChatMsg = { role: "user", content: text, timestamp: new Date() };
     const withUser = [...messages, newMsg];
     setMessages(withUser);
@@ -156,19 +159,32 @@ export default function AgentChat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentRole: role, message: text,
-          history: history.slice(-12), // last 12 turns to stay within context
+          history: history.slice(-12),
           contextMode,
           ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
         }),
       });
 
+      // Clear input only on success
+      setInput("");
       const aiMsg: ChatMsg = { role: "assistant", content: res.response, timestamp: new Date() };
       const withAi = [...withUser, aiMsg];
       setMessages(withAi);
       saveChatHistory(role, selectedCampaign, withAi);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro de comunicação");
-      setMessages(messages); // revert
+      // Revert the optimistic user message so the chat stays consistent,
+      // but keep the input intact so the user can retry without retyping.
+      setMessages(messages);
+      if (!overrideMsg) {
+        // Only preserve typed input — suggestion clicks don't need it
+        setInput(text);
+      }
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Erro de comunicação. Sua mensagem foi preservada — tente enviar novamente.",
+        { duration: 5000 },
+      );
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);

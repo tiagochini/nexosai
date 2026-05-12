@@ -18,6 +18,24 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
 
+// Called on HTTP 401. Should attempt a token refresh and return true if it
+// succeeded (the request will be retried once with the fresh token).
+export type UnauthorizedHandler = () => Promise<boolean>;
+let _unauthorizedHandler: UnauthorizedHandler | null = null;
+
+/**
+ * Register a callback that is invoked whenever a 401 Unauthorized response is
+ * received.  If the callback returns `true` the original request is retried
+ * once with whatever token the `authTokenGetter` now returns.  This allows the
+ * web app to silently refresh the JWT and transparently replay the call without
+ * losing the in-flight payload.
+ *
+ * Pass `null` to clear the handler.
+ */
+export function setUnauthorizedHandler(fn: UnauthorizedHandler | null): void {
+  _unauthorizedHandler = fn;
+}
+
 /**
  * Set a base URL that is prepended to every relative request URL
  * (i.e. paths that start with `/`).
@@ -360,7 +378,21 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  let response = await fetch(input, { ...init, method, headers });
+
+  // ── 401 auto-retry ─────────────────────────────────────────────────────────
+  // If we get a 401 and an unauthorizedHandler is registered, attempt a token
+  // refresh and replay the request once with the fresh token.
+  if (response.status === 401 && _unauthorizedHandler) {
+    const refreshed = await _unauthorizedHandler();
+    if (refreshed && _authTokenGetter) {
+      const freshToken = await _authTokenGetter();
+      if (freshToken) {
+        headers.set("authorization", `Bearer ${freshToken}`);
+      }
+      response = await fetch(input, { ...init, method, headers });
+    }
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

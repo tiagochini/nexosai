@@ -353,23 +353,26 @@ export default function CampaignIntake() {
   const handleSend = async () => {
     if (!inputValue.trim() || sending) return;
     const userMsg = inputValue.trim();
-    setInputValue("");
 
+    // Do NOT clear input before the request succeeds. If the token is expired
+    // or the network fails, the user's text must be preserved for retry.
     const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMsg }];
     setMessages(newMessages);
     setSending(true);
-    setPendingProposal(null); // clear any pending proposal when user types
+    setPendingProposal(null);
 
     try {
       const history = newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
       const result = await callConversation({ message: userMsg, history });
+
+      // Clear input only after confirmed success
+      setInputValue("");
 
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
       if (result.progress != null) setProgress(result.progress);
       if (result.isComplete) setChatComplete(true);
 
-      // If AI proposed a type, show the proposal card
       if (result.proposedType && result.proposedTrack) {
         setPendingProposal({
           type: result.proposedType,
@@ -381,19 +384,17 @@ export default function CampaignIntake() {
       queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
       queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
     } catch (err) {
-      const is401 = err instanceof ApiError && err.status === 401;
-      if (is401) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant" as const,
-            content: "⚠️ Sua sessão expirou enquanto você escrevia. A página será recarregada automaticamente para reconectar.",
-          },
-        ]);
-        setTimeout(() => window.location.reload(), 2500);
-      } else {
-        toast.error("Erro de comunicação com a IA. Tente novamente.");
-      }
+      // Revert optimistic user message and restore the input text.
+      // The customFetch 401-retry already attempted a token refresh, so if we
+      // still land here it was a genuine failure — let the user retry manually.
+      setMessages(messages);
+      setInputValue(userMsg);
+      toast.error(
+        err instanceof ApiError && err.status === 401
+          ? "Sessão expirada. Tente enviar novamente — o token foi renovado automaticamente."
+          : "Erro de comunicação com a IA. Sua mensagem foi preservada. Tente novamente.",
+        { duration: 6000 },
+      );
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
