@@ -60,9 +60,10 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       label: "Ferramentas",
       expertOnly: true,
       items: [
-        { name: "VSL Studio",   href: "/vsls",       icon: Video      },
-        { name: "Social Media", href: "/social",     icon: Share2     },
-        { name: "Sequências",   href: "/sequences",  icon: Workflow   },
+        { name: "VSL Studio",     href: "/vsls",              icon: Video   },
+        { name: "Social Media",   href: "/social",            icon: Share2  },
+        { name: "Moderação Bot",  href: "/social/moderation", icon: Shield  },
+        { name: "Sequências",     href: "/sequences",         icon: Workflow },
         { name: "Receita",      href: "/revenue",    icon: DollarSign },
         { name: "Compliance",   href: "/compliance", icon: Shield     },
         ...(isAgency ? [

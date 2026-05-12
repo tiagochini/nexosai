@@ -5,6 +5,7 @@ import {
   timestamp,
   integer,
   pgEnum,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -36,6 +37,7 @@ export const workspacesTable = pgTable("workspaces", {
   logoUrl: text("logo_url"),
   brandName: text("brand_name"),
   customDomain: text("custom_domain"),
+  settings: jsonb("settings").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
