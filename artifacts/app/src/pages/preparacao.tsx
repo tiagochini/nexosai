@@ -208,7 +208,6 @@ function AiChat({ segment }: { segment: Segment }) {
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
-    setInput("");
     const userMsg: ChatMsg = { role: "user", content: text };
     const withUser = [...messages, userMsg];
     setMessages(withUser);
@@ -222,10 +221,14 @@ function AiChat({ segment }: { segment: Segment }) {
       const data = await res.json() as { reply?: string; error?: string };
       const aiReply = data.reply ?? "Ops, tive um problema. Tente novamente!";
       const withAi: ChatMsg[] = [...withUser, { role: "assistant", content: aiReply }];
+      // Clear input only after confirmed success
+      setInput("");
       setMessages(withAi);
       try { localStorage.setItem(storageKey, JSON.stringify(withAi.slice(-40))); } catch { /* ignore */ }
     } catch {
-      toast.error("Erro de conexão. Tente novamente.");
+      // Revert optimistic message and restore input
+      setMessages(messages);
+      toast.error("Erro de conexão. Sua mensagem foi preservada. Tente novamente.", { duration: 5000 });
     } finally {
       setLoading(false);
     }

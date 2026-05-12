@@ -449,13 +449,15 @@ export default function Onboarding() {
   const handleSend = async () => {
     if (!inputValue.trim() || sending || !path || !campaignId) return;
     const userMsg = inputValue.trim();
-    setInputValue("");
+
+    // Do NOT clear input before the request succeeds — if the token expires or
+    // the network fails the user's text must survive for retry.
     const newMessages = [...messages, { role: "user" as const, content: userMsg }];
     setMessages(newMessages);
     setSending(true);
 
     try {
-      const history = newMessages.slice(0, -1); // exclude the last user message since we send it separately
+      const history = newMessages.slice(0, -1);
       let endpoint = "";
       let body: Record<string, unknown> = { message: userMsg, history };
 
@@ -472,21 +474,21 @@ export default function Onboarding() {
         body = { message: userMsg, history };
       }
 
-      const res = await customFetch<Response>(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) throw new Error("Falha na resposta da IA");
-      const data = await res.json() as {
+      const data = await customFetch<{
         aiMessage?: string;
         message?: string;
         productProposals?: ProductProposal[];
         affiliateStrategy?: AffiliateStrategy;
         plan?: AudienceMonetizationPlan;
         isComplete?: boolean;
-      };
+      }>(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      // Only clear input after confirmed success
+      setInputValue("");
 
       const aiText = data.aiMessage ?? data.message ?? "...";
       const withAi: ChatMessage[] = [...newMessages, { role: "assistant", content: aiText }];
@@ -498,12 +500,14 @@ export default function Onboarding() {
       if (data.plan) setAudienceMonetizationPlan(data.plan);
       if (complete) setConversationComplete(true);
 
-      // Persist updated conversation
       if (path && campaignId) {
         saveOnboardingState({ path, campaignId, step, messages: withAi, conversationComplete: complete, audienceSubPath: audienceSubPath ?? undefined });
       }
     } catch {
-      toast.error("Erro de comunicação com a IA. Tente novamente.");
+      // Revert the optimistic user message and restore the typed text
+      setMessages(messages);
+      setInputValue(userMsg);
+      toast.error("Erro de comunicação com a IA. Sua mensagem foi preservada. Tente novamente.", { duration: 6000 });
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
