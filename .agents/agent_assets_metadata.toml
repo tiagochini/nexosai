@@ -23,3 +23,15 @@ id = "AQQ5sBmzcHyazMze0m2Az"
 uri = "file://NexOS_AI_Audit_Report_2026.pdf"
 type = "pdf"
 title = "NexOS AI — Relatório de Auditoria Técnica 2026 (PT-BR + EN-US)"
+
+[[outputs]]
+id = "e1QYfZzpa0SCC7ZY2tKl0"
+uri = "file://NexOS_AI_Auditoria_PT.pdf"
+type = "pdf"
+title = "NexOS AI — Auditoria Técnica 2026 (Português)"
+
+[[outputs]]
+id = "qYhiWdPXC04MqPnWWJhWn"
+uri = "file://NexOS_AI_Audit_EN.pdf"
+type = "pdf"
+title = "NexOS AI — Technical Audit Report 2026 (English)"
