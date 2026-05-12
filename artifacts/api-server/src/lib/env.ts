@@ -22,6 +22,10 @@ export const env = {
   NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "nexos.ai",
   CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
   APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
+  META_APP_ID: process.env["META_APP_ID"] ?? "",
+  META_APP_SECRET: process.env["META_APP_SECRET"] ?? "",
+  TIKTOK_CLIENT_KEY: process.env["TIKTOK_CLIENT_KEY"] ?? "",
+  TIKTOK_CLIENT_SECRET: process.env["TIKTOK_CLIENT_SECRET"] ?? "",
   ALLOWED_ORIGINS: process.env["ALLOWED_ORIGINS"] ?? "",
   // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
   LAUNCH_CAMPAIGN_DATE: process.env["LAUNCH_CAMPAIGN_DATE"] ?? "",

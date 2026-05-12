@@ -53,6 +53,8 @@ interface CatalogEntry {
   required: boolean;
   fields: FieldDef[];
   guide: SetupGuide;
+  oauthPlatform?: "meta" | "tiktok";
+  oauthLabel?: string;
 }
 
 // ── Catalog ───────────────────────────────────────────────────────────────────
@@ -230,6 +232,8 @@ const CATALOG: CatalogEntry[] = [
       docsUrl: "https://developers.facebook.com/docs/instagram-api/getting-started",
       docsLabel: "Docs Instagram API",
     },
+    oauthPlatform: "meta",
+    oauthLabel: "Entrar com Meta",
   },
   {
     provider: "tiktok",
@@ -259,6 +263,8 @@ const CATALOG: CatalogEntry[] = [
       docsUrl: "https://developers.tiktok.com/doc/content-posting-api-get-started",
       docsLabel: "Docs TikTok Content API",
     },
+    oauthPlatform: "tiktok",
+    oauthLabel: "Entrar com TikTok",
   },
   {
     provider: "hotmart",
@@ -336,6 +342,8 @@ const CATALOG: CatalogEntry[] = [
       docsUrl: "https://developers.facebook.com/docs/marketing-api/get-started",
       docsLabel: "Docs Meta Marketing API",
     },
+    oauthPlatform: "meta",
+    oauthLabel: "Entrar com Meta",
   },
   {
     provider: "tiktok_ads",
@@ -363,6 +371,8 @@ const CATALOG: CatalogEntry[] = [
       docsUrl: "https://ads.tiktok.com/marketing_api/docs",
       docsLabel: "Docs TikTok Marketing API",
     },
+    oauthPlatform: "tiktok",
+    oauthLabel: "Entrar com TikTok",
   },
   {
     provider: "google_ads",
@@ -423,16 +433,35 @@ const CATALOG: CatalogEntry[] = [
 
 const CATEGORIES = ["Mensagens", "E-mail", "Social Orgânico", "Pagamentos", "Mídia Paga", "CRM"];
 
+// ── OAuth platform meta icons (inline SVG, no external deps) ─────────────────
+const MetaLogo = () => (
+  <svg viewBox="0 0 40 40" className="h-4 w-4" fill="none">
+    <path d="M20 7C13 7 7 13 7 20s6 13 13 13 13-6 13-13S27 7 20 7z" fill="#1877F2"/>
+    <path d="M22.5 16.5c-1.38 0-2.5 1.12-2.5 2.5v6h3v-5.5h2l.5-3H23v-1.5c0-.55.45-1 1-1h1.5v-2.5A8 8 0 0 0 22.5 11c-2.76 0-5 2.24-5 5v.5h-2v3h2V31h3v-6.5h2.5" fill="#fff"/>
+  </svg>
+);
+const TikTokLogo = () => (
+  <svg viewBox="0 0 40 40" className="h-4 w-4" fill="none">
+    <rect width="40" height="40" rx="8" fill="#010101"/>
+    <path d="M28 14.5a5.5 5.5 0 0 1-5.5-5.5h-3.5v14.5L19 28a3 3 0 1 1-3-3 3 3 0 0 1 .5.04V21.5A6.5 6.5 0 1 0 23 28V19.5A9 9 0 0 0 28 21v-3.5a5.47 5.47 0 0 1-3-.55V14.5z" fill="white"/>
+    <path d="M28 14.5a5.5 5.5 0 0 1-5.5-5.5h-3.5v14.5L19 28a3 3 0 1 1-3-3 3 3 0 0 1 .5.04V21.5A6.5 6.5 0 1 0 23 28V19.5A9 9 0 0 0 28 21v-3.5a5.47 5.47 0 0 1-3-.55V14.5" stroke="#69C9D0" strokeWidth=".5" fill="none"/>
+  </svg>
+);
+
 // ── Connect Modal ─────────────────────────────────────────────────────────────
 function ConnectModal({
-  entry, onClose, onConnect,
+  entry, onClose, onConnect, onOAuthSuccess,
 }: {
   entry: CatalogEntry;
   onClose: () => void;
   onConnect: (provider: Provider, fields: Record<string, string>) => void;
+  onOAuthSuccess: () => void;
 }) {
   const [fields, setFields] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const [oauthError, setOauthError] = useState<string | null>(null);
+  const [showManual, setShowManual] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const { guide } = entry;
 
@@ -441,6 +470,58 @@ function ConnectModal({
     try { onConnect(entry.provider, fields); }
     finally { setLoading(false); }
   };
+
+  const handleOAuth = async () => {
+    setOauthLoading(true);
+    setOauthError(null);
+    try {
+      const res = await customFetch<Response>(`/api/integrations/oauth/start/${entry.provider}`);
+      const body = await res.json() as { url?: string; error?: string; code?: string };
+
+      if (!res.ok || !body.url) {
+        if (body.code === "OAUTH_NOT_CONFIGURED") {
+          setOauthError("OAuth não configurado no servidor. Use a conexão manual abaixo.");
+          setShowManual(true);
+        } else {
+          setOauthError(body.error ?? "Erro ao iniciar OAuth.");
+        }
+        return;
+      }
+
+      const popup = window.open(body.url, "nexos_oauth", "width=620,height=700,scrollbars=yes,resizable=yes");
+
+      if (!popup) {
+        setOauthError("O popup foi bloqueado. Permita popups para este site e tente novamente.");
+        return;
+      }
+
+      const handler = (event: MessageEvent<{ type?: string; success?: boolean; provider?: string; error?: string }>) => {
+        if (event.data?.type !== "oauth_complete") return;
+        window.removeEventListener("message", handler);
+        setOauthLoading(false);
+        if (event.data.success) {
+          onOAuthSuccess();
+        } else {
+          setOauthError(event.data.error ?? "Falha na autenticação.");
+        }
+      };
+      window.addEventListener("message", handler);
+
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          window.removeEventListener("message", handler);
+          setOauthLoading(false);
+        }
+      }, 600);
+    } catch {
+      setOauthError("Erro de rede. Tente novamente.");
+      setOauthLoading(false);
+    }
+  };
+
+  const isOAuth = !!entry.oauthPlatform && !showManual;
+  const OAuthIcon = entry.oauthPlatform === "tiktok" ? TikTokLogo : MetaLogo;
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
@@ -465,7 +546,7 @@ function ConnectModal({
             <p className="text-[11px] font-mono text-muted-foreground/75 leading-relaxed">{entry.why}</p>
           </div>
 
-          {/* ── Warning (e.g. WhatsApp must be API, not app) ── */}
+          {/* ── Warning banner ── */}
           {guide.warning && (
             <div className="px-5 py-3 bg-yellow-400/8 border-b border-yellow-400/25 flex items-start gap-2">
               <ShieldAlert className="h-3.5 w-3.5 text-yellow-400 mt-0.5 shrink-0" />
@@ -473,111 +554,177 @@ function ConnectModal({
             </div>
           )}
 
-          {/* ── Prerequisites ── */}
-          {guide.prereqs.length > 0 && (
-            <div className="px-5 py-4 border-b border-border/30 space-y-2">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Antes de começar — você precisa ter:</div>
-              {guide.prereqs.map((p, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <div className="w-4 h-4 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="font-mono text-[9px] text-primary font-bold">{i + 1}</span>
-                  </div>
-                  <p className="font-mono text-[11px] text-foreground/75 leading-relaxed">{p}</p>
+          {/* ══ OAuth FAST PATH ══════════════════════════════════════════════ */}
+          {entry.oauthPlatform && !showManual && (
+            <div className="px-5 py-6 flex flex-col items-center gap-4 border-b border-border/30">
+              <div className="text-center">
+                <p className="font-mono text-xs text-muted-foreground/60 uppercase tracking-widest mb-1">Método recomendado</p>
+                <p className="font-mono text-[11px] text-muted-foreground/50">
+                  O NexOS vai abrir uma janela segura da plataforma. Faça login e autorize o acesso — tokens são capturados automaticamente.
+                </p>
+              </div>
+
+              {oauthError && (
+                <div className="w-full flex items-start gap-2 border border-yellow-400/30 bg-yellow-400/5 px-3 py-2">
+                  <AlertTriangle className="h-3.5 w-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                  <p className="font-mono text-[10px] text-yellow-300/80 leading-relaxed">{oauthError}</p>
                 </div>
-              ))}
+              )}
+
+              <button
+                onClick={handleOAuth}
+                disabled={oauthLoading}
+                className="w-full flex items-center justify-center gap-3 border-2 px-6 py-3.5 font-mono text-sm font-bold uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.99]"
+                style={{
+                  borderColor: entry.oauthPlatform === "meta" ? "#1877F2" : "#fe2c55",
+                  color: entry.oauthPlatform === "meta" ? "#1877F2" : "#fe2c55",
+                  background: entry.oauthPlatform === "meta" ? "rgba(24,119,242,0.07)" : "rgba(254,44,85,0.07)",
+                }}
+              >
+                {oauthLoading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <OAuthIcon />}
+                {oauthLoading ? "Aguardando autorização…" : (entry.oauthLabel ?? `Entrar com ${entry.oauthPlatform}`)}
+                {!oauthLoading && <ExternalLink className="h-3.5 w-3.5 opacity-60" />}
+              </button>
+
+              <div className="flex items-center gap-3 w-full">
+                <div className="flex-1 h-px bg-border/30" />
+                <button
+                  onClick={() => setShowManual(true)}
+                  className="font-mono text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 uppercase tracking-widest transition-colors"
+                >
+                  ou inserir credenciais manualmente
+                </button>
+                <div className="flex-1 h-px bg-border/30" />
+              </div>
             </div>
           )}
 
-          {/* ── Step-by-step guide (collapsible) ── */}
-          <div className="border-b border-border/30">
-            <button
-              onClick={() => setGuideOpen(v => !v)}
-              className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/10 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Info className="h-3.5 w-3.5 text-cyan-400" />
-                <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold">
-                  Passo a passo — como configurar
-                </span>
-              </div>
-              {guideOpen
-                ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" />
-                : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
-            </button>
+          {/* ══ MANUAL FORM (shown for non-OAuth or when user chose manual) ══ */}
+          {(!entry.oauthPlatform || showManual) && (
+            <>
+              {entry.oauthPlatform && showManual && (
+                <div className="px-5 py-2 border-b border-border/30 flex items-center justify-between bg-muted/5">
+                  <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">Inserção manual de credenciais</span>
+                  <button onClick={() => setShowManual(false)} className="font-mono text-[10px] text-primary hover:underline">
+                    ← Usar OAuth
+                  </button>
+                </div>
+              )}
 
-            {guideOpen && (
-              <div className="px-5 pb-4 space-y-3 bg-muted/5">
-                {guide.steps.map((s, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-5 h-5 border border-cyan-400/30 bg-cyan-400/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="font-mono text-[9px] text-cyan-400 font-bold">{i + 1}</span>
+              {/* Prerequisites (only for manual) */}
+              {guide.prereqs.length > 0 && (
+                <div className="px-5 py-4 border-b border-border/30 space-y-2">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Antes de começar — você precisa ter:</div>
+                  {guide.prereqs.map((p, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <div className="w-4 h-4 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="font-mono text-[9px] text-primary font-bold">{i + 1}</span>
+                      </div>
+                      <p className="font-mono text-[11px] text-foreground/75 leading-relaxed">{p}</p>
                     </div>
-                    <div>
-                      <div className="font-mono text-[11px] font-bold text-foreground">{s.title}</div>
-                      <p className="font-mono text-[10px] text-muted-foreground/65 leading-relaxed mt-0.5">{s.detail}</p>
-                      {s.url && (
-                        <a href={s.url} target="_blank" rel="noopener noreferrer"
-                          className="font-mono text-[10px] text-primary hover:underline flex items-center gap-1 mt-0.5">
-                          Abrir <ExternalLink className="h-2.5 w-2.5" />
-                        </a>
-                      )}
-                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Step-by-step guide (collapsible) */}
+              <div className="border-b border-border/30">
+                <button
+                  onClick={() => setGuideOpen(v => !v)}
+                  className="w-full px-5 py-3 flex items-center justify-between hover:bg-muted/10 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Info className="h-3.5 w-3.5 text-cyan-400" />
+                    <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold">
+                      Passo a passo — como encontrar as credenciais
+                    </span>
+                  </div>
+                  {guideOpen
+                    ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
+                </button>
+                {guideOpen && (
+                  <div className="px-5 pb-4 space-y-3 bg-muted/5">
+                    {guide.steps.map((s, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <div className="w-5 h-5 border border-cyan-400/30 bg-cyan-400/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="font-mono text-[9px] text-cyan-400 font-bold">{i + 1}</span>
+                        </div>
+                        <div>
+                          <div className="font-mono text-[11px] font-bold text-foreground">{s.title}</div>
+                          <p className="font-mono text-[10px] text-muted-foreground/65 leading-relaxed mt-0.5">{s.detail}</p>
+                          {s.url && (
+                            <a href={s.url} target="_blank" rel="noopener noreferrer"
+                              className="font-mono text-[10px] text-primary hover:underline flex items-center gap-1 mt-0.5">
+                              Abrir <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {guide.docsUrl && (
+                      <a href={guide.docsUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground/50 hover:text-primary transition-colors mt-1">
+                        <ExternalLink className="h-2.5 w-2.5" />
+                        {guide.docsLabel ?? "Documentação oficial"}
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Fields */}
+              <div className="p-5 space-y-5">
+                {entry.fields.map(f => (
+                  <div key={f.key} className="space-y-1.5">
+                    <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
+                    <input
+                      type={f.type ?? "text"}
+                      placeholder={f.placeholder}
+                      value={fields[f.key] ?? ""}
+                      onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      autoComplete="off"
+                      className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-primary/50 rounded-none"
+                    />
+                    {f.hint && (
+                      <div className="flex items-start gap-1.5 mt-1">
+                        <Info className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+                        <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">{f.hint}</p>
+                      </div>
+                    )}
                   </div>
                 ))}
-                {guide.docsUrl && (
-                  <a href={guide.docsUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground/50 hover:text-primary transition-colors mt-1">
-                    <ExternalLink className="h-2.5 w-2.5" />
-                    {guide.docsLabel ?? "Documentação oficial"}
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* ── Fields ── */}
-          <div className="p-5 space-y-5">
-            {entry.fields.map(f => (
-              <div key={f.key} className="space-y-1.5">
-                <label className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground/70">{f.label}</label>
-                <input
-                  type={f.type ?? "text"}
-                  placeholder={f.placeholder}
-                  value={fields[f.key] ?? ""}
-                  onChange={e => setFields(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  autoComplete="off"
-                  className="w-full bg-background border border-border/50 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-primary/50 rounded-none"
-                />
-                {f.hint && (
-                  <div className="flex items-start gap-1.5 mt-1">
+                {entry.fields.some(f => f.type === "password") && (
+                  <div className="flex items-start gap-1.5 border border-border/30 bg-muted/10 px-3 py-2">
                     <Info className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0 mt-0.5" />
-                    <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">{f.hint}</p>
+                    <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">
+                      Campos de token ficam em branco mesmo se você já conectou antes — o NexOS mantém o token salvo. Preencha apenas para atualizar.
+                    </p>
                   </div>
                 )}
               </div>
-            ))}
-
-            {/* Password field disclaimer */}
-            {entry.fields.some(f => f.type === "password") && (
-              <div className="flex items-start gap-1.5 border border-border/30 bg-muted/10 px-3 py-2">
-                <Info className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0 mt-0.5" />
-                <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">
-                  Campos de token/senha ficam em branco mesmo se você já conectou antes. Se precisar atualizar, insira o novo valor. Para manter o atual, deixe em branco e o NexOS mantém o token salvo.
-                </p>
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* ── Footer ── */}
         <div className="border-t border-border/50 px-5 py-4 flex gap-3 shrink-0">
-          <Button onClick={handleConnect} disabled={loading} className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-            Conectar
-          </Button>
-          <Button variant="outline" onClick={onClose} className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-5">
-            Cancelar
-          </Button>
+          {isOAuth ? (
+            <Button onClick={onClose} variant="outline" className="flex-1 font-mono uppercase tracking-widest rounded-none border-border/50 h-10">
+              Fechar
+            </Button>
+          ) : (
+            <>
+              <Button onClick={handleConnect} disabled={loading} className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
+                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                Salvar Credenciais
+              </Button>
+              <Button variant="outline" onClick={onClose} className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-5">
+                Cancelar
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -797,6 +944,11 @@ export default function IntegracoesPage() {
           entry={connectModal}
           onClose={() => setConnectModal(null)}
           onConnect={(provider, fields) => connectMutation.mutate({ provider, fields })}
+          onOAuthSuccess={() => {
+            toast.success("Integração conectada com sucesso via OAuth.");
+            setConnectModal(null);
+            queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+          }}
         />
       )}
     </div>

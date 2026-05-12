@@ -33,6 +33,7 @@ import demoRouter from "../modules/demo/demo.routes.js";
 import clientProfilesRouter from "../modules/client-profiles/client-profiles.routes.js";
 import simulatorRouter from "../modules/simulator/simulator.routes.js";
 import serverEventsRouter from "../modules/server-events/server-events.routes.js";
+import oauthRouter from "../modules/integrations/oauth.routes.js";
 
 const router: IRouter = Router();
 
@@ -70,5 +71,6 @@ router.use("/demo", demoRouter);
 router.use("/client-profiles", clientProfilesRouter);
 router.use("/simulator", simulatorRouter);
 router.use("/events", serverEventsRouter);
+router.use("/integrations/oauth", oauthRouter);
 
 export default router;
