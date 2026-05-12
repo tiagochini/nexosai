@@ -21,6 +21,8 @@ import {
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
 } from "lucide-react";
 import { CampaignBrief } from "@/components/campaign-brief";
+import { SocialPostPreview } from "@/components/social-post-preview";
+import type { PreviewPiece } from "@/components/social-post-preview";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -232,6 +234,57 @@ export default function CampaignDetail() {
       return res.json() as Promise<{ pieces: ContentPiece[] }>;
     },
   });
+
+  // ── Content preview query (for awaiting_approval visual banner) ────────────
+  const { data: previewContentData } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/content/preview`],
+    enabled: !!campaignId && campaign?.status === "awaiting_approval",
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
+      if (!res.ok) return { pieces: [] };
+      return res.json() as Promise<{ pieces: ContentPiece[] }>;
+    },
+  });
+
+  const VISUAL_PLATFORM_ORDER = ["instagram", "tiktok", "facebook"];
+  const previewSnippets: PreviewPiece[] = (() => {
+    const raw = previewContentData?.pieces ?? [];
+    if (raw.length === 0) return [];
+    const PLATFORM_MAP: Record<string, PreviewPiece["platform"]> = {
+      instagram_post: "instagram", instagram_reel: "instagram", instagram_story: "instagram",
+      tiktok_video: "tiktok", tiktok_reel: "tiktok", native_video: "tiktok",
+      facebook_post: "facebook", facebook_ad: "facebook",
+      email_campaign: "email", email: "email",
+      whatsapp_message: "whatsapp", whatsapp: "whatsapp",
+      ad_copy: "ads",
+    };
+    const TYPE_MAP: Record<string, PreviewPiece["type"]> = {
+      instagram_post: "post", instagram_reel: "reel", instagram_story: "story",
+      tiktok_video: "native_video", tiktok_reel: "native_video",
+      facebook_post: "post", facebook_ad: "ad",
+      email_campaign: "email", email: "email",
+      whatsapp_message: "message", whatsapp: "message",
+      ad_copy: "ad",
+    };
+    const mapped = raw.map((p, i): PreviewPiece => {
+      const rawType = p.type?.toLowerCase().replace(/\s+/g, "_") ?? "post";
+      const platform = (p.platform as PreviewPiece["platform"] | undefined) ?? PLATFORM_MAP[rawType] ?? "instagram";
+      return {
+        id: p.id,
+        platform,
+        type: TYPE_MAP[rawType] ?? "post",
+        dayIndex: i % 8,
+        title: `${platform} — ${rawType.replace(/_/g, " ")}`,
+        body: p.content,
+        status: p.status === "draft" ? "pending" : p.status as PreviewPiece["status"],
+        segment: "all",
+      };
+    });
+    const visual = mapped.filter(p => VISUAL_PLATFORM_ORDER.includes(p.platform));
+    const sorted = [...VISUAL_PLATFORM_ORDER.flatMap(plt => visual.filter(p => p.platform === plt).slice(0, 1))];
+    return sorted.slice(0, 3);
+  })();
 
   // ── Metrics query ──────────────────────────────────────────────────────────────
   const { data: metricsData, isLoading: metricsLoading } = useQuery({
@@ -648,6 +701,47 @@ export default function CampaignDetail() {
                 <><AlertCircle className="h-5 w-5 text-yellow-400 shrink-0" />
                 <div><div className="font-mono font-bold text-yellow-400 uppercase tracking-widest">Aguardando ação</div></div></>
               )}
+            </div>
+          )}
+
+          {/* ─ Creatives Preview (awaiting_approval) ─ */}
+          {campaign.status === "awaiting_approval" && (
+            <div className="border border-yellow-400/30 bg-card/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-yellow-400" />
+                  <span className="font-mono text-xs uppercase tracking-widest text-yellow-400 font-bold">
+                    Prévia dos Criativos Gerados pela IA
+                  </span>
+                </div>
+                <Link href={`/campaigns/${campaignId}/content`}>
+                  <button className="font-mono text-[11px] uppercase tracking-widest text-primary hover:underline flex items-center gap-1">
+                    Ver todos <ChevronRight className="h-3 w-3" />
+                  </button>
+                </Link>
+              </div>
+              {previewSnippets.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {previewSnippets.map(piece => (
+                    <SocialPostPreview key={piece.id} piece={piece} showMetrics={false} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { platform: "instagram" as const, type: "post" as const, body: "Algo grande está chegando. 🔥\n\nNos próximos 7 dias vou revelar o método que me ajudou a sair do zero para os 6 dígitos.\n\nSiga de perto." },
+                    { platform: "tiktok" as const, type: "native_video" as const, body: "POV: você vai descobrir o que separa os lançamentos de 6 dígitos dos que não vendem nada.\n\nFica aqui essa semana.", tiktokHook: "O método que nenhum guru te conta sobre lançamentos" },
+                    { platform: "facebook" as const, type: "post" as const, body: "Nos próximos 7 dias compartilho tudo que aprendi sobre lançamentos digitais que batem 6 dígitos.\n\nSalva e ativa as notificações 🔔" },
+                  ].map((p, i) => (
+                    <SocialPostPreview key={i} piece={{ id: `preview-${i}`, dayIndex: 0, title: `${p.platform} — Dia 0`, status: "pending", segment: "all", ...p }} showMetrics={false} />
+                  ))}
+                </div>
+              )}
+              <p className="font-mono text-[11px] text-muted-foreground/50">
+                {previewSnippets.length > 0
+                  ? `${previewSnippets.length} de ${previewContentData?.pieces?.length ?? 0} peças. Revise e aprove antes de lançar.`
+                  : "Pré-visualização do estilo dos criativos. Clique em Aprovar Conteúdo para revisar todas as peças geradas."}
+              </p>
             </div>
           )}
 

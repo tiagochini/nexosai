@@ -793,6 +793,18 @@ export default function IntegracoesPage() {
     staleTime: 30_000,
   });
 
+  const { data: oauthStatus } = useQuery({
+    queryKey: ["/api/integrations/oauth/providers"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/integrations/oauth/providers");
+      if (!res.ok) return { providers: {} as Record<string, boolean> };
+      return res.json() as Promise<{ providers: Record<string, boolean> }>;
+    },
+    staleTime: 300_000,
+  });
+
+  const oauthProviders = oauthStatus?.providers ?? {};
+
   const integrations = data?.integrations ?? [];
   const connectedMap = new Map(integrations.filter(i => i.status === "connected").map(i => [i.provider, i]));
 
@@ -947,7 +959,7 @@ export default function IntegracoesPage() {
                         </div>
 
                         {/* Action */}
-                        <div className="shrink-0 flex items-center gap-2">
+                        <div className="shrink-0 flex flex-col items-end gap-1.5">
                           {isConn ? (
                             <button
                               onClick={() => integration && handleDisconnect(integration.id)}
@@ -972,6 +984,16 @@ export default function IntegracoesPage() {
                               <Link2 className="h-3 w-3" />
                               Conectar
                             </Button>
+                          )}
+                          {!isConn && entry.oauthPlatform && (
+                            <span className={`font-mono text-[9px] uppercase tracking-widest flex items-center gap-0.5 ${
+                              oauthProviders[entry.oauthPlatform]
+                                ? "text-success/70"
+                                : "text-muted-foreground/30"
+                            }`}>
+                              <span className={`inline-block w-1.5 h-1.5 rounded-full ${oauthProviders[entry.oauthPlatform] ? "bg-success/60" : "bg-muted-foreground/20"}`} />
+                              {oauthProviders[entry.oauthPlatform] ? "OAuth pronto" : "Inserção manual"}
+                            </span>
                           )}
                         </div>
                       </div>

@@ -155,6 +155,19 @@ function popupPage(success: boolean, message: string, provider?: string): string
 </html>`;
 }
 
+// ── GET /providers — which OAuth platforms are configured ────────────────────
+router.get("/providers", requireAuth, (_req, res): void => {
+  res.json({
+    providers: {
+      meta:      !!(env.META_APP_ID && env.META_APP_SECRET),
+      tiktok:    !!(env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET),
+      google:    !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+      hubspot:   !!(env.HUBSPOT_CLIENT_ID && env.HUBSPOT_CLIENT_SECRET),
+      rdstation: !!(env.RD_STATION_CLIENT_ID && env.RD_STATION_CLIENT_SECRET),
+    },
+  });
+});
+
 // ── GET /start/:provider — authenticated, returns OAuth URL ──────────────────
 router.get("/start/:provider", requireAuth, (req, res): void => {
   const provider = req.params["provider"] as string;

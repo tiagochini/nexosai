@@ -564,6 +564,73 @@ function EditModal({ piece, onClose, onSave }: { piece: ContentPiece; onClose: (
   );
 }
 
+// ── API Content Piece (raw from backend) ──────────────────────────────────────
+
+interface ApiContentPiece {
+  id: string;
+  type: string;
+  platform?: string;
+  launchPhase?: string;
+  mentalTrigger?: string;
+  content: string;
+  status: string;
+  createdAt: string;
+}
+
+const TYPE_TO_PLATFORM: Record<string, Platform> = {
+  instagram_post: "instagram", instagram_reel: "instagram", instagram_story: "instagram",
+  instagram_feed: "instagram", reel: "instagram", story: "instagram",
+  tiktok_video: "tiktok", tiktok_reel: "tiktok", native_video: "tiktok",
+  facebook_post: "facebook", facebook_ad: "facebook",
+  email_campaign: "email", email: "email",
+  whatsapp_message: "whatsapp", whatsapp: "whatsapp",
+  ad_copy: "ads", meta_ad: "ads", google_ad: "ads",
+  landing_page: "landing",
+};
+
+const TYPE_TO_PIECE_TYPE: Record<string, PieceType> = {
+  instagram_post: "post", instagram_feed: "post", facebook_post: "post",
+  instagram_reel: "reel", reel: "reel",
+  instagram_story: "story", story: "story",
+  tiktok_video: "native_video", tiktok_reel: "native_video", native_video: "native_video",
+  email_campaign: "email", email: "email",
+  whatsapp_message: "message", whatsapp: "message",
+  ad_copy: "ad", meta_ad: "ad", facebook_ad: "ad", google_ad: "ad",
+  landing_page: "copy",
+};
+
+const PHASE_TO_DAY: Record<string, number> = {
+  pre_launch: 0, pre_launch_1: 0, antecipacao: 0, anticipation: 0,
+  authority: 1, authority_1: 1, autoridade: 1,
+  authority_2: 2, value: 2, conteudo: 2,
+  desire: 3, desire_1: 3, desejo: 3,
+  desire_2: 4,
+  cart_open: 5, abertura: 5,
+  cart_middle: 6, meio_carrinho: 6,
+  cart_close: 7, fechamento: 7,
+};
+
+function mapApiPiece(p: ApiContentPiece, idx: number): ContentPiece {
+  const rawType = p.type?.toLowerCase().replace(/\s+/g, "_") ?? "copy";
+  const platform = (p.platform as Platform | undefined)
+    ?? TYPE_TO_PLATFORM[rawType]
+    ?? "instagram";
+  const pieceType = TYPE_TO_PIECE_TYPE[rawType] ?? "post";
+  const launchKey = p.launchPhase?.toLowerCase().replace(/\s+/g, "_") ?? "";
+  const dayIndex = PHASE_TO_DAY[launchKey] ?? (idx % 8);
+  const statusMap: Record<string, Status> = { draft: "pending", approved: "approved", rejected: "rejected" };
+  return {
+    id: p.id,
+    platform,
+    type: pieceType,
+    dayIndex,
+    title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} — ${rawType.replace(/_/g, " ")}`,
+    body: p.content,
+    status: statusMap[p.status] ?? "pending",
+    segment: "all",
+  };
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 type Tab = "platform" | "preview" | "flowchart" | "schedule" | "segmentation";
@@ -575,7 +642,7 @@ export default function ContentApproval() {
   const campaignId = params.id;
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<Tab>("flowchart");
+  const [activeTab, setActiveTab] = useState<Tab>("preview");
   const [editingPiece, setEditingPiece] = useState<ContentPiece | null>(null);
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
@@ -591,6 +658,17 @@ export default function ContentApproval() {
       return res.json() as Promise<{ campaign: { id: string; title: string; status: string } }>;
     },
     enabled: !!campaignId,
+  });
+
+  const { data: apiContentData } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/content`],
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
+      if (!res.ok) return null;
+      return res.json() as Promise<{ pieces: ApiContentPiece[] }>;
+    },
+    enabled: !!campaignId,
+    staleTime: 30_000,
   });
 
   // Transition campaign from awaiting_approval → approved when user approves all content
@@ -618,9 +696,22 @@ export default function ContentApproval() {
   });
 
   const campaign = campaignData?.campaign;
+
+  const realPieces: ContentPiece[] | null = apiContentData?.pieces?.length
+    ? apiContentData.pieces.map((p, i) => mapApiPiece(p, i))
+    : null;
+
+  const basePieces = realPieces ?? generateMockPlan(campaign?.title ?? "Campanha").pieces;
   const plan: ContentPlan = localPieces
     ? { ...generateMockPlan(campaign?.title ?? "Campanha"), pieces: localPieces }
-    : generateMockPlan(campaign?.title ?? "Campanha");
+    : {
+        ...generateMockPlan(campaign?.title ?? "Campanha"),
+        pieces: basePieces,
+        totalPieces: basePieces.length,
+        approved: basePieces.filter(p => p.status === "approved").length,
+        rejected: basePieces.filter(p => p.status === "rejected").length,
+        pending: basePieces.filter(p => p.status === "pending").length,
+      };
 
   const pieces = plan.pieces;
   const approvedCount = pieces.filter(p => p.status === "approved").length;
@@ -634,14 +725,46 @@ export default function ContentApproval() {
 
   const handleApprove = async (id: string) => {
     setLoadingPiece(id);
-    await new Promise(r => setTimeout(r, 300));
-    setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "approved" } : p));
-    setLoadingPiece(null);
-    toast.success("Peça aprovada");
+    if (realPieces) {
+      try {
+        const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/approve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedback: "" }),
+        });
+        if (!res.ok) throw new Error("Erro");
+        queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+        toast.success("Peça aprovada");
+      } catch {
+        toast.error("Erro ao aprovar peça");
+      } finally {
+        setLoadingPiece(null);
+      }
+    } else {
+      await new Promise(r => setTimeout(r, 300));
+      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "approved" } : p));
+      setLoadingPiece(null);
+      toast.success("Peça aprovada");
+    }
   };
-  const handleReject = (id: string) => {
-    setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "rejected" } : p));
-    toast.info("Peça rejeitada");
+  const handleReject = async (id: string) => {
+    if (realPieces) {
+      try {
+        const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/reject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedback: "" }),
+        });
+        if (!res.ok) throw new Error("Erro");
+        queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+        toast.info("Peça rejeitada");
+      } catch {
+        toast.error("Erro ao rejeitar peça");
+      }
+    } else {
+      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "rejected" } : p));
+      toast.info("Peça rejeitada");
+    }
   };
   const handleAiRewrite = async (id: string) => {
     setLoadingPiece(id);
