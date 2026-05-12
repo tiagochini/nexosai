@@ -527,6 +527,11 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
       return;
     }
+    // AbortError from AbortSignal.timeout() — AI call exceeded 90s
+    if (err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError")) {
+      res.status(504).json({ error: "A IA demorou demais para responder. Tente novamente.", code: "AI_TIMEOUT" });
+      return;
+    }
     throw err;
   }
 });

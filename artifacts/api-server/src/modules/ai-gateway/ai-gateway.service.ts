@@ -166,21 +166,26 @@ function getGemini(): GoogleGenerativeAI {
   return geminiClient;
 }
 
+const SERVER_AI_TIMEOUT_MS = 90_000; // 90s — client-side is 110s, so server aborts first
+
 async function callAnthropic(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
   maxTokens = 8192,
+  signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
   const client = getAnthropic();
-  // Use integration-compatible model when using integration proxy
   const effectiveModel = env.ANTHROPIC_API_KEY ? model : ANTHROPIC_INTEGRATION_MODEL;
-  const response = await client.messages.create({
-    model: effectiveModel,
-    max_tokens: maxTokens,
-    system: systemPrompt,
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
-  });
+  const response = await client.messages.create(
+    {
+      model: effectiveModel,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    },
+    { signal },
+  );
 
   const content =
     response.content[0]?.type === "text" ? response.content[0].text : "";
@@ -196,33 +201,35 @@ async function callOpenAI(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
+  signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
   const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
 
-  // If no OpenAI access at all, fall back to Anthropic integration
   if (!env.OPENAI_API_KEY && !hasOpenAIIntegration()) {
     if (hasAnthropicIntegration()) {
-      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages);
+      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
     }
   }
 
   const client = getOpenAI();
   const effectiveModel = usingIntegration ? OPENAI_INTEGRATION_MODEL : model;
 
-  // gpt-5.x family uses max_completion_tokens; older models use max_tokens
   const isGpt5 = effectiveModel.startsWith("gpt-5") || effectiveModel.startsWith("o4") || effectiveModel.startsWith("o3");
   const completionParams = isGpt5
     ? { max_completion_tokens: 8192 }
     : { max_tokens: 4096 };
 
-  const response = await client.chat.completions.create({
-    model: effectiveModel,
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...messages.map((m) => ({ role: m.role, content: m.content })),
-    ],
-    ...completionParams,
-  });
+  const response = await client.chat.completions.create(
+    {
+      model: effectiveModel,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...messages.map((m) => ({ role: m.role, content: m.content })),
+      ],
+      ...completionParams,
+    },
+    { signal },
+  );
 
   return {
     content: response.choices[0]?.message?.content ?? "",
@@ -235,12 +242,12 @@ async function callGemini(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
+  signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
   const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
 
-  // No Gemini access: fall back to Anthropic (already handles integration)
   if (!hasGeminiAccess) {
-    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages);
+    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
   }
 
   const client = getGemini();
@@ -257,7 +264,7 @@ async function callGemini(
 
   const chat = geminiModel.startChat({ history });
   const lastMessage = messages[messages.length - 1];
-  const result = await chat.sendMessage(lastMessage?.content ?? "");
+  const result = await chat.sendMessage(lastMessage?.content ?? "", { signal } as any);
   const response = await result.response;
 
   return {
@@ -277,18 +284,19 @@ export async function completeWithAgent(
 ): Promise<AICompletionResult> {
   const { provider, model } = AGENT_PROVIDER_MAP[agentRole];
   const startTime = Date.now();
+  const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);
 
   let result: { content: string; inputTokens: number; outputTokens: number };
 
   switch (provider) {
     case "anthropic":
-      result = await callAnthropic(model, systemPrompt, messages);
+      result = await callAnthropic(model, systemPrompt, messages, 8192, signal);
       break;
     case "openai":
-      result = await callOpenAI(model, systemPrompt, messages);
+      result = await callOpenAI(model, systemPrompt, messages, signal);
       break;
     case "gemini":
-      result = await callGemini(model, systemPrompt, messages);
+      result = await callGemini(model, systemPrompt, messages, signal);
       break;
   }
 

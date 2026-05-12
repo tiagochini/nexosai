@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRoute, Link } from "wouter";
-import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useListCampaigns, getListCampaignsQueryKey } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -165,6 +165,7 @@ export default function AgentChat() {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
   const [contextMode, setContextMode] = useState<ContextMode>("question");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -183,55 +184,89 @@ export default function AgentChat() {
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [role, selectedCampaign]);
 
+  const MAX_RETRIES = 2;
+  const RETRY_DELAYS_MS = [4000, 8000];
+  const FETCH_TIMEOUT_MS = 110_000; // 110s — AI calls can take up to 90s
+
   const sendMessage = async (overrideMsg?: string) => {
     const text = (overrideMsg ?? input).trim();
     if (!text || sending) return;
 
-    // Only clear input after we know the message was received — never before.
-    // This way, if the request fails (401 token expiry, network error, etc.),
-    // the user's text is preserved and they can retry without retyping.
+    const snapshotMessages = messages; // capture before optimistic update
     const newMsg: ChatMsg = { role: "user", content: text, timestamp: new Date() };
     const withUser = [...messages, newMsg];
     setMessages(withUser);
     setSending(true);
+    setRetryInfo(null);
 
-    try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const res = await customFetch<{ response: string; tokensUsed: number; creditsCharged: number }>("/api/agents/direct-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agentRole: role, message: text,
-          history: history.slice(-12),
-          contextMode,
-          ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
-        }),
-      });
+    const requestBody = JSON.stringify({
+      agentRole: role,
+      message: text,
+      history: snapshotMessages.map(m => ({ role: m.role, content: m.content })).slice(-12),
+      contextMode,
+      ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
+    });
 
-      // Clear input only on success
-      setInput("");
-      const aiMsg: ChatMsg = { role: "assistant", content: res.response, timestamp: new Date() };
-      const withAi = [...withUser, aiMsg];
-      setMessages(withAi);
-      saveChatHistory(role, selectedCampaign, withAi);
-    } catch (err) {
-      // Revert the optimistic user message so the chat stays consistent,
-      // but keep the input intact so the user can retry without retyping.
-      setMessages(messages);
-      if (!overrideMsg) {
-        // Only preserve typed input — suggestion clicks don't need it
-        setInput(text);
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        setRetryInfo({ attempt, max: MAX_RETRIES });
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS_MS[attempt - 1]));
       }
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "Erro de comunicação. Sua mensagem foi preservada — tente enviar novamente.",
-        { duration: 5000 },
-      );
-    } finally {
-      setSending(false);
-      setTimeout(() => inputRef.current?.focus(), 100);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(new DOMException("Tempo limite excedido", "TimeoutError")), FETCH_TIMEOUT_MS);
+
+      try {
+        const res = await customFetch<{ response: string; tokensUsed: number; creditsCharged: number }>(
+          "/api/agents/direct-chat",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: requestBody,
+            signal: controller.signal,
+          },
+        );
+
+        clearTimeout(timeoutId);
+        setInput("");
+        setRetryInfo(null);
+        const aiMsg: ChatMsg = { role: "assistant", content: res.response, timestamp: new Date() };
+        const withAi = [...withUser, aiMsg];
+        setMessages(withAi);
+        saveChatHistory(role, selectedCampaign, withAi);
+        setSending(false);
+        setTimeout(() => inputRef.current?.focus(), 100);
+        return; // success
+      } catch (err) {
+        clearTimeout(timeoutId);
+        lastError = err instanceof Error ? err : new Error(String(err));
+
+        // Don't retry on 4xx (bad request, auth, credits).
+        // AbortError / TypeError (network failure) are never ApiError instances,
+        // so !(err instanceof ApiError) covers them automatically.
+        const isRetryable = !(err instanceof ApiError) || err.status >= 500;
+
+        if (!isRetryable || attempt === MAX_RETRIES) break;
+        // else loop continues → wait then retry
+      }
     }
+
+    // All attempts exhausted — revert optimistic message, always restore text
+    setMessages(snapshotMessages);
+    setInput(text); // restore for BOTH typed input and suggestion clicks
+    setRetryInfo(null);
+    setSending(false);
+    setTimeout(() => inputRef.current?.focus(), 100);
+
+    const isTimeout = lastError?.name === "AbortError" || lastError?.name === "TimeoutError";
+    toast.error(
+      isTimeout
+        ? "A IA demorou demais para responder. Sua mensagem foi preservada — tente novamente."
+        : (lastError?.message ?? "Erro de comunicação. Sua mensagem foi preservada — tente novamente."),
+      { duration: 7000 },
+    );
   };
 
   const clearChat = () => {
@@ -360,18 +395,24 @@ export default function AgentChat() {
           );
         })}
 
-        {/* Typing indicator */}
+        {/* Typing / retry indicator */}
         {sending && (
           <div className="flex gap-2.5">
             <div className={`w-7 h-7 border shrink-0 flex items-center justify-center ${accent.border} ${accent.bg}`}>
               <Loader2 className={`h-3.5 w-3.5 ${accent.text} animate-spin`} />
             </div>
-            <div className="border border-border/40 bg-card/70 px-4 py-3">
-              <div className="flex gap-1 items-center">
-                {[0, 150, 300].map(d => (
-                  <div key={d} className={`w-1.5 h-1.5 rounded-full animate-bounce ${accent.text.replace("text-", "bg-")}`} style={{ animationDelay: `${d}ms` }} />
-                ))}
-              </div>
+            <div className="border border-border/40 bg-card/70 px-4 py-3 flex flex-col gap-1.5">
+              {retryInfo ? (
+                <span className="font-mono text-[11px] text-amber-400/80 uppercase tracking-widest">
+                  Tentando novamente {retryInfo.attempt}/{retryInfo.max}…
+                </span>
+              ) : (
+                <div className="flex gap-1 items-center">
+                  {[0, 150, 300].map(d => (
+                    <div key={d} className={`w-1.5 h-1.5 rounded-full animate-bounce ${accent.text.replace("text-", "bg-")}`} style={{ animationDelay: `${d}ms` }} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
