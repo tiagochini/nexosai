@@ -9,8 +9,8 @@ import { logger } from "../../lib/logger.js";
 const router = Router();
 
 // ── Platform configs ─────────────────────────────────────────────────────────
-type OAuthPlatform = "meta" | "tiktok";
-type DbProvider = "instagram" | "meta_ads" | "tiktok_ads";
+type OAuthPlatform = "meta" | "tiktok" | "google" | "hubspot" | "rdstation";
+type DbProvider = "instagram" | "meta_ads" | "tiktok_ads" | "google_ads" | "hubspot" | "rd_station";
 
 interface PlatformConfig {
   name: string;
@@ -34,6 +34,27 @@ const PLATFORMS: Record<OAuthPlatform, PlatformConfig> = {
     tokenUrl: "https://open.tiktokapis.com/v2/oauth/token/",
     clientId: () => env.TIKTOK_CLIENT_KEY,
     clientSecret: () => env.TIKTOK_CLIENT_SECRET,
+  },
+  google: {
+    name: "Google",
+    authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    clientId: () => env.GOOGLE_CLIENT_ID,
+    clientSecret: () => env.GOOGLE_CLIENT_SECRET,
+  },
+  hubspot: {
+    name: "HubSpot",
+    authUrl: "https://app.hubspot.com/oauth/authorize",
+    tokenUrl: "https://api.hubapi.com/oauth/v1/token",
+    clientId: () => env.HUBSPOT_CLIENT_ID,
+    clientSecret: () => env.HUBSPOT_CLIENT_SECRET,
+  },
+  rdstation: {
+    name: "RD Station",
+    authUrl: "https://app.rdstation.com.br/oauth/sign-in",
+    tokenUrl: "https://api.rd.services/auth/token",
+    clientId: () => env.RD_STATION_CLIENT_ID,
+    clientSecret: () => env.RD_STATION_CLIENT_SECRET,
   },
 };
 
@@ -68,6 +89,24 @@ const PROVIDER_MAP: Record<string, ProviderConfig> = {
     scope: "biz.creator.info",
     label: "TikTok Ads",
     dbProvider: "tiktok_ads",
+  },
+  google_ads: {
+    platform: "google",
+    scope: "https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/userinfo.profile openid email",
+    label: "Google Ads",
+    dbProvider: "google_ads",
+  },
+  hubspot: {
+    platform: "hubspot",
+    scope: "oauth crm.objects.contacts.write crm.objects.deals.write crm.lists.write",
+    label: "HubSpot",
+    dbProvider: "hubspot",
+  },
+  rd_station: {
+    platform: "rdstation",
+    scope: "read_contacts write_contacts",
+    label: "RD Station",
+    dbProvider: "rd_station",
   },
 };
 
@@ -210,20 +249,19 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         access_token?: string;
         error?: { message: string };
       };
-
       if (!tokenData.access_token) {
         res.send(popupPage(false, tokenData.error?.message ?? "Falha ao obter access token."));
         return;
       }
       accessToken = tokenData.access_token;
-
       const meRes = await fetch(
         `https://graph.facebook.com/v20.0/me?access_token=${accessToken}&fields=id,name`,
       );
       const me = (await meRes.json()) as { id?: string; name?: string };
       accountId = me.id ?? "";
       accountName = me.name ?? config.label;
-    } else {
+
+    } else if (config.platform === "tiktok") {
       const tokenRes = await fetch(platform.tokenUrl, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -239,15 +277,102 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         data?: { access_token?: string; open_id?: string };
         error?: { code?: string; message?: string };
       };
-
       if (!tokenData.data?.access_token) {
-        res.send(
-          popupPage(false, tokenData.error?.message ?? "Falha ao obter token TikTok."),
-        );
+        res.send(popupPage(false, tokenData.error?.message ?? "Falha ao obter token TikTok."));
         return;
       }
       accessToken = tokenData.data.access_token;
       accountId = tokenData.data.open_id ?? "";
+
+    } else if (config.platform === "google") {
+      const tokenRes = await fetch(platform.tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: platform.clientId(),
+          client_secret: platform.clientSecret(),
+          code: code as string,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }),
+      });
+      const tokenData = (await tokenRes.json()) as {
+        access_token?: string;
+        error?: string;
+        error_description?: string;
+      };
+      if (!tokenData.access_token) {
+        res.send(popupPage(false, tokenData.error_description ?? "Falha ao obter token Google."));
+        return;
+      }
+      accessToken = tokenData.access_token;
+      const meRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const me = (await meRes.json()) as { sub?: string; name?: string; email?: string };
+      accountId = me.sub ?? "";
+      accountName = me.name ?? me.email ?? config.label;
+
+    } else if (config.platform === "hubspot") {
+      const tokenRes = await fetch(platform.tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: platform.clientId(),
+          client_secret: platform.clientSecret(),
+          code: code as string,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }),
+      });
+      const tokenData = (await tokenRes.json()) as {
+        access_token?: string;
+        message?: string;
+      };
+      if (!tokenData.access_token) {
+        res.send(popupPage(false, tokenData.message ?? "Falha ao obter token HubSpot."));
+        return;
+      }
+      accessToken = tokenData.access_token;
+      const meRes = await fetch(
+        `https://api.hubapi.com/oauth/v1/access-tokens/${accessToken}`,
+      );
+      const me = (await meRes.json()) as {
+        hub_id?: number;
+        hub_domain?: string;
+        user?: string;
+      };
+      accountId = String(me.hub_id ?? "");
+      accountName = me.hub_domain ?? me.user ?? config.label;
+
+    } else {
+      // rdstation
+      const tokenRes = await fetch(platform.tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: platform.clientId(),
+          client_secret: platform.clientSecret(),
+          code: code as string,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }),
+      });
+      const tokenData = (await tokenRes.json()) as {
+        access_token?: string;
+        error?: string;
+      };
+      if (!tokenData.access_token) {
+        res.send(popupPage(false, tokenData.error ?? "Falha ao obter token RD Station."));
+        return;
+      }
+      accessToken = tokenData.access_token;
+      const meRes = await fetch("https://api.rd.services/platform/account", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const me = (await meRes.json()) as { uuid?: string; name?: string };
+      accountId = me.uuid ?? "";
+      accountName = me.name ?? config.label;
     }
 
     // Upsert integration

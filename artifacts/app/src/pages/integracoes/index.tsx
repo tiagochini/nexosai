@@ -53,7 +53,7 @@ interface CatalogEntry {
   required: boolean;
   fields: FieldDef[];
   guide: SetupGuide;
-  oauthPlatform?: "meta" | "tiktok";
+  oauthPlatform?: "meta" | "tiktok" | "google" | "hubspot" | "rdstation";
   oauthLabel?: string;
 }
 
@@ -144,6 +144,8 @@ const CATALOG: CatalogEntry[] = [
       docsUrl: "https://developers.rdstation.com/pt-BR/authentication",
       docsLabel: "Docs RD Station API",
     },
+    oauthPlatform: "rdstation",
+    oauthLabel: "Entrar com RD Station",
   },
   {
     provider: "activecampaign",
@@ -376,6 +378,8 @@ const CATALOG: CatalogEntry[] = [
   },
   {
     provider: "google_ads",
+    oauthPlatform: "google",
+    oauthLabel: "Entrar com Google",
     label: "Google Ads",
     description: "Campanhas de pesquisa e display no Google",
     why: "Captura de leads via pesquisa durante o lançamento, gerenciada pelo agente Media Buyer.",
@@ -428,6 +432,8 @@ const CATALOG: CatalogEntry[] = [
       docsUrl: "https://developers.hubspot.com/docs/api/private-apps",
       docsLabel: "Docs HubSpot Private Apps",
     },
+    oauthPlatform: "hubspot",
+    oauthLabel: "Entrar com HubSpot",
   },
 ];
 
@@ -445,6 +451,28 @@ const TikTokLogo = () => (
     <rect width="40" height="40" rx="8" fill="#010101"/>
     <path d="M28 14.5a5.5 5.5 0 0 1-5.5-5.5h-3.5v14.5L19 28a3 3 0 1 1-3-3 3 3 0 0 1 .5.04V21.5A6.5 6.5 0 1 0 23 28V19.5A9 9 0 0 0 28 21v-3.5a5.47 5.47 0 0 1-3-.55V14.5z" fill="white"/>
     <path d="M28 14.5a5.5 5.5 0 0 1-5.5-5.5h-3.5v14.5L19 28a3 3 0 1 1-3-3 3 3 0 0 1 .5.04V21.5A6.5 6.5 0 1 0 23 28V19.5A9 9 0 0 0 28 21v-3.5a5.47 5.47 0 0 1-3-.55V14.5" stroke="#69C9D0" strokeWidth=".5" fill="none"/>
+  </svg>
+);
+
+const GoogleLogo = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4">
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+  </svg>
+);
+
+const HubSpotLogo = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="#FF7A59">
+    <path d="M22.447 13.098a5.166 5.166 0 0 0-4.21-5.08V5.57a2.013 2.013 0 0 0 1.164-1.818v-.056A2.013 2.013 0 0 0 17.39 1.68h-.042a2.013 2.013 0 0 0-2.012 2.013v.056c0 .815.487 1.519 1.165 1.818v2.449a5.162 5.162 0 0 0-2.715 1.19L8.017 5.3a2.25 2.25 0 1 0-.944 1.16l5.716 3.864a5.166 5.166 0 0 0-.816 2.898 5.166 5.166 0 0 0 .816 2.898l-1.737 1.237a1.89 1.89 0 1 0 .983 1.09l1.792-1.277a5.166 5.166 0 0 0 3.505 1.179 5.17 5.17 0 0 0 5.115-5.251zm-5.115 3.215a3.212 3.212 0 1 1 0-6.424 3.212 3.212 0 0 1 0 6.424z"/>
+  </svg>
+);
+
+const RDLogo = () => (
+  <svg viewBox="0 0 28 28" className="h-4 w-4">
+    <rect width="28" height="28" rx="5" fill="#0071c1"/>
+    <text x="3" y="20" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="12" fill="white">RD</text>
   </svg>
 );
 
@@ -521,7 +549,19 @@ function ConnectModal({
   };
 
   const isOAuth = !!entry.oauthPlatform && !showManual;
-  const OAuthIcon = entry.oauthPlatform === "tiktok" ? TikTokLogo : MetaLogo;
+  const OAUTH_ICONS: Record<string, React.ElementType> = {
+    meta: MetaLogo, tiktok: TikTokLogo, google: GoogleLogo,
+    hubspot: HubSpotLogo, rdstation: RDLogo,
+  };
+  const OAUTH_BRAND: Record<string, { bg: string; border: string; color: string }> = {
+    meta:      { bg: "rgba(24,119,242,0.07)",  border: "#1877F2", color: "#1877F2" },
+    tiktok:    { bg: "rgba(254,44,85,0.07)",   border: "#fe2c55", color: "#fe2c55" },
+    google:    { bg: "rgba(66,133,244,0.07)",  border: "#4285F4", color: "#4285F4" },
+    hubspot:   { bg: "rgba(255,122,89,0.07)",  border: "#FF7A59", color: "#FF7A59" },
+    rdstation: { bg: "rgba(0,113,193,0.07)",   border: "#0071c1", color: "#0071c1" },
+  };
+  const OAuthIcon = OAUTH_ICONS[entry.oauthPlatform ?? ""] ?? MetaLogo;
+  const brand = OAUTH_BRAND[entry.oauthPlatform ?? ""] ?? OAUTH_BRAND["meta"]!;
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
@@ -576,9 +616,9 @@ function ConnectModal({
                 disabled={oauthLoading}
                 className="w-full flex items-center justify-center gap-3 border-2 px-6 py-3.5 font-mono text-sm font-bold uppercase tracking-widest transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 active:scale-[0.99]"
                 style={{
-                  borderColor: entry.oauthPlatform === "meta" ? "#1877F2" : "#fe2c55",
-                  color: entry.oauthPlatform === "meta" ? "#1877F2" : "#fe2c55",
-                  background: entry.oauthPlatform === "meta" ? "rgba(24,119,242,0.07)" : "rgba(254,44,85,0.07)",
+                  borderColor: brand.border,
+                  color: brand.color,
+                  background: brand.bg,
                 }}
               >
                 {oauthLoading
