@@ -395,7 +395,15 @@ export default function AgentChat() {
             className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[80px]"
           />
           <div className="flex flex-col gap-1.5 shrink-0">
-            <Button onClick={() => void sendMessage()} disabled={sending || !input.trim()}
+            <Button
+              onClick={() => {
+                if (!input.trim()) {
+                  inputRef.current?.focus();
+                  return;
+                }
+                void sendMessage();
+              }}
+              disabled={sending}
               title="Enviar (Ctrl+Enter)"
               className={`font-mono rounded-none h-10 px-4 ${accent.bg} ${accent.border} border hover:brightness-125`}>
               {sending ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} /> : <Send className={`h-4 w-4 ${accent.text}`} />}

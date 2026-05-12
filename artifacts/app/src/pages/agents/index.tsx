@@ -288,51 +288,46 @@ export default function AgentsHub() {
               {agents.map(agent => {
                 const Icon = agent.icon;
                 return (
-                  <div
-                    key={agent.role}
-                    className={`border bg-card/40 p-4 cursor-pointer transition-all group relative overflow-hidden ${agent.accent}`}
-                  >
-                    <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-current/20 pointer-events-none" />
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 border border-border/30 bg-muted/20">
-                          <Icon className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <div>
-                          <div className="font-mono font-bold text-sm text-foreground leading-tight group-hover:text-primary transition-colors">
-                            {agent.name}
+                  <Link key={agent.role} href={`/agents/${agent.role}`} className="block">
+                    <div
+                      className={`border bg-card/40 p-4 cursor-pointer transition-all group relative overflow-hidden h-full flex flex-col ${agent.accent}`}
+                    >
+                      <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-current/20 pointer-events-none" />
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 border border-border/30 bg-muted/20">
+                            <Icon className="h-3.5 w-3.5 text-primary" />
                           </div>
-                          <div className="font-mono text-[11px] text-muted-foreground/60">{agent.tagline}</div>
+                          <div>
+                            <div className="font-mono font-bold text-sm text-foreground leading-tight group-hover:text-primary transition-colors">
+                              {agent.name}
+                            </div>
+                            <div className="font-mono text-[11px] text-muted-foreground/60">{agent.tagline}</div>
+                          </div>
                         </div>
+                        <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 shrink-0 ${PROVIDER_COLOR[agent.provider]}`}>
+                          {agent.provider}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 shrink-0 ${PROVIDER_COLOR[agent.provider]}`}>
-                        {agent.provider}
-                      </Badge>
-                    </div>
 
-                    <p className="font-mono text-[11px] text-muted-foreground leading-relaxed mb-3 line-clamp-2">
-                      {agent.description}
-                    </p>
+                      <p className="font-mono text-[11px] text-muted-foreground leading-relaxed mb-3 line-clamp-2 flex-1">
+                        {agent.description}
+                      </p>
 
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {agent.specialties.map(s => (
-                        <span key={s} className="font-mono text-[10px] uppercase tracking-widest border border-border/30 bg-muted/10 px-1.5 py-0.5 text-muted-foreground/60">
-                          {s}
-                        </span>
-                      ))}
-                    </div>
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {agent.specialties.map(s => (
+                          <span key={s} className="font-mono text-[10px] uppercase tracking-widest border border-border/30 bg-muted/10 px-1.5 py-0.5 text-muted-foreground/60">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
 
-                    <Link href={`/agents/${agent.role}`}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full rounded-none font-mono uppercase text-[11px] tracking-widest btn-weapon-outline gap-2 group-hover:border-primary/50 group-hover:text-primary transition-colors h-8"
-                      >
+                      <div className="w-full rounded-none font-mono uppercase text-[11px] tracking-widest border border-border/50 group-hover:border-primary/60 group-hover:text-primary text-muted-foreground transition-colors h-8 flex items-center justify-center gap-2 bg-card/20 group-hover:bg-primary/5">
                         Conversar com Agente
                         <ChevronRight className="h-3 w-3" />
-                      </Button>
-                    </Link>
-                  </div>
+                      </div>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
