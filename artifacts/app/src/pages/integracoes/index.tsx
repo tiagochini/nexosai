@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -503,23 +503,15 @@ function ConnectModal({
     setOauthLoading(true);
     setOauthError(null);
     try {
-      const res = await customFetch<Response>(`/api/integrations/oauth/start/${entry.provider}`);
-      const body = await res.json() as { url?: string; error?: string; code?: string };
-
-      if (!res.ok || !body.url) {
-        if (body.code === "OAUTH_NOT_CONFIGURED") {
-          setOauthError("OAuth não configurado no servidor. Use a conexão manual abaixo.");
-          setShowManual(true);
-        } else {
-          setOauthError(body.error ?? "Erro ao iniciar OAuth.");
-        }
-        return;
-      }
+      const body = await customFetch<{ url: string }>(
+        `/api/integrations/oauth/start/${entry.provider}`,
+      );
 
       const popup = window.open(body.url, "nexos_oauth", "width=620,height=700,scrollbars=yes,resizable=yes");
 
       if (!popup) {
-        setOauthError("O popup foi bloqueado. Permita popups para este site e tente novamente.");
+        setOauthError("O popup foi bloqueado pelo browser. Permita popups para este site e tente novamente.");
+        setOauthLoading(false);
         return;
       }
 
@@ -542,9 +534,23 @@ function ConnectModal({
           setOauthLoading(false);
         }
       }, 600);
-    } catch {
-      setOauthError("Erro de rede. Tente novamente.");
+
+    } catch (err) {
       setOauthLoading(false);
+      if (err instanceof ApiError) {
+        const data = err.data as { code?: string; error?: string } | null;
+        if (data?.code === "OAUTH_NOT_CONFIGURED") {
+          setOauthError("OAuth ainda não configurado no servidor. Insira as credenciais manualmente.");
+          setShowManual(true);
+        } else if (data?.code === "UNKNOWN_PROVIDER") {
+          setOauthError("Provedor não suportado. Use a inserção manual.");
+          setShowManual(true);
+        } else {
+          setOauthError(data?.error ?? `Erro ${err.status} ao iniciar autenticação.`);
+        }
+      } else {
+        setOauthError("Erro de rede. Verifique sua conexão e tente novamente.");
+      }
     }
   };
 
