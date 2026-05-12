@@ -187,6 +187,14 @@ export default function AgentChat() {
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [role, selectedCampaign]);
 
+  // Auto-save whenever messages change (belt-and-suspenders — also catches
+  // any case where the explicit save inside sendMessage is missed)
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveChatHistory(role, selectedCampaign, messages);
+    }
+  }, [messages, role, selectedCampaign]);
+
   const MAX_RETRIES = 2;
   const RETRY_DELAYS_MS = [4000, 8000];
   const FETCH_TIMEOUT_MS = 110_000; // 110s — AI calls can take up to 90s
@@ -444,9 +452,11 @@ export default function AgentChat() {
           <div className="flex flex-col gap-1.5 shrink-0">
             <Button
               onPointerDown={e => {
-                // Prevent the textarea from losing focus (and the mobile keyboard
-                // from dismissing + reshaping the layout) before the click fires.
-                e.preventDefault();
+                // On touch only: prevent the textarea from losing focus (and the
+                // mobile keyboard from dismissing + reshaping the layout) before
+                // the click event fires. For mouse events leave default intact so
+                // the click event is never blocked on desktop.
+                if (e.pointerType === "touch") e.preventDefault();
               }}
               onClick={() => {
                 if (!input.trim()) {
