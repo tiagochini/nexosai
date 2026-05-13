@@ -203,9 +203,14 @@ export default function CampaignIntake() {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
 
+  const draftKey = `nexos_intake_draft_${campaignId}`;
+
   const [view, setView] = useState<"chat" | "form">("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(() => {
+    try { return localStorage.getItem(`nexos_intake_draft_${campaignId}`) ?? ""; }
+    catch { return ""; }
+  });
   const [sending, setSending] = useState(false);
   const [chatComplete, setChatComplete] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -222,6 +227,14 @@ export default function CampaignIntake() {
 
   // Budget simulator panel
   const [showSimulator, setShowSimulator] = useState(false);
+
+  // Persist draft to localStorage as user types — survives any page reload
+  useEffect(() => {
+    try {
+      if (inputValue) localStorage.setItem(draftKey, inputValue);
+      else localStorage.removeItem(draftKey);
+    } catch { /* ignore */ }
+  }, [inputValue, draftKey]);
 
   const aiTriggered = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -402,8 +415,9 @@ export default function CampaignIntake() {
       const history = newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
       const result = await callConversation({ message: userMsg, history });
 
-      // Clear input only after confirmed success
+      // Clear input and draft only after confirmed success
       setInputValue("");
+      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
 
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
