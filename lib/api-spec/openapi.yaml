@@ -610,6 +610,9 @@ components:
           type: string
         role:
           type: string
+        locale:
+          type: string
+          enum: [pt-BR, en-US, en-AU, es-LA]
       required: [id, email]
 
     Workspace:

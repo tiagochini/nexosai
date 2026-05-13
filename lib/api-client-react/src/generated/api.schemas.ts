@@ -30,6 +30,7 @@ export interface User {
   email: string;
   name?: string;
   role?: string;
+  locale?: "pt-BR" | "en-US" | "en-AU" | "es-LA";
 }
 
 export interface Workspace {

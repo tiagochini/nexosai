@@ -37,8 +37,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const queryClient = useQueryClient();
   const [savingLocale, setSavingLocale] = useState(false);
 
-  const currentLocale = ((user as Record<string, unknown> | null)?.locale as LocaleCode | undefined) ?? "pt-BR";
-  const currentLocaleOpt = LOCALE_OPTIONS.find(o => o.value === currentLocale) ?? LOCALE_OPTIONS[0];
+  const currentLocale: LocaleCode = (user?.locale as LocaleCode | undefined) ?? "pt-BR";
+  const currentLocaleOpt = LOCALE_OPTIONS.find(o => o.value === currentLocale) ?? LOCALE_OPTIONS[0]!
 
   const handleSetLocale = async (locale: LocaleCode) => {
     if (locale === currentLocale || savingLocale) return;
