@@ -237,16 +237,16 @@ export default function AgentChat() {
   const RETRY_DELAYS_MS = [4000, 8000];
   const FETCH_TIMEOUT_MS = 110_000; // 110s — AI calls can take up to 90s
 
-  const readTextContent = (file: File): Promise<string | null> =>
+  const readTextContent = (file: File): Promise<string | undefined> =>
     new Promise(resolve => {
       const isReadable =
         file.type.startsWith("text/") ||
         ["application/json", "application/xml"].includes(file.type) ||
         /\.(txt|md|csv|json|html|xml|yml|yaml|ts|tsx|js|jsx|py|sql|sh|env)$/i.test(file.name);
-      if (!isReadable || file.size > 400_000) { resolve(null); return; }
+      if (!isReadable || file.size > 400_000) { resolve(undefined); return; }
       const reader = new FileReader();
-      reader.onload = e => resolve((e.target?.result as string | null) ?? null);
-      reader.onerror = () => resolve(null);
+      reader.onload = e => resolve((e.target?.result as string | undefined) ?? undefined);
+      reader.onerror = () => resolve(undefined);
       reader.readAsText(file);
     });
 

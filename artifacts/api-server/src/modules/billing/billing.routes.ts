@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { z } from "zod/v4";
-import crypto from "crypto";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
   initiatePayment,
+  initiatePackPayment,
+  getPaymentById,
   getPaymentHistory,
   getSubscriptionStatus,
   markPaymentPaid,
@@ -25,19 +26,23 @@ router.get("/history", requireAuth, async (req, res): Promise<void> => {
   res.json({ payments });
 });
 
-// ─── Initiate payment ─────────────────────────────────────────────────────────
+// ─── Payment status polling ───────────────────────────────────────────────────
+
+router.get("/payment/:paymentId", requireAuth, async (req, res): Promise<void> => {
+  const paymentId = req.params["paymentId"] as string;
+  const payment = await getPaymentById(req.auth.workspaceId, paymentId);
+  if (!payment) {
+    res.status(404).json({ error: "Pagamento não encontrado", code: "NOT_FOUND" });
+    return;
+  }
+  res.json({ payment });
+});
+
+// ─── Initiate plan payment ────────────────────────────────────────────────────
 
 const initiateSchema = z.object({
   planId: z.string().uuid(),
-  method: z.enum([
-    "pix",
-    "bank_transfer",
-    "crypto_usdt",
-    "crypto_btc",
-    "crypto_eth",
-    "credit_card",
-    "manual",
-  ]),
+  method: z.enum(["pix", "boleto", "bank_transfer", "credit_card", "manual"]),
 });
 
 router.post("/initiate", requireAuth, async (req, res): Promise<void> => {
@@ -59,12 +64,37 @@ router.post("/initiate", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json({ payment });
 });
 
-// ─── Manual confirmation (admin or user upload proof) ────────────────────────
+// ─── Initiate pack payment ────────────────────────────────────────────────────
+
+const initiatePackSchema = z.object({
+  packId: z.string(),
+  method: z.enum(["pix", "boleto", "bank_transfer", "manual"]),
+});
+
+router.post("/packs/initiate", requireAuth, async (req, res): Promise<void> => {
+  const parsed = initiatePackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const payment = await initiatePackPayment({
+    workspaceId: req.auth.workspaceId,
+    userId: req.auth.userId,
+    packId: parsed.data.packId,
+    method: parsed.data.method,
+    userName: req.auth.email,
+    userEmail: req.auth.email,
+  });
+
+  res.status(201).json({ payment });
+});
+
+// ─── Manual confirmation ──────────────────────────────────────────────────────
 
 router.post("/confirm/:paymentId", requireAuth, async (req, res): Promise<void> => {
   const paymentId = req.params["paymentId"] as string;
   const note = (req.body as { note?: string }).note;
-
   const payment = await markPaymentPaid(req.auth.workspaceId, paymentId, note);
   res.json({ payment });
 });
@@ -73,7 +103,6 @@ router.post("/confirm/:paymentId", requireAuth, async (req, res): Promise<void> 
 
 router.post("/webhooks/asaas", async (req, res): Promise<void> => {
   const webhookSecret = process.env["ASAAS_WEBHOOK_SECRET"];
-
   if (webhookSecret) {
     const signature = req.headers["asaas-access-token"] as string | undefined;
     if (signature !== webhookSecret) {
@@ -81,33 +110,8 @@ router.post("/webhooks/asaas", async (req, res): Promise<void> => {
       return;
     }
   }
-
   await processAsaasWebhook(req.body);
   res.status(200).json({ received: true });
-});
-
-// ─── Crypto payment verification (manual + auto) ─────────────────────────────
-
-router.get("/crypto/addresses", requireAuth, async (_req, res): Promise<void> => {
-  const addresses = {
-    usdt: {
-      address: process.env["CRYPTO_USDT_ADDRESS"] ?? null,
-      network: process.env["CRYPTO_USDT_NETWORK"] ?? "TRC20",
-    },
-    btc: {
-      address: process.env["CRYPTO_BTC_ADDRESS"] ?? null,
-      network: "Bitcoin",
-    },
-    eth: {
-      address: process.env["CRYPTO_ETH_ADDRESS"] ?? null,
-      network: "ERC20",
-    },
-  };
-  const configured = Object.entries(addresses)
-    .filter(([, v]) => v.address)
-    .reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
-
-  res.json({ addresses: configured });
 });
 
 // ─── Bank transfer info ───────────────────────────────────────────────────────

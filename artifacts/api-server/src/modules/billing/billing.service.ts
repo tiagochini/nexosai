@@ -9,17 +9,16 @@ import {
 } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
+import { grantCredits } from "../credits/credits.service.js";
 
 // ─── Asaas API ────────────────────────────────────────────────────────────────
 
-const ASAAS_BASE = process.env["ASAAS_ENV"] === "production"
-  ? "https://api.asaas.com/v3"
-  : "https://sandbox.asaas.com/api/v3";
+const ASAAS_BASE =
+  process.env["ASAAS_ENV"] === "production"
+    ? "https://api.asaas.com/v3"
+    : "https://sandbox.asaas.com/api/v3";
 
-async function asaasRequest<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const apiKey = process.env["ASAAS_API_KEY"];
   if (!apiKey) throw new AppError(503, "Asaas não configurado", "ASAAS_NOT_CONFIGURED");
 
@@ -34,17 +33,25 @@ async function asaasRequest<T>(
 
   const data = (await res.json()) as T & { errors?: Array<{ description: string }> };
   if (!res.ok) {
-    const msg = (data as { errors?: Array<{ description: string }> }).errors?.[0]?.description
-      ?? `Asaas API error ${res.status}`;
+    const msg =
+      (data as { errors?: Array<{ description: string }> }).errors?.[0]?.description ??
+      `Asaas API error ${res.status}`;
     throw new AppError(res.status >= 500 ? 502 : 400, msg, "ASAAS_ERROR");
   }
   return data;
 }
 
+async function ensureAsaasCustomer(name: string, email: string, cpfCnpj?: string): Promise<string> {
+  const customer = await asaasRequest<{ id: string }>("/customers", {
+    method: "POST",
+    body: JSON.stringify({ name, email, cpfCnpj: cpfCnpj ?? "00000000000" }),
+  });
+  return customer.id;
+}
+
 // ─── PIX via Asaas ───────────────────────────────────────────────────────────
 
 async function createAsaasPix(opts: {
-  customerId?: string;
   name: string;
   email: string;
   cpfCnpj?: string;
@@ -52,21 +59,8 @@ async function createAsaasPix(opts: {
   description: string;
   dueDate: string;
 }): Promise<{ asaasId: string; qrCode: string; copiaECola: string; expiresAt: string }> {
-  // Ensure customer exists in Asaas
-  let customerId = opts.customerId;
-  if (!customerId) {
-    const customer = await asaasRequest<{ id: string }>("/customers", {
-      method: "POST",
-      body: JSON.stringify({
-        name: opts.name,
-        email: opts.email,
-        cpfCnpj: opts.cpfCnpj ?? "00000000000",
-      }),
-    });
-    customerId = customer.id;
-  }
+  const customerId = await ensureAsaasCustomer(opts.name, opts.email, opts.cpfCnpj);
 
-  // Create payment
   const payment = await asaasRequest<{ id: string }>("/payments", {
     method: "POST",
     body: JSON.stringify({
@@ -78,7 +72,6 @@ async function createAsaasPix(opts: {
     }),
   });
 
-  // Get PIX QR code
   const pix = await asaasRequest<{
     encodedImage: string;
     payload: string;
@@ -93,34 +86,141 @@ async function createAsaasPix(opts: {
   };
 }
 
-// ─── Crypto addresses ─────────────────────────────────────────────────────────
+// ─── Boleto via Asaas ────────────────────────────────────────────────────────
 
-const CRYPTO_WALLETS = {
-  USDT: {
-    address: process.env["CRYPTO_USDT_ADDRESS"] ?? "",
-    network: process.env["CRYPTO_USDT_NETWORK"] ?? "TRC20",
-  },
-  BTC: {
-    address: process.env["CRYPTO_BTC_ADDRESS"] ?? "",
-    network: "Bitcoin",
-  },
-  ETH: {
-    address: process.env["CRYPTO_ETH_ADDRESS"] ?? "",
-    network: "ERC20",
-  },
-} as const;
+async function createAsaasBoleto(opts: {
+  name: string;
+  email: string;
+  cpfCnpj?: string;
+  amountCents: number;
+  description: string;
+  dueDate: string;
+}): Promise<{ asaasId: string; bankSlipUrl: string; barcode: string; nossoNumero: string }> {
+  const customerId = await ensureAsaasCustomer(opts.name, opts.email, opts.cpfCnpj);
 
-const BANK_TRANSFER_DATA = {
-  bank: process.env["BANK_NAME"] ?? "Inter",
-  agency: process.env["BANK_AGENCY"] ?? "",
-  account: process.env["BANK_ACCOUNT"] ?? "",
-  accountType: process.env["BANK_ACCOUNT_TYPE"] ?? "corrente",
-  cnpj: process.env["COMPANY_CNPJ"] ?? "",
-  companyName: process.env["COMPANY_NAME"] ?? "NexOS AI",
-  instructions: "Envie o comprovante após a transferência para confirmar o acesso.",
+  const payment = await asaasRequest<{
+    id: string;
+    bankSlipUrl?: string;
+    nossoNumero?: string;
+  }>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "BOLETO",
+      value: opts.amountCents / 100,
+      dueDate: opts.dueDate,
+      description: opts.description,
+    }),
+  });
+
+  const idf = await asaasRequest<{ identificationField?: string }>(
+    `/payments/${payment.id}/identificationField`
+  );
+
+  return {
+    asaasId: payment.id,
+    bankSlipUrl: payment.bankSlipUrl ?? "",
+    barcode: idf.identificationField ?? "",
+    nossoNumero: payment.nossoNumero ?? "",
+  };
+}
+
+// ─── Pack config (mirrors frontend) ──────────────────────────────────────────
+
+export const PACK_CONFIG: Record<string, { credits: number; priceBrl: number; label: string }> = {
+  pack_500:  { credits: 500,  priceBrl: 85,  label: "Pack Lançamento Extra (500 créditos)" },
+  pack_1500: { credits: 1500, priceBrl: 239, label: "Pack Trimestral (1.500 créditos)" },
+  pack_3500: { credits: 3500, priceBrl: 529, label: "Pack Semestral (3.500 créditos)" },
+  pack_7000: { credits: 7000, priceBrl: 979, label: "Pack Anual (7.000 créditos)" },
 };
 
-// ─── Service ──────────────────────────────────────────────────────────────────
+// ─── Shared Asaas payment builder ─────────────────────────────────────────────
+
+type PaymentData = Pick<
+  SubscriptionPayment,
+  "pixData" | "boletoData" | "bankTransferData" | "cryptoData"
+> & { externalId: string | null; expiresAt: Date | null };
+
+async function buildAsaasPayment(
+  method: PaymentMethod,
+  opts: { name: string; email: string; amountCents: number; description: string; dueDate: string }
+): Promise<PaymentData> {
+  const result: PaymentData = {
+    pixData: null,
+    boletoData: null,
+    bankTransferData: null,
+    cryptoData: null,
+    externalId: null,
+    expiresAt: null,
+  };
+
+  switch (method) {
+    case "pix": {
+      try {
+        const pix = await createAsaasPix(opts);
+        result.pixData = {
+          qrCode: pix.qrCode,
+          copiaECola: pix.copiaECola,
+          expiresAt: pix.expiresAt,
+          asaasId: pix.asaasId,
+        };
+        result.externalId = pix.asaasId;
+        result.expiresAt = new Date(pix.expiresAt);
+      } catch (err) {
+        if (err instanceof AppError && err.code === "ASAAS_NOT_CONFIGURED") {
+          result.pixData = { instructions: "Entre em contato: suporte@nexos.ai" };
+          result.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        } else { throw err; }
+      }
+      break;
+    }
+
+    case "boleto": {
+      try {
+        const boleto = await createAsaasBoleto(opts);
+        result.boletoData = {
+          barcodeUrl: boleto.bankSlipUrl,
+          barcode: boleto.barcode,
+          dueDate: opts.dueDate,
+          asaasId: boleto.asaasId,
+          nossoNumero: boleto.nossoNumero,
+        };
+        result.externalId = boleto.asaasId;
+        result.expiresAt = new Date(opts.dueDate + "T23:59:59.000Z");
+      } catch (err) {
+        if (err instanceof AppError && err.code === "ASAAS_NOT_CONFIGURED") {
+          result.boletoData = {
+            dueDate: opts.dueDate,
+            instructions: "Entre em contato para obter o boleto: suporte@nexos.ai",
+          };
+          result.expiresAt = new Date(opts.dueDate + "T23:59:59.000Z");
+        } else { throw err; }
+      }
+      break;
+    }
+
+    case "bank_transfer": {
+      result.bankTransferData = {
+        bank: process.env["BANK_NAME"] ?? "Inter",
+        agency: process.env["BANK_AGENCY"] ?? "",
+        account: process.env["BANK_ACCOUNT"] ?? "",
+        accountType: process.env["BANK_ACCOUNT_TYPE"] ?? "corrente",
+        cnpj: process.env["COMPANY_CNPJ"] ?? "",
+        companyName: process.env["COMPANY_NAME"] ?? "NexOS AI",
+        instructions: "Envie o comprovante após a transferência para confirmar o acesso.",
+      };
+      result.expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+      break;
+    }
+
+    default:
+      throw new AppError(400, `Método de pagamento não suportado: ${method}`, "INVALID_METHOD");
+  }
+
+  return result;
+}
+
+// ─── Plan payment ─────────────────────────────────────────────────────────────
 
 export async function initiatePayment(opts: {
   workspaceId: string;
@@ -135,102 +235,19 @@ export async function initiatePayment(opts: {
     .from(plansTable)
     .where(eq(plansTable.id, opts.planId))
     .limit(1);
-
   if (!plan) throw new NotFoundError("Plano não encontrado");
 
-  const amountCents = Math.round(Number(plan.priceMonthly) * 100); // price_monthly = preço de acesso único
+  const amountCents = Math.round(Number(plan.priceMonthly) * 100);
   const description = `NexOS AI — Acesso ${plan.name} (vitalício)`;
-  const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0]!;
+  const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
 
-  let pixData = undefined;
-  let cryptoData = undefined;
-  let bankTransferData = undefined;
-  let externalId: string | undefined;
-  let expiresAt: Date | undefined;
-
-  switch (opts.method) {
-    case "pix": {
-      try {
-        const pix = await createAsaasPix({
-          name: opts.userName,
-          email: opts.userEmail,
-          amountCents,
-          description,
-          dueDate,
-        });
-        pixData = {
-          qrCode: pix.qrCode,
-          copiaECola: pix.copiaECola,
-          expiresAt: pix.expiresAt,
-          asaasId: pix.asaasId,
-        };
-        externalId = pix.asaasId;
-        expiresAt = new Date(pix.expiresAt);
-      } catch (err) {
-        // Asaas not configured — create pending manual PIX
-        if (err instanceof AppError && err.code === "ASAAS_NOT_CONFIGURED") {
-          pixData = { instructions: "Entre em contato para receber os dados de PIX." };
-        } else {
-          throw err;
-        }
-      }
-      break;
-    }
-
-    case "crypto_usdt": {
-      const wallet = CRYPTO_WALLETS.USDT;
-      if (!wallet.address) throw new AppError(503, "Carteira USDT não configurada", "CRYPTO_NOT_CONFIGURED");
-      // Approximate BRL → USDT (rate fetched at payment time — placeholder)
-      const usdtAmount = amountCents / 100 / 5.2;
-      cryptoData = {
-        address: wallet.address,
-        network: wallet.network,
-        amount: Math.ceil(usdtAmount * 100) / 100,
-        currency: "USDT",
-        exchangeRate: 5.2,
-        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      };
-      expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
-      break;
-    }
-
-    case "crypto_btc": {
-      const wallet = CRYPTO_WALLETS.BTC;
-      if (!wallet.address) throw new AppError(503, "Carteira BTC não configurada", "CRYPTO_NOT_CONFIGURED");
-      cryptoData = {
-        address: wallet.address,
-        network: wallet.network,
-        currency: "BTC",
-        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      };
-      expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
-      break;
-    }
-
-    case "crypto_eth": {
-      const wallet = CRYPTO_WALLETS.ETH;
-      if (!wallet.address) throw new AppError(503, "Carteira ETH não configurada", "CRYPTO_NOT_CONFIGURED");
-      cryptoData = {
-        address: wallet.address,
-        network: wallet.network,
-        currency: "ETH",
-        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      };
-      expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
-      break;
-    }
-
-    case "bank_transfer": {
-      bankTransferData = BANK_TRANSFER_DATA;
-      expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-      break;
-    }
-
-    default:
-      throw new AppError(400, `Método de pagamento não suportado: ${opts.method}`, "INVALID_METHOD");
-  }
+  const pd = await buildAsaasPayment(opts.method, {
+    name: opts.userName,
+    email: opts.userEmail,
+    amountCents,
+    description,
+    dueDate,
+  });
 
   const [payment] = await db
     .insert(subscriptionPaymentsTable)
@@ -243,20 +260,80 @@ export async function initiatePayment(opts: {
       method: opts.method,
       status: "pending",
       description,
-      externalId: externalId ?? null,
-      pixData: pixData ?? null,
-      cryptoData: cryptoData ?? null,
-      bankTransferData: bankTransferData ?? null,
-      expiresAt: expiresAt ?? null,
-      metadata: {},
+      externalId: pd.externalId,
+      pixData: pd.pixData,
+      boletoData: pd.boletoData,
+      cryptoData: pd.cryptoData,
+      bankTransferData: pd.bankTransferData,
+      expiresAt: pd.expiresAt,
+      metadata: { type: "plan" },
     })
     .returning();
 
   if (!payment) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
-
-  logger.info({ workspaceId: opts.workspaceId, method: opts.method, amountCents }, "Payment initiated");
+  logger.info({ workspaceId: opts.workspaceId, method: opts.method, amountCents }, "Plan payment initiated");
   return payment;
 }
+
+// ─── Credit pack payment ──────────────────────────────────────────────────────
+
+export async function initiatePackPayment(opts: {
+  workspaceId: string;
+  userId: string;
+  packId: string;
+  method: PaymentMethod;
+  userName: string;
+  userEmail: string;
+}): Promise<SubscriptionPayment> {
+  const pack = PACK_CONFIG[opts.packId];
+  if (!pack) throw new NotFoundError("Pack de créditos não encontrado");
+
+  const [ws] = await db
+    .select({ planId: workspacesTable.planId })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, opts.workspaceId))
+    .limit(1);
+  if (!ws) throw new NotFoundError("Workspace não encontrado");
+
+  const amountCents = pack.priceBrl * 100;
+  const description = pack.label;
+  const dueDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]!;
+
+  const pd = await buildAsaasPayment(opts.method, {
+    name: opts.userName,
+    email: opts.userEmail,
+    amountCents,
+    description,
+    dueDate,
+  });
+
+  const [payment] = await db
+    .insert(subscriptionPaymentsTable)
+    .values({
+      workspaceId: opts.workspaceId,
+      userId: opts.userId,
+      planId: ws.planId,
+      amountCents,
+      currency: "BRL",
+      method: opts.method,
+      status: "pending",
+      description,
+      externalId: pd.externalId,
+      pixData: pd.pixData,
+      boletoData: pd.boletoData,
+      cryptoData: pd.cryptoData,
+      bankTransferData: pd.bankTransferData,
+      expiresAt: pd.expiresAt,
+      metadata: { type: "pack", packId: opts.packId, packCredits: pack.credits },
+    })
+    .returning();
+
+  if (!payment) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
+  logger.info({ workspaceId: opts.workspaceId, packId: opts.packId, amountCents }, "Pack payment initiated");
+  return payment;
+}
+
+// ─── Confirmation ─────────────────────────────────────────────────────────────
 
 export async function confirmPaymentByExternalId(
   externalId: string,
@@ -268,12 +345,10 @@ export async function confirmPaymentByExternalId(
     .where(eq(subscriptionPaymentsTable.externalId, externalId))
     .limit(1);
 
-  if (!payment) {
-    logger.warn({ externalId }, "Payment not found for external ID");
-    return;
-  }
-
+  if (!payment) { logger.warn({ externalId }, "Payment not found for external ID"); return; }
   if (payment.status === "paid") return;
+
+  const meta = payment.metadata as { type?: string; packCredits?: number } | null;
 
   await db
     .update(subscriptionPaymentsTable)
@@ -285,7 +360,18 @@ export async function confirmPaymentByExternalId(
     })
     .where(eq(subscriptionPaymentsTable.id, payment.id));
 
-  logger.info({ paymentId: payment.id, workspaceId: payment.workspaceId }, "Payment confirmed");
+  if (meta?.type === "pack" && meta.packCredits && meta.packCredits > 0) {
+    await grantCredits(
+      payment.workspaceId,
+      meta.packCredits,
+      "purchase",
+      logger,
+      payment.description ?? "Pack de créditos"
+    );
+    logger.info({ paymentId: payment.id, credits: meta.packCredits }, "Credits granted for pack payment");
+  }
+
+  logger.info({ paymentId: payment.id, workspaceId: payment.workspaceId }, "Payment confirmed via webhook");
 }
 
 export async function markPaymentPaid(
@@ -306,6 +392,8 @@ export async function markPaymentPaid(
 
   if (!payment) throw new NotFoundError("Pagamento não encontrado");
 
+  const meta = payment.metadata as { type?: string; packCredits?: number } | null;
+
   const [updated] = await db
     .update(subscriptionPaymentsTable)
     .set({
@@ -317,7 +405,36 @@ export async function markPaymentPaid(
     .where(eq(subscriptionPaymentsTable.id, paymentId))
     .returning();
 
+  if (meta?.type === "pack" && meta.packCredits && meta.packCredits > 0) {
+    await grantCredits(
+      payment.workspaceId,
+      meta.packCredits,
+      "purchase",
+      logger,
+      payment.description ?? "Pack de créditos"
+    );
+  }
+
   return updated!;
+}
+
+// ─── Getters ──────────────────────────────────────────────────────────────────
+
+export async function getPaymentById(
+  workspaceId: string,
+  paymentId: string
+): Promise<SubscriptionPayment | null> {
+  const [payment] = await db
+    .select()
+    .from(subscriptionPaymentsTable)
+    .where(
+      and(
+        eq(subscriptionPaymentsTable.id, paymentId),
+        eq(subscriptionPaymentsTable.workspaceId, workspaceId)
+      )
+    )
+    .limit(1);
+  return payment ?? null;
 }
 
 export async function getPaymentHistory(
@@ -339,10 +456,7 @@ export async function getSubscriptionStatus(workspaceId: string): Promise<{
   nextDueDate: Date | null;
 }> {
   const payments = await db
-    .select({
-      payment: subscriptionPaymentsTable,
-      planName: plansTable.name,
-    })
+    .select({ payment: subscriptionPaymentsTable, planName: plansTable.name })
     .from(subscriptionPaymentsTable)
     .innerJoin(plansTable, eq(subscriptionPaymentsTable.planId, plansTable.id))
     .where(
@@ -355,33 +469,25 @@ export async function getSubscriptionStatus(workspaceId: string): Promise<{
     .limit(1);
 
   const last = payments[0];
-  if (!last) {
-    return { isActive: false, lastPayment: null, planName: null, nextDueDate: null };
-  }
+  if (!last) return { isActive: false, lastPayment: null, planName: null, nextDueDate: null };
 
   const paidAt = last.payment.paidAt!;
   const nextDue = new Date(paidAt.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const isActive = nextDue > new Date();
-
   return {
-    isActive,
+    isActive: nextDue > new Date(),
     lastPayment: last.payment,
     planName: last.planName,
     nextDueDate: nextDue,
   };
 }
 
-export async function processAsaasWebhook(body: unknown): Promise<void> {
-  const payload = body as {
-    event?: string;
-    payment?: { id?: string; status?: string };
-  };
+// ─── Asaas webhook ────────────────────────────────────────────────────────────
 
+export async function processAsaasWebhook(body: unknown): Promise<void> {
+  const payload = body as { event?: string; payment?: { id?: string } };
   const asaasId = payload.payment?.id;
   const event = payload.event;
-
   if (!asaasId) return;
-
   if (event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED") {
     await confirmPaymentByExternalId(asaasId, payload);
   }

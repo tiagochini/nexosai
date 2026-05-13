@@ -15,6 +15,7 @@ import { plansTable } from "./plans";
 
 export const paymentMethodEnum = pgEnum("payment_method", [
   "pix",
+  "boleto",
   "bank_transfer",
   "crypto_usdt",
   "crypto_btc",
@@ -68,6 +69,15 @@ export type BankTransferData = {
   instructions?: string;
 };
 
+export type BoletoData = {
+  barcodeUrl?: string;
+  barcode?: string;
+  dueDate?: string;
+  asaasId?: string;
+  nossoNumero?: string;
+  instructions?: string;
+};
+
 export const subscriptionPaymentsTable = pgTable("subscription_payments", {
   id: uuid("id").primaryKey().defaultRandom(),
   workspaceId: uuid("workspace_id")
@@ -86,6 +96,7 @@ export const subscriptionPaymentsTable = pgTable("subscription_payments", {
   description: text("description"),
   externalId: text("external_id"),
   pixData: jsonb("pix_data").$type<PixData>(),
+  boletoData: jsonb("boleto_data").$type<BoletoData>(),
   cryptoData: jsonb("crypto_data").$type<CryptoData>(),
   bankTransferData: jsonb("bank_transfer_data").$type<BankTransferData>(),
   paidAt: timestamp("paid_at", { withTimezone: true }),
