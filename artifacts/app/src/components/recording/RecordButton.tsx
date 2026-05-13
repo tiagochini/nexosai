@@ -461,30 +461,99 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
   // ── Full panel ─────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Floating trigger button */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        title="Gravação de Lançamento"
-        className={`fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 border
-          text-xs font-mono uppercase tracking-widest shadow-lg transition-all
-          ${hasActive
-            ? uiState === "paused"
-              ? "border-yellow-400/60 bg-yellow-400/10 text-yellow-400"
-              : "border-destructive/60 bg-destructive/10 text-destructive"
-            : "border-border/50 bg-card/80 text-muted-foreground hover:text-foreground hover:border-border"
-          }`}
-      >
-        {hasActive && (
-          <span className={`w-2 h-2 rounded-full ${
-            uiState === "paused" ? "bg-yellow-400" : "bg-destructive animate-pulse"
-          }`} />
-        )}
-        {!hasActive && <Radio className="h-3.5 w-3.5" />}
-        <span className="hidden sm:inline">
-          {hasActive ? fmtDuration(elapsed) : "Gravar"}
-        </span>
-        {hasActive && <span className="sm:hidden">{fmtDuration(elapsed)}</span>}
-      </button>
+      {/* ── Idle: simple "Gravar" pill ────────────────────────────────────── */}
+      {!hasActive && (
+        <button
+          onClick={() => setOpen(o => !o)}
+          title="Gravação de Lançamento"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 border
+            border-border/50 bg-card/90 text-muted-foreground hover:text-foreground
+            hover:border-border text-xs font-mono uppercase tracking-widest shadow-lg transition-all"
+        >
+          <Radio className="h-3.5 w-3.5" />
+          <span>Gravar</span>
+        </button>
+      )}
+
+      {/* ── Active: inline control bar (recording) ───────────────────────── */}
+      {uiState === "recording" && (
+        <div className="fixed bottom-6 right-6 z-40 flex items-center shadow-2xl border border-destructive/70
+          bg-destructive/90 text-white font-mono text-xs uppercase tracking-widest">
+
+          {/* Pulse dot + timer */}
+          <button
+            onClick={() => setOpen(o => !o)}
+            title="Ver detalhes"
+            className="flex items-center gap-2 px-3 py-2.5 hover:bg-white/10 transition-colors">
+            <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse shrink-0" />
+            <span className="tabular-nums font-bold tracking-wider">{fmtDuration(elapsed)}</span>
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-8 bg-white/20" />
+
+          {/* Pause */}
+          <button
+            onClick={pauseCapture}
+            title="Pausar gravação"
+            className="flex items-center gap-1.5 px-3 py-2.5 hover:bg-white/10 transition-colors">
+            <Pause className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Pausar</span>
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-8 bg-white/20" />
+
+          {/* Stop */}
+          <button
+            onClick={() => void stopCapture()}
+            title="Parar e salvar"
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/40 transition-colors">
+            <Square className="h-3.5 w-3.5 fill-current" />
+            <span className="hidden sm:inline">Parar</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Active: inline control bar (paused) ──────────────────────────── */}
+      {uiState === "paused" && (
+        <div className="fixed bottom-6 right-6 z-40 flex items-center shadow-2xl border border-yellow-400/80
+          bg-yellow-500/90 text-black font-mono text-xs uppercase tracking-widest">
+
+          {/* Pause indicator + timer */}
+          <button
+            onClick={() => setOpen(o => !o)}
+            title="Ver detalhes"
+            className="flex items-center gap-2 px-3 py-2.5 hover:bg-black/10 transition-colors">
+            <span className="w-2.5 h-2.5 rounded-full bg-black/60 shrink-0" />
+            <span className="tabular-nums font-bold tracking-wider opacity-80">{fmtDuration(elapsed)}</span>
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-8 bg-black/20" />
+
+          {/* Resume */}
+          <button
+            onClick={resumeCapture}
+            title="Retomar gravação"
+            className="flex items-center gap-1.5 px-3 py-2.5 hover:bg-black/10 transition-colors font-bold">
+            <Play className="h-3.5 w-3.5 fill-current" />
+            <span className="hidden sm:inline">Retomar</span>
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-8 bg-black/20" />
+
+          {/* Stop */}
+          <button
+            onClick={() => void stopCapture()}
+            title="Parar e salvar"
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/30 transition-colors">
+            <Square className="h-3.5 w-3.5 fill-current" />
+            <span className="hidden sm:inline">Parar</span>
+          </button>
+        </div>
+      )}
 
       {/* Panel */}
       {open && (
