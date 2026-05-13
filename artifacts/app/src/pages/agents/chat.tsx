@@ -435,8 +435,8 @@ export default function AgentChat() {
           return (
             <div key={i} className={`flex gap-2.5 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
               {!isUser && (
-                <div className={`w-7 h-7 border shrink-0 mt-1 flex items-center justify-center ${accent.border} ${accent.bg}`}>
-                  <img src={nexosLogo} alt="AI" className="w-4 h-4 object-contain" />
+                <div className={`w-10 h-10 border shrink-0 mt-1 flex items-center justify-center ${accent.border} ${accent.bg}`}>
+                  <img src={nexosLogo} alt="AI" className="w-7 h-7 object-contain" />
                 </div>
               )}
               {isUser && (
