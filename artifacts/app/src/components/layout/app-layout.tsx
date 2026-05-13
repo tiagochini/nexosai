@@ -367,13 +367,10 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
             <img
               src={nexosLogo}
               alt="NexOS"
-              className="h-9 w-9 object-contain transition-all duration-300"
+              className="h-8 w-8 object-contain transition-all duration-300"
               style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.65))" }}
             />
-            <div>
-              <div className="font-mono font-black text-base uppercase tracking-[0.15em] leading-tight">NexOS <span className="text-primary">AI</span></div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary/60 leading-tight">Plataforma</div>
-            </div>
+            <div className="font-mono font-black text-sm uppercase tracking-widest leading-none whitespace-nowrap">NEXOS <span className="text-primary">AI</span></div>
           </div>
         </Link>
         <div className="hidden md:block text-[11px] font-mono uppercase tracking-widest text-muted-foreground/40">

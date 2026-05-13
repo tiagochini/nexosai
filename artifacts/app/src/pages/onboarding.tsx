@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -385,13 +385,11 @@ export default function Onboarding() {
     setPath(selectedPath);
     setStarting(true);
     try {
-      const res = await customFetch<Response>("/api/onboarding/start", {
+      const data = await customFetch<{ campaign: { id: string }; path: string }>("/api/onboarding/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path: selectedPath }),
       });
-      if (!res.ok) throw new Error("Falha ao iniciar");
-      const data = await res.json() as { campaign: { id: string }; path: string };
       const cid = data.campaign.id;
       setCampaignId(cid);
       setStep("conversation");
@@ -405,8 +403,12 @@ export default function Onboarding() {
       const initMsgs = [{ role: "assistant" as const, content: greetings[selectedPath] }];
       setMessages(initMsgs);
       saveOnboardingState({ path: selectedPath, campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false });
-    } catch {
-      toast.error("Erro ao iniciar. Tente novamente.");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        toast.error("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", { duration: 6000 });
+      } else {
+        toast.error("Erro ao iniciar. Tente novamente.");
+      }
     } finally {
       setStarting(false);
     }
@@ -417,13 +419,11 @@ export default function Onboarding() {
     setAudienceSubPath(subPath);
     setStarting(true);
     try {
-      const res = await customFetch<Response>("/api/onboarding/start", {
+      const data = await customFetch<{ campaign: { id: string } }>("/api/onboarding/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path: "has_audience", audienceSubPath: subPath }),
       });
-      if (!res.ok) throw new Error("Falha ao iniciar");
-      const data = await res.json() as { campaign: { id: string } };
       const cid = data.campaign.id;
       setCampaignId(cid);
       setStep("conversation");
@@ -438,8 +438,12 @@ export default function Onboarding() {
       const initMsgs = [{ role: "assistant" as const, content: subPathGreetings[subPath] }];
       setMessages(initMsgs);
       saveOnboardingState({ path: "has_audience", campaignId: cid, step: "conversation", messages: initMsgs, conversationComplete: false, audienceSubPath: subPath });
-    } catch {
-      toast.error("Erro ao iniciar. Tente novamente.");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        toast.error("Limite de campanhas atingido. Acesse sua campanha existente ou faça upgrade do plano.", { duration: 6000 });
+      } else {
+        toast.error("Erro ao iniciar. Tente novamente.");
+      }
     } finally {
       setStarting(false);
     }
@@ -531,15 +535,12 @@ export default function Onboarding() {
     if (!silent) setLoadingIntegrations(true);
     else setRefreshingIntegrations(true);
     try {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations");
-      if (res.ok) {
-        const data = await res.json() as { integrations: { provider: string; status: string }[] };
-        setConnectedIntegrations(
-          (data.integrations ?? [])
-            .filter((i) => i.status === "connected")
-            .map((i) => i.provider)
-        );
-      }
+      const data = await customFetch<{ integrations: { provider: string; status: string }[] }>("/api/workspaces/me/integrations");
+      setConnectedIntegrations(
+        (data.integrations ?? [])
+          .filter((i) => i.status === "connected")
+          .map((i) => i.provider)
+      );
     } catch { /* silent */ }
     finally {
       setLoadingIntegrations(false);
