@@ -435,7 +435,7 @@ export default function CampaignIntake() {
   const isComplete = typeof data?.completeness === "object" && (data?.completeness as { valid?: boolean })?.valid;
 
   return (
-    <div className="space-y-4 md:space-y-5 max-w-5xl mx-auto">
+    <div className="flex flex-col flex-1 gap-4 md:gap-5 max-w-5xl mx-auto w-full min-h-0">
       {/* ── Header ── */}
       <div className="border-b border-border/50 pb-4">
         <Link href={`/campaigns/${campaignId}`}>
@@ -535,7 +535,7 @@ export default function CampaignIntake() {
 
       {/* ════════════════ CHAT VIEW ════════════════ */}
       {view === "chat" && (
-        <div className="flex flex-col" style={{ height: "calc(100vh - 13rem)", minHeight: "600px" }}>
+        <div className="flex flex-col flex-1 min-h-0" style={{ minHeight: "520px" }}>
           {/* Info bar / "onde você parou" summary */}
           {isReturning && progress > 0 ? (
             <div className="border border-blue-400/30 bg-blue-400/5 px-3 py-2.5 shrink-0 space-y-1.5">

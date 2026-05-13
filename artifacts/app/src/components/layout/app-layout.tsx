@@ -87,7 +87,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: "Time de IA",
       items: [
-        { name: "Agentes IA", href: "/agents", icon: Bot, badge: "29" },
+        { name: "Agentes IA", href: "/agents", icon: Bot, badge: "44" },
       ],
     },
     {
@@ -421,8 +421,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar onMenuOpen={() => setMobileOpen(true)} />
-        <main className="flex-1 overflow-y-auto">
-          <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto">
+        <main className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto flex flex-col flex-1 min-h-0">
             {children}
           </div>
         </main>
