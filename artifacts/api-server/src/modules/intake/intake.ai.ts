@@ -500,9 +500,18 @@ export async function finalizeIntake(
   const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
 
   const completeness = validateIntakeCompleteness(type, track, intakeData);
+  const fieldsCount = Object.keys(intakeData).length;
+
+  // Soft validation: require at least 3 fields collected; missing required fields only warn, don't block.
+  // The conversational AI decides when it has enough — strict field-key matching would block valid intakes
+  // where the AI stored data under slightly different keys than the static schema expects.
+  if (fieldsCount < 3) {
+    throw new ValidationError("Briefing muito curto. Continue a conversa com a IA antes de finalizar.");
+  }
   if (!completeness.valid) {
-    throw new ValidationError(
-      `Intake incompleto. Campos obrigatórios faltando: ${completeness.missingRequired.join(", ")}`
+    log.warn(
+      { campaignId, missingRequired: completeness.missingRequired },
+      "Finalizing intake with soft-incomplete fields — AI conversation marked complete"
     );
   }
 

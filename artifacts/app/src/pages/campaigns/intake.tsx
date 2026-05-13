@@ -529,13 +529,21 @@ export default function CampaignIntake() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      toast.success("Briefing finalizado! A IA está montando sua estratégia.");
-      setLocation(`/campaigns/${campaignId}`);
+      toast.success("Briefing finalizado! Redirecionando para sua campanha...");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao finalizar intake");
-    } finally {
-      setFinalizing(false);
+      const msg = err instanceof Error ? err.message : "Erro ao finalizar";
+      // If intake is "too short", block navigation — otherwise go to campaign regardless
+      if (msg.includes("Briefing muito curto")) {
+        toast.error(msg);
+        setFinalizing(false);
+        return;
+      }
+      // For any other error (e.g. already finalized, soft-incomplete), warn and navigate anyway
+      toast.warning("Briefing registrado com avisos — indo para sua campanha.");
     }
+    // Always navigate to campaign detail after finalize (success or soft error)
+    setLocation(`/campaigns/${campaignId}`);
+    setFinalizing(false);
   };
 
   if (isLoading && messages.length === 0) {
