@@ -42,25 +42,33 @@ const Section = React.forwardRef<HTMLElement, { children: React.ReactNode; class
 function Nav({ scrolled }: { scrolled: boolean }) {
   return (
     <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-border/40 bg-background/90 backdrop-blur-xl" : "bg-transparent"}`}>
-      <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <img src={nexosLogo} alt="NexOS AI" className="h-14 w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 sm:h-14 sm:w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
           <div className="hidden sm:block">
             <div className="font-mono font-black text-xl tracking-[0.15em] uppercase">NexOS <span className="text-primary">AI</span></div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">Automação de Vendas em Volume</div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <a href="/landing/simulador">
+        <div className="flex items-center gap-2">
+          <a href="/landing/simulador" className="hidden sm:block">
             <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-primary/80 hover:text-primary border border-primary/20 hover:border-primary/40 h-9 px-4 gap-1.5">
-              <Zap className="h-3 w-3" />Simular minha meta de vendas
+              <Zap className="h-3 w-3" />Simular meta
+            </Button>
+          </a>
+          <a href="/landing/simulador" className="sm:hidden">
+            <Button variant="ghost" size="sm" className="font-mono border border-primary/20 h-8 w-8 p-0 text-primary/80">
+              <Zap className="h-3.5 w-3.5" />
             </Button>
           </a>
           <a href="/login">
             <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground hidden sm:flex">Já tenho acesso</Button>
           </a>
           <a href="#oferta">
-            <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-xs tracking-widest font-bold h-9 px-5">Quero saber o valor</Button>
+            <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] sm:text-xs tracking-widest font-bold h-8 sm:h-9 px-3 sm:px-5">
+              <span className="hidden sm:inline">Quero saber o valor</span>
+              <span className="sm:hidden">Entrar</span>
+            </Button>
           </a>
         </div>
       </div>
@@ -83,15 +91,16 @@ function HeroSection() {
   const { ref, inView } = useInView(0.1);
   return (
     <Section id="hero" className="auth-bg-gradient" ref={ref as React.Ref<HTMLElement>}>
-      <div className="max-w-6xl mx-auto px-6 pt-20 w-full">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 w-full pb-28 sm:pb-20">
         <div className={`transition-all duration-1000 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
 
-          <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-10 font-mono text-xs uppercase tracking-[0.3em] text-primary">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Demonstração ao vivo — veja a IA vendendo em tempo real
+          <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 sm:px-4 py-2 mb-6 sm:mb-10 font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+            <span className="hidden sm:inline">Demonstração ao vivo — veja a IA vendendo em tempo real</span>
+            <span className="sm:hidden">Demo ao vivo — IA vendendo em tempo real</span>
           </div>
 
-          <h1 className="text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-none mb-8 max-w-5xl">
+          <h1 className="text-[2.2rem] sm:text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
             Você está vendendo<br />
             menos do que<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
@@ -99,20 +108,20 @@ function HeroSection() {
             </span>
           </h1>
 
-          <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl">
+          <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-8 sm:mb-12 max-w-2xl">
             A maioria das pessoas que tem um produto ou serviço fatura <strong className="text-foreground">uma fração do que poderia</strong> — não por falta de esforço, mas porque vender em volume exige uma operação que uma pessoa só não consegue sustentar.<br /><br />
             <strong className="text-foreground">O NexOS AI é essa operação. Rodando 24h. Por uma fração do custo.</strong>
           </p>
 
-          <div className="flex flex-col gap-4 items-start">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a href="/landing/simulador">
-                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-base h-16 px-10 gap-3">
-                  <Zap className="h-5 w-5" />SIMULAR MINHA META DE VENDAS
+          <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <a href="/landing/simulador" className="w-full sm:w-auto">
+                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs sm:text-base h-12 sm:h-16 px-6 sm:px-10 gap-2 sm:gap-3 w-full sm:w-auto">
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5" />SIMULAR MINHA META
                 </Button>
               </a>
-              <a href="#oferta">
-                <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-base h-16 px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60">
+              <a href="#oferta" className="w-full sm:w-auto">
+                <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-xs sm:text-base h-12 sm:h-16 px-5 sm:px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
                   QUERO VENDER MAIS <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
@@ -126,19 +135,19 @@ function HeroSection() {
       </div>
 
       {/* Stats strip */}
-      <div className="absolute bottom-16 left-0 right-0 border-t border-border/15 bg-background/40 backdrop-blur-md py-3">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between gap-2">
+      <div className="absolute bottom-0 sm:bottom-10 left-0 right-0 border-t border-border/15 bg-background/60 backdrop-blur-md py-2.5 sm:py-3">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-1">
           {[
-            { n: "R$41k",  label: "Em 6 dias" },
-            { n: "R$78k",  label: "Em 7 dias" },
-            { n: "R$134k", label: "Projeção top" },
-            { n: "44",     label: "Agentes IA", hide: false },
+            { n: "R$41k",  label: "Em 6 dias",   hide: false },
+            { n: "R$78k",  label: "Em 7 dias",   hide: false },
+            { n: "R$134k", label: "Projeção top", hide: false },
+            { n: "44",     label: "Agentes IA",   hide: false },
             { n: "100%",   label: "Automatizado", hide: true },
-            { n: "24h",    label: "Sem parar", hide: true },
+            { n: "24h",    label: "Sem parar",    hide: true },
           ].map(({ n, label, hide }) => (
             <div key={label} className={`flex flex-col items-center ${hide ? "hidden md:flex" : ""}`}>
-              <div className="font-mono font-black text-sm md:text-base text-primary leading-none">{n}</div>
-              <div className="font-mono text-[8px] md:text-[9px] uppercase tracking-widest text-muted-foreground/50 mt-0.5">{label}</div>
+              <div className="font-mono font-black text-xs sm:text-base text-primary leading-none">{n}</div>
+              <div className="font-mono text-[7px] sm:text-[9px] uppercase tracking-widest text-muted-foreground/50 mt-0.5">{label}</div>
             </div>
           ))}
         </div>
@@ -178,7 +187,7 @@ function FeriadaSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 delay-100 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">POR QUE VOCÊ NÃO ESTÁ VENDENDO NO VOLUME QUE PODERIA</div>
-          <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
             Você tem produto.<br />
             Você tem audiência.<br />
             <span className="text-destructive/80">O dinheiro não está entrando.</span>
@@ -228,7 +237,7 @@ function CustoRealSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">O QUE ISSO CUSTA NO MERCADO</div>
-          <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
             Montar um time de<br />lançamento completo<br />
             <span className="text-destructive/80">custa isso por mês:</span>
           </h2>
@@ -306,7 +315,7 @@ function RotinaSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">O CUSTO INVISÍVEL DE VENDER NA MÃO</div>
-          <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-10">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
             Cada hora que você gasta<br />em execução manual<br />
             <span className="text-primary">é uma venda que não aconteceu.</span>
           </h2>
@@ -359,11 +368,11 @@ function SolutionSection() {
             style={{ filter: "drop-shadow(0 0 28px hsl(var(--primary)/0.8))" }}
           />
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">APRESENTANDO</div>
-          <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-8">
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8">
             NexOS AI.<br />
             <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">Sua operação de vendas em volume.</span>
           </h2>
-          <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
+          <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-10 sm:mb-12 max-w-2xl mx-auto">
             Você define o produto e quanto quer faturar. A IA monta toda a operação — estratégia, textos de venda, segmentação de contatos, sequências de mensagens, monitoramento e otimização.{" "}
             <strong className="text-foreground">Você aprova. Ela executa. As vendas entram.</strong>
           </p>
@@ -413,7 +422,7 @@ function ModelosSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESTRATÉGIA SOB MEDIDA PARA A SUA SITUAÇÃO</div>
-          <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-3">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-3">
             6 formas de<br />
             <span className="text-primary">fazer as vendas entrarem.</span>
           </h2>
@@ -489,7 +498,7 @@ function ComoFuncionaSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">COMO FUNCIONA NA PRÁTICA</div>
-          <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-12">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-12">
             3 passos.<br />
             <span className="text-primary">Vendas rodando em 72 horas.</span>
           </h2>
@@ -561,7 +570,7 @@ function ProvaSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESSES RESULTADOS FORAM GERADOS PELO NEXOS AI</div>
-          <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-4">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
             Pessoas reais.<br />
             <span className="text-primary">Dinheiro real entrando na conta.</span>
           </h2>
@@ -648,7 +657,7 @@ function AoVivoSection() {
 
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">EVENTO AO VIVO · DATA A CONFIRMAR</div>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-            <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05]">
               Veja a IA vendendo<br />
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">em tempo real. Ao vivo.</span>
             </h2>
@@ -743,7 +752,7 @@ function EmJogoSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">O QUE ESTÁ EM JOGO</div>
-          <h2 className="text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-4">
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
             Cada semana sem isso<br />
             <span className="text-destructive/80">tem um custo calculável.</span>
           </h2>
@@ -790,7 +799,7 @@ function JanelaSection() {
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
 
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">UMA DECISÃO. UMA JANELA.</div>
-          <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
             O carrinho vai abrir<br />uma única vez<br />
             <span className="text-primary">neste preço. Para esta lista.</span>
           </h2>
@@ -936,7 +945,7 @@ function OfferSection() {
 
           <div className="text-center mb-14">
             <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">LISTA DE FUNDADORES</div>
-            <h2 className="text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-none mb-6">
+            <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
               O valor real só aparece<br />na hora que o carrinho<br />
               <span className="text-primary">abre. Mas a decisão é agora.</span>
             </h2>
