@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
@@ -11,7 +11,7 @@ import {
   Instagram, Mail, MessageSquare, Globe, Calendar,
   Users, Loader2, Send, ArrowRight, Eye,
   BarChart3, Music2, ChevronRight, TrendingUp,
-  Zap, Target, Activity, PlayCircle,
+  Zap, Target, Activity, PlayCircle, Link2, Shield,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -452,6 +452,239 @@ function mapApiPiece(p: ApiContentPiece, idx: number): ContentPiece {
   };
 }
 
+// ── Social platform → OAuth provider mapping ──────────────────────────────────
+
+interface SocialPlatformDef {
+  platform: Platform;
+  label: string;
+  oauthProvider: string;          // matches /api/integrations/oauth/start/:provider
+  dbProvider: string;             // stored in workspaceIntegrationsTable.provider
+  Icon: React.ElementType;
+  brand: { bg: string; border: string; text: string };
+}
+
+const SOCIAL_OAUTH_PLATFORMS: SocialPlatformDef[] = [
+  {
+    platform: "instagram",
+    label: "Instagram Business",
+    oauthProvider: "instagram",
+    dbProvider: "instagram",
+    Icon: Instagram,
+    brand: { bg: "rgba(225,48,108,0.08)", border: "#e1306c", text: "#e1306c" },
+  },
+  {
+    platform: "facebook",
+    label: "Facebook Pages",
+    oauthProvider: "meta_ads",
+    dbProvider: "meta_ads",
+    Icon: Globe,
+    brand: { bg: "rgba(24,119,242,0.08)", border: "#1877F2", text: "#1877F2" },
+  },
+  {
+    platform: "tiktok",
+    label: "TikTok Business",
+    oauthProvider: "tiktok",
+    dbProvider: "tiktok_ads",
+    Icon: Music2,
+    brand: { bg: "rgba(254,44,85,0.08)", border: "#fe2c55", text: "#fe2c55" },
+  },
+];
+
+// ── Social Launch Gate ────────────────────────────────────────────────────────
+// Shown after all content is approved — user must connect each social platform
+// that has content pieces before the real launch button becomes active.
+
+interface WorkspaceIntegration {
+  id: string;
+  provider: string;
+  status: string;
+  accountName?: string;
+}
+
+function SocialLaunchGate({
+  activePlatforms,
+  onLaunch,
+  launching,
+}: {
+  activePlatforms: Platform[];
+  onLaunch: () => void;
+  launching: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [connecting, setConnecting] = useState<string | null>(null);
+
+  const { data: integrationsData, refetch: refetchIntegrations } = useQuery({
+    queryKey: ["/api/workspaces/me/integrations", "gate"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/workspaces/me/integrations");
+      if (!res.ok) return { integrations: [] as WorkspaceIntegration[] };
+      return res.json() as Promise<{ integrations: WorkspaceIntegration[] }>;
+    },
+    staleTime: 10_000,
+  });
+
+  const integrations = integrationsData?.integrations ?? [];
+
+  // Determine which social platforms need to be connected
+  const required = SOCIAL_OAUTH_PLATFORMS.filter(def =>
+    activePlatforms.includes(def.platform)
+  );
+
+  const isConnected = (def: SocialPlatformDef) =>
+    integrations.some(i => i.provider === def.dbProvider && i.status === "connected");
+
+  const allConnected = required.every(def => isConnected(def));
+
+  const handleOAuth = useCallback(async (def: SocialPlatformDef) => {
+    setConnecting(def.oauthProvider);
+    try {
+      const body = await customFetch<{ url: string }>(
+        `/api/integrations/oauth/start/${def.oauthProvider}`
+      );
+      const popup = window.open(body.url, "nexos_oauth", "width=620,height=700,scrollbars=yes,resizable=yes");
+      if (!popup) {
+        toast.error("Popup bloqueado. Permita popups para este site e tente novamente.");
+        setConnecting(null);
+        return;
+      }
+      const handler = (event: MessageEvent<{ type?: string; success?: boolean; error?: string }>) => {
+        if (event.data?.type !== "oauth_complete") return;
+        window.removeEventListener("message", handler);
+        clearInterval(timer);
+        setConnecting(null);
+        if (event.data.success) {
+          toast.success(`${def.label} conectado!`);
+          void refetchIntegrations();
+          void queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+        } else {
+          toast.error(event.data.error ?? `Falha ao conectar ${def.label}`);
+        }
+      };
+      window.addEventListener("message", handler);
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          window.removeEventListener("message", handler);
+          setConnecting(null);
+        }
+      }, 600);
+    } catch {
+      toast.error(`Erro ao iniciar conexão com ${def.label}. Verifique se as credenciais OAuth estão configuradas.`);
+      setConnecting(null);
+    }
+  }, [refetchIntegrations, queryClient]);
+
+  // If no social platforms require OAuth (e.g. only email/whatsapp/ads), skip gate
+  if (required.length === 0) {
+    return (
+      <Button
+        onClick={onLaunch}
+        disabled={launching}
+        className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none"
+      >
+        {launching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+        Lançar<ArrowRight className="h-3 w-3" />
+      </Button>
+    );
+  }
+
+  return (
+    <div className="border border-primary/30 bg-card/60 mt-5">
+      {/* Header */}
+      <div className="border-b border-border/40 px-5 py-4 flex items-center gap-3">
+        <Shield className="h-4 w-4 text-primary shrink-0" />
+        <div className="flex-1">
+          <div className="font-mono text-xs font-bold uppercase tracking-widest text-primary">
+            Conectar Plataformas Antes de Lançar
+          </div>
+          <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
+            A NexOS AI vai postar automaticamente em seu nome. Conecte cada rede social com sua conta para liberar o lançamento.
+          </p>
+        </div>
+      </div>
+
+      {/* Platform rows */}
+      <div className="divide-y divide-border/30">
+        {required.map(def => {
+          const connected = isConnected(def);
+          const isLoading = connecting === def.oauthProvider;
+          const integration = integrations.find(i => i.provider === def.dbProvider && i.status === "connected");
+
+          return (
+            <div key={def.platform} className="flex items-center gap-4 px-5 py-4">
+              {/* Icon */}
+              <div
+                className="w-9 h-9 border flex items-center justify-center shrink-0"
+                style={{ borderColor: def.brand.border, background: def.brand.bg }}
+              >
+                <def.Icon className="h-4 w-4" style={{ color: def.brand.text }} />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-sm font-bold">{def.label}</div>
+                {connected && integration?.accountName ? (
+                  <div className="font-mono text-[11px] text-success mt-0.5">
+                    Conectado como {integration.accountName}
+                  </div>
+                ) : (
+                  <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">
+                    Faça login para autorizar a publicação
+                  </div>
+                )}
+              </div>
+
+              {/* Status / Connect button */}
+              {connected ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <span className="font-mono text-[11px] text-success uppercase tracking-widest">Conectado</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => void handleOAuth(def)}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-4 h-9 font-mono text-[11px] uppercase tracking-widest border transition-all shrink-0 disabled:opacity-50"
+                  style={{ borderColor: def.brand.border, color: def.brand.text, background: def.brand.bg }}
+                >
+                  {isLoading
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Conectando...</>
+                    : <><Link2 className="h-3.5 w-3.5" />Entrar com {def.label.split(" ")[0]}</>
+                  }
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Launch button — unlocks when all connected */}
+      <div className="border-t border-border/40 px-5 py-4">
+        {allConnected ? (
+          <Button
+            onClick={onLaunch}
+            disabled={launching}
+            className="w-full rounded-none font-mono uppercase tracking-widest gap-2 btn-weapon-primary h-11"
+          >
+            {launching
+              ? <><Loader2 className="h-4 w-4 animate-spin" />Iniciando lançamento...</>
+              : <><Send className="h-4 w-4" />Confirmar e Lançar Campanha<ArrowRight className="h-4 w-4" /></>
+            }
+          </Button>
+        ) : (
+          <div className="flex items-center gap-3 text-muted-foreground/50">
+            <div className="flex-1 h-px bg-border/30" />
+            <span className="font-mono text-[11px] uppercase tracking-widest">
+              {required.filter(d => !isConnected(d)).length} plataforma{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""} pendente{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""}
+            </span>
+            <div className="flex-1 h-px bg-border/30" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 type Tab = "platform" | "preview" | "flowchart" | "schedule" | "segmentation";
@@ -706,18 +939,6 @@ export default function ContentApproval() {
                   <CheckCircle2 className="h-3.5 w-3.5" />Aprovar Tudo ({pendingCount})
                 </Button>
               )}
-              {approvedCount === pieces.length && (
-                <Button
-                  onClick={() => approveCampaignMutation.mutate()}
-                  disabled={approveCampaignMutation.isPending}
-                  className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none"
-                >
-                  {approveCampaignMutation.isPending
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Send className="h-3.5 w-3.5" />}
-                  Lançar<ArrowRight className="h-3 w-3" />
-                </Button>
-              )}
             </div>
           </div>
 
@@ -955,6 +1176,15 @@ export default function ContentApproval() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* ── Social Launch Gate — appears when all content approved ── */}
+        {pieces.length > 0 && approvedCount === pieces.length && (
+          <SocialLaunchGate
+            activePlatforms={Object.keys(byPlatform) as Platform[]}
+            onLaunch={() => approveCampaignMutation.mutate()}
+            launching={approveCampaignMutation.isPending}
+          />
         )}
       </div>
     </>
