@@ -24,94 +24,94 @@ interface AgentInfo {
 }
 
 const AGENT_INFO: Record<string, AgentInfo> = {
-  command: { name: "Comandante IA", tagline: "General das Operações", provider: "Claude", icon: Rocket, accentColor: "primary",
+  command: { name: "Erick", tagline: "General das Operações", provider: "Claude", icon: Rocket, accentColor: "primary",
     description: "Orquestra toda a operação de lançamento com visão estratégica e execução impecável.",
     suggestions: ["Como devo estruturar meu próximo lançamento?", "Quais são os maiores erros em lançamentos de 6 dígitos?", "Monte um plano de 7 dias para meu lançamento", "Analise minha estratégia atual e aponte gargalos"] },
-  strategy: { name: "Estrategista", tagline: "Arquiteto do Lançamento", provider: "Claude", icon: Brain, accentColor: "primary",
+  strategy: { name: "Jefferson", tagline: "Arquiteto do Lançamento", provider: "Claude", icon: Brain, accentColor: "primary",
     description: "Cria estratégias de lançamento de 6 a 10 dígitos com base em dados e psicologia do consumidor.",
     suggestions: ["Como posicionar meu produto no mercado?", "Qual narrativa usar para meu avatar primário?", "Como me diferenciar da concorrência?", "Monte uma estratégia de lançamento semente para mim"] },
-  launch_manager: { name: "Gerente de Lançamento", tagline: "Coordenador de Fases", provider: "Claude", icon: Zap, accentColor: "primary",
+  launch_manager: { name: "Ryan", tagline: "Coordenador de Fases", provider: "Claude", icon: Zap, accentColor: "primary",
     description: "Coordena cada fase do lançamento com precisão milimétrica.",
     suggestions: ["Crie um cronograma de lançamento de 10 dias", "Quais CPLs devo publicar e quando?", "Como faço a transição do pré-lançamento para o carrinho?", "Monte uma timeline PLF completa para mim"] },
-  offer: { name: "Especialista em Oferta", tagline: "Arquiteto de Ofertas", provider: "Claude", icon: ShoppingCart, accentColor: "primary",
+  offer: { name: "Alexandre", tagline: "Arquiteto de Ofertas", provider: "Claude", icon: ShoppingCart, accentColor: "primary",
     description: "Constrói ofertas irresistíveis com stack de bônus e pricing psicológico.",
     suggestions: ["Analise minha oferta e sugira melhorias", "Qual garantia mais converte no mercado brasileiro?", "Como montar um stack de bônus que justifique R$2.000?", "Como usar ancoragem de preço no meu lançamento?"] },
-  product_builder: { name: "Product Builder", tagline: "Descobridor de Produtos", provider: "Claude", icon: Star, accentColor: "primary",
+  product_builder: { name: "Danny", tagline: "Descobridor de Produtos", provider: "Claude", icon: Star, accentColor: "primary",
     description: "Descobre e refina produtos digitais de alto valor percebido.",
     suggestions: ["Tenho expertise em X, qual produto criar?", "Como validar minha ideia de curso antes de criar?", "Que formato de produto vende mais no Brasil?", "Como precificar meu infoproduto?"] },
-  copywriter: { name: "Copywriter", tagline: "Mestre das Palavras", provider: "GPT-4o", icon: Pen, accentColor: "cyan",
+  copywriter: { name: "Gary", tagline: "Mestre das Palavras", provider: "GPT-4o", icon: Pen, accentColor: "cyan",
     description: "Escreve copy de venda que converte. Domina AIDA, PAS e storytelling emocional.",
     suggestions: ["Escreva uma headline para meu produto", "Crie um email de pré-lançamento", "Escreva um script de VSL para meu produto", "Crie copy para anúncio de topo de funil"] },
-  creative_director: { name: "Diretor Criativo", tagline: "Arquiteto Visual", provider: "GPT-4o", icon: Eye, accentColor: "cyan",
+  creative_director: { name: "David", tagline: "Arquiteto Visual", provider: "GPT-4o", icon: Eye, accentColor: "cyan",
     description: "Define identidade visual, branding e direção criativa completa.",
     suggestions: ["Crie um moodboard para meu produto premium", "Que paleta de cores usar para transmitir autoridade?", "Como fazer um branding que posicione como premium?", "Sugira tipografia para um produto de saúde"] },
-  landing_page: { name: "Landing Page", tagline: "Especialista em Conversão", provider: "GPT-4o", icon: Globe, accentColor: "cyan",
+  landing_page: { name: "Russell", tagline: "Especialista em Conversão", provider: "GPT-4o", icon: Globe, accentColor: "cyan",
     description: "Cria páginas de captura e vendas que convertem.",
     suggestions: ["Escreva a copy acima do fold da minha página de vendas", "Como estruturar uma VSL page que converte?", "Quais elementos de prova social incluir?", "Crie uma squeeze page para meu webinário"] },
-  targeting: { name: "Targeting Expert", tagline: "Caçador de Públicos", provider: "GPT-4o", icon: Target, accentColor: "yellow",
+  targeting: { name: "Perry", tagline: "Caçador de Públicos", provider: "GPT-4o", icon: Target, accentColor: "yellow",
     description: "Encontra os públicos certos nas plataformas certas com arquiteturas precisas.",
     suggestions: ["Quais interesses usar no Meta Ads para coaches?", "Como montar uma arquitetura de públicos lookalike?", "Qual é o melhor público para um curso de finanças?", "Como segmentar para um produto de R$2.000?"] },
-  media_buyer: { name: "Media Buyer", tagline: "Maximizador de ROAS", provider: "GPT-4o", icon: Megaphone, accentColor: "yellow",
+  media_buyer: { name: "Nicholas", tagline: "Maximizador de ROAS", provider: "GPT-4o", icon: Megaphone, accentColor: "yellow",
     description: "Maximiza ROAS em Meta Ads, Google Ads, TikTok e YouTube.",
     suggestions: ["Como distribuir R$10k de budget num lançamento?", "Qual ROAS é considerado bom no Brasil?", "Como escalar um conjunto de anúncios vencedor?", "Quando pausar um anúncio no Meta?"] },
-  affiliate_campaign: { name: "Especialista em Afiliados", tagline: "Multiplicador de Alcance", provider: "GPT-4o", icon: Users, accentColor: "yellow",
+  affiliate_campaign: { name: "Stuart", tagline: "Multiplicador de Alcance", provider: "GPT-4o", icon: Users, accentColor: "yellow",
     description: "Estrutura programas de afiliados para explosão de alcance.",
     suggestions: ["Qual comissão oferecer para afiliados top?", "Como criar um kit de materiais para afiliados?", "Como reativar afiliados inativos?", "Monte uma estratégia de co-produção"] },
-  analytics: { name: "Analista de Performance", tagline: "Intérprete de Dados", provider: "Gemini", icon: BarChart3, accentColor: "green",
+  analytics: { name: "Avinash", tagline: "Intérprete de Dados", provider: "Gemini", icon: BarChart3, accentColor: "green",
     description: "Interpreta dados e extrai insights acionáveis de campanhas.",
     suggestions: ["Meu CPL está em R$25, é bom para meu nicho?", "Como calcular o LTV do meu produto de R$997?", "Quais métricas acompanhar num lançamento?", "Como montar um dashboard de performance?"] },
-  optimization: { name: "Otimizador", tagline: "Motor de Melhoria Contínua", provider: "Gemini", icon: TrendingUp, accentColor: "green",
+  optimization: { name: "Bryan", tagline: "Motor de Melhoria Contínua", provider: "Gemini", icon: TrendingUp, accentColor: "green",
     description: "Melhora continuamente resultados com testes estruturados.",
     suggestions: ["Como fazer A/B test na minha página de vendas?", "Meu ROAS caiu 30%, o que fazer?", "Quais são os primeiros elementos a otimizar?", "Como testar criativos de forma eficiente?"] },
-  video: { name: "Estrategista de Vídeo", tagline: "Diretor de Conteúdo Visual", provider: "Gemini", icon: Video, accentColor: "green",
+  video: { name: "Blake", tagline: "Diretor de Conteúdo Visual", provider: "Gemini", icon: Video, accentColor: "green",
     description: "Define estratégias de VSL, YouTube, Reels, TikTok e Lives.",
     suggestions: ["Crie a estrutura de um VSL de 30 minutos", "Qual hook usar para Reels de lançamento?", "Como estruturar uma live de vendas?", "Monte um roteiro de CPL para YouTube"] },
-  creator_growth: { name: "Creator Growth", tagline: "Arquiteto de Audiência", provider: "Gemini", icon: Star, accentColor: "green",
+  creator_growth: { name: "Ali", tagline: "Arquiteto de Audiência", provider: "Gemini", icon: Star, accentColor: "green",
     description: "Cresce audiências orgânicas em Instagram, YouTube, TikTok e podcasts.",
     suggestions: ["Como crescer do 0 a 10k no Instagram?", "Qual frequência de posts no TikTok?", "Como transformar seguidores em compradores?", "Monte uma estratégia de conteúdo para 90 dias"] },
-  compliance: { name: "Compliance Officer", tagline: "Guardião Legal", provider: "Claude", icon: Shield, accentColor: "red",
+  compliance: { name: "Philip", tagline: "Guardião Legal", provider: "Claude", icon: Shield, accentColor: "red",
     description: "Garante que seu lançamento não viola CONAR, Meta Ads Policy, LGPD e CVM.",
     suggestions: ["Minha copy está dentro das normas do CONAR?", "O que não posso prometer num anúncio de saúde?", "Como fazer garantia de resultado sem risco legal?", "Quais disclaimers incluir em produtos financeiros?"] },
-  perpetual_launch_manager: { name: "Gerente de Perpétuo", tagline: "Motor de Vendas 24/7", provider: "Claude", icon: RefreshCw, accentColor: "primary",
+  perpetual_launch_manager: { name: "Francisco", tagline: "Motor de Vendas 24/7", provider: "Claude", icon: RefreshCw, accentColor: "primary",
     description: "Gerencia lançamentos perpétuos com evergreen funnels e automações de longo prazo.",
     suggestions: ["Como estruturar um funil perpétuo do zero?", "Qual é a diferença entre lançamento e perpétuo?", "Como criar urgência real num funil evergreen?", "Monte um funil perpétuo para meu produto de R$997"] },
-  ad_copy: { name: "Copy de Anúncios", tagline: "Criativo de Performance", provider: "GPT-4o", icon: Megaphone, accentColor: "cyan",
+  ad_copy: { name: "Carlton", tagline: "Criativo de Performance", provider: "GPT-4o", icon: Megaphone, accentColor: "cyan",
     description: "Cria copies de anúncios que param o scroll para Meta Ads e Google Ads.",
     suggestions: ["Escreva um hook para anúncio de topo de funil", "Crie copy para remarketing de carrinho abandonado", "Qual é o melhor ângulo para anúncio de curso de finanças?", "Escreva 3 variações de headline para meu produto"] },
-  social_media: { name: "Social Media IA", tagline: "Calendário de Conteúdo", provider: "GPT-4o", icon: Hash, accentColor: "cyan",
+  social_media: { name: "Garry", tagline: "Calendário de Conteúdo", provider: "GPT-4o", icon: Hash, accentColor: "cyan",
     description: "Cria calendários completos de conteúdo para Instagram, TikTok, YouTube e Facebook.",
     suggestions: ["Crie um calendário de conteúdo para semana de lançamento", "Qual é a proporção ideal entre posts de valor e venda?", "Como criar conteúdo que filtra o avatar certo?", "Monte estratégia de conteúdo para 30 dias pré-lançamento"] },
-  stories_sequence: { name: "Sequência de Stories", tagline: "Narrativa em Frames", provider: "GPT-4o", icon: Layers, accentColor: "cyan",
+  stories_sequence: { name: "Donald", tagline: "Narrativa em Frames", provider: "GPT-4o", icon: Layers, accentColor: "cyan",
     description: "Cria roteiros completos de stories para lançamento com ganchos e revelações.",
     suggestions: ["Crie uma sequência de stories de abertura de carrinho", "Como manter atenção por 20 stories seguidos?", "Monte sequência de stories para CPL de pré-lançamento", "Crie stories de urgência para últimas horas de carrinho"] },
-  media_brief: { name: "Brief de Mídia", tagline: "Guia para o Time de Tráfego", provider: "GPT-4o", icon: FileText, accentColor: "cyan",
+  media_brief: { name: "Andrew", tagline: "Guia para o Time de Tráfego", provider: "GPT-4o", icon: FileText, accentColor: "cyan",
     description: "Gera briefs completos para o time de tráfego pago com objetivos, públicos e KPIs.",
     suggestions: ["Gere um brief completo para lançamento de 10 dias", "O que não pode faltar num brief de tráfego?", "Como especificar públicos para o gestor de tráfego?", "Monte um brief de remarketing para carrinho abandonado"] },
-  vsl_script: { name: "Roteirista VSL", tagline: "Script de Alta Conversão", provider: "GPT-4o", icon: Video, accentColor: "cyan",
+  vsl_script: { name: "Jon", tagline: "Script de Alta Conversão", provider: "GPT-4o", icon: Video, accentColor: "cyan",
     description: "Escreve roteiros completos de VSL com estrutura AIDA, provas sociais e fechamento.",
     suggestions: ["Como estruturar um VSL de 30 minutos?", "Qual é o hook mais forte para abrir minha VSL?", "Escreva os primeiros 5 minutos do meu VSL", "Como fazer a transição para oferta sem soar forçado?"] },
-  cpl_script: { name: "Script CPL", tagline: "Conteúdo de Pré-Lançamento", provider: "GPT-4o", icon: Play, accentColor: "cyan",
+  cpl_script: { name: "Conrado", tagline: "Conteúdo de Pré-Lançamento", provider: "GPT-4o", icon: Play, accentColor: "cyan",
     description: "Roteiros para vídeos CPL com educação, autoridade e antecipação progressiva.",
     suggestions: ["Escreva o roteiro do CPL 1 para meu produto", "Como equilibrar entrega de valor e antecipação no CPL?", "Qual é a estrutura dos 3 CPLs no PLF?", "Como terminar cada CPL com gancho para o próximo?"] },
-  webinar_script: { name: "Roteirista Webinar", tagline: "Apresentação de Vendas", provider: "GPT-4o", icon: Mic, accentColor: "cyan",
+  webinar_script: { name: "Jason", tagline: "Apresentação de Vendas", provider: "GPT-4o", icon: Mic, accentColor: "cyan",
     description: "Roteiros completos para webinários de venda com slides, pitch e Q&A estratégico.",
     suggestions: ["Como estruturar um webinário de 90 minutos?", "Qual é a transição perfeita para o pitch?", "Como manter atenção durante 90 minutos ao vivo?", "Escreva a abertura de impacto do meu webinário"] },
-  live_script: { name: "Roteirista de Live", tagline: "Venda ao Vivo", provider: "GPT-4o", icon: Radio, accentColor: "cyan",
+  live_script: { name: "Grant", tagline: "Venda ao Vivo", provider: "GPT-4o", icon: Radio, accentColor: "cyan",
     description: "Roteiros para lives de lançamento com abertura de impacto e fechamento ao vivo.",
     suggestions: ["Como abrir uma live de carrinho sem soar artificial?", "Como responder objeções ao vivo no chat?", "Monte o roteiro de uma live de fechamento de 90min", "Como criar urgência real nos últimos 10 minutos?"] },
-  video_strategy: { name: "Estrategista de Vídeo", tagline: "Arquitetura do Conteúdo em Vídeo", provider: "Claude", icon: Cpu, accentColor: "primary",
+  video_strategy: { name: "Blake", tagline: "Arquitetura do Conteúdo em Vídeo", provider: "Claude", icon: Cpu, accentColor: "primary",
     description: "Define a estratégia completa de vídeo para o lançamento: quais produzir e em qual sequência.",
     suggestions: ["Quais vídeos devo produzir para meu lançamento?", "Como planejar a produção de vídeo para 30 dias?", "Qual é a diferença entre VSL, CPL e webinário?", "Monte a arquitetura de vídeo para um PLF completo"] },
-  financial_projector: { name: "Projetor Financeiro", tagline: "Simulador de Resultados", provider: "Gemini", icon: DollarSign, accentColor: "green",
+  financial_projector: { name: "Chet", tagline: "Simulador de Resultados", provider: "Gemini", icon: DollarSign, accentColor: "green",
     description: "Projeta receita, break-even, ROI e fluxo de caixa com base em benchmarks do mercado.",
     suggestions: ["Qual receita posso esperar com lista de 2.000 leads?", "Como calcular o break-even do meu lançamento?", "Projete 3 cenários (conservador, realista, otimista) para mim", "Quais custos não posso esquecer na projeção?"] },
-  launch_sequence_builder: { name: "Builder de Sequências", tagline: "Arquiteto de Automações", provider: "Claude", icon: Mail, accentColor: "primary",
+  launch_sequence_builder: { name: "Chris", tagline: "Arquiteto de Automações", provider: "Claude", icon: Mail, accentColor: "primary",
     description: "Cria sequências completas de email + WhatsApp por fase e segmento de engajamento.",
     suggestions: ["Monte uma sequência de 7 dias para abertura de carrinho", "Como segmentar mensagens por nível de engajamento?", "Qual é o timing ideal entre os emails de lançamento?", "Crie sequência de recuperação de carrinho abandonado"] },
-  continuous_sales_manager: { name: "Gestor de Vendas Contínuas", tagline: "Receita Previsível", provider: "Claude", icon: TrendingUp, accentColor: "primary",
+  continuous_sales_manager: { name: "Aaron", tagline: "Receita Previsível", provider: "Claude", icon: TrendingUp, accentColor: "primary",
     description: "Gerencia o ciclo de vendas contínuas pós-lançamento: nurturing, recompra e upsell.",
     suggestions: ["Como criar um programa de upsell pós-lançamento?", "Como reduzir churn em produto de recorrência?", "Monte uma sequência de reativação de leads frios", "Como identificar sinais de churn antes que aconteça?"] },
-  whatsapp_response: { name: "Auto-Resposta WhatsApp", tagline: "Atendimento Inteligente", provider: "Claude", icon: MessageCircle, accentColor: "primary",
+  whatsapp_response: { name: "Neil", tagline: "Atendimento Inteligente", provider: "Claude", icon: MessageCircle, accentColor: "primary",
     description: "Classifica mensagens do WhatsApp e gera respostas contextuais para leads e clientes.",
     suggestions: ["Como responder 'tá caro' sem dar desconto?", "Crie respostas para as 5 objeções mais comuns", "Como identificar intenção de compra numa mensagem?", "Monte roteiro de resposta para lead que sumiu por 3 dias"] },
 };
@@ -124,6 +124,7 @@ interface FileAttachment {
   url: string; // object URL for download
   size: number;
   isImage: boolean;
+  content?: string; // text content extracted from readable files
 }
 
 interface ChatMsg {
@@ -236,18 +237,33 @@ export default function AgentChat() {
   const RETRY_DELAYS_MS = [4000, 8000];
   const FETCH_TIMEOUT_MS = 110_000; // 110s — AI calls can take up to 90s
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const readTextContent = (file: File): Promise<string | null> =>
+    new Promise(resolve => {
+      const isReadable =
+        file.type.startsWith("text/") ||
+        ["application/json", "application/xml"].includes(file.type) ||
+        /\.(txt|md|csv|json|html|xml|yml|yaml|ts|tsx|js|jsx|py|sql|sh|env)$/i.test(file.name);
+      if (!isReadable || file.size > 400_000) { resolve(null); return; }
+      const reader = new FileReader();
+      reader.onload = e => resolve((e.target?.result as string | null) ?? null);
+      reader.onerror = () => resolve(null);
+      reader.readAsText(file);
+    });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
-    const attachments: FileAttachment[] = files.map(f => ({
-      name: f.name,
-      type: f.type,
-      url: URL.createObjectURL(f),
-      size: f.size,
-      isImage: f.type.startsWith("image/"),
-    }));
+    const attachments: FileAttachment[] = await Promise.all(
+      files.map(async f => ({
+        name: f.name,
+        type: f.type,
+        url: URL.createObjectURL(f),
+        size: f.size,
+        isImage: f.type.startsWith("image/"),
+        content: await readTextContent(f),
+      }))
+    );
     setPendingAttachments(prev => [...prev, ...attachments]);
-    // Reset input so same file can be re-selected
     e.target.value = "";
   };
 
@@ -279,9 +295,16 @@ export default function AgentChat() {
     setSending(true);
     setRetryInfo(null);
 
+    // Include readable file contents in the message so the AI can process them
+    const fileContext = attachmentsSnapshot
+      .filter(a => a.content)
+      .map(a => `\n\n--- Arquivo: ${a.name} ---\n${a.content}`)
+      .join("");
+    const messageWithFiles = text + fileContext;
+
     const requestBody = JSON.stringify({
       agentRole: role,
-      message: text,
+      message: messageWithFiles,
       history: snapshotMessages.map(m => ({ role: m.role, content: m.content })).slice(-12),
       contextMode,
       ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
@@ -553,7 +576,9 @@ export default function AgentChat() {
         )}
         <div className="flex gap-2 items-end">
           {/* Hidden file input */}
-          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+          <input ref={fileInputRef} type="file" multiple className="hidden"
+            accept=".txt,.md,.csv,.json,.html,.xml,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sql,.sh,.pdf,.doc,.docx,image/*"
+            onChange={e => { void handleFileSelect(e); }} />
           <textarea ref={inputRef} value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
