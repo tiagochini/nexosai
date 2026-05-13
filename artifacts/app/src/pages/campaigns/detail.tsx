@@ -181,6 +181,180 @@ function KpiCard({ label, value, sub, icon: Icon, color = "primary" }: {
   );
 }
 
+// ── AgentPlanPanel ─────────────────────────────────────────────────────────────
+function PlanBlock({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="border border-border/40 bg-muted/5 p-4 space-y-2">
+      <div className="font-mono text-[11px] uppercase tracking-widest text-primary/70 font-bold">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function PlanText({ value }: { value: unknown }) {
+  if (!value) return null;
+  if (typeof value === "string") return <p className="font-mono text-xs text-foreground/80 leading-relaxed">{value}</p>;
+  if (Array.isArray(value)) return (
+    <ul className="space-y-1">
+      {(value as unknown[]).map((item, i) => (
+        <li key={i} className="font-mono text-xs text-foreground/80 flex items-start gap-2 leading-relaxed">
+          <span className="text-primary/50 shrink-0 mt-0.5">·</span>
+          <span>{typeof item === "string" ? item : typeof item === "object" && item !== null ? Object.values(item as Record<string, unknown>).filter(v => typeof v === "string").join(" — ") : String(item)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+  if (typeof value === "object" && value !== null) {
+    const obj = value as Record<string, unknown>;
+    const entries = Object.entries(obj).filter(([, v]) => v !== null && v !== undefined && v !== "");
+    if (entries.length === 0) return null;
+    return (
+      <div className="space-y-1.5">
+        {entries.map(([k, v]) => (
+          <div key={k}>
+            <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider">{k.replace(/_/g, " ")}: </span>
+            <span className="font-mono text-xs text-foreground/80">{typeof v === "string" ? v : Array.isArray(v) ? (v as unknown[]).join(", ") : JSON.stringify(v)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
+
+function AgentPlanPanel({
+  strategyD, audienceD, offerD, targetingD, timelineD, checkpoints, onGoToStrategy,
+}: {
+  strategyD: Record<string, unknown>;
+  audienceD: Record<string, unknown>;
+  offerD: Record<string, unknown>;
+  targetingD: Record<string, unknown>;
+  timelineD: Record<string, unknown>;
+  checkpoints: Checkpoint[];
+  onGoToStrategy: () => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const approvedCps = checkpoints.filter(c => c.status === "approved");
+
+  const hasPlan = Object.keys(strategyD).length > 0 || Object.keys(audienceD).length > 0 || Object.keys(offerD).length > 0;
+
+  return (
+    <div className="border border-cyan-400/25 bg-cyan-400/3 overflow-hidden">
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full px-4 py-3 flex items-center gap-3 border-b border-cyan-400/20 hover:bg-cyan-400/5 transition-colors"
+      >
+        <div className="w-2 h-2 rounded-full bg-cyan-400 shrink-0" style={{ boxShadow: "0 0 6px hsl(180 100% 60%)" }} />
+        <span className="font-mono text-xs uppercase tracking-widest text-cyan-400 font-bold flex-1 text-left">
+          Outputs dos Agentes — Plano de Ação
+        </span>
+        <span className="font-mono text-[11px] text-muted-foreground/50">
+          {expanded ? "▲ recolher" : "▼ expandir"}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="p-4 space-y-3">
+
+          {/* Strategy summary */}
+          {!!strategyD.executiveSummary && (
+            <PlanBlock label="Diagnóstico Executivo — Estrategista IA">
+              <PlanText value={strategyD.executiveSummary} />
+            </PlanBlock>
+          )}
+
+          {/* Market diagnosis */}
+          {!!strategyD.marketDiagnosis && (
+            <PlanBlock label="Diagnóstico de Mercado — Estrategista IA">
+              <PlanText value={strategyD.marketDiagnosis} />
+            </PlanBlock>
+          )}
+
+          {/* Offer positioning */}
+          {!!(strategyD.offerPositioning ?? offerD.positioning ?? offerD.uvp) && (
+            <PlanBlock label="Posicionamento da Oferta — Especialista em Oferta">
+              <PlanText value={strategyD.offerPositioning ?? offerD} />
+            </PlanBlock>
+          )}
+
+          {/* Audience segmentation */}
+          {!!(strategyD.audienceSegmentation ?? audienceD.avatars ?? audienceD.segments) && (
+            <PlanBlock label="Segmentação de Audiência — Profile Builder">
+              <PlanText value={strategyD.audienceSegmentation ?? audienceD} />
+            </PlanBlock>
+          )}
+
+          {/* Campaign architecture */}
+          {!!strategyD.campaignArchitecture && (
+            <PlanBlock label="Arquitetura da Campanha — Estrategista IA">
+              <PlanText value={strategyD.campaignArchitecture} />
+            </PlanBlock>
+          )}
+
+          {/* Trigger map */}
+          {!!strategyD.triggerMap && (
+            <PlanBlock label="Mapa de Gatilhos Mentais — Estrategista IA">
+              <PlanText value={strategyD.triggerMap} />
+            </PlanBlock>
+          )}
+
+          {/* Success metrics */}
+          {!!strategyD.successMetrics && (
+            <PlanBlock label="Metas & KPIs Projetados — Estrategista IA">
+              <PlanText value={strategyD.successMetrics} />
+            </PlanBlock>
+          )}
+
+          {/* Targeting data */}
+          {Object.keys(targetingD).length > 0 && (
+            <PlanBlock label="Targeting & Mídia Paga — Media Buyer">
+              <PlanText value={targetingD} />
+            </PlanBlock>
+          )}
+
+          {/* Timeline */}
+          {Object.keys(timelineD).length > 0 && (
+            <PlanBlock label="Cronograma do Lançamento — Gerente de Lançamento">
+              <PlanText value={timelineD} />
+            </PlanBlock>
+          )}
+
+          {/* Approved checkpoints */}
+          {approvedCps.length > 0 && (
+            <div className="space-y-2">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-success/70 font-bold flex items-center gap-2">
+                <CheckCircle2 className="h-3 w-3" />Checkpoints Aprovados ({approvedCps.length})
+              </div>
+              {approvedCps.map(cp => (
+                <PlanBlock key={cp.id} label={cp.type.replace(/_/g, " ")}>
+                  <div className="text-[11px] font-mono text-muted-foreground/50 mb-2">
+                    Aprovado em {new Date(cp.createdAt).toLocaleString("pt-BR")}
+                  </div>
+                  {cp.data && Object.keys(cp.data).length > 0 && <PlanText value={cp.data} />}
+                </PlanBlock>
+              ))}
+            </div>
+          )}
+
+          {!hasPlan && approvedCps.length === 0 && (
+            <div className="py-6 text-center font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
+              Nenhum output registrado ainda. Execute uma fase de IA para ver os resultados aqui.
+            </div>
+          )}
+
+          <button
+            onClick={onGoToStrategy}
+            className="w-full border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors px-4 py-2.5 font-mono text-xs uppercase tracking-widest text-primary flex items-center justify-center gap-2"
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Ver Proposta Estratégica Completa
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function CampaignDetail() {
   const [, params] = useRoute("/campaigns/:id");
@@ -868,6 +1042,19 @@ export default function CampaignDetail() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* ─ Plano de Ação gerado pelos Agentes ─ */}
+          {(Object.keys(strategyD).length > 0 || Object.keys(audienceD).length > 0 || Object.keys(offerD).length > 0 || Object.keys(timelineD).length > 0) && (
+            <AgentPlanPanel
+              strategyD={strategyD}
+              audienceD={audienceD}
+              offerD={offerD}
+              targetingD={targetingD}
+              timelineD={timelineD}
+              checkpoints={agentsData?.checkpoints ?? []}
+              onGoToStrategy={() => setActiveTab("estrategia")}
+            />
           )}
 
           {agentsLoading ? (

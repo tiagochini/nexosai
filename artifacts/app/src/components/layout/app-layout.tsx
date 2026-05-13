@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useMode } from "@/lib/mode";
-import { useGetCreditsBalance, getGetCreditsBalanceQueryKey } from "@workspace/api-client-react";
+import { useGetCreditsBalance, getGetCreditsBalanceQueryKey, getGetMeQueryKey } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
-  Brain, Receipt, Link2,
+  Brain, Receipt, Link2, Globe,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
@@ -18,11 +20,43 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { GlobalSearch, useGlobalSearch } from "@/components/global-search";
+import { toast } from "sonner";
+
+type LocaleCode = "pt-BR" | "en-US" | "en-AU" | "es-LA";
+const LOCALE_OPTIONS: { value: LocaleCode; flag: string; label: string }[] = [
+  { value: "pt-BR", flag: "🇧🇷", label: "Português (BR)" },
+  { value: "en-US", flag: "🇺🇸", label: "English (US)" },
+  { value: "en-AU", flag: "🇦🇺", label: "English (AU)" },
+  { value: "es-LA", flag: "🇲🇽", label: "Español (LA)" },
+];
 
 function SidebarContent({ onNav }: { onNav?: () => void }) {
   const { user, workspace, plan, planSlug, isAdmin, logout } = useAuth();
   const [location] = useLocation();
   const { mode, setMode, isExpert } = useMode();
+  const queryClient = useQueryClient();
+  const [savingLocale, setSavingLocale] = useState(false);
+
+  const currentLocale = ((user as Record<string, unknown> | null)?.locale as LocaleCode | undefined) ?? "pt-BR";
+  const currentLocaleOpt = LOCALE_OPTIONS.find(o => o.value === currentLocale) ?? LOCALE_OPTIONS[0];
+
+  const handleSetLocale = async (locale: LocaleCode) => {
+    if (locale === currentLocale || savingLocale) return;
+    setSavingLocale(true);
+    try {
+      await customFetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      });
+      toast.success("Idioma da IA atualizado.");
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+    } catch {
+      toast.error("Erro ao salvar idioma.");
+    } finally {
+      setSavingLocale(false);
+    }
+  };
 
   const { data: creditsData } = useGetCreditsBalance({
     query: {
@@ -247,13 +281,14 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   {isAdmin && " · Owner"}
                 </div>
               </div>
+              <span className="text-base leading-none shrink-0" title={currentLocaleOpt?.label}>{currentLocaleOpt?.flag}</span>
               <ChevronDown className="h-3 w-3 text-muted-foreground/40 shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
             side="top"
-            className="w-52 rounded-none border border-primary/20 bg-card/95 backdrop-blur-xl font-mono"
+            className="w-56 rounded-none border border-primary/20 bg-card/95 backdrop-blur-xl font-mono"
           >
             <DropdownMenuItem asChild className="cursor-pointer focus:bg-primary/10 focus:text-primary rounded-none font-mono text-xs uppercase tracking-widest">
               <Link href="/settings" onClick={onNav}>
@@ -272,6 +307,31 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                 </Link>
               </DropdownMenuItem>
             )}
+            <DropdownMenuSeparator className="bg-border/30" />
+            {/* Locale picker */}
+            <div className="px-2 py-1.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Globe className="h-3 w-3 text-muted-foreground/50" />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Idioma da IA</span>
+              </div>
+              <div className="grid grid-cols-2 gap-0.5">
+                {LOCALE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    disabled={savingLocale}
+                    onClick={() => void handleSetLocale(opt.value)}
+                    className={`flex items-center gap-1.5 px-2 py-1.5 text-left transition-all rounded-none text-[11px] font-mono
+                      ${currentLocale === opt.value
+                        ? "bg-primary/15 text-primary border border-primary/30"
+                        : "hover:bg-muted/30 text-muted-foreground hover:text-foreground border border-transparent"
+                      }`}
+                  >
+                    <span className="text-sm leading-none">{opt.flag}</span>
+                    <span className="truncate leading-none">{opt.label.split(" ")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <DropdownMenuSeparator className="bg-border/30" />
             <DropdownMenuItem
               onClick={() => { logout(); onNav?.(); }}
