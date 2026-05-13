@@ -68,7 +68,7 @@ function ProfileTab() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingLocale, setSavingLocale] = useState(false);
   const [copied, setCopied] = useState(false);
-  const currentLocale = (user as { locale?: Locale } | null)?.locale ?? "pt-BR";
+  const currentLocale = user?.locale ?? "pt-BR";
 
   useEffect(() => { setName(user?.name ?? ""); }, [user?.name]);
 
@@ -76,13 +76,17 @@ function ProfileTab() {
     if (!name.trim()) return;
     setSavingProfile(true);
     try {
-      const res = await customFetch<Response>("/api/workspaces/me", {
+      await customFetch("/api/workspaces/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
       });
-      if (!res.ok) throw new Error("Falha ao atualizar nome");
       toast.success("Nome atualizado com sucesso.");
+      queryClient.setQueryData(getGetMeQueryKey(), (old: unknown) => {
+        if (!old || typeof old !== "object") return old;
+        const prev = old as Record<string, unknown>;
+        return { ...prev, user: { ...(prev.user as Record<string, unknown>), name: name.trim() } };
+      });
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
       toast.error("Erro ao salvar nome.");
@@ -94,6 +98,11 @@ function ProfileTab() {
   const handleSetLocale = async (locale: Locale) => {
     if (locale === currentLocale || savingLocale) return;
     setSavingLocale(true);
+    queryClient.setQueryData(getGetMeQueryKey(), (old: unknown) => {
+      if (!old || typeof old !== "object") return old;
+      const prev = old as Record<string, unknown>;
+      return { ...prev, user: { ...(prev.user as Record<string, unknown>), locale } };
+    });
     try {
       await customFetch("/api/auth/me", {
         method: "PATCH",
@@ -103,6 +112,11 @@ function ProfileTab() {
       toast.success("Idioma atualizado com sucesso.");
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
+      queryClient.setQueryData(getGetMeQueryKey(), (old: unknown) => {
+        if (!old || typeof old !== "object") return old;
+        const prev = old as Record<string, unknown>;
+        return { ...prev, user: { ...(prev.user as Record<string, unknown>), locale: currentLocale } };
+      });
       toast.error("Erro ao salvar idioma.");
     } finally {
       setSavingLocale(false);
