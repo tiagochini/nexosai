@@ -20,6 +20,7 @@ import {
   MessageSquare, LayoutList, ChevronRight, Zap,
   Rocket, RefreshCw, Radio, TrendingUp, BarChart3,
   Users, Mail, Check, X, BarChart2, ChevronDown, ChevronUp, CornerDownLeft,
+  Mic, MicOff, Paperclip, ImageIcon, File,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -236,9 +237,14 @@ export default function CampaignIntake() {
     } catch { /* ignore */ }
   }, [inputValue, draftKey]);
 
+  const [isListening, setIsListening]           = useState(false);
+  const [pendingFiles, setPendingFiles]         = useState<Array<{ name: string; content?: string; url: string; isImage: boolean }>>([]);
   const aiTriggered = useRef(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const chatEndRef  = useRef<HTMLDivElement>(null);
+  const inputRef    = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   const { data, isLoading } = useGetIntake(campaignId, {
     query: { enabled: !!campaignId, queryKey: getGetIntakeQueryKey(campaignId) },
@@ -399,21 +405,84 @@ export default function CampaignIntake() {
     }
   };
 
+  // ── Voice to text ─────────────────────────────────────────────────────────────
+  const toggleVoice = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRec = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) { toast.error("Seu navegador não suporta voz. Use Chrome ou Edge."); return; }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
+    const rec = new SpeechRec() as any;
+    rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const t = (e.results[0]?.[0]?.transcript as string | undefined) ?? "";
+      if (t) setInputValue(prev => prev ? `${prev} ${t}` : t);
+    };
+    rec.onend = () => setIsListening(false);
+    rec.onerror = () => { setIsListening(false); toast.error("Erro ao capturar áudio. Verifique as permissões do microfone."); };
+    recognitionRef.current = rec;
+    rec.start();
+    setIsListening(true);
+    toast("Ouvindo… fale agora.", { duration: 2500 });
+  };
+
+  // ── File select ───────────────────────────────────────────────────────────────
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const added = await Promise.all(files.map(async f => {
+      const isReadable = f.type.startsWith("text/") ||
+        ["application/json"].includes(f.type) ||
+        /\.(txt|md|csv|json|ts|tsx|js|jsx|py|sql)$/i.test(f.name);
+      let content: string | undefined;
+      if (isReadable && f.size < 400_000) {
+        content = await new Promise<string>(res => {
+          const r = new FileReader();
+          r.onload = ev => res((ev.target?.result as string) ?? "");
+          r.onerror = () => res("");
+          r.readAsText(f);
+        });
+      }
+      return { name: f.name, content, url: URL.createObjectURL(f), isImage: f.type.startsWith("image/") };
+    }));
+    setPendingFiles(prev => [...prev, ...added]);
+    e.target.value = "";
+  };
+
+  const removeFile = (idx: number) => {
+    setPendingFiles(prev => { URL.revokeObjectURL(prev[idx]?.url ?? ""); return prev.filter((_, i) => i !== idx); });
+  };
+
   // ── Send message ──────────────────────────────────────────────────────────────
   const handleSend = async () => {
-    if (!inputValue.trim() || sending) return;
+    if (!inputValue.trim() && pendingFiles.length === 0) return;
+    if (sending) return;
     const userMsg = inputValue.trim();
+    const filesSnapshot = pendingFiles;
+    setPendingFiles([]);
+
+    // Build display message (includes file names so user sees them)
+    const fileNote = filesSnapshot.length > 0
+      ? `\n[Arquivos: ${filesSnapshot.map(f => f.name).join(", ")}]` : "";
+    const displayMsg = userMsg + fileNote;
+
+    // Build AI message (includes readable file contents)
+    const fileContext = filesSnapshot.filter(f => f.content)
+      .map(f => `\n\n--- Arquivo: ${f.name} ---\n${f.content}`).join("");
+    const aiMsg = (userMsg || "(Veja os arquivos abaixo)") + fileContext;
 
     // Do NOT clear input before the request succeeds. If the token is expired
     // or the network fails, the user's text must be preserved for retry.
-    const newMessages: ChatMessage[] = [...messages, { role: "user", content: userMsg }];
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: displayMsg }];
     setMessages(newMessages);
     setSending(true);
     setPendingProposal(null);
 
     try {
       const history = newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
-      const result = await callConversation({ message: userMsg, history });
+      const result = await callConversation({ message: aiMsg, history });
 
       // Clear input and draft only after confirmed success
       setInputValue("");
@@ -737,55 +806,107 @@ export default function CampaignIntake() {
 
           {/* Input */}
           {!chatComplete && (
-            <div className="border border-t-0 border-border/50 p-3 shrink-0">
-              <div className="flex gap-2 items-end">
-                <textarea
-                  ref={inputRef}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      if (isMobile || e.ctrlKey || e.metaKey) {
-                        e.preventDefault();
-                        void handleSend();
-                      }
-                      // desktop without modifier = new line
-                    }
-                  }}
-                  placeholder="Digite sua resposta aqui... (seja simples e direto, a IA entende tudo)"
-                  disabled={sending || confirmingType}
-                  rows={isMobile ? 6 : 8}
-                  className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[140px]"
-                />
-                <div className="flex flex-col gap-1.5 shrink-0">
-                  <Button
-                    onPointerDown={(e) => {
-                      if (e.pointerType === "touch") {
-                        e.preventDefault();
-                        void handleSend();
-                      }
-                    }}
-                    onClick={() => { if (!isMobile) void handleSend(); }}
-                    disabled={sending || !inputValue.trim() || confirmingType}
-                    title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
-                    className="font-mono rounded-none h-10 px-4 btn-weapon-primary">
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                  {!isMobile && (
-                    <Button variant="outline" size="sm" title="Nova linha (Enter)"
-                      onClick={() => {
-                        setInputValue(v => v + "\n");
-                        setTimeout(() => inputRef.current?.focus(), 0);
-                      }}
-                      disabled={sending || confirmingType}
-                      className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border">
-                      <CornerDownLeft className="h-4 w-4" />
-                    </Button>
-                  )}
+            <div className="border border-t-0 border-border/50 p-3 shrink-0 flex flex-col gap-2">
+
+              {/* Hidden file input */}
+              <input ref={fileInputRef} type="file" multiple className="hidden"
+                accept=".txt,.md,.csv,.json,.html,.xml,.ts,.tsx,.js,.jsx,.py,.sql,.pdf,.doc,.docx,image/*"
+                onChange={e => { void handleFileSelect(e); }} />
+
+              {/* Pending files preview */}
+              {pendingFiles.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border/30">
+                  {pendingFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1.5 border border-border/50 bg-muted/20 px-2 py-1">
+                      {f.isImage
+                        ? <ImageIcon className="h-3 w-3 text-primary/70 shrink-0" />
+                        : <File className="h-3 w-3 text-muted-foreground shrink-0" />}
+                      <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{f.name}</span>
+                      <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-destructive ml-1">
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
+              )}
+
+              {/* Listening indicator */}
+              {isListening && (
+                <div className="flex items-center gap-2 px-2 py-1 border border-destructive/40 bg-destructive/10">
+                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
+                  <span className="font-mono text-[11px] text-destructive uppercase tracking-widest">Ouvindo… fale agora</span>
+                  <button onClick={toggleVoice} className="ml-auto text-destructive"><X className="h-3 w-3" /></button>
+                </div>
+              )}
+
+              {/* Textarea */}
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    if (isMobile || e.ctrlKey || e.metaKey) {
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }
+                }}
+                placeholder="Digite sua resposta aqui... ou use o microfone para falar (a IA entende tudo)"
+                disabled={sending || confirmingType}
+                rows={isMobile ? 5 : 7}
+                className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[100px]"
+              />
+
+              {/* Action toolbar */}
+              <div className="flex items-center gap-1.5">
+
+                {/* Mic */}
+                <button type="button" onClick={toggleVoice}
+                  title={isListening ? "Parar gravação" : "Falar por voz (PT-BR)"}
+                  className={`h-9 w-9 flex items-center justify-center border transition-all rounded-sm shrink-0
+                    ${isListening
+                      ? "border-destructive bg-destructive/20 text-destructive"
+                      : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}>
+                  {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </button>
+
+                {/* Attach */}
+                <button type="button" onClick={() => fileInputRef.current?.click()}
+                  title="Anexar arquivo ou imagem"
+                  className="h-9 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0">
+                  <Paperclip className="h-4 w-4" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">Arquivo</span>
+                  {pendingFiles.length > 0 && (
+                    <span className="text-[9px] font-bold text-primary bg-primary/20 px-1 rounded-sm">{pendingFiles.length}</span>
+                  )}
+                </button>
+
+                <div className="flex-1" />
+
+                {/* New line (desktop) */}
+                {!isMobile && (
+                  <Button variant="outline" size="sm" title="Nova linha"
+                    onClick={() => { setInputValue(v => v + "\n"); setTimeout(() => inputRef.current?.focus(), 0); }}
+                    disabled={sending || confirmingType}
+                    className="font-mono rounded-sm h-9 px-3 border-border/50 text-muted-foreground hover:text-foreground shrink-0">
+                    <CornerDownLeft className="h-4 w-4" />
+                  </Button>
+                )}
+
+                {/* Send */}
+                <Button
+                  onPointerDown={(e) => { if (e.pointerType === "touch") { e.preventDefault(); void handleSend(); } }}
+                  onClick={() => { if (!isMobile) void handleSend(); }}
+                  disabled={sending || (inputValue.trim() === "" && pendingFiles.length === 0) || confirmingType}
+                  title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
+                  className="font-mono rounded-sm h-9 px-4 btn-weapon-primary shrink-0 gap-1.5">
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /><span className="hidden sm:inline text-[11px] uppercase tracking-widest">Enviar</span></>}
+                </Button>
               </div>
-              <p className="text-[11px] font-mono text-muted-foreground/40 mt-1.5 text-right">
-                {isMobile ? "Enter = enviar · Shift+Enter = nova linha" : "Enter = nova linha · Ctrl+Enter = enviar"}
+
+              <p className="text-[10px] font-mono text-muted-foreground/40 text-right">
+                {isMobile ? "Enter = enviar" : "Ctrl+Enter = enviar · Enter = nova linha"} · suporta texto, código, imagens, PDF
               </p>
             </div>
           )}
