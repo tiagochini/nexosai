@@ -582,7 +582,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 mb-3">
               <Bot className="h-4 w-4 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">
-                NexOS AI · 29 agentes prontos para trabalhar
+                NexOS AI · 44 agentes prontos para trabalhar
               </span>
             </div>
 
@@ -599,7 +599,7 @@ export default function Dashboard() {
               {[
                 { value: "R$41.200", label: "lançamento de 312 leads" },
                 { value: "7 dias", label: "do briefing ao carrinho aberto" },
-                { value: "29 agentes", label: "trabalhando ao mesmo tempo" },
+                { value: "44 agentes", label: "trabalhando ao mesmo tempo" },
               ].map(stat => (
                 <div key={stat.label} className="flex items-baseline gap-1.5">
                   <span className="font-mono font-black text-base text-primary">{stat.value}</span>
