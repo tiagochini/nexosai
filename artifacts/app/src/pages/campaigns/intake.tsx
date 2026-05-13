@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile.tsx";
 import {
   useGetIntake,
   useSaveIntake,
@@ -165,6 +166,7 @@ export default function CampaignIntake() {
   const campaignId = params?.id || "";
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const [view, setView] = useState<"chat" | "form">("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -665,36 +667,48 @@ export default function CampaignIntake() {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                      e.preventDefault();
-                      void handleSend();
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      if (isMobile || e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        void handleSend();
+                      }
+                      // desktop without modifier = new line
                     }
-                    // plain Enter = new line (default textarea behavior)
                   }}
                   placeholder="Digite sua resposta aqui... (seja simples e direto, a IA entende tudo)"
                   disabled={sending || confirmingType}
-                  rows={4}
-                  className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[80px]"
+                  rows={isMobile ? 3 : 4}
+                  className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[72px]"
                 />
                 <div className="flex flex-col gap-1.5 shrink-0">
-                  <Button onClick={() => void handleSend()} disabled={sending || !inputValue.trim() || confirmingType}
-                    title="Enviar (Ctrl+Enter)"
+                  <Button
+                    onPointerDown={(e) => {
+                      if (e.pointerType === "touch") {
+                        e.preventDefault();
+                        void handleSend();
+                      }
+                    }}
+                    onClick={() => { if (!isMobile) void handleSend(); }}
+                    disabled={sending || !inputValue.trim() || confirmingType}
+                    title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
                     className="font-mono rounded-none h-10 px-4 btn-weapon-primary">
                     {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
-                  <Button variant="outline" size="sm" title="Nova linha (Enter)"
-                    onClick={() => {
-                      setInputValue(v => v + "\n");
-                      setTimeout(() => inputRef.current?.focus(), 0);
-                    }}
-                    disabled={sending || confirmingType}
-                    className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border">
-                    <CornerDownLeft className="h-4 w-4" />
-                  </Button>
+                  {!isMobile && (
+                    <Button variant="outline" size="sm" title="Nova linha (Enter)"
+                      onClick={() => {
+                        setInputValue(v => v + "\n");
+                        setTimeout(() => inputRef.current?.focus(), 0);
+                      }}
+                      disabled={sending || confirmingType}
+                      className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border">
+                      <CornerDownLeft className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
               <p className="text-[11px] font-mono text-muted-foreground/40 mt-1.5 text-right">
-                Enter = nova linha · Ctrl+Enter = enviar
+                {isMobile ? "Enter = enviar · Shift+Enter = nova linha" : "Enter = nova linha · Ctrl+Enter = enviar"}
               </p>
             </div>
           )}
@@ -713,57 +727,150 @@ export default function CampaignIntake() {
       )}
 
       {/* ════════════════ FORM VIEW ════════════════ */}
-      {view === "form" && (
-        <div className="space-y-4">
-          <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2">
-            <Database className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Edite campos individuais — sincronizados com o chat em tempo real
-            </span>
-          </div>
+      {view === "form" && (() => {
+        const questions = data?.questions ?? [];
+        const campaignStatus = (data as unknown as { status?: string })?.status ?? "";
+        const isLive = !!campaignStatus && !["draft", "analyzing", "strategy_ready", "generating", "awaiting_approval"].includes(campaignStatus);
 
-          <div className="border border-border/50 bg-card/40 backdrop-blur-sm p-5 md:p-6 space-y-5">
-            {data?.questions?.map((q) => {
-              const placeholder = (q as unknown as { placeholder?: string }).placeholder ?? "Insira os dados...";
-              return (
-                <div key={q.key} className="space-y-1.5 group">
-                  <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
-                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30 group-focus-within:bg-primary transition-all" />
-                    {q.label} {q.required && <span className="text-primary">*</span>}
-                  </label>
-                  {q.type === "textarea" ? (
-                    <textarea value={formData[q.key] ?? ""}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
-                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm min-h-[90px] p-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all"
-                      placeholder={placeholder} />
-                  ) : (
-                    <input value={formData[q.key] ?? ""}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
-                      className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm h-10 px-3 text-foreground placeholder:text-muted-foreground/50 transition-all"
-                      placeholder={placeholder} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        // Group questions by section
+        const sections = questions.reduce<Record<string, typeof questions>>((acc, q) => {
+          const sec = (q as unknown as { section?: string }).section ?? "geral";
+          if (!acc[sec]) acc[sec] = [];
+          acc[sec].push(q);
+          return acc;
+        }, {});
+        const sectionEntries = Object.entries(sections);
 
-          <div className="flex flex-col md:flex-row gap-3">
-            <Button variant="outline"
-              onClick={() => saveMutation.mutate({ campaignId, data: { intakeData: formData } })}
-              disabled={saveMutation.isPending}
-              className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 text-xs">
-              {saveMutation.isPending ? "Salvando..." : "Salvar Alterações"}
-            </Button>
-            {isComplete && (
-              <Button onClick={() => void handleFinalize()} disabled={finalizing}
-                className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
-                {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
-                  : <><Zap className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
-              </Button>
+        const sectionLabels: Record<string, string> = {
+          produto: "Produto",
+          audiencia: "Audiência",
+          criador: "Criador",
+          conteudo: "Conteúdo",
+          risco: "Riscos",
+          lancamento: "Lançamento",
+          geral: "Geral",
+          metricas: "Métricas",
+          estrategia: "Estratégia",
+        };
+
+        return (
+          <div className="space-y-4">
+            <div className="border border-border/50 bg-card/30 px-3 py-2 flex items-center gap-2">
+              <Database className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest flex-1">
+                {isLive
+                  ? "Briefing — modo somente leitura (campanha em execução)"
+                  : "Edite campos individuais — sincronizados com o chat em tempo real"}
+              </span>
+              {isLive && (
+                <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-widest border-yellow-500/40 text-yellow-400">
+                  Read-only
+                </Badge>
+              )}
+            </div>
+
+            {isLoading ? (
+              <div className="space-y-3 p-5 border border-border/50 bg-card/40">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="space-y-1.5">
+                    <Skeleton className="h-3 w-32" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : questions.length === 0 ? (
+              <div className="border border-border/50 bg-card/40 p-8 flex flex-col items-center justify-center text-center gap-3">
+                <Database className="h-8 w-8 text-muted-foreground/30" />
+                <p className="font-mono text-sm text-muted-foreground">
+                  Nenhuma pergunta encontrada para este tipo de campanha.
+                </p>
+                <p className="font-mono text-[11px] text-muted-foreground/50">
+                  Use o chat para preencher o briefing com ajuda da IA.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setView("chat")}
+                  className="font-mono uppercase tracking-widest rounded-none border-border/50 text-xs mt-1">
+                  <MessageSquare className="h-3.5 w-3.5 mr-2" />Abrir Chat
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {sectionEntries.map(([section, qs]) => (
+                  <div key={section} className="border border-border/50 bg-card/40 backdrop-blur-sm">
+                    <div className="px-4 py-2 border-b border-border/30 bg-muted/10">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        {sectionLabels[section] ?? section}
+                      </span>
+                    </div>
+                    <div className="p-4 md:p-5 space-y-5">
+                      {qs.map((q) => {
+                        const placeholder = (q as unknown as { placeholder?: string }).placeholder ?? "Insira os dados...";
+                        const desc = (q as unknown as { description?: string }).description;
+                        const opts = (q as unknown as { options?: { value: string; label: string }[] }).options;
+
+                        return (
+                          <div key={q.key} className="space-y-1.5 group">
+                            <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2 group-focus-within:text-primary transition-colors">
+                              <span className="w-1 h-1 rounded-full bg-muted-foreground/30 group-focus-within:bg-primary transition-all" />
+                              {q.label}
+                              {q.required && <span className="text-primary ml-0.5">*</span>}
+                              {formData[q.key] && <Check className="h-3 w-3 text-emerald-500 ml-auto" />}
+                            </label>
+                            {desc && (
+                              <p className="text-[11px] text-muted-foreground/50 font-mono pl-3">{desc}</p>
+                            )}
+                            {opts && opts.length > 0 ? (
+                              <select
+                                value={formData[q.key] ?? ""}
+                                onChange={(e) => !isLive && setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
+                                disabled={isLive}
+                                className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm h-10 px-3 text-foreground disabled:opacity-60 disabled:cursor-not-allowed transition-all">
+                                <option value="">{placeholder}</option>
+                                {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                              </select>
+                            ) : q.type === "textarea" ? (
+                              <textarea
+                                value={formData[q.key] ?? ""}
+                                onChange={(e) => !isLive && setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
+                                readOnly={isLive}
+                                className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm min-h-[90px] p-3 resize-y text-foreground placeholder:text-muted-foreground/50 disabled:opacity-60 read-only:opacity-70 transition-all"
+                                placeholder={placeholder} />
+                            ) : (
+                              <input
+                                value={formData[q.key] ?? ""}
+                                onChange={(e) => !isLive && setFormData((prev) => ({ ...prev, [q.key]: e.target.value }))}
+                                readOnly={isLive}
+                                className="w-full font-mono text-sm bg-background/50 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm h-10 px-3 text-foreground placeholder:text-muted-foreground/50 read-only:opacity-70 transition-all"
+                                placeholder={placeholder} />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isLive && questions.length > 0 && (
+              <div className="flex flex-col md:flex-row gap-3">
+                <Button variant="outline"
+                  onClick={() => saveMutation.mutate({ campaignId, data: { intakeData: formData } })}
+                  disabled={saveMutation.isPending}
+                  className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 text-xs">
+                  {saveMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+                {isComplete && (
+                  <Button onClick={() => void handleFinalize()} disabled={finalizing}
+                    className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
+                    {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
+                      : <><Zap className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
+                  </Button>
+                )}
+              </div>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

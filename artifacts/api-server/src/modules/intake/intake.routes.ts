@@ -144,11 +144,24 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
     const completeness = validateIntakeCompleteness(type, track, intakeData);
     const questions = getIntakeQuestions(type, track);
 
+    // Map id → key so the client-generated schema (IntakeQuestion.key) matches
+    const questionsForClient = questions.map((q) => ({
+      key: q.id,
+      label: q.label,
+      type: q.type,
+      required: q.required,
+      section: q.section,
+      placeholder: q.placeholder,
+      description: q.description,
+      options: q.options,
+    }));
+
     res.json({
       campaignId,
       type,
       track,
       intakeData,
+      questions: questionsForClient,
       completeness: {
         valid: completeness.valid,
         missingRequired: completeness.missingRequired,
