@@ -668,6 +668,7 @@ export default function CampaignDetail() {
 
   const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string } | null => {
     switch (campaign.status) {
+      case "analyzing": return { phase: "strategy" as CampaignExecuteInputPhase, label: "Iniciar Análise Estratégica", description: "Briefing completo. A IA vai montar sua estratégia de lançamento agora." };
       case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia aprovada. Inicie a geração de conteúdo com IA." };
       case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A IA gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };

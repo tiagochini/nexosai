@@ -516,7 +516,10 @@ export async function finalizeIntake(
   }
 
   // Pre-populate campaign fields from intake data
-  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  const updates: Record<string, unknown> = {
+    updatedAt: new Date(),
+    status: "analyzing", // Advance out of intake so campaign detail page doesn't redirect back
+  };
 
   if (intakeData["campaign.revenueTarget"]) {
     updates["revenueTarget"] = String(Number(intakeData["campaign.revenueTarget"]));
