@@ -31,7 +31,7 @@ router.post("/", async (req, res): Promise<void> => {
   res.status(201).json({ recording: rec });
 });
 
-// GET /api/recordings — list
+// GET /api/recordings — list all (including active sessions for re-sync)
 router.get("/", async (req, res): Promise<void> => {
   const list = await svc.listRecordings(req.auth.workspaceId);
   res.json({ recordings: list });
@@ -66,6 +66,19 @@ router.post("/:id/stop", async (req, res): Promise<void> => {
   const rec = await svc.stopRecording(req.params["id"]!, req.auth.workspaceId);
   if (!rec) { res.status(404).json({ error: "Gravação não encontrada" }); return; }
   res.json({ recording: rec });
+});
+
+// POST /api/recordings/:id/upload — stream raw video body directly to disk
+// Client sends: Content-Type: video/webm, body = raw blob
+router.post("/:id/upload", async (req, res): Promise<void> => {
+  const result = await svc.uploadVideo(req.params["id"]!, req.auth.workspaceId, req);
+  if (!result) { res.status(404).json({ error: "Gravação não encontrada" }); return; }
+  res.json({ ok: true, size: result.size, path: result.path });
+});
+
+// GET /api/recordings/:id/video — stream video file (supports Range for seeking)
+router.get("/:id/video", async (req, res): Promise<void> => {
+  await svc.serveVideo(req.params["id"]!, req.auth.workspaceId, res);
 });
 
 // GET /api/recordings/:id/export — stream ZIP download

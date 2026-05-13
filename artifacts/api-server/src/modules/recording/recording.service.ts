@@ -2,19 +2,25 @@ import { eq, and } from "drizzle-orm";
 import { db, launchRecordingsTable } from "@workspace/db";
 import type { RecordingEvent } from "@workspace/db";
 import { ZipArchive } from "archiver";
-import type { Response } from "express";
+import type { Response, Request } from "express";
+import { createWriteStream, createReadStream } from "node:fs";
+import { mkdir, stat } from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
+import path from "node:path";
 import { logger } from "../../lib/logger.js";
 
 function nowIso() { return new Date().toISOString(); }
 function eventId() { return crypto.randomUUID(); }
 
+const UPLOADS_DIR = path.join(process.cwd(), "uploads", "recordings");
+
 // Elapsed active ms = (now - startedAt) - totalPausedMs - (if paused, ms since pausedAt)
 function calcActiveDuration(rec: typeof launchRecordingsTable.$inferSelect): number {
   const started = new Date(rec.startedAt).getTime();
-  const now = Date.now();
+  const now = rec.stoppedAt ? new Date(rec.stoppedAt).getTime() : Date.now();
   let paused = rec.totalPausedMs;
   if (rec.state === "paused" && rec.pausedAt) {
-    paused += now - new Date(rec.pausedAt).getTime();
+    paused += Date.now() - new Date(rec.pausedAt).getTime();
   }
   return Math.max(0, now - started - paused);
 }
@@ -33,6 +39,17 @@ export async function startRecording(workspaceId: string, name: string, campaign
   }).returning();
   logger.info({ recordingId: rec!.id }, "Recording started");
   return rec!;
+}
+
+// ─── Get single recording ─────────────────────────────────────────────────────
+
+export async function getRecording(recordingId: string, workspaceId: string) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+  return rec ?? null;
 }
 
 // ─── Add event ────────────────────────────────────────────────────────────────
@@ -79,14 +96,13 @@ export async function pauseRecording(recordingId: string, workspaceId: string) {
     .limit(1);
   if (!rec || rec.state !== "recording") return null;
 
-  // Log the pause event before pausing
   const pauseEvent: RecordingEvent = {
     id: eventId(),
     type: "recording_paused",
     phase: "pausa",
     timestamp: nowIso(),
     durationMs: calcActiveDuration(rec),
-    data: { reason: "Aguardando abertura do carrinho" },
+    data: {},
   };
 
   const [updated] = await db
@@ -119,7 +135,7 @@ export async function resumeRecording(recordingId: string, workspaceId: string) 
     type: "recording_resumed",
     phase: "retomada",
     timestamp: nowIso(),
-    durationMs: calcActiveDuration(rec),
+    durationMs: 0,
     data: { pausedMs: additionalPaused },
   };
 
@@ -153,10 +169,79 @@ export async function stopRecording(recordingId: string, workspaceId: string) {
 
   const [updated] = await db
     .update(launchRecordingsTable)
-    .set({ state: "stopped", stoppedAt: new Date(), totalPausedMs: totalPaused })
+    .set({ state: "stopped", stoppedAt: new Date(), pausedAt: null, totalPausedMs: totalPaused })
     .where(eq(launchRecordingsTable.id, recordingId))
     .returning();
   return updated!;
+}
+
+// ─── Upload video (stream directly to disk) ───────────────────────────────────
+
+export async function uploadVideo(recordingId: string, workspaceId: string, req: Request) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!rec) return null;
+
+  await mkdir(UPLOADS_DIR, { recursive: true });
+  const filepath = path.join(UPLOADS_DIR, `${recordingId}.webm`);
+  const ws = createWriteStream(filepath);
+
+  await pipeline(req, ws);
+
+  const fileStat = await stat(filepath);
+
+  await db
+    .update(launchRecordingsTable)
+    .set({
+      videoPath: filepath,
+      videoSize: fileStat.size,
+      videoUploadedAt: new Date(),
+    })
+    .where(eq(launchRecordingsTable.id, recordingId));
+
+  logger.info({ recordingId, size: fileStat.size }, "Recording video uploaded");
+  return { path: filepath, size: fileStat.size };
+}
+
+// ─── Serve video (with Range header support for seeking) ──────────────────────
+
+export async function serveVideo(recordingId: string, workspaceId: string, res: Response) {
+  const [rec] = await db
+    .select()
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!rec) { res.status(404).json({ error: "Gravação não encontrada" }); return; }
+  if (!rec.videoPath) { res.status(404).json({ error: "Vídeo ainda não foi enviado para o servidor" }); return; }
+
+  let fileStat: Awaited<ReturnType<typeof stat>>;
+  try { fileStat = await stat(rec.videoPath); }
+  catch { res.status(404).json({ error: "Arquivo de vídeo não encontrado no servidor" }); return; }
+
+  const total = fileStat.size;
+  const rangeHeader = (res.req as Request).headers.range;
+
+  res.setHeader("Content-Type", "video/webm");
+  res.setHeader("Accept-Ranges", "bytes");
+
+  if (rangeHeader) {
+    const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
+    const start = parseInt(startStr ?? "0", 10);
+    const end = endStr ? parseInt(endStr, 10) : total - 1;
+    const chunkSize = end - start + 1;
+
+    res.status(206);
+    res.setHeader("Content-Range", `bytes ${start}-${end}/${total}`);
+    res.setHeader("Content-Length", chunkSize);
+    createReadStream(rec.videoPath, { start, end }).pipe(res);
+  } else {
+    res.setHeader("Content-Length", total);
+    createReadStream(rec.videoPath).pipe(res);
+  }
 }
 
 // ─── List ─────────────────────────────────────────────────────────────────────
@@ -169,8 +254,12 @@ export async function listRecordings(workspaceId: string) {
       state: launchRecordingsTable.state,
       campaignId: launchRecordingsTable.campaignId,
       startedAt: launchRecordingsTable.startedAt,
+      pausedAt: launchRecordingsTable.pausedAt,
       stoppedAt: launchRecordingsTable.stoppedAt,
       totalPausedMs: launchRecordingsTable.totalPausedMs,
+      videoPath: launchRecordingsTable.videoPath,
+      videoSize: launchRecordingsTable.videoSize,
+      videoUploadedAt: launchRecordingsTable.videoUploadedAt,
     })
     .from(launchRecordingsTable)
     .where(eq(launchRecordingsTable.workspaceId, workspaceId))
@@ -197,6 +286,7 @@ function buildSummaryMd(rec: typeof launchRecordingsTable.$inferSelect, activeDu
     rec.stoppedAt ? `**Encerrado em:** ${new Date(rec.stoppedAt).toLocaleString("pt-BR")}` : "",
     `**Duração ativa:** ${fmtDuration(activeDurationMs)}`,
     `**Total de eventos:** ${events.length}`,
+    rec.videoPath ? `**Vídeo salvo:** ${path.basename(rec.videoPath)} (${rec.videoSize ? (rec.videoSize / 1024 / 1024).toFixed(1) + " MB" : "?"})` : "",
     ``,
     `---`,
     ``,
@@ -231,18 +321,17 @@ export async function exportZip(recordingId: string, workspaceId: string, res: R
   const events = rec.events as RecordingEvent[];
   const activeDurationMs = calcActiveDuration(rec);
 
-  // Group events by category for separate files
-  const briefing = events.filter(e => e.type.startsWith("briefing"));
-  const strategy = events.filter(e => e.type === "strategy_generated");
-  const copy = events.filter(e => e.type === "copy_generated");
-  const approvals = events.filter(e => e.type === "approval_requested" || e.type === "approved");
-  const creatives = events.filter(e => e.type === "creative_delivered");
-  const budgets = events.filter(e => e.type === "budget_set");
-  const cart = events.filter(e => e.type === "cart_opened" || e.type === "cart_closed");
-  const metrics = events.filter(e => e.type === "metrics_snapshot");
+  const briefing   = events.filter(e => e.type.startsWith("briefing"));
+  const strategy   = events.filter(e => e.type === "strategy_generated");
+  const copy       = events.filter(e => e.type === "copy_generated");
+  const approvals  = events.filter(e => e.type === "approval_requested" || e.type === "approved");
+  const creatives  = events.filter(e => e.type === "creative_delivered");
+  const budgets    = events.filter(e => e.type === "budget_set");
+  const cart       = events.filter(e => e.type === "cart_opened" || e.type === "cart_closed");
+  const metrics    = events.filter(e => e.type === "metrics_snapshot");
 
   const safeName = rec.name.replace(/[^a-z0-9]/gi, "_").slice(0, 40);
-  const dateStr = new Date(rec.startedAt).toISOString().slice(0, 10);
+  const dateStr  = new Date(rec.startedAt).toISOString().slice(0, 10);
   const filename = `nexos_lancamento_${safeName}_${dateStr}.zip`;
 
   res.setHeader("Content-Type", "application/zip");
@@ -251,44 +340,35 @@ export async function exportZip(recordingId: string, workspaceId: string, res: R
   const archive = new ZipArchive({ zlib: { level: 9 } });
   archive.pipe(res);
 
-  // Metadata
   const meta = {
-    id: rec.id,
-    name: rec.name,
-    campaignId: rec.campaignId,
-    state: rec.state,
-    startedAt: rec.startedAt,
-    stoppedAt: rec.stoppedAt,
-    totalPausedMs: rec.totalPausedMs,
-    activeDurationMs,
+    id: rec.id, name: rec.name, campaignId: rec.campaignId,
+    state: rec.state, startedAt: rec.startedAt, stoppedAt: rec.stoppedAt,
+    totalPausedMs: rec.totalPausedMs, activeDurationMs,
     activeDuration: fmtDuration(activeDurationMs),
     totalEvents: events.length,
+    videoFile: rec.videoPath ? path.basename(rec.videoPath) : null,
+    videoSizeMb: rec.videoSize ? +(rec.videoSize / 1024 / 1024).toFixed(1) : null,
     exportedAt: nowIso(),
   };
 
   archive.append(buildSummaryMd(rec, activeDurationMs), { name: "00-resumo.md" });
   archive.append(JSON.stringify(meta, null, 2), { name: "01-metadata.json" });
-
-  if (briefing.length) archive.append(JSON.stringify(briefing, null, 2), { name: "02-briefing.json" });
-  if (strategy.length) archive.append(JSON.stringify(strategy, null, 2), { name: "03-estrategia.json" });
-
+  if (briefing.length)  archive.append(JSON.stringify(briefing, null, 2),  { name: "02-briefing.json" });
+  if (strategy.length)  archive.append(JSON.stringify(strategy, null, 2),  { name: "03-estrategia.json" });
   if (copy.length) {
     archive.append(JSON.stringify(copy, null, 2), { name: "04-copy/copy-completo.json" });
     for (const ev of copy) {
       const d = ev.data as Record<string, unknown>;
-      const label = `${d["phase"] ?? "phase"}_${d["segment"] ?? "all"}`;
+      const label   = `${d["phase"] ?? "phase"}_${d["segment"] ?? "all"}`;
       const content = typeof d["content"] === "string" ? d["content"] : JSON.stringify(d, null, 2);
       archive.append(content, { name: `04-copy/${label}.txt` });
     }
   }
-
   if (approvals.length) archive.append(JSON.stringify(approvals, null, 2), { name: "05-aprovacoes.json" });
   if (creatives.length) archive.append(JSON.stringify(creatives, null, 2), { name: "06-criativos.json" });
-  if (budgets.length) archive.append(JSON.stringify(budgets, null, 2), { name: "07-orcamentos.json" });
-  if (cart.length) archive.append(JSON.stringify(cart, null, 2), { name: "08-carrinho.json" });
-  if (metrics.length) archive.append(JSON.stringify(metrics, null, 2), { name: "09-resultados.json" });
-
-  // Full timeline
+  if (budgets.length)   archive.append(JSON.stringify(budgets, null, 2),   { name: "07-orcamentos.json" });
+  if (cart.length)      archive.append(JSON.stringify(cart, null, 2),      { name: "08-carrinho.json" });
+  if (metrics.length)   archive.append(JSON.stringify(metrics, null, 2),   { name: "09-resultados.json" });
   archive.append(JSON.stringify(events, null, 2), { name: "10-timeline-completo.json" });
 
   await archive.finalize();

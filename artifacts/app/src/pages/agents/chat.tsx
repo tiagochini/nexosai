@@ -11,6 +11,7 @@ import {
   ShoppingCart, Users, BarChart3, TrendingUp, Video, Star,
   Shield, Rocket, Megaphone, Globe, RefreshCw, Download, CornerDownLeft,
   Mic, Play, Radio, FileText, Hash, Mail, MessageCircle, DollarSign, Layers, Cpu,
+  Paperclip, X, ImageIcon, File,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 
@@ -116,7 +117,21 @@ const AGENT_INFO: Record<string, AgentInfo> = {
 };
 
 type ContextMode = "brainstorm" | "review" | "strategy" | "question" | "optimize";
-interface ChatMsg { role: "user" | "assistant"; content: string; timestamp: Date }
+
+interface FileAttachment {
+  name: string;
+  type: string;
+  url: string; // object URL for download
+  size: number;
+  isImage: boolean;
+}
+
+interface ChatMsg {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  attachments?: FileAttachment[];
+}
 
 const ACCENT_CLASSES: Record<string, { border: string; text: string; bg: string }> = {
   primary: { border: "border-primary/40", text: "text-primary", bg: "bg-primary/10" },
@@ -171,8 +186,10 @@ export default function AgentChat() {
   const [retryInfo, setRetryInfo] = useState<{ attempt: number; max: number } | null>(null);
   const [contextMode, setContextMode] = useState<ContextMode>("question");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
+  const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: campaignsData } = useListCampaigns({ query: { queryKey: getListCampaignsQueryKey() } });
 
@@ -199,12 +216,44 @@ export default function AgentChat() {
   const RETRY_DELAYS_MS = [4000, 8000];
   const FETCH_TIMEOUT_MS = 110_000; // 110s — AI calls can take up to 90s
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    const attachments: FileAttachment[] = files.map(f => ({
+      name: f.name,
+      type: f.type,
+      url: URL.createObjectURL(f),
+      size: f.size,
+      isImage: f.type.startsWith("image/"),
+    }));
+    setPendingAttachments(prev => [...prev, ...attachments]);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const removeAttachment = (idx: number) => {
+    setPendingAttachments(prev => {
+      const removed = prev[idx];
+      if (removed) URL.revokeObjectURL(removed.url);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
   const sendMessage = async (overrideMsg?: string) => {
     const text = (overrideMsg ?? input).trim();
-    if (!text || sending) return;
+    if ((!text && pendingAttachments.length === 0) || sending) return;
+
+    const attachmentsSnapshot = pendingAttachments;
+    setPendingAttachments([]);
+
+    // Build display text (include file list so AI knows what was shared)
+    const attachmentNote = attachmentsSnapshot.length > 0
+      ? `\n\n[Arquivos anexados: ${attachmentsSnapshot.map(a => a.name).join(", ")}]`
+      : "";
+    const displayText = text + attachmentNote;
 
     const snapshotMessages = messages; // capture before optimistic update
-    const newMsg: ChatMsg = { role: "user", content: text, timestamp: new Date() };
+    const newMsg: ChatMsg = { role: "user", content: displayText, timestamp: new Date(), attachments: attachmentsSnapshot };
     const withUser = [...messages, newMsg];
     setMessages(withUser);
     setSending(true);
@@ -397,6 +446,23 @@ export default function AgentChat() {
               )}
               <div className={`max-w-[85%] px-4 py-3 text-xs font-mono leading-relaxed whitespace-pre-wrap border
                 ${isUser ? "bg-primary/15 border-primary/25 text-foreground" : "bg-card/70 border-border/40 text-foreground"}`}>
+                {/* File attachments */}
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {msg.attachments.map((att, ai) => (
+                      <a key={ai} href={att.url} download={att.name} title={`Baixar ${att.name}`}
+                        className="flex items-center gap-1.5 border border-border/50 bg-muted/20 hover:bg-muted/40 px-2 py-1 transition-colors group">
+                        {att.isImage
+                          ? <ImageIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                          : <File className="h-3 w-3 text-muted-foreground shrink-0" />}
+                        <span className="text-[10px] font-mono text-muted-foreground group-hover:text-foreground truncate max-w-[140px]">
+                          {att.name}
+                        </span>
+                        <Download className="h-2.5 w-2.5 text-muted-foreground/50 group-hover:text-foreground shrink-0" />
+                      </a>
+                    ))}
+                  </div>
+                )}
                 {msg.content}
                 <div className="mt-2 text-[11px] text-muted-foreground/50 uppercase tracking-widest">
                   {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -432,7 +498,26 @@ export default function AgentChat() {
 
       {/* Input */}
       <div className="shrink-0 border border-t-0 border-border/50 p-3 bg-card/20">
+        {/* Pending attachments preview */}
+        {pendingAttachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5 pb-2 border-b border-border/30">
+            {pendingAttachments.map((att, i) => (
+              <div key={i} className="flex items-center gap-1.5 border border-border/50 bg-muted/20 px-2 py-1">
+                {att.isImage
+                  ? <ImageIcon className="h-3 w-3 text-primary/70 shrink-0" />
+                  : <File className="h-3 w-3 text-muted-foreground shrink-0" />}
+                <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{att.name}</span>
+                <button onClick={() => removeAttachment(i)}
+                  className="text-muted-foreground hover:text-destructive transition-colors ml-1">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex gap-2 items-end">
+          {/* Hidden file input */}
+          <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
           <textarea ref={inputRef} value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
@@ -470,6 +555,15 @@ export default function AgentChat() {
               className={`font-mono rounded-none h-10 px-4 ${accent.bg} ${accent.border} border hover:brightness-125`}>
               {sending ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} /> : <Send className={`h-4 w-4 ${accent.text}`} />}
             </Button>
+            {/* Attach file */}
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              title="Anexar arquivo (qualquer tipo)"
+              className="font-mono rounded-none h-10 px-3 border border-border/50 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground shrink-0">
+              <Paperclip className="h-4 w-4" />
+              {pendingAttachments.length > 0 && (
+                <span className="ml-1 text-[9px] font-bold text-primary">{pendingAttachments.length}</span>
+              )}
+            </button>
             {!isMobile && (
               <Button variant="outline" size="sm" title="Nova linha (Enter)"
                 onClick={() => {

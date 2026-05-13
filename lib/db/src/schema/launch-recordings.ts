@@ -37,5 +37,9 @@ export const launchRecordingsTable = pgTable("launch_recordings", {
   pausedAt: timestamp("paused_at", { withTimezone: true }),
   stoppedAt: timestamp("stopped_at", { withTimezone: true }),
   totalPausedMs: integer("total_paused_ms").notNull().default(0),
+  // Video file stored on server
+  videoPath: text("video_path"),
+  videoSize: integer("video_size"), // bytes
+  videoUploadedAt: timestamp("video_uploaded_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -41,12 +41,20 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
 import IntegracoesPage from "@/pages/integracoes/index";
+import VideoEditorPage from "@/pages/video-editor/index";
+import SiteBuilderPage from "@/pages/site-builder/index";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
   if (!token) return <Redirect to="/login" />;
   return <AppLayout>{children}</AppLayout>;
+}
+
+function VideoEditorProtected() {
+  const { token } = useAuth();
+  if (!token) return <Redirect to="/login" />;
+  return <VideoEditorPage />;
 }
 
 function HomeRoute() {
@@ -202,6 +210,16 @@ export default function AppRoutes() {
       {/* Integrações */}
       <Route path="/integracoes">
         {() => <ProtectedRoute><IntegracoesPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Editor de Vídeo (full-screen, sem sidebar) */}
+      <Route path="/video-editor">
+        {() => <VideoEditorProtected />}
+      </Route>
+
+      {/* Construtor de Sites IA */}
+      <Route path="/site-builder">
+        {() => <ProtectedRoute><SiteBuilderPage /></ProtectedRoute>}
       </Route>
 
       {/* Account */}

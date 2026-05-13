@@ -9,7 +9,7 @@ import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
-  Brain, Receipt, Link2, Globe,
+  Brain, Receipt, Link2, Globe, Clapperboard,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
@@ -94,12 +94,14 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       label: "Ferramentas",
       expertOnly: true,
       items: [
-        { name: "VSL Studio",     href: "/vsls",              icon: Video   },
-        { name: "Social Media",   href: "/social",            icon: Share2  },
-        { name: "Moderação Bot",  href: "/social/moderation", icon: Shield  },
-        { name: "Sequências",     href: "/sequences",         icon: Workflow },
-        { name: "Receita",      href: "/revenue",    icon: DollarSign },
-        { name: "Compliance",   href: "/compliance", icon: Shield     },
+        { name: "VSL Studio",       href: "/vsls",              icon: Video      },
+        { name: "Editor de Vídeo",  href: "/video-editor",      icon: Clapperboard },
+        { name: "Social Media",     href: "/social",            icon: Share2     },
+        { name: "Moderação Bot",    href: "/social/moderation", icon: Shield     },
+        { name: "Sequências",       href: "/sequences",         icon: Workflow   },
+        { name: "Receita",          href: "/revenue",           icon: DollarSign },
+        { name: "Compliance",       href: "/compliance",        icon: Shield     },
+        { name: "Construtor de Sites IA", href: "/site-builder", icon: Globe    },
         ...(isAgency ? [
           { name: "Clientes",       href: "/agency/clients",   icon: Users },
           { name: "Perfis de Cliente", href: "/agency/profiles", icon: Users },
