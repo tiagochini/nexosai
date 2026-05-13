@@ -28,9 +28,11 @@ import { BudgetSimulator } from "@/components/budget-simulator";
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  agentId?: string;
 }
 
 interface ConversationResult {
+  agentId?: string;
   aiMessage: string;
   isComplete: boolean;
   progress: number;
@@ -39,6 +41,15 @@ interface ConversationResult {
   proposedTrack: string | null;
   proposedReason: string | null;
 }
+
+// ── Intake agents roster (mirrors backend INTAKE_AGENTS) ───────────────────────
+const INTAKE_AGENTS: Record<string, { name: string; role: string; specialty: string; color: string; initial: string }> = {
+  erico:  { name: "Érico",  role: "Estrategista de Produto",      specialty: "PLF · Fórmula de Lançamento",         color: "text-blue-400",    initial: "E" },
+  ryan:   { name: "Ryan",   role: "Especialista em Audiência",    specialty: "Avatar · Psicologia do Comprador",     color: "text-emerald-400", initial: "R" },
+  jeff:   { name: "Jeff",   role: "Estrategista de Receita",      specialty: "Metas · Orçamento · ROI",             color: "text-yellow-400",  initial: "J" },
+  chet:   { name: "Chet",   role: "Diretor de Estratégia",        specialty: "Modelo de Campanha · Funil",           color: "text-violet-400",  initial: "C" },
+  walker: { name: "Walker", role: "Especialista em Execução",     specialty: "PLF Avançado · Copy de Lançamento",   color: "text-orange-400",  initial: "W" },
+};
 
 // ── Campaign type/track label maps ─────────────────────────────────────────────
 const TYPE_LABELS: Record<string, { label: string; tag: string; icon: React.ElementType; color: string }> = {
@@ -60,22 +71,46 @@ const TRACK_LABELS: Record<string, { label: string; range: string }> = {
   not_applicable:  { label: "Crescimento", range: "Sem meta de faturamento concentrado" },
 };
 
-function ChatBubble({ msg }: { msg: ChatMessage }) {
+function AgentAvatar({ agentId, size = "sm" }: { agentId?: string; size?: "sm" | "md" }) {
+  const agent = agentId ? INTAKE_AGENTS[agentId] : null;
+  const dim = size === "sm" ? "w-8 h-8" : "w-10 h-10";
+  const txt = size === "sm" ? "text-xs" : "text-sm";
+  if (!agent) {
+    return (
+      <div className={`${dim} rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0`}>
+        <img src={nexosLogo} alt="AI" className="w-4 h-4 object-contain" />
+      </div>
+    );
+  }
+  return (
+    <div className={`${dim} rounded-sm border bg-card/80 flex items-center justify-center shrink-0 font-mono font-black ${txt} ${agent.color} border-current/30`}>
+      {agent.initial}
+    </div>
+  );
+}
+
+function ChatBubble({ msg, showAgentLabel }: { msg: ChatMessage; showAgentLabel?: boolean }) {
   const isUser = msg.role === "user";
+  const agent = (!isUser && msg.agentId) ? INTAKE_AGENTS[msg.agentId] : null;
+
   return (
     <div className={`flex gap-2 md:gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-      {!isUser && (
-        <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-          <img src={nexosLogo} alt="AI" className="w-4 h-4 object-contain" />
+      {!isUser && <AgentAvatar agentId={msg.agentId} size="sm" />}
+      <div className={`flex flex-col gap-1 max-w-[88%] ${isUser ? "items-end" : "items-start"}`}>
+        {!isUser && agent && showAgentLabel && (
+          <div className="flex items-center gap-2 px-1">
+            <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${agent.color}`}>{agent.name}</span>
+            <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-wider">{agent.role}</span>
+          </div>
+        )}
+        <div className={`px-3 md:px-4 py-2.5 md:py-3 rounded-sm text-xs md:text-sm font-mono leading-relaxed whitespace-pre-wrap
+          ${isUser
+            ? "bg-primary/20 border border-primary/30 text-foreground ml-auto"
+            : "bg-card/80 border border-border/50 text-foreground"
+          }`}
+        >
+          {msg.content}
         </div>
-      )}
-      <div className={`max-w-[88%] px-3 md:px-4 py-2.5 md:py-3 rounded-sm text-xs md:text-sm font-mono leading-relaxed whitespace-pre-wrap
-        ${isUser
-          ? "bg-primary/20 border border-primary/30 text-foreground ml-auto"
-          : "bg-card/80 border border-border/50 text-foreground"
-        }`}
-      >
-        {msg.content}
       </div>
     </div>
   );
@@ -272,7 +307,7 @@ export default function CampaignIntake() {
           message: filledKeys.length > 0 ? "continuar_intake" : "iniciar_intake",
           history: [],
         });
-        setMessages([{ role: "assistant", content: result.aiMessage }]);
+        setMessages([{ role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
         if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
         if (result.progress) setProgress(result.progress);
         if (result.isComplete) setChatComplete(true);
@@ -318,7 +353,7 @@ export default function CampaignIntake() {
         message: `Confirmo o modelo: ${pendingProposal.type} na trilha ${pendingProposal.track}`,
         history: messages.map(m => ({ role: m.role, content: m.content })).slice(-12),
       });
-      setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage }]);
+      setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
       if (result.progress != null) setProgress(result.progress);
       if (result.isComplete) setChatComplete(true);
@@ -339,7 +374,7 @@ export default function CampaignIntake() {
         message: "Quero considerar outras opções de modelo de campanha. Pode me explicar as alternativas que fariam sentido para o meu caso?",
         history: messages.map(m => ({ role: m.role, content: m.content })).slice(-12),
       });
-      setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage }]);
+      setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.proposedType && result.proposedTrack) {
         setPendingProposal({ type: result.proposedType, track: result.proposedTrack, reason: result.proposedReason });
       }
@@ -370,7 +405,7 @@ export default function CampaignIntake() {
       // Clear input only after confirmed success
       setInputValue("");
 
-      setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
       if (result.progress != null) setProgress(result.progress);
       if (result.isComplete) setChatComplete(true);
@@ -590,6 +625,26 @@ export default function CampaignIntake() {
             </div>
           )}
 
+          {/* Board of specialists strip */}
+          {messages.length === 0 && !sending && (
+            <div className="border-x border-b border-border/40 bg-card/20 px-4 py-3 shrink-0">
+              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-2">Especialistas na sala</div>
+              <div className="flex gap-3 flex-wrap">
+                {Object.entries(INTAKE_AGENTS).map(([id, ag]) => (
+                  <div key={id} className="flex items-center gap-1.5">
+                    <div className={`w-6 h-6 rounded-sm border bg-card/80 flex items-center justify-center font-mono font-black text-[10px] ${ag.color} border-current/30`}>
+                      {ag.initial}
+                    </div>
+                    <div>
+                      <div className={`font-mono text-[10px] font-bold ${ag.color}`}>{ag.name}</div>
+                      <div className="font-mono text-[8px] text-muted-foreground/40 leading-tight">{ag.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto space-y-3 p-4 border-x border-border/50">
             {/* Initial loading state while AI triggers */}
@@ -604,28 +659,36 @@ export default function CampaignIntake() {
                       <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
                     ))}
                   </div>
-                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Iniciando briefing com IA...</span>
+                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Preparando a sala de briefing...</span>
                 </div>
               </div>
             )}
 
-            {messages.map((msg, i) => <ChatBubble key={i} msg={msg} />)}
+            {messages.map((msg, i) => {
+              const prevMsg = messages[i - 1];
+              const agentChanged = msg.role === "assistant" && (
+                !prevMsg || prevMsg.role === "user" || prevMsg.agentId !== msg.agentId
+              );
+              return <ChatBubble key={i} msg={msg} showAgentLabel={agentChanged} />;
+            })}
 
-            {/* Sending indicator (after initial) */}
-            {sending && messages.length > 0 && (
-              <div className="flex gap-3">
-                <div className="w-7 h-7 rounded-sm border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
-                  <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-                </div>
-                <div className="bg-card/80 border border-border/50 px-4 py-3 rounded-sm">
-                  <div className="flex gap-1 items-center">
-                    {[0, 150, 300].map((delay) => (
-                      <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
-                    ))}
+            {/* Sending indicator — shows current agent avatar if known */}
+            {sending && messages.length > 0 && (() => {
+              const lastAssistant = [...messages].reverse().find(m => m.role === "assistant");
+              const thinkingAgentId = lastAssistant?.agentId;
+              return (
+                <div className="flex gap-2 md:gap-3">
+                  <AgentAvatar agentId={thinkingAgentId} size="sm" />
+                  <div className="bg-card/80 border border-border/50 px-4 py-3 rounded-sm">
+                    <div className="flex gap-1 items-center">
+                      {[0, 150, 300].map((delay) => (
+                        <div key={delay} className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Type proposal card — AI recommends a model */}
             {pendingProposal && !sending && (

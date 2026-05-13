@@ -50,6 +50,8 @@ interface LeadData {
   firstName: string;
   productName: string;
   productType: ProductType;
+  niche?: string;
+  revenueGoal?: string;
   email: string;
   whatsapp: string;
   countryCode: string;
@@ -1031,7 +1033,7 @@ function SummaryStep({ lead }: { lead: LeadData }) {
 // ── Lead Form Step ─────────────────────────────────────────────────────────────
 
 function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
-  const [form, setForm] = useState<LeadData>({ firstName: "", productName: "", productType: "curso", email: "", whatsapp: "", countryCode: "+55" });
+  const [form, setForm] = useState<LeadData>({ firstName: "", productName: "", productType: "curso", niche: "", revenueGoal: "", email: "", whatsapp: "", countryCode: "+55" });
   const [errors, setErrors] = useState<Partial<LeadData>>({});
 
   const set = (k: keyof LeadData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -1139,6 +1141,30 @@ function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
                   className="w-full h-11 bg-background/60 border border-border/50 focus:border-primary/60 focus:outline-none px-3 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 transition-colors"
                 />
                 {errors.firstName && <div className="font-mono text-[10px] text-destructive mt-0.5">{errors.firstName}</div>}
+              </div>
+              <div>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Nicho / Área</label>
+                <input
+                  value={form.niche ?? ""}
+                  onChange={set("niche")}
+                  placeholder="Ex: fitness, finanças, coaching..."
+                  className="w-full h-11 bg-background/60 border border-border/50 focus:border-primary/60 focus:outline-none px-3 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Meta de faturamento</label>
+                <select
+                  value={form.revenueGoal ?? ""}
+                  onChange={set("revenueGoal") as React.ChangeEventHandler<HTMLSelectElement>}
+                  className="w-full h-11 bg-background/60 border border-border/50 focus:border-primary/60 focus:outline-none px-3 font-mono text-sm text-foreground transition-colors"
+                >
+                  <option value="">Selecionar (opcional)</option>
+                  <option value="ate_10k">Até R$ 10k</option>
+                  <option value="10k_50k">R$ 10k – R$ 50k</option>
+                  <option value="50k_100k">R$ 50k – R$ 100k</option>
+                  <option value="100k_500k">R$ 100k – R$ 500k</option>
+                  <option value="acima_500k">Acima de R$ 500k</option>
+                </select>
               </div>
               <div className="col-span-2">
                 <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">E-mail *</label>

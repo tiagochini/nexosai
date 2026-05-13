@@ -317,6 +317,8 @@ interface SimulatorData {
   firstName: string;
   productName: string;
   productType: string;
+  niche?: string;
+  revenueGoal?: string;
   email: string;
   whatsapp: string;
   simulatedAt: string;
