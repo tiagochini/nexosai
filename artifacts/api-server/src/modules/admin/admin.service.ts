@@ -305,3 +305,82 @@ export async function getAdminFinancials(): Promise<AdminFinancials> {
     })),
   };
 }
+
+// ─── Admin payments list ───────────────────────────────────────────────────────
+
+export interface AdminPaymentRow {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  email: string;
+  userName: string;
+  amountCents: number;
+  currency: string;
+  method: string;
+  status: string;
+  description: string | null;
+  externalId: string | null;
+  pixData: unknown;
+  boletoData: unknown;
+  bankTransferData: unknown;
+  createdAt: string;
+  paidAt: string | null;
+  expiresAt: string | null;
+  metadata: unknown;
+}
+
+export async function getAdminPayments(opts: {
+  status?: string;
+  limit?: number;
+}): Promise<AdminPaymentRow[]> {
+  const { status, limit = 100 } = opts;
+
+  const rows = await db
+    .select({
+      id:               subscriptionPaymentsTable.id,
+      workspaceId:      subscriptionPaymentsTable.workspaceId,
+      workspaceName:    workspacesTable.name,
+      email:            usersTable.email,
+      userName:         usersTable.name,
+      amountCents:      subscriptionPaymentsTable.amountCents,
+      currency:         subscriptionPaymentsTable.currency,
+      method:           subscriptionPaymentsTable.method,
+      status:           subscriptionPaymentsTable.status,
+      description:      subscriptionPaymentsTable.description,
+      externalId:       subscriptionPaymentsTable.externalId,
+      pixData:          subscriptionPaymentsTable.pixData,
+      boletoData:       subscriptionPaymentsTable.boletoData,
+      bankTransferData: subscriptionPaymentsTable.bankTransferData,
+      createdAt:        subscriptionPaymentsTable.createdAt,
+      paidAt:           subscriptionPaymentsTable.paidAt,
+      expiresAt:        subscriptionPaymentsTable.expiresAt,
+      metadata:         subscriptionPaymentsTable.metadata,
+    })
+    .from(subscriptionPaymentsTable)
+    .innerJoin(workspacesTable, eq(subscriptionPaymentsTable.workspaceId, workspacesTable.id))
+    .innerJoin(usersTable, eq(workspacesTable.ownerId, usersTable.id))
+    .where(status ? eq(subscriptionPaymentsTable.status, status as any) : undefined)
+    .orderBy(desc(subscriptionPaymentsTable.createdAt))
+    .limit(limit);
+
+  return rows.map(r => ({
+    id:               r.id,
+    workspaceId:      r.workspaceId,
+    workspaceName:    r.workspaceName,
+    email:            r.email,
+    userName:         r.userName,
+    amountCents:      r.amountCents,
+    currency:         r.currency,
+    method:           r.method,
+    status:           r.status,
+    description:      r.description,
+    externalId:       r.externalId,
+    pixData:          r.pixData,
+    boletoData:       r.boletoData,
+    bankTransferData: r.bankTransferData,
+    createdAt:        r.createdAt.toISOString(),
+    paidAt:           r.paidAt?.toISOString() ?? null,
+    expiresAt:        r.expiresAt?.toISOString() ?? null,
+    metadata:         r.metadata,
+  }));
+}

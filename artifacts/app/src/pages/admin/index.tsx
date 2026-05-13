@@ -1,19 +1,41 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   ShieldCheck, Users, Rocket, UserCheck, UserX, Moon, Zap,
   Activity, TrendingUp, CreditCard, AlertTriangle, ArrowLeft,
   DollarSign, BarChart3, Bot, Target, TrendingDown, Clock,
   RefreshCw, CheckCircle2, ArrowUpRight, Percent,
+  QrCode, FileText, CheckCheck, Filter, Wallet,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AdminPaymentRow {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  email: string;
+  userName: string;
+  amountCents: number;
+  currency: string;
+  method: string;
+  status: string;
+  description: string | null;
+  externalId: string | null;
+  pixData?: { copiaECola?: string; qrCode?: string; instructions?: string } | null;
+  boletoData?: { barcode?: string; barcodeUrl?: string; dueDate?: string; instructions?: string } | null;
+  createdAt: string;
+  paidAt: string | null;
+  expiresAt: string | null;
+  metadata: unknown;
+}
 
 type SaasStatus = "novo" | "ativo_lancando" | "ativo" | "pausado" | "hibernado";
 
@@ -87,17 +109,36 @@ function MetricCard({
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+const METHOD_LABEL: Record<string, { label: string; icon: React.ElementType }> = {
+  pix:           { label: "PIX",         icon: QrCode },
+  boleto:        { label: "Boleto",      icon: FileText },
+  bank_transfer: { label: "TED",         icon: Wallet },
+  credit_card:   { label: "Cartão",      icon: CreditCard },
+  manual:        { label: "Manual",      icon: CheckCheck },
+};
+
+const PAYMENT_STATUS: Record<string, { label: string; cls: string }> = {
+  pending:    { label: "Pendente",   cls: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10" },
+  processing: { label: "Processando",cls: "text-blue-400 border-blue-400/40 bg-blue-400/10" },
+  paid:       { label: "Pago",       cls: "text-success border-success/40 bg-success/10" },
+  failed:     { label: "Falhou",     cls: "text-destructive border-destructive/40 bg-destructive/10" },
+  cancelled:  { label: "Cancelado",  cls: "text-muted-foreground border-border bg-muted/20" },
+  expired:    { label: "Expirado",   cls: "text-muted-foreground border-border bg-muted/20" },
+};
+
 export default function AdminPage() {
   const { isAdmin } = useAuth();
-  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell">("overview");
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos">("pagamentos");
+  const [payFilter, setPayFilter] = useState<"all" | "pending" | "paid">("pending");
+  const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
 
   const { data: overview, isLoading: loadingOverview } = useQuery({
     queryKey: ["/api/admin/overview"],
     enabled: isAdmin,
     queryFn: async (): Promise<AdminOverview> => {
-      const res = await customFetch<Response>("/api/admin/overview");
-      if (!res.ok) throw new Error("Acesso negado");
-      return res.json() as Promise<AdminOverview>;
+      const data = await customFetch<AdminOverview>("/api/admin/overview");
+      return data;
     },
   });
 
@@ -105,9 +146,38 @@ export default function AdminPage() {
     queryKey: ["/api/admin/financials"],
     enabled: isAdmin,
     queryFn: async (): Promise<AdminFinancials> => {
-      const res = await customFetch<Response>("/api/admin/financials");
-      if (!res.ok) throw new Error("Acesso negado");
-      return res.json() as Promise<AdminFinancials>;
+      const data = await customFetch<AdminFinancials>("/api/admin/financials");
+      return data;
+    },
+  });
+
+  const { data: paymentsData, isLoading: loadingPayments, refetch: refetchPayments } = useQuery({
+    queryKey: ["/api/admin/payments", payFilter],
+    enabled: isAdmin,
+    refetchInterval: tab === "pagamentos" ? 15000 : false,
+    queryFn: async () => {
+      const qs = payFilter !== "all" ? `?status=${payFilter}` : "";
+      const data = await customFetch<{ payments: AdminPaymentRow[] }>(`/api/admin/payments${qs}`);
+      return data.payments;
+    },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const data = await customFetch<{ message: string }>(`/api/admin/payments/${paymentId}/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: `Confirmado manualmente via admin` }),
+      });
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message ?? "Pagamento confirmado!");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/financials"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message ?? "Erro ao confirmar pagamento.");
     },
   });
 
@@ -126,6 +196,7 @@ export default function AdminPage() {
   const ov  = overview;
 
   const TABS = [
+    { id: "pagamentos" as const,  label: "Pagamentos" },
     { id: "overview" as const,    label: "Visão Geral" },
     { id: "financials" as const,  label: "Financeiro" },
     { id: "upsell" as const,      label: "Oportunidades" },
@@ -430,6 +501,216 @@ export default function AdminPage() {
               <div className="font-mono text-[11px] text-primary">
                 → Use a sequência de reengajamento: demonstração ao vivo + 3 emails de ativação + call do Jeff
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PAGAMENTOS TAB ── */}
+      {tab === "pagamentos" && (
+        <div className="space-y-4">
+
+          {/* Summary strip */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Pendentes",   val: paymentsData?.filter(p => p.status === "pending").length ?? "—",   cls: "text-yellow-400 border-yellow-400/20" },
+              { label: "Confirmados", val: paymentsData?.filter(p => p.status === "paid").length    ?? "—",   cls: "text-success border-success/20" },
+              { label: "Total (vis.)",val: paymentsData?.length ?? "—",                                        cls: "text-primary border-primary/20" },
+            ].map(s => (
+              <div key={s.label} className={`border ${s.cls} bg-card/40 p-3 text-center`}>
+                <div className={`font-mono text-2xl font-bold ${s.cls.split(" ")[0]}`}>{s.val}</div>
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mt-0.5">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Filter + Refresh */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Filter className="h-3.5 w-3.5 text-muted-foreground/40" />
+            {(["pending", "paid", "all"] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setPayFilter(f)}
+                className={`font-mono text-[11px] uppercase tracking-widest px-3 py-1.5 border transition-all
+                  ${payFilter === f
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/40 text-muted-foreground hover:border-primary/30"}`}
+              >
+                {f === "pending" ? "Pendentes" : f === "paid" ? "Confirmados" : "Todos"}
+              </button>
+            ))}
+            <Button
+              size="sm" variant="ghost"
+              className="ml-auto rounded-none font-mono uppercase text-[10px] tracking-widest gap-1.5"
+              onClick={() => refetchPayments()}
+            >
+              <RefreshCw className="h-3 w-3" />Atualizar
+            </Button>
+          </div>
+
+          {/* Payments list */}
+          <div className="border border-border/50 overflow-hidden">
+            {/* Header row */}
+            <div className="hidden md:grid grid-cols-[1fr_120px_90px_80px_100px_120px] text-[10px] font-mono uppercase tracking-widest text-muted-foreground/50 border-b border-border/50 bg-muted/10 px-5 py-2 gap-3">
+              <span>Cliente</span>
+              <span>Descrição</span>
+              <span className="text-right">Valor</span>
+              <span className="text-center">Método</span>
+              <span className="text-center">Status</span>
+              <span className="text-right">Ação</span>
+            </div>
+
+            {loadingPayments ? (
+              <div className="p-6 space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-14 bg-muted/20" />)}</div>
+            ) : !paymentsData?.length ? (
+              <div className="py-16 text-center">
+                <CheckCircle2 className="h-7 w-7 text-muted-foreground/20 mx-auto mb-3" />
+                <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
+                  {payFilter === "pending" ? "Nenhum pagamento pendente" : "Nenhum pagamento encontrado"}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/30 max-h-[70vh] overflow-y-auto">
+                {paymentsData.map(p => {
+                  const meth  = METHOD_LABEL[p.method] ?? { label: p.method.toUpperCase(), icon: CreditCard };
+                  const MethodIcon = meth.icon;
+                  const st    = PAYMENT_STATUS[p.status] ?? { label: p.status, cls: "text-muted-foreground" };
+                  const isPending = p.status === "pending";
+                  const isExpanded = expandedPayment === p.id;
+                  const meta  = p.metadata as { type?: string; packCredits?: number } | null;
+                  return (
+                    <div key={p.id} className="hover:bg-muted/5 transition-colors">
+                      <div className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_120px_90px_80px_100px_120px] items-center px-5 py-3.5 gap-3">
+
+                        {/* Client */}
+                        <div className="min-w-0">
+                          <div className="font-mono text-sm font-bold truncate">{p.userName}</div>
+                          <div className="font-mono text-[11px] text-muted-foreground/60 truncate">{p.email}</div>
+                          <div className="font-mono text-[10px] text-muted-foreground/40 mt-0.5 flex gap-2">
+                            <span>{fmtDate(p.createdAt)}</span>
+                            {meta?.type === "pack" && (
+                              <span className="text-cyan-400/70">Pack {meta.packCredits} cr</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Description */}
+                        <div className="hidden md:block font-mono text-[11px] text-muted-foreground/70 truncate">
+                          {p.description ?? "—"}
+                        </div>
+
+                        {/* Amount */}
+                        <div className="hidden md:block text-right font-mono text-sm font-bold">
+                          R${(p.amountCents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </div>
+
+                        {/* Method */}
+                        <div className="hidden md:flex justify-center items-center gap-1.5">
+                          <MethodIcon className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          <span className="font-mono text-[11px] text-muted-foreground/70">{meth.label}</span>
+                        </div>
+
+                        {/* Status */}
+                        <div className="hidden md:flex justify-center">
+                          <Badge variant="outline" className={`rounded-none font-mono text-[10px] ${st.cls}`}>
+                            {st.label}
+                          </Badge>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-2">
+                          {isPending && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="rounded-none font-mono uppercase text-[10px] tracking-widest gap-1 h-7 bg-success/80 hover:bg-success text-white border-0"
+                                disabled={confirmMutation.isPending && confirmMutation.variables === p.id}
+                                onClick={() => confirmMutation.mutate(p.id)}
+                              >
+                                {confirmMutation.isPending && confirmMutation.variables === p.id
+                                  ? <RefreshCw className="h-2.5 w-2.5 animate-spin" />
+                                  : <CheckCheck className="h-2.5 w-2.5" />}
+                                Confirmar
+                              </Button>
+                              <button
+                                onClick={() => setExpandedPayment(isExpanded ? null : p.id)}
+                                className="font-mono text-[10px] text-muted-foreground/50 hover:text-primary uppercase tracking-widest border border-border/30 px-2 h-7"
+                              >
+                                {isExpanded ? "Fechar" : "Dados"}
+                              </button>
+                            </>
+                          )}
+                          {!isPending && p.paidAt && (
+                            <span className="font-mono text-[10px] text-success/70">
+                              ✓ {fmtDate(p.paidAt)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Expanded payment details */}
+                      {isExpanded && (
+                        <div className="border-t border-border/30 bg-muted/10 px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {p.pixData?.copiaECola && (
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">PIX Copia e Cola</div>
+                              <div className="font-mono text-[11px] text-muted-foreground break-all border border-border/30 bg-card/40 p-2.5 leading-relaxed max-h-20 overflow-y-auto">
+                                {p.pixData.copiaECola}
+                              </div>
+                            </div>
+                          )}
+                          {p.pixData?.instructions && (
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Instruções PIX</div>
+                              <div className="font-mono text-[11px] text-muted-foreground border border-border/30 bg-card/40 p-2.5">{p.pixData.instructions}</div>
+                            </div>
+                          )}
+                          {p.boletoData?.barcode && (
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Código de Barras</div>
+                              <div className="font-mono text-[11px] text-muted-foreground break-all border border-border/30 bg-card/40 p-2.5">{p.boletoData.barcode}</div>
+                              {p.boletoData.barcodeUrl && (
+                                <a href={p.boletoData.barcodeUrl} target="_blank" rel="noreferrer"
+                                   className="inline-flex items-center gap-1 font-mono text-[10px] text-primary mt-1 hover:underline">
+                                  <ArrowUpRight className="h-3 w-3" />Abrir PDF do boleto
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {p.externalId && (
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">ID Asaas</div>
+                              <div className="font-mono text-[11px] text-muted-foreground border border-border/30 bg-card/40 p-2.5">{p.externalId}</div>
+                            </div>
+                          )}
+                          {p.expiresAt && (
+                            <div>
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Expira em</div>
+                              <div className="font-mono text-[11px] text-muted-foreground">{new Date(p.expiresAt).toLocaleString("pt-BR")}</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Webhook info box */}
+          <div className="border border-border/30 bg-muted/5 p-4 space-y-2">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2 flex items-center gap-2">
+              <Activity className="h-3.5 w-3.5" />Webhook Asaas — Confirmação Automática
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+              Configure no painel Asaas → Integrações → Webhooks:
+            </div>
+            <div className="font-mono text-[11px] bg-card/60 border border-border/40 px-3 py-2 text-primary break-all">
+              {`${window.location.origin}/api/billing/webhooks/asaas`}
+            </div>
+            <div className="font-mono text-[10px] text-muted-foreground/40">
+              Eventos: PAYMENT_RECEIVED · PAYMENT_CONFIRMED — Confirmação automática ao receber PIX ou boleto pago
             </div>
           </div>
         </div>
