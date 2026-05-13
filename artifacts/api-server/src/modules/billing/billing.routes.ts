@@ -40,9 +40,21 @@ router.get("/payment/:paymentId", requireAuth, async (req, res): Promise<void> =
 
 // ─── Initiate plan payment ────────────────────────────────────────────────────
 
+const cardDataSchema = z.object({
+  holderName: z.string().min(1),
+  number: z.string().min(13),
+  expiryMonth: z.string().length(2),
+  expiryYear: z.string().min(4),
+  cvv: z.string().min(3).max(4),
+  cpfCnpj: z.string().optional(),
+  phone: z.string().optional(),
+  postalCode: z.string().optional(),
+});
+
 const initiateSchema = z.object({
   planId: z.string().uuid(),
   method: z.enum(["pix", "boleto", "bank_transfer", "credit_card", "manual"]),
+  card: cardDataSchema.optional(),
 });
 
 router.post("/initiate", requireAuth, async (req, res): Promise<void> => {
@@ -59,6 +71,7 @@ router.post("/initiate", requireAuth, async (req, res): Promise<void> => {
     method: parsed.data.method,
     userName: req.auth.email,
     userEmail: req.auth.email,
+    card: parsed.data.card,
   });
 
   res.status(201).json({ payment });
@@ -68,7 +81,8 @@ router.post("/initiate", requireAuth, async (req, res): Promise<void> => {
 
 const initiatePackSchema = z.object({
   packId: z.string(),
-  method: z.enum(["pix", "boleto", "bank_transfer", "manual"]),
+  method: z.enum(["pix", "boleto", "bank_transfer", "credit_card", "manual"]),
+  card: cardDataSchema.optional(),
 });
 
 router.post("/packs/initiate", requireAuth, async (req, res): Promise<void> => {
@@ -83,6 +97,7 @@ router.post("/packs/initiate", requireAuth, async (req, res): Promise<void> => {
     userId: req.auth.userId,
     packId: parsed.data.packId,
     method: parsed.data.method,
+    card: parsed.data.card,
     userName: req.auth.email,
     userEmail: req.auth.email,
   });

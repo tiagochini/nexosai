@@ -1,0 +1,122 @@
+import { Router } from "express";
+import { z } from "zod/v4";
+import { requireAuth } from "../auth/auth.middleware.js";
+import {
+  createProduct,
+  listProducts,
+  getProduct,
+  updateProduct,
+  deleteProduct,
+  initiateProductCheckout,
+  getSale,
+  confirmProductSaleByExternalId,
+} from "./product-checkout.service.js";
+
+const router = Router();
+
+const cardSchema = z.object({
+  holderName: z.string().min(1),
+  number: z.string().min(13),
+  expiryMonth: z.string().length(2),
+  expiryYear: z.string().min(4),
+  cvv: z.string().min(3).max(4),
+  cpfCnpj: z.string().optional(),
+  phone: z.string().optional(),
+  postalCode: z.string().optional(),
+});
+
+// ─── Workspace owner: manage their products ───────────────────────────────────
+
+const createProductSchema = z.object({
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  priceCents: z.number().int().min(100),
+  sequenceId: z.string().uuid().optional(),
+  successUrl: z.string().url().optional(),
+});
+
+router.post("/", requireAuth, async (req, res): Promise<void> => {
+  const parsed = createProductSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const product = await createProduct({ workspaceId: req.auth.workspaceId, ...parsed.data });
+  res.status(201).json({ product });
+});
+
+router.get("/", requireAuth, async (req, res): Promise<void> => {
+  const products = await listProducts(req.auth.workspaceId);
+  res.json({ products });
+});
+
+router.patch("/:productId", requireAuth, async (req, res): Promise<void> => {
+  const productId = req.params["productId"] as string;
+  const product = await updateProduct(req.auth.workspaceId, productId, req.body as any);
+  res.json({ product });
+});
+
+router.delete("/:productId", requireAuth, async (req, res): Promise<void> => {
+  await deleteProduct(req.auth.workspaceId, req.params["productId"] as string);
+  res.json({ ok: true });
+});
+
+// ─── Public: buyer-facing checkout ───────────────────────────────────────────
+
+router.get("/:productId/public", async (req, res): Promise<void> => {
+  const product = await getProduct(req.params["productId"] as string);
+  if (!product || !product.active) {
+    res.status(404).json({ error: "Produto não encontrado", code: "NOT_FOUND" });
+    return;
+  }
+  res.json({
+    product: {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      priceCents: product.priceCents,
+      successUrl: product.successUrl,
+    },
+  });
+});
+
+const checkoutSchema = z.object({
+  buyerName: z.string().min(1).max(200),
+  buyerEmail: z.string().email(),
+  buyerCpf: z.string().optional(),
+  method: z.enum(["pix", "boleto", "credit_card"]),
+  card: cardSchema.optional(),
+});
+
+router.post("/:productId/checkout", async (req, res): Promise<void> => {
+  const parsed = checkoutSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const productId = req.params["productId"] as string;
+  const sale = await initiateProductCheckout({ productId, ...parsed.data });
+  res.status(201).json({ sale });
+});
+
+router.get("/sales/:saleId", async (req, res): Promise<void> => {
+  const sale = await getSale(req.params["saleId"] as string);
+  if (!sale) {
+    res.status(404).json({ error: "Venda não encontrada", code: "NOT_FOUND" });
+    return;
+  }
+  res.json({ sale });
+});
+
+// ─── Asaas webhook for product sales ─────────────────────────────────────────
+
+router.post("/webhooks/asaas", async (req, res): Promise<void> => {
+  const payload = req.body as { event?: string; payment?: { id?: string } };
+  const asaasId = payload.payment?.id;
+  if (asaasId && (payload.event === "PAYMENT_RECEIVED" || payload.event === "PAYMENT_CONFIRMED")) {
+    await confirmProductSaleByExternalId(asaasId);
+  }
+  res.json({ received: true });
+});
+
+export default router;

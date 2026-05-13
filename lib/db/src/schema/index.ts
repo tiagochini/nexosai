@@ -31,3 +31,5 @@ export * from "./launch-recordings";
 export * from "./client-profiles";
 export * from "./social-comment-actions";
 export * from "./creatives";
+export * from "./products";
+export * from "./product-sales";

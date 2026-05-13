@@ -80,8 +80,9 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 const PAYMENT_METHODS = [
-  { value: "pix",    label: "PIX",    sub: "Instantâneo · QR Code",   icon: QrCode },
-  { value: "boleto", label: "Boleto", sub: "Vence em 3 dias · Código de barras", icon: FileText },
+  { value: "pix",         label: "PIX",    sub: "Instantâneo · QR Code",          icon: QrCode    },
+  { value: "boleto",      label: "Boleto", sub: "Vence em 3 dias · Código",        icon: FileText  },
+  { value: "credit_card", label: "Cartão", sub: "+3,5% de taxa · Aprovação rápida", icon: CreditCard },
 ];
 
 const CREDIT_PACKS = [
@@ -345,44 +346,87 @@ function PaymentPanel({ payment, onClose, onConfirmed }: {
   );
 }
 
+// ── Card data type ────────────────────────────────────────────────────────────
+
+interface CardData {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cvv: string;
+  cpfCnpj?: string;
+}
+
 // ── Checkout selector ─────────────────────────────────────────────────────────
 
-function CheckoutSelector({ label, amount, onMethod, loading, onCancel }: {
+function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCancel }: {
   label: string;
   amount: string;
-  onMethod: (method: string) => void;
+  amountCents: number;
+  onMethod: (method: string, card?: CardData) => void;
   loading: boolean;
   onCancel: () => void;
 }) {
   const [method, setMethod] = useState("pix");
+  const [cardHolder, setCardHolder] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardMonth, setCardMonth] = useState("");
+  const [cardYear, setCardYear] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [cardCpf, setCardCpf] = useState("");
+
+  const cardFee = Math.round(amountCents * 1.035);
+  const displayAmount = method === "credit_card" ? `R$ ${(cardFee / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : amount;
+
+  const handlePay = () => {
+    if (method === "credit_card") {
+      if (!cardHolder || !cardNumber || !cardMonth || !cardYear || !cardCvv) {
+        return;
+      }
+      onMethod(method, {
+        holderName: cardHolder,
+        number: cardNumber.replace(/\s/g, ""),
+        expiryMonth: cardMonth,
+        expiryYear: cardYear,
+        cvv: cardCvv,
+        cpfCnpj: cardCpf || undefined,
+      });
+    } else {
+      onMethod(method);
+    }
+  };
+
   return (
     <div className="border border-primary/30 bg-primary/5 p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60">Pagamento</div>
           <div className="font-mono text-sm font-bold text-foreground">{label}</div>
-          <div className="font-mono text-xl font-bold text-primary">{amount}</div>
+          <div className="font-mono text-xl font-bold text-primary">{displayAmount}</div>
+          {method === "credit_card" && (
+            <div className="font-mono text-[10px] text-yellow-400/80 mt-0.5">+3,5% de taxa de cartão</div>
+          )}
         </div>
         <button onClick={onCancel} className="text-muted-foreground hover:text-foreground">
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {PAYMENT_METHODS.map(m => {
           const Icon = m.icon;
           return (
             <button
               key={m.value}
               onClick={() => setMethod(m.value)}
-              className={`border p-3 text-left transition-all flex items-start gap-2.5
+              className={`border p-3 text-left transition-all flex items-start gap-2
                 ${method === m.value
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border/40 hover:border-primary/30 text-muted-foreground"}`}
             >
               <Icon className="h-4 w-4 shrink-0 mt-0.5" />
               <div>
-                <div className="font-mono text-xs font-bold uppercase tracking-widest">{m.label}</div>
+                <div className="font-mono text-[11px] font-bold uppercase tracking-widest">{m.label}</div>
                 <div className="font-mono text-[10px] opacity-70 mt-0.5 leading-relaxed">{m.sub}</div>
               </div>
             </button>
@@ -390,9 +434,62 @@ function CheckoutSelector({ label, amount, onMethod, loading, onCancel }: {
         })}
       </div>
 
+      {/* Card form */}
+      {method === "credit_card" && (
+        <div className="border border-border/40 bg-muted/5 p-4 space-y-3">
+          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-2">
+            <Lock className="h-3 w-3" /> Dados do cartão
+          </div>
+          <div className="space-y-1.5">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Nome no cartão</label>
+            <input
+              value={cardHolder}
+              onChange={e => setCardHolder(e.target.value.toUpperCase())}
+              placeholder="NOME SOBRENOME"
+              className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Número do cartão</label>
+            <input
+              value={cardNumber}
+              onChange={e => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 16);
+                setCardNumber(v.replace(/(.{4})/g, "$1 ").trim());
+              }}
+              placeholder="0000 0000 0000 0000"
+              maxLength={19}
+              className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Mês</label>
+              <input value={cardMonth} onChange={e => setCardMonth(e.target.value.replace(/\D/g,"").slice(0,2))} placeholder="MM" maxLength={2}
+                className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Ano</label>
+              <input value={cardYear} onChange={e => setCardYear(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="AAAA" maxLength={4}
+                className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">CVV</label>
+              <input value={cardCvv} onChange={e => setCardCvv(e.target.value.replace(/\D/g,"").slice(0,4))} placeholder="123" maxLength={4}
+                className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">CPF do titular (opcional)</label>
+            <input value={cardCpf} onChange={e => setCardCpf(e.target.value)} placeholder="000.000.000-00"
+              className="w-full border border-border/40 bg-background/50 rounded-none px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary" />
+          </div>
+        </div>
+      )}
+
       <Button
-        onClick={() => onMethod(method)}
-        disabled={loading}
+        onClick={handlePay}
+        disabled={loading || (method === "credit_card" && (!cardHolder || !cardNumber || !cardMonth || !cardYear || !cardCvv))}
         className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11"
       >
         {loading ? (
@@ -400,7 +497,7 @@ function CheckoutSelector({ label, amount, onMethod, loading, onCancel }: {
         ) : (
           <ChevronRight className="h-4 w-4" />
         )}
-        {loading ? "Gerando..." : `Pagar via ${METHOD_LABEL[method]}`}
+        {loading ? "Processando..." : `Pagar via ${METHOD_LABEL[method]}`}
       </Button>
       <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest text-center">
         Confirmação automática · Acesso/créditos liberados na hora
@@ -445,11 +542,11 @@ export default function BillingPage() {
   });
 
   const initiatePlanMutation = useMutation({
-    mutationFn: async ({ planId, method }: { planId: string; method: string }) => {
+    mutationFn: async ({ planId, method, card }: { planId: string; method: string; card?: CardData }) => {
       const data = await customFetch<{ payment: PaymentRecord }>("/api/billing/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, method }),
+        body: JSON.stringify({ planId, method, card }),
       });
       return data;
     },
@@ -464,11 +561,11 @@ export default function BillingPage() {
   });
 
   const initiatePackMutation = useMutation({
-    mutationFn: async ({ packId, method }: { packId: string; method: string }) => {
+    mutationFn: async ({ packId, method, card }: { packId: string; method: string; card?: CardData }) => {
       const data = await customFetch<{ payment: PaymentRecord }>("/api/billing/packs/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packId, method }),
+        body: JSON.stringify({ packId, method, card }),
       });
       return data;
     },
@@ -679,9 +776,10 @@ export default function BillingPage() {
             <CheckoutSelector
               label={`Pack ${checkout.label}`}
               amount={checkout.amountBrl}
+              amountCents={parseInt(checkout.amountBrl.replace(/[^\d]/g, ""), 10) || 0}
               loading={initiatePackMutation.isPending}
               onCancel={() => setCheckout(null)}
-              onMethod={(method) => initiatePackMutation.mutate({ packId: checkout.id, method })}
+              onMethod={(method, card) => initiatePackMutation.mutate({ packId: checkout.id, method, card })}
             />
           </div>
         )}
@@ -767,9 +865,10 @@ export default function BillingPage() {
                       <CheckoutSelector
                         label={`Plano ${plan.name}`}
                         amount={priceDisplay}
+                        amountCents={plan.monthlyPriceBrl}
                         loading={initiatePlanMutation.isPending}
                         onCancel={() => setCheckout(null)}
-                        onMethod={(method) => initiatePlanMutation.mutate({ planId: plan.id, method })}
+                        onMethod={(method, card) => initiatePlanMutation.mutate({ planId: plan.id, method, card })}
                       />
                     </div>
                   )}

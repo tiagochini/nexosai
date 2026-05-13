@@ -36,6 +36,7 @@ import serverEventsRouter from "../modules/server-events/server-events.routes.js
 import oauthRouter from "../modules/integrations/oauth.routes.js";
 import socialModerationRouter from "../modules/social-moderation/social-moderation.routes.js";
 import creativesRouter from "../modules/creatives/creatives.routes.js";
+import productCheckoutRouter from "../modules/product-checkout/product-checkout.routes.js";
 
 const router: IRouter = Router();
 
@@ -76,5 +77,6 @@ router.use("/events", serverEventsRouter);
 router.use("/integrations/oauth", oauthRouter);
 router.use("/social-moderation", socialModerationRouter);
 router.use("/campaigns", creativesRouter);
+router.use("/products", productCheckoutRouter);
 
 export default router;

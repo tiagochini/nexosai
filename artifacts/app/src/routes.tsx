@@ -41,6 +41,8 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
 import IntegracoesPage from "@/pages/integracoes/index";
+import ProdutosPage from "@/pages/produtos/index";
+import ComprarPage from "@/pages/comprar/index";
 import VideoEditorPage from "@/pages/video-editor/index";
 import SiteBuilderPage from "@/pages/site-builder/index";
 import NotFound from "@/pages/not-found";
@@ -235,6 +237,13 @@ export default function AppRoutes() {
       <Route path="/memory">
         {() => <ProtectedRoute><MemoryPage /></ProtectedRoute>}
       </Route>
+      {/* Produtos (workspace owner) */}
+      <Route path="/produtos">
+        {() => <ProtectedRoute><ProdutosPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Comprar — página pública de checkout de produto */}
+      <Route path="/comprar/:productId" component={ComprarPage} />
       <Route path="/preparacao" component={PreparacaoPage} />
       <Route path="/abertura" component={AberturaPage} />
       <Route path="/conversao" component={ConversaoPage} />

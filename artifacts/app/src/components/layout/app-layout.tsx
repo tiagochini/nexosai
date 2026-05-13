@@ -9,7 +9,7 @@ import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
-  Brain, Receipt, Link2, Globe, Clapperboard,
+  Brain, Receipt, Link2, Globe, Clapperboard, ShoppingBag,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: "Automações",
       items: [
+        { name: "Produtos",        href: "/produtos",    icon: ShoppingBag },
         { name: "Integrações",     href: "/integracoes", icon: Link2, badge: "!" },
       ],
     },

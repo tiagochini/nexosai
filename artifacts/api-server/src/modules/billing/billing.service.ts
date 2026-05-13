@@ -125,6 +125,75 @@ async function createAsaasBoleto(opts: {
   };
 }
 
+// ─── Credit card via Asaas ───────────────────────────────────────────────────
+
+/** Adds 3.5% card fee to the base amount (passed to buyer). */
+export function applyCardFee(amountCents: number): number {
+  return Math.round(amountCents * 1.035);
+}
+
+interface AsaasCardOpts {
+  name: string;
+  email: string;
+  cpfCnpj?: string;
+  phone?: string;
+  postalCode?: string;
+  amountCents: number;
+  description: string;
+  dueDate: string;
+  cardHolderName: string;
+  cardNumber: string;
+  cardExpiryMonth: string;
+  cardExpiryYear: string;
+  cardCvv: string;
+}
+
+async function createAsaasCardPayment(opts: AsaasCardOpts): Promise<{
+  asaasId: string;
+  last4: string;
+  brand: string;
+  status: string;
+}> {
+  const customerId = await ensureAsaasCustomer(opts.name, opts.email, opts.cpfCnpj);
+
+  const payment = await asaasRequest<{
+    id: string;
+    status: string;
+    creditCard?: { creditCardBrand: string; creditCardNumber: string };
+  }>("/payments", {
+    method: "POST",
+    body: JSON.stringify({
+      customer: customerId,
+      billingType: "CREDIT_CARD",
+      value: opts.amountCents / 100,
+      dueDate: opts.dueDate,
+      description: opts.description,
+      creditCard: {
+        holderName: opts.cardHolderName,
+        number: opts.cardNumber.replace(/\D/g, ""),
+        expiryMonth: opts.cardExpiryMonth,
+        expiryYear: opts.cardExpiryYear,
+        ccv: opts.cardCvv,
+      },
+      creditCardHolderInfo: {
+        name: opts.name,
+        email: opts.email,
+        cpfCnpj: opts.cpfCnpj ?? "00000000000",
+        postalCode: opts.postalCode ?? "00000000",
+        addressNumber: "S/N",
+        phone: opts.phone ?? "00000000000",
+      },
+    }),
+  });
+
+  return {
+    asaasId: payment.id,
+    last4: payment.creditCard?.creditCardNumber ?? "****",
+    brand: payment.creditCard?.creditCardBrand ?? "VISA",
+    status: payment.status,
+  };
+}
+
 // ─── Pack config (mirrors frontend) ──────────────────────────────────────────
 
 export const PACK_CONFIG: Record<string, { credits: number; priceBrl: number; label: string }> = {
@@ -136,14 +205,31 @@ export const PACK_CONFIG: Record<string, { credits: number; priceBrl: number; la
 
 // ─── Shared Asaas payment builder ─────────────────────────────────────────────
 
+export interface CardInputData {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cvv: string;
+  cpfCnpj?: string;
+  phone?: string;
+  postalCode?: string;
+}
+
 type PaymentData = Pick<
   SubscriptionPayment,
   "pixData" | "boletoData" | "bankTransferData" | "cryptoData"
-> & { externalId: string | null; expiresAt: Date | null };
+> & {
+  externalId: string | null;
+  expiresAt: Date | null;
+  chargedCents: number;
+  cardResult?: { last4: string; brand: string; status: string; asaasId: string };
+};
 
 async function buildAsaasPayment(
   method: PaymentMethod,
-  opts: { name: string; email: string; amountCents: number; description: string; dueDate: string }
+  opts: { name: string; email: string; amountCents: number; description: string; dueDate: string },
+  card?: CardInputData
 ): Promise<PaymentData> {
   const result: PaymentData = {
     pixData: null,
@@ -152,6 +238,7 @@ async function buildAsaasPayment(
     cryptoData: null,
     externalId: null,
     expiresAt: null,
+    chargedCents: opts.amountCents,
   };
 
   switch (method) {
@@ -213,6 +300,31 @@ async function buildAsaasPayment(
       break;
     }
 
+    case "credit_card": {
+      if (!card) throw new AppError(400, "Dados do cartão obrigatórios", "CARD_DATA_REQUIRED");
+      const charged = applyCardFee(opts.amountCents);
+      result.chargedCents = charged;
+      const cc = await createAsaasCardPayment({
+        name: opts.name,
+        email: opts.email,
+        cpfCnpj: card.cpfCnpj,
+        phone: card.phone,
+        postalCode: card.postalCode,
+        amountCents: charged,
+        description: opts.description,
+        dueDate: opts.dueDate,
+        cardHolderName: card.holderName,
+        cardNumber: card.number,
+        cardExpiryMonth: card.expiryMonth,
+        cardExpiryYear: card.expiryYear,
+        cardCvv: card.cvv,
+      });
+      result.externalId = cc.asaasId;
+      result.expiresAt = new Date();
+      result.cardResult = { last4: cc.last4, brand: cc.brand, status: cc.status, asaasId: cc.asaasId };
+      break;
+    }
+
     default:
       throw new AppError(400, `Método de pagamento não suportado: ${method}`, "INVALID_METHOD");
   }
@@ -229,6 +341,7 @@ export async function initiatePayment(opts: {
   method: PaymentMethod;
   userName: string;
   userEmail: string;
+  card?: CardInputData;
 }): Promise<SubscriptionPayment> {
   const [plan] = await db
     .select()
@@ -247,7 +360,10 @@ export async function initiatePayment(opts: {
     amountCents,
     description,
     dueDate,
-  });
+  }, opts.card);
+
+  const isCardApproved = pd.cardResult &&
+    (pd.cardResult.status === "CONFIRMED" || pd.cardResult.status === "RECEIVED");
 
   const [payment] = await db
     .insert(subscriptionPaymentsTable)
@@ -255,10 +371,10 @@ export async function initiatePayment(opts: {
       workspaceId: opts.workspaceId,
       userId: opts.userId,
       planId: opts.planId,
-      amountCents,
+      amountCents: pd.chargedCents,
       currency: "BRL",
       method: opts.method,
-      status: "pending",
+      status: isCardApproved ? "paid" : "pending",
       description,
       externalId: pd.externalId,
       pixData: pd.pixData,
@@ -266,12 +382,13 @@ export async function initiatePayment(opts: {
       cryptoData: pd.cryptoData,
       bankTransferData: pd.bankTransferData,
       expiresAt: pd.expiresAt,
-      metadata: { type: "plan" },
+      paidAt: isCardApproved ? new Date() : null,
+      metadata: { type: "plan", cardResult: pd.cardResult },
     })
     .returning();
 
   if (!payment) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
-  logger.info({ workspaceId: opts.workspaceId, method: opts.method, amountCents }, "Plan payment initiated");
+  logger.info({ workspaceId: opts.workspaceId, method: opts.method, amountCents: pd.chargedCents }, "Plan payment initiated");
   return payment;
 }
 
@@ -284,6 +401,7 @@ export async function initiatePackPayment(opts: {
   method: PaymentMethod;
   userName: string;
   userEmail: string;
+  card?: CardInputData;
 }): Promise<SubscriptionPayment> {
   const pack = PACK_CONFIG[opts.packId];
   if (!pack) throw new NotFoundError("Pack de créditos não encontrado");
@@ -305,7 +423,10 @@ export async function initiatePackPayment(opts: {
     amountCents,
     description,
     dueDate,
-  });
+  }, opts.card);
+
+  const isCardApproved = pd.cardResult &&
+    (pd.cardResult.status === "CONFIRMED" || pd.cardResult.status === "RECEIVED");
 
   const [payment] = await db
     .insert(subscriptionPaymentsTable)
@@ -313,10 +434,10 @@ export async function initiatePackPayment(opts: {
       workspaceId: opts.workspaceId,
       userId: opts.userId,
       planId: ws.planId,
-      amountCents,
+      amountCents: pd.chargedCents,
       currency: "BRL",
       method: opts.method,
-      status: "pending",
+      status: isCardApproved ? "paid" : "pending",
       description,
       externalId: pd.externalId,
       pixData: pd.pixData,
@@ -324,12 +445,20 @@ export async function initiatePackPayment(opts: {
       cryptoData: pd.cryptoData,
       bankTransferData: pd.bankTransferData,
       expiresAt: pd.expiresAt,
-      metadata: { type: "pack", packId: opts.packId, packCredits: pack.credits },
+      paidAt: isCardApproved ? new Date() : null,
+      metadata: { type: "pack", packId: opts.packId, packCredits: pack.credits, cardResult: pd.cardResult },
     })
     .returning();
 
   if (!payment) throw new AppError(500, "Falha ao criar pagamento", "DB_ERROR");
-  logger.info({ workspaceId: opts.workspaceId, packId: opts.packId, amountCents }, "Pack payment initiated");
+
+  if (isCardApproved && pack.credits > 0) {
+    setImmediate(() =>
+      grantCredits(opts.workspaceId, pack.credits, "purchase", logger, pack.label).catch(() => {})
+    );
+  }
+
+  logger.info({ workspaceId: opts.workspaceId, packId: opts.packId, amountCents: pd.chargedCents }, "Pack payment initiated");
   return payment;
 }
 
