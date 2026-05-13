@@ -389,7 +389,7 @@ function ComunidadeSection() {
 function OfertaSection({ expired }: { expired: boolean }) {
   const { precoCheio, precoCheioSufixo, precoFundador, precoFundadorSufixo, cartUrl } = CART_CONFIG;
   const includes = [
-    "29 agentes de IA executando 24h no seu lançamento",
+    "44 agentes de IA executando 24h no seu lançamento",
     "Estratégia completa gerada em 47 minutos",
     "23 emails + 18 mensagens WhatsApp por campanha",
     "Segmentação comportamental atualizada em tempo real",

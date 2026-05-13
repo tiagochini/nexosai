@@ -182,7 +182,7 @@ function CheckoutForm({
               NexOS AI — Acesso Completo
             </div>
             <div className="font-mono text-xs text-muted-foreground">
-              29 agentes IA · 3 campanhas · Sequências automáticas
+              44 agentes IA · 3 campanhas · Sequências automáticas
             </div>
           </div>
           <div className="text-right">
@@ -192,7 +192,7 @@ function CheckoutForm({
         </div>
         <div className="border-t border-primary/20 pt-3 flex items-center gap-2 flex-wrap">
           {[
-            "29 agentes IA",
+            "44 agentes IA",
             "Aprovação antes de qualquer execução",
             "WhatsApp + Email automáticos",
             "Health score em tempo real",
@@ -379,7 +379,7 @@ export default function CheckoutPage() {
               </div>
               <ul className="space-y-2.5">
                 {[
-                  "29 agentes de IA especializados",
+                  "44 agentes de IA especializados",
                   "Diagnóstico completo do produto e mercado",
                   "Estratégia de lançamento gerada por Claude",
                   "Copy de WhatsApp e Email por segmento de lead",
