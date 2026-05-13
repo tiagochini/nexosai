@@ -753,21 +753,31 @@ export default function Onboarding() {
     return (
       <div className="flex flex-col h-[calc(100vh-9rem)] md:h-[calc(100vh-8rem)] max-w-3xl mx-auto">
         {/* Chat header */}
-        <div className="border-b border-border/50 pb-4 mb-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-            <div>
-              <h2 className="font-mono font-bold text-sm text-foreground uppercase tracking-widest">
-                {path === "has_product" ? "Briefing Estratégico" : path === "building_product" ? "Product Discovery" : path === "has_audience" ? "Creator Monetization" : "Estratégia de Afiliado"}
-              </h2>
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-                {pathMeta.subtitle}
-              </p>
+        <div className="border-b border-border/50 pb-4 mb-4 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+              <div>
+                <h2 className="font-mono font-bold text-sm text-foreground uppercase tracking-widest">
+                  {path === "has_product" ? "Briefing Estratégico" : path === "building_product" ? "Product Discovery" : path === "has_audience" ? "Creator Monetization" : "Estratégia de Afiliado"}
+                </h2>
+                <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+                  {pathMeta.subtitle}
+                </p>
+              </div>
             </div>
+            <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-1 ${pathMeta.badgeColor}`}>
+              {pathMeta.badge}
+            </Badge>
           </div>
-          <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-1 ${pathMeta.badgeColor}`}>
-            {pathMeta.badge}
-          </Badge>
+          {!conversationComplete && (
+            <button
+              onClick={() => { clearOnboardingState(); setStep("path_select"); setPath(null); setMessages([]); setCampaignId(null); setProposals(null); setAffiliateStrategy(null); setAudienceMonetizationPlan(null); setAudienceSubPath(null); }}
+              className="mt-2.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              <ChevronRight className="h-3 w-3 rotate-180" /> Mudar caminho
+            </button>
+          )}
         </div>
 
         {/* Messages */}
