@@ -463,7 +463,7 @@ export default function ContentApproval() {
   const campaignId = params.id;
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<Tab>("preview");
+  const [activeTab, setActiveTab] = useState<Tab>("platform");
   const [editingPiece, setEditingPiece] = useState<ContentPiece | null>(null);
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
@@ -817,24 +817,78 @@ export default function ContentApproval() {
 
         {/* ── Platform Tab ── */}
         {activeTab === "platform" && (
-          <div className="space-y-8">
+          <div className="space-y-10">
             {Object.entries(byPlatform).map(([platform, platformPieces]) => {
               const PIcon = PLATFORM_ICON[platform as Platform] ?? Globe;
               const pColor = PLATFORM_COLOR[platform as Platform] ?? "text-muted-foreground border-border/40";
+              const approvedCount = platformPieces.filter(p => p.status === "approved").length;
+              const isVisual = VISUAL_PLATFORMS.includes(platform as Platform);
               return (
                 <div key={platform}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-6 h-6 border flex items-center justify-center ${pColor}`}><PIcon className="h-3 w-3" /></div>
-                    <span className="font-mono text-xs uppercase tracking-widest font-bold">{PLATFORM_LABEL[platform as Platform]}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground/50">
-                      {platformPieces.filter(p => p.status === "approved").length}/{platformPieces.length} aprovadas
-                    </span>
+                  {/* Platform header */}
+                  <div className="flex items-center gap-3 mb-4 border-b border-border/40 pb-3">
+                    <div className={`w-8 h-8 border flex items-center justify-center ${pColor}`}>
+                      <PIcon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-mono text-sm uppercase tracking-widest font-bold">{PLATFORM_LABEL[platform as Platform]}</span>
+                      <span className="font-mono text-[11px] text-muted-foreground/50 ml-3">
+                        {approvedCount}/{platformPieces.length} aprovadas
+                      </span>
+                    </div>
+                    {/* Approve all for this platform */}
+                    {platformPieces.some(p => p.status === "pending") && (
+                      <button
+                        onClick={async () => {
+                          const ids = platformPieces.filter(p => p.status === "pending").map(p => p.id);
+                          for (const id of ids) {
+                            await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/approve`, {
+                              method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ feedback: "" }),
+                            }).catch(() => null);
+                          }
+                          queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+                          toast.success(`${PLATFORM_LABEL[platform as Platform]}: ${ids.length} peças aprovadas`);
+                        }}
+                        className={`font-mono text-[11px] uppercase tracking-widest border px-3 h-7 flex items-center gap-1.5 transition-colors ${pColor} hover:bg-current/10`}
+                      >
+                        <CheckCircle2 className="h-3 w-3" />Aprovar tudo
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {platformPieces.map(piece => (
-                      <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} />
-                    ))}
-                  </div>
+
+                  {/* Visual mocks for social platforms */}
+                  {isVisual ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {platformPieces.map(piece => (
+                        <div key={piece.id} className="space-y-2">
+                          <SocialPostPreview
+                            piece={piece}
+                            showMetrics
+                            onApprove={handleApprove}
+                            onReject={handleReject}
+                            loading={loadingPiece}
+                          />
+                          {/* Extra actions under each mock */}
+                          <div className="flex gap-1.5 flex-wrap">
+                            <button onClick={() => setEditingPiece(piece)} className="font-mono text-[11px] uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:border-border px-2 h-6 flex items-center gap-1 transition-colors">
+                              <Edit3 className="h-2.5 w-2.5" />Editar
+                            </button>
+                            <button onClick={() => void handleAiRewrite(piece.id)} disabled={loadingPiece === piece.id} className="font-mono text-[11px] uppercase tracking-widest border border-primary/30 text-primary hover:bg-primary/10 px-2 h-6 flex items-center gap-1 transition-colors">
+                              <Sparkles className="h-2.5 w-2.5" />IA Reescrever
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Text-based platforms: email, whatsapp, ads, landing */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {platformPieces.map(piece => (
+                        <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}

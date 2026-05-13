@@ -380,10 +380,13 @@ export default function CampaignDetail() {
   const refetchInterval = isActive ? 5000 : false;
 
   // Auto-redirect draft/intake campaigns to intake chat immediately
+  // Auto-redirect awaiting_approval to the content approval page (mocks + per-platform approval)
   useEffect(() => {
     if (!campaign) return;
     if (campaign.status === "draft" || campaign.status === "intake") {
       setLocation(`/campaigns/${campaignId}/intake`);
+    } else if (campaign.status === "awaiting_approval") {
+      setLocation(`/campaigns/${campaignId}/content`);
     }
   }, [campaign?.status, campaignId, setLocation, campaign]);
 
@@ -635,8 +638,9 @@ export default function CampaignDetail() {
     );
   }
 
-  // While redirecting draft/intake campaigns, show a minimal loading state
-  if (campaign.status === "draft" || campaign.status === "intake") {
+  // While redirecting draft/intake/awaiting_approval, show a minimal loading state
+  if (campaign.status === "draft" || campaign.status === "intake" || campaign.status === "awaiting_approval") {
+    const isContent = campaign.status === "awaiting_approval";
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-5">
         <div className="relative">
@@ -648,10 +652,10 @@ export default function CampaignDetail() {
         </div>
         <div className="text-center space-y-1">
           <p className="font-mono text-sm text-foreground font-bold uppercase tracking-widest">
-            Abrindo o briefing com IA...
+            {isContent ? "Conteúdo pronto para aprovação!" : "Abrindo o briefing com IA..."}
           </p>
           <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
-            Em alguns segundos a IA vai iniciar a conversa
+            {isContent ? "Abrindo área de aprovação por plataforma..." : "Em alguns segundos a IA vai iniciar a conversa"}
           </p>
         </div>
       </div>
