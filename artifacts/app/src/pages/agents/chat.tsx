@@ -10,7 +10,7 @@ import {
   ArrowLeft, Send, Loader2, Bot, Brain, Zap, Target, Pen, Eye,
   ShoppingCart, Users, BarChart3, TrendingUp, Video, Star,
   Shield, Rocket, Megaphone, Globe, RefreshCw, Download, CornerDownLeft,
-  Mic, Play, Radio, FileText, Hash, Mail, MessageCircle, DollarSign, Layers, Cpu,
+  Mic, MicOff, Play, Radio, FileText, Hash, Mail, MessageCircle, DollarSign, Layers, Cpu,
   Paperclip, X, ImageIcon, File, GripHorizontal,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
@@ -189,10 +189,13 @@ export default function AgentChat() {
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
   const [inputHeight, setInputHeight] = useState(180);
+  const [isListening, setIsListening] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dividerDragRef = useRef<{ startY: number; startH: number } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   const onDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -370,6 +373,44 @@ export default function AgentChat() {
         : (lastError?.message ?? "Erro de comunicação. Sua mensagem foi preservada — tente novamente."),
       { duration: 7000 },
     );
+  };
+
+  // ── Voice to text ───────────────────────────────────────────────────────────
+  const toggleVoice = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRec = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      toast.error("Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
+    const rec = new SpeechRec() as any;
+    rec.lang = "pt-BR";
+    rec.continuous = false;
+    rec.interimResults = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const transcript = (e.results[0]?.[0]?.transcript as string | undefined) ?? "";
+      if (transcript) {
+        setInput(prev => prev ? `${prev} ${transcript}` : transcript);
+        setTimeout(() => inputRef.current?.focus(), 50);
+      }
+    };
+    rec.onend = () => setIsListening(false);
+    rec.onerror = () => {
+      setIsListening(false);
+      toast.error("Não foi possível capturar o áudio. Verifique as permissões do microfone.");
+    };
+    recognitionRef.current = rec;
+    rec.start();
+    setIsListening(true);
+    toast("Ouvindo… fale agora.", { duration: 2500 });
   };
 
   const clearChat = () => {
@@ -557,6 +598,12 @@ export default function AgentChat() {
       {/* Input */}
       <div className="shrink-0 border border-t-0 border-border/50 p-3 bg-card/20"
         style={{ height: inputHeight, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+
+        {/* Hidden file input */}
+        <input ref={fileInputRef} type="file" multiple className="hidden"
+          accept=".txt,.md,.csv,.json,.html,.xml,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sql,.sh,.pdf,.doc,.docx,image/*"
+          onChange={e => { void handleFileSelect(e); }} />
+
         {/* Pending attachments preview */}
         {pendingAttachments.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-1.5 pb-2 border-b border-border/30">
@@ -574,76 +621,101 @@ export default function AgentChat() {
             ))}
           </div>
         )}
-        <div className="flex gap-2 items-end">
-          {/* Hidden file input */}
-          <input ref={fileInputRef} type="file" multiple className="hidden"
-            accept=".txt,.md,.csv,.json,.html,.xml,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sql,.sh,.pdf,.doc,.docx,image/*"
-            onChange={e => { void handleFileSelect(e); }} />
-          <textarea ref={inputRef} value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === "Enter") {
-                // Mobile: plain Enter sends (no Ctrl available on virtual keyboard)
-                // Desktop: Ctrl+Enter or Meta+Enter sends; plain Enter = new line
-                if (isMobile || e.ctrlKey || e.metaKey) {
-                  e.preventDefault();
-                  void sendMessage();
-                }
-              }
-            }}
-            placeholder={`Fale com ${agent.name}…`}
-            disabled={sending}
-            className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
-          />
-          <div className="flex flex-col gap-1.5 shrink-0">
-            <Button
-              onPointerDown={e => {
-                // On touch only: prevent the textarea from losing focus (and the
-                // mobile keyboard from dismissing + reshaping the layout) before
-                // the click event fires. For mouse events leave default intact so
-                // the click event is never blocked on desktop.
-                if (e.pointerType === "touch") e.preventDefault();
-              }}
-              onClick={() => {
-                if (!input.trim()) {
-                  inputRef.current?.focus();
-                  return;
-                }
-                void sendMessage();
-              }}
-              disabled={sending}
-              title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
-              className={`font-mono rounded-none h-10 px-4 ${accent.bg} ${accent.border} border hover:brightness-125`}>
-              {sending ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} /> : <Send className={`h-4 w-4 ${accent.text}`} />}
-            </Button>
-            {/* Attach file */}
-            <button type="button" onClick={() => fileInputRef.current?.click()}
-              title="Anexar arquivo (qualquer tipo)"
-              className="font-mono rounded-none h-10 px-3 border border-border/50 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-colors text-muted-foreground hover:text-foreground shrink-0">
-              <Paperclip className="h-4 w-4" />
-              {pendingAttachments.length > 0 && (
-                <span className="ml-1 text-[9px] font-bold text-primary">{pendingAttachments.length}</span>
-              )}
+
+        {/* Listening indicator */}
+        {isListening && (
+          <div className="mb-1.5 flex items-center gap-2 px-2 py-1 border border-destructive/40 bg-destructive/10">
+            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
+            <span className="font-mono text-[11px] text-destructive uppercase tracking-widest">Ouvindo… fale agora</span>
+            <button onClick={toggleVoice} className="ml-auto text-destructive hover:text-destructive/70">
+              <X className="h-3 w-3" />
             </button>
-            {!isMobile && (
-              <Button variant="outline" size="sm" title="Nova linha (Enter)"
-                onClick={() => {
-                  setInput(v => v + "\n");
-                  setTimeout(() => inputRef.current?.focus(), 0);
-                }}
-                disabled={sending}
-                className="font-mono rounded-none h-10 px-4 border-border/50 text-muted-foreground hover:text-foreground hover:border-border">
-                <CornerDownLeft className="h-4 w-4" />
-              </Button>
-            )}
           </div>
+        )}
+
+        {/* Textarea — full width */}
+        <textarea ref={inputRef} value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              if (isMobile || e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                void sendMessage();
+              }
+            }
+          }}
+          placeholder={`Fale com ${agent.name}…`}
+          disabled={sending}
+          className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all min-h-0"
+        />
+
+        {/* ── Action toolbar ─────────────────────────────────────────────── */}
+        <div className="flex items-center gap-1.5 mt-2">
+
+          {/* Mic — voice to text */}
+          <button
+            type="button"
+            onClick={toggleVoice}
+            title={isListening ? "Parar gravação de voz" : "Gravar mensagem por voz (PT-BR)"}
+            className={`h-9 w-9 flex items-center justify-center border transition-all rounded-sm shrink-0
+              ${isListening
+                ? "border-destructive bg-destructive/20 text-destructive"
+                : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}
+          >
+            {isListening
+              ? <MicOff className="h-4 w-4" />
+              : <Mic className="h-4 w-4" />}
+          </button>
+
+          {/* Attach file */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Anexar arquivo ou imagem"
+            className="h-9 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0"
+          >
+            <Paperclip className="h-4 w-4" />
+            <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">Arquivo</span>
+            {pendingAttachments.length > 0 && (
+              <span className="text-[9px] font-bold text-primary bg-primary/20 px-1 rounded-sm">
+                {pendingAttachments.length}
+              </span>
+            )}
+          </button>
+
+          <div className="flex-1" />
+
+          {/* New line (desktop only) */}
+          {!isMobile && (
+            <Button variant="outline" size="sm"
+              title="Inserir nova linha"
+              onClick={() => { setInput(v => v + "\n"); setTimeout(() => inputRef.current?.focus(), 0); }}
+              disabled={sending}
+              className="font-mono rounded-sm h-9 px-3 border-border/50 text-muted-foreground hover:text-foreground hover:border-border shrink-0">
+              <CornerDownLeft className="h-4 w-4" />
+            </Button>
+          )}
+
+          {/* Send */}
+          <Button
+            onPointerDown={e => { if (e.pointerType === "touch") e.preventDefault(); }}
+            onClick={() => { if (!input.trim() && pendingAttachments.length === 0) { inputRef.current?.focus(); return; } void sendMessage(); }}
+            disabled={sending}
+            title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
+            className={`font-mono rounded-sm h-9 px-4 ${accent.bg} ${accent.border} border hover:brightness-125 shrink-0`}>
+            {sending
+              ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} />
+              : <><Send className={`h-4 w-4 ${accent.text}`} /><span className={`ml-1.5 font-mono text-[11px] uppercase tracking-widest ${accent.text} hidden sm:inline`}>Enviar</span></>}
+          </Button>
         </div>
-        <div className="flex justify-between items-center mt-1.5 px-1">
-          <span className="text-[11px] font-mono text-muted-foreground/40 uppercase tracking-widest">
-            Modo: {MODE_LABELS[contextMode]} · {selectedCampaign ? "Com contexto de campanha" : "Sem contexto"}
+
+        {/* Footer hint */}
+        <div className="flex justify-between items-center mt-1.5 px-0.5">
+          <span className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
+            Modo: {MODE_LABELS[contextMode]} · {selectedCampaign ? "Com campanha" : "Sem campanha"}
           </span>
-          <span className="text-[11px] font-mono text-muted-foreground/40">
-            {isMobile ? "Enter = enviar · 3 cr/msg" : "Enter = nova linha · Ctrl+Enter = enviar · 3 cr/msg"}
+          <span className="text-[10px] font-mono text-muted-foreground/40">
+            {isMobile ? "Enter = enviar" : "Ctrl+Enter = enviar"} · 3 cr/msg
           </span>
         </div>
       </div>

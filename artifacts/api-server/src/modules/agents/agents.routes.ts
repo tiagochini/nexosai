@@ -12,6 +12,7 @@ import {
   campaignsTable,
   auditLogsTable,
   workspacesTable,
+  usersTable,
 } from "@workspace/db";
 
 const router = Router();
@@ -320,9 +321,25 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       return;
     }
 
+    // Fetch user locale to instruct AI to respond in the right language
+    const [userRow] = await db
+      .select({ locale: usersTable.locale })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.auth.userId))
+      .limit(1);
+    const locale = userRow?.locale ?? "pt-BR";
+    const localeMap: Record<string, string> = {
+      "en-US": "American English",
+      "en-AU": "Australian English",
+      "es-LA": "Spanish (Latin America)",
+    };
+    const localeNote = locale !== "pt-BR" && localeMap[locale]
+      ? `\n\nLANGUAGE: Always respond in ${localeMap[locale]}. All output must be in ${localeMap[locale]}.`
+      : "";
+
     const modeNote = contextMode ? `\n\nMODO: ${contextMode.toUpperCase()} — adapte sua resposta a este contexto.` : "";
     const basePrompt = AGENT_SYSTEM_PROMPTS[agentRole] ?? "Você é um especialista em marketing digital. Responda em PT-BR.";
-    const systemPrompt = basePrompt + modeNote;
+    const systemPrompt = basePrompt + modeNote + localeNote;
 
     const messages = [
       ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
