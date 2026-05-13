@@ -16,7 +16,7 @@ import {
 type Provider =
   | "whatsapp_business" | "telegram"
   | "rd_station" | "activecampaign" | "resend"
-  | "hotmart" | "kiwify" | "stripe"
+  | "hotmart" | "kiwify" | "stripe" | "asaas"
   | "meta_ads" | "google_ads" | "tiktok_ads"
   | "instagram" | "tiktok"
   | "hubspot";
@@ -267,6 +267,33 @@ const CATALOG: CatalogEntry[] = [
     },
     oauthPlatform: "tiktok",
     oauthLabel: "Entrar com TikTok",
+  },
+  {
+    provider: "asaas",
+    label: "Asaas",
+    description: "Checkout próprio · PIX · Boleto · Cartão · sem comissão de plataforma",
+    why: "Com o Asaas conectado, seus clientes pagam direto para você via PIX, boleto ou cartão. O dinheiro cai na sua conta sem intermediários. Crie sua conta pelo link de indicação da NexOS e ganhe benefícios exclusivos.",
+    category: "Pagamentos",
+    color: "text-blue-400",
+    icon: CreditCard,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "API Key do Asaas", placeholder: "$aact_prod_xxxx...", type: "password",
+        hint: "Encontrada em Asaas → Minha Conta → Integrações → API Keys. Use a chave de produção ($aact_prod_...)." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
+      { key: "accountId",   label: "Ambiente", placeholder: "production",
+        hint: "Deixe 'production' para conta real, ou 'sandbox' para testes." },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no Asaas (crie pelo link de indicação abaixo para benefícios)"],
+      steps: [
+        { title: "Crie sua conta no Asaas", detail: "Acesse o link de indicação da NexOS para criar sua conta e já começar com vantagens.", url: "https://www.asaas.com/referral?referral=nexosai" },
+        { title: "Acesse suas API Keys", detail: "No painel do Asaas: Menu → Minha Conta → Integrações → API Keys. Copie a chave de produção (começa com $aact_prod_...)." },
+        { title: "Cole a chave aqui", detail: "Preencha o campo API Key acima com sua chave de produção e salve. Pronto — seus checkouts já cobram direto na sua conta." },
+      ],
+      docsUrl: "https://docs.asaas.com",
+      docsLabel: "Documentação Asaas",
+    },
   },
   {
     provider: "hotmart",

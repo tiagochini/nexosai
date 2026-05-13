@@ -22,6 +22,7 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
   "hotmart",
   "eduzz",
   "kiwify",
+  "asaas",
   "mailchimp",
   "activecampaign",
   "rd_station",

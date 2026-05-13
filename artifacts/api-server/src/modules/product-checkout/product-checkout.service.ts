@@ -1,21 +1,19 @@
 import { eq, and } from "drizzle-orm";
-import { db, productsTable, productSalesTable, sequenceContactsTable, type Product, type ProductSale } from "@workspace/db";
+import { db, productsTable, productSalesTable, sequenceContactsTable, workspaceIntegrationsTable, type Product, type ProductSale } from "@workspace/db";
 import { AppError, NotFoundError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
 import type { CardInputData } from "../billing/billing.service.js";
 
-// ─── Re-use Asaas helpers from billing (copied to keep modules decoupled) ─────
+// ─── Asaas helpers — workspace key takes priority over platform key ───────────
 
-const ASAAS_BASE =
-  process.env["ASAAS_ENV"] === "production"
-    ? "https://api.asaas.com/v3"
-    : "https://sandbox.asaas.com/api/v3";
+function asaasBase(env?: string) {
+  return (env === "sandbox")
+    ? "https://sandbox.asaas.com/api/v3"
+    : "https://api.asaas.com/v3";
+}
 
-async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const apiKey = process.env["ASAAS_API_KEY"];
-  if (!apiKey) throw new AppError(503, "Asaas não configurado", "ASAAS_NOT_CONFIGURED");
-
-  const res = await fetch(`${ASAAS_BASE}${path}`, {
+async function asaasRequest<T>(apiKey: string, base: string, path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${base}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -33,8 +31,39 @@ async function asaasRequest<T>(path: string, options: RequestInit = {}): Promise
   return data;
 }
 
-async function ensureCustomer(name: string, email: string, cpfCnpj?: string): Promise<string> {
-  const customer = await asaasRequest<{ id: string }>("/customers", {
+/** Returns the Asaas API key + base URL to use for a workspace.
+ *  Priority: workspace's own connected Asaas account → platform key (NexOS). */
+async function resolveAsaas(workspaceId: string): Promise<{ apiKey: string; base: string }> {
+  const [wsIntegration] = await db
+    .select({ accessToken: workspaceIntegrationsTable.accessToken, accountId: workspaceIntegrationsTable.accountId })
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        eq(workspaceIntegrationsTable.provider, "asaas"),
+        eq(workspaceIntegrationsTable.status, "connected"),
+      )
+    )
+    .limit(1);
+
+  if (wsIntegration?.accessToken) {
+    return {
+      apiKey: wsIntegration.accessToken,
+      base: asaasBase(wsIntegration.accountId ?? "production"),
+    };
+  }
+
+  // Fall back to platform key (NexOS sells its own products)
+  const platformKey = process.env["ASAAS_API_KEY"];
+  if (!platformKey) throw new AppError(503, "Asaas não configurado. Conecte sua conta Asaas em Integrações.", "ASAAS_NOT_CONFIGURED");
+  return {
+    apiKey: platformKey,
+    base: asaasBase(process.env["ASAAS_ENV"]),
+  };
+}
+
+async function ensureCustomer(apiKey: string, base: string, name: string, email: string, cpfCnpj?: string): Promise<string> {
+  const customer = await asaasRequest<{ id: string }>(apiKey, base, "/customers", {
     method: "POST",
     body: JSON.stringify({ name, email, cpfCnpj: cpfCnpj ?? "00000000000" }),
   });
@@ -118,10 +147,11 @@ export async function initiateProductCheckout(opts: {
   let expiresAt: Date | null = null;
   let initialStatus: "pending" | "paid" = "pending";
 
-  const customerId = await ensureCustomer(opts.buyerName, opts.buyerEmail, opts.buyerCpf);
+  const { apiKey, base } = await resolveAsaas(product.workspaceId);
+  const customerId = await ensureCustomer(apiKey, base, opts.buyerName, opts.buyerEmail, opts.buyerCpf);
 
   if (opts.method === "pix") {
-    const payment = await asaasRequest<{ id: string }>("/payments", {
+    const payment = await asaasRequest<{ id: string }>(apiKey, base, "/payments", {
       method: "POST",
       body: JSON.stringify({
         customer: customerId,
@@ -132,13 +162,13 @@ export async function initiateProductCheckout(opts: {
       }),
     });
     const pix = await asaasRequest<{ encodedImage: string; payload: string; expirationDate: string }>(
-      `/payments/${payment.id}/pixQrCode`
+      apiKey, base, `/payments/${payment.id}/pixQrCode`
     );
     pixData = { qrCode: pix.encodedImage, copiaECola: pix.payload, expiresAt: pix.expirationDate, asaasId: payment.id };
     externalId = payment.id;
     expiresAt = new Date(pix.expirationDate);
   } else if (opts.method === "boleto") {
-    const payment = await asaasRequest<{ id: string; bankSlipUrl?: string; nossoNumero?: string }>("/payments", {
+    const payment = await asaasRequest<{ id: string; bankSlipUrl?: string; nossoNumero?: string }>(apiKey, base, "/payments", {
       method: "POST",
       body: JSON.stringify({
         customer: customerId,
@@ -148,7 +178,7 @@ export async function initiateProductCheckout(opts: {
         description,
       }),
     });
-    const idf = await asaasRequest<{ identificationField?: string }>(`/payments/${payment.id}/identificationField`);
+    const idf = await asaasRequest<{ identificationField?: string }>(apiKey, base, `/payments/${payment.id}/identificationField`);
     boletoData = {
       barcodeUrl: payment.bankSlipUrl ?? "",
       barcode: idf.identificationField ?? "",
@@ -163,7 +193,7 @@ export async function initiateProductCheckout(opts: {
       id: string;
       status: string;
       creditCard?: { creditCardBrand: string; creditCardNumber: string };
-    }>("/payments", {
+    }>(apiKey, base, "/payments", {
       method: "POST",
       body: JSON.stringify({
         customer: customerId,

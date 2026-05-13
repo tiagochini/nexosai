@@ -545,7 +545,7 @@ function SecurityTab() {
 type IntegrationProvider =
   | "meta_ads" | "instagram" | "tiktok" | "tiktok_ads" | "google_ads"
   | "whatsapp_business" | "telegram" | "stripe" | "hotmart"
-  | "eduzz" | "kiwify" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot"
+  | "eduzz" | "kiwify" | "asaas" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot"
   | "resend" | "crypto_native" | "custom_webhook";
 
 interface WorkspaceIntegration {
@@ -606,6 +606,18 @@ const INTEGRATION_CATALOG: {
       { key: "accountId", label: "Account Name", placeholder: "minhaempresa" },
       { key: "accountName", label: "Nome da Conta", placeholder: "Minha AC" },
       { key: "accessToken", label: "API Key", placeholder: "xxxxxx...", type: "password" },
+    ],
+  },
+  {
+    provider: "asaas",
+    label: "Asaas",
+    description: "Checkout próprio · PIX · Boleto · Cartão · sem comissão de plataforma",
+    category: "Pagamentos",
+    color: "text-blue-400",
+    fields: [
+      { key: "accessToken", label: "API Key do Asaas", placeholder: "$aact_prod_xxxx...", type: "password" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
+      { key: "accountId",   label: "Ambiente (production/sandbox)", placeholder: "production" },
     ],
   },
   {
