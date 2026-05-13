@@ -357,6 +357,73 @@ export async function processConversationalTurn(
   const nextMissing = missingRequired[0] ?? null;
   const nextQuestion = questions.find((q) => q.id === nextMissing);
 
+  // ── Hard-stop: all required fields already filled ─────────────────────────
+  // Don't call the LLM at all — return a deterministic completion message.
+  if (completeness.valid) {
+    const productName = String(
+      currentIntake["product.name"] ?? currentIntake["product.nome"] ?? "seu produto"
+    );
+    const wrapUpMessage = `Perfeito! Temos tudo que precisamos para montar o Master Plan de Lançamento de **${productName}** 🎯\n\nO briefing está 100% completo. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento — com estratégia, calendário editorial, criativos e projeções de resultado.`;
+
+    // Persist the wrap-up as the last assistant message in history
+    const prevHistory = Array.isArray(currentIntake["_conversationHistory"])
+      ? (currentIntake["_conversationHistory"] as Array<{ role: string; content: string }>)
+      : [];
+    const updatedHistory = [
+      ...prevHistory,
+      { role: "user", content: userMessage },
+      { role: "assistant", content: wrapUpMessage, agentId: "erico" },
+    ].slice(-40);
+    await saveIntakeData(campaignId, workspaceId, { ...currentIntake, _conversationHistory: updatedHistory }, log);
+
+    const progress = 100;
+    return {
+      agentId: "erico",
+      extracted: {},
+      aiMessage: wrapUpMessage,
+      nextQuestionId: null,
+      isComplete: true,
+      progress,
+      missingRequired: [],
+      intakeData: { ...currentIntake, _conversationHistory: updatedHistory },
+      proposedType: null,
+      proposedTrack: null,
+      proposedReason: null,
+    };
+  }
+
+  // ── Round limit: after 40 history entries (~20 exchanges), force completion ─
+  const existingHistory = Array.isArray(currentIntake["_conversationHistory"])
+    ? (currentIntake["_conversationHistory"] as unknown[])
+    : [];
+  if (existingHistory.length >= 40) {
+    const forcedMessage = `Temos informações suficientes para começar! Briefing registrado com os dados coletados até aqui. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento.`;
+    const updatedHistory = [
+      ...existingHistory as Array<{ role: string; content: string }>,
+      { role: "user", content: userMessage },
+      { role: "assistant", content: forcedMessage, agentId: "erico" },
+    ].slice(-40);
+    await saveIntakeData(campaignId, workspaceId, { ...currentIntake, _conversationHistory: updatedHistory }, log);
+
+    const newCompleteness2 = validateIntakeCompleteness(type, track, currentIntake);
+    const progress2 = Math.round(
+      ((questions.length - newCompleteness2.missingRequired.length) / questions.length) * 100
+    );
+    return {
+      agentId: "erico",
+      extracted: {},
+      aiMessage: forcedMessage,
+      nextQuestionId: null,
+      isComplete: true,
+      progress: progress2,
+      missingRequired: newCompleteness2.missingRequired,
+      intakeData: { ...currentIntake, _conversationHistory: updatedHistory },
+      proposedType: null,
+      proposedTrack: null,
+      proposedReason: null,
+    };
+  }
+
   // Only include a compact summary of filled fields (not full JSON) to limit token usage
   const filledSummary = answeredFields
     .slice(0, 20) // cap at 20 fields to keep prompt short

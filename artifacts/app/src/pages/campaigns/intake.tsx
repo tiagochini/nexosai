@@ -793,27 +793,80 @@ export default function CampaignIntake() {
               />
             )}
 
-            {/* Completion banner */}
-            {chatComplete && (
-              <div className="border border-success/30 bg-success/5 p-4 rounded-sm mt-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span className="font-mono font-bold text-xs uppercase tracking-widest text-success">
-                    Briefing completo! A IA tem tudo que precisa.
-                  </span>
-                </div>
-                <Button onClick={() => void handleFinalize()} disabled={finalizing}
-                  className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11">
-                  {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
-                    : <><Zap className="h-4 w-4" />Finalizar e Iniciar Análise Estratégica</>}
-                </Button>
-              </div>
-            )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Input */}
-          {!chatComplete && (
+          {/* ── Completion CTA — replaces input when briefing is done ── */}
+          {(chatComplete || isComplete) ? (
+            <div className="border border-t-0 border-success/40 bg-success/5 shrink-0">
+              {/* Top accent bar */}
+              <div className="h-1 w-full bg-gradient-to-r from-success/0 via-success to-success/0" />
+
+              <div className="px-5 py-5 flex flex-col gap-4">
+                {/* Status row */}
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 border border-success/50 bg-success/10 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mono font-bold text-sm uppercase tracking-widest text-success">
+                      Briefing 100% Completo
+                    </div>
+                    <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
+                      A IA coletou tudo que precisa para montar o Master Plan de Lançamento
+                    </p>
+                  </div>
+                  <div className="shrink-0 font-mono text-2xl font-black text-success/20 hidden sm:block">
+                    100%
+                  </div>
+                </div>
+
+                {/* Data summary pills */}
+                {(() => {
+                  const fd = formData;
+                  const pills: { label: string; value: string }[] = [];
+                  const pName = fd["product.name"] ?? fd["product.nome"];
+                  const pPrice = fd["product.price"] ?? fd["product.preco"];
+                  const pAudience = fd["audience.avatar"] ?? fd["audience.target"];
+                  const pBudget = fd["campaign.budget.total"] ?? fd["campaign.budget"];
+                  if (pName) pills.push({ label: "Produto", value: String(pName) });
+                  if (pPrice) pills.push({ label: "Preço", value: `R$${Number(pPrice).toLocaleString("pt-BR")}` });
+                  if (pAudience) pills.push({ label: "Público", value: String(pAudience).slice(0, 35) + (String(pAudience).length > 35 ? "…" : "") });
+                  if (pBudget) pills.push({ label: "Budget", value: `R$${Number(pBudget).toLocaleString("pt-BR")}` });
+                  if (pills.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-2">
+                      {pills.map(p => (
+                        <div key={p.label} className="border border-border/40 bg-card/60 px-3 py-1.5 flex items-center gap-2">
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{p.label}</span>
+                          <span className="font-mono text-[11px] font-bold text-foreground/90">{p.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* The big button */}
+                <Button
+                  onClick={() => void handleFinalize()}
+                  disabled={finalizing}
+                  className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary"
+                  style={{ fontSize: "0.8rem", letterSpacing: "0.12em" }}
+                >
+                  {finalizing
+                    ? <><Loader2 className="h-5 w-5 animate-spin" />Preparando Master Plan...</>
+                    : <><Rocket className="h-5 w-5" />Ver e Aprovar Master Plan do Lançamento<ChevronRight className="h-5 w-5" /></>
+                  }
+                </Button>
+
+                <p className="font-mono text-[10px] text-center text-muted-foreground/40 uppercase tracking-widest -mt-1">
+                  Estratégia · Calendário Editorial · Criativos · Projeções
+                </p>
+              </div>
+            </div>
+          ) : (
+          /* Input */
+          (
             <div className="border border-t-0 border-border/50 p-3 shrink-0 flex flex-col gap-2">
 
               {/* Hidden file input */}
@@ -917,18 +970,7 @@ export default function CampaignIntake() {
                 {isMobile ? "Enter = enviar" : "Ctrl+Enter = enviar · Enter = nova linha"} · suporta texto, código, imagens, PDF
               </p>
             </div>
-          )}
-
-          {/* Finalize button (when intake is complete but chat didn't flag it) */}
-          {isComplete && !chatComplete && (
-            <div className="pt-3 border-t border-border/50 shrink-0">
-              <Button onClick={() => void handleFinalize()} disabled={finalizing}
-                className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11">
-                {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
-                  : <><ChevronRight className="h-4 w-4" />Briefing Completo — Iniciar Estratégia</>}
-              </Button>
-            </div>
-          )}
+          ))}
         </div>
       )}
 
