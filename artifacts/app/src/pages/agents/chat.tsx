@@ -11,7 +11,7 @@ import {
   ShoppingCart, Users, BarChart3, TrendingUp, Video, Star,
   Shield, Rocket, Megaphone, Globe, RefreshCw, Download, CornerDownLeft,
   Mic, Play, Radio, FileText, Hash, Mail, MessageCircle, DollarSign, Layers, Cpu,
-  Paperclip, X, ImageIcon, File,
+  Paperclip, X, ImageIcon, File, GripHorizontal,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 
@@ -187,9 +187,29 @@ export default function AgentChat() {
   const [contextMode, setContextMode] = useState<ContextMode>("question");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
+  const [inputHeight, setInputHeight] = useState(180);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dividerDragRef = useRef<{ startY: number; startH: number } | null>(null);
+
+  const onDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    dividerDragRef.current = { startY: e.clientY, startH: inputHeight };
+    const onMove = (ev: PointerEvent) => {
+      if (!dividerDragRef.current) return;
+      const delta = dividerDragRef.current.startY - ev.clientY;
+      const next = Math.max(100, Math.min(480, dividerDragRef.current.startH + delta));
+      setInputHeight(next);
+    };
+    const onUp = () => {
+      dividerDragRef.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
 
   const { data: campaignsData } = useListCampaigns({ query: { queryKey: getListCampaignsQueryKey() } });
 
@@ -407,7 +427,7 @@ export default function AgentChat() {
       </div>
 
       {/* Chat area */}
-      <div className="flex-1 overflow-y-auto border border-border/50 bg-card/10 p-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto border border-border/50 bg-card/10 p-4 space-y-4 min-h-0 relative">
         {/* Empty state with suggestions */}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-5 py-8">
@@ -496,8 +516,24 @@ export default function AgentChat() {
         <div ref={chatEndRef} />
       </div>
 
+      {/* ── Drag divider ─────────────────────────────────────────────────── */}
+      <div
+        onPointerDown={onDividerPointerDown}
+        className="shrink-0 h-5 border-x border-border/50 bg-muted/10 hover:bg-primary/10
+          flex items-center justify-center cursor-ns-resize select-none group transition-colors"
+        title="Arraste para redimensionar">
+        <div className="flex items-center gap-2 px-3 py-0.5 rounded-sm group-hover:bg-primary/10 transition-colors">
+          <GripHorizontal className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 group-hover:text-primary/60 transition-colors">
+            arrastar
+          </span>
+          <GripHorizontal className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+        </div>
+      </div>
+
       {/* Input */}
-      <div className="shrink-0 border border-t-0 border-border/50 p-3 bg-card/20">
+      <div className="shrink-0 border border-t-0 border-border/50 p-3 bg-card/20"
+        style={{ height: inputHeight, overflow: "hidden", display: "flex", flexDirection: "column" }}>
         {/* Pending attachments preview */}
         {pendingAttachments.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-1.5 pb-2 border-b border-border/30">
@@ -531,8 +567,8 @@ export default function AgentChat() {
               }
             }}
             placeholder={`Fale com ${agent.name}…`}
-            disabled={sending} rows={isMobile ? 3 : 4}
-            className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[64px]"
+            disabled={sending}
+            className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all"
           />
           <div className="flex flex-col gap-1.5 shrink-0">
             <Button
