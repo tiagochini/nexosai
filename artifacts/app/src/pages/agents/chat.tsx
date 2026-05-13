@@ -240,8 +240,17 @@ export default function AgentChat() {
   const RETRY_DELAYS_MS = [4000, 8000];
   const FETCH_TIMEOUT_MS = 110_000; // 110s — AI calls can take up to 90s
 
-  const readTextContent = (file: File): Promise<string | undefined> =>
+  const readFileContent = (file: File): Promise<string | undefined> =>
     new Promise(resolve => {
+      const isImage = file.type.startsWith("image/");
+      if (isImage && file.size <= 5_000_000) {
+        // Read images as base64 data-URL so Claude can actually see them
+        const reader = new FileReader();
+        reader.onload = e => resolve((e.target?.result as string | undefined) ?? undefined);
+        reader.onerror = () => resolve(undefined);
+        reader.readAsDataURL(file);
+        return;
+      }
       const isReadable =
         file.type.startsWith("text/") ||
         ["application/json", "application/xml"].includes(file.type) ||
@@ -263,7 +272,7 @@ export default function AgentChat() {
         url: URL.createObjectURL(f),
         size: f.size,
         isImage: f.type.startsWith("image/"),
-        content: await readTextContent(f),
+        content: await readFileContent(f),
       }))
     );
     setPendingAttachments(prev => [...prev, ...attachments]);
@@ -298,19 +307,22 @@ export default function AgentChat() {
     setSending(true);
     setRetryInfo(null);
 
-    // Include readable file contents in the message so the AI can process them
-    const fileContext = attachmentsSnapshot
-      .filter(a => a.content)
+    // Separate images (sent as base64 to vision AI) from text files (inlined)
+    const imageAttachments = attachmentsSnapshot.filter(a => a.isImage && a.content);
+    const textAttachments  = attachmentsSnapshot.filter(a => !a.isImage && a.content);
+
+    const fileContext = textAttachments
       .map(a => `\n\n--- Arquivo: ${a.name} ---\n${a.content}`)
       .join("");
     const messageWithFiles = text + fileContext;
 
     const requestBody = JSON.stringify({
       agentRole: role,
-      message: messageWithFiles,
+      message: messageWithFiles || (imageAttachments.length > 0 ? "Analise esta imagem." : ""),
       history: snapshotMessages.map(m => ({ role: m.role, content: m.content })).slice(-12),
       contextMode,
       ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
+      ...(imageAttachments.length > 0 ? { images: imageAttachments.map(a => a.content!) } : {}),
     });
 
     let lastError: Error | null = null;

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { orchestrateCampaign } from "./command.agent.js";
-import { completeWithAgent, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
+import { completeWithAgent, callVisionChat, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { AppError } from "../../lib/errors.js";
 import { eq, and, desc } from "drizzle-orm";
 import {
@@ -285,13 +285,15 @@ const AGENT_ROLES = Object.keys(AGENT_SYSTEM_PROMPTS);
 
 const directChatSchema = z.object({
   agentRole: z.string().min(1),
-  message: z.string().min(1).max(8000),
+  message: z.string().max(8000).default(""),
   history: z.array(z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string(),
   })).default([]),
   campaignId: z.string().uuid().optional(),
   contextMode: z.enum(["brainstorm", "review", "strategy", "question", "optimize"]).optional(),
+  // base64 data-URLs of uploaded images ("data:image/png;base64,...")
+  images: z.array(z.string().max(10_000_000)).max(5).optional(),
 });
 
 router.post("/direct-chat", async (req, res): Promise<void> => {
@@ -301,7 +303,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
     return;
   }
 
-  const { agentRole, message, history, campaignId, contextMode } = parsed.data;
+  const { agentRole, message, history, campaignId, contextMode, images } = parsed.data;
 
   if (!AGENT_ROLES.includes(agentRole)) {
     res.status(400).json({ error: `Unknown agent role: ${agentRole}`, code: "VALIDATION_ERROR" });
@@ -346,14 +348,17 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       { role: "user" as const, content: message },
     ];
 
-    const result = await completeWithAgent(
-      agentRole as AgentRole,
-      systemPrompt,
-      messages,
-      req.auth.workspaceId,
-      req.log,
-      campaignId ?? undefined,
-    );
+    // Route through vision API when images are attached, otherwise normal text
+    const result = images && images.length > 0
+      ? await callVisionChat(systemPrompt, messages, images, req.auth.workspaceId, req.log)
+      : await completeWithAgent(
+          agentRole as AgentRole,
+          systemPrompt,
+          messages,
+          req.auth.workspaceId,
+          req.log,
+          campaignId ?? undefined,
+        );
 
     // Deduct 3 credits per direct chat message (analytics_report cost)
     await db

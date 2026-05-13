@@ -306,6 +306,90 @@ async function callGemini(
   };
 }
 
+// ── Vision support (images → Claude) ─────────────────────────────────────────
+
+/**
+ * Send a message with one or more images to Claude for analysis.
+ * Images are base64 data-URLs ("data:image/png;base64,...").
+ * Always routes through Anthropic because it has the best vision support.
+ */
+export async function callVisionChat(
+  systemPrompt: string,
+  messages: AIMessage[],
+  imageDataUrls: string[],
+  workspaceId: string,
+  log: Logger,
+): Promise<AICompletionResult> {
+  const client = getAnthropic();
+  const effectiveModel = env.ANTHROPIC_API_KEY ? ANTHROPIC_NATIVE_MODEL : ANTHROPIC_INTEGRATION_MODEL;
+  const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);
+  const startTime = Date.now();
+
+  // Build image blocks for Claude's multimodal API
+  type ClaudeMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  const imageBlocks = imageDataUrls.map(dataUrl => {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    const mediaType = (match?.[1] ?? "image/jpeg") as ClaudeMediaType;
+    const data = match?.[2] ?? "";
+    return {
+      type: "image" as const,
+      source: { type: "base64" as const, media_type: mediaType, data },
+    };
+  });
+
+  // History messages (text-only), last user message includes images + text
+  const historyMessages = messages.slice(0, -1).map(m => ({
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
+  const lastMsg = messages[messages.length - 1];
+  const lastContent = [
+    ...imageBlocks,
+    { type: "text" as const, text: lastMsg?.content ?? "" },
+  ];
+
+  const response = await client.messages.create({
+    model: effectiveModel,
+    max_tokens: 8192,
+    system: systemPrompt,
+    messages: [
+      ...historyMessages,
+      { role: "user", content: lastContent },
+    ],
+  }, { signal });
+
+  const content = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const latencyMs = Date.now() - startTime;
+  const costUsd = calculateCostUsd("anthropic", effectiveModel, response.usage.input_tokens, response.usage.output_tokens);
+  const creditsCharged = calculateCreditsFromCost(costUsd, env.CREDIT_MARGIN_MULTIPLIER);
+
+  await db.insert(aiProviderLogsTable).values({
+    workspaceId,
+    campaignId: null,
+    agentType: "vision_chat" as AgentRole,
+    provider: "anthropic",
+    model: effectiveModel,
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+    costUsd: costUsd.toString(),
+    creditsCharged,
+    latencyMs,
+  });
+
+  log.info({ provider: "anthropic", model: effectiveModel, costUsd, latencyMs, images: imageDataUrls.length }, "Vision completion");
+
+  return {
+    content,
+    provider: "anthropic",
+    model: effectiveModel,
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    costUsd,
+    creditsCharged,
+  };
+}
+
 export async function completeWithAgent(
   agentRole: AgentRole,
   systemPrompt: string,
