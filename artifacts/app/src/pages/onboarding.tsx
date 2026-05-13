@@ -751,7 +751,7 @@ export default function Onboarding() {
     const pathMeta = PATHS.find((p) => p.id === path)!;
 
     return (
-      <div className="flex flex-col h-[calc(100vh-9rem)] md:h-[calc(100vh-8rem)] max-w-3xl mx-auto">
+      <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-5rem)] max-w-3xl mx-auto" style={{ minHeight: "600px" }}>
         {/* Chat header */}
         <div className="border-b border-border/50 pb-4 mb-4 shrink-0">
           <div className="flex items-center justify-between">
@@ -911,7 +911,7 @@ export default function Onboarding() {
                 placeholder="Digite sua resposta…"
                 disabled={sending}
                 rows={4}
-                className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-4 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[80px]"
+                className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-4 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[140px]"
               />
               <div className="flex flex-col gap-1.5 shrink-0">
                 <Button

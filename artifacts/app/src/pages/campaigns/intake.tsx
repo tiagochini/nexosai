@@ -535,7 +535,7 @@ export default function CampaignIntake() {
 
       {/* ════════════════ CHAT VIEW ════════════════ */}
       {view === "chat" && (
-        <div className="flex flex-col" style={{ height: "calc(100vh - 22rem)" }}>
+        <div className="flex flex-col" style={{ height: "calc(100vh - 13rem)", minHeight: "600px" }}>
           {/* Info bar / "onde você parou" summary */}
           {isReturning && progress > 0 ? (
             <div className="border border-blue-400/30 bg-blue-400/5 px-3 py-2.5 shrink-0 space-y-1.5">
@@ -677,8 +677,8 @@ export default function CampaignIntake() {
                   }}
                   placeholder="Digite sua resposta aqui... (seja simples e direto, a IA entende tudo)"
                   disabled={sending || confirmingType}
-                  rows={isMobile ? 3 : 4}
-                  className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[72px]"
+                  rows={isMobile ? 6 : 8}
+                  className="flex-1 font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[140px]"
                 />
                 <div className="flex flex-col gap-1.5 shrink-0">
                   <Button
