@@ -5,6 +5,7 @@ import {
   approvalCheckpointsTable,
   creditTransactionsTable,
   workspacesTable,
+  usersTable,
   auditLogsTable,
   type CampaignAgent,
 } from "@workspace/db";
@@ -90,10 +91,24 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const enrichedSystemPrompt = buildTemporalContextBlock() + systemPrompt;
 
   const [ws] = await db
-    .select({ creditsBalance: workspacesTable.creditsBalance })
+    .select({
+      creditsBalance: workspacesTable.creditsBalance,
+      ownerId: workspacesTable.ownerId,
+    })
     .from(workspacesTable)
     .where(eq(workspacesTable.id, workspaceId))
     .limit(1);
+
+  // Look up owner locale so every agent respects the user's language setting
+  let ownerLocale: string | undefined;
+  if (ws?.ownerId) {
+    const [ownerRow] = await db
+      .select({ locale: usersTable.locale })
+      .from(usersTable)
+      .where(eq(usersTable.id, ws.ownerId))
+      .limit(1);
+    ownerLocale = ownerRow?.locale ?? undefined;
+  }
 
   const MIN_CREDITS_REQUIRED = 5;
   if (!ws || ws.creditsBalance < MIN_CREDITS_REQUIRED) {
@@ -148,6 +163,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       workspaceId,
       log,
       campaignId ?? undefined,
+      ownerLocale,
     );
 
     content = result.content;

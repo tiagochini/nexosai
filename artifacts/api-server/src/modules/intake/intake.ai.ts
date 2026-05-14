@@ -5,7 +5,7 @@ import {
   auditLogsTable,
   type Campaign,
 } from "@workspace/db";
-import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
+import { completeWithAgent, buildLocaleInstruction } from "../ai-gateway/ai-gateway.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 import {
@@ -323,7 +323,8 @@ export async function processConversationalTurn(
   workspaceId: string,
   userMessage: string,
   history: ConversationTurn[],
-  log: Logger
+  log: Logger,
+  locale?: string
 ): Promise<{
   agentId: string;
   extracted: Record<string, unknown>;
@@ -467,7 +468,8 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
       messages,
       workspaceId,
       log,
-      campaignId
+      campaignId,
+      locale
     );
 
     const jsonMatch = result.content.match(/\{[\s\S]*\}/);

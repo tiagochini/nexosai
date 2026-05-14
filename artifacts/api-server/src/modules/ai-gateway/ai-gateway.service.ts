@@ -390,6 +390,20 @@ export async function callVisionChat(
   };
 }
 
+// ── Locale → language instruction ─────────────────────────────────────────────
+const LOCALE_LANGUAGE_MAP: Record<string, string> = {
+  "en-US": "English (US)",
+  "en-AU": "English (AU)",
+  "es-LA": "Spanish (Latin America)",
+};
+
+export function buildLocaleInstruction(locale: string | null | undefined): string {
+  if (!locale || locale === "pt-BR") return "";
+  const lang = LOCALE_LANGUAGE_MAP[locale];
+  if (!lang) return "";
+  return `\n\nLANGUAGE INSTRUCTION: You MUST respond exclusively in ${lang}. Every word of your output — analysis, copy, labels, JSON values, messages, recommendations — must be written in ${lang}. Do not mix languages.`;
+}
+
 export async function completeWithAgent(
   agentRole: AgentRole,
   systemPrompt: string,
@@ -397,8 +411,10 @@ export async function completeWithAgent(
   workspaceId: string,
   log: Logger,
   campaignId?: string,
+  locale?: string,
 ): Promise<AICompletionResult> {
   const { provider, model } = AGENT_PROVIDER_MAP[agentRole];
+  const effectiveSystem = systemPrompt + buildLocaleInstruction(locale);
   const startTime = Date.now();
   const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);
 
@@ -406,13 +422,13 @@ export async function completeWithAgent(
 
   switch (provider) {
     case "anthropic":
-      result = await callAnthropic(model, systemPrompt, messages, 8192, signal);
+      result = await callAnthropic(model, effectiveSystem, messages, 8192, signal);
       break;
     case "openai":
-      result = await callOpenAI(model, systemPrompt, messages, signal);
+      result = await callOpenAI(model, effectiveSystem, messages, signal);
       break;
     case "gemini":
-      result = await callGemini(model, systemPrompt, messages, signal);
+      result = await callGemini(model, effectiveSystem, messages, signal);
       break;
   }
 

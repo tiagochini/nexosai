@@ -26,7 +26,7 @@ import {
 } from "./intake.scoring.js";
 import { AppError } from "../../lib/errors.js";
 import { eq, and } from "drizzle-orm";
-import { db, campaignsTable } from "@workspace/db";
+import { db, campaignsTable, usersTable } from "@workspace/db";
 
 const router = Router();
 router.use(requireAuth);
@@ -224,12 +224,21 @@ router.post("/:campaignId/conversation", async (req, res): Promise<void> => {
     const fullHistory = parsed.data.history as ConversationTurn[];
     const trimmedHistory = fullHistory.slice(-12);
 
+    // Fetch user locale so the AI responds in their chosen language
+    const [userRow] = await db
+      .select({ locale: usersTable.locale })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.auth.userId))
+      .limit(1);
+    const locale = userRow?.locale ?? "pt-BR";
+
     const result = await processConversationalTurn(
       req.params["campaignId"] as string,
       req.auth.workspaceId,
       parsed.data.message,
       trimmedHistory,
-      req.log
+      req.log,
+      locale
     );
 
     res.json(result);
