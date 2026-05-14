@@ -23,6 +23,10 @@ import {
 import { CampaignBrief } from "@/components/campaign-brief";
 import { SocialPostPreview } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
+import {
+  ConnectModal, INTEGRATION_CATALOG,
+  type CatalogEntry, type Provider,
+} from "@/components/integration-connect-modal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -1207,7 +1211,36 @@ export default function CampaignDetail() {
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas">("comando");
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
+  const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
   const [bypassLaunchLoading, setBypassLaunchLoading] = useState(false);
+
+  const connectIntegrationMutation = useMutation({
+    mutationFn: async ({ provider, fields }: { provider: Provider; fields: Record<string, string> }) => {
+      const res = await customFetch<Response>("/api/workspaces/me/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          accountId: fields["accountId"],
+          accountName: fields["accountName"],
+          accessToken: fields["accessToken"],
+          metadata: fields,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro ao conectar");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Integração conectada! Tente lançar novamente.");
+      setConnectingEntry(null);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
   const autoLaunchFired = useRef(false);
 
   const { data, isLoading } = useGetCampaign(campaignId, {
@@ -1603,44 +1636,111 @@ export default function CampaignDetail() {
     <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
 
       {/* ── Missing Integrations Modal (hard block) ── */}
-      {missingIntegrations && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="border border-destructive/50 bg-card w-full max-w-md shadow-2xl">
-            <div className="border-b border-destructive/20 px-5 py-4 flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <XCircle className="h-5 w-5 text-destructive shrink-0" />
-                <div>
-                  <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-destructive">Canais Obrigatórios Ausentes</h3>
-                  <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Conecte ao menos um canal de mensagens e um de e-mail para lançar.</p>
+      {missingIntegrations && !connectingEntry && (() => {
+        const PROVIDER_NAME_MAP: Record<string, CatalogEntry | undefined> = Object.fromEntries(
+          INTEGRATION_CATALOG.map(e => [e.label.toLowerCase(), e])
+        );
+        const SHORT_NAMES: Record<string, string> = {
+          "whatsapp business": "whatsapp_business",
+          "telegram": "telegram",
+          "rd station": "rd_station",
+          "activecampaign": "activecampaign",
+          "resend": "resend",
+          "instagram": "instagram",
+          "tiktok": "tiktok",
+          "facebook/meta ads": "meta_ads",
+        };
+        const findEntry = (name: string): CatalogEntry | undefined => {
+          const lower = name.toLowerCase();
+          const byLabel = PROVIDER_NAME_MAP[lower];
+          if (byLabel) return byLabel;
+          const providerId = SHORT_NAMES[lower];
+          if (providerId) return INTEGRATION_CATALOG.find(e => e.provider === providerId);
+          return INTEGRATION_CATALOG.find(e => e.label.toLowerCase().includes(lower) || lower.includes(e.label.toLowerCase().split(" ")[0] ?? ""));
+        };
+        return (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="border border-destructive/50 bg-card w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+              <div className="border-b border-destructive/20 px-5 py-4 flex items-start justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-3">
+                  <XCircle className="h-5 w-5 text-destructive shrink-0" />
+                  <div>
+                    <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-destructive">Canais Obrigatórios Ausentes</h3>
+                    <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Conecte ao menos um canal de mensagens e um de e-mail para lançar.</p>
+                  </div>
                 </div>
+                <button onClick={() => setMissingIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button onClick={() => setMissingIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
-              {missingIntegrations.map(m => (
-                <div key={m.category} className="border border-destructive/20 bg-destructive/5 p-4">
-                  <div className="font-mono text-xs font-bold uppercase tracking-widest text-destructive mb-1">{m.category}</div>
-                  <p className="text-xs font-mono text-muted-foreground/70">
-                    {m.reason && <span className="block text-muted-foreground/50 mb-1">{m.reason}</span>}
-                    Conecte: <span className="text-foreground/80">{m.providers.join(" · ")}</span>
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-border/50 px-5 py-4 flex gap-3">
-              <Link href="/integracoes" className="flex-1">
-                <Button className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
-                  <Link2 className="h-4 w-4" />Configurar Agora
+              <div className="overflow-y-auto flex-1 p-5 space-y-5">
+                {missingIntegrations.map(m => (
+                  <div key={m.category}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-destructive/80">{m.category}</div>
+                      <div className="flex-1 h-px bg-destructive/20" />
+                    </div>
+                    {m.reason && (
+                      <p className="font-mono text-[11px] text-muted-foreground/50 mb-3 px-1">{m.reason}</p>
+                    )}
+                    <div className="space-y-2">
+                      {m.providers.map(providerName => {
+                        const entry = findEntry(providerName);
+                        if (!entry) return (
+                          <div key={providerName} className="border border-border/30 bg-muted/10 px-4 py-3 flex items-center justify-between">
+                            <span className="font-mono text-xs text-foreground/70">{providerName}</span>
+                            <Link href="/integracoes">
+                              <Button size="sm" variant="outline" className="font-mono uppercase tracking-widest rounded-none h-7 px-3 text-[11px] border-border/50">
+                                <Link2 className="h-3 w-3 mr-1" />Conectar
+                              </Button>
+                            </Link>
+                          </div>
+                        );
+                        const Icon = entry.icon;
+                        return (
+                          <div key={entry.provider} className="border border-border/40 bg-card/60 px-4 py-3 flex items-center gap-3">
+                            <div className={`w-7 h-7 border rounded-sm flex items-center justify-center shrink-0 ${entry.color} border-current/30 bg-current/5`}>
+                              <Icon className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-mono text-xs font-bold text-foreground leading-tight">{entry.label}</div>
+                              <p className="font-mono text-[10px] text-muted-foreground/55 mt-0.5 leading-relaxed truncate">{entry.description}</p>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => setConnectingEntry(entry)}
+                              className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-7 px-3 text-[11px] btn-weapon-primary shrink-0"
+                            >
+                              <Link2 className="h-3 w-3" />Conectar
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-border/50 px-5 py-3 shrink-0">
+                <Button variant="outline" onClick={() => setMissingIntegrations(null)} className="w-full font-mono uppercase tracking-widest rounded-none border-border/50 h-9 text-[11px]">
+                  Fechar
                 </Button>
-              </Link>
-              <Button variant="outline" onClick={() => setMissingIntegrations(null)} className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-4">
-                Fechar
-              </Button>
+              </div>
             </div>
           </div>
-        </div>
+        );
+      })()}
+
+      {/* Inline ConnectModal — opens on top of missing integrations modal */}
+      {connectingEntry && (
+        <ConnectModal
+          entry={connectingEntry}
+          onClose={() => setConnectingEntry(null)}
+          onConnect={(provider, fields) => connectIntegrationMutation.mutate({ provider, fields })}
+          onOAuthSuccess={() => {
+            toast.success("Integração conectada via OAuth! Tente lançar novamente.");
+            setConnectingEntry(null);
+          }}
+        />
       )}
 
       {/* ── Partial Integrations Modal (soft confirmation) ── */}
