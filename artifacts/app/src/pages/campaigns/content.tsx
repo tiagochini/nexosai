@@ -677,9 +677,10 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
     if (rawType === "email_sequence") {
       const emailSeq = c["emailSequence"] as Record<string, Array<Record<string, unknown>>> | undefined;
       const phases = [
-        { key: "preLaunch",  label: "Pré-Lançamento", day: 0 },
-        { key: "cartOpen",   label: "Abertura Carrinho", day: 5 },
-        { key: "cartClose",  label: "Fechamento", day: 7 },
+        { key: "preLaunch",   label: "Pré-Lançamento",     day: 0 },
+        { key: "cartOpen",    label: "Abertura Carrinho",   day: 5 },
+        { key: "cartClose",   label: "Fechamento",          day: 7 },
+        { key: "remarketing", label: "Remarketing",         day: 8 },
       ] as const;
       let emailIdx = 0;
       for (const phase of phases) {

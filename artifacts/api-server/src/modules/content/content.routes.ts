@@ -122,7 +122,8 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
 
 // POST /campaigns/:campaignId/content/:pieceId/reject
 const rejectPieceSchema = z.object({
-  reason: z.string().min(1, "Rejection reason is required"),
+  reason: z.string().optional().default(""),
+  feedback: z.string().optional().default(""),
 });
 
 router.post("/:campaignId/content/:pieceId/reject", async (req, res): Promise<void> => {
@@ -135,11 +136,12 @@ router.post("/:campaignId/content/:pieceId/reject", async (req, res): Promise<vo
   }
 
   try {
+    const reason = parsed.data.reason || parsed.data.feedback || "";
     const piece = await rejectContentPiece(
       campaignId,
       req.auth.workspaceId,
       pieceId,
-      parsed.data.reason,
+      reason,
     );
     // Fire-and-forget memory save — never blocks response
     processContentPieceApproval(
@@ -148,7 +150,7 @@ router.post("/:campaignId/content/:pieceId/reject", async (req, res): Promise<vo
       pieceId,
       piece.type ?? "copywriter",
       false,
-      parsed.data.reason,
+      reason,
     ).catch(() => undefined);
     res.json({ message: "Content piece rejected", piece });
   } catch (err) {
