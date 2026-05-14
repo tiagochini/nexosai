@@ -632,26 +632,265 @@ function extractBodyText(content: unknown, type?: string): string {
   try { return JSON.stringify(obj, null, 2).slice(0, 3000); } catch { return String(obj); }
 }
 
-function mapApiPiece(p: ApiContentPiece, idx: number): ContentPiece {
-  const rawType = p.type?.toLowerCase().replace(/\s+/g, "_") ?? "copy";
-  const platform = (p.platform as Platform | undefined)
-    ?? TYPE_TO_PLATFORM[rawType]
-    ?? "email";
-  const pieceType = TYPE_TO_PIECE_TYPE[rawType] ?? "copy";
-  const launchKey = p.launchPhase?.toLowerCase().replace(/\s+/g, "_") ?? "";
-  const dayIndex = PHASE_TO_DAY[launchKey] ?? (idx % 8);
-  const statusMap: Record<string, Status> = { draft: "pending", pending_approval: "pending", approved: "approved", rejected: "rejected" };
-  const label = AGGREGATED_TYPE_LABELS[rawType] ?? rawType.replace(/_/g, " ");
-  return {
-    id: p.id,
-    platform,
-    type: pieceType,
-    dayIndex,
-    title: label,
-    body: extractBodyText(p.content, rawType),
-    status: statusMap[p.status] ?? "pending",
-    segment: "all",
+// Extract the DB UUID from a possibly-synthetic child ID ("parentUUID::subKey")
+function getParentId(id: string): string {
+  return id.includes("::") ? (id.split("::")[0] ?? id) : id;
+}
+
+// Expand aggregated AI documents into individual reviewable cards.
+// Each sub-item (email, story, CPL video, landing section…) becomes its own card.
+function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
+  const STATUS_MAP: Record<string, Status> = {
+    draft: "pending", pending_approval: "pending",
+    approved: "approved", rejected: "rejected",
   };
+  const result: ContentPiece[] = [];
+
+  for (const piece of pieces) {
+    const rawType = piece.type?.toLowerCase().replace(/\s+/g, "_") ?? "copy";
+    const status: Status = STATUS_MAP[piece.status] ?? "pending";
+    const launchKey = piece.launchPhase?.toLowerCase().replace(/\s+/g, "_") ?? "";
+    const baseDayIndex = PHASE_TO_DAY[launchKey] ?? 0;
+
+    // Parse JSONB content (API returns it already as an object, not a string)
+    let c: Record<string, unknown> = {};
+    try {
+      const raw = piece.content as unknown;
+      if (typeof raw === "string") c = JSON.parse(raw) as Record<string, unknown>;
+      else if (raw && typeof raw === "object") c = raw as Record<string, unknown>;
+    } catch { c = {}; }
+
+    // Helper: create a child card
+    const child = (subKey: string, overrides: Partial<ContentPiece>): ContentPiece => ({
+      id: `${piece.id}::${subKey}`,
+      platform: TYPE_TO_PLATFORM[rawType] ?? "email",
+      type: TYPE_TO_PIECE_TYPE[rawType] ?? "copy",
+      dayIndex: baseDayIndex,
+      title: AGGREGATED_TYPE_LABELS[rawType] ?? rawType,
+      body: "",
+      status,
+      segment: "all",
+      ...overrides,
+    });
+
+    // ── email_sequence ──────────────────────────────────────────────────────
+    if (rawType === "email_sequence") {
+      const emailSeq = c["emailSequence"] as Record<string, Array<Record<string, unknown>>> | undefined;
+      const phases = [
+        { key: "preLaunch",  label: "Pré-Lançamento", day: 0 },
+        { key: "cartOpen",   label: "Abertura Carrinho", day: 5 },
+        { key: "cartClose",  label: "Fechamento", day: 7 },
+      ] as const;
+      let emailIdx = 0;
+      for (const phase of phases) {
+        const emails = emailSeq?.[phase.key] ?? [];
+        for (const email of emails) {
+          result.push(child(`email:${emailIdx}`, {
+            platform: "email", type: "email", dayIndex: phase.day,
+            title: `✉ ${email["subject"] as string ?? `${phase.label} #${emailIdx + 1}`}`,
+            body: [
+              email["previewText"] ? `Preview: ${email["previewText"] as string}` : "",
+              email["body"] ? (email["body"] as string).slice(0, 500) : "",
+            ].filter(Boolean).join("\n\n"),
+            callToAction: email["cta"] as string | undefined,
+          }));
+          emailIdx++;
+        }
+      }
+      // WhatsApp messages
+      const wa = c["whatsapp"] as Array<Record<string, unknown>> | undefined;
+      wa?.forEach((msg, i) => {
+        result.push(child(`wa:${i}`, {
+          platform: "whatsapp", type: "message",
+          dayIndex: i < 2 ? 0 : i < 4 ? 5 : 7,
+          title: `💬 WhatsApp: Mensagem ${i + 1}`,
+          body: msg["message"] as string ?? JSON.stringify(msg).slice(0, 300),
+        }));
+      });
+      // Sales page headline card
+      const sp = c["salesPage"] as Record<string, unknown> | undefined;
+      const spSections = sp?.["sections"] as Array<Record<string, unknown>> | undefined;
+      const hero = spSections?.find(s => (s["section"] as string)?.includes("hero")) ?? spSections?.[0];
+      if (hero?.["headline"]) {
+        result.push(child("sales_page", {
+          platform: "landing", type: "copy", dayIndex: 5,
+          title: `🚀 Landing Page de Vendas`,
+          body: [
+            hero["headline"] as string,
+            hero["subheadline"] ? `\n${hero["subheadline"] as string}` : "",
+          ].join(""),
+          callToAction: hero["cta"] as string | undefined,
+        }));
+      }
+      if (result.filter(p => p.id.startsWith(piece.id)).length === 0) {
+        result.push(child("fallback", { body: extractBodyText(piece.content as unknown, rawType) }));
+      }
+
+    // ── stories_sequence ────────────────────────────────────────────────────
+    } else if (rawType === "stories_sequence") {
+      const seqs = c["sequences"] as Array<Record<string, unknown>> | undefined;
+      if (seqs?.length) {
+        seqs.forEach((seq, i) => {
+          const frames = seq["frames"] as Array<Record<string, unknown>> | undefined;
+          const frameLines = frames?.map((f, fi) => `Frame ${fi + 1}: ${f["textContent"] as string ?? ""}`) ?? [];
+          result.push(child(`story:${i}`, {
+            platform: "instagram", type: "story", dayIndex: i,
+            title: `📱 Stories: ${seq["title"] as string ?? `Sequência ${i + 1}`}`,
+            body: [
+              seq["phase"] ? `Fase: ${seq["phase"] as string}` : "",
+              ...frameLines,
+              seq["cta"] ? `CTA: ${seq["cta"] as string}` : "",
+            ].filter(Boolean).join("\n"),
+          }));
+        });
+      } else {
+        result.push(child("fallback", { body: extractBodyText(piece.content as unknown, rawType) }));
+      }
+
+    // ── cpl_script ──────────────────────────────────────────────────────────
+    } else if (rawType === "cpl_script") {
+      const videos = c["videos"] as Array<Record<string, unknown>> | undefined;
+      if (videos?.length) {
+        videos.forEach((video, i) => {
+          result.push(child(`cpl:${i}`, {
+            platform: "tiktok", type: "native_video",
+            dayIndex: i < 2 ? 1 : 3,
+            title: `🎬 Roteiro CPL ${i + 1}: ${video["title"] as string ?? ""}`,
+            body: [
+              video["hook"] ? `Hook: ${video["hook"] as string}` : "",
+              video["objective"] ? `Objetivo: ${(video["objective"] as string).slice(0, 200)}` : "",
+              video["body"] ? (video["body"] as string).slice(0, 350) : "",
+              video["cta"] ? `CTA: ${video["cta"] as string}` : "",
+            ].filter(Boolean).join("\n\n"),
+            tiktokHook: video["hook"] as string | undefined,
+            callToAction: video["cta"] as string | undefined,
+          }));
+        });
+      } else {
+        result.push(child("fallback", { body: extractBodyText(piece.content as unknown, rawType) }));
+      }
+
+    // ── live_script ─────────────────────────────────────────────────────────
+    } else if (rawType === "live_script") {
+      const segments = c["segments"] as Array<Record<string, unknown>> | undefined;
+      result.push(child("live_intro", {
+        platform: "facebook", type: "post", dayIndex: 5,
+        title: `🔴 Live: ${c["title"] as string ?? "Script de Live"}`,
+        body: [
+          c["liveType"] ? `Tipo: ${c["liveType"] as string}` : "",
+          c["platform"] ? `Plataforma: ${c["platform"] as string}` : "",
+          segments?.length ? `${segments.length} segmentos` : "",
+          segments?.[0]?.["script"] ? `Abertura:\n${(segments[0]["script"] as string).slice(0, 300)}` : "",
+        ].filter(Boolean).join("\n"),
+      }));
+      segments?.slice(1).forEach((seg, i) => {
+        result.push(child(`live_seg:${i}`, {
+          platform: "facebook", type: "post", dayIndex: 5,
+          title: `🔴 Live — ${seg["name"] as string ?? seg["type"] as string ?? `Segmento ${i + 2}`}`,
+          body: seg["script"] ? (seg["script"] as string).slice(0, 450) : JSON.stringify(seg).slice(0, 300),
+        }));
+      });
+
+    // ── landing_page_structure ───────────────────────────────────────────────
+    } else if (rawType === "landing_page_structure") {
+      const sections = c["sections"] as Array<Record<string, unknown>> | undefined;
+      if (sections?.length) {
+        sections.forEach((section, i) => {
+          const cta = section["cta"] as Record<string, unknown> | undefined;
+          result.push(child(`section:${i}`, {
+            platform: "landing", type: "copy", dayIndex: 5,
+            title: `🌐 Landing: ${section["headline"] as string ?? `Seção ${i + 1}`}`,
+            body: [
+              section["bodyContent"] ? (section["bodyContent"] as string).slice(0, 450) : "",
+              section["purpose"] ? `Objetivo: ${(section["purpose"] as string).slice(0, 150)}` : "",
+            ].filter(Boolean).join("\n\n"),
+            callToAction: cta?.["text"] as string | undefined,
+          }));
+        });
+      } else {
+        result.push(child("fallback", { body: extractBodyText(piece.content as unknown, rawType) }));
+      }
+
+    // ── creative_direction ───────────────────────────────────────────────────
+    } else if (rawType === "creative_direction") {
+      // Guidelines card
+      const doAndDonts = c["doAndDonts"] as Record<string, unknown> | undefined;
+      const dos = doAndDonts?.["dos"] as string[] | undefined;
+      if (dos?.length) {
+        result.push(child("guidelines", {
+          platform: "instagram", type: "post", dayIndex: 0,
+          title: "🎨 Diretrizes Criativas",
+          body: dos.slice(0, 6).map(d => `• ${d}`).join("\n"),
+        }));
+      }
+      // One card per visual concept
+      const concepts = c["visualConcepts"] as Array<Record<string, unknown>> | undefined;
+      concepts?.forEach((concept, i) => {
+        result.push(child(`concept:${i}`, {
+          platform: "instagram", type: "post", dayIndex: i,
+          title: `🖼 Conceito Visual ${i + 1}: ${concept["headline"] as string ?? ""}`,
+          body: [
+            concept["description"] ? (concept["description"] as string).slice(0, 350) : "",
+            concept["colorPalette"] ? `Cores: ${concept["colorPalette"] as string}` : "",
+            concept["typography"] ? `Tipografia: ${concept["typography"] as string}` : "",
+          ].filter(Boolean).join("\n\n"),
+          visualDirection: concept["description"] as string | undefined,
+        }));
+      });
+      if (!dos?.length && !concepts?.length) {
+        result.push(child("fallback", { body: extractBodyText(piece.content as unknown, rawType) }));
+      }
+
+    // ── media_brief ──────────────────────────────────────────────────────────
+    } else if (rawType === "media_brief") {
+      const imageConcepts = c["imageConcepts"] as Array<Record<string, unknown>> | undefined;
+      const videoConcepts = c["videoConcepts"] as Array<Record<string, unknown>> | undefined;
+      let briefIdx = 0;
+      imageConcepts?.forEach((ic, i) => {
+        result.push(child(`img:${i}`, {
+          platform: "ads", type: "ad", dayIndex: 1,
+          title: `🖼 Criativo Imagem ${i + 1}: ${ic["concept"] as string ?? ic["headline"] as string ?? `Imagem ${i + 1}`}`,
+          body: [
+            ic["description"] ? (ic["description"] as string).slice(0, 300) : "",
+            ic["dimensions"] ? `Dimensões: ${ic["dimensions"] as string}` : "",
+          ].filter(Boolean).join("\n"),
+        }));
+        briefIdx++;
+      });
+      videoConcepts?.forEach((vc, i) => {
+        result.push(child(`vid:${i}`, {
+          platform: "ads", type: "ad", dayIndex: 2,
+          title: `🎬 Criativo Vídeo ${i + 1}: ${vc["concept"] as string ?? vc["title"] as string ?? `Vídeo ${i + 1}`}`,
+          body: [
+            vc["description"] ? (vc["description"] as string).slice(0, 300) : "",
+            vc["duration"] ? `Duração: ${vc["duration"] as string}` : "",
+            vc["hook"] ? `Hook: ${vc["hook"] as string}` : "",
+          ].filter(Boolean).join("\n"),
+        }));
+        briefIdx++;
+      });
+      if (briefIdx === 0) {
+        result.push(child("fallback", { title: "📋 Brief de Mídia", body: extractBodyText(piece.content as unknown, rawType) }));
+      }
+
+    // ── compliance_report ────────────────────────────────────────────────────
+    } else if (rawType === "compliance_report") {
+      result.push(child("compliance", {
+        platform: "landing", type: "copy", dayIndex: 7,
+        title: "⚖ Relatório de Compliance",
+        body: extractBodyText(piece.content as unknown, rawType),
+      }));
+
+    // ── generic fallback ─────────────────────────────────────────────────────
+    } else {
+      result.push(child("fallback", {
+        id: piece.id, // use real ID for true unknowns
+        body: extractBodyText(piece.content as unknown, rawType),
+      }));
+    }
+  }
+
+  return result;
 }
 
 // ── Social platform → OAuth provider mapping ──────────────────────────────────
@@ -956,15 +1195,13 @@ export default function ContentApproval() {
 
   const realPieces: ContentPiece[] | null = (() => {
     if (!apiContentData?.pieces?.length) return null;
-    const mapped: ContentPiece[] = [];
-    for (let i = 0; i < apiContentData.pieces.length; i++) {
-      try {
-        mapped.push(mapApiPiece(apiContentData.pieces[i]!, i));
-      } catch (err) {
-        console.error("[content] mapApiPiece failed for piece", apiContentData.pieces[i]?.id, err);
-      }
+    try {
+      const expanded = expandApiPieces(apiContentData.pieces);
+      return expanded.length > 0 ? expanded : null;
+    } catch (err) {
+      console.error("[content] expandApiPieces failed", err);
+      return null;
     }
-    return mapped.length > 0 ? mapped : null;
   })();
 
   const pieces: ContentPiece[] = localPieces ?? realPieces ?? [];
@@ -978,40 +1215,47 @@ export default function ContentApproval() {
   };
 
   const handleApprove = async (id: string) => {
+    // Mark locally first for instant feedback
+    setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "approved" } : p));
     setLoadingPiece(id);
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/approve`, {
+      const parentId = getParentId(id);
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: "" }),
       });
       if (!res.ok) throw new Error("Erro");
-      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       toast.success("Peça aprovada");
     } catch {
+      // Revert on failure
+      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
       toast.error("Erro ao aprovar peça");
     } finally {
       setLoadingPiece(null);
     }
   };
   const handleReject = async (id: string) => {
+    setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "rejected" } : p));
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/reject`, {
+      const parentId = getParentId(id);
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: "" }),
       });
       if (!res.ok) throw new Error("Erro");
-      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       toast.info("Peça rejeitada");
     } catch {
+      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
       toast.error("Erro ao rejeitar peça");
     }
   };
   const handleAiRewrite = async (id: string) => {
     setLoadingPiece(id);
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/rewrite`, {
+      const parentId = getParentId(id);
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/rewrite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -1030,16 +1274,19 @@ export default function ContentApproval() {
     toast.success("Peça editada e aprovada");
   };
   const handleApproveAll = async () => {
-    const pendingIds = pieces.filter(p => p.status === "pending").map(p => p.id);
-    for (const id of pendingIds) {
-      await customFetch<Response>(`/api/campaigns/${campaignId}/content/${id}/approve`, {
+    const pendingPieces = pieces.filter(p => p.status === "pending");
+    // Mark all approved locally immediately
+    setPieces(prev => prev.map(p => p.status === "pending" ? { ...p, status: "approved" } : p));
+    // Deduplicate parent IDs to avoid duplicate API calls
+    const parentIds = [...new Set(pendingPieces.map(p => getParentId(p.id)))];
+    for (const parentId of parentIds) {
+      await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: "" }),
       }).catch(() => null);
     }
-    queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-    toast.success(`${pendingIds.length} peças aprovadas`);
+    toast.success(`${pendingPieces.length} peças aprovadas`);
   };
 
   const byPlatform = pieces.reduce<Record<string, ContentPiece[]>>((acc, p) => {
