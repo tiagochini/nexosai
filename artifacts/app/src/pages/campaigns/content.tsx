@@ -402,11 +402,22 @@ const TYPE_TO_PLATFORM: Record<string, Platform> = {
   instagram_post: "instagram", instagram_reel: "instagram", instagram_story: "instagram",
   instagram_feed: "instagram", reel: "instagram", story: "instagram",
   tiktok_video: "tiktok", tiktok_reel: "tiktok", native_video: "tiktok",
-  facebook_post: "facebook", facebook_ad: "facebook",
+  facebook_post: "facebook", facebook_ad: "facebook", live_stream: "facebook",
   email_campaign: "email", email: "email",
   whatsapp_message: "whatsapp", whatsapp: "whatsapp",
   ad_copy: "ads", meta_ad: "ads", google_ad: "ads",
   landing_page: "landing",
+  // Aggregated AI document types
+  email_sequence: "email",
+  creative_direction: "instagram",
+  landing_page_structure: "landing",
+  cpl_script: "tiktok",
+  live_script: "facebook",
+  stories_sequence: "instagram",
+  media_brief: "ads",
+  compliance_report: "landing",
+  targeting_plan: "ads",
+  audience_profile: "email",
 };
 
 const TYPE_TO_PIECE_TYPE: Record<string, PieceType> = {
@@ -418,6 +429,17 @@ const TYPE_TO_PIECE_TYPE: Record<string, PieceType> = {
   whatsapp_message: "message", whatsapp: "message",
   ad_copy: "ad", meta_ad: "ad", facebook_ad: "ad", google_ad: "ad",
   landing_page: "copy",
+  // Aggregated AI document types
+  email_sequence: "email",
+  creative_direction: "post",
+  landing_page_structure: "copy",
+  cpl_script: "native_video",
+  live_script: "post",
+  stories_sequence: "story",
+  media_brief: "ad",
+  compliance_report: "copy",
+  targeting_plan: "ad",
+  audience_profile: "email",
 };
 
 const PHASE_TO_DAY: Record<string, number> = {
@@ -444,15 +466,169 @@ const AGGREGATED_TYPE_LABELS: Record<string, string> = {
   audience_profile: "Perfil de Audiência",
 };
 
-function extractBodyText(content: unknown): string {
-  if (typeof content === "string") return content;
+function extractBodyText(content: unknown, type?: string): string {
   if (content === null || content === undefined) return "";
-  try {
-    const json = JSON.stringify(content, null, 2);
-    return json.slice(0, 2000);
-  } catch {
-    return String(content);
+  let obj: unknown = content;
+  if (typeof obj === "string") {
+    try { obj = JSON.parse(obj); } catch { return obj; }
   }
+  if (typeof obj !== "object") return String(obj);
+  const c = obj as Record<string, unknown>;
+  const lines: string[] = [];
+  try {
+    if (type === "email_sequence") {
+      const sp = c["salesPage"] as Record<string, unknown> | undefined;
+      const spSections = sp?.["sections"] as Array<Record<string, unknown>> | undefined;
+      const hero = spSections?.find(s => (s["section"] as string)?.includes("hero")) ?? spSections?.[0];
+      if (hero?.["headline"]) {
+        lines.push("── PÁGINA DE VENDAS ──");
+        lines.push(`Headline: ${hero["headline"] as string}`);
+        if (hero["subheadline"]) lines.push(`Subtítulo: ${hero["subheadline"] as string}`);
+        if (hero["cta"]) lines.push(`CTA: ${hero["cta"] as string}`);
+        lines.push("");
+      }
+      const emails = c["emailSequence"] as Record<string, unknown> | undefined;
+      const allEmails = [
+        ...((emails?.["preLaunch"] as Array<Record<string, unknown>>) ?? []),
+        ...((emails?.["cartOpen"] as Array<Record<string, unknown>>) ?? []),
+        ...((emails?.["cartClose"] as Array<Record<string, unknown>>) ?? []),
+      ];
+      if (allEmails.length) {
+        lines.push(`── SEQUÊNCIA DE E-MAILS (${allEmails.length} e-mails) ──`);
+        allEmails.forEach((email, i) => {
+          lines.push(`\nE-mail ${i + 1}: ${email["subject"] as string ?? ""}`);
+          if (email["previewText"]) lines.push(`Preview: ${email["previewText"] as string}`);
+          if (email["body"] && typeof email["body"] === "string") lines.push(email["body"].slice(0, 300));
+        });
+      }
+      const wa = c["whatsapp"] as Array<Record<string, unknown>> | undefined;
+      if (wa?.length) {
+        lines.push(`\n── WHATSAPP (${wa.length} mensagens) ──`);
+        wa.forEach((msg, i) => {
+          lines.push(`\nMensagem ${i + 1}: ${msg["message"] as string ?? ""}`);
+        });
+      }
+      return lines.join("\n");
+    }
+    if (type === "stories_sequence") {
+      const seqs = c["sequences"] as Array<Record<string, unknown>> | undefined;
+      if (seqs?.length) {
+        lines.push(`── STORIES (${seqs.length} sequências) ──`);
+        seqs.forEach((seq, i) => {
+          lines.push(`\nSequência ${i + 1}: ${seq["title"] as string ?? ""}`);
+          lines.push(`Fase: ${seq["phase"] as string ?? ""}`);
+          const frames = seq["frames"] as Array<Record<string, unknown>> | undefined;
+          frames?.forEach((frame, fi) => {
+            if (frame["textContent"]) lines.push(`  Frame ${fi + 1}: ${frame["textContent"] as string}`);
+          });
+          if (seq["cta"]) lines.push(`CTA: ${seq["cta"] as string}`);
+        });
+      }
+      return lines.join("\n");
+    }
+    if (type === "landing_page_structure") {
+      const sections = c["sections"] as Array<Record<string, unknown>> | undefined;
+      if (sections?.length) {
+        lines.push(`── LANDING PAGE (${sections.length} seções) ──`);
+        sections.forEach((section, i) => {
+          lines.push(`\nSeção ${i + 1}: ${section["headline"] as string ?? ""}`);
+          if (section["bodyContent"]) lines.push(`${(section["bodyContent"] as string).slice(0, 250)}`);
+          const cta = section["cta"] as Record<string, unknown> | undefined;
+          if (cta?.["text"]) lines.push(`CTA: ${cta["text"] as string}`);
+          if (section["purpose"]) lines.push(`Objetivo: ${(section["purpose"] as string).slice(0, 120)}`);
+        });
+      }
+      return lines.join("\n");
+    }
+    if (type === "cpl_script") {
+      const videos = c["videos"] as Array<Record<string, unknown>> | undefined;
+      if (videos?.length) {
+        lines.push(`── ROTEIROS CPL (${videos.length} vídeos) ──`);
+        videos.forEach((video, i) => {
+          lines.push(`\nVÍDEO ${i + 1}: ${video["title"] as string ?? ""}`);
+          if (video["subtitle"]) lines.push(`Subtítulo: ${video["subtitle"] as string}`);
+          if (video["hook"]) lines.push(`Hook: ${video["hook"] as string}`);
+          if (video["objective"]) lines.push(`Objetivo: ${(video["objective"] as string).slice(0, 200)}`);
+          if (video["cta"]) lines.push(`CTA: ${video["cta"] as string}`);
+        });
+      }
+      return lines.join("\n");
+    }
+    if (type === "live_script") {
+      lines.push(`── LIVE: ${c["title"] as string ?? ""} ──`);
+      lines.push(`Tipo: ${c["liveType"] as string ?? ""} | Plataforma: ${c["platform"] as string ?? ""}`);
+      const segments = c["segments"] as Array<Record<string, unknown>> | undefined;
+      if (segments?.length) {
+        lines.push("");
+        segments.forEach(seg => {
+          lines.push(`[${seg["type"] as string ?? ""}] ${seg["name"] as string ?? ""}`);
+          if (seg["script"]) lines.push(`${(seg["script"] as string).slice(0, 300)}`);
+          lines.push("");
+        });
+      }
+      return lines.join("\n");
+    }
+    if (type === "creative_direction") {
+      const doAndDonts = c["doAndDonts"] as Record<string, unknown> | undefined;
+      if (doAndDonts) {
+        const dos = doAndDonts["dos"] as string[] | undefined;
+        const donts = doAndDonts["donts"] as string[] | undefined;
+        if (dos?.length) {
+          lines.push("── FAZER ──");
+          dos.forEach(d => lines.push(`• ${d}`));
+          lines.push("");
+        }
+        if (donts?.length) {
+          lines.push("── NÃO FAZER ──");
+          donts.forEach(d => lines.push(`• ${d}`));
+          lines.push("");
+        }
+      }
+      const concepts = c["visualConcepts"] as Array<Record<string, unknown>> | undefined;
+      if (concepts?.length) {
+        lines.push(`── CONCEITOS VISUAIS (${concepts.length}) ──`);
+        concepts.forEach((concept, i) => {
+          lines.push(`\nConceito ${i + 1}: ${concept["headline"] as string ?? ""}`);
+          if (concept["description"]) lines.push(`${(concept["description"] as string).slice(0, 200)}`);
+        });
+      }
+      return lines.join("\n");
+    }
+    if (type === "media_brief") {
+      lines.push(`── BRIEF DE MÍDIA — ${c["campaignTitle"] as string ?? ""} ──`);
+      const imageConcepts = c["imageConcepts"] as Array<Record<string, unknown>> | undefined;
+      if (imageConcepts?.length) {
+        lines.push(`\nCONCEITOS DE IMAGEM (${imageConcepts.length}):`);
+        imageConcepts.forEach((ic, i) => lines.push(`${i + 1}. ${JSON.stringify(ic).slice(0, 150)}`));
+      }
+      const videoConcepts = c["videoConcepts"] as Array<Record<string, unknown>> | undefined;
+      if (videoConcepts?.length) {
+        lines.push(`\nCONCEITOS DE VÍDEO (${videoConcepts.length}):`);
+        videoConcepts.forEach((vc, i) => lines.push(`${i + 1}. ${JSON.stringify(vc).slice(0, 150)}`));
+      }
+      const approval = c["approvalProcess"] as Array<Record<string, unknown>> | undefined;
+      if (approval?.length) {
+        lines.push(`\nPROCESSO DE APROVAÇÃO:`);
+        approval.forEach(step => lines.push(`${step["step"] as number}. ${step["action"] as string}`));
+      }
+      return lines.join("\n");
+    }
+    if (type === "compliance_report") {
+      lines.push(`── COMPLIANCE — ${c["campaignTitle"] as string ?? ""} ──`);
+      const violations = c["violations"] as unknown[] | undefined;
+      lines.push(violations?.length === 0 ? "✓ Nenhuma violação direta identificada" : `⚠ ${violations?.length ?? 0} violações encontradas`);
+      const conar = c["conarAnalysis"] as Record<string, unknown> | undefined;
+      if (conar?.["verdict"]) lines.push(`CONAR: ${conar["verdict"] as string}`);
+      if (conar?.["issues"] && Array.isArray(conar["issues"]) && (conar["issues"] as unknown[]).length > 0) {
+        lines.push("\nProblemas CONAR:");
+        (conar["issues"] as unknown[]).forEach(issue => lines.push(`• ${JSON.stringify(issue).slice(0, 100)}`));
+      }
+      const notes = c["complianceNotes"] as string | undefined;
+      if (notes) lines.push(`\nObservações:\n${notes.slice(0, 600)}`);
+      return lines.join("\n");
+    }
+  } catch { /* fallback */ }
+  try { return JSON.stringify(obj, null, 2).slice(0, 3000); } catch { return String(obj); }
 }
 
 function mapApiPiece(p: ApiContentPiece, idx: number): ContentPiece {
@@ -471,7 +647,7 @@ function mapApiPiece(p: ApiContentPiece, idx: number): ContentPiece {
     type: pieceType,
     dayIndex,
     title: label,
-    body: extractBodyText(p.content),
+    body: extractBodyText(p.content, rawType),
     status: statusMap[p.status] ?? "pending",
     segment: "all",
   };
