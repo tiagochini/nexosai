@@ -355,6 +355,115 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
   );
 }
 
+// ── Generate More Modal ────────────────────────────────────────────────────────
+
+function GenerateMoreModal({
+  platform,
+  platformLabel,
+  onClose,
+  onConfirm,
+  loading,
+}: {
+  platform: Platform;
+  platformLabel: string;
+  onClose: () => void;
+  onConfirm: (count: number, instructions: string) => void;
+  loading: boolean;
+}) {
+  const [count, setCount] = useState(3);
+  const [instructions, setInstructions] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-card border border-border w-full max-w-lg mx-4 shadow-2xl">
+        <div className="p-5 border-b border-border/50">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="font-mono text-sm uppercase tracking-widest font-bold">Gerar mais peças — {platformLabel}</span>
+          </div>
+          <p className="font-mono text-xs text-muted-foreground">O Agente Copywriter vai criar novas inserções alinhadas à campanha</p>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Count selector */}
+          <div>
+            <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground block mb-3">
+              Quantas peças a gerar?
+            </label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setCount(v => Math.max(1, v - 1))}
+                disabled={count <= 1}
+                className="w-9 h-9 border border-border/60 font-mono text-lg text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                −
+              </button>
+              <div className="flex-1 text-center">
+                <span className="font-mono text-3xl font-bold text-primary">{count}</span>
+                <span className="font-mono text-xs text-muted-foreground ml-2">peça{count !== 1 ? "s" : ""} de {platformLabel}</span>
+              </div>
+              <button
+                onClick={() => setCount(v => Math.min(10, v + 1))}
+                disabled={count >= 10}
+                className="w-9 h-9 border border-border/60 font-mono text-lg text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                +
+              </button>
+            </div>
+            <div className="flex gap-2 mt-3">
+              {[1, 3, 5, 10].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setCount(n)}
+                  className={`flex-1 h-7 font-mono text-[11px] uppercase tracking-widest border transition-all ${count === n ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground"}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div>
+            <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground block mb-2">
+              Instruções para o agente (opcional)
+            </label>
+            <textarea
+              placeholder={`Ex: "Foque nos dias de fechamento com urgência máxima" ou "Adicione mais gatilho de prova social e depoimentos"`}
+              className="w-full bg-muted/10 border border-border/60 text-sm p-3 min-h-[80px] resize-none font-mono placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/50 transition-colors"
+              value={instructions}
+              onChange={e => setInstructions(e.target.value)}
+            />
+          </div>
+
+          <div className="bg-primary/5 border border-primary/20 p-3">
+            <div className="flex items-start gap-2">
+              <Zap className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+              <p className="font-mono text-xs text-primary/80 leading-relaxed">
+                O agente vai ler a campanha existente, manter coerência com o plano e gerar {count} nova{count !== 1 ? "s" : ""} peça{count !== 1 ? "s" : ""} prontas para aprovação.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 border-t border-border/50 flex gap-2 justify-end">
+          <Button variant="ghost" onClick={onClose} disabled={loading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8">
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => onConfirm(count, instructions)}
+            disabled={loading}
+            className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8 gap-1.5 btn-weapon-primary"
+          >
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Gerar {count} Peça{count !== 1 ? "s" : ""} com IA
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Reject Modal ───────────────────────────────────────────────────────────────
 
 function RejectModal({
@@ -957,6 +1066,23 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
         body: extractBodyText(piece.content as unknown, rawType),
       }));
 
+    // ── extraPieces — from generate-extra endpoint ────────────────────────────
+    } else if (Array.isArray(c["extraPieces"]) && (c["extraPieces"] as unknown[]).length > 0) {
+      const extras = c["extraPieces"] as Array<Record<string, unknown>>;
+      extras.forEach((ep, i) => {
+        result.push(child(`extra:${i}`, {
+          platform: (ep["platform"] as Platform) ?? "instagram",
+          type: (ep["type"] as PieceType) ?? "post",
+          dayIndex: typeof ep["dayIndex"] === "number" ? ep["dayIndex"] : 0,
+          title: (ep["title"] as string) ?? `Extra ${i + 1}`,
+          body: (ep["body"] as string) ?? "",
+          callToAction: ep["callToAction"] as string | undefined,
+          tiktokHook: ep["tiktokHook"] as string | undefined,
+          visualDirection: ep["visualDirection"] as string | undefined,
+          segment: (ep["segment"] as Segment) ?? "all",
+        }));
+      });
+
     // ── generic fallback ─────────────────────────────────────────────────────
     } else {
       result.push(child("fallback", {
@@ -1218,6 +1344,8 @@ export default function ContentApproval() {
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
   const [rejectingPiece, setRejectingPiece] = useState<ContentPiece | null>(null);
   const [rewritingPiece, setRewritingPiece] = useState<string | null>(null);
+  const [generateMoreTarget, setGenerateMoreTarget] = useState<Platform | null>(null);
+  const [generatingMore, setGeneratingMore] = useState(false);
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
   const [previewFilter, setPreviewFilter] = useState<Platform | "all">("all");
 
@@ -1368,6 +1496,25 @@ export default function ContentApproval() {
       setRewritingPiece(null);
     }
   };
+  const handleGenerateMore = async (platform: Platform, count: number, instructions: string) => {
+    setGeneratingMore(true);
+    try {
+      await customFetch<{ message: string }>(`/api/campaigns/${campaignId}/content/generate-extra`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform, count, instructions }),
+      });
+      setGenerateMoreTarget(null);
+      setLocalPieces(null);
+      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+      toast.success(`${count} nova${count !== 1 ? "s" : ""} peça${count !== 1 ? "s" : ""} de ${PLATFORM_LABEL[platform]} gerada${count !== 1 ? "s" : ""} pelo agente!`);
+    } catch {
+      toast.error("Erro ao gerar peças. Tente novamente.");
+    } finally {
+      setGeneratingMore(false);
+    }
+  };
+
   const handleSaveEdit = (id: string, body: string, cta: string) => {
     setPieces(prev => prev.map(p => p.id === id ? { ...p, body, callToAction: cta, status: "approved" } : p));
     setEditingPiece(null);
@@ -1468,6 +1615,15 @@ export default function ContentApproval() {
 
   return (
     <>
+      {generateMoreTarget && (
+        <GenerateMoreModal
+          platform={generateMoreTarget}
+          platformLabel={PLATFORM_LABEL[generateMoreTarget]}
+          onClose={() => setGenerateMoreTarget(null)}
+          onConfirm={(count, instructions) => void handleGenerateMore(generateMoreTarget, count, instructions)}
+          loading={generatingMore}
+        />
+      )}
       {rejectingPiece && (
         <RejectModal
           piece={rejectingPiece}
@@ -1624,6 +1780,14 @@ export default function ContentApproval() {
                         {approvedCount}/{platformPieces.length} aprovadas
                       </span>
                     </div>
+                    <div className="flex items-center gap-2">
+                    {/* Generate more pieces */}
+                    <button
+                      onClick={() => setGenerateMoreTarget(platform as Platform)}
+                      className="font-mono text-[11px] uppercase tracking-widest border border-primary/30 text-primary px-3 h-7 flex items-center gap-1.5 hover:bg-primary/10 transition-colors"
+                    >
+                      <Sparkles className="h-3 w-3" />+ Gerar mais
+                    </button>
                     {/* Approve all for this platform */}
                     {platformPieces.some(p => p.status === "pending") && (
                       <button
@@ -1643,6 +1807,7 @@ export default function ContentApproval() {
                         <CheckCircle2 className="h-3 w-3" />Aprovar tudo
                       </button>
                     )}
+                    </div>
                   </div>
 
                   {/* Visual mocks for social platforms */}

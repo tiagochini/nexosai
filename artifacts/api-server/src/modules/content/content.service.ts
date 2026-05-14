@@ -1418,6 +1418,115 @@ Reescreva essa peça incorporando o feedback acima. Retorne APENAS o JSON com a 
   return updated;
 }
 
+const PLATFORM_TO_DB_TYPE: Record<string, string> = {
+  tiktok: "social_post",
+  instagram: "social_post",
+  facebook: "social_post",
+  email: "email_sequence",
+  whatsapp: "whatsapp_broadcast",
+  ads: "ad_copy",
+  landing: "landing_page_structure",
+};
+
+const PLATFORM_LABELS: Record<string, string> = {
+  tiktok: "TikTok", instagram: "Instagram", facebook: "Facebook",
+  email: "E-mail", whatsapp: "WhatsApp", ads: "Ads", landing: "Landing Page",
+};
+
+export async function generateExtraContent(
+  campaignId: string,
+  workspaceId: string,
+  platform: string,
+  count: number,
+  instructions: string,
+  log: Logger,
+) {
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  // Fetch existing pieces for context
+  const existingPieces = await db
+    .select({ type: contentPiecesTable.type, content: contentPiecesTable.content })
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.campaignId, campaignId))
+    .limit(5);
+
+  const platformLabel = PLATFORM_LABELS[platform] ?? platform;
+  const safeCount = Math.max(1, Math.min(10, count));
+  const existingContext = existingPieces
+    .map(p => JSON.stringify(p.content).slice(0, 400))
+    .join("\n---\n");
+
+  const systemPrompt = `Você é um especialista em copywriting para lançamentos digitais brasileiros.
+Gere exatamente ${safeCount} peça(s) de conteúdo para a plataforma ${platformLabel}.
+
+FORMATO DE SAÍDA — retorne APENAS este JSON, sem comentários:
+{
+  "extraPieces": [
+    {
+      "title": "Título descritivo da peça",
+      "platform": "${platform}",
+      "type": ${platform === "tiktok" ? '"reel"' : platform === "instagram" ? '"post"' : platform === "email" ? '"email"' : platform === "whatsapp" ? '"message"' : platform === "ads" ? '"ad"' : '"copy"'},
+      "dayIndex": 1,
+      "body": "Texto principal da peça",
+      "callToAction": "CTA aqui",
+      ${platform === "tiktok" ? '"tiktokHook": "Hook de abertura do vídeo",' : ""}
+      "segment": "all"
+    }
+  ]
+}
+
+REGRAS:
+- dayIndex entre 0 e 7 (0=pré-lançamento, 5=abertura carrinho, 7=fechamento)
+- Escreva em PT-BR, tom persuasivo e autêntico
+- Variar os dias e gatilhos mentais entre as peças geradas
+- Para TikTok: inclua tiktokHook criativo e impactante
+- Para e-mail: body deve incluir preview text + corpo completo`;
+
+  const userMessage = [
+    `CAMPANHA: ${campaign.title ?? "Digital Product Launch"}`,
+    instructions ? `INSTRUÇÕES DO USUÁRIO: ${instructions}` : "",
+    existingContext ? `CONTEXTO DAS PEÇAS EXISTENTES (para manter coerência):\n${existingContext}` : "",
+    `\nGere ${safeCount} peça(s) para ${platformLabel}.`,
+  ].filter(Boolean).join("\n\n");
+
+  const { content: rawOutput } = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "copywriter",
+    systemPrompt,
+    messages: [{ role: "user", content: userMessage }],
+    log,
+  });
+
+  const parsed = parseAgentJSON<{ extraPieces?: unknown[] }>(rawOutput, { extraPieces: [] });
+  const extraPieces = Array.isArray(parsed.extraPieces) ? parsed.extraPieces : [];
+
+  if (extraPieces.length === 0) throw new ValidationError("AI did not return valid pieces");
+
+  const dbType = (PLATFORM_TO_DB_TYPE[platform] ?? "social_post") as "social_post" | "email_sequence" | "whatsapp_broadcast" | "ad_copy" | "landing_page_structure";
+
+  const [saved] = await db
+    .insert(contentPiecesTable)
+    .values({
+      campaignId,
+      workspaceId,
+      type: dbType,
+      status: "pending_approval",
+      launchPhase: "pre_launch",
+      content: { extraPieces } as Record<string, unknown>,
+      title: `${platformLabel} — Geração Extra (${safeCount} peça${safeCount > 1 ? "s" : ""})`,
+    })
+    .returning();
+
+  log.info({ campaignId, platform, count: safeCount }, "Extra content generated");
+  return { piece: saved, extraPieces };
+}
+
 export async function rejectMediaBrief(
   campaignId: string,
   workspaceId: string,

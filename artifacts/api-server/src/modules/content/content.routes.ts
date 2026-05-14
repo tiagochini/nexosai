@@ -9,6 +9,7 @@ import {
   approveContentPiece,
   rejectContentPiece,
   rewriteContentPiece,
+  generateExtraContent,
   approveMediaBrief,
   rejectMediaBrief,
   optimizeCampaign,
@@ -186,6 +187,41 @@ router.post("/:campaignId/content/:pieceId/rewrite", async (req, res): Promise<v
       req.log,
     );
     res.json({ message: "Content piece rewritten by AI", piece });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// POST /campaigns/:campaignId/content/generate-extra — generate additional pieces for a platform
+const generateExtraSchema = z.object({
+  platform: z.string().min(1),
+  count: z.number().int().min(1).max(10).default(3),
+  instructions: z.string().optional().default(""),
+});
+
+router.post("/:campaignId/content/generate-extra", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const parsed = generateExtraSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const result = await generateExtraContent(
+      campaignId,
+      req.auth.workspaceId,
+      parsed.data.platform,
+      parsed.data.count,
+      parsed.data.instructions,
+      req.log,
+    );
+    res.status(201).json({ message: "Extra content generated", ...result });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
