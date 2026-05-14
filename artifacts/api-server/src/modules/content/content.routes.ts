@@ -8,6 +8,7 @@ import {
   getCampaignMediaBriefs,
   approveContentPiece,
   rejectContentPiece,
+  rewriteContentPiece,
   approveMediaBrief,
   rejectMediaBrief,
   optimizeCampaign,
@@ -153,6 +154,38 @@ router.post("/:campaignId/content/:pieceId/reject", async (req, res): Promise<vo
       reason,
     ).catch(() => undefined);
     res.json({ message: "Content piece rejected", piece });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// POST /campaigns/:campaignId/content/:pieceId/rewrite — AI rewrites piece based on rejection feedback
+const rewriteSchema = z.object({
+  feedback: z.string().optional().default(""),
+});
+
+router.post("/:campaignId/content/:pieceId/rewrite", async (req, res): Promise<void> => {
+  const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
+
+  const parsed = rewriteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const piece = await rewriteContentPiece(
+      campaignId,
+      req.auth.workspaceId,
+      pieceId,
+      parsed.data.feedback,
+      req.log,
+    );
+    res.json({ message: "Content piece rewritten by AI", piece });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

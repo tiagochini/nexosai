@@ -238,24 +238,26 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
 
 // ── Content Card (text view) ──────────────────────────────────────────────────
 
-function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading }: {
+function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading, rewriting }: {
   piece: ContentPiece;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onEdit: (piece: ContentPiece) => void;
   onAiRewrite: (id: string) => void;
   loading?: string | null;
+  rewriting?: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const PlatformIcon = PLATFORM_ICON[piece.platform] ?? Globe;
   const platformColor = PLATFORM_COLOR[piece.platform] ?? "text-muted-foreground border-border/40";
-  const statusBorder = piece.status === "approved" ? "border-success/40" : piece.status === "rejected" ? "border-destructive/40" : "border-border/50";
+  const isRewriting = rewriting === piece.id;
+  const statusBorder = isRewriting ? "border-primary/40" : piece.status === "approved" ? "border-success/40" : piece.status === "rejected" ? "border-destructive/40" : "border-border/50";
   const isLoading = loading === piece.id;
   const m = estimatePostMetrics(piece);
 
   return (
     <div className={`border bg-card/40 transition-all relative overflow-hidden ${statusBorder}`}>
-      <div className={`absolute left-0 inset-y-0 w-[3px] ${piece.status === "approved" ? "bg-success" : piece.status === "rejected" ? "bg-destructive" : "bg-border/30"}`} />
+      <div className={`absolute left-0 inset-y-0 w-[3px] ${isRewriting ? "bg-primary animate-pulse" : piece.status === "approved" ? "bg-success" : piece.status === "rejected" ? "bg-destructive" : "bg-border/30"}`} />
       <div className="pl-4 pr-4 py-3">
         <div className="flex items-start gap-3 mb-2">
           <div className={`w-7 h-7 border rounded-sm flex items-center justify-center shrink-0 mt-0.5 ${platformColor}`}>
@@ -325,22 +327,95 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading 
           <span className="font-mono text-[10px] text-muted-foreground/50">Conv. <span className="text-yellow-400">{m.conversionPct}%</span></span>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          {piece.status !== "approved" && (
-            <Button size="sm" onClick={() => onApprove(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 bg-success/10 border border-success/40 text-success hover:bg-success/20">
-              {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Aprovar
-            </Button>
-          )}
-          {piece.status !== "rejected" && (
+        {isRewriting ? (
+          <div className="flex items-center gap-2 py-1">
+            <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+            <span className="font-mono text-[11px] uppercase tracking-widest text-primary">Agente reescrevendo com base no seu feedback...</span>
+          </div>
+        ) : (
+          <div className="flex gap-2 flex-wrap">
+            {piece.status !== "approved" && (
+              <Button size="sm" onClick={() => onApprove(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 bg-success/10 border border-success/40 text-success hover:bg-success/20">
+                {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Aprovar
+              </Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => onReject(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
               <XCircle className="h-3 w-3" />Rejeitar
             </Button>
-          )}
-          <Button size="sm" variant="ghost" onClick={() => onEdit(piece)} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-muted-foreground hover:text-foreground">
-            <Edit3 className="h-3 w-3" />Editar
+            <Button size="sm" variant="ghost" onClick={() => onEdit(piece)} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-muted-foreground hover:text-foreground">
+              <Edit3 className="h-3 w-3" />Editar
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onAiRewrite(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10">
+              <Sparkles className="h-3 w-3" />IA Reescrever
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Reject Modal ───────────────────────────────────────────────────────────────
+
+function RejectModal({
+  piece,
+  onClose,
+  onConfirm,
+  loading,
+}: {
+  piece: ContentPiece;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  loading: boolean;
+}) {
+  const [reason, setReason] = useState("");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-card border border-border w-full max-w-lg mx-4 shadow-2xl">
+        <div className="p-5 border-b border-border/50">
+          <div className="flex items-center gap-2 mb-1">
+            <XCircle className="h-4 w-4 text-destructive" />
+            <span className="font-mono text-sm uppercase tracking-widest font-bold">Rejeitar e Corrigir com IA</span>
+          </div>
+          <p className="font-mono text-xs text-muted-foreground truncate">{piece.title}</p>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground block mb-2">
+              Por que está rejeitando? O agente vai absorver seu feedback e reescrever.
+            </label>
+            <textarea
+              autoFocus
+              placeholder={'Ex: "O tom está muito formal, precisa ser mais urgente e direto" ou "A headline não conecta com o problema do avatar, refaça focando na dor principal..."'}
+              className="w-full bg-muted/10 border border-border/60 text-sm p-3 min-h-[110px] resize-none font-mono placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/50 transition-colors"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+            />
+          </div>
+
+          <div className="bg-primary/5 border border-primary/20 p-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+              <p className="font-mono text-xs text-primary/80 leading-relaxed">
+                O Agente Copywriter vai ler seu feedback, entender o que precisa mudar e reescrever a peça automaticamente. Você revisa e aprova — ou rejeita novamente.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-5 border-t border-border/50 flex gap-2 justify-end">
+          <Button variant="ghost" onClick={onClose} disabled={loading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8">
+            Cancelar
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => onAiRewrite(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10">
-            <Sparkles className="h-3 w-3" />IA Reescrever
+          <Button
+            onClick={() => onConfirm(reason)}
+            disabled={loading}
+            className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8 gap-1.5 bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
+          >
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Rejeitar e Corrigir com IA
           </Button>
         </div>
       </div>
@@ -1141,6 +1216,8 @@ export default function ContentApproval() {
   const [activeTab, setActiveTab] = useState<Tab>("platform");
   const [editingPiece, setEditingPiece] = useState<ContentPiece | null>(null);
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
+  const [rejectingPiece, setRejectingPiece] = useState<ContentPiece | null>(null);
+  const [rewritingPiece, setRewritingPiece] = useState<string | null>(null);
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
   const [previewFilter, setPreviewFilter] = useState<Platform | "all">("all");
 
@@ -1238,37 +1315,57 @@ export default function ContentApproval() {
       setLoadingPiece(null);
     }
   };
-  const handleReject = async (id: string) => {
+  const handleReject = (id: string) => {
+    const piece = pieces.find(p => p.id === id);
+    if (piece) setRejectingPiece(piece);
+  };
+
+  const handleRejectWithFeedback = async (id: string, reason: string) => {
+    setRejectingPiece(null);
+    setRewritingPiece(id);
     setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "rejected" } : p));
     try {
       const parentId = getParentId(id);
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/reject`, {
+      // 1. Reject with reason
+      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: reason || "" }),
+      }).catch(() => null);
+      // 2. Rewrite with AI using the feedback
+      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/rewrite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback: reason || "" }),
+      });
+      // 3. Refresh from API — piece now has new content + status pending_approval
+      setLocalPieces(null);
+      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+      toast.success("Agente reescreveu com base no seu feedback. Revise e aprove.");
+    } catch {
+      toast.error("Erro ao processar rejeição e reescrita com IA.");
+      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
+    } finally {
+      setRewritingPiece(null);
+    }
+  };
+
+  const handleAiRewrite = async (id: string) => {
+    setRewritingPiece(id);
+    try {
+      const parentId = getParentId(id);
+      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/rewrite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: "" }),
       });
-      if (!res.ok) throw new Error("Erro");
-      toast.info("Peça rejeitada");
-    } catch {
-      setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
-      toast.error("Erro ao rejeitar peça");
-    }
-  };
-  const handleAiRewrite = async (id: string) => {
-    setLoadingPiece(id);
-    try {
-      const parentId = getParentId(id);
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/rewrite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!res.ok) throw new Error("Erro");
-      queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+      setLocalPieces(null);
+      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       toast.success("IA reescreveu. Revise e aprove.");
     } catch {
       toast.error("Erro ao reescrever com IA");
     } finally {
-      setLoadingPiece(null);
+      setRewritingPiece(null);
     }
   };
   const handleSaveEdit = (id: string, body: string, cta: string) => {
@@ -1371,6 +1468,14 @@ export default function ContentApproval() {
 
   return (
     <>
+      {rejectingPiece && (
+        <RejectModal
+          piece={rejectingPiece}
+          onClose={() => setRejectingPiece(null)}
+          onConfirm={(reason) => handleRejectWithFeedback(rejectingPiece.id, reason)}
+          loading={rewritingPiece === rejectingPiece.id}
+        />
+      )}
       {editingPiece && (
         <EditModal piece={editingPiece} onClose={() => setEditingPiece(null)} onSave={handleSaveEdit} />
       )}
@@ -1568,7 +1673,7 @@ export default function ContentApproval() {
                     /* Text-based platforms: email, whatsapp, ads, landing */
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {platformPieces.map(piece => (
-                        <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} />
+                        <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} />
                       ))}
                     </div>
                   )}
@@ -1610,7 +1715,7 @@ export default function ContentApproval() {
                   </div>
                   <div className="ml-11 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {dayPieces.map(piece => (
-                      <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} />
+                      <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} />
                     ))}
                   </div>
                 </div>
@@ -1632,7 +1737,7 @@ export default function ContentApproval() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {segPieces.map(piece => (
-                    <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} />
+                    <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} />
                   ))}
                 </div>
               </div>

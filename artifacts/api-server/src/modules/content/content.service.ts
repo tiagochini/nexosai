@@ -6,6 +6,7 @@ import {
   mediaBriefsTable,
   auditLogsTable,
 } from "@workspace/db";
+import { runAgent, parseAgentJSON } from "../agents/agent.runner.js";
 import { runCopywriterAgent } from "../agents/copywriter.agent.js";
 import { runSocialMediaAgent } from "../agents/social-media.agent.js";
 import { runAdCopyAgent } from "../agents/ad-copy.agent.js";
@@ -1341,6 +1342,80 @@ export async function approveMediaBrief(
 
   if (!brief) throw new NotFoundError("Media brief");
   return brief;
+}
+
+export async function rewriteContentPiece(
+  campaignId: string,
+  workspaceId: string,
+  pieceId: string,
+  feedback: string,
+  log: Logger,
+) {
+  const [campaign] = await db
+    .select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const [piece] = await db
+    .select()
+    .from(contentPiecesTable)
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+    .limit(1);
+  if (!piece) throw new NotFoundError("Content piece");
+
+  const contentStr = JSON.stringify(piece.content, null, 2).slice(0, 6000);
+  const userFeedback = feedback.trim() || "Melhore o copy geral, tornando mais persuasivo e alinhado com o produto e avatar.";
+
+  const systemPrompt = `Você é um especialista em copywriting para lançamentos digitais brasileiros.
+Sua missão é REESCREVER uma peça de conteúdo incorporando 100% do feedback do revisor humano.
+
+REGRAS CRÍTICAS:
+- Mantenha EXATAMENTE a mesma estrutura JSON e os mesmos campos do original
+- Reescreva APENAS o conteúdo textual (body, subject, headline, hook, message, script, cta, etc.)
+- Incorpore o feedback integralmente — o revisor é quem tem a palavra final
+- Responda APENAS com o JSON reescrito, sem comentários adicionais fora do JSON
+- Preserve o idioma original (PT-BR) de cada campo
+- Se o feedback pedir mais urgência, adicione. Se pedir simplificação, simplifique. Se pedir mudança de tom, mude.`;
+
+  const userMessage = `PEÇA ORIGINAL (tipo: ${piece.type}):
+${contentStr}
+
+FEEDBACK DO REVISOR:
+"${userFeedback}"
+
+Reescreva essa peça incorporando o feedback acima. Retorne APENAS o JSON com a mesma estrutura do original.`;
+
+  const { content: rawOutput } = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "copywriter",
+    systemPrompt,
+    messages: [{ role: "user", content: userMessage }],
+    log,
+  });
+
+  const fallbackContent = piece.content as Record<string, unknown>;
+  const parsed = parseAgentJSON<Record<string, unknown>>(rawOutput, fallbackContent);
+  const newContent = (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+    ? parsed
+    : fallbackContent;
+
+  const [updated] = await db
+    .update(contentPiecesTable)
+    .set({
+      content: newContent,
+      status: "pending_approval",
+      approvedAt: null,
+    })
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+    .returning();
+
+  if (!updated) throw new NotFoundError("Content piece");
+
+  log.info({ pieceId, campaignId, feedback: userFeedback.slice(0, 80) }, "Content piece rewritten by AI");
+  return updated;
 }
 
 export async function rejectMediaBrief(
