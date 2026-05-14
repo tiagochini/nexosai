@@ -1254,30 +1254,31 @@ function SocialLaunchGate({
           const integration = integrations.find(i => i.provider === def.dbProvider && i.status === "connected");
 
           return (
-            <div key={def.platform} className="flex items-center gap-4 px-5 py-4">
-              {/* Icon */}
-              <div
-                className="w-9 h-9 border flex items-center justify-center shrink-0"
-                style={{ borderColor: def.brand.border, background: def.brand.bg }}
-              >
-                <def.Icon className="h-4 w-4" style={{ color: def.brand.text }} />
+            <div key={def.platform} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              {/* Top row: icon + name (always visible together) */}
+              <div className="flex items-center gap-3 sm:contents">
+                <div
+                  className="w-9 h-9 border flex items-center justify-center shrink-0"
+                  style={{ borderColor: def.brand.border, background: def.brand.bg }}
+                >
+                  <def.Icon className="h-4 w-4" style={{ color: def.brand.text }} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-sm font-bold">{def.label}</div>
+                  {connected && integration?.accountName ? (
+                    <div className="font-mono text-[11px] text-success mt-0.5">
+                      Conectado como {integration.accountName}
+                    </div>
+                  ) : (
+                    <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">
+                      Faça login para autorizar a publicação
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="font-mono text-sm font-bold">{def.label}</div>
-                {connected && integration?.accountName ? (
-                  <div className="font-mono text-[11px] text-success mt-0.5">
-                    Conectado como {integration.accountName}
-                  </div>
-                ) : (
-                  <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">
-                    Faça login para autorizar a publicação
-                  </div>
-                )}
-              </div>
-
-              {/* Status / Connect button */}
+              {/* Status / Connect button — full-width on mobile */}
               {connected ? (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <CheckCircle2 className="h-4 w-4 text-success" />
@@ -1287,7 +1288,7 @@ function SocialLaunchGate({
                 <button
                   onClick={() => void handleOAuth(def)}
                   disabled={isLoading}
-                  className="flex items-center gap-2 px-4 h-9 font-mono text-[11px] uppercase tracking-widest border transition-all shrink-0 disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 h-9 font-mono text-[11px] uppercase tracking-widest border transition-all shrink-0 disabled:opacity-50"
                   style={{ borderColor: def.brand.border, color: def.brand.text, background: def.brand.bg }}
                 >
                   {isLoading
