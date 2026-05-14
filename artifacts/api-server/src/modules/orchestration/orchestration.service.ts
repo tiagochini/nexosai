@@ -209,6 +209,24 @@ export async function triggerStrategyPhase(
     );
   }
 
+  // Guard: prevent double-triggering — if agents are already running, reject
+  const [existingRun] = await db
+    .select({ id: campaignAgentsTable.id })
+    .from(campaignAgentsTable)
+    .where(
+      and(
+        eq(campaignAgentsTable.campaignId, campaignId),
+        eq(campaignAgentsTable.status, "running"),
+      ),
+    )
+    .limit(1);
+
+  if (existingRun) {
+    throw new ValidationError(
+      "Agentes já estão em execução para esta campanha. Aguarde a conclusão antes de tentar novamente.",
+    );
+  }
+
   await db.insert(auditLogsTable).values({
     workspaceId,
     campaignId,
@@ -245,6 +263,24 @@ export async function triggerContentPhase(
   if (!allowedStatuses.includes(campaign.status)) {
     throw new ValidationError(
       `Cannot start content generation from status "${campaign.status}". Strategy phase must complete first.`,
+    );
+  }
+
+  // Guard: prevent double-triggering — if agents are already running, reject
+  const [existingContentRun] = await db
+    .select({ id: campaignAgentsTable.id })
+    .from(campaignAgentsTable)
+    .where(
+      and(
+        eq(campaignAgentsTable.campaignId, campaignId),
+        eq(campaignAgentsTable.status, "running"),
+      ),
+    )
+    .limit(1);
+
+  if (existingContentRun) {
+    throw new ValidationError(
+      "Agentes já estão em execução para esta campanha. Aguarde a conclusão antes de tentar novamente.",
     );
   }
 

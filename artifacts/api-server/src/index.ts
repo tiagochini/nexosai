@@ -22,6 +22,8 @@ import { getQueue, closeAllQueues, QUEUE_NAMES } from "./modules/queue/queue.ser
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
+import { db, campaignAgentsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
 
@@ -77,6 +79,23 @@ try {
 initOrchestrationWorker();
 startSocialScheduler();
 initSequenceScheduler();
+
+// ── Boot cleanup: mark orphaned "running" agents as failed ────────────────────
+// If the server was restarted mid-execution, agents stay stuck as "running"
+// forever. This cleanup runs once on boot to recover those campaigns.
+db.update(campaignAgentsTable)
+  .set({
+    status: "failed",
+    errorMessage: "Servidor reiniciado — execução interrompida",
+    completedAt: new Date(),
+  })
+  .where(eq(campaignAgentsTable.status, "running"))
+  .then((result) => {
+    if (result.rowCount && result.rowCount > 0) {
+      logger.warn({ count: result.rowCount }, "Boot cleanup: marked orphaned running agents as failed");
+    }
+  })
+  .catch((err) => logger.error({ err }, "Boot cleanup failed"));
 
 httpServer.listen(port, (err?: Error) => {
   if (err) {
