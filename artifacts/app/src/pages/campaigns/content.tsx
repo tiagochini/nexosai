@@ -256,7 +256,7 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
   const m = estimatePostMetrics(piece);
 
   return (
-    <div className={`border bg-card/40 transition-all relative overflow-hidden ${statusBorder}`}>
+    <div className={`border bg-card/40 transition-all relative ${statusBorder}`}>
       <div className={`absolute left-0 inset-y-0 w-[3px] ${isRewriting ? "bg-primary animate-pulse" : piece.status === "approved" ? "bg-success" : piece.status === "rejected" ? "bg-destructive" : "bg-border/30"}`} />
       <div className="pl-4 pr-4 py-3">
         <div className="flex items-start gap-3 mb-2">
@@ -300,7 +300,7 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
         {piece.visualDirection && (
           <div className="mb-2 px-2 py-1 border border-purple-400/30 bg-purple-400/5">
             <span className="font-mono text-[10px] text-purple-400 uppercase tracking-widest">Visual IA: </span>
-            <span className="font-mono text-[11px] text-foreground/70">{piece.visualDirection.slice(0, 80)}...</span>
+            <span className="font-mono text-[11px] text-foreground/70">{piece.visualDirection}</span>
           </div>
         )}
 
@@ -774,7 +774,7 @@ function extractBodyText(content: unknown, type?: string): string {
         lines.push(`── CONCEITOS VISUAIS (${concepts.length}) ──`);
         concepts.forEach((concept, i) => {
           lines.push(`\nConceito ${i + 1}: ${concept["headline"] as string ?? ""}`);
-          if (concept["description"]) lines.push(`${(concept["description"] as string).slice(0, 200)}`);
+          if (concept["description"]) lines.push(`${concept["description"] as string}`);
         });
       }
       return lines.join("\n");
@@ -784,12 +784,12 @@ function extractBodyText(content: unknown, type?: string): string {
       const imageConcepts = c["imageConcepts"] as Array<Record<string, unknown>> | undefined;
       if (imageConcepts?.length) {
         lines.push(`\nCONCEITOS DE IMAGEM (${imageConcepts.length}):`);
-        imageConcepts.forEach((ic, i) => lines.push(`${i + 1}. ${JSON.stringify(ic).slice(0, 150)}`));
+        imageConcepts.forEach((ic, i) => lines.push(`${i + 1}. ${JSON.stringify(ic, null, 2)}`));
       }
       const videoConcepts = c["videoConcepts"] as Array<Record<string, unknown>> | undefined;
       if (videoConcepts?.length) {
         lines.push(`\nCONCEITOS DE VÍDEO (${videoConcepts.length}):`);
-        videoConcepts.forEach((vc, i) => lines.push(`${i + 1}. ${JSON.stringify(vc).slice(0, 150)}`));
+        videoConcepts.forEach((vc, i) => lines.push(`${i + 1}. ${JSON.stringify(vc, null, 2)}`));
       }
       const approval = c["approvalProcess"] as Array<Record<string, unknown>> | undefined;
       if (approval?.length) {
@@ -806,14 +806,14 @@ function extractBodyText(content: unknown, type?: string): string {
       if (conar?.["verdict"]) lines.push(`CONAR: ${conar["verdict"] as string}`);
       if (conar?.["issues"] && Array.isArray(conar["issues"]) && (conar["issues"] as unknown[]).length > 0) {
         lines.push("\nProblemas CONAR:");
-        (conar["issues"] as unknown[]).forEach(issue => lines.push(`• ${JSON.stringify(issue).slice(0, 100)}`));
+        (conar["issues"] as unknown[]).forEach(issue => lines.push(`• ${JSON.stringify(issue)}`))
       }
       const notes = c["complianceNotes"] as string | undefined;
-      if (notes) lines.push(`\nObservações:\n${notes.slice(0, 600)}`);
+      if (notes) lines.push(`\nObservações:\n${notes}`);
       return lines.join("\n");
     }
   } catch { /* fallback */ }
-  try { return JSON.stringify(obj, null, 2).slice(0, 3000); } catch { return String(obj); }
+  try { return JSON.stringify(obj, null, 2); } catch { return String(obj); }
 }
 
 // Extract the DB UUID from a possibly-synthetic child ID ("parentUUID::subKey")
@@ -875,7 +875,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
             title: `✉ ${email["subject"] as string ?? `${phase.label} #${emailIdx + 1}`}`,
             body: [
               email["previewText"] ? `Preview: ${email["previewText"] as string}` : "",
-              email["body"] ? (email["body"] as string).slice(0, 500) : "",
+              email["body"] ? (email["body"] as string) : "",
             ].filter(Boolean).join("\n\n"),
             callToAction: email["cta"] as string | undefined,
           }));
@@ -889,7 +889,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
           platform: "whatsapp", type: "message",
           dayIndex: i < 2 ? 0 : i < 4 ? 5 : 7,
           title: `💬 WhatsApp: Mensagem ${i + 1}`,
-          body: msg["message"] as string ?? JSON.stringify(msg).slice(0, 300),
+          body: msg["message"] as string ?? JSON.stringify(msg, null, 2),
         }));
       });
       // Sales page headline card
@@ -943,8 +943,8 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
             title: `🎬 Roteiro CPL ${i + 1}: ${video["title"] as string ?? ""}`,
             body: [
               video["hook"] ? `Hook: ${video["hook"] as string}` : "",
-              video["objective"] ? `Objetivo: ${(video["objective"] as string).slice(0, 200)}` : "",
-              video["body"] ? (video["body"] as string).slice(0, 350) : "",
+              video["objective"] ? `Objetivo: ${video["objective"] as string}` : "",
+              video["body"] ? (video["body"] as string) : "",
               video["cta"] ? `CTA: ${video["cta"] as string}` : "",
             ].filter(Boolean).join("\n\n"),
             tiktokHook: video["hook"] as string | undefined,
@@ -965,14 +965,14 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
           c["liveType"] ? `Tipo: ${c["liveType"] as string}` : "",
           c["platform"] ? `Plataforma: ${c["platform"] as string}` : "",
           segments?.length ? `${segments.length} segmentos` : "",
-          segments?.[0]?.["script"] ? `Abertura:\n${(segments[0]["script"] as string).slice(0, 300)}` : "",
+          segments?.[0]?.["script"] ? `Abertura:\n${segments[0]["script"] as string}` : "",
         ].filter(Boolean).join("\n"),
       }));
       segments?.slice(1).forEach((seg, i) => {
         result.push(child(`live_seg:${i}`, {
           platform: "facebook", type: "post", dayIndex: 5,
           title: `🔴 Live — ${seg["name"] as string ?? seg["type"] as string ?? `Segmento ${i + 2}`}`,
-          body: seg["script"] ? (seg["script"] as string).slice(0, 450) : JSON.stringify(seg).slice(0, 300),
+          body: seg["script"] ? (seg["script"] as string) : JSON.stringify(seg, null, 2),
         }));
       });
 
@@ -986,8 +986,8 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
             platform: "landing", type: "copy", dayIndex: 5,
             title: `🌐 Landing: ${section["headline"] as string ?? `Seção ${i + 1}`}`,
             body: [
-              section["bodyContent"] ? (section["bodyContent"] as string).slice(0, 450) : "",
-              section["purpose"] ? `Objetivo: ${(section["purpose"] as string).slice(0, 150)}` : "",
+              section["bodyContent"] ? (section["bodyContent"] as string) : "",
+              section["purpose"] ? `Objetivo: ${section["purpose"] as string}` : "",
             ].filter(Boolean).join("\n\n"),
             callToAction: cta?.["text"] as string | undefined,
           }));
@@ -1005,7 +1005,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
         result.push(child("guidelines", {
           platform: "instagram", type: "post", dayIndex: 0,
           title: "🎨 Diretrizes Criativas",
-          body: dos.slice(0, 6).map(d => `• ${d}`).join("\n"),
+          body: dos.map(d => `• ${d}`).join("\n"),
         }));
       }
       // One card per visual concept
@@ -1015,7 +1015,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
           platform: "instagram", type: "post", dayIndex: i,
           title: `🖼 Conceito Visual ${i + 1}: ${concept["headline"] as string ?? ""}`,
           body: [
-            concept["description"] ? (concept["description"] as string).slice(0, 350) : "",
+            concept["description"] ? (concept["description"] as string) : "",
             concept["colorPalette"] ? `Cores: ${concept["colorPalette"] as string}` : "",
             concept["typography"] ? `Tipografia: ${concept["typography"] as string}` : "",
           ].filter(Boolean).join("\n\n"),
@@ -1036,7 +1036,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
           platform: "ads", type: "ad", dayIndex: 1,
           title: `🖼 Criativo Imagem ${i + 1}: ${ic["concept"] as string ?? ic["headline"] as string ?? `Imagem ${i + 1}`}`,
           body: [
-            ic["description"] ? (ic["description"] as string).slice(0, 300) : "",
+            ic["description"] ? (ic["description"] as string) : "",
             ic["dimensions"] ? `Dimensões: ${ic["dimensions"] as string}` : "",
           ].filter(Boolean).join("\n"),
         }));
@@ -1047,7 +1047,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
           platform: "ads", type: "ad", dayIndex: 2,
           title: `🎬 Criativo Vídeo ${i + 1}: ${vc["concept"] as string ?? vc["title"] as string ?? `Vídeo ${i + 1}`}`,
           body: [
-            vc["description"] ? (vc["description"] as string).slice(0, 300) : "",
+            vc["description"] ? (vc["description"] as string) : "",
             vc["duration"] ? `Duração: ${vc["duration"] as string}` : "",
             vc["hook"] ? `Hook: ${vc["hook"] as string}` : "",
           ].filter(Boolean).join("\n"),
