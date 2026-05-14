@@ -714,7 +714,7 @@ export default function ContentApproval() {
     enabled: !!campaignId,
   });
 
-  const { data: apiContentData } = useQuery({
+  const { data: apiContentData, isLoading: isContentLoading } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}/content`],
     queryFn: async () => {
       const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
@@ -854,7 +854,7 @@ export default function ContentApproval() {
     (previewFilter === "all" || p.platform === previewFilter)
   );
 
-  if (isLoading) {
+  if (isLoading || isContentLoading) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
         <Skeleton className="h-10 w-64 bg-muted/20" />
