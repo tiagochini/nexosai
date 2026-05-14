@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useLogin } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
+import { useAppI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,17 +16,19 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { setToken } = useAuth();
+  const tr = useAppI18n();
+  const t = tr.login;
 
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (data) => {
         const raw = data as typeof data & { refreshToken?: string };
         setToken(data.accessToken, raw.refreshToken);
-        toast.success("Acesso autorizado.");
+        toast.success(t.success);
         setLocation("/");
       },
       onError: () => {
-        toast.error("Acesso negado. Verifique as credenciais.");
+        toast.error(t.error);
       },
     },
   });
@@ -48,7 +51,7 @@ export default function Login() {
             style={{ imageRendering: "crisp-edges", filter: "drop-shadow(0 0 20px hsl(var(--primary)/0.6))" }}
           />
           <p className="text-primary text-sm uppercase tracking-[0.3em] font-mono mt-4 font-bold drop-shadow-[0_0_5px_hsl(var(--primary)/0.8)]">
-            Automated Launch
+            {t.tagline}
           </p>
         </div>
 
@@ -63,7 +66,7 @@ export default function Login() {
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Identificação (Email)
+                {t.email_label}
               </Label>
               <Input
                 id="email"
@@ -79,7 +82,7 @@ export default function Login() {
             {/* Password with show/hide */}
             <div className="space-y-2">
               <Label htmlFor="password" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Código de Acesso (Senha)
+                {t.password_label}
               </Label>
               <div className="relative">
                 <Input
@@ -96,7 +99,7 @@ export default function Login() {
                   tabIndex={-1}
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-primary transition-colors"
-                  aria-label={showPassword ? "Ocultar senha" : "Revelar senha"}
+                  aria-label={showPassword ? t.hide_password : t.show_password}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -108,15 +111,15 @@ export default function Login() {
               className="w-full rounded-none font-mono uppercase tracking-widest font-bold btn-weapon-primary mt-4"
               disabled={loginMutation.isPending}
             >
-              {loginMutation.isPending ? "Autenticando..." : "Iniciar Sessão"}
+              {loginMutation.isPending ? t.submitting : t.submit}
             </Button>
           </form>
 
           <div className="mt-8 text-center relative z-10 border-t border-border/30 pt-6">
-            <span className="text-xs text-muted-foreground font-mono uppercase tracking-wide">Solicitar novo acesso? </span>
+            <span className="text-xs text-muted-foreground font-mono uppercase tracking-wide">{t.no_account} </span>
             <Link href="/register">
               <span className="text-xs text-primary uppercase font-bold hover:text-white hover:drop-shadow-[0_0_5px_hsl(var(--primary))] transition-all cursor-pointer tracking-wide ml-2">
-                Registrar-se
+                {t.register}
               </span>
             </Link>
           </div>

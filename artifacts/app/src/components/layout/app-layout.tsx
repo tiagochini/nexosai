@@ -12,6 +12,7 @@ import {
   Brain, Receipt, Link2, Globe, Clapperboard, ShoppingBag,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
+import { useAppI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { RecordButton } from "@/components/recording/RecordButton";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -36,6 +37,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const { mode, setMode, isExpert } = useMode();
   const queryClient = useQueryClient();
   const [savingLocale, setSavingLocale] = useState(false);
+  const tr = useAppI18n();
 
   const currentLocale: LocaleCode = (user?.locale as LocaleCode | undefined) ?? "pt-BR";
   const currentLocaleOpt = LOCALE_OPTIONS.find(o => o.value === currentLocale) ?? LOCALE_OPTIONS[0]!
@@ -78,57 +80,57 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 
   const navGroups: NavGroup[] = [
     {
-      label: "Sistemas Principais",
+      label: tr.nav.main,
       items: [
-        { name: "Dashboard",  href: "/",          icon: LayoutDashboard },
-        { name: "Campanhas",  href: "/campaigns", icon: Rocket },
+        { name: tr.sidebar.dashboard,  href: "/",          icon: LayoutDashboard },
+        { name: tr.sidebar.campaigns,  href: "/campaigns", icon: Rocket },
       ],
     },
     {
-      label: "Time de IA",
+      label: tr.nav.ai_team,
       items: [
-        { name: "Agentes IA", href: "/agents", icon: Bot, badge: "44" },
+        { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "44" },
       ],
     },
     {
-      label: "Ferramentas",
+      label: tr.nav.tools,
       expertOnly: true,
       items: [
-        { name: "VSL Studio",       href: "/vsls",              icon: Video      },
-        { name: "Editor de Vídeo",  href: "/video-editor",      icon: Clapperboard },
-        { name: "Social Media",     href: "/social",            icon: Share2     },
-        { name: "Moderação Bot",    href: "/social/moderation", icon: Shield     },
-        { name: "Sequências",       href: "/sequences",         icon: Workflow   },
-        { name: "Receita",          href: "/revenue",           icon: DollarSign },
-        { name: "Compliance",       href: "/compliance",        icon: Shield     },
-        { name: "Construtor de Sites IA", href: "/site-builder", icon: Globe    },
+        { name: tr.sidebar.vsl,          href: "/vsls",              icon: Video      },
+        { name: tr.sidebar.video,        href: "/video-editor",      icon: Clapperboard },
+        { name: tr.sidebar.social,       href: "/social",            icon: Share2     },
+        { name: tr.sidebar.moderation,   href: "/social/moderation", icon: Shield     },
+        { name: tr.sidebar.sequences,    href: "/sequences",         icon: Workflow   },
+        { name: tr.sidebar.revenue,      href: "/revenue",           icon: DollarSign },
+        { name: tr.sidebar.compliance,   href: "/compliance",        icon: Shield     },
+        { name: tr.sidebar.site_builder, href: "/site-builder",      icon: Globe      },
         ...(isAgency ? [
-          { name: "Clientes",       href: "/agency/clients",   icon: Users },
-          { name: "Perfis de Cliente", href: "/agency/profiles", icon: Users },
+          { name: tr.sidebar.clients,  href: "/agency/clients",   icon: Users },
+          { name: tr.sidebar.profiles, href: "/agency/profiles",  icon: Users },
         ] : []),
       ],
     },
     {
-      label: "Crescimento",
+      label: tr.nav.growth,
       expertOnly: true,
       items: [
-        { name: "Afiliados",    href: "/affiliate", icon: Star },
+        { name: tr.sidebar.affiliates, href: "/affiliate", icon: Star },
       ],
     },
     {
-      label: "Automações",
+      label: tr.nav.automations,
       items: [
-        { name: "Produtos",        href: "/produtos",    icon: ShoppingBag },
-        { name: "Integrações",     href: "/integracoes", icon: Link2, badge: "!" },
+        { name: tr.sidebar.products,     href: "/produtos",    icon: ShoppingBag },
+        { name: tr.sidebar.integrations, href: "/integracoes", icon: Link2, badge: "!" },
       ],
     },
     {
-      label: "Conta",
+      label: tr.nav.account,
       items: [
-        { name: "Créditos de IA",  href: "/credits",  icon: CreditCard },
-        { name: "Memória de IA",   href: "/memory",   icon: Brain      },
-        { name: "Plano & Fatura",  href: "/billing",  icon: Receipt    },
-        { name: "Configurações",   href: "/settings", icon: Settings   },
+        { name: tr.sidebar.credits,  href: "/credits",  icon: CreditCard },
+        { name: tr.sidebar.memory,   href: "/memory",   icon: Brain      },
+        { name: tr.sidebar.billing,  href: "/billing",  icon: Receipt    },
+        { name: tr.sidebar.settings, href: "/settings", icon: Settings   },
       ],
     },
   ];
@@ -208,7 +210,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         <div>
           <div className="px-2 mb-2">
             <span className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground/40">
-              Modo de Uso
+              {tr.nav.mode}
             </span>
           </div>
           <div className="flex gap-1 border border-border/40 bg-muted/10 p-0.5">
@@ -220,7 +222,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Gauge className="h-2.5 w-2.5" />
-              Iniciante
+              {tr.mode.beginner}
             </button>
             <button
               onClick={() => setMode("expert")}
@@ -230,17 +232,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Zap className="h-2.5 w-2.5" />
-              Avançado
+              {tr.mode.advanced}
             </button>
           </div>
           {mode === "guided" && (
             <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              Menu simplificado · foco no lançamento
+              {tr.mode.beginner_desc}
             </p>
           )}
           {mode === "expert" && (
             <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              Acesso completo a todas as ferramentas
+              {tr.mode.advanced_desc}
             </p>
           )}
         </div>
@@ -249,7 +251,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       {/* Credits bar */}
       <div className="px-4 py-3 border-t border-border/30 mx-3 mb-1">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Créditos IA</span>
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{tr.credits.label}</span>
           <Link href="/credits" onClick={onNav}>
             <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">
               {balance.toLocaleString("pt-BR")} cr
@@ -264,7 +266,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         </div>
         {isLow && (
           <div className="mt-1 font-mono text-[11px] text-destructive uppercase tracking-widest animate-pulse">
-            Créditos baixos!
+            {tr.credits.low}
           </div>
         )}
       </div>
@@ -278,7 +280,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                 <User className="h-3.5 w-3.5 text-primary" />
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <div className="font-mono text-xs text-foreground font-semibold truncate">{user?.name ?? "Usuário"}</div>
+                <div className="font-mono text-xs text-foreground font-semibold truncate">{user?.name ?? tr.user.default_name}</div>
                 <div className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest truncate">
                   {plan?.name ?? "NexOS AI"}
                   {isAdmin && " · Owner"}
@@ -295,18 +297,18 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           >
             <DropdownMenuItem asChild className="cursor-pointer focus:bg-primary/10 focus:text-primary rounded-none font-mono text-xs uppercase tracking-widest">
               <Link href="/settings" onClick={onNav}>
-                <Settings className="h-3.5 w-3.5 mr-2" />Configurações
+                <Settings className="h-3.5 w-3.5 mr-2" />{tr.user.settings}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="cursor-pointer focus:bg-primary/10 focus:text-primary rounded-none font-mono text-xs uppercase tracking-widest">
               <Link href="/credits" onClick={onNav}>
-                <CreditCard className="h-3.5 w-3.5 mr-2" />Créditos de IA
+                <CreditCard className="h-3.5 w-3.5 mr-2" />{tr.user.credits}
               </Link>
             </DropdownMenuItem>
             {isAdmin && (
               <DropdownMenuItem asChild className="cursor-pointer focus:bg-yellow-400/10 focus:text-yellow-400 rounded-none font-mono text-xs uppercase tracking-widest">
                 <Link href="/admin" onClick={onNav}>
-                  <ShieldCheck className="h-3.5 w-3.5 mr-2" />Admin SaaS
+                  <ShieldCheck className="h-3.5 w-3.5 mr-2" />{tr.sidebar.admin}
                 </Link>
               </DropdownMenuItem>
             )}
@@ -315,7 +317,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             <div className="px-2 py-1.5">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Globe className="h-3 w-3 text-muted-foreground/50" />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Idioma da IA</span>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{tr.user.ai_language}</span>
               </div>
               <div className="grid grid-cols-2 gap-0.5">
                 {LOCALE_OPTIONS.map(opt => (
@@ -340,7 +342,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
               onClick={() => { logout(); onNav?.(); }}
               className="cursor-pointer focus:bg-destructive/10 focus:text-destructive rounded-none font-mono text-xs uppercase tracking-widest text-destructive/70"
             >
-              <LogOut className="h-3.5 w-3.5 mr-2" />Sair da Plataforma
+              <LogOut className="h-3.5 w-3.5 mr-2" />{tr.user.logout}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

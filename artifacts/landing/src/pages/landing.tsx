@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { LiveDemoSection, SimulatorSection } from "@/components/landing-demo-sections";
+import { useI18n, LANG_LABELS, type Lang } from "@/lib/i18n";
 
 // ─── Scroll-snap section wrapper ──────────────────────────────────────────────
 function useInView(threshold = 0.3) {
@@ -38,8 +39,33 @@ const Section = React.forwardRef<HTMLElement, { children: React.ReactNode; class
   )
 );
 
+// ─── Language switcher ────────────────────────────────────────────────────────
+function LangSwitcher() {
+  const { lang, setLang } = useI18n();
+  const langs: Lang[] = ["pt-BR", "en-US", "es-LA"];
+  return (
+    <div className="flex items-center gap-0.5">
+      {langs.map((l) => (
+        <button
+          key={l}
+          onClick={() => setLang(l)}
+          title={LANG_LABELS[l].label}
+          className={`text-base leading-none px-1 py-0.5 rounded-sm transition-all ${
+            lang === l
+              ? "opacity-100 ring-1 ring-primary/50 bg-primary/10"
+              : "opacity-40 hover:opacity-70"
+          }`}
+        >
+          {LANG_LABELS[l].flag}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 function Nav({ scrolled }: { scrolled: boolean }) {
+  const { t } = useI18n();
   return (
     <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-border/40 bg-background/90 backdrop-blur-xl" : "bg-transparent"}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
@@ -47,13 +73,14 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 sm:h-14 sm:w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
           <div className="hidden sm:block">
             <div className="font-mono font-black text-xl tracking-[0.15em] uppercase">NexOS <span className="text-primary">AI</span></div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">Automação de Vendas em Volume</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">{t.nav.tagline}</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <LangSwitcher />
           <a href="/landing/simulador" className="hidden sm:block">
             <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-primary/80 hover:text-primary border border-primary/20 hover:border-primary/40 h-9 px-4 gap-1.5">
-              <Zap className="h-3 w-3" />Simular meta
+              <Zap className="h-3 w-3" />{t.nav.simulate}
             </Button>
           </a>
           <a href="/landing/simulador" className="sm:hidden">
@@ -62,12 +89,12 @@ function Nav({ scrolled }: { scrolled: boolean }) {
             </Button>
           </a>
           <a href="/login">
-            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground hidden sm:flex">Já tenho acesso</Button>
+            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground hidden sm:flex">{t.nav.login}</Button>
           </a>
           <a href="#oferta">
             <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] sm:text-xs tracking-widest font-bold h-8 sm:h-9 px-3 sm:px-5">
-              <span className="hidden sm:inline">Quero saber o valor</span>
-              <span className="sm:hidden">Entrar</span>
+              <span className="hidden sm:inline">{t.nav.cta}</span>
+              <span className="sm:hidden">{t.nav.cta_mobile}</span>
             </Button>
           </a>
         </div>
@@ -84,66 +111,63 @@ function ScrollHint() {
   );
 }
 
-// ─── Section 1: HERO ─────────────────────────────────────────────────────────
-// Objetivo: criar tensão imediata. Não explicar o produto — fazer o visitante
-// sentir que algo importante está acontecendo e ele não pode perder.
+// ─── Section 1: HERO ──────────────────────────────────────────────────────────
 function HeroSection() {
   const { ref, inView } = useInView(0.1);
+  const { t } = useI18n();
+  const h = t.hero;
   return (
     <Section id="hero" className="auth-bg-gradient" ref={ref as React.Ref<HTMLElement>}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 w-full pb-28 sm:pb-20">
         <div className={`transition-all duration-1000 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
-
           <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 sm:px-4 py-2 mb-6 sm:mb-10 font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-            <span className="hidden sm:inline">Demonstração ao vivo — veja a IA vendendo em tempo real</span>
-            <span className="sm:hidden">Demo ao vivo — IA vendendo em tempo real</span>
+            <span className="hidden sm:inline">{h.badge}</span>
+            <span className="sm:hidden">{h.badge_mobile}</span>
           </div>
 
           <h1 className="text-[2.2rem] sm:text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
-            Você está vendendo<br />
-            menos do que<br />
+            {h.h1_1}<br />{h.h1_2}<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              você poderia.
+              {h.h1_3}
             </span>
           </h1>
 
           <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-8 sm:mb-12 max-w-2xl">
-            A maioria das pessoas que tem um produto ou serviço fatura <strong className="text-foreground">uma fração do que poderia</strong> — não por falta de esforço, mas porque vender em volume exige uma operação que uma pessoa só não consegue sustentar.<br /><br />
-            <strong className="text-foreground">O NexOS AI é essa operação. Rodando 24h. Por uma fração do custo.</strong>
+            {h.p_pre}<strong className="text-foreground">{h.p_bold}</strong>{h.p_post}<br /><br />
+            <strong className="text-foreground">{h.p2}</strong>
           </p>
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <a href="/landing/simulador" className="w-full sm:w-auto">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs sm:text-base h-12 sm:h-16 px-6 sm:px-10 gap-2 sm:gap-3 w-full sm:w-auto">
-                  <Zap className="h-4 w-4 sm:h-5 sm:w-5" />SIMULAR MINHA META
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5" />{h.btn_sim}
                 </Button>
               </a>
               <a href="#oferta" className="w-full sm:w-auto">
                 <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-xs sm:text-base h-12 sm:h-16 px-5 sm:px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
-                  QUERO VENDER MAIS <ArrowRight className="h-4 w-4" />
+                  {h.btn_offer} <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
             <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground/40">
               <Lock className="h-3.5 w-3.5" />
-              Acesso por lista — vagas limitadas na abertura
+              {h.access}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stats strip */}
       <div className="absolute bottom-0 sm:bottom-10 left-0 right-0 border-t border-border/15 bg-background/60 backdrop-blur-md py-2.5 sm:py-3">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-1">
           {[
-            { n: "R$41k",  label: "Em 6 dias",   hide: false },
-            { n: "R$78k",  label: "Em 7 dias",   hide: false },
-            { n: "R$134k", label: "Projeção top", hide: false },
-            { n: "44",     label: "Agentes IA",   hide: false },
-            { n: "100%",   label: "Automatizado", hide: true },
-            { n: "24h",    label: "Sem parar",    hide: true },
+            { n: "R$41k",  label: h.s1, hide: false },
+            { n: "R$78k",  label: h.s2, hide: false },
+            { n: "R$134k", label: h.s3, hide: false },
+            { n: "44",     label: h.s4, hide: false },
+            { n: "100%",   label: h.s5, hide: true  },
+            { n: "24h",    label: h.s6, hide: true  },
           ].map(({ n, label, hide }) => (
             <div key={label} className={`flex flex-col items-center ${hide ? "hidden md:flex" : ""}`}>
               <div className="font-mono font-black text-xs sm:text-base text-primary leading-none">{n}</div>
@@ -152,51 +176,30 @@ function HeroSection() {
           ))}
         </div>
       </div>
-
       <ScrollHint />
     </Section>
   );
 }
 
-// ─── Section 2: A FERIDA — O que está custando caro agora ─────────────────────
-// Objetivo: abrir a ferida antes de mostrar qualquer solução.
-// A pessoa precisa sentir a dor antes de querer o remédio.
+// ─── Section 2: A FERIDA ──────────────────────────────────────────────────────
 function FeriadaSection() {
   const { ref, inView } = useInView(0.2);
-  const dores = [
-    {
-      situacao: "Você tem um produto bom e sabe que as pessoas comprariam.",
-      realidade: "Mas escrever tudo que precisa — a sequência de mensagens, os emails, as páginas — leva semanas. Enquanto isso, o produto continua na prateleira e a conta continua igual.",
-    },
-    {
-      situacao: "Você tem contatos. Pessoas que já demonstraram interesse.",
-      realidade: "Cada semana sem contato é -7% de chance de elas comprarem. Depois de 6 semanas sem falar com elas, você vai precisar gastar dinheiro em anúncio pra reconquistar quem já era seu.",
-    },
-    {
-      situacao: "Você quer vender todo mês, não uma vez por ano.",
-      realidade: "Para ter consistência nas vendas você precisa de uma operação que funcione enquanto você dorme, viaja ou trabalha em outra coisa. Isso não é possível fazendo tudo na mão.",
-    },
-    {
-      situacao: "Você contratou pessoas para te ajudar a vender mais.",
-      realidade: "Cada um entregou um pedaço. Ninguém assumiu o todo. Você ficou coordenando, revisando, corrigindo — e ainda assim a meta não foi batida. A conta do time venceu antes das vendas.",
-    },
-  ];
-
+  const { t } = useI18n();
+  const p = t.pain;
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 delay-100 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">POR QUE VOCÊ NÃO ESTÁ VENDENDO NO VOLUME QUE PODERIA</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">{p.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
-            Você tem produto.<br />
-            Você tem audiência.<br />
-            <span className="text-destructive/80">O dinheiro não está entrando.</span>
+            {p.h2_1}<br />{p.h2_2}<br />
+            <span className="text-destructive/80">{p.h2_3}</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-12">
-            Chegar em R$100k, R$500k ou R$1M não é mistério. É operação. E operação exige sequências certas, disparos no momento certo, respostas automáticas, carrinho funcionando, dados em tempo real. <strong className="text-foreground">Uma pessoa só não aguenta sustentar isso sozinha — e é por isso que a maioria vende muito menos do que poderia.</strong>
+            {p.p}<strong className="text-foreground">{p.p_bold}</strong>
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {dores.map((item, i) => (
+            {p.dores.map((item, i) => (
               <div
                 key={i}
                 className={`border border-border/30 bg-card/20 p-7 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
@@ -209,8 +212,8 @@ function FeriadaSection() {
           </div>
           <div className={`mt-6 border border-destructive/20 bg-destructive/5 px-6 py-4 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} style={{ transitionDelay: "640ms" }}>
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              O problema não é você. É que lançar sozinho exige <strong className="text-foreground">dezenas de entregas simultâneas</strong> que nenhuma pessoa consegue executar com qualidade, no prazo, sem errar o horário de carrinho ou esquecer o email de escassez do D-1.{" "}
-              <span className="text-destructive/70 font-bold">Esse é o motivo real pelo qual a maioria dos lançamentos morre antes de abrir.</span>
+              {p.closing}<strong className="text-foreground">{p.closing_bold}</strong>{p.closing2}{" "}
+              <span className="text-destructive/70 font-bold">{p.closing_red}</span>
             </p>
           </div>
         </div>
@@ -220,30 +223,23 @@ function FeriadaSection() {
   );
 }
 
-// ─── Section 3: O CUSTO REAL — Ancoragem ──────────────────────────────────────
-// Objetivo: fazer o visitante calcular o custo real de montar isso sozinho.
-// Sem revelar o preço do NexOS. Só deixar a âncora cravada.
+// ─── Section 3: O CUSTO REAL ──────────────────────────────────────────────────
 function CustoRealSection() {
   const { ref, inView } = useInView(0.2);
-  const alternativas = [
-    { nome: "Agência de lançamento completa", preco: "R$15k–R$50k/mês", nota: "Contrato mínimo de 6 meses. Resultado prometido pra 90 dias." },
-    { nome: "Copywriter sênior dedicado", preco: "R$8k–R$15k/mês", nota: "2 a 3 copies por semana. No máximo. Férias não inclusas." },
-    { nome: "Gestor de tráfego + automação", preco: "R$5k–R$12k/mês", nota: "Só tráfego. Automação é outro fornecedor, outra fatura." },
-    { nome: "Social media + suporte ao cliente", preco: "R$3k–R$6k/mês", nota: "Posts genéricos. Não entende de lançamento. Não entrega copy." },
-  ];
-
+  const { t } = useI18n();
+  const c = t.cost;
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">O QUE ISSO CUSTA NO MERCADO</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">{c.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
-            Montar um time de<br />lançamento completo<br />
-            <span className="text-destructive/80">custa isso por mês:</span>
+            {c.h2_1}<br />{c.h2_2}<br />
+            <span className="text-destructive/80">{c.h2_3}</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              {alternativas.map((item, i) => (
+              {c.alt.map((item, i) => (
                 <div
                   key={i}
                   className={`flex items-center justify-between border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"}`}
@@ -260,8 +256,8 @@ function CustoRealSection() {
                 className={`flex items-center justify-between border border-destructive/40 bg-destructive/5 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"}`}
                 style={{ transitionDelay: "420ms" }}
               >
-                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-black">Total por mês</div>
-                <div className="font-mono font-black text-base text-destructive text-right ml-4 shrink-0">R$31.000 a R$83.000</div>
+                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-black">{c.total_label}</div>
+                <div className="font-mono font-black text-base text-destructive text-right ml-4 shrink-0">{c.total}</div>
               </div>
             </div>
 
@@ -269,23 +265,20 @@ function CustoRealSection() {
               className={`border border-primary/30 bg-primary/5 p-8 flex flex-col justify-center transition-all duration-700 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
               style={{ transitionDelay: "200ms" }}
             >
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">O NexOS AI substitui tudo isso</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">{c.box_label}</div>
               <p className="font-mono font-black text-2xl text-foreground leading-snug mb-6">
-                Estratégia. Copy. Segmentação.<br />WhatsApp. Email. Carrinho.<br />
-                <span className="text-primary">29 agentes. 6 modelos. 24 horas por dia.</span>
+                {c.box_p}<span className="text-primary">{c.box_p_accent}</span>
               </p>
               <div className="border-l-2 border-primary/50 pl-4 mb-6">
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  O NexOS AI não vai custar R$31.000 por mês.<br />
-                  Não vai custar R$83.000 por mês.<br />
-                  <strong className="text-foreground">Nem de longe.</strong><br /><br />
-                  O investimento real? Só quem estiver<br />
-                  na lista vai descobrir — na abertura.
+                  {c.box_body_1}<br />{c.box_body_2}<br />
+                  <strong className="text-foreground">{c.box_body_3}</strong><br /><br />
+                  {c.box_body_4}
                 </p>
               </div>
               <a href="#oferta">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 w-full">
-                  QUERO SABER O VALOR <ArrowRight className="h-4 w-4" />
+                  {c.box_cta} <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -297,30 +290,22 @@ function CustoRealSection() {
   );
 }
 
-// ─── Section 4: A ROTINA — Execução manual mata ───────────────────────────────
-// Objetivo: fazer o visitante se identificar com o custo invisível.
-// Não é sobre dinheiro — é sobre tempo, energia, erros que custam vendas.
+// ─── Section 4: A ROTINA ──────────────────────────────────────────────────────
 function RotinaSection() {
   const { ref, inView } = useInView(0.2);
-  const itens = [
-    "Escrever email por email — cada mensagem leva horas, a campanha nunca sai toda de uma vez",
-    "Mandar mensagem no WhatsApp para centenas de pessoas. Uma por uma. Na mão.",
-    "Perder o momento certo de falar com um lead quente porque você estava ocupado com outra coisa",
-    "Não saber se a copy está boa o suficiente e adiando a campanha por semanas",
-    "Dormir 4h na semana que deveria vender mais — e ainda assim errar alguma coisa",
-    "Deixar dinheiro na mesa porque o email de urgência não saiu no horário certo",
-  ];
+  const { t } = useI18n();
+  const r = t.routine;
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">O CUSTO INVISÍVEL DE VENDER NA MÃO</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">{r.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
-            Cada hora que você gasta<br />em execução manual<br />
-            <span className="text-primary">é uma venda que não aconteceu.</span>
+            {r.h2_1}<br />{r.h2_2}<br />
+            <span className="text-primary">{r.h2_3}</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
-            {itens.map((item, i) => (
+            {r.items.map((item, i) => (
               <div
                 key={i}
                 className={`flex items-start gap-3 border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
@@ -334,8 +319,7 @@ function RotinaSection() {
             ))}
           </div>
           <p className="font-mono text-base text-muted-foreground/70 leading-relaxed border-l-2 border-destructive/30 pl-6">
-            Quem fatura R$100k, R$500k ou mais em um ciclo de vendas não é necessariamente mais talentoso que você.<br />
-            Eles simplesmente param de fazer essas coisas na mão antes. <strong className="text-foreground">E começam a vender em volume.</strong>
+            {r.closing}<strong className="text-foreground">{r.closing_bold}</strong>
           </p>
         </div>
       </div>
@@ -344,50 +328,40 @@ function RotinaSection() {
   );
 }
 
-// ─── Section 5: SOLUÇÃO — Reveal do produto ───────────────────────────────────
-// Objetivo: apresentar o produto como a resposta inevitável — não como uma
-// oferta, mas como algo que vai acontecer de qualquer jeito.
+// ─── Section 5: SOLUÇÃO ───────────────────────────────────────────────────────
 function SolutionSection() {
   const { ref, inView } = useInView(0.2);
-  const features = [
-    { icon: BrainCircuit, label: "Estrategista IA",  sub: "Analisa seu produto e sua meta de faturamento. Monta o plano completo de vendas em 47 minutos." },
-    { icon: Target,        label: "Vendedor IA",      sub: "Escreve emails, mensagens de WhatsApp, página de vendas e anúncios no seu tom. Você só aprova." },
-    { icon: Users,         label: "Segmentador IA",   sub: "Classifica cada contato pelo nível de interesse e envia a mensagem certa para cada pessoa, na hora certa." },
-    { icon: Activity,      label: "Disparador IA",    sub: "Envia automaticamente, responde dúvidas, abre e fecha o período de vendas. Zero intervenção manual." },
-    { icon: TrendingUp,    label: "Analytics IA",     sub: "Mede o desempenho em tempo real, detecta queda de resultado e sugere ajustes antes que você perca vendas." },
-    { icon: Shield,        label: "Compliance IA",    sub: "Garante que cada mensagem enviada segue as regras de privacidade (LGPD) sem você precisar se preocupar." },
-  ];
+  const { t } = useI18n();
+  const s = t.solution;
+  const icons = [BrainCircuit, Target, Users, Activity, TrendingUp, Shield];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
       <div className="max-w-5xl mx-auto px-6 w-full text-center">
         <div className={`transition-all duration-1000 ${inView ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}>
-          <img
-            src={nexosLogo}
-            alt="NexOS AI"
-            className="h-24 w-24 object-contain mx-auto mb-8"
-            style={{ filter: "drop-shadow(0 0 28px hsl(var(--primary)/0.8))" }}
-          />
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">APRESENTANDO</div>
+          <img src={nexosLogo} alt="NexOS AI" className="h-24 w-24 object-contain mx-auto mb-8" style={{ filter: "drop-shadow(0 0 28px hsl(var(--primary)/0.8))" }} />
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">{s.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8">
-            NexOS AI.<br />
-            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">Sua operação de vendas em volume.</span>
+            {s.h2_1}<br />
+            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{s.h2_2}</span>
           </h2>
           <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-10 sm:mb-12 max-w-2xl mx-auto">
-            Você define o produto e quanto quer faturar. A IA monta toda a operação — estratégia, textos de venda, segmentação de contatos, sequências de mensagens, monitoramento e otimização.{" "}
-            <strong className="text-foreground">Você aprova. Ela executa. As vendas entram.</strong>
+            {s.p}<strong className="text-foreground">{s.p_bold}</strong>
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
-            {features.map(({ icon: Icon, label, sub }, i) => (
-              <div
-                key={i}
-                className={`border border-primary/20 bg-primary/5 p-5 text-center transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                style={{ transitionDelay: `${300 + i * 100}ms` }}
-              >
-                <Icon className="h-6 w-6 text-primary mx-auto mb-3" />
-                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-1">{label}</div>
-                <div className="font-mono text-[11px] text-muted-foreground leading-relaxed">{sub}</div>
-              </div>
-            ))}
+            {s.features.map(({ label, sub }, i) => {
+              const Icon = icons[i]!;
+              return (
+                <div
+                  key={i}
+                  className={`border border-primary/20 bg-primary/5 p-5 text-center transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                  style={{ transitionDelay: `${300 + i * 100}ms` }}
+                >
+                  <Icon className="h-6 w-6 text-primary mx-auto mb-3" />
+                  <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-1">{label}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground leading-relaxed">{sub}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -396,67 +370,49 @@ function SolutionSection() {
   );
 }
 
-// ─── Section 5b: MODELOS & TRACKS ────────────────────────────────────────────
-// Objetivo: mostrar que a IA não usa template genérico — escolhe o modelo certo
-// para o produto, público e meta de faturamento de cada usuário.
+// ─── Section 5b: MODELOS & TRACKS ─────────────────────────────────────────────
 function ModelosSection() {
   const { ref, inView } = useInView(0.2);
-
-  const modelos = [
-    { code: "PLF",  nome: "Product Launch Formula", desc: "Sequência de CPLs, aquecimento por autoridade, abertura com urgência máxima. O modelo mais replicado do mundo." },
-    { code: "FRM",  nome: "Fórmula de Lançamento",  desc: "Adaptação da PLF para o mercado brasileiro. Copy emocional, provas sociais densas, sequência de aquecimento intensa." },
-    { code: "SEM",  nome: "Lançamento Semente",      desc: "Valide o produto com uma turma piloto antes de escalar. Ideal para quem está lançando pela primeira vez ou testando nova oferta." },
-    { code: "AFI",  nome: "Lançamento de Afiliado",  desc: "Ative uma rede de afiliados com copy, links rastreáveis e sequências prontas. Escale o alcance sem escalar o custo." },
-    { code: "PRP",  nome: "Perpétuo",                desc: "Funil evergreen 24/7. Captação, aquecimento e venda acontecem automaticamente todos os dias sem abrir e fechar carrinho." },
-    { code: "CUS",  nome: "Custom",                  desc: "IA monta uma estratégia sob medida para casos fora do padrão. Sem template engessado. Inteligência pura sobre o seu cenário." },
-  ];
-
-  const tracks = [
-    { label: "6 Dígitos", range: "R$100k – R$999k", sub: "Meta em 7 dias", plano: "Solo + Agency" },
-    { label: "8 Dígitos", range: "R$10M – R$99M",   sub: "Meta em 7 dias", plano: "Agency" },
-    { label: "10 Dígitos", range: "R$100M+",         sub: "Meta em 7 dias", plano: "Agency" },
-  ];
-
+  const { t } = useI18n();
+  const m = t.models;
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESTRATÉGIA SOB MEDIDA PARA A SUA SITUAÇÃO</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">{m.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-3">
-            6 formas de<br />
-            <span className="text-primary">fazer as vendas entrarem.</span>
+            {m.h2_1}<br />
+            <span className="text-primary">{m.h2_2}</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Não existe uma estratégia única para todo mundo. O NexOS AI analisa seu produto, seu público e sua meta financeira — e monta automaticamente a estratégia mais adequada para o seu caso.
-          </p>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">{m.p}</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-            {modelos.map((m, i) => (
+            {m.list.map((item, i) => (
               <div
-                key={m.code}
+                key={item.code}
                 className={`border border-border/30 bg-card/20 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
                 style={{ transitionDelay: `${100 + i * 80}ms` }}
               >
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="font-mono text-[9px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5 uppercase tracking-widest shrink-0">{m.code}</span>
-                  <span className="font-mono text-xs font-black uppercase tracking-wide text-foreground leading-tight">{m.nome}</span>
+                  <span className="font-mono text-[9px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5 uppercase tracking-widest shrink-0">{item.code}</span>
+                  <span className="font-mono text-xs font-black uppercase tracking-wide text-foreground leading-tight">{item.nome}</span>
                 </div>
-                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{m.desc}</p>
+                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            {tracks.map((t, i) => (
+            {m.tracks.map((track, i) => (
               <div
-                key={t.label}
+                key={track.label}
                 className={`border border-primary/20 bg-primary/5 p-5 text-center transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
                 style={{ transitionDelay: `${580 + i * 80}ms` }}
               >
-                <div className="font-mono font-black text-lg text-primary mb-0.5">{t.label}</div>
-                <div className="font-mono font-black text-sm text-foreground mb-1">{t.range}</div>
-                <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">{t.sub}</div>
-                <div className="font-mono text-[9px] text-primary/60 uppercase tracking-widest mt-0.5">{t.plano}</div>
+                <div className="font-mono font-black text-lg text-primary mb-0.5">{track.label}</div>
+                <div className="font-mono font-black text-sm text-foreground mb-1">{track.range}</div>
+                <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">{track.sub}</div>
+                <div className="font-mono text-[9px] text-primary/60 uppercase tracking-widest mt-0.5">{track.plano}</div>
               </div>
             ))}
           </div>
@@ -470,58 +426,40 @@ function ModelosSection() {
 // ─── Section 6: COMO FUNCIONA ─────────────────────────────────────────────────
 function ComoFuncionaSection() {
   const { ref, inView } = useInView(0.2);
-  const steps = [
-    {
-      num: "01",
-      title: "Conecta em 23 minutos",
-      desc: "Conecta o WhatsApp, o email e as redes sociais que você já usa. Importa sua lista de contatos. A IA identifica automaticamente quem está mais propenso a comprar e organiza sua base por nível de interesse — sem você precisar fazer nada.",
-      tag: "14+ ferramentas conectadas",
-      icon: BrainCircuit,
-    },
-    {
-      num: "02",
-      title: "IA monta toda a operação de vendas",
-      desc: "Você responde 7 perguntas sobre seu produto e quanto quer faturar. Em 47 minutos a IA entrega: plano completo de vendas, sequência de emails, mensagens de WhatsApp, texto da página de vendas e variações de anúncio. Você lê, aprova ou ajusta. Ela executa.",
-      tag: "47 minutos do zero ao plano completo",
-      icon: Layers,
-    },
-    {
-      num: "03",
-      title: "Vendas acontecem no piloto automático",
-      desc: "A IA envia cada mensagem no horário certo para cada contato, responde as dúvidas mais frequentes, abre o período de vendas, manda os lembretes de urgência e fecha automaticamente. Você acompanha no painel. O dinheiro entra na sua conta.",
-      tag: "Rodando 24h. Sem intervenção.",
-      icon: Zap,
-    },
-  ];
+  const { t } = useI18n();
+  const h = t.howto;
+  const icons = [BrainCircuit, Layers, Zap];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">COMO FUNCIONA NA PRÁTICA</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">{h.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-12">
-            3 passos.<br />
-            <span className="text-primary">Vendas rodando em 72 horas.</span>
+            {h.h2_1}<br /><span className="text-primary">{h.h2_2}</span>
           </h2>
           <div className="space-y-5">
-            {steps.map((step, i) => (
-              <div
-                key={i}
-                className={`grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 border border-border/30 bg-card/20 p-7 transition-all duration-600 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}
-                style={{ transitionDelay: `${i * 150}ms` }}
-              >
-                <div className="flex items-start gap-4 md:flex-col md:gap-0 md:w-20">
-                  <div className="font-mono font-black text-5xl text-primary/20 leading-none">{step.num}</div>
-                  <step.icon className="h-6 w-6 text-primary mt-2 hidden md:block" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-3 mb-2 flex-wrap">
-                    <span className="font-mono font-black uppercase tracking-wide text-base text-foreground">{step.title}</span>
-                    <span className="font-mono text-[10px] border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 uppercase tracking-widest">{step.tag}</span>
+            {h.steps.map((step, i) => {
+              const Icon = icons[i]!;
+              return (
+                <div
+                  key={i}
+                  className={`grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 border border-border/30 bg-card/20 p-7 transition-all duration-600 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}
+                  style={{ transitionDelay: `${i * 150}ms` }}
+                >
+                  <div className="flex items-start gap-4 md:flex-col md:gap-0 md:w-20">
+                    <div className="font-mono font-black text-5xl text-primary/20 leading-none">{step.num}</div>
+                    <Icon className="h-6 w-6 text-primary mt-2 hidden md:block" />
                   </div>
-                  <p className="font-mono text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                  <div>
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <span className="font-mono font-black uppercase tracking-wide text-base text-foreground">{step.title}</span>
+                      <span className="font-mono text-[10px] border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 uppercase tracking-widest">{step.tag}</span>
+                    </div>
+                    <p className="font-mono text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -530,56 +468,23 @@ function ComoFuncionaSection() {
   );
 }
 
-// ─── Section 7: DEMO AO VIVO + SIMULADOR ─────────────────────────────────────
-// (componentes externos — não alterar)
-
 // ─── Section 7b: PROVA SOCIAL ─────────────────────────────────────────────────
-// Objetivo: transformação específica com nomes, resultados e contexto real.
-// Prova social genérica não vende. Prova social específica fecha carrinho.
 function ProvaSection() {
   const { ref, inView } = useInView(0.2);
-  const provas = [
-    {
-      nome: "Renata Coelho",
-      cargo: "Terapeuta holística · Belo Horizonte",
-      antes: "312 contatos no WhatsApp. 8 meses sem vender porque nunca conseguia tempo para escrever todas as mensagens.",
-      resultado: "R$41.200",
-      prazo: "em 6 dias",
-      detalhe: "A IA escreveu todas as mensagens, montou a sequência completa e enviou no horário certo para cada contato. Renata aprovou tudo em 40 minutos. As vendas entraram enquanto ela atendia pacientes.",
-    },
-    {
-      nome: "Marcos Tavares",
-      cargo: "Personal trainer online · São Paulo",
-      antes: "Tentou vender 3 vezes. Parou no meio das 3 — sempre travava na hora de escrever as mensagens de vendas.",
-      resultado: "R$78.400",
-      prazo: "em 7 dias",
-      detalhe: "A IA completou o que ele sempre abandonava. A última mensagem de urgência — que ele nunca conseguia escrever — foi a que mais gerou vendas.",
-    },
-    {
-      nome: "Luciana Faria",
-      cargo: "Professora de inglês · Recife",
-      antes: "218 alunos no WhatsApp. Nunca tinha vendido nada online. Sem produto formatado.",
-      resultado: "R$33.900",
-      prazo: "em 5 dias",
-      detalhe: "A IA ajudou a formatar o produto, montou toda a sequência de vendas e disparou para a lista. Luciana descobriu como vender em volume enquanto o dinheiro já entrava.",
-    },
-  ];
-
+  const { t } = useI18n();
+  const pr = t.proof;
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">ESSES RESULTADOS FORAM GERADOS PELO NEXOS AI</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">{pr.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            Pessoas reais.<br />
-            <span className="text-primary">Dinheiro real entrando na conta.</span>
+            {pr.h2_1}<br /><span className="text-primary">{pr.h2_2}</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-12">
-            Nenhum desses resultados veio de agência, equipe de marketing ou anos de experiência. Veio do NexOS AI executando — enquanto essas pessoas focavam no que só elas podiam fazer.
-          </p>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-12">{pr.p}</p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {provas.map((item, i) => (
+            {pr.cases.map((item, i) => (
               <div
                 key={i}
                 className={`border border-border/30 bg-card/20 p-6 flex flex-col gap-4 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
@@ -594,7 +499,7 @@ function ProvaSection() {
                   <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">{item.cargo}</div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="font-mono text-[9px] text-destructive/60 uppercase tracking-widest shrink-0 mt-0.5 font-bold">Antes</span>
+                  <span className="font-mono text-[9px] text-destructive/60 uppercase tracking-widest shrink-0 mt-0.5 font-bold">{pr.before}</span>
                   <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{item.antes}</p>
                 </div>
                 <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed border-t border-border/30 pt-3">{item.detalhe}</p>
@@ -604,14 +509,14 @@ function ProvaSection() {
 
           <div className={`border border-primary/20 bg-primary/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
             <div>
-              <div className="font-mono text-xs font-black text-foreground uppercase tracking-widest mb-1">O que esses 3 casos têm em comum</div>
+              <div className="font-mono text-xs font-black text-foreground uppercase tracking-widest mb-1">{pr.common_label}</div>
               <p className="font-mono text-sm text-muted-foreground">
-                Nenhum deles tinha uma operação de marketing montada. <strong className="text-foreground">A IA executou enquanto elas descobriam como vender em volume.</strong>
+                {pr.common_p}<strong className="text-foreground">{pr.common_bold}</strong>
               </p>
             </div>
             <a href="#oferta" className="shrink-0">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 whitespace-nowrap text-xs px-6">
-                QUERO VENDER ASSIM <ArrowRight className="h-4 w-4" />
+                {pr.common_cta} <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
@@ -622,64 +527,37 @@ function ProvaSection() {
   );
 }
 
-// ─── Section 7c: AO VIVO — Demonstração ao vivo do app ───────────────────────
-// Objetivo: gerar antecipação para o evento ao vivo onde a IA será demonstrada
-// executando em tempo real. A maior prova social = os próprios participantes.
+// ─── Section 7c: AO VIVO ──────────────────────────────────────────────────────
 function AoVivoSection() {
   const { ref, inView } = useInView(0.2);
-  const momentos = [
-    {
-      icone: "01",
-      titulo: "Você vê a IA recebendo o produto",
-      desc: "Na live, um produto real é inserido no NexOS AI em tempo real. Sem preparação, sem roteiro. O produto entra, a IA analisa e começa a trabalhar.",
-    },
-    {
-      icone: "02",
-      titulo: "A estratégia de vendas aparece ao vivo",
-      desc: "Em menos de 1 hora, a IA monta o plano completo de vendas: mensagens, sequências, cronograma, estratégia de preço. Você assiste acontecendo.",
-    },
-    {
-      icone: "03",
-      titulo: "Os primeiros contatos recebem as mensagens",
-      desc: "A automação é ativada ao vivo. Os primeiros disparos saem durante a própria demonstração. Você vê a lista sendo trabalhada em tempo real.",
-    },
-    {
-      icone: "04",
-      titulo: "A maior prova social é você mesmo",
-      desc: "Quem estiver assistindo a live chegou até lá porque o NexOS AI executou um plano de vendas para esse evento. Você é o resultado do que o app faz.",
-    },
-  ];
-
+  const { t } = useI18n();
+  const lv = t.live;
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">EVENTO AO VIVO · DATA A CONFIRMAR</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">{lv.label}</div>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
             <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05]">
-              Veja a IA vendendo<br />
-              <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">em tempo real. Ao vivo.</span>
+              {lv.h2_1}<br />
+              <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{lv.h2_2}</span>
             </h2>
             <div className="font-mono text-xs text-muted-foreground/60 max-w-xs leading-relaxed shrink-0">
-              Não é vídeo gravado. Não é demonstração ensaiada.<br />É o app rodando ao vivo com produto real.
+              {lv.disclaimer.split("\n").map((line, i) => <span key={i}>{line}{i === 0 ? <br /> : null}</span>)}
             </div>
           </div>
 
-          {/* Live preview badge */}
           <div className={`flex items-center gap-3 border border-primary/30 bg-primary/5 px-5 py-4 mb-10 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "100ms" }}>
             <div className="flex items-center gap-2 shrink-0">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="font-mono text-xs font-black uppercase tracking-widest text-primary">Ao Vivo</span>
+              <span className="font-mono text-xs font-black uppercase tracking-widest text-primary">{lv.live_badge}</span>
             </div>
             <div className="w-px h-4 bg-border/40" />
-            <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-              Durante o evento você vai assistir o NexOS AI montando e executando uma campanha de vendas completa — da estratégia ao primeiro disparo — sem corte, sem edição, sem roteiro.
-            </p>
+            <p className="font-mono text-xs text-muted-foreground leading-relaxed">{lv.live_desc}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {momentos.map((m, i) => (
+            {lv.moments.map((m, i) => (
               <div
                 key={i}
                 className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
@@ -692,22 +570,16 @@ function AoVivoSection() {
             ))}
           </div>
 
-          {/* Meta-proof statement */}
           <div className={`border border-primary/40 bg-primary/8 px-7 py-6 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "620ms" }}>
-            <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary mb-3">A PROVA MAIS PODEROSA</div>
-            <p className="font-mono text-base text-foreground leading-relaxed font-bold">
-              Se você está lendo isso, foi porque o NexOS AI executou uma campanha de vendas para te trazer até aqui.
-            </p>
-            <p className="font-mono text-sm text-muted-foreground leading-relaxed mt-2">
-              O evento, as mensagens, o email que você recebeu, o anúncio que você viu — tudo foi gerado e disparado pela IA. Você já é a prova de que funciona. Agora é sua vez de usar isso para vender o que você tem.
-            </p>
+            <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary mb-3">{lv.proof_label}</div>
+            <p className="font-mono text-base text-foreground leading-relaxed font-bold">{lv.proof_p1}</p>
+            <p className="font-mono text-sm text-muted-foreground leading-relaxed mt-2">{lv.proof_p2}</p>
             <a href="#oferta" className="inline-block mt-5">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs px-8">
-                GARANTIR MINHA VAGA NA LIVE <ArrowRight className="h-4 w-4" />
+                {lv.proof_cta} <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
-
         </div>
       </div>
       <ScrollHint />
@@ -715,69 +587,43 @@ function AoVivoSection() {
   );
 }
 
-// ─── Section 8: O QUE ESTÁ EM JOGO ───────────────────────────────────────────
-// Objetivo: o visitante precisa sentir o custo de não agir — não como
-// funcionalidade perdida, mas como realidade concreta que se acumula.
+// ─── Section 8: O QUE ESTÁ EM JOGO ────────────────────────────────────────────
 function EmJogoSection() {
   const { ref, inView } = useInView(0.2);
-  const calculos = [
-    {
-      icon: Clock,
-      titulo: "Tempo que você nunca recupera",
-      dado: "40h por lançamento · R$800/h de oportunidade",
-      detalhe: "Em 6 lançamentos por ano: 240h de execução manual que você nunca vai ter de volta. Se sua hora vale R$800 (e após um lançamento, vale mais), você está queimando R$192.000 em execução que a IA faz por uma fração disso.",
-    },
-    {
-      icon: TrendingDown,
-      titulo: "Sua base esquecendo quem você é agora",
-      dado: "−7% de taxa de abertura por semana parada",
-      detalhe: "Uma lista de 3.000 pessoas sem sequência ativa há 6 semanas já perdeu ~40% de engajamento. O lead que abriria o carrinho hoje por R$1.200 vai precisar de R$80 em remarketing para ser reaquecido — se ainda responder.",
-    },
-    {
-      icon: Target,
-      titulo: "A diferença entre copy mediana e copy de máquina",
-      dado: "1.8% vs 6.4% de conversão em carrinho",
-      detalhe: "Em R$15k de tráfego investido e 800 leads, essa diferença é 14 vendas vs 51 vendas. Com ticket de R$997: R$13.958 vs R$50.847. A IA não cansa, não tem bloqueio criativo e não esquece o PS.",
-    },
-    {
-      icon: Activity,
-      titulo: "O concorrente que já decidiu",
-      dado: "6 lançamentos no ano dele. 1 ou 2 no seu.",
-      detalhe: "Ele não é mais talentoso que você. Ele só parou de executar manualmente antes. Cada lançamento que ele faz constrói lista, prova social e dados que você vai precisar de anos para recuperar. A janela para entrar na frente está fechando.",
-    },
-  ];
-
+  const { t } = useI18n();
+  const sk = t.stake;
+  const icons = [Clock, TrendingDown, Target, Activity];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">O QUE ESTÁ EM JOGO</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">{sk.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            Cada semana sem isso<br />
-            <span className="text-destructive/80">tem um custo calculável.</span>
+            {sk.h2_1}<br /><span className="text-destructive/80">{sk.h2_2}</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Não é hipérbole de marketing. É aritmética. O que você está perdendo enquanto não toma a decisão é mensurável — e se acumula enquanto você lê isso.
-          </p>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">{sk.p}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {calculos.map(({ icon: Icon, titulo, dado, detalhe }, i) => (
-              <div
-                key={i}
-                className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                style={{ transitionDelay: `${i * 100}ms` }}
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <Icon className="h-5 w-5 text-destructive/50 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-0.5">{titulo}</div>
-                    <div className="font-mono text-xs text-destructive/60 font-bold">{dado}</div>
+            {sk.items.map(({ titulo, dado, detalhe }, i) => {
+              const Icon = icons[i]!;
+              return (
+                <div
+                  key={i}
+                  className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                  style={{ transitionDelay: `${i * 100}ms` }}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <Icon className="h-5 w-5 text-destructive/50 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-0.5">{titulo}</div>
+                      <div className="font-mono text-xs text-destructive/60 font-bold">{dado}</div>
+                    </div>
+                  </div>
+                  <div className="border-l-2 border-border/40 pl-3 ml-8">
+                    <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{detalhe}</p>
                   </div>
                 </div>
-                <div className="border-l-2 border-border/40 pl-3 ml-8">
-                  <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{detalhe}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -786,29 +632,24 @@ function EmJogoSection() {
   );
 }
 
-// ─── Section 9: A JANELA — Preparação para o preço ────────────────────────────
-// Objetivo: criar antecipação para o momento do carrinho sem explicar
-// a mecânica de aquecimento. O visitante deve querer entrar — não entender
-// que está sendo aquecido.
+// ─── Section 9: A JANELA ──────────────────────────────────────────────────────
 function JanelaSection() {
   const { ref, inView } = useInView(0.2);
-
+  const { t } = useI18n();
+  const w = t.window;
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">UMA DECISÃO. UMA JANELA.</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">{w.label}</div>
           <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-            O carrinho vai abrir<br />uma única vez<br />
-            <span className="text-primary">neste preço. Para esta lista.</span>
+            {w.h2_1}<br />{w.h2_2}<br />
+            <span className="text-primary">{w.h2_3}</span>
           </h2>
-
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            Quando acontecer, quem está na lista recebe o acesso primeiro — com uma condição que não vai existir depois disso. <strong className="text-foreground">Não existe segunda data. Não existe reabertura. Não existe "me avisa quando abrir de novo".</strong>
+            {w.p}<strong className="text-foreground">{w.p_bold}</strong>
           </p>
 
-          {/* Community signal */}
           <div className={`flex items-center gap-3 mb-10 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "100ms" }}>
             <div className="flex -space-x-2">
               {["#7c3aed","#6d28d9","#5b21b6","#4c1d95","#3b0764"].map((bg, i) => (
@@ -818,35 +659,13 @@ function JanelaSection() {
               ))}
             </div>
             <span className="font-mono text-xs text-muted-foreground">
-              <strong className="text-foreground">+{Math.floor(Date.now() / 10000) % 200 + 847} pessoas</strong> já garantiram a condição de Fundador
+              <strong className="text-foreground">+{Math.floor(Date.now() / 10000) % 200 + 847}</strong>{w.community}
             </span>
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-            {[
-              {
-                num: "01",
-                titulo: "Na abertura",
-                desc: "O carrinho abre. Quem está na lista recebe o link antes de qualquer pessoa — com a condição exclusiva já aplicada.",
-                cor: "text-muted-foreground",
-                destaque: false,
-              },
-              {
-                num: "02",
-                titulo: "Nas primeiras 24h",
-                desc: "O preço de Fundador existe por exatamente 24 horas. Não é retórica — é o mecanismo de precificação. Depois disso, muda. Sem negociação.",
-                cor: "text-primary",
-                destaque: true,
-              },
-              {
-                num: "03",
-                titulo: "Depois das 24h",
-                desc: "A janela fecha. Preço cheio. Sem cupom, sem conversa, sem reabertura. Quem não estava na lista nunca saberá o que perdeu — e isso é intencional.",
-                cor: "text-destructive/70",
-                destaque: false,
-              },
-            ].map((item, i) => (
+            {w.slots.map((item, i) => (
               <div
                 key={i}
                 className={`border ${item.destaque ? "border-primary/40 bg-primary/8" : "border-border/30 bg-card/20"} p-7 flex flex-col gap-4 transition-all duration-600 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
@@ -859,7 +678,7 @@ function JanelaSection() {
                 </div>
                 {item.destaque && (
                   <div className="mt-auto border border-primary/30 bg-primary/5 px-3 py-2">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">← Só para quem está na lista</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">{w.only_list}</span>
                   </div>
                 )}
               </div>
@@ -868,18 +687,15 @@ function JanelaSection() {
 
           <div className="border border-primary/20 bg-primary/5 px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <div className="font-mono text-xs uppercase tracking-widest text-primary font-bold mb-1">A única forma de garantir a condição de Fundador</div>
-              <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                Entrar na lista agora. Quando o carrinho abrir, você é o primeiro a saber — e a condição que existe só nas primeiras 24h vai estar esperando por você.
-              </p>
+              <div className="font-mono text-xs uppercase tracking-widest text-primary font-bold mb-1">{w.box_label}</div>
+              <p className="font-mono text-sm text-muted-foreground leading-relaxed">{w.box_p}</p>
             </div>
             <a href="#oferta" className="shrink-0">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 px-10 gap-3 whitespace-nowrap">
-                GARANTIR MINHA VAGA <ArrowRight className="h-4 w-4" />
+                {w.box_cta} <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
-
         </div>
       </div>
       <ScrollHint />
@@ -890,6 +706,8 @@ function JanelaSection() {
 // ─── Section 10: OFERTA FINAL ─────────────────────────────────────────────────
 function OfferSection() {
   const { ref, inView } = useInView(0.15);
+  const { t } = useI18n();
+  const o = t.offer;
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -921,22 +739,9 @@ function OfferSection() {
       } else {
         toast.error("Erro ao entrar na lista.");
       }
-    } catch { toast.error("Erro de conexão."); }
+    } catch { toast.error(o.error_conn); }
     finally { setLoading(false); }
   };
-
-  const includes = [
-    "44 agentes de IA especializados em vendas, copy, tráfego e automação",
-    "Plano completo de vendas gerado em 47 minutos — estratégia, mensagens, cronograma",
-    "Sequências automáticas de email e WhatsApp com o timing certo para cada contato",
-    "Abertura e fechamento do período de vendas 100% automatizado com urgência real",
-    "Identificação automática de quem está pronto para comprar na sua lista",
-    "Rastreamento preciso de vendas: Meta Ads, Google, TikTok com dados reais do servidor",
-    "Todos os dados de cada contato dentro da lei de privacidade (LGPD) — automático",
-    "Painel de resultados em tempo real com alertas quando algo precisa de atenção",
-    "IA que aprende qual horário cada contato prefere receber mensagens e ajusta automaticamente",
-    "Acesso antecipado a novas funcionalidades + onboarding + grupo privado de Fundadores",
-  ];
 
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-primary/20" id="oferta">
@@ -944,25 +749,22 @@ function OfferSection() {
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
 
           <div className="text-center mb-14">
-            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">LISTA DE FUNDADORES</div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">{o.label}</div>
             <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-              O valor real só aparece<br />na hora que o carrinho<br />
-              <span className="text-primary">abre. Mas a decisão é agora.</span>
+              {o.h2_1}<br />{o.h2_2}<br />
+              <span className="text-primary">{o.h2_3}</span>
             </h2>
             <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              Quem vê o que o NexOS AI executa acha barato de qualquer jeito.{" "}
-              <strong className="text-foreground">Quem está nessa lista recebe a condição de Fundador antes de qualquer pessoa. Por 24 horas. Só essa vez. Depois, o preço muda — e não volta.</strong>
+              {o.p}<strong className="text-foreground">{o.p_bold}</strong>
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-            {/* Left — O que está incluso */}
             <div className="border border-primary/20 bg-primary/5 p-7">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">O que você vai ter acesso</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">{o.includes_label}</div>
               <ul className="space-y-2.5 mb-8">
-                {includes.map((feat) => (
-                  <li key={feat} className="flex items-start gap-2.5">
+                {o.includes.map((feat, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
                     <span className="font-mono text-xs text-foreground/80 leading-relaxed">{feat}</span>
                   </li>
@@ -970,71 +772,49 @@ function OfferSection() {
               </ul>
               <div className="border-t border-primary/20 pt-5 space-y-3">
                 <div>
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Custo equivalente contratando separado</div>
-                  <div className="font-mono font-black text-2xl text-destructive/60 line-through">R$31.000 – R$83.000/mês</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">{o.cost_label}</div>
+                  <div className="font-mono font-black text-2xl text-destructive/60 line-through">{o.cost_value}</div>
                 </div>
                 <div className="border border-primary/30 bg-primary/5 px-4 py-3">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">Preço de Fundador (24h)</div>
-                  <div className="font-mono font-black text-xl text-foreground">Revelado na abertura do carrinho</div>
-                  <div className="font-mono text-[11px] text-muted-foreground mt-1">Só para quem está nessa lista. Nunca mais este valor.</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">{o.price_label}</div>
+                  <div className="font-mono font-black text-xl text-foreground">{o.price_value}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground mt-1">{o.price_note}</div>
                 </div>
               </div>
             </div>
 
-            {/* Right — Formulário */}
             <div className="border border-border/30 bg-card/20 p-7 flex flex-col">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-1">Lista de Fundadores</div>
-              <h3 className="font-mono font-black uppercase text-xl tracking-tight text-foreground mb-2">
-                Garanta a condição das 24h.
-              </h3>
-              <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
-                Preencha abaixo. Na hora que o carrinho abrir, você recebe o acesso primeiro — com o link direto para a oferta de Fundador. Depois das 24h, essa condição fecha para sempre.
-              </p>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-1">{o.form_label}</div>
+              <h3 className="font-mono font-black uppercase text-xl tracking-tight text-foreground mb-2">{o.form_h3}</h3>
+              <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">{o.form_p}</p>
 
               {joined ? (
                 <div className="flex items-center gap-3 border border-primary/30 bg-primary/5 px-4 py-5 mt-auto">
                   <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                   <div>
-                    <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">Vaga confirmada!</div>
-                    <div className="font-mono text-[11px] text-muted-foreground">Redirecionando para sua página de acesso...</div>
+                    <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">{o.confirmed_title}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground">{o.confirmed_desc}</div>
                   </div>
                 </div>
               ) : (
                 <form onSubmit={handleWaitlist} className="space-y-3 flex-1 flex flex-col">
                   <div className="space-y-1">
-                    <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Seu nome</Label>
-                    <Input
-                      required
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      placeholder="Como você se chama?"
-                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-sans"
-                    />
+                    <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{o.field_name}</Label>
+                    <Input required value={name} onChange={e => setName(e.target.value)} placeholder={o.field_name_ph}
+                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-sans" />
                   </div>
                   <div className="space-y-1">
-                    <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">WhatsApp (com DDD)</Label>
-                    <Input
-                      required
-                      value={whatsapp}
-                      onChange={e => setWhatsapp(formatWA(e.target.value))}
-                      placeholder="(11) 99999-9999"
-                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-mono"
-                    />
+                    <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{o.field_wa}</Label>
+                    <Input required value={whatsapp} onChange={e => setWhatsapp(formatWA(e.target.value))} placeholder={o.field_wa_ph}
+                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-mono" />
                   </div>
                   <div className="mt-auto pt-2">
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 gap-2"
-                    >
-                      {loading
-                        ? "Verificando..."
-                        : <><ArrowRight className="h-4 w-4" /> VER O INVESTIMENTO E GARANTIR VAGA</>
-                      }
+                    <Button type="submit" disabled={loading}
+                      className="w-full btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 gap-2">
+                      {loading ? o.btn_loading : <><ArrowRight className="h-4 w-4" /> {o.btn_submit}</>}
                     </Button>
                     <div className="flex items-center justify-center gap-2 mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
-                      <Shield className="h-3 w-3" />
-                      Sem spam · Você recebe o link na abertura
+                      <Shield className="h-3 w-3" />{o.no_spam}
                     </div>
                   </div>
                 </form>
@@ -1046,12 +826,10 @@ function OfferSection() {
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
               <span className="font-mono text-xs text-foreground/80">
-                <strong>Acesso por lista.</strong> Quando o carrinho abrir, você é o primeiro — com a condição de Fundador garantida.
+                <strong>{o.bottom_text}</strong> {o.bottom_sub}
               </span>
             </div>
-            <span className="font-mono text-[10px] uppercase tracking-widest text-destructive/50 shrink-0">
-              Cada semana sem isso é receita que fica na mesa
-            </span>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-destructive/50 shrink-0">{o.bottom_warn}</span>
           </div>
 
         </div>
@@ -1080,7 +858,6 @@ export default function Landing() {
       className="bg-background text-foreground"
     >
       <Nav scrolled={scrolled} />
-
       <HeroSection />
       <FeriadaSection />
       <CustoRealSection />

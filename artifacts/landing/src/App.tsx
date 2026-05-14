@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import Landing from "@/pages/landing";
 import SimulatorPage from "@/pages/simulator";
 import NotFound from "@/pages/not-found";
+import { LangProvider } from "@/lib/i18n";
 
 const queryClient = new QueryClient();
 
@@ -20,10 +21,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <Router />
-      </WouterRouter>
-      <Toaster richColors />
+      <LangProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <Router />
+        </WouterRouter>
+        <Toaster richColors />
+      </LangProvider>
     </QueryClientProvider>
   );
 }

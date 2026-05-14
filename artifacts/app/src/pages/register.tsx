@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
+import { useAppI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,8 @@ export default function Register() {
   const [plan, setPlan]                   = useState("solo");
   const [, setLocation]                   = useLocation();
   const { setToken }                      = useAuth();
+  const tr = useAppI18n();
+  const t = tr.register;
 
   // Derived validation
   const emailMatch    = confirmEmail.length > 0 ? email === confirmEmail : null;
@@ -53,11 +56,11 @@ export default function Register() {
       onSuccess: (data) => {
         const raw = data as typeof data & { refreshToken?: string };
         setToken(data.accessToken, raw.refreshToken);
-        toast.success("Conta criada com sucesso!");
+        toast.success(t.success);
         setLocation("/onboarding");
       },
       onError: () => {
-        toast.error("Falha ao criar acesso. Email pode já estar em uso.");
+        toast.error(t.error);
       },
     },
   });
@@ -92,7 +95,7 @@ export default function Register() {
             style={{ imageRendering: "crisp-edges", filter: "drop-shadow(0 0 20px hsl(var(--primary)/0.6))" }}
           />
           <p className="text-primary text-sm uppercase tracking-[0.3em] font-mono mt-3 font-bold drop-shadow-[0_0_5px_hsl(var(--primary)/0.8)]">
-            Novo Registro
+            {t.tagline}
           </p>
         </div>
 
@@ -108,7 +111,7 @@ export default function Register() {
             {/* Nome */}
             <div className="space-y-2">
               <Label htmlFor="name" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Nome Completo <span className="text-destructive">*</span>
+                {t.name_label} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
@@ -116,7 +119,7 @@ export default function Register() {
                 autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="João Silva"
+                placeholder={t.name_ph}
                 className={inputClass}
               />
             </div>
@@ -124,7 +127,7 @@ export default function Register() {
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                E-mail <span className="text-destructive">*</span>
+                {t.email_label} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="email"
@@ -133,7 +136,7 @@ export default function Register() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="voce@email.com"
+                placeholder={t.email_ph}
                 className={inputClass}
               />
             </div>
@@ -141,7 +144,7 @@ export default function Register() {
             {/* Confirmar Email */}
             <div className="space-y-2">
               <Label htmlFor="confirmEmail" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Confirmar E-mail <span className="text-destructive">*</span>
+                {t.email_confirm_label} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="confirmEmail"
@@ -150,19 +153,19 @@ export default function Register() {
                 autoComplete="off"
                 value={confirmEmail}
                 onChange={(e) => setConfirmEmail(e.target.value)}
-                placeholder="voce@email.com"
+                placeholder={t.email_confirm_ph}
                 className={`${inputClass} ${emailMatch === false ? "border-destructive/60 focus-visible:border-destructive" : emailMatch === true ? "border-success/60" : ""}`}
               />
               <FieldStatus
                 ok={emailMatch}
-                msg={emailMatch === true ? "E-mails conferem" : "E-mails não conferem"}
+                msg={emailMatch === true ? t.match_ok : t.match_err}
               />
             </div>
 
             {/* Telefone */}
             <div className="space-y-2">
               <Label htmlFor="phone" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Telefone / WhatsApp <span className="text-muted-foreground/40">(opcional)</span>
+                {t.phone_label}
               </Label>
               <Input
                 id="phone"
@@ -170,7 +173,7 @@ export default function Register() {
                 autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+55 11 99999-9999"
+                placeholder={t.phone_ph}
                 className={inputClass}
               />
             </div>
@@ -179,7 +182,7 @@ export default function Register() {
             {phone.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="confirmPhone" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                  Confirmar Telefone
+                  {t.phone_confirm_label}
                 </Label>
                 <Input
                   id="confirmPhone"
@@ -187,12 +190,12 @@ export default function Register() {
                   autoComplete="off"
                   value={confirmPhone}
                   onChange={(e) => setConfirmPhone(e.target.value)}
-                  placeholder="+55 11 99999-9999"
+                  placeholder={t.phone_confirm_ph}
                   className={`${inputClass} ${phoneMatch === false ? "border-destructive/60" : phoneMatch === true ? "border-success/60" : ""}`}
                 />
                 <FieldStatus
                   ok={phoneMatch}
-                  msg={phoneMatch === true ? "Telefones conferem" : "Telefones não conferem"}
+                  msg={phoneMatch === true ? t.match_ok : t.match_err}
                 />
               </div>
             )}
@@ -200,7 +203,7 @@ export default function Register() {
             {/* Senha */}
             <div className="space-y-2">
               <Label htmlFor="password" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Senha <span className="text-destructive">*</span>
+                {t.password_label} <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -210,7 +213,7 @@ export default function Register() {
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder={t.password_ph}
                   className={`${inputClass} pr-11 ${password.length > 0 && !passStrong ? "border-destructive/60" : password.length >= 8 ? "border-success/60" : ""}`}
                 />
                 <button
@@ -225,7 +228,7 @@ export default function Register() {
               {password.length > 0 && (
                 <FieldStatus
                   ok={passStrong}
-                  msg={passStrong ? "Senha forte o suficiente" : "Mínimo 8 caracteres"}
+                  msg={passStrong ? t.strong_pass : t.weak_pass}
                 />
               )}
             </div>
@@ -233,7 +236,7 @@ export default function Register() {
             {/* Confirmar Senha */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Confirmar Senha <span className="text-destructive">*</span>
+                {t.password_confirm_label} <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Input
@@ -243,7 +246,7 @@ export default function Register() {
                   autoComplete="new-password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repita a senha"
+                  placeholder={t.password_confirm_ph}
                   className={`${inputClass} pr-11 ${passMatch === false ? "border-destructive/60" : passMatch === true ? "border-success/60" : ""}`}
                 />
                 <button
@@ -257,25 +260,25 @@ export default function Register() {
               </div>
               <FieldStatus
                 ok={passMatch}
-                msg={passMatch === true ? "Senhas conferem" : "Senhas não conferem"}
+                msg={passMatch === true ? t.match_ok : t.match_err}
               />
             </div>
 
             {/* Plano */}
             <div className="space-y-2">
               <Label htmlFor="plan" className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                Nível Operacional (Plano)
+                {t.plan_label}
               </Label>
               <Select value={plan} onValueChange={setPlan}>
                 <SelectTrigger className="font-mono rounded-none bg-background/50 border-border/50 focus:ring-primary focus:border-primary transition-all">
-                  <SelectValue placeholder="Selecione o plano" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-none border-primary/20 backdrop-blur-xl bg-card/80">
                   <SelectItem value="solo" className="font-mono uppercase text-xs tracking-wider focus:bg-primary/20 focus:text-primary">
-                    Lançador Solo
+                    {t.plan_solo}
                   </SelectItem>
                   <SelectItem value="agency" className="font-mono uppercase text-xs tracking-wider focus:bg-primary/20 focus:text-primary">
-                    Agência (Múltiplos Clientes)
+                    {t.plan_agency}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -286,21 +289,15 @@ export default function Register() {
               className="w-full rounded-none font-mono uppercase tracking-widest font-bold btn-weapon-primary mt-2 h-12"
               disabled={registerMutation.isPending || !canSubmit}
             >
-              {registerMutation.isPending ? "Processando..." : "Criar Minha Conta"}
+              {registerMutation.isPending ? t.submitting : t.submit}
             </Button>
-
-            {!canSubmit && (name || email || password) && (
-              <p className="text-xs font-mono text-muted-foreground/50 uppercase tracking-widest text-center">
-                Preencha todos os campos obrigatórios e confirme email e senha para continuar
-              </p>
-            )}
           </form>
 
           <div className="mt-6 text-center relative z-10 border-t border-border/30 pt-6">
-            <span className="text-xs text-muted-foreground font-mono uppercase tracking-wide">Já possui acesso? </span>
+            <span className="text-xs text-muted-foreground font-mono uppercase tracking-wide">{t.have_account} </span>
             <Link href="/login">
               <span className="text-xs text-primary uppercase font-bold hover:text-white hover:drop-shadow-[0_0_5px_hsl(var(--primary))] transition-all cursor-pointer tracking-wide ml-2">
-                Entrar
+                {t.login_link}
               </span>
             </Link>
           </div>
