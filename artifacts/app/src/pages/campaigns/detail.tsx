@@ -469,7 +469,7 @@ function PlatformMockCard({
   brief, state, onApprove, onRevise,
 }: {
   brief: PlatformBrief;
-  state: "pending" | "approved" | "revised";
+  state: "pending" | "approved" | "editing";
   onApprove: () => void;
   onRevise: () => void;
 }) {
@@ -482,9 +482,7 @@ function PlatformMockCard({
         <span className={`font-mono text-[11px] uppercase tracking-widest font-bold flex-1 ${m.col}`}>{m.label}</span>
         <span className="font-mono text-[9px] text-muted-foreground/40 truncate max-w-[80px]">{brief.format}</span>
         {state !== "pending" && (
-          <span className={`font-mono text-[9px] uppercase shrink-0 ${state === "approved" ? "text-success" : "text-yellow-400"}`}>
-            {state === "approved" ? "✓" : "↻"}
-          </span>
+          <span className="font-mono text-[9px] uppercase shrink-0 text-success">✓</span>
         )}
       </div>
 
@@ -646,12 +644,6 @@ function PlatformMockCard({
           <CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Desfazer
         </button>
       )}
-      {state === "revised" && (
-        <button onClick={onApprove}
-          className="border-t border-yellow-400/20 py-2 w-full font-mono text-[10px] uppercase tracking-widest text-yellow-400 flex items-center justify-center gap-1 hover:bg-yellow-400/5 transition-colors">
-          ↻ Para revisão — Aprovar assim mesmo
-        </button>
-      )}
     </div>
   );
 }
@@ -704,7 +696,7 @@ function StrategyApprovalBoard({
   targetingD: Record<string, unknown>;
   timelineD: Record<string, unknown>;
   intakeD: Record<string, unknown>;
-  onProceed: () => void;
+  onProceed: (notes: Record<string, string>) => void;
   proceedLoading: boolean;
 }) {
   const briefs = useMemo(
@@ -713,20 +705,30 @@ function StrategyApprovalBoard({
   );
   const insights = useMemo(() => parseStrategyInsights(strategyD), [strategyD]);
 
-  type ApprovalState = "pending" | "approved" | "revised";
+  type ApprovalState = "pending" | "approved" | "editing";
   const [secA, setSecA] = useState<ApprovalState>("pending");
   const [secB, setSecB] = useState<ApprovalState>("pending");
   const [secC, setSecC] = useState<ApprovalState>("pending");
   const [platStates, setPlatStates] = useState<Record<PlatformId, ApprovalState>>({
     instagram: "pending", tiktok: "pending", facebook: "pending", whatsapp: "pending", email: "pending",
   });
+  const [userNotes, setUserNotes] = useState<Record<string, string>>({});
+  const [savedNotes, setSavedNotes] = useState<Record<string, string>>({});
 
-  const allDecided = secA !== "pending" && secB !== "pending" && secC !== "pending" && briefs.every(b => platStates[b.platform] !== "pending");
-  const hasRevisions = secA === "revised" || secB === "revised" || secC === "revised" || briefs.some(b => platStates[b.platform] === "revised");
+  const allDecided = secA !== "pending" && secA !== "editing" && secB !== "pending" && secB !== "editing" && secC !== "pending" && secC !== "editing" && briefs.every(b => platStates[b.platform] !== "pending" && platStates[b.platform] !== "editing");
+  const hasNotes = Object.values(savedNotes).some(v => v?.trim());
+
+  const setNote = (key: string, val: string) => setUserNotes(prev => ({ ...prev, [key]: val }));
+  const saveNote = (key: string, sec: (s: ApprovalState) => void) => {
+    const note = userNotes[key]?.trim() ?? "";
+    setSavedNotes(prev => ({ ...prev, [key]: note }));
+    sec("approved");
+  };
 
   const approveAll = () => {
     setSecA("approved"); setSecB("approved"); setSecC("approved");
     setPlatStates({ instagram: "approved", tiktok: "approved", facebook: "approved", whatsapp: "approved", email: "approved" });
+    setTimeout(() => onProceed(savedNotes), 80);
   };
   const setPlt = (p: PlatformId, s: ApprovalState) => setPlatStates(prev => ({ ...prev, [p]: s }));
 
@@ -768,9 +770,9 @@ function StrategyApprovalBoard({
             </div>
           </div>
         </div>
-        <button onClick={approveAll}
-          className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-success border border-border/40 hover:border-success/40 px-3 py-1.5 transition-colors whitespace-nowrap shrink-0">
-          Aprovar Tudo
+        <button onClick={approveAll} disabled={proceedLoading}
+          className="font-mono text-[11px] uppercase tracking-widest text-success border border-success/40 hover:bg-success/10 px-3 py-1.5 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 disabled:opacity-50">
+          {proceedLoading ? <><Loader2 className="h-3 w-3 animate-spin" />Gerando...</> : <><Zap className="h-3 w-3" />Aprovar Tudo e Gerar</>}
         </button>
       </div>
 
@@ -845,23 +847,54 @@ function StrategyApprovalBoard({
               );
             })}
           </div>
+          {secA === "editing" && (
+            <div className="pt-1 space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/80 font-bold flex items-center gap-1.5">
+                <XCircle className="h-3 w-3" />Instruções de ajuste — Segmentação
+              </div>
+              <textarea
+                className="w-full bg-card/40 border border-yellow-400/30 text-foreground/90 font-mono text-xs p-3 resize-none placeholder:text-muted-foreground/40 focus:outline-none focus:border-yellow-400/60"
+                rows={4}
+                placeholder="Ex: quero tráfego pago com geolocalização nas academias da cidade, raio de 5km por unidade, combinar com orgânico no Instagram..."
+                value={userNotes["secA"] ?? ""}
+                onChange={e => setNote("secA", e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => saveNote("secA", setSecA)}
+                  className="py-2 border border-yellow-400/40 bg-yellow-400/10 hover:bg-yellow-400/15 font-mono text-[10px] uppercase tracking-widest text-yellow-400 flex items-center justify-center gap-1.5 transition-colors">
+                  <CheckCircle2 className="h-3 w-3" />Salvar & Aprovar
+                </button>
+                <button onClick={() => setSecA("pending")}
+                  className="py-2 border border-border/40 hover:bg-muted/20 font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
           {secA === "pending" && (
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button onClick={() => setSecA("approved")}
                 className="py-2.5 border border-success/30 bg-success/5 hover:bg-success/10 font-mono text-[11px] uppercase tracking-widest text-success flex items-center justify-center gap-1.5 transition-colors">
                 <CheckCircle2 className="h-3 w-3" />Aprovar Segmentação
               </button>
-              <button onClick={() => setSecA("revised")}
-                className="py-2.5 border border-border/40 hover:bg-muted/20 font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
-                <XCircle className="h-3 w-3" />Solicitar Revisão
+              <button onClick={() => setSecA("editing")}
+                className="py-2.5 border border-yellow-400/30 hover:bg-yellow-400/10 font-mono text-[11px] uppercase tracking-widest text-yellow-400 flex items-center justify-center gap-1.5 transition-colors">
+                <XCircle className="h-3 w-3" />Editar & Ajustar
               </button>
             </div>
           )}
-          {secA !== "pending" && (
-            <button onClick={() => setSecA("pending")}
-              className={`w-full py-2 border font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors ${secA === "approved" ? "border-success/20 text-success hover:bg-success/5" : "border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/5"}`}>
-              {secA === "approved" ? <><CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para alterar</> : <>↻ Para revisão · Aprovar assim mesmo</>}
-            </button>
+          {secA === "approved" && (
+            <div className="space-y-1 pt-1">
+              {savedNotes["secA"] && (
+                <div className="border border-yellow-400/20 bg-yellow-400/5 p-2 font-mono text-[10px] text-yellow-400/80">
+                  <span className="text-muted-foreground/50 uppercase">Instrução salva: </span>{savedNotes["secA"]}
+                </div>
+              )}
+              <button onClick={() => setSecA("editing")}
+                className="w-full py-2 border border-success/20 text-success hover:bg-success/5 font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors">
+                <CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para editar instrução
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -884,7 +917,7 @@ function StrategyApprovalBoard({
                 brief={b}
                 state={platStates[b.platform]}
                 onApprove={() => setPlt(b.platform, "approved")}
-                onRevise={() => setPlt(b.platform, platStates[b.platform] === "approved" ? "pending" : "revised")}
+                onRevise={() => setPlt(b.platform, "pending")}
               />
             ))}
           </div>
@@ -995,23 +1028,54 @@ function StrategyApprovalBoard({
               }} />
             </div>
           )}
+          {secC === "editing" && (
+            <div className="pt-1 space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-orange-400/80 font-bold flex items-center gap-1.5">
+                <XCircle className="h-3 w-3" />Instruções de ajuste — Tráfego & Alcance
+              </div>
+              <textarea
+                className="w-full bg-card/40 border border-orange-400/30 text-foreground/90 font-mono text-xs p-3 resize-none placeholder:text-muted-foreground/40 focus:outline-none focus:border-orange-400/60"
+                rows={4}
+                placeholder="Ex: quero tráfego PAGO nas academias da cidade usando geolocalização por raio de 5km em cada unidade, combinar Meta Ads + Google Ads, aumentar número de inserções semanais para pelo menos 5 por plataforma..."
+                value={userNotes["secC"] ?? ""}
+                onChange={e => setNote("secC", e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => saveNote("secC", setSecC)}
+                  className="py-2 border border-orange-400/40 bg-orange-400/10 hover:bg-orange-400/15 font-mono text-[10px] uppercase tracking-widest text-orange-400 flex items-center justify-center gap-1.5 transition-colors">
+                  <CheckCircle2 className="h-3 w-3" />Salvar & Aprovar
+                </button>
+                <button onClick={() => setSecC("pending")}
+                  className="py-2 border border-border/40 hover:bg-muted/20 font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
           {secC === "pending" && (
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button onClick={() => setSecC("approved")}
                 className="py-2.5 border border-success/30 bg-success/5 hover:bg-success/10 font-mono text-[11px] uppercase tracking-widest text-success flex items-center justify-center gap-1.5 transition-colors">
                 <CheckCircle2 className="h-3 w-3" />Aprovar Plano de Tráfego
               </button>
-              <button onClick={() => setSecC("revised")}
-                className="py-2.5 border border-border/40 hover:bg-muted/20 font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
-                <XCircle className="h-3 w-3" />Solicitar Revisão
+              <button onClick={() => setSecC("editing")}
+                className="py-2.5 border border-orange-400/30 hover:bg-orange-400/10 font-mono text-[11px] uppercase tracking-widest text-orange-400 flex items-center justify-center gap-1.5 transition-colors">
+                <XCircle className="h-3 w-3" />Editar & Ajustar
               </button>
             </div>
           )}
-          {secC !== "pending" && (
-            <button onClick={() => setSecC("pending")}
-              className={`w-full py-2 border font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors ${secC === "approved" ? "border-success/20 text-success hover:bg-success/5" : "border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/5"}`}>
-              {secC === "approved" ? <><CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para alterar</> : <>↻ Para revisão</>}
-            </button>
+          {secC === "approved" && (
+            <div className="space-y-1 pt-1">
+              {savedNotes["secC"] && (
+                <div className="border border-orange-400/20 bg-orange-400/5 p-2 font-mono text-[10px] text-orange-400/80">
+                  <span className="text-muted-foreground/50 uppercase">Instrução salva: </span>{savedNotes["secC"]}
+                </div>
+              )}
+              <button onClick={() => setSecC("editing")}
+                className="w-full py-2 border border-success/20 text-success hover:bg-success/5 font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors">
+                <CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para editar instrução
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1048,51 +1112,82 @@ function StrategyApprovalBoard({
               <PlanText value={strategyD["successMetrics"] as Record<string, unknown>} />
             </div>
           ) : null}
+          {secB === "editing" && (
+            <div className="pt-1 space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/80 font-bold flex items-center gap-1.5">
+                <XCircle className="h-3 w-3" />Instruções de ajuste — Cronograma
+              </div>
+              <textarea
+                className="w-full bg-card/40 border border-yellow-400/30 text-foreground/90 font-mono text-xs p-3 resize-none placeholder:text-muted-foreground/40 focus:outline-none focus:border-yellow-400/60"
+                rows={4}
+                placeholder="Ex: quero mais inserções — pelo menos 15 posts antes da abertura do carrinho, dividir entre orgânico diário e pago com boosting nos melhores Reels..."
+                value={userNotes["secB"] ?? ""}
+                onChange={e => setNote("secB", e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => saveNote("secB", setSecB)}
+                  className="py-2 border border-yellow-400/40 bg-yellow-400/10 hover:bg-yellow-400/15 font-mono text-[10px] uppercase tracking-widest text-yellow-400 flex items-center justify-center gap-1.5 transition-colors">
+                  <CheckCircle2 className="h-3 w-3" />Salvar & Aprovar
+                </button>
+                <button onClick={() => setSecB("pending")}
+                  className="py-2 border border-border/40 hover:bg-muted/20 font-mono text-[10px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
           {secB === "pending" && (
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button onClick={() => setSecB("approved")}
                 className="py-2.5 border border-success/30 bg-success/5 hover:bg-success/10 font-mono text-[11px] uppercase tracking-widest text-success flex items-center justify-center gap-1.5 transition-colors">
                 <CheckCircle2 className="h-3 w-3" />Aprovar Cronograma
               </button>
-              <button onClick={() => setSecB("revised")}
-                className="py-2.5 border border-border/40 hover:bg-muted/20 font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
-                <XCircle className="h-3 w-3" />Solicitar Revisão
+              <button onClick={() => setSecB("editing")}
+                className="py-2.5 border border-yellow-400/30 hover:bg-yellow-400/10 font-mono text-[11px] uppercase tracking-widest text-yellow-400 flex items-center justify-center gap-1.5 transition-colors">
+                <XCircle className="h-3 w-3" />Editar & Ajustar
               </button>
             </div>
           )}
-          {secB !== "pending" && (
-            <button onClick={() => setSecB("pending")}
-              className={`w-full py-2 border font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors ${secB === "approved" ? "border-success/20 text-success hover:bg-success/5" : "border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/5"}`}>
-              {secB === "approved" ? <><CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para alterar</> : <>↻ Para revisão</>}
-            </button>
+          {secB === "approved" && (
+            <div className="space-y-1 pt-1">
+              {savedNotes["secB"] && (
+                <div className="border border-yellow-400/20 bg-yellow-400/5 p-2 font-mono text-[10px] text-yellow-400/80">
+                  <span className="text-muted-foreground/50 uppercase">Instrução salva: </span>{savedNotes["secB"]}
+                </div>
+              )}
+              <button onClick={() => setSecB("editing")}
+                className="w-full py-2 border border-success/20 text-success hover:bg-success/5 font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors">
+                <CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para editar instrução
+              </button>
+            </div>
           )}
         </div>
       </div>
 
       {/* Proceed CTA */}
       {allDecided && (
-        <div className={`border p-5 relative overflow-hidden ${hasRevisions ? "border-yellow-400/30 bg-yellow-400/5" : "border-primary/30 bg-primary/5"}`}>
+        <div className="border border-primary/30 bg-primary/5 p-5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-primary" />
           <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary" />
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <div className={`font-mono text-sm font-bold uppercase tracking-widest mb-1 ${hasRevisions ? "text-yellow-400" : "text-primary"}`}>
-                {hasRevisions ? "Revisões solicitadas — a IA vai ajustar" : "Tudo aprovado!"}
+              <div className="font-mono text-sm font-bold uppercase tracking-widest mb-1 text-primary">
+                Tudo aprovado — pronto para gerar!
               </div>
               <div className="text-xs font-mono text-muted-foreground/60">
-                {hasRevisions
-                  ? "A IA vai reescrever as seções marcadas antes de gerar o conteúdo final."
-                  : "A IA vai gerar todo o conteúdo agora: copy, criativos, e-mails e sequências."}
+                {hasNotes
+                  ? "Suas instruções foram salvas. A IA vai incorporar todos os ajustes ao gerar copy, criativos, e-mails e sequências."
+                  : "A IA vai gerar todo o conteúdo agora: copy, criativos, e-mails e sequências completas."}
               </div>
             </div>
             <Button
               className="font-mono uppercase tracking-widest rounded-none gap-2 h-12 px-8 w-full md:w-auto btn-weapon-primary"
-              onClick={onProceed}
+              onClick={() => onProceed(savedNotes)}
               disabled={proceedLoading}
             >
               {proceedLoading
                 ? <><Loader2 className="h-4 w-4 animate-spin" />Gerando Conteúdo...</>
-                : <><Zap className="h-4 w-4" />{hasRevisions ? "Gerar com Revisões" : "Gerar Conteúdo Completo"}</>
+                : <><Zap className="h-4 w-4" />Gerar Conteúdo Completo</>
               }
             </Button>
           </div>
@@ -1846,7 +1941,19 @@ export default function CampaignDetail() {
               targetingD={targetingD}
               timelineD={timelineD}
               intakeD={intakeD}
-              onProceed={() => {
+              onProceed={async (notes) => {
+                const hasNotes = Object.values(notes).some(v => v?.trim());
+                if (hasNotes) {
+                  try {
+                    await customFetch(`/api/campaigns/${campaignId}/directives`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ directives: notes }),
+                    });
+                  } catch {
+                    // non-blocking — proceed anyway
+                  }
+                }
                 executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
               }}
               proceedLoading={executeMutation.isPending}

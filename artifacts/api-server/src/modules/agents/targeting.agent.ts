@@ -85,9 +85,36 @@ export interface TargetingOutput {
   targetingNotes: string;
 }
 
-const TARGETING_PROMPT = `Você é o Agente de Targeting da NexOS AI — especialista em configuração de audiências para tráfego pago em lançamentos digitais.
+const TARGETING_PROMPT = `Você é o Agente de Targeting Híbrido da NexOS AI — especialista em integrar tráfego PAGO e ORGÂNICO numa estratégia unificada de lançamento digital, com domínio em geolocalização e segmentação física para negócios locais (academias, studios, clínicas, unidades físicas).
 
-Você vai além dos segmentos teóricos — você entrega as audiências prontas para configurar no Meta Business Manager, Google Ads e TikTok Ads Manager.
+Você vai além dos segmentos teóricos — você entrega as audiências prontas para configurar no Meta Business Manager, Google Ads e TikTok Ads Manager, combinadas com a estratégia orgânica de cada canal.
+
+## ESTRATÉGIA HÍBRIDA: PAGO + ORGÂNICO
+
+**Sempre planeje os dois eixos — mesmo sem orçamento confirmado:**
+- PAGO: Meta Ads, Google Ads, TikTok Ads — capture leads frios, retargeting de visitantes
+- ORGÂNICO: Reels/TikTok para topo de funil, WhatsApp VIP para base quente, e-mail para nutrição
+
+**Sinergia pago + orgânico:**
+- Orgânico cria prova social → pago amplifica com boosting dos posts mais engajados
+- Lista orgânica (e-mail/WhatsApp) → semente para Lookalike no Meta (melhor qualidade)
+- Conteúdo orgânico de autoridade → remarketing pago para quem assistiu 50%+ do vídeo
+- Google Search captura intenção ativa → Reels/TikTok criam demanda passiva
+
+## GEOLOCALIZAÇÃO PARA NEGÓCIOS FÍSICOS (ACADEMIAS, STUDIOS, CLÍNICAS)
+
+**Quando o produto tem componente físico/local, use raio geográfico:**
+- Meta: "Pessoas que vivem ou frequentam recentemente" + raio de 3-15km de cada unidade
+- Google: raio de localização por CEP/cidade de cada unidade física
+- Segmento VIP: raio de 5km de academias concorrentes (meta: captação lateral)
+- Excluir: pessoas que vivem fora do raio de atendimento (evita leads inválidos)
+
+**Estratégia para academias e fitness:**
+- Interesses: fitness, musculação, emagrecimento, crossfit, yoga, nutrição esportiva
+- Comportamentos: compradores de suplementos, ativos em apps fitness, uso de rastreador
+- Geolocalização: bairros específicos + raio das unidades + cidades da região
+- Público-alvo local: 500m a 5km de cada unidade física (criar conjunto separado por unidade)
+- Segmentos de renda: médio-alto para academias premium, médio para academias populares
 
 ## FILOSOFIA DE TARGETING
 
@@ -95,15 +122,17 @@ Você vai além dos segmentos teóricos — você entrega as audiências prontas
 - Muito pequeno (<50k): frequência sobe rápido, CPL sobe
 - Muito amplo (>5M): sem relevância, CTR baixo, CPL alto
 - Sweet spot para lançamentos: 500k - 2M por público no Meta
+- Para negócios locais: 20k-200k é aceitável por praça
 
 **A hierarquia de qualidade de audiência:**
 1. Lookalike 1% de compradores → melhor qualidade
 2. Lookalike 1% de lista engajada → ótima qualidade  
 3. Custom audience (site, vídeo, engajamento) → retargeting
-4. Interesses específicos e nichados → boa qualidade
-5. Comportamentos de compra → boa qualidade
-6. Interesses amplos → teste apenas
-7. Broad (sem targeting) → só com pixel maduro
+4. Geolocalização por raio + interesses → boa qualidade para negócios locais
+5. Interesses específicos e nichados → boa qualidade
+6. Comportamentos de compra → boa qualidade
+7. Interesses amplos → teste apenas
+8. Broad (sem targeting) → só com pixel maduro
 
 **Regras de exclusão sempre ativas:**
 - Excluir compradores de TODOS os públicos de topo de funil
@@ -254,27 +283,33 @@ Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(
     messages: [
       {
         role: "user",
-        content: `Configure todas as audiências para a campanha — Meta, Google e TikTok.
+        content: `Configure a estratégia HÍBRIDA (pago + orgânico) e todas as audiências para a campanha — Meta, Google e TikTok.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")} — categoria: ${String(intakeData["product.category"] ?? "")}
-**Budget de tráfego:** R$${String(intakeData["campaign.budget.traffic"] ?? 0)}
-**Localização:** ${String(intakeData["audience.location"] ?? "brazil_nationwide")}
+**Budget de tráfego pago:** R$${String(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.trafficBudget"] ?? 0)}
+**Localização principal:** ${String(intakeData["audience.location"] ?? "brazil_nationwide")}
+**Tem negócio físico/local (academia, studio, clínica)?** ${String(intakeData["business.hasPhysicalLocation"] ?? intakeData["product.category"] ?? "").toLowerCase().includes("academi") || String(intakeData["product.category"] ?? "").toLowerCase().includes("fitness") ? "SIM — use geolocalização por raio" : "verificar perfil"}
+**Possui endereços físicos:** ${String(intakeData["business.locations"] ?? intakeData["audience.city"] ?? "verificar dados do produto")}
 ${avatarContext}
 
 **Segmentos de audiência:**
 ${segmentsContext}
 
 **Nível de sofisticação da audiência:** ${String(intakeData["audience.sophisticationLevel"] ?? "solution_aware")}
-
 **Concorrência no mercado:** ${profile?.marketIntelligence?.competitionLevel ?? "medium"}
 
+**Diretrizes adicionais do usuário:**
+${JSON.stringify((intakeData["user_directives"] as Record<string, string> | undefined) ?? {}, null, 2)}
+
 **ENTREGÁVEIS NECESSÁRIOS:**
-- Mínimo 6 públicos no Meta (2 frios, 2 lookalike, 2 retargeting)
-- Mínimo 3 públicos no Google
+- Mínimo 8 públicos no Meta (2 frios por interesses, 2 lookalike, 2 retargeting, 2 geolocalização por raio se negócio local)
+- Mínimo 3 públicos no Google (search intent + display + remarketing)
 - Mínimo 3 públicos no TikTok
 - Configuração completa de pixel para cada plataforma
 - Estrutura de UTM padronizada
 - Lista de exclusões obrigatórias
+- Plano de sinergia: como o orgânico alimenta o pago (Lookalike seeds, boosting de Reels, etc.)
+- Se produto fitness/academia: OBRIGATÓRIO incluir pelo menos 2 públicos com raio geográfico de 3-10km
 
 Retorne APENAS o JSON de configuração de audiências.`,
       },

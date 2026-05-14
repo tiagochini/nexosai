@@ -217,6 +217,23 @@ export async function updateIntakeData(
   return updated;
 }
 
+export async function mergeIntakeDirectives(
+  campaignId: string,
+  workspaceId: string,
+  directives: Record<string, string>,
+  log: Logger,
+): Promise<Campaign> {
+  const campaign = await getCampaign(campaignId, workspaceId);
+  const merged = { ...(campaign.intakeData as Record<string, unknown> ?? {}), user_directives: directives };
+  const [updated] = await db
+    .update(campaignsTable)
+    .set({ intakeData: merged, updatedAt: new Date() })
+    .where(eq(campaignsTable.id, campaignId))
+    .returning();
+  log.info({ campaignId, directiveKeys: Object.keys(directives) }, "Campaign intake directives merged");
+  return updated;
+}
+
 export async function getCampaignWithAgents(
   campaignId: string,
   workspaceId: string,

@@ -9,6 +9,7 @@ import {
   getCampaignWithAgents,
   getCampaignLiveStats,
   DIGIT_TRACK_LABELS,
+  mergeIntakeDirectives,
 } from "./campaigns.service.js";
 import { AppError } from "../../lib/errors.js";
 
@@ -103,6 +104,25 @@ router.get("/:id/live-stats", async (req, res): Promise<void> => {
   try {
     const stats = await getCampaignLiveStats(id!, req.auth.workspaceId);
     res.json({ liveStats: stats });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.patch("/:id/directives", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  const directives = req.body?.directives as Record<string, string> | undefined;
+  if (!directives || typeof directives !== "object") {
+    res.status(400).json({ error: "directives object required", code: "VALIDATION_ERROR" });
+    return;
+  }
+  try {
+    const campaign = await mergeIntakeDirectives(id, req.auth.workspaceId, directives, req.log);
+    res.json({ campaign });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

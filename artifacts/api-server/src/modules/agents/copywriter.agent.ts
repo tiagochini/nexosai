@@ -528,7 +528,12 @@ export async function runCopywriterAgent(
 **Abertura de carrinho:** ${JSON.stringify((strategy as any).triggerMap?.cartOpen)}
 **Fechamento:** ${JSON.stringify((strategy as any).triggerMap?.cartClose)}` : "Aplicar sequência padrão: Curiosidade → Autoridade → Prova Social → Transformação → Escassez → Urgência → Medo de Perda";
 
-  const userMessage = `Escreva todo o copy da campanha — página de vendas completa, sequência completa de e-mails, scripts de WhatsApp e carrinho.
+  const userDirectives = (intakeData["user_directives"] as Record<string, string> | undefined) ?? {};
+  const directivesText = Object.entries(userDirectives).filter(([, v]) => v?.trim()).length > 0
+    ? `\n\n**DIRETRIZES ESPECÍFICAS DO CLIENTE (prioridade máxima — incorpore em todo o copy):**\n${Object.entries(userDirectives).map(([k, v]) => `- [${k}]: ${v}`).join("\n")}`
+    : "";
+
+  const userMessage = `Escreva todo o copy da campanha — página de vendas completa, sequência completa de e-mails, scripts de WhatsApp e carrinho.${directivesText}
 
 ${avatarContext}
 
@@ -609,14 +614,19 @@ Vagas limitadas precisam ser REAIS e a razão precisa ser explicada. Timers que 
 
 ---
 
-**REQUISITOS DE VOLUME E COMPLETUDE:**
-- Emails de pré-lançamento: mínimo 5 emails COMPLETOS (não esboços) com corpo, assunto real, preview text, PS
-- Emails de carrinho: mínimo 3 abertos + 3 fechamento, com escalada real de urgência
-- WhatsApp: mínimo 8 broadcasts completos + 4 mensagens de grupo, com follow-up em cada fase
-- Facebook: mínimo 5 posts completos, textos longos e narrativos para audiência +30
-- TikTok: mínimo 4 roteiros completos com hook, script falado, overlay texts
+**REQUISITOS DE VOLUME E COMPLETUDE — MÍNIMOS OBRIGATÓRIOS:**
+- Emails de pré-lançamento: mínimo 7 emails COMPLETOS (não esboços) com corpo, assunto real, preview text, PS
+- Emails de carrinho: mínimo 4 abertos + 4 fechamento, com escalada real de urgência
+- WhatsApp: mínimo 12 broadcasts completos + 6 mensagens de grupo, com follow-up em cada fase
+- Facebook: mínimo 8 posts completos (orgânico + pago), textos longos e narrativos para audiência +30
+- Instagram: mínimo 10 posts/Reels com legenda completa, hook, CTA e hashtags — inclui stories diários
+- TikTok: mínimo 6 roteiros completos com hook, script falado, overlay texts, som sugerido
 - Página de vendas: TODAS as seções com copy real (hero, identificação, problema, agitação, mecanismo, solução, prova, oferta, garantia, faq, fechamento)
+- Remarketing: mínimo 3 versões por segmento (frio/morno/quente)
 - Placeholders de URL: {{LINK_CAPTURA}}, {{LINK_PAGAMENTO}}, {{LINK_REMARKETING}}
+- Tráfego pago: inclua copy para anúncios Meta Ads (headline + primary text + description) — mínimo 4 variações para teste A/B
+
+**ATENÇÃO: "mínimo" é o piso, não o teto.** Se a campanha pede mais, entregue mais.
 
 Retorne APENAS o JSON. Todo o copy em português do Brasil. Nenhum placeholder vago — copy real.`;
 
