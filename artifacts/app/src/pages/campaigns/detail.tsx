@@ -378,15 +378,34 @@ interface PlatformBrief {
   actions: string[];
 }
 
+// ── Extract nested strategy JSON from executiveSummary (AI wraps it in code blocks) ──
+function parseStrategyInsights(strategyD: Record<string, unknown>): Record<string, unknown> {
+  const raw = strategyD["executiveSummary"];
+  if (typeof raw !== "string") return {};
+  const stripped = raw.replace(/^```json\s*/m, "").replace(/^```\s*/m, "").replace(/```\s*$/m, "").trim();
+  try {
+    const parsed = JSON.parse(stripped);
+    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : {};
+  } catch {
+    const match = stripped.match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    try { return JSON.parse(match[0]) as Record<string, unknown>; } catch { return {}; }
+  }
+}
+
 function buildPlatformBriefs(
   strategyD: Record<string, unknown>,
   targetingD: Record<string, unknown>,
   intakeD: Record<string, unknown>,
 ): PlatformBrief[] {
-  void targetingD;
+  const insights = parseStrategyInsights(strategyD);
   const product = (intakeD["product.name"] as string) || "Produto";
   const persona = (intakeD["audience.primaryPersona"] as string) || "empreendedores digitais";
   const triggerMap = (strategyD["triggerMap"] as Record<string, string> | undefined) ?? {};
+  // Pull targeting from insights if available
+  const mkt = (insights["marketDiagnosis"] as Record<string, unknown> | undefined) ?? (strategyD["marketDiagnosis"] as Record<string, unknown> | undefined) ?? {};
+  const bigDomino = (insights["bigDomino"] as string | undefined) ?? "";
+  void targetingD; void mkt; void bigDomino;
   const p2 = persona.split(" ").slice(0, 3).join(" ");
   const p1 = persona.split(" ").slice(0, 2).join(" ");
 
@@ -692,22 +711,49 @@ function StrategyApprovalBoard({
     () => buildPlatformBriefs(strategyD, targetingD, intakeD),
     [strategyD, targetingD, intakeD],
   );
+  const insights = useMemo(() => parseStrategyInsights(strategyD), [strategyD]);
 
   type ApprovalState = "pending" | "approved" | "revised";
   const [secA, setSecA] = useState<ApprovalState>("pending");
   const [secB, setSecB] = useState<ApprovalState>("pending");
+  const [secC, setSecC] = useState<ApprovalState>("pending");
   const [platStates, setPlatStates] = useState<Record<PlatformId, ApprovalState>>({
     instagram: "pending", tiktok: "pending", facebook: "pending", whatsapp: "pending", email: "pending",
   });
 
-  const allDecided = secA !== "pending" && secB !== "pending" && briefs.every(b => platStates[b.platform] !== "pending");
-  const hasRevisions = secA === "revised" || secB === "revised" || briefs.some(b => platStates[b.platform] === "revised");
+  const allDecided = secA !== "pending" && secB !== "pending" && secC !== "pending" && briefs.every(b => platStates[b.platform] !== "pending");
+  const hasRevisions = secA === "revised" || secB === "revised" || secC === "revised" || briefs.some(b => platStates[b.platform] === "revised");
 
   const approveAll = () => {
-    setSecA("approved"); setSecB("approved");
+    setSecA("approved"); setSecB("approved"); setSecC("approved");
     setPlatStates({ instagram: "approved", tiktok: "approved", facebook: "approved", whatsapp: "approved", email: "approved" });
   };
   const setPlt = (p: PlatformId, s: ApprovalState) => setPlatStates(prev => ({ ...prev, [p]: s }));
+
+  // Paid traffic data from intake + AI insights
+  const trafficBudget = (intakeD["campaign.trafficBudget"] as string | number | undefined);
+  const budgetNum = typeof trafficBudget === "number" ? trafficBudget : parseFloat(String(trafficBudget ?? "0").replace(/[^0-9.]/g, "")) || 0;
+  const mktDiag = (insights["marketDiagnosis"] as Record<string, unknown> | undefined) ?? (strategyD["marketDiagnosis"] as Record<string, unknown> | undefined) ?? {};
+  const bigDomino = (insights["bigDomino"] as string | undefined) ?? (strategyD["bigDomino"] as string | undefined) ?? "";
+  const execSummaryText = (insights["executiveSummary"] as string | undefined) ?? "";
+  const competitive = (mktDiag["competitiveLandscape"] as string | undefined) ?? "";
+  const funnelStrategy = (insights["funnelStrategy"] as Record<string, unknown> | undefined) ?? {};
+  const pricingStrategy = (insights["pricingStrategy"] as Record<string, unknown> | undefined) ?? {};
+  const product = (intakeD["product.name"] as string) || "Produto";
+  const persona = (intakeD["audience.primaryPersona"] as string) || "";
+  const targetMkt = (targetingD["marketIntelligence"] as Record<string, unknown> | undefined) ?? {};
+  const avgCPL = (targetMkt["averageCPL"] as number | undefined) ?? 0;
+  const typicalROAS = (targetMkt["typicalROAS"] as number | undefined) ?? 0;
+  // Budget distribution (approx)
+  const fbBudget = budgetNum > 0 ? Math.round(budgetNum * 0.45) : null;
+  const googleBudget = budgetNum > 0 ? Math.round(budgetNum * 0.30) : null;
+  const tiktokBudget = budgetNum > 0 ? Math.round(budgetNum * 0.25) : null;
+  const hasBudget = budgetNum > 0;
+  // Estimated reach: CPL from AI or estimate
+  const cplEst = avgCPL > 0 ? avgCPL : (budgetNum > 0 ? Math.round(budgetNum * 0.04) : 0);
+  const reachEst = budgetNum > 0 && cplEst > 0 ? Math.round((budgetNum / cplEst) * 8) : 0;
+  const leadsEst = budgetNum > 0 && cplEst > 0 ? Math.round(budgetNum / cplEst) : 0;
+  void pricingStrategy; void funnelStrategy;
 
   return (
     <div className="space-y-4">
@@ -727,6 +773,40 @@ function StrategyApprovalBoard({
           Aprovar Tudo
         </button>
       </div>
+
+      {/* ── Intelligence Panel — Big Domino + AI Thesis (informational) ── */}
+      {(bigDomino || execSummaryText || competitive) && (
+        <div className="border border-primary/25 bg-primary/3 overflow-hidden">
+          <div className="px-4 py-3 border-b border-primary/20">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold flex items-center gap-2">
+              <Activity className="h-3 w-3" />Inteligência Estratégica — Análise Real da IA
+            </div>
+            <div className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">Diagnóstico executivo gerado pelos agentes. Informativo — não requer aprovação.</div>
+          </div>
+          <div className="p-4 space-y-3">
+            {bigDomino && (
+              <div className="border border-yellow-400/30 bg-yellow-400/5 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/80 mb-1.5 font-bold flex items-center gap-1.5">
+                  <Target className="h-3 w-3" />Big Domino — Crença Principal a Plantar
+                </div>
+                <p className="font-mono text-xs text-foreground/85 leading-relaxed">{bigDomino}</p>
+              </div>
+            )}
+            {execSummaryText && (
+              <div className="border border-border/30 bg-card/30 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-1.5 font-bold">Diagnóstico Executivo</div>
+                <p className="font-mono text-xs text-foreground/75 leading-relaxed line-clamp-6">{execSummaryText}</p>
+              </div>
+            )}
+            {competitive && (
+              <div className="border border-border/30 bg-card/30 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 mb-1.5 font-bold">Landscape Competitivo</div>
+                <p className="font-mono text-xs text-foreground/75 leading-relaxed line-clamp-4">{competitive}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Section 1: Audience segmentation */}
       <div className="border border-border/50 bg-card/30 overflow-hidden">
@@ -811,12 +891,137 @@ function StrategyApprovalBoard({
         </div>
       </div>
 
-      {/* Section 3: Architecture + Timeline */}
+      {/* Section 3: Paid Traffic Plan */}
+      <div className="border border-border/50 bg-card/30 overflow-hidden">
+        <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between gap-3">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-orange-400 font-bold flex items-center gap-2">
+              <DollarSign className="h-3 w-3" />Seção 3 — Tráfego Pago & Alcance
+            </div>
+            <div className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">Orçamento, distribuição por canal, segmentação e alcance estimado</div>
+          </div>
+          {secC !== "pending" && (
+            <span className={`font-mono text-[10px] uppercase shrink-0 ${secC === "approved" ? "text-success" : "text-yellow-400"}`}>
+              {secC === "approved" ? "✓ Aprovado" : "↻ Revisão"}
+            </span>
+          )}
+        </div>
+        <div className="p-4 space-y-3">
+          {hasBudget ? (
+            <>
+              {/* Budget KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="border border-orange-400/25 bg-orange-400/5 p-3 text-center">
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-orange-400/70 mb-1">Budget Total</div>
+                  <div className="font-mono text-sm font-bold text-orange-400">
+                    {budgetNum.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+                {cplEst > 0 && (
+                  <div className="border border-border/30 bg-card/20 p-3 text-center">
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 mb-1">CPL Est.</div>
+                    <div className="font-mono text-sm font-bold text-foreground/80">
+                      R$ {cplEst.toFixed(0)}
+                      {avgCPL > 0 && <span className="font-mono text-[8px] text-muted-foreground/40 block">via IA</span>}
+                    </div>
+                  </div>
+                )}
+                {leadsEst > 0 && (
+                  <div className="border border-border/30 bg-card/20 p-3 text-center">
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 mb-1">Leads Est.</div>
+                    <div className="font-mono text-sm font-bold text-foreground/80">{leadsEst.toLocaleString("pt-BR")}</div>
+                  </div>
+                )}
+                {reachEst > 0 && (
+                  <div className="border border-border/30 bg-card/20 p-3 text-center">
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 mb-1">Alcance Est.</div>
+                    <div className="font-mono text-sm font-bold text-foreground/80">{reachEst.toLocaleString("pt-BR")}</div>
+                  </div>
+                )}
+                {typicalROAS > 0 && (
+                  <div className="border border-border/30 bg-card/20 p-3 text-center">
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 mb-1">ROAS Típico</div>
+                    <div className="font-mono text-sm font-bold text-foreground/80">{typicalROAS.toFixed(1)}x</div>
+                  </div>
+                )}
+              </div>
+              {/* Channel distribution */}
+              <div className="border border-border/30 bg-card/20 p-3 space-y-2">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 font-bold mb-2">Distribuição por Canal</div>
+                {[
+                  { label: "Meta Ads (Facebook + Instagram)", budget: fbBudget, pct: 45, col: "bg-blue-500" },
+                  { label: "Google Ads (Search + Display)", budget: googleBudget, pct: 30, col: "bg-red-500" },
+                  { label: "TikTok Ads", budget: tiktokBudget, pct: 25, col: "bg-cyan-500" },
+                ].map(ch => ch.budget !== null && (
+                  <div key={ch.label} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] text-foreground/70">{ch.label}</span>
+                      <span className="font-mono text-[10px] font-bold text-foreground/80">
+                        {ch.budget.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} · {ch.pct}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-border/20 rounded-full overflow-hidden">
+                      <div className={`h-full ${ch.col} opacity-60`} style={{ width: `${ch.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Targeting plan */}
+              <div className="border border-border/30 bg-card/20 p-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 font-bold mb-2">Plano de Segmentação</div>
+                <div className="space-y-1.5">
+                  {[
+                    { label: "Público Frio — Interesses", value: persona ? `Interesses relacionados a: ${persona}` : "Interesses do nicho + comportamento de compra" },
+                    { label: "Lookalike 1–3%", value: `Baseado em lista de clientes ${product} + engajamento no perfil` },
+                    { label: "Retargeting Quente", value: "Visitantes do site D-7 · Engajadores do Instagram D-30 · Leads da lista VIP" },
+                    { label: "Exclusões", value: "Clientes ativos · Inscritos na newsletter já convertidos" },
+                  ].map(seg => (
+                    <div key={seg.label}>
+                      <span className="font-mono text-[10px] text-orange-400/70 uppercase">{seg.label}: </span>
+                      <span className="font-mono text-[10px] text-foreground/70">{seg.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="border border-border/30 bg-card/20 p-3 space-y-1.5">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 font-bold mb-2">Plano de Segmentação (Orgânico)</div>
+              <PlanText value={{
+                abordagem: "Lançamento 100% orgânico — sem investimento pago",
+                canais_principais: "Instagram Reels + TikTok + E-mail + WhatsApp VIP",
+                estrategia: "Autoridade orgânica + parcerias estratégicas + lista de leads própria",
+                amplificacao: "Conteúdo de valor → captura de leads → nutrição → carrinho aberto",
+              }} />
+            </div>
+          )}
+          {secC === "pending" && (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button onClick={() => setSecC("approved")}
+                className="py-2.5 border border-success/30 bg-success/5 hover:bg-success/10 font-mono text-[11px] uppercase tracking-widest text-success flex items-center justify-center gap-1.5 transition-colors">
+                <CheckCircle2 className="h-3 w-3" />Aprovar Plano de Tráfego
+              </button>
+              <button onClick={() => setSecC("revised")}
+                className="py-2.5 border border-border/40 hover:bg-muted/20 font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
+                <XCircle className="h-3 w-3" />Solicitar Revisão
+              </button>
+            </div>
+          )}
+          {secC !== "pending" && (
+            <button onClick={() => setSecC("pending")}
+              className={`w-full py-2 border font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors ${secC === "approved" ? "border-success/20 text-success hover:bg-success/5" : "border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/5"}`}>
+              {secC === "approved" ? <><CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para alterar</> : <>↻ Para revisão</>}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Section 4: Architecture + Timeline */}
       <div className="border border-border/50 bg-card/30 overflow-hidden">
         <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between gap-3">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-yellow-400 font-bold flex items-center gap-2">
-              <Target className="h-3 w-3" />Seção 3 — Arquitetura & Cronograma
+              <Target className="h-3 w-3" />Seção 4 — Arquitetura & Cronograma
             </div>
             <div className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">Fases do lançamento, milestones e metas projetadas</div>
           </div>
