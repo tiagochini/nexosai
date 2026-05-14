@@ -1158,9 +1158,11 @@ export default function ContentApproval() {
   const { data: apiContentData, isLoading: isContentLoading } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}/content`],
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{ pieces: ApiContentPiece[] }>;
+      try {
+        return await customFetch<{ pieces: ApiContentPiece[] }>(`/api/campaigns/${campaignId}/content`);
+      } catch {
+        return null;
+      }
     },
     enabled: !!campaignId,
     staleTime: 0,
