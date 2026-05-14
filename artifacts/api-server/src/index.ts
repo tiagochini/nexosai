@@ -22,7 +22,7 @@ import { getQueue, closeAllQueues, QUEUE_NAMES } from "./modules/queue/queue.ser
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
-import { db, campaignAgentsTable } from "@workspace/db";
+import { db, campaignAgentsTable, campaignsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
@@ -96,6 +96,20 @@ db.update(campaignAgentsTable)
     }
   })
   .catch((err) => logger.error({ err }, "Boot cleanup failed"));
+
+// ── Boot cleanup: reset campaigns stuck in "generating" → "strategy_ready" ───
+// Content generation runs in-process (setImmediate when Redis unavailable).
+// A server restart kills the process, leaving campaigns stuck in "generating".
+// Reset them so the user can trigger generation again cleanly.
+db.update(campaignsTable)
+  .set({ status: "strategy_ready", updatedAt: new Date() })
+  .where(eq(campaignsTable.status, "generating"))
+  .then((result) => {
+    if (result.rowCount && result.rowCount > 0) {
+      logger.warn({ count: result.rowCount }, "Boot cleanup: reset generating campaigns to strategy_ready");
+    }
+  })
+  .catch((err) => logger.error({ err }, "Boot cleanup (generating reset) failed"));
 
 httpServer.listen(port, (err?: Error) => {
   if (err) {
