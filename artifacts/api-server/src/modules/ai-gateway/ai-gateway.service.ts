@@ -198,7 +198,7 @@ function getGemini(): GoogleGenerativeAI {
   return geminiClient;
 }
 
-const SERVER_AI_TIMEOUT_MS = 90_000; // 90s — client-side is 110s, so server aborts first
+const SERVER_AI_TIMEOUT_MS = 240_000; // 4 min — allows complex strategic AI responses (Anthropic can be slow)
 
 async function callAnthropic(
   model: string,
