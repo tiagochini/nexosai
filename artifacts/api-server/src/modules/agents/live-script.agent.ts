@@ -234,11 +234,11 @@ export async function runLiveScriptAgent(
 ): Promise<LiveScriptOutput> {
   const avatarContext = profile
     ? `
-**Avatar:** ${profile.primaryAvatar.name} — ${profile.primaryAvatar.age}
-**Desejo mais profundo:** ${profile.primaryAvatar.deepestDesire}
-**Objeções típicas (para tratar ao vivo):** ${profile.primaryAvatar.typicalObjections.join("; ")}
-**Tom de linguagem:** ${profile.primaryAvatar.languageStyle}
-**Big Idea:** ${profile.positioning.campaignBigIdea}`
+**Avatar:** ${profile.primaryAvatar?.name ?? "Avatar principal"} — ${profile.primaryAvatar?.age ?? ""}
+**Desejo mais profundo:** ${profile.primaryAvatar?.deepestDesire ?? ""}
+**Objeções típicas (para tratar ao vivo):** ${(profile.primaryAvatar?.typicalObjections ?? []).join("; ")}
+**Tom de linguagem:** ${profile.primaryAvatar?.languageStyle ?? ""}
+**Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}`
     : "";
 
   const cartOpenDay =

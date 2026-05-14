@@ -237,13 +237,13 @@ export async function runTargetingAgent(
 
   const avatarContext = profile
     ? `
-Avatar: ${profile.primaryAvatar.name}, ${profile.primaryAvatar.age}
-Localização: ${profile.primaryAvatar.location}
-Renda: ${profile.primaryAvatar.income}
-Ocupação: ${profile.primaryAvatar.occupation}
-Onde está online: ${profile.primaryAvatar.whereTheyHangOut.join(", ")}
-Conteúdo que consome: ${profile.primaryAvatar.contentTheyConsume.join(", ")}
-Comportamentos de compra: ${profile.primaryAvatar.buyingTriggers.slice(0, 3).join("; ")}`
+Avatar: ${profile.primaryAvatar?.name ?? "Avatar principal"}, ${profile.primaryAvatar?.age ?? ""}
+Localização: ${profile.primaryAvatar?.location ?? ""}
+Renda: ${profile.primaryAvatar?.income ?? ""}
+Ocupação: ${profile.primaryAvatar?.occupation ?? ""}
+Onde está online: ${(profile.primaryAvatar?.whereTheyHangOut ?? []).join(", ")}
+Conteúdo que consome: ${(profile.primaryAvatar?.contentTheyConsume ?? []).join(", ")}
+Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(0, 3).join("; ")}`
     : "";
 
   const result = await runAgent({

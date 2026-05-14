@@ -204,15 +204,15 @@ export async function runWebinarScriptAgent(
 ): Promise<WebinarScriptOutput> {
   const avatarContext = profile
     ? `
-**Avatar:** ${profile.primaryAvatar.name} — ${profile.primaryAvatar.age}, ${profile.primaryAvatar.occupation}
-**Desejo mais profundo:** ${profile.primaryAvatar.deepestDesire}
-**Objeções típicas:** ${profile.primaryAvatar.typicalObjections.join("; ")}
-**O que os faz confiar:** ${profile.primaryAvatar.whatMakesThemTrust.join("; ")}
-**Nível de sofisticação:** ${profile.primaryAvatar.sophisticationLevel}
-**Tom de linguagem:** ${profile.primaryAvatar.languageStyle}
-**Big Idea:** ${profile.positioning.campaignBigIdea}
-**Mecanismo único:** ${profile.positioning.uniqueMechanism}`
-    : `**Narrativa central:** ${strategy.campaignArchitecture.coreNarrative}`;
+**Avatar:** ${profile.primaryAvatar?.name ?? "Avatar principal"} — ${profile.primaryAvatar?.age ?? ""}, ${profile.primaryAvatar?.occupation ?? ""}
+**Desejo mais profundo:** ${profile.primaryAvatar?.deepestDesire ?? ""}
+**Objeções típicas:** ${(profile.primaryAvatar?.typicalObjections ?? []).join("; ")}
+**O que os faz confiar:** ${(profile.primaryAvatar?.whatMakesThemTrust ?? []).join("; ")}
+**Nível de sofisticação:** ${profile.primaryAvatar?.sophisticationLevel ?? ""}
+**Tom de linguagem:** ${profile.primaryAvatar?.languageStyle ?? ""}
+**Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Mecanismo único:** ${profile.positioning?.uniqueMechanism ?? ""}`
+    : `**Narrativa central:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}`;
 
   const salesChannel = String(intakeData["campaign.salesChannel"] ?? "webinar");
   const format =

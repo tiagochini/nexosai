@@ -194,7 +194,7 @@ export async function runVideoStrategyAgent(
   log: Logger,
 ): Promise<VideoStrategyOutput> {
   const avatarContext = profile
-    ? `Avatar: ${profile.primaryAvatar.name} | Plataformas: ${profile.primaryAvatar.whereTheyHangOut.join(", ")} | Conteúdo: ${profile.primaryAvatar.contentTheyConsume.join(", ")}`
+    ? `Avatar: ${profile.primaryAvatar?.name ?? "Avatar principal"} | Plataformas: ${(profile.primaryAvatar?.whereTheyHangOut ?? []).join(", ")} | Conteúdo: ${(profile.primaryAvatar?.contentTheyConsume ?? []).join(", ")}`
     : "";
 
   const result = await runAgent({

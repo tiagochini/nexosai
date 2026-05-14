@@ -196,9 +196,9 @@ export async function runMediaBriefAgent(
 ): Promise<MediaBriefOutput> {
   const brandContext = profile
     ? `
-**Estética da campanha:** ${profile.positioning.campaignBigIdea}
-**Mood:** ${profile.primaryAvatar.languageStyle}
-**Plataformas principais:** ${profile.primaryAvatar.whereTheyHangOut.slice(0, 3).join(", ")}`
+**Estética da campanha:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Mood:** ${profile.primaryAvatar?.languageStyle ?? ""}
+**Plataformas principais:** ${(profile.primaryAvatar?.whereTheyHangOut ?? []).slice(0, 3).join(", ")}`
     : "";
 
   const result = await runAgent({

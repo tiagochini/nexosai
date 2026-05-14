@@ -238,11 +238,11 @@ export async function runCreativeDirectorAgent(
 ): Promise<CreativeDirectorOutput> {
   const positioningContext = profile
     ? `
-Posicionamento: ${profile.positioning.campaignBigIdea}
-Estética derivada do avatar: ${profile.primaryAvatar.name} — ${profile.primaryAvatar.languageStyle}
-Onde o avatar está: ${profile.primaryAvatar.whereTheyHangOut.join(", ")}
-Ponto de preço: ${profile.product.pricePoint}
-Mood do avatar: desejo = "${profile.primaryAvatar.deepestDesire}" | medo = "${profile.primaryAvatar.fears[0] ?? ""}"`
+Posicionamento: ${profile.positioning?.campaignBigIdea ?? "Definir durante criação"}
+Estética derivada do avatar: ${profile.primaryAvatar?.name ?? "Avatar principal"} — ${profile.primaryAvatar?.languageStyle ?? ""}
+Onde o avatar está: ${(profile.primaryAvatar?.whereTheyHangOut ?? []).join(", ")}
+Ponto de preço: ${profile.product?.pricePoint ?? ""}
+Mood do avatar: desejo = "${profile.primaryAvatar?.deepestDesire ?? ""}" | medo = "${profile.primaryAvatar?.fears?.[0] ?? ""}"`
     : `
 Estilo: ${String(intakeData["content.style"] ?? "")}
 Tom: ${String(intakeData["content.tone"] ?? "")}`;

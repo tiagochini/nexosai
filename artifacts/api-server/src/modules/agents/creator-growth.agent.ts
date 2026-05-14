@@ -179,7 +179,7 @@ export async function runCreatorGrowthAgent(
   log: Logger,
 ): Promise<CreatorGrowthOutput> {
   const avatarContext = profile
-    ? `Avatar-alvo: ${profile.primaryAvatar.name} | ${profile.primaryAvatar.whereTheyHangOut.join(", ")} | Conteúdo: ${profile.primaryAvatar.contentTheyConsume.join(", ")}`
+    ? `Avatar-alvo: ${profile.primaryAvatar?.name ?? "Avatar principal"} | ${(profile.primaryAvatar?.whereTheyHangOut ?? []).join(", ")} | Conteúdo: ${(profile.primaryAvatar?.contentTheyConsume ?? []).join(", ")}`
     : "";
 
   const result = await runAgent({

@@ -138,18 +138,18 @@ export async function runCPLScriptAgent(
 ): Promise<CPLScriptOutput> {
   const avatarContext = profile
     ? `
-**Avatar:** ${profile.primaryAvatar.name} — ${profile.primaryAvatar.age}, ${profile.primaryAvatar.occupation}
-**Dores diárias:** ${profile.primaryAvatar.dailyPains.slice(0, 4).join("; ")}
-**Desejo mais profundo:** ${profile.primaryAvatar.deepestDesire}
-**Medos profundos:** ${profile.primaryAvatar.fears.slice(0, 3).join("; ")}
-**Nível de consciência:** ${profile.primaryAvatar.awarenessLevel}
-**Nível de sofisticação:** ${profile.primaryAvatar.sophisticationLevel}
-**O que os faz confiar:** ${profile.primaryAvatar.whatMakesThemTrust.slice(0, 3).join("; ")}
-**Tom de linguagem:** ${profile.primaryAvatar.languageStyle}
-**Big Idea:** ${profile.positioning.campaignBigIdea}
-**Mecanismo único:** ${profile.positioning.uniqueMechanism}
-**Gancho emocional:** ${profile.positioning.emotionalHook}`
-    : `**Narrativa central:** ${strategy.campaignArchitecture.coreNarrative}`;
+**Avatar:** ${profile.primaryAvatar?.name ?? "Avatar principal"} — ${profile.primaryAvatar?.age ?? ""}, ${profile.primaryAvatar?.occupation ?? ""}
+**Dores diárias:** ${(profile.primaryAvatar?.dailyPains ?? []).slice(0, 4).join("; ")}
+**Desejo mais profundo:** ${profile.primaryAvatar?.deepestDesire ?? ""}
+**Medos profundos:** ${(profile.primaryAvatar?.fears ?? []).slice(0, 3).join("; ")}
+**Nível de consciência:** ${profile.primaryAvatar?.awarenessLevel ?? ""}
+**Nível de sofisticação:** ${profile.primaryAvatar?.sophisticationLevel ?? ""}
+**O que os faz confiar:** ${(profile.primaryAvatar?.whatMakesThemTrust ?? []).slice(0, 3).join("; ")}
+**Tom de linguagem:** ${profile.primaryAvatar?.languageStyle ?? ""}
+**Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Mecanismo único:** ${profile.positioning?.uniqueMechanism ?? ""}
+**Gancho emocional:** ${profile.positioning?.emotionalHook ?? ""}`
+    : `**Narrativa central:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}`;
 
   const preLaunchDays =
     (launchPlan as any)?.phases?.find((p: any) => p.phase?.includes("capture") || p.phase?.includes("warmup"))?.dayRange ?? "14 dias antes";

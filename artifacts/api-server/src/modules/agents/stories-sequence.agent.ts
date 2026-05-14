@@ -166,10 +166,10 @@ export async function runStoriesSequenceAgent(
 ): Promise<StoriesSequenceOutput> {
   const avatarContext = profile
     ? `
-**Avatar:** ${profile.primaryAvatar.name} — ${profile.primaryAvatar.languageStyle}
-**Onde está online:** ${profile.primaryAvatar.whereTheyHangOut.join(", ")}
-**Conteúdo que consome:** ${profile.primaryAvatar.contentTheyConsume.join(", ")}
-**Big Idea:** ${profile.positioning.campaignBigIdea}`
+**Avatar:** ${profile.primaryAvatar?.name ?? "Avatar principal"} — ${profile.primaryAvatar?.languageStyle ?? ""}
+**Onde está online:** ${(profile.primaryAvatar?.whereTheyHangOut ?? []).join(", ")}
+**Conteúdo que consome:** ${(profile.primaryAvatar?.contentTheyConsume ?? []).join(", ")}
+**Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}`
     : "";
 
   const phases = ((launchPlan as any)?.phases ?? []).map((p: any) => ({

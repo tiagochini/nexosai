@@ -503,19 +503,19 @@ export async function runCopywriterAgent(
 
   const avatarContext = profile
     ? `
-**Avatar primário:** ${profile.primaryAvatar.name}, ${profile.primaryAvatar.age}, ${profile.primaryAvatar.occupation}
-**Desejo mais profundo:** ${profile.primaryAvatar.deepestDesire}
-**Palavras que usa:** ${profile.primaryAvatar.keywordsTheyUse.slice(0, 8).join(", ")}
-**Palavras a evitar:** ${profile.primaryAvatar.wordsToAvoid.slice(0, 5).join(", ")}
-**Tom de linguagem:** ${profile.primaryAvatar.languageStyle}
-**Objeções típicas:** ${profile.primaryAvatar.typicalObjections.slice(0, 4).join("; ")}
-**O que os faz confiar:** ${profile.primaryAvatar.whatMakesThemTrust.slice(0, 3).join("; ")}
-**Nível de consciência:** ${profile.primaryAvatar.awarenessLevel}
-**Big Idea da campanha:** ${profile.positioning.campaignBigIdea}
-**Mecanismo único:** ${profile.positioning.uniqueMechanism}
-**Gancho emocional:** ${profile.positioning.emotionalHook}
-**Headline principal:** ${profile.positioning.coreHeadline}
-**Elevator pitch:** ${profile.positioning.elevatorPitch}`
+**Avatar primário:** ${profile.primaryAvatar?.name ?? "Avatar principal"}, ${profile.primaryAvatar?.age ?? ""}, ${profile.primaryAvatar?.occupation ?? ""}
+**Desejo mais profundo:** ${profile.primaryAvatar?.deepestDesire ?? ""}
+**Palavras que usa:** ${(profile.primaryAvatar?.keywordsTheyUse ?? []).slice(0, 8).join(", ")}
+**Palavras a evitar:** ${(profile.primaryAvatar?.wordsToAvoid ?? []).slice(0, 5).join(", ")}
+**Tom de linguagem:** ${profile.primaryAvatar?.languageStyle ?? ""}
+**Objeções típicas:** ${(profile.primaryAvatar?.typicalObjections ?? []).slice(0, 4).join("; ")}
+**O que os faz confiar:** ${(profile.primaryAvatar?.whatMakesThemTrust ?? []).slice(0, 3).join("; ")}
+**Nível de consciência:** ${profile.primaryAvatar?.awarenessLevel ?? ""}
+**Big Idea da campanha:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Mecanismo único:** ${profile.positioning?.uniqueMechanism ?? ""}
+**Gancho emocional:** ${profile.positioning?.emotionalHook ?? ""}
+**Headline principal:** ${profile.positioning?.coreHeadline ?? ""}
+**Elevator pitch:** ${profile.positioning?.elevatorPitch ?? ""}`
     : "";
 
   const triggerContext = (strategy as any).triggerMap ? `
