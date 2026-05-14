@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRoute, Link, useLocation, useSearch } from "wouter";
 import {
   useGetCampaign,
@@ -355,6 +355,548 @@ function AgentPlanPanel({
   );
 }
 
+// ── Platform creative mocks ───────────────────────────────────────────────────
+type PlatformId = "instagram" | "tiktok" | "facebook" | "whatsapp" | "email";
+
+const PLT: Record<PlatformId, { label: string; abbr: string; col: string; bdr: string; bg: string }> = {
+  instagram: { label: "Instagram", abbr: "IG", col: "text-pink-400",   bdr: "border-pink-400/40",   bg: "bg-pink-400/5"   },
+  tiktok:    { label: "TikTok",    abbr: "TK", col: "text-cyan-400",   bdr: "border-cyan-400/40",   bg: "bg-cyan-400/5"   },
+  facebook:  { label: "Facebook",  abbr: "FB", col: "text-blue-400",   bdr: "border-blue-400/40",   bg: "bg-blue-400/5"   },
+  whatsapp:  { label: "WhatsApp",  abbr: "WA", col: "text-green-400",  bdr: "border-green-400/40",  bg: "bg-green-400/5"  },
+  email:     { label: "E-mail",    abbr: "EM", col: "text-indigo-300", bdr: "border-indigo-300/40", bg: "bg-indigo-300/5" },
+};
+
+interface PlatformBrief {
+  platform: PlatformId;
+  format: string;
+  trigger: string;
+  angle: string;
+  hook?: string;
+  headline?: string;
+  caption?: string;
+  cta?: string;
+  actions: string[];
+}
+
+function buildPlatformBriefs(
+  strategyD: Record<string, unknown>,
+  targetingD: Record<string, unknown>,
+  intakeD: Record<string, unknown>,
+): PlatformBrief[] {
+  void targetingD;
+  const product = (intakeD["product.name"] as string) || "Produto";
+  const persona = (intakeD["audience.primaryPersona"] as string) || "empreendedores digitais";
+  const triggerMap = (strategyD["triggerMap"] as Record<string, string> | undefined) ?? {};
+  const p2 = persona.split(" ").slice(0, 3).join(" ");
+  const p1 = persona.split(" ").slice(0, 2).join(" ");
+
+  return [
+    {
+      platform: "instagram",
+      format: "Reels 9:16 + Feed + Stories",
+      trigger: String(triggerMap["instagram"] ?? triggerMap["authority"] ?? "Autoridade"),
+      angle: `Conteúdo de valor orgânico para ${p2}`,
+      headline: `Como ${product} transforma resultados de ${p2}`,
+      hook: `A maioria de ${p1} não sabe disso ainda...`,
+      caption: `📈 Você está deixando resultados na mesa.\n\nO método que mudou tudo para centenas de ${p1}.\n\nSalva e comenta! 👇`,
+      cta: "Link na bio",
+      actions: ["3 Reels de valor/semana (Seg·Qua·Sex)", "1 Story diário com CTA para lista VIP", "Carrossel educativo a cada 5 dias"],
+    },
+    {
+      platform: "tiktok",
+      format: "Vídeo 30–60s + Lives",
+      trigger: String(triggerMap["tiktok"] ?? triggerMap["curiosity"] ?? "Curiosidade"),
+      angle: `Hook viral + revelação rápida para ${p2}`,
+      headline: `O erro que 90% de ${p1} cometem`,
+      hook: `POV: você descobre o que sabotava seus resultados o tempo todo`,
+      caption: `#empreendedorismo #resultados #${product.replace(/\s+/g, "").slice(0, 15).toLowerCase()}`,
+      cta: "Link na bio",
+      actions: ["1 vídeo de hook/dia nos 7 dias de aquecimento", "Lives 30min nos dias D-3 e D-1", "Dueto/resposta em comentários estratégicos"],
+    },
+    {
+      platform: "facebook",
+      format: "Anúncio Video + Carrossel",
+      trigger: String(triggerMap["facebook"] ?? triggerMap["fear_of_loss"] ?? "Medo da Perda"),
+      angle: `Tráfego pago segmentado — interesses + lookalike`,
+      headline: `Pare de perder clientes para quem já usa ${product}`,
+      caption: `Enquanto você lê isso, seus concorrentes estão usando ${product} para fechar mais. Quando vai ser a sua vez?`,
+      cta: "Saiba Mais",
+      actions: [`Lookalike 1% de compradores`, `Interesse: ${p1}`, `Retargeting D-3 com oferta especial`],
+    },
+    {
+      platform: "whatsapp",
+      format: "Lista VIP — Broadcast 7 dias",
+      trigger: String(triggerMap["whatsapp"] ?? triggerMap["community"] ?? "Exclusividade"),
+      angle: `Sequência de aquecimento pré-abertura do carrinho`,
+      headline: `[Lista VIP] Acesso antecipado — só para quem está aqui`,
+      caption: `Estou preparando algo que vai mudar completamente como você trabalha com ${product}...`,
+      cta: "Responda QUERO para saber mais",
+      actions: ["D-7: Teaser exclusivo + primeiro contato", "D-3: Revelação parcial + prova social", "D-1: Abertura 24h antes do público geral"],
+    },
+    {
+      platform: "email",
+      format: "Sequência de 7 e-mails",
+      trigger: String(triggerMap["email"] ?? triggerMap["reciprocity"] ?? "Reciprocidade"),
+      angle: `Nurturing + conversão via e-mail para ${p2}`,
+      headline: `[Exclusivo] O que ninguém te conta sobre ${product}`,
+      caption: `Tenho uma novidade que vai mudar sua visão sobre como chegar aos seus resultados mais rápido...`,
+      cta: "Quero saber mais",
+      actions: ["E-mail 1: Entrega de conteúdo de alto valor (gratuito)", "E-mails 2–5: Prova social + queima de objeções", "E-mails 6–7: Urgência + escassez + CTA direto"],
+    },
+  ];
+}
+
+function PlatformMockCard({
+  brief, state, onApprove, onRevise,
+}: {
+  brief: PlatformBrief;
+  state: "pending" | "approved" | "revised";
+  onApprove: () => void;
+  onRevise: () => void;
+}) {
+  const m = PLT[brief.platform];
+  return (
+    <div className={`border ${m.bdr} ${m.bg} flex flex-col overflow-hidden`}>
+      {/* Header */}
+      <div className={`px-3 py-2 border-b ${m.bdr} flex items-center gap-2`}>
+        <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border ${m.bdr} ${m.col}`}>{m.abbr}</span>
+        <span className={`font-mono text-[11px] uppercase tracking-widest font-bold flex-1 ${m.col}`}>{m.label}</span>
+        <span className="font-mono text-[9px] text-muted-foreground/40 truncate max-w-[80px]">{brief.format}</span>
+        {state !== "pending" && (
+          <span className={`font-mono text-[9px] uppercase shrink-0 ${state === "approved" ? "text-success" : "text-yellow-400"}`}>
+            {state === "approved" ? "✓" : "↻"}
+          </span>
+        )}
+      </div>
+
+      {/* Visual mock */}
+      <div className="p-2.5 flex-1 space-y-2">
+        {brief.platform === "instagram" && (
+          <div className="border border-border/30 bg-card/60 overflow-hidden">
+            <div className="flex items-center gap-1.5 px-2 py-1 border-b border-border/20">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-pink-500/60 to-orange-400/60 shrink-0" />
+              <span className="text-[9px] font-mono text-foreground/50">@usuario · Seguir</span>
+              <span className="ml-auto text-[9px] font-mono text-muted-foreground/30">···</span>
+            </div>
+            <div className="relative aspect-square bg-gradient-to-br from-pink-900/25 via-purple-900/15 to-orange-900/15 flex items-center justify-center overflow-hidden" style={{ maxHeight: "90px" }}>
+              <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,hsl(var(--primary)),hsl(var(--primary))_1px,transparent_1px,transparent_10px)]" />
+              {brief.headline && (
+                <p className="relative z-10 text-[9px] font-mono font-bold text-center text-foreground/80 px-2 leading-snug">
+                  {brief.headline.slice(0, 55)}{brief.headline.length > 55 ? "…" : ""}
+                </p>
+              )}
+            </div>
+            <div className="px-2 py-1">
+              <p className="text-[8px] font-mono text-foreground/40 line-clamp-2 leading-snug">
+                {(brief.caption ?? brief.angle).split("\n")[0].slice(0, 60)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {brief.platform === "tiktok" && (
+          <div className="border border-border/30 bg-black overflow-hidden flex" style={{ minHeight: "100px" }}>
+            <div className="flex-1 relative bg-gradient-to-b from-purple-900/30 via-black to-black flex flex-col justify-end p-2">
+              <div className="absolute inset-0 opacity-5 bg-[repeating-linear-gradient(0deg,#00f0ff,#00f0ff_1px,transparent_1px,transparent_8px)]" />
+              {brief.hook && (
+                <div className="relative bg-black/60 px-1.5 py-1 mb-1">
+                  <p className="text-[8px] font-mono font-bold text-white leading-snug">
+                    &ldquo;{brief.hook.slice(0, 42)}{brief.hook.length > 42 ? "…" : ""}&rdquo;
+                  </p>
+                </div>
+              )}
+              <div className="relative flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-white/20 shrink-0" />
+                <span className="text-[8px] font-mono text-white/40">@usuario</span>
+              </div>
+            </div>
+            <div className="flex flex-col items-center justify-end gap-2 px-2 py-2 bg-black">
+              {["♥","💬","↗","♫"].map((ic, i) => (
+                <span key={i} className="text-[10px] text-white/25">{ic}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {brief.platform === "facebook" && (
+          <div className="border border-border/30 bg-[#18191A] overflow-hidden">
+            <div className="flex items-center gap-1.5 px-2 py-1 border-b border-white/5">
+              <div className="w-4 h-4 rounded-full bg-blue-500/30 border border-blue-500/40 flex items-center justify-center">
+                <span className="text-[7px] font-bold text-blue-400">P</span>
+              </div>
+              <div>
+                <div className="text-[8px] font-mono font-bold text-white/70">Patrocinado</div>
+                <div className="text-[7px] font-mono text-blue-400">Meta Ads</div>
+              </div>
+            </div>
+            <div className="px-2 py-1">
+              <p className="text-[8px] font-mono text-white/50 leading-snug line-clamp-2">
+                {(brief.caption ?? brief.angle).slice(0, 70)}
+              </p>
+            </div>
+            <div className="mx-2 mb-2 bg-[#3A3B3C] px-2 py-1 flex items-center justify-between">
+              <div>
+                <div className="text-[8px] font-mono font-bold text-white/70">{(brief.headline ?? "Saiba Mais").slice(0, 28)}</div>
+                <div className="text-[7px] font-mono text-white/30">patrocinado.com</div>
+              </div>
+              <div className="bg-blue-600 px-1.5 py-0.5 text-[7px] font-mono font-bold text-white">Saiba mais</div>
+            </div>
+          </div>
+        )}
+
+        {brief.platform === "whatsapp" && (
+          <div className="border border-border/30 bg-[#0B141A] overflow-hidden p-2">
+            <div className="flex items-center gap-1.5 border-b border-white/5 pb-1.5 mb-2">
+              <div className="w-4 h-4 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                <span className="text-[7px] font-bold text-green-400">L</span>
+              </div>
+              <div className="text-[8px] font-mono text-green-400">Lista VIP · broadcast</div>
+            </div>
+            <div className="space-y-1">
+              {["D-7 · Teaser", "D-3 · Revelação", "D-1 · Abertura"].map((d, i) => (
+                <div key={i} className="flex justify-end">
+                  <div className="bg-[#005C4B] rounded-lg rounded-tr-none px-2 py-1 max-w-[90%]">
+                    <div className="text-[7px] font-mono text-green-300/50 mb-0.5">{d}</div>
+                    <p className="text-[8px] font-mono text-[#E9EDEF] leading-snug">
+                      {i === 0 ? "Algo especial está chegando... 🔥" :
+                       i === 1 ? (brief.headline ?? "Novidade exclusiva!").slice(0, 30) :
+                       (brief.cta ?? "Garante sua vaga agora")}
+                    </p>
+                    <div className="text-[7px] font-mono text-[#667781] text-right mt-0.5">10:30 ✓✓</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {brief.platform === "email" && (
+          <div className="border border-border/30 bg-white/5 overflow-hidden">
+            <div className="px-2 py-1.5 border-b border-border/20 bg-white/5">
+              <div className="text-[9px] font-mono font-bold text-foreground/80">
+                📧 {(brief.headline ?? "Assunto do e-mail").slice(0, 35)}
+              </div>
+              <div className="text-[7px] font-mono text-muted-foreground/30 mt-0.5">De: voce@dominio.com · Para: lista-vip@...</div>
+            </div>
+            <div className="px-2 py-1.5 space-y-1">
+              <div className="bg-indigo-500/10 border border-indigo-500/20 px-2 py-1 text-[8px] font-mono font-bold text-indigo-300 text-center">
+                {(brief.headline ?? "Chamada Principal").slice(0, 38)}
+              </div>
+              <p className="text-[8px] font-mono text-foreground/40 leading-snug line-clamp-2">
+                {(brief.caption ?? brief.angle).slice(0, 80)}
+              </p>
+              <div className="bg-indigo-600/20 border border-indigo-600/30 px-2 py-0.5 text-[8px] font-mono text-indigo-300 text-center">
+                {brief.cta ?? "Clique aqui"}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Trigger badge + actions */}
+        <div className="flex flex-wrap gap-1">
+          <span className={`px-1.5 py-0.5 text-[8px] font-mono border ${m.bdr} ${m.col} ${m.bg} uppercase tracking-wide`}>
+            ⚡ {brief.trigger}
+          </span>
+        </div>
+        <ul className="space-y-0.5">
+          {brief.actions.slice(0, 3).map((a, i) => (
+            <li key={i} className="flex items-start gap-1">
+              <span className={`shrink-0 text-[8px] mt-0.5 ${m.col}`}>·</span>
+              <span className="text-[8px] font-mono text-muted-foreground/60 leading-snug">{a}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Approval controls */}
+      {state === "pending" && (
+        <div className="grid grid-cols-2 border-t border-border/30 divide-x divide-border/30">
+          <button onClick={onApprove}
+            className="py-2 font-mono text-[10px] uppercase tracking-widest text-success hover:bg-success/10 transition-colors flex items-center justify-center gap-1">
+            <CheckCircle2 className="h-2.5 w-2.5" />Aprovar
+          </button>
+          <button onClick={onRevise}
+            className="py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 hover:bg-muted/20 transition-colors flex items-center justify-center gap-1">
+            <XCircle className="h-2.5 w-2.5" />Revisar
+          </button>
+        </div>
+      )}
+      {state === "approved" && (
+        <button onClick={onRevise}
+          className="border-t border-success/20 py-2 w-full font-mono text-[10px] uppercase tracking-widest text-success flex items-center justify-center gap-1 hover:bg-success/5 transition-colors">
+          <CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Desfazer
+        </button>
+      )}
+      {state === "revised" && (
+        <button onClick={onApprove}
+          className="border-t border-yellow-400/20 py-2 w-full font-mono text-[10px] uppercase tracking-widest text-yellow-400 flex items-center justify-center gap-1 hover:bg-yellow-400/5 transition-colors">
+          ↻ Para revisão — Aprovar assim mesmo
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AgentRunLog({ agents }: { agents: AgentRun[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-border/30 bg-card/20">
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full px-4 py-2.5 flex items-center gap-2 hover:bg-muted/20 transition-colors">
+        <Bot className="h-3 w-3 text-muted-foreground/50" />
+        <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 flex-1 text-left">
+          Log de Execução — {agents.length} agente{agents.length !== 1 ? "s" : ""}
+        </span>
+        <span className="text-[10px] font-mono text-muted-foreground/40">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="border-t border-border/20 divide-y divide-border/20">
+          {[...agents].reverse().map(agent => (
+            <div key={agent.id} className="px-4 py-2.5 flex items-center gap-3">
+              <StatusDot status={agent.status} />
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-[11px] font-bold uppercase tracking-wide truncate">
+                  {AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}
+                </div>
+                <div className="text-[10px] font-mono text-muted-foreground/40">
+                  {new Date(agent.startedAt).toLocaleTimeString("pt-BR")}
+                  {agent.completedAt && ` → ${new Date(agent.completedAt).toLocaleTimeString("pt-BR")}`}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {agent.tokensUsed && <span className="text-[10px] font-mono text-muted-foreground/40">{agent.tokensUsed.toLocaleString()} tok</span>}
+                <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 py-0 ${agent.status === "completed" ? "border-success/30 text-success" : agent.status === "failed" ? "border-destructive/30 text-destructive" : "border-primary/30 text-primary"}`}>
+                  {agent.status}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StrategyApprovalBoard({
+  strategyD, audienceD, targetingD, timelineD, intakeD, onProceed, proceedLoading,
+}: {
+  strategyD: Record<string, unknown>;
+  audienceD: Record<string, unknown>;
+  targetingD: Record<string, unknown>;
+  timelineD: Record<string, unknown>;
+  intakeD: Record<string, unknown>;
+  onProceed: () => void;
+  proceedLoading: boolean;
+}) {
+  const briefs = useMemo(
+    () => buildPlatformBriefs(strategyD, targetingD, intakeD),
+    [strategyD, targetingD, intakeD],
+  );
+
+  type ApprovalState = "pending" | "approved" | "revised";
+  const [secA, setSecA] = useState<ApprovalState>("pending");
+  const [secB, setSecB] = useState<ApprovalState>("pending");
+  const [platStates, setPlatStates] = useState<Record<PlatformId, ApprovalState>>({
+    instagram: "pending", tiktok: "pending", facebook: "pending", whatsapp: "pending", email: "pending",
+  });
+
+  const allDecided = secA !== "pending" && secB !== "pending" && briefs.every(b => platStates[b.platform] !== "pending");
+  const hasRevisions = secA === "revised" || secB === "revised" || briefs.some(b => platStates[b.platform] === "revised");
+
+  const approveAll = () => {
+    setSecA("approved"); setSecB("approved");
+    setPlatStates({ instagram: "approved", tiktok: "approved", facebook: "approved", whatsapp: "approved", email: "approved" });
+  };
+  const setPlt = (p: PlatformId, s: ApprovalState) => setPlatStates(prev => ({ ...prev, [p]: s }));
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="border border-success/30 bg-success/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+          <div>
+            <div className="font-mono text-xs font-bold uppercase tracking-widest text-success">Análise Estratégica Completa</div>
+            <div className="text-[11px] font-mono text-muted-foreground/60 mt-0.5">
+              Revise e aprove cada seção. Quando tudo ok, a IA gera o conteúdo completo.
+            </div>
+          </div>
+        </div>
+        <button onClick={approveAll}
+          className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:text-success border border-border/40 hover:border-success/40 px-3 py-1.5 transition-colors whitespace-nowrap shrink-0">
+          Aprovar Tudo
+        </button>
+      </div>
+
+      {/* Section 1: Audience segmentation */}
+      <div className="border border-border/50 bg-card/30 overflow-hidden">
+        <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between gap-3">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold flex items-center gap-2">
+              <Users className="h-3 w-3" />Seção 1 — Segmentação de Audiência
+            </div>
+            <div className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">Quem vamos alcançar e como chegar até eles por canal</div>
+          </div>
+          {secA !== "pending" && (
+            <span className={`font-mono text-[10px] uppercase shrink-0 ${secA === "approved" ? "text-success" : "text-yellow-400"}`}>
+              {secA === "approved" ? "✓ Aprovado" : "↻ Revisão"}
+            </span>
+          )}
+        </div>
+        <div className="p-4 space-y-3">
+          {(strategyD["audienceSegmentation"] ?? audienceD["avatars"] ?? audienceD["segments"]) ? (
+            <PlanText value={strategyD["audienceSegmentation"] ?? audienceD} />
+          ) : (
+            <PlanText value={{
+              avatar_primario: (intakeD["audience.primaryPersona"] as string) || "Definido no briefing",
+              canal_principal: "Instagram + TikTok + E-mail + WhatsApp",
+              abordagem: "Conteúdo orgânico de autoridade + tráfego pago de conversão",
+            }} />
+          )}
+          {/* Per-platform reach summary */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
+            {briefs.map(b => {
+              const m = PLT[b.platform];
+              return (
+                <div key={b.platform} className={`border ${m.bdr} ${m.bg} px-2.5 py-2`}>
+                  <div className={`font-mono text-[9px] font-bold uppercase tracking-widest ${m.col} mb-1`}>{m.label}</div>
+                  <div className="text-[8px] font-mono text-muted-foreground/60 leading-snug">{b.angle.slice(0, 40)}</div>
+                </div>
+              );
+            })}
+          </div>
+          {secA === "pending" && (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button onClick={() => setSecA("approved")}
+                className="py-2.5 border border-success/30 bg-success/5 hover:bg-success/10 font-mono text-[11px] uppercase tracking-widest text-success flex items-center justify-center gap-1.5 transition-colors">
+                <CheckCircle2 className="h-3 w-3" />Aprovar Segmentação
+              </button>
+              <button onClick={() => setSecA("revised")}
+                className="py-2.5 border border-border/40 hover:bg-muted/20 font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
+                <XCircle className="h-3 w-3" />Solicitar Revisão
+              </button>
+            </div>
+          )}
+          {secA !== "pending" && (
+            <button onClick={() => setSecA("pending")}
+              className={`w-full py-2 border font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors ${secA === "approved" ? "border-success/20 text-success hover:bg-success/5" : "border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/5"}`}>
+              {secA === "approved" ? <><CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para alterar</> : <>↻ Para revisão · Aprovar assim mesmo</>}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Section 2: Platform creative briefs */}
+      <div className="border border-border/50 bg-card/30 overflow-hidden">
+        <div className="px-4 py-3 border-b border-border/40">
+          <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold flex items-center gap-2">
+            <Layers className="h-3 w-3" />Seção 2 — Criativos por Plataforma
+          </div>
+          <div className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">
+            Visual, formato, gatilho e ações para cada canal — aprove um a um
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {briefs.map(b => (
+              <PlatformMockCard
+                key={b.platform}
+                brief={b}
+                state={platStates[b.platform]}
+                onApprove={() => setPlt(b.platform, "approved")}
+                onRevise={() => setPlt(b.platform, platStates[b.platform] === "approved" ? "pending" : "revised")}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3: Architecture + Timeline */}
+      <div className="border border-border/50 bg-card/30 overflow-hidden">
+        <div className="px-4 py-3 border-b border-border/40 flex items-center justify-between gap-3">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-widest text-yellow-400 font-bold flex items-center gap-2">
+              <Target className="h-3 w-3" />Seção 3 — Arquitetura & Cronograma
+            </div>
+            <div className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">Fases do lançamento, milestones e metas projetadas</div>
+          </div>
+          {secB !== "pending" && (
+            <span className={`font-mono text-[10px] uppercase shrink-0 ${secB === "approved" ? "text-success" : "text-yellow-400"}`}>
+              {secB === "approved" ? "✓ Aprovado" : "↻ Revisão"}
+            </span>
+          )}
+        </div>
+        <div className="p-4 space-y-3">
+          {strategyD["campaignArchitecture"] ? <PlanText value={strategyD["campaignArchitecture"] as Record<string, unknown>} /> : null}
+          {Object.keys(timelineD).length > 0 && <PlanText value={timelineD} />}
+          {!strategyD["campaignArchitecture"] && Object.keys(timelineD).length === 0 && (
+            <PlanText value={{
+              pre_lancamento: "D-7 a D-1: Aquecimento orgânico + lista VIP",
+              abertura: "D0: Abertura do carrinho em todas as plataformas simultaneamente",
+              meio: "D1-D5: Conteúdo de objeções + prova social + retargeting",
+              fechamento: "D6-D7: Escassez máxima + última chamada",
+            }} />
+          )}
+          {strategyD["successMetrics"] ? (
+            <div className="border border-yellow-400/20 bg-yellow-400/5 p-3">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/70 mb-2 font-bold">Metas & KPIs Projetados</div>
+              <PlanText value={strategyD["successMetrics"] as Record<string, unknown>} />
+            </div>
+          ) : null}
+          {secB === "pending" && (
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button onClick={() => setSecB("approved")}
+                className="py-2.5 border border-success/30 bg-success/5 hover:bg-success/10 font-mono text-[11px] uppercase tracking-widest text-success flex items-center justify-center gap-1.5 transition-colors">
+                <CheckCircle2 className="h-3 w-3" />Aprovar Cronograma
+              </button>
+              <button onClick={() => setSecB("revised")}
+                className="py-2.5 border border-border/40 hover:bg-muted/20 font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5 transition-colors">
+                <XCircle className="h-3 w-3" />Solicitar Revisão
+              </button>
+            </div>
+          )}
+          {secB !== "pending" && (
+            <button onClick={() => setSecB("pending")}
+              className={`w-full py-2 border font-mono text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 transition-colors ${secB === "approved" ? "border-success/20 text-success hover:bg-success/5" : "border-yellow-400/20 text-yellow-400 hover:bg-yellow-400/5"}`}>
+              {secB === "approved" ? <><CheckCircle2 className="h-2.5 w-2.5" />Aprovado · Clique para alterar</> : <>↻ Para revisão</>}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Proceed CTA */}
+      {allDecided && (
+        <div className={`border p-5 relative overflow-hidden ${hasRevisions ? "border-yellow-400/30 bg-yellow-400/5" : "border-primary/30 bg-primary/5"}`}>
+          <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-primary" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary" />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className={`font-mono text-sm font-bold uppercase tracking-widest mb-1 ${hasRevisions ? "text-yellow-400" : "text-primary"}`}>
+                {hasRevisions ? "Revisões solicitadas — a IA vai ajustar" : "Tudo aprovado!"}
+              </div>
+              <div className="text-xs font-mono text-muted-foreground/60">
+                {hasRevisions
+                  ? "A IA vai reescrever as seções marcadas antes de gerar o conteúdo final."
+                  : "A IA vai gerar todo o conteúdo agora: copy, criativos, e-mails e sequências."}
+              </div>
+            </div>
+            <Button
+              className="font-mono uppercase tracking-widest rounded-none gap-2 h-12 px-8 w-full md:w-auto btn-weapon-primary"
+              onClick={onProceed}
+              disabled={proceedLoading}
+            >
+              {proceedLoading
+                ? <><Loader2 className="h-4 w-4 animate-spin" />Gerando Conteúdo...</>
+                : <><Zap className="h-4 w-4" />{hasRevisions ? "Gerar com Revisões" : "Gerar Conteúdo Completo"}</>
+              }
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function CampaignDetail() {
   const [, params] = useRoute("/campaigns/:id");
@@ -505,7 +1047,7 @@ export default function CampaignDetail() {
         queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/agents`] });
       }
     },
-    isActive,
+    true,
   );
 
   // Auto-scroll live feed
@@ -513,11 +1055,35 @@ export default function CampaignDetail() {
     if (liveRef.current) liveRef.current.scrollTop = liveRef.current.scrollHeight;
   }, [liveEvents]);
 
+  // Polling fallback: if active but socket hasn't delivered events, show a message after 12s
+  useEffect(() => {
+    if (!isActive || liveEvents.length > 1) return;
+    const timer = setTimeout(() => {
+      setLiveEvents(prev => {
+        if (prev.length > 1) return prev;
+        return [...prev, {
+          campaignId,
+          type: "execution_update" as const,
+          message: "Processando em background — aguardando próxima atualização dos agentes...",
+          timestamp: new Date().toISOString(),
+        }];
+      });
+    }, 12000);
+    return () => clearTimeout(timer);
+  }, [isActive, liveEvents.length, campaignId]);
+
   // ── Execute campaign phase ─────────────────────────────────────────────────────
   const executeMutation = useExecuteCampaign({
     mutation: {
       onSuccess: () => {
         toast.success("Fase iniciada. A IA está em execução.");
+        setActiveTab("agentes");
+        setLiveEvents(prev => [...prev, {
+          campaignId,
+          type: "execution_update" as const,
+          message: "Fase iniciada — agentes sendo ativados em instantes...",
+          timestamp: new Date().toISOString(),
+        }]);
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
       onError: (err: unknown) => {
@@ -998,7 +1564,8 @@ export default function CampaignDetail() {
       {/* ══════════════ AGENTES TAB ══════════════ */}
       {activeTab === "agentes" && (
         <div className="space-y-4">
-          {/* ─ Live feed (Socket.io) ─ */}
+
+          {/* ─ Live feed (Socket.io) — shown while AI is running ─ */}
           {isActive && (
             <div className="border border-primary/30 bg-primary/5 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
@@ -1009,26 +1576,36 @@ export default function CampaignDetail() {
               </div>
               <div ref={liveRef} className="h-48 overflow-y-auto p-4 space-y-1.5 font-mono text-[11px]">
                 {liveEvents.length === 0 ? (
-                  <div className="flex items-center gap-2 text-muted-foreground/40 text-xs">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Aguardando eventos da IA...</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-muted-foreground/50 text-xs">
+                      <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                      <span>Agentes sendo inicializados... processando em background</span>
+                    </div>
+                    {[55, 72, 45].map((w, i) => (
+                      <div key={i} className="flex items-center gap-2 opacity-30">
+                        <span className="text-primary/40 shrink-0 w-3">·</span>
+                        <div className="h-2 bg-primary/15 animate-pulse rounded-sm" style={{ width: `${w}%` }} />
+                      </div>
+                    ))}
+                    <p className="text-[10px] font-mono text-muted-foreground/30 mt-2 pt-2 border-t border-border/20">
+                      O processamento acontece em background. O status atualiza automaticamente quando concluído.
+                    </p>
                   </div>
                 ) : (
                   liveEvents.map((ev, i) => {
                     const color =
-                      ev.type === "agent_started"    ? "text-primary" :
-                      ev.type === "agent_thinking"   ? "text-cyan-400/80" :
-                      ev.type === "agent_completed"  ? "text-success" :
-                      ev.type === "agent_failed"     ? "text-destructive" :
+                      ev.type === "agent_started"      ? "text-primary" :
+                      ev.type === "agent_thinking"     ? "text-cyan-400/80" :
+                      ev.type === "agent_completed"    ? "text-success" :
+                      ev.type === "agent_failed"       ? "text-destructive" :
                       ev.type === "checkpoint_created" ? "text-yellow-400" :
                       "text-muted-foreground/60";
                     const prefix =
-                      ev.type === "agent_started"    ? "▶" :
-                      ev.type === "agent_thinking"   ? "·" :
-                      ev.type === "agent_completed"  ? "✓" :
-                      ev.type === "agent_failed"     ? "✗" :
-                      ev.type === "checkpoint_created" ? "!" :
-                      "·";
+                      ev.type === "agent_started"      ? "▶" :
+                      ev.type === "agent_thinking"     ? "·" :
+                      ev.type === "agent_completed"    ? "✓" :
+                      ev.type === "agent_failed"       ? "✗" :
+                      ev.type === "checkpoint_created" ? "!" : "·";
                     return (
                       <div key={i} className={`flex items-start gap-2 ${color}`}>
                         <span className="shrink-0 w-3">{prefix}</span>
@@ -1049,77 +1626,63 @@ export default function CampaignDetail() {
             </div>
           )}
 
-          {/* ─ Plano de Ação gerado pelos Agentes ─ */}
-          {(Object.keys(strategyD).length > 0 || Object.keys(audienceD).length > 0 || Object.keys(offerD).length > 0 || Object.keys(timelineD).length > 0) && (
-            <AgentPlanPanel
+          {/* ─ Strategy Approval Board — shown when strategy data is ready ─ */}
+          {(campaign.status === "strategy_ready" || Object.keys(strategyD).length > 0) && (
+            <StrategyApprovalBoard
               strategyD={strategyD}
               audienceD={audienceD}
-              offerD={offerD}
               targetingD={targetingD}
               timelineD={timelineD}
-              checkpoints={agentsData?.checkpoints ?? []}
-              onGoToStrategy={() => setActiveTab("estrategia")}
+              intakeD={intakeD}
+              onProceed={() => {
+                executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
+              }}
+              proceedLoading={executeMutation.isPending}
             />
           )}
 
-          {agentsLoading ? (
-            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-16 bg-muted/20" />)}</div>
-          ) : (
-            <>
-              {/* Pending checkpoints */}
-              {(agentsData?.checkpoints ?? []).filter(c => c.status === "awaiting_review").map(cp => (
-                <div key={cp.id} className="border border-yellow-400/30 bg-yellow-400/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-mono uppercase tracking-widest text-yellow-400 flex items-center gap-2 mb-1">
-                      <AlertTriangle className="h-3 w-3" />Aprovação Necessária
-                    </div>
-                    <div className="font-mono text-sm font-bold uppercase tracking-wide">{cp.type.replace(/_/g, " ")}</div>
-                    <div className="text-xs text-muted-foreground font-mono mt-0.5">{new Date(cp.createdAt).toLocaleString("pt-BR")}</div>
-                  </div>
-                  <Button
-                    className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-4 text-xs"
-                    disabled={checkpointLoading === cp.id}
-                    onClick={() => handleCheckpointApprove(cp.id)}
-                  >
-                    {checkpointLoading === cp.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                    Aprovar
-                  </Button>
-                </div>
-              ))}
-
-              {/* Agent runs */}
-              {(agentsData?.agents ?? []).length === 0 ? (
-                <div className="py-12 text-center font-mono text-xs text-muted-foreground uppercase tracking-widest">
-                  Nenhum agente executado ainda. Execute uma fase para acionar a IA.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <SectionHeader icon={Bot} label={`${agentsData?.agents.length ?? 0} Execuções de Agente`} />
-                  {[...(agentsData?.agents ?? [])].reverse().map(agent => (
-                    <div key={agent.id} className="border border-border/50 bg-card/30 p-3 flex flex-col md:flex-row md:items-center gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <StatusDot status={agent.status} />
-                        <div className="min-w-0">
-                          <div className="font-mono text-xs font-bold uppercase tracking-wide">{AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}</div>
-                          <div className="text-[11px] text-muted-foreground font-mono uppercase tracking-widest">
-                            {new Date(agent.startedAt).toLocaleString("pt-BR")}
-                            {agent.completedAt && ` → ${new Date(agent.completedAt).toLocaleString("pt-BR")}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        {agent.tokensUsed && <span className="text-[11px] font-mono text-muted-foreground">{agent.tokensUsed.toLocaleString()} tokens</span>}
-                        {agent.costUsd && <span className="text-[11px] font-mono text-muted-foreground">US$ {Number(agent.costUsd).toFixed(4)}</span>}
-                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${agent.status === "completed" ? "border-success/40 text-success" : agent.status === "failed" ? "border-destructive/40 text-destructive" : "border-primary/40 text-primary"}`}>
-                          {agent.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
+          {/* ─ Empty state (no data, no activity) ─ */}
+          {!isActive && Object.keys(strategyD).length === 0 && campaign.status !== "strategy_ready" && (
+            <div className="py-16 text-center border border-border/30 bg-card/20">
+              <Bot className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="font-mono text-xs text-muted-foreground/70 uppercase tracking-widest mb-1">
+                Nenhum agente executado ainda
+              </p>
+              <p className="font-mono text-xs text-muted-foreground/40">
+                Clique em &ldquo;Iniciar Análise&rdquo; no tab Comando para acionar os agentes de IA
+              </p>
+            </div>
           )}
+
+          {/* ─ Pending checkpoints ─ */}
+          {(agentsData?.checkpoints ?? []).filter(c => c.status === "awaiting_review").map(cp => (
+            <div key={cp.id} className="border border-yellow-400/30 bg-yellow-400/5 p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-mono uppercase tracking-widest text-yellow-400 flex items-center gap-2 mb-1">
+                  <AlertTriangle className="h-3 w-3" />Aprovação Necessária
+                </div>
+                <div className="font-mono text-sm font-bold uppercase tracking-wide">{cp.type.replace(/_/g, " ")}</div>
+                <div className="text-xs text-muted-foreground font-mono mt-0.5">{new Date(cp.createdAt).toLocaleString("pt-BR")}</div>
+              </div>
+              <Button
+                className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-4 text-xs"
+                disabled={checkpointLoading === cp.id}
+                onClick={() => handleCheckpointApprove(cp.id)}
+              >
+                {checkpointLoading === cp.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                Aprovar
+              </Button>
+            </div>
+          ))}
+
+          {/* ─ Agent run log (collapsible) ─ */}
+          {agentsLoading && (
+            <div className="space-y-2">{[1,2].map(i => <Skeleton key={i} className="h-12 bg-muted/20" />)}</div>
+          )}
+          {(agentsData?.agents ?? []).length > 0 && (
+            <AgentRunLog agents={agentsData?.agents ?? []} />
+          )}
+
         </div>
       )}
 
