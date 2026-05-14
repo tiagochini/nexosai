@@ -343,7 +343,7 @@ export async function triggerNextPhase(
 
   const status = campaign.status;
 
-  if (["intake", "analyzing", "strategy_ready"].includes(status) && status !== "analyzing") {
+  if (["intake", "analyzing"].includes(status)) {
     const result = await triggerStrategyPhase(campaignId, workspaceId, log);
     return { ...result, action: "run_strategy" };
   }

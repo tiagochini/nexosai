@@ -1239,7 +1239,7 @@ export default function CampaignDetail() {
   const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string } | null => {
     switch (campaign.status) {
       case "analyzing": return { phase: "strategy" as CampaignExecuteInputPhase, label: "Iniciar Análise Estratégica", description: "Briefing completo. A IA vai montar sua estratégia de lançamento agora." };
-      case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia aprovada. Inicie a geração de conteúdo com IA." };
+      case "strategy_ready": return { label: "Revisar Estratégia", description: "Estratégia pronta. Revise e aprove cada seção no board antes de gerar o conteúdo.", phase: undefined };
       case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A IA gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
       case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
@@ -1460,6 +1460,13 @@ export default function CampaignDetail() {
                       <Layers className="h-4 w-4" />{nextAction.label}
                     </Button>
                   </Link>
+                ) : campaign.status === "strategy_ready" ? (
+                  <Button
+                    className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto"
+                    onClick={() => setActiveTab("agentes")}
+                  >
+                    <Eye className="h-4 w-4" />Revisar Estratégia
+                  </Button>
                 ) : null}
               </div>
             </div>
@@ -1565,8 +1572,8 @@ export default function CampaignDetail() {
       {activeTab === "agentes" && (
         <div className="space-y-4">
 
-          {/* ─ Live feed (Socket.io) — shown while AI is running ─ */}
-          {isActive && (
+          {/* ─ Live feed (Socket.io) — shown while AI is running OR has recent events ─ */}
+          {(isActive || liveEvents.length > 0) && (
             <div className="border border-primary/30 bg-primary/5 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
               <div className="px-4 py-2.5 border-b border-primary/20 flex items-center gap-2">
@@ -1626,8 +1633,8 @@ export default function CampaignDetail() {
             </div>
           )}
 
-          {/* ─ Strategy Approval Board — shown when strategy data is ready ─ */}
-          {(campaign.status === "strategy_ready" || Object.keys(strategyD).length > 0) && (
+          {/* ─ Strategy Approval Board — shown only when strategy is ready for approval ─ */}
+          {campaign.status === "strategy_ready" && (
             <StrategyApprovalBoard
               strategyD={strategyD}
               audienceD={audienceD}
@@ -1641,8 +1648,8 @@ export default function CampaignDetail() {
             />
           )}
 
-          {/* ─ Empty state (no data, no activity) ─ */}
-          {!isActive && Object.keys(strategyD).length === 0 && campaign.status !== "strategy_ready" && (
+          {/* ─ Empty state (no data, no activity, no pending events) ─ */}
+          {!isActive && liveEvents.length === 0 && Object.keys(strategyD).length === 0 && campaign.status !== "strategy_ready" && (
             <div className="py-16 text-center border border-border/30 bg-card/20">
               <Bot className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
               <p className="font-mono text-xs text-muted-foreground/70 uppercase tracking-widest mb-1">
