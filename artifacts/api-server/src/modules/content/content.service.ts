@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, ne } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -1075,9 +1075,24 @@ export async function generateCampaignContent(
     ? "strategy_ready"
     : "awaiting_approval";
 
+  // Move all generated content pieces from draft → pending_approval so they
+  // appear correctly in the content review page. Pieces already approved or
+  // rejected are left unchanged.
+  if (!allFailed) {
+    await db
+      .update(contentPiecesTable)
+      .set({ status: "pending_approval", updatedAt: new Date() })
+      .where(
+        and(
+          eq(contentPiecesTable.campaignId, campaignId),
+          eq(contentPiecesTable.status, "draft"),
+        ),
+      );
+  }
+
   await db
     .update(campaignsTable)
-    .set({ status: finalStatus })
+    .set({ status: finalStatus, executionStartedAt: new Date() })
     .where(eq(campaignsTable.id, campaignId));
 
   await db.insert(auditLogsTable).values({
