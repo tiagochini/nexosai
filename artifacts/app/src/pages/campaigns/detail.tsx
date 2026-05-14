@@ -1246,9 +1246,10 @@ export default function CampaignDetail() {
     queryKey: [`/api/campaigns/${campaignId}/content`],
     enabled: !!campaignId && activeTab === "conteudo",
     refetchInterval: isActive ? 5000 : false,
+    staleTime: 0,
     queryFn: async () => {
       const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
-      if (!res.ok) return { pieces: [] };
+      if (!res.ok) return null;
       return res.json() as Promise<{ pieces: ContentPiece[] }>;
     },
   });
@@ -1257,10 +1258,10 @@ export default function CampaignDetail() {
   const { data: previewContentData } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}/content/preview`],
     enabled: !!campaignId && campaign?.status === "awaiting_approval",
-    staleTime: 60_000,
+    staleTime: 0,
     queryFn: async () => {
       const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
-      if (!res.ok) return { pieces: [] };
+      if (!res.ok) return null;
       return res.json() as Promise<{ pieces: ContentPiece[] }>;
     },
   });

@@ -470,7 +470,8 @@ function extractBodyText(content: unknown, type?: string): string {
   if (content === null || content === undefined) return "";
   let obj: unknown = content;
   if (typeof obj === "string") {
-    try { obj = JSON.parse(obj); } catch { return obj; }
+    const str = obj;
+    try { obj = JSON.parse(str); } catch { return str; }
   }
   if (typeof obj !== "object") return String(obj);
   const c = obj as Record<string, unknown>;
@@ -923,6 +924,8 @@ export default function ContentApproval() {
       return res.json() as Promise<{ pieces: ApiContentPiece[] }>;
     },
     enabled: !!campaignId,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   // Transition campaign from awaiting_approval → approved when user approves all content
@@ -951,9 +954,18 @@ export default function ContentApproval() {
 
   const campaign = campaignData?.campaign;
 
-  const realPieces: ContentPiece[] | null = apiContentData?.pieces?.length
-    ? apiContentData.pieces.map((p, i) => mapApiPiece(p, i))
-    : null;
+  const realPieces: ContentPiece[] | null = (() => {
+    if (!apiContentData?.pieces?.length) return null;
+    const mapped: ContentPiece[] = [];
+    for (let i = 0; i < apiContentData.pieces.length; i++) {
+      try {
+        mapped.push(mapApiPiece(apiContentData.pieces[i]!, i));
+      } catch (err) {
+        console.error("[content] mapApiPiece failed for piece", apiContentData.pieces[i]?.id, err);
+      }
+    }
+    return mapped.length > 0 ? mapped : null;
+  })();
 
   const pieces: ContentPiece[] = localPieces ?? realPieces ?? [];
   const approvedCount = pieces.filter(p => p.status === "approved").length;
