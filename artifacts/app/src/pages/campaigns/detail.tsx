@@ -7,7 +7,7 @@ import {
   getGetCampaignQueryKey,
 } from "@workspace/api-client-react";
 import { useCampaignSocket, type CampaignEvent } from "@/lib/socket";
-import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1219,25 +1219,37 @@ export default function CampaignDetail() {
 
   const reorientMutation = useMutation({
     mutationFn: async (directive: string) => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/reorient`, {
+      return customFetch<{ ok: boolean; status: string }>(`/api/campaigns/${campaignId}/reorient`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ directive }),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao reorientar campanha");
-      }
-      return res.json();
     },
     onSuccess: () => {
-      toast.success("Campanha reorientada! A IA está reconstruindo a estratégia do zero.");
+      toast.success("Reorientação iniciada! A IA está reconstruindo a estratégia do zero.", { duration: 5000 });
       setReorientOpen(false);
       setReorientDirective("");
+      setActiveTab("agentes");
       void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
     },
-    onError: (err: Error) => {
-      toast.error(err.message);
+    onError: (err: unknown) => {
+      if (err instanceof ApiError) {
+        const data = err.data as { code?: string; error?: string; data?: { balance?: number; shortage?: number } } | null;
+        if (data?.code === "INSUFFICIENT_CREDITS") {
+          const shortage = data.data?.shortage ?? 0;
+          toast.error(
+            `Créditos insuficientes. Faltam ${shortage} crédito${shortage !== 1 ? "s" : ""} para reconstruir a estratégia.`,
+            {
+              duration: 8000,
+              action: { label: "Comprar créditos", onClick: () => setLocation("/creditos") },
+            },
+          );
+        } else {
+          toast.error(data?.error ?? err.message);
+        }
+      } else if (err instanceof Error) {
+        toast.error(err.message);
+      }
     },
   });
 

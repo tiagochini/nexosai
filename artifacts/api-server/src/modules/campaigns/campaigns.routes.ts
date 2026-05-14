@@ -14,6 +14,10 @@ import {
 } from "./campaigns.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError } from "../../lib/errors.js";
+import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
+import { eq } from "drizzle-orm";
+
+const REORIENT_STRATEGY_COST = 45;
 
 const router = Router();
 router.use(requireAuth);
@@ -123,6 +127,28 @@ router.post("/:id/reorient", async (req, res): Promise<void> => {
     return;
   }
   try {
+    // Pre-flight credit check — strategy phase costs 45 cr + buffer
+    const [workspace] = await db
+      .select({ balance: workspacesTable.creditsBalance })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, req.auth.workspaceId))
+      .limit(1);
+
+    const balance = workspace?.balance ?? 0;
+    const required = REORIENT_STRATEGY_COST + CAMPAIGN_CREDIT_BUFFER;
+    if (balance < required) {
+      const shortage = required - balance;
+      res.status(402).json({
+        error:
+          `Créditos insuficientes para reconstruir a estratégia. ` +
+          `Saldo atual: ${balance} cr. Necessário: ${required} cr (${REORIENT_STRATEGY_COST} para análise + ${CAMPAIGN_CREDIT_BUFFER} de reserva). ` +
+          `Adquira mais ${shortage} crédito${shortage !== 1 ? "s" : ""} para continuar.`,
+        code: "INSUFFICIENT_CREDITS",
+        data: { balance, required, shortage },
+      });
+      return;
+    }
+
     await reorientCampaign(id, req.auth.workspaceId, directive.trim(), req.log);
     setImmediate(() =>
       triggerStrategyPhase(id, req.auth.workspaceId, req.log).catch((err) =>
