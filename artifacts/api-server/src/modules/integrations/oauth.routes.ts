@@ -72,6 +72,12 @@ const PROVIDER_MAP: Record<string, ProviderConfig> = {
     label: "Instagram Business",
     dbProvider: "instagram",
   },
+  facebook: {
+    platform: "meta",
+    scope: "pages_manage_posts,pages_read_engagement,pages_show_list,publish_video,public_profile",
+    label: "Facebook",
+    dbProvider: "meta_ads",
+  },
   meta_ads: {
     platform: "meta",
     scope: "ads_management,ads_read,business_management",

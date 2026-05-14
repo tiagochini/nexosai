@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1109,7 +1109,7 @@ interface SocialPlatformDef {
 const SOCIAL_OAUTH_PLATFORMS: SocialPlatformDef[] = [
   {
     platform: "instagram",
-    label: "Instagram Business",
+    label: "Instagram",
     oauthProvider: "instagram",
     dbProvider: "instagram",
     Icon: Instagram,
@@ -1117,15 +1117,15 @@ const SOCIAL_OAUTH_PLATFORMS: SocialPlatformDef[] = [
   },
   {
     platform: "facebook",
-    label: "Facebook Pages",
-    oauthProvider: "meta_ads",
+    label: "Facebook",
+    oauthProvider: "facebook",
     dbProvider: "meta_ads",
     Icon: Globe,
     brand: { bg: "rgba(24,119,242,0.08)", border: "#1877F2", text: "#1877F2" },
   },
   {
     platform: "tiktok",
-    label: "TikTok Business",
+    label: "TikTok",
     oauthProvider: "tiktok",
     dbProvider: "tiktok_ads",
     Icon: Music2,
@@ -1196,7 +1196,7 @@ function SocialLaunchGate({
         clearInterval(timer);
         setConnecting(null);
         if (event.data.success) {
-          toast.success(`${def.label} conectado!`);
+          toast.success(`${def.label} conectado com sucesso!`);
           void refetchIntegrations();
           void queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
         } else {
@@ -1211,9 +1211,19 @@ function SocialLaunchGate({
           setConnecting(null);
         }
       }, 600);
-    } catch {
-      toast.error(`Erro ao iniciar conexão com ${def.label}. Verifique se as credenciais OAuth estão configuradas.`);
+    } catch (err) {
       setConnecting(null);
+      if (err instanceof ApiError) {
+        const data = err.data as { code?: string; error?: string } | null;
+        if (data?.code === "OAUTH_NOT_CONFIGURED") {
+          const platform = def.platform === "facebook" || def.platform === "instagram" ? "META_APP_ID e META_APP_SECRET" : "TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET";
+          toast.error(`OAuth do ${def.label} não configurado. O administrador precisa definir ${platform} nas variáveis de ambiente.`, { duration: 7000 });
+        } else {
+          toast.error(data?.error ?? `Erro ao conectar ${def.label}: ${err.message}`);
+        }
+      } else {
+        toast.error(`Erro de rede ao conectar ${def.label}. Verifique sua conexão.`);
+      }
     }
   }, [refetchIntegrations, queryClient]);
 

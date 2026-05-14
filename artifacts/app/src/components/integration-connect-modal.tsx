@@ -264,7 +264,7 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
       docsLabel: "Docs Instagram API",
     },
     oauthPlatform: "meta",
-    oauthLabel: "Entrar com Meta",
+    oauthLabel: "Entrar com Instagram",
   },
   {
     provider: "tiktok",
@@ -401,7 +401,7 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
       docsLabel: "Docs Meta Marketing API",
     },
     oauthPlatform: "meta",
-    oauthLabel: "Entrar com Meta",
+    oauthLabel: "Entrar com Meta Ads",
   },
   {
     provider: "tiktok_ads",
@@ -551,10 +551,18 @@ export function ConnectModal({
       if (err instanceof ApiError) {
         const data = err.data as { code?: string; error?: string } | null;
         if (data?.code === "OAUTH_NOT_CONFIGURED") {
-          setOauthError("OAuth ainda não configurado no servidor. Insira as credenciais manualmente.");
-          setShowManual(true);
+          const isMeta = entry.oauthPlatform === "meta";
+          const isTikTok = entry.oauthPlatform === "tiktok";
+          const vars = isMeta
+            ? "META_APP_ID e META_APP_SECRET"
+            : isTikTok
+            ? "TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET"
+            : "as variáveis OAuth";
+          setOauthError(
+            `Conexão OAuth não habilitada ainda. Para ativar o login via ${entry.label}, o administrador da plataforma precisa configurar ${vars} nas variáveis de ambiente do servidor.`
+          );
         } else if (data?.code === "UNKNOWN_PROVIDER") {
-          setOauthError("Provedor não suportado. Use a inserção manual.");
+          setOauthError("Provedor não suportado via OAuth. Use a inserção manual de credenciais.");
           setShowManual(true);
         } else {
           setOauthError(data?.error ?? `Erro ${err.status} ao iniciar autenticação.`);
