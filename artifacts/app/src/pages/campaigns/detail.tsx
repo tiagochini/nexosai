@@ -1265,43 +1265,89 @@ export default function CampaignDetail() {
     },
   });
 
+  // Extract actual copy text from aggregated JSON content pieces
+  function extractCopyFromPiece(type: string, raw: unknown): { body: string; platform: PreviewPiece["platform"]; pieceType: PreviewPiece["type"]; title: string } | null {
+    if (!raw || typeof raw !== "object") return null;
+    const c = raw as Record<string, unknown>;
+    try {
+      if (type === "email_sequence") {
+        const sp = (c["salesPage"] as Record<string, unknown> | undefined);
+        const headline = sp?.["sections"] && Array.isArray(sp["sections"]) ? (sp["sections"][0] as Record<string, unknown>)?.["headline"] as string : null;
+        const emails = c["emailSequence"] as Record<string, unknown> | undefined;
+        const preLaunch = emails?.["preLaunch"] as Array<Record<string, unknown>> | undefined;
+        const subj = preLaunch?.[0]?.["subject"] as string | undefined;
+        const preview = preLaunch?.[0]?.["previewText"] as string | undefined;
+        const body = headline ?? subj ?? preview ?? "";
+        if (!body) return null;
+        return { body, platform: "email", pieceType: "email", title: "E-mail — Sequência de Lançamento" };
+      }
+      if (type === "stories_sequence") {
+        const seqs = c["sequences"] as Array<Record<string, unknown>> | undefined;
+        const frame = (seqs?.[0]?.["frames"] as Array<Record<string, unknown>> | undefined)?.[0];
+        const text = frame?.["textContent"] as string | undefined;
+        if (!text) return null;
+        return { body: text, platform: "instagram", pieceType: "story", title: "Stories — Pré-Lançamento" };
+      }
+      if (type === "landing_page_structure") {
+        const sections = c["sections"] as Array<Record<string, unknown>> | undefined;
+        const hero = sections?.find(s => (s["sectionId"] as string)?.includes("hero") || (s["purpose"] as string)?.toLowerCase().includes("hero"));
+        const headline = (hero ?? sections?.[0])?.["headline"] as string | undefined;
+        if (!headline) return null;
+        return { body: headline, platform: "instagram", pieceType: "post", title: "Landing Page — Hero" };
+      }
+      if (type === "cpl_script") {
+        const videos = c["videos"] as Array<Record<string, unknown>> | undefined;
+        const hook = videos?.[0]?.["hook"] as string | undefined;
+        if (!hook) return null;
+        return { body: hook, platform: "tiktok", pieceType: "native_video", title: "CPL — Vídeo 1" };
+      }
+      if (type === "live_script") {
+        const segments = c["segments"] as Array<Record<string, unknown>> | undefined;
+        const opening = segments?.find(s => (s["type"] as string) === "opening" || (s["name"] as string)?.toLowerCase().includes("open"));
+        const script = opening?.["script"] as string | undefined;
+        if (!script) return null;
+        return { body: script.slice(0, 200), platform: "facebook", pieceType: "post", title: "Live — Abertura do Carrinho" };
+      }
+      if (type === "creative_direction") {
+        const dos = (c["doAndDonts"] as Record<string, unknown> | undefined)?.["dos"] as string[] | undefined;
+        const headline = (c["visualConcepts"] as Array<Record<string, unknown>> | undefined)?.[0]?.["headline"] as string | undefined;
+        const body = headline ?? dos?.[0] ?? "";
+        if (!body) return null;
+        return { body, platform: "instagram", pieceType: "post", title: "Direção Criativa — Conceito Visual" };
+      }
+    } catch { return null; }
+    return null;
+  }
+
   const VISUAL_PLATFORM_ORDER = ["instagram", "tiktok", "facebook"];
   const previewSnippets: PreviewPiece[] = (() => {
     const raw = previewContentData?.pieces ?? [];
     if (raw.length === 0) return [];
-    const PLATFORM_MAP: Record<string, PreviewPiece["platform"]> = {
-      instagram_post: "instagram", instagram_reel: "instagram", instagram_story: "instagram",
-      tiktok_video: "tiktok", tiktok_reel: "tiktok", native_video: "tiktok",
-      facebook_post: "facebook", facebook_ad: "facebook",
-      email_campaign: "email", email: "email",
-      whatsapp_message: "whatsapp", whatsapp: "whatsapp",
-      ad_copy: "ads",
-    };
-    const TYPE_MAP: Record<string, PreviewPiece["type"]> = {
-      instagram_post: "post", instagram_reel: "reel", instagram_story: "story",
-      tiktok_video: "native_video", tiktok_reel: "native_video",
-      facebook_post: "post", facebook_ad: "ad",
-      email_campaign: "email", email: "email",
-      whatsapp_message: "message", whatsapp: "message",
-      ad_copy: "ad",
-    };
-    const mapped = raw.map((p, i): PreviewPiece => {
-      const rawType = p.type?.toLowerCase().replace(/\s+/g, "_") ?? "post";
-      const platform = (p.platform as PreviewPiece["platform"] | undefined) ?? PLATFORM_MAP[rawType] ?? "instagram";
-      return {
-        id: p.id,
-        platform,
-        type: TYPE_MAP[rawType] ?? "post",
-        dayIndex: i % 8,
-        title: `${platform} — ${rawType.replace(/_/g, " ")}`,
-        body: p.content,
-        status: p.status === "draft" ? "pending" : p.status as PreviewPiece["status"],
-        segment: "all",
-      };
-    });
-    const visual = mapped.filter(p => VISUAL_PLATFORM_ORDER.includes(p.platform));
-    const sorted = [...VISUAL_PLATFORM_ORDER.flatMap(plt => visual.filter(p => p.platform === plt).slice(0, 1))];
-    return sorted.slice(0, 3);
+
+    const extracted: PreviewPiece[] = [];
+    for (const p of raw) {
+      const rawType = (p.type ?? "").toLowerCase().replace(/\s+/g, "_");
+      let contentObj: unknown = p.content;
+      if (typeof contentObj === "string") {
+        try { contentObj = JSON.parse(contentObj); } catch { contentObj = null; }
+      }
+      const result = extractCopyFromPiece(rawType, contentObj);
+      if (result && VISUAL_PLATFORM_ORDER.includes(result.platform)) {
+        extracted.push({
+          id: p.id,
+          platform: result.platform,
+          type: result.pieceType,
+          dayIndex: 0,
+          title: result.title,
+          body: result.body,
+          status: (p.status === "draft" || p.status === "pending_approval") ? "pending" : p.status as PreviewPiece["status"],
+          segment: "all",
+        });
+      }
+    }
+    // One per platform (instagram, tiktok, facebook)
+    const byPlatform = VISUAL_PLATFORM_ORDER.flatMap(plt => extracted.filter(p => p.platform === plt).slice(0, 1));
+    return byPlatform.slice(0, 3);
   })();
 
   // ── Metrics query ──────────────────────────────────────────────────────────────
@@ -1813,26 +1859,14 @@ export default function CampaignDetail() {
                     </div>
                   );
                 }
+                // Fallback: show neutral style skeletons — never show generic marketing copy
                 const fallbackPosts = [
-                  {
-                    platform: "instagram" as const,
-                    type: "post" as const,
-                    body: `Você consegue vender em volume todos os dias de forma 100% automática?\n\nNos próximos 7 dias vou mostrar exatamente como o ${productName} faz isso — e você pode replicar.\n\nSalva esse post.`,
-                    creatorName,
-                  },
-                  {
-                    platform: "tiktok" as const,
-                    type: "native_video" as const,
-                    body: `${audience} que ainda não automatizou as vendas está deixando dinheiro na mesa toda semana.\n\nVou mostrar o que mudou depois do ${productName}. Fica aqui.`,
-                    tiktokHook: `Você sabe vender em grandes volumes online 100% automático?`,
-                    creatorName,
-                  },
-                  {
-                    platform: "facebook" as const,
-                    type: "post" as const,
-                    body: `${productName} — em 7 dias você vai ver na prática como ${audience} que usam esse método vendem mais sem depender de tráfego caro.\n\nAtiva as notificações. Começa hoje.`,
-                    creatorName,
-                  },
+                  { platform: "instagram" as const, type: "post" as const,
+                    body: `${productName}\n\nCarregando prévia do conteúdo gerado para esta campanha...`, creatorName },
+                  { platform: "tiktok" as const, type: "native_video" as const,
+                    body: `${productName} — prévia do roteiro em carregamento.`, tiktokHook: productName, creatorName },
+                  { platform: "facebook" as const, type: "post" as const,
+                    body: `${productName}\n\nCarregando prévia do conteúdo gerado para esta campanha...`, creatorName },
                 ];
                 return (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
