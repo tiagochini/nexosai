@@ -431,22 +431,47 @@ const PHASE_TO_DAY: Record<string, number> = {
   cart_close: 7, fechamento: 7,
 };
 
+const AGGREGATED_TYPE_LABELS: Record<string, string> = {
+  email_sequence: "Sequência de E-mails",
+  creative_direction: "Direção Criativa",
+  landing_page_structure: "Landing Page",
+  cpl_script: "Roteiro CPL",
+  live_script: "Roteiro Live",
+  stories_sequence: "Stories",
+  media_brief: "Brief de Mídia",
+  compliance_report: "Compliance",
+  targeting_plan: "Plano de Tráfego",
+  audience_profile: "Perfil de Audiência",
+};
+
+function extractBodyText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (content === null || content === undefined) return "";
+  try {
+    const json = JSON.stringify(content, null, 2);
+    return json.slice(0, 2000);
+  } catch {
+    return String(content);
+  }
+}
+
 function mapApiPiece(p: ApiContentPiece, idx: number): ContentPiece {
   const rawType = p.type?.toLowerCase().replace(/\s+/g, "_") ?? "copy";
   const platform = (p.platform as Platform | undefined)
     ?? TYPE_TO_PLATFORM[rawType]
-    ?? "instagram";
-  const pieceType = TYPE_TO_PIECE_TYPE[rawType] ?? "post";
+    ?? "email";
+  const pieceType = TYPE_TO_PIECE_TYPE[rawType] ?? "copy";
   const launchKey = p.launchPhase?.toLowerCase().replace(/\s+/g, "_") ?? "";
   const dayIndex = PHASE_TO_DAY[launchKey] ?? (idx % 8);
-  const statusMap: Record<string, Status> = { draft: "pending", approved: "approved", rejected: "rejected" };
+  const statusMap: Record<string, Status> = { draft: "pending", pending_approval: "pending", approved: "approved", rejected: "rejected" };
+  const label = AGGREGATED_TYPE_LABELS[rawType] ?? rawType.replace(/_/g, " ");
   return {
     id: p.id,
     platform,
     type: pieceType,
     dayIndex,
-    title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} — ${rawType.replace(/_/g, " ")}`,
-    body: p.content,
+    title: label,
+    body: extractBodyText(p.content),
     status: statusMap[p.status] ?? "pending",
     segment: "all",
   };
@@ -722,7 +747,6 @@ export default function ContentApproval() {
       return res.json() as Promise<{ pieces: ApiContentPiece[] }>;
     },
     enabled: !!campaignId,
-    staleTime: 30_000,
   });
 
   // Transition campaign from awaiting_approval → approved when user approves all content

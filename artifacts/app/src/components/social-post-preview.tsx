@@ -7,6 +7,7 @@ export interface PreviewPiece {
   id: string;
   platform: "instagram" | "facebook" | "tiktok" | "email" | "whatsapp" | "landing" | "ads";
   type: "post" | "story" | "reel" | "email" | "message" | "ad" | "copy" | "native_video";
+  creatorName?: string;
   dayIndex: number;
   title: string;
   body: string;
@@ -97,15 +98,17 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
   const hashtags = piece.hashtags?.slice(0, 5).join(" ") ?? "#lançamento #digital #resultado";
   const isReel = piece.type === "reel";
   const likes = Math.round(m.engagements * 0.7);
+  const handle = piece.creatorName ?? "seu.perfil";
+  const initial = handle.charAt(0).toUpperCase();
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-lg text-black text-xs font-sans max-w-[320px] w-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px]">N</div>
+          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-[10px]">{initial}</div>
           <div>
-            <div className="font-semibold text-[11px] leading-tight">nexos.creator</div>
+            <div className="font-semibold text-[11px] leading-tight">{handle}</div>
             <div className="text-[9px] text-gray-400">Patrocinado</div>
           </div>
         </div>
@@ -160,7 +163,7 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
       <div className="px-3 pb-3">
         {!isReel && <div className="font-semibold text-[11px] mb-0.5">{fmtNum(likes)} curtidas</div>}
         <div className="text-[11px] leading-relaxed text-gray-800">
-          <span className="font-semibold">nexos.creator</span> {caption}
+          <span className="font-semibold">{handle}</span> {caption}
         </div>
         <div className="text-[10px] text-blue-500 mt-1">{hashtags}</div>
         {piece.callToAction && (
@@ -174,6 +177,8 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
 // ── Instagram Story ────────────────────────────────────────────────────────────
 
 function InstagramStory({ piece }: { piece: PreviewPiece }) {
+  const handle = piece.creatorName ?? "seu.perfil";
+  const initial = handle.charAt(0).toUpperCase();
   return (
     <div className="bg-black rounded-xl overflow-hidden shadow-lg text-white text-xs font-sans max-w-[180px] w-full"
          style={{ aspectRatio: "9/16" }}>
@@ -185,8 +190,8 @@ function InstagramStory({ piece }: { piece: PreviewPiece }) {
       </div>
       {/* Header */}
       <div className="flex items-center gap-1.5 px-2 py-1.5">
-        <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-[8px]">N</div>
-        <span className="text-[10px] font-semibold">nexos.creator</span>
+        <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white font-bold text-[8px]">{initial}</div>
+        <span className="text-[10px] font-semibold">{handle}</span>
         <span className="text-[9px] text-white/50 ml-0.5">agora</span>
       </div>
       {/* Content */}
@@ -223,15 +228,17 @@ function FacebookPost({ piece }: { piece: PreviewPiece }) {
   const reactions = Math.round(m.engagements * 0.65);
   const comments = Math.round(m.engagements * 0.2);
   const shares = Math.round(m.engagements * 0.15);
+  const handle = piece.creatorName ?? "Seu Perfil";
+  const initial = handle.charAt(0).toUpperCase();
 
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-lg text-black text-xs font-sans max-w-[320px] w-full">
       {/* Header */}
       <div className="flex items-start justify-between px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">N</div>
+          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">{initial}</div>
           <div>
-            <div className="font-semibold text-[12px] text-blue-800 leading-tight">NexOS Creator</div>
+            <div className="font-semibold text-[12px] text-blue-800 leading-tight">{handle}</div>
             <div className="flex items-center gap-1 text-[9px] text-gray-500">
               <span>Agora</span>
               <span>·</span>

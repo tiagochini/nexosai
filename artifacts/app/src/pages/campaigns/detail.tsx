@@ -1799,23 +1799,49 @@ export default function CampaignDetail() {
                   </button>
                 </Link>
               </div>
-              {previewSnippets.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {previewSnippets.map(piece => (
-                    <SocialPostPreview key={piece.id} piece={piece} showMetrics={false} />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {[
-                    { platform: "instagram" as const, type: "post" as const, body: "Algo grande está chegando. 🔥\n\nNos próximos 7 dias vou revelar o método que me ajudou a sair do zero para os 6 dígitos.\n\nSiga de perto." },
-                    { platform: "tiktok" as const, type: "native_video" as const, body: "POV: você vai descobrir o que separa os lançamentos de 6 dígitos dos que não vendem nada.\n\nFica aqui essa semana.", tiktokHook: "O método que nenhum guru te conta sobre lançamentos" },
-                    { platform: "facebook" as const, type: "post" as const, body: "Nos próximos 7 dias compartilho tudo que aprendi sobre lançamentos digitais que batem 6 dígitos.\n\nSalva e ativa as notificações 🔔" },
-                  ].map((p, i) => (
-                    <SocialPostPreview key={i} piece={{ id: `preview-${i}`, dayIndex: 0, title: `${p.platform} — Dia 0`, status: "pending", segment: "all", ...p }} showMetrics={false} />
-                  ))}
-                </div>
-              )}
+              {(() => {
+                const productName = String(intakeD["product.name"] ?? campaign.title ?? "seu produto");
+                const audience = String(intakeD["audience.primaryPersona"] ?? "sua audiência");
+                const handle = productName.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z0-9.]/g, "").slice(0, 20);
+                const creatorName = handle || "seu.perfil";
+                if (previewSnippets.length > 0) {
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {previewSnippets.map(piece => (
+                        <SocialPostPreview key={piece.id} piece={{ ...piece, creatorName }} showMetrics={false} />
+                      ))}
+                    </div>
+                  );
+                }
+                const fallbackPosts = [
+                  {
+                    platform: "instagram" as const,
+                    type: "post" as const,
+                    body: `Você consegue vender em volume todos os dias de forma 100% automática?\n\nNos próximos 7 dias vou mostrar exatamente como o ${productName} faz isso — e você pode replicar.\n\nSalva esse post.`,
+                    creatorName,
+                  },
+                  {
+                    platform: "tiktok" as const,
+                    type: "native_video" as const,
+                    body: `${audience} que ainda não automatizou as vendas está deixando dinheiro na mesa toda semana.\n\nVou mostrar o que mudou depois do ${productName}. Fica aqui.`,
+                    tiktokHook: `Você sabe vender em grandes volumes online 100% automático?`,
+                    creatorName,
+                  },
+                  {
+                    platform: "facebook" as const,
+                    type: "post" as const,
+                    body: `${productName} — em 7 dias você vai ver na prática como ${audience} que usam esse método vendem mais sem depender de tráfego caro.\n\nAtiva as notificações. Começa hoje.`,
+                    creatorName,
+                  },
+                ];
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {fallbackPosts.map((p, i) => (
+                      <SocialPostPreview key={i} piece={{ id: `preview-${i}`, dayIndex: 0, title: `${p.platform} — Dia 0`, status: "pending", segment: "all", ...p }} showMetrics={false} />
+                    ))}
+                  </div>
+                );
+              })()}
               <p className="font-mono text-[11px] text-muted-foreground/50">
                 {previewSnippets.length > 0
                   ? `${previewSnippets.length} de ${previewContentData?.pieces?.length ?? 0} peças. Revise e aprove antes de lançar.`
