@@ -12,6 +12,7 @@ import {
   sequenceContactsTable,
   revenueEventsTable,
   sequenceEngagementTable,
+  contentPiecesTable,
   type Campaign,
   type InsertCampaign,
 } from "@workspace/db";
@@ -28,9 +29,9 @@ export const DIGIT_TRACK_LABELS = {
 export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   intake: ["analyzing", "cancelled"],
   analyzing: ["strategy_ready", "intake", "cancelled"],
-  strategy_ready: ["generating", "cancelled"],
-  generating: ["awaiting_approval", "cancelled"],
-  awaiting_approval: ["approved", "generating", "cancelled"],
+  strategy_ready: ["generating", "analyzing", "cancelled"],
+  generating: ["awaiting_approval", "analyzing", "cancelled"],
+  awaiting_approval: ["approved", "generating", "analyzing", "cancelled"],
   approved: ["executing", "cancelled"],
   executing: ["live", "paused", "cancelled"],
   live: ["paused", "completed", "cancelled"],
@@ -231,6 +232,67 @@ export async function mergeIntakeDirectives(
     .where(eq(campaignsTable.id, campaignId))
     .returning();
   log.info({ campaignId, directiveKeys: Object.keys(directives) }, "Campaign intake directives merged");
+  return updated;
+}
+
+export async function reorientCampaign(
+  campaignId: string,
+  workspaceId: string,
+  directive: string,
+  log: Logger,
+): Promise<Campaign> {
+  const campaign = await getCampaign(campaignId, workspaceId);
+
+  const reorientableStatuses = ["strategy_ready", "generating", "awaiting_approval"];
+  if (!reorientableStatuses.includes(campaign.status)) {
+    throw new ValidationError(
+      `Não é possível reorientar uma campanha com status '${campaign.status}'. ` +
+      `Reorientação disponível apenas quando a campanha está em: ${reorientableStatuses.join(", ")}.`,
+    );
+  }
+
+  const existing = (campaign.intakeData as Record<string, unknown>) ?? {};
+  const prevReorientations = (existing["reorientations"] as Array<{ directive: string; timestamp: string; fromStatus: string }> | undefined) ?? [];
+  const merged = {
+    ...existing,
+    reorientations: [
+      ...prevReorientations,
+      { directive, timestamp: new Date().toISOString(), fromStatus: campaign.status },
+    ],
+    latest_reorientation: directive,
+  };
+
+  await db.delete(contentPiecesTable).where(eq(contentPiecesTable.campaignId, campaignId));
+
+  const [updated] = await db
+    .update(campaignsTable)
+    .set({
+      intakeData: merged,
+      strategyData: null as any,
+      timelineData: null as any,
+      status: "analyzing" as any,
+      updatedAt: new Date(),
+    })
+    .where(eq(campaignsTable.id, campaignId))
+    .returning();
+
+  await db.insert(auditLogsTable).values({
+    workspaceId,
+    campaignId,
+    action: "campaign.reorient",
+    actor: "user",
+    data: { from: campaign.status, directivePreview: directive.slice(0, 300) },
+  });
+
+  emitCampaignEvent({
+    campaignId,
+    type: "phase_changed",
+    message: "Campanha reorientada — reconstruindo estratégia do zero com nova direção",
+    data: { status: "analyzing" },
+    timestamp: new Date().toISOString(),
+  });
+
+  log.info({ campaignId, from: campaign.status }, "Campaign reoriented — rebuilding strategy");
   return updated;
 }
 

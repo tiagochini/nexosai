@@ -10,7 +10,9 @@ import {
   getCampaignLiveStats,
   DIGIT_TRACK_LABELS,
   mergeIntakeDirectives,
+  reorientCampaign,
 } from "./campaigns.service.js";
+import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError } from "../../lib/errors.js";
 
 const router = Router();
@@ -104,6 +106,30 @@ router.get("/:id/live-stats", async (req, res): Promise<void> => {
   try {
     const stats = await getCampaignLiveStats(id!, req.auth.workspaceId);
     res.json({ liveStats: stats });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.post("/:id/reorient", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  const directive = req.body?.directive as string | undefined;
+  if (!directive || typeof directive !== "string" || directive.trim().length < 10) {
+    res.status(400).json({ error: "directive deve ter ao menos 10 caracteres", code: "VALIDATION_ERROR" });
+    return;
+  }
+  try {
+    await reorientCampaign(id, req.auth.workspaceId, directive.trim(), req.log);
+    setImmediate(() =>
+      triggerStrategyPhase(id, req.auth.workspaceId, req.log).catch((err) =>
+        req.log.warn({ err, campaignId: id }, "Failed to trigger strategy after reorient"),
+      ),
+    );
+    res.json({ ok: true, status: "analyzing" });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

@@ -19,6 +19,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
+  RefreshCw,
 } from "lucide-react";
 import { CampaignBrief } from "@/components/campaign-brief";
 import { SocialPostPreview } from "@/components/social-post-preview";
@@ -1213,6 +1214,32 @@ export default function CampaignDetail() {
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
   const [bypassLaunchLoading, setBypassLaunchLoading] = useState(false);
+  const [reorientOpen, setReorientOpen] = useState(false);
+  const [reorientDirective, setReorientDirective] = useState("");
+
+  const reorientMutation = useMutation({
+    mutationFn: async (directive: string) => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/reorient`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directive }),
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro ao reorientar campanha");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Campanha reorientada! A IA está reconstruindo a estratégia do zero.");
+      setReorientOpen(false);
+      setReorientDirective("");
+      void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
 
   const connectIntegrationMutation = useMutation({
     mutationFn: async ({ provider, fields }: { provider: Provider; fields: Record<string, string> }) => {
@@ -1730,6 +1757,76 @@ export default function CampaignDetail() {
         );
       })()}
 
+      {/* ── Reorient Modal ── */}
+      {reorientOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="border border-orange-500/40 bg-card w-full max-w-lg shadow-2xl">
+            <div className="border-b border-orange-500/20 px-5 py-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 border border-orange-500/30 bg-orange-500/10 flex items-center justify-center shrink-0">
+                  <RefreshCw className="h-4 w-4 text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-orange-400">Reorientar Estratégia</h3>
+                  <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5">A IA vai apagar tudo e reconstruir do zero com sua nova direção.</p>
+                </div>
+              </div>
+              <button onClick={() => { setReorientOpen(false); setReorientDirective(""); }} className="text-muted-foreground hover:text-foreground shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="border border-orange-500/20 bg-orange-500/5 px-4 py-3 space-y-1">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-orange-400/70 font-bold">O que vai acontecer</div>
+                <ul className="space-y-1">
+                  {["Estratégia atual será descartada", "Todos os conteúdos gerados serão removidos", "A IA relerá seu briefing + nova direção", "Estratégia e copy serão reconstruídos do zero"].map(item => (
+                    <li key={item} className="flex items-start gap-2 font-mono text-[11px] text-muted-foreground/70">
+                      <span className="text-orange-400/60 shrink-0 mt-0.5">·</span>{item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 block mb-2">
+                  Sua nova direção — seja específico sobre o ângulo, posicionamento ou narrativa
+                </label>
+                <textarea
+                  value={reorientDirective}
+                  onChange={e => setReorientDirective(e.target.value)}
+                  placeholder="Ex: Percebi que meu público-alvo tem medo de falhar, não medo de perder dinheiro. Quero mudar o ângulo de toda a campanha para transformação pessoal e superação do medo, com uma narrativa mais emocional. O produto passa a ser vendido como uma virada de chave, não uma ferramenta técnica."
+                  rows={6}
+                  className="w-full bg-muted/10 border border-border/50 px-3 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground/30 resize-none focus:outline-none focus:border-orange-500/50 focus:bg-orange-500/5 transition-colors"
+                />
+                <div className={`font-mono text-[10px] mt-1 text-right transition-colors ${reorientDirective.length < 10 ? "text-muted-foreground/40" : "text-orange-400/60"}`}>
+                  {reorientDirective.length} caracteres {reorientDirective.length < 10 && "(mínimo 10)"}
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-orange-500/20 px-5 py-3 flex gap-3">
+              <Button
+                onClick={() => reorientMutation.mutate(reorientDirective)}
+                disabled={reorientMutation.isPending || reorientDirective.trim().length < 10}
+                className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 h-10 text-xs"
+                style={{ background: "rgb(249 115 22 / 0.15)", border: "1px solid rgb(249 115 22 / 0.5)", color: "rgb(251 146 60)" }}
+              >
+                {reorientMutation.isPending
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Reorientando...</>
+                  : <><RefreshCw className="h-3.5 w-3.5" />Reorientar e Reconstruir</>
+                }
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setReorientOpen(false); setReorientDirective(""); }}
+                disabled={reorientMutation.isPending}
+                className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-4 text-xs"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Inline ConnectModal — opens on top of missing integrations modal */}
       {connectingEntry && (
         <ConnectModal
@@ -1832,6 +1929,15 @@ export default function CampaignDetail() {
             <Button variant="outline" onClick={() => setLocation("/sequences")} className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-3 text-xs">
               <FileSpreadsheet className="h-3.5 w-3.5" />Sequências
             </Button>
+            {["strategy_ready", "generating", "awaiting_approval"].includes(campaign.status) && (
+              <Button
+                variant="outline"
+                onClick={() => setReorientOpen(true)}
+                className="font-mono uppercase tracking-widest rounded-none gap-2 border-orange-500/40 text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/70 h-9 px-3 text-xs"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />Reorientar
+              </Button>
+            )}
           </div>
         </div>
       </div>
