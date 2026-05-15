@@ -12,7 +12,7 @@ export type Provider =
   | "whatsapp_business" | "telegram"
   | "rd_station" | "activecampaign" | "resend"
   | "hotmart" | "kiwify" | "stripe" | "asaas"
-  | "meta_ads" | "google_ads" | "tiktok_ads"
+  | "meta_ads" | "google_ads" | "tiktok_ads" | "linkedin_ads"
   | "instagram" | "facebook" | "tiktok"
   | "hubspot";
 
@@ -48,7 +48,7 @@ export interface CatalogEntry {
   required: boolean;
   fields: FieldDef[];
   guide: SetupGuide;
-  oauthPlatform?: "meta" | "tiktok" | "google" | "hubspot" | "rdstation";
+  oauthPlatform?: "meta" | "tiktok" | "google" | "hubspot" | "rdstation" | "linkedin";
   oauthLabel?: string;
 }
 
@@ -83,6 +83,11 @@ export const RDLogo = () => (
   <svg viewBox="0 0 28 28" className="h-4 w-4">
     <rect width="28" height="28" rx="5" fill="#0071c1"/>
     <text x="3" y="20" fontFamily="Arial, sans-serif" fontWeight="bold" fontSize="12" fill="white">RD</text>
+  </svg>
+);
+export const LinkedInLogo = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="#0A66C2">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
   </svg>
 );
 
@@ -524,6 +529,36 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
     oauthPlatform: "hubspot",
     oauthLabel: "Entrar com HubSpot",
   },
+  {
+    provider: "linkedin_ads",
+    label: "LinkedIn Ads",
+    description: "Anúncios B2B no LinkedIn para produtos de alto ticket e infoprodutos empresariais",
+    why: "Alcança decisores e profissionais de alta renda. Ideal para produtos B2B, cursos corporativos e infoprodutos premium acima de R$2.000.",
+    category: "Mídia Paga",
+    color: "text-blue-500",
+    icon: LinkedInLogo,
+    required: false,
+    fields: [
+      { key: "accountId",   label: "Ad Account ID", placeholder: "urn:li:sponsoredAccount:123456789",
+        hint: "ID da conta de anúncios. No Campaign Manager → nome da conta → 'Ver conta'. Formato: urn:li:sponsoredAccount:XXXXXXXXX." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "LinkedIn Ads" },
+      { key: "accessToken", label: "Access Token", placeholder: "AQV...", type: "password",
+        hint: "Token gerado no LinkedIn Developer Portal → seu app → Auth → OAuth 2.0 tools → Request access token." },
+    ],
+    guide: {
+      prereqs: ["Conta pessoal no LinkedIn", "Conta de anúncios criada no Campaign Manager"],
+      steps: [
+        { title: "Crie sua conta de anúncios", detail: "Em linkedin.com/campaignmanager → criar conta. Adicione método de pagamento.", url: "https://www.linkedin.com/campaignmanager" },
+        { title: "Crie um app no Developer Portal", detail: "Em developer.linkedin.com → Create App. Use o nome NexOS AI ou seu produto.", url: "https://developer.linkedin.com/apps" },
+        { title: "Solicite acesso à Marketing API", detail: "No seu app → Products → clique em 'Request access' ao lado de 'Marketing Developer Platform'. O LinkedIn aprova em 1–3 dias úteis." },
+        { title: "Conecte via OAuth acima", detail: "Após aprovação, clique em 'Entrar com LinkedIn' e autorize os escopos de anúncios." },
+      ],
+      docsUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/",
+      docsLabel: "Docs LinkedIn Marketing API",
+    },
+    oauthPlatform: "linkedin",
+    oauthLabel: "Entrar com LinkedIn",
+  },
 ];
 
 export const INTEGRATION_CATEGORIES = ["Mensagens", "E-mail", "Social Orgânico", "Pagamentos", "Mídia Paga", "CRM"];
@@ -608,7 +643,7 @@ export function ConnectModal({
 
   const OAUTH_ICONS: Record<string, React.ElementType> = {
     meta: MetaLogo, tiktok: TikTokLogo, google: GoogleLogo,
-    hubspot: HubSpotLogo, rdstation: RDLogo,
+    hubspot: HubSpotLogo, rdstation: RDLogo, linkedin: LinkedInLogo,
   };
   const OAUTH_BRAND: Record<string, { bg: string; border: string; color: string }> = {
     meta:      { bg: "rgba(24,119,242,0.07)",  border: "#1877F2", color: "#1877F2" },
@@ -616,6 +651,7 @@ export function ConnectModal({
     google:    { bg: "rgba(66,133,244,0.07)",  border: "#4285F4", color: "#4285F4" },
     hubspot:   { bg: "rgba(255,122,89,0.07)",  border: "#FF7A59", color: "#FF7A59" },
     rdstation: { bg: "rgba(0,113,193,0.07)",   border: "#0071c1", color: "#0071c1" },
+    linkedin:  { bg: "rgba(10,102,194,0.07)",  border: "#0A66C2", color: "#0A66C2" },
   };
 
   const isOAuth = !!entry.oauthPlatform && !showManual;

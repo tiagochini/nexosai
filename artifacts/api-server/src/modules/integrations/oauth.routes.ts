@@ -9,8 +9,8 @@ import { logger } from "../../lib/logger.js";
 const router = Router();
 
 // ── Platform configs ─────────────────────────────────────────────────────────
-type OAuthPlatform = "meta" | "tiktok" | "google" | "hubspot" | "rdstation";
-type DbProvider = "instagram" | "meta_ads" | "tiktok_ads" | "google_ads" | "hubspot" | "rd_station";
+type OAuthPlatform = "meta" | "tiktok" | "google" | "hubspot" | "rdstation" | "linkedin";
+type DbProvider = "instagram" | "meta_ads" | "tiktok_ads" | "google_ads" | "hubspot" | "rd_station" | "linkedin_ads";
 
 interface PlatformConfig {
   name: string;
@@ -56,6 +56,13 @@ const PLATFORMS: Record<OAuthPlatform, PlatformConfig> = {
     clientId: () => env.RD_STATION_CLIENT_ID,
     clientSecret: () => env.RD_STATION_CLIENT_SECRET,
   },
+  linkedin: {
+    name: "LinkedIn",
+    authUrl: "https://www.linkedin.com/oauth/v2/authorization",
+    tokenUrl: "https://www.linkedin.com/oauth/v2/accessToken",
+    clientId: () => env.LINKEDIN_CLIENT_ID,
+    clientSecret: () => env.LINKEDIN_CLIENT_SECRET,
+  },
 };
 
 interface ProviderConfig {
@@ -80,7 +87,7 @@ const PROVIDER_MAP: Record<string, ProviderConfig> = {
   },
   meta_ads: {
     platform: "meta",
-    scope: "public_profile",
+    scope: "public_profile,ads_management,ads_read,business_management",
     label: "Meta Ads",
     dbProvider: "meta_ads",
   },
@@ -92,9 +99,15 @@ const PROVIDER_MAP: Record<string, ProviderConfig> = {
   },
   tiktok_ads: {
     platform: "tiktok",
-    scope: "biz.creator.info",
+    scope: "advertiser.info.read,campaign.read,campaign.write,ad.read,ad.write,report.read",
     label: "TikTok Ads",
     dbProvider: "tiktok_ads",
+  },
+  linkedin_ads: {
+    platform: "linkedin",
+    scope: "r_ads r_ads_reporting rw_ads w_member_social r_basicprofile",
+    label: "LinkedIn Ads",
+    dbProvider: "linkedin_ads",
   },
   google_ads: {
     platform: "google",
@@ -170,6 +183,7 @@ router.get("/providers", requireAuth, (_req, res): void => {
       google:    !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
       hubspot:   !!(env.HUBSPOT_CLIENT_ID && env.HUBSPOT_CLIENT_SECRET),
       rdstation: !!(env.RD_STATION_CLIENT_ID && env.RD_STATION_CLIENT_SECRET),
+      linkedin:  !!(env.LINKEDIN_CLIENT_ID && env.LINKEDIN_CLIENT_SECRET),
     },
   });
 });
@@ -187,12 +201,16 @@ router.get("/start/:provider", requireAuth, (req, res): void => {
   const platform = PLATFORMS[config.platform];
 
   if (!platform.clientId()) {
-    const vars =
-      config.platform === "meta"
-        ? "META_APP_ID e META_APP_SECRET"
-        : "TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET";
+    const PLATFORM_VARS: Record<string, string> = {
+      meta:      "META_APP_ID e META_APP_SECRET",
+      tiktok:    "TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET",
+      google:    "GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET",
+      hubspot:   "HUBSPOT_CLIENT_ID e HUBSPOT_CLIENT_SECRET",
+      rdstation: "RD_STATION_CLIENT_ID e RD_STATION_CLIENT_SECRET",
+      linkedin:  "LINKEDIN_CLIENT_ID e LINKEDIN_CLIENT_SECRET",
+    };
     res.status(400).json({
-      error: `OAuth não configurado para ${provider}. Configure ${vars} nas variáveis de ambiente.`,
+      error: `OAuth não configurado para ${provider}. Configure ${PLATFORM_VARS[config.platform] ?? "as variáveis OAuth"} nas variáveis de ambiente.`,
       code: "OAUTH_NOT_CONFIGURED",
     });
     return;
@@ -207,19 +225,16 @@ router.get("/start/:provider", requireAuth, (req, res): void => {
   const redirectUri = `${env.APP_URL}/api/integrations/oauth/callback/${provider}`;
   const authUrl = new URL(platform.authUrl);
 
-  if (config.platform === "meta") {
-    authUrl.searchParams.set("client_id", platform.clientId());
-    authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("scope", config.scope);
-    authUrl.searchParams.set("state", state);
-    authUrl.searchParams.set("response_type", "code");
-  } else {
+  // TikTok uses client_key instead of client_id
+  if (config.platform === "tiktok") {
     authUrl.searchParams.set("client_key", platform.clientId());
-    authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("scope", config.scope);
-    authUrl.searchParams.set("state", state);
-    authUrl.searchParams.set("response_type", "code");
+  } else {
+    authUrl.searchParams.set("client_id", platform.clientId());
   }
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("scope", config.scope);
+  authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set("response_type", "code");
 
   res.json({ url: authUrl.toString() });
 });
@@ -363,6 +378,35 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       };
       accountId = String(me.hub_id ?? "");
       accountName = me.hub_domain ?? me.user ?? config.label;
+
+    } else if (config.platform === "linkedin") {
+      const tokenRes = await fetch(platform.tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: platform.clientId(),
+          client_secret: platform.clientSecret(),
+          code: code as string,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }),
+      });
+      const tokenData = (await tokenRes.json()) as {
+        access_token?: string;
+        error?: string;
+        error_description?: string;
+      };
+      if (!tokenData.access_token) {
+        res.send(popupPage(false, tokenData.error_description ?? "Falha ao obter token LinkedIn."));
+        return;
+      }
+      accessToken = tokenData.access_token;
+      const meRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const me = (await meRes.json()) as { sub?: string; name?: string; email?: string };
+      accountId = me.sub ?? "";
+      accountName = me.name ?? me.email ?? config.label;
 
     } else {
       // rdstation

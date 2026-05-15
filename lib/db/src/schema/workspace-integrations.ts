@@ -16,6 +16,7 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
   "instagram",
   "tiktok_ads",
   "google_ads",
+  "linkedin_ads",
   "whatsapp_business",
   "telegram",
   "stripe",

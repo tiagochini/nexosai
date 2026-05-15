@@ -32,6 +32,8 @@ export const env = {
   HUBSPOT_CLIENT_SECRET: process.env["HUBSPOT_CLIENT_SECRET"] ?? "",
   RD_STATION_CLIENT_ID: process.env["RD_STATION_CLIENT_ID"] ?? "",
   RD_STATION_CLIENT_SECRET: process.env["RD_STATION_CLIENT_SECRET"] ?? "",
+  LINKEDIN_CLIENT_ID: process.env["LINKEDIN_CLIENT_ID"] ?? "",
+  LINKEDIN_CLIENT_SECRET: process.env["LINKEDIN_CLIENT_SECRET"] ?? "",
   ALLOWED_ORIGINS: process.env["ALLOWED_ORIGINS"] ?? "",
   // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
   LAUNCH_CAMPAIGN_DATE: process.env["LAUNCH_CAMPAIGN_DATE"] ?? "",
