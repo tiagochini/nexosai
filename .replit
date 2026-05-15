@@ -45,3 +45,8 @@ externalPort = 3003
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+META_APP_ID = "992748096543542"
