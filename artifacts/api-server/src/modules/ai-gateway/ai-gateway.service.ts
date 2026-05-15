@@ -128,6 +128,36 @@ export interface AIMessage {
   content: string;
 }
 
+// ── Whisper audio transcription ───────────────────────────────────────────────
+export async function transcribeAudio(
+  audioBase64: string,
+  mimeType = "audio/webm",
+  log: Logger,
+): Promise<string> {
+  const client = getOpenAI();
+  const base64Data = audioBase64.includes(",") ? audioBase64.split(",")[1]! : audioBase64;
+  const buffer = Buffer.from(base64Data, "base64");
+  const ext = mimeType.includes("mp4") ? "mp4"
+    : mimeType.includes("mpeg") || mimeType.includes("mp3") ? "mp3"
+    : mimeType.includes("wav") ? "wav"
+    : mimeType.includes("ogg") ? "ogg"
+    : mimeType.includes("m4a") ? "m4a"
+    : "webm";
+
+  const { toFile } = await import("openai");
+  const file = await toFile(buffer, `audio.${ext}`, { type: mimeType });
+
+  const transcription = await client.audio.transcriptions.create({
+    file,
+    model: "whisper-1",
+    language: "pt",
+    response_format: "text",
+  });
+
+  log.info({ mimeType, ext, bytes: buffer.length }, "Audio transcribed via Whisper");
+  return typeof transcription === "string" ? transcription : String(transcription);
+}
+
 export interface AICompletionResult {
   content: string;
   provider: "anthropic" | "openai" | "gemini";

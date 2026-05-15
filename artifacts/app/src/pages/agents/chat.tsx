@@ -128,6 +128,8 @@ interface FileAttachment {
   isVideo: boolean;
   isAudio: boolean;
   content?: string;
+  isTranscribing?: boolean;
+  transcription?: string;
 }
 
 interface ChatMsg {
@@ -437,6 +439,14 @@ export default function AgentChat() {
         reader.readAsDataURL(file);
         return;
       }
+      // Audio/video: read as dataURL for sending to Whisper
+      if (file.type.startsWith("audio/") && file.size <= 25_000_000) {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target?.result as string | undefined);
+        reader.onerror = () => resolve(undefined);
+        reader.readAsDataURL(file);
+        return;
+      }
       const isReadable =
         file.type.startsWith("text/") ||
         ["application/json", "application/xml", "application/pdf"].includes(file.type) ||
@@ -461,11 +471,52 @@ export default function AgentChat() {
         isVideo: f.type.startsWith("video/"),
         isAudio: f.type.startsWith("audio/"),
         content: await readFileContent(f),
+        isTranscribing: f.type.startsWith("audio/"),
       }))
     );
     setPendingAttachments(prev => [...prev, ...attachments]);
     e.target.value = "";
     textareaRef.current?.focus();
+
+    // Auto-transcribe audio files in background
+    for (const att of attachments) {
+      if (att.isAudio && att.content) {
+        void (async () => {
+          try {
+            const token = localStorage.getItem("nexos_access_token");
+            const res = await fetch("/api/agents/transcribe", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({ audioBase64: att.content, mimeType: att.type }),
+            });
+            if (!res.ok) throw new Error("Transcrição falhou");
+            const data = await res.json() as { text: string };
+            const transcript = data.text?.trim();
+            if (!transcript) return;
+            // Update attachment state with transcription
+            setPendingAttachments(prev =>
+              prev.map(a => a.url === att.url
+                ? { ...a, isTranscribing: false, transcription: transcript }
+                : a
+              )
+            );
+            // Append transcription to the input
+            setInput(prev => prev ? `${prev}\n\n${transcript}` : transcript);
+            setTimeout(() => { textareaRef.current?.focus(); autoGrow(); }, 50);
+          } catch {
+            setPendingAttachments(prev =>
+              prev.map(a => a.url === att.url
+                ? { ...a, isTranscribing: false, transcription: undefined }
+                : a
+              )
+            );
+          }
+        })();
+      }
+    }
   };
 
   const removeAttachment = (idx: number) => {
@@ -793,19 +844,34 @@ export default function AgentChat() {
 
         {/* Pending attachments */}
         {pendingAttachments.length > 0 && (
-          <div className="border-b border-border/30 px-3 pt-2.5 pb-2 flex flex-wrap gap-2">
+          <div className="border-b border-border/30 px-3 pt-2.5 pb-2 space-y-1.5">
             {pendingAttachments.map((att, i) => (
-              <div key={i} className="flex items-center gap-2 border border-border/50 bg-muted/20 pl-2 pr-1 py-1">
-                {att.isImage && att.content ? (
-                  <img src={att.content} alt={att.name} className="h-5 w-5 object-cover shrink-0" />
-                ) : (
-                  fileIcon(att)
+              <div key={i}>
+                <div className="flex items-center gap-2 border border-border/50 bg-muted/20 pl-2 pr-1 py-1">
+                  {att.isImage && att.content ? (
+                    <img src={att.content} alt={att.name} className="h-5 w-5 object-cover shrink-0" />
+                  ) : att.isTranscribing ? (
+                    <Loader2 className="h-3.5 w-3.5 text-green-400 animate-spin shrink-0" />
+                  ) : (
+                    fileIcon(att)
+                  )}
+                  <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[130px]">{att.name}</span>
+                  {att.isTranscribing ? (
+                    <span className="text-[10px] font-mono text-green-400/70 animate-pulse">Transcrevendo…</span>
+                  ) : att.transcription ? (
+                    <span className="text-[10px] font-mono text-green-400/70">✓ Transcrito</span>
+                  ) : (
+                    <span className="text-[10px] font-mono text-muted-foreground/40">{formatBytes(att.size)}</span>
+                  )}
+                  <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive transition-colors ml-0.5 p-0.5">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+                {att.transcription && (
+                  <div className="mt-0.5 ml-1 border-l-2 border-green-400/30 pl-2 font-mono text-[10px] text-muted-foreground/60 italic max-w-sm truncate">
+                    "{att.transcription}"
+                  </div>
                 )}
-                <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[130px]">{att.name}</span>
-                <span className="text-[10px] font-mono text-muted-foreground/40">{formatBytes(att.size)}</span>
-                <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive transition-colors ml-0.5 p-0.5">
-                  <X className="h-3 w-3" />
-                </button>
               </div>
             ))}
           </div>

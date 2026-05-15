@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
-import { completeWithAgent, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
+import {
+  completeWithAgent,
+  callVisionChat,
+  transcribeAudio,
+  type AgentRole,
+} from "../ai-gateway/ai-gateway.service.js";
 import { AppError } from "../../lib/errors.js";
 import { eq } from "drizzle-orm";
 import { db, workspacesTable, auditLogsTable } from "@workspace/db";
@@ -431,13 +436,14 @@ const AGENT_ROLES = new Set(Object.keys(AGENT_SYSTEM_PROMPTS));
 
 const directChatSchema = z.object({
   agentRole: z.string().min(1),
-  message: z.string().min(1).max(8000),
+  message: z.string().max(8000).default(""),
   history: z.array(z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string(),
   })).default([]),
   campaignId: z.string().uuid().optional(),
   contextMode: z.enum(["brainstorm", "review", "strategy", "question", "optimize"]).optional(),
+  images: z.array(z.string()).max(6).optional(),
 });
 
 // ── GET /api/agents — list all available agents ───────────────────────────────
@@ -449,6 +455,47 @@ router.get("/", (_req, res): void => {
   res.json({ agents, total: agents.length });
 });
 
+// ── POST /api/agents/transcribe — transcribe audio via Whisper ────────────────
+router.post("/transcribe", async (req, res): Promise<void> => {
+  const { audioBase64, mimeType = "audio/webm" } = req.body as {
+    audioBase64?: string;
+    mimeType?: string;
+  };
+
+  if (!audioBase64) {
+    res.status(400).json({ error: "audioBase64 é obrigatório", code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const [ws] = await db
+    .select({ creditsBalance: workspacesTable.creditsBalance })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+
+  if (!ws || ws.creditsBalance < 1) {
+    res.status(402).json({ error: "Créditos insuficientes", code: "INSUFFICIENT_CREDITS" });
+    return;
+  }
+
+  try {
+    const text = await transcribeAudio(audioBase64, mimeType as string, req.log);
+
+    await db
+      .update(workspacesTable)
+      .set({ creditsBalance: Math.max(0, ws.creditsBalance - 1) })
+      .where(eq(workspacesTable.id, req.auth.workspaceId));
+
+    res.json({ text, creditsCharged: 1 });
+  } catch (err) {
+    if (err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError")) {
+      res.status(504).json({ error: "Transcrição demorou demais. Tente novamente.", code: "AI_TIMEOUT" });
+      return;
+    }
+    throw err;
+  }
+});
+
 // ── POST /api/agents/direct-chat — converse with any agent directly ───────────
 router.post("/direct-chat", async (req, res): Promise<void> => {
   const parsed = directChatSchema.safeParse(req.body);
@@ -457,12 +504,15 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
     return;
   }
 
-  const { agentRole, message, history, campaignId, contextMode } = parsed.data;
+  const { agentRole, message, history, campaignId, contextMode, images } = parsed.data;
 
   if (!AGENT_ROLES.has(agentRole)) {
     res.status(400).json({ error: `Agente desconhecido: ${agentRole}`, code: "VALIDATION_ERROR" });
     return;
   }
+
+  const hasImages = Array.isArray(images) && images.length > 0;
+  const creditCost = hasImages ? 5 : 3;
 
   try {
     const [ws] = await db
@@ -471,8 +521,11 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       .where(eq(workspacesTable.id, req.auth.workspaceId))
       .limit(1);
 
-    if (!ws || ws.creditsBalance < 3) {
-      res.status(402).json({ error: "Créditos insuficientes (mín 3 por mensagem)", code: "INSUFFICIENT_CREDITS" });
+    if (!ws || ws.creditsBalance < creditCost) {
+      res.status(402).json({
+        error: `Créditos insuficientes (mín ${creditCost} por mensagem${hasImages ? " com imagens" : ""})`,
+        code: "INSUFFICIENT_CREDITS",
+      });
       return;
     }
 
@@ -482,24 +535,35 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
     const basePrompt = AGENT_SYSTEM_PROMPTS[agentRole] ?? "Você é um especialista em marketing digital. Responda em PT-BR.";
     const systemPrompt = basePrompt + modeNote;
 
-    const messages = [
-      ...history.map(h => ({ role: h.role as "user" | "assistant", content: h.content })),
-      { role: "user" as const, content: message },
-    ];
+    const historyMessages = history.map(h => ({ role: h.role as "user" | "assistant", content: h.content }));
+    const userContent = message || (hasImages ? "Analise este(s) arquivo(s) anexado(s)." : "");
 
-    const result = await completeWithAgent(
-      agentRole as AgentRole,
-      systemPrompt,
-      messages,
-      req.auth.workspaceId,
-      req.log,
-      campaignId,
-    );
+    let result;
 
-    // Deduct 3 credits
+    if (hasImages) {
+      // Vision route — Claude with image blocks
+      result = await callVisionChat(
+        systemPrompt,
+        [...historyMessages, { role: "user" as const, content: userContent }],
+        images!,
+        req.auth.workspaceId,
+        req.log,
+      );
+    } else {
+      // Text-only route
+      result = await completeWithAgent(
+        agentRole as AgentRole,
+        systemPrompt,
+        [...historyMessages, { role: "user" as const, content: userContent }],
+        req.auth.workspaceId,
+        req.log,
+        campaignId,
+      );
+    }
+
     await db
       .update(workspacesTable)
-      .set({ creditsBalance: Math.max(0, ws.creditsBalance - 3) })
+      .set({ creditsBalance: Math.max(0, ws.creditsBalance - creditCost) })
       .where(eq(workspacesTable.id, req.auth.workspaceId));
 
     await db.insert(auditLogsTable).values({
@@ -510,6 +574,8 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       data: {
         agentRole,
         contextMode: contextMode ?? "question",
+        hasImages,
+        imageCount: images?.length ?? 0,
         tokensUsed: result.inputTokens + result.outputTokens,
         model: result.model,
       },
@@ -519,7 +585,7 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       response: result.content,
       agentRole,
       tokensUsed: result.inputTokens + result.outputTokens,
-      creditsCharged: 3,
+      creditsCharged: creditCost,
       model: result.model,
     });
   } catch (err) {
@@ -527,7 +593,6 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
       return;
     }
-    // AbortError from AbortSignal.timeout() — AI call exceeded 90s
     if (err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError")) {
       res.status(504).json({ error: "A IA demorou demais para responder. Tente novamente.", code: "AI_TIMEOUT" });
       return;
