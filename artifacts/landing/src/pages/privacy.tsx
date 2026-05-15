@@ -197,8 +197,31 @@ export default function PrivacyPolicy() {
           </section>
 
           {/* 11. Contact */}
+          <section id="data-deletion">
+            <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">11. Exclusão de Dados</h2>
+            <p className="mb-3">
+              Você pode solicitar a exclusão completa dos seus dados pessoais armazenados pelo NexOS AI a qualquer momento.
+              Isso inclui dados de conta, histórico de campanhas, integrações conectadas e qualquer dado vinculado
+              a plataformas de terceiros como Meta (Facebook e Instagram).
+            </p>
+            <p className="mb-3">
+              Para revogar o acesso do NexOS AI à sua conta Meta e solicitar exclusão dos dados coletados via Facebook Login:
+            </p>
+            <ol className="list-decimal list-inside space-y-2 ml-4 mb-3">
+              <li>Acesse <a href="https://www.facebook.com/settings?tab=applications" className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">facebook.com/settings → Aplicativos e Sites</a></li>
+              <li>Localize <strong className="text-white">NexOS AI</strong> na lista</li>
+              <li>Clique em <strong className="text-white">Remover</strong></li>
+            </ol>
+            <p className="mb-3">
+              Para solicitar exclusão diretamente ao NexOS AI, envie um e-mail para{" "}
+              <a href="mailto:privacy@nexos.ai" className="text-blue-400 hover:underline">privacy@nexos.ai</a>{" "}
+              com o assunto <strong className="text-white">"Exclusão de Dados"</strong>. Processamos todas as
+              solicitações em até 30 dias úteis conforme a LGPD.
+            </p>
+          </section>
+
           <section>
-            <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">11. Contato</h2>
+            <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">12. Contato</h2>
             <p>
               Para dúvidas, solicitações ou exercício dos seus direitos:
             </p>
