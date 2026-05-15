@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import Landing from "@/pages/landing";
 import SimulatorPage from "@/pages/simulator";
+import PrivacyPolicy from "@/pages/privacy";
 import NotFound from "@/pages/not-found";
 import { LangProvider } from "@/lib/i18n";
 
@@ -13,6 +14,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/simulador" component={SimulatorPage} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route component={NotFound} />
     </Switch>
   );
