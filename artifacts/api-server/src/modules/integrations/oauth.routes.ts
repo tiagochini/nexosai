@@ -75,8 +75,8 @@ const PROVIDER_MAP: Record<string, ProviderConfig> = {
   facebook: {
     platform: "meta",
     scope: "public_profile",
-    label: "Facebook",
-    dbProvider: "meta_ads",
+    label: "Facebook Páginas",
+    dbProvider: "instagram",
   },
   meta_ads: {
     platform: "meta",

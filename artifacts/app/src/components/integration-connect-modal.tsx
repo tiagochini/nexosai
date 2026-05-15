@@ -13,7 +13,7 @@ export type Provider =
   | "rd_station" | "activecampaign" | "resend"
   | "hotmart" | "kiwify" | "stripe" | "asaas"
   | "meta_ads" | "google_ads" | "tiktok_ads"
-  | "instagram" | "tiktok"
+  | "instagram" | "facebook" | "tiktok"
   | "hubspot";
 
 export interface WorkspaceIntegration {
@@ -265,6 +265,39 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
     },
     oauthPlatform: "meta",
     oauthLabel: "Entrar com Instagram",
+  },
+  {
+    provider: "facebook",
+    label: "Facebook (Páginas)",
+    description: "Auto-post orgânico em Páginas do Facebook sincronizado ao lançamento",
+    why: "Publica automaticamente no Facebook durante o lançamento. Obrigatório para quem tem audiência orgânica no Facebook.",
+    category: "Social Orgânico",
+    color: "text-blue-400",
+    icon: MetaLogo,
+    required: false,
+    fields: [
+      { key: "accountId",   label: "Page ID", placeholder: "123456789012345",
+        hint: "ID numérico da sua Página do Facebook. Encontrado em Configurações da Página → Informações da página → ID da página." },
+      { key: "accountName", label: "Nome da Página",        placeholder: "Minha Empresa" },
+      { key: "accessToken", label: "Access Token (Meta)",   placeholder: "EAAxxxx...", type: "password",
+        hint: "Token de acesso com permissão pages_manage_posts. Gerado em Meta Developers → Graph API Explorer." },
+    ],
+    guide: {
+      warning: "Requer uma Página do Facebook — não funciona com perfis pessoais.",
+      prereqs: [
+        "Página do Facebook criada (não perfil pessoal)",
+        "Conta Instagram Business vinculada à Página (para publicar no Instagram também)",
+      ],
+      steps: [
+        { title: "Crie ou acesse sua Página", detail: "No Facebook → Menu → Páginas → Criar nova página. Use nome da sua empresa ou produto.", url: "https://www.facebook.com/pages/create" },
+        { title: "Vincule seu Instagram Business", detail: "Na sua Página → Configurações → Instagram → conecte sua conta Instagram Business." },
+        { title: "Conecte via OAuth acima", detail: "Clique em 'Entrar com Facebook' — o NexOS vai detectar automaticamente sua Página e Instagram vinculado." },
+      ],
+      docsUrl: "https://developers.facebook.com/docs/pages/getting-started",
+      docsLabel: "Docs Facebook Pages",
+    },
+    oauthPlatform: "meta",
+    oauthLabel: "Entrar com Facebook",
   },
   {
     provider: "tiktok",

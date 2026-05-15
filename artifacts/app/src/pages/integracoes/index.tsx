@@ -12,6 +12,7 @@ import {
   ConnectModal, INTEGRATION_CATALOG, INTEGRATION_CATEGORIES,
   type Provider, type CatalogEntry, type WorkspaceIntegration,
 } from "@/components/integration-connect-modal";
+import { OnboardingAgent } from "@/components/onboarding-agent";
 
 export default function IntegracoesPage() {
   const queryClient = useQueryClient();
@@ -40,7 +41,16 @@ export default function IntegracoesPage() {
 
   const oauthProviders = oauthStatus?.providers ?? {};
   const integrations = data?.integrations ?? [];
-  const connectedMap = new Map(integrations.filter(i => i.status === "connected").map(i => [i.provider, i]));
+  const connectedProviders = integrations.filter(i => i.status === "connected").map(i => i.provider);
+
+  // Build connected map — facebook shares the instagram token/record in DB
+  const connectedMap = new Map(
+    integrations.filter(i => i.status === "connected").map(i => [i.provider, i])
+  );
+  // When instagram is connected, facebook is also effectively connected (same Meta OAuth)
+  if (connectedMap.has("instagram") && !connectedMap.has("facebook")) {
+    connectedMap.set("facebook", connectedMap.get("instagram")!);
+  }
 
   const hasMessaging = ["whatsapp_business", "telegram"].some(p => connectedMap.has(p as Provider));
   const hasEmail = ["rd_station", "activecampaign", "resend"].some(p => connectedMap.has(p as Provider));
@@ -88,6 +98,11 @@ export default function IntegracoesPage() {
     }
   };
 
+  const openConnectModal = (providerOrId: string) => {
+    const entry = INTEGRATION_CATALOG.find(e => e.provider === providerOrId);
+    if (entry) setConnectModal(entry);
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -99,6 +114,12 @@ export default function IntegracoesPage() {
           Conecte seus canais para ativar o modo Full Auto — disparos automáticos durante o lançamento.
         </p>
       </div>
+
+      {/* Onboarding Agent */}
+      <OnboardingAgent
+        connectedProviders={connectedProviders}
+        onConnect={openConnectModal}
+      />
 
       {/* Full Auto status bar */}
       <div className={`border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
@@ -183,6 +204,10 @@ export default function IntegracoesPage() {
                                   <CheckCircle2 className="h-2.5 w-2.5" />conectado
                                 </Badge>
                               )}
+                              {/* Facebook note: shares Instagram connection */}
+                              {entry.provider === "facebook" && isConn && (
+                                <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">via Meta</span>
+                              )}
                             </div>
                             <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 leading-relaxed">{entry.description}</p>
                             {isConn && integration?.accountName && (
@@ -194,16 +219,22 @@ export default function IntegracoesPage() {
                         {/* Action */}
                         <div className="shrink-0 flex flex-col items-end gap-1.5">
                           {isConn ? (
-                            <button
-                              onClick={() => integration && handleDisconnect(integration.id)}
-                              disabled={disconnecting === integration?.id}
-                              className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-destructive transition-colors flex items-center gap-1"
-                            >
-                              {disconnecting === integration?.id
-                                ? <Loader2 className="h-3 w-3 animate-spin" />
-                                : <XCircle className="h-3 w-3" />}
-                              Desconectar
-                            </button>
+                            entry.provider !== "facebook" ? (
+                              <button
+                                onClick={() => integration && handleDisconnect(integration.id)}
+                                disabled={disconnecting === integration?.id}
+                                className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-destructive transition-colors flex items-center gap-1"
+                              >
+                                {disconnecting === integration?.id
+                                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                                  : <XCircle className="h-3 w-3" />}
+                                Desconectar
+                              </button>
+                            ) : (
+                              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
+                                Desconecte pelo Instagram
+                              </span>
+                            )
                           ) : (
                             <Button
                               size="sm"
