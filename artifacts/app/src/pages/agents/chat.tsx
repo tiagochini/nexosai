@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRoute, Link } from "wouter";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
@@ -11,7 +11,8 @@ import {
   ShoppingCart, Users, BarChart3, TrendingUp, Video, Star,
   Shield, Rocket, Megaphone, Globe, RefreshCw, Download, CornerDownLeft,
   Mic, MicOff, Play, Radio, FileText, Hash, Mail, MessageCircle, DollarSign, Layers, Cpu,
-  Paperclip, X, ImageIcon, File, GripHorizontal,
+  Paperclip, X, ImageIcon, File, ChevronDown, ChevronUp,
+  Search, Sparkles, CheckCircle2, FileVideo, FileAudio, Camera,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 
@@ -121,10 +122,12 @@ type ContextMode = "brainstorm" | "review" | "strategy" | "question" | "optimize
 interface FileAttachment {
   name: string;
   type: string;
-  url: string; // object URL for download
+  url: string;
   size: number;
   isImage: boolean;
-  content?: string; // text content extracted from readable files
+  isVideo: boolean;
+  isAudio: boolean;
+  content?: string;
 }
 
 interface ChatMsg {
@@ -132,14 +135,29 @@ interface ChatMsg {
   content: string;
   timestamp: Date;
   attachments?: FileAttachment[];
+  meta?: { tokensUsed?: number; creditsCharged?: number; elapsedMs?: number };
 }
 
+// ── Thinking phases shown while agent is working ──────────────────────────────
+interface ThinkingPhase {
+  icon: React.ElementType;
+  label: string;
+  color: string;
+}
+const THINKING_PHASES: ThinkingPhase[] = [
+  { icon: Brain,       label: "Analisando contexto…",       color: "text-primary" },
+  { icon: Search,      label: "Buscando referências…",      color: "text-cyan-400" },
+  { icon: Sparkles,    label: "Elaborando estratégia…",     color: "text-yellow-400" },
+  { icon: Pen,         label: "Redigindo resposta…",        color: "text-green-400" },
+  { icon: CheckCircle2,label: "Revisando qualidade…",       color: "text-primary" },
+];
+
 const ACCENT_CLASSES: Record<string, { border: string; text: string; bg: string }> = {
-  primary: { border: "border-primary/40", text: "text-primary", bg: "bg-primary/10" },
-  cyan:    { border: "border-cyan-400/40", text: "text-cyan-400", bg: "bg-cyan-400/10" },
-  yellow:  { border: "border-yellow-400/40", text: "text-yellow-400", bg: "bg-yellow-400/10" },
-  green:   { border: "border-green-400/40", text: "text-green-400", bg: "bg-green-400/10" },
-  red:     { border: "border-red-400/40", text: "text-red-400", bg: "bg-red-400/10" },
+  primary: { border: "border-primary/40",      text: "text-primary",      bg: "bg-primary/10" },
+  cyan:    { border: "border-cyan-400/40",      text: "text-cyan-400",     bg: "bg-cyan-400/10" },
+  yellow:  { border: "border-yellow-400/40",    text: "text-yellow-400",   bg: "bg-yellow-400/10" },
+  green:   { border: "border-green-400/40",     text: "text-green-400",    bg: "bg-green-400/10" },
+  red:     { border: "border-red-400/40",       text: "text-red-400",      bg: "bg-red-400/10" },
 };
 const PROVIDER_BADGE_CLASS: Record<string, string> = {
   Claude:  "text-primary border-primary/40 bg-primary/10",
@@ -151,34 +169,215 @@ const MODE_LABELS: Record<ContextMode, string> = {
 };
 
 // ── localStorage helpers ──────────────────────────────────────────────────────
-const CHAT_MAX_STORED = 60; // max messages to persist per agent
+const CHAT_MAX_STORED = 60;
 
 function chatStorageKey(role: string, campaignId: string) {
   return `nexos-chat-${role}${campaignId ? `-${campaignId}` : ""}`;
 }
-
 function loadChatHistory(role: string, campaignId: string): ChatMsg[] {
   try {
     const raw = localStorage.getItem(chatStorageKey(role, campaignId));
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as Array<{ role: string; content: string; timestamp: string }>;
+    const parsed = JSON.parse(raw) as Array<{ role: string; content: string; timestamp: string; meta?: ChatMsg["meta"] }>;
     return parsed.map(m => ({ ...m, role: m.role as "user" | "assistant", timestamp: new Date(m.timestamp) }));
   } catch { return []; }
 }
-
 function saveChatHistory(role: string, campaignId: string, msgs: ChatMsg[]) {
   try {
-    const toStore = msgs.slice(-CHAT_MAX_STORED);
-    localStorage.setItem(chatStorageKey(role, campaignId), JSON.stringify(toStore));
-  } catch { /* storage full — ignore */ }
+    localStorage.setItem(chatStorageKey(role, campaignId), JSON.stringify(msgs.slice(-CHAT_MAX_STORED)));
+  } catch { /* storage full */ }
 }
 
+// ── File icon helper ──────────────────────────────────────────────────────────
+function fileIcon(att: FileAttachment) {
+  if (att.isImage) return <ImageIcon className="h-3.5 w-3.5 text-primary/70 shrink-0" />;
+  if (att.isVideo) return <FileVideo className="h-3.5 w-3.5 text-cyan-400/70 shrink-0" />;
+  if (att.isAudio) return <FileAudio className="h-3.5 w-3.5 text-green-400/70 shrink-0" />;
+  return <File className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />;
+}
+
+function formatBytes(b: number) {
+  if (b < 1024) return `${b}B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)}KB`;
+  return `${(b / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+// ── Thinking indicator component ──────────────────────────────────────────────
+function AgentThinking({ agentName, accent, showAll, onToggleAll }:
+  { agentName: string; accent: { border: string; text: string; bg: string }; showAll: boolean; onToggleAll: () => void }) {
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [completedPhases, setCompletedPhases] = useState<number[]>([]);
+  const startRef = useRef(Date.now());
+
+  useEffect(() => {
+    startRef.current = Date.now();
+    setPhaseIdx(0);
+    setElapsed(0);
+    setCompletedPhases([]);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (phaseIdx >= THINKING_PHASES.length - 1) return;
+    const delay = 3500 + Math.random() * 1500;
+    const t = setTimeout(() => {
+      setCompletedPhases(prev => [...prev, phaseIdx]);
+      setPhaseIdx(p => p + 1);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [phaseIdx]);
+
+  const currentPhase = THINKING_PHASES[phaseIdx]!;
+  const CurrentIcon = currentPhase.icon;
+
+  return (
+    <div className="flex gap-3">
+      {/* Agent avatar */}
+      <div className={`w-8 h-8 border flex items-center justify-center shrink-0 mt-1 ${accent.border} ${accent.bg}`}>
+        <img src={nexosLogo} alt="AI" className="w-5 h-5 object-contain" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        {/* Process panel */}
+        <div className="border border-border/40 bg-card/50">
+          {/* Header */}
+          <button
+            onClick={onToggleAll}
+            className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-muted/10 transition-colors text-left"
+          >
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <Loader2 className={`h-3.5 w-3.5 ${accent.text} animate-spin shrink-0`} />
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70">
+                {agentName} está trabalhando
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground/40 ml-1">
+                {elapsed}s
+              </span>
+            </div>
+            {showAll
+              ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+              : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />}
+          </button>
+
+          {/* Current phase — always visible */}
+          <div className={`border-t border-border/30 px-3 py-2 flex items-center gap-2.5 ${accent.bg}/30`}>
+            <CurrentIcon className={`h-3.5 w-3.5 ${currentPhase.color} shrink-0`} />
+            <span className={`font-mono text-xs ${currentPhase.color}`}>{currentPhase.label}</span>
+            {/* Animated dots */}
+            <div className="flex gap-0.5 ml-auto">
+              {[0, 150, 300].map(d => (
+                <div key={d}
+                  className={`w-1 h-1 rounded-full ${accent.text.replace("text-", "bg-")} animate-bounce opacity-80`}
+                  style={{ animationDelay: `${d}ms` }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Expanded process: all completed phases */}
+          {showAll && completedPhases.length > 0 && (
+            <div className="border-t border-border/20 px-3 py-2 space-y-1.5">
+              {completedPhases.map(idx => {
+                const phase = THINKING_PHASES[idx]!;
+                const PhaseIcon = phase.icon;
+                return (
+                  <div key={idx} className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3 w-3 text-success/60 shrink-0" />
+                    <PhaseIcon className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+                    <span className="font-mono text-[10px] text-muted-foreground/40 line-through">{phase.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Message detail panel (expandable on each AI message) ──────────────────────
+function MessageProcess({ msg, agentName, phaseCount }:
+  { msg: ChatMsg; agentName: string; phaseCount: number }) {
+  const [open, setOpen] = useState(false);
+  if (!msg.meta) return null;
+  const { tokensUsed, creditsCharged, elapsedMs } = msg.meta;
+  const elapsedSec = elapsedMs != null ? (elapsedMs / 1000).toFixed(1) : null;
+
+  return (
+    <div className="mt-1.5 border border-border/25 bg-card/20">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-muted/10 transition-colors"
+      >
+        <Sparkles className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 flex-1 text-left">
+          Ver processo completo
+        </span>
+        {open
+          ? <ChevronUp className="h-3 w-3 text-muted-foreground/30" />
+          : <ChevronDown className="h-3 w-3 text-muted-foreground/30" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-border/20 px-3 py-2.5 space-y-2">
+          {/* Timeline of phases */}
+          <div className="space-y-1.5">
+            {THINKING_PHASES.slice(0, phaseCount).map((phase, idx) => {
+              const PhaseIcon = phase.icon;
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3 w-3 text-success/60 shrink-0" />
+                  <PhaseIcon className={`h-3 w-3 shrink-0 ${phase.color} opacity-60`} />
+                  <span className="font-mono text-[10px] text-muted-foreground/50">{phase.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Stats */}
+          <div className="border-t border-border/20 pt-2 grid grid-cols-3 gap-3">
+            {elapsedSec && (
+              <div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">Tempo</div>
+                <div className="font-mono text-xs text-muted-foreground/60">{elapsedSec}s</div>
+              </div>
+            )}
+            {tokensUsed != null && (
+              <div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">Tokens</div>
+                <div className="font-mono text-xs text-muted-foreground/60">{tokensUsed.toLocaleString()}</div>
+              </div>
+            )}
+            {creditsCharged != null && (
+              <div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">Créditos</div>
+                <div className="font-mono text-xs text-muted-foreground/60">{creditsCharged}</div>
+              </div>
+            )}
+          </div>
+          <p className="font-mono text-[9px] text-muted-foreground/30">
+            Agente: {agentName} · Resposta gerada em {new Date(msg.timestamp).toLocaleTimeString("pt-BR")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main chat page ────────────────────────────────────────────────────────────
 export default function AgentChat() {
   const [, params] = useRoute("/agents/:role");
   const role = params?.role ?? "command";
   const agent = AGENT_INFO[role] ?? AGENT_INFO.command!;
   const accent = ACCENT_CLASSES[agent.accentColor] ?? ACCENT_CLASSES.primary!;
-
   const isMobile = useIsMobile();
 
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -188,83 +387,70 @@ export default function AgentChat() {
   const [contextMode, setContextMode] = useState<ContextMode>("question");
   const [selectedCampaign, setSelectedCampaign] = useState<string>("");
   const [pendingAttachments, setPendingAttachments] = useState<FileAttachment[]>([]);
-  const [inputHeight, setInputHeight] = useState(180);
   const [isListening, setIsListening] = useState(false);
+  const [showThinkingProcess, setShowThinkingProcess] = useState(false);
+  const [msgPhaseCount, setMsgPhaseCount] = useState<Record<number, number>>({});
+
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dividerDragRef = useRef<{ startY: number; startH: number } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
-
-  const onDividerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    dividerDragRef.current = { startY: e.clientY, startH: inputHeight };
-    const onMove = (ev: PointerEvent) => {
-      if (!dividerDragRef.current) return;
-      const delta = dividerDragRef.current.startY - ev.clientY;
-      const next = Math.max(100, Math.min(480, dividerDragRef.current.startH + delta));
-      setInputHeight(next);
-    };
-    const onUp = () => {
-      dividerDragRef.current = null;
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  };
+  const sendStartRef = useRef<number>(0);
 
   const { data: campaignsData } = useListCampaigns({ query: { queryKey: getListCampaignsQueryKey() } });
 
+  // Auto-scroll
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, sending]);
 
-  // Restore history when role or campaign changes
+  // Restore history
   useEffect(() => {
-    const saved = loadChatHistory(role, selectedCampaign);
-    setMessages(saved);
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setMessages(loadChatHistory(role, selectedCampaign));
+    setTimeout(() => textareaRef.current?.focus(), 100);
   }, [role, selectedCampaign]);
 
-  // Auto-save whenever messages change (belt-and-suspenders — also catches
-  // any case where the explicit save inside sendMessage is missed)
+  // Auto-save
   useEffect(() => {
-    if (messages.length > 0) {
-      saveChatHistory(role, selectedCampaign, messages);
-    }
+    if (messages.length > 0) saveChatHistory(role, selectedCampaign, messages);
   }, [messages, role, selectedCampaign]);
 
-  const MAX_RETRIES = 2;
-  const RETRY_DELAYS_MS = [4000, 8000];
-  const FETCH_TIMEOUT_MS = 110_000; // 110s — AI calls can take up to 90s
+  // Auto-grow textarea
+  const autoGrow = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const next = Math.min(el.scrollHeight, 240); // max ~10 lines
+    el.style.height = `${next}px`;
+  }, []);
 
+  useEffect(() => { autoGrow(); }, [input, autoGrow]);
+
+  // ── File handling ──────────────────────────────────────────────────────────
   const readFileContent = (file: File): Promise<string | undefined> =>
     new Promise(resolve => {
-      const isImage = file.type.startsWith("image/");
-      if (isImage && file.size <= 5_000_000) {
-        // Read images as base64 data-URL so Claude can actually see them
+      if (file.type.startsWith("image/") && file.size <= 8_000_000) {
         const reader = new FileReader();
-        reader.onload = e => resolve((e.target?.result as string | undefined) ?? undefined);
+        reader.onload = e => resolve((e.target?.result as string | undefined));
         reader.onerror = () => resolve(undefined);
         reader.readAsDataURL(file);
         return;
       }
       const isReadable =
         file.type.startsWith("text/") ||
-        ["application/json", "application/xml"].includes(file.type) ||
+        ["application/json", "application/xml", "application/pdf"].includes(file.type) ||
         /\.(txt|md|csv|json|html|xml|yml|yaml|ts|tsx|js|jsx|py|sql|sh|env)$/i.test(file.name);
       if (!isReadable || file.size > 400_000) { resolve(undefined); return; }
       const reader = new FileReader();
-      reader.onload = e => resolve((e.target?.result as string | undefined) ?? undefined);
+      reader.onload = e => resolve((e.target?.result as string | undefined));
       reader.onerror = () => resolve(undefined);
       reader.readAsText(file);
     });
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
+    if (!files.length) return;
     const attachments: FileAttachment[] = await Promise.all(
       files.map(async f => ({
         name: f.name,
@@ -272,11 +458,14 @@ export default function AgentChat() {
         url: URL.createObjectURL(f),
         size: f.size,
         isImage: f.type.startsWith("image/"),
+        isVideo: f.type.startsWith("video/"),
+        isAudio: f.type.startsWith("audio/"),
         content: await readFileContent(f),
       }))
     );
     setPendingAttachments(prev => [...prev, ...attachments]);
     e.target.value = "";
+    textareaRef.current?.focus();
   };
 
   const removeAttachment = (idx: number) => {
@@ -287,6 +476,11 @@ export default function AgentChat() {
     });
   };
 
+  // ── Send message ───────────────────────────────────────────────────────────
+  const MAX_RETRIES = 2;
+  const RETRY_DELAYS_MS = [4000, 8000];
+  const FETCH_TIMEOUT_MS = 110_000;
+
   const sendMessage = async (overrideMsg?: string) => {
     const text = (overrideMsg ?? input).trim();
     if ((!text && pendingAttachments.length === 0) || sending) return;
@@ -294,31 +488,30 @@ export default function AgentChat() {
     const attachmentsSnapshot = pendingAttachments;
     setPendingAttachments([]);
 
-    // Build display text (include file list so AI knows what was shared)
     const attachmentNote = attachmentsSnapshot.length > 0
       ? `\n\n[Arquivos anexados: ${attachmentsSnapshot.map(a => a.name).join(", ")}]`
       : "";
     const displayText = text + attachmentNote;
 
-    const snapshotMessages = messages; // capture before optimistic update
+    const snapshotMessages = messages;
     const newMsg: ChatMsg = { role: "user", content: displayText, timestamp: new Date(), attachments: attachmentsSnapshot };
     const withUser = [...messages, newMsg];
     setMessages(withUser);
+    setInput("");
     setSending(true);
     setRetryInfo(null);
+    setShowThinkingProcess(false);
+    sendStartRef.current = Date.now();
 
-    // Separate images (sent as base64 to vision AI) from text files (inlined)
+    // Separate images vs text attachments
     const imageAttachments = attachmentsSnapshot.filter(a => a.isImage && a.content);
     const textAttachments  = attachmentsSnapshot.filter(a => !a.isImage && a.content);
-
-    const fileContext = textAttachments
-      .map(a => `\n\n--- Arquivo: ${a.name} ---\n${a.content}`)
-      .join("");
+    const fileContext = textAttachments.map(a => `\n\n--- Arquivo: ${a.name} ---\n${a.content}`).join("");
     const messageWithFiles = text + fileContext;
 
     const requestBody = JSON.stringify({
       agentRole: role,
-      message: messageWithFiles || (imageAttachments.length > 0 ? "Analise esta imagem." : ""),
+      message: messageWithFiles || (imageAttachments.length > 0 ? "Analise este(s) arquivo(s) anexado(s)." : ""),
       history: snapshotMessages.map(m => ({ role: m.role, content: m.content })).slice(-12),
       contextMode,
       ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
@@ -339,103 +532,80 @@ export default function AgentChat() {
       try {
         const res = await customFetch<{ response: string; tokensUsed: number; creditsCharged: number }>(
           "/api/agents/direct-chat",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: requestBody,
-            signal: controller.signal,
-          },
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: requestBody, signal: controller.signal },
         );
-
         clearTimeout(timeoutId);
-        setInput("");
         setRetryInfo(null);
-        const aiMsg: ChatMsg = { role: "assistant", content: res.response, timestamp: new Date() };
+
+        const elapsedMs = Date.now() - sendStartRef.current;
+        const msgIndex = withUser.length;
+        // Record how many phases completed (approx based on elapsed)
+        const phasesCompleted = Math.min(THINKING_PHASES.length, Math.floor(elapsedMs / 3500) + 1);
+        setMsgPhaseCount(prev => ({ ...prev, [msgIndex]: phasesCompleted }));
+
+        const aiMsg: ChatMsg = {
+          role: "assistant",
+          content: res.response,
+          timestamp: new Date(),
+          meta: { tokensUsed: res.tokensUsed, creditsCharged: res.creditsCharged, elapsedMs },
+        };
         const withAi = [...withUser, aiMsg];
         setMessages(withAi);
         saveChatHistory(role, selectedCampaign, withAi);
         setSending(false);
-        setTimeout(() => inputRef.current?.focus(), 100);
-        return; // success
+        setTimeout(() => textareaRef.current?.focus(), 100);
+        return;
       } catch (err) {
         clearTimeout(timeoutId);
         lastError = err instanceof Error ? err : new Error(String(err));
-
-        // Don't retry on 4xx (bad request, auth, credits).
-        // AbortError / TypeError (network failure) are never ApiError instances,
-        // so !(err instanceof ApiError) covers them automatically.
         const isRetryable = !(err instanceof ApiError) || err.status >= 500;
-
         if (!isRetryable || attempt === MAX_RETRIES) break;
-        // else loop continues → wait then retry
       }
     }
 
-    // All attempts exhausted — revert optimistic message, always restore text
     setMessages(snapshotMessages);
-    setInput(text); // restore for BOTH typed input and suggestion clicks
+    setInput(text);
     setRetryInfo(null);
     setSending(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
-
+    setTimeout(() => textareaRef.current?.focus(), 100);
     const isTimeout = lastError?.name === "AbortError" || lastError?.name === "TimeoutError";
     toast.error(
       isTimeout
-        ? "A IA demorou demais para responder. Sua mensagem foi preservada — tente novamente."
-        : (lastError?.message ?? "Erro de comunicação. Sua mensagem foi preservada — tente novamente."),
+        ? "A IA demorou demais. Sua mensagem foi preservada — tente novamente."
+        : (lastError?.message ?? "Erro de comunicação. Sua mensagem foi preservada."),
       { duration: 7000 },
     );
   };
 
-  // ── Voice to text ───────────────────────────────────────────────────────────
+  // ── Voice to text ──────────────────────────────────────────────────────────
   const toggleVoice = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRec = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) {
-      toast.error("Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.");
-      return;
-    }
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
+    if (!SpeechRec) { toast.error("Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge."); return; }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
     const rec = new SpeechRec() as any;
-    rec.lang = "pt-BR";
-    rec.continuous = false;
-    rec.interimResults = false;
+    rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (e: any) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const transcript = (e.results[0]?.[0]?.transcript as string | undefined) ?? "";
-      if (transcript) {
-        setInput(prev => prev ? `${prev} ${transcript}` : transcript);
-        setTimeout(() => inputRef.current?.focus(), 50);
-      }
+      if (transcript) { setInput(prev => prev ? `${prev} ${transcript}` : transcript); setTimeout(() => textareaRef.current?.focus(), 50); }
     };
     rec.onend = () => setIsListening(false);
-    rec.onerror = () => {
-      setIsListening(false);
-      toast.error("Não foi possível capturar o áudio. Verifique as permissões do microfone.");
-    };
+    rec.onerror = () => { setIsListening(false); toast.error("Não foi possível capturar o áudio. Verifique as permissões."); };
     recognitionRef.current = rec;
     rec.start();
     setIsListening(true);
     toast("Ouvindo… fale agora.", { duration: 2500 });
   };
 
-  const clearChat = () => {
-    setMessages([]);
-    localStorage.removeItem(chatStorageKey(role, selectedCampaign));
-  };
-
+  const clearChat = () => { setMessages([]); localStorage.removeItem(chatStorageKey(role, selectedCampaign)); };
   const exportChat = () => {
     const text = messages.map(m => `[${m.role === "user" ? "Você" : agent.name}] ${m.content}`).join("\n\n");
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `conversa-${role}-${Date.now()}.txt`; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `conversa-${role}-${Date.now()}.txt`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -443,7 +613,8 @@ export default function AgentChat() {
 
   return (
     <div className="flex flex-col max-w-5xl mx-auto" style={{ height: "calc(100vh - 7rem)" }}>
-      {/* Header */}
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="shrink-0 pb-4 border-b border-border/50 mb-4">
         <Link href="/agents">
           <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
@@ -462,24 +633,21 @@ export default function AgentChat() {
             </div>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">{agent.tagline} · {agent.description}</p>
           </div>
-          <div className="flex gap-2 shrink-0">
-            {messages.length > 0 && (
-              <>
-                <Button variant="ghost" size="sm" onClick={exportChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
-                  <Download className="h-3 w-3 mr-1.5" />Exportar
-                </Button>
-                <Button variant="ghost" size="sm" onClick={clearChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
-                  <RefreshCw className="h-3 w-3 mr-1.5" />Limpar
-                </Button>
-              </>
-            )}
-          </div>
+          {messages.length > 0 && (
+            <div className="flex gap-2 shrink-0">
+              <Button variant="ghost" size="sm" onClick={exportChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
+                <Download className="h-3 w-3 mr-1.5" />Exportar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
+                <RefreshCw className="h-3 w-3 mr-1.5" />Limpar
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Context controls */}
+      {/* ── Context controls ────────────────────────────────────────────────── */}
       <div className="shrink-0 flex flex-wrap gap-2 mb-3">
-        {/* Mode selector */}
         <div className="flex gap-1 border border-border/50 bg-card/40 p-0.5 rounded-sm">
           {(Object.keys(MODE_LABELS) as ContextMode[]).map(m => (
             <button key={m} onClick={() => setContextMode(m)}
@@ -489,8 +657,6 @@ export default function AgentChat() {
             </button>
           ))}
         </div>
-
-        {/* Campaign context */}
         {(campaignsData?.campaigns ?? []).length > 0 && (
           <select value={selectedCampaign} onChange={e => setSelectedCampaign(e.target.value)}
             className="text-[11px] font-mono uppercase tracking-widest bg-card/40 border border-border/50 px-3 py-1.5 text-muted-foreground rounded-sm focus:border-primary/50 focus:outline-none">
@@ -502,10 +668,11 @@ export default function AgentChat() {
         )}
       </div>
 
-      {/* Chat area */}
-      <div className="flex-1 overflow-y-auto border border-border/50 bg-card/10 p-4 space-y-4 min-h-0 relative">
-        {/* Empty state with suggestions */}
-        {messages.length === 0 && (
+      {/* ── Chat area ──────────────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto border border-border/50 bg-card/10 p-4 space-y-5 min-h-0">
+
+        {/* Empty state */}
+        {messages.length === 0 && !sending && (
           <div className="flex flex-col items-center justify-center h-full gap-5 py-8">
             <div className={`w-16 h-16 border flex items-center justify-center ${accent.border} ${accent.bg}`}>
               <Icon className={`h-7 w-7 ${accent.text}`} />
@@ -529,105 +696,115 @@ export default function AgentChat() {
         {messages.map((msg, i) => {
           const isUser = msg.role === "user";
           return (
-            <div key={i} className={`flex gap-2.5 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
-              {!isUser && (
-                <div className={`w-10 h-10 border shrink-0 mt-1 flex items-center justify-center ${accent.border} ${accent.bg}`}>
-                  <img src={nexosLogo} alt="AI" className="w-7 h-7 object-contain" />
+            <div key={i} className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+              {/* Avatar */}
+              {!isUser ? (
+                <div className={`w-8 h-8 border flex items-center justify-center shrink-0 mt-1 ${accent.border} ${accent.bg}`}>
+                  <img src={nexosLogo} alt="AI" className="w-5 h-5 object-contain" />
                 </div>
-              )}
-              {isUser && (
-                <div className="w-7 h-7 border border-border/50 bg-muted/20 shrink-0 mt-1 flex items-center justify-center">
+              ) : (
+                <div className="w-8 h-8 border border-border/50 bg-muted/20 shrink-0 mt-1 flex items-center justify-center">
                   <Bot className="h-3.5 w-3.5 text-muted-foreground" />
                 </div>
               )}
-              <div className={`max-w-[85%] px-4 py-3 text-xs font-mono leading-relaxed whitespace-pre-wrap border
-                ${isUser ? "bg-primary/15 border-primary/25 text-foreground" : "bg-card/70 border-border/40 text-foreground"}`}>
-                {/* File attachments */}
+
+              <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} min-w-0 max-w-[85%]`}>
+                {/* Attachments (images preview, others as chips) */}
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="mb-2 flex flex-wrap gap-1.5">
-                    {msg.attachments.map((att, ai) => (
-                      <a key={ai} href={att.url} download={att.name} title={`Baixar ${att.name}`}
-                        className="flex items-center gap-1.5 border border-border/50 bg-muted/20 hover:bg-muted/40 px-2 py-1 transition-colors group">
-                        {att.isImage
-                          ? <ImageIcon className="h-3 w-3 text-muted-foreground shrink-0" />
-                          : <File className="h-3 w-3 text-muted-foreground shrink-0" />}
-                        <span className="text-[10px] font-mono text-muted-foreground group-hover:text-foreground truncate max-w-[140px]">
-                          {att.name}
-                        </span>
-                        <Download className="h-2.5 w-2.5 text-muted-foreground/50 group-hover:text-foreground shrink-0" />
+                    {msg.attachments.filter(a => a.isImage).map((att, ai) => (
+                      <a key={`img-${ai}`} href={att.url} target="_blank" rel="noreferrer"
+                        className="block border border-border/40 overflow-hidden bg-muted/10 hover:opacity-90 transition-opacity">
+                        <img src={att.url} alt={att.name} className="max-h-40 max-w-xs object-contain" />
+                      </a>
+                    ))}
+                    {msg.attachments.filter(a => !a.isImage).map((att, ai) => (
+                      <a key={`file-${ai}`} href={att.url} download={att.name}
+                        className="flex items-center gap-1.5 border border-border/50 bg-muted/20 hover:bg-muted/40 px-2.5 py-1.5 transition-colors group">
+                        {fileIcon(att)}
+                        <span className="text-[11px] font-mono text-muted-foreground group-hover:text-foreground truncate max-w-[160px]">{att.name}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground/40 ml-1">{formatBytes(att.size)}</span>
+                        <Download className="h-2.5 w-2.5 text-muted-foreground/40 group-hover:text-foreground ml-1 shrink-0" />
                       </a>
                     ))}
                   </div>
                 )}
-                {msg.content}
-                <div className="mt-2 text-[11px] text-muted-foreground/50 uppercase tracking-widest">
+
+                {/* Bubble */}
+                <div className={`px-4 py-3 text-sm font-mono leading-relaxed whitespace-pre-wrap border
+                  ${isUser
+                    ? "bg-primary/15 border-primary/25 text-foreground"
+                    : "bg-card/70 border-border/40 text-foreground"}`}>
+                  {msg.content}
+                </div>
+
+                {/* Timestamp */}
+                <div className="mt-1 px-1 text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
                   {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </div>
+
+                {/* "Ver processo completo" — only on AI messages */}
+                {!isUser && (
+                  <MessageProcess
+                    msg={msg}
+                    agentName={agent.name}
+                    phaseCount={msgPhaseCount[i] ?? THINKING_PHASES.length}
+                  />
+                )}
               </div>
             </div>
           );
         })}
 
-        {/* Typing / retry indicator */}
+        {/* Thinking indicator */}
         {sending && (
-          <div className="flex gap-2.5">
-            <div className={`w-7 h-7 border shrink-0 flex items-center justify-center ${accent.border} ${accent.bg}`}>
-              <Loader2 className={`h-3.5 w-3.5 ${accent.text} animate-spin`} />
-            </div>
-            <div className="border border-border/40 bg-card/70 px-4 py-3 flex flex-col gap-1.5">
-              {retryInfo ? (
-                <span className="font-mono text-[11px] text-amber-400/80 uppercase tracking-widest">
-                  Tentando novamente {retryInfo.attempt}/{retryInfo.max}…
-                </span>
-              ) : (
-                <div className="flex gap-1 items-center">
-                  {[0, 150, 300].map(d => (
-                    <div key={d} className={`w-1.5 h-1.5 rounded-full animate-bounce ${accent.text.replace("text-", "bg-")}`} style={{ animationDelay: `${d}ms` }} />
-                  ))}
-                </div>
-              )}
-            </div>
+          <AgentThinking
+            agentName={agent.name}
+            accent={accent}
+            showAll={showThinkingProcess}
+            onToggleAll={() => setShowThinkingProcess(o => !o)}
+          />
+        )}
+        {/* Retry banner */}
+        {retryInfo && (
+          <div className="flex items-center gap-2 px-3 py-2 border border-amber-400/30 bg-amber-400/10">
+            <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin shrink-0" />
+            <span className="font-mono text-[11px] text-amber-400 uppercase tracking-widest">
+              Tentando novamente {retryInfo.attempt}/{retryInfo.max}…
+            </span>
           </div>
         )}
+
         <div ref={chatEndRef} />
       </div>
 
-      {/* ── Drag divider ─────────────────────────────────────────────────── */}
-      <div
-        onPointerDown={onDividerPointerDown}
-        className="shrink-0 h-5 border-x border-border/50 bg-muted/10 hover:bg-primary/10
-          flex items-center justify-center cursor-ns-resize select-none group transition-colors"
-        title="Arraste para redimensionar">
-        <div className="flex items-center gap-2 px-3 py-0.5 rounded-sm group-hover:bg-primary/10 transition-colors">
-          <GripHorizontal className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors" />
-          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 group-hover:text-primary/60 transition-colors">
-            arrastar
-          </span>
-          <GripHorizontal className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors" />
-        </div>
-      </div>
+      {/* ── Composer ────────────────────────────────────────────────────────── */}
+      <div className="shrink-0 border border-t-0 border-border/50 bg-card/20">
 
-      {/* Input */}
-      <div className="shrink-0 border border-t-0 border-border/50 p-3 bg-card/20"
-        style={{ height: inputHeight, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        {/* Hidden file input — accepts EVERYTHING */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept="*/*"
+          onChange={e => { void handleFileSelect(e); }}
+        />
 
-        {/* Hidden file input */}
-        <input ref={fileInputRef} type="file" multiple className="hidden"
-          accept=".txt,.md,.csv,.json,.html,.xml,.yml,.yaml,.ts,.tsx,.js,.jsx,.py,.sql,.sh,.pdf,.doc,.docx,image/*"
-          onChange={e => { void handleFileSelect(e); }} />
-
-        {/* Pending attachments preview */}
+        {/* Pending attachments */}
         {pendingAttachments.length > 0 && (
-          <div className="mb-2 flex flex-wrap gap-1.5 pb-2 border-b border-border/30">
+          <div className="border-b border-border/30 px-3 pt-2.5 pb-2 flex flex-wrap gap-2">
             {pendingAttachments.map((att, i) => (
-              <div key={i} className="flex items-center gap-1.5 border border-border/50 bg-muted/20 px-2 py-1">
-                {att.isImage
-                  ? <ImageIcon className="h-3 w-3 text-primary/70 shrink-0" />
-                  : <File className="h-3 w-3 text-muted-foreground shrink-0" />}
-                <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{att.name}</span>
-                <button onClick={() => removeAttachment(i)}
-                  className="text-muted-foreground hover:text-destructive transition-colors ml-1">
-                  <X className="h-2.5 w-2.5" />
+              <div key={i} className="flex items-center gap-2 border border-border/50 bg-muted/20 pl-2 pr-1 py-1">
+                {att.isImage && att.content ? (
+                  <img src={att.content} alt={att.name} className="h-5 w-5 object-cover shrink-0" />
+                ) : (
+                  fileIcon(att)
+                )}
+                <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[130px]">{att.name}</span>
+                <span className="text-[10px] font-mono text-muted-foreground/40">{formatBytes(att.size)}</span>
+                <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive transition-colors ml-0.5 p-0.5">
+                  <X className="h-3 w-3" />
                 </button>
               </div>
             ))}
@@ -636,97 +813,124 @@ export default function AgentChat() {
 
         {/* Listening indicator */}
         {isListening && (
-          <div className="mb-1.5 flex items-center gap-2 px-2 py-1 border border-destructive/40 bg-destructive/10">
+          <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
-            <span className="font-mono text-[11px] text-destructive uppercase tracking-widest">Ouvindo… fale agora</span>
-            <button onClick={toggleVoice} className="ml-auto text-destructive hover:text-destructive/70">
-              <X className="h-3 w-3" />
+            <span className="font-mono text-[11px] text-destructive uppercase tracking-widest flex-1">Ouvindo… fale agora</span>
+            <button onClick={toggleVoice} className="text-destructive hover:text-destructive/60 transition-colors">
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         )}
 
-        {/* Textarea — full width */}
-        <textarea ref={inputRef} value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === "Enter") {
-              if (isMobile || e.ctrlKey || e.metaKey) {
-                e.preventDefault();
-                void sendMessage();
+        {/* Textarea row */}
+        <div className="px-3 pt-3 pb-1">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={e => { setInput(e.target.value); autoGrow(); }}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                if (isMobile || e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  void sendMessage();
+                }
               }
-            }
-          }}
-          placeholder={`Fale com ${agent.name}…`}
-          disabled={sending}
-          className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-2.5 resize-none text-foreground placeholder:text-muted-foreground/50 transition-all min-h-0"
-        />
+            }}
+            placeholder={`Fale com ${agent.name}…`}
+            disabled={sending}
+            rows={3}
+            className="w-full font-mono text-sm bg-transparent border-none focus:outline-none resize-none text-foreground placeholder:text-muted-foreground/40 leading-relaxed min-h-[72px]"
+            style={{ maxHeight: 240 }}
+          />
+        </div>
 
-        {/* ── Action toolbar ─────────────────────────────────────────────── */}
-        <div className="flex items-center gap-1.5 mt-2">
+        {/* Toolbar */}
+        <div className="flex items-center gap-1.5 px-3 pb-3 pt-1">
 
-          {/* Mic — voice to text */}
+          {/* Attach — opens full file picker (images, videos, camera, documents, etc.) */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Anexar arquivo, foto, vídeo ou documento"
+            className={`h-8 w-8 flex items-center justify-center border transition-all shrink-0
+              ${pendingAttachments.length > 0
+                ? "border-primary/50 bg-primary/10 text-primary"
+                : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}
+          >
+            <Paperclip className="h-4 w-4" />
+          </button>
+          {pendingAttachments.length > 0 && (
+            <span className="font-mono text-[10px] text-primary/70">{pendingAttachments.length} arquivo{pendingAttachments.length > 1 ? "s" : ""}</span>
+          )}
+
+          {/* Camera shortcut on mobile */}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => {
+                // Create a temporary input with capture for camera
+                const tmp = document.createElement("input");
+                tmp.type = "file"; tmp.accept = "image/*,video/*"; tmp.capture = "environment";
+                tmp.style.display = "none";
+                tmp.onchange = () => { void handleFileSelect({ target: tmp } as React.ChangeEvent<HTMLInputElement>); document.body.removeChild(tmp); };
+                document.body.appendChild(tmp); tmp.click();
+              }}
+              title="Tirar foto ou gravar vídeo"
+              className="h-8 w-8 flex items-center justify-center border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all shrink-0"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Voice to text */}
           <button
             type="button"
             onClick={toggleVoice}
-            title={isListening ? "Parar gravação de voz" : "Gravar mensagem por voz (PT-BR)"}
-            className={`h-9 w-9 flex items-center justify-center border transition-all rounded-sm shrink-0
+            title={isListening ? "Parar gravação de voz" : "Gravar mensagem por voz"}
+            className={`h-8 w-8 flex items-center justify-center border transition-all shrink-0
               ${isListening
                 ? "border-destructive bg-destructive/20 text-destructive"
                 : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}
           >
-            {isListening
-              ? <MicOff className="h-4 w-4" />
-              : <Mic className="h-4 w-4" />}
-          </button>
-
-          {/* Attach file */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            title="Anexar arquivo ou imagem"
-            className="h-9 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0"
-          >
-            <Paperclip className="h-4 w-4" />
-            <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">Arquivo</span>
-            {pendingAttachments.length > 0 && (
-              <span className="text-[9px] font-bold text-primary bg-primary/20 px-1 rounded-sm">
-                {pendingAttachments.length}
-              </span>
-            )}
+            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </button>
 
           <div className="flex-1" />
 
-          {/* New line (desktop only) */}
+          {/* New line (desktop) */}
           {!isMobile && (
             <Button variant="outline" size="sm"
-              title="Inserir nova linha"
-              onClick={() => { setInput(v => v + "\n"); setTimeout(() => inputRef.current?.focus(), 0); }}
+              title="Inserir nova linha (ou Shift+Enter)"
+              onClick={() => { setInput(v => v + "\n"); setTimeout(() => textareaRef.current?.focus(), 0); autoGrow(); }}
               disabled={sending}
-              className="font-mono rounded-sm h-9 px-3 border-border/50 text-muted-foreground hover:text-foreground hover:border-border shrink-0">
-              <CornerDownLeft className="h-4 w-4" />
+              className="font-mono rounded-sm h-8 px-2.5 border-border/50 text-muted-foreground hover:text-foreground hover:border-border shrink-0">
+              <CornerDownLeft className="h-3.5 w-3.5" />
             </Button>
           )}
 
           {/* Send */}
           <Button
             onPointerDown={e => { if (e.pointerType === "touch") e.preventDefault(); }}
-            onClick={() => { if (!input.trim() && pendingAttachments.length === 0) { inputRef.current?.focus(); return; } void sendMessage(); }}
+            onClick={() => { if (!input.trim() && pendingAttachments.length === 0) { textareaRef.current?.focus(); return; } void sendMessage(); }}
             disabled={sending}
             title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
-            className={`font-mono rounded-sm h-9 px-4 ${accent.bg} ${accent.border} border hover:brightness-125 shrink-0`}>
+            className={`font-mono h-8 px-4 gap-1.5 rounded-sm ${accent.bg} ${accent.border} border hover:brightness-125 shrink-0`}
+          >
             {sending
               ? <Loader2 className={`h-4 w-4 ${accent.text} animate-spin`} />
-              : <><Send className={`h-4 w-4 ${accent.text}`} /><span className={`ml-1.5 font-mono text-[11px] uppercase tracking-widest ${accent.text} hidden sm:inline`}>Enviar</span></>}
+              : <>
+                  <Send className={`h-4 w-4 ${accent.text}`} />
+                  <span className={`font-mono text-[11px] uppercase tracking-widest ${accent.text} hidden sm:inline`}>Enviar</span>
+                </>}
           </Button>
         </div>
 
         {/* Footer hint */}
-        <div className="flex justify-between items-center mt-1.5 px-0.5">
-          <span className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">
-            Modo: {MODE_LABELS[contextMode]} · {selectedCampaign ? "Com campanha" : "Sem campanha"}
+        <div className="flex justify-between items-center px-3 pb-2.5">
+          <span className="text-[10px] font-mono text-muted-foreground/30 uppercase tracking-widest">
+            Modo: {MODE_LABELS[contextMode]}{selectedCampaign ? " · Com campanha" : ""}
           </span>
-          <span className="text-[10px] font-mono text-muted-foreground/40">
+          <span className="text-[10px] font-mono text-muted-foreground/30">
             {isMobile ? "Enter = enviar" : "Ctrl+Enter = enviar"} · 3 cr/msg
           </span>
         </div>
