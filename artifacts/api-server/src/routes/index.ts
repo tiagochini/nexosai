@@ -37,6 +37,7 @@ import oauthRouter from "../modules/integrations/oauth.routes.js";
 import socialModerationRouter from "../modules/social-moderation/social-moderation.routes.js";
 import creativesRouter from "../modules/creatives/creatives.routes.js";
 import productCheckoutRouter from "../modules/product-checkout/product-checkout.routes.js";
+import metaDeletionRouter from "../modules/meta/meta-deletion.routes.js";
 
 const router: IRouter = Router();
 
@@ -78,5 +79,6 @@ router.use("/integrations/oauth", oauthRouter);
 router.use("/social-moderation", socialModerationRouter);
 router.use("/campaigns", creativesRouter);
 router.use("/products", productCheckoutRouter);
+router.use("/", metaDeletionRouter);
 
 export default router;
