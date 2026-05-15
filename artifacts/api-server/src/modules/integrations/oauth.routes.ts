@@ -68,19 +68,19 @@ interface ProviderConfig {
 const PROVIDER_MAP: Record<string, ProviderConfig> = {
   instagram: {
     platform: "meta",
-    scope: "instagram_basic,instagram_content_publish,pages_read_engagement,pages_manage_posts",
+    scope: "public_profile,email",
     label: "Instagram Business",
     dbProvider: "instagram",
   },
   facebook: {
     platform: "meta",
-    scope: "pages_manage_posts,pages_read_engagement,pages_show_list,publish_video,public_profile",
+    scope: "public_profile,email,pages_show_list",
     label: "Facebook",
     dbProvider: "meta_ads",
   },
   meta_ads: {
     platform: "meta",
-    scope: "ads_management,ads_read,business_management",
+    scope: "public_profile,email",
     label: "Meta Ads",
     dbProvider: "meta_ads",
   },
