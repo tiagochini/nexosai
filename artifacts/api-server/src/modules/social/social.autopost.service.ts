@@ -4,26 +4,27 @@ import {
   contentPiecesTable,
   workspaceIntegrationsTable,
   socialPostsTable,
+  mediaBriefsTable,
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { publishToInstagram, publishToFacebook, publishToTikTok } from "./social.publisher.js";
 import type { SocialPost, WorkspaceIntegration } from "@workspace/db";
 
-// Maps content piece types → social platforms to publish
-const CONTENT_TYPE_PLATFORMS: Record<string, string[]> = {
+// Maps content piece types → DB provider values to query
+const CONTENT_TYPE_PROVIDERS: Record<string, string[]> = {
   instagram_post:  ["instagram"],
   instagram_story: ["instagram"],
   instagram_reel:  ["instagram"],
-  facebook_post:   ["facebook"],
-  facebook_video:  ["facebook"],
-  feed_image:      ["instagram", "facebook"],
-  feed_video:      ["instagram", "facebook", "tiktok"],
+  facebook_post:   ["meta_ads"],
+  facebook_video:  ["meta_ads"],
+  feed_image:      ["instagram", "meta_ads"],
+  feed_video:      ["instagram", "meta_ads", "tiktok_ads"],
   story:           ["instagram"],
-  reel:            ["instagram", "tiktok"],
+  reel:            ["instagram", "tiktok_ads"],
   carousel:        ["instagram"],
-  tiktok_video:    ["tiktok"],
-  tiktok_reel:     ["tiktok"],
-  short_video:     ["tiktok", "instagram"],
+  tiktok_video:    ["tiktok_ads"],
+  tiktok_reel:     ["tiktok_ads"],
+  short_video:     ["tiktok_ads", "instagram"],
 };
 
 const CONTENT_TYPE_POST_TYPE: Record<string, string> = {
@@ -41,6 +42,74 @@ const CONTENT_TYPE_POST_TYPE: Record<string, string> = {
   tiktok_reel:     "reel",
   short_video:     "reel",
 };
+
+// Maps DB provider → SocialPost platform field
+const PROVIDER_TO_PLATFORM: Record<string, SocialPost["platform"]> = {
+  instagram:  "instagram",
+  meta_ads:   "facebook_page",
+  tiktok_ads: "tiktok",
+};
+
+/**
+ * Extracts the text caption from a content piece's JSONB content field.
+ * Content can be a string or an object with various text keys.
+ */
+function extractCaption(content: unknown): string {
+  if (!content) return "";
+  if (typeof content === "string") return content.slice(0, 2200);
+  if (typeof content === "object" && content !== null) {
+    const c = content as Record<string, unknown>;
+    const text =
+      c["caption"] ??
+      c["body"] ??
+      c["text"] ??
+      c["copy"] ??
+      c["message"] ??
+      c["content"] ??
+      null;
+    if (typeof text === "string") return text.slice(0, 2200);
+  }
+  return "";
+}
+
+/**
+ * Extracts media URLs from a content piece's JSONB content field.
+ * Falls back to approved media briefs linked to the piece.
+ */
+async function extractMediaUrls(
+  pieceId: string,
+  content: unknown
+): Promise<string[]> {
+  // Try to extract from content JSONB
+  if (content && typeof content === "object" && content !== null) {
+    const c = content as Record<string, unknown>;
+    const fromContent =
+      c["mediaUrls"] ?? c["media_urls"] ?? c["imageUrls"] ?? c["videoUrls"];
+    if (Array.isArray(fromContent) && fromContent.length > 0) {
+      return fromContent.filter((u): u is string => typeof u === "string");
+    }
+    const single = c["mediaUrl"] ?? c["imageUrl"] ?? c["videoUrl"] ?? c["url"];
+    if (typeof single === "string" && single) return [single];
+  }
+
+  // Fall back to approved media briefs linked to this piece
+  const briefs = await db
+    .select({ finalUrl: mediaBriefsTable.finalUrl })
+    .from(mediaBriefsTable)
+    .where(
+      and(
+        eq(mediaBriefsTable.contentPieceId, pieceId),
+        eq(mediaBriefsTable.conceptStatus, "concept_approved")
+      )
+    )
+    .limit(10);
+
+  const urls = briefs
+    .map((b) => b.finalUrl)
+    .filter((u): u is string => typeof u === "string" && u.length > 0);
+
+  return urls;
+}
 
 /**
  * Triggered fire-and-forget after content piece approval.
@@ -62,52 +131,61 @@ export async function autoPostApprovedContent(
     if (!piece) return;
 
     const contentType = piece.type ?? "";
-    const platforms = CONTENT_TYPE_PLATFORMS[contentType];
-    if (!platforms || platforms.length === 0) return;
+    const providers = CONTENT_TYPE_PROVIDERS[contentType];
+    if (!providers || providers.length === 0) {
+      logger.info({ workspaceId, pieceId, contentType }, "social.autopost: content type has no platforms, skip");
+      return;
+    }
 
-    const uniquePlatforms = [...new Set(platforms)];
+    const uniqueProviders = [...new Set(providers)];
     const integrations = await db
       .select()
       .from(workspaceIntegrationsTable)
       .where(
         and(
           eq(workspaceIntegrationsTable.workspaceId, workspaceId),
-          inArray(workspaceIntegrationsTable.provider, uniquePlatforms as any),
+          inArray(workspaceIntegrationsTable.provider, uniqueProviders as any),
           eq(workspaceIntegrationsTable.status, "connected"),
         )
       );
 
     if (integrations.length === 0) {
-      logger.info({ workspaceId, pieceId, platforms }, "social.autopost: no connected integrations, skip");
+      logger.info({ workspaceId, pieceId, providers: uniqueProviders }, "social.autopost: no connected integrations, skip");
       return;
     }
 
     const postType = (CONTENT_TYPE_POST_TYPE[contentType] ?? "feed_image") as SocialPost["postType"];
-    const caption = typeof piece.content === "string"
-      ? piece.content.slice(0, 2200)
-      : "";
+    const caption = extractCaption(piece.content);
+    const mediaUrls = await extractMediaUrls(pieceId, piece.content);
 
     const providerMap = new Map<string, WorkspaceIntegration>(
       integrations.map(i => [i.provider as string, i])
     );
 
-    for (const platform of uniquePlatforms) {
-      const integration = providerMap.get(platform);
+    for (const providerKey of uniqueProviders) {
+      const integration = providerMap.get(providerKey);
       if (!integration) continue;
 
-      // Build a minimal SocialPost to satisfy publisher types
+      const platform = PROVIDER_TO_PLATFORM[providerKey] ?? "facebook_page";
+
+      // Instagram requires media — skip gracefully if none available
+      if (platform === "instagram" && mediaUrls.length === 0) {
+        logger.info({ workspaceId, pieceId }, "social.autopost: Instagram skipped — no media URLs available");
+        continue;
+      }
+
       const mockPost: SocialPost = {
         id: piece.id,
         workspaceId,
         campaignId: campaignId || null,
         contentPieceId: pieceId,
         integrationId: integration.id,
-        platform: platform as SocialPost["platform"],
+        platform,
         postType,
         status: "publishing",
         caption,
         hashtags: [],
-        mediaUrls: [],
+        mediaUrls,
         callToAction: null,
         linkUrl: null,
         scheduledAt: null,
@@ -125,7 +203,7 @@ export async function autoPostApprovedContent(
       let result;
       if (platform === "instagram") {
         result = await publishToInstagram(mockPost, integration);
-      } else if (platform === "facebook") {
+      } else if (platform === "facebook_page") {
         result = await publishToFacebook(mockPost, integration);
       } else if (platform === "tiktok") {
         result = await publishToTikTok(mockPost, integration);
@@ -140,11 +218,11 @@ export async function autoPostApprovedContent(
           campaignId: campaignId || null,
           contentPieceId: pieceId,
           integrationId: integration.id,
-          platform: platform as SocialPost["platform"],
+          platform,
           postType,
           caption,
           hashtags: [],
-          mediaUrls: [],
+          mediaUrls,
           status: "published",
           platformPostId: result.platformPostId ?? null,
           platformUrl: result.platformUrl ?? null,
@@ -153,17 +231,16 @@ export async function autoPostApprovedContent(
         }).onConflictDoNothing();
       } else {
         logger.warn({ platform, error: result.error, pieceId }, "social.autopost: publish failed");
-        // Record the failure for visibility
         await db.insert(socialPostsTable).values({
           workspaceId,
           campaignId: campaignId || null,
           contentPieceId: pieceId,
           integrationId: integration.id,
-          platform: platform as SocialPost["platform"],
+          platform,
           postType,
           caption,
           hashtags: [],
-          mediaUrls: [],
+          mediaUrls,
           status: "failed",
           errorMessage: result.error ?? "Unknown error",
           aiGenerated: true,
