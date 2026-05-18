@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CURRICULUM } from "@/data/curriculum";
 
 const OWNER_PIN = "nexos2025";
 const OWNER_KEY = "nexos-owner-mode";
+const OWNER_SECRET = "nexos2025";
 
 export function isOwnerMode(): boolean {
   try {
@@ -25,10 +26,69 @@ interface OwnerProps {
   isOwner: boolean;
 }
 
+interface Lead {
+  id: string;
+  email: string;
+  name: string | null;
+  source: string;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+interface Purchase {
+  id: string;
+  accessToken: string;
+  customerEmail: string;
+  customerName: string;
+  productId: string;
+  status: string;
+  amountCents: number;
+  createdAt: string;
+  confirmedAt: string | null;
+}
+
+type Tab = "leads" | "compras" | "curso" | "acesso";
+
+function fmt(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function fmtBrl(cents: number) {
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    confirmed: { label: "Confirmado", cls: "bg-green-500/15 text-green-400 border-green-500/30" },
+    pending: { label: "Pendente", cls: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30" },
+    cancelled: { label: "Cancelado", cls: "bg-red-500/15 text-red-400 border-red-500/30" },
+    refunded: { label: "Estornado", cls: "bg-orange-500/15 text-orange-400 border-orange-500/30" },
+  };
+  const s = map[status] ?? { label: status, cls: "bg-[hsl(220_20%_12%)] text-[hsl(220_10%_55%)] border-[hsl(220_20%_18%)]" };
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${s.cls}`}>
+      {s.label}
+    </span>
+  );
+}
+
 export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [showPin, setShowPin] = useState(false);
+
+  const [tab, setTab] = useState<Tab>("leads");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadsTotal, setLeadsTotal] = useState(0);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [purchasesTotal, setPurchasesTotal] = useState(0);
+  const [purchasesLoading, setPurchasesLoading] = useState(false);
+  const [copyMsg, setCopyMsg] = useState("");
 
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
   const allLessons = allChapters.flatMap(c => c.lessons);
@@ -42,6 +102,52 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   }, 0);
   const totalHours = Math.floor(totalDuration / 60);
   const totalMinutes = totalDuration % 60;
+
+  const moduleStats = CURRICULUM.map(mod => {
+    const lessons = mod.chapters.flatMap(c => c.lessons);
+    return {
+      id: mod.id,
+      number: mod.number,
+      title: mod.title,
+      chapters: mod.chapters.length,
+      lessons: lessons.length,
+      badge: mod.badge,
+    };
+  });
+
+  const fetchLeads = useCallback(async () => {
+    setLeadsLoading(true);
+    try {
+      const r = await fetch(`/api/academy/leads?secret=${OWNER_SECRET}&limit=200`);
+      const j = await r.json();
+      setLeads(j.leads ?? []);
+      setLeadsTotal(j.total ?? 0);
+    } catch {
+      // ignore
+    } finally {
+      setLeadsLoading(false);
+    }
+  }, []);
+
+  const fetchPurchases = useCallback(async () => {
+    setPurchasesLoading(true);
+    try {
+      const r = await fetch(`/api/academy/purchases?secret=${OWNER_SECRET}&limit=200`);
+      const j = await r.json();
+      setPurchases(j.purchases ?? []);
+      setPurchasesTotal(j.total ?? 0);
+    } catch {
+      // ignore
+    } finally {
+      setPurchasesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOwner) return;
+    if (tab === "leads") fetchLeads();
+    if (tab === "compras") fetchPurchases();
+  }, [isOwner, tab, fetchLeads, fetchPurchases]);
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +167,40 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
       onOwnerChange(false);
       onNavigate("home");
     }
+  }
+
+  function copyEmails() {
+    const text = leads.map(l => l.email).join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyMsg("Copiado!");
+      setTimeout(() => setCopyMsg(""), 2000);
+    });
+  }
+
+  function exportLeadsCsv() {
+    const header = "email,nome,fonte,utm_source,utm_medium,utm_campaign,data\n";
+    const rows = leads
+      .map(l =>
+        [
+          l.email,
+          l.name ?? "",
+          l.source,
+          l.utmSource ?? "",
+          l.utmMedium ?? "",
+          l.utmCampaign ?? "",
+          new Date(l.createdAt).toISOString(),
+        ]
+          .map(v => `"${String(v).replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const blob = new Blob([header + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `academy-leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (!isOwner) {
@@ -122,20 +262,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     );
   }
 
-  const moduleStats = CURRICULUM.map(mod => {
-    const lessons = mod.chapters.flatMap(c => c.lessons);
-    return {
-      id: mod.id,
-      number: mod.number,
-      title: mod.title,
-      chapters: mod.chapters.length,
-      lessons: lessons.length,
-      badge: mod.badge,
-    };
-  });
-
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -145,134 +273,307 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
             </span>
           </div>
           <h1 className="text-3xl font-bold text-white">Painel do Administrador</h1>
-          <p className="text-[hsl(220_10%_50%)] mt-1">Visão completa do portal NexOS Academy</p>
+          <p className="text-[hsl(220_10%_50%)] mt-1">NexOS Academy — visão completa</p>
         </div>
-        <button
-          onClick={handleLogout}
-          className="btn-outline text-sm px-4 py-2 shrink-0"
-        >
+        <button onClick={handleLogout} className="btn-outline text-sm px-4 py-2 shrink-0">
           Sair do modo dono
         </button>
       </div>
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Módulos", value: totalModules, icon: "📦" },
-          { label: "Capítulos", value: totalChapters, icon: "📖" },
-          { label: "Aulas", value: totalLessons, icon: "🎓" },
-          { label: "Horas de conteúdo", value: `${totalHours}h ${totalMinutes}m`, icon: "⏱️" },
+          { label: "Leads capturados", value: leadsTotal, icon: "📥", tab: "leads" as Tab },
+          { label: "Compras", value: purchasesTotal, icon: "💳", tab: "compras" as Tab },
+          { label: "Módulos", value: totalModules, icon: "📦", tab: "curso" as Tab },
+          { label: "Horas de conteúdo", value: `${totalHours}h ${totalMinutes}m`, icon: "⏱️", tab: "acesso" as Tab },
         ].map(kpi => (
-          <div key={kpi.label} className="card p-5 text-center">
+          <button
+            key={kpi.label}
+            onClick={() => setTab(kpi.tab)}
+            className={`card p-5 text-center hover:border-[hsl(250_90%_65%/0.5)] transition-colors ${tab === kpi.tab ? "border-[hsl(250_90%_65%/0.5)] bg-[hsl(250_90%_65%/0.05)]" : ""}`}
+          >
             <div className="text-2xl mb-1">{kpi.icon}</div>
             <div className="text-3xl font-extrabold text-white">{kpi.value}</div>
             <div className="text-xs text-[hsl(220_10%_45%)] mt-0.5">{kpi.label}</div>
-          </div>
+          </button>
         ))}
       </div>
 
-      {/* Access info */}
-      <div className="card p-6 border border-[hsl(250_90%_65%/0.3)] bg-[hsl(250_90%_65%/0.05)]">
-        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span>🔑</span> Seu Acesso de Dono
-        </h2>
-        <div className="grid sm:grid-cols-2 gap-4 text-sm">
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-0.5">✓</span>
-              <div>
-                <p className="text-white font-medium">Conteúdo 100% desbloqueado</p>
-                <p className="text-[hsl(220_10%_45%)]">Você acessa todas as aulas sem pagar</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-0.5">✓</span>
-              <div>
-                <p className="text-white font-medium">Sem paywall nunca</p>
-                <p className="text-[hsl(220_10%_45%)]">O modo dono fica salvo neste navegador</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-green-400 mt-0.5">✓</span>
-              <div>
-                <p className="text-white font-medium">Badge "Dono" visível</p>
-                <p className="text-[hsl(220_10%_45%)]">Você sempre sabe que está no modo admin</p>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="p-4 rounded-xl bg-[hsl(220_20%_8%)] space-y-2">
-              <p className="text-xs text-[hsl(220_10%_45%)] uppercase tracking-wider font-semibold">URL de acesso ao painel</p>
-              <code className="text-[hsl(250_90%_75%)] text-sm break-all">
-                /nexos-academy/#owner
-              </code>
-              <p className="text-xs text-[hsl(220_10%_40%)]">Salve este link. Só você sabe que ele existe.</p>
-            </div>
-            <div className="p-4 rounded-xl bg-[hsl(220_20%_8%)]">
-              <p className="text-xs text-[hsl(220_10%_45%)] uppercase tracking-wider font-semibold mb-1">PIN atual</p>
-              <code className="text-[hsl(250_90%_75%)] text-sm">{OWNER_PIN}</code>
-              <p className="text-xs text-[hsl(220_10%_40%)] mt-1">Guarde em local seguro.</p>
-            </div>
-          </div>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)]">
+        {(["leads", "compras", "curso", "acesso"] as Tab[]).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${
+              tab === t
+                ? "bg-[hsl(250_90%_65%)] text-white shadow"
+                : "text-[hsl(220_10%_50%)] hover:text-white"
+            }`}
+          >
+            {t === "leads" ? "📥 Leads" : t === "compras" ? "💳 Compras" : t === "curso" ? "📦 Curso" : "🔑 Acesso"}
+          </button>
+        ))}
       </div>
 
-      {/* Module overview */}
-      <div>
-        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span>📦</span> Conteúdo do Curso
-        </h2>
-        <div className="space-y-2">
-          {moduleStats.map(mod => (
-            <div
-              key={mod.id}
-              className="card p-4 flex items-center justify-between gap-4 hover:border-[hsl(250_90%_65%/0.4)] transition-colors cursor-pointer"
-              onClick={() => onNavigate("module", { moduleId: mod.id })}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-[hsl(250_90%_65%/0.15)] flex items-center justify-center text-xs font-bold text-[hsl(250_90%_75%)] shrink-0">
-                  {mod.number}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{mod.title}</p>
-                  <p className="text-xs text-[hsl(220_10%_45%)]">{mod.chapters} capítulos · {mod.lessons} aulas</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {mod.badge && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(220_20%_12%)] text-[hsl(220_10%_55%)] border border-[hsl(220_20%_18%)]">
-                    {mod.badge}
-                  </span>
-                )}
-                <span className="text-[hsl(220_10%_40%)] text-xs">→</span>
+      {/* TAB: LEADS */}
+      {tab === "leads" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-bold text-white">Leads Capturados</h2>
+              <p className="text-sm text-[hsl(220_10%_45%)]">
+                {leadsTotal} lead{leadsTotal !== 1 ? "s" : ""} no total
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={copyEmails}
+                className="btn-outline text-sm px-3 py-1.5"
+              >
+                {copyMsg || "Copiar e-mails"}
+              </button>
+              <button
+                onClick={exportLeadsCsv}
+                className="btn-outline text-sm px-3 py-1.5"
+                disabled={leads.length === 0}
+              >
+                ↓ CSV
+              </button>
+              <button
+                onClick={fetchLeads}
+                className="btn-outline text-sm px-3 py-1.5"
+              >
+                ↻
+              </button>
+            </div>
+          </div>
+
+          {leadsLoading ? (
+            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">Carregando...</div>
+          ) : leads.length === 0 ? (
+            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">
+              <div className="text-4xl mb-3">📭</div>
+              <p className="font-semibold text-white mb-1">Nenhum lead ainda</p>
+              <p className="text-sm">Quando alguém preencher o formulário do guia gratuito, aparece aqui.</p>
+            </div>
+          ) : (
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[hsl(220_20%_15%)]">
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">E-mail</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden sm:table-cell">Nome</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden md:table-cell">Fonte</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden lg:table-cell">UTM</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead, i) => (
+                      <tr
+                        key={lead.id}
+                        className={`border-b border-[hsl(220_20%_12%)] hover:bg-[hsl(220_20%_8%)] transition-colors ${i === leads.length - 1 ? "border-b-0" : ""}`}
+                      >
+                        <td className="px-4 py-3 text-white font-medium">{lead.email}</td>
+                        <td className="px-4 py-3 text-[hsl(220_10%_60%)] hidden sm:table-cell">
+                          {lead.name ?? <span className="text-[hsl(220_10%_35%)] italic">—</span>}
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(250_90%_65%/0.1)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.2)]">
+                            {lead.source}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[hsl(220_10%_50%)] text-xs hidden lg:table-cell">
+                          {lead.utmSource ? (
+                            <span>{lead.utmSource}{lead.utmMedium ? ` / ${lead.utmMedium}` : ""}{lead.utmCampaign ? ` / ${lead.utmCampaign}` : ""}</span>
+                          ) : (
+                            <span className="text-[hsl(220_10%_35%)] italic">orgânico</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-[hsl(220_10%_50%)] text-xs whitespace-nowrap">{fmt(lead.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          ))}
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Quick actions */}
-      <div>
-        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span>⚡</span> Ações Rápidas
-        </h2>
-        <div className="grid sm:grid-cols-3 gap-3">
-          {[
-            { label: "Ver todos os módulos", icon: "📦", page: "modules" },
-            { label: "Ver glossário", icon: "📖", page: "glossary" },
-            { label: "Página de produtos", icon: "🛒", page: "products" },
-          ].map(action => (
-            <button
-              key={action.page}
-              className="card p-4 text-left hover:border-[hsl(250_90%_65%/0.4)] transition-colors flex items-center gap-3"
-              onClick={() => onNavigate(action.page)}
-            >
-              <span className="text-xl">{action.icon}</span>
-              <span className="text-sm font-medium text-white">{action.label}</span>
+      {/* TAB: COMPRAS */}
+      {tab === "compras" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-bold text-white">Compras</h2>
+              <p className="text-sm text-[hsl(220_10%_45%)]">
+                {purchasesTotal} compra{purchasesTotal !== 1 ? "s" : ""} no total
+              </p>
+            </div>
+            <button onClick={fetchPurchases} className="btn-outline text-sm px-3 py-1.5">
+              ↻ Atualizar
             </button>
-          ))}
+          </div>
+
+          {purchasesLoading ? (
+            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">Carregando...</div>
+          ) : purchases.length === 0 ? (
+            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">
+              <div className="text-4xl mb-3">🛒</div>
+              <p className="font-semibold text-white mb-1">Nenhuma compra ainda</p>
+              <p className="text-sm">As compras via Asaas aparecem aqui após a confirmação do webhook.</p>
+            </div>
+          ) : (
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[hsl(220_20%_15%)]">
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Cliente</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden sm:table-cell">Produto</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Valor</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Status</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden md:table-cell">Token</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchases.map((p, i) => (
+                      <tr
+                        key={p.id}
+                        className={`border-b border-[hsl(220_20%_12%)] hover:bg-[hsl(220_20%_8%)] transition-colors ${i === purchases.length - 1 ? "border-b-0" : ""}`}
+                      >
+                        <td className="px-4 py-3">
+                          <p className="text-white font-medium">{p.customerName}</p>
+                          <p className="text-[hsl(220_10%_50%)] text-xs">{p.customerEmail}</p>
+                        </td>
+                        <td className="px-4 py-3 text-[hsl(220_10%_60%)] text-xs hidden sm:table-cell">{p.productId}</td>
+                        <td className="px-4 py-3 text-white font-semibold">{fmtBrl(p.amountCents)}</td>
+                        <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <code className="text-xs text-[hsl(250_90%_70%)] bg-[hsl(250_90%_65%/0.1)] px-2 py-0.5 rounded">
+                            {p.accessToken}
+                          </code>
+                        </td>
+                        <td className="px-4 py-3 text-[hsl(220_10%_50%)] text-xs whitespace-nowrap">{fmt(p.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
+
+      {/* TAB: CURSO */}
+      {tab === "curso" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Capítulos", value: totalChapters, icon: "📖" },
+              { label: "Aulas", value: totalLessons, icon: "🎓" },
+              { label: "Horas", value: `${totalHours}h ${totalMinutes}m`, icon: "⏱️" },
+            ].map(kpi => (
+              <div key={kpi.label} className="card p-4 text-center">
+                <div className="text-xl mb-1">{kpi.icon}</div>
+                <div className="text-2xl font-extrabold text-white">{kpi.value}</div>
+                <div className="text-xs text-[hsl(220_10%_45%)] mt-0.5">{kpi.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <h2 className="text-base font-bold text-white mt-2">Módulos</h2>
+          <div className="space-y-2">
+            {moduleStats.map(mod => (
+              <div
+                key={mod.id}
+                className="card p-4 flex items-center justify-between gap-4 hover:border-[hsl(250_90%_65%/0.4)] transition-colors cursor-pointer"
+                onClick={() => onNavigate("module", { moduleId: mod.id })}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-[hsl(250_90%_65%/0.15)] flex items-center justify-center text-xs font-bold text-[hsl(250_90%_75%)] shrink-0">
+                    {mod.number}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{mod.title}</p>
+                    <p className="text-xs text-[hsl(220_10%_45%)]">{mod.chapters} capítulos · {mod.lessons} aulas</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {mod.badge && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(220_20%_12%)] text-[hsl(220_10%_55%)] border border-[hsl(220_20%_18%)]">
+                      {mod.badge}
+                    </span>
+                  )}
+                  <span className="text-[hsl(220_10%_40%)] text-xs">→</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-3 mt-2">
+            {[
+              { label: "Ver todos os módulos", icon: "📦", page: "modules" },
+              { label: "Ver glossário", icon: "📖", page: "glossary" },
+              { label: "Página de produtos", icon: "🛒", page: "products" },
+            ].map(action => (
+              <button
+                key={action.page}
+                className="card p-4 text-left hover:border-[hsl(250_90%_65%/0.4)] transition-colors flex items-center gap-3"
+                onClick={() => onNavigate(action.page)}
+              >
+                <span className="text-xl">{action.icon}</span>
+                <span className="text-sm font-medium text-white">{action.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: ACESSO */}
+      {tab === "acesso" && (
+        <div className="space-y-4">
+          <div className="card p-6 border border-[hsl(250_90%_65%/0.3)] bg-[hsl(250_90%_65%/0.05)]">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span>🔑</span> Seu Acesso de Dono
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-3">
+                {[
+                  { title: "Conteúdo 100% desbloqueado", desc: "Você acessa todas as aulas sem pagar" },
+                  { title: "Sem paywall nunca", desc: "O modo dono fica salvo neste navegador" },
+                  { title: "Badge \"Dono\" visível", desc: "Você sempre sabe que está no modo admin" },
+                ].map(item => (
+                  <div key={item.title} className="flex items-start gap-3">
+                    <span className="text-green-400 mt-0.5">✓</span>
+                    <div>
+                      <p className="text-white font-medium">{item.title}</p>
+                      <p className="text-[hsl(220_10%_45%)]">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl bg-[hsl(220_20%_8%)] space-y-2">
+                  <p className="text-xs text-[hsl(220_10%_45%)] uppercase tracking-wider font-semibold">URL do painel</p>
+                  <code className="text-[hsl(250_90%_75%)] text-sm break-all">/nexos-academy/#owner</code>
+                  <p className="text-xs text-[hsl(220_10%_40%)]">Salve este link. Só você sabe que ele existe.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[hsl(220_20%_8%)]">
+                  <p className="text-xs text-[hsl(220_10%_45%)] uppercase tracking-wider font-semibold mb-1">PIN atual</p>
+                  <code className="text-[hsl(250_90%_75%)] text-sm">{OWNER_PIN}</code>
+                  <p className="text-xs text-[hsl(220_10%_40%)] mt-1">Guarde em local seguro.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="text-center text-xs text-[hsl(220_10%_30%)] py-4">
         Painel acessível apenas via <code className="text-[hsl(220_10%_40%)]">/nexos-academy/#owner</code> — não aparece em nenhum menu público.

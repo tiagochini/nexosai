@@ -224,6 +224,26 @@ router.get("/verify/:token", async (req, res): Promise<void> => {
   });
 });
 
+// GET /api/academy/leads?secret=nexos2025
+// Owner-only list of all captured leads
+router.get("/leads", async (req, res): Promise<void> => {
+  const { secret, limit = "100", offset = "0" } = req.query as Record<string, string>;
+  if (secret !== "nexos2025") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const rows = await db
+    .select()
+    .from(academyLeadsTable)
+    .orderBy(academyLeadsTable.createdAt)
+    .limit(Math.min(parseInt(limit) || 100, 500))
+    .offset(parseInt(offset) || 0);
+
+  // Also return total count
+  const totalRows = await db.$count(academyLeadsTable);
+  res.json({ leads: rows.reverse(), total: totalRows });
+});
+
 // POST /api/academy/leads
 // Captures a free-guide lead (no auth required)
 const leadSchema = z.object({
@@ -262,6 +282,34 @@ router.post("/leads", async (req, res): Promise<void> => {
   logger.info({ email: parsed.email, source: parsed.source }, "academy: free lead captured");
 
   res.json({ ok: true });
+});
+
+// GET /api/academy/purchases?secret=nexos2025
+// Owner-only list of all purchases
+router.get("/purchases", async (req, res): Promise<void> => {
+  const { secret, limit = "100" } = req.query as Record<string, string>;
+  if (secret !== "nexos2025") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const rows = await db
+    .select({
+      id: academyPurchasesTable.id,
+      accessToken: academyPurchasesTable.accessToken,
+      customerEmail: academyPurchasesTable.customerEmail,
+      customerName: academyPurchasesTable.customerName,
+      productId: academyPurchasesTable.productId,
+      status: academyPurchasesTable.status,
+      amountCents: academyPurchasesTable.amountCents,
+      createdAt: academyPurchasesTable.createdAt,
+      confirmedAt: academyPurchasesTable.confirmedAt,
+    })
+    .from(academyPurchasesTable)
+    .orderBy(academyPurchasesTable.createdAt)
+    .limit(Math.min(parseInt(limit) || 100, 500));
+
+  const total = await db.$count(academyPurchasesTable);
+  res.json({ purchases: rows.reverse(), total });
 });
 
 // POST /api/academy/simulate-confirm (dev/owner only — manually confirms a pending purchase)
