@@ -1,0 +1,343 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-success: hsl(var(--success));
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: 222 25% 4%;
+  --foreground: 220 10% 96%;
+  --border: 220 20% 14%;
+  --card: 222 25% 6%;
+  --card-foreground: 220 10% 96%;
+  --primary: 250 90% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 20% 12%;
+  --secondary-foreground: 220 10% 96%;
+  --muted: 220 20% 12%;
+  --muted-foreground: 220 10% 60%;
+  --accent: 220 20% 14%;
+  --accent-foreground: 220 10% 96%;
+  --destructive: 350 80% 60%;
+  --success: 168 100% 42%;
+  --input: 220 20% 14%;
+  --ring: 250 90% 65%;
+  --app-font-sans: 'Plus Jakarta Sans', sans-serif;
+  --app-font-mono: 'Space Mono', monospace;
+  --radius: 0.5rem;
+  --gradient-primary: linear-gradient(135deg, hsl(220 90% 60%), hsl(260 90% 65%));
+  --gradient-accent: linear-gradient(135deg, hsl(168 100% 42%), hsl(220 90% 60%));
+  --gradient-gold: linear-gradient(135deg, hsl(40 95% 55%), hsl(30 100% 60%));
+  --glow-primary: 0 0 20px hsl(250 90% 65% / 0.4);
+  --glow-subtle: 0 0 10px hsl(250 90% 65% / 0.15);
+  --glow-success: 0 0 15px hsl(168 100% 42% / 0.3);
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    background-image:
+      radial-gradient(ellipse at top right, hsl(250 90% 65% / 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at bottom left, hsl(168 100% 42% / 0.03) 0%, transparent 60%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4, h5, h6 { @apply font-sans; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg,
+    hsl(220 10% 85%) 0%,
+    hsl(250 90% 80%) 40%,
+    hsl(220 10% 85%) 80%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+.card-nexos {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-nexos:hover {
+  border-color: hsl(250 90% 65% / 0.3);
+  box-shadow: 0 4px 24px hsl(250 90% 65% / 0.08), 0 0 0 1px hsl(250 90% 65% / 0.1);
+  transform: translateY(-2px);
+}
+
+.card-locked {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.progress-bar-track {
+  background: hsl(220 20% 10%);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  background: var(--gradient-primary);
+  border-radius: 9999px;
+  animation: progress-fill 0.8s ease-out;
+  transition: width 0.4s ease;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(220 10% 55%);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sidebar-link:hover {
+  color: hsl(220 10% 90%);
+  background: hsl(220 20% 10%);
+}
+.sidebar-link.active {
+  color: hsl(250 90% 75%);
+  background: hsl(250 90% 65% / 0.1);
+  border-left: 2px solid hsl(250 90% 65%);
+}
+
+.badge-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: hsl(250 90% 65% / 0.15);
+  color: hsl(250 90% 75%);
+  border: 1px solid hsl(250 90% 65% / 0.25);
+}
+
+.badge-gold {
+  background: hsl(40 95% 55% / 0.15);
+  color: hsl(40 95% 65%);
+  border-color: hsl(40 95% 55% / 0.25);
+}
+
+.badge-success {
+  background: hsl(168 100% 42% / 0.1);
+  color: hsl(168 100% 50%);
+  border-color: hsl(168 100% 42% / 0.2);
+}
+
+.badge-locked {
+  background: hsl(220 20% 14%);
+  color: hsl(220 10% 40%);
+  border-color: hsl(220 20% 18%);
+}
+
+.chapter-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.chapter-item:hover:not(.locked) {
+  border-color: hsl(250 90% 65% / 0.3);
+  background: hsl(250 90% 65% / 0.04);
+}
+.chapter-item.active {
+  border-color: hsl(250 90% 65% / 0.5);
+  background: hsl(250 90% 65% / 0.06);
+}
+.chapter-item.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.btn-primary:hover {
+  box-shadow: var(--glow-primary);
+  opacity: 0.92;
+}
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: transparent;
+  color: hsl(220 10% 80%);
+  border: 1px solid hsl(var(--border));
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-outline:hover {
+  border-color: hsl(250 90% 65% / 0.5);
+  color: hsl(250 90% 75%);
+  background: hsl(250 90% 65% / 0.05);
+}
+
+.module-header {
+  background: linear-gradient(135deg, hsl(222 25% 7%), hsl(222 25% 9%));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.hero-glow {
+  position: relative;
+}
+.hero-glow::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(ellipse, hsl(250 90% 65% / 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: hsl(250 90% 65% / 0.1);
+  color: hsl(250 90% 75%);
+  border: 1px solid hsl(250 90% 65% / 0.15);
+}
+
+.lesson-content {
+  line-height: 1.8;
+  color: hsl(220 10% 80%);
+}
+.lesson-content h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: hsl(220 10% 96%);
+  margin: 1.5rem 0 0.75rem;
+}
+.lesson-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: hsl(220 10% 90%);
+  margin: 1.25rem 0 0.5rem;
+}
+.lesson-content p { margin-bottom: 1rem; }
+.lesson-content ul, .lesson-content ol {
+  margin: 0.75rem 0 1rem 1.25rem;
+}
+.lesson-content li { margin-bottom: 0.375rem; }
+.lesson-content strong { color: hsl(220 10% 96%); font-weight: 600; }
+.lesson-content em { color: hsl(250 90% 75%); font-style: normal; }
+.lesson-content blockquote {
+  border-left: 3px solid hsl(250 90% 65% / 0.6);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: hsl(220 10% 70%);
+  font-style: italic;
+}
+.lesson-content code {
+  font-family: var(--app-font-mono);
+  font-size: 0.8em;
+  padding: 0.1em 0.4em;
+  border-radius: 0.25rem;
+  background: hsl(220 20% 12%);
+  color: hsl(250 90% 75%);
+}
+
+.stat-card {
+  background: hsl(222 25% 7%);
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+}
+
+.scroll-sidebar::-webkit-scrollbar { width: 4px; }
+.scroll-sidebar::-webkit-scrollbar-track { background: transparent; }
+.scroll-sidebar::-webkit-scrollbar-thumb {
+  background: hsl(220 20% 18%);
+  border-radius: 2px;
+}
+
+.floating-icon {
+  animation: float 4s ease-in-out infinite;
+}

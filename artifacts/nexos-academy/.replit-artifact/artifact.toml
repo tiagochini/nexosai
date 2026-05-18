@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/nexos-academy/"
+title = "Metodologia NexOS — Portal de Treinamento"
+version = "1.0.0"
+id = "artifacts/nexos-academy"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/nexos-academy/" ]
+localPort = 25927
+
+[services.development]
+run = "pnpm --filter @workspace/nexos-academy run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nexos-academy", "run", "build" ]
+publicDir = "artifacts/nexos-academy/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25927"
+BASE_PATH = "/nexos-academy/"
