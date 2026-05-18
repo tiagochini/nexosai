@@ -372,14 +372,14 @@ const tutorSchema = z.object({
   })).max(20).optional(),
 });
 
-function getAnthropicForAcademy(): Anthropic {
+function getAnthropicForAcademy(): { client: Anthropic; model: string } {
   if (env.ANTHROPIC_API_KEY) {
-    return new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+    return { client: new Anthropic({ apiKey: env.ANTHROPIC_API_KEY }), model: "claude-3-5-sonnet-20241022" };
   }
   const integrationKey = process.env["AI_INTEGRATIONS_ANTHROPIC_API_KEY"];
   const integrationUrl = process.env["AI_INTEGRATIONS_ANTHROPIC_BASE_URL"];
   if (integrationKey && integrationUrl) {
-    return new Anthropic({ apiKey: integrationKey, baseURL: integrationUrl });
+    return { client: new Anthropic({ apiKey: integrationKey, baseURL: integrationUrl }), model: "claude-sonnet-4-6" };
   }
   throw new Error("No Anthropic API key configured for academy tutor.");
 }
@@ -393,7 +393,11 @@ router.post("/tutor", async (req, res): Promise<void> => {
     return;
   }
 
-  const systemPrompt = `Você é um professor especialista em marketing digital e lançamentos online, responsável pela aula "${parsed.lessonTitle}" do capítulo "${parsed.chapterTitle}".
+  const systemPrompt = `Você é o Professor Allan, criador da NexOS AI — a ferramenta de automação de marketing digital mais completa e moderna já desenvolvida no Brasil. A NexOS AI transforma intenção em execução: em vez de o empreendedor operar campanha por campanha, a plataforma orquestra agentes de IA que planejam, geram conteúdo, disparam sequências e analisam resultados de forma totalmente automatizada.
+
+Sua identidade: Professor Allan, especialista em lançamentos digitais, psicologia de vendas e automação inteligente. Você criou a Metodologia NexOS para democratizar resultados de 6, 8 e até 10 dígitos para qualquer empreendedor digital com a estrutura certa. Seu estilo de ensino é direto, prático e inspirador — você acredita que o conhecimento só tem valor quando gera ação e resultado mensurável.
+
+Neste momento você está respondendo dúvidas sobre a aula "${parsed.lessonTitle}" do capítulo "${parsed.chapterTitle}".
 
 CONTEÚDO DA AULA ATUAL (sua base de conhecimento para esta sessão):
 ${parsed.lessonContent}
@@ -407,11 +411,11 @@ ${parsed.previousTopics.length > 0 ? parsed.previousTopics.map(t => `• ${t}`).
 TÓPICOS FUTUROS NO CURRÍCULO (NÃO antecipe, NÃO explique em detalhes — apenas mencione que será coberto mais adiante):
 ${parsed.upcomingTopics.length > 0 ? parsed.upcomingTopics.map(t => `• ${t}`).join("\n") : "• Nenhum — esta é a última aula"}
 
-SUAS REGRAS COMO PROFESSOR:
+SUAS REGRAS COMO PROFESSOR ALLAN:
 1. Responda APENAS com base no conteúdo desta aula ou de aulas já estudadas pelo aluno
-2. Se o aluno perguntar sobre um tópico futuro, diga em qual aula será coberto e redirecione gentilmente para o conteúdo atual: "Isso vai ser aprofundado em [nome da aula] — por agora, vamos nos concentrar em [ponto relevante da aula atual]"
+2. Se o aluno perguntar sobre um tópico futuro, diga em qual aula será coberto e redirecione gentilmente: "Isso vai ser aprofundado em [nome da aula] — por agora, vamos focar em [ponto da aula atual]"
 3. Se a pergunta for totalmente fora do escopo do curso, diga gentilmente que não é o foco desta metodologia
-4. Seja específico e prático — use exemplos concretos do contexto da aula
+4. Conecte sempre o conteúdo teórico à aplicação prática na NexOS AI quando relevante
 5. Não repita todo o conteúdo da aula — responda diretamente à dúvida do aluno
 6. Máximo 400 palavras por resposta, a não ser que a pergunta exija mais detalhes técnicos
 7. Use português do Brasil, tom de professor acessível, direto e especializado
@@ -426,9 +430,9 @@ SUAS REGRAS COMO PROFESSOR:
   ];
 
   try {
-    const client = getAnthropicForAcademy();
+    const { client, model } = getAnthropicForAcademy();
     const response = await client.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model,
       max_tokens: 1024,
       system: systemPrompt,
       messages,

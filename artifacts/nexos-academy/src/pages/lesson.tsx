@@ -462,7 +462,7 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
                 🎓
               </div>
               <div>
-                <p className="font-bold text-white text-sm">Professor IA</p>
+                <p className="font-bold text-white text-sm">Professor Allan</p>
                 <p className="text-xs text-[hsl(220_10%_45%)]">
                   {tutorHistory.length === 0
                     ? "Dúvidas sobre esta aula? Pergunte aqui"
@@ -502,10 +502,10 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
                       🎓
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">Olá! Sou seu professor de IA.</p>
+                      <p className="text-sm font-semibold text-white">Olá! Sou o Professor Allan.</p>
                       <p className="text-xs text-[hsl(220_10%_45%)] mt-1">
-                        Estou especializado em <strong className="text-[hsl(250_90%_70%)]">{activeLesson.title}</strong>.<br />
-                        Pergunte sobre o conteúdo desta aula — exemplos, aplicações, dúvidas conceituais.
+                        Criador da <strong className="text-[hsl(250_90%_70%)]">NexOS AI</strong> — a automação de marketing digital mais completa e moderna do Brasil.<br className="hidden sm:block" />
+                        Estou aqui para aprofundar <strong className="text-[hsl(250_90%_70%)]">{activeLesson.title}</strong> com você. Qual é a sua dúvida?
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2 justify-center">
