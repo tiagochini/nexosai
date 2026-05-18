@@ -11,6 +11,12 @@ import {
   generateAccessToken,
   sendAccessEmail,
 } from "./academy.service.js";
+import {
+  enrollLeadInFunnel,
+  markLeadConverted,
+  markLeadUnsubscribed,
+  getFunnelStats,
+} from "./academy-funnel.service.js";
 
 const router = Router();
 
@@ -180,6 +186,11 @@ router.post("/webhook", async (req, res): Promise<void> => {
       productName: productInfo?.name ?? purchase.productId,
       portalUrl: `${env.APP_URL}/nexos-academy/`,
     }).catch(err => logger.error({ err }, "academy: access email error"));
+
+    // Mark matching funnel lead as converted (stops sales emails)
+    markLeadConverted(purchase.customerEmail).catch(err =>
+      logger.error({ err }, "academy: failed to mark lead converted")
+    );
   });
 
   res.json({ ok: true, token: purchase.accessToken });
@@ -268,7 +279,7 @@ router.post("/leads", async (req, res): Promise<void> => {
     ?? req.socket.remoteAddress
     ?? null;
 
-  await db.insert(academyLeadsTable).values({
+  const inserted = await db.insert(academyLeadsTable).values({
     email: parsed.email.toLowerCase(),
     name: parsed.name ?? null,
     source: parsed.source ?? "free-guide",
@@ -277,10 +288,42 @@ router.post("/leads", async (req, res): Promise<void> => {
     utmSource: parsed.utmSource ?? null,
     utmMedium: parsed.utmMedium ?? null,
     utmCampaign: parsed.utmCampaign ?? null,
-  }).onConflictDoNothing();
+  }).onConflictDoNothing().returning({ id: academyLeadsTable.id });
 
   logger.info({ email: parsed.email, source: parsed.source }, "academy: free lead captured");
 
+  // Auto-enroll in perpetual sales funnel (fire-and-forget)
+  if (inserted.length > 0 && inserted[0]) {
+    const leadId = inserted[0].id;
+    setImmediate(() => {
+      enrollLeadInFunnel(leadId).catch(err => {
+        logger.error({ err, leadId }, "academy: failed to enroll lead in funnel");
+      });
+    });
+  }
+
+  res.json({ ok: true });
+});
+
+// GET /api/academy/funnel/stats?secret=nexos2025
+router.get("/funnel/stats", async (req, res): Promise<void> => {
+  const { secret } = req.query as Record<string, string>;
+  if (secret !== "nexos2025") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const stats = await getFunnelStats();
+  res.json(stats);
+});
+
+// POST /api/academy/unsubscribe — public, called from email link
+router.post("/unsubscribe", async (req, res): Promise<void> => {
+  const { email } = req.body as { email?: string };
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "E-mail obrigatório." });
+    return;
+  }
+  await markLeadUnsubscribed(email);
   res.json({ ok: true });
 });
 

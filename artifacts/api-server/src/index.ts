@@ -22,6 +22,7 @@ import { getQueue, closeAllQueues, QUEUE_NAMES } from "./modules/queue/queue.ser
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
+import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { db, campaignAgentsTable, campaignsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -79,6 +80,7 @@ try {
 initOrchestrationWorker();
 startSocialScheduler();
 initSequenceScheduler();
+startFunnelScheduler();
 
 // ── Boot cleanup: mark orphaned "running" agents as failed ────────────────────
 // If the server was restarted mid-execution, agents stay stuck as "running"

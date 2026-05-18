@@ -1,6 +1,23 @@
 import { useState, useEffect, useCallback } from "react";
 import { CURRICULUM } from "@/data/curriculum";
 
+interface FunnelStep {
+  step: number;
+  subject: string;
+  dayOffset: number;
+  sent: number;
+  failed: number;
+  scheduled: number;
+  skipped: number;
+}
+
+interface FunnelStats {
+  totalEnrolled: number;
+  totalConverted: number;
+  totalUnsubscribed: number;
+  byStep: FunnelStep[];
+}
+
 const OWNER_PIN = "nexos2025";
 const OWNER_KEY = "nexos-owner-mode";
 const OWNER_SECRET = "nexos2025";
@@ -50,7 +67,7 @@ interface Purchase {
   confirmedAt: string | null;
 }
 
-type Tab = "leads" | "compras" | "curso" | "acesso";
+type Tab = "leads" | "compras" | "funil" | "curso" | "acesso";
 
 function fmt(iso: string) {
   const d = new Date(iso);
@@ -88,6 +105,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchasesTotal, setPurchasesTotal] = useState(0);
   const [purchasesLoading, setPurchasesLoading] = useState(false);
+  const [funnelStats, setFunnelStats] = useState<FunnelStats | null>(null);
+  const [funnelLoading, setFunnelLoading] = useState(false);
   const [copyMsg, setCopyMsg] = useState("");
 
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
@@ -143,11 +162,25 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     }
   }, []);
 
+  const fetchFunnelStats = useCallback(async () => {
+    setFunnelLoading(true);
+    try {
+      const r = await fetch(`/api/academy/funnel/stats?secret=${OWNER_SECRET}`);
+      const j = await r.json();
+      setFunnelStats(j);
+    } catch {
+      // ignore
+    } finally {
+      setFunnelLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOwner) return;
     if (tab === "leads") fetchLeads();
     if (tab === "compras") fetchPurchases();
-  }, [isOwner, tab, fetchLeads, fetchPurchases]);
+    if (tab === "funil") fetchFunnelStats();
+  }, [isOwner, tab, fetchLeads, fetchPurchases, fetchFunnelStats]);
 
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -284,9 +317,9 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "Leads capturados", value: leadsTotal, icon: "📥", tab: "leads" as Tab },
+          { label: "No funil", value: funnelStats?.totalEnrolled ?? "—", icon: "🔄", tab: "funil" as Tab },
+          { label: "Convertidos", value: funnelStats?.totalConverted ?? "—", icon: "✅", tab: "compras" as Tab },
           { label: "Compras", value: purchasesTotal, icon: "💳", tab: "compras" as Tab },
-          { label: "Módulos", value: totalModules, icon: "📦", tab: "curso" as Tab },
-          { label: "Horas de conteúdo", value: `${totalHours}h ${totalMinutes}m`, icon: "⏱️", tab: "acesso" as Tab },
         ].map(kpi => (
           <button
             key={kpi.label}
@@ -302,17 +335,21 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)]">
-        {(["leads", "compras", "curso", "acesso"] as Tab[]).map(t => (
+        {(["leads", "funil", "compras", "curso", "acesso"] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors capitalize ${
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
               tab === t
                 ? "bg-[hsl(250_90%_65%)] text-white shadow"
                 : "text-[hsl(220_10%_50%)] hover:text-white"
             }`}
           >
-            {t === "leads" ? "📥 Leads" : t === "compras" ? "💳 Compras" : t === "curso" ? "📦 Curso" : "🔑 Acesso"}
+            {t === "leads" ? "📥 Leads"
+              : t === "funil" ? "🔄 Funil"
+              : t === "compras" ? "💳 Compras"
+              : t === "curso" ? "📦 Curso"
+              : "🔑 Acesso"}
           </button>
         ))}
       </div>
@@ -401,6 +438,97 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: FUNIL */}
+      {tab === "funil" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-lg font-bold text-white">Funil de Venda Perpétuo</h2>
+              <p className="text-sm text-[hsl(220_10%_45%)]">Sequência de 5 e-mails enviada automaticamente ao capturar um lead</p>
+            </div>
+            <button onClick={fetchFunnelStats} className="btn-outline text-sm px-3 py-1.5">↻ Atualizar</button>
+          </div>
+
+          {/* Summary KPIs */}
+          {funnelStats && (
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "No funil", value: funnelStats.totalEnrolled, icon: "🔄", color: "text-blue-400" },
+                { label: "Convertidos", value: funnelStats.totalConverted, icon: "✅", color: "text-green-400" },
+                { label: "Descadastrados", value: funnelStats.totalUnsubscribed, icon: "🚫", color: "text-red-400" },
+              ].map(kpi => (
+                <div key={kpi.label} className="card p-4 text-center">
+                  <div className={`text-2xl font-extrabold ${kpi.color}`}>{kpi.value}</div>
+                  <div className="text-xs text-[hsl(220_10%_45%)] mt-0.5">{kpi.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {funnelLoading ? (
+            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">Carregando...</div>
+          ) : !funnelStats ? (
+            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">Erro ao carregar estatísticas.</div>
+          ) : (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-[hsl(220_10%_55%)] uppercase tracking-wider">Sequência de E-mails</h3>
+              {funnelStats.byStep.map(step => {
+                const total = step.sent + step.failed + step.scheduled + step.skipped;
+                const sentPct = total > 0 ? Math.round((step.sent / total) * 100) : 0;
+                return (
+                  <div key={step.step} className="card p-4">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[hsl(250_90%_65%/0.15)] flex items-center justify-center text-xs font-bold text-[hsl(250_90%_75%)] shrink-0">
+                          {step.step}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">{step.subject}</p>
+                          <p className="text-xs text-[hsl(220_10%_45%)]">
+                            Dia {step.dayOffset} após captura
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 shrink-0 text-xs">
+                        <span className="text-green-400 font-semibold">{step.sent} enviados</span>
+                        {step.scheduled > 0 && <span className="text-yellow-400">{step.scheduled} agendados</span>}
+                        {step.failed > 0 && <span className="text-red-400">{step.failed} falhas</span>}
+                        {step.skipped > 0 && <span className="text-[hsl(220_10%_40%)]">{step.skipped} ignorados</span>}
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="h-1.5 rounded-full bg-[hsl(220_20%_12%)] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-[hsl(250_90%_55%)] to-[hsl(270_90%_65%)] transition-all"
+                        style={{ width: `${sentPct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-[hsl(220_10%_35%)] mt-1">{sentPct}% enviados do total agendado</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Info card */}
+          <div className="card p-5 border border-[hsl(250_90%_65%/0.2)] bg-[hsl(250_90%_65%/0.04)]">
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <span>⚙️</span> Como funciona
+            </h3>
+            <div className="space-y-2 text-sm text-[hsl(220_10%_55%)]">
+              <p>→ Lead se inscreve no formulário do guia gratuito</p>
+              <p>→ É automaticamente matriculado na sequência de 5 e-mails</p>
+              <p>→ O servidor verifica e envia e-mails devidos a cada hora</p>
+              <p>→ Quando o lead compra, os e-mails de venda são interrompidos automaticamente</p>
+              <p>→ Descadastro funciona via link no rodapé de cada e-mail</p>
+            </div>
+            <p className="mt-3 text-xs text-[hsl(220_10%_40%)]">
+              Configure <code className="text-[hsl(250_90%_70%)]">RESEND_API_KEY</code> e <code className="text-[hsl(250_90%_70%)]">RESEND_FROM_EMAIL</code> nas variáveis de ambiente para ativar o envio real.
+            </p>
+          </div>
         </div>
       )}
 
