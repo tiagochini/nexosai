@@ -666,197 +666,513 @@ POR QUE FUNCIONA: ___
     ]
   },
   {
-    id: "automacoes",
+    id: "tipos-lancamento",
     number: 3,
-    title: "Automações e NexOS na Prática",
-    description: "Como o NexOS automatiza cada etapa da sua campanha. Do intake ao pós-venda, veja os agentes de IA trabalhando em tempo real.",
-    badge: "NexOS",
+    title: "Tipos de Lançamento e Monetização",
+    description: "Cada produto e momento de negócio pede um modelo diferente. Aprenda quando usar Semente, Perpétuo, Interno, Afiliado e como montar uma escada de valor que maximiza o LTV do cliente.",
+    badge: "Estratégia",
     chapters: [
       {
-        id: "nexos-visao",
+        id: "modelos-lancamento",
         number: 7,
-        title: "NexOS: A Visão do Sistema",
-        subtitle: "Como a IA orquestra uma campanha inteira em minutos",
-        icon: "⚡",
-        color: "from-purple-600 to-indigo-600",
-        duration: "50 min",
-        summary: "Entenda a arquitetura do NexOS: como 29 agentes de IA trabalham em conjunto para planejar, executar e otimizar campanhas sem intervenção manual.",
+        title: "Os 6 Modelos de Lançamento",
+        subtitle: "Semente, Perpétuo, Interno, Externo, Afiliado e Co-criação",
+        icon: "🗺",
+        color: "from-violet-600 to-purple-600",
+        duration: "1h 30min",
+        summary: "Cada modelo de lançamento tem um contexto ideal, vantagens específicas e armadilhas a evitar. Escolher o modelo errado para o momento certo é o erro mais caro que um produtor digital pode cometer.",
         lessons: [
           {
-            id: "nexos-1",
-            title: "Os 29 Agentes NexOS e Seus Papéis",
-            duration: "20 min",
+            id: "semente",
+            title: "Lançamento Semente: Venda Antes de Criar",
+            duration: "22 min",
             type: "text",
-            keyPoints: ["Arquitetura multi-agente", "Claude para estratégia, GPT-4o para copy, Gemini para analytics", "O fluxo de execução automático"],
-            content: `<h2>A Máquina de Lançamento Autônoma</h2>
-<p>O NexOS foi construído com uma premissa única: e se fosse possível ter um time de especialistas trabalhando 24/7 na sua campanha, sem custos fixos, sem inconsistências?</p>
+            keyPoints: ["O que é o lançamento semente", "Como vender sem produto pronto", "Validação de mercado com risco zero", "Quando usar e quando evitar"],
+            content: `<h2>Lançamento Semente: A Arte de Vender o que Ainda Não Existe</h2>
+<p>O lançamento semente é o modelo mais inteligente para quem está começando ou testando uma nova ideia. A lógica é simples e poderosa: <em>você vende primeiro, cria depois</em>. Isso elimina o maior risco do empreendedorismo digital — criar algo que ninguém quer comprar.</p>
 
-<h3>A Arquitetura de 3 Camadas</h3>
+<h3>Como Funciona na Prática</h3>
+<p>Você apresenta a ideia do produto para uma audiência pequena (sua lista de email, grupo de WhatsApp, seguidores próximos) e oferece acesso a um preço de fundador — significativamente mais barato que o preço final. Em troca, o comprador sabe que está adquirindo algo em construção e que terá participação no processo.</p>
 
-<h3>Camada 1: Estratégia (Claude Sonnet)</h3>
-<p>O Claude da Anthropic processa o briefing do produto e gera a estratégia completa do lançamento: posicionamento, ângulo, público, cronograma e metas. É o "CMO artificial" da plataforma.</p>
+<p>O número mínimo viável é <strong>entre 10 e 30 compradores</strong>. Esse volume já valida a demanda, gera receita para cobrir a produção e cria um grupo de "co-criadores" que darão feedback valioso.</p>
 
-<h3>Camada 2: Execução de Conteúdo (GPT-4o)</h3>
-<p>O GPT-4o da OpenAI gera todo o copy: emails da sequência, captions de Reels, roteiro de VSL, textos de anúncios. Especializado em criatividade e nuances linguísticas.</p>
+<h3>A Estrutura em 4 Etapas</h3>
+<ol>
+  <li><strong>Pré-anúncio:</strong> Compartilhe a ideia informalmente. "Estou pensando em criar X. Você teria interesse?" — colete reações sem compromisso.</li>
+  <li><strong>Oferta de Fundador:</strong> Apresente formalmente com preço reduzido (30-50% do preço final), prazo curto (48-72h) e transparência sobre o estágio atual.</li>
+  <li><strong>Criação com Feedback:</strong> Entregue módulos progressivamente. Cada entrega é uma oportunidade de coletar feedback e ajustar o conteúdo.</li>
+  <li><strong>Lançamento Completo:</strong> Com produto pronto, provas sociais reais e depoimentos dos fundadores, você relança para o mercado amplo a preço cheio.</li>
+</ol>
 
-<h3>Camada 3: Analytics e Otimização (Gemini)</h3>
-<p>O Gemini do Google monitora métricas em tempo real e gera recomendações de otimização: aumento de verba em criativos vencedores, pausa de audiences que estão performando mal, ajustes de copy.</p>
-
-<h3>Os 29 Agentes Especializados</h3>
-
-<h3>Estratégia (5 agentes)</h3>
+<h3>Quando Usar o Lançamento Semente</h3>
 <ul>
-  <li>Estrategista de Lançamento</li>
-  <li>Analista de Mercado</li>
-  <li>Arquiteto de Funil</li>
-  <li>Construtor de Perfil de Cliente</li>
-  <li>Agente de Compliance</li>
+  <li>Primeiro produto digital — validar antes de investir tempo em produção</li>
+  <li>Nova área ou nicho — testar demanda sem assumir que você sabe o que o mercado quer</li>
+  <li>Produto de alto ticket — o risco de criar sem validação é maior quando o investimento de produção é alto</li>
+  <li>Audiência pequena — mesmo com 200 seguidores é possível fazer um semente bem-sucedido</li>
 </ul>
 
-<h3>Conteúdo (7 agentes)</h3>
+<h3>Quando Evitar</h3>
 <ul>
-  <li>Copywriter Master</li>
-  <li>Criador de VSL</li>
-  <li>Roteirista de Reels</li>
-  <li>Redator de Email</li>
-  <li>Criador de WhatsApp</li>
-  <li>Escritor de Anúncios</li>
-  <li>Criador de Sequência de Nurturing</li>
+  <li>Produtos físicos com custo de produção alto — o modelo não se aplica bem</li>
+  <li>Quando você não consegue entregar em 30-60 dias — compromisso com o comprador é sagrado</li>
+  <li>Se sua audiência já espera produto acabado — certos mercados não aceitam "em construção"</li>
 </ul>
 
-<h3>Audiência (4 agentes)</h3>
-<ul>
-  <li>Segmentador de Audiência</li>
-  <li>Analista de Comportamento</li>
-  <li>Gerenciador de Lista</li>
-  <li>Otimizador de Conversão</li>
-</ul>
+<blockquote>Jeff Walker, criador da PLF, começou com um lançamento semente para sua própria lista de email. Faturou US$34.000 em uma semana com um produto que ainda não existia. O semente não é gambito de iniciante — é estratégia de risco calculado.</blockquote>
 
-<h3>Vídeo (3 agentes)</h3>
+<h3>Erros Fatais no Semente</h3>
 <ul>
-  <li>Diretor de Criativo</li>
-  <li>Editor de VSL</li>
-  <li>Produtor de Thumbnail</li>
-</ul>
-
-<h3>Analytics (5 agentes)</h3>
-<ul>
-  <li>Monitor de Métricas</li>
-  <li>Detector de Fadiga Criativa</li>
-  <li>Analista de ROAS</li>
-  <li>Otimizador de Budget</li>
-  <li>Gerador de Relatórios</li>
-</ul>
-
-<h3>Automação (5 agentes)</h3>
-<ul>
-  <li>Dispatcher de Email</li>
-  <li>Respondedor de WhatsApp</li>
-  <li>Scheduler de Conteúdo</li>
-  <li>Integrador de Plataformas</li>
-  <li>Monitor de Lançamento</li>
-</ul>
-
-<blockquote>Cada agente é um prompt engenheirado com centenas de horas de refinamento, conectado à base de conhecimento de mais de 500 lançamentos brasileiros bem-sucedidos.</blockquote>`
+  <li><strong>Prometer mais do que pode entregar:</strong> Transparência é o ativo principal deste modelo</li>
+  <li><strong>Não ter deadline na oferta de fundador:</strong> Sem urgência, "vou pensar" vira nunca</li>
+  <li><strong>Precificar muito barato:</strong> Preço de fundador deve ser especial, não irrisório. Produto de R$1.000 pode ter fundador a R$497, não a R$97</li>
+  <li><strong>Ignorar o feedback dos compradores:</strong> Eles são seus co-criadores, não apenas primeiros clientes</li>
+</ul>`
           },
           {
-            id: "nexos-2",
-            title: "Walkthrough: Do Briefing ao Lançamento",
-            duration: "30 min",
+            id: "perpetuo",
+            title: "Lançamento Perpétuo: A Máquina de Vendas 24/7",
+            duration: "25 min",
             type: "text",
-            keyPoints: ["O processo de intake conversacional", "Geração automática de estratégia", "Aprovação e execução", "Automação do carrinho"],
-            content: `<h2>De Zero ao Lançamento em 7 Passos</h2>
-<p>Veja como um lançamento completo é executado dentro do NexOS, do primeiro briefing à campanha ao vivo.</p>
+            keyPoints: ["Funil perpétuo vs. lançamento pontal", "Sequência de email automatizada", "Webinar evergreen", "Quando escalar para perpétuo"],
+            content: `<h2>Perpétuo: Quando Seu Funil Trabalha Enquanto Você Dorme</h2>
+<p>O lançamento perpétuo (também chamado de evergreen) é um sistema de vendas automatizado que roda continuamente — sem janelas de abertura e fechamento de carrinho, sem pico de estresse, sem dependência de você estar online.</p>
 
-<h3>Passo 1: Intake Conversacional (10-15 min)</h3>
-<p>O agente de intake faz perguntas estruturadas sobre seu produto, audiência, histórico e metas. É como uma sessão com um estrategista sênior — ele extrai exatamente o que precisa saber.</p>
-<p>Ao final, você tem um Score de Prontidão que identifica gaps antes de avançar.</p>
+<p>A diferença fundamental: enquanto o lançamento pontual gera picos de receita, o perpétuo gera receita <em>previsível e crescente</em>. É a diferença entre sprint e maratona.</p>
 
-<h3>Passo 2: Geração de Estratégia (2-5 min)</h3>
-<p>Com base no intake, o Estrategista de Lançamento gera:</p>
+<h3>Como Funciona a Estrutura Perpétua</h3>
+<p>O visitante entra no funil via anúncio ou conteúdo orgânico, assiste a um webinar gravado (que ele percebe como ao vivo graças à tecnologia de "simulação de ao vivo"), recebe uma sequência de emails de 5-7 dias e é apresentado à oferta com um deadline individual — geralmente 48-72h após o cadastro.</p>
+
+<h3>Os 4 Pilares do Funil Perpétuo</h3>
+
+<h3>1. A Isca (Lead Magnet)</h3>
+<p>O ponto de entrada. Deve resolver um problema específico e imediato. Mini-curso, checklist, calculadora. Quanto mais específico o problema que resolve, melhor a qualidade do lead.</p>
+
+<h3>2. O Webinar Evergreen</h3>
+<p>O coração do funil perpétuo. Um webinar de 60-90 minutos com estrutura: gancho → conteúdo de valor → transição → oferta. A chave é que ele deve converter tão bem gravado quanto ao vivo.</p>
+<p>Ferramentas: EverWebinar, WebinarJam, Demio (modo simulado), ou simplesmente uma página com vídeo do YouTube não listado.</p>
+
+<h3>3. A Sequência de Email</h3>
+<p>7 emails disparados ao longo de 7 dias após o cadastro. Cada email tem um papel:</p>
 <ul>
-  <li>Posicionamento e ângulo principal</li>
-  <li>Público-alvo primário e secundário</li>
-  <li>Track de lançamento recomendado (6, 8 ou 10 dígitos)</li>
-  <li>Timeline de 7-21 dias</li>
-  <li>KPIs-alvo com benchmarks</li>
+  <li>Email 1: Entrega o lead magnet + expectativa do que vem</li>
+  <li>Email 2: Conteúdo de valor direto (sem vender)</li>
+  <li>Email 3: Sua história de transformação</li>
+  <li>Email 4: Prova social de alunos</li>
+  <li>Email 5: Destruição da objeção principal</li>
+  <li>Email 6: A oferta direta com deadline</li>
+  <li>Email 7: Última chance + por que agir agora</li>
 </ul>
 
-<h3>Passo 3: Geração de Conteúdo (5-10 min)</h3>
-<p>Após aprovação da estratégia, o sistema gera automaticamente:</p>
+<h3>4. O Deadline Individual</h3>
+<p>Cada pessoa que entra no funil recebe um deadline personalizado (ex: 72h após o webinar). Ferramentas como Deadline Funnel criam contadores genuinamente únicos por usuário — não é fake, é real.</p>
+
+<h3>Quando Migrar para o Perpétuo</h3>
+<p>O erro mais comum é ir direto para o perpétuo antes de validar a oferta. A sequência correta é:</p>
+<ol>
+  <li>Lançamento semente (valida a ideia)</li>
+  <li>1-2 lançamentos pontuais (refina a oferta, coleta provas sociais)</li>
+  <li>Perpétuo (escala o que já funciona)</li>
+</ol>
+
+<blockquote>Um funil perpétuo mal construído é uma máquina de queimar dinheiro em anúncios. Um funil perpétuo bem construído é um ativo que se valoriza com o tempo — quanto mais dados, melhor a otimização.</blockquote>
+
+<h3>Métricas do Funil Perpétuo Saudável</h3>
 <ul>
-  <li>Sequência completa de emails (7-14 emails)</li>
-  <li>Calendário de Reels (21 roteiros)</li>
-  <li>Roteiro de VSL</li>
-  <li>Captions para Instagram/Facebook</li>
-  <li>Textos para WhatsApp (por segmento: hot/warm/cold)</li>
-  <li>Copys de anúncios (5 variações por fase)</li>
+  <li>Taxa de opt-in da landing page: &gt;35%</li>
+  <li>Taxa de comparecimento ao webinar: &gt;25% dos inscritos</li>
+  <li>Taxa de conversão do webinar: 5-15% dos participantes</li>
+  <li>ROAS mínimo para escalar: 3x</li>
+</ul>`
+          },
+          {
+            id: "interno-externo",
+            title: "Lançamento Interno e Externo",
+            duration: "18 min",
+            type: "text",
+            keyPoints: ["Interno: sua própria audiência", "Externo: parceiros e afiliados", "Co-lançamento e JV (Joint Venture)", "Como estruturar comissões e acordos"],
+            content: `<h2>Interno vs. Externo: Aproveitando Cada Audiência</h2>
+
+<h3>Lançamento Interno</h3>
+<p>O lançamento interno é feito exclusivamente para sua própria audiência — sua lista de email, seguidores nas redes, grupo de WhatsApp. Você controla tudo: timing, mensagem, frequência.</p>
+
+<p><strong>Vantagens:</strong></p>
+<ul>
+  <li>Margem 100% para você (sem comissões)</li>
+  <li>Relacionamento mais próximo — audiência que já te conhece e confia</li>
+  <li>Velocidade de execução — não depende de parceiros</li>
+  <li>Controle total da mensagem e posicionamento</li>
 </ul>
 
-<h3>Passo 4: Aprovação Humana</h3>
-<p>Tudo passa por você antes de ir ao ar. Você pode aprovar, rejeitar ou pedir reescrita. O NexOS aprende com seus feedbacks.</p>
+<p><strong>Limitação:</strong> o teto de receita é limitado pelo tamanho da sua audiência. Para crescer, você precisa ou aumentar a lista constantemente, ou trazer audiências externas.</p>
 
-<h3>Passo 5: Ativação da Sequência</h3>
-<p>Com um clique, a sequência é ativada. O scheduler automaticamente dispara emails e mensagens de WhatsApp nos dias e horários calculados pelo algoritmo de otimização de envio.</p>
+<h3>Lançamento Externo</h3>
+<p>No lançamento externo, você apresenta seu produto para a audiência de outra pessoa — um parceiro que tem a confiança de um público que você ainda não alcança. O parceiro (chamado de JV — Joint Venture) promove seu produto para a lista dele em troca de comissão sobre as vendas.</p>
 
-<h3>Passo 6: Lançamento ao Vivo</h3>
-<p>Durante o carrinho aberto, o Monitor de Lançamento rastreia métricas em tempo real. Se uma métrica cai abaixo do threshold, alertas são gerados e sugestões de correção aparecem automaticamente.</p>
+<p><strong>Como estruturar um JV:</strong></p>
+<ul>
+  <li>Comissão padrão no mercado: 30-50% do valor do produto</li>
+  <li>O JV cede a lista e faz os disparos; você entrega o produto e o suporte</li>
+  <li>Acordar antecipadamente: reciprocidade futura, materiais de divulgação, tracking de vendas</li>
+  <li>Ferramenta: Hotmart, Kiwify ou Eduzz têm sistema de afiliados embutido</li>
+</ul>
 
-<h3>Passo 7: Análise e Memória</h3>
-<p>Após o fechamento, o NexOS gera um relatório completo e armazena os aprendizados na memória da workspace. O próximo lançamento começa com essa base.</p>`
+<h3>Lançamento Co-criado</h3>
+<p>Modelo híbrido onde dois produtores unem audiências e criam um produto juntos. Cada um contribui com sua área de expertise e divide a receita 50/50 (ou conforme acordo).</p>
+<p><em>Exemplo clássico:</em> nutricionista + personal trainer criando um programa de emagrecimento completo.</p>
+
+<h3>Como Encontrar Parceiros de JV</h3>
+<ol>
+  <li>Mapeie quem tem a audiência que você quer alcançar (mesmo tamanho ou maior)</li>
+  <li>Construa relacionamento genuíno antes de pedir parceria</li>
+  <li>Apresente a proposta com dados: taxa de conversão histórica, ticket médio, suporte ao aluno</li>
+  <li>Comece com trocas menores para construir confiança mútua</li>
+</ol>
+
+<blockquote>Um único lançamento externo com o parceiro certo pode multiplicar sua receita em 5-10x em relação ao interno. Mas a reputação do parceiro é sua reputação — escolha com cuidado.</blockquote>`
+          },
+          {
+            id: "afiliado",
+            title: "Lançamento de Afiliado: Lucro Sem Produto Próprio",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Como funciona o modelo de afiliado", "Escolhendo o produto certo para promover", "Estratégias de afiliado avançado: bônus e posicionamento", "A transição de afiliado para produtor"],
+            content: `<h2>Afiliado: A Porta de Entrada para o Mercado Digital</h2>
+<p>O lançamento de afiliado é quando você promove o produto de outra pessoa para sua audiência em troca de comissão. Não há criação de produto, suporte ao cliente ou infraestrutura — apenas geração de tráfego e conversão.</p>
+
+<p>Para quem está começando, o modelo de afiliado é a forma mais rápida de gerar receita enquanto aprende como o mercado funciona. Para quem já tem produto, o afiliado é uma linha de receita adicional com esforço incremental.</p>
+
+<h3>Como Escolher o Produto Certo para Promover</h3>
+<p>Critérios não negociáveis:</p>
+<ul>
+  <li><strong>Alinhamento com sua audiência:</strong> Promover algo fora do seu contexto destrói credibilidade rapidamente</li>
+  <li><strong>Produto que você usaria:</strong> Autenticidade na promoção é detectável — e sua ausência também</li>
+  <li><strong>Produtor com boa reputação:</strong> O suporte e a entrega do produto refletem em você</li>
+  <li><strong>Comissão justa:</strong> Produtos digitais pagam 30-50%. Abaixo disso, o math raramente fecha</li>
+  <li><strong>Material de divulgação de qualidade:</strong> Página de vendas, banners, copy pronto facilitam a promoção</li>
+</ul>
+
+<h3>A Estratégia do Bônus Exclusivo</h3>
+<p>O afiliado mediano promove o produto. O afiliado avançado cria um <em>bônus exclusivo</em> que só quem comprar pelo seu link recebe. Esse bônus pode ser:</p>
+<ul>
+  <li>Uma consultoria de 1h com você</li>
+  <li>Um template ou ferramenta complementar</li>
+  <li>Um mini-curso de implementação do produto principal</li>
+  <li>Acesso a um grupo fechado de suporte</li>
+</ul>
+<p>A pergunta que o comprador faz é: "Por que comprar pelo link do João e não direto?" Seu bônus é a resposta.</p>
+
+<h3>Posicionamento de Afiliado: Curation vs. Promoção</h3>
+<p>Há dois posicionamentos possíveis:</p>
+<ul>
+  <li><strong>Curador:</strong> "Testei 12 cursos de X e só recomendo este" — autoridade de quem seleciona o melhor</li>
+  <li><strong>Usuário:</strong> "Comprei, usei, tive resultado Y" — prova social de quem viveu a transformação</li>
+</ul>
+<p>O posicionamento de curador funciona mesmo sem ter comprado — desde que o filtro seja real. O de usuário exige experiência genuína mas converte melhor.</p>
+
+<h3>A Transição Natural: De Afiliado a Produtor</h3>
+<p>O modelo de afiliado é excelente escola. Você aprende o que vende, o que converte, quais objeções existem e como o mercado reage. Com esse conhecimento, a transição para produto próprio é muito mais assertiva.</p>
+<p>A sequência inteligente: afiliado → semente → lançamento pontual → perpétuo.</p>`
+          },
+          {
+            id: "comparativo-modelos",
+            title: "Exercício: Qual Modelo é o Seu?",
+            duration: "15 min",
+            type: "exercise",
+            keyPoints: ["Matriz de decisão por modelo", "Análise do seu momento atual", "Planejamento para os próximos 90 dias"],
+            content: `<h2>Exercício: Encontre Seu Modelo Ideal</h2>
+<p>Com base no que você aprendeu, este exercício vai ajudar você a identificar qual modelo de lançamento faz mais sentido para o seu momento atual.</p>
+
+<h3>Passo 1: Responda as 5 Perguntas</h3>
+
+<p><strong>1. Você já tem um produto validado?</strong><br/>
+Sim → considere perpétuo ou lançamento pontual<br/>
+Não → comece pelo semente ou afiliado</p>
+
+<p><strong>2. Qual é o tamanho da sua audiência própria?</strong><br/>
+0-500: semente ou afiliado<br/>
+500-5.000: lançamento interno pequeno<br/>
+5.000+: lançamento completo com escala</p>
+
+<p><strong>3. Você tem capital para investir em tráfego?</strong><br/>
+Não → orgânico primeiro, semente ou afiliado<br/>
+Sim → perpétuo ou externo com tráfego pago</p>
+
+<p><strong>4. Você tem parceiros ou relacionamentos no mercado?</strong><br/>
+Sim → externo ou JV são aceleradores poderosos<br/>
+Não → construa seu interno primeiro</p>
+
+<p><strong>5. Você consegue criar o produto em 60 dias?</strong><br/>
+Sim → semente é seguro<br/>
+Não → afiliado enquanto produz</p>
+
+<h3>Passo 2: A Matriz de Decisão</h3>
+
+<p>Com base nas respostas acima, identifique seu quadrante:</p>
+<ul>
+  <li><strong>Iniciante sem produto + sem audiência:</strong> Afiliado → Semente</li>
+  <li><strong>Iniciante sem produto + com audiência:</strong> Semente imediato</li>
+  <li><strong>Produto validado + audiência pequena:</strong> Interno + buscar JVs</li>
+  <li><strong>Produto validado + audiência média:</strong> Perpétuo + lançamentos sazonais</li>
+  <li><strong>Produto validado + audiência grande:</strong> Lançamento completo + perpétuo no intervalo</li>
+</ul>
+
+<h3>Passo 3: Planejamento 90 Dias</h3>
+<p>Defina agora:</p>
+<ul>
+  <li>Qual modelo você vai executar nos próximos 90 dias?</li>
+  <li>Qual é a meta de receita realista para este modelo?</li>
+  <li>Quais são os 3 obstáculos principais que pode enfrentar?</li>
+  <li>Quem pode ser seu primeiro parceiro JV se for o modelo externo?</li>
+</ul>
+
+<blockquote>Não existe modelo certo ou errado em abstrato. Existe o modelo certo para o seu momento. Um lançamento semente executado com excelência supera qualquer lançamento complexo feito na hora errada.</blockquote>`
+          }
+        ]
+      },
+      {
+        id: "escada-valor",
+        number: 8,
+        title: "Escada de Valor e Monetização Avançada",
+        subtitle: "Como maximizar o LTV de cada cliente com upsell, downsell e recorrência",
+        icon: "📈",
+        color: "from-emerald-600 to-teal-600",
+        duration: "1h 15min",
+        summary: "Vender uma vez é apenas o começo. A escada de valor é a arquitetura que transforma compradores em clientes recorrentes e multiplica a receita sem aumentar o custo de aquisição.",
+        lessons: [
+          {
+            id: "escada-1",
+            title: "Escada de Valor: Da Isca ao High Ticket",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["O conceito de escada de valor (Value Ladder)", "Da isca digital ao produto premium", "Como cada produto financia o próximo", "Ticket médio vs. LTV"],
+            content: `<h2>A Escada de Valor: Arquitetura de Receita Inteligente</h2>
+<p>Russell Brunson popularizou o conceito de Value Ladder (escada de valor) no livro DotCom Secrets. A ideia é simples: em vez de ter um produto, você tem uma <em>jornada de produtos</em> — cada um entregando mais valor a um preço mais alto, para quem está pronto para subir o próximo degrau.</p>
+
+<h3>Por Que a Escada Funciona</h3>
+<p>O custo de aquisição de um cliente é alto. Uma vez que alguém comprou de você, a barreira da confiança foi vencida. Vender para quem já comprou custa <strong>5 a 7 vezes menos</strong> do que adquirir um novo cliente. A escada de valor é a estrutura que aproveita isso sistematicamente.</p>
+
+<h3>Os 5 Degraus da Escada</h3>
+
+<h3>Degrau 1: Isca Digital (Gratuito ou R$9-R$47)</h3>
+<p>Objetivo: capturar o lead ou fazer a primeira venda de baixíssima resistência. Não precisa gerar lucro — precisa gerar cadastro e primeira experiência positiva com sua entrega.</p>
+<p><em>Exemplos:</em> ebook, mini-curso, checklist, template, calculadora.</p>
+
+<h3>Degrau 2: Produto de Entrada (R$47-R$297)</h3>
+<p>A primeira compra real. Resolve um problema específico com profundidade suficiente para gerar resultado rápido. Este degrau financia os anúncios e mostra que você entrega o prometido.</p>
+<p><em>Exemplos:</em> curso curto, workshop gravado, guia completo.</p>
+
+<h3>Degrau 3: Produto Core (R$297-R$1.997)</h3>
+<p>O produto principal do seu negócio. Solução completa para o problema central da sua audiência. A maioria dos produtores vive neste degrau — é onde está a maior parte da receita.</p>
+<p><em>Exemplos:</em> curso completo, mentoria em grupo, programa com acompanhamento.</p>
+
+<h3>Degrau 4: High Ticket (R$2.000-R$20.000)</h3>
+<p>Acesso direto a você ou resultado garantido. A entrega é muito mais personalizada: mentoria 1:1, consultoria, mastermind fechado. 20% dos seus clientes têm potencial para este degrau.</p>
+
+<h3>Degrau 5: Ultra High Ticket / Continuidade (R$10.000+)</h3>
+<p>Parcerias estratégicas, participação societária, fee mensal por resultado. Só faz sentido para quem já tem casos de sucesso sólidos nos degraus anteriores.</p>
+
+<h3>Como Construir Sua Escada</h3>
+<ol>
+  <li>Mapeie o resultado final que seu cliente quer alcançar</li>
+  <li>Quebre essa jornada em etapas menores</li>
+  <li>Crie um produto para cada etapa</li>
+  <li>Garanta que cada produto entrega resultado real — não apenas "prepara" para o próximo</li>
+  <li>Construa a subida naturalmente: quem tem resultado quer mais</li>
+</ol>
+
+<blockquote>A escada de valor não é um funil de vendas agressivo — é uma jornada de transformação progressiva. Cada degrau deve ser completo em si mesmo. Se o cliente parar no degrau 2, ele deve ter tido uma experiência excelente.</blockquote>`
+          },
+          {
+            id: "upsell-downsell",
+            title: "Upsell, Downsell e Order Bump",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Order Bump: +20-35% de receita no checkout", "Upsell de 1 clique pós-compra", "Downsell para quem recusa", "Como sequenciar sem parecer agressivo"],
+            content: `<h2>Maximizando o Valor de Cada Transação</h2>
+<p>A maioria dos produtores para de otimizar quando o cliente decide comprar. Esse é o momento em que a receita pode crescer 40-80% sem nenhum cliente adicional — apenas com técnicas de otimização do checkout.</p>
+
+<h3>Order Bump: A Técnica Mais Simples e Poderosa</h3>
+<p>O order bump é uma oferta adicional apresentada <em>dentro do checkout</em>, antes da confirmação de pagamento. É um checkbox que o cliente pode marcar para adicionar um produto complementar à compra com um único clique.</p>
+
+<p><strong>Características do order bump ideal:</strong></p>
+<ul>
+  <li>Preço baixo em relação ao produto principal (10-30% do valor)</li>
+  <li>Complementar e imediatamente relevante à compra</li>
+  <li>Resultado rápido e tangível</li>
+  <li>Taxa de aceitação de mercado: 20-40%</li>
+</ul>
+
+<p><em>Exemplo prático:</em> Você vende um curso de tráfego pago por R$997. No checkout, oferece uma "Biblioteca de Criativos Prontos" por R$197. Quem está comprando um curso de tráfego claramente precisa de criativos.</p>
+
+<h3>Upsell de 1 Clique</h3>
+<p>Apresentado <em>depois</em> da confirmação de pagamento, o upsell é uma oferta de maior valor que o cliente pode aceitar com um único clique — sem preencher cartão novamente.</p>
+
+<p><strong>A psicologia por trás:</strong> o cliente acabou de tomar uma decisão de compra e está no pico de excitação. O "modo compra" está ativado. Apresentar uma oferta complementar neste momento encontra muito menos resistência do que em qualquer outro.</p>
+
+<p><strong>Regra de ouro do upsell:</strong> deve ser uma versão superior ou mais completa do que foi comprado — nunca algo completamente diferente. "Quer o curso básico que você comprou + o avançado + mentoria mensal por R$500 a mais?" funciona. "Quer comprar meu curso de culinária?" não funciona.</p>
+
+<h3>Downsell: Recuperando Quem Recusa</h3>
+<p>Quando o cliente recusa o upsell, você apresenta uma versão menor e mais barata. O cliente já disse não ao R$500; ofereça o núcleo daquilo por R$197.</p>
+
+<p>Taxa de aceitação de downsell: 10-20% dos que recusaram o upsell. Isso representa receita que seria perdida sem o sistema.</p>
+
+<h3>A Sequência Completa</h3>
+<p>Produto principal → Order Bump (checkout) → Upsell 1 → Recusa → Downsell 1 → Upsell 2 (opcional)</p>
+
+<p>Não crie mais de 2 níveis de upsell. A experiência se torna frustrante e queima confiança.</p>
+
+<blockquote>Jeff Bezos disse que a Amazon seria um negócio sem sentido se não fosse pelas compras repetidas. O mesmo vale para infoprodutos. A primeira venda é o custo de aquisição do cliente; as vendas seguintes são o lucro real.</blockquote>`
+          },
+          {
+            id: "recorrencia",
+            title: "Modelos de Recorrência: A Receita Previsível",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Assinatura vs. mensalidade vs. retainer", "Membership sites e comunidades pagas", "Como calcular o LTV ideal", "Churn: o inimigo silencioso"],
+            content: `<h2>Recorrência: O Santo Graal da Renda Digital</h2>
+<p>Receita recorrente é o ativo mais valioso que um negócio digital pode construir. Enquanto lançamentos geram picos de receita, a recorrência cria a <em>base</em> — o chão que sustenta toda a operação mesmo nos meses sem lançamento.</p>
+
+<h3>Os 4 Modelos de Recorrência para Infoprodutores</h3>
+
+<h3>1. Membership / Comunidade Paga</h3>
+<p>Acesso a uma comunidade exclusiva, conteúdo novo mensalmente, encontros ao vivo periódicos. O valor está no pertencimento, na atualização constante e no networking.</p>
+<p><em>Ticket típico:</em> R$47-R$297/mês</p>
+<p><em>O que retém o membro:</em> qualidade das relações na comunidade e relevância do conteúdo novo</p>
+
+<h3>2. Atualização de Produto (Content Club)</h3>
+<p>O cliente paga mensalmente para receber novos materiais, templates, estudos de caso ou atualizações do conteúdo principal. Funciona bem para nichos que mudam rápido (marketing, tecnologia, finanças).</p>
+<p><em>Ticket típico:</em> R$37-R$197/mês</p>
+
+<h3>3. Mentoria / Acompanhamento Recorrente</h3>
+<p>Calls mensais em grupo, sessões de Q&A, revisão de trabalhos. Você oferece acesso contínuo à sua expertise por uma mensalidade.</p>
+<p><em>Ticket típico:</em> R$297-R$997/mês</p>
+<p><em>Limitação:</em> escala limitada pelo seu tempo — cada novo membro demanda atenção</p>
+
+<h3>4. Retainer de Resultado</h3>
+<p>Você é contratado mensalmente para entregar um resultado específico — não conteúdo. Geralmente para agências ou consultores: "R$3.000/mês para gerenciar e otimizar sua estratégia de tráfego".</p>
+
+<h3>Calculando o LTV (Lifetime Value)</h3>
+<p>LTV = Ticket Médio Mensal × Tempo Médio de Permanência (em meses)</p>
+<p>Se seu membership custa R$197/mês e os membros ficam em média 8 meses, seu LTV é R$1.576.</p>
+<p>Isso significa que você pode gastar até R$500 para adquirir um assinante e ainda ter margem saudável.</p>
+
+<h3>Churn: O Inimigo Silencioso</h3>
+<p>Churn é a taxa de cancelamento mensal. Um churn de 10% ao mês significa que você perde metade da base em 7 meses. Para crescer, você precisa adquirir mais do que perde — o que se torna uma corrida sem fim.</p>
+
+<p>Redutores de churn que funcionam:</p>
+<ul>
+  <li>Onboarding excepcional nos primeiros 30 dias</li>
+  <li>Quick wins visíveis logo no início da assinatura</li>
+  <li>Comunidade ativa — cancelar significa perder o grupo</li>
+  <li>Plano anual com desconto: além de melhorar o fluxo de caixa, reduz churn (quem paga por 1 ano raramente cancela nos primeiros meses)</li>
+</ul>
+
+<blockquote>Um membership com 200 membros a R$297/mês gera R$59.400 previsíveis por mês — sem lançamento, sem sprint, sem estresse. Esse chão muda completamente a psicologia do empreendedor e a qualidade das decisões de negócio.</blockquote>`
+          },
+          {
+            id: "monetizacao-quiz",
+            title: "Quiz: Estratégia de Monetização",
+            duration: "10 min",
+            type: "quiz",
+            keyPoints: ["12 questões sobre escada de valor e modelos", "Análise do seu modelo atual", "Recomendação personalizada"],
+            content: `<h2>Quiz: Qual é a Sua Estratégia de Monetização?</h2>
+<p>Este quiz avalia sua compreensão dos modelos de monetização e ajuda a identificar gaps na sua estrutura atual.</p>
+<p>Ao concluir, você receberá uma análise do seu perfil e as principais oportunidades de crescimento de receita.</p>
+<p>Clique em "Começar Avaliação" para iniciar as 12 questões.</p>`
           }
         ],
         locked: true
       },
       {
-        id: "escassez-automacao",
-        number: 8,
-        title: "Escassez Inteligente e Automação de Carrinho",
-        subtitle: "Como os sistemas automatizados maximizam receita nos dias finais",
-        icon: "⏱",
-        color: "from-orange-600 to-red-600",
-        duration: "40 min",
-        summary: "Os últimos 48h de um lançamento podem representar 50-70% da receita total. Aprenda a automatizar escassez real, urgência e retargeting.",
+        id: "pos-venda",
+        number: 9,
+        title: "Pós-Venda e Retenção: O Ciclo Completo",
+        subtitle: "De comprador a fã: como transformar resultados em indicações",
+        icon: "🔄",
+        color: "from-sky-600 to-blue-600",
+        duration: "50 min",
+        summary: "O pós-venda é onde os maiores lançamentos são decididos. Clientes que têm resultado indicam, compram de novo e protegem sua reputação quando alguém questiona seu trabalho.",
         lessons: [
           {
-            id: "escassez-1",
-            title: "A Psicologia do Deadline",
-            duration: "20 min",
+            id: "onboarding",
+            title: "Onboarding: Os Primeiros 7 Dias Decidem Tudo",
+            duration: "18 min",
             type: "text",
-            keyPoints: ["Por que 60-70% das vendas são nas últimas 24h", "Escassez real vs. falsa", "Sequência de emails de fechamento"],
-            content: `<h2>O Paradoxo da Urgência</h2>
-<p>Dan Ariely, em "Previsivelmente Irracional", documentou que a maioria das pessoas procrastina indefinidamente até que a pressão externa force uma decisão. Um lançamento sem deadline é uma campanha sem resultado.</p>
+            keyPoints: ["Por que 70% dos abandonos acontecem na primeira semana", "Sequência de boas-vindas de alto impacto", "Quick wins planejados", "Gamificação no onboarding"],
+            content: `<h2>Os 7 Dias Mais Importantes da Jornada do Aluno</h2>
+<p>Pesquisas de SaaS e produtos digitais são consistentes: <strong>70% dos cancelamentos e abandonos acontecem nos primeiros 7 dias</strong>. O comprador que não vê valor rápido racionaliza a compra como erro e desengaja — primeiro dos conteúdos, depois da comunidade, depois do produto inteiro.</p>
 
-<h3>A Distribuição de Vendas num Lançamento Típico</h3>
-<ul>
-  <li>Dia 1 (abertura): 25-35% das vendas</li>
-  <li>Dias 2-4 (meio): 15-20% das vendas</li>
-  <li>Dia 5 (pré-fechamento): 10-15% das vendas</li>
-  <li>Último dia: 35-45% das vendas</li>
-</ul>
+<p>Onboarding não é burocracia de acesso. É a arquitetura da primeira experiência.</p>
 
-<p>Esta distribuição é previsível e universal. Significa que você <em>precisa</em> de uma campanha de fechamento tão forte quanto a de abertura.</p>
+<h3>A Sequência de Boas-Vindas em 7 Dias</h3>
 
-<h3>Escassez Real: Os 3 Tipos que Funcionam</h3>
+<p><strong>Dia 1 — A Boas-Vindas Calorosa:</strong><br/>
+Email pessoal do produtor (não da plataforma). Tom humano, não corporativo. Confirma a decisão de compra. Diz o que esperar. Link de acesso.</p>
+
+<p><strong>Dia 2 — O Quick Win:</strong><br/>
+Entregue algo acionável que o aluno pode implementar em 30 minutos e ver resultado. Não precisa ser grande — precisa ser rápido e visível. Isso cria o ciclo: "funciona, vou continuar".</p>
+
+<p><strong>Dia 3 — A Comunidade:</strong><br/>
+Apresente o grupo/comunidade. Peça que o aluno se apresente. Crie o primeiro senso de pertencimento.</p>
+
+<p><strong>Dia 5 — O Check-in:</strong><br/>
+"Já acessou? Tem alguma dúvida? O que achou até agora?" — humaniza o suporte e identifica alunos em risco de churn.</p>
+
+<p><strong>Dia 7 — O Primeiro Marco:</strong><br/>
+Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento público no grupo cria narrativa de progresso.</p>
+
+<h3>Quick Wins Planejados</h3>
+<p>O quick win ideal tem 3 características:</p>
 <ol>
-  <li><strong>Escassez de vagas:</strong> Turmas com número limitado têm razão real (suporte, comunidade, atenção do professor)</li>
-  <li><strong>Escassez de bônus:</strong> "Os primeiros 50 recebem acesso ao grupo VIP com calls mensais"</li>
-  <li><strong>Escassez de preço:</strong> "Preço de lançamento válido apenas para esta turma" — desde que seja real</li>
+  <li>Pode ser feito em menos de 1 hora</li>
+  <li>Gera um resultado visível (número, resultado, screenshot)</li>
+  <li>É o primeiro passo real para o resultado final do produto</li>
 </ol>
 
-<h3>A Sequência de Fechamento de 7 Mensagens</h3>
-<p>Nas últimas 48h, automatize estas mensagens:</p>
+<blockquote>O aluno que implementa algo na primeira semana tem 5x mais chance de completar o curso e 8x mais chance de indicar para alguém. O investimento em onboarding tem o maior ROI de toda a operação de pós-venda.</blockquote>`
+          },
+          {
+            id: "indicacoes",
+            title: "Programa de Indicação: Crescimento Orgânico pelo Boca a Boca",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Por que indicação é o canal mais barato e de maior qualidade", "Como estruturar um programa formal de indicação", "Incentivos que funcionam", "NPS e como usar o feedback"],
+            content: `<h2>Indicação: O Canal que a Maioria Subutiliza</h2>
+<p>Um lead vindo de indicação converte em média <strong>3-5x mais</strong> do que um lead de anúncio pago. A razão é óbvia: ele chega com prova social embutida — alguém de confiança já validou o produto para ele.</p>
+
+<p>Apesar disso, a maioria dos produtores deixa as indicações acontecerem organicamente, sem estrutura. Criar um programa formal de indicação pode dobrar esse volume sem custo adicional de aquisição.</p>
+
+<h3>Os 3 Modelos de Programa de Indicação</h3>
+
+<h3>1. Programa de Afiliados para Alunos</h3>
+<p>Transforme seus melhores alunos em afiliados. Eles promovem porque acreditam no produto; você paga comissão apenas quando há venda. Sem resultado, sem custo.</p>
+<p>Critério de elegibilidade: alunos que concluíram o produto + tiveram resultado documentado.</p>
+
+<h3>2. Give to Get (Dê para Receber)</h3>
+<p>O aluno ganha algo de valor ao indicar alguém que se cadastra (não necessariamente compra). Pode ser uma aula bônus, um mês de membership grátis, desconto na próxima compra.</p>
+<p>Funciona bem para gerar leads qualificados mesmo sem venda imediata.</p>
+
+<h3>3. Programa de Embaixadores</h3>
+<p>Um grupo seleto de alunos que têm acesso privilegiado (calls exclusivas com você, conteúdo antecipado, créditos) em troca de representar o produto ativamente — criando conteúdo, respondendo dúvidas, sendo referência para o mercado.</p>
+
+<h3>NPS: Medindo a Satisfação de Forma Acionável</h3>
+<p>O NPS (Net Promoter Score) é a métrica mais simples e poderosa de satisfação. Uma única pergunta: "Em uma escala de 0 a 10, qual a probabilidade de você recomendar este produto a um amigo ou colega?"</p>
 <ul>
-  <li>H-48: "Amanhã é o último dia"</li>
-  <li>H-24: "Hoje é o último dia"</li>
-  <li>H-12: "12 horas para encerrar"</li>
-  <li>H-6: "6 horas restantes"</li>
-  <li>H-3: "3 horas — última chance"</li>
-  <li>H-1: "1 hora para fechar"</li>
-  <li>H-0: "Carrinho fechado / obrigado"</li>
+  <li>9-10: Promotores — seus potenciais embaixadores</li>
+  <li>7-8: Passivos — satisfeitos mas não entusiasmados</li>
+  <li>0-6: Detratores — risco de churn e reputação negativa</li>
+</ul>
+<p>NPS = % Promotores - % Detratores. Acima de 50 é excelente para o mercado de infoprodutos.</p>
+
+<p>Use o NPS não apenas para medir — use para agir:</p>
+<ul>
+  <li>Promotores: convide para o programa de embaixadores</li>
+  <li>Passivos: entenda o que falta para virar promotor</li>
+  <li>Detratores: reaja rápido, ofereça suporte, salve o relacionamento</li>
 </ul>
 
-<blockquote>Cada mensagem de fechamento deve ter um ângulo diferente: benefício, medo de perda, prova social recente, objeção destruída. Nunca repita o mesmo copy nas 7 mensagens.</blockquote>`
+<blockquote>Cada Detrator que você transforma em Promotor vale duas vezes: você eliminou a ameaça de reputação negativa e criou um novo canal de indicação. A gestão de Detratores é o trabalho mais rentável do pós-venda.</blockquote>`
           }
         ],
         locked: true
