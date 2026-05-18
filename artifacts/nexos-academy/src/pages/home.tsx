@@ -121,12 +121,32 @@ export default function Home({ onNavigate, progress }: HomeProps) {
                       <span className="badge-primary">{module.badge}</span>
                     </div>
                     <p className="text-xs text-[hsl(220_10%_55%)] leading-relaxed mb-3">{module.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-[hsl(220_10%_45%)]">
+                    <div className="flex items-center gap-4 text-xs text-[hsl(220_10%_45%)] mb-2.5">
                       <span>{moduleChapters.length} capítulos</span>
                       <span>{moduleLessons.length} aulas</span>
                       {moduleDone > 0 && (
-                        <span className="text-[hsl(168_100%_50%)]">✓ {moduleDone}/{moduleLessons.length} concluídas</span>
+                        <span className="text-[hsl(168_100%_50%)] font-semibold">✓ {moduleDone}/{moduleLessons.length}</span>
                       )}
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex-1 h-1.5 rounded-full bg-[hsl(220_20%_10%)] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.round((moduleDone / moduleLessons.length) * 100)}%`,
+                            background: moduleDone === moduleLessons.length
+                              ? "hsl(168 100% 42%)"
+                              : "var(--gradient-primary)",
+                          }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-semibold shrink-0" style={{
+                        color: moduleDone === moduleLessons.length ? "hsl(168 100% 50%)" : "hsl(250 90% 70%)",
+                        minWidth: "28px",
+                        textAlign: "right",
+                      }}>
+                        {Math.round((moduleDone / moduleLessons.length) * 100)}%
+                      </span>
                     </div>
                   </div>
                 </div>
