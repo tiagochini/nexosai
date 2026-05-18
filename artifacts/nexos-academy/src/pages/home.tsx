@@ -4,9 +4,10 @@ import { CURRICULUM, PRODUCTS } from "@/data/curriculum";
 interface HomeProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
   progress: Record<string, boolean>;
+  hasAccess: boolean;
 }
 
-export default function Home({ onNavigate, progress }: HomeProps) {
+export default function Home({ onNavigate, progress, hasAccess }: HomeProps) {
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
 
   const totalLessons = CURRICULUM.flatMap(m => m.chapters).flatMap(c => c.lessons).length;
@@ -15,6 +16,8 @@ export default function Home({ onNavigate, progress }: HomeProps) {
 
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
   const nextChapter = allChapters.find(ch => !ch.locked && !progress[ch.id + "_done"]);
+
+  const premiumProducts = PRODUCTS.filter(p => p.type !== "free");
 
   return (
     <div className="space-y-10">
@@ -34,21 +37,27 @@ export default function Home({ onNavigate, progress }: HomeProps) {
             Formação completa em lançamentos: estratégia, tráfego pago e orgânico, copywriting, automações, criação de produto e como transformar sua audiência em clientes.
           </p>
           <div className="flex flex-wrap gap-3">
-            {nextChapter ? (
-              <button
-                className="btn-primary"
-                onClick={() => onNavigate("lesson", { chapterId: nextChapter.id })}
-              >
-                <span>▶</span>
-                {completedLessons === 0 ? "Começar Agora" : "Continuar"}
-              </button>
+            {hasAccess ? (
+              nextChapter ? (
+                <button
+                  className="btn-primary"
+                  onClick={() => onNavigate("lesson", { chapterId: nextChapter.id })}
+                >
+                  <span>▶</span>
+                  {completedLessons === 0 ? "Começar Agora" : "Continuar"}
+                </button>
+              ) : (
+                <button className="btn-primary" onClick={() => onNavigate("modules")}>
+                  <span>📚</span> Ver Módulos
+                </button>
+              )
             ) : (
-              <button className="btn-primary" onClick={() => onNavigate("modules")}>
-                <span>📚</span> Ver Módulos
+              <button className="btn-primary" onClick={() => onNavigate("products")}>
+                <span>🔓</span> Adquirir Acesso
               </button>
             )}
             <button className="btn-outline" onClick={() => onNavigate("products")}>
-              <span>🛒</span> Adquirir Ebook
+              <span>🛒</span> {hasAccess ? "Ver Produtos" : "Baixar Guia Gratuito"}
             </button>
           </div>
         </div>
@@ -58,8 +67,8 @@ export default function Home({ onNavigate, progress }: HomeProps) {
         <div className="absolute right-32 bottom-8 opacity-10 text-4xl floating-icon select-none hidden md:block" style={{ animationDelay: "1.5s" }}>🚀</div>
       </div>
 
-      {/* Progress Bar */}
-      {completedLessons > 0 && (
+      {/* Progress Bar (only when has access and has started) */}
+      {hasAccess && completedLessons > 0 && (
         <div className="card-nexos rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -96,24 +105,43 @@ export default function Home({ onNavigate, progress }: HomeProps) {
       <div>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-bold text-white">Módulos do Curso</h2>
-          <button className="btn-outline text-xs px-3 py-1.5" onClick={() => onNavigate("modules")}>
-            Ver Todos →
-          </button>
+          {hasAccess && (
+            <button className="btn-outline text-xs px-3 py-1.5" onClick={() => onNavigate("modules")}>
+              Ver Todos →
+            </button>
+          )}
         </div>
+
+        {/* Paywall banner when no access */}
+        {!hasAccess && (
+          <div className="mb-5 rounded-xl border border-[hsl(250_90%_65%/0.25)] bg-[hsl(250_30%_8%)] p-5 flex flex-col sm:flex-row items-center gap-4">
+            <div className="text-3xl shrink-0">🔒</div>
+            <div className="flex-1 text-center sm:text-left">
+              <p className="text-sm font-semibold text-white">Acesso liberado após a aquisição</p>
+              <p className="text-xs text-[hsl(220_10%_50%)] mt-1">Adquira a Edição Completa para desbloquear todos os módulos, capítulos e aulas com progresso salvo.</p>
+            </div>
+            <button className="btn-primary shrink-0 text-sm" onClick={() => onNavigate("products")}>
+              Ver Planos →
+            </button>
+          </div>
+        )}
+
         <div className="space-y-4">
           {CURRICULUM.map(module => {
             const moduleChapters = module.chapters;
             const moduleLessons = moduleChapters.flatMap(c => c.lessons);
             const moduleDone = moduleLessons.filter(l => progress[l.id]).length;
+            const pct = Math.round((moduleDone / moduleLessons.length) * 100);
+
             return (
               <div
                 key={module.id}
-                className="card-nexos rounded-xl p-5 cursor-pointer"
-                onClick={() => onNavigate("module", { moduleId: module.id })}
+                className={`card-nexos rounded-xl p-5 ${hasAccess ? "cursor-pointer" : "opacity-70 cursor-default"}`}
+                onClick={() => hasAccess && onNavigate("module", { moduleId: module.id })}
               >
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 rounded-lg bg-[hsl(250_90%_65%/0.1)] border border-[hsl(250_90%_65%/0.2)] flex items-center justify-center text-sm font-bold text-[hsl(250_90%_75%)] shrink-0">
-                    {module.number}
+                    {hasAccess ? module.number : "🔒"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -124,30 +152,36 @@ export default function Home({ onNavigate, progress }: HomeProps) {
                     <div className="flex items-center gap-4 text-xs text-[hsl(220_10%_45%)] mb-2.5">
                       <span>{moduleChapters.length} capítulos</span>
                       <span>{moduleLessons.length} aulas</span>
-                      {moduleDone > 0 && (
+                      {hasAccess && moduleDone > 0 && (
                         <span className="text-[hsl(168_100%_50%)] font-semibold">✓ {moduleDone}/{moduleLessons.length}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex-1 h-1.5 rounded-full bg-[hsl(220_20%_10%)] overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${Math.round((moduleDone / moduleLessons.length) * 100)}%`,
-                            background: moduleDone === moduleLessons.length
-                              ? "hsl(168 100% 42%)"
-                              : "var(--gradient-primary)",
-                          }}
-                        />
+
+                    {/* Progress bar: shown only when has access */}
+                    {hasAccess ? (
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex-1 h-1.5 rounded-full bg-[hsl(220_20%_10%)] overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${pct}%`,
+                              background: pct === 100
+                                ? "hsl(168 100% 42%)"
+                                : "var(--gradient-primary)",
+                            }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-semibold shrink-0" style={{
+                          color: pct === 100 ? "hsl(168 100% 50%)" : "hsl(250 90% 70%)",
+                          minWidth: "28px",
+                          textAlign: "right",
+                        }}>
+                          {pct}%
+                        </span>
                       </div>
-                      <span className="text-[10px] font-semibold shrink-0" style={{
-                        color: moduleDone === moduleLessons.length ? "hsl(168 100% 50%)" : "hsl(250 90% 70%)",
-                        minWidth: "28px",
-                        textAlign: "right",
-                      }}>
-                        {Math.round((moduleDone / moduleLessons.length) * 100)}%
-                      </span>
-                    </div>
+                    ) : (
+                      <div className="h-1.5 rounded-full bg-[hsl(220_20%_10%)]" />
+                    )}
                   </div>
                 </div>
               </div>
@@ -156,45 +190,44 @@ export default function Home({ onNavigate, progress }: HomeProps) {
         </div>
       </div>
 
-      {/* Products */}
-      <div>
-        <h2 className="text-xl font-bold text-white mb-5">Produtos Disponíveis</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          {PRODUCTS.map(product => (
-            <div
-              key={product.id}
-              className="card-nexos rounded-xl p-6 cursor-pointer"
-              onMouseEnter={() => setHoveredProduct(product.id)}
-              onMouseLeave={() => setHoveredProduct(null)}
-              onClick={() => onNavigate("products")}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <span className={`badge-primary ${product.type === "premium" ? "badge-gold" : ""}`}>{product.badge}</span>
-                <div className="text-right">
-                  <div className="text-2xl font-extrabold text-white">
-                    R${product.price.toLocaleString("pt-BR")}
+      {/* Products preview (only when no access) */}
+      {!hasAccess && (
+        <div>
+          <h2 className="text-xl font-bold text-white mb-5">Adquira a Metodologia</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {premiumProducts.map(product => (
+              <div
+                key={product.id}
+                className="card-nexos rounded-xl p-6 cursor-pointer"
+                onMouseEnter={() => setHoveredProduct(product.id)}
+                onMouseLeave={() => setHoveredProduct(null)}
+                onClick={() => onNavigate("products")}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <span className={`badge-primary ${product.type === "premium" ? "badge-gold" : ""}`}>{product.badge}</span>
+                  <div className="text-right">
+                    <div className="text-2xl font-extrabold text-white">
+                      {product.price === 0 ? "Grátis" : `R$${product.price.toLocaleString("pt-BR")}`}
+                    </div>
                   </div>
-                  {product.type === "premium" && (
-                    <div className="text-xs text-[hsl(220_10%_45%)]">acesso vitalício</div>
-                  )}
                 </div>
+                <h3 className="font-bold text-white mb-2">{product.name}</h3>
+                <p className="text-sm text-[hsl(220_10%_55%)] mb-4">{product.description}</p>
+                <ul className="space-y-1.5">
+                  {product.features.slice(0, hoveredProduct === product.id ? product.features.length : 3).map((f, i) => (
+                    <li key={i} className="text-xs text-[hsl(220_10%_65%)] flex items-center gap-2">
+                      <span className="text-[hsl(168_100%_50%)]">✓</span> {f}
+                    </li>
+                  ))}
+                  {hoveredProduct !== product.id && product.features.length > 3 && (
+                    <li className="text-xs text-[hsl(220_10%_45%)]">+ {product.features.length - 3} mais...</li>
+                  )}
+                </ul>
               </div>
-              <h3 className="font-bold text-white mb-2">{product.name}</h3>
-              <p className="text-sm text-[hsl(220_10%_55%)] mb-4">{product.description}</p>
-              <ul className="space-y-1.5">
-                {product.features.slice(0, hoveredProduct === product.id ? product.features.length : 3).map((f, i) => (
-                  <li key={i} className="text-xs text-[hsl(220_10%_65%)] flex items-center gap-2">
-                    <span className="text-[hsl(168_100%_50%)]">✓</span> {f}
-                  </li>
-                ))}
-                {hoveredProduct !== product.id && product.features.length > 3 && (
-                  <li className="text-xs text-[hsl(220_10%_45%)]">+ {product.features.length - 3} mais...</li>
-                )}
-              </ul>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

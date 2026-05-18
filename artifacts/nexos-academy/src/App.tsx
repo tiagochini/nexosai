@@ -18,6 +18,7 @@ interface NavState {
 }
 
 const STORAGE_KEY = "nexos-academy-progress";
+const ACCESS_KEY = "nexos-academy-access";
 
 function loadProgress(): Record<string, boolean> {
   try {
@@ -31,13 +32,21 @@ function saveProgress(p: Record<string, boolean>) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
 }
 
-const NAV_ITEMS = [
+function hasStoredAccess(): boolean {
+  return localStorage.getItem(ACCESS_KEY) === "true";
+}
+
+const ALL_NAV_ITEMS = [
   { id: "home", label: "Início", icon: "🏠" },
   { id: "modules", label: "Módulos", icon: "📦" },
   { id: "glossary", label: "Glossário", icon: "📖" },
   { id: "products", label: "Produtos", icon: "🛒" },
   { id: "progress", label: "Progresso", icon: "📊" },
 ];
+
+const PUBLIC_NAV_ITEMS = ALL_NAV_ITEMS.filter(n => ["home", "products", "glossary"].includes(n.id));
+
+const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress"];
 
 function getInitialPage(): NavState {
   if (typeof window !== "undefined" && window.location.hash === "#owner") {
@@ -51,6 +60,12 @@ function AcademyApp() {
   const [progress, setProgress] = useState<Record<string, boolean>>(loadProgress);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [ownerMode, setOwnerMode] = useState<boolean>(isOwnerMode);
+  const [hasAccess, setHasAccess] = useState<boolean>(() => hasStoredAccess() || isOwnerMode());
+
+  const grantAccess = useCallback(() => {
+    localStorage.setItem(ACCESS_KEY, "true");
+    setHasAccess(true);
+  }, []);
 
   useEffect(() => {
     function onHashChange() {
@@ -89,19 +104,47 @@ function AcademyApp() {
 
   const handleOwnerChange = useCallback((val: boolean) => {
     setOwnerMode(val);
+    if (val) {
+      localStorage.setItem(ACCESS_KEY, "true");
+      setHasAccess(true);
+    }
   }, []);
 
   const totalLessons = 118;
   const completedLessons = Object.values(progress).filter(Boolean).length;
   const pct = Math.round((completedLessons / totalLessons) * 100);
 
+  const canAccess = hasAccess || ownerMode;
+
   const isActive = (id: string) =>
     nav.page === id || (id === "modules" && (nav.page === "module" || nav.page === "lesson"));
 
+  const navItems = canAccess ? ALL_NAV_ITEMS : PUBLIC_NAV_ITEMS;
+
   function renderPage() {
+    if (!canAccess && RESTRICTED_PAGES.includes(nav.page)) {
+      return (
+        <div className="max-w-2xl mx-auto text-center py-20 space-y-6">
+          <div className="text-5xl mb-2">🔒</div>
+          <h2 className="text-2xl font-bold text-white">Acesso Restrito</h2>
+          <p className="text-[hsl(220_10%_55%)]">
+            Esta área é exclusiva para alunos da Metodologia NexOS. Adquira o acesso completo para desbloquear todos os módulos, capítulos e aulas.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button className="btn-primary" onClick={() => navigate("products")}>
+              Ver Planos e Preços →
+            </button>
+            <button className="btn-outline" onClick={() => navigate("home")}>
+              Voltar ao Início
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     switch (nav.page) {
       case "home":
-        return <Home onNavigate={navigate} progress={progress} />;
+        return <Home onNavigate={navigate} progress={progress} hasAccess={canAccess} />;
       case "modules":
         return <Modules onNavigate={navigate} progress={progress} />;
       case "module":
@@ -117,7 +160,7 @@ function AcademyApp() {
           />
         );
       case "products":
-        return <Products onNavigate={navigate} />;
+        return <Products onNavigate={navigate} hasAccess={canAccess} onAccessGranted={grantAccess} />;
       case "progress":
         return <ProgressPage onNavigate={navigate} progress={progress} onReset={resetProgress} />;
       case "glossary":
@@ -125,7 +168,7 @@ function AcademyApp() {
       case "owner":
         return <Owner onNavigate={navigate} onOwnerChange={handleOwnerChange} isOwner={ownerMode} />;
       default:
-        return <Home onNavigate={navigate} progress={progress} />;
+        return <Home onNavigate={navigate} progress={progress} hasAccess={canAccess} />;
     }
   }
 
@@ -150,7 +193,7 @@ function AcademyApp() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {NAV_ITEMS.map(item => (
+            {navItems.map(item => (
               <button
                 key={item.id}
                 className={`sidebar-link ${isActive(item.id) ? "active" : ""}`}
@@ -172,7 +215,7 @@ function AcademyApp() {
                 ⚡ Dono
               </button>
             )}
-            {completedLessons > 0 && (
+            {canAccess && completedLessons > 0 && (
               <div className="flex items-center gap-2">
                 <div className="w-24 h-1.5 rounded-full bg-[hsl(220_20%_10%)] overflow-hidden">
                   <div
@@ -183,12 +226,19 @@ function AcademyApp() {
                 <span className="text-xs text-[hsl(250_90%_75%)] font-semibold">{pct}%</span>
               </div>
             )}
-            {!ownerMode && (
+            {!canAccess ? (
               <button
                 className="btn-primary text-xs px-3 py-1.5"
                 onClick={() => navigate("products")}
               >
-                Adquirir
+                Adquirir Acesso
+              </button>
+            ) : !ownerMode && (
+              <button
+                className="btn-outline text-xs px-3 py-1.5"
+                onClick={() => navigate("products")}
+              >
+                Produtos
               </button>
             )}
           </div>
@@ -205,7 +255,7 @@ function AcademyApp() {
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-[hsl(220_20%_10%)] bg-[hsl(222_25%_5%)] px-4 py-3 space-y-1">
-            {NAV_ITEMS.map(item => (
+            {navItems.map(item => (
               <button
                 key={item.id}
                 className={`sidebar-link w-full ${isActive(item.id) ? "active" : ""}`}
@@ -248,7 +298,7 @@ function AcademyApp() {
             )}
             {(nav.page === "modules" || nav.page === "products" || nav.page === "progress" || nav.page === "glossary") && (
               <span className="text-[hsl(250_90%_75%)]">
-                {NAV_ITEMS.find(n => n.id === nav.page)?.label}
+                {ALL_NAV_ITEMS.find(n => n.id === nav.page)?.label}
               </span>
             )}
             {nav.page === "owner" && (

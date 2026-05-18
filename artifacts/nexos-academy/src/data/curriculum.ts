@@ -6006,10 +6006,24 @@ Plano VIP: R$2.997 (tudo + 3 sessões individuais + revisão de copy)
 
 export const PRODUCTS = [
   {
+    id: "free-guide",
+    name: "Os 7 Erros do Primeiro Lançamento",
+    price: 0,
+    type: "free" as const,
+    description: "Guia gratuito com os erros mais comuns de quem estreia no digital — e o que fazer diferente desde o início. PDF de acesso imediato.",
+    features: [
+      "12 páginas direto ao ponto",
+      "Os 7 erros com exemplos reais",
+      "Checklist de autodiagnóstico",
+      "Acesso imediato ao PDF"
+    ],
+    badge: "Gratuito"
+  },
+  {
     id: "mini-guide",
     name: "Mini-Guia: Primeiros R$10k Online",
     price: 10,
-    type: "isca" as const,
+    type: "starter" as const,
     description: "O caminho mais rápido para sua primeira renda digital. 47 páginas direto ao ponto.",
     features: [
       "47 páginas de conteúdo denso",
@@ -6017,7 +6031,7 @@ export const PRODUCTS = [
       "Planilha de projeção de receita",
       "3 estudos de caso reais"
     ],
-    badge: "Isca Digital"
+    badge: "Apostila"
   },
   {
     id: "complete-bundle",
@@ -6035,6 +6049,6 @@ export const PRODUCTS = [
       "Swipe file com 200+ exemplos",
       "Suporte prioritário por email"
     ],
-    badge: "Mais Completo"
+    badge: "Acesso Completo"
   }
 ];
