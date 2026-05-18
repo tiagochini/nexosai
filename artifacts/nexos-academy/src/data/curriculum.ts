@@ -3274,6 +3274,1559 @@ Escreva em uma frase o que vai mudar na sua estratégia depois deste curso:</p>
         locked: false
       }
     ]
+  },
+
+  // ══════════════════════════════════════════════════════════════════
+  // MÓDULO 8 — INTEGRAÇÕES E AUTOMAÇÕES: A MÁQUINA CONECTADA
+  // ══════════════════════════════════════════════════════════════════
+  {
+    id: "integracoes-automacoes",
+    number: 8,
+    title: "Integrações e Automações: A Máquina Conectada",
+    description: "A teoria sem execução técnica não gera receita. Este módulo preenche a lacuna entre aprender e operar: configura o Meta Business Manager profissional, instala CAPI server-side, conecta Hotmart/Kiwify ao pixel, monta automações de email e WhatsApp, cria webhooks entre plataformas e constrói o cronograma operacional completo de um lançamento. Ao final, sua máquina de lançamentos roda automaticamente — da captura ao pós-venda.",
+    badge: "Automação",
+    chapters: [
+
+      // ── CAPÍTULO 22: META PIXEL, CAPI E BUSINESS MANAGER PROFISSIONAL ──
+      {
+        id: "meta-pixel-capi",
+        number: 22,
+        title: "Meta: Pixel Avançado, CAPI e Business Manager Profissional",
+        subtitle: "A base técnica que determina a qualidade de todo o seu tráfego pago",
+        icon: "🎯",
+        color: "from-blue-800 to-indigo-900",
+        duration: "2h 30min",
+        summary: "O Pixel e o Business Manager são a fundação de qualquer operação séria de tráfego. Sem configuração correta, você paga por dados ruins e perde otimização. Com CAPI (Conversions API), você rastreia eventos que o iOS14+ bloqueou e recupera 20-40% de receita 'invisível'. Este capítulo não deixa nada de fora.",
+        lessons: [
+          {
+            id: "meta-bm-profissional",
+            title: "Arquitetura do Business Manager: Contas, Ativos e Permissões",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Estrutura correta: BM → Ad Account → Página → Pixel", "System Users vs. usuários pessoais — qual usar para cada função", "Permissões granulares: o que um gestor de tráfego pode e não pode acessar", "Domínio verificado: por que é obrigatório e como configurar", "Múltiplas contas de anúncio: quando e como usar"],
+            content: `<h2>Por que 80% dos Produtores Têm o Business Manager Configurado Errado</h2>
+<p>Um Business Manager mal configurado é como construir uma casa sobre areia. Pixels desassociados, permissões excessivas a parceiros, domínio não verificado — cada um desses erros reduz a qualidade dos seus dados e aumenta o risco de bloqueio da conta.</p>
+
+<h3>A Hierarquia Correta de Ativos</h3>
+<p>O BM tem uma estrutura hierárquica que precisa ser entendida antes de qualquer configuração:</p>
+<pre>
+Business Manager (seu CNPJ ou CPF)
+├── Conta de Anúncios (1 por negócio/cliente)
+│   ├── Campanhas
+│   ├── Conjuntos de Anúncios
+│   └── Anúncios
+├── Página do Facebook (1 por marca)
+├── Conta do Instagram (vinculada à Página)
+├── Pixel do Meta (1 por domínio de conversão)
+├── Catálogo de Produtos (se tiver e-commerce)
+└── Usuários e Parceiros (gestores, agências)
+</pre>
+
+<h3>System Users: A Configuração que a Maioria Ignora</h3>
+<p>System Users são usuários automáticos — não vinculados a nenhuma conta pessoal — usados para integrações API e automações. São essenciais para:</p>
+<ul>
+  <li>Integrar Conversions API sem depender do token de um funcionário que pode sair</li>
+  <li>Dar acesso a ferramentas de automação (ManyChat, Zapier) sem compartilhar login pessoal</li>
+  <li>Rotacionar tokens de acesso sem interromper campanhas</li>
+</ul>
+<p>Como criar: <strong>Business Manager → Configurações → Usuários do Sistema → Adicionar</strong>. Escolha nível "Administrador" para integrações CAPI e "Funcionário" para ferramentas de leitura.</p>
+
+<h3>Verificação de Domínio: Obrigatório Pós-iOS14</h3>
+<p>Sem domínio verificado, a Meta não processa conversões de forma confiável. É o pré-requisito para eventos de conversão e CAPI.</p>
+<ol>
+  <li>Business Manager → Brand Safety → Domínios → Adicionar</li>
+  <li>Escolha método: DNS TXT record (recomendado), Meta-tag HTML ou upload de arquivo</li>
+  <li>DNS: acesse o painel do seu domínio (GoDaddy, Cloudflare, HostGator) e adicione o registro TXT fornecido</li>
+  <li>Aguarde propagação (2-24h) e clique em "Verificar"</li>
+</ol>
+
+<h3>Permissões para Parceiros: O que Dar e o que Nunca Dar</h3>
+<table>
+<tr><th>Parceiro</th><th>Permissão correta</th><th>Nunca dar</th></tr>
+<tr><td>Gestor de tráfego</td><td>Gerenciar campanhas na conta de anúncios</td><td>Acesso admin ao BM</td></tr>
+<tr><td>Agência</td><td>Acesso a conta de anúncios específica</td><td>Acesso ao Pixel ou Catálogo</td></tr>
+<tr><td>Desenvolvedor</td><td>System User com permissão de eventos</td><td>Admin do BM</td></tr>
+</table>
+
+<blockquote>Nunca compartilhe acesso de Administrador ao Business Manager com parceiros externos. Use a função "Parceiro" para vincular o BM deles ao seu — assim eles trabalham com os ativos sem ter controle sobre a conta raiz.</blockquote>`
+          },
+          {
+            id: "meta-pixel-avancado",
+            title: "Pixel Avançado: Eventos Padrão, Customizados e Parâmetros",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["Os 17 eventos padrão e quando usar cada um", "Eventos customizados: quando os padrão não são suficientes", "Parâmetros de evento: value, currency, content_ids", "Verificação com Pixel Helper e Events Manager", "Priorização de eventos pós-iOS14 (máximo 8 eventos por domínio)"],
+            content: `<h2>O Pixel Não é Só Código — É uma Estratégia de Dados</h2>
+<p>A maioria das pessoas instala o código base do Pixel e acha que terminou. Mas o Pixel sem eventos configurados é como uma câmera de segurança desligada: está lá mas não registra nada útil.</p>
+
+<h3>Os 5 Eventos Essenciais para Lançamentos</h3>
+<p>Dos 17 eventos padrão, estes são os que mais importam para um produtor digital:</p>
+
+<p><strong>1. PageView</strong> — Disparado em qualquer página visitada. Base para retargeting de visitantes. Instale no <code>&lt;head&gt;</code> de todas as páginas.</p>
+<p><strong>2. ViewContent</strong> — Visitou uma página específica de produto. Use na página de vendas, página de webinar, página de checkout. Parâmetros importantes: <code>content_name</code>, <code>content_type</code>.</p>
+<p><strong>3. Lead</strong> — Cadastro/opt-in realizado. Dispare na confirmação de cadastro da lista de espera ou lead magnet. Parâmetros: <code>value</code> (valor estimado do lead), <code>currency: "BRL"</code>.</p>
+<p><strong>4. InitiateCheckout</strong> — Acessou a página de checkout. Crítico para recuperação de carrinho abandonado.</p>
+<p><strong>5. Purchase</strong> — Compra realizada. O evento mais importante. <strong>Obrigatório ter <code>value</code> e <code>currency</code></strong> para otimização de campanhas de valor.</p>
+
+<h3>Instalação via Google Tag Manager (Recomendado)</h3>
+<p>GTM é o método mais profissional — permite gerenciar todos os eventos sem mexer no código do site.</p>
+<ol>
+  <li>Crie uma conta no GTM e instale o contêiner no site</li>
+  <li>No GTM: <strong>Tags → Nova → Tag de Pixel do Facebook</strong></li>
+  <li>Adicione o Pixel ID (disponível no Events Manager)</li>
+  <li>Gatilho: "Todas as Páginas" para PageView, gatilhos específicos para outros eventos</li>
+  <li>Para Purchase: Gatilho = "Página de Agradecimento" com variáveis de valor da transação</li>
+</ol>
+
+<h3>Priorização de Eventos Pós-iOS14</h3>
+<p>Desde iOS14, você pode rastrear no máximo 8 eventos por domínio de forma confiável. Priorize na seguinte ordem:</p>
+<ol>
+  <li>Purchase (prioridade 1 — nunca deve ficar de fora)</li>
+  <li>Lead</li>
+  <li>InitiateCheckout</li>
+  <li>ViewContent (página de vendas)</li>
+  <li>CompleteRegistration</li>
+  <li>PageView</li>
+</ol>
+
+<h3>Verificando a Instalação</h3>
+<p>Instale a extensão <strong>Meta Pixel Helper</strong> no Chrome. Acesse seu site e verifique:</p>
+<ul>
+  <li>Verde: Pixel carregou corretamente</li>
+  <li>Laranja: Pixel carregou com alertas (geralmente eventos duplicados)</li>
+  <li>Vermelho: Pixel com erros (geralmente ID errado ou bloqueio de script)</li>
+</ul>
+
+<blockquote>Nunca dispare o mesmo evento duas vezes na mesma página (ex: PageView no código + via GTM). Eventos duplicados inflam suas métricas e prejudicam a otimização algorítmica do Meta.</blockquote>`
+          },
+          {
+            id: "meta-capi",
+            title: "Conversions API (CAPI): Rastreamento Server-Side para o Mundo Pós-Cookie",
+            duration: "32 min",
+            type: "text",
+            keyPoints: ["Por que iOS14+ destruiu o tracking client-side", "CAPI vs Pixel: complementares, não substitutas", "Event Match Quality (EMQ): o número que determina tudo", "Configurando CAPI via parceiros (Hotmart, Kiwify) e direto", "Desduplicação de eventos: como evitar contagem dupla"],
+            content: `<h2>O Problema que Custou Bilhões ao Mercado</h2>
+<p>Em abril de 2021, a Apple lançou o App Tracking Transparency (ATT) no iOS14. Com isso, ~65% dos usuários iOS passaram a bloquear o rastreamento client-side (cookies de terceiros). O resultado: o Pixel do Meta passou a "ver" apenas 40-60% das conversões reais.</p>
+
+<p>Consequência prática: campanhas otimizando com dados incompletos, ROAS aparentemente baixo, decisões ruins de escala/corte. Produtores que não implementaram CAPI estão gerenciando mídia essencialmente com metade dos dados.</p>
+
+<h3>Como a Conversions API Funciona</h3>
+<p>O Pixel dispara do navegador do usuário (client-side) e pode ser bloqueado por ad blockers, iOS14+, browsers que bloqueiam cookies de terceiros.</p>
+<p>A CAPI dispara do <strong>seu servidor</strong> (server-side) — não pode ser bloqueada pelo navegador do usuário. A Meta recebe os eventos diretamente da sua infraestrutura.</p>
+
+<pre>
+PIXEL (client-side):
+Usuário → Navegador → [pode ser bloqueado] → Meta
+
+CAPI (server-side):
+Usuário → Seu servidor → [nunca bloqueado] → Meta
+</pre>
+
+<p>Usar <strong>ambos</strong> (Pixel + CAPI) com desduplicação é o ideal — cobertura máxima com dados limpos.</p>
+
+<h3>Event Match Quality (EMQ)</h3>
+<p>EMQ é o score de 0-10 que o Meta atribui à qualidade dos dados que você envia. Quanto maior, melhor a correspondência do evento com um usuário real na base do Meta — melhor a otimização.</p>
+<table>
+<tr><th>EMQ</th><th>Status</th><th>O que melhorar</th></tr>
+<tr><td>7-10</td><td>Excelente</td><td>Manter — envie email hash e phone hash</td></tr>
+<tr><td>5-6</td><td>Bom</td><td>Adicionar fbp/fbc (cookies), nome e sobrenome</td></tr>
+<tr><td>3-4</td><td>Baixo</td><td>Revisar o que está sendo enviado, adicionar email</td></tr>
+<tr><td>0-2</td><td>Crítico</td><td>Nada útil sendo enviado, reconfigurar</td></tr>
+</table>
+
+<h3>Opção 1: CAPI via Plataformas Parceiras (Hotmart, Kiwify)</h3>
+<p>A forma mais simples — sem código. Hotmart e Kiwify têm integração nativa com a CAPI da Meta.</p>
+<p><strong>Hotmart:</strong> Ferramentas → Pixels → Adicionar Pixel → Escolha "Meta Pixel + CAPI" → Cole o Pixel ID e o Access Token do System User.</p>
+<p><strong>Kiwify:</strong> Configurações → Integrações → Meta Conversions API → Cole Pixel ID e Token.</p>
+<p>O Access Token de CAPI é gerado em: <strong>Events Manager → Configurações → Conversions API → Gerar Token de Acesso</strong>. Use um System User para gerar um token estável (não vinculado a pessoa).</p>
+
+<h3>Opção 2: CAPI via GTM Server-Side</h3>
+<p>Nível avançado — requer um servidor GTM (custo ~$5-15/mês no Google Cloud). Permite rastrear eventos customizados com alta precisão e controle total dos dados.</p>
+<ol>
+  <li>Crie um contêiner Server no GTM</li>
+  <li>Provisione um servidor no Google Cloud Run</li>
+  <li>Instale o template "Facebook Conversions API" no servidor GTM</li>
+  <li>Configure o routing: eventos do GTM client → GTM server → Meta</li>
+</ol>
+
+<h3>Desduplicação: Garantindo Dados Limpos</h3>
+<p>Quando Pixel e CAPI disparam para o mesmo evento, o Meta recebe dois sinais. Sem desduplicação, conta duas compras. Com desduplicação, usa apenas o melhor dado.</p>
+<p>Como implementar: envie o mesmo <code>event_id</code> no Pixel e na CAPI para o mesmo evento. A Meta usa esse ID para identificar duplicatas e manter apenas um registro.</p>
+
+<blockquote>A CAPI não é configuração avançada opcional — é infraestrutura básica em 2025. Quem não tem CAPI está pagando mais por leads e vendas que já aconteceram mas o Meta não viu. Configure hoje.</blockquote>`
+          },
+          {
+            id: "meta-attribution",
+            title: "Attribution e Mensuração Real: Descobrindo o que Realmente Vendeu",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Modelos de atribuição: primeiro clique, último clique, data-driven", "Por que o ROAS do Meta Ads Manager está errado", "UTMs: a camada de dados que o pixel não captura", "Triple counting: quando sua campanha parece vender 3x mais do que vende", "O relatório de mensuração correto para lançamentos"],
+            content: `<h2>O Número que Está Enganando Você</h2>
+<p>O ROAS exibido no Ads Manager do Meta é provavelmente 30-60% maior do que o ROAS real. Isso não é bug — é como o modelo de atribuição padrão funciona, e entendê-lo é a diferença entre escalar campanhas lucrativas e escalar prejuízo.</p>
+
+<h3>Modelos de Atribuição do Meta</h3>
+<p>O Meta usa por padrão atribuição de "1 dia após clique + 7 dias após visualização". Isso significa:</p>
+<ul>
+  <li>Se alguém clicou no seu anúncio e comprou em até 24h: atribuído ao anúncio ✓</li>
+  <li>Se alguém <strong>viu</strong> o seu anúncio (sem clicar) e comprou em até 7 dias: também atribuído ao anúncio 🚨</li>
+</ul>
+<p>Resultado: pessoas que comprariam de qualquer jeito (via email, pesquisa orgânica, indicação) são contadas como resultado da campanha de anúncio.</p>
+
+<h3>UTMs: A Camada de Dados Independente</h3>
+<p>UTM Parameters são tags adicionadas às URLs dos anúncios que permitem rastrear a origem da visita no Google Analytics, independente do tracking do Meta.</p>
+<p>Exemplo de URL com UTM:</p>
+<pre>https://seusite.com/vendas?utm_source=meta&utm_medium=paid&utm_campaign=lancamento-junho&utm_content=video-depoimento-1</pre>
+
+<p>No Ads Manager: edite o anúncio → URL do site → Parâmetros de URL → adicione os UTMs. Use o mesmo formato em todos os anúncios para padronizar relatórios.</p>
+
+<h3>O Relatório Correto: Triangulação de Dados</h3>
+<p>Para mensuração precisa, use três fontes de dados simultaneamente:</p>
+<table>
+<tr><th>Fonte</th><th>O que mede</th><th>Limitação</th></tr>
+<tr><td>Meta Ads Manager</td><td>Cliques, impressões, conversões atribuídas</td><td>Sobre-atribuição via view-through</td></tr>
+<tr><td>Google Analytics 4</td><td>Sessões, origem real do tráfego, UTMs</td><td>Sub-atribui sem-cookie (iOS)</td></tr>
+<tr><td>Plataforma de checkout (Hotmart)</td><td>Vendas reais com dados do comprador</td><td>Não sabe de onde veio o tráfego sem UTM</td></tr>
+</table>
+
+<p>A atribuição real = intersecção dos dados das 3 fontes. Quando GA4 e Hotmart confirmam o que o Meta Ads Manager reporta, você pode confiar no número.</p>
+
+<h3>Attribution Window Recomendada para Lançamentos</h3>
+<p>Para lançamentos com janela de 5-7 dias de carrinho aberto, configure:</p>
+<ul>
+  <li><strong>Clique:</strong> 7 dias (janela do lançamento)</li>
+  <li><strong>Visualização:</strong> Desligar ou 1 dia (reduz sobre-atribuição)</li>
+</ul>
+<p>Isso dá uma visão mais honesta do que os anúncios realmente geraram durante o período do carrinho.</p>`
+          },
+          {
+            id: "meta-system-user",
+            title: "System Users, Tokens de API e Automação de Anúncios",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Gerando tokens de acesso de longa duração via System User", "Permissões necessárias para cada tipo de integração", "Marketing API: criando anúncios programaticamente (conceitos)", "Catalog API: sincronizando produtos automaticamente", "Alertas automáticos: como ser notificado quando campanhas param"],
+            content: `<h2>A Camada de API que Profissionais Usam</h2>
+<p>A maioria dos produtores usa o Meta Ads Manager via interface web. Profissionais de alto nível usam a Marketing API — o que permite automações, relatórios customizados e integrações que a interface não oferece.</p>
+
+<h3>Criando um System User para Integrações</h3>
+<ol>
+  <li>Business Manager → Configurações → Usuários → Usuários do Sistema</li>
+  <li>Adicionar Usuário do Sistema → Nível: Administrador (para CAPI e API)</li>
+  <li>Atribuir Ativos: selecione Pixel, Conta de Anúncios, Página e Catálogo</li>
+  <li>Gerar Token de Acesso → Selecione os escopos necessários</li>
+  <li>Copie e armazene o token em local seguro (não expira automaticamente)</li>
+</ol>
+
+<h3>Escopos de Token por Caso de Uso</h3>
+<table>
+<tr><th>Integração</th><th>Escopos necessários</th></tr>
+<tr><td>CAPI (enviar eventos)</td><td>ads_management, business_management</td></tr>
+<tr><td>Relatórios (ler dados)</td><td>ads_read, business_management</td></tr>
+<tr><td>Criar/editar anúncios</td><td>ads_management</td></tr>
+<tr><td>Catálogo de produtos</td><td>catalog_management</td></tr>
+<tr><td>Leads/formulários</td><td>leads_retrieval</td></tr>
+</table>
+
+<h3>Alertas Automáticos de Campanha</h3>
+<p>Configure alertas para nunca perder quando campanhas pausam ou têm problemas:</p>
+<ul>
+  <li>Ads Manager → Alertas Automatizados → Criar alerta</li>
+  <li>Condição: "Campanha pausada por alto CPR" → Notificação: email + WhatsApp via webhook</li>
+  <li>Condição: "Gasto diário zerado por mais de 6h" → Notificação imediata</li>
+  <li>Condição: "ROAS abaixo de X" → Pausa automática + alerta</li>
+</ul>
+
+<blockquote>System Users com tokens de API têm vida útil de 60 dias para tokens de usuário e indefinida para tokens de sistema com permissão admin. Para integrações de produção, sempre use System User — nunca seu token pessoal de usuário.</blockquote>`,
+            exercise: `<h3>Exercício: Auditoria e Configuração Meta</h3>
+<p>Execute este checklist completo no seu Business Manager:</p>
+<ol>
+  <li>✓ Domínio principal verificado no BM</li>
+  <li>✓ Pixel instalado via GTM com eventos Purchase, Lead e ViewContent</li>
+  <li>✓ Verificar com Pixel Helper: nenhum erro, zero duplicação</li>
+  <li>✓ CAPI configurado na plataforma de checkout (Hotmart/Kiwify) com o token do System User</li>
+  <li>✓ EMQ ≥ 6 no Events Manager para o evento Purchase</li>
+  <li>✓ Attribution window ajustada: 7d clique / 1d visualização</li>
+  <li>✓ UTMs configurados em todos os anúncios ativos</li>
+  <li>✓ Alerta criado para campanhas com ROAS abaixo da meta</li>
+</ol>
+<p>Itens com ✗: documente e resolva um por semana até zerar a lista.</p>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 23: PLATAFORMAS DE PAGAMENTO ──
+      {
+        id: "plataformas-pagamento",
+        number: 23,
+        title: "Plataformas de Pagamento: Hotmart, Kiwify e Eduzz",
+        subtitle: "Configuração técnica completa e integração com todo o ecossistema de marketing",
+        icon: "💳",
+        color: "from-green-800 to-emerald-900",
+        duration: "2h",
+        summary: "Hotmart, Kiwify e Eduzz são mais do que processadores de pagamento — são sistemas completos de gestão de produtos digitais, afiliados, webhooks e integrações. Configurar corretamente cada um determina a qualidade do tracking, a automação do pós-venda e a eficiência dos afiliados.",
+        lessons: [
+          {
+            id: "hotmart-setup-completo",
+            title: "Hotmart: Configuração Completa do Produto ao Webhook",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Criando produto: tipo, preço, checkout customizado", "Order Bump e Upsell One-Click no Hotmart", "Pixels no Hotmart: Meta, Google e TikTok via painel", "Webhooks Hotmart: configurando notificações de compra/reembolso", "Programa de afiliados: aprovação, comissão e materiais"],
+            content: `<h2>Hotmart: O Mais Completo para Infoprodutos PT-BR</h2>
+<p>O Hotmart domina o mercado de infoprodutos no Brasil com razão: tem checkout nativo, afiliados, área de membros, streaming de vídeo e integrações que nenhum concorrente conseguiu replicar na totalidade.</p>
+
+<h3>Criando o Produto Corretamente</h3>
+<p><strong>Tipo de produto:</strong> Curso Online (para conteúdo com área de membros), E-book (para PDFs), Membership (para recorrências), Evento (para lives pontuais).</p>
+<p><strong>Configurações críticas:</strong></p>
+<ul>
+  <li>Nomenclatura: use o nome que aparecerá na fatura do cartão do cliente (máx. 22 caracteres)</li>
+  <li>Moeda: BRL para vendas nacionais. Para vender em dólares, crie produto separado em USD</li>
+  <li>Garantia: 7 dias (mínimo legal), 30 dias (converte melhor), 60 dias (para tickets altos)</li>
+  <li>Período de disponibilidade: Vitalício vs. por prazo (cuidado: vitalício pode ser problema de suporte futuro)</li>
+</ul>
+
+<h3>Order Bump e Upsell: Configuração que Aumenta Ticket em 30-50%</h3>
+<p><strong>Order Bump:</strong> oferta dentro do checkout, antes da compra. Taxa de aceitação: 20-40%.</p>
+<ol>
+  <li>Produto principal → Upsell → Adicionar Order Bump</li>
+  <li>Selecione o produto do Order Bump (deve ter preço menor: 10-30% do produto principal)</li>
+  <li>Escreva o copy do Order Bump: máx. 100 palavras, foco no complemento imediato</li>
+</ol>
+<p><strong>Upsell One-Click:</strong> oferta após a compra, sem precisar digitar dados do cartão novamente. Taxa: 10-20%.</p>
+
+<h3>Pixels e Tracking no Hotmart</h3>
+<p>Hotmart → Ferramentas → Pixels → Adicionar Pixel</p>
+<ul>
+  <li><strong>Meta (Pixel + CAPI):</strong> Cole Pixel ID e token de acesso do System User. Escolha "Com API de Conversões" para máxima precisão.</li>
+  <li><strong>Google Ads:</strong> Cole Conversion ID e Conversion Label (disponíveis no Google Ads → Metas → Conversões)</li>
+  <li><strong>TikTok Ads:</strong> Cole o Pixel ID do TikTok Events Manager</li>
+</ul>
+<p>O Hotmart disparará os eventos de compra (e outros) automaticamente para todos os pixels configurados.</p>
+
+<h3>Webhooks: Automatizando o Pós-Venda</h3>
+<p>Webhooks são notificações automáticas que o Hotmart envia para sistemas externos quando algo acontece (compra, reembolso, cancelamento).</p>
+<p>Hotmart → Ferramentas → Webhooks → Criar Webhook:</p>
+<ul>
+  <li>URL: o endpoint do sistema que receberá a notificação (ActiveCampaign, RD Station, seu servidor)</li>
+  <li>Eventos: PURCHASE_COMPLETE, PURCHASE_REFUNDED, SUBSCRIPTION_CANCELLATION</li>
+  <li>Versão API: sempre use a mais recente (V2)</li>
+</ul>
+<p>Com webhook configurado, cada compra dispara automaticamente: tag no email, mensagem de boas-vindas no WhatsApp, acesso liberado no produto.</p>
+
+<h3>Afiliados: Configuração do Programa</h3>
+<ul>
+  <li>Comissão por produto: defina um valor ou % (30-50% é padrão de mercado para infoprodutos)</li>
+  <li>Aprovação: manual (controla quem promove) ou automática (escala rápido)</li>
+  <li>Materiais: suba criativos prontos (banners, vídeos, copies) na área de afiliados</li>
+  <li>Cookie: duração padrão de 90 dias — afiliado recebe comissão se o cliente comprar em até 90 dias do primeiro clique</li>
+</ul>`
+          },
+          {
+            id: "kiwify-setup-completo",
+            title: "Kiwify: Checkout de Alta Conversão e Integrações Nativas",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Por que o checkout do Kiwify converte mais que o padrão", "Configuração de produto e checkout personalizado", "Order Bump, Upsell e bump de pós-compra", "Integrações nativas: Meta CAPI, Google, ActiveCampaign, RD Station", "Recuperação de boleto e PIX abandonados"],
+            content: `<h2>Kiwify: O Checkout que Prioriza Conversão</h2>
+<p>A Kiwify cresceu rapidamente por uma razão simples: o checkout deles converte 15-25% melhor que o Hotmart em muitos nichos, graças a um design mais limpo, carregamento mais rápido e menos campos obrigatórios.</p>
+
+<h3>Diferenças-Chave vs. Hotmart</h3>
+<table>
+<tr><th>Feature</th><th>Hotmart</th><th>Kiwify</th></tr>
+<tr><td>Checkout</td><td>Completo, muitos campos</td><td>Simplificado, 1-step</td></tr>
+<tr><td>Área de membros</td><td>Nativa e robusta</td><td>Básica (muitos usam plataformas externas)</td></tr>
+<tr><td>Afiliados</td><td>Ecossistema maduro</td><td>Crescendo</td></tr>
+<tr><td>CAPI Meta</td><td>Nativo</td><td>Nativo</td></tr>
+<tr><td>Recuperação de abandonados</td><td>Básica</td><td>Avançada com WhatsApp</td></tr>
+<tr><td>Taxa</td><td>9,9% + R$1 por venda</td><td>9,99% por venda</td></tr>
+</table>
+
+<h3>Configuração de Produto na Kiwify</h3>
+<ol>
+  <li>Produtos → Criar produto → Escolha tipo (Curso, E-book, Serviço, Recorrência)</li>
+  <li>Configure checkout: personalize cores, adicione depoimentos, ative garantia</li>
+  <li>Ative "Checkout inteligente" — detecta dispositivo e exibe layout otimizado</li>
+  <li>Configure bumps: Order Bump (antes da compra) e 2 níveis de Upsell (após)</li>
+</ol>
+
+<h3>Recuperação de Abandonados (Diferencial Kiwify)</h3>
+<p>A Kiwify tem sistema nativo de recuperação de boleto e PIX abandonados:</p>
+<ul>
+  <li>Configurações → Recuperação → Ativar recuperação automática</li>
+  <li>Configure sequência: Email 1h após abandono → WhatsApp 4h → Email 24h</li>
+  <li>Templates prontos de copy disponíveis no painel</li>
+  <li>Resultado típico: 8-15% de recuperação de boletos abandonados</li>
+</ul>
+
+<h3>Integrações Nativas</h3>
+<p>Kiwify → Configurações → Integrações:</p>
+<ul>
+  <li><strong>Meta Pixel + CAPI:</strong> Cole Pixel ID e Access Token. A Kiwify envia Purchase, Lead (cadastro no checkout) e InitiateCheckout.</li>
+  <li><strong>ActiveCampaign:</strong> Cole URL da conta e API Key. Configure qual lista recebe compradores e qual tag é aplicada.</li>
+  <li><strong>RD Station:</strong> Cole o Token da API. Configure campo de conversão e lead scoring automático.</li>
+  <li><strong>Webhook genérico:</strong> Para qualquer sistema não listado — envia JSON com todos os dados da compra.</li>
+</ul>
+
+<blockquote>Para lançamentos de carrinho de 5-7 dias com volume alto, use Kiwify pelo checkout mais simples e menor atrito. Para produtos com área de membros robusta, afiliados maduros e produto com download, Hotmart tem mais infraestrutura nativa.</blockquote>`
+          },
+          {
+            id: "eduzz-setup",
+            title: "Eduzz: Estrutura, Checkout e Programa de Afiliados",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Arquitetura Eduzz: produtos, planos e subdivisões", "Checkout Eduzz: personalização e otimização", "Afiliados Eduzz: aprovação e materiais", "Integrações de pixel e rastreamento", "Quando usar Eduzz vs. Hotmart vs. Kiwify"],
+            content: `<h2>Eduzz: A Terceira Opção que Tem Seus Nichos</h2>
+<p>Eduzz é menos popular que Hotmart e Kiwify entre criadores de conteúdo, mas dominante em alguns nichos específicos — especialmente cursos profissionais, concursos e educação corporativa.</p>
+
+<h3>Arquitetura de Produto Eduzz</h3>
+<p>A Eduzz usa uma hierarquia diferente:</p>
+<pre>
+Conta Eduzz
+└── Produtor
+    ├── Produto (o curso/ebook)
+    │   ├── Planos (preços e acessos diferentes)
+    │   └── Módulos (divisão de conteúdo)
+    └── Funil de vendas (checkout com bump/upsell)
+</pre>
+
+<h3>Configuração do Checkout</h3>
+<ol>
+  <li>Criar Produto → Definir tipo (curso, ebook, assinatura)</li>
+  <li>Criar Plano: nome, preço, periodicidade, acesso</li>
+  <li>Personalizar Checkout: logo, cores, campos customizados, depoimentos</li>
+  <li>Ativar Bump de Produto e Upsell de Pós-Compra</li>
+</ol>
+
+<h3>Afiliados na Eduzz</h3>
+<p>O programa de afiliados Eduzz tem características únicas:</p>
+<ul>
+  <li>Comissões por "funil" — afiliado pode receber % de toda a jornada de compra, não só do produto inicial</li>
+  <li>Divulgação por "conteúdo gerado" — afiliado cria conteúdo e recebe comissão de quem comprar via link do conteúdo</li>
+  <li>Multi-level: possibilidade de sub-afiliados (verifique compliance jurídico)</li>
+</ul>
+
+<h3>Quando Escolher Cada Plataforma</h3>
+<table>
+<tr><th>Critério</th><th>Use Hotmart</th><th>Use Kiwify</th><th>Use Eduzz</th></tr>
+<tr><td>Área de membros robusta</td><td>✓ Melhor opção</td><td>Básica</td><td>Intermediária</td></tr>
+<tr><td>Conversão de checkout</td><td>Boa</td><td>✓ Melhor</td><td>Boa</td></tr>
+<tr><td>Afiliados ecossistema</td><td>✓ Maior</td><td>Crescendo</td><td>Nicho</td></tr>
+<tr><td>Recuperação abandonado</td><td>Básica</td><td>✓ Melhor</td><td>Básica</td></tr>
+<tr><td>Ticket alto (+R$2k)</td><td>✓ Funciona</td><td>✓ Funciona</td><td>Funciona</td></tr>
+</table>`
+          },
+          {
+            id: "checkout-email-whatsapp-flow",
+            title: "O Fluxo Automático Completo: Compra → Email → WhatsApp → Área de Membros",
+            duration: "28 min",
+            type: "text",
+            glossaryTerms: ["nurturing", "opt-in", "lead-magnet", "mrr"],
+            keyPoints: ["Mapeando todos os eventos de uma jornada de compra", "Webhook → ActiveCampaign/RD Station: configuração passo a passo", "WhatsApp de boas-vindas automático via Z-API", "Liberação de acesso e onboarding automático", "Tratamento de reembolsos e cancelamentos"],
+            content: `<h2>O Fluxo que Todo Negócio Digital Precisa Ter</h2>
+<p>Um cliente compra seu curso. O que acontece a seguir precisa ser automático, rápido e perfeito. Esse fluxo define a primeira impressão e o LTV do cliente.</p>
+
+<h3>Mapa Completo do Fluxo Pós-Compra</h3>
+<pre>
+COMPRA CONFIRMADA (Hotmart/Kiwify)
+         ↓
+    Webhook disparado
+    ↙              ↘
+Email marketing    WhatsApp
+(ActiveCampaign)   (Z-API)
+    ↓                ↓
+Tag "comprador"   Mensagem boas-vindas
+aplicada          em até 5 minutos
+    ↓
+Sequência onboarding
+(7 emails em 14 dias)
+    ↓
+Acesso liberado na
+área de membros
+</pre>
+
+<h3>Configurando o Webhook Hotmart → ActiveCampaign</h3>
+<p>ActiveCampaign não tem URL de webhook nativa — você precisa de um intermediário (Zapier, Make ou endpoint customizado).</p>
+<p><strong>Via Zapier (sem código):</strong></p>
+<ol>
+  <li>Zapier → Create Zap → Trigger: "Webhooks by Zapier" → Catch Hook</li>
+  <li>Copie a URL gerada pelo Zapier</li>
+  <li>Cole essa URL no Hotmart como URL de Webhook</li>
+  <li>Action: ActiveCampaign → "Add/Update Contact" → aplique tag "comprador-[nome-produto]"</li>
+  <li>Action 2: ActiveCampaign → "Add to Automation" → sequência de onboarding</li>
+</ol>
+
+<h3>WhatsApp Automático de Boas-Vindas</h3>
+<p>Via Z-API (uma das opções de WhatsApp Business API):</p>
+<ol>
+  <li>Adicione outro Action no Zapier: "Webhooks by Zapier" → POST</li>
+  <li>URL: <code>https://api.z-api.io/instances/SEU_ID/token/SEU_TOKEN/send-text</code></li>
+  <li>Body (JSON): <code>{"phone": "55{{phone}}", "message": "Olá {{first_name}}! Sua compra foi confirmada..."}</code></li>
+  <li>O número do comprador vem do webhook do Hotmart no campo <code>buyer.phone</code></li>
+</ol>
+
+<h3>Template de Mensagem de Boas-Vindas (WhatsApp)</h3>
+<blockquote>
+Olá [NOME]! 🎉
+
+Sua compra de [PRODUTO] foi confirmada com sucesso!
+
+Seus próximos passos:
+1️⃣ Acesse a área de membros: [LINK]
+2️⃣ Complete seu perfil para personalizar a experiência
+3️⃣ Comece pelo Módulo 1 — ele muda tudo
+
+Qualquer dúvida, responda aqui neste chat.
+
+Bem-vindo(a) à família [MARCA]! 🚀
+</blockquote>
+
+<h3>Tratamento de Reembolsos</h3>
+<p>Configure webhook para evento PURCHASE_REFUNDED:</p>
+<ul>
+  <li>Remover tag "comprador" e adicionar tag "reembolsado" no ActiveCampaign</li>
+  <li>Pausar sequência de onboarding</li>
+  <li>Disparar sequência de recuperação (3 emails em 7 dias tentando reconverter)</li>
+  <li>Revogar acesso na área de membros após processamento (geralmente automático no Hotmart/Kiwify)</li>
+</ul>`
+          },
+          {
+            id: "payment-exercise",
+            title: "Exercício: Checklist Completo de Produto e Integrações",
+            duration: "15 min",
+            type: "exercise",
+            keyPoints: ["Verificação de produto no Hotmart/Kiwify", "Teste de compra e fluxo completo", "Validação de todos os pixels e webhooks"],
+            content: `<h2>Checklist de Lançamento de Produto</h2>
+<p>Antes de abrir qualquer carrinho, execute este checklist completo. Um item faltando pode custar R$10k em vendas perdidas.</p>`,
+            exercise: `<h3>Execute o Teste Completo</h3>
+<p><strong>Produto:</strong></p>
+<ul>
+  <li>[ ] Nome do produto correto no checkout</li>
+  <li>[ ] Preço correto (incluindo centavos)</li>
+  <li>[ ] Imagem do produto adicionada</li>
+  <li>[ ] Garantia configurada (7/30/60 dias)</li>
+  <li>[ ] Order Bump ativo e com copy correto</li>
+  <li>[ ] Upsell configurado e testado</li>
+</ul>
+<p><strong>Pixels e Rastreamento:</strong></p>
+<ul>
+  <li>[ ] Meta Pixel disparando Purchase após compra de teste</li>
+  <li>[ ] CAPI configurado e EMQ ≥ 6</li>
+  <li>[ ] Google Ads Conversion disparando corretamente</li>
+  <li>[ ] UTMs configurados na URL de afiliado/anúncio</li>
+</ul>
+<p><strong>Automações:</strong></p>
+<ul>
+  <li>[ ] Webhook configurado e testado (use ngrok ou ferramenta de teste de webhook)</li>
+  <li>[ ] Email de boas-vindas chega em menos de 5 minutos</li>
+  <li>[ ] WhatsApp de boas-vindas chega em menos de 5 minutos</li>
+  <li>[ ] Acesso liberado na área de membros</li>
+  <li>[ ] Sequência de onboarding iniciada corretamente</li>
+</ul>
+<p><strong>Pós-venda:</strong></p>
+<ul>
+  <li>[ ] Teste de reembolso: acesso revogado e sequência de recuperação disparada</li>
+  <li>[ ] Página de agradecimento personalizada e com próximos passos claros</li>
+</ul>
+<p><em>Realize uma compra de teste de R$1 (crie um cupom de 99% de desconto) e percorra todo o fluxo como comprador. O que você experimentar é o que seu cliente experimentará.</em></p>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 24: EMAIL MARKETING AUTOMATION ──
+      {
+        id: "email-automation",
+        number: 24,
+        title: "Email Marketing: Automação Profissional de Lançamentos",
+        subtitle: "RD Station, ActiveCampaign e as sequências que vendem automaticamente",
+        icon: "📧",
+        color: "from-violet-800 to-purple-900",
+        duration: "2h 30min",
+        summary: "Email marketing com taxa de 25-40% de abertura e 3-8% de clique é o canal com maior ROI do marketing digital. Mas o poder real está na automação: sequências que nutrem leads, abrem carrinhos, criam urgência e fazem onboarding — sem você precisar escrever um email na hora.",
+        lessons: [
+          {
+            id: "rdstation-configuracao",
+            title: "RD Station: Configuração, Lead Scoring e Fluxos para Lançamentos",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["Configuração inicial: domínio, SPF/DKIM, listas", "Lead Scoring: pontuando leads por comportamento", "Automações de lançamento: captura → nutrição → venda → pós-venda", "Segmentação por comportamento (abriu email, clicou, visitou página)", "Integração RD Station + Hotmart via webhook"],
+            content: `<h2>RD Station: A Plataforma Número 1 em PT-BR</h2>
+<p>RD Station domina o mercado brasileiro de marketing automation com razão: suporte em português, preços em BRL, integrações com todas as plataformas nacionais e uma interface que qualquer produtor consegue operar sem developer.</p>
+
+<h3>Configuração Essencial (Fazer Antes de Qualquer Coisa)</h3>
+<p><strong>1. Domínio de envio:</strong> Configure o domínio de envio para o seu domínio (ex: marketing@seudominio.com.br), não o domínio genérico do RD Station. Isso aumenta deliverability em 30-40%.</p>
+<p><strong>2. SPF e DKIM:</strong> São registros DNS que provam que seus emails são legítimos. Sem eles, 20-40% dos emails vão para spam.</p>
+<ul>
+  <li>RD Station → Configurações → Email → Domínio Personalizado</li>
+  <li>Siga as instruções para adicionar registros TXT no seu DNS</li>
+  <li>Aguarde propagação (2-24h) e valide</li>
+</ul>
+<p><strong>3. Segmentos base:</strong> Crie imediatamente: "Leads Ativos", "Compradores", "Leads Inativos 90d", "Cancelamentos". Você vai precisar desses segmentos em todas as automações.</p>
+
+<h3>Lead Scoring: Identificando Quem Vai Comprar</h3>
+<p>Lead Scoring atribui pontos aos leads com base em comportamentos. Leads com score alto recebem abordagem mais direta de venda.</p>
+<p><strong>Configuração recomendada:</strong></p>
+<table>
+<tr><th>Comportamento</th><th>Pontos</th></tr>
+<tr><td>Abrindo email</td><td>+1</td></tr>
+<tr><td>Clicando em link</td><td>+3</td></tr>
+<tr><td>Visitando página de vendas</td><td>+5</td></tr>
+<tr><td>Assistindo webinar</td><td>+10</td></tr>
+<tr><td>Iniciando checkout</td><td>+20</td></tr>
+<tr><td>30 dias sem abrir email</td><td>-5</td></tr>
+</table>
+
+<h3>Automações Essenciais para Lançamentos</h3>
+<p><strong>Automação 1: Entrada de Lead</strong></p>
+<pre>
+Gatilho: Lead entra na lista
+→ Aguarda 0 min
+→ Envia Email de Boas-Vindas
+→ Aguarda 2 dias
+→ Envia Email de Valor 1
+→ Aguarda 3 dias  
+→ Envia Email de Valor 2
+→ Aguarda 2 dias
+→ Envia Email de Abertura de Carrinho (se lançamento ativo)
+</pre>
+
+<p><strong>Automação 2: Visitou Página de Vendas (Sem Comprar)</strong></p>
+<pre>
+Gatilho: Tag "visitou-pv" aplicada
+→ Aguarda 2 horas
+→ Envia Email de Objeções
+→ Aguarda 24 horas
+→ Envia Email de Bônus/Urgência
+→ Aguarda 24 horas
+→ Remove da automação se comprou,
+  ou envia Email de Último Dia
+</pre>
+
+<h3>Integração RD Station + Hotmart</h3>
+<p>No RD Station, cada "conversão" pode ser uma origem de lead. Configure:</p>
+<ul>
+  <li>Hotmart → Webhooks → URL de webhook do RD Station (disponível em Integrações → API)</li>
+  <li>Mapeie campos: email do comprador → email RD Station, nome → nome, produto → tag</li>
+  <li>Configure conversão "Comprou [nome-produto]" para tracking de receita no RD</li>
+</ul>`
+          },
+          {
+            id: "activecampaign-avancado",
+            title: "ActiveCampaign: Lead Scoring, Tagging Avançado e Automações",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["ActiveCampaign vs. RD Station: quando usar cada um", "Sistema de tags: a lógica de segmentação mais poderosa do mercado", "Deals e CRM: transformando leads quentes em vendas", "Automações condicionais: caminhos diferentes para comportamentos diferentes", "Score de contato e segmentação dinâmica"],
+            content: `<h2>ActiveCampaign: O Poder das Tags e Automações Condicionais</h2>
+<p>Se o RD Station é o melhor para quem quer simplicidade e suporte PT-BR, o ActiveCampaign é a escolha de quem quer poder máximo de segmentação e automações complexas.</p>
+
+<h3>A Lógica de Tags no ActiveCampaign</h3>
+<p>Tags são etiquetas aplicadas a contatos que descrevem comportamentos, interesses e estágio no funil. A diferença entre usar tags bem e mal pode dobrar sua taxa de conversão.</p>
+<p><strong>Sistema de tags recomendado para lançamentos:</strong></p>
+<pre>
+Origem:       lead-instagram, lead-tiktok, lead-google, lead-afiliado
+Produto:      interessado-[produto], comprou-[produto], reembolso-[produto]
+Engajamento:  abriu-email, clicou-email, visitou-pv, iniciou-checkout
+Lançamento:   ll-jun25-inscrito, ll-jun25-assistiu-aula1, ll-jun25-comprou
+Ciclo:        novo-lead, lead-engajado, lead-quente, comprador, embaixador
+</pre>
+
+<h3>Automações Condicionais: O Diferencial do ActiveCampaign</h3>
+<p>Automações condicionais permitem criar caminhos diferentes baseados no comportamento do contato:</p>
+<pre>
+Contato entra na automação
+    ↓
+[Condição: tem tag "comprou-produto-x"?]
+   Sim ↓                    Não ↓
+Skip para               Envia Email de
+"Upsell"                Apresentação
+automação                   ↓
+                    [Condição: score > 50?]
+                   Alta ↓          Baixa ↓
+               Email de         Sequência de
+               Oferta Direta    Nutrição (7 dias)
+</pre>
+
+<h3>CRM e Deals: Gerenciando Vendas de Alto Ticket</h3>
+<p>Para produtos acima de R$1.000, use os Deals do ActiveCampaign como CRM simplificado:</p>
+<ul>
+  <li>Crie pipeline de vendas: Novo Lead → Qualificado → Proposta → Negociação → Fechado</li>
+  <li>Automação: quando score > 80, cria um Deal automaticamente e alerta vendedor</li>
+  <li>Integra com email, WhatsApp e chamada telefônica no mesmo histórico de contato</li>
+</ul>
+
+<h3>Métricas que Importam no ActiveCampaign</h3>
+<table>
+<tr><th>Métrica</th><th>Benchmark bom</th><th>Ação se abaixo</th></tr>
+<tr><td>Taxa de abertura</td><td>&gt;25%</td><td>Testar subject lines, enviar nos horários de pico</td></tr>
+<tr><td>Taxa de clique</td><td>&gt;3%</td><td>Melhorar o copy e o CTA do email</td></tr>
+<tr><td>Taxa de descadastro</td><td>&lt;0,5%</td><td>Segmentar melhor, não enviar para lista toda</td></tr>
+<tr><td>Taxa de spam</td><td>&lt;0,1%</td><td>Revisar origem dos leads, higienizar lista</td></tr>
+</table>`
+          },
+          {
+            id: "sequencia-prelancamento",
+            title: "A Sequência dos 7 Emails de Pré-Lançamento (Com Copy Pronto)",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["A lógica de cada email na sequência PLF", "Email 1: A Grande Promessa e a Virada de Chave", "Emails 2-3: Conteúdo de valor + estabelecendo autoridade", "Email 4: A Grande Revelação / Prova Social", "Email 5: Abertura de carrinho com bônus", "Emails 6-7: Urgência e fechamento"],
+            content: `<h2>A Sequência que Aquece sua Lista para Comprar</h2>
+<p>Jeff Walker popularizou a PLF (Product Launch Formula) com uma sequência de pré-lançamento de 4 vídeos. No modelo PT-BR adaptado, os emails desempenham esse papel — e quando bem escritos, fazem a lista chegar no dia de abertura do carrinho pronta para comprar.</p>
+
+<h3>Email 1: A Grande Promessa (D-14)</h3>
+<p><strong>Objetivo:</strong> Criar expectativa e dar contexto do que vai acontecer nos próximos dias.</p>
+<p><strong>Assunto:</strong> "O que estou prestes a te revelar vai mudar como você [resultado desejado]"</p>
+<p><strong>Estrutura:</strong></p>
+<pre>
+- Abertura com história pessoal de transformação (3-5 parágrafos)
+- O problema que você vai resolver (1 parágrafo)
+- Preview do que vem nos próximos dias (bullets)
+- CTA: "Responda esse email com sua maior dúvida sobre [tema]"
+</pre>
+
+<h3>Email 2: Conteúdo de Valor + Gatilho de Autoridade (D-11)</h3>
+<p><strong>Objetivo:</strong> Entregar conteúdo prático. Mostrar que você sabe o que está ensinando.</p>
+<p><strong>Assunto:</strong> "[Número] [resultado] que [público] está usando para [meta]"</p>
+<p><strong>Estrutura:</strong> Lista de dicas práticas com profundidade real. Termine revelando que existe "uma camada mais funda" que será revelada na próxima aula.</p>
+
+<h3>Email 3: Quebra de Objeção Principal (D-8)</h3>
+<p><strong>Objetivo:</strong> Destruir a maior crença limitante do público.</p>
+<p><strong>Assunto:</strong> "A mentira que te impede de [resultado] (não é o que você pensa)"</p>
+<p><strong>Estrutura:</strong> Reenquadre a crença limitante com prova (dados, estudos, casos reais). Mostre que o problema real é outro — e que você tem a solução.</p>
+
+<h3>Email 4: Prova Social Massiva (D-5)</h3>
+<p><strong>Objetivo:</strong> Social proof que vence o ceticismo.</p>
+<p><strong>Assunto:</strong> "O que [NOME REAL] fez em [tempo] usando [método]"</p>
+<p><strong>Estrutura:</strong> 3-5 casos de alunos com resultados específicos (não "mudou minha vida" — use números: "faturou R$23.400 no primeiro lançamento").</p>
+
+<h3>Email 5: Abertura de Carrinho (D-0, Manhã)</h3>
+<p><strong>Objetivo:</strong> Converter a expectativa criada em compra.</p>
+<p><strong>Assunto:</strong> "ABERTO: [Nome do Produto] + [Bônus por tempo limitado]"</p>
+<p><strong>Estrutura:</strong></p>
+<pre>
+- Uma linha de abertura que confirma: chegou o dia
+- Bullets dos benefícios principais (máx. 7)
+- Os bônus exclusivos de early bird
+- O preço + condições (parcelamento)
+- CTA principal + urgência real (vagas/tempo)
+- P.S. com o que eles perdem se não agirem
+</pre>
+
+<h3>Email 6: Urgência de Meio de Carrinho (D+3)</h3>
+<p><strong>Assunto:</strong> "Só X horas restantes para o bônus [NOME_BONUS]"</p>
+<p><strong>Objetivo:</strong> Reativar quem abriu mas não comprou. Remove bônus que expiram.</p>
+
+<h3>Email 7: Fechamento (Último Dia, 3 Emails)</h3>
+<p><strong>Manhã:</strong> "Último dia — o que você vai perder amanhã"<br/>
+<strong>Tarde (16h):</strong> "Só X horas — o carrinho fecha à meia-noite"<br/>
+<strong>Noite (22h):</strong> "Última chamada — carrinho fecha em 2 horas"</p>
+<p>O dia de fechamento do carrinho gera 30-40% de toda a receita de um lançamento. Não envie apenas um email — envie três.</p>`
+          },
+          {
+            id: "sequencia-carrinho",
+            title: "Sequências de Carrinho: Abertura, Urgência e Fechamento",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["A matemática do carrinho: quando cada email vai", "Email de abandono de checkout: 20-30% de recuperação", "Segmentação por comportamento dentro do carrinho", "Urgência real vs. urgência falsa: o impacto na credibilidade", "Emails de última hora que triplicam a receita do fechamento"],
+            content: `<h2>A Estrutura Completa de Emails de Carrinho</h2>
+<p>O período de carrinho aberto de 5-7 dias tem uma curva de vendas previsível: pico no D+0, queda nos dias intermediários, pico maior no último dia. A sequência de emails deve amplificar esses picos e minimizar a queda intermediária.</p>
+
+<h3>Cronograma Completo de Emails no Carrinho</h3>
+<table>
+<tr><th>Dia</th><th>Email</th><th>Assunto</th><th>Objetivo</th></tr>
+<tr><td>D+0 (manhã)</td><td>Abertura</td><td>ABERTO: [Produto] + bônus early bird</td><td>Converter lista aquecida</td></tr>
+<tr><td>D+0 (tarde)</td><td>2ª chamada</td><td>Você viu a novidade de hoje?</td><td>Capturar quem perdeu o primeiro</td></tr>
+<tr><td>D+2</td><td>Objeções</td><td>Você ainda está em dúvida porque...</td><td>Quebrar as 3 principais objeções</td></tr>
+<tr><td>D+3</td><td>Prova social</td><td>O resultado de [aluno] em [tempo]</td><td>Social proof de último momento</td></tr>
+<tr><td>D+4</td><td>Bônus expirando</td><td>Só 24h: bônus [X] sai amanhã</td><td>Urgência de bônus</td></tr>
+<tr><td>Último dia 9h</td><td>Último dia</td><td>O carrinho fecha hoje — o que você perde</td><td>Ativar decisão</td></tr>
+<tr><td>Último dia 16h</td><td>Contagem</td><td>Só 8 horas. [Ticker de contagem]</td><td>Urgência máxima</td></tr>
+<tr><td>Último dia 22h</td><td>Última chamada</td><td>2 horas para a decisão</td><td>Last minute converter</td></tr>
+</table>
+
+<h3>Email de Abandono de Checkout</h3>
+<p>Quem iniciou o checkout mas não completou está a 90% de comprar — ativado o gatilho de posse, precisa apenas de um empurrão.</p>
+<p>Configure no Hotmart/Kiwify a "Recuperação de Abandono" ou use webhook (evento InitiateCheckout → sem Purchase em 2h) para disparar:</p>
+<ul>
+  <li>1h após abandono: "Algo deu errado? Seu acesso está esperando"</li>
+  <li>6h após: "Ainda está pensando? Aqui estão as respostas para suas dúvidas"</li>
+  <li>24h após: "Última oportunidade antes do preço mudar"</li>
+</ul>
+<p>Taxa de recuperação típica: 20-35% dos que abandonaram o checkout.</p>`
+          },
+          {
+            id: "sequencia-pos-compra",
+            title: "Sequência Pós-Compra: Onboarding que Retém e Upsell que Converte",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Os primeiros 7 dias determinam o LTV do cliente", "Email de boas-vindas: o mais importante que você vai escrever", "Sequência de ativação: levando ao primeiro resultado rápido", "Upsell pós-compra: quando e como oferecer sem parecer agressivo", "Programa de indicação: transformando compradores em promotores"],
+            content: `<h2>O Onboarding que Transforma Comprador em Fã</h2>
+<p>80% do churn acontece nas primeiras 2 semanas. Um comprador que não conclui a primeira aula em 72h tem 3x mais chance de pedir reembolso. O onboarding não é pós-venda — é parte da venda em si.</p>
+
+<h3>Sequência de Onboarding: 14 Dias</h3>
+<p><strong>Email 1 (D+0, imediato):</strong> Boas-vindas. Link de acesso. O que fazer primeiro. 200 palavras máximo. Assunto: "Bem-vindo(a), [NOME] — seu acesso está pronto".</p>
+<p><strong>Email 2 (D+1):</strong> Orientação de navegação. "Por onde começar". Identifique o nível do aluno e recomende a trilha correta.</p>
+<p><strong>Email 3 (D+3):</strong> Quick win. Algo que o aluno consegue implementar em 30 minutos e sentir resultado imediato. Peça que responda o email com o resultado.</p>
+<p><strong>Email 4 (D+5):</strong> Comunidade. Convite para grupo fechado (WhatsApp/Telegram). Apresentação de membros ativos como prova de que outros estão progredindo.</p>
+<p><strong>Email 5 (D+7):</strong> Check-in. "Como está sendo sua experiência?" + mini-pesquisa (1 pergunta). Leads com NPS alto são candidatos a programa de indicação.</p>
+<p><strong>Email 6 (D+10):</strong> Upsell suave. "Alunos que chegaram a este ponto geralmente avançam mais rápido com [produto complementar]". Preço de alumni (10-20% de desconto).</p>
+<p><strong>Email 7 (D+14):</strong> Programa de indicação. "Você já foi transformado — agora pode transformar alguém". Link de afiliado com comissão ou benefícios exclusivos.</p>
+
+<h3>Automação de Engajamento: Detectando Alunos em Risco</h3>
+<p>Configure na plataforma de membros (Hotmart Sparkle, Memberkit, etc.) para enviar evento de "último login" para o ActiveCampaign:</p>
+<ul>
+  <li>Não logou em 5 dias → tag "inativo-5d" → email de reengajamento</li>
+  <li>Não logou em 14 dias → tag "risco-churn" → ligação pessoal ou mensagem WhatsApp</li>
+  <li>Completou 100% → tag "concluiu" → convite para depoimento + upsell</li>
+</ul>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 25: WHATSAPP AUTOMATION ──
+      {
+        id: "whatsapp-automation",
+        number: 25,
+        title: "WhatsApp Automation: ManyChat, WABA e Disparos de Lançamento",
+        subtitle: "O canal com 90% de leitura — configurado para trabalhar automaticamente",
+        icon: "💬",
+        color: "from-green-700 to-teal-800",
+        duration: "2h",
+        summary: "WhatsApp tem 90%+ de taxa de leitura vs 25% do email. Para lançamentos PT-BR, é o canal com maior impacto imediato. Mas exige configuração cuidadosa: LGPD, opt-in correto e timing estratégico são a diferença entre campanhas que convertem e número banido.",
+        lessons: [
+          {
+            id: "manychat-configuracao",
+            title: "ManyChat: Fluxos, Comentários → DM e Captura de Leads via Instagram",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["ManyChat: o que é e por que é a ferramenta mais importante para orgânico", "Gatilho de comentário → DM automático: configuração completa", "Capturando email e telefone via DM automático", "Fluxos de nutrição via Instagram DM", "Integrando ManyChat com ActiveCampaign e Hotmart"],
+            content: `<h2>ManyChat: A Ferramenta que Transformou o Orgânico</h2>
+<p>ManyChat permite automatizar conversas no Instagram DM, Facebook Messenger e, em alguns países, WhatsApp. Para o mercado BR, o Instagram DM é o principal caso de uso — e a funcionalidade de comentário → DM automático é revolucionária.</p>
+
+<h3>O Gatilho de Comentário → DM: Como Funciona</h3>
+<p>Você posta um Reels dizendo: "Comente PLANILHA aqui que eu te mando grátis". Quando alguém comenta "PLANILHA", o ManyChat envia automaticamente uma DM com o link do material. Resultado: captura de email com taxa de conversão de 60-80% (vs. 20-40% de landing page tradicional).</p>
+
+<h3>Configuração do Fluxo de Comentário</h3>
+<ol>
+  <li>ManyChat → Automation → New Flow</li>
+  <li>Trigger: Instagram Comment → escolha "Keyword" → adicione palavra-chave (ex: "PLANILHA")</li>
+  <li>Action 1: Send DM → Mensagem de boas-vindas com o link do material</li>
+  <li>Action 2: Ask for email → "Para enviar no seu email também, qual o seu endereço?"</li>
+  <li>Action 3: Save email → Campo {email} do contato</li>
+  <li>Action 4: Send to ActiveCampaign/RD Station via Zapier/Make</li>
+  <li>Action 5: Apply tag "lead-manychat-[nome-post]"</li>
+</ol>
+
+<h3>Fluxo de Nutrição via DM (Sequência de 3 dias)</h3>
+<pre>
+D+0: Lead capturado → Material enviado + email coletado
+D+1 (24h): DM de follow-up: "Como foi o material? Tenho mais conteúdo sobre [tema]"
+D+2 (48h): DM com link para próximo conteúdo ou oferta de entrada
+D+3 (72h): DM de conversão: "Tenho algo especial para quem está levando [tema] a sério"
+</pre>
+
+<h3>Integração ManyChat → Email Marketing</h3>
+<p>Via Zapier:</p>
+<ol>
+  <li>ManyChat → Configurações → Integrations → Zapier</li>
+  <li>Zapier: ManyChat New Subscriber → ActiveCampaign Create/Update Contact</li>
+  <li>Mapeie: email ManyChat → email AC, first name → first name, tag → tag AC</li>
+</ol>
+
+<h3>Métricas de ManyChat para Acompanhar</h3>
+<table>
+<tr><th>Métrica</th><th>Benchmark</th></tr>
+<tr><td>Taxa de opt-in de comentário</td><td>60-80%</td></tr>
+<tr><td>Taxa de entrega de DM</td><td>&gt;95%</td></tr>
+<tr><td>Taxa de clique no link da DM</td><td>40-60%</td></tr>
+<tr><td>Taxa de captura de email via DM</td><td>30-50%</td></tr>
+</table>`
+          },
+          {
+            id: "waba-zapi-configuracao",
+            title: "WhatsApp Business API: Opções, Configuração e Casos de Uso",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["WhatsApp Business App vs. API: qual usar quando", "Z-API, WPPConnect e a API Oficial Meta: comparativo honesto", "Configurando Z-API para disparos de lançamento", "Templates de mensagem: aprovação e melhores práticas", "Limites de envio e como escalar com segurança"],
+            content: `<h2>O Ecossistema de WhatsApp para Marketing</h2>
+<p>Existem três categorias de acesso ao WhatsApp para negócios. Cada uma tem limitações, custos e casos de uso diferentes.</p>
+
+<h3>Comparativo das Opções</h3>
+<table>
+<tr><th>Opção</th><th>Limite de envio</th><th>Custo/mês</th><th>Risco de ban</th><th>Melhor para</th></tr>
+<tr><td>WhatsApp Business App</td><td>~500 contatos/dia</td><td>Grátis</td><td>Médio</td><td>Negócios pequenos</td></tr>
+<tr><td>Z-API / WPPConnect</td><td>Variável (depende da conta)</td><td>R$80-300</td><td>Médio-alto</td><td>Lançamentos médios</td></tr>
+<tr><td>API Oficial Meta (WABA)</td><td>Ilimitado (com templates aprovados)</td><td>Por mensagem (R$0,05-0,40)</td><td>Baixo</td><td>Operações grandes</td></tr>
+</table>
+
+<h3>Z-API: Configuração para Lançamentos</h3>
+<p>Z-API é uma API não-oficial que conecta ao WhatsApp Web. Funciona bem para volume moderado (até 1.000 contatos/dia) com os cuidados certos.</p>
+<ol>
+  <li>Crie conta em z-api.io → escolha plano (Starter para até 500/dia, Pro para mais)</li>
+  <li>Crie uma Instance → escaneie o QR Code com o número de WhatsApp dedicado ao lançamento</li>
+  <li><strong>IMPORTANTE:</strong> Use sempre um número dedicado, nunca seu número pessoal</li>
+  <li>Teste o endpoint: POST https://api.z-api.io/instances/{id}/token/{token}/send-text</li>
+  <li>Body: {"phone": "5511999999999", "message": "Texto da mensagem"}</li>
+</ol>
+
+<h3>Boas Práticas Anti-Ban</h3>
+<ul>
+  <li>Envie para números que te deram opt-in explícito (nunca compre listas)</li>
+  <li>Respeite intervalo entre mensagens: mínimo 3-5 segundos entre envios</li>
+  <li>Limite diário: máximo 500 mensagens/número/dia para contas novas</li>
+  <li>Textos longos: divida em múltiplas mensagens menores (mais natural)</li>
+  <li>Personalize sempre: pelo menos o nome no início da mensagem</li>
+  <li>Tenha um link de opt-out claro: "Para sair da lista, responda PARAR"</li>
+</ul>
+
+<h3>API Oficial Meta (WABA): Para Operações Grandes</h3>
+<p>Para +10.000 contatos ou operações críticas de negócio, use a API Oficial via provedores homologados:</p>
+<ul>
+  <li>Provedores BR recomendados: Zenvia, Take Blip, Twilio, MessageBird</li>
+  <li>Exige templates de mensagem aprovados pela Meta (prazo: 24-48h)</li>
+  <li>Custo variável: entre R$0,05 e R$0,40 por mensagem dependendo do tipo</li>
+  <li>Sem risco de ban quando usado dentro dos termos</li>
+</ul>`
+          },
+          {
+            id: "whatsapp-sequencias-lancamento",
+            title: "Sequências de WhatsApp para Cada Fase do Lançamento",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Pré-lançamento: aquecendo a lista de WhatsApp", "Abertura de carrinho: mensagem de alto impacto", "Meio de carrinho: manter engajamento sem parecer spam", "Fechamento: as mensagens que geram o pico de vendas", "Copy pronto para cada fase"],
+            content: `<h2>O WhatsApp Muda o Jogo do Lançamento</h2>
+<p>Em lançamentos PT-BR, WhatsApp é o canal que converte mais no último dia. Produtores que integram email + WhatsApp têm 40-70% mais receita no fechamento do que os que usam apenas email.</p>
+
+<h3>Fase 1: Pré-Lançamento (D-14 a D-1)</h3>
+<p>Objetivo: criar expectativa sem queimar. Máximo 2-3 mensagens neste período.</p>
+<p><strong>Mensagem de aquecimento (D-7):</strong></p>
+<blockquote>
+Olá [NOME]!
+
+Estou preparando algo que vai mudar como você [resultado]. 
+
+Na próxima semana vou revelar tudo.
+
+Enquanto isso, me responde: qual é a sua maior dificuldade com [tema]?
+
+[NOME]
+</blockquote>
+<p>Essa mensagem gera respostas — e cada resposta sobe a relevância do seu número no WhatsApp do contato (evita cair em spam).</p>
+
+<h3>Fase 2: Abertura de Carrinho (D+0)</h3>
+<p><strong>Mensagem de abertura (enviar às 08h):</strong></p>
+<blockquote>
+[NOME]! Hoje é o dia.
+
+O [NOME DO PRODUTO] está com as portas abertas — e com um bônus especial para quem entrar até hoje: [DESCRICAO_BONUS].
+
+Acesse agora: [LINK]
+
+São apenas [VAGAS] vagas. Primeiro a chegar, primeiro atendido.
+
+Alguma dúvida? Me responde aqui 🙋
+</blockquote>
+
+<h3>Fase 3: Meio de Carrinho (D+2, D+3)</h3>
+<p>Não envie mensagem de venda todos os dias — desgasta. Envie conteúdo de valor com menção da oportunidade:</p>
+<blockquote>
+[NOME], vi que você ainda não entrou para o [PRODUTO].
+
+Tá com dúvida? Isso aqui pode ajudar:
+
+🔴 "Mas eu não tenho tempo" → O método é pensado para quem tem 1h/dia
+🔴 "Mas eu não sei se funciona pra mim" → [CASE com número]
+
+Ainda dá tempo: [LINK]
+</blockquote>
+
+<h3>Fase 4: Fechamento (Último Dia)</h3>
+<p><strong>Manhã (08h):</strong></p>
+<blockquote>
+⚠️ [NOME] — hoje é o ÚLTIMO DIA.
+
+O carrinho fecha às 23h59. Depois disso, não tem como entrar.
+
+O que você perde se não entrar hoje:
+— [BENEFÍCIO 1]
+— [BENEFÍCIO 2]  
+— [BÔNUS que expira]
+
+Não deixa pra última hora: [LINK]
+</blockquote>
+
+<p><strong>Tarde (17h) — somente para quem não comprou:</strong></p>
+<blockquote>
+6 horas, [NOME].
+
+Às 23h59 o carrinho fecha automaticamente.
+
+Última chamada: [LINK]
+</blockquote>`
+          },
+          {
+            id: "whatsapp-lgpd-compliance",
+            title: "LGPD no WhatsApp: Opt-in, Opt-out e Como Não Ser Banido",
+            duration: "20 min",
+            type: "text",
+            glossaryTerms: ["opt-in"],
+            keyPoints: ["O que a LGPD exige para mensagens de marketing via WhatsApp", "Double opt-in para WhatsApp: como implementar", "Gestão de opt-out: quando e como respeitar pedidos de saída", "Armazenamento de consentimento: o que guardar para se proteger", "Consequências jurídicas e como o mercado está se adaptando"],
+            content: `<h2>LGPD e WhatsApp: O que Você Precisa Saber para Não Ter Problema</h2>
+<p>A Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018) exige consentimento explícito para uso de dados pessoais para marketing. No WhatsApp, isso significa: você só pode enviar mensagens de marketing para quem te deu permissão explícita para isso.</p>
+
+<h3>O que Configura Opt-in Válido para WhatsApp</h3>
+<p>Opt-in válido = a pessoa forneceu o número E concordou expressamente em receber mensagens de marketing por WhatsApp. Não basta ter o número — precisa do consentimento para o canal.</p>
+<p><strong>Formas válidas de opt-in:</strong></p>
+<ul>
+  <li>Formulário com checkbox: "Concordo em receber mensagens via WhatsApp" (desmarcado por padrão)</li>
+  <li>Double opt-in: lead envia "SIM" para um número após receber solicitação</li>
+  <li>Grupo de WhatsApp: entrada voluntária já configura consentimento implícito</li>
+  <li>Compra realizada: comprador aceitou termos que incluem contato pós-venda (guarde os termos)</li>
+</ul>
+
+<h3>Armazenamento de Consentimento</h3>
+<p>Guarde sempre: data/hora do opt-in, origem (qual formulário/página), texto exato apresentado ao usuário, IP do dispositivo. Esses dados são sua prova em caso de reclamação à ANPD.</p>
+
+<h3>Gestão de Opt-out: Seja Eficiente</h3>
+<p>Quando alguém responde "PARAR", "SAIR", "REMOVER" ou similar:</p>
+<ul>
+  <li>Confirme o opt-out imediatamente na mesma conversa</li>
+  <li>Remova das listas de disparo em no máximo 48h (recomendado: imediatamente)</li>
+  <li>Aplique tag "optout-whatsapp" no CRM</li>
+  <li>Nunca reenvie para esse número sem novo opt-in explícito</li>
+</ul>
+
+<h3>Risco de Ban: Prevenção Prática</h3>
+<p>O WhatsApp tem sistema automatizado de detecção de spam. Gatilhos de ban:</p>
+<ul>
+  <li>Muitos reports de "Bloquear e reportar" (limite desconhecido mas baixo)</li>
+  <li>Taxa de resposta muito baixa em volume alto (indica lista comprada)</li>
+  <li>Envio muito rápido (parece bot)</li>
+  <li>Mesmo template copiado e colado centenas de vezes</li>
+</ul>
+<p><strong>Proteção:</strong> Use sempre número dedicado (nunca pessoal), personalize as mensagens (nome no mínimo), construa a lista somente com opt-in real, respeite os opt-outs imediatamente.</p>`
+          },
+          {
+            id: "whatsapp-exercise",
+            title: "Exercício: Monte Sua Primeira Sequência Automática de WhatsApp",
+            duration: "20 min",
+            type: "exercise",
+            keyPoints: ["Definindo os 3 momentos de contato do seu lançamento", "Escrevendo os templates de mensagem", "Testando o fluxo completo"],
+            content: `<h2>Exercício: Sequência de WhatsApp para Seu Próximo Lançamento</h2>`,
+            exercise: `<h3>Monte Sua Sequência em 3 Passos</h3>
+<p><strong>Passo 1: Defina os momentos de contato</strong><br/>
+Escreva para seu lançamento específico:</p>
+<ul>
+  <li>Data de abertura de carrinho: ____</li>
+  <li>Data de fechamento: ____</li>
+  <li>Mensagem de aquecimento (D-7): data ____ horário ____</li>
+  <li>Abertura de carrinho (D+0): data ____ horário ____</li>
+  <li>Meio de carrinho: data ____ horário ____</li>
+  <li>Fechamento manhã: data ____ horário ____</li>
+  <li>Fechamento tarde: data ____ horário ____</li>
+</ul>
+<p><strong>Passo 2: Escreva os templates</strong><br/>
+Use as estruturas da aula anterior e adapte para seu produto, público e voz. Escreva os 5 templates antes de abrir qualquer ferramenta de envio.</p>
+<p><strong>Passo 3: Configure e teste</strong><br/>
+Configure a sequência na sua ferramenta de escolha (Z-API, ManyChat ou outra). Envie uma mensagem de teste para o seu próprio número. Verifique: chegou rápido? Personalização correta? Links funcionando? Opt-out configurado?</p>
+<p><em>Regra de ouro: se você recebesse essa mensagem de alguém, responderia? Se a resposta for não — reescreva antes de enviar para a lista.</em></p>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 26: WEBHOOKS, ZAPIER E INTEGRAÇÕES ──
+      {
+        id: "webhooks-integracoes",
+        number: 26,
+        title: "Webhooks, Zapier e Make: A Cola Entre Todos os Sistemas",
+        subtitle: "Automatize o que nenhuma plataforma faz nativamente — sem programar",
+        icon: "🔗",
+        color: "from-orange-800 to-red-900",
+        duration: "1h 45min",
+        summary: "Cada plataforma que você usa é uma ilha. Webhooks e ferramentas de automação sem código (Zapier, Make) são a ponte que conecta essas ilhas — criando fluxos automatizados que nenhuma plataforma oferece nativamente. Quando um cliente compra, ele é marcado no CRM, adicionado ao WhatsApp, recebe o email de boas-vindas e tem acesso liberado — tudo sem intervenção humana.",
+        lessons: [
+          {
+            id: "webhooks-fundamentos",
+            title: "O que é um Webhook e como Ele Conecta Tudo",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Webhook vs. API: qual a diferença real", "Eventos comuns: purchase, lead, subscription, cancellation", "Como testar webhooks com ferramentas gratuitas", "JSON: entendendo o formato de dados dos webhooks", "Segurança: validando que o webhook é legítimo"],
+            content: `<h2>Webhooks: A Tecnologia que Todos Usam mas Poucos Entendem</h2>
+<p>Um webhook é uma notificação automática que um sistema envia para outro quando algo acontece. É o oposto de uma API — em vez de você ir buscar informação ("o que aconteceu?"), o sistema te avisa proativamente ("aconteceu algo!").</p>
+
+<h3>A Analogia do Correio</h3>
+<p><strong>API (polling):</strong> É como ir ao correio toda hora verificar se chegou carta. Você faz o esforço, independente de ter carta ou não.</p>
+<p><strong>Webhook:</strong> É como ter entrega em domicílio com aviso sonoro. Quando chega, você é notificado imediatamente — sem esforço contínuo.</p>
+
+<h3>Como um Webhook Funciona na Prática</h3>
+<pre>
+1. Você cadastra uma URL no sistema (ex: Hotmart)
+2. Um evento acontece (compra confirmada)
+3. Hotmart faz um POST para a URL que você cadastrou
+4. O sistema que recebe a URL processa os dados
+5. Dispara ação: adiciona contato, envia email, etc.
+
+Tudo isso em menos de 1 segundo.
+</pre>
+
+<h3>O Formato JSON: Lendo os Dados do Webhook</h3>
+<p>Todo webhook envia dados em formato JSON. Você não precisa saber programar para entender JSON — é basicamente um dicionário de pares chave:valor.</p>
+<pre>
+{
+  "event": "PURCHASE_COMPLETE",
+  "buyer": {
+    "name": "Maria Silva",
+    "email": "maria@email.com",
+    "phone": "11999999999"
+  },
+  "product": {
+    "name": "Curso de Lançamentos",
+    "price": 2970.00,
+    "currency": "BRL"
+  },
+  "purchase": {
+    "approved_date": "2025-06-15T14:30:00Z",
+    "payment_method": "credit_card"
+  }
+}
+</pre>
+<p>Cada ferramenta de automação (Zapier, Make) lê esse JSON e permite usar qualquer campo como dado na automação seguinte.</p>
+
+<h3>Testando Webhooks com Webhook.site</h3>
+<ol>
+  <li>Acesse webhook.site — recebe um URL único gratuito</li>
+  <li>Cole esse URL como URL de webhook na plataforma (ex: Hotmart)</li>
+  <li>Simule um evento (compra de teste)</li>
+  <li>O webhook.site mostra o JSON exato que a plataforma enviou</li>
+  <li>Use esses dados para configurar sua automação no Zapier/Make</li>
+</ol>`
+          },
+          {
+            id: "zapier-make-automacoes",
+            title: "Zapier e Make: Automações Sem Código Para Não-Técnicos",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Zapier vs. Make: qual escolher para cada caso de uso", "Criando seu primeiro Zap: Hotmart → ActiveCampaign", "Filtros e condicionais: executar ação apenas em casos específicos", "Multi-step automations: múltiplas ações em sequência", "Monitoramento: como saber quando uma automação falha"],
+            content: `<h2>Zapier vs. Make: A Escolha Certa para Cada Caso</h2>
+<table>
+<tr><th>Critério</th><th>Zapier</th><th>Make (ex-Integromat)</th></tr>
+<tr><td>Facilidade</td><td>Muito fácil (passo a passo)</td><td>Médio (visual, mas curva maior)</td></tr>
+<tr><td>Integrações</td><td>6.000+ apps</td><td>1.500+ apps</td></tr>
+<tr><td>Custo para 1.000 tarefas/mês</td><td>Grátis (limite 100) / $20</td><td>Grátis (1.000) / $9</td></tr>
+<tr><td>Lógica complexa</td><td>Limitada (plano pago)</td><td>Excelente (roteamento, iteradores)</td></tr>
+<tr><td>Recomendado para</td><td>Iniciantes, automações simples</td><td>Avançados, volume alto</td></tr>
+</table>
+<p><strong>Recomendação:</strong> Comece com Zapier pela simplicidade. Migre para Make quando precisar de lógica mais complexa ou reduzir custo.</p>
+
+<h3>Criando seu Primeiro Zap: Hotmart → ActiveCampaign</h3>
+<ol>
+  <li>Zapier → Create Zap</li>
+  <li><strong>Trigger:</strong> Webhooks by Zapier → Catch Hook → Copie a URL</li>
+  <li>Cole a URL no Hotmart como webhook URL</li>
+  <li>Faça uma compra de teste para o Zapier capturar o JSON</li>
+  <li><strong>Action 1:</strong> ActiveCampaign → Create/Update Contact → mapeie email, nome, telefone</li>
+  <li><strong>Action 2:</strong> ActiveCampaign → Add Tag → "comprou-[produto]"</li>
+  <li><strong>Action 3:</strong> ActiveCampaign → Add to Automation → sequência de onboarding</li>
+  <li>Teste e ative</li>
+</ol>
+
+<h3>Filtros: Executando Apenas para Casos Específicos</h3>
+<p>Filtros permitem que a automação só continue se certas condições forem atendidas.</p>
+<p>Exemplos:</p>
+<ul>
+  <li>Só executar se evento = "PURCHASE_COMPLETE" (não para PURCHASE_EXPIRED)</li>
+  <li>Só executar se produto = "Curso Premium" (ignorar outros produtos)</li>
+  <li>Só executar se email não contém "@test.com" (ignorar compras de teste)</li>
+</ul>
+<p>No Zapier: após o trigger, adicione um Filter Step. No Make: use um Router com condição.</p>
+
+<h3>Monitoramento de Automações</h3>
+<p>Uma automação que falha silenciosamente é pior que não ter automação — você pensa que está funcionando mas leads estão se perdendo.</p>
+<ul>
+  <li>Zapier: Zap History → veja todas as execuções, sucessos e falhas</li>
+  <li>Configure alertas de email quando um Zap falha (Zapier → Settings → Notifications)</li>
+  <li>Crie um Zap de monitoramento: se ActiveCampaign não recebeu contato novo em 24h (durante lançamento ativo), envie alerta no Slack/email</li>
+</ul>`
+          },
+          {
+            id: "fluxo-mestre-integracao",
+            title: "O Fluxo Mestre: Conectando Hotmart + Email + WhatsApp + CRM",
+            duration: "30 min",
+            type: "text",
+            glossaryTerms: ["nurturing", "ltv", "mrr"],
+            keyPoints: ["Mapeando o fluxo completo de um lançamento", "Decisões de roteamento: compradores, não-compradores, reembolsados", "Sincronizando dados entre plataformas sem duplicação", "O fluxo de um afiliado: rastreando comissões e nutrição", "Documentando suas automações para manutenção futura"],
+            content: `<h2>O Fluxo Completo de um Lançamento Automatizado</h2>
+<p>Um lançamento profissional tem dezenas de eventos e ramificações. Este é o mapa completo — do primeiro lead ao cliente recorrente.</p>
+
+<h3>Fase 1: Captura de Lead</h3>
+<pre>
+Anúncio ou post orgânico
+    ↓
+Landing Page de captura
+    ↓
+Lead cadastrado → Hotmart (ou formulário próprio)
+    ↓ (webhook)
+Zapier/Make recebe evento
+    ↙              ↓              ↘
+ActiveCampaign   RD Station     Planilha Google
+(tag: lead-novo) (conversão)    (backup de leads)
+    ↓
+Sequência de nutrição inicia
+(7 emails em 14 dias)
+</pre>
+
+<h3>Fase 2: Abertura de Carrinho</h3>
+<pre>
+Email 1: Abertura + bônus
+    ↓ 2h depois
+WhatsApp (Z-API): mensagem de abertura
+    ↓ Monitorar
+[Lead visitou página de vendas?]
+  Sim ↓                   Não ↓
+Tag "visitou-pv"    Continua sequência
+    ↓               padrão de nutrição
+Email "viu mas
+não comprou"
+</pre>
+
+<h3>Fase 3: Pós-Compra</h3>
+<pre>
+Compra confirmada (PURCHASE_COMPLETE)
+    ↓ webhook imediato
+Zapier: 4 ações em paralelo:
+├── 1. ActiveCampaign: tag "comprador", remove sequência de nutrição, inicia onboarding
+├── 2. Z-API: WhatsApp de boas-vindas em &lt;5 minutos
+├── 3. Planilha Google: registra compra com valor + produto + data
+└── 4. Slack/Email interno: notificação "Nova venda: R$X"
+</pre>
+
+<h3>Tratamento de Exceções</h3>
+<pre>
+REEMBOLSO (PURCHASE_REFUNDED):
+├── Remove tag "comprador"
+├── Adiciona tag "reembolsado"  
+├── Pausa sequência de onboarding
+├── Inicia sequência de recuperação (3 emails em 7 dias)
+└── Revoga acesso na área de membros
+
+BOLETO EXPIRADO (PURCHASE_EXPIRED):
+├── Tag "boleto-expirado"
+├── Email: "Seu boleto expirou — gere um novo aqui" + link
+├── WhatsApp: mensagem de reativação
+└── Remove da sequência após 3 tentativas sem retorno
+</pre>
+
+<h3>Documentando Suas Automações</h3>
+<p>Toda automação que você cria, documente em uma planilha simples:</p>
+<table>
+<tr><th>Nome da automação</th><th>Gatilho</th><th>Ação</th><th>Data criação</th><th>Status</th></tr>
+<tr><td>Compra → AC</td><td>PURCHASE_COMPLETE Hotmart</td><td>Tag AC + OnboardingFlow</td><td>01/06/25</td><td>✓ Ativo</td></tr>
+<tr><td>Compra → WhatsApp</td><td>PURCHASE_COMPLETE Hotmart</td><td>Z-API boas-vindas</td><td>01/06/25</td><td>✓ Ativo</td></tr>
+</table>
+<p>Esta documentação salva horas quando algo quebra às 23h no dia de fechamento do carrinho.</p>`
+          },
+          {
+            id: "monitoramento-alertas",
+            title: "Monitoramento, Alertas e Resolução de Problemas em Produção",
+            duration: "18 min",
+            type: "text",
+            keyPoints: ["O que pode dar errado em um lançamento (e o que fazer)", "Dashboard de monitoramento em tempo real", "Alertas automáticos para falhas críticas", "Procedimento de emergência: o que fazer quando algo quebra"],
+            content: `<h2>Quando Algo Quebra às 23h no Fechamento do Carrinho</h2>
+<p>Todo lançamento tem algum problema técnico. A diferença entre o profissional e o amador não é não ter problemas — é detectá-los rápido e ter protocolo de resposta.</p>
+
+<h3>O que Pode Quebrar (em ordem de frequência)</h3>
+<ol>
+  <li><strong>Webhook parou de funcionar</strong> — Causa: token expirou, URL mudou, serviço fora do ar. Detecção: nenhum contato novo no ActiveCampaign apesar de vendas. Solução: verificar Zapier History, reconfigurar webhook.</li>
+  <li><strong>Email indo para spam</strong> — Causa: volume muito alto, blacklist, SPF/DKIM desconfigurado. Detecção: taxa de abertura cai para &lt;5%. Solução: verificar blacklists, reduzir volume, warmup de IP.</li>
+  <li><strong>Z-API desconectou</strong> — Causa: WhatsApp Web deslogou. Detecção: mensagens não sendo entregues. Solução: reescanear QR Code.</li>
+  <li><strong>Pixel não disparando</strong> — Causa: GTM publicou versão com erro, script bloqueado. Detecção: Pixel Helper mostra erro. Solução: publicar versão anterior do GTM.</li>
+  <li><strong>Checkout fora do ar</strong> — Causa: Hotmart/Kiwify com instabilidade. Detecção: carrinho não abrindo. Solução: backup em outra plataforma (sempre tenha).</li>
+</ol>
+
+<h3>Dashboard de Monitoramento em Tempo Real</h3>
+<p>Durante os dias de lançamento, monitore a cada 2h:</p>
+<ul>
+  <li>Vendas no painel Hotmart/Kiwify (número absoluto + ritmo vs. projeção)</li>
+  <li>Zapier History: último Zap executado há menos de 1h?</li>
+  <li>ActiveCampaign: novos contatos chegando?</li>
+  <li>Pixel Helper: testando uma página antes de escalar anúncios</li>
+</ul>
+
+<blockquote>Tenha sempre um plano B para os elementos críticos. Se o Hotmart estiver fora, Kiwify recebe. Se Z-API desconectar, manda manual para os top 100. Se email estiver no spam, acelera o WhatsApp. Flexibilidade em tempo real é o que separa lançamentos de R$50k de lançamentos de R$500k.</blockquote>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 27: CALENDÁRIO EDITORIAL E CRONOGRAMA OPERACIONAL ──
+      {
+        id: "calendario-operacional",
+        number: 27,
+        title: "Calendário Editorial e Cronograma Operacional de Lançamento",
+        subtitle: "O mapa completo de 30 dias que transforma a teoria em execução perfeita",
+        icon: "📅",
+        color: "from-indigo-800 to-blue-900",
+        duration: "2h",
+        summary: "Um lançamento sem cronograma é um lançamento que vai improvisar — e improviso custa receita. Este capítulo entrega o cronograma operacional completo de 30 dias: o que publicar, quando disparar, quanto gastar em anúncios em cada fase e como coordenar orgânico + pago + email + WhatsApp para máxima sinergia.",
+        lessons: [
+          {
+            id: "timing-sequencias-plf",
+            title: "A Lógica de Timing das Sequências PLF (Semana a Semana)",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Os 4 períodos de um lançamento e o que deve acontecer em cada um", "Pré-aquecimento (D-30 a D-14): construindo audiência e lista", "Pré-lançamento (D-14 a D-0): aquecendo a lista para comprar", "Carrinho (D+0 a D+7): maximizando conversões", "Pós-lançamento (D+8 a D+30): retendo e upselling"],
+            content: `<h2>A Anatomia de um Lançamento de 30 Dias</h2>
+<p>Um lançamento não começa quando o carrinho abre — começa 30 dias antes. E não termina quando o carrinho fecha — o pós-lançamento é onde se constrói o próximo lançamento.</p>
+
+<h3>Os 4 Períodos e seus Objetivos</h3>
+
+<h4>Período 1: Pré-Aquecimento (D-30 a D-14)</h4>
+<p><strong>Objetivo:</strong> Construir audiência e lista. Ainda não fale no produto — fale no problema.</p>
+<ul>
+  <li>Conteúdo: 100% educacional sobre o tema do produto</li>
+  <li>Anúncios: campanhas de tráfego para conteúdo (não de conversão)</li>
+  <li>Email: se você tem lista, envie 1-2 emails de valor puro</li>
+  <li>Lead magnet: lance ou reative um lead magnet forte para crescer a lista</li>
+</ul>
+
+<h4>Período 2: Pré-Lançamento (D-14 a D-0)</h4>
+<p><strong>Objetivo:</strong> Aquecer a lista para comprar. Crie expectativa sem revelar o preço.</p>
+<ul>
+  <li>Semana 1 (D-14 a D-7): Conteúdo PLF — aula 1 (oportunidade), aula 2 (transformação)</li>
+  <li>Semana 2 (D-7 a D-0): Conteúdo PLF — aula 3 (mecanismo único), sequência de email de aquecimento</li>
+  <li>Anúncios: remarketing para lista de email + engajados no conteúdo</li>
+  <li>WhatsApp: 1 mensagem de aquecimento em D-7</li>
+</ul>
+
+<h4>Período 3: Carrinho Aberto (D+0 a D+7)</h4>
+<p><strong>Objetivo:</strong> Maximizar vendas. Todos os canais em alta frequência.</p>
+<ul>
+  <li>D+0: Email de abertura (manhã) + WhatsApp (manhã) + Reels anunciando abertura</li>
+  <li>D+1-D+4: Emails diários + anúncios de conversão + conteúdo orgânico de prova social</li>
+  <li>D+5-D+6: Início da urgência — emails de bônus expirando</li>
+  <li>D+7 (fechamento): 3 emails + 2 WhatsApp + post de "últimas horas"</li>
+</ul>
+
+<h4>Período 4: Pós-Lançamento (D+8 a D+30)</h4>
+<p><strong>Objetivo:</strong> Reter compradores e plantar semente do próximo lançamento.</p>
+<ul>
+  <li>Semana 1 pós-lançamento: Onboarding intensivo de novos alunos</li>
+  <li>Semana 2: Primeiro check-in de resultado + convite para comunidade</li>
+  <li>Semana 3: Case study de aluno + upsell de próximo produto</li>
+  <li>Semana 4: Pesquisa NPS + programa de indicação</li>
+</ul>
+
+<blockquote>A regra de ouro do timing: nunca improvise durante o carrinho aberto. Cada email, cada post, cada WhatsApp deve estar escrito e agendado antes do carrinho abrir. Improviso no meio do lançamento é o caminho mais rápido para erros, inconsistências e receita abaixo do potencial.</blockquote>`
+          },
+          {
+            id: "ferramentas-agendamento-conteudo",
+            title: "Ferramentas de Agendamento: Metricool, Buffer e Agendamento Nativo",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Metricool: o melhor custo-benefício para o mercado BR", "Buffer: simplificidade para quem usa poucos canais", "Agendamento nativo (Instagram, Facebook, YouTube): quando usar", "Agendamento de anúncios: day-parting por fase do lançamento", "O fluxo de aprovação: como trabalhar com equipe sem caos"],
+            content: `<h2>Agendando Tudo com Antecedência: A Operação Que Não Improvisa</h2>
+<p>Uma das habilidades mais subestimadas do marketing digital é a capacidade de produzir e agendar com antecedência. Quem improvisa perde o ritmo no momento que mais importa — o carrinho aberto.</p>
+
+<h3>Metricool: Recomendado para o Mercado BR</h3>
+<p><strong>Por que Metricool:</strong> Interface em PT-BR, integração com todas as redes relevantes (Instagram, TikTok, Facebook, YouTube, LinkedIn, Twitter/X, Google My Business, Pinterest), plano gratuito generoso, plano pago em BRL.</p>
+<p><strong>Funcionalidades que fazem diferença:</strong></p>
+<ul>
+  <li>Best Time to Post: analisa seu histórico e sugere horários com maior engajamento</li>
+  <li>Smart Links: página de bio com links rastreados</li>
+  <li>AutoList: reposta automática de conteúdo evergreen</li>
+  <li>Reports: relatórios de performance em PDF para clientes/equipe</li>
+</ul>
+
+<h3>Agendamento por Rede Social</h3>
+<table>
+<tr><th>Rede</th><th>Ferramenta recomendada</th><th>Obs.</th></tr>
+<tr><td>Instagram Feed/Reels</td><td>Metricool ou nativo</td><td>Reels: nativo tem limitações</td></tr>
+<tr><td>Instagram Stories</td><td>Metricool (via notificação)</td><td>Stories com stickers interativos: só manual</td></tr>
+<tr><td>TikTok</td><td>Metricool ou nativo</td><td>TikTok Studio nativo funciona bem</td></tr>
+<tr><td>YouTube</td><td>YouTube Studio nativo</td><td>Melhor controle de thumbnail e cards</td></tr>
+<tr><td>Facebook</td><td>Meta Business Suite nativo</td><td>Gratuito e completo para páginas</td></tr>
+<tr><td>LinkedIn</td><td>LinkedIn nativo ou Buffer</td><td>Evite terceiros para artigos longos</td></tr>
+</table>
+
+<h3>Agendamento de Anúncios: Day-Parting por Fase</h3>
+<p>Day-parting = configurar anúncios para rodar apenas em determinadas horas do dia.</p>
+<p><strong>Pré-lançamento:</strong> 24/7 (tráfego de aquecimento, sem urgência de hora)</p>
+<p><strong>Abertura de carrinho (D+0):</strong> Concentre budget entre 8h-23h. Dobre o budget das 19h às 23h (maior intenção de compra).</p>
+<p><strong>Fechamento (último dia):</strong> Budget máximo das 14h até o fechamento às 23h59. Crie urgência real com copy de contagem regressiva.</p>
+
+<h3>Fluxo de Aprovação para Equipes</h3>
+<pre>
+Criador produz conteúdo
+    ↓
+Designer formata / edita
+    ↓
+Revisor aprova (copy + visual)
+    ↓
+Gestor de lançamento agenda
+    ↓
+Notificação automática: "Conteúdo agendado para [data/hora]"
+</pre>`
+          },
+          {
+            id: "cronograma-definitivo-30-dias",
+            title: "O Cronograma Definitivo: Dia a Dia dos 30 Dias de Lançamento",
+            duration: "32 min",
+            type: "text",
+            keyPoints: ["Cada dia dos 30 dias: o que publicar, quando disparar", "Sinergia orgânico + pago: como amplificar o que funciona com verba", "Checklist de verificação diária durante o carrinho", "Adaptações em tempo real: como reagir ao que os dados mostram", "O cronograma adaptado para times de 1, 3 e 10+ pessoas"],
+            content: `<h2>O Cronograma de 30 Dias: Nada Deixado ao Acaso</h2>
+
+<h3>SEMANA 1 (D-30 a D-23): CONSTRUÇÃO DE AUDIÊNCIA</h3>
+<table>
+<tr><th>Dia</th><th>Orgânico</th><th>Email</th><th>WhatsApp</th><th>Ads</th></tr>
+<tr><td>D-30</td><td>Reels: problema do público</td><td>—</td><td>—</td><td>Tráfego para Reels</td></tr>
+<tr><td>D-28</td><td>Carrossel: dados sobre o problema</td><td>—</td><td>—</td><td>Tráfego para LP lead magnet</td></tr>
+<tr><td>D-26</td><td>Stories: bastidores + enquete</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>D-24</td><td>Reels: história pessoal de transformação</td><td>Email de valor 1 (lista atual)</td><td>—</td><td>Remarketing engajados</td></tr>
+</table>
+
+<h3>SEMANA 2 (D-22 a D-15): AQUECIMENTO</h3>
+<table>
+<tr><th>Dia</th><th>Orgânico</th><th>Email</th><th>WhatsApp</th><th>Ads</th></tr>
+<tr><td>D-21</td><td>Reels: dica 1 do conteúdo</td><td>—</td><td>—</td><td>Tráfego para conteúdo</td></tr>
+<tr><td>D-19</td><td>Carrossel: framework básico</td><td>Email de valor 2</td><td>—</td><td>—</td></tr>
+<tr><td>D-17</td><td>Stories: prova social (alunos)</td><td>—</td><td>—</td><td>Remarketing lista email</td></tr>
+<tr><td>D-15</td><td>Reels: "semana que vem vou revelar..."</td><td>Email de anticipation</td><td>—</td><td>Lookalike compradores</td></tr>
+</table>
+
+<h3>SEMANA 3 (D-14 a D-7): PRÉ-LANÇAMENTO PLF</h3>
+<table>
+<tr><th>Dia</th><th>Orgânico</th><th>Email</th><th>WhatsApp</th><th>Ads</th></tr>
+<tr><td>D-14</td><td>Aula 1 PLF (oportunidade)</td><td>Email 1 PLF</td><td>—</td><td>Tráfego para Aula 1</td></tr>
+<tr><td>D-11</td><td>Stories: reações à Aula 1</td><td>Email follow-up Aula 1</td><td>—</td><td>Remarketing assistiu aula 1</td></tr>
+<tr><td>D-9</td><td>Aula 2 PLF (transformação)</td><td>Email 2 PLF</td><td>Mensagem aquecimento</td><td>Tráfego para Aula 2</td></tr>
+<tr><td>D-7</td><td>Reels: "Em 7 dias..."</td><td>Email 3 PLF</td><td>—</td><td>Escalar Lookalike</td></tr>
+</table>
+
+<h3>SEMANA 4 (D-6 a D+0): INTENSIFICAÇÃO</h3>
+<table>
+<tr><th>Dia</th><th>Orgânico</th><th>Email</th><th>WhatsApp</th><th>Ads</th></tr>
+<tr><td>D-5</td><td>Aula 3 PLF (mecanismo único)</td><td>Email 4: prova social</td><td>—</td><td>Remarketing lista + Lookalike</td></tr>
+<tr><td>D-3</td><td>Carrossel: perguntas frequentes</td><td>Email 5: quebra de objeção</td><td>—</td><td>Máximo em lista quente</td></tr>
+<tr><td>D-1</td><td>Stories: "amanhã abre"</td><td>Email 6: "amanhã é o dia"</td><td>—</td><td>—</td></tr>
+<tr><td>D+0 (8h)</td><td>Post de abertura</td><td>Email 7: ABERTURA</td><td>WhatsApp abertura</td><td>Conversão: máximo budget</td></tr>
+</table>
+
+<h3>CARRINHO ABERTO (D+0 a D+7)</h3>
+<p>Durante o carrinho, monitore as métricas a cada 2-4h e ajuste. Se a taxa de abertura de email cair, aumente frequência de WhatsApp. Se os anúncios travarem, teste novos criativos imediatamente.</p>
+
+<h3>Adaptações por Tamanho de Time</h3>
+<p><strong>Solo (1 pessoa):</strong> Foque em email + WhatsApp + orgânico no Instagram. Ads opcionais. Pré-produza tudo na semana anterior ao lançamento.</p>
+<p><strong>Time pequeno (2-3 pessoas):</strong> Divida: 1 pessoa em conteúdo + orgânico, 1 em ads + tracking, 1 em email + WhatsApp + suporte.</p>
+<p><strong>Time médio (5+):</strong> Adicione especialista de cada canal. Reunião diária de 15min durante o carrinho para sync.</p>`
+          },
+          {
+            id: "budget-distribution-fases",
+            title: "Budget Distribution: Como Alocar Verba de Anúncios por Fase",
+            duration: "22 min",
+            type: "text",
+            glossaryTerms: ["roas", "cac", "cpm", "ctr"],
+            keyPoints: ["A distribuição de budget que maximiza ROAS no lançamento", "Quanto gastar em cada fase: pré, durante e fechamento", "Ramp-up de budget: como escalar sem quebrar a otimização", "Distribuição por público: frio, morno e quente", "O modelo de Excel para calcular budget ideal por receita meta"],
+            content: `<h2>A Matemática do Budget em um Lançamento</h2>
+<p>A maioria dos produtores erra no budget de duas formas: ou gasta demais no tráfego frio antes de aquecer, ou segura o investimento quando a máquina está quente. A distribuição correta pode aumentar o ROAS em 30-50%.</p>
+
+<h3>Modelo de Distribuição de Budget por Fase</h3>
+<table>
+<tr><th>Fase</th><th>% do Budget Total</th><th>Foco</th></tr>
+<tr><td>Pré-aquecimento (D-30 a D-14)</td><td>10-15%</td><td>Tráfego frio + crescimento de lista</td></tr>
+<tr><td>Pré-lançamento (D-14 a D-0)</td><td>20-25%</td><td>Aquecimento de lista + remarketing</td></tr>
+<tr><td>Abertura + primeiros 3 dias</td><td>30-35%</td><td>Conversão: quente + morno</td></tr>
+<tr><td>Últimos 2 dias (fechamento)</td><td>25-30%</td><td>Conversão máxima: urgência + scarcity</td></tr>
+</table>
+
+<h3>Calculando o Budget Ideal por Meta de Receita</h3>
+<pre>
+Meta de receita bruta: R$100.000
+Ticket médio: R$2.000
+Vendas necessárias: 50 vendas
+
+Taxa de conversão histórica checkout: 3%
+Visitantes necessários na PV: 50 ÷ 0,03 = 1.667 visitantes
+
+CPC médio dos anúncios: R$2,50
+Budget necessário em anúncios: 1.667 × R$2,50 = R$4.167
+
+ROAS esperado: R$100.000 ÷ R$4.167 = 24x
+</pre>
+<p>Esse cálculo é a base. Na prática, adicione 20% de margem de segurança e separe verba para testes de criativo (15-20% do total).</p>
+
+<h3>Distribuição por Tipo de Público</h3>
+<p>Para um budget de R$10.000 no carrinho de 7 dias:</p>
+<ul>
+  <li><strong>50%: Lista quente</strong> (email list custom audience, visitantes PV, seguidores IG) — maior ROAS, menor escala</li>
+  <li><strong>30%: Lookalike 1%</strong> (similar a compradores anteriores) — bom equilíbrio</li>
+  <li><strong>15%: Interesse frio</strong> (expansão de audiência) — menor ROAS mas maior alcance</li>
+  <li><strong>5%: Teste de novos criativos</strong> — sempre testando para o próximo lançamento</li>
+</ul>
+
+<h3>Ramp-up Sem Quebrar a Otimização</h3>
+<p>Aumentar budget muito rápido "quebra" a fase de aprendizagem do Meta — o algoritmo precisa recalcular o targeting com o novo volume. Regra prática:</p>
+<ul>
+  <li>Aumento máximo de 20-30% do budget a cada 24h</li>
+  <li>Se ROAS cair &gt;30% após aumento → volte o budget anterior por 24h</li>
+  <li>Pico de budget no último dia: pode dobrar de uma vez se o ROAS estiver estável</li>
+</ul>`
+          },
+          {
+            id: "cronograma-exercise",
+            title: "Exercício Final: Monte o Cronograma do Seu Próximo Lançamento",
+            duration: "25 min",
+            type: "exercise",
+            glossaryTerms: ["lead-magnet", "opt-in", "mrr"],
+            keyPoints: ["Definindo as datas do seu lançamento", "Mapeando todos os conteúdos necessários", "Calculando o budget por fase"],
+            content: `<h2>Exercício: Seu Cronograma Personalizado</h2>
+<p>Usando tudo que aprendeu neste módulo, construa o cronograma completo do seu próximo lançamento. Este exercício é o produto final de todo o Módulo 8.</p>`,
+            exercise: `<h3>Passo 1: Defina as Datas (15 min)</h3>
+<p>Preencha as datas do seu próximo lançamento:</p>
+<ul>
+  <li>Data de início do pré-aquecimento: ____</li>
+  <li>Data de início do pré-lançamento (D-14): ____</li>
+  <li>Data de abertura do carrinho (D+0): ____</li>
+  <li>Data de fechamento do carrinho: ____</li>
+  <li>Ticket do produto: R$____</li>
+  <li>Meta de receita: R$____</li>
+  <li>Budget total de anúncios: R$____</li>
+</ul>
+
+<h3>Passo 2: Liste os Conteúdos Necessários</h3>
+<p>Para cada semana, liste o que você precisa produzir:</p>
+<p><strong>Semana 1 (pré-aquecimento):</strong> ____ posts, ____ stories, ____ Reels</p>
+<p><strong>Semana 2 (aquecimento):</strong> ____ posts, ____ Reels, ____ emails</p>
+<p><strong>Semana 3 (pré-lançamento):</strong> ____ aulas PLF, ____ emails, ____ WhatsApps</p>
+<p><strong>Carrinho:</strong> ____ emails, ____ WhatsApps, ____ posts urgência</p>
+
+<h3>Passo 3: Calcule o Budget por Fase</h3>
+<p>Usando o modelo da última aula, calcule:</p>
+<ul>
+  <li>Budget pré-aquecimento (10-15%): R$____</li>
+  <li>Budget pré-lançamento (20-25%): R$____</li>
+  <li>Budget abertura + dias 1-4 (30-35%): R$____</li>
+  <li>Budget dias finais + fechamento (25-30%): R$____</li>
+</ul>
+
+<h3>Passo 4: Monte o Checklist de Infraestrutura</h3>
+<p>Antes de abrir o carrinho, confirme que tem:</p>
+<ul>
+  <li>[ ] Pixel + CAPI configurado e testado</li>
+  <li>[ ] Webhooks Hotmart/Kiwify → Email marketing funcionando</li>
+  <li>[ ] Sequência de emails completa e agendada</li>
+  <li>[ ] Templates de WhatsApp escritos</li>
+  <li>[ ] Automação de boas-vindas pós-compra funcionando</li>
+  <li>[ ] Cronograma de conteúdo 100% pré-produzido</li>
+  <li>[ ] Budget distribuído nas campanhas corretas</li>
+  <li>[ ] Alertas de monitoramento configurados</li>
+</ul>
+
+<p><em>Este cronograma completo, com todos os itens do checklist marcados, é o que separa um lançamento profissional de um lançamento amador. O trabalho que você faz antes do carrinho abrir determina quanto você vai faturar quando ele abrir.</em></p>`
+          }
+        ],
+        locked: false
+      }
+    ]
   }
 ];
 
