@@ -85,14 +85,29 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
     }
   }
 
-  function handleFreeSubmit(e: React.FormEvent) {
+  async function handleFreeSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!freeEmail.trim()) return;
     setFreeLoading(true);
-    setTimeout(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      await fetch("/api/academy/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: freeEmail.trim(),
+          source: "free-guide",
+          utmSource: params.get("utm_source") ?? undefined,
+          utmMedium: params.get("utm_medium") ?? undefined,
+          utmCampaign: params.get("utm_campaign") ?? undefined,
+        }),
+      });
+    } catch {
+      // best-effort — still show success
+    } finally {
       setFreeLoading(false);
       setFreeSubmitted(true);
-    }, 1500);
+    }
   }
 
   return (

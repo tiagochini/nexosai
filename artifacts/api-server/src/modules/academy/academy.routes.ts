@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod/v4";
 import { eq, or } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { academyPurchasesTable } from "@workspace/db";
+import { academyPurchasesTable, academyLeadsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import {
@@ -222,6 +222,46 @@ router.get("/verify/:token", async (req, res): Promise<void> => {
     email: purchase.customerEmail,
     name: purchase.customerName,
   });
+});
+
+// POST /api/academy/leads
+// Captures a free-guide lead (no auth required)
+const leadSchema = z.object({
+  email: z.email(),
+  name: z.string().max(255).optional(),
+  source: z.string().max(100).optional(),
+  utmSource: z.string().max(100).optional(),
+  utmMedium: z.string().max(100).optional(),
+  utmCampaign: z.string().max(100).optional(),
+});
+
+router.post("/leads", async (req, res): Promise<void> => {
+  let parsed;
+  try {
+    parsed = leadSchema.parse(req.body);
+  } catch {
+    res.status(400).json({ error: "E-mail inválido." });
+    return;
+  }
+
+  const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim()
+    ?? req.socket.remoteAddress
+    ?? null;
+
+  await db.insert(academyLeadsTable).values({
+    email: parsed.email.toLowerCase(),
+    name: parsed.name ?? null,
+    source: parsed.source ?? "free-guide",
+    ipAddress: ip,
+    userAgent: (req.headers["user-agent"] as string | undefined) ?? null,
+    utmSource: parsed.utmSource ?? null,
+    utmMedium: parsed.utmMedium ?? null,
+    utmCampaign: parsed.utmCampaign ?? null,
+  }).onConflictDoNothing();
+
+  logger.info({ email: parsed.email, source: parsed.source }, "academy: free lead captured");
+
+  res.json({ ok: true });
 });
 
 // POST /api/academy/simulate-confirm (dev/owner only — manually confirms a pending purchase)
