@@ -7,6 +7,7 @@ import {
   ArrowRight, CheckCircle2, ArrowDown,
   BrainCircuit, Lock, Shield, Zap, Target, Activity,
   Layers, Clock, TrendingDown, Users, TrendingUp,
+  BookOpen, GraduationCap, BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LiveDemoSection, SimulatorSection } from "@/components/landing-demo-sections";
@@ -370,7 +371,99 @@ function SolutionSection() {
   );
 }
 
-// ─── Section 5b: MODELOS & TRACKS ─────────────────────────────────────────────
+// ─── Section 5b: NEXOS ACADEMY ────────────────────────────────────────────────
+function AcademySection() {
+  const { ref, inView } = useInView(0.15);
+  const { t } = useI18n();
+  const a = t.academy;
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20" id="academy">
+      <div className="max-w-6xl mx-auto px-6 w-full py-20">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+            {/* Left: heading + stats + methodology box */}
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-5 flex items-center gap-2">
+                <GraduationCap className="h-3.5 w-3.5 text-primary/60" />
+                {a.label}
+              </div>
+              <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
+                {a.h2_1}<br />
+                <span className="text-primary">{a.h2_2}</span>
+              </h2>
+              <p className="font-mono text-sm text-muted-foreground leading-relaxed mb-2">
+                {a.p}
+              </p>
+              <p className="font-mono text-sm text-foreground font-bold leading-relaxed mb-8">
+                {a.p_bold}
+              </p>
+
+              {/* Stats */}
+              <div className="flex gap-0 mb-10">
+                {a.stats.map((s, i) => (
+                  <div key={i} className="flex-1 border border-border/30 px-4 py-3 bg-card/20 text-center">
+                    <div className="font-mono font-black text-2xl text-primary leading-none mb-1">{s.num}</div>
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Methodology box example */}
+              <div className="border border-[#334155] bg-[#0f172a] p-5 space-y-3">
+                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60 flex items-center gap-1.5">
+                  <BookOpen className="h-3 w-3" />
+                  {a.box_label}
+                </div>
+                <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{a.box_p}</p>
+                <div className="space-y-1.5 pt-1">
+                  {["A) Conceito — a lógica que a IA aplica", "B) Aplicação prática — como você executa ou aprova", "C) Resultado esperado — o que medir para saber que funcionou"].map((item, i) => (
+                    <div key={i} className="font-mono text-[10px] text-[#a78bfa] leading-relaxed">{item}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: modules grid */}
+            <div className="space-y-2">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-1.5">
+                <BarChart3 className="h-3 w-3" />
+                6 módulos · {a.stats[0].num} aulas
+              </div>
+              {a.modules.map((mod, i) => (
+                <div
+                  key={i}
+                  className={`border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}
+                  style={{ transitionDelay: `${200 + i * 80}ms` }}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="font-mono font-black text-2xl text-primary/15 leading-none shrink-0 mt-0.5">{mod.code}</span>
+                    <div>
+                      <div className="font-mono text-xs font-black uppercase tracking-widest text-foreground mb-1">{mod.nome}</div>
+                      <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{mod.desc}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className={`mt-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
+                <a href="#oferta">
+                  <Button className="btn-weapon-primary w-full rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs">
+                    {a.cta} <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section 5c: MODELOS & TRACKS ─────────────────────────────────────────────
 function ModelosSection() {
   const { ref, inView } = useInView(0.2);
   const { t } = useI18n();
@@ -863,6 +956,7 @@ export default function Landing() {
       <CustoRealSection />
       <RotinaSection />
       <SolutionSection />
+      <AcademySection />
       <ModelosSection />
       <ComoFuncionaSection />
       <LiveDemoSection />

@@ -141,6 +141,15 @@ export default function VideoEditorPage() {
   const narrationChunksRef = useRef<Blob[]>([]);
   const narrationStreamRef = useRef<MediaStream | null>(null);
 
+  // ── Timeline range selection ───────────────────────────────────────────────
+  const [rangeStart, setRangeStart] = useState<number | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<number | null>(null);
+  const isDraggingRange = useRef(false);
+  // ── Scrubber hover preview ─────────────────────────────────────────────────
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverX, setHoverX] = useState(0);
+  const [previewDataUrl, setPreviewDataUrl] = useState("");
+
   // ── Export ─────────────────────────────────────────────────────────────────
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
@@ -209,6 +218,7 @@ export default function VideoEditorPage() {
   const exportMrRef = useRef<MediaRecorder | null>(null);
   const rafRef = useRef<number>(0);
   const isDraggingPlayhead = useRef(false);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
 
   // ── Keyboard shortcuts ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -226,6 +236,25 @@ export default function VideoEditorPage() {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   });
+
+  // ── Preview video: sync src + draw frames on seek ─────────────────────────
+  useEffect(() => {
+    const pv = previewVideoRef.current;
+    if (pv && activeClip?.url) { pv.src = activeClip.url; pv.load(); }
+  }, [activeClip?.url]);
+
+  useEffect(() => {
+    const pv = previewVideoRef.current;
+    if (!pv) return;
+    const draw = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 80; canvas.height = 45;
+      const ctx = canvas.getContext("2d");
+      if (ctx) { ctx.drawImage(pv, 0, 0, 80, 45); setPreviewDataUrl(canvas.toDataURL()); }
+    };
+    pv.addEventListener("seeked", draw);
+    return () => pv.removeEventListener("seeked", draw);
+  }, []);
 
   // ── Load recording from server ─────────────────────────────────────────────
   useEffect(() => {
@@ -374,11 +403,57 @@ export default function VideoEditorPage() {
       ? `${((t / activeClip.duration) * 100).toFixed(3)}%`
       : "0%";
 
-  const onTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onTimelineMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!activeClip?.duration || isDraggingPlayhead.current) return;
+    e.preventDefault();
     const rect = e.currentTarget.getBoundingClientRect();
     const p = (e.clientX - rect.left) / rect.width;
-    seek(p * activeClip.duration);
+    const t = p * activeClip.duration;
+    const startX = e.clientX;
+    let hasDragged = false;
+    setRangeStart(t);
+    setRangeEnd(null);
+    isDraggingRange.current = true;
+
+    const move = (ev: MouseEvent) => {
+      const bar = timelineRef.current;
+      if (!bar || !activeClip) return;
+      if (!hasDragged && Math.abs(ev.clientX - startX) > 5) hasDragged = true;
+      if (!hasDragged) return;
+      const r = bar.getBoundingClientRect();
+      const pp = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+      setRangeEnd(pp * activeClip.duration);
+    };
+    const up = (ev: MouseEvent) => {
+      isDraggingRange.current = false;
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      if (!hasDragged) {
+        setRangeStart(null);
+        setRangeEnd(null);
+        const bar = timelineRef.current;
+        if (bar && activeClip) {
+          const r = bar.getBoundingClientRect();
+          const pp = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+          seek(pp * activeClip.duration);
+        }
+      }
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+
+  const onTimelineMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!activeClip?.duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const t = p * activeClip.duration;
+    setHoverTime(t);
+    setHoverX(e.clientX - rect.left);
+    const pv = previewVideoRef.current;
+    if (!isPlaying && pv && pv.src && Math.abs((pv.currentTime ?? 0) - t) > 0.12) {
+      pv.currentTime = t;
+    }
   };
 
   // ── Playhead drag ──────────────────────────────────────────────────────────
@@ -844,6 +919,7 @@ export default function VideoEditorPage() {
                 </>
               )}
               <canvas ref={canvasRef} className="hidden" />
+              <video ref={previewVideoRef} className="hidden" muted preload="metadata" crossOrigin="anonymous" />
             </div>
 
             {/* Playback controls + Timeline */}
@@ -852,9 +928,11 @@ export default function VideoEditorPage() {
                 {/* ── Timeline ── */}
                 <div
                   ref={timelineRef}
-                  onClick={onTimelineClick}
-                  className="relative h-10 bg-card/40 border border-border/40 cursor-crosshair select-none"
-                  title="Clique para navegar · Arraste o marcador branco para scrub frame-a-frame"
+                  onMouseDown={onTimelineMouseDown}
+                  onMouseMove={onTimelineMouseMove}
+                  onMouseLeave={() => setHoverTime(null)}
+                  className="relative h-10 bg-card/40 border border-border/40 cursor-crosshair select-none overflow-visible"
+                  title="Clique para navegar · Arraste para selecionar range · Arraste o marcador branco para scrub frame-a-frame"
                 >
                   {/* In/Out region */}
                   <div
@@ -864,6 +942,17 @@ export default function VideoEditorPage() {
                       width: `calc(${pct(activeClip.outPoint)} - ${pct(activeClip.inPoint)})`,
                     }}
                   />
+
+                  {/* Range selection highlight */}
+                  {rangeStart !== null && rangeEnd !== null && (
+                    <div
+                      className="absolute top-0 bottom-0 bg-yellow-400/20 border-x border-yellow-400/50 pointer-events-none z-[5]"
+                      style={{
+                        left: pct(Math.min(rangeStart, rangeEnd)),
+                        width: `calc(${pct(Math.max(rangeStart, rangeEnd))} - ${pct(Math.min(rangeStart, rangeEnd))})`,
+                      }}
+                    />
+                  )}
 
                   {/* Caption markers */}
                   {captions.map((cap, i) => (
@@ -947,6 +1036,23 @@ export default function VideoEditorPage() {
                     <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45" />
                     <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45" />
                   </div>
+
+                  {/* Hover time tooltip + frame preview */}
+                  {hoverTime !== null && (
+                    <div
+                      className="absolute bottom-full mb-1.5 pointer-events-none z-30 -translate-x-1/2"
+                      style={{ left: Math.max(40, Math.min(hoverX, (timelineRef.current?.offsetWidth ?? 200) - 40)) }}
+                    >
+                      <div className="bg-background/95 border border-border/60 flex flex-col items-center shadow-xl">
+                        {previewDataUrl && (
+                          <img src={previewDataUrl} width={80} height={45} className="block border-b border-border/40" />
+                        )}
+                        <span className="font-mono text-[9px] text-foreground/80 px-1.5 py-0.5 whitespace-nowrap">
+                          {fmtTimeFull(hoverTime)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Timecodes row */}
@@ -1023,6 +1129,33 @@ export default function VideoEditorPage() {
                       title="Marcar ponto de saída no frame atual">
                       OUT<Scissors className="h-3 w-3 ml-1" />
                     </Button>
+                    {rangeStart !== null && rangeEnd !== null && (
+                      <div className="flex items-center gap-1 border-l border-border/40 pl-2">
+                        <span className="font-mono text-[9px] text-yellow-400/90 whitespace-nowrap">
+                          {fmtTime(Math.min(rangeStart, rangeEnd))}→{fmtTime(Math.max(rangeStart, rangeEnd))}
+                        </span>
+                        <Button variant="ghost" size="sm"
+                          onClick={() => {
+                            const rs = Math.min(rangeStart, rangeEnd);
+                            const re = Math.max(rangeStart, rangeEnd);
+                            setClips(prev => prev.map(c => c.id === activeClipId
+                              ? { ...c, inPoint: Math.max(0, rs), outPoint: Math.min(c.duration, re) } : c));
+                            pushHistory(clips, overlays, captions);
+                            setRangeStart(null); setRangeEnd(null);
+                            toast.success("IN/OUT ajustados ao range");
+                          }}
+                          className="rounded-none font-mono text-[9px] uppercase tracking-widest px-2 h-7 border border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10"
+                          title="Usar range selecionado como IN/OUT">
+                          IN↔OUT
+                        </Button>
+                        <button
+                          onClick={() => { setRangeStart(null); setRangeEnd(null); }}
+                          className="font-mono text-[10px] px-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                          title="Limpar seleção">
+                          ✕
+                        </button>
+                      </div>
+                    )}
                     <Button variant="ghost" size="sm" onClick={captureThumbnail}
                       className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2">
                       <ImageIcon className="h-3 w-3 mr-1" />Thumb
@@ -1367,8 +1500,19 @@ export default function VideoEditorPage() {
                                 ? "Pause ou pare o vídeo para finalizar a gravação"
                                 : narrationRecordBlob
                                 ? "Narração anexada. Pressione Play para regravar."
-                                : "Pressione Play para iniciar o vídeo e gravar sua narração simultaneamente"}
+                                : rangeStart !== null && rangeEnd !== null
+                                ? `Segmento ${fmtTime(Math.min(rangeStart, rangeEnd))}→${fmtTime(Math.max(rangeStart, rangeEnd))} selecionado. Play para gravar este trecho.`
+                                : "Pressione Play para gravar narração. Arraste na timeline para selecionar um segmento específico."}
                             </p>
+                            {!isRecordingNarration && !narrationRecordBlob && rangeStart !== null && rangeEnd !== null && (
+                              <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1 border border-yellow-500/30 bg-yellow-500/5">
+                                <div className="h-1.5 w-1.5 rounded-full bg-yellow-400/80 shrink-0" />
+                                <span className="font-mono text-[9px] text-yellow-400/80">
+                                  {fmtTime(Math.min(rangeStart, rangeEnd))} → {fmtTime(Math.max(rangeStart, rangeEnd))}
+                                  {" "}({fmtTime(Math.abs(rangeEnd - rangeStart))})
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                         {narrationRecordBlob && (
