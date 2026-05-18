@@ -666,56 +666,30 @@ export default function AgentChat() {
     <div className="flex flex-col max-w-5xl mx-auto" style={{ height: "calc(100vh - 7rem)" }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 pb-4 border-b border-border/50 mb-4">
+      <div className="shrink-0 flex items-center gap-2.5 py-2 border-b border-border/50 mb-2">
         <Link href="/agents">
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-3 -ml-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-3 w-3 mr-2" />Time de Agentes
-          </Button>
+          <button className="h-7 w-7 border border-border/50 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all shrink-0">
+            <ArrowLeft className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
         </Link>
-        <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-          <div className={`w-12 h-12 border flex items-center justify-center shrink-0 ${accent.border} ${accent.bg}`}>
-            <Icon className={`h-5 w-5 ${accent.text}`} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h1 className="font-mono font-bold text-xl uppercase tracking-wide text-foreground">{agent.name}</h1>
-              <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 border ${PROVIDER_BADGE_CLASS[agent.provider]}`}>{agent.provider}</Badge>
-              <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-border/50 text-muted-foreground">3 cr/msg</Badge>
-            </div>
-            <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">{agent.tagline} · {agent.description}</p>
-          </div>
-          {messages.length > 0 && (
-            <div className="flex gap-2 shrink-0">
-              <Button variant="ghost" size="sm" onClick={exportChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
-                <Download className="h-3 w-3 mr-1.5" />Exportar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={clearChat} className="font-mono text-xs uppercase tracking-widest rounded-sm h-8 px-3 text-muted-foreground hover:text-foreground">
-                <RefreshCw className="h-3 w-3 mr-1.5" />Limpar
-              </Button>
-            </div>
-          )}
+        <div className={`w-8 h-8 border flex items-center justify-center shrink-0 ${accent.border} ${accent.bg}`}>
+          <Icon className={`h-4 w-4 ${accent.text}`} />
         </div>
-      </div>
-
-      {/* ── Context controls ────────────────────────────────────────────────── */}
-      <div className="shrink-0 flex flex-wrap gap-2 mb-3">
-        <div className="flex gap-1 border border-border/50 bg-card/40 p-0.5 rounded-sm">
-          {(Object.keys(MODE_LABELS) as ContextMode[]).map(m => (
-            <button key={m} onClick={() => setContextMode(m)}
-              className={`px-2.5 py-1.5 text-[11px] font-mono uppercase tracking-widest transition-all rounded-sm
-                ${contextMode === m ? `${accent.bg} ${accent.text} border ${accent.border}` : "text-muted-foreground hover:text-foreground"}`}>
-              {MODE_LABELS[m]}
+        <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+          <h1 className="font-mono font-bold text-sm uppercase tracking-wide text-foreground leading-none">{agent.name}</h1>
+          <span className="font-mono text-[11px] text-muted-foreground/60 truncate hidden sm:inline">{agent.tagline}</span>
+          <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 py-0 border ${PROVIDER_BADGE_CLASS[agent.provider]}`}>{agent.provider}</Badge>
+          <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 border-border/50 text-muted-foreground/60">3 cr</Badge>
+        </div>
+        {messages.length > 0 && (
+          <div className="flex gap-1 shrink-0">
+            <button onClick={exportChat} title="Exportar conversa" className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground">
+              <Download className="h-3 w-3" />
             </button>
-          ))}
-        </div>
-        {(campaignsData?.campaigns ?? []).length > 0 && (
-          <select value={selectedCampaign} onChange={e => setSelectedCampaign(e.target.value)}
-            className="text-[11px] font-mono uppercase tracking-widest bg-card/40 border border-border/50 px-3 py-1.5 text-muted-foreground rounded-sm focus:border-primary/50 focus:outline-none">
-            <option value="">Sem contexto de campanha</option>
-            {(campaignsData?.campaigns ?? []).map(c => (
-              <option key={c.id} value={c.id}>{c.title}</option>
-            ))}
-          </select>
+            <button onClick={clearChat} title="Limpar histórico" className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground">
+              <RefreshCw className="h-3 w-3" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -760,24 +734,59 @@ export default function AgentChat() {
               )}
 
               <div className={`flex flex-col ${isUser ? "items-end" : "items-start"} min-w-0 max-w-[85%]`}>
-                {/* Attachments (images preview, others as chips) */}
+                {/* Attachments — rich preview per type */}
                 {msg.attachments && msg.attachments.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {msg.attachments.filter(a => a.isImage).map((att, ai) => (
-                      <a key={`img-${ai}`} href={att.url} target="_blank" rel="noreferrer"
-                        className="block border border-border/40 overflow-hidden bg-muted/10 hover:opacity-90 transition-opacity">
-                        <img src={att.url} alt={att.name} className="max-h-40 max-w-xs object-contain" />
-                      </a>
-                    ))}
-                    {msg.attachments.filter(a => !a.isImage).map((att, ai) => (
-                      <a key={`file-${ai}`} href={att.url} download={att.name}
-                        className="flex items-center gap-1.5 border border-border/50 bg-muted/20 hover:bg-muted/40 px-2.5 py-1.5 transition-colors group">
-                        {fileIcon(att)}
-                        <span className="text-[11px] font-mono text-muted-foreground group-hover:text-foreground truncate max-w-[160px]">{att.name}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground/40 ml-1">{formatBytes(att.size)}</span>
-                        <Download className="h-2.5 w-2.5 text-muted-foreground/40 group-hover:text-foreground ml-1 shrink-0" />
-                      </a>
-                    ))}
+                  <div className="mb-2 flex flex-col gap-1.5 w-full max-w-sm">
+                    {msg.attachments.map((att, ai) => {
+                      if (att.isImage) return (
+                        <a key={`img-${ai}`} href={att.url} target="_blank" rel="noreferrer"
+                          className="block border border-border/40 overflow-hidden bg-muted/10 hover:opacity-90 transition-opacity">
+                          <img src={att.url} alt={att.name} className="max-h-48 w-full object-contain" />
+                          <div className="px-2 py-1 border-t border-border/30 flex items-center gap-1.5">
+                            <ImageIcon className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                            <span className="font-mono text-[10px] text-muted-foreground/50 truncate">{att.name}</span>
+                          </div>
+                        </a>
+                      );
+                      if (att.isVideo) return (
+                        <div key={`vid-${ai}`} className="border border-cyan-400/30 bg-card/40 overflow-hidden">
+                          <video src={att.url} controls className="w-full max-h-48 bg-black" preload="metadata" />
+                          <div className="px-2 py-1 border-t border-border/30 flex items-center gap-1.5">
+                            <FileVideo className="h-3 w-3 text-cyan-400/70 shrink-0" />
+                            <span className="font-mono text-[10px] text-muted-foreground/50 truncate flex-1">{att.name}</span>
+                            <span className="font-mono text-[10px] text-muted-foreground/30">{formatBytes(att.size)}</span>
+                          </div>
+                        </div>
+                      );
+                      if (att.isAudio) return (
+                        <div key={`aud-${ai}`} className="border border-green-400/30 bg-card/40 p-2">
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <FileAudio className="h-3.5 w-3.5 text-green-400/70 shrink-0" />
+                            <span className="font-mono text-[11px] text-muted-foreground/70 truncate">{att.name}</span>
+                          </div>
+                          <audio src={att.url} controls className="w-full h-8" />
+                        </div>
+                      );
+                      const ext = att.name.split(".").pop()?.toUpperCase() ?? "FILE";
+                      const isPdf = /pdf/i.test(att.type ?? att.name);
+                      const isDoc = /\.(ppt|pptx|doc|docx|xls|xlsx)$/i.test(att.name);
+                      return (
+                        <div key={`doc-${ai}`} className="flex items-center gap-2 border border-border/50 bg-muted/20 px-2.5 py-2">
+                          <div className={`w-7 h-8 border flex items-center justify-center shrink-0 font-mono text-[8px] font-bold
+                            ${isPdf ? "border-red-400/40 text-red-400 bg-red-400/10" : isDoc ? "border-blue-400/40 text-blue-400 bg-blue-400/10" : "border-border/50 text-muted-foreground bg-muted/20"}`}>
+                            {ext}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono text-[11px] text-foreground/80 truncate">{att.name}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground/40">{formatBytes(att.size)}</div>
+                          </div>
+                          <a href={att.url} download={att.name} title="Baixar"
+                            className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground shrink-0">
+                            <Download className="h-3 w-3" />
+                          </a>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -842,38 +851,57 @@ export default function AgentChat() {
           onChange={e => { void handleFileSelect(e); }}
         />
 
-        {/* Pending attachments */}
+        {/* Pending attachments — rich preview */}
         {pendingAttachments.length > 0 && (
-          <div className="border-b border-border/30 px-3 pt-2.5 pb-2 space-y-1.5">
-            {pendingAttachments.map((att, i) => (
-              <div key={i}>
-                <div className="flex items-center gap-2 border border-border/50 bg-muted/20 pl-2 pr-1 py-1">
+          <div className="border-b border-border/30 px-3 pt-2.5 pb-2">
+            <div className="flex flex-wrap gap-2">
+              {pendingAttachments.map((att, i) => (
+                <div key={i} className="relative group">
                   {att.isImage && att.content ? (
-                    <img src={att.content} alt={att.name} className="h-5 w-5 object-cover shrink-0" />
-                  ) : att.isTranscribing ? (
-                    <Loader2 className="h-3.5 w-3.5 text-green-400 animate-spin shrink-0" />
+                    <div className="relative border border-border/50 bg-muted/20 overflow-hidden">
+                      <img src={att.content} alt={att.name} className="h-16 w-16 object-cover" />
+                      <button onClick={() => removeAttachment(i)}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 bg-background/80 hover:bg-destructive/80 flex items-center justify-center transition-colors">
+                        <X className="h-2.5 w-2.5 text-foreground" />
+                      </button>
+                    </div>
+                  ) : att.isVideo ? (
+                    <div className="relative border border-cyan-400/30 bg-card/40 overflow-hidden">
+                      <video src={att.url} className="h-16 w-24 object-cover bg-black" preload="metadata" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <FileVideo className="h-5 w-5 text-cyan-400/80" />
+                      </div>
+                      <button onClick={() => removeAttachment(i)}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 bg-background/80 hover:bg-destructive/80 flex items-center justify-center transition-colors">
+                        <X className="h-2.5 w-2.5 text-foreground" />
+                      </button>
+                    </div>
                   ) : (
-                    fileIcon(att)
+                    <div className="flex items-center gap-1.5 border border-border/50 bg-muted/20 pl-2 pr-1 py-1.5 max-w-[180px]">
+                      {att.isTranscribing
+                        ? <Loader2 className="h-3.5 w-3.5 text-green-400 animate-spin shrink-0" />
+                        : att.isAudio
+                          ? <FileAudio className="h-3.5 w-3.5 text-green-400/70 shrink-0" />
+                          : fileIcon(att)
+                      }
+                      <div className="flex-1 min-w-0">
+                        <div className="font-mono text-[11px] text-muted-foreground truncate">{att.name}</div>
+                        <div className="font-mono text-[10px] text-muted-foreground/40">
+                          {att.isTranscribing ? (
+                            <span className="text-green-400/70 animate-pulse">Transcrevendo…</span>
+                          ) : att.transcription ? (
+                            <span className="text-green-400/70">✓ Transcrito</span>
+                          ) : formatBytes(att.size)}
+                        </div>
+                      </div>
+                      <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5 shrink-0">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
                   )}
-                  <span className="text-[11px] font-mono text-muted-foreground truncate max-w-[130px]">{att.name}</span>
-                  {att.isTranscribing ? (
-                    <span className="text-[10px] font-mono text-green-400/70 animate-pulse">Transcrevendo…</span>
-                  ) : att.transcription ? (
-                    <span className="text-[10px] font-mono text-green-400/70">✓ Transcrito</span>
-                  ) : (
-                    <span className="text-[10px] font-mono text-muted-foreground/40">{formatBytes(att.size)}</span>
-                  )}
-                  <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive transition-colors ml-0.5 p-0.5">
-                    <X className="h-3 w-3" />
-                  </button>
                 </div>
-                {att.transcription && (
-                  <div className="mt-0.5 ml-1 border-l-2 border-green-400/30 pl-2 font-mono text-[10px] text-muted-foreground/60 italic max-w-sm truncate">
-                    "{att.transcription}"
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
@@ -910,10 +938,34 @@ export default function AgentChat() {
           />
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center gap-1.5 px-3 pb-3 pt-1">
+        {/* Toolbar row 1: context + campaign */}
+        <div className="flex items-center gap-1.5 px-3 pt-2 pb-1 border-t border-border/20 flex-wrap">
+          {/* Context mode pills — compact */}
+          <div className="flex gap-0.5">
+            {(Object.keys(MODE_LABELS) as ContextMode[]).map(m => (
+              <button key={m} onClick={() => setContextMode(m)}
+                className={`px-2 py-1 text-[10px] font-mono uppercase tracking-widest transition-all
+                  ${contextMode === m ? `${accent.bg} ${accent.text} border ${accent.border}` : "text-muted-foreground/50 hover:text-foreground"}`}>
+                {MODE_LABELS[m]}
+              </button>
+            ))}
+          </div>
+          {(campaignsData?.campaigns ?? []).length > 0 && (
+            <select value={selectedCampaign} onChange={e => setSelectedCampaign(e.target.value)}
+              className="text-[10px] font-mono uppercase tracking-widest bg-card/40 border border-border/40 px-2 py-1 text-muted-foreground/60 focus:border-primary/50 focus:outline-none max-w-[160px] truncate">
+              <option value="">Sem campanha</option>
+              {(campaignsData?.campaigns ?? []).map(c => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+          )}
+          <span className="ml-auto text-[10px] font-mono text-muted-foreground/25">
+            {isMobile ? "Enter = enviar" : "Ctrl+Enter"}
+          </span>
+        </div>
 
-          {/* Attach — opens full file picker (images, videos, camera, documents, etc.) */}
+        {/* Toolbar row 2: actions + send */}
+        <div className="flex items-center gap-1.5 px-3 pb-3 pt-1">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -925,16 +977,11 @@ export default function AgentChat() {
           >
             <Paperclip className="h-4 w-4" />
           </button>
-          {pendingAttachments.length > 0 && (
-            <span className="font-mono text-[10px] text-primary/70">{pendingAttachments.length} arquivo{pendingAttachments.length > 1 ? "s" : ""}</span>
-          )}
 
-          {/* Camera shortcut on mobile */}
           {isMobile && (
             <button
               type="button"
               onClick={() => {
-                // Create a temporary input with capture for camera
                 const tmp = document.createElement("input");
                 tmp.type = "file"; tmp.accept = "image/*,video/*"; tmp.capture = "environment";
                 tmp.style.display = "none";
@@ -948,7 +995,6 @@ export default function AgentChat() {
             </button>
           )}
 
-          {/* Voice to text */}
           <button
             type="button"
             onClick={toggleVoice}
@@ -963,10 +1009,9 @@ export default function AgentChat() {
 
           <div className="flex-1" />
 
-          {/* New line (desktop) */}
           {!isMobile && (
             <Button variant="outline" size="sm"
-              title="Inserir nova linha (ou Shift+Enter)"
+              title="Inserir nova linha"
               onClick={() => { setInput(v => v + "\n"); setTimeout(() => textareaRef.current?.focus(), 0); autoGrow(); }}
               disabled={sending}
               className="font-mono rounded-sm h-8 px-2.5 border-border/50 text-muted-foreground hover:text-foreground hover:border-border shrink-0">
@@ -974,7 +1019,6 @@ export default function AgentChat() {
             </Button>
           )}
 
-          {/* Send */}
           <Button
             onPointerDown={e => { if (e.pointerType === "touch") e.preventDefault(); }}
             onClick={() => { if (!input.trim() && pendingAttachments.length === 0) { textareaRef.current?.focus(); return; } void sendMessage(); }}
@@ -989,16 +1033,6 @@ export default function AgentChat() {
                   <span className={`font-mono text-[11px] uppercase tracking-widest ${accent.text} hidden sm:inline`}>Enviar</span>
                 </>}
           </Button>
-        </div>
-
-        {/* Footer hint */}
-        <div className="flex justify-between items-center px-3 pb-2.5">
-          <span className="text-[10px] font-mono text-muted-foreground/30 uppercase tracking-widest">
-            Modo: {MODE_LABELS[contextMode]}{selectedCampaign ? " · Com campanha" : ""}
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground/30">
-            {isMobile ? "Enter = enviar" : "Ctrl+Enter = enviar"} · 3 cr/msg
-          </span>
         </div>
       </div>
     </div>

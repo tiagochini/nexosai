@@ -93,11 +93,16 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       ],
     },
     {
+      label: "Criação",
+      items: [
+        { name: tr.sidebar.vsl,   href: "/vsls",         icon: Video      },
+        { name: tr.sidebar.video, href: "/video-editor", icon: Clapperboard },
+      ],
+    },
+    {
       label: tr.nav.tools,
       expertOnly: true,
       items: [
-        { name: tr.sidebar.vsl,          href: "/vsls",              icon: Video      },
-        { name: tr.sidebar.video,        href: "/video-editor",      icon: Clapperboard },
         { name: tr.sidebar.social,       href: "/social",            icon: Share2     },
         { name: tr.sidebar.moderation,   href: "/social/moderation", icon: Shield     },
         { name: tr.sidebar.sequences,    href: "/sequences",         icon: Workflow   },

@@ -3302,11 +3302,7 @@ Exemplo: R$100/dia → R$120/dia (3 dias) → R$144/dia (3 dias) → R$172/dia..
   <li><strong>Performance boa depois deteriorando → Saturação:</strong> freqüência acima de 3 para público frio — renove criativos ou expanda público</li>
 </ul>
 
-<blockquote>O maior inimigo do Meta Ads não é o algoritmo — é a impaciência. Campanhas que seriam vencedoras são pausadas antes de completar a aprendizagem. Dados sem paciência são apenas ruído.</blockquote>`
-  <li><strong>CPC (Custo por Clique):</strong> quanto custa cada clique. Relevante mas não isoladamente — um CPC alto com alta conversão é melhor que CPC baixo com zero conversão.</li>
-  <li><strong>CPL (Custo por Lead):</strong> o que realmente importa em campanhas de captura. Compare com o LTV do seu cliente.</li>
-  <li><strong>ROAS (Retorno sobre Gasto em Anúncio):</strong> receita ÷ gasto em ads. ROAS de 3x significa que cada R$1 investido gerou R$3. Ponto de equilíbrio depende da margem do produto.</li>
-</ul>
+<blockquote>O maior inimigo do Meta Ads não é o algoritmo — é a impaciência. Campanhas que seriam vencedoras são pausadas antes de completar a aprendizagem. Dados sem paciência são apenas ruído.</blockquote>
 
 <h3>A Fase de Aprendizado: Não Mexa</h3>
 <p>Quando você cria ou faz mudanças significativas em um conjunto de anúncios, o algoritmo entra em "fase de aprendizado". Precisa de 50 eventos de otimização para sair dessa fase. Mexer antes reinicia o contador.</p>
