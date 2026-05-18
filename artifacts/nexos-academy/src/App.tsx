@@ -5,10 +5,11 @@ import Modules from "@/pages/modules";
 import Lesson from "@/pages/lesson";
 import Products from "@/pages/products";
 import ProgressPage from "@/pages/progress-page";
+import Glossary from "@/pages/glossary";
 
 const queryClient = new QueryClient();
 
-type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress";
+type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary";
 
 interface NavState {
   page: Page;
@@ -32,6 +33,7 @@ function saveProgress(p: Record<string, boolean>) {
 const NAV_ITEMS = [
   { id: "home", label: "Início", icon: "🏠" },
   { id: "modules", label: "Módulos", icon: "📦" },
+  { id: "glossary", label: "Glossário", icon: "📖" },
   { id: "products", label: "Produtos", icon: "🛒" },
   { id: "progress", label: "Progresso", icon: "📊" },
 ];
@@ -91,6 +93,8 @@ function AcademyApp() {
         return <Products onNavigate={navigate} />;
       case "progress":
         return <ProgressPage onNavigate={navigate} progress={progress} onReset={resetProgress} />;
+      case "glossary":
+        return <Glossary onNavigate={navigate} />;
       default:
         return <Home onNavigate={navigate} progress={progress} />;
     }
@@ -194,7 +198,7 @@ function AcademyApp() {
                 <span className="text-[hsl(250_90%_75%)]">Aula</span>
               </>
             )}
-            {(nav.page === "modules" || nav.page === "products" || nav.page === "progress") && (
+            {(nav.page === "modules" || nav.page === "products" || nav.page === "progress" || nav.page === "glossary") && (
               <span className="text-[hsl(250_90%_75%)]">
                 {NAV_ITEMS.find(n => n.id === nav.page)?.label}
               </span>
