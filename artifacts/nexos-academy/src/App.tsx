@@ -49,8 +49,10 @@ const PUBLIC_NAV_ITEMS = ALL_NAV_ITEMS.filter(n => ["home", "products", "glossar
 const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress"];
 
 function getInitialPage(): NavState {
-  if (typeof window !== "undefined" && window.location.hash === "#owner") {
-    return { page: "owner", params: {} };
+  if (typeof window !== "undefined") {
+    if (window.location.hash === "#owner") return { page: "owner", params: {} };
+    const search = new URLSearchParams(window.location.search);
+    if (search.get("payment") === "success") return { page: "products", params: { paymentSuccess: "1" } };
   }
   return { page: "home", params: {} };
 }
@@ -62,8 +64,11 @@ function AcademyApp() {
   const [ownerMode, setOwnerMode] = useState<boolean>(isOwnerMode);
   const [hasAccess, setHasAccess] = useState<boolean>(() => hasStoredAccess() || isOwnerMode());
 
-  const grantAccess = useCallback(() => {
+  const ACADEMY_TOKEN_KEY = "nexos-academy-token";
+
+  const grantAccess = useCallback((token?: string) => {
     localStorage.setItem(ACCESS_KEY, "true");
+    if (token) localStorage.setItem(ACADEMY_TOKEN_KEY, token);
     setHasAccess(true);
   }, []);
 
@@ -160,7 +165,7 @@ function AcademyApp() {
           />
         );
       case "products":
-        return <Products onNavigate={navigate} hasAccess={canAccess} onAccessGranted={grantAccess} />;
+        return <Products onNavigate={navigate} hasAccess={canAccess} onAccessGranted={grantAccess} paymentSuccess={nav.params.paymentSuccess === "1"} />;
       case "progress":
         return <ProgressPage onNavigate={navigate} progress={progress} onReset={resetProgress} />;
       case "glossary":

@@ -33,3 +33,4 @@ export * from "./social-comment-actions";
 export * from "./creatives";
 export * from "./products";
 export * from "./product-sales";
+export * from "./academy-purchases";
