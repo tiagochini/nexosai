@@ -2072,6 +2072,815 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
         locked: true
       }
     ]
+  },
+  {
+    id: "algoritmos",
+    number: 7,
+    title: "Algoritmos: A Ciência de Ser Visto",
+    description: "Entenda como cada algoritmo pensa, o que ele quer maximizar e como você pode usá-lo como alavanca — não lutar contra ele. TikTok, Instagram, YouTube, Facebook, Google e os padrões universais que governam todos eles.",
+    badge: "Algoritmos",
+    chapters: [
+      {
+        id: "algoritmos-fundamentos",
+        number: 15,
+        title: "A Lógica Universal dos Algoritmos",
+        subtitle: "O que todo algoritmo de recomendação tem em comum — e como usar isso",
+        icon: "🧮",
+        color: "from-slate-600 to-gray-700",
+        duration: "1h 20min",
+        summary: "Antes de entender cada plataforma individualmente, existe uma lógica comum que governa todos os algoritmos de recomendação. Quem entende essa lógica consegue adaptar qualquer plataforma nova em dias — não meses.",
+        lessons: [
+          {
+            id: "algo-o-que-e",
+            title: "O que é um Algoritmo de Recomendação e o que ele Quer",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["O objetivo real de todo algoritmo: maximizar tempo na plataforma", "Sinal implícito vs. sinal explícito", "O loop de feedback que alimenta o algoritmo", "Por que o algoritmo não é seu inimigo — é um espelho"],
+            content: `<h2>O Algoritmo não é Mágica — é Otimização</h2>
+<p>Todo algoritmo de recomendação de plataforma digital tem um único objetivo central: <strong>maximizar o tempo que o usuário passa na plataforma</strong>. Não é para ajudar o criador, não é para entregar o melhor conteúdo do mundo — é para manter as pessoas rolando, assistindo e interagindo o máximo possível.</p>
+
+<p>Entender isso muda completamente a perspectiva. Você não precisa "enganar" o algoritmo. Você precisa <em>criar conteúdo que faz as pessoas ficarem</em> — e o algoritmo distribui automaticamente.</p>
+
+<h3>A Equação Fundamental</h3>
+<p>Todo algoritmo de recomendação, em qualquer plataforma, resolve uma variante da mesma equação:</p>
+<pre>Score do Conteúdo = f(Engajamento, Retenção, Relevância, Frescor)</pre>
+
+<ul>
+  <li><strong>Engajamento:</strong> curtidas, comentários, compartilhamentos, saves, cliques — interações que sinalizam que o conteúdo provocou uma reação</li>
+  <li><strong>Retenção:</strong> quanto tempo a pessoa passou consumindo aquele conteúdo — o sinal mais honesto de valor</li>
+  <li><strong>Relevância:</strong> o quão bem o conteúdo combina com o histórico e os interesses daquele usuário específico</li>
+  <li><strong>Frescor:</strong> conteúdo recente tem vantagem inicial, mas perde para conteúdo com mais sinais acumulados com o tempo</li>
+</ul>
+
+<h3>Sinais Implícitos vs. Explícitos</h3>
+<p>Os algoritmos aprenderam a confiar mais em sinais <em>implícitos</em> — comportamento do usuário que revela preferência real — do que em sinais <em>explícitos</em> como curtidas.</p>
+
+<p><strong>Sinais implícitos (mais pesados no algoritmo):</strong></p>
+<ul>
+  <li>Tempo de visualização do vídeo (retenção)</li>
+  <li>Rolar de volta para reler uma parte</li>
+  <li>Assistir ao vídeo mais de uma vez (rewatch)</li>
+  <li>Parar o scroll e ficar na tela por mais de 3 segundos</li>
+  <li>Abrir o perfil depois de ver o conteúdo</li>
+  <li>Salvar o post para ver depois</li>
+</ul>
+
+<p><strong>Sinais explícitos (menos peso, mais fáceis de manipular):</strong></p>
+<ul>
+  <li>Curtidas</li>
+  <li>Comentários</li>
+  <li>Cliques no "não me mostrar mais"</li>
+</ul>
+
+<blockquote>O algoritmo aprende com o que as pessoas <em>fazem</em>, não com o que dizem que gostam. Um usuário pode curtir todo conteúdo de fitness que aparece, mas se ele não assiste até o final, o algoritmo entende que fitness não retém esse usuário — e distribui menos.</blockquote>
+
+<h3>O Loop de Feedback</h3>
+<p>Todo algoritmo funciona em loop:</p>
+<ol>
+  <li>Conteúdo novo é publicado</li>
+  <li>Algoritmo testa com grupo pequeno de usuários potencialmente interessados</li>
+  <li>Mede sinais de engajamento e retenção</li>
+  <li>Se sinais são positivos → expande distribuição para grupo maior</li>
+  <li>Repete até saturar ou o conteúdo perder performance</li>
+</ol>
+
+<p>Cada plataforma tem parâmetros diferentes para "positivo" neste loop — mas a estrutura é universal.</p>
+
+<h3>O Algoritmo como Espelho</h3>
+<p>Se seu conteúdo não está sendo distribuído, há duas possibilidades: ou o algoritmo está com problema (raro) ou seu conteúdo não está gerando retenção suficiente (quase sempre). O algoritmo não te pune — ele simplesmente reflete o comportamento real da audiência. Culpar o algoritmo é evitar a pergunta certa: <em>por que as pessoas não estão ficando?</em></p>`
+          },
+          {
+            id: "algo-psicologia",
+            title: "A Psicologia por Trás dos Sinais de Engajamento",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Por que o cérebro para o scroll", "O papel da dopamina na distribuição de conteúdo", "Curiosity gap: a lacuna que força a continuação", "Pattern interrupt: quebrando o piloto automático", "Como emocionar em 3 segundos"],
+            content: `<h2>A Neurociência do Scroll: Por Que Paramos</h2>
+<p>Para usar o algoritmo a seu favor, você precisa entender o que está do outro lado: um cérebro humano em modo de piloto automático, tomando micro-decisões a cada 1,7 segundo. O algoritmo distribui para quem sabe interromper esse piloto automático.</p>
+
+<h3>O Cérebro no Scroll: O Estado Default</h3>
+<p>Quando alguém está fazendo scroll no feed, o córtex pré-frontal — a parte do cérebro responsável por decisões conscientes — está parcialmente desativado. É um estado quase meditativo de processamento baixo de informação. Nesse estado, o conteúdo é processado de forma rápida e superficial.</p>
+
+<p>Para parar esse estado, o conteúdo precisa ativar uma das respostas do sistema límbico — a parte emocional e primitiva do cérebro que processa ameaças, oportunidades e novidades.</p>
+
+<h3>Os 5 Gatilhos que Param o Scroll</h3>
+
+<h3>1. Curiosidade (Curiosity Gap)</h3>
+<p>O cérebro humano tem aversão a lacunas de conhecimento. Quando percebe que sabe apenas parte de algo, sente desconforto e busca completar a informação.</p>
+<p>Como usar: crie uma promessa no início que só se completa no final. "O erro que 99% dos produtores cometem no dia de abertura do carrinho" — a pessoa <em>precisa</em> saber qual é o erro.</p>
+<p>O Curiosity Gap é a base do copywriting de alto engajamento e do clickbait legítimo (quando entrega o que promete).</p>
+
+<h3>2. Reconhecimento de Si Mesmo (Self-Reference Effect)</h3>
+<p>O cérebro processa mais rapidamente informações que parecem relevantes para si mesmo. Quando alguém lê "Você ainda faz isso ao lançar seu produto?", o "você" ativa uma resposta de atenção involuntária.</p>
+<p>Como usar: personalize o hook para a identidade específica do seu público. "Se você vende cursos online e está travado no mesmo patamar há 3 meses..." — quem se encaixa não consegue ignorar.</p>
+
+<h3>3. Dissonância Cognitiva (Pattern Interrupt)</h3>
+<p>O cérebro automaticamente filtra o que já conhece. Algo que contraria uma crença estabelecida força atenção consciente — o sistema ativa para resolver o conflito.</p>
+<p>Como usar: comece com uma afirmação contraintuitiva. "Postar todo dia no Instagram está destruindo seu alcance" — vai contra o que a maioria acredita, forçando atenção para resolver a dissonância.</p>
+
+<h3>4. Ameaça e FOMO (Fear of Missing Out)</h3>
+<p>O cérebro primitivo prioriza ameaças. FOMO é uma ameaça social — a sensação de ficar para trás enquanto outros avançam.</p>
+<p>Como usar: "Enquanto você lê isso, produtores menores que você estão faturando 3x mais com esse método". Não é manipulação — é ativação de urgência real quando o conteúdo entrega valor genuíno.</p>
+
+<h3>5. Dopamina Antecipada</h3>
+<p>A dopamina é liberada não apenas quando recebemos uma recompensa, mas quando <em>antecipamos</em> recebê-la. Isso é o mecanismo central do scroll infinito — cada novo card pode ser a recompensa.</p>
+<p>Como usar: crie loops abertos dentro do conteúdo. Em um vídeo de 5 minutos, abra uma nova pergunta no minuto 2 que só será respondida no minuto 4. A antecipação mantém a retenção.</p>
+
+<h3>O Princípio do Menor Esforço Cognitivo</h3>
+<p>O cérebro sempre escolhe o caminho de menor resistência cognitiva. Conteúdo complexo, denso ou difícil de processar é abandonado — não porque seja ruim, mas porque exige esforço demais no estado de scroll.</p>
+<p>Regra prática: <strong>uma ideia por frase</strong>. Uma cena por segundo de vídeo. Um conceito por slide de carrossel. Cada unidade deve ser imediatamente compreensível sem esforço.</p>`
+          },
+          {
+            id: "algo-metricas-universais",
+            title: "As 7 Métricas que Todo Algoritmo Mede",
+            duration: "18 min",
+            type: "text",
+            keyPoints: ["Hook Rate: a taxa de parada do scroll", "Completion Rate: a métrica mais honesta", "Rewatch Rate: o sinal de conteúdo excepcional", "Share Rate: o multiplicador orgânico", "Save Rate: o indicador de valor percebido", "Comment Quality: interação profunda vs. superficial", "Profile Visit Rate: o sinal de conversão de audiência"],
+            content: `<h2>As 7 Métricas Universais que Definem Distribuição</h2>
+<p>Cada plataforma tem sua nomenclatura e ênfase diferente, mas estas 7 métricas aparecem, de alguma forma, em todos os algoritmos de recomendação. Otimize para elas e qualquer plataforma distribui seu conteúdo.</p>
+
+<h3>1. Hook Rate (Taxa de Parada)</h3>
+<p><strong>O que mede:</strong> % das pessoas que para o scroll e começa a consumir o conteúdo<br/>
+<strong>Janela de medição:</strong> primeiros 1-3 segundos de vídeo, primeira linha visível de texto<br/>
+<strong>Benchmark alvo:</strong> &gt;30% para vídeo, &gt;5% CTR para imagem<br/>
+<strong>Como melhorar:</strong> teste múltiplos hooks para o mesmo conteúdo; o primeiro frame/palavra decide tudo</p>
+
+<h3>2. Completion Rate (Taxa de Conclusão)</h3>
+<p><strong>O que mede:</strong> % das pessoas que consome o conteúdo até o final<br/>
+<strong>Por que importa:</strong> é o sinal mais difícil de manipular — reflete valor real entregue<br/>
+<strong>Benchmark alvo:</strong> &gt;70% para vídeos curtos (&lt;30s), &gt;50% para vídeos médios (30-90s), &gt;40% para longos<br/>
+<strong>Como melhorar:</strong> elimine qualquer segundo "vazio" no vídeo; ritmo constante do primeiro ao último segundo</p>
+
+<h3>3. Rewatch Rate (Taxa de Revisita)</h3>
+<p><strong>O que mede:</strong> % das pessoas que assiste o conteúdo mais de uma vez<br/>
+<strong>Por que importa:</strong> é o sinal mais raro e mais valorizado — significa que o conteúdo tem densidade de informação suficiente para justificar rever<br/>
+<strong>Como gerar:</strong> inclua informações muito densas (lista longa, número específico, revelação surpresa no final)</p>
+
+<h3>4. Share Rate (Taxa de Compartilhamento)</h3>
+<p><strong>O que mede:</strong> % das pessoas que compartilha o conteúdo com outro usuário ou em story<br/>
+<strong>Por que importa:</strong> compartilhamento é endosso social — o algoritmo trata como sinal de qualidade excepcionalmente alta<br/>
+<strong>Como gerar:</strong> conteúdo que as pessoas querem mandar para alguém específico: "isso é exatamente o que meu amigo X precisa ver"</p>
+
+<h3>5. Save Rate (Taxa de Salvamento)</h3>
+<p><strong>O que mede:</strong> % das pessoas que salva para ver depois<br/>
+<strong>Por que importa:</strong> sinaliza utilidade prática — "vou precisar disso depois"<br/>
+<strong>Como gerar:</strong> conteúdo de referência (checklists, templates, listas, guias passo-a-passo)</p>
+
+<h3>6. Comment Quality Score</h3>
+<p><strong>O que mede:</strong> profundidade dos comentários (alguns algoritmos analisam sentimento e comprimento)<br/>
+<strong>Por que importa:</strong> comentários longos e debates sinalizam conteúdo que provocou reflexão genuína<br/>
+<strong>Como gerar:</strong> termine com uma pergunta aberta que provoca divisão de opiniões ou auto-reflexão</p>
+
+<h3>7. Profile Visit Rate</h3>
+<p><strong>O que mede:</strong> % das pessoas que visita seu perfil após o conteúdo<br/>
+<strong>Por que importa:</strong> sinaliza interesse em saber mais sobre quem criou — intenção de seguir<br/>
+<strong>Como melhorar:</strong> construa suspense sobre quem você é; o conteúdo isolado deve gerar curiosidade sobre o criador</p>`
+          }
+        ]
+      },
+      {
+        id: "algoritmo-tiktok-profundo",
+        number: 16,
+        title: "TikTok Algorithm: Dissecção Completa",
+        subtitle: "O sistema de distribuição mais sofisticado da história das redes sociais",
+        icon: "🎵",
+        color: "from-black to-gray-800",
+        duration: "1h 30min",
+        summary: "O TikTok construiu o algoritmo de recomendação mais avançado já disponibilizado para o público geral. Entender sua mecânica em profundidade é uma vantagem competitiva de 2-3 anos sobre quem não entende.",
+        lessons: [
+          {
+            id: "tiktok-deep-1",
+            title: "O Sistema de Pontuação do TikTok: O que o ByteDance Realmente Mede",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["O modelo de distribuição progressiva em detalhe", "Os pesos reais de cada sinal (baseado em patentes e estudos)", "Como o TikTok classifica conteúdo por tópico", "O papel da velocidade de engajamento nas primeiras horas", "Por que vídeos antigos ainda viralizam"],
+            content: `<h2>O Sistema de Distribuição Progressiva do TikTok em Profundidade</h2>
+<p>O TikTok é uma empresa de tecnologia chinesa com raízes no processamento de dados em escala. O algoritmo deles não é uma lista de regras — é um modelo de machine learning que decide, a cada milissegundo, qual vídeo mostrar para qual usuário para maximizar o tempo total na plataforma.</p>
+
+<h3>A Arquitetura Técnica (Simplificada)</h3>
+<p>O sistema do TikTok tem dois componentes principais:</p>
+<ul>
+  <li><strong>Modelo de Candidatos:</strong> seleciona um pool de vídeos potencialmente relevantes para aquele usuário específico, com base em histórico, localização, idioma e tópicos de interesse</li>
+  <li><strong>Modelo de Ranking:</strong> ordena esses candidatos por probabilidade de engajamento — combinando sinais do vídeo + perfil do usuário + contexto (hora, dispositivo, velocidade de internet)</li>
+</ul>
+
+<h3>Os Fatores de Ranking em Ordem de Peso</h3>
+<p>Com base em documentos internos vazados e pesquisas independentes, estes são os fatores aproximados e seus pesos relativos:</p>
+
+<ol>
+  <li><strong>Completion Rate (peso: ~35%):</strong> de longe o fator mais importante. Um vídeo de 15s com 90% de conclusão supera um vídeo de 3min com 30% de conclusão na maioria dos casos.</li>
+  <li><strong>Rewatch Rate (peso: ~25%):</strong> assistir mais de uma vez é sinal de conteúdo excepcional. O TikTok prioriza fortemente vídeos que as pessoas assistem em loop.</li>
+  <li><strong>Compartilhamento (peso: ~20%):</strong> o TikTok valoriza shares para fora da plataforma (WhatsApp, Instagram Stories) como sinal de que o conteúdo tem vida além do app.</li>
+  <li><strong>Comentários (peso: ~12%):</strong> especialmente comentários que geram respostas — cria atividade no vídeo por mais tempo.</li>
+  <li><strong>Curtidas (peso: ~8%):</strong> o sinal mais fácil de dar e por isso tem menos peso relativo.</li>
+</ol>
+
+<h3>O Conceito de "Velocidade de Engajamento"</h3>
+<p>Não é apenas a quantidade de engajamento — é a velocidade com que chega. Um vídeo que recebe 100 curtidas nas primeiras 2 horas de publicação tem score maior que um que recebe 100 curtidas ao longo de 24 horas.</p>
+<p>Implicação prática: o momento de publicação importa. Publique quando sua audiência está ativa para acelerar a velocidade inicial.</p>
+
+<h3>O Sistema de Tópicos e Clusters</h3>
+<p>O TikTok classifica todo conteúdo em uma taxonomia de tópicos com centenas de subcategorias. Quando você publica, o sistema analisa:</p>
+<ul>
+  <li>Transcrição do áudio (o que você fala)</li>
+  <li>Texto sobreposto no vídeo</li>
+  <li>Hashtags e caption</li>
+  <li>Descrição do som usado</li>
+  <li>Análise visual (objetos, cenário, faces reconhecidas)</li>
+</ul>
+<p>Com base nisso, classifica o vídeo em tópicos e distribui para usuários com histórico de interesse naqueles tópicos. <strong>A consistência de tópico na conta acelera a classificação</strong> — uma conta que sempre faz conteúdo sobre finanças pessoais tem distribuição mais eficiente que uma conta que mistura finanças, culinária e humor.</p>
+
+<h3>Por que Vídeos Antigos Ainda Viralizam</h3>
+<p>O TikTok não tem "feed cronológico" — tem feed de relevância. Um vídeo de 6 meses pode viralizar hoje se um usuário de alta influência (com muitos seguidores) compartilhar ou se o algoritmo encontrar um novo cluster de usuários com perfil compatível.</p>
+<p>Isso significa que todo conteúdo publicado tem potencial de longa vida — diferente do Instagram, onde posts ficam relevantes por 24-48h no máximo.</p>`
+          },
+          {
+            id: "tiktok-deep-2",
+            title: "Estratégia de Conta: Como Construir Autoridade de Nicho no TikTok",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Por que o algoritmo prefere contas especializadas", "A estratégia dos 30 primeiros vídeos", "Como usar o TikTok Search a seu favor", "Duets, Stitches e colaborações como alavanca de alcance", "TikTok LIVE: o algoritmo separado que expande a conta"],
+            content: `<h2>Construindo uma Conta com Autoridade de Nicho</h2>
+
+<h3>Por que Especialização Bate Generalização no TikTok</h3>
+<p>O algoritmo do TikTok funciona melhor quando consegue classificar sua conta com clareza. Uma conta sobre "como vender online" tem distribuição mais eficiente que uma conta sobre "empreendedorismo, viagens e saúde". Não porque o algoritmo pune generalistas — mas porque as listas de usuários potencialmente interessados são muito menores quando o tópico é amplo demais.</p>
+
+<p>Conta especializada → classificação clara → pool de usuários maior dentro daquele nicho → mais probabilidade de chegar no FYP certo.</p>
+
+<h3>Os 30 Primeiros Vídeos: A Fase de Calibração</h3>
+<p>Nos primeiros 30 vídeos de uma conta nova (ou reposicionada), o algoritmo está aprendendo quem é você. Nessa fase:</p>
+<ul>
+  <li>Mantenha o <strong>mesmo nicho</strong> sem exceções — cada vídeo reforça a classificação</li>
+  <li>Use <strong>formatos variados</strong> (vídeo falado, texto na tela, demonstração, história) para descobrir o que mais ressoa com a audiência</li>
+  <li>Publique com <strong>frequência consistente</strong> (pelo menos 3-5x por semana) — consistência acelera a calibração</li>
+  <li>Analise os primeiros 100 seguidores que ganhar — eles revelam quem o algoritmo classificou como sua audiência ideal</li>
+</ul>
+
+<h3>TikTok Search: O Canal Subaproveitado</h3>
+<p>O TikTok virou um buscador. Uma pesquisa da Adobe em 2023 revelou que 40% dos usuários da Geração Z preferem buscar no TikTok antes do Google para descobrir novos produtos, restaurantes e serviços.</p>
+
+<p>Como aproveitar:</p>
+<ul>
+  <li>Use o TikTok Search Insights (nativo) para descobrir o que as pessoas buscam no seu nicho</li>
+  <li>Crie vídeos cujo título é literalmente a pergunta que as pessoas fazem: "Como vender um infoproduto sem audiência" — isso aparece tanto no FYP quanto nas buscas</li>
+  <li>Inclua palavras-chave faladas no vídeo (o TikTok transcreve o áudio) e escritas no caption</li>
+</ul>
+
+<h3>Duets e Stitches: Alcance Emprestado</h3>
+<p>Quando você cria um Duet ou Stitch com um vídeo popular, seu conteúdo herdas parte do alcance do vídeo original — porque o algoritmo mostra seu vídeo para quem interagiu com o original.</p>
+
+<p>Estratégia: identifique os 10 vídeos mais virais do seu nicho dos últimos 30 dias. Crie Stitches com comentário analítico ou contra-argumento respeitoso. Opiniões divergentes sobre conteúdo viral geram debate nos comentários — o algoritmo ama.</p>
+
+<h3>TikTok LIVE: O Algoritmo Diferente</h3>
+<p>O LIVE no TikTok tem um algoritmo próprio, separado dos vídeos gravados. As lives são distribuídas com base em: duração da live (quanto mais longa, mais distribuição), presentes recebidos (sinal de valor percebido) e usuários simultâneos.</p>
+
+<p>Para criadores de conteúdo educacional, a live é poderosa porque:</p>
+<ul>
+  <li>Aparece numa tab separada no feed, com maior visibilidade</li>
+  <li>Usuários que estavam dormindo para o seu conteúdo gravado podem redescobrir sua conta via live</li>
+  <li>Gera notificação push para seguidores — contato proativo</li>
+</ul>`
+          },
+          {
+            id: "tiktok-deep-3",
+            title: "Conteúdo de Conversão no TikTok: Do Scroll à Venda",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["TikTok não é plataforma de venda direta — e como usar isso a seu favor", "A sequência de conteúdo que aquece e converte", "TikTok Shop e Link in Bio: a jornada do comprador", "O funil TikTok → Instagram → WhatsApp → Venda"],
+            content: `<h2>Transformando Alcance em Receita no TikTok</h2>
+<p>O TikTok tem o maior alcance orgânico de qualquer plataforma — mas também a menor intenção de compra imediata. As pessoas estão no TikTok para se entreter e descobrir, não para comprar. Entender isso define a estratégia certa.</p>
+
+<h3>O Papel do TikTok no Funil</h3>
+<p>O TikTok funciona melhor como <strong>topo de funil</strong> — gerador de consciência e audiência — do que como canal de conversão direta. A jornada mais eficiente é:</p>
+
+<pre>
+TikTok (descoberta + interesse)
+    ↓
+Instagram (aprofundamento + relacionamento)
+    ↓
+WhatsApp ou Email (confiança + conversão)
+    ↓
+Venda
+</pre>
+
+<p>Tente vender direto do TikTok para produtos de alto ticket e a conversão vai ser baixa. Use o TikTok para trazer a pessoa para o Instagram (onde você tem mais profundidade) ou diretamente para o WhatsApp (onde o contato é 1:1).</p>
+
+<h3>O Conteúdo que Migra a Audiência</h3>
+<p>Para que alguém siga de uma plataforma para outra, você precisa de um motivo forte. Três estratégias que funcionam:</p>
+
+<ol>
+  <li><strong>Continuação exclusiva:</strong> "Mostrei o passo 1 aqui. Os passos 2, 3 e 4 com template estão no link da bio" — cria razão de sair do TikTok</li>
+  <li><strong>Lead magnet:</strong> "Tenho uma planilha gratuita que calcula automaticamente o que mostrei nesse vídeo — link na bio" — troca de valor por contato</li>
+  <li><strong>Comunidade exclusiva:</strong> "Quem quiser acesso ao grupo onde posto os bastidores, link na bio" — apelo de pertencimento</li>
+</ol>
+
+<h3>A Sequência de Conteúdo de 10 Vídeos</h3>
+<p>Para um lançamento, uma sequência de 10 vídeos pré-lançamento no TikTok pode gerar centenas de leads qualificados:</p>
+<ul>
+  <li>Vídeos 1-3: Problema (mostre a dor com especificidade)</li>
+  <li>Vídeos 4-6: Educação (ensine parte da solução — gere resultado rápido)</li>
+  <li>Vídeos 7-8: Prova social (mostre resultados de outros com o método)</li>
+  <li>Vídeo 9: Teaser da oferta ("semana que vem abrindo as vagas")</li>
+  <li>Vídeo 10: CTA direto com link na bio</li>
+</ul>`
+          }
+        ],
+        locked: true
+      },
+      {
+        id: "algoritmo-instagram-profundo",
+        number: 17,
+        title: "Instagram Algorithm: Os 4 Sistemas Separados",
+        subtitle: "Feed, Explore, Reels e Stories têm algoritmos distintos — dominar todos multiplica o alcance",
+        icon: "📸",
+        color: "from-pink-600 to-purple-700",
+        duration: "1h 15min",
+        summary: "O Instagram não tem um algoritmo — tem quatro. Cada superfície (Feed, Explore, Reels, Stories) usa sinais diferentes e tem objetivos diferentes. Quem trata todos igual deixa 70% do alcance potencial na mesa.",
+        lessons: [
+          {
+            id: "ig-quatro-sistemas",
+            title: "Os 4 Algoritmos do Instagram e seus Sinais Específicos",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Feed: o algoritmo de relacionamento", "Explore: o algoritmo de descoberta", "Reels: o algoritmo de retenção de vídeo", "Stories: o algoritmo de frequência e proximidade", "Como otimizar para cada superfície separadamente"],
+            content: `<h2>Instagram: Quatro Superfícies, Quatro Lógicas</h2>
+<p>Adam Mosseri, chefe do Instagram, confirmou publicamente que cada superfície do app usa sistemas diferentes. Isso não é detalhe técnico — é a diferença entre uma estratégia que funciona em todas as partes do app e uma que funciona apenas em uma.</p>
+
+<h3>O Feed: Algoritmo de Relacionamento</h3>
+<p>O Feed mostra conteúdo de quem você já segue. O algoritmo ordena com base em:</p>
+<ul>
+  <li><strong>Probabilidade de interação:</strong> com base no histórico de interação entre você e aquela conta específica</li>
+  <li><strong>Tempo de visualização:</strong> quanto tempo a pessoa costuma passar em posts daquele formato (imagem vs. carrossel vs. vídeo)</li>
+  <li><strong>Frescor:</strong> posts mais recentes têm vantagem, mas não exclusividade — um post viral de 3 dias atrás ainda aparece</li>
+  <li><strong>Uso do app:</strong> o Instagram tenta garantir que posts importantes não sejam perdidos — se você não abriu o app por 2 dias, ele prioriza o que você teria mais probabilidade de ver</li>
+</ul>
+
+<p><strong>O que isso significa na prática:</strong> para crescer no Feed, você precisa de <em>frequência de interação alta</em> com seus seguidores. Responda todos os comentários (especialmente nas primeiras horas), responda DMs, use curtidas nos comentários. Cada interação aumenta o score de relacionamento e garante mais visibilidade futura.</p>
+
+<h3>O Explore: Algoritmo de Descoberta</h3>
+<p>A aba Explore é o único lugar onde usuários que não te seguem podem te descobrir. O algoritmo aqui funciona diferente do Feed:</p>
+<ul>
+  <li>Analisa os posts com que um usuário interagiu recentemente</li>
+  <li>Busca posts com sinais similares (temática, estética, engajamento) que tiveram alta performance nas últimas horas</li>
+  <li>Prioriza conteúdo com alta taxa de salvamento e compartilhamento para stories</li>
+</ul>
+
+<p><strong>Para chegar no Explore:</strong> seu post precisa ter performance acima da média <em>entre seus seguidores primeiro</em>. O Explore distribui para não-seguidores conteúdo que já provou ser bom com quem já te conhece.</p>
+
+<h3>Reels: Algoritmo de Retenção</h3>
+<p>O Reels é a tentativa do Instagram de competir com o TikTok, e o algoritmo reflete isso:</p>
+<ul>
+  <li><strong>Completion Rate:</strong> principal métrica — % de pessoas que assiste o Reel até o final</li>
+  <li><strong>Rewatch:</strong> Reels assistidos mais de uma vez recebem boost significativo</li>
+  <li><strong>Shares para Stories:</strong> quando alguém compartilha um Reel nos próprios Stories, é sinal poderoso de que o conteúdo foi impactante</li>
+  <li><strong>Audio original vs. trending:</strong> Reels com áudio original que viraliza recebem distribuição extra retroativa — o Instagram promove a conta que criou o som original</li>
+</ul>
+
+<p><strong>Diferença do TikTok:</strong> o Instagram Reels prioriza mais os seguidores existentes nos primeiros estágios de distribuição. No TikTok, até contas com zero seguidores chegam ao FYP. No Reels, a prova social com seguidores existentes é mais importante antes da expansão.</p>
+
+<h3>Stories: Algoritmo de Frequência e Proximidade</h3>
+<p>Stories têm o algoritmo mais simples dos quatro — é basicamente uma medida de quão próximo o algoritmo acha que você e aquela conta são:</p>
+<ul>
+  <li>Com que frequência você visualiza os Stories daquela conta</li>
+  <li>Com que frequência você interage (responde, reage, vota em enquetes)</li>
+  <li>Se vocês já trocaram DMs</li>
+</ul>
+
+<p>Contas que você ignora por semanas desaparecem da frente da lista. Contas com quem você interage diariamente aparecem primeiro — sempre.</p>
+
+<p><strong>Implicação para criadores:</strong> engajar ativamente com seus seguidores nos Stories deles (visitar os Stories de quem comenta) sobe sua conta na lista deles. É recíproco.</p>`
+          },
+          {
+            id: "ig-crescimento-estrategia",
+            title: "Estratégia de Crescimento Acelerado no Instagram",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["O método de 90 dias para crescimento orgânico", "Hashtags em 2025: mortas ou vivas?", "O papel dos primeiros 60 minutos após publicação", "Collab Posts: alcance dobrado instantâneo", "Como usar o Instagram Broadcast Channel para retenção"],
+            content: `<h2>Crescimento Orgânico no Instagram: O que Funciona em 2025</h2>
+
+<h3>Os Primeiros 60 Minutos: A Janela de Ouro</h3>
+<p>O algoritmo do Instagram avalia a performance do post nas primeiras horas e usa isso para decidir o alcance futuro. Os primeiros 60 minutos são desproporcionalmente importantes — o engajamento nessa janela sinaliza se o conteúdo vai ser expandido ou não.</p>
+
+<p>Como maximizar os primeiros 60 minutos:</p>
+<ul>
+  <li>Publique quando sua audiência está mais ativa (use "Insights" → "Audiência" → "Dias e horários mais ativos")</li>
+  <li>Responda cada comentário nos primeiros 60 min — cada resposta é um sinal adicional de engajamento</li>
+  <li>Adicione o post nos seus próprios Stories logo após publicar — direciona seguidores ao post imediatamente</li>
+  <li>Mande por DM para 5-10 pessoas que você sabe que vão genuinamente se importar com aquele conteúdo</li>
+</ul>
+
+<h3>Hashtags em 2025: A Verdade</h3>
+<p>As hashtags perderam muito de seu poder de descoberta no Instagram ao longo dos anos. Em 2025, a posição oficial do Instagram (confirmada por Mosseri) é que hashtags são <em>classificadoras de conteúdo</em>, não amplificadoras de alcance.</p>
+
+<p>O que isso significa: hashtags ajudam o algoritmo a <em>classificar</em> seu post, não a distribuí-lo para mais pessoas. Use hashtags descritivas e específicas do nicho — não hashtags massivas como #motivação ou #vida.</p>
+
+<p>Regra prática: 3-5 hashtags muito específicas superam 30 hashtags genéricas. Qualidade de classificação &gt; quantidade.</p>
+
+<h3>Collab Posts: Alcance Dobrado sem Trabalho Extra</h3>
+<p>O Collab Post é uma funcionalidade nativa do Instagram onde dois criadores publicam o mesmo post — e ele aparece no feed dos seguidores de ambos, com os dois nomes no cabeçalho.</p>
+
+<p>Para um lançamento, o Collab Post com um parceiro JV no momento de abertura do carrinho pode dobrar o alcance orgânico instantaneamente. Nenhuma outra funcionalidade nativa oferece essa alavancagem de alcance sem custo.</p>
+
+<h3>Broadcast Channel: Retenção de Audiência Quente</h3>
+<p>O Broadcast Channel é um canal de transmissão unidirecional dentro do Instagram onde você manda mensagens para quem optou por entrar. Características:</p>
+<ul>
+  <li>Notificação push para membros (taxa de abertura &gt;60% — muito superior ao email)</li>
+  <li>Membros não podem responder publicamente (sem ruído)</li>
+  <li>Perfeito para avisos de lançamento, conteúdo exclusivo, bastidores</li>
+</ul>
+
+<p>Use o Broadcast Channel para a "lista de espera" do lançamento dentro do Instagram. É o equivalente do grupo de WhatsApp, mas sem o caos das respostas em grupo.</p>
+
+<h3>O Método de 90 Dias para Crescimento Real</h3>
+<p>Crescimento orgânico consistente não acontece com posts virais isolados — acontece com sistema:</p>
+<ul>
+  <li><strong>Semanas 1-4:</strong> Publique 1 Reel + 2 Carrosséis por semana. Foco absoluto em um nicho. Sem vender.</li>
+  <li><strong>Semanas 5-8:</strong> Adicione Stories diários (enquetes, perguntas, bastidores). Responda 100% dos comentários e DMs.</li>
+  <li><strong>Semanas 9-12:</strong> 1 Collab Post com conta do mesmo tamanho. Primeiro Broadcast Channel. Início do aquecimento para lançamento.</li>
+</ul>
+<p>Com esse sistema e conteúdo de qualidade, crescimento de 500-2.000 seguidores por mês no nicho certo é consistentemente alcançável.</p>`
+          }
+        ],
+        locked: true
+      },
+      {
+        id: "algoritmo-youtube-profundo",
+        number: 18,
+        title: "YouTube Algorithm: O Motor de Busca de Vídeo",
+        subtitle: "Como o maior buscador de vídeo do mundo decide o que mostrar — e como aparecer nele",
+        icon: "▶",
+        color: "from-red-600 to-red-800",
+        duration: "1h",
+        summary: "O YouTube é único: metade mecanismo de busca, metade rede social de vídeo. Isso cria duas estratégias de crescimento paralelas — SEO de vídeo e otimização para o sistema de recomendação — que, usadas juntas, criam crescimento composto.",
+        lessons: [
+          {
+            id: "yt-dois-motores",
+            title: "Os Dois Motores do YouTube: Busca e Recomendação",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Tráfego de busca vs. tráfego de sugeridos: diferenças fundamentais", "CTR de thumbnail: o fator mais subestimado", "Watch Time e AVD (Average View Duration)", "Como o YouTube decide o que sugerir depois", "Playlists como alavanca de watch time"],
+            content: `<h2>YouTube: Dois Sistemas de Distribuição em Um</h2>
+<p>O YouTube é a única grande plataforma que tem dois sistemas de descoberta completamente distintos operando simultaneamente: o motor de busca (como o Google, mas para vídeo) e o sistema de recomendação (que decide o que aparece na home e nos "vídeos sugeridos").</p>
+
+<p>Criadores que entendem os dois e otimizam para ambos crescem muito mais rápido — porque cada vídeo pode trazer tráfego via busca E via sugestão, multiplicando o alcance.</p>
+
+<h3>Motor 1: Busca</h3>
+<p>Quando alguém busca "como criar um lançamento semente", o YouTube ranqueia os resultados com base em:</p>
+
+<ul>
+  <li><strong>Relevância do título e descrição:</strong> a keyword precisa estar no título (preferencialmente no início) e nos primeiros 200 caracteres da descrição</li>
+  <li><strong>CTR (Click-Through Rate):</strong> % das pessoas que veem o resultado e clicam na thumbnail. Um CTR alto sinaliza que o título + thumbnail são relevantes para aquela busca</li>
+  <li><strong>Watch Time da busca:</strong> após clicar, quantos minutos assistem? Alguém que clicou e saiu em 30 segundos sinaliza que o vídeo não entregou o que prometeu</li>
+  <li><strong>Satisfação da busca:</strong> após assistir, a pessoa fez outra busca relacionada ou foi embora? Se foi embora satisfeita, o YouTube interpreta isso positivamente</li>
+</ul>
+
+<h3>Motor 2: Recomendação (Home + Sugeridos)</h3>
+<p>O sistema de sugestão decide quais vídeos aparecem na home do usuário e na coluna lateral "próximos vídeos". Aqui os fatores são diferentes:</p>
+
+<ul>
+  <li><strong>Histórico de consumo do usuário:</strong> o algoritmo modela um "perfil de interesse" de cada usuário e recomenda vídeos que se encaixam</li>
+  <li><strong>Performance do vídeo com audiências similares:</strong> se pessoas com perfil parecido assistiram e gostaram, você vai receber recomendação</li>
+  <li><strong>AVD (Average View Duration):</strong> a duração média de visualização — não apenas a porcentagem. Um vídeo de 20 minutos com AVD de 12 minutos supera um vídeo de 3 minutos com AVD de 2 minutos no sistema de sugestão</li>
+</ul>
+
+<h3>CTR de Thumbnail: O Fator Mais Subestimado</h3>
+<p>O CTR de thumbnail (% de impressões que viram o vídeo e clicaram) é o fator que mais impacta a distribuição inicial no YouTube. Um CTR baixo mata a distribuição antes que o watch time seja medido.</p>
+
+<p>Benchmarks por tipo de canal:</p>
+<ul>
+  <li>Canal novo sem audiência estabelecida: 2-4% é normal</li>
+  <li>Canal crescendo com audiência engajada: 4-8%</li>
+  <li>Canal com audiência muito fiel (nicho específico): 8-15%</li>
+</ul>
+
+<p>Elementos da thumbnail de alto CTR:</p>
+<ul>
+  <li>Rosto humano com expressão emocional clara (surpresa, curiosidade, alegria)</li>
+  <li>Texto de no máximo 5 palavras com promessa ou pergunta</li>
+  <li>Contraste alto (fundo que se destaca no feed predominantemente branco do YouTube)</li>
+  <li>Elemento visual inesperado (algo fora do padrão do nicho chama atenção por contraste)</li>
+</ul>
+
+<h3>Playlists: A Alavanca de Watch Time Ignorada</h3>
+<p>Vídeos organizados em playlists têm watch time significativamente maior porque o YouTube reproduz automaticamente o próximo vídeo da playlist. Isso eleva o watch time total da sessão — um dos sinais mais importantes para o algoritmo de recomendação.</p>
+
+<p>Estratégia: organize seus vídeos em playlists temáticas. Um visitante que assiste 3 vídeos em sequência de uma playlist gera 3x mais watch time que 3 visitas independentes — e o algoritmo atribui esse engagement ao canal como um todo.</p>`
+          },
+          {
+            id: "yt-seo",
+            title: "YouTube SEO Avançado: Apareça em Buscas por Anos",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Pesquisa de keywords para YouTube", "Títulos que ranqueiam e têm CTR alto simultaneamente", "Descrição otimizada: estrutura dos 5 blocos", "Tags e chapters: impacto real vs. mito", "Como aparecer no Google com vídeos do YouTube"],
+            content: `<h2>YouTube SEO: A Estratégia de Longo Prazo</h2>
+<p>Um vídeo bem otimizado para busca pode gerar leads orgânicos por 3-5 anos. Um Reel do Instagram dura 48 horas de pico. O YouTube SEO é o único canal de conteúdo com esse horizonte temporal — e poucos produtores levam a sério.</p>
+
+<h3>Pesquisa de Keywords para YouTube</h3>
+<p>Ferramentas para encontrar o que as pessoas buscam no YouTube:</p>
+<ul>
+  <li><strong>YouTube Search Suggest:</strong> comece a digitar no buscador do YouTube — as sugestões automáticas são as buscas mais frequentes</li>
+  <li><strong>TubeBuddy / VidIQ:</strong> mostram volume de busca estimado, dificuldade de ranqueamento e score de oportunidade por keyword</li>
+  <li><strong>Google Keyword Planner:</strong> keywords que ranqueiam no Google frequentemente também ranqueiam no YouTube</li>
+  <li><strong>Aba "Pesquisa" no YouTube Studio:</strong> mostra as buscas que trouxeram pessoas ao seu canal — ouro para descobrir oportunidades</li>
+</ul>
+
+<p>Critério de keyword ideal: volume médio (não as mais competitivas), alta intenção de aprendizado (palavras como "como", "tutorial", "passo a passo") e baixa competição de canais grandes.</p>
+
+<h3>Títulos que Ranqueiam E Têm CTR Alto</h3>
+<p>Existe tensão entre título de SEO (keyword no início) e título de CTR (promessa emocional). A solução é combinar os dois:</p>
+
+<p>Fórmula: [Keyword Principal]: [Promessa ou Curiosidade]</p>
+<ul>
+  <li>"Lançamento Semente: Como Vendi R$47k Antes de Criar o Produto"</li>
+  <li>"Meta Ads para Iniciantes: A Estrutura Que Ninguém Explica"</li>
+  <li>"Funil Perpétuo: Por Que o Meu Fatura R$30k/mês no Piloto Automático"</li>
+</ul>
+
+<h3>Estrutura da Descrição Otimizada</h3>
+<p>Os primeiros 200 caracteres são os mais importantes (aparecem antes do "ver mais" no mobile e são os mais indexados pelo algoritmo).</p>
+
+<p>Estrutura dos 5 blocos:</p>
+<ol>
+  <li><strong>Resumo + keyword (0-200 chars):</strong> primeira frase com keyword principal + o que o vídeo entrega</li>
+  <li><strong>Recursos mencionados no vídeo:</strong> links de ferramentas, templates, livros citados</li>
+  <li><strong>Timestamps / Chapters:</strong> facilita navegação + aparece como mini-sumário no Google</li>
+  <li><strong>Links de outros vídeos relacionados:</strong> cria navegação interna, melhora watch time de sessão</li>
+  <li><strong>Keywords secundárias:</strong> parágrafo natural mencionando termos relacionados ao tema principal</li>
+</ol>
+
+<h3>Como Aparecer no Google com Vídeos</h3>
+<p>O Google mostra vídeos do YouTube para queries de "como fazer", "tutorial" e comparações. Para aparecer no Google:</p>
+<ul>
+  <li>Adicione timestamps/chapters (o Google usa esses como "key moments" no resultado de busca)</li>
+  <li>Use a mesma keyword do título do vídeo como keyword-alvo no Google Search Console do seu site (o Google correlaciona)</li>
+  <li>Embedde o vídeo em um post do blog com o mesmo tema — o Google favorece páginas que combinam texto e vídeo relevante</li>
+</ul>`
+          }
+        ],
+        locked: true
+      },
+      {
+        id: "algoritmo-facebook-google",
+        number: 19,
+        title: "Facebook Orgânico e Google: Os Algoritmos de Intenção",
+        subtitle: "Facebook Groups, o feed orgânico e o algoritmo de busca do Google",
+        icon: "🔵",
+        color: "from-blue-700 to-blue-900",
+        duration: "1h",
+        summary: "O alcance orgânico do Facebook para páginas caiu 90% desde 2012 — mas os Grupos continuam com alcance excepcional. O Google Search é o canal com maior intenção de compra do marketing digital. Entenda a lógica de cada um.",
+        lessons: [
+          {
+            id: "fb-groups-algoritmo",
+            title: "Facebook Groups: O Algoritmo que Ainda Entrega Alcance",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Por que grupos têm alcance orgânico que páginas não têm", "Os sinais que o algoritmo do grupo usa", "Estratégia de grupo de lançamento passo-a-passo", "Facebook Feed para páginas: o que ainda funciona", "Events do Facebook como canal de notificação"],
+            content: `<h2>Facebook em 2025: Grupos São o Ativo Real</h2>
+
+<h3>Por que o Alcance de Páginas Morreu</h3>
+<p>O declínio do alcance orgânico de páginas no Facebook não foi acidente — foi política deliberada. O Facebook precisa monetizar o espaço no feed. Quanto menos conteúdo de páginas aparece organicamente, mais essas páginas precisam pagar para aparecer.</p>
+
+<p>O alcance médio de uma postagem de página para seus seguidores em 2025: <strong>1,5-3%</strong>. Uma página com 10.000 seguidores alcança 150-300 pessoas por post organicamente.</p>
+
+<h3>Por que Grupos Sobreviveram ao Declínio</h3>
+<p>Grupos têm um status especial no Facebook: são considerados "espaços de comunidade", não "espaços de mídia". O algoritmo ainda distribui conteúdo de grupos para membros com muito mais liberalidade — especialmente quando o engajamento dentro do grupo é alto.</p>
+
+<p>Taxa de alcance orgânico em grupos bem gerenciados: <strong>15-40% dos membros</strong>. Uma diferença de 10-20x em relação às páginas.</p>
+
+<h3>Os Sinais do Algoritmo de Grupos</h3>
+<p>Para um post receber boa distribuição dentro de um grupo, o algoritmo mede:</p>
+<ul>
+  <li><strong>Comentários e threads:</strong> posts que geram discussão aparecem para mais membros — o Facebook prioriza conteúdo que mantém as pessoas no app</li>
+  <li><strong>Reações diversas:</strong> mistura de reações (💙❤️😲) sinaliza conteúdo que provoca emoção — mais valioso que só curtidas</li>
+  <li><strong>Velocidade de engajamento:</strong> posts que recebem 5+ comentários nos primeiros 30 minutos disparam o algoritmo de distribuição</li>
+  <li><strong>Histórico do criador no grupo:</strong> membros que consistentemente postam conteúdo bem recebido têm seus posts distribuídos mais amplamente</li>
+</ul>
+
+<h3>Estratégia de Grupo de Lançamento</h3>
+<p>A estratégia mais poderosa de Facebook orgânico para produtores digitais é o grupo de lançamento — criado especificamente para um lançamento, fechado após o fechamento do carrinho.</p>
+
+<p>Cronograma típico:</p>
+<ul>
+  <li><strong>D-21:</strong> Cria o grupo com nome baseado no resultado ("Desafio: Primeira Venda Online em 7 Dias")</li>
+  <li><strong>D-21 a D-8:</strong> Conteúdo de valor diário — vídeos curtos, PDFs, enquetes, perguntas. Sem venda.</li>
+  <li><strong>D-7 a D-1:</strong> Pré-lançamento — estudos de caso, AMA (Ask Me Anything) ao vivo, countdown</li>
+  <li><strong>D0:</strong> Abertura do carrinho — post de lançamento com link, live de 30-60min tirando dúvidas</li>
+  <li><strong>D1-D5:</strong> Posts de prova social (capturas de novos alunos), respostas a objeções, posts de urgência crescente</li>
+  <li><strong>D6:</strong> Fechamento — "últimas horas" posts a cada 3-4h</li>
+</ul>
+
+<h3>Facebook Events: Notificação Gratuita</h3>
+<p>Quando você cria um evento e as pessoas marcam "Interessado" ou "Vou", o Facebook manda notificações automáticas nos dias antes do evento. Para um webinar de lançamento, isso é um canal de lembrete gratuito com taxa de abertura alta.</p>`
+          },
+          {
+            id: "google-seo-intencao",
+            title: "Google Search: O Algoritmo de Maior Intenção de Compra",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Por que quem busca no Google converte melhor que quem descobre no TikTok", "Intenção de busca: informacional, navegacional, transacional", "Os 200+ fatores de ranqueamento simplificados", "E-E-A-T: o framework de autoridade do Google", "SEO para landing pages de produto"],
+            content: `<h2>Google Search: O Canal com Maior Intenção de Compra</h2>
+<p>Uma pessoa que busca "curso de lançamento digital" no Google está ativamente procurando por uma solução — ela já identificou o problema e está em modo de pesquisa de compra. Isso é radicalmente diferente de alguém que encontrou um conteúdo no TikTok passivamente.</p>
+
+<p>Essa diferença de intenção explica por que tráfego orgânico do Google converte em média 2-5x melhor que tráfego de redes sociais para a maioria dos produtos digitais.</p>
+
+<h3>Os 3 Tipos de Intenção de Busca</h3>
+
+<p><strong>1. Intenção Informacional</strong> (60-70% das buscas)<br/>
+A pessoa quer aprender: "como fazer lançamento semente", "o que é funil perpétuo".<br/>
+<em>Como aproveitar:</em> posts de blog, vídeos YouTube embedados, guias completos. Objetivo é capturar o lead em troca do conteúdo.</p>
+
+<p><strong>2. Intenção Comparativa / de Consideração</strong><br/>
+A pessoa está avaliando opções: "melhor curso de marketing digital", "NexOS vs. ClickFunnels".<br/>
+<em>Como aproveitar:</em> conteúdo de comparação, cases de resultado, reviews. Objetivo é aparecer quando a pessoa está decidindo.</p>
+
+<p><strong>3. Intenção Transacional</strong> (alta conversão)<br/>
+A pessoa quer agir: "comprar curso de lançamento digital", "assinar plataforma de automação de marketing".<br/>
+<em>Como aproveitar:</em> landing pages de produto otimizadas, Google Ads para capturar quem está pronto para comprar.</p>
+
+<h3>E-E-A-T: O Framework de Autoridade do Google</h3>
+<p>O Google avalia conteúdo com base em E-E-A-T: Experience (Experiência), Expertise (Especialidade), Authoritativeness (Autoridade) e Trustworthiness (Confiabilidade).</p>
+
+<ul>
+  <li><strong>Experience:</strong> o criador tem experiência direta com o assunto? Mencione casos reais, números específicos, datas. Primeira pessoa ("na minha primeira campanha...") sinaliza experiência.</li>
+  <li><strong>Expertise:</strong> a profundidade do conteúdo demonstra conhecimento real? O Google consegue diferenciar conteúdo superficial de conteúdo de especialista.</li>
+  <li><strong>Authoritativeness:</strong> outros sites relevantes linkam para você? Backlinks de sites de autoridade são o principal sinal externo de autoridade.</li>
+  <li><strong>Trustworthiness:</strong> o site tem HTTPS? Política de privacidade? Informações de contato? Esses sinais básicos afetam a confiabilidade percebida.</li>
+</ul>
+
+<h3>SEO para Landing Pages de Produto Digital</h3>
+<p>Muitos produtores ignoram SEO para páginas de venda — mas ranquear organicamente para termos transacionais é uma das aquisições de cliente mais baratas possíveis.</p>
+
+<p>Otimizações essenciais para landing pages:</p>
+<ul>
+  <li>Title tag (aparece na aba do navegador e no resultado do Google): keyword principal + diferencial único</li>
+  <li>Meta description (o texto que aparece no resultado de busca): 155 caracteres com CTA</li>
+  <li>H1 único com keyword principal</li>
+  <li>Schema markup de produto (ajuda o Google a entender que é uma página de produto)</li>
+  <li>Velocidade de carregamento abaixo de 2.5s no mobile (Core Web Vitals é fator de ranking)</li>
+</ul>`
+          }
+        ],
+        locked: true
+      },
+      {
+        id: "algoritmo-dominio-total",
+        number: 20,
+        title: "Domínio Total: Estratégia Multi-Plataforma e Omnichannel",
+        subtitle: "Como criar uma presença algorítmica que se reforça em todas as plataformas simultaneamente",
+        icon: "🌐",
+        color: "from-emerald-600 to-cyan-600",
+        duration: "1h",
+        summary: "Quem domina uma plataforma tem alcance. Quem domina a interseção entre plataformas tem audiência própria — independente de qualquer algoritmo. Este capítulo final mostra como construir esse ativo.",
+        lessons: [
+          {
+            id: "omnichannel-estrategia",
+            title: "A Estratégia de Conteúdo Multi-Plataforma que Multiplica Alcance",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["O modelo Hub & Spoke de distribuição de conteúdo", "Repurposing inteligente: um conteúdo, 7 formatos", "Como as plataformas se alimentam mutuamente", "A audiência própria: o ativo que os algoritmos não controlam"],
+            content: `<h2>Multi-Plataforma: Quando 1+1+1 = 10</h2>
+<p>Presença em múltiplas plataformas não significa criar conteúdo diferente para cada uma — significa criar um conteúdo central e distribuí-lo em formatos adaptados para cada plataforma. Isso é o modelo Hub & Spoke.</p>
+
+<h3>O Modelo Hub & Spoke</h3>
+<p><strong>Hub (conteúdo central):</strong> um vídeo longo do YouTube, um podcast, um artigo aprofundado — conteúdo denso que você produziu uma vez.</p>
+
+<p><strong>Spokes (derivados):</strong> a partir do hub, você cria:</p>
+<ul>
+  <li>3-5 Shorts/Reels/TikToks dos melhores momentos (ferramenta: Opus Clip faz isso automaticamente)</li>
+  <li>1 Carrossel do Instagram com os pontos principais</li>
+  <li>1 Thread para LinkedIn/Twitter com os insights</li>
+  <li>1 Email para a lista com o link + resumo dos pontos principais</li>
+  <li>3-5 Stories com enquete ou pergunta derivada do tema</li>
+</ul>
+
+<p>Um vídeo de 20 minutos vira 12 peças de conteúdo distribuídas em 6 plataformas. Custo de produção de uma, alcance de doze.</p>
+
+<h3>Como as Plataformas se Alimentam Mutuamente</h3>
+<p>Cada plataforma tem um papel específico no funil e deve alimentar as outras:</p>
+
+<p><strong>TikTok → Instagram:</strong> TikTok tem o maior alcance orgânico para novos públicos. Instagram tem maior profundidade de relacionamento. Use TikTok para descoberta, Instagram para conversão de seguidores em leads.</p>
+
+<p><strong>YouTube → Google:</strong> Vídeos do YouTube aparecem no Google para buscas de "como fazer". O YouTube ranqueado traz tráfego do Google sem custo adicional.</p>
+
+<p><strong>Instagram/TikTok → WhatsApp/Email:</strong> Redes sociais para descoberta, WhatsApp e email para conversão. Alguém que está no seu WhatsApp tem 8x mais probabilidade de comprar que alguém que só te segue no Instagram.</p>
+
+<p><strong>Facebook Group → Email:</strong> Grupos geram engajamento e confiança. Use para converter membros em assinantes da lista — o ativo que você controla completamente.</p>
+
+<h3>A Audiência Própria: O Ativo que os Algoritmos Não Controlam</h3>
+<p>Seguidores nas redes sociais não são seus — são do Instagram, do TikTok, do YouTube. Quando uma plataforma muda o algoritmo, seu alcance pode cair 70% da noite para o dia.</p>
+
+<p>Audiência própria é aquela que você controla:</p>
+<ul>
+  <li><strong>Lista de email:</strong> você tem o endereço. Pode enviar quando e como quiser.</li>
+  <li><strong>Lista de WhatsApp:</strong> taxa de abertura de 90%+. Contato direto.</li>
+  <li><strong>Membros de comunidade paga:</strong> pagaram para estar com você — maior engajamento possível.</li>
+</ul>
+
+<p>A métrica mais importante de qualquer estratégia de conteúdo não é seguidores — é o crescimento semanal da lista própria.</p>
+
+<blockquote>Um algoritmo muda. Duas plataformas fecham por ano. A única proteção real é ter uma audiência que você pode contatar diretamente, independente de qualquer plataforma. Construa o email e o WhatsApp primeiro. Use as redes sociais como motores de alimentação dessa lista — nunca como destino final.</blockquote>`
+          },
+          {
+            id: "algoritmo-acompanhar",
+            title: "Como Acompanhar as Mudanças de Algoritmo sem Enlouquecer",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Fontes confiáveis para atualizações de algoritmo", "O que realmente muda vs. o que é ruído", "Como testar hipóteses de algoritmo sistematicamente", "Construindo um sistema de aprendizado contínuo"],
+            content: `<h2>Algoritmos Mudam — Seu Sistema de Aprendizado não Pode Parar</h2>
+<p>O maior erro de quem aprende sobre algoritmos é pensar que o conhecimento é fixo. TikTok, Instagram e Google atualizam seus algoritmos centenas de vezes por ano. A maioria das mudanças é pequena e incremental — mas algumas mudam radicalmente as regras do jogo.</p>
+
+<h3>Fontes Confiáveis por Plataforma</h3>
+
+<p><strong>Instagram:</strong></p>
+<ul>
+  <li>Blog oficial do Instagram (@creators no Instagram) — updates diretos de Adam Mosseri</li>
+  <li>@socialmediaexaminer — análise de tendências com dados reais</li>
+</ul>
+
+<p><strong>TikTok:</strong></p>
+<ul>
+  <li>TikTok Newsroom — comunicados oficiais</li>
+  <li>TikTok Creator Academy — guias oficiais de boas práticas</li>
+</ul>
+
+<p><strong>YouTube:</strong></p>
+<ul>
+  <li>YouTube Creator Blog — único canal oficial confiável</li>
+  <li>@TeamYouTube no X/Twitter — updates rápidos</li>
+</ul>
+
+<p><strong>Google:</strong></p>
+<ul>
+  <li>Google Search Central Blog — onde todas as updates de algoritmo são documentadas</li>
+  <li>@searchliaison no X/Twitter — porta-voz oficial do Google Search</li>
+</ul>
+
+<h3>O que Realmente Muda vs. Ruído</h3>
+<p>A internet de marketing digital gera pânico a cada boato de mudança de algoritmo. Regra simples para filtrar:</p>
+
+<p><strong>Ignore:</strong> afirmações sem fonte oficial, "estratégias secretas reveladas", qualquer conteúdo que diz "o algoritmo foi completamente mudado" sem link para comunicado oficial.</p>
+
+<p><strong>Preste atenção:</strong> comunicados de blog oficial das plataformas, mudanças confirmadas por múltiplas fontes independentes com dados, estudos com metodologia clara (não "eu percebi que...").</p>
+
+<h3>Sistema de Teste de Hipóteses</h3>
+<p>Ao invés de acreditar em tudo que lê sobre algoritmos, teste você mesmo:</p>
+<ol>
+  <li>Formule uma hipótese: "Posts publicados às 19h têm mais alcance que às 9h para minha audiência"</li>
+  <li>Crie um teste controlado: publique conteúdo similar em horários diferentes por 4 semanas</li>
+  <li>Meça a variável certa: não curtidas — alcance orgânico e salvamentos</li>
+  <li>Tome conclusão baseada em dados: não em 2 posts, mas em pelo menos 8-10</li>
+</ol>
+
+<p>Essa abordagem científica tem dois benefícios: gera conhecimento real sobre seu nicho específico (algoritmos se comportam diferente por nicho) e imuniza contra o ruído do "guru descobriu novo hack do algoritmo".</p>
+
+<blockquote>O algoritmo muda. A psicologia humana não. Conteúdo que retém atenção, gera emoção genuína e entrega valor real sempre vai ser distribuído — independente das mudanças. Domine a psicologia e você estará sempre à frente das mudanças de algoritmo.</blockquote>`
+          },
+          {
+            id: "algoritmo-exercicio-final",
+            title: "Exercício Final: Auditoria Algorítmica do Seu Negócio",
+            duration: "15 min",
+            type: "exercise",
+            keyPoints: ["Mapeamento atual de plataformas e performance", "Identificação de gaps algorítmicos", "Plano de 30 dias para otimização"],
+            content: `<h2>Exercício: Auditoria Algorítmica Completa</h2>
+<p>Este exercício leva 30-45 minutos e vai revelar onde estão os maiores gaps algorítmicos no seu negócio hoje — e as oportunidades de maior impacto com menor esforço.</p>
+
+<h3>Parte 1: Mapeamento (15 min)</h3>
+<p>Para cada plataforma que você usa, preencha:</p>
+
+<table>
+<tr><th>Plataforma</th><th>Seguidores/Assinantes</th><th>Alcance médio por post</th><th>Taxa de engajamento</th><th>Conversões/mês para sua lista</th></tr>
+<tr><td>TikTok</td><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+<tr><td>Instagram</td><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+<tr><td>YouTube</td><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+<tr><td>Facebook</td><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+<tr><td>Email/WhatsApp</td><td>___</td><td>___</td><td>___</td><td>___</td></tr>
+</table>
+
+<h3>Parte 2: Análise de Gaps (10 min)</h3>
+<p>Responda:</p>
+<ul>
+  <li>Em qual plataforma você tem o maior alcance mas a menor conversão para lista própria?</li>
+  <li>Em qual plataforma você está completamente ausente mas sua audiência-alvo está presente?</li>
+  <li>Qual é a sua taxa de crescimento semanal da lista de email + WhatsApp combinados?</li>
+  <li>Qual plataforma você usa mais por hábito mas que tem menor ROI de tempo investido?</li>
+</ul>
+
+<h3>Parte 3: Plano de 30 Dias (15 min)</h3>
+<p>Com base na análise, defina:</p>
+<ul>
+  <li><strong>Plataforma principal:</strong> onde você vai investir 70% do esforço de criação</li>
+  <li><strong>Plataformas de distribuição (2 no máximo):</strong> onde você vai repurposar o conteúdo principal</li>
+  <li><strong>Meta de crescimento de lista:</strong> quantos novos contatos de email/WhatsApp por semana</li>
+  <li><strong>Uma mudança no hook</strong> que você vai testar nas próximas 2 semanas</li>
+  <li><strong>Uma métrica nova</strong> que você vai começar a acompanhar que nunca acompanhou antes</li>
+</ul>
+
+<blockquote>O produtor que vence algoritmicamente não é o que sabe tudo sobre os algoritmos — é o que tem um sistema de aprendizado contínuo, testa hipóteses com dados e otimiza consistentemente. Você acabou de adquirir o mapa. O caminho é construído com execução.</blockquote>`
+          }
+        ],
+        locked: true
+      }
+    ]
   }
 ];
 
