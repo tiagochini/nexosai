@@ -130,6 +130,9 @@ interface FileAttachment {
   content?: string;
   isTranscribing?: boolean;
   transcription?: string;
+  isAnalyzingVideo?: boolean;
+  videoFrames?: string[];
+  videoTranscription?: string;
 }
 
 interface ChatMsg {
@@ -429,6 +432,54 @@ export default function AgentChat() {
 
   useEffect(() => { autoGrow(); }, [input, autoGrow]);
 
+  // ── Video frame extraction ──────────────────────────────────────────────────
+  const extractVideoFrames = (file: File, numFrames = 6): Promise<string[]> =>
+    new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const vid = document.createElement("video");
+      vid.muted = true;
+      vid.preload = "auto";
+      vid.crossOrigin = "anonymous";
+      vid.src = url;
+
+      vid.onloadedmetadata = () => {
+        const duration = vid.duration;
+        if (!isFinite(duration) || duration <= 0) { URL.revokeObjectURL(url); resolve([]); return; }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d")!;
+        const frames: string[] = [];
+        const timestamps = Array.from({ length: numFrames }, (_, i) =>
+          (duration * (i + 0.5)) / numFrames
+        );
+        let idx = 0;
+
+        const captureNext = () => {
+          if (idx >= timestamps.length) {
+            URL.revokeObjectURL(url);
+            resolve(frames);
+            return;
+          }
+          vid.currentTime = timestamps[idx]!;
+        };
+
+        vid.onseeked = () => {
+          canvas.width = Math.min(vid.videoWidth, 768);
+          canvas.height = Math.min(vid.videoHeight, 432);
+          ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          frames.push(dataUrl);
+          idx++;
+          captureNext();
+        };
+
+        vid.onerror = () => { URL.revokeObjectURL(url); resolve(frames); };
+        captureNext();
+      };
+
+      vid.onerror = () => { URL.revokeObjectURL(url); resolve([]); };
+    });
+
   // ── File handling ──────────────────────────────────────────────────────────
   const readFileContent = (file: File): Promise<string | undefined> =>
     new Promise(resolve => {
@@ -439,7 +490,7 @@ export default function AgentChat() {
         reader.readAsDataURL(file);
         return;
       }
-      // Audio/video: read as dataURL for sending to Whisper
+      // Audio: read as dataURL for sending to Whisper
       if (file.type.startsWith("audio/") && file.size <= 25_000_000) {
         const reader = new FileReader();
         reader.onload = e => resolve(e.target?.result as string | undefined);
@@ -447,6 +498,8 @@ export default function AgentChat() {
         reader.readAsDataURL(file);
         return;
       }
+      // Video: will be analyzed separately — skip content here
+      if (file.type.startsWith("video/")) { resolve(undefined); return; }
       const isReadable =
         file.type.startsWith("text/") ||
         ["application/json", "application/xml", "application/pdf"].includes(file.type) ||
@@ -472,6 +525,7 @@ export default function AgentChat() {
         isAudio: f.type.startsWith("audio/"),
         content: await readFileContent(f),
         isTranscribing: f.type.startsWith("audio/"),
+        isAnalyzingVideo: f.type.startsWith("video/"),
       }))
     );
     setPendingAttachments(prev => [...prev, ...attachments]);
@@ -496,14 +550,12 @@ export default function AgentChat() {
             const data = await res.json() as { text: string };
             const transcript = data.text?.trim();
             if (!transcript) return;
-            // Update attachment state with transcription
             setPendingAttachments(prev =>
               prev.map(a => a.url === att.url
                 ? { ...a, isTranscribing: false, transcription: transcript }
                 : a
               )
             );
-            // Append transcription to the input
             setInput(prev => prev ? `${prev}\n\n${transcript}` : transcript);
             setTimeout(() => { textareaRef.current?.focus(); autoGrow(); }, 50);
           } catch {
@@ -513,6 +565,94 @@ export default function AgentChat() {
                 : a
               )
             );
+          }
+        })();
+      }
+
+      // Auto-analyze video files: extract frames + transcribe audio
+      if (att.isVideo) {
+        const originalFile = files.find(f => f.name === att.name && f.type === att.type);
+        if (!originalFile) continue;
+        void (async () => {
+          try {
+            // 1. Extract keyframes via canvas
+            const frames = await extractVideoFrames(originalFile, 6);
+
+            // 2. Try to extract audio and transcribe via Whisper
+            let videoTranscription: string | undefined;
+            try {
+              const audioBlob = await new Promise<Blob | null>((res) => {
+                const vid = document.createElement("video");
+                vid.src = att.url;
+                vid.muted = false;
+                vid.preload = "auto";
+                vid.onloadedmetadata = () => {
+                  try {
+                    const stream = (vid as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.();
+                    if (!stream) { res(null); return; }
+                    const audioTracks = stream.getAudioTracks();
+                    if (audioTracks.length === 0) { res(null); return; }
+                    const audioStream = new MediaStream(audioTracks);
+                    const mr = new MediaRecorder(audioStream);
+                    const chunks: Blob[] = [];
+                    mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+                    mr.onstop = () => res(new Blob(chunks, { type: "audio/webm" }));
+                    mr.start();
+                    void vid.play();
+                    // Record up to 60s of audio
+                    setTimeout(() => { mr.stop(); vid.pause(); }, Math.min(vid.duration * 1000, 60_000));
+                  } catch { res(null); }
+                };
+                vid.onerror = () => res(null);
+              });
+
+              if (audioBlob && audioBlob.size > 1000) {
+                const reader = new FileReader();
+                const audioBase64: string = await new Promise(r => {
+                  reader.onload = e => r(e.target?.result as string);
+                  reader.readAsDataURL(audioBlob);
+                });
+                const token = localStorage.getItem("nexos_access_token");
+                const tRes = await fetch("/api/agents/transcribe", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                  body: JSON.stringify({ audioBase64, mimeType: "audio/webm" }),
+                });
+                if (tRes.ok) {
+                  const tData = await tRes.json() as { text: string };
+                  videoTranscription = tData.text?.trim() || undefined;
+                }
+              }
+            } catch { /* audio extraction optional */ }
+
+            // 3. Update attachment state
+            setPendingAttachments(prev =>
+              prev.map(a => a.url === att.url
+                ? { ...a, isAnalyzingVideo: false, videoFrames: frames, videoTranscription }
+                : a
+              )
+            );
+
+            // 4. If transcription, append to input
+            if (videoTranscription) {
+              setInput(prev => {
+                const note = `[Transcrição do vídeo "${att.name}"]:\n${videoTranscription}`;
+                return prev ? `${prev}\n\n${note}` : note;
+              });
+              setTimeout(() => { textareaRef.current?.focus(); autoGrow(); }, 50);
+            }
+
+            toast.success(
+              frames.length > 0
+                ? `Vídeo analisado: ${frames.length} frames extraídos${videoTranscription ? " + transcrição" : ""}`
+                : "Vídeo anexado (sem frames extraídos)",
+              { duration: 4000 }
+            );
+          } catch {
+            setPendingAttachments(prev =>
+              prev.map(a => a.url === att.url ? { ...a, isAnalyzingVideo: false } : a)
+            );
+            toast.warning("Não foi possível analisar o vídeo automaticamente");
           }
         })();
       }
@@ -554,19 +694,41 @@ export default function AgentChat() {
     setShowThinkingProcess(false);
     sendStartRef.current = Date.now();
 
-    // Separate images vs text attachments
+    // Separate images vs text vs video attachments
     const imageAttachments = attachmentsSnapshot.filter(a => a.isImage && a.content);
-    const textAttachments  = attachmentsSnapshot.filter(a => !a.isImage && a.content);
-    const fileContext = textAttachments.map(a => `\n\n--- Arquivo: ${a.name} ---\n${a.content}`).join("");
-    const messageWithFiles = text + fileContext;
+    const videoAttachments = attachmentsSnapshot.filter(a => a.isVideo && (a.videoFrames?.length ?? 0) > 0);
+    const textAttachments  = attachmentsSnapshot.filter(a => !a.isImage && !a.isVideo && a.content);
+
+    // Build file context: text files + video transcriptions
+    const fileContext = [
+      ...textAttachments.map(a => `\n\n--- Arquivo: ${a.name} ---\n${a.content}`),
+      ...videoAttachments.filter(a => a.videoTranscription).map(a =>
+        `\n\n--- Transcrição do vídeo "${a.name}" ---\n${a.videoTranscription}`
+      ),
+    ].join("");
+
+    // Include video metadata as context
+    const videoContext = videoAttachments.length > 0
+      ? `\n\n[Vídeos anexados para análise: ${videoAttachments.map(a =>
+          `"${a.name}" (${(a.videoFrames?.length ?? 0)} frames extraídos${a.videoTranscription ? ", com transcrição" : ""})`
+        ).join(", ")}]`
+      : "";
+
+    const messageWithFiles = text + fileContext + videoContext;
+
+    // All visual images = regular images + video frames
+    const allImages = [
+      ...imageAttachments.map(a => a.content!),
+      ...videoAttachments.flatMap(a => a.videoFrames ?? []),
+    ];
 
     const requestBody = JSON.stringify({
       agentRole: role,
-      message: messageWithFiles || (imageAttachments.length > 0 ? "Analise este(s) arquivo(s) anexado(s)." : ""),
+      message: messageWithFiles || (allImages.length > 0 ? "Analise este(s) arquivo(s) anexado(s)." : ""),
       history: snapshotMessages.map(m => ({ role: m.role, content: m.content })).slice(-12),
       contextMode,
       ...(selectedCampaign ? { campaignId: selectedCampaign } : {}),
-      ...(imageAttachments.length > 0 ? { images: imageAttachments.map(a => a.content!) } : {}),
+      ...(allImages.length > 0 ? { images: allImages } : {}),
     });
 
     let lastError: Error | null = null;
@@ -868,8 +1030,20 @@ export default function AgentChat() {
                   ) : att.isVideo ? (
                     <div className="relative border border-cyan-400/30 bg-card/40 overflow-hidden">
                       <video src={att.url} className="h-16 w-24 object-cover bg-black" preload="metadata" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <FileVideo className="h-5 w-5 text-cyan-400/80" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50">
+                        {att.isAnalyzingVideo ? (
+                          <>
+                            <Loader2 className="h-4 w-4 text-cyan-400 animate-spin" />
+                            <span className="font-mono text-[8px] text-cyan-400 mt-0.5 uppercase tracking-widest">Analisando…</span>
+                          </>
+                        ) : att.videoFrames && att.videoFrames.length > 0 ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-cyan-400" />
+                            <span className="font-mono text-[8px] text-cyan-400 mt-0.5 uppercase tracking-widest">{att.videoFrames.length} frames{att.videoTranscription ? " + voz" : ""}</span>
+                          </>
+                        ) : (
+                          <FileVideo className="h-5 w-5 text-cyan-400/80" />
+                        )}
                       </div>
                       <button onClick={() => removeAttachment(i)}
                         className="absolute top-0.5 right-0.5 w-4 h-4 bg-background/80 hover:bg-destructive/80 flex items-center justify-center transition-colors">

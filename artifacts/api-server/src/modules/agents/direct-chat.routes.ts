@@ -436,14 +436,14 @@ const AGENT_ROLES = new Set(Object.keys(AGENT_SYSTEM_PROMPTS));
 
 const directChatSchema = z.object({
   agentRole: z.string().min(1),
-  message: z.string().max(8000).default(""),
+  message: z.string().max(12000).default(""),
   history: z.array(z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string(),
   })).default([]),
   campaignId: z.string().uuid().optional(),
   contextMode: z.enum(["brainstorm", "review", "strategy", "question", "optimize"]).optional(),
-  images: z.array(z.string()).max(6).optional(),
+  images: z.array(z.string()).max(20).optional(),
 });
 
 // ── GET /api/agents — list all available agents ───────────────────────────────
@@ -512,7 +512,8 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
   }
 
   const hasImages = Array.isArray(images) && images.length > 0;
-  const creditCost = hasImages ? 5 : 3;
+  const isVideoAnalysis = hasImages && images!.length >= 4;
+  const creditCost = isVideoAnalysis ? 8 : hasImages ? 5 : 3;
 
   try {
     const [ws] = await db
@@ -532,8 +533,11 @@ router.post("/direct-chat", async (req, res): Promise<void> => {
     const modeNote = contextMode
       ? `\n\nMODO: ${contextMode.toUpperCase()} — adapte sua resposta a este contexto de ${contextMode}.`
       : "";
+    const videoNote = isVideoAnalysis
+      ? `\n\nANÁLISE DE VÍDEO: Você receberá ${images!.length} frames extraídos de um vídeo em sequência temporal. Analise a progressão visual, identifique elementos-chave (pessoas, textos, produtos, ambientes), avalie qualidade de produção, engajamento potencial e sugira melhorias específicas para marketing digital. Se houver transcrição do áudio, use-a em conjunto com os frames visuais para uma análise completa.`
+      : "";
     const basePrompt = AGENT_SYSTEM_PROMPTS[agentRole] ?? "Você é um especialista em marketing digital. Responda em PT-BR.";
-    const systemPrompt = basePrompt + modeNote;
+    const systemPrompt = basePrompt + modeNote + videoNote;
 
     const historyMessages = history.map(h => ({ role: h.role as "user" | "assistant", content: h.content }));
     const userContent = message || (hasImages ? "Analise este(s) arquivo(s) anexado(s)." : "");
