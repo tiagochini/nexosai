@@ -23,16 +23,15 @@ export default function Home({ onNavigate, progress }: HomeProps) {
         <div className="relative z-10 max-w-2xl">
           <div className="flex items-center gap-2 mb-4">
             <span className="badge-primary">⚡ NexOS Academy</span>
-            <span className="badge-primary badge-gold">Metodologia Completa</span>
+            <span className="badge-primary badge-gold">10 Módulos · 34 Capítulos · 118 Aulas</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4">
-            Do Zero a{" "}
-            <span className="shimmer-text">7 Dígitos</span>
-            <br />com Método e IA
+            Crie, Lance e Venda{" "}
+            <br />
+            <span className="shimmer-text">Produtos Digitais</span>
           </h1>
           <p className="text-[hsl(220_10%_70%)] text-lg leading-relaxed mb-6">
-            A metodologia completa de lançamentos digitais: tráfego, copy, gatilhos, automação e os 29 agentes NexOS. 
-            Tudo que você precisa para executar campanhas de 6 a 10 dígitos.
+            Formação completa em lançamentos: estratégia, tráfego pago e orgânico, copywriting, automações, criação de produto e como transformar sua audiência em clientes.
           </p>
           <div className="flex flex-wrap gap-3">
             {nextChapter ? (
