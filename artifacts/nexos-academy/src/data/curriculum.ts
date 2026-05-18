@@ -1178,6 +1178,900 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
         locked: true
       }
     ]
+  },
+  {
+    id: "ferramentas-plataformas",
+    number: 4,
+    title: "Ferramentas e Plataformas do Marketing Digital",
+    description: "Domine o ecossistema de ferramentas que os maiores produtores usam. De criação de conteúdo a agendamento, análise e automação — cada plataforma tem seu jogo e suas regras.",
+    badge: "Ferramentas",
+    chapters: [
+      {
+        id: "instagram-tiktok",
+        number: 10,
+        title: "Instagram e TikTok: Orgânico de Alto Impacto",
+        subtitle: "Os algoritmos, formatos e estratégias de crescimento que funcionam em 2025",
+        icon: "📱",
+        color: "from-pink-600 to-rose-600",
+        duration: "1h 45min",
+        summary: "Instagram e TikTok são os dois motores de crescimento orgânico mais poderosos do marketing digital. Cada um tem lógica própria — entender as diferenças é o que separa quem cresce de quem estagna.",
+        lessons: [
+          {
+            id: "tiktok-algoritmo",
+            title: "TikTok: O Algoritmo que Democratizou o Alcance",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Como o FYP (For You Page) funciona de verdade", "Os 3 estágios de distribuição de um vídeo", "Retenção é a métrica-rainha", "Estratégia de nicho antes de escalar"],
+            content: `<h2>TikTok: A Plataforma que Quebrou as Regras do Jogo</h2>
+<p>O TikTok é a única plataforma onde uma conta com zero seguidores pode viralizar no primeiro vídeo. Isso não é marketing — é a arquitetura do algoritmo. Entender isso muda completamente sua estratégia.</p>
+
+<h3>Como o Algoritmo do TikTok Realmente Funciona</h3>
+<p>Cada vídeo passa por estágios progressivos de distribuição. O TikTok não entrega seu conteúdo para toda a base — ele testa em grupos pequenos e expande para grupos maiores com base nas métricas de performance.</p>
+
+<h3>Estágio 1: Pequeno Grupo de Teste (100-500 visualizações)</h3>
+<p>Seu vídeo é mostrado para um grupo inicial. O algoritmo mede: taxa de conclusão do vídeo, taxa de interação (likes, comentários, shares, saves) e taxa de rewatch (pessoas que assistem mais de uma vez). Se as métricas ficam acima do threshold do nicho, o vídeo avança.</p>
+
+<h3>Estágio 2: Expansão Moderada (1.000-50.000 visualizações)</h3>
+<p>Vídeos que passaram no estágio 1 são mostrados para um grupo maior. As mesmas métricas são medidas, com threshold mais exigente. É aqui que a maioria dos vídeos para.</p>
+
+<h3>Estágio 3: Viral (100k+)</h3>
+<p>Vídeos que consistentemente superam os thresholds dos dois primeiros estágios entram no pool de distribuição ampla — o FYP global. Isso pode acontecer 2 dias ou 3 meses depois da publicação.</p>
+
+<h3>A Métrica-Rainha: Taxa de Retenção</h3>
+<p>De todas as métricas, a que o TikTok mais valoriza é a retenção — quanto do vídeo as pessoas assistem. Um vídeo de 30 segundos assistido até o fim supera um vídeo de 3 minutos assistido até a metade.</p>
+
+<p>Benchmarks por tipo de conteúdo:</p>
+<ul>
+  <li>Vídeos de 15-30s: retenção alvo &gt;80%</li>
+  <li>Vídeos de 1-2 min: retenção alvo &gt;60%</li>
+  <li>Vídeos de 3-5 min: retenção alvo &gt;45%</li>
+</ul>
+
+<h3>Estrutura dos Primeiros 3 Segundos</h3>
+<p>O hook decide tudo. As primeiras palavras ou imagem do vídeo determinam se a pessoa vai parar o scroll ou seguir em frente. Hooks que funcionam:</p>
+<ul>
+  <li><strong>Promessa de resultado:</strong> "Em 60 segundos vou te mostrar como faturei R$30k este mês"</li>
+  <li><strong>Contraintuitivo:</strong> "Pare de postar todo dia no TikTok — isso está te prejudicando"</li>
+  <li><strong>Pergunta polarizante:</strong> "Você ainda acredita que precisa de muita audiência para vender?"</li>
+  <li><strong>Número específico:</strong> "7 erros que 95% dos produtores digitais cometem"</li>
+</ul>
+
+<h3>Estratégia de Nicho antes de Escalar</h3>
+<p>O erro mais comum no TikTok é tentar ser relevante para todos. O algoritmo aprende com o tempo quem é sua audiência. Quanto mais consistente o nicho, mais eficiente a distribuição.</p>
+<p>Defina: 1 problema central + 1 audiência específica. Fique nesse eixo por pelo menos 30 vídeos antes de diversificar.</p>
+
+<h3>Ferramentas Essenciais para TikTok</h3>
+<ul>
+  <li><strong>TikTok Studio:</strong> analytics nativo, tendências de hashtags, performance por vídeo</li>
+  <li><strong>CapCut:</strong> editor nativo integrado ao TikTok, templates virais, legendas automáticas</li>
+  <li><strong>Tokboard / Pentos:</strong> análise competitiva — veja o que está viralizando no seu nicho</li>
+  <li><strong>Creator Search Insights:</strong> ferramenta nativa que mostra o que as pessoas estão buscando no TikTok</li>
+</ul>
+
+<blockquote>O TikTok é a plataforma que mais recompensa consistência e qualidade de retenção. Um produtor com 500 seguidores pode ter mais impacto de vendas que outro com 50 mil — se seus vídeos terminam no FYP certo.</blockquote>`
+          },
+          {
+            id: "instagram-estrategia",
+            title: "Instagram: Reels, Carrosséis e a Estratégia de Conversão",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Reels vs. Feed vs. Stories: o papel de cada formato", "O algoritmo do Instagram em 2025", "Carrosséis de alto salvamento", "Bio e link na bio como funil"],
+            content: `<h2>Instagram: A Plataforma de Relacionamento e Conversão</h2>
+<p>O Instagram perdeu a batalha do alcance orgânico puro para o TikTok, mas ganhou outra batalha: <em>profundidade de relacionamento</em>. Enquanto o TikTok viraliza, o Instagram converte. Entender isso define a estratégia certa para cada plataforma.</p>
+
+<h3>Os 4 Formatos e o Papel de Cada Um</h3>
+
+<h3>Reels: Topo de Funil e Descoberta</h3>
+<p>O único formato do Instagram com distribuição orgânica relevante para quem não te segue. Use Reels para ser descoberto. Estrutura: hook nos primeiros 2 segundos, conteúdo de valor comprimido, CTA para seguir ou salvar.</p>
+<p>Duração ideal em 2025: 7-30 segundos para entretenimento, 30-90 segundos para educação.</p>
+
+<h3>Carrosséis: O Formato que o Algoritmo Ama</h3>
+<p>Carrosséis têm a maior taxa de salvamento do Instagram — e salvamento é o sinal mais forte de valor que você pode dar ao algoritmo. A lógica: quando alguém salva, está dizendo "quero voltar aqui".</p>
+<p>Estrutura de carrossel de alto impacto:</p>
+<ul>
+  <li>Slide 1: Promessa irresistível (o que a pessoa vai aprender/ganhar)</li>
+  <li>Slides 2-8: Conteúdo desmembrado — um ponto por slide, visual limpo</li>
+  <li>Slide final: CTA claro (salvar, comentar com uma palavra, seguir)</li>
+</ul>
+
+<h3>Stories: Relacionamento e Conversão Direta</h3>
+<p>Stories são vistas por quem já te segue — é o formato de relacionamento. Use para bastidores, enquetes, perguntas, countdown de lançamento e links diretos (qualquer conta pode usar link nos stories).</p>
+<p>Taxa de conclusão de stories alvo: &gt;70%. Se está abaixo, seus stories são longos demais ou sem ritmo.</p>
+
+<h3>Feed Estático: Portfólio e Credibilidade</h3>
+<p>O feed é o que alguém vê quando abre seu perfil pela primeira vez. É o currículo visual. Foque em consistência estética e conteúdo que mostre autoridade no nicho.</p>
+
+<h3>O Algoritmo do Instagram em 2025</h3>
+<p>Quatro métricas que o Instagram usa para distribuição:</p>
+<ol>
+  <li><strong>Interesse previsto:</strong> com base no histórico do usuário, o Instagram estima a probabilidade de interação</li>
+  <li><strong>Relacionamento:</strong> contas com quem o usuário interage frequentemente têm prioridade</li>
+  <li><strong>Tempo de visualização:</strong> especialmente para Reels — retenção é o sinal principal</li>
+  <li><strong>Popularidade:</strong> velocidade de engajamento nas primeiras horas após publicação</li>
+</ol>
+
+<h3>Bio como Funil: A Página de Captura Mais Visitada</h3>
+<p>Sua bio do Instagram é visitada por cada pessoa que considera te seguir. Trate como uma mini landing page:</p>
+<ul>
+  <li>Linha 1: quem você ajuda e com o quê</li>
+  <li>Linha 2: prova de resultado (número, credencial, marco)</li>
+  <li>Linha 3: CTA + link na bio</li>
+</ul>
+<p>Ferramentas de link na bio: Linktree, Bio.site, ou uma página própria. Prefira domínio próprio para analytics completo.</p>
+
+<h3>Ferramentas para Instagram</h3>
+<ul>
+  <li><strong>Meta Business Suite:</strong> agenda posts + stories, analytics unificado Instagram + Facebook</li>
+  <li><strong>Later / Buffer:</strong> agendamento visual, análise de melhor horário de postagem</li>
+  <li><strong>Canva:</strong> templates de carrossel, stories e feed com identidade visual consistente</li>
+  <li><strong>Metricool:</strong> analytics avançado, comparação com concorrentes, relatórios automáticos</li>
+</ul>`
+          },
+          {
+            id: "facebook-youtube",
+            title: "Facebook e YouTube: Audiência Madura e Conteúdo Longo",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Facebook Groups como comunidade de lançamento", "YouTube: o maior buscador de vídeo do mundo", "Shorts vs. vídeos longos: quando usar cada um", "SEO de vídeo no YouTube"],
+            content: `<h2>Facebook e YouTube: Onde Está a Audiência com Poder de Compra</h2>
+
+<h3>Facebook em 2025: Grupos e Comunidade</h3>
+<p>O alcance orgânico do Facebook para páginas está morto. Mas os <strong>Grupos do Facebook</strong> continuam sendo um dos ativos mais poderosos do marketing digital brasileiro — especialmente para lançamentos.</p>
+
+<h3>Estratégia de Grupo de Lançamento</h3>
+<p>Criar um grupo fechado como parte de uma sequência de lançamento é uma das táticas mais eficazes do mercado PT-BR:</p>
+<ol>
+  <li>Crie o grupo com nome relacionado ao resultado (não ao produto): "Grupo de Preparação para R$10k Online"</li>
+  <li>Divulgue como isca — quem entra no grupo recebe acesso antecipado, conteúdo exclusivo</li>
+  <li>Durante a pré-lançamento, publique conteúdo de valor diariamente (PDFs livros digitais, lives)</li>
+  <li>No dia da abertura do carrinho, o grupo é o canal de maior conversão — pessoas já aquecidas, com prova social acumulada durante a preparação</li>
+</ol>
+
+<p>Grupos bem gerenciados têm taxa de abertura de posts orgânicos de 20-30% — muito superior ao email.</p>
+
+<h3>Facebook Live: Alcance Ainda Funciona</h3>
+<p>O algoritmo do Facebook ainda distribui Lives organicamente — muito mais do que posts comuns. Use lives durante a fase de preparação do lançamento para alcançar quem está no grupo e amigos dos membros.</p>
+
+<h3>YouTube: O Ativo de Longo Prazo</h3>
+<p>O YouTube tem uma característica única que nenhuma outra plataforma oferece: <em>conteúdo que continua gerando leads anos depois de publicado</em>. Um vídeo bem posicionado no YouTube pode trazer leads orgânicos por 3-5 anos.</p>
+
+<h3>SEO de Vídeo: Como Ranquear no YouTube</h3>
+<p>O YouTube é o segundo maior buscador do mundo. Otimize seus vídeos para busca:</p>
+<ul>
+  <li><strong>Título:</strong> palavra-chave principal no início, promessa clara (ex: "Como Criar seu Primeiro Produto Digital — Passo a Passo Completo")</li>
+  <li><strong>Descrição:</strong> primeiras 2 linhas são críticas (aparecem antes do "ver mais"). Inclua keyword + link para captura</li>
+  <li><strong>Tags:</strong> keyword principal + variações + termos relacionados</li>
+  <li><strong>Thumbnail:</strong> rosto + texto com promessa + contraste alto. CTR de thumbnail alvo: &gt;5%</li>
+  <li><strong>Capítulos:</strong> timestamps na descrição melhoram watch time e aparecem no Google</li>
+</ul>
+
+<h3>Shorts vs. Vídeos Longos</h3>
+<ul>
+  <li><strong>Shorts (até 60s):</strong> descoberta e topo de funil — funciona igual ao TikTok, ganha novos inscritos</li>
+  <li><strong>Vídeos de 8-20 min:</strong> conteúdo educacional aprofundado, maior watch time, melhor monetização, ranqueia no Google</li>
+  <li><strong>Estratégia combinada:</strong> Shorts para crescimento de audiência + vídeos longos para conversão</li>
+</ul>
+
+<h3>Ferramentas para YouTube</h3>
+<ul>
+  <li><strong>TubeBuddy / VidIQ:</strong> pesquisa de keywords, análise de concorrentes, grade de tags</li>
+  <li><strong>YouTube Studio:</strong> analytics, revenue, public retention graph por segundo de vídeo</li>
+  <li><strong>Descript:</strong> edição de vídeo por transcrição — perfeito para longos sem experiência em edição</li>
+</ul>`
+          },
+          {
+            id: "ferramentas-producao",
+            title: "Stack de Ferramentas: Do Zero ao Profissional",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Ferramentas gratuitas vs. pagas: o que priorizar", "Stack de criação de conteúdo", "Ferramentas de agendamento e automação", "Analytics e monitoramento"],
+            content: `<h2>O Stack de Ferramentas do Produtor Digital Profissional</h2>
+<p>A maioria dos iniciantes erra na ordem: compra ferramentas antes de saber o que fazer com elas. Este guia organiza o stack por estágio — começando pelo essencial gratuito e progredindo para ferramentas pagas conforme o negócio cresce.</p>
+
+<h3>Nível 1: Começando (Gratuito)</h3>
+<ul>
+  <li><strong>Canva (free):</strong> design de posts, stories, carrosséis, thumbnails</li>
+  <li><strong>CapCut (free):</strong> edição de vídeos para TikTok e Reels, legendas automáticas</li>
+  <li><strong>Meta Business Suite (free):</strong> agendamento e analytics para Instagram e Facebook</li>
+  <li><strong>Google Analytics 4 (free):</strong> análise do site e rastreamento de conversões</li>
+  <li><strong>Mailchimp (free até 500 contatos):</strong> email marketing básico</li>
+  <li><strong>Hotmart / Kiwify (free para criar):</strong> hospedagem de produto digital, sistema de pagamento</li>
+</ul>
+
+<h3>Nível 2: Crescimento (R$100-R$500/mês)</h3>
+<ul>
+  <li><strong>Canva Pro:</strong> banco de imagens, remoção de fundo, brand kit, pastas de time</li>
+  <li><strong>Later ou Buffer:</strong> agendamento multi-plataforma, análise de melhor horário</li>
+  <li><strong>Metricool:</strong> analytics avançado de redes sociais, relatórios automáticos</li>
+  <li><strong>ActiveCampaign / RD Station:</strong> email marketing com automação, lead scoring, CRM</li>
+  <li><strong>Manychat:</strong> automação de DMs no Instagram e WhatsApp</li>
+</ul>
+
+<h3>Nível 3: Escala (R$500+/mês)</h3>
+<ul>
+  <li><strong>Adobe Premiere / DaVinci Resolve:</strong> edição de vídeo profissional</li>
+  <li><strong>Riverside.fm:</strong> gravação de podcast e entrevistas em alta qualidade</li>
+  <li><strong>EverWebinar / WebinarJam:</strong> webinars ao vivo e evergreen com alta conversão</li>
+  <li><strong>Hotjar / Microsoft Clarity:</strong> mapas de calor, gravação de sessões no site</li>
+  <li><strong>Deadline Funnel:</strong> deadlines individuais reais para funis perpétuos</li>
+</ul>
+
+<h3>Ferramentas de IA que Mudaram o Jogo</h3>
+<ul>
+  <li><strong>ChatGPT / Claude:</strong> geração de copy, roteiros, títulos, emails, estratégia de conteúdo</li>
+  <li><strong>Midjourney / DALL-E:</strong> criação de imagens para thumbnails e criativos</li>
+  <li><strong>ElevenLabs:</strong> narração com voz sintética profissional para vídeos</li>
+  <li><strong>Opus Clip:</strong> corta automaticamente longos vídeos nos melhores trechos para Shorts/Reels/TikTok</li>
+  <li><strong>Descript:</strong> edita vídeo editando o texto da transcrição</li>
+</ul>
+
+<blockquote>Ferramenta não substitui estratégia. Um funil mal pensado com as melhores ferramentas do mundo ainda vai falhar. Mas uma boa estratégia com ferramentas corretas escala sem esforço adicional. Invista em aprender o jogo antes de comprar o equipamento.</blockquote>`
+          }
+        ],
+        locked: true
+      }
+    ]
+  },
+  {
+    id: "meta-ads",
+    number: 5,
+    title: "Meta Ads — O Curso Definitivo",
+    description: "Do zero ao avançado em Facebook e Instagram Ads. Estrutura de campanha, públicos, criativos, otimização e escala — tudo que você precisa para dominar o tráfego pago na Meta.",
+    badge: "Meta Ads",
+    chapters: [
+      {
+        id: "meta-fundamentos",
+        number: 11,
+        title: "Fundamentos do Meta Ads",
+        subtitle: "Business Manager, Pixel, estrutura de campanha e primeiros anúncios",
+        icon: "🎯",
+        color: "from-blue-600 to-blue-800",
+        duration: "2h",
+        summary: "Antes de gastar R$1 em anúncios, você precisa entender a arquitetura da plataforma. Business Manager, Pixel, estrutura CBO/ABO e objetivos de campanha — a base que determina se seu dinheiro vai trabalhar ou desperdiçar.",
+        lessons: [
+          {
+            id: "meta-bm",
+            title: "Business Manager: Configuração Profissional do Zero",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Por que nunca anunciar pelo perfil pessoal", "Configuração completa do BM", "Pixel de conversão e eventos", "Domínio verificado e CAPI"],
+            content: `<h2>Business Manager: A Infraestrutura que Protege seus Anúncios</h2>
+<p>O erro mais comum de quem começa no Meta Ads é anunciar diretamente pela conta pessoal ou pela página sem o Business Manager. Isso é frágil — qualquer problema na conta pessoal derruba tudo. O Business Manager é a infraestrutura empresarial da Meta.</p>
+
+<h3>O Que é o Business Manager</h3>
+<p>É uma plataforma separada (business.facebook.com) que centraliza ativos de negócio: páginas, contas de anúncio, pixels, catálogos, públicos, equipe. Diferentes pessoas podem ter acesso a diferentes ativos com permissões granulares — sem compartilhar senha.</p>
+
+<h3>Configuração em 8 Passos</h3>
+<ol>
+  <li>Acesse business.facebook.com e crie o negócio</li>
+  <li>Adicione sua Página do Facebook (ou crie uma)</li>
+  <li>Crie uma Conta de Anúncios (nunca use a pessoal)</li>
+  <li>Adicione um método de pagamento à conta de anúncios</li>
+  <li>Crie e instale o Pixel no site (via código ou integração)</li>
+  <li>Verifique o domínio do seu site (crucial para rastreamento pós-iOS 14)</li>
+  <li>Configure os eventos de conversão prioritários no gerenciador de eventos</li>
+  <li>Ative a API de Conversões (CAPI) — essencial para rastreamento server-side</li>
+</ol>
+
+<h3>O Pixel: Seu Ativo Mais Valioso</h3>
+<p>O Pixel é um código JavaScript que você instala no site. Ele rastreia o comportamento dos visitantes e envia esses dados para o Meta — permitindo que o algoritmo encontre pessoas parecidas com quem já comprou de você.</p>
+
+<p>Eventos essenciais para configurar:</p>
+<ul>
+  <li><strong>PageView:</strong> disparado em todas as páginas — mínimo obrigatório</li>
+  <li><strong>ViewContent:</strong> visita à página de vendas</li>
+  <li><strong>InitiateCheckout:</strong> início do processo de compra</li>
+  <li><strong>Purchase:</strong> compra concluída — com Value e Currency</li>
+  <li><strong>Lead:</strong> cadastro de email ou WhatsApp</li>
+</ul>
+
+<h3>CAPI: A Solução para o Mundo Pós-iOS 14</h3>
+<p>Com as restrições de privacidade do iOS 14+, o Pixel de navegador perdeu capacidade de rastreamento. A API de Conversões (CAPI) envia eventos diretamente do servidor — sem depender de cookies ou navegador.</p>
+<p>Com CAPI configurado corretamente, a taxa de rastreamento sobe de 50-60% (só pixel) para 85-95%. Isso não é detalhe — é a diferença entre um algoritmo cego e um algoritmo preciso.</p>
+
+<h3>Verificação de Domínio</h3>
+<p>Após o iOS 14, a Meta exige que você verifique a propriedade do domínio antes de rastrear eventos. Sem isso, o Facebook pode restringir os eventos que aparecem nos seus relatórios.</p>
+<p>Processo: Gerenciador de Negócios → Configurações → Domínios → Adicionar domínio → inserir meta-tag no cabeçalho do site ou arquivo DNS.</p>`
+          },
+          {
+            id: "meta-estrutura",
+            title: "Estrutura de Campanha: CBO, ABO e Objetivos",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Hierarquia: campanha → conjunto → anúncio", "CBO vs. ABO: quando usar cada um", "Objetivos corretos por fase do funil", "Como estruturar a primeira campanha"],
+            content: `<h2>Estrutura de Campanha: A Hierarquia que Define Resultados</h2>
+<p>O Meta Ads tem 3 níveis: Campanha (objetivo e orçamento global), Conjunto de Anúncios (público, placement, horário) e Anúncio (criativo, copy, CTA). Entender o papel de cada nível evita 90% dos erros de configuração.</p>
+
+<h3>CBO: Orçamento ao Nível de Campanha</h3>
+<p>No CBO (Campaign Budget Optimization), você define um orçamento total e o algoritmo distribui automaticamente entre os conjuntos — colocando mais verba em quem está performando melhor.</p>
+
+<p><strong>Quando usar CBO:</strong></p>
+<ul>
+  <li>Quando você já tem dados históricos (pixel com pelo menos 50 conversões/semana)</li>
+  <li>Quando quer escalar — o algoritmo tem mais liberdade para otimizar</li>
+  <li>Quando os conjuntos dentro da campanha são competitivos entre si</li>
+</ul>
+
+<h3>ABO: Orçamento ao Nível de Conjunto</h3>
+<p>No ABO (Ad Set Budget Optimization), você controla quanto cada conjunto recebe. Mais controle, menos otimização automática.</p>
+
+<p><strong>Quando usar ABO:</strong></p>
+<ul>
+  <li>Fase de testes — você precisa de dados iguais por conjunto para comparação justa</li>
+  <li>Quando um conjunto específico precisa de verba garantida (retargeting, por exemplo)</li>
+  <li>Testes de público no início, antes de escalar</li>
+</ul>
+
+<h3>Objetivos de Campanha por Fase do Funil</h3>
+
+<p><strong>Topo de Funil (descoberta):</strong></p>
+<ul>
+  <li>Awareness: alcance máximo, ótimo para branding e lançamento de novo produto</li>
+  <li>Tráfego: leva pessoas ao site, bom para aquecer pixel com pouco investimento inicial</li>
+  <li>Engajamento: otimiza para interações — útil para crescimento de página e testes de copy</li>
+</ul>
+
+<p><strong>Meio de Funil (consideração):</strong></p>
+<ul>
+  <li>Geração de Leads: formulário nativo do Meta — zero fricção, alta quantidade, qualidade variável</li>
+  <li>Visualizações de Vídeo: ótimo para aquecimento de audiência para listas de retargeting</li>
+</ul>
+
+<p><strong>Fundo de Funil (conversão):</strong></p>
+<ul>
+  <li>Vendas / Conversões: o objetivo principal para quem quer compras — exige pixel configurado com evento de Purchase</li>
+  <li>Mensagens: leva para WhatsApp ou Messenger — altíssima taxa de fechamento para high ticket</li>
+</ul>
+
+<h3>A Estrutura da Primeira Campanha</h3>
+<p>Para quem está começando com pixel sem histórico:</p>
+<pre>Campanha: Conversões (Lead) | ABO | R$50/dia total
+├── Conjunto 1: Público Amplo (só segmentação por interesse 1) | R$20/dia
+├── Conjunto 2: Lookalike 1% (de lista de clientes ou visitantes) | R$20/dia
+└── Conjunto 3: Interesses específicos do nicho | R$10/dia</pre>
+<p>Rode por 7 dias sem mexer. Deixe o algoritmo aprender. Analise CPL (custo por lead) e tome decisão com dados.</p>`
+          },
+          {
+            id: "meta-publicos",
+            title: "Públicos: Frio, Morno e Quente",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Público frio: interesses, lookalike e amplo", "Público morno: engajamento e visualizações de vídeo", "Público quente: retargeting de visitantes e lista", "Lookalike: a ferramenta mais poderosa do Meta Ads"],
+            content: `<h2>Públicos: A Arte de Falar com a Pessoa Certa na Hora Certa</h2>
+<p>O maior erro em Meta Ads não é o criativo ruim nem o copy fraco — é falar com a pessoa errada. Um anúncio perfeito para o público errado gera zero resultado. Um anúncio mediano para o público certo converte.</p>
+
+<h3>A Temperatura dos Públicos</h3>
+
+<h3>Público Frio: Quem Não Conhece Você</h3>
+<p>São pessoas que nunca interagiram com seu negócio. O maior volume — e o maior custo por conversão.</p>
+
+<p><strong>Tipos de público frio:</strong></p>
+<ul>
+  <li><strong>Segmentação por Interesse:</strong> pessoas que a Meta classifica como interessadas em temas relacionados ao seu nicho. Boa para início, mas saturada e imprecisa para escala.</li>
+  <li><strong>Público Amplo:</strong> sem segmentação de interesse — deixa o algoritmo decidir quem ver o anúncio. Contraintuitivo, mas frequentemente supera interesses quando o pixel tem dados suficientes.</li>
+  <li><strong>Lookalike (semelhante):</strong> o algoritmo encontra pessoas parecidas com seus melhores clientes. O mais poderoso tipo de público frio.</li>
+</ul>
+
+<h3>Construindo Lookalikes de Qualidade</h3>
+<p>A qualidade do Lookalike depende da qualidade da fonte. Hierarquia de fontes (melhor para pior):</p>
+<ol>
+  <li>Lista de compradores (clientes que já pagaram)</li>
+  <li>Lista de leads qualificados (quem comprou webinar, quiz, etc.)</li>
+  <li>Visitantes da página de vendas (30 dias)</li>
+  <li>Engajadores no Instagram/Facebook (60 dias)</li>
+  <li>Seguidores da página (pior — muito genérico)</li>
+</ol>
+
+<p>Porcentagens do Lookalike:</p>
+<ul>
+  <li>1%: mais parecido com a fonte, menor volume</li>
+  <li>2-5%: equilíbrio entre precisão e volume</li>
+  <li>5-10%: muito volume, menos precisão — use só na escala</li>
+</ul>
+
+<h3>Público Morno: Quem Já Interagiu</h3>
+<p>Pessoas que já tiveram algum contato com você — mais fáceis de converter que o público frio, mas menos volumosas.</p>
+<ul>
+  <li>Pessoas que engajaram com sua página do Facebook (30/60/90/180 dias)</li>
+  <li>Pessoas que interagiram com seu perfil do Instagram</li>
+  <li>Pessoas que assistiram pelo menos 50% de um vídeo específico</li>
+  <li>Pessoas que abriram um formulário de lead</li>
+</ul>
+
+<h3>Público Quente: Retargeting</h3>
+<p>Os públicos de maior conversão — e menor volume. Use para fechamento de vendas.</p>
+<ul>
+  <li>Visitantes da página de vendas (últimos 30 dias) que não compraram</li>
+  <li>Pessoas que iniciaram o checkout mas não finalizaram</li>
+  <li>Lista de leads (email ou telefone) que ainda não converteu</li>
+  <li>Compradores — para ofertas de upsell</li>
+</ul>
+
+<blockquote>Uma campanha de retargeting bem configurada pode ter ROAS de 8-15x — muito superior aos 2-4x típicos do público frio. O motivo é simples: essas pessoas já sabem quem você é. O trabalho de aquecimento já foi feito.</blockquote>`
+          },
+          {
+            id: "meta-criativos",
+            title: "Criativos que Convertem: Vídeo, Imagem e Copy",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["Os 3 segundos que decidem o resultado", "Estrutura de vídeo de anúncio que vende", "Copy de anúncio: primary text, headline e descrição", "Testes A/B de criativo", "UGC vs. produção profissional"],
+            content: `<h2>Criativos: O Elemento que Mais Impacta o Resultado</h2>
+<p>Dentro do Meta Ads, o criativo (imagem/vídeo + copy) é o fator que mais influencia a performance — muito mais do que público ou estrutura de campanha. Porque o criativo é o que determina quem clica e quem ignora.</p>
+
+<h3>O Hook: Os 3 Primeiros Segundos</h3>
+<p>Em um feed onde o usuário faz scroll em 1,7 segundo por post, você tem 3 segundos para parar o polegar. O hook do vídeo é o ativo mais valioso de todo o anúncio.</p>
+
+<p><strong>Tipos de hook que funcionam:</strong></p>
+<ul>
+  <li><strong>Visual disruptivo:</strong> algo fora do padrão que forçe o olhar (contraste de cor, movimento, texto grande)</li>
+  <li><strong>Pergunta de dor:</strong> "Você já tentou vender um produto digital e não vendeu nada?" — ativa o self-recognition</li>
+  <li><strong>Resultado específico:</strong> "Como faturei R$87.420 em 7 dias com uma lista de 800 pessoas"</li>
+  <li><strong>Contraintuitivo:</strong> "Pare de criar conteúdo todo dia" — vai contra o que a pessoa espera ouvir</li>
+  <li><strong>Demonstração imediata:</strong> mostre o produto/resultado funcionando nos primeiros 2 segundos</li>
+</ul>
+
+<h3>Estrutura do Vídeo de Anúncio</h3>
+<p>Para vídeos de 30-90 segundos (os mais eficazes em 2025):</p>
+<ol>
+  <li><strong>0-3s: Hook</strong> — para o scroll</li>
+  <li><strong>3-10s: Problema</strong> — aprofunda a dor ou o desejo</li>
+  <li><strong>10-40s: Solução</strong> — como você resolve (sem revelar tudo)</li>
+  <li><strong>40-60s: Prova</strong> — resultado específico, depoimento, screenshot</li>
+  <li><strong>60-90s: CTA</strong> — instrução clara do que fazer agora</li>
+</ol>
+
+<h3>UGC vs. Produção Profissional</h3>
+<p>UGC (User Generated Content) — vídeos gravados de forma "caseira", geralmente na câmera frontal do celular — frequentemente superam produções profissionais em Meta Ads. Por quê?</p>
+<ul>
+  <li>Parece conteúdo orgânico, não anúncio — menos resistência do usuário</li>
+  <li>Transmite autenticidade — mais confiança</li>
+  <li>Menor custo de produção — permite mais testes</li>
+</ul>
+<p>Para produtos de alto ticket ou com forte componente aspiracional, produção profissional ainda tem seu lugar. Para o dia a dia, teste UGC primeiro.</p>
+
+<h3>Copy de Anúncio: Cada Campo Tem uma Função</h3>
+
+<p><strong>Primary Text (texto principal):</strong> O que aparece acima da imagem/vídeo. Primeiras 3 linhas são o mais importante — é o que aparece antes do "Ver mais". Estrutura: Hook de texto → Problema → Solução → CTA.</p>
+
+<p><strong>Headline (título):</strong> Aparece abaixo da mídia, em negrito. Deve ser a maior promessa em menos de 40 caracteres. Ex: "De R$0 a R$10k: o método completo"</p>
+
+<p><strong>Descrição:</strong> Aparece abaixo do título. Reforce o benefício ou adicione urgência. Ex: "Mais de 2.000 alunos já aplicaram"</p>
+
+<h3>Quantos Criativos Testar?</h3>
+<p>Para um conjunto de anúncios ativo, mantenha 3-5 criativos rodando simultaneamente. Quando um criativo começa a perder performance (CPM subindo, CTR caindo), substitua por novo — não pause o vencedor até que o novo prove ser melhor.</p>
+
+<blockquote>O criativo é o único elemento do Meta Ads que você pode mudar sem reiniciar a fase de aprendizado. Mude público → campanha reinicia. Mude criativo → mantém o aprendizado. Por isso, o criativo deve ser seu principal laboratório de otimização.</blockquote>`
+          },
+          {
+            id: "meta-otimizacao",
+            title: "Otimização e Escala: Do R$50 ao R$5.000/dia",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["Métricas que importam: CPM, CPC, CTR, CPL, ROAS", "Fase de aprendizado: o erro de mexer cedo", "Escala horizontal vs. vertical", "Regras de automatização e alertas", "Diagnóstico de campanha por problema"],
+            content: `<h2>Otimização e Escala: Quando e Como Crescer</h2>
+<p>A maioria das pessoas perde dinheiro no Meta Ads não porque as campanhas são ruins — mas porque mexem nelas cedo demais. Entender a fase de aprendizado e os sinais corretos para otimizar é o que separa quem escala de quem desperdiça verba.</p>
+
+<h3>Métricas Essenciais e o que Significam</h3>
+<ul>
+  <li><strong>CPM (Custo por Mil Impressões):</strong> o preço que você paga pela atenção. Alto CPM não é problema se a conversão compensar. CPM médio Brasil por nicho: educação R$15-R$35, finanças R$40-R$80, fitness R$12-R$25.</li>
+  <li><strong>CTR (Taxa de Cliques):</strong> % de quem viu o anúncio e clicou. Benchmarks: CTR no link &gt;1% é bom, &gt;2% é excelente. CTR baixo = criativo ou público errado.</li>
+  <li><strong>CPC (Custo por Clique):</strong> quanto custa cada clique. Relevante mas não isoladamente — um CPC alto com alta conversão é melhor que CPC baixo com zero conversão.</li>
+  <li><strong>CPL (Custo por Lead):</strong> o que realmente importa em campanhas de captura. Compare com o LTV do seu cliente.</li>
+  <li><strong>ROAS (Retorno sobre Gasto em Anúncio):</strong> receita ÷ gasto em ads. ROAS de 3x significa que cada R$1 investido gerou R$3. Ponto de equilíbrio depende da margem do produto.</li>
+</ul>
+
+<h3>A Fase de Aprendizado: Não Mexa</h3>
+<p>Quando você cria ou faz mudanças significativas em um conjunto de anúncios, o algoritmo entra em "fase de aprendizado". Precisa de 50 eventos de otimização para sair dessa fase. Mexer antes reinicia o contador.</p>
+<p>O que fazer durante a fase de aprendizado: absolutamente nada. Observe. Anote. Não ajuste orçamento, não troque criativos, não mude o público. Aguarde pelo menos 7 dias ou 50 conversões.</p>
+
+<h3>Escala Vertical: Aumentar o Orçamento</h3>
+<p>Regra de ouro: aumento máximo de 20-30% do orçamento a cada 3-4 dias. Aumentos maiores reiniciam o aprendizado e desestabilizam o algoritmo.</p>
+<p>Se você está em R$100/dia e quer chegar a R$500/dia:</p>
+<ul>
+  <li>Dia 1: R$100 → R$130</li>
+  <li>Dia 4: R$130 → R$169</li>
+  <li>Dia 8: R$169 → R$220</li>
+  <li>Dia 12: R$220 → R$286</li>
+  <li>Dia 16: R$286 → R$372</li>
+  <li>Dia 20: R$372 → R$483</li>
+</ul>
+
+<h3>Escala Horizontal: Duplicar o que Funciona</h3>
+<p>Em vez de aumentar o orçamento de um conjunto, duplique-o e aumente o orçamento na cópia. O conjunto original mantém seu histórico de aprendizado enquanto o novo busca novos bolsões de audiência.</p>
+
+<h3>Diagnóstico por Problema</h3>
+<ul>
+  <li><strong>CPM alto + CTR baixo → Público muito restrito ou saturado:</strong> expanda o público ou troque de segmento</li>
+  <li><strong>CTR bom + CPL alto → Problema na landing page:</strong> a pessoa clica mas não converte — revise a página</li>
+  <li><strong>CPL bom + nenhuma venda → Problema na qualidade do lead:</strong> revise a segmentação ou a oferta</li>
+  <li><strong>Performance boa depois deteriorando → Saturação:</strong> freqüência acima de 3 para público frio — renove criativos ou expanda público</li>
+</ul>
+
+<blockquote>O maior inimigo do Meta Ads não é o algoritmo — é a impaciência. Campanhas que seriam vencedoras são pausadas antes de completar a aprendizagem. Dados sem paciência são apenas ruído.</blockquote>`
+          }
+        ],
+        locked: true
+      },
+      {
+        id: "meta-avancado",
+        number: 12,
+        title: "Meta Ads Avançado: Lançamentos e Funis",
+        subtitle: "Estrutura de campanha para lançamentos, retargeting em cascata e remarketing de lista",
+        icon: "🚀",
+        color: "from-indigo-600 to-violet-600",
+        duration: "1h 30min",
+        summary: "Aplicar Meta Ads em um lançamento tem dinâmica própria — diferentes fases exigem objetivos, públicos e criativos diferentes. Este capítulo cobre a estratégia completa de mídia paga para um lançamento de 7 dígitos.",
+        lessons: [
+          {
+            id: "meta-lancamento",
+            title: "Estrutura Completa de Mídia para um Lançamento",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["As 4 fases da campanha de lançamento", "Orçamento por fase", "Objetivo por fase", "Retargeting em cascata"],
+            content: `<h2>Mídia Paga no Lançamento: Uma Estratégia por Fase</h2>
+<p>Um lançamento não é uma campanha — é um sistema de múltiplas campanhas com objetivos diferentes, rodando em paralelo e em sequência. A maioria perde dinheiro porque usa a mesma campanha do início ao fim.</p>
+
+<h3>Fase 1: Aquecimento (D-21 a D-8)</h3>
+<p><strong>Objetivo:</strong> construir audiência de remarketing barata antes de precisar dela</p>
+<p><strong>Campanhas:</strong></p>
+<ul>
+  <li>Engajamento de vídeo (objetivo: visualizações de vídeo) — cria lista de quem assistiu 50%+</li>
+  <li>Tráfego para artigos/conteúdo (objetivo: tráfego) — cria lista de visitantes do site</li>
+</ul>
+<p><strong>Orçamento:</strong> 15-20% do total de mídia do lançamento</p>
+<p><strong>Meta:</strong> construir uma audiência de 10.000-50.000 pessoas aquecidas para o momento da abertura</p>
+
+<h3>Fase 2: Captura / Pré-lançamento (D-7 a D-1)</h3>
+<p><strong>Objetivo:</strong> capturar leads para a lista de espera / webinar de abertura</p>
+<p><strong>Campanhas:</strong></p>
+<ul>
+  <li>Geração de leads para público frio (lookalike de compradores + interesses)</li>
+  <li>Retargeting dos aquecidos da fase 1 com oferta de inscrição</li>
+</ul>
+<p><strong>Orçamento:</strong> 35-40% do total</p>
+<p><strong>Meta:</strong> CPL inferior a 10% do ticket do produto. Para produto de R$997, CPL máximo aceitável: R$99</p>
+
+<h3>Fase 3: Carrinho Aberto (D0 a D5)</h3>
+<p><strong>Objetivo:</strong> conversão — vendas diretas</p>
+<p><strong>Campanhas:</strong></p>
+<ul>
+  <li>Conversão (Purchase/Lead) para público frio — escala pesada aqui</li>
+  <li>Retargeting de visitantes da página de vendas que não compraram</li>
+  <li>Retargeting de quem iniciou checkout — os mais quentes</li>
+  <li>Retargeting de leads da lista de espera que não compraram</li>
+</ul>
+<p><strong>Orçamento:</strong> 35-40% do total</p>
+
+<h3>Fase 4: Fechamento (Últimas 24-48h)</h3>
+<p><strong>Objetivo:</strong> urgência e recuperação de indecisos</p>
+<p><strong>Campanhas:</strong></p>
+<ul>
+  <li>Retargeting pesado de visitantes recentes com copy de fechamento</li>
+  <li>Mensagens (WhatsApp/Messenger) para leads quentes</li>
+</ul>
+<p><strong>Orçamento:</strong> 10% do total — menor volume, maior intensidade</p>
+<p><strong>Frequência alvo:</strong> 5-8x para público de retargeting quente nas últimas 48h</p>
+
+<h3>O Retargeting em Cascata</h3>
+<p>Estruture os públicos de retargeting por temperatura decrescente, com diferentes criativos por nível:</p>
+<ol>
+  <li>Quem abandonou o checkout → Copy de objeção + urgência máxima</li>
+  <li>Quem visitou a página de vendas 3+ vezes → Prova social + garantia em destaque</li>
+  <li>Quem visitou a página 1 vez → Reapresentação da oferta com ângulo diferente</li>
+  <li>Leads da lista que não visitaram a página → Copy de convite para a página de vendas</li>
+</ol>`
+          },
+          {
+            id: "meta-mensuração",
+            title: "Mensuração Real: Attribution e o Relatório que Importa",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Modelos de atribuição: o que o Meta mostra vs. a realidade", "UTM tracking e Google Analytics como validação", "O relatório semanal de mídia paga", "Como apresentar ROAS real"],
+            content: `<h2>Mensuração: Separando Dados Reais de Vanity Metrics</h2>
+<p>O Meta Ads é um mestre em mostrar números que parecem ótimos mas escondem a verdade. Entender como funciona a atribuição é a diferença entre saber se você está lucrando ou iludindo a si mesmo.</p>
+
+<h3>O Problema da Atribuição</h3>
+<p>Atribuição é: quando há uma venda, qual anúncio/canal recebe o crédito? O Meta usa por padrão "7 dias após clique + 1 dia após visualização". Isso significa:</p>
+<ul>
+  <li>Se alguém viu seu anúncio (sem clicar) e comprou 23 horas depois — o Meta atribui a venda ao anúncio</li>
+  <li>Se alguém clicou há 6 dias e comprou hoje — o Meta atribui a venda ao anúncio</li>
+  <li>Se o mesmo comprador viu anúncios de 3 campanhas — todas as 3 podem contar a venda</li>
+</ul>
+<p>Resultado: o Meta frequentemente exibe ROAS 2-3x maior que o real. Não é fraude — é o modelo de atribuição.</p>
+
+<h3>Como Medir o ROAS Real</h3>
+<p>Três métodos complementares:</p>
+<ol>
+  <li><strong>UTM + Google Analytics:</strong> adicione parâmetros UTM em todos os anúncios (utm_source=facebook&utm_medium=paid&utm_campaign=nome). No GA4, veja receita atribuída por canal de forma independente.</li>
+  <li><strong>Receita na plataforma de venda:</strong> compare total de receita no período com total gasto em ads. ROAS = receita total ÷ gasto em ads. Simples, mas real.</li>
+  <li><strong>Pesquisa de origem:</strong> no obrigado da compra, pergunte "Como você nos encontrou?" — dados qualitativos complementam o quantitativo</li>
+</ol>
+
+<h3>Métricas por Nível de Campanha</h3>
+<p>Não analise tudo no mesmo nível:</p>
+<ul>
+  <li><strong>Nível de campanha:</strong> ROAS total, custo por compra</li>
+  <li><strong>Nível de conjunto:</strong> CPM, frequência, CTR — sinais de saúde do público</li>
+  <li><strong>Nível de anúncio:</strong> CTR do link, custo por clique, hook rate (% que assistiu 3s do vídeo)</li>
+</ul>
+
+<h3>O Relatório Semanal de Mídia</h3>
+<p>Toda semana, registre em planilha:</p>
+<ul>
+  <li>Gasto total por campanha</li>
+  <li>Número de leads gerados e CPL</li>
+  <li>Número de vendas atribuídas e ROAS do Meta</li>
+  <li>Receita total da semana na plataforma de venda</li>
+  <li>ROAS real (receita ÷ gasto)</li>
+  <li>Top 3 criativos por CTR e top 3 por conversão</li>
+</ul>
+<p>Com 4 semanas de dados, você começa a ver padrões e a tomar decisões com confiança.</p>
+
+<blockquote>Tratar o dashboard do Meta como verdade absoluta é o erro mais caro do tráfego pago. O Meta mede o que é conveniente para ele medir. Sua planilha, com dados da plataforma de venda + UTMs, é a fonte de verdade.</blockquote>`
+          }
+        ],
+        locked: true
+      }
+    ]
+  },
+  {
+    id: "nexos-ferramenta",
+    number: 6,
+    title: "NexOS AI — A Ferramenta Definitiva",
+    description: "Você aprendeu a metodologia. Agora conheça a plataforma que executa tudo isso com inteligência artificial — do briefing ao carrinho aberto, de forma automática e auditável.",
+    badge: "NexOS AI",
+    chapters: [
+      {
+        id: "nexos-apresentacao",
+        number: 13,
+        title: "Por que o NexOS Existe",
+        subtitle: "O problema que nenhuma ferramenta resolvia — até agora",
+        icon: "⚡",
+        color: "from-purple-600 to-indigo-700",
+        duration: "45 min",
+        summary: "Você estudou cada peça do lançamento: tráfego, copy, sequências, análise de métricas, tipos de lançamento, Meta Ads. Agora entenda por que executar tudo isso manualmente cria um teto invisível de receita — e como o NexOS quebra esse teto.",
+        lessons: [
+          {
+            id: "nexos-problema",
+            title: "O Teto Invisível do Produtor Digital",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["Por que produtores de 6 dígitos travam antes dos 7", "O custo real de uma equipe de marketing completa", "O problema de coordenação entre especialistas", "A solução: inteligência de orquestração"],
+            content: `<h2>O Teto Invisível: Por que Produtores Grandes Travam</h2>
+<p>Você estudou tudo neste portal. Sabe como funciona o algoritmo do TikTok, como estruturar uma campanha de Meta Ads, como escrever copy que converte, como montar uma sequência de email de fechamento.</p>
+
+<p>Agora imagine executar tudo isso simultaneamente, em um lançamento de 21 dias, com 5 plataformas de conteúdo, 3 campanhas de ads rodando em paralelo, uma sequência de 12 emails, 8 mensagens de WhatsApp por segmento, e tomar decisões de otimização com dados em tempo real.</p>
+
+<p>Isso não é um trabalho de uma pessoa. Isso é um time.</p>
+
+<h3>O Custo Real de um Time de Marketing Completo</h3>
+<ul>
+  <li>Estrategista de lançamento: R$8.000-R$15.000/mês</li>
+  <li>Copywriter sênior: R$5.000-R$10.000/mês</li>
+  <li>Gestor de tráfego: R$4.000-R$8.000/mês</li>
+  <li>Social media manager: R$3.000-R$5.000/mês</li>
+  <li>Analista de métricas: R$4.000-R$7.000/mês</li>
+  <li>Designer de criativos: R$3.000-R$6.000/mês</li>
+</ul>
+<p><strong>Total: R$27.000-R$51.000/mês</strong> — antes de incluir ferramentas, plataformas e ads.</p>
+
+<p>Para um produtor faturando R$50.000-R$100.000/mês, esse custo é proibitivo. Para quem está escalando do 6 para o 7 dígito, é o principal gargalo.</p>
+
+<h3>O Problema de Coordenação</h3>
+<p>Mesmo quem consegue montar o time enfrenta o problema de coordenação: o copywriter não sabe o que o gestor de tráfego descobriu nos criativos. O estrategista não está acompanhando as métricas em tempo real. O social media está postando sem saber que a taxa de cliques do email caiu.</p>
+
+<p>Cada especialista trabalha em silos. As decisões de otimização chegam tarde. O lançamento acaba antes das melhorias serem implementadas.</p>
+
+<h3>A Solução: Orquestração por Inteligência Artificial</h3>
+<p>O NexOS AI foi construído para resolver exatamente este problema. É uma plataforma de orquestração de lançamentos onde múltiplos agentes de inteligência artificial trabalham em conjunto — cada um especializado em um domínio, todos sincronizados em tempo real.</p>
+
+<p>Não é uma ferramenta que sugere copy. Não é um dashborad de métricas. É um sistema completo que pensa, cria, analisa, alerta e otimiza — enquanto você aprova as decisões estratégicas.</p>`
+          },
+          {
+            id: "nexos-como-funciona",
+            title: "Como o NexOS Funciona: Do Briefing ao Carrinho",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["O intake conversacional com IA", "Geração automática de estratégia completa", "Produção de conteúdo multi-plataforma", "O monitor de lançamento em tempo real"],
+            content: `<h2>Do Briefing ao Lançamento: O Fluxo Completo do NexOS</h2>
+
+<h3>Etapa 1: Intake Inteligente</h3>
+<p>Você começa descrevendo seu produto e objetivos em uma conversa com o agente de intake. Ele faz perguntas estruturadas — produto, audiência, histórico de lançamentos, metas de receita, recursos disponíveis — e ao final gera um <strong>Score de Prontidão</strong> que identifica gaps antes de avançar.</p>
+<p>É como uma sessão com um estrategista sênior, mas disponível 24/7 e que nunca esquece nenhuma informação.</p>
+
+<h3>Etapa 2: Geração de Estratégia</h3>
+<p>Com base no intake, o NexOS gera automaticamente:</p>
+<ul>
+  <li>Posicionamento e ângulo principal do produto</li>
+  <li>Mapa de público-alvo (primário, secundário, anti-público)</li>
+  <li>Timeline de lançamento personalizada (7 a 21 dias)</li>
+  <li>Track de receita recomendado baseado no seu histórico</li>
+  <li>KPIs-alvo com benchmarks do mercado PT-BR</li>
+  <li>Cronograma de conteúdo orgânico por plataforma</li>
+</ul>
+<p>Você revisa e aprova — ou pede ajustes. A estratégia é modificada em tempo real.</p>
+
+<h3>Etapa 3: Produção de Conteúdo</h3>
+<p>Aprovada a estratégia, o NexOS produz automaticamente:</p>
+<ul>
+  <li>Sequência completa de emails (pré-lançamento + carrinho + fechamento)</li>
+  <li>Roteiros de Reels para cada fase do lançamento</li>
+  <li>Roteiro completo de VSL</li>
+  <li>Textos de WhatsApp segmentados por temperatura (hot/warm/cold)</li>
+  <li>Copys de anúncios com variações por objetivo e fase</li>
+  <li>Captions de Instagram/Facebook/TikTok com hashtags otimizadas</li>
+</ul>
+<p>Cada peça de conteúdo passa por você antes de ser publicada ou agendada.</p>
+
+<h3>Etapa 4: Ativação e Automação</h3>
+<p>Com um clique, a sequência é ativada. O NexOS agenda e dispara automaticamente emails e mensagens de WhatsApp nos dias e horários otimizados para cada segmento da lista.</p>
+
+<h3>Etapa 5: Monitoramento em Tempo Real</h3>
+<p>Durante o carrinho aberto, o painel de lançamento exibe em tempo real:</p>
+<ul>
+  <li>Receita acumulada e projeção para o fechamento</li>
+  <li>Taxa de abertura e clique de cada email</li>
+  <li>Engajamento por segmento (hot/warm/cold)</li>
+  <li>Alertas automáticos quando métricas caem abaixo do threshold</li>
+  <li>Sugestões de otimização geradas por IA quando detecta queda</li>
+</ul>
+
+<h3>Etapa 6: Pós-Lançamento e Memória</h3>
+<p>Após o fechamento, o NexOS gera um relatório completo de performance e <em>armazena os aprendizados</em>. O próximo lançamento começa com todo o histórico do anterior — o sistema fica mais inteligente a cada campanha.</p>`
+          }
+        ]
+      },
+      {
+        id: "nexos-diferenciais",
+        number: 14,
+        title: "NexOS na Prática: Funcionalidades e Diferenciais",
+        subtitle: "Tudo que o NexOS faz que nenhuma outra ferramenta do mercado faz",
+        icon: "🧠",
+        color: "from-cyan-600 to-blue-600",
+        duration: "1h",
+        summary: "Conheça em detalhe as funcionalidades do NexOS que transformam a forma de operar um negócio digital: da detecção de fadiga criativa ao sistema de afiliados inteligente, cada recurso foi desenhado para remover gargalos reais.",
+        lessons: [
+          {
+            id: "nexos-agentes",
+            title: "Os 44 Agentes de IA: Especialistas Disponíveis 24/7",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["6 categorias de agentes especializados", "Claude para estratégia, GPT-4o para copy, Gemini para analytics", "Como os agentes colaboram entre si", "O trail de auditoria de cada decisão de IA"],
+            content: `<h2>44 Agentes Especializados: O Time que Trabalha Enquanto Você Dorme</h2>
+<p>O NexOS é construído sobre uma arquitetura de múltiplos agentes de IA — cada um especializado em um domínio, usando o modelo de linguagem mais adequado para aquela tarefa.</p>
+
+<h3>Por que Múltiplos Modelos?</h3>
+<p>Nenhum modelo de IA é o melhor em tudo. O NexOS usa cada modelo onde ele brilha:</p>
+<ul>
+  <li><strong>Claude (Anthropic):</strong> raciocínio estratégico, análise de mercado, compliance, decisões complexas com múltiplas variáveis</li>
+  <li><strong>GPT-4o (OpenAI):</strong> criatividade, copy persuasivo, roteiros, nuances linguísticas do PT-BR</li>
+  <li><strong>Gemini (Google):</strong> análise de dados, otimização de métricas, padrões em grandes volumes de informação</li>
+</ul>
+
+<h3>As 6 Categorias de Agentes</h3>
+
+<p><strong>Estratégia (8 agentes):</strong> Estrategista de Lançamento, Analista de Mercado, Arquiteto de Funil, Builder de Perfil, Agente de Compliance, Scoring de Prontidão, Otimizador de Posicionamento, Agente de Track</p>
+
+<p><strong>Conteúdo (10 agentes):</strong> Copywriter Master, Criador de VSL, Roteirista de Reels, Redator de Email, Escritor de WhatsApp, Criador de Anúncios, Escritor de Carrossel, Gerador de Headlines, Criador de Sequência, Editor de Copy</p>
+
+<p><strong>Audiência (7 agentes):</strong> Segmentador de Temperatura, Analista de Comportamento, Construtor de Lista, Otimizador de Conversão, Detector de Padrões, Agente de Referral, Analista de UTM</p>
+
+<p><strong>Vídeo e Criativo (5 agentes):</strong> Diretor de Conceito, Roteirista de VSL, Criador de Script para Reels, Analista de Criativo, Gerador de Brief para Design</p>
+
+<p><strong>Analytics (8 agentes):</strong> Monitor de Métricas, Detector de Fadiga Criativa, Analista de ROAS, Otimizador de Budget, Gerador de Alertas, Analista de Coorte, Calculador de LTV, Gerador de Relatório Semanal</p>
+
+<p><strong>Automação (6 agentes):</strong> Dispatcher de Email, Respondedor de WhatsApp, Scheduler de Conteúdo, Monitor de Sequência, Integrador de Plataformas, Agente de Pós-Venda</p>
+
+<h3>Auditoria Total: Toda Decisão de IA é Rastreável</h3>
+<p>Cada ação dos agentes — cada email gerado, cada análise produzida, cada alerta disparado — fica registrada no log de auditoria com timestamp, modelo usado, tokens consumidos e resultado.</p>
+<p>Você sempre sabe o que a IA fez, por que fez e quanto custou. Não há caixa preta.</p>`
+          },
+          {
+            id: "nexos-recursos",
+            title: "Recursos Exclusivos: Do que Nenhuma Outra Ferramenta Tem",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["Score de prontidão pré-lançamento", "Detecção automática de fadiga criativa", "Sequência de automação com dispatch inteligente", "Painel de lançamento ao vivo", "Sistema de afiliados com tracking server-side"],
+            content: `<h2>Funcionalidades que Definem uma Categoria Própria</h2>
+
+<h3>1. Score de Prontidão para Lançamento</h3>
+<p>Antes de qualquer campanha começar, o NexOS analisa 27 variáveis do seu negócio e produto — lista, autoridade, prova social, infraestrutura técnica, histórico de lançamentos — e gera um Score de 0 a 100.</p>
+<p>Abaixo de 60 pontos, o sistema identifica os gaps específicos e sugere ações para fechar antes de avançar. É o checkup pré-lançamento que evita lançamentos falhos por problemas evitáveis.</p>
+
+<h3>2. Detecção de Fadiga Criativa</h3>
+<p>O sistema monitora automaticamente o histórico de CTR dos criativos ao longo do tempo. Quando o CTR atual cai abaixo de 70% do pico histórico, um alerta é gerado: "Fadiga criativa detectada — CTR caiu X% do pico. Recomendação: renovar ângulo do criativo com foco em [sugestão específica]."</p>
+<p>Isso vale tanto para ads de Meta quanto para taxa de abertura de emails e Reels de orgânico.</p>
+
+<h3>3. Dispatch Inteligente por Segmento de Temperatura</h3>
+<p>A sequência de automação do NexOS não trata todos os contatos igual. Com base no comportamento (aberturas, cliques, respostas, compras), cada contato é classificado automaticamente como <em>hot</em>, <em>warm</em> ou <em>cold</em>.</p>
+<p>Nos momentos críticos do carrinho (abertura, meio, fechamento), o sistema despacha automaticamente copy diferente para cada segmento:</p>
+<ul>
+  <li><strong>Hot:</strong> angle de insider e VIP — "você já provou que age"</li>
+  <li><strong>Warm:</strong> urgência padrão com reforço de benefício principal</li>
+  <li><strong>Cold:</strong> reativação com curiosidade e nova perspectiva</li>
+</ul>
+
+<h3>4. Painel de Lançamento ao Vivo</h3>
+<p>Durante o carrinho aberto, um painel em tempo real exibe: receita acumulada x meta, cadência de vendas por hora, performance de cada email da sequência, engajamento de WhatsApp por segmento e saúde geral do lançamento em um score de 0 a 100.</p>
+<p>O painel é atualizado a cada 60 segundos e emite alertas sonoros quando métricas críticas ficam abaixo do threshold definido na estratégia.</p>
+
+<h3>5. Viragem Automática de Sequência (Afiliado → Comprador)</h3>
+<p>Integrado com as principais plataformas (Hotmart, Kiwify, Eduzz), o NexOS detecta automaticamente quando um contato da sequência realiza uma compra. Imediatamente:</p>
+<ul>
+  <li>O contato é removido da sequência de venda (para de receber copy de conversão)</li>
+  <li>É adicionado à sequência de onboarding</li>
+  <li>Score de engajamento atualizado para 100</li>
+  <li>Evento de conversão disparado para Meta CAPI e TikTok Events API</li>
+</ul>
+
+<h3>6. Relatório Semanal Automático</h3>
+<p>Todo domingo às 20h, o NexOS envia automaticamente um relatório de performance para o email do proprietário da workspace: receita da semana, vendas, saúde da lista, score de engajamento das sequências, créditos de IA usados e insights gerados pela análise de coorte.</p>
+
+<h3>7. Rastreamento Server-Side (Meta CAPI + TikTok Events)</h3>
+<p>Toda captura de lead e compra rastreada pelo NexOS é automaticamente enviada para Meta CAPI e TikTok Events API via servidor — independente de bloqueadores de anúncio, iOS 14 e cookies de terceiros. Taxa de rastreamento de 90-95% vs. 50-60% do pixel de navegador isolado.</p>`
+          },
+          {
+            id: "nexos-planos",
+            title: "Planos, Créditos e Como Começar",
+            duration: "15 min",
+            type: "text",
+            keyPoints: ["Plano Solo vs. Agency", "Como funcionam os créditos de IA", "Primeiros passos: de zero a primeiro lançamento", "Suporte e comunidade"],
+            content: `<h2>Como Começar no NexOS</h2>
+
+<h3>Os Planos</h3>
+
+<h3>Solo — R$297/mês</h3>
+<p>Para produtores independentes e pequenas operações:</p>
+<ul>
+  <li>3 campanhas simultâneas</li>
+  <li>1.500 créditos de IA por mês</li>
+  <li>Acesso ao track de 6 dígitos (R$100k-R$999k)</li>
+  <li>Todos os 44 agentes de IA</li>
+  <li>Automação de sequências email + WhatsApp</li>
+  <li>Painel de métricas e relatório semanal</li>
+  <li>Suporte por email em 24h</li>
+</ul>
+
+<h3>Agency — R$1.497/mês</h3>
+<p>Para agências, lançadores profissionais e operações de escala:</p>
+<ul>
+  <li>10 campanhas simultâneas</li>
+  <li>5.000 créditos de IA por mês</li>
+  <li>Todos os tracks (6, 8 e 10 dígitos)</li>
+  <li>White-label — sua marca na plataforma</li>
+  <li>Gestão de clientes (sub-workspaces)</li>
+  <li>Acesso prioritário a novas funcionalidades</li>
+  <li>Suporte por WhatsApp em 4h</li>
+</ul>
+
+<h3>Como Funcionam os Créditos</h3>
+<p>Créditos de IA representam o custo de processamento dos modelos de linguagem. Cada ação consome créditos proporcionais ao seu custo real:</p>
+<ul>
+  <li>Geração de estratégia completa: ~80 créditos</li>
+  <li>Email completo gerado: ~5 créditos</li>
+  <li>Roteiro de Reel: ~3 créditos</li>
+  <li>Análise de métricas semanal: ~15 créditos</li>
+  <li>Resposta automática de WhatsApp: ~2 créditos</li>
+</ul>
+<p>O plano Solo de 1.500 créditos suporta confortavelmente 3 lançamentos completos por mês.</p>
+
+<h3>Primeiros Passos: Protocolo de Onboarding</h3>
+<ol>
+  <li><strong>Dia 1:</strong> Configure a workspace — nome do negócio, logo, dados fiscais, integração com email e WhatsApp</li>
+  <li><strong>Dia 2:</strong> Conecte as integrações — Meta Ads, plataforma de venda (Hotmart/Kiwify), RD Station ou ActiveCampaign</li>
+  <li><strong>Dia 3:</strong> Faça o intake do seu primeiro produto — 15-20 minutos de conversa com o agente</li>
+  <li><strong>Dia 4:</strong> Revise e aprove a estratégia gerada. Solicite ajustes se necessário</li>
+  <li><strong>Dia 5:</strong> Aprove o primeiro lote de conteúdo gerado</li>
+  <li><strong>Dia 6:</strong> Ative a sequência e veja o primeiro disparo automático</li>
+  <li><strong>Dia 7:</strong> Seu lançamento está rodando</li>
+</ol>
+
+<blockquote>O NexOS não é uma promessa de resultado — é uma alavanca de execução. Quanto mais você domina a metodologia que aprendeu neste portal, mais inteligentemente você usa a plataforma. Você é o estrategista; o NexOS é o time de execução.</blockquote>`
+          }
+        ],
+        locked: true
+      }
+    ]
   }
 ];
 
