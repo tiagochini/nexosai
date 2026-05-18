@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { GLOSSARY, GLOSSARY_CATEGORIES, type GlossaryTerm } from "@/data/glossary";
+import { CURRICULUM } from "@/data/curriculum";
 
 interface Props {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -32,6 +33,12 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+const ALL_LESSONS = CURRICULUM.flatMap(m =>
+  m.chapters.flatMap(c =>
+    c.lessons.map(l => ({ id: l.id, title: l.title, chapterId: c.id, chapterTitle: c.title }))
+  )
+);
 
 export default function Glossary({ onNavigate }: Props) {
   const [search, setSearch] = useState("");
@@ -334,6 +341,35 @@ export default function Glossary({ onNavigate }: Props) {
                                   </div>
                                 </div>
                               )}
+
+                              {term.lessonIds && term.lessonIds.length > 0 && (() => {
+                                const linked = term.lessonIds
+                                  .map(lid => ALL_LESSONS.find(l => l.id === lid))
+                                  .filter(Boolean) as typeof ALL_LESSONS;
+                                if (!linked.length) return null;
+                                return (
+                                  <div className="p-4 rounded-lg bg-[hsl(168_100%_42%/5%)] border border-[hsl(168_100%_42%/15%)]">
+                                    <h4 className="text-xs font-bold text-[hsl(168_100%_45%)] uppercase tracking-widest mb-2.5">
+                                      🎓 Ver nas Aulas
+                                    </h4>
+                                    <div className="space-y-1.5">
+                                      {linked.map(l => (
+                                        <button
+                                          key={l.id}
+                                          onClick={e => { e.stopPropagation(); onNavigate("lesson", { chapterId: l.chapterId, lessonId: l.id }); }}
+                                          className="w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg bg-[hsl(220_20%_8%)] hover:bg-[hsl(168_100%_42%/10%)] transition-colors group"
+                                        >
+                                          <span className="text-[hsl(168_100%_45%)] text-xs shrink-0">▶</span>
+                                          <div className="min-w-0">
+                                            <p className="text-xs font-medium text-white truncate group-hover:text-[hsl(168_100%_70%)] transition-colors">{l.title}</p>
+                                            <p className="text-xs text-[hsl(220_10%_40%)] truncate">{l.chapterTitle}</p>
+                                          </div>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

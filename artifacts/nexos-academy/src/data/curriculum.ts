@@ -5,6 +5,8 @@ export interface Lesson {
   type: "text" | "video" | "exercise" | "quiz";
   content: string;
   keyPoints: string[];
+  glossaryTerms?: string[];
+  exercise?: string;
   locked?: boolean;
 }
 
@@ -53,6 +55,7 @@ export const CURRICULUM: Module[] = [
             title: "O que é a Economia da Atenção",
             duration: "12 min",
             type: "text",
+            glossaryTerms: ["algoritmo-de-recomendacao", "hook-rate", "completion-rate"],
             keyPoints: ["Atenção como recurso escasso", "A guerra pelos eyeballs", "Por que 8 segundos é tudo que você tem"],
             content: `<h2>A Moeda do Século XXI</h2>
 <p>Em 1971, o economista Herbert Simon previu algo que poucos entenderam: "A riqueza de informação cria pobreza de atenção." Cinquenta anos depois, vivemos exatamente isso.</p>
@@ -84,6 +87,7 @@ export const CURRICULUM: Module[] = [
             title: "Algoritmos: Como Plataformas Distribuem Conteúdo",
             duration: "18 min",
             type: "text",
+            glossaryTerms: ["algoritmo-de-recomendacao", "completion-rate", "rewatch-rate", "saves", "shadow-ban"],
             keyPoints: ["Sinais de engajamento", "Tempo de retenção vs. curtidas", "Fingerprint do algoritmo do Instagram"],
             content: `<h2>Decodificando os Algoritmos</h2>
 <p>Algoritmos não são mistérios. São sistemas de ranqueamento com objetivos declarados: maximizar o tempo que o usuário passa na plataforma.</p>
@@ -2253,6 +2257,7 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
             title: "O Sistema de Pontuação do TikTok: O que o ByteDance Realmente Mede",
             duration: "28 min",
             type: "text",
+            glossaryTerms: ["fyp", "completion-rate", "rewatch-rate", "hook-rate", "ctr", "algoritmo-de-recomendacao"],
             keyPoints: ["O modelo de distribuição progressiva em detalhe", "Os pesos reais de cada sinal (baseado em patentes e estudos)", "Como o TikTok classifica conteúdo por tópico", "O papel da velocidade de engajamento nas primeiras horas", "Por que vídeos antigos ainda viralizam"],
             content: `<h2>O Sistema de Distribuição Progressiva do TikTok em Profundidade</h2>
 <p>O TikTok é uma empresa de tecnologia chinesa com raízes no processamento de dados em escala. O algoritmo deles não é uma lista de regras — é um modelo de machine learning que decide, a cada milissegundo, qual vídeo mostrar para qual usuário para maximizar o tempo total na plataforma.</p>
@@ -2402,6 +2407,7 @@ Venda
             title: "Os 4 Algoritmos do Instagram e seus Sinais Específicos",
             duration: "28 min",
             type: "text",
+            glossaryTerms: ["saves", "collab-post", "completion-rate", "shadow-ban", "rewatch-rate"],
             keyPoints: ["Feed: o algoritmo de relacionamento", "Explore: o algoritmo de descoberta", "Reels: o algoritmo de retenção de vídeo", "Stories: o algoritmo de frequência e proximidade", "Como otimizar para cada superfície separadamente"],
             content: `<h2>Instagram: Quatro Superfícies, Quatro Lógicas</h2>
 <p>Adam Mosseri, chefe do Instagram, confirmou publicamente que cada superfície do app usa sistemas diferentes. Isso não é detalhe técnico — é a diferença entre uma estratégia que funciona em todas as partes do app e uma que funciona apenas em uma.</p>
@@ -2518,6 +2524,7 @@ Venda
             title: "Os Dois Motores do YouTube: Busca e Recomendação",
             duration: "28 min",
             type: "text",
+            glossaryTerms: ["avd", "watch-time", "ctr", "seo", "keyword", "backlinks"],
             keyPoints: ["Tráfego de busca vs. tráfego de sugeridos: diferenças fundamentais", "CTR de thumbnail: o fator mais subestimado", "Watch Time e AVD (Average View Duration)", "Como o YouTube decide o que sugerir depois", "Playlists como alavanca de watch time"],
             content: `<h2>YouTube: Dois Sistemas de Distribuição em Um</h2>
 <p>O YouTube é a única grande plataforma que tem dois sistemas de descoberta completamente distintos operando simultaneamente: o motor de busca (como o Google, mas para vídeo) e o sistema de recomendação (que decide o que aparece na home e nos "vídeos sugeridos").</p>
@@ -2840,6 +2847,7 @@ A pessoa quer agir: "comprar curso de lançamento digital", "assinar plataforma 
             title: "Exercício Final: Auditoria Algorítmica do Seu Negócio",
             duration: "15 min",
             type: "exercise",
+            glossaryTerms: ["roas", "ctr", "completion-rate", "hook-rate", "retargeting"],
             keyPoints: ["Mapeamento atual de plataformas e performance", "Identificação de gaps algorítmicos", "Plano de 30 dias para otimização"],
             content: `<h2>Exercício: Auditoria Algorítmica Completa</h2>
 <p>Este exercício leva 30-45 minutos e vai revelar onde estão os maiores gaps algorítmicos no seu negócio hoje — e as oportunidades de maior impacto com menor esforço.</p>
@@ -2879,6 +2887,391 @@ A pessoa quer agir: "comprar curso de lançamento digital", "assinar plataforma 
           }
         ],
         locked: true
+      },
+      {
+        id: "segredo-redes-sociais",
+        number: 21,
+        title: "O Segredo das Redes Sociais",
+        subtitle: "A revelação que gestores de tráfego e plataformas nunca vão te contar",
+        icon: "🔐",
+        color: "from-red-950 to-gray-900",
+        duration: "2h",
+        summary: "Você passou o módulo inteiro aprendendo a usar algoritmos. Agora vai descobrir o que está por trás deles — o modelo de negócio que nenhuma plataforma quer que você entenda. Esta é a virada de chave que separa os criadores que constroem impérios dos que ficam eternamente dependentes de alcance alugado.",
+        lessons: [
+          {
+            id: "segredo-1-ilusao",
+            title: "A Grande Ilusão: O que Você Acredita vs. a Realidade",
+            duration: "22 min",
+            type: "text",
+            glossaryTerms: ["algoritmo-de-recomendacao", "shadow-ban", "frequencia"],
+            keyPoints: ["O que você acredita que está fazendo nas redes sociais", "O que você está realmente fazendo", "Por que essa distinção muda tudo", "A ilusão do criador independente"],
+            content: `<h2>Antes de Revelar o Segredo: Uma Pergunta</h2>
+<p>Para que você usa as redes sociais no seu negócio? Pense na sua resposta antes de continuar.</p>
+
+<p>A maioria das pessoas responde algo como: <em>"Para crescer minha audiência", "Para vender meus produtos", "Para construir minha marca".</em></p>
+
+<p>Essas respostas são verdadeiras do seu ponto de vista. Mas não são verdadeiras do ponto de vista das plataformas. E essa discrepância é o segredo que muda tudo.</p>
+
+<h2>O Modelo de Negócio que Ninguém Explica</h2>
+<p>Vamos começar com um fato que quase ninguém processa de verdade:</p>
+
+<p><strong>Meta (Facebook + Instagram) tem receita de ~$135 bilhões por ano. 98,5% dessa receita vem de publicidade.</strong></p>
+
+<p>Isso significa que o cliente real da Meta não é você — criador de conteúdo. O cliente real são as marcas que pagam bilhões por anúncios. Você é o fornecedor de matéria-prima, não o cliente.</p>
+
+<h3>Os 4 Papéis no Ecossistema das Plataformas</h3>
+
+<p><strong>1. As Plataformas (Meta, TikTok, YouTube)</strong><br/>
+São empresas de tecnologia cujo produto real é <em>atenção quantificada e vendável</em>. Elas não distribuem conteúdo — elas vendem atenção de audiência para anunciantes.</p>
+
+<p><strong>2. Os Criadores (você)</strong><br/>
+São fornecedores de conteúdo não-remunerado que atraem e retêm usuários na plataforma. Cada post seu mantém pessoas na plataforma por mais tempo — o que aumenta o inventário de anúncios disponível.</p>
+
+<p><strong>3. Os Usuários (sua audiência)</strong><br/>
+São o produto. Sua atenção, comportamento e dados demográficos são o que os anunciantes estão comprando. Cada segundo que passam na plataforma é monetizado.</p>
+
+<p><strong>4. Os Anunciantes</strong><br/>
+São os clientes reais. Pagam para ter acesso à atenção dos usuários, segmentada com precisão cirúrgica graças aos dados coletados do comportamento de todos os usuários — incluindo você.</p>
+
+<h2>A Implicação Que Ninguém Quer Admitir</h2>
+<p>Quando você cria um conteúdo viral que mantém 50.000 pessoas no TikTok por 3 minutos, você acabou de gerar 150.000 minutos de inventário de anúncios para o TikTok.</p>
+
+<p>Você foi pago por isso? Não, a menos que você esteja no programa de criadores do TikTok, que paga uma fração de centavo por visualização. O TikTok monetizou seu trabalho exponencialmente mais do que te pagou.</p>
+
+<p>Isso não é conspiração — é o modelo de negócio declarado de todas as plataformas. É o que consta nos relatórios anuais para os investidores. A maioria dos criadores simplesmente nunca para para ler esses documentos.</p>
+
+<h2>Mas Espera — Isso Não Significa que as Redes Sociais São Inúteis</h2>
+<p>Absolutamente não. As plataformas são ferramentas poderosas. O ponto não é evitá-las — é usá-las com os olhos abertos, entendendo quem é o cliente de quem.</p>
+
+<p>O criador ingênuo pensa: <em>"Vou crescer no Instagram e depois monetizar minha audiência."</em></p>
+
+<p>O criador estratégico pensa: <em>"Vou usar o alcance do Instagram para construir uma audiência que EU controlo — e depois monetizá-la com ou sem o Instagram."</em></p>
+
+<p>A diferença entre essas duas perspectivas vale milhões. Literalmente.</p>
+
+<blockquote>A ilusão mais cara do marketing digital é acreditar que seguidores são ativos seus. Eles não são. São dados no banco de dados de uma empresa de capital aberto que pode mudar as regras amanhã — e muda, consistentemente, sempre que é financeiramente conveniente.</blockquote>`
+          },
+          {
+            id: "segredo-2-supressao",
+            title: "A Supressão Programada: O Ciclo que Toda Plataforma Repete",
+            duration: "28 min",
+            type: "text",
+            glossaryTerms: ["shadow-ban", "frequencia", "algoritmo-de-recomendacao", "cpm"],
+            keyPoints: ["Os dados documentados de declínio de alcance orgânico", "O ciclo de 4 fases que toda plataforma repete", "Por que o alcance vai continuar caindo", "O que gestores de tráfego nunca admitem sobre isso"],
+            content: `<h2>Os Números Que Nenhuma Plataforma Quer que Você Veja</h2>
+<p>Vamos falar em dados. Não em teorias — em números documentados e verificáveis:</p>
+
+<h3>Facebook: O Caso de Estudo Definitivo</h3>
+<table>
+<tr><th>Ano</th><th>Alcance orgânico médio de páginas</th></tr>
+<tr><td>2012</td><td>~16% dos seguidores</td></tr>
+<tr><td>2014</td><td>~6% dos seguidores</td></tr>
+<tr><td>2016</td><td>~2,6% dos seguidores</td></tr>
+<tr><td>2018</td><td>~1,8% dos seguidores</td></tr>
+<tr><td>2024</td><td>~1,2-1,5% dos seguidores</td></tr>
+</table>
+
+<p>Uma página com 100.000 seguidores que em 2012 alcançava 16.000 pessoas organicamente por post, hoje alcança 1.200-1.500. Uma redução de 90% em 12 anos.</p>
+
+<p>Isso não é coincidência ou "o algoritmo ficou mais inteligente". É política de negócios deliberada, documentada internamente e revelada em inúmeros vazamentos de documentos internos do Facebook.</p>
+
+<h3>O Ciclo de 4 Fases que Toda Plataforma Repete</h3>
+<p>Este padrão se repete em TODA plataforma que atinge escala:</p>
+
+<p><strong>Fase 1 — Abertura (crescimento da plataforma)</strong><br/>
+Plataforma precisa de criadores para atrair usuários. Alcance orgânico é generoso — às vezes absurdamente generoso. O TikTok em 2020, o Instagram Reels em 2022 nessa fase. A plataforma precisa de você mais do que você precisa dela.</p>
+
+<p><strong>Fase 2 — Crescimento Mútuo</strong><br/>
+Criadores crescem. Usuários crescem. A plataforma começa a ter valor de inventário de anúncios. Os primeiros formatos de monetização de anúncios aparecem.</p>
+
+<p><strong>Fase 3 — Monetização do Alcance</strong><br/>
+A plataforma tem escala suficiente para vender alcance para anunciantes. O alcance orgânico começa a declinar gradualmente — nunca de uma vez, sempre suavemente. Surgem as primeiras ferramentas de anúncio. Criadores "percebem" que pagando têm mais alcance.</p>
+
+<p><strong>Fase 4 — Dependência e Extração</strong><br/>
+Alcance orgânico está tão baixo que é economicamente inviável depender dele. Criadores que construíram negócios na plataforma precisam pagar para ter acesso à própria audiência. Novos criadores entram no ecossistema direto para a fase 4.</p>
+
+<h3>Onde Cada Plataforma Está Hoje</h3>
+<ul>
+  <li><strong>Facebook:</strong> Fase 4 há anos. Alcance orgânico de página: morto.</li>
+  <li><strong>Instagram:</strong> Fase 3-4. Reels ainda têm alcance razoável, Feed e Stories em declínio.</li>
+  <li><strong>YouTube:</strong> Fase 3. Canal orgânico ainda viável via SEO, mas recomendação cada vez mais paga.</li>
+  <li><strong>TikTok:</strong> Fase 2-3. Ainda tem o melhor alcance orgânico — mas os dados mostram declínio consistente desde 2022.</li>
+  <li><strong>LinkedIn:</strong> Fase 2-3. Ainda excelente para B2B orgânico — aproveite agora.</li>
+</ul>
+
+<h3>O que Gestores de Tráfego Nunca Vão te Dizer</h3>
+<p>Gestores de tráfego sobrevivem da dependência. O modelo de negócio deles é cobrar para gerenciar seus anúncios — o que pressupõe que você PRECISA de anúncios. Um gestor que te dissesse "construa uma lista de email e fique menos dependente de anúncios" estaria cortando seu próprio faturamento.</p>
+
+<p>Isso não é acusação — é incentivo econômico. Entenda o incentivo de quem te dá conselho.</p>
+
+<p>Da mesma forma: plataformas têm times inteiros de "evangelist relations" cujo trabalho é convencer criadores de que alcance orgânico ainda funciona e que o futuro é brilhante. Esses profissionais são pagos para manter você criando conteúdo gratuitamente enquanto a plataforma vende sua audiência.</p>
+
+<blockquote>Toda plataforma faz a mesma promessa: "crie bom conteúdo e vamos distribuir". Toda plataforma quebra essa promessa da mesma forma: gradualmente, suavemente, de forma que nunca dá para identificar um momento específico em que mudou — mas você olha para trás e percebe que o jogo é completamente diferente do que era quando começou.</blockquote>`
+          },
+          {
+            id: "segredo-3-predicao-comportamental",
+            title: "O Motor de Predição Comportamental: Por que Qualidade Não é o Critério",
+            duration: "25 min",
+            type: "text",
+            glossaryTerms: ["algoritmo-de-recomendacao", "completion-rate", "hook-rate", "rewatch-rate", "ctr"],
+            keyPoints: ["O algoritmo não mede qualidade — mede previsibilidade comportamental", "Por que conteúdo manipulativo supera conteúdo genuíno nas métricas", "O que os criadores de 8 dígitos fazem diferente", "A linha entre engajamento legítimo e exploração do algoritmo"],
+            content: `<h2>O que o Algoritmo Realmente Otimiza</h2>
+<p>Aqui está uma afirmação que vai soar errada mas é matematicamente correta:</p>
+
+<p><strong>O algoritmo não distribui o melhor conteúdo. Distribui o conteúdo com comportamento mais previsível.</strong></p>
+
+<p>Deixa eu explicar com precisão o que isso significa.</p>
+
+<h3>A Função Objetivo do Algoritmo</h3>
+<p>Todo modelo de machine learning tem uma "função objetivo" — a variável que ele está tentando maximizar. Para algoritmos de recomendação de plataformas sociais, a função objetivo é:</p>
+
+<p><strong>Maximizar o tempo total que todos os usuários passam na plataforma por dia.</strong></p>
+
+<p>Não é "distribuir conteúdo de qualidade". Não é "ajudar criadores a crescer". É tempo total de sessão — porque isso é o que se converte em impressões de anúncio, que se converte em receita.</p>
+
+<h3>O Problema com Qualidade</h3>
+<p>"Qualidade" é subjetiva e difícil de medir. "Comportamento observável" é objetivo e mensurável em tempo real.</p>
+
+<p>O algoritmo não pergunta "esse conteúdo é bom?". Ele pergunta "esse conteúdo gera o comportamento que maximiza o tempo de sessão?" — e mede isso com milissegundos de precisão.</p>
+
+<p>Comportamentos que maximizam tempo de sessão:</p>
+<ul>
+  <li>Assistir até o final (completion) → o usuário ficou na plataforma X segundos</li>
+  <li>Assistir mais de uma vez (rewatch) → ficou X×2 segundos</li>
+  <li>Ir para o próximo vídeo imediatamente após (session continuation) → ficou na plataforma mais tempo</li>
+  <li>Comentar → interação que gera notificação → traz o usuário de volta depois</li>
+  <li>Compartilhar → traz novos usuários para a plataforma</li>
+</ul>
+
+<h3>O Paradoxo do Conteúdo "Ruim" que Performa Bem</h3>
+<p>Conteúdo que gera indignação, controvérsia ou debate acirrado tem completion rate altíssimo. As pessoas assistem até o final porque querem "ver onde isso vai chegar". Compartilham porque querem "mostrar o absurdo". Comentam porque precisam "rebater".</p>
+
+<p>Do ponto de vista do algoritmo, esse conteúdo é excelente — gerou todos os comportamentos desejados. Do ponto de vista de quem quer construir autoridade e gerar receita sustentável, é um desastre.</p>
+
+<h3>O que Criadores de Alto Nível Fazem Diferente</h3>
+<p>Os criadores que consistentemente vendem cursos de R$5k-R$50k não são necessariamente os que têm mais seguidores ou mais viral. São os que desenvolveram a habilidade de criar conteúdo que:</p>
+
+<ol>
+  <li><strong>Gera os sinais de comportamento que o algoritmo valoriza</strong> (completion, rewatch, shares) — para receber distribuição</li>
+  <li><strong>Ao mesmo tempo atrai especificamente quem tem capacidade e intenção de comprar</strong> — não qualquer audiência, mas a audiência certa</li>
+  <li><strong>E move essa audiência para canais próprios</strong> (email, WhatsApp) — para não depender do algoritmo para a próxima venda</li>
+</ol>
+
+<p>Esse equilíbrio — servir o algoritmo sem se tornar escravo dele — é a habilidade mais valiosa do marketing digital contemporâneo.</p>
+
+<blockquote>O algoritmo é uma ferramenta de distribuição com um viés embutido: favorece comportamento previsível, não valor genuíno. Seu trabalho como criador estratégico é criar conteúdo que engana o algoritmo de uma forma ética — que parece comportamentalmente previsível para o sistema, mas entrega valor real para humanos. Essa é a arte do criador de alto nível.</blockquote>`
+          },
+          {
+            id: "segredo-4-dois-jogos",
+            title: "A Virada de Chave: O Framework dos Dois Jogos",
+            duration: "30 min",
+            type: "text",
+            glossaryTerms: ["lead-magnet", "opt-in", "nurturing", "ltv", "churn-rate", "mrr"],
+            keyPoints: ["Jogo 1: a plataforma quer que você jogue", "Jogo 2: o jogo que te dá liberdade real", "Por que 1.000 emails valem mais que 100.000 seguidores", "A matemática do alcance alugado vs. alcance próprio", "Como construir os dois simultaneamente"],
+            content: `<h2>A Revelação Central: Existem Dois Jogos</h2>
+<p>Tudo que você aprendeu neste módulo sobre algoritmos — TikTok, Instagram, YouTube, Facebook, Google — é sobre como jogar o Jogo 1. Este capítulo é sobre o Jogo 2. E o Jogo 2 é onde a liberdade financeira real está.</p>
+
+<h3>Jogo 1: O Jogo da Plataforma</h3>
+<p>Objetivo: crescer seguidores, aumentar alcance, viralizar.<br/>
+Métricas: seguidores, visualizações, impressões, curtidas.<br/>
+Controlado por: algoritmos da plataforma.<br/>
+Ativo gerado: seguidores em uma conta que não é sua.<br/>
+Risco: conta banida, algoritmo mudado, plataforma fechada = zero.</p>
+
+<p>O Jogo 1 é necessário — é o motor de aquisição. Mas é eternamente instável. Você está construindo em terreno alugado.</p>
+
+<h3>Jogo 2: O Jogo da Independência</h3>
+<p>Objetivo: converter audiência de plataforma em audiência própria.<br/>
+Métricas: tamanho e engajamento da lista de email, contatos de WhatsApp, membros de comunidade.<br/>
+Controlado por: você.<br/>
+Ativo gerado: banco de dados de pessoas que você pode contatar diretamente, para sempre.<br/>
+Risco: quase zero — você tem os dados, independente de qualquer plataforma.</p>
+
+<h3>A Matemática Que Ninguém Mostra</h3>
+<p>Vamos colocar números reais nisso:</p>
+
+<p><strong>Cenário A: 100.000 seguidores no Instagram, zero lista própria</strong><br/>
+Alcance médio por post: 2.500 pessoas (2,5%)<br/>
+Taxa de clique para oferta: 1% = 25 pessoas<br/>
+Taxa de conversão da oferta: 3% = 0,75 vendas por post<br/>
+Produto de R$2.000: R$1.500 por campanha de posts<br/>
+Risco: se o Instagram mudar o algoritmo ou banir a conta, receita = R$0</p>
+
+<p><strong>Cenário B: 10.000 seguidores, 3.000 emails e 1.500 no WhatsApp</strong><br/>
+Email: 3.000 × 30% abertura = 900 leitores × 5% clique = 45 visitas<br/>
+WhatsApp: 1.500 × 90% leitura = 1.350 × 10% clique = 135 visitas<br/>
+Total: 180 visitas à oferta × 3% conversão = 5,4 vendas<br/>
+Produto de R$2.000: R$10.800 por campanha<br/>
+Risco: se o Instagram sumisse amanhã, 90% da receita ainda acontece</p>
+
+<p><strong>O Cenário B gera 7x mais receita com 10x menos seguidores.</strong></p>
+
+<h3>Por que 1.000 Emails Valem Mais que 100.000 Seguidores</h3>
+<p>Esta afirmação parece absurda até você ver os dados:</p>
+
+<table>
+<tr><th>Canal</th><th>Taxa de Alcance</th><th>Taxa de Clique</th><th>Controle</th></tr>
+<tr><td>Instagram Feed</td><td>2-5%</td><td>0,5-2%</td><td>Plataforma</td></tr>
+<tr><td>Instagram Stories</td><td>5-10%</td><td>1-3%</td><td>Plataforma</td></tr>
+<tr><td>Email Marketing</td><td>25-40%</td><td>2-8%</td><td>Você</td></tr>
+<tr><td>WhatsApp Broadcast</td><td>85-95%</td><td>15-30%</td><td>Você</td></tr>
+</table>
+
+<p>Um email com 30% de abertura e 5% de clique alcança 150 pessoas de 1.000 contatos. Instagram com 3% de alcance e 1% de CTR alcança 30 pessoas de 1.000 seguidores. O email entrega 5x mais alcance efetivo — e você paga centavos por envio, não uma taxa de engajamento ao algoritmo.</p>
+
+<h3>Como Jogar os Dois Jogos Simultaneamente</h3>
+<p>A estratégia não é abandonar as plataformas. É usá-las com propósito diferente:</p>
+
+<p><strong>Plataformas = Motor de Aquisição de Leads</strong><br/>
+Todo conteúdo tem um segundo objetivo além do engajamento: mover a pessoa para sua lista própria. Lead magnet na bio, CTA no final de cada vídeo, ManyChat capturando quem comenta.</p>
+
+<p><strong>Email + WhatsApp = Motor de Conversão</strong><br/>
+Quando você tem algo para vender, vai para a lista própria. Taxa de conversão 3-5x maior. Independência total de algoritmos.</p>
+
+<p><strong>A Métrica que realmente importa</strong><br/>
+Substitua "quantos seguidores ganhei essa semana" por "quantos contatos próprios (email + WhatsApp) adquiri essa semana". Esse número determina sua receita em 6 meses, não o número de seguidores.</p>
+
+<blockquote>O segredo mais guardado do marketing digital não está em qual plataforma usar ou qual hack de algoritmo funciona hoje. Está em entender que plataformas são minas de ouro temporárias — você extrai o máximo enquanto pode e guarda o ouro em cofre próprio (sua lista). Os criadores que dependem do ouro ainda estar na mina quando precisarem são os que ficam sem renda quando o algoritmo muda. Os que já transferiram para o cofre próprio são os que têm negócios reais.</blockquote>`
+          },
+          {
+            id: "segredo-5-framework-independencia",
+            title: "O Framework de Independência: Construindo um Negócio à Prova de Algoritmo",
+            duration: "28 min",
+            type: "text",
+            glossaryTerms: ["ltv", "cac", "mrr", "churn-rate", "membership", "escada-de-valor"],
+            keyPoints: ["Os 5 ativos de um negócio digital antifrágil", "O sistema de conversão de seguidor para comprador", "A estrutura de receita que não depende de nenhuma plataforma", "Por que o timing de construção desses ativos importa mais que tudo"],
+            content: `<h2>O Negócio Digital Antifrágil</h2>
+<p>Antifrágil é o conceito de Nassim Taleb: sistemas que não apenas sobrevivem ao caos — mas ficam mais fortes com ele. Um negócio digital antifrágil não apenas sobrevive a mudanças de algoritmo — usa essas mudanças como vantagem competitiva (enquanto concorrentes dependentes panicamente perdem receita, você continua vendendo normalmente).</p>
+
+<h3>Os 5 Ativos do Negócio Digital Antifrágil</h3>
+
+<p><strong>Ativo 1: Lista de Email Qualificada (Não Apenas Grande)</strong><br/>
+Uma lista de 3.000 compradores anteriores é mais valiosa que 30.000 leads frios. A qualidade da segmentação importa mais que o volume. Como construir: cada produto vendido, cada lead magnet baixado, cada webinar assistido vira um contato segmentado por comportamento e interesse.</p>
+
+<p><strong>Ativo 2: Lista de WhatsApp Segmentada</strong><br/>
+O canal de maior alcance e menor custo disponível. 90%+ de leitura, contato pessoal e direto. Requer construção cuidadosa (ninguém quer spam no WhatsApp pessoal) — mas quem tem 1.000 contatos qualificados no WhatsApp tem um ativo de valor incalculável.</p>
+
+<p><strong>Ativo 3: Comunidade Própria Paga</strong><br/>
+Membros pagantes têm o maior engajamento e o menor custo de manutenção de relacionamento. Um membership de R$97/mês com 200 membros (R$19.400/mês de receita recorrente) é uma base que funciona independente de qualquer plataforma.</p>
+
+<p><strong>Ativo 4: Biblioteca de Conteúdo com SEO</strong><br/>
+Artigos e vídeos bem posicionados no Google e YouTube continuam gerando tráfego por anos. Um vídeo do YouTube que ranqueia para "como fazer lançamento semente" pode trazer 500 visitas por mês durante 3 anos sem nenhum trabalho adicional. É o único ativo de conteúdo com retorno composto real.</p>
+
+<p><strong>Ativo 5: Produto com Alto LTV e Baixo Churn</strong><br/>
+Um produto tão bom que clientes ficam, indicam e voltam. LTV alto significa que você pode gastar mais na aquisição — vantagem competitiva direta em anúncios. Com LTV de R$5.000, você pode pagar R$1.500 de CAC e ainda ter margens de 70%.</p>
+
+<h3>O Sistema de Conversão: Do Seguidor ao Comprador</h3>
+
+<pre>
+PLATAFORMA (qualquer uma)
+   ↓ [conteúdo de valor com CTA]
+LEAD MAGNET (isca gratuita específica)
+   ↓ [captura email + WhatsApp]
+SEQUÊNCIA DE NURTURING (3-7 dias)
+   ↓ [entrega valor, constrói confiança]
+OFERTA DE ENTRADA (produto de R$97-R$297)
+   ↓ [primeira compra — cliente ativado]
+SEQUÊNCIA DE UPSELL
+   ↓ [produto core R$997-R$2.997]
+MEMBERSHIP OU HIGH TICKET
+   ↓ [receita recorrente + indicações]
+LTV COMPOSTO
+</pre>
+
+<p>Cada pessoa que entra nesse sistema tem valor muito maior que um seguidor que nunca foi capturado. A diferença é o opt-in — o momento em que a pessoa diz "sim, quero receber mais de você".</p>
+
+<h3>Por que o Timing Importa Mais que Tudo</h3>
+<p>Você poderia ter começado a construir esse sistema em 2015, no pico do alcance orgânico do Facebook — e teria uma lista de 100.000 emails construída quase de graça, e hoje venderia para essa lista com custo zero de aquisição.</p>
+
+<p>Você não pode voltar a 2015. Mas em 10 anos, alguém vai olhar para 2025 e pensar: "queria ter começado a construir minha lista quando o TikTok ainda tinha alcance orgânico alto".</p>
+
+<p>O melhor momento para construir sua lista foi há 5 anos. O segundo melhor momento é hoje.</p>
+
+<blockquote>Algoritmos mudam. Plataformas fecham. Tendências passam. O único ativo do marketing digital que aprecia com o tempo e não depende de nenhuma empresa de tecnologia é a sua lista de pessoas que confiam em você o suficiente para dar o contato pessoal delas. Tudo que aprendeu neste curso serve a um único propósito superior: construir essa lista. O dia que você entender isso de verdade, você para de trabalhar para o algoritmo — e o algoritmo começa a trabalhar para você.</blockquote>`
+          },
+          {
+            id: "segredo-exercicio-auditoria",
+            title: "Exercício Final: Auditoria de Independência Algorítmica",
+            duration: "20 min",
+            type: "exercise",
+            glossaryTerms: ["ltv", "cac", "mrr", "churn-rate", "opt-in", "lead-magnet"],
+            keyPoints: ["Calcular seu score de dependência atual", "Identificar o maior risco ao seu negócio", "Criar plano de independência de 90 dias"],
+            content: `<h2>Auditoria de Independência Algorítmica</h2>
+<p>Este exercício revela sua vulnerabilidade real — e o caminho para a independência. Reserve 30-40 minutos, seja honesto nos números e não julgue onde você está. Só o diagnóstico honesto permite a prescrição certa.</p>
+
+<h3>Parte 1: Inventário de Audiência (10 min)</h3>
+<p>Preencha seu inventário atual:</p>
+
+<p><strong>Audiência Alugada (não controlada por você):</strong></p>
+<ul>
+  <li>Seguidores no Instagram: ____</li>
+  <li>Inscritos no YouTube: ____</li>
+  <li>Seguidores no TikTok: ____</li>
+  <li>Curtidas na página do Facebook: ____</li>
+  <li>Seguidores no LinkedIn: ____</li>
+  <li><strong>Total de audiência alugada: ____</strong></li>
+</ul>
+
+<p><strong>Audiência Própria (controlada por você):</strong></p>
+<ul>
+  <li>Contatos de email: ____</li>
+  <li>Contatos no WhatsApp (broadcast/grupo): ____</li>
+  <li>Membros de comunidade paga: ____</li>
+  <li><strong>Total de audiência própria: ____</strong></li>
+</ul>
+
+<p><strong>Índice de Independência = Audiência Própria ÷ Total × 100 = ____%</strong></p>
+<ul>
+  <li>Abaixo de 5%: Dependência crítica — você está um update de algoritmo longe de perder o negócio</li>
+  <li>5-20%: Dependência alta — vulnerável, mas com base para construir</li>
+  <li>20-50%: Dependência moderada — bom progresso, continue construindo</li>
+  <li>Acima de 50%: Baixa dependência — negócio antifrágil em construção</li>
+</ul>
+
+<h3>Parte 2: Auditoria de Receita (10 min)</h3>
+<p>Para cada fonte de receita dos últimos 3 meses, identifique:</p>
+<table>
+<tr><th>Fonte</th><th>Receita (R$)</th><th>Depende de algoritmo?</th><th>Sobrevive sem redes sociais?</th></tr>
+<tr><td>Lançamentos via Instagram/TikTok</td><td>R$____</td><td>Sim / Parcial / Não</td><td>Sim / Não</td></tr>
+<tr><td>Email marketing</td><td>R$____</td><td>Sim / Parcial / Não</td><td>Sim / Não</td></tr>
+<tr><td>WhatsApp marketing</td><td>R$____</td><td>Sim / Parcial / Não</td><td>Sim / Não</td></tr>
+<tr><td>Indicações / boca a boca</td><td>R$____</td><td>Sim / Parcial / Não</td><td>Sim / Não</td></tr>
+<tr><td>Membership / recorrência</td><td>R$____</td><td>Sim / Parcial / Não</td><td>Sim / Não</td></tr>
+</table>
+
+<p><strong>Pergunta crítica:</strong> Se sua conta principal do Instagram fosse banida amanhã sem aviso, qual % da sua receita sobreviveria? ____%</p>
+
+<h3>Parte 3: Plano de 90 Dias (10 min)</h3>
+<p>Com base na auditoria, defina 3 ações concretas para aumentar sua independência algorítmica:</p>
+
+<p><strong>Ação 1 (Semanas 1-4):</strong> Criar ou otimizar seu lead magnet principal<br/>
+Meta específica: capturar ____ novos emails por semana<br/>
+Canal: ____</p>
+
+<p><strong>Ação 2 (Semanas 5-8):</strong> Estruturar canal de WhatsApp Broadcast<br/>
+Meta: ____ contatos no WhatsApp até o fim do período<br/>
+Estratégia de captura: ____</p>
+
+<p><strong>Ação 3 (Semanas 9-12):</strong> Lançar ou melhorar produto de entrada<br/>
+Preço: R$____<br/>
+Meta de MRR ao final de 90 dias: R$____</p>
+
+<p><strong>Declaração de Comprometimento:</strong><br/>
+Escreva em uma frase o que vai mudar na sua estratégia depois deste curso:</p>
+<p><em>"A partir de hoje, cada conteúdo que criar vai ter o objetivo duplo de _________________ (métrica da plataforma) E _________________ (crescimento de audiência própria)."</em></p>
+
+<blockquote>Você chegou ao final do portal. Dos fundamentos à psicologia do algoritmo, dos lançamentos à estrutura de monetização, das ferramentas ao segredo que poucos admitem: o jogo real não é de alcance — é de propriedade. Não de seguidores — de relacionamentos. Não de virais — de confiança construída ao longo do tempo. Esse é o segredo das redes sociais. Agora é sua vez de usá-lo.</blockquote>`,
+            exercise: `<h3>Tarefa Imediata (faça hoje)</h3>
+<p>Antes de fechar o portal, execute estas 3 ações em menos de 30 minutos:</p>
+<ol>
+  <li><strong>Calcule seu Índice de Independência</strong> com os números reais da Parte 1 da auditoria acima</li>
+  <li><strong>Defina uma meta de email para os próximos 30 dias</strong> (ex: "vou de 500 para 750 emails") e coloque no calendário as ações semanais para chegar lá</li>
+  <li><strong>Escreva o copy do seu próximo lead magnet</strong> — título, subtítulo e os 5 benefícios principais. Não precisa criar hoje, mas o copy precisa existir para você agir</li>
+</ol>
+<p>O conhecimento sem ação é apenas entretenimento. A ação começa agora.</p>`
+          }
+        ],
+        locked: false
       }
     ]
   }

@@ -5,6 +5,7 @@ export interface GlossaryTerm {
   definition: string;
   example?: string;
   related?: string[];
+  lessonIds?: string[];
 }
 
 export const GLOSSARY_CATEGORIES = [
@@ -251,6 +252,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Página inicial do TikTok, alimentada exclusivamente pelo algoritmo de recomendação. Diferente do Instagram Feed (que prioriza quem você segue), o FYP mostra conteúdo de qualquer conta — conhecida ou não — com base no comportamento do usuário. É o mecanismo que permite que contas com zero seguidores virem virais.",
     related: ["Algoritmo TikTok", "Completion Rate", "Rewatch Rate"],
+    lessonIds: ["tiktok-deep-1"],
   },
   {
     id: "completion-rate",
@@ -258,6 +260,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Percentual de pessoas que assiste ou consume um conteúdo até o final. É a métrica mais honesta de valor de um conteúdo — difícil de manipular, reflete genuinamente se a entrega sustentou o interesse do início ao fim. No TikTok, é o fator de maior peso no algoritmo (35% do score). Benchmarks: vídeos curtos &gt;70%, médios &gt;50%, longos &gt;40%.",
     related: ["Hook Rate", "Rewatch Rate", "Algoritmo TikTok", "Retenção de Audiência"],
+    lessonIds: ["atencao-1", "atencao-2", "tiktok-deep-1", "ig-quatro-sistemas", "segredo-3-predicao-comportamental"],
   },
   {
     id: "rewatch-rate",
@@ -265,6 +268,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Percentual de usuários que assiste ao vídeo mais de uma vez. É o sinal mais raro e mais valorizado pelos algoritmos — indica que o conteúdo tem densidade de informação suficiente para justificar rever. No TikTok representa aproximadamente 25% do score de ranking. Conteúdo que gera rewatch: listas densas, revelações no final, informação com muito valor comprimido.",
     related: ["Completion Rate", "Algoritmo TikTok", "Hook Rate"],
+    lessonIds: ["atencao-2", "tiktok-deep-1", "ig-quatro-sistemas", "segredo-3-predicao-comportamental"],
   },
   {
     id: "hook-rate",
@@ -272,6 +276,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Percentual de pessoas que para o scroll e começa a consumir o conteúdo ao ver os primeiros segundos. É determinado pelo hook (os primeiros 1-3 segundos do vídeo ou a primeira linha visível do texto). Um Hook Rate abaixo de 20% indica que o conteúdo não está competindo bem pela atenção no feed.",
     related: ["Hook", "Completion Rate", "CTR", "Algoritmo"],
+    lessonIds: ["atencao-1", "tiktok-deep-1", "segredo-3-predicao-comportamental"],
   },
   {
     id: "avd",
@@ -279,6 +284,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Duração média de visualização de um vídeo no YouTube, em minutos e segundos absolutos (não em porcentagem). Para o algoritmo de sugestão do YouTube, o AVD absoluto importa mais que a porcentagem — um vídeo de 20 minutos com AVD de 12 min gera mais watch time total que um vídeo de 5 min com 80% de conclusão.",
     related: ["Watch Time", "YouTube Algorithm", "Completion Rate"],
+    lessonIds: ["yt-dois-motores"],
   },
   {
     id: "watch-time",
@@ -286,6 +292,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Tempo total acumulado que os usuários passam assistindo aos vídeos de um canal no YouTube. É uma das métricas mais importantes para o algoritmo de sugestão e para monetização (necessário 4.000 horas de watch time público nos últimos 12 meses para se qualificar ao YouTube Partner Program). Playlists são uma das melhores ferramentas para aumentar watch time de sessão.",
     related: ["AVD", "YouTube Algorithm", "Playlists"],
+    lessonIds: ["yt-dois-motores"],
   },
   {
     id: "eeat",
@@ -307,6 +314,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Sistema de inteligência artificial que decide qual conteúdo mostrar para qual usuário, com o objetivo central de maximizar o tempo na plataforma. Aprende com o comportamento do usuário (cliques, tempo de visualização, interações) e usa esse aprendizado para prever qual conteúdo vai reter aquela pessoa por mais tempo.",
     related: ["Machine Learning", "FYP", "Watch Time", "Engajamento"],
+    lessonIds: ["atencao-1", "atencao-2", "tiktok-deep-1", "segredo-1-ilusao", "segredo-3-predicao-comportamental"],
   },
   {
     id: "shadow-ban",
@@ -314,6 +322,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Redução severa e não declarada do alcance de uma conta, aplicada pelo algoritmo da plataforma em resposta a comportamentos que violam as diretrizes (spam, uso de hashtags proibidas, conteúdo sensível, compra de seguidores). A conta não é notificada — simplesmente para de aparecer para não-seguidores. Diagnosticado quando o alcance cai abruptamente sem motivo aparente.",
     related: ["Algoritmo", "Diretrizes da Plataforma", "Alcance Orgânico"],
+    lessonIds: ["atencao-2", "ig-quatro-sistemas", "segredo-1-ilusao"],
   },
   {
     id: "saves",
@@ -321,6 +330,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Ação de salvar um post para ver depois, disponível no Instagram e outras plataformas. É o sinal de maior peso no algoritmo do Instagram Explore e de alta relevância no Reels — indica que o conteúdo tem utilidade prática percebida ('vou precisar disso depois'). Posts com alta taxa de salvamento recebem distribuição amplificada.",
     related: ["Algoritmo Instagram", "Taxa de Engajamento", "Carrossel"],
+    lessonIds: ["atencao-2", "ig-quatro-sistemas"],
   },
   {
     id: "collab-post",
@@ -328,6 +338,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Algoritmos & Plataformas",
     definition: "Funcionalidade do Instagram que permite dois criadores publicarem o mesmo post simultaneamente — ele aparece no feed dos seguidores de ambas as contas, com os dois nomes no cabeçalho. É a maneira mais eficiente de dobrar o alcance orgânico imediatamente sem custo adicional. Ideal para lançamentos em parceria.",
     related: ["Lançamento Externo", "Joint Venture", "Alcance Orgânico"],
+    lessonIds: ["ig-quatro-sistemas"],
   },
 
   // ─── COPYWRITING & PERSUASÃO ────────────────────────────────────
@@ -477,6 +488,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     definition: "Material gratuito de alto valor percebido oferecido em troca do contato (email, telefone) do visitante. Deve resolver um problema específico e imediato do público-alvo. Quanto mais específico o problema que resolve, melhor a qualidade do lead capturado. Formatos: ebook, mini-curso, checklist, template, calculadora, planilha, quiz.",
     example: "'Checklist: 27 pontos para revisar antes de abrir o carrinho do seu lançamento' — altamente específico, valor claro, download imediato.",
     related: ["Lista de Email", "Funil de Captura", "Landing Page"],
+    lessonIds: ["segredo-4-dois-jogos", "segredo-5-framework-independencia", "segredo-exercicio-auditoria"],
   },
   {
     id: "nurturing",
@@ -484,6 +496,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Email & WhatsApp Marketing",
     definition: "Processo de construir relacionamento e confiança com leads ao longo do tempo através de conteúdo relevante, até que estejam prontos para comprar. Uma sequência de nurturing típica entrega valor genuíno sem vender por 3-7 emails antes de apresentar uma oferta. Leads que passaram por nurturing convertem 2-5x melhor que leads frios.",
     related: ["Sequência de Email", "Lead Scoring", "Automação de Email"],
+    lessonIds: ["segredo-4-dois-jogos", "segredo-5-framework-independencia"],
   },
   {
     id: "lead-scoring",
@@ -498,6 +511,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Email & WhatsApp Marketing",
     definition: "Ato de uma pessoa consentir ativamente em receber comunicações de marketing (email, SMS, WhatsApp). Double opt-in exige confirmação por email após o cadastro — gera listas menores mas de maior qualidade e entregabilidade. Exigido por lei em muitos países (GDPR na Europa, LGPD no Brasil).",
     related: ["LGPD", "Lista de Email", "Deliverability", "Consentimento"],
+    lessonIds: ["segredo-4-dois-jogos", "segredo-5-framework-independencia", "segredo-exercicio-auditoria"],
   },
   {
     id: "broadcast",
@@ -521,6 +535,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Analytics & Métricas",
     definition: "Custo total médio para adquirir um novo cliente pagante, incluindo todos os gastos com marketing e vendas. CAC = (Total gasto em marketing + Vendas) ÷ Número de novos clientes no período. Diferente do CPA (que considera apenas o custo do anúncio) — o CAC inclui salários, ferramentas, eventos e toda a estrutura de aquisição.",
     related: ["LTV", "ROAS", "CPA", "Margem de Lucro"],
+    lessonIds: ["segredo-5-framework-independencia"],
   },
   {
     id: "ltv",
@@ -529,6 +544,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     definition: "Receita total esperada de um cliente durante todo o relacionamento com a empresa. LTV = Ticket Médio × Frequência de Compra × Tempo de Relacionamento. Para assinaturas: LTV = Mensalidade × Tempo Médio de Permanência. O LTV é o teto máximo que você pode gastar para adquirir um cliente e ainda ser lucrativo.",
     example: "Um membership de R$297/mês onde os membros ficam em média 10 meses tem LTV de R$2.970. Você pode gastar até R$990 (33% do LTV) em CAC e ainda manter margens saudáveis.",
     related: ["CAC", "Churn Rate", "Receita Recorrente", "Escada de Valor"],
+    lessonIds: ["segredo-4-dois-jogos", "segredo-5-framework-independencia"],
   },
   {
     id: "churn-rate",
@@ -536,6 +552,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Analytics & Métricas",
     definition: "Percentual de clientes ou assinantes que cancelam em um período. Churn mensal de 10% significa que você perde metade da base em 7 meses. Para crescer, você precisa adquirir clientes mais rápido do que os perde — o que se torna progressivamente mais caro. Reduzir o churn é frequentemente mais rentável do que aumentar a aquisição.",
     related: ["LTV", "Receita Recorrente", "NPS", "Onboarding"],
+    lessonIds: ["segredo-5-framework-independencia"],
   },
   {
     id: "nps",
@@ -550,6 +567,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Analytics & Métricas",
     definition: "Receita recorrente mensal — o total de receita previsível gerado pelas assinaturas ativas em um mês. Principal métrica de saúde para negócios de membership e SaaS. MRR cresce quando: novos assinantes entram, assinantes fazem upgrade. MRR decresce com churn e downgrades. MRR × 12 = ARR (Receita Recorrente Anual).",
     related: ["ARR", "Churn Rate", "LTV", "Receita Recorrente"],
+    lessonIds: ["segredo-4-dois-jogos", "segredo-5-framework-independencia", "segredo-exercicio-auditoria"],
   },
   {
     id: "taxa-de-conversao",
@@ -624,10 +642,12 @@ export const GLOSSARY: GlossaryTerm[] = [
     category: "Monetização & Funis",
     definition: "Arquitetura de produtos ordenados por valor e preço crescentes, onde cada degrau entrega mais resultado e cobra mais. Conceito criado por Russell Brunson. Permite que cada produto pague o custo de aquisição do próximo, e que clientes que querem mais possam subir naturalmente. Os degraus típicos: isca gratuita → produto de entrada → produto core → high ticket → continuidade.",
     related: ["LTV", "Upsell", "Funil de Vendas", "Receita Recorrente"],
+    lessonIds: ["segredo-5-framework-independencia"],
   },
   {
     id: "membership",
     term: "Membership (Associação/Plano)",
+    lessonIds: ["segredo-5-framework-independencia"],
     category: "Monetização & Funis",
     definition: "Modelo de receita recorrente onde o cliente paga mensalmente para acesso contínuo a conteúdo, comunidade, suporte ou serviço. É o modelo com maior previsibilidade de receita e maior LTV. O maior desafio é o churn — a taxa de cancelamento. Estratégias de retenção: onboarding excepcional, comunidade forte, entrega constante de novo valor.",
     related: ["Churn Rate", "MRR", "LTV", "Comunidade"],
