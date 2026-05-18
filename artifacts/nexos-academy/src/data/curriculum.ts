@@ -431,76 +431,420 @@ POR QUE FUNCIONA: ___
             title: "Estrutura da PLF Brasileira",
             duration: "25 min",
             type: "text",
-            keyPoints: ["As 4 fases: Pré-lançamento, Lançamento, Abertura, Fechamento", "Timeline de 14-21 dias", "O papel do conteúdo de valor gratuito"],
-            content: `<h2>A Fórmula que Mudou o Mercado Digital</h2>
-<p>Jeff Walker publicou "Launch" em 2014 e revolucionou como produtos digitais são vendidos. No Brasil, esse método foi adaptado com características únicas do consumidor brasileiro: maior emotividade, menor tolerância a formalidade e preferência por comunicação pessoal.</p>
+            keyPoints: ["O calendário exato de 21 dias com ação por dia", "O que postar/enviar em cada fase — com copy real", "A anatomia de um PLC que converte 3-8% da lista", "Por que 60-70% das vendas ocorrem nas últimas 24h e como usar isso"],
+            exercise: "Preencha seu calendário PLF: Escolha uma data de abertura de carrinho. Conte 21 dias para trás — esse é seu D-21. Abra uma planilha e preencha cada linha com: Data | Fase | Canal | Ação | Copy (use os modelos desta aula). Até o fim desta aula você terá seu plano de lançamento completo.",
+            content: `<h2>A PLF na Prática: 21 Dias, Ação por Ação</h2>
 
-<h3>As 4 Fases do Lançamento PLF</h3>
+<p>A maioria das pessoas aprende que a PLF tem "4 fases" e fica nisso. O problema? Fase não é ação. Este módulo vai te dar o roteiro executável — o que fazer em cada dia, com o copy real que vai ao ar.</p>
 
-<h3>Fase 1: Pré-Pré-Lançamento (30-14 dias antes)</h3>
-<p>O objetivo é despertar curiosidade e criar lista de espera. Você <em>não revela o produto</em> ainda. Levanta problemas, instiga curiosidade, constrói antecipação.</p>
-<p>Conteúdos típicos: posts provocativos, enquetes, "o que você mais luta com X?", bastidores vagos.</p>
+<blockquote>O segredo da PLF não é o roteiro. É o <strong>estado emocional</strong> que você cria na audiência ao longo das semanas. Cada mensagem é uma peça de uma história que termina com a compra como ato natural.</blockquote>
 
-<h3>Fase 2: Pré-Lançamento (14-1 dias antes)</h3>
-<p>Aqui entram os famosos PLC (Pre-Launch Content): 3 vídeos/textos de alto valor que educam e pré-vendem ao mesmo tempo. Cada PLC aumenta a antecipação e derruba uma objeção.</p>
+<h2>Os 4 Estados Emocionais da Jornada</h2>
+
+<p>Antes de ver o calendário, entenda o que você está construindo na cabeça da audiência:</p>
+
+<ol>
+  <li><strong>Curiosidade</strong> (D-21 a D-14) — "O que está acontecendo?"</li>
+  <li><strong>Esperança</strong> (D-14 a D-3) — "Isso pode funcionar pra mim?"</li>
+  <li><strong>Desejo</strong> (D-3 a D-0) — "Eu quero. Quando abre?"</li>
+  <li><strong>Urgência</strong> (Carrinho aberto) — "Preciso decidir agora."</li>
+</ol>
+
+<p>Cada post, email e mensagem tem exatamente uma função: mover a audiência de um estado para o próximo.</p>
+
+<hr/>
+
+<h2>FASE 1 — Pré-Pré-Lançamento (D-21 a D-14)</h2>
+<h3>Objetivo: despertar o problema sem revelar o produto</h3>
+
+<p>Você não fala em produto nenhum ainda. Fala sobre a dor, o problema, o paradoxo. A audiência começa a se identificar e a perceber que você entende o que ela vive.</p>
+
+<h3>O que fazer em cada dia:</h3>
+
+<table>
+  <thead>
+    <tr><th>Dia</th><th>Canal</th><th>Tipo de Conteúdo</th><th>Objetivo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>D-21</td><td>Feed + Stories</td><td>Pergunta provocativa</td><td>Identificação com o problema</td></tr>
+    <tr><td>D-19</td><td>Feed</td><td>Post de dor — "por que a maioria falha"</td><td>Construir autoridade sobre o problema</td></tr>
+    <tr><td>D-17</td><td>Stories</td><td>Enquete / caixinha de perguntas</td><td>Engajamento + levantamento de objeções</td></tr>
+    <tr><td>D-15</td><td>Feed + Email</td><td>Bastidores vagos — "estou preparando algo"</td><td>Criar antecipação sem revelar</td></tr>
+    <tr><td>D-14</td><td>Stories + WhatsApp</td><td>Anúncio da lista VIP</td><td>Captação para lista de espera</td></tr>
+  </tbody>
+</table>
+
+<h3>Copy Real — Post de D-21 (Pergunta Provocativa)</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#a78bfa;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 8px">📱 FEED — D-21</p>
+<p style="color:#e2e8f0;margin:0"><strong>Por que a maioria das pessoas que tenta lançar um produto digital desiste antes do primeiro resultado?</strong></p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Não é falta de esforço. Vi pessoas trabalhar 14h por dia durante meses sem faturar R$1.</p>
+<p style="color:#e2e8f0;margin:0">Não é falta de produto. Vi produtos excelentes que não venderam nada.</p>
+<p style="color:#e2e8f0;margin:0">A resposta que encontrei me surpreendeu.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Me conta nos comentários: qual foi o maior obstáculo que você enfrentou (ou imagina enfrentar) no seu primeiro lançamento?</p>
+<br/>
+<p style="color:#a0aec0;font-size:13px;margin:0">#lancamento #produtodigital #marketingdigital #empreendedorismo</p>
+</div>
+
+<h3>Por que esse copy funciona?</h3>
 <ul>
-  <li><strong>PLC 1:</strong> Oportunidade — "Existe um jeito melhor"</li>
-  <li><strong>PLC 2:</strong> Transformação — "Veja quem já fez"</li>
-  <li><strong>PLC 3:</strong> Você precisa disso — Proof + Antecipação da abertura</li>
+  <li><strong>Paradoxo inicial:</strong> "desiste antes do primeiro resultado" cria dissonância — a pessoa quer saber por quê</li>
+  <li><strong>Duas falsas respostas primeiro:</strong> derruba objeções que a audiência teria ("mas eu me esforço...") antes de apresentar a real</li>
+  <li><strong>CTA de engajamento:</strong> a pergunta nos comentários alimenta o algoritmo E coleta dados de objeção reais para usar no PLC</li>
 </ul>
 
-<h3>Fase 3: Abertura do Carrinho (Dias 1-3)</h3>
-<p>Launch day tem energia de evento. Email + WhatsApp + Instagram simultâneos. Stories em tempo real. Live de abertura se possível.</p>
+<h3>Copy Real — Stories D-17 (Caixinha)</h3>
 
-<h3>Fase 4: Urgência + Fechamento (Últimos 2 dias)</h3>
-<p>Escassez real, deadline hard, última chance. A receita se concentra aqui: 60-70% das vendas ocorrem nas últimas 24h.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#a78bfa;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 8px">📲 STORIES — D-17</p>
+<p style="color:#e2e8f0;margin:0"><strong>Slide 1:</strong> Estou pesquisando algo importante e preciso da sua honestidade.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0"><strong>Slide 2 (caixinha):</strong> "Se você pudesse resolver UMA coisa no seu negócio online hoje, o que seria?"</p>
+<br/>
+<p style="color:#e2e8f0;margin:0"><strong>Slide 3 (após respostas):</strong> Obrigado pelas respostas. Percebi um padrão que me deixou impressionado. Semana que vem vou compartilhar o que encontrei — e acho que vai mudar sua perspectiva.</p>
+</div>
 
-<blockquote>O segredo da PLF não é o roteiro. É o estado emocional que você cria na audiência ao longo das semanas. Cada mensagem é uma peça de uma história que termina com a compra como ato natural.</blockquote>`
+<p><strong>O que fazer com as respostas:</strong> leia todas. As objeções que aparecem mais vão direto nos seus PLCs. Se 40 pessoas disseram "não sei como atrair clientes", esse é o tema do PLC 1.</p>
+
+<hr/>
+
+<h2>FASE 2 — Pré-Lançamento (D-14 a D-1): Os 3 PLCs</h2>
+<h3>Objetivo: educar, criar desejo, eliminar objeções</h3>
+
+<p>PLC = Pre-Launch Content. São 3 peças de conteúdo longo (vídeo de 20-40min ou texto longo) que ensinam algo de valor real — e ao mesmo tempo pré-vendem o produto sem aparecer com uma oferta explícita.</p>
+
+<h3>Estrutura dos 3 PLCs</h3>
+
+<table>
+  <thead>
+    <tr><th>PLC</th><th>Dia</th><th>Tema</th><th>Objeção que elimina</th><th>Gancho para o próximo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>PLC 1</td><td>D-14</td><td>A Oportunidade</td><td>"Isso funciona?"</td><td>"No próximo vou mostrar quem já fez"</td></tr>
+    <tr><td>PLC 2</td><td>D-9</td><td>A Transformação</td><td>"Funciona pra mim especificamente?"</td><td>"No próximo revelarei o mecanismo secreto"</td></tr>
+    <tr><td>PLC 3</td><td>D-5</td><td>O Mecanismo</td><td>"Eu consigo implementar?"</td><td>"Na próxima semana abre — avise um amigo"</td></tr>
+  </tbody>
+</table>
+
+<h3>Anatomia do PLC 1 — Roteiro Completo (Vídeo de 25 min)</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#34d399;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 8px">🎬 PLC 1 — ROTEIRO (adapte para seu nicho)</p>
+
+<p style="color:#e2e8f0;margin:0"><strong>[0:00 - 0:30] GANCHO</strong><br/>
+"Nos próximos 25 minutos vou te mostrar por que a maioria das pessoas que tenta lançar online está cometendo um erro que eu mesmo cometi — e que me custou [X meses / R$ Y]. Fica até o final porque vou te dar [entregável concreto]."</p>
+<br/>
+<p style="color:#e2e8f0;margin:0"><strong>[0:30 - 3:00] PROBLEMA AMPLIFICADO</strong><br/>
+"Sabe aquela sensação de trabalhar muito, gerar conteúdo todo dia, ter seguidores... e mesmo assim não conseguir converter em renda consistente? Isso tem um nome: é o Paradoxo do Esforço Sem Sistema."</p>
+<br/>
+<p style="color:#e2e8f0;margin:0"><strong>[3:00 - 8:00] A OPORTUNIDADE (Virada)</strong><br/>
+"Mas existe uma janela de oportunidade que a maioria ignora. Em [nicho], [dado específico que valida a oportunidade]. Quem aprender a acessar essa janela primeiro, vai [resultado desejado]."</p>
+<br/>
+<p style="color:#e2e8f0;margin:0"><strong>[8:00 - 20:00] CONTEÚDO DE VALOR REAL</strong><br/>
+Ensine 3-5 conceitos/táticas genuinamente úteis. Não retenha o melhor — entregue valor real. Quanto mais a pessoa aprender aqui, mais ela vai querer o produto completo.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0"><strong>[20:00 - 23:00] PROVA SOCIAL + AUTORIDADE</strong><br/>
+"[Nome do aluno] aplicou exatamente isso e em [tempo] conseguiu [resultado específico]. Vou mostrar exatamente o que ele fez diferente."</p>
+<br/>
+<p style="color:#e2e8f0;margin:0"><strong>[23:00 - 25:00] GANCHO PARA PLC 2</strong><br/>
+"Semana que vem vou publicar o PLC 2 onde vou mostrar [transformação específica de alunos reais]. Se você quer ser avisado primeiro, entre na lista VIP no link abaixo."</p>
+</div>
+
+<h3>Email de Lançamento do PLC 1</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#a78bfa;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 8px">📧 EMAIL — D-14 (lançamento PLC 1)</p>
+<p style="color:#e2e8f0;margin:0"><strong>Assunto:</strong> Você está cometendo esse erro? (vídeo novo)</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Olá, [Nome].</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Publiquei hoje um vídeo que levei semanas para preparar.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Nele, revelo o motivo pelo qual [resultado que a audiência quer] é muito mais simples do que parece — e por que a maioria das pessoas está procurando no lugar errado.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">São 25 minutos. Sem enrolação. Com exemplos reais.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">→ [LINK DO VÍDEO]</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Esse é o primeiro de três vídeos que vou publicar nas próximas semanas. O segundo, que sai em 5 dias, vai ser ainda mais impactante.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Assista e me conta o que achou.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">— [Seu nome]</p>
+</div>
+
+<hr/>
+
+<h2>FASE 3 — Abertura do Carrinho (D-1 a D+3)</h2>
+<h3>Objetivo: converter o desejo construído em ação imediata</h3>
+
+<h3>O roteiro das primeiras 24 horas — hora a hora</h3>
+
+<table>
+  <thead>
+    <tr><th>Horário</th><th>Canal</th><th>Ação</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>08h00</td><td>Email</td><td>Email de abertura — "Abriu! Acesso aqui"</td></tr>
+    <tr><td>08h05</td><td>WhatsApp</td><td>Broadcast — link direto para a página</td></tr>
+    <tr><td>08h30</td><td>Stories</td><td>Story ao vivo mostrando a abertura + primeiras confirmações</td></tr>
+    <tr><td>10h00</td><td>Feed</td><td>Post de abertura com print das primeiras vendas</td></tr>
+    <tr><td>19h00</td><td>Stories</td><td>"X pessoas já entraram. Bônus exclusivo para quem entrar hoje ainda"</td></tr>
+    <tr><td>21h00</td><td>Email</td><td>Email de follow-up — "Ainda dá tempo hoje"</td></tr>
+    <tr><td>22h00</td><td>WhatsApp</td><td>Mensagem de escassez — "Encerra o bônus à meia-noite"</td></tr>
+  </tbody>
+</table>
+
+<h3>Email de Abertura do Carrinho (D+0, 8h00)</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#a78bfa;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 8px">📧 EMAIL DE ABERTURA</p>
+<p style="color:#e2e8f0;margin:0"><strong>Assunto:</strong> Abriu ✅ — [Nome do Produto] está disponível</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Chegou o dia, [Nome].</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">A partir de agora, o [Nome do Produto] está aberto para os alunos que estiveram aqui durante as últimas semanas.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Você vai aprender exatamente como [promessa principal do produto].</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Mas atenção: o carrinho fecha na [data/hora]. E os primeiros [X] alunos a entrarem hoje ganham [bônus exclusivo de abertura].</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">→ [BOTÃO: QUERO ENTRAR AGORA]</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Qualquer dúvida, responde esse email. Lerei pessoalmente.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">— [Seu nome]</p>
+</div>
+
+<hr/>
+
+<h2>FASE 4 — Urgência e Fechamento (Últimas 24h)</h2>
+<h3>Por que 60-70% das vendas acontecem nas últimas 24 horas</h3>
+
+<p>Kahneman provou: o medo de perda pesa 2,5x mais que o desejo de ganho. A urgência real ativa o sistema límbico — a parte do cérebro que toma decisões. Sem deadline, a decisão fica para "depois". E depois nunca chega.</p>
+
+<h3>A Sequência dos Últimos 90 minutos</h3>
+
+<table>
+  <thead>
+    <tr><th>Horário</th><th>Canal</th><th>Mensagem</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Meia-noite - 4h</td><td>Email</td><td>"Encerra em 4 horas" — tom calmo, factual</td></tr>
+    <tr><td>Meia-noite - 1h</td><td>WhatsApp</td><td>"Última hora. [Link]"</td></tr>
+    <tr><td>Meia-noite - 30min</td><td>Stories</td><td>Contador ao vivo no stories</td></tr>
+    <tr><td>Meia-noite</td><td>Todos</td><td>"Carrinho fechado. Lista para próxima turma: [link]"</td></tr>
+  </tbody>
+</table>
+
+<h3>WhatsApp de Fechamento (Últimas 2 horas)</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#a78bfa;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 8px">📱 WHATSAPP — ÚLTIMAS 2H</p>
+<p style="color:#e2e8f0;margin:0">[Nome], o carrinho do [Produto] fecha em 2 horas.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Se você está em dúvida, me responde aqui — a gente conversa.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Se você já decidiu que não é pra você, tudo bem — só me faz saber pra eu não te incomodar mais com isso.</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">Mas se você realmente quer [resultado principal] e está só esperando... o que está te travando?</p>
+<br/>
+<p style="color:#e2e8f0;margin:0">→ [LINK DE COMPRA]</p>
+</div>
+
+<p><strong>Por que esse copy de fechamento funciona:</strong> Ele não empurra — faz uma pergunta. Abre diálogo. Pessoas que respondem com objeções são a oportunidade de venda mais quente que existe. Cada resposta é uma conversa de vendas 1:1.</p>
+
+<hr/>
+
+<h2>Calendário Resumido: Os 21 Dias em Uma Tabela</h2>
+
+<table>
+  <thead>
+    <tr><th>Semana</th><th>Fase</th><th>Foco Principal</th><th>KPI para acompanhar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Semana 1 (D-21 a D-14)</td><td>PPL</td><td>Despertar o problema</td><td>Comentários, respostas de stories, DMs</td></tr>
+    <tr><td>Semana 2 (D-14 a D-7)</td><td>PL — PLCs 1 e 2</td><td>Educação + prova social</td><td>Views de vídeo, opt-ins na lista VIP</td></tr>
+    <tr><td>Semana 3 (D-7 a D-0)</td><td>PL — PLC 3</td><td>Mecanismo + antecipação</td><td>Perguntas sobre o produto, "quando abre?"</td></tr>
+    <tr><td>Dias 1-3</td><td>Abertura</td><td>Converter desejo em compra</td><td>Vendas, taxa de conversão da lista</td></tr>
+    <tr><td>Dias 4-5</td><td>Fechamento</td><td>Urgência real</td><td>60-70% do total de vendas aqui</td></tr>
+  </tbody>
+</table>
+
+<h2>O Erro Mais Comum: Encurtar a Fase de PPL</h2>
+
+<p>A maioria das pessoas pula direto para o PLC 1. O problema? A audiência ainda não está no estado emocional certo para receber o conteúdo. A fase PPL não é "perda de tempo" — é o aquecimento que determina a temperatura do carrinho.</p>
+
+<p><strong>Referência real:</strong> Lançamentos que pulam a PPL têm, em média, 40% menos conversão na fase de abertura do que lançamentos que respeitam as 3 semanas completas. (Benchmark PLF Brasil, 2023)</p>`
           },
           {
             id: "plf-2",
             title: "Construindo Sua Lista de Espera",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Páginas de captura de alta conversão", "Lead magnet irresistível", "Sequência de e-mail de pré-lançamento"],
-            content: `<h2>A Lista é Seu Ativo Mais Valioso</h2>
-<p>Empresas que dependem 100% de redes sociais estão sempre um algoritmo de mudança de perderem tudo. Sua lista de emails e WhatsApp é o único ativo digital que você realmente controla.</p>
+            keyPoints: ["A copy completa de uma landing page de lista VIP — pronta para adaptar", "Os 7 emails da sequência pré-lançamento com assuntos e corpo real", "Como escolher o lead magnet certo para seu nicho (com exemplos)", "WhatsApp + Instagram: scripts de captação para cada canal"],
+            exercise: "Escreva hoje o copy da sua landing page de lista VIP usando o template desta aula. Preencha as lacunas com informações do seu produto e nicho. Meta: página no ar em 48h. Copie a estrutura exatamente — não tente inventar agora. Melhore depois, com dados.",
+            content: `<h2>A Lista é Seu Ativo Mais Valioso — E Essa Página é a Porta de Entrada</h2>
 
-<h3>Taxas de Conversão de Referência</h3>
-<ul>
-  <li>Landing Page genérica: 15-25%</li>
-  <li>Landing Page com lead magnet forte: 35-55%</li>
-  <li>Landing Page de lista VIP (produto aguardado): 45-70%</li>
-</ul>
+<p>Redes sociais emprestam audiência. Lista é propriedade. Um post pode não ser visto por 90% dos seus seguidores. Um email vai direto para a caixa de entrada de 100% da sua lista.</p>
 
-<h3>O Lead Magnet Irresistível</h3>
-<p>Um lead magnet funciona quando a percepção de valor é maior que o "custo" (email/telefone). Ele deve:</p>
-<ul>
-  <li>Resolver um problema específico em 10-15 minutos</li>
-  <li>Gerar resultado imediato e mensurável</li>
-  <li>Ser o primeiro passo para o produto principal</li>
-</ul>
-
-<p>Tipos por conversão (maior para menor):</p>
+<p>Para um lançamento PLF, você precisa de dois tipos de lista:</p>
 <ol>
-  <li>Mini-curso em vídeo (3-5 aulas curtas)</li>
-  <li>Checklist ou template preenchível</li>
-  <li>Calculadora ou ferramenta</li>
-  <li>Ebook ou guia PDF</li>
-  <li>Webinar gravado</li>
+  <li><strong>Lista de leads frios</strong> — capturada pelo lead magnet, aquecida pela sequência</li>
+  <li><strong>Lista VIP de pré-lançamento</strong> — pessoas que pediram explicitamente para ser avisadas quando o produto abrir</li>
 </ol>
 
-<h3>A Sequência de Emails de Pré-Lançamento</h3>
-<p>Após o opt-in, uma sequência de 7 emails ao longo de 14 dias:</p>
-<ul>
-  <li>Email 1 (imediato): Entrega o lead magnet + apresentação</li>
-  <li>Email 2 (dia 2): História de transformação</li>
-  <li>Email 3 (dia 4): Conteúdo de valor direto</li>
-  <li>Email 4 (dia 6): Prova social</li>
-  <li>Email 5 (dia 9): Objeção principal destruída</li>
-  <li>Email 6 (dia 12): Antecipação do lançamento</li>
-  <li>Email 7 (dia 14): "Abre amanhã"</li>
-</ul>`
+<p>A lista VIP converte 3-7x mais do que leads frios. Priorize construí-la.</p>
+
+<hr/>
+
+<h2>A Landing Page de Lista VIP — Copy Completo Pronto para Adaptar</h2>
+
+<p>Use esta estrutura exatamente. Cada seção tem uma função específica:</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#a78bfa;font-size:12px;font-weight:700;text-transform:uppercase;margin:0 0 8px">📄 TEMPLATE — LANDING PAGE VIP</p>
+
+<p style="color:#e2e8f0;margin:0 0 4px"><strong>[HEADLINE — Promessa em 1 linha]</strong></p>
+<p style="color:#a0aec0;font-size:13px;margin:0 0 16px">Exemplo: "Em breve: o método que gerou R$100k em 7 dias para 340 produtores digitais"</p>
+
+<p style="color:#e2e8f0;margin:0 0 4px"><strong>[SUBHEADLINE — Quem é para]</strong></p>
+<p style="color:#a0aec0;font-size:13px;margin:0 0 16px">Exemplo: "Para coaches, consultores e criadores de conteúdo que querem lançar seu primeiro produto digital sem precisar de uma audiência grande"</p>
+
+<p style="color:#e2e8f0;margin:0 0 4px"><strong>[3 BULLETS — O que a pessoa vai aprender/conseguir]</strong></p>
+<p style="color:#a0aec0;font-size:13px;margin:0 0 4px">✓ Como [resultado 1] mesmo que [objeção 1]</p>
+<p style="color:#a0aec0;font-size:13px;margin:0 0 4px">✓ O método de [resultado 2] que [diferenciador]</p>
+<p style="color:#a0aec0;font-size:13px;margin:0 0 16px">✓ Por que [crença limitante] é falso — e o que funciona de verdade</p>
+
+<p style="color:#e2e8f0;margin:0 0 4px"><strong>[FORMULÁRIO — Só email e nome]</strong></p>
+<p style="color:#a0aec0;font-size:13px;margin:0 0 16px">Campo: Nome | Campo: Email | Botão: "Quero ser avisado(a) primeiro"</p>
+
+<p style="color:#e2e8f0;margin:0 0 4px"><strong>[PROVA SOCIAL ABAIXO DO FORM]</strong></p>
+<p style="color:#a0aec0;font-size:13px;margin:0 0 16px">Exemplo: "Mais de 2.400 pessoas já estão na lista. Sem spam. Cancele quando quiser."</p>
+
+<p style="color:#e2e8f0;margin:0 0 4px"><strong>[AUTORIDADE — 2-3 linhas sobre quem você é]</strong></p>
+<p style="color:#a0aec0;font-size:13px;margin:0">Foco no resultado que você gerou para outros, não em diplomas. "Já ajudei X pessoas a conseguirem Y" converte mais que "Sou formado em Z".</p>
+</div>
+
+<h3>Taxas de conversão por tipo de página</h3>
+<table>
+  <thead>
+    <tr><th>Tipo de Landing Page</th><th>Conversão Típica</th><th>Quando usar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Genérica sem lead magnet</td><td>10-20%</td><td>Nunca — não use</td></tr>
+    <tr><td>Com lead magnet fraco</td><td>20-35%</td><td>Início de carreira</td></tr>
+    <tr><td>Lista VIP com contexto claro</td><td>40-60%</td><td>Lançamento PLF</td></tr>
+    <tr><td>Lead magnet forte + urgência</td><td>55-75%</td><td>Lançamentos avançados</td></tr>
+  </tbody>
+</table>
+
+<hr/>
+
+<h2>Escolhendo o Lead Magnet Certo</h2>
+
+<p>Um lead magnet funciona quando: <strong>percepção de valor &gt; custo percebido (fornecer email/telefone)</strong>.</p>
+
+<p>Regra de ouro: o lead magnet resolve 1 problema específico em 15 minutos ou menos, e é o primeiro passo natural para o produto principal.</p>
+
+<table>
+  <thead>
+    <tr><th>Formato</th><th>Conversão</th><th>Melhor para</th><th>Exemplo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Mini-curso em vídeo (3-5 aulas)</td><td>★★★★★</td><td>Qualquer nicho educacional</td><td>"5 aulas: Como criar seu primeiro produto em 7 dias"</td></tr>
+    <tr><td>Checklist preenchível</td><td>★★★★☆</td><td>Processos e produtividade</td><td>"Checklist de 47 pontos para lançar sem erro"</td></tr>
+    <tr><td>Template / Swipe file</td><td>★★★★☆</td><td>Copy, design, gestão</td><td>"11 emails de lançamento prontos para usar"</td></tr>
+    <tr><td>Calculadora ou ferramenta</td><td>★★★★☆</td><td>Finanças, métricas</td><td>"Calculadora: quanto você pode faturar no lançamento"</td></tr>
+    <tr><td>Ebook / PDF</td><td>★★★☆☆</td><td>Conteúdo denso e técnico</td><td>"O Guia de 30 páginas sobre [tema]"</td></tr>
+    <tr><td>Webinar gravado</td><td>★★★☆☆</td><td>Audiência morna/fria</td><td>"Masterclass: Como fazer seu primeiro R$10k online"</td></tr>
+  </tbody>
+</table>
+
+<hr/>
+
+<h2>A Sequência de 7 Emails Pré-Lançamento — Copy Completo</h2>
+
+<p>Após o opt-in, essa sequência roda automaticamente. Cada email tem uma função única. Não pule nem junte — a cadência importa.</p>
+
+<h3>Email 1 — Imediato (Entrega + Apresentação)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">ASSUNTO: Seu [lead magnet] chegou + uma coisa importante</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Olá, [Nome]! Aqui está o que você pediu: [LINK]<br/><br/>Mas antes de mergulhar nisso, quero que você saiba que nas próximas semanas vou compartilhar [X] coisas que aprendi sobre [tema] que mudaram completamente os resultados de quem aplica.<br/><br/>Você está na lista certa. Fique de olho na caixa de entrada.<br/><br/>— [Seu nome]</p>
+</div>
+
+<h3>Email 2 — Dia 2 (História de Transformação)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">ASSUNTO: O dia que tudo mudou (minha história)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Conta a história de como você chegou onde está. Inclua: o momento de dificuldade (relatable), a virada (o insight que mudou tudo), o resultado depois da virada. Termine com: "Nos próximos dias vou te mostrar exatamente o que aprendi nesse processo."</p>
+</div>
+
+<h3>Email 3 — Dia 4 (Conteúdo de Valor Puro)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">ASSUNTO: [Número] coisas que ninguém te conta sobre [tema]</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Entregue 3-5 insights genuínos e aplicáveis. Sem venda. Sem CTA para produto. O objetivo aqui é construir credibilidade através do valor real. A reciprocidade gerada aqui converte no dia de abertura.</p>
+</div>
+
+<h3>Email 4 — Dia 6 (Prova Social)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">ASSUNTO: O que [nome do aluno] conseguiu em [tempo]</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Compartilhe 1-2 casos de alunos com resultado específico e verificável. Se não tem alunos ainda: use seu próprio resultado ou faça um beta com 3-5 pessoas e use o resultado deles. Resultados sem especificidade não convencem. "Conseguiu resultados incríveis" não vale nada. "Faturou R$18.700 em 6 dias" converte.</p>
+</div>
+
+<h3>Email 5 — Dia 9 (Derrubando a Maior Objeção)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">ASSUNTO: "Mas eu não tenho audiência..." (a resposta honesta)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Identifique a objeção número 1 que apareceu nos comentários e stories da fase PPL. Escreva o assunto com ela. Destrua a objeção com lógica + exemplo real + reframe. Estrutura: "Eu entendo por que você pensa isso. Mas o que você não sabe é que... [revelação]. Prova disso é que... [caso]. Então o que bloqueia não é [objeção] — é [real problema que seu produto resolve]."</p>
+</div>
+
+<h3>Email 6 — Dia 12 (Antecipação)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">ASSUNTO: Tenho algo importante para te contar</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Em [X dias], vou abrir o [nome do produto] para um grupo restrito. Como você está na lista VIP, vai ter acesso antes de todo mundo — e ao bônus exclusivo que só quem está aqui vai receber.<br/><br/>Não vou revelar tudo ainda. Mas posso dizer que vai incluir [preview do conteúdo mais valioso].<br/><br/>Fique de olho na sua caixa de entrada.</p>
+</div>
+
+<h3>Email 7 — Dia 14 (Véspera de Abertura)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">ASSUNTO: Abre amanhã às 8h ✅</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Amanhã às 8h você vai receber um email com o link de acesso ao [produto].<br/><br/>Para você que está aqui desde o começo: as primeiras [X] pessoas a entrarem receberão [bônus]. Depois disso, o bônus não estará mais disponível.<br/><br/>Prepare-se para amanhã.<br/><br/>— [Seu nome]<br/><br/>P.S. Se tiver alguma dúvida sobre o programa, responde esse email. Estou aqui.</p>
+</div>
+
+<hr/>
+
+<h2>Scripts de Captação por Canal</h2>
+
+<h3>Instagram Stories — Sequência de 3 slides</h3>
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">📲 STORIES — CAPTAÇÃO VIP</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0"><strong>Slide 1:</strong> "Estou preparando algo que não consigo parar de pensar."<br/><br/><strong>Slide 2:</strong> "Em [X semanas] vou abrir [nome do produto] para um grupo pequeno. Quem entrar na lista VIP terá acesso antes de todo mundo + bônus que não vou oferecer em nenhum outro lugar."<br/><br/><strong>Slide 3 (link sticker):</strong> "Entre na lista ↑ São só nome e email. Sem spam." [Link para landing page VIP]</p>
+</div>
+
+<h3>WhatsApp — Mensagem de captação para contatos quentes</h3>
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:16px 20px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">📱 WHATSAPP — CONTATOS QUENTES</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Oi [Nome]! Tô finalizando um projeto novo sobre [tema] e pensei em você especificamente. Antes de abrir pro público, vou avisar uma lista pequena de pessoas em quem confio. Posso te colocar? Se sim, me manda seu email que coloco na lista VIP. Sem compromisso nenhum."</p>
+</div>
+
+<hr/>
+
+<h2>Benchmark: O Que é Uma Lista Boa Antes de Abrir?</h2>
+
+<table>
+  <thead>
+    <tr><th>Tamanho da lista VIP</th><th>Expectativa de vendas (2-4% conversão)</th><th>O que fazer</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Menos de 200 pessoas</td><td>4-8 vendas</td><td>Semente ou beta fechado — não PLF completo</td></tr>
+    <tr><td>200-500 pessoas</td><td>8-20 vendas</td><td>PLF simplificado — 2 PLCs em vez de 3</td></tr>
+    <tr><td>500-2.000 pessoas</td><td>20-80 vendas</td><td>PLF completo com tráfego pago modesto</td></tr>
+    <tr><td>2.000+ pessoas</td><td>80+ vendas</td><td>PLF completo com investimento em ads</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Insight crítico:</strong> Qualidade supera quantidade. Uma lista de 300 pessoas que passou pela sequência de 7 emails completa converte mais do que uma lista de 3.000 pessoas frias. Não abra o carrinho antes de completar a sequência — por mais impaciente que você esteja.</p>`
           }
         ]
       },
