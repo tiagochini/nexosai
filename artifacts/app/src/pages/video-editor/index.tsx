@@ -86,6 +86,43 @@ const FRAME_STEP = 1 / 30; // 30fps frame step
 
 const PROJECT_SAVE_KEY = "nexos-video-project";
 
+// ── Persisted project shape ────────────────────────────────────────────────────
+
+interface SavedClipMeta {
+  id: string;
+  name: string;
+  duration: number;
+  inPoint: number;
+  outPoint: number;
+  url: string | null; // null = was a local blob — needs re-add
+}
+
+interface SavedProject {
+  version: 2;
+  projectTitle: string;
+  projectDescription: string;
+  clips: SavedClipMeta[];
+  activeClipId: string | null;
+  overlays: TextOverlay[];
+  captions: CaptionLine[];
+  narrationVolume: number;
+  narrationDelay: number;
+  bgMusicVolume: number;
+  ambientVolume: number;
+  tab: Tab;
+  savedAt: string;
+}
+
+function loadSavedProject(): SavedProject | null {
+  try {
+    const raw = localStorage.getItem(PROJECT_SAVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SavedProject>;
+    if (parsed.version !== 2) return null; // ignore old format
+    return parsed as SavedProject;
+  } catch { return null; }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function VideoEditorPage() {
@@ -93,9 +130,22 @@ export default function VideoEditorPage() {
   const params = new URLSearchParams(search);
   const recordingId = params.get("recordingId") ?? "";
 
+  // ── Restore persisted project (lazy — runs once at module init) ────────────
+  const _saved = loadSavedProject();
+
   // ── Clips ──────────────────────────────────────────────────────────────────
-  const [clips, setClips] = useState<Clip[]>([]);
-  const [activeClipId, setActiveClipId] = useState<string | null>(null);
+  const [clips, setClips] = useState<Clip[]>(() => {
+    if (!_saved?.clips?.length) return [];
+    return _saved.clips.map(c => ({
+      id: c.id,
+      name: c.name,
+      url: c.url ?? "", // empty = local file was lost; shown as placeholder
+      duration: c.duration,
+      inPoint: c.inPoint,
+      outPoint: c.outPoint,
+    }));
+  });
+  const [activeClipId, setActiveClipId] = useState<string | null>(() => _saved?.activeClipId ?? null);
   const activeClip = clips.find(c => c.id === activeClipId) ?? null;
 
   // ── Playback ───────────────────────────────────────────────────────────────
@@ -105,13 +155,14 @@ export default function VideoEditorPage() {
   const [muted, setMuted] = useState(false);
 
   // ── UI ─────────────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<Tab>("clips");
+  const [tab, setTab] = useState<Tab>(() => _saved?.tab ?? "clips");
   const [thumbnailUrl, setThumbnailUrl] = useState<string>("");
-  const [projectTitle, setProjectTitle] = useState("Meu Vídeo");
-  const [projectDescription, setProjectDescription] = useState("");
+  const [projectTitle, setProjectTitle] = useState(() => _saved?.projectTitle ?? "Meu Vídeo");
+  const [projectDescription, setProjectDescription] = useState(() => _saved?.projectDescription ?? "");
+  const [autoSavedAt, setAutoSavedAt] = useState<string | null>(() => _saved?.savedAt ?? null);
 
   // ── Text overlays ──────────────────────────────────────────────────────────
-  const [overlays, setOverlays] = useState<TextOverlay[]>([]);
+  const [overlays, setOverlays] = useState<TextOverlay[]>(() => _saved?.overlays ?? []);
   const [newOverlayText, setNewOverlayText] = useState("");
   const [newOverlayPos, setNewOverlayPos] = useState<TextOverlay["position"]>("bottom");
   const [newOverlayStyle, setNewOverlayStyle] = useState<TextOverlay["style"]>("caption");
@@ -119,19 +170,19 @@ export default function VideoEditorPage() {
   const [newOverlayEnd, setNewOverlayEnd] = useState(5);
 
   // ── Captions ───────────────────────────────────────────────────────────────
-  const [captions, setCaptions] = useState<CaptionLine[]>([]);
+  const [captions, setCaptions] = useState<CaptionLine[]>(() => _saved?.captions ?? []);
   const [captionLang, setCaptionLang] = useState("pt-BR");
   const [generatingCaptions, setGeneratingCaptions] = useState(false);
   const [showCaptions, setShowCaptions] = useState(true);
 
   // ── Audio ──────────────────────────────────────────────────────────────────
   const [bgMusicFile, setBgMusicFile] = useState<File | null>(null);
-  const [bgMusicVolume, setBgMusicVolume] = useState(0.3);
+  const [bgMusicVolume, setBgMusicVolume] = useState(() => _saved?.bgMusicVolume ?? 0.3);
   const [ambientFile, setAmbientFile] = useState<File | null>(null);
-  const [ambientVolume, setAmbientVolume] = useState(0.2);
+  const [ambientVolume, setAmbientVolume] = useState(() => _saved?.ambientVolume ?? 0.2);
   const [narrationFile, setNarrationFile] = useState<File | null>(null);
-  const [narrationVolume, setNarrationVolume] = useState(0.9);
-  const [narrationDelay, setNarrationDelay] = useState(0);
+  const [narrationVolume, setNarrationVolume] = useState(() => _saved?.narrationVolume ?? 0.9);
+  const [narrationDelay, setNarrationDelay] = useState(() => _saved?.narrationDelay ?? 0);
 
   // ── Narration recording ────────────────────────────────────────────────────
   const [narrationMode, setNarrationMode] = useState<"upload" | "record">("upload");
@@ -270,25 +321,90 @@ export default function VideoEditorPage() {
     })();
   }, [recordingId]);
 
+  // ── Auto-save on every meaningful state change (debounced 2s) ───────────────
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      const state: SavedProject = {
+        version: 2,
+        projectTitle,
+        projectDescription,
+        clips: clips.map(c => ({
+          id: c.id,
+          name: c.name,
+          duration: c.duration,
+          inPoint: c.inPoint,
+          outPoint: c.outPoint,
+          url: c.url.startsWith("blob:") ? null : c.url || null,
+        })),
+        activeClipId,
+        overlays,
+        captions,
+        narrationVolume,
+        narrationDelay,
+        bgMusicVolume,
+        ambientVolume,
+        tab,
+        savedAt: new Date().toISOString(),
+      };
+      try {
+        localStorage.setItem(PROJECT_SAVE_KEY, JSON.stringify(state));
+        setAutoSavedAt(state.savedAt);
+      } catch { /* storage full — silent */ }
+    }, 2000);
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [projectTitle, projectDescription, clips, activeClipId, overlays, captions,
+      narrationVolume, narrationDelay, bgMusicVolume, ambientVolume, tab]);
+
   // ── Save / load project ────────────────────────────────────────────────────
   function saveProject() {
-    const state = {
+    const state: SavedProject = {
+      version: 2,
       projectTitle,
       projectDescription,
+      clips: clips.map(c => ({
+        id: c.id,
+        name: c.name,
+        duration: c.duration,
+        inPoint: c.inPoint,
+        outPoint: c.outPoint,
+        url: c.url.startsWith("blob:") ? null : c.url || null,
+      })),
+      activeClipId,
       overlays,
       captions,
       narrationVolume,
       narrationDelay,
       bgMusicVolume,
       ambientVolume,
+      tab,
       savedAt: new Date().toISOString(),
     };
     try {
       localStorage.setItem(PROJECT_SAVE_KEY, JSON.stringify(state));
-      toast.success("Projeto salvo localmente");
+      setAutoSavedAt(state.savedAt);
+      toast.success("Projeto salvo");
     } catch {
       toast.error("Erro ao salvar projeto");
     }
+  }
+
+  function clearSavedProject() {
+    try { localStorage.removeItem(PROJECT_SAVE_KEY); } catch { /* noop */ }
+    setClips([]);
+    setActiveClipId(null);
+    setOverlays([]);
+    setCaptions([]);
+    setProjectTitle("Meu Vídeo");
+    setProjectDescription("");
+    setNarrationVolume(0.9);
+    setNarrationDelay(0);
+    setBgMusicVolume(0.3);
+    setAmbientVolume(0.2);
+    setTab("clips");
+    setAutoSavedAt(null);
+    toast.success("Projeto limpo");
   }
 
   function downloadProjectFile() {
@@ -831,9 +947,23 @@ export default function VideoEditorPage() {
               className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1">
               <Copy className="h-3.5 w-3.5" />Exportar JSON
             </Button>
-            <Badge variant="outline" className="font-mono text-[10px] rounded-none border-primary/40 text-primary hidden md:flex">
-              {clips.length} clipe{clips.length !== 1 ? "s" : ""} · {fmtTime(totalDuration)}
-            </Badge>
+            {clips.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => {
+                if (confirm("Limpar projeto e começar do zero?")) clearSavedProject();
+              }} className="rounded-none font-mono text-[10px] uppercase tracking-widest px-2 gap-1 text-muted-foreground hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" />Novo
+              </Button>
+            )}
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono text-[10px] rounded-none border-primary/40 text-primary hidden md:flex">
+                {clips.length} clipe{clips.length !== 1 ? "s" : ""} · {fmtTime(totalDuration)}
+              </Badge>
+              {autoSavedAt && (
+                <span className="font-mono text-[9px] text-muted-foreground/50 hidden md:block">
+                  ✓ auto-salvo {new Date(autoSavedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1230,28 +1360,50 @@ export default function VideoEditorPage() {
                 )}
 
                 <div className="space-y-2">
-                  {clips.map(clip => (
-                    <div key={clip.id} onClick={() => setActiveClipId(clip.id)}
-                      className={`border p-3 cursor-pointer transition-all flex items-center gap-3 ${
-                        clip.id === activeClipId ? "border-primary/60 bg-primary/5" : "border-border/40 bg-card/20 hover:border-border/70"
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                        <Film className="h-4 w-4 text-primary/60" />
+                  {clips.map(clip => {
+                    const isLost = !clip.url; // local file URL lost after page close
+                    return (
+                      <div key={clip.id}
+                        onClick={() => !isLost && setActiveClipId(clip.id)}
+                        className={`border p-3 transition-all flex items-center gap-3 ${
+                          isLost
+                            ? "border-amber-500/30 bg-amber-500/5 cursor-default opacity-70"
+                            : clip.id === activeClipId
+                              ? "border-primary/60 bg-primary/5 cursor-pointer"
+                              : "border-border/40 bg-card/20 hover:border-border/70 cursor-pointer"
+                        }`}
+                      >
+                        <div className={`w-8 h-8 border flex items-center justify-center shrink-0 ${
+                          isLost ? "bg-amber-500/10 border-amber-500/20" : "bg-primary/10 border-primary/20"
+                        }`}>
+                          {isLost ? <Upload className="h-4 w-4 text-amber-400/60" /> : <Film className="h-4 w-4 text-primary/60" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-mono text-[11px] text-foreground truncate">{clip.name}</p>
+                          {isLost ? (
+                            <p className="font-mono text-[10px] text-amber-400/70">
+                              arquivo local — re-adicione para editar
+                            </p>
+                          ) : (
+                            <p className="font-mono text-[10px] text-muted-foreground">
+                              {fmtTime(clip.inPoint)} → {fmtTime(clip.outPoint)}
+                              {clip.duration > 0 && ` · ${fmtTime(clip.outPoint - clip.inPoint)}`}
+                            </p>
+                          )}
+                        </div>
+                        {isLost && (
+                          <button onClick={e => { e.stopPropagation(); localFileRef.current?.click(); }}
+                            className="text-[10px] font-mono text-amber-400/70 hover:text-amber-400 transition-colors border border-amber-500/30 px-1.5 py-0.5 shrink-0">
+                            + ADD
+                          </button>
+                        )}
+                        <button onClick={e => { e.stopPropagation(); removeClip(clip.id); }}
+                          className="text-muted-foreground hover:text-destructive transition-colors shrink-0">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-mono text-[11px] text-foreground truncate">{clip.name}</p>
-                        <p className="font-mono text-[10px] text-muted-foreground">
-                          {fmtTime(clip.inPoint)} → {fmtTime(clip.outPoint)}
-                          {clip.duration > 0 && ` · ${fmtTime(clip.outPoint - clip.inPoint)}`}
-                        </p>
-                      </div>
-                      <button onClick={e => { e.stopPropagation(); removeClip(clip.id); }}
-                        className="text-muted-foreground hover:text-destructive transition-colors shrink-0">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Thumbnail */}
