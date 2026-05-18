@@ -56,31 +56,86 @@ export const CURRICULUM: Module[] = [
             duration: "12 min",
             type: "text",
             glossaryTerms: ["algoritmo-de-recomendacao", "hook-rate", "completion-rate"],
-            keyPoints: ["Atenção como recurso escasso", "A guerra pelos eyeballs", "Por que 8 segundos é tudo que você tem"],
-            content: `<h2>A Moeda do Século XXI</h2>
-<p>Em 1971, o economista Herbert Simon previu algo que poucos entenderam: "A riqueza de informação cria pobreza de atenção." Cinquenta anos depois, vivemos exatamente isso.</p>
+            keyPoints: ["A fórmula prática do gancho em 3 segundos", "5 gatilhos de atenção com copy real pronto", "Como testar se seu hook vai parar o scroll antes de postar"],
+            exercise: "Pegue seu último post ou reel. Leia apenas a primeira frase ou assista apenas os primeiros 3 segundos. Se você não soubesse que fez esse conteúdo, scrollaria? Se a resposta for 'talvez', reescreva o gancho usando um dos 5 modelos desta aula antes de publicar o próximo.",
+            content: `<h2>Atenção: A Habilidade Que Decide Tudo Antes Mesmo de Você Falar</h2>
 
-<p>Cada scroll no Instagram, cada story assistido, cada vídeo pausado representa uma micro-decisão humana. E essas micro-decisões somadas constroem ou destroem campanhas inteiras.</p>
+<p>Você pode ter o melhor produto do mercado, o método mais transformador, a oferta mais irresistível — e nenhum desses fatores vai importar se a pessoa rolar o dedo antes de chegar até eles.</p>
 
-<h3>Os Três Atores da Economia da Atenção</h3>
+<p>O span médio de atenção em redes sociais é <strong>1,7 segundos</strong> antes da decisão de parar ou continuar. Não 8 segundos — 1,7. Esse é o tempo real que você tem para fazer alguém parar.</p>
+
+<h2>A Fórmula Prática: Atenção = Curiosidade × Relevância ÷ Custo Cognitivo</h2>
+
+<p>Vamos tornar isso acionável:</p>
 <ul>
-  <li><strong>Plataformas:</strong> vendem atenção do usuário para anunciantes</li>
-  <li><strong>Criadores:</strong> capturam atenção para monetizar depois</li>
-  <li><strong>Usuários:</strong> trocam atenção por entretenimento, informação e conexão</li>
+  <li><strong>Curiosidade:</strong> o cérebro percebe uma lacuna de informação e quer fechar</li>
+  <li><strong>Relevância:</strong> a pessoa se enxerga no conteúdo ("isso é pra mim")</li>
+  <li><strong>Custo Cognitivo:</strong> quanto esforço mental precisa para consumir</li>
 </ul>
 
-<blockquote>O usuário não está consumindo conteúdo. Ele está gastando o recurso mais finito que possui: tempo consciente.</blockquote>
+<p>O objetivo é maximizar os dois primeiros e minimizar o terceiro. Na prática: hook direto, linguagem simples, contexto imediato.</p>
 
-<h3>O Colapso do Span de Atenção</h3>
-<p>Estudos da Microsoft (2015) mostraram que o span de atenção humana caiu de 12 segundos (2000) para 8 segundos. O de um peixinho dourado é 9 segundos.</p>
+<h2>Os 5 Gatilhos de Atenção — Com Copy Real</h2>
 
-<p>O que isso significa na prática? Que você tem <em>menos de 3 segundos</em> para capturar atenção antes que o dedo role para o próximo conteúdo.</p>
+<p>Cada um desses padrões foi validado com milhões de impressões. Use-os como base, não como fórmula rígida.</p>
 
-<h3>A Fórmula NexOS de Atenção</h3>
-<p>No NexOS, modelamos atenção assim:</p>
-<code>Atenção = Curiosidade × Relevância ÷ Custo Cognitivo</code>
+<h3>Gatilho 1: Curiosidade por Gap de Informação</h3>
+<p>Revela que existe uma informação que a pessoa não tem — e que muda algo importante.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY DE EXEMPLO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Tem uma coisa que os maiores lançamentos do Brasil fazem que ninguém fala publicamente. Não é tráfego, não é lista, não é copy. É isso aqui →"</p>
+</div>
+<p><strong>Por que funciona:</strong> cria suspense + invalida as respostas óbvias que a pessoa já tinha (tráfego, lista, copy), forçando-a a continuar para descobrir a real.</p>
 
-<p>Maximizar a numeradora e minimizar o denominador é a ciência por trás de todo copy de alto impacto que você verá neste curso.</p>`
+<h3>Gatilho 2: Identificação com Dor</h3>
+<p>A pessoa se vê no que está sendo descrito e sente que você a entende.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY DE EXEMPLO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Você passa semanas criando conteúdo, investe em tráfego, tem um produto bom — e na abertura do carrinho vende menos de 10 unidades. Não é falta de esforço. É isso que está errado →"</p>
+</div>
+<p><strong>Por que funciona:</strong> valida o esforço da pessoa (não é culpa dela), cria cumplicidade e promete a razão real — que ela vai querer saber.</p>
+
+<h3>Gatilho 3: Resultado Específico e Incomum</h3>
+<p>Números específicos são mais críveis e mais intrigantes do que generalizações.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY DE EXEMPLO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"R$847.000 em 6 dias com uma lista de 2.300 pessoas. Sem afiliados, sem parceria. O que foi diferente nesse lançamento:"</p>
+</div>
+<p><strong>Por que funciona:</strong> R$847k é mais crível que "quase R$1M". Lista de 2.300 é verificável e surpreende (expectativa seria lista maior). "O que foi diferente" abre a curiosidade.</p>
+
+<h3>Gatilho 4: Controvérsia Contra Crença Comum</h3>
+<p>Contradiz algo que o público acredita ser verdade.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY DE EXEMPLO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Parei de postar todo dia e meu perfil cresceu 3x mais rápido. Não é intuição — é dado. Aqui o que aconteceu:"</p>
+</div>
+<p><strong>Por que funciona:</strong> viola a expectativa ("postar todo dia é obrigatório"). O cérebro quer resolver a contradição — então continua lendo.</p>
+
+<h3>Gatilho 5: Urgência ou Tempo Definido</h3>
+<p>Define janela de relevância — cria senso de que perder esse conteúdo tem custo.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY DE EXEMPLO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Tem uma janela de 6 meses no TikTok que vai fechar. Quem entrar agora vai ter uma vantagem que não vai mais existir. Explico:"</p>
+</div>
+<p><strong>Por que funciona:</strong> ativa FOMO imediato + dá razão concreta para parar agora (não depois).</p>
+
+<h2>O Teste dos 3 Segundos</h2>
+
+<p>Antes de publicar qualquer conteúdo, aplique este filtro:</p>
+
+<table>
+  <thead>
+    <tr><th>Pergunta</th><th>Resposta necessária</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Se eu não conhecesse quem fez isso, scrollaria?</td><td>Sim</td></tr>
+    <tr><td>Existe uma razão clara para continuar assistindo/lendo?</td><td>Sim</td></tr>
+    <tr><td>A primeira frase/frame cria alguma emoção (curiosidade, identificação, surpresa)?</td><td>Sim</td></tr>
+    <tr><td>Dá para entender em 2 segundos do que se trata?</td><td>Sim</td></tr>
+  </tbody>
+</table>
+
+<p>Se qualquer resposta for "não" — reescreva o gancho. Conteúdo com gancho fraco nunca alcança a parte boa, por melhor que ela seja.`
           },
           {
             id: "atencao-2",
@@ -88,32 +143,83 @@ export const CURRICULUM: Module[] = [
             duration: "18 min",
             type: "text",
             glossaryTerms: ["algoritmo-de-recomendacao", "completion-rate", "rewatch-rate", "saves", "shadow-ban"],
-            keyPoints: ["Sinais de engajamento", "Tempo de retenção vs. curtidas", "Fingerprint do algoritmo do Instagram"],
-            content: `<h2>Decodificando os Algoritmos</h2>
-<p>Algoritmos não são mistérios. São sistemas de ranqueamento com objetivos declarados: maximizar o tempo que o usuário passa na plataforma.</p>
+            keyPoints: ["Os sinais que cada plataforma realmente pesa — com benchmarks numéricos", "Como criar conteúdo que ativa saves e shares organicamente", "Checklist de otimização pré-publicação por plataforma"],
+            exercise: "Audite seus últimos 5 posts. Para cada um, anote: taxa de conclusão (vídeo) ou tempo de leitura (texto), número de saves, número de compartilhamentos. Compare com os benchmarks desta aula. Identifique qual sinal está mais abaixo do benchmark e crie um conteúdo especificamente para melhorar esse número.",
+            content: `<h2>Algoritmos: O que Realmente Acontece Depois que Você Posta</h2>
 
-<h3>Os 5 Sinais que Importam</h3>
+<p>Algoritmos não são caixas pretas. Cada plataforma documentou — em maior ou menor grau — o que seus sistemas medem. O problema não é falta de informação, é que a maioria aplica a estratégia errada para a plataforma errada.</p>
+
+<h2>O Princípio Universal: Toda Plataforma Quer o Mesmo</h2>
+
+<p>Instagram, TikTok, YouTube, Facebook — todas têm o mesmo objetivo: <strong>maximizar o tempo que o usuário passa na plataforma</strong>. O algoritmo distribui conteúdo que atinge esse objetivo. Ponto.</p>
+
+<p>Consequência prática: conteúdo que faz pessoas ficarem mais tempo (watch time, scroll time, retorno ao app) é distribuído. Conteúdo que faz pessoas saírem (cliques que levam para fora, baixo tempo de permanência) é penalizado.</p>
+
+<h2>Os 5 Sinais por Peso — Com Benchmarks Reais</h2>
+
+<table>
+  <thead>
+    <tr><th>Sinal</th><th>Peso</th><th>Benchmark Bom</th><th>O que cria esse sinal</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Watch Time / Retenção</td><td>★★★★★</td><td>&gt;60% do vídeo</td><td>Hook forte + entrega de valor ao longo do vídeo</td></tr>
+    <tr><td>Saves / Bookmarks</td><td>★★★★★</td><td>&gt;3% dos alcançados</td><td>Conteúdo que a pessoa quer rever ou aplicar depois</td></tr>
+    <tr><td>Compartilhamentos</td><td>★★★★☆</td><td>&gt;2% dos alcançados</td><td>Conteúdo que a pessoa quer que outros vejam</td></tr>
+    <tr><td>Comentários com texto</td><td>★★★☆☆</td><td>&gt;1% dos alcançados</td><td>Pergunta no final, controvérsia, pedido de opinião</td></tr>
+    <tr><td>Curtidas</td><td>★★☆☆☆</td><td>Qualquer número</td><td>Conteúdo agradável — mas peso baixo</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Insight crítico:</strong> curtidas são o sinal que a maioria otimiza, mas têm o menor peso. Saves são o sinal que poucos otimizam, mas têm o maior peso no Instagram. Mude o que você mede.</p>
+
+<h2>Como Criar Conteúdo que Gera Saves</h2>
+
+<p>Saves acontecem quando a pessoa pensa: "vou querer usar isso depois". Tipos de conteúdo que disparam saves:</p>
+
 <ul>
-  <li><strong>Watch Time / Tempo de Leitura:</strong> O rei absoluto. Quanto mais tempo, mais distribuição.</li>
-  <li><strong>Saves / Bookmarks:</strong> Sinaliza valor percebido alto. Instagram valoriza muito.</li>
-  <li><strong>Shares:</strong> O sinal social mais poderoso. Indica que o conteúdo saiu da bolha.</li>
-  <li><strong>Comments com texto:</strong> Comentários substanciais pesam mais que emojis.</li>
-  <li><strong>Clique no perfil:</strong> Curiosidade gerada. Indica lead qualificado.</li>
+  <li><strong>Checklists e passo a passos:</strong> "7 etapas para configurar sua campanha no Meta" — pessoa salva para executar</li>
+  <li><strong>Templates e modelos:</strong> "Copy de email de abertura pronto para usar" — salva para copiar</li>
+  <li><strong>Informações técnicas densas:</strong> Dados, benchmarks, fórmulas — salva para consultar</li>
+  <li><strong>Calendários e timelines:</strong> Qualquer estrutura temporal — salva para planejar</li>
 </ul>
 
-<h3>Instagram 2024: O Fingerprint</h3>
-<p>O algoritmo atual do Instagram usa um modelo chamado IG Score que pondera:</p>
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">EXEMPLO: Copy que gera save</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Salva esse carrossel — os benchmarks de Meta Ads que uso para saber se uma campanha está funcionando:<br/>CPM bom: &lt;R$12 | Excelente: &lt;R$7<br/>CTR bom: &gt;2% | Excelente: &gt;4%<br/>CPL (produto R$2k+): até R$30<br/>ROAS mínimo para escalar: 3x<br/>Taxa de conversão LP: &gt;25%"</p>
+</div>
+
+<p>Perceba: o post pede explicitamente para salvar (reduz o custo de ação) e entrega algo que a pessoa vai querer rever quando for configurar uma campanha.</p>
+
+<h2>Como Criar Conteúdo que Gera Compartilhamentos</h2>
+
+<p>Compartilhamentos acontecem quando a pessoa pensa: "fulano precisa ver isso". Isso acontece quando o conteúdo:</p>
 <ul>
-  <li>30% — Relevância para o usuário específico (histórico de interações)</li>
-  <li>25% — Qualidade do conteúdo (retenção primeiros 3 segundos)</li>
-  <li>25% — Engajamento dos primeiros 100 seguidores que viram</li>
-  <li>20% — Atualidade (posts novos recebem boost inicial de 2h)</li>
+  <li>Resume algo que ela já sabia mas nunca viu explicado assim</li>
+  <li>Contradiz uma crença comum de forma surpreendente</li>
+  <li>Faz a pessoa parecer inteligente ao compartilhar</li>
+  <li>É tão específico para um grupo que parece "feito para eles"</li>
 </ul>
 
-<blockquote>A melhor estratégia não é "hackear" o algoritmo. É criar conteúdo que o usuário queira consumir até o fim. O algoritmo seguirá naturalmente.</blockquote>
+<h2>Checklist de Otimização Pré-Publicação</h2>
 
-<h3>Implicação Direta para Lançamentos</h3>
-<p>Em um lançamento, você precisa de <em>ondas de distribuição orgânica</em> para amplificar o tráfego pago. Isso significa: criar conteúdo de pré-lançamento que já gera saves e shares antes mesmo do carrinho abrir.</p>`
+<table>
+  <thead>
+    <tr><th>Item</th><th>Instagram</th><th>TikTok</th><th>YouTube</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Hook nos primeiros 1-3s</td><td>✅ Obrigatório</td><td>✅ Crítico</td><td>✅ Obrigatório</td></tr>
+    <tr><td>Palavra-chave no texto</td><td>✅ Nome + legenda</td><td>✅ Caption</td><td>✅ Título + descrição</td></tr>
+    <tr><td>CTA para save/share</td><td>✅ Explicitar</td><td>✅ Pedir duet/stitch</td><td>✅ Pedir like/save</td></tr>
+    <tr><td>Primeiro comentário</td><td>✅ Engaja algoritmo</td><td>✅ Responder todos</td><td>✅ Pinado como recurso</td></tr>
+    <tr><td>Thumbnail/capa</td><td>✅ Frame 1 importa</td><td>✅ Cover image</td><td>✅ Decisivo para CTR</td></tr>
+  </tbody>
+</table>
+
+<h2>O Erro Mais Caro: Postar e Ignorar</h2>
+
+<p>Nas primeiras 2 horas após publicar, o algoritmo está em fase de teste: distribui para uma amostra dos seus seguidores e mede os sinais. Se o engajamento da amostra for bom, amplia a distribuição. Se for ruim, enterra o post.</p>
+
+<p><strong>O que fazer nas primeiras 2h:</strong> responda todos os comentários (mesmo com emoji), responda DMs relacionados, interaja com posts do mesmo nicho. Isso sinaliza que você é um perfil ativo e empurra o post na distribuição da amostra.</p>`
           },
           {
             id: "atencao-3",
@@ -169,98 +275,286 @@ POR QUE FUNCIONA: ___
             title: "Os 4 Tipos de Conteúdo Que Convertem",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Educacional vs. Inspiracional vs. Entretenimento vs. Vendas", "Proporção 80/20", "Calendário de conteúdo pré-lançamento"],
-            content: `<h2>A Matriz de Conteúdo NexOS</h2>
-<p>Na NexOS, dividimos conteúdo em 4 categorias com papéis distintos na jornada do comprador:</p>
+            keyPoints: ["A matriz de conteúdo com exemplos reais de copy para cada tipo", "Calendário de 4 semanas pré-lançamento — post por post", "Como transformar qualquer ideia em um dos 4 tipos que vende"],
+            exercise: "Abra seu perfil e classifique seus últimos 12 posts em um dos 4 tipos. Calcule a porcentagem de cada tipo. Se você tem mais de 30% em vendas diretas e menos de 25% em prova social — esse é o diagnóstico do problema. Monte seu calendário das próximas 2 semanas usando as proporções desta aula.",
+            content: `<h2>A Matriz de Conteúdo: O Que Postar, Quando e Por Quê</h2>
 
-<h3>1. Conteúdo Educacional (40% do volume)</h3>
-<p>Resolve problemas específicos, ensina algo prático, posiciona você como autoridade. Este é o conteúdo que gera saves e bookmarks.</p>
-<p><em>Exemplo:</em> "Os 7 erros que matam campanhas de tráfego pago" — resolve dor, gera identificação.</p>
+<p>A maioria das pessoas posta por instinto — o que parece certo no momento. O problema é que instinto não tem distribuição planejada. Você acaba com ou muito conteúdo educacional (que educa mas não vende) ou muito conteúdo de venda (que afasta quem ainda não está pronto para comprar).</p>
 
-<h3>2. Conteúdo de Prova Social (25% do volume)</h3>
-<p>Cases de clientes, depoimentos, resultados. A prova social não vende produto — vende possibilidade. A pessoa não quer o produto, ela quer o resultado do produto.</p>
-<p><em>Exemplo:</em> "Como a Ana saiu do zero para R$87.000 em 8 dias"</p>
+<p>A Matriz NexOS distribui conteúdo em 4 tipos com funções específicas na jornada do comprador. Cada tipo move a pessoa para o próximo estágio.</p>
 
-<h3>3. Conteúdo de Identidade (20% do volume)</h3>
-<p>Stories, bastidores, posicionamento. Constrói o personagem, gera conexão humana. Pessoas compram de pessoas que conhecem, gostam e confiam.</p>
+<h2>Tipo 1: Conteúdo Educacional — 40% do volume</h2>
+<p><strong>Função:</strong> posiciona autoridade, gera saves, constrói confiança</p>
+<p><strong>Sinal de que está funcionando:</strong> saves acima de 3%, perguntas nos comentários, DMs pedindo mais</p>
 
-<h3>4. Conteúdo de Venda Direta (15% do volume)</h3>
-<p>Só funciona quando os 3 acima já criaram contexto. Uma oferta sem contexto é spam. Uma oferta com contexto é oportunidade.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">EXEMPLO DE LEGENDA — EDUCACIONAL</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Os 5 motivos pelos quais 90% dos lançamentos não passam de R$50k:<br/><br/>1. Carrinho abriu cedo demais — audiência fria<br/>2. Bônus genéricos que ninguém valorizou<br/>3. Sequência de email de urgência sem escassez real<br/>4. Nenhum live de abertura — vendas concentradas demais nas últimas horas<br/>5. Copy da página de vendas copiado de concorrente<br/><br/>Salva esse post. Na semana que vem faço um breakdown completo de cada ponto.<br/><br/>#lancamento #marketingdigital #produtodigital</p>
+</div>
 
-<blockquote>O erro fatal: publicar conteúdo de venda sem ter construído os outros 3 tipos antes. É como pedir casamento no primeiro encontro.</blockquote>`
+<p><strong>Por que funciona:</strong> entrega valor real, pede o save (ativa o sinal), cria expectativa do próximo conteúdo (aumenta watch time do perfil).</p>
+
+<h2>Tipo 2: Conteúdo de Prova Social — 25% do volume</h2>
+<p><strong>Função:</strong> elimina ceticismo, demonstra resultado possível, ativa gatilho de manada</p>
+<p><strong>Sinal de que está funcionando:</strong> compartilhamentos, DMs "você acha que funciona pra mim?", novos seguidores do nicho</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">EXEMPLO DE LEGENDA — PROVA SOCIAL</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">A Camila entrou no método em outubro. Antes: 3 anos tentando lançar, 2 produtos que não venderam nada, R$0 de receita digital.<br/><br/>Na primeira semana de aplicar o framework de pré-lançamento: R$23.400 em 4 dias com uma lista de apenas 890 pessoas.<br/><br/>Ela não tem 100k seguidores. Não tem parceria de afiliados. Não fez live. Fez o que está aqui no método — sistematicamente.<br/><br/>O que mudou: a ordem das ações, não a quantidade de esforço.</p>
+</div>
+
+<p><strong>Nota técnica:</strong> Nome real + resultado específico (R$23.400, não "muito dinheiro") + contexto antes (3 anos, R$0) + por que foi diferente = prova social que converte. Depoimento vago não converte.</p>
+
+<h2>Tipo 3: Conteúdo de Identidade — 20% do volume</h2>
+<p><strong>Função:</strong> cria conexão humana, constrói personagem, gera "quero comprar dessa pessoa"</p>
+<p><strong>Sinal de que está funcionando:</strong> comentários pessoais, DMs espontâneos, seguidores que mencionam detalhes da sua vida</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">EXEMPLO — BASTIDORES DE IDENTIDADE</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Tem 2 anos eu estava do outro lado. Cliente de um curso de marketing, tentando entender por que não conseguia aplicar o que ensinava.<br/><br/>Hoje estou aqui preparando o que vai ser a maior aula que já gravei sobre sequência de lançamento.<br/><br/>A diferença entre quem estava lá e quem está aqui não foi talento. Foi uma decisão sobre qual informação seguir — e execução obsessiva.<br/><br/>Se você está no início, isso é para você.</p>
+</div>
+
+<h2>Tipo 4: Conteúdo de Venda Direta — 15% do volume</h2>
+<p><strong>Função:</strong> converter a audiência aquecida em compradores</p>
+<p><strong>Regra de ouro:</strong> só funciona depois dos tipos 1, 2 e 3 criarem o contexto. Venda sem contexto é spam.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">EXEMPLO — VENDA COM CONTEXTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Nas últimas 3 semanas mostrei aqui o framework completo de pré-lançamento, os cases de alunos e a história de como cheguei nesse método.<br/><br/>Amanhã às 8h abre o [produto]. Para quem está na lista VIP, há um bônus que não vai estar disponível depois da primeira hora.<br/><br/>Link na bio → Lista VIP.</p>
+</div>
+
+<h2>Calendário de 4 Semanas Pré-Lançamento</h2>
+
+<table>
+  <thead>
+    <tr><th>Semana</th><th>Seg</th><th>Qua</th><th>Sex</th><th>Stories diários</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Semana 1 (D-28)</td><td>Educacional</td><td>Educacional</td><td>Identidade</td><td>Bastidores leves</td></tr>
+    <tr><td>Semana 2 (D-21)</td><td>Educacional</td><td>Prova Social</td><td>Educacional</td><td>Enquetes + caixinha</td></tr>
+    <tr><td>Semana 3 (D-14)</td><td>Prova Social</td><td>Educacional</td><td>Identidade</td><td>Antecipação vaga</td></tr>
+    <tr><td>Semana 4 (D-7)</td><td>Educacional</td><td>Prova Social</td><td>Venda (lista VIP)</td><td>Countdown + bastidores</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Volume ideal:</strong> 3 posts/semana no feed + stories diários. Menos que isso, a audiência esfria. Mais que isso sem qualidade, o algoritmo penaliza.`
           },
           {
             id: "organico-2",
-            title: "Reels & Shorts: A Corrida do Ouro de 2024",
+            title: "Reels & Shorts: Roteiros Prontos Para Gravar Hoje",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Estrutura de Reels que viralizam", "Hook-Retenção-CTA", "Os 7 formatos que funcionam"],
-            content: `<h2>A Era do Vídeo Curto</h2>
-<p>O Instagram Reels e o YouTube Shorts são, em 2024, a maior oportunidade de crescimento orgânico disponível para produtores digitais. A razão é simples: as plataformas estão subsidiando criadores para competir com o TikTok.</p>
+            keyPoints: ["3 roteiros completos de Reel prontos para adaptar ao seu nicho", "A estrutura segundo a segundo dos primeiros 3s que decidem tudo", "Métricas de referência: o que é um Reel bom vs. fraco"],
+            exercise: "Escolha um dos 3 roteiros desta aula. Adapte para o seu nicho preenchendo as lacunas em [colchetes]. Grave hoje mesmo — mesmo que imperfeito. Um Reel gravado supera infinitos roteiros perfeitos não gravados. Poste e observe as métricas 48h depois.",
+            content: `<h2>Reels: A Única Aula de Que Você Precisa Para Começar Hoje</h2>
 
-<h3>A Estrutura dos 3 Atos</h3>
-<p>Todo Reel que converte segue esta estrutura:</p>
+<p>Você não precisa de equipamento profissional, equipe de edição ou 10k seguidores para um Reel gerar leads. Você precisa de estrutura + assunto relevante + constância.</p>
 
-<h3>Ato 1 — O Hook (0-3 segundos)</h3>
-<p>Tem um único trabalho: impedir o scroll. Use um dos gatilhos:</p>
-<ul>
-  <li><strong>Curiosidade:</strong> "O segredo que nenhum guru te conta sobre..."</li>
-  <li><strong>Controvérsia:</strong> "Você está fazendo tráfego pago errado e aqui está a prova"</li>
-  <li><strong>Resultado chocante:</strong> "Como fiz R$142.000 em 7 dias sem lista"</li>
-  <li><strong>Pergunta direta:</strong> "Você sabe quanto dinheiro está deixando na mesa?"</li>
-</ul>
+<p>Esta aula dá os roteiros prontos. Seu trabalho é adaptar ao seu nicho e gravar.</p>
 
-<h3>Ato 2 — A Retenção (3s ao fim)</h3>
-<p>Entregue o prometido. Quebre em passos claros. Use texto na tela. Mostre, não apenas diga. Crie loops de curiosidade ("Mas tem um detalhe que muda tudo... veja no próximo ponto").</p>
+<h2>A Estrutura dos 3 Atos — Com Tempo Exato</h2>
 
-<h3>Ato 3 — O CTA (últimos 5 segundos)</h3>
-<p>Um CTA. Não dois. Não três. Um. O cérebro paralisa com múltiplas escolhas. Exemplos: "Salva esse vídeo para não esquecer" / "Comenta UM se quiser o template"</p>
+<table>
+  <thead>
+    <tr><th>Ato</th><th>Tempo</th><th>Função</th><th>Erro comum</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Hook</td><td>0-3s</td><td>Parar o scroll</td><td>Começar com "Olá, tudo bem?" — mortal</td></tr>
+    <tr><td>Promessa</td><td>3-7s</td><td>Dar razão para continuar</td><td>Não dizer o que a pessoa vai ganhar</td></tr>
+    <tr><td>Conteúdo</td><td>7s até fim-5s</td><td>Entregar o prometido</td><td>Conteúdo longo demais ou vago demais</td></tr>
+    <tr><td>CTA</td><td>Últimos 5s</td><td>Um único comando</td><td>Dois CTAs — pessoa não faz nenhum</td></tr>
+  </tbody>
+</table>
 
-<h3>Os 7 Formatos que Funcionam</h3>
-<ol>
-  <li>Lista numerada ("7 erros que...")</li>
-  <li>Before/After ("De R$0 para R$X em Y dias")</li>
-  <li>Tutorial rápido ("Em 60 segundos, aprenda...")</li>
-  <li>Reação/Opinião ("Analisei 50 campanhas e descobri...")</li>
-  <li>Bastidores ("Mostrando como funciona por dentro...")</li>
-  <li>Mito vs Verdade ("Esqueça tudo que te ensinaram sobre...")</li>
-  <li>Perguntas e Respostas ("Respondo as 5 perguntas mais frequentes")</li>
-</ol>`
+<h2>Roteiro 1 — Lista Numerada (melhor formato para saves)</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ROTEIRO COMPLETO — 45-60 segundos</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>[HOOK — fala olhando para câmera, texto na tela]</strong><br/>
+"[Número] erros que fazem [perfil do avatar] perder [resultado doloroso]."<br/><br/>
+
+<strong>[PROMESSA — 3s]</strong><br/>
+"Se você faz qualquer um desses, para com tudo e assiste até o final."<br/><br/>
+
+<strong>[ERRO 1 — 8s]</strong><br/>
+"Erro 1: [nome do erro]. [Uma frase explicando por que é errado]. O certo: [solução em uma frase]."<br/><br/>
+
+<strong>[ERRO 2 — 8s]</strong><br/>
+"Erro 2: [nome]. [Explicação]. O certo: [solução]."<br/><br/>
+
+<strong>[ERRO 3 — 8s — o mais impactante]</strong><br/>
+"Erro 3 — esse é o que mais mata resultado: [nome]. [Explicação com dado ou exemplo específico]. O certo: [solução]."<br/><br/>
+
+<strong>[CTA — últimos 5s]</strong><br/>
+"Salva esse vídeo pra não esquecer. E me conta nos comentários qual erro você estava cometendo."
+</p>
+</div>
+
+<p><strong>Exemplo adaptado para marketing digital:</strong><br/>
+Hook: "3 erros que fazem lançamentos não passarem de R$30k."<br/>
+Erro 3: "Abrir o carrinho sem uma sequência de urgência real. 70% das vendas acontecem nas últimas 24h. Se você não tem emails e WhatsApp programados para essa janela, está deixando a maioria do dinheiro na mesa."</p>
+
+<h2>Roteiro 2 — Before/After (melhor formato para prova social)</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ROTEIRO COMPLETO — 30-45 segundos</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>[HOOK — resultado chocante primeiro]</strong><br/>
+"[Nome] fez R$[valor] em [tempo] com [recurso limitado surpreendente]."<br/><br/>
+
+<strong>[CONTEXTO BEFORE — 10s]</strong><br/>
+"Antes de entrar no método: [situação específica ruim]. Tentou [o que tentou]. Resultado: [fracasso específico]."<br/><br/>
+
+<strong>[A VIRADA — 10s]</strong><br/>
+"O que mudou: [detalhe específico do método/produto]. Não foi mais esforço — foi [o que foi]."<br/><br/>
+
+<strong>[RESULTADO AFTER — 5s]</strong><br/>
+"[Resultado numérico específico] em [tempo]."<br/><br/>
+
+<strong>[CTA — 5s]</strong><br/>
+"Comenta [palavra-chave] aqui em baixo que te mando o método gratuito."
+</p>
+</div>
+
+<h2>Roteiro 3 — Mito vs. Verdade (melhor formato para compartilhamentos)</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ROTEIRO COMPLETO — 40-55 segundos</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>[HOOK — controvérsia imediata]</strong><br/>
+"Vou contrariar o que você aprendeu sobre [tema]. E vou provar com dados."<br/><br/>
+
+<strong>[MITO 1 — 10s]</strong><br/>
+"Mito: [crença comum]. Realidade: [dado ou caso contrário específico]."<br/><br/>
+
+<strong>[MITO 2 — 10s]</strong><br/>
+"Mito: [crença 2]. Realidade: [dado 2]."<br/><br/>
+
+<strong>[MITO 3 — 10s — o mais chocante]</strong><br/>
+"E o maior mito de todos: [crença central do nicho]. Dados mostram que [realidade surpreendente]. Isso explica por que [consequência que impacta o avatar]."<br/><br/>
+
+<strong>[CTA — 5s]</strong><br/>
+"Manda esse vídeo para alguém que ainda acredita nesses mitos."
+</p>
+</div>
+
+<h2>Métricas de Referência: Como Saber Se Está Funcionando</h2>
+
+<table>
+  <thead>
+    <tr><th>Métrica</th><th>Ruim</th><th>Bom</th><th>Excelente</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Taxa de conclusão (watch %)</td><td>&lt;30%</td><td>40-60%</td><td>&gt;70%</td></tr>
+    <tr><td>Saves / alcance</td><td>&lt;1%</td><td>2-4%</td><td>&gt;5%</td></tr>
+    <tr><td>Compartilhamentos / alcance</td><td>&lt;0.5%</td><td>1-3%</td><td>&gt;4%</td></tr>
+    <tr><td>Comentários com texto</td><td>&lt;0.3%</td><td>0.5-1%</td><td>&gt;2%</td></tr>
+    <tr><td>Cliques no perfil / alcance</td><td>&lt;1%</td><td>2-4%</td><td>&gt;5%</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Se watch time está abaixo de 30%:</strong> o problema é o hook — reescreva os primeiros 3 segundos.<br/>
+<strong>Se saves estão baixos mas watch time é bom:</strong> o conteúdo entretém mas não é útil o suficiente para guardar.<br/>
+<strong>Se compartilhamentos estão baixos:</strong> falta elemento de identidade ou controvérsia que faça a pessoa querer mostrar para alguém.`
           },
           {
             id: "organico-3",
-            title: "SEO no Instagram e YouTube",
+            title: "SEO no Instagram e YouTube: Processo Passo a Passo",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Pesquisa de palavras-chave para redes sociais", "Otimização de perfil", "Hashtags estratégicas vs. hashtags por volume"],
-            content: `<h2>SEO Social: Seja Encontrado</h2>
-<p>As redes sociais se tornaram motores de busca. 40% dos Millennials preferem pesquisar no Instagram e TikTok em vez do Google. Isso é uma oportunidade enorme.</p>
+            keyPoints: ["O processo completo de pesquisa de palavras-chave para redes sociais — com ferramentas e exemplos", "Como otimizar perfil de Instagram e canal de YouTube para buscas", "A estratégia de hashtags com exemplos reais de nicho"],
+            exercise: "Abra o Instagram agora e pesquise sua palavra-chave principal. Anote as 5 primeiras sugestões de completar que aparecem — essas são as buscas reais que seu público faz. Escolha 2 dessas sugestões como palavras-chave secundárias do seu perfil. Reescreva seu nome e bio usando essas palavras hoje.",
+            content: `<h2>SEO Social: Como Ser Encontrado por Quem Já Quer o Que Você Oferece</h2>
 
-<h3>Pesquisa de Palavras-Chave Social</h3>
-<p>Ferramentas para usar:</p>
-<ul>
-  <li><strong>Instagram Explore:</strong> Digite sua palavra-chave e veja sugestões de busca</li>
-  <li><strong>YouTube Search Predictions:</strong> Ouro para conteúdo longo</li>
-  <li><strong>TikTok Creative Center:</strong> Trending hashtags e sons</li>
-  <li><strong>Google Trends:</strong> Valide o volume de busca</li>
-</ul>
+<p>Em 2024, o Instagram é o segundo maior motor de busca do Brasil para conteúdo de marketing e negócios — à frente do Bing e do YouTube para o público de 18-34 anos. Isso significa que há pessoas buscando ativamente pelo que você ensina. A questão é: elas te encontram?</p>
 
-<h3>Os 3 Campos de SEO do Instagram</h3>
-<ol>
-  <li><strong>Nome:</strong> Inclua sua palavra-chave principal. "João | Marketing Digital para Infoprodutores"</li>
-  <li><strong>Bio:</strong> Use as palavras-chave secundárias naturalmente</li>
-  <li><strong>Alt Text das imagens:</strong> Acessível e indexável pelo algoritmo</li>
-</ol>
+<h2>Passo 1: Pesquisa de Palavras-Chave Social — Processo Completo</h2>
 
-<h3>Hashtags: A Estratégia Correta</h3>
-<p>A maioria usa hashtags aleatoriamente. A estratégia NexOS é a pirâmide de hashtags:</p>
-<ul>
-  <li>3 hashtags grandes (+1M posts): visibilidade ampla</li>
-  <li>4 hashtags médias (100k-1M): competição moderada</li>
-  <li>3 hashtags pequenas (-100k): maior chance de rankear</li>
-</ul>
+<p><strong>Objetivo:</strong> encontrar os termos exatos que seu público usa para buscar o conteúdo que você produz.</p>
 
-<blockquote>Não use #marketing com 500 milhões de posts se você tem 1.000 seguidores. É como gritar em um estádio cheio. Use hashtags onde você pode estar na página 1.</blockquote>`
+<table>
+  <thead>
+    <tr><th>Ferramenta</th><th>Como usar</th><th>O que você encontra</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Instagram Busca</td><td>Digite sua palavra-chave — anote as sugestões de completar</td><td>Termos que usuários reais buscam no Instagram</td></tr>
+    <tr><td>YouTube Search Predictions</td><td>Digite no YouTube — anote sugestões + concorrência</td><td>Volume e intenção de busca para vídeos longos</td></tr>
+    <tr><td>TikTok Creative Center</td><td>Keyword Insights → pesquise seu nicho</td><td>Tendências de busca + volume + CTR estimado</td></tr>
+    <tr><td>Google Trends</td><td>Compare 3-5 variações do seu tema</td><td>Sazonalidade e qual variação tem mais volume</td></tr>
+    <tr><td>Ubersuggest / SEMrush (grátis)</td><td>Coloque sua palavra-chave e veja sugestões "People also ask"</td><td>Dúvidas reais que sua audiência tem</td></tr>
+  </tbody>
+</table>
+
+<h3>Exemplo Prático: Pesquisa para o Nicho de Marketing Digital</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">PROCESSO APLICADO — NICHO MARKETING</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Digite "lançamento digital" no Instagram → sugestões: "lançamento digital como fazer", "lançamento digital gratuito", "lançamento digital para iniciantes"<br/><br/>
+Conclusão: seu público busca "como fazer" e "para iniciantes" — isso indica conteúdo de execução, não de estratégia avançada.<br/><br/>
+Palavra-chave principal: <strong>lançamento digital</strong><br/>
+Secundárias: <strong>como fazer um lançamento</strong>, <strong>lançamento para iniciantes</strong>, <strong>produto digital</strong>
+</p>
+</div>
+
+<h2>Passo 2: Otimização de Perfil no Instagram</h2>
+
+<p>O Instagram indexa 3 campos para buscas: <strong>Nome de usuário</strong>, <strong>Nome na bio</strong> e <strong>Texto da bio</strong>. Os outros campos (site, link) não são indexados.</p>
+
+<h3>Template de Perfil Otimizado</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">PERFIL OTIMIZADO — EXEMPLO REAL</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>@nome_de_usuario:</strong> inclua a palavra-chave se possível (ex: @joaolancamentos)<br/>
+<strong>Nome na bio:</strong> "João Silva | Lançamento Digital" — palavra-chave logo no início<br/>
+<strong>Bio (150 caracteres):</strong> "Ajudo produtores digitais a lançar R$100k+ | Método PLF adaptado para PT-BR | 2.400 alunos | ↓ Método gratuito"<br/><br/>
+<strong>O que esse perfil faz:</strong><br/>
+✓ Aparece em buscas de "lançamento digital"<br/>
+✓ Deixa claro quem é para (produtores digitais)<br/>
+✓ Prova social (2.400 alunos)<br/>
+✓ CTA com ação clara (↓ Método gratuito)
+</p>
+</div>
+
+<h2>Passo 3: Otimização de Canal no YouTube</h2>
+
+<p>No YouTube, SEO é mais determinístico que no Instagram. Há 5 campos que o algoritmo de busca usa:</p>
+
+<table>
+  <thead>
+    <tr><th>Campo</th><th>Peso no SEO</th><th>Como otimizar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Título do vídeo</td><td>★★★★★</td><td>Palavra-chave exata nos primeiros 60 caracteres</td></tr>
+    <tr><td>Descrição (primeiras 2 linhas)</td><td>★★★★☆</td><td>Palavra-chave na primeira frase + sinônimos</td></tr>
+    <tr><td>Tags</td><td>★★★☆☆</td><td>10-15 tags: palavra-chave exata + variações</td></tr>
+    <tr><td>Thumbnail (CTR)</td><td>★★★★★</td><td>CTR alto melhora posição — use rosto + texto em destaque</td></tr>
+    <tr><td>Capítulos / timestamps</td><td>★★★☆☆</td><td>Aparecem nas buscas do Google — palavras-chave nos títulos</td></tr>
+  </tbody>
+</table>
+
+<h3>Fórmula de Título de YouTube</h3>
+<p><strong>[Keyword Principal]: [Promessa ou Curiosidade]</strong></p>
+<p>Exemplo: "Lançamento Digital: Como Vender R$100k em 7 Dias Mesmo Sem Lista" (72 chars — dentro do limite de exibição)</p>
+
+<h2>Passo 4: Estratégia de Hashtags</h2>
+
+<p>Hashtags no Instagram em 2024 funcionam como amplificadores — não como fonte primária de tráfego. Use a pirâmide:</p>
+
+<table>
+  <thead>
+    <tr><th>Tipo</th><th>Volume</th><th>Quantidade</th><th>Função</th><th>Exemplo (marketing)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Grande</td><td>+1M posts</td><td>3 hashtags</td><td>Visibilidade ampla</td><td>#marketingdigital, #empreendedorismo</td></tr>
+    <tr><td>Médio</td><td>100k-1M</td><td>4 hashtags</td><td>Competição moderada</td><td>#lancamentodigital, #infoproduto</td></tr>
+    <tr><td>Pequeno / Nicho</td><td>-100k</td><td>3 hashtags</td><td>Chance de rankear na página 1</td><td>#lancamentoPLF, #produtodigitalBR</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Regra prática:</strong> com menos de 5.000 seguidores, foque 60% das suas hashtags nas categorias médio e nicho. Com audiências maiores você pode competir nas grandes. Hashtag com 500M posts com perfil de 1.000 seguidores não gera nenhuma descoberta.`
           },
           {
             id: "organico-4",
@@ -289,121 +583,307 @@ POR QUE FUNCIONA: ___
             title: "Meta Ads: Estrutura de Campanha para Lançamentos",
             duration: "30 min",
             type: "text",
-            keyPoints: ["CBO vs ABO", "Audiences: Interesse, Lookalike, Retargeting", "Estrutura de funil completa"],
-            content: `<h2>Meta Ads para Lançamentos</h2>
-<p>O Meta Ads (Facebook + Instagram) continua sendo a plataforma mais eficiente para lançamentos de produtos digitais no Brasil. Aqui está a estrutura que usamos no NexOS para campanhas de 6 a 10 dígitos.</p>
+            keyPoints: ["A estrutura exata de campanhas por fase — com budgets, objetivos e públicos", "Os KPIs com benchmarks numéricos para saber se está ou não funcionando", "Diagnóstico: como identificar qual campanha está sangrando budget"],
+            exercise: "Monte agora a estrutura de campanhas do seu próximo lançamento. Use a tabela desta aula como template. Defina: fase, objetivo, público, budget por dia, KPI de sucesso. Isso deve tomar 30 minutos — mas vai economizar semanas de erro.",
+            content: `<h2>Meta Ads para Lançamentos: A Estrutura Que Funciona</h2>
 
-<h3>A Estrutura de 3 Camadas</h3>
+<p>A maioria das pessoas cria uma campanha de conversão, bota R$50/dia e espera vender. Isso não é estratégia de anúncio — é esperança patrocinada.</p>
 
-<h3>Camada 1 — Topo de Funil (Aquisição)</h3>
-<ul>
-  <li>Objetivo: Alcance ou Visualizações de Vídeo</li>
-  <li>Audiência: Interesses amplos (1-5M pessoas)</li>
-  <li>Budget: 20% do total</li>
-  <li>Meta: CPM baixo, construção de audiência de retargeting</li>
-</ul>
+<p>Um lançamento de produto digital exige uma <strong>estrutura de funil em 3 fases</strong> com campanhas, objetivos, públicos e budgets diferentes para cada momento da jornada. Veja abaixo a estrutura completa.</p>
 
-<h3>Camada 2 — Meio de Funil (Aquecimento)</h3>
-<ul>
-  <li>Objetivo: Engajamento ou Tráfego</li>
-  <li>Audiência: Engajamento dos últimos 90 dias + Lookalike 1%</li>
-  <li>Budget: 40% do total</li>
-  <li>Meta: Leads qualificados, lista aquecida</li>
-</ul>
+<h2>Fase 1 — Pré-Pré-Lançamento (D-30 a D-14): Construção de Audiência</h2>
 
-<h3>Camada 3 — Fundo de Funil (Conversão)</h3>
-<ul>
-  <li>Objetivo: Conversão / Compras</li>
-  <li>Audiência: Visitantes site 30d + Engajamento 30d</li>
-  <li>Budget: 40% do total</li>
-  <li>Meta: ROAS mínimo 3x (quanto menor o ticket, maior o ROAS esperado)</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Configuração</th><th>Valor</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Objetivo da campanha</td><td>Visualizações de Vídeo ou Engajamento</td></tr>
+    <tr><td>Público</td><td>Interesses amplos relacionados ao nicho (tamanho: 1-5M)</td></tr>
+    <tr><td>Budget</td><td>15-20% do orçamento total do lançamento / dia</td></tr>
+    <tr><td>Criativo</td><td>Vídeo de 60-90s com conteúdo educacional de valor</td></tr>
+    <tr><td>Objetivo real</td><td>Popular o pixel e criar público de remarketing para fases 2 e 3</td></tr>
+    <tr><td>KPI de sucesso</td><td>CPV &lt;R$0.05 | Watch 50%+ &gt;20% dos espectadores</td></tr>
+  </tbody>
+</table>
 
-<blockquote>CBO (Campaign Budget Optimization) para campanhas acima de R$500/dia. ABO (Ad Set Budget) para campanhas abaixo, quando você precisa controlar granularmente.</blockquote>
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">CONFIGURAÇÃO DO PÚBLICO — Fase 1</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Ad Set 1: Interesses [Nicho A] + [Nicho B] — Excluir: compradores (pixel)<br/>Ad Set 2: Lookalike 2-5% da sua lista de email<br/>Ad Set 3: Interesses de comportamento (ex: "Negócios online", "Empreendedorismo")<br/><br/>⚠️ NÃO use CBO nessa fase. Use ABO com R$20-50/dia por ad set para controlar onde o budget vai.</p>
+</div>
 
-<h3>Os KPIs que Importam</h3>
-<ul>
-  <li><strong>CPM:</strong> Custo por mil impressões. Bom: &lt;R$15. Excelente: &lt;R$8</li>
-  <li><strong>CTR:</strong> Taxa de clique. Bom: &gt;2%. Excelente: &gt;4%</li>
-  <li><strong>CPL:</strong> Custo por lead. Depende do ticket. Para R$2.500, até R$35 é viável.</li>
-  <li><strong>ROAS:</strong> Retorno sobre gasto em anúncios. Para produtos R$1.500+, ROAS &gt;3x = saudável.</li>
-</ul>`
+<h2>Fase 2 — Pré-Lançamento (D-14 a D-1): Aquecimento e Captura</h2>
+
+<table>
+  <thead>
+    <tr><th>Configuração</th><th>Valor</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Objetivo da campanha</td><td>Leads (formulário nativo ou tráfego para LP)</td></tr>
+    <tr><td>Público quente</td><td>Quem assistiu 50%+ dos vídeos da Fase 1 (últimos 30d)</td></tr>
+    <tr><td>Público morno</td><td>Engajamento no perfil últimos 60d + Lookalike 1% da lista</td></tr>
+    <tr><td>Budget</td><td>35-40% do orçamento total / dia</td></tr>
+    <tr><td>Criativo</td><td>PLCs adaptados como anúncio ou teaser com link para PLC completo</td></tr>
+    <tr><td>KPI de sucesso</td><td>CPL &lt;R$25 (produto R$2k+) | Taxa opt-in LP &gt;35%</td></tr>
+  </tbody>
+</table>
+
+<h2>Fase 3 — Carrinho Aberto (D+0 a D+5): Conversão</h2>
+
+<table>
+  <thead>
+    <tr><th>Configuração</th><th>Valor</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Objetivo da campanha</td><td>Conversão (Compras) — pixel obrigatório</td></tr>
+    <tr><td>Público 1 — mais quente</td><td>Visitantes da página de vendas últimos 7d sem compra</td></tr>
+    <tr><td>Público 2</td><td>Lista VIP (upload de lista de email)</td></tr>
+    <tr><td>Público 3</td><td>Engajamento últimos 30d (excluindo compradores)</td></tr>
+    <tr><td>Budget</td><td>40-50% do orçamento total / dia — escalar nos últimos 2 dias</td></tr>
+    <tr><td>CBO ou ABO</td><td>CBO acima de R$500/dia. ABO abaixo.</td></tr>
+    <tr><td>KPI de sucesso</td><td>ROAS &gt;3x | CPA &lt;30% do ticket</td></tr>
+  </tbody>
+</table>
+
+<h2>Distribuição de Budget por Fase — Exemplo Prático</h2>
+
+<p>Para um lançamento com orçamento total de R$10.000 em 30 dias:</p>
+
+<table>
+  <thead>
+    <tr><th>Fase</th><th>Dias</th><th>% do Budget</th><th>Total</th><th>Por dia</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Construção (Fase 1)</td><td>D-30 a D-14 (16d)</td><td>20%</td><td>R$2.000</td><td>R$125/dia</td></tr>
+    <tr><td>Aquecimento (Fase 2)</td><td>D-14 a D-1 (13d)</td><td>35%</td><td>R$3.500</td><td>R$270/dia</td></tr>
+    <tr><td>Conversão (Fase 3)</td><td>D+0 a D+5 (6d)</td><td>45%</td><td>R$4.500</td><td>R$750/dia</td></tr>
+  </tbody>
+</table>
+
+<h2>Diagnóstico: O Que Fazer Quando os KPIs Estão Ruins</h2>
+
+<table>
+  <thead>
+    <tr><th>Sintoma</th><th>Diagnóstico provável</th><th>Ação</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CPM alto (&gt;R$20)</td><td>Público muito pequeno ou criativo com baixo relevance score</td><td>Ampliar público ou trocar criativo</td></tr>
+    <tr><td>CTR baixo (&lt;1%)</td><td>Hook do criativo fraco</td><td>Testar 3 hooks diferentes — mesma mensagem</td></tr>
+    <tr><td>CPL alto (&gt;R$50)</td><td>LP com baixa conversão ou público frio demais</td><td>Testar LP first, depois público</td></tr>
+    <tr><td>ROAS &lt;2x</td><td>Oferta com objeções não resolvidas ou público frio na fase de conversão</td><td>Adicionar remarketing + revisar página de vendas</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "pago-2",
             title: "Criativos que Param o Scroll",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Fórmula do criativo de alta performance", "Tipos de criativo por fase do lançamento", "A/B testing sistemático"],
-            content: `<h2>Criativos de Alta Performance</h2>
-<p>Um criativo ruim desperdiça 90% do budget. Um criativo excelente pode ser o diferencial entre 3x e 10x de ROAS. Aqui está o que funcionou em R$50M+ de verba gerenciada.</p>
+            keyPoints: ["Brief completo de criativo por fase do lançamento — copy de gancho pronto", "A ordem de teste A/B que economiza budget", "Como analisar um criativo ruim e saber exatamente o que consertar"],
+            exercise: "Escolha uma fase do seu lançamento (pré-lançamento, abertura ou fechamento). Use o brief desta aula para essa fase. Escreva o copy do gancho + headline + CTA. Mande para um designer ou produza você mesmo. Teste com R$30/dia por 3 dias antes de escalar.",
+            content: `<h2>Criativos de Alta Performance: Do Brief à Arte Final</h2>
 
-<h3>Os 4 Tipos de Criativo por Fase</h3>
+<p>Um criativo ruim desperdiça todo o restante da estratégia. Público certo, oferta certa, landing page certa — mas criativo fraco: o dinheiro vai pro lixo antes de alguém clicar.</p>
 
-<h3>Pré-lançamento (30-7 dias antes)</h3>
-<ul>
-  <li><strong>Curiosity Ads:</strong> Levantam o problema sem mostrar a solução. "Você está cometendo este erro fatal em sua estratégia de lançamento?"</li>
-  <li><strong>Authority Ads:</strong> Posicionam você como especialista. Cases, métricas, bastidores de resultados.</li>
-</ul>
-
-<h3>Aquecimento (7-1 dias antes)</h3>
-<ul>
-  <li><strong>Social Proof Ads:</strong> Depoimentos de alunos, prints de resultados, transformações</li>
-  <li><strong>Urgência suave:</strong> "Lista VIP abre em 3 dias" — sem pressão excessiva ainda</li>
-</ul>
-
-<h3>Carrinho Aberto (dias 1-3)</h3>
-<ul>
-  <li><strong>Oferta direta:</strong> Produto, preço, bônus, garantia. Clareza absoluta.</li>
-  <li><strong>Objeção Busters:</strong> "Mas e se eu não tiver tempo?" — destrói a principal objeção</li>
-</ul>
-
-<h3>Fechamento (últimas 24h)</h3>
-<ul>
-  <li><strong>Escassez real:</strong> "Últimas 12 vagas" (só use se for verdade)</li>
-  <li><strong>Deadline hard:</strong> Contador regressivo visível</li>
-</ul>
-
-<h3>A Fórmula do Teste A/B</h3>
-<p>Teste uma variável por vez. Nunca duas simultaneamente. Ordem de impacto:</p>
+<p>A anatomia de um criativo de alta performance tem 3 camadas:</p>
 <ol>
-  <li>Hook (primeiros 3 segundos) — impacto alto</li>
-  <li>Headline principal — impacto alto</li>
-  <li>Formato (vídeo vs. imagem) — impacto médio</li>
-  <li>CTA — impacto baixo</li>
-</ol>`
+  <li><strong>Gancho visual:</strong> o que para o scroll antes da pessoa ler qualquer coisa (0-1s)</li>
+  <li><strong>Gancho textual/verbal:</strong> o que mantém a atenção nos próximos 3-5s</li>
+  <li><strong>Promessa + CTA:</strong> o que converte a atenção em clique</li>
+</ol>
+
+<h2>Brief por Fase — Com Copy de Gancho Pronto</h2>
+
+<h3>Fase 1 — Pré-Pré-Lançamento (D-30 a D-14): Curiosity Ads</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BRIEF — CURIOSITY AD</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Formato:</strong> Vídeo 9:16 (Stories/Reels) — 30-45 segundos<br/>
+<strong>Gancho visual:</strong> Você falando direto para câmera — sem vinheta, sem intro<br/>
+<strong>Gancho textual (texto na tela nos primeiros 3s):</strong> "O erro que faz lançamentos falharem antes de começar"<br/>
+<strong>Fala de abertura:</strong> "Se você está planejando um lançamento, tem uma coisa que ninguém te conta — e que vai determinar se você vai vender ou não no dia de abertura."<br/>
+<strong>Corpo:</strong> Conteúdo educacional de 20-30s — entregue valor real<br/>
+<strong>CTA:</strong> "Link na bio — entra na lista VIP pra ser avisado primeiro quando abrir"
+</p>
+</div>
+
+<h3>Fase 2 — Pré-Lançamento (D-14 a D-1): Social Proof Ads</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BRIEF — SOCIAL PROOF AD</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Formato:</strong> Imagem estática (melhor CPM para social proof) ou vídeo depoimento<br/>
+<strong>Gancho visual:</strong> Print de resultado (WhatsApp, área de membros, número de vendas)<br/>
+<strong>Headline:</strong> "[Nome] conseguiu [resultado específico] em [tempo]. Aqui está o que fez diferente."<br/>
+<strong>Corpo:</strong> 2-3 frases do before/after + o insight que mudou<br/>
+<strong>CTA:</strong> "Entre na lista VIP — abre [data]"<br/>
+<strong>Atenção:</strong> Inclua consentimento escrito do aluno antes de usar o case
+</p>
+</div>
+
+<h3>Fase 3 — Carrinho Aberto (D+0 a D+3): Direct Response Ads</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BRIEF — DIRECT RESPONSE AD (carrinho aberto)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Formato:</strong> Vídeo 1:1 (feed) + Story 9:16 — 60-90s<br/>
+<strong>Gancho visual:</strong> Contador regressivo OU "ABERTO AGORA" em destaque<br/>
+<strong>Gancho verbal:</strong> "[Produto] está aberto. Fecha [data/hora]. Aqui está o que você recebe:"<br/>
+<strong>Corpo:</strong> Lista de 3-5 benefícios principais + bônus de tempo limitado<br/>
+<strong>Objection crusher (20s):</strong> "Se você está pensando em [objeção 1] — [resposta direta de 1 frase]"<br/>
+<strong>CTA:</strong> "Link abaixo. Fecha [dia] às [hora]. Depois, fecha e não reabre."
+</p>
+</div>
+
+<h3>Fase 4 — Fechamento (Últimas 24h): Urgency Ads</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#f87171;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BRIEF — URGENCY AD (últimas 24h)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Formato:</strong> Vídeo Story 9:16 — 15-30s (curto e urgente)<br/>
+<strong>Gancho:</strong> "[X horas] para fechar. Depois não tem como entrar."<br/>
+<strong>Corpo:</strong> Recapitulação rápida do que está dentro + o bônus que vai desaparecer<br/>
+<strong>CTA:</strong> "Link na bio. Agora."<br/>
+<strong>⚠️ Regra:</strong> Use escassez real (vagas reais, deadline real). Escassez falsa detectada = credibilidade destruída permanentemente.
+</p>
+</div>
+
+<h2>A Ordem Correta de Teste A/B</h2>
+
+<p>Teste uma variável por vez. Nunca duas. Orçamento mínimo para conclusão estatística: R$30/variação/dia por 3-5 dias.</p>
+
+<table>
+  <thead>
+    <tr><th>Ordem</th><th>O que testar</th><th>Impacto no CTR</th><th>Sinal de vitória</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1º</td><td>Gancho (primeiros 3s do vídeo ou headline da imagem)</td><td>Alto (30-60%)</td><td>CTR &gt;2x do perdedor</td></tr>
+    <tr><td>2º</td><td>Formato (vídeo vs. imagem vs. carrossel)</td><td>Médio (20-40%)</td><td>CPL &lt;70% do perdedor</td></tr>
+    <tr><td>3º</td><td>Ângulo da mensagem (dor vs. desejo vs. resultado)</td><td>Médio (20-35%)</td><td>Taxa de conversão pós-clique maior</td></tr>
+    <tr><td>4º</td><td>CTA (texto do botão, link na bio, mensagem)</td><td>Baixo (&lt;15%)</td><td>CTR marginalmente melhor</td></tr>
+  </tbody>
+</table>
+
+<h2>Diagnóstico: O Que Está Matando Seu Criativo</h2>
+
+<table>
+  <thead>
+    <tr><th>Sintoma</th><th>Causa</th><th>Solução</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CTR &lt;1%</td><td>Gancho fraco — a pessoa não clicou</td><td>Reescreva apenas os primeiros 3s. Não refilme tudo.</td></tr>
+    <tr><td>CTR bom mas CPL alto</td><td>Landing page fraca ou público errado</td><td>Teste a LP. Se LP está OK, refine o público.</td></tr>
+    <tr><td>Frequência &gt;3 com performance caindo</td><td>Fadiga criativa — audiência viu demais</td><td>Crie 2-3 criativos novos com ângulos diferentes</td></tr>
+    <tr><td>Bom no início, piora em 5 dias</td><td>Esgotou o melhor da audiência</td><td>Expandir público ou criar Lookalike 2-3%</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "pago-3",
             title: "Google Ads: Search + Display para Lançamentos",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Palavras-chave de intenção de compra", "Display para retargeting", "YouTube Ads antes do carrinho"],
-            content: `<h2>Google Ads no Contexto de Lançamentos</h2>
-<p>O Google Ads é subutilizado em lançamentos de produtos digitais. A maioria foca 100% em Meta e deixa dinheiro na mesa. Aqui está como usamos o Google estrategicamente.</p>
+            keyPoints: ["Copy de anúncio de Search pronto para adaptar", "Como montar a campanha de retargeting Display em 30 minutos", "YouTube Ads: o script de 5 segundos que não é pulado"],
+            exercise: "Monte agora sua lista de palavras-chave de Search. Comece por 3 colunas: branded ([seu nome] + curso/método), problema ([problema que você resolve] + solução) e comparação ([seu nome] vs [concorrente principal]). Escreva 2 variações de copy de anúncio para a palavra-chave de maior intenção. Isso pode ser feito em 45 minutos.",
+            content: `<h2>Google Ads para Lançamentos: O Que a Maioria Ignora</h2>
 
-<h3>Search: Capturando Intenção</h3>
-<p>Pessoas que buscam no Google estão em modo de pesquisa/compra. A temperatura do lead é muito mais alta.</p>
-<p>Palavras-chave de intenção alta para infoprodutos:</p>
-<ul>
-  <li>"[seu nome] curso" — branded intent</li>
-  <li>"[tema] curso online" — categoria intent</li>
-  <li>"como [resultado desejado]" — problema intent</li>
-</ul>
+<p>No Brasil, 80-90% dos lançamentos de produtos digitais concentram budget 100% no Meta Ads. Isso cria uma oportunidade: no Google, você captura as pessoas que já estão procurando pelo que você oferece — intenção de compra alta, competição baixa de outros lançadores.</p>
 
-<h3>YouTube Ads: O Pré-Aquecimento Invisível</h3>
-<p>Anúncios no YouTube funcionam melhor para criar familiaridade antes do carrinho abrir. A fórmula: mostre um VSL de 3-5 minutos para quem assistiu seus Reels nos últimos 30 dias.</p>
+<h2>Search Ads: Capturando Intenção de Compra</h2>
 
-<p>Tipos de anúncio:</p>
-<ul>
-  <li><strong>TrueView In-Stream:</strong> Pulável após 5s. Pague apenas por quem assistiu 30s+.</li>
-  <li><strong>Bumper Ads:</strong> 6s não puláveis. Perfeitos para retargeting de carrinho.</li>
-</ul>
+<p>Quem digita no Google está em modo ativo de busca — a temperatura de lead é 3x maior que no Meta. A estratégia é organizar keywords em 3 grupos por intenção:</p>
 
-<h3>Display: O Perseguidor</h3>
-<p>Quem visitou sua página de vendas mas não comprou deve ser perseguido no Google Display por 7 dias. Configure exclusão automática após a compra (via pixel de conversão).</p>
+<table>
+  <thead>
+    <tr><th>Grupo</th><th>Tipo de keyword</th><th>Exemplo</th><th>Intenção</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Branded</td><td>[Seu nome] + verbo</td><td>"João Silva curso", "João Silva método"</td><td>Quem já te conhece — mais alta</td></tr>
+    <tr><td>Problema</td><td>Como + problema/solução</td><td>"como fazer um lançamento digital", "como vender produto online"</td><td>Pesquisa ativa de solução</td></tr>
+    <tr><td>Comparação</td><td>[Tema] + melhor/top/comparação</td><td>"melhor curso de lançamento digital", "curso lançamento digital vale a pena"</td><td>Avaliando opções — próximo de comprar</td></tr>
+  </tbody>
+</table>
 
-<blockquote>O erro mais comum: gastar R$10.000 em tráfego para uma landing page que converte 2%. Antes de aumentar budget, aumente conversão.</blockquote>`
+<h3>Copy de Anúncio de Search — Template Pronto</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY SEARCH AD — 3 VARIAÇÕES</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Headline 1 (30 chars):</strong> [Keyword exata] — Método [ano]<br/>
+<strong>Headline 2 (30 chars):</strong> [Resultado específico] em [tempo]<br/>
+<strong>Headline 3 (30 chars):</strong> Turma Aberta | Acesso Imediato<br/>
+<strong>Descrição 1 (90 chars):</strong> "[Número] alunos já [resultado]. Método validado em [N] lançamentos reais. Vagas limitadas."<br/>
+<strong>Descrição 2 (90 chars):</strong> "Aprenda a [resultado principal] com quem gerou R$[X] em lançamentos. Veja como →"<br/><br/>
+<em style="color:#a0aec0">Dica: ative assets de sitelinks com links para: Depoimentos, O que está incluso, Garantia, FAQ</em>
+</p>
+</div>
+
+<h2>YouTube Ads: O Pré-Aquecimento Que Multiplica o Meta</h2>
+
+<p>YouTube Ads para lançamentos funcionam como "aquecedor silencioso" — a pessoa vê seu conteúdo no YouTube antes mesmo de te seguir no Instagram. Quando vê seus anúncios no Meta, já tem familiaridade (efeito "eu conheço esse cara").</p>
+
+<h3>TrueView In-Stream: Os 5 Segundos Que Decidem Tudo</h3>
+<p>O anúncio In-Stream pode ser pulado após 5 segundos. Você paga apenas se a pessoa assistir 30s+. Portanto: os primeiros 5s devem criar curiosidade ou identificação tão forte que a pessoa não pule.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">SCRIPT — 5 PRIMEIROS SEGUNDOS (não puláveis)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Opção 1 — Resultado chocante:</strong> "Em [mês], fiz R$[valor] em [dias] dias com uma lista de [N] pessoas. Vou te mostrar exatamente como."<br/><br/>
+<strong>Opção 2 — Identificação com dor:</strong> "Se você já tentou lançar e não vendeu o suficiente — o problema não foi seu produto."<br/><br/>
+<strong>Opção 3 — Pergunta polarizadora:</strong> "Quanto do seu budget de anúncio está sendo desperdiçado agora mesmo? A maioria não sabe. Você vai querer ver isso."
+</p>
+</div>
+
+<h3>Bumper Ads (6s não puláveis): Para Retargeting de Carrinho</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#f87171;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">SCRIPT — BUMPER AD FECHAMENTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"[Produto] fecha hoje à meia-noite. [Nome] → clica agora."<br/><br/>
+<em style="color:#a0aec0;font-size:13px">Público: remarketing de quem visitou a página de vendas nos últimos 7 dias sem converter</em>
+</p>
+</div>
+
+<h2>Display: Perseguição Estratégica de 7 Dias</h2>
+
+<p>A campanha de Display é simples mas poderosa: mostrar banner/imagem para quem visitou sua página de vendas mas não comprou.</p>
+
+<table>
+  <thead>
+    <tr><th>Configuração</th><th>Valor</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Público</td><td>Visitantes da página de vendas (últimos 7 dias) excluindo compradores</td></tr>
+    <tr><td>Duração da perseguição</td><td>7 dias após a visita — depois excluir</td></tr>
+    <tr><td>Frequência máxima</td><td>3-5 impressões/dia por usuário</td></tr>
+    <tr><td>Tamanhos de banner</td><td>300x250, 728x90, 160x600, 320x50 (cobre 90% dos placements)</td></tr>
+    <tr><td>Mensagem ideal</td><td>Urgência + prova social + garantia — os 3 em um banner</td></tr>
+  </tbody>
+</table>
+
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY DO BANNER DISPLAY</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Headline:</strong> "[Produto] fecha [dia]"<br/>
+<strong>Subheadline:</strong> "[N] alunos já entraram"<br/>
+<strong>Badge:</strong> "Garantia 30 dias"<br/>
+<strong>CTA button:</strong> "Entrar agora →"
+</p>
+</div>
+
+<h2>Budget e Alocação</h2>
+
+<table>
+  <thead>
+    <tr><th>Canal</th><th>% do budget Google</th><th>Melhor fase</th><th>KPI de sucesso</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Search (branded)</td><td>30%</td><td>Carrinho aberto</td><td>CPC &lt;R$2 | Conversão &gt;5%</td></tr>
+    <tr><td>Search (problema)</td><td>25%</td><td>Pré-lançamento</td><td>CPL &lt;R$30</td></tr>
+    <tr><td>YouTube In-Stream</td><td>30%</td><td>D-14 a D-1</td><td>CPV &lt;R$0.10 | VTR &gt;25%</td></tr>
+    <tr><td>Display Remarketing</td><td>15%</td><td>Carrinho + fechamento</td><td>CPC &lt;R$1.50</td></tr>
+  </tbody>
+</table>`
           }
         ]
       }
@@ -863,51 +1343,134 @@ Ensine 3-5 conceitos/táticas genuinamente úteis. Não retenha o melhor — ent
             title: "Os 12 Gatilhos Mentais do NexOS",
             duration: "30 min",
             type: "text",
-            keyPoints: ["Autoridade, Prova Social, Escassez, Urgência, Reciprocidade", "Comunidade, Antecipação, Evento, Transformação", "Medo de Perda, Curiosidade, Contraste"],
-            content: `<h2>A Neurociência Por Trás da Compra</h2>
-<p>Antonio Damasio, neurocientista de Harvard, descobriu que pessoas com dano na região emocional do cérebro eram incapazes de tomar decisões, mesmo simples. Conclusão: <em>toda decisão de compra é emocional, justificada depois pela razão.</em></p>
+            keyPoints: ["Copy real de ativação para cada um dos 12 gatilhos", "Quando usar cada gatilho — fase certa do lançamento", "Os erros que transformam gatilhos em manipulação e destroem a credibilidade"],
+            exercise: "Pegue a página de vendas ou a sequência de emails do seu produto. Identifique quais dos 12 gatilhos você está usando. Depois identifique quais estão ausentes. Escolha 2 gatilhos ausentes e reescreva um parágrafo da sua página de vendas ativando cada um deles.",
+            content: `<h2>Gatilhos Mentais: Do Conceito ao Copy que Converte</h2>
 
-<h3>Os 12 Gatilhos Mentais do Sistema NexOS</h3>
+<p>Gatilho mental não é técnica de manipulação — é falar a linguagem que o cérebro já usa para tomar decisões. Toda compra que você já fez na vida foi ativada por pelo menos um desses 12 padrões.</p>
 
-<h3>1. Autoridade</h3>
-<p>Pessoas seguem especialistas. Construa credibilidade com dados específicos, casos reais, mídia e associações com autoridades maiores.</p>
-<p><em>Ativação:</em> "Fui estudar nos EUA...", "Já gerenciei R$50M em verba...", "Meu aluno apareceu no Globo..."</p>
+<p>Esta aula não explica o que são os gatilhos. Mostra como ativá-los com copy real.</p>
 
-<h3>2. Prova Social</h3>
-<p>O comportamento da manada. Se outros compraram e aprovaram, reduz risco percebido imensamente.</p>
-<p><em>Ativação:</em> Depoimentos em vídeo, prints de WhatsApp, número de alunos, avaliações.</p>
+<h2>1. Autoridade</h2>
+<p><strong>Função:</strong> reduzir ceticismo inicial. Pessoas seguem quem demonstra domínio — com dados, não com diplomas.</p>
 
-<h3>3. Escassez (Real)</h3>
-<p>O cérebro valoriza mais o que é raro. Vagas limitadas, bônus exclusivos para os primeiros, turma fechada.</p>
-<p><strong>Aviso crítico:</strong> Escassez falsa destrói credibilidade para sempre. Use apenas quando real.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Em 7 anos gerenciando campanhas para produtos digitais, já vi mais de R$50M em verba de anúncio. Seis padrões se repetem em 100% dos lançamentos que ultrapassam R$1M. É sobre esses padrões que vou falar."</p>
+</div>
+<p><strong>Erro comum:</strong> listar credenciais acadêmicas ("sou formado em..."). Resultados numéricos específicos convertem mais.</p>
 
-<h3>4. Urgência</h3>
-<p>Deadline claro cria ação. Sem prazo, a decisão fica para "depois" — e depois raramente chega.</p>
-<p><em>Ativação:</em> Contador regressivo, data de encerramento, "preço especial até sexta".</p>
+<h2>2. Prova Social</h2>
+<p><strong>Função:</strong> eliminar o risco percebido. Se outros fizeram, eu também consigo.</p>
 
-<h3>5. Reciprocidade</h3>
-<p>Quando você dá algo de valor, o cérebro cria um débito emocional. O conteúdo gratuito de valor cria reciprocidade poderosa.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"487 alunos já passaram por esse método. Dos que completaram os 21 dias, 78% tiveram um resultado mensurável antes do lançamento. Não são todos — mas são a maioria."</p>
+</div>
+<p><strong>Regra de ouro:</strong> prova social com número específico + contexto ("dos que completaram") é muito mais crível que "centenas de alunos satisfeitos".</p>
 
-<h3>6. Comunidade</h3>
-<p>Pertencimento. Acesso a um grupo exclusivo de pessoas que pensam igual. "Venha fazer parte de..."</p>
+<h2>3. Escassez — Use Apenas Quando Real</h2>
+<p><strong>Função:</strong> valorizar o que é raro. O cérebro quer mais aquilo que pode ser perdido.</p>
 
-<h3>7. Antecipação</h3>
-<p>Ativar dopamina antes da abertura. O prazer da antecipação é frequentemente maior que o da conquista.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Estou limitando a turma a 80 alunos porque ofereço revisão individual dos planos de lançamento. Com mais do que isso, a qualidade cai. No momento em que escrevo isso: 47 vagas preenchidas."</p>
+</div>
+<p><strong>Aviso:</strong> escassez falsa (vagas que nunca acabam, contador que reseta) é detectada e destrói a credibilidade de forma permanente. A escassez deve ser real e justificada.</p>
 
-<h3>8. Transformação</h3>
-<p>O produto não é o produto — é a nova identidade. Quem a pessoa se tornará após comprar?</p>
+<h2>4. Urgência</h2>
+<p><strong>Função:</strong> mover a decisão de "depois" para "agora". Sem deadline, não há ação.</p>
 
-<h3>9. Medo de Perda (FOMO)</h3>
-<p>A perda pesa 2.5x mais que o ganho equivalente (Kahneman). "O que você perde ao não comprar" converte mais que "o que você ganha".</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"O preço de R$2.500 com os 3 bônus é válido até sexta-feira às 23:59. Sábado, o bônus [nome] sai do pacote e o preço não muda. Não porque é truque — mas porque tenho uma equipe que custa caro e não consigo manter isso indefinidamente."</p>
+</div>
 
-<h3>10. Curiosidade</h3>
-<p>O gap de informação. Quando o cérebro percebe que há algo que ele não sabe, cria tensão até descobrir.</p>
+<h2>5. Reciprocidade</h2>
+<p><strong>Função:</strong> criar débito emocional antes da venda. Quem recebe quer retribuir.</p>
 
-<h3>11. Evento</h3>
-<p>Transforme o lançamento num acontecimento. Com data marcada, tema, personagens, rituais.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Nas últimas 3 semanas compartilhei o framework completo gratuitamente — o mesmo que meus alunos pagam para aprender. Se isso ajudou você de alguma forma, a melhor forma de retribuir é entrar e aplicar o método completo."</p>
+</div>
 
-<h3>12. Contraste</h3>
-<p>O preço fica caro ou barato em relação ao que foi comparado antes. Compare com o custo do problema, não com outros produtos.</p>`
+<h2>6. Comunidade</h2>
+<p><strong>Função:</strong> vender identidade e pertencimento, não só conteúdo.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"O que os alunos relatam com mais frequência não é o método — é a comunidade. Um grupo fechado de 487 pessoas que estão, cada uma, construindo um negócio digital sério. Esse nível de acesso não existe em nenhum lugar público."</p>
+</div>
+
+<h2>7. Antecipação</h2>
+<p><strong>Função:</strong> gerar dopamina antes da venda. O prazer da expectativa ativa o desejo.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO (D-3)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Em 3 dias abre. Posso adiantar que tem um bônus que não está em nenhum material de divulgação — só quem entrar vai saber. Você vai entender por que guarda quando ver."</p>
+</div>
+
+<h2>8. Transformação</h2>
+<p><strong>Função:</strong> vender a identidade futura, não o produto presente.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Este não é um curso sobre como fazer um lançamento. É sobre se tornar o tipo de pessoa que consegue gerar receita digital de forma consistente e previsível — sem depender de um único pico anual."</p>
+</div>
+
+<h2>9. Medo de Perda (FOMO)</h2>
+<p><strong>Função:</strong> A perda pesa 2,5x mais que o ganho equivalente (Kahneman). Mostrar o custo de não comprar converte mais que mostrar o benefício de comprar.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Enquanto você avalia, outros estão acessando a mesma audiência que você. O mercado de produtos digitais no Brasil está crescendo 40% ao ano. Quem entra agora tem uma vantagem de pioneiro que desaparece conforme o nicho satura. Em 18 meses, esse acesso vai custar mais e render menos."</p>
+</div>
+
+<h2>10. Curiosidade</h2>
+<p><strong>Função:</strong> criar tensão cognitiva que só a compra (ou o conteúdo seguinte) resolve.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Tem uma configuração de campanha que 98% dos gestores de tráfego nunca usam — e que triplicou o ROAS de dois lançamentos que acompanhei esse ano. Não é uma otimização nova. É uma que foi esquecida porque parece contraintuitiva. Explico no módulo 5."</p>
+</div>
+
+<h2>11. Evento</h2>
+<p><strong>Função:</strong> transformar o lançamento de "produto à venda" para "acontecimento que você não pode perder".</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"No dia 15 às 20h tem a live de abertura — ao vivo, com Q&A. Já vamos entrar na plataforma juntos, e quem comprar durante a live ganha uma sessão de strategy call que normalmente não está no pacote. Confirma presença no link abaixo."</p>
+</div>
+
+<h2>12. Contraste</h2>
+<p><strong>Função:</strong> fazer o preço parecer pequeno em relação a uma âncora maior.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:8px 0 16px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;margin:0 0 4px">COPY DE ATIVAÇÃO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Uma consultoria de marketing de 2h com um especialista sênior custa R$800-1.200. Este programa tem o equivalente a 20+ horas de consultoria estruturada — por R$2.500. Mas compare com o custo real: um lançamento mal feito com R$10.000 em tráfego que converte 0,3%. Esse é o número que importa."</p>
+</div>
+
+<h2>Mapa de Uso: Qual Gatilho em Qual Fase</h2>
+
+<table>
+  <thead>
+    <tr><th>Gatilho</th><th>PPL (D-21 a D-14)</th><th>Pré-Lançamento (D-14 a D-1)</th><th>Abertura (D+0)</th><th>Fechamento</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Autoridade</td><td>✅ Principal</td><td>✅</td><td>✅</td><td>—</td></tr>
+    <tr><td>Reciprocidade</td><td>✅ Principal</td><td>✅</td><td>—</td><td>—</td></tr>
+    <tr><td>Antecipação</td><td>✅</td><td>✅ Principal</td><td>—</td><td>—</td></tr>
+    <tr><td>Prova Social</td><td>—</td><td>✅ Principal</td><td>✅</td><td>✅</td></tr>
+    <tr><td>Curiosidade</td><td>✅</td><td>✅ Principal</td><td>—</td><td>—</td></tr>
+    <tr><td>Evento</td><td>—</td><td>✅</td><td>✅ Principal</td><td>—</td></tr>
+    <tr><td>Transformação</td><td>—</td><td>✅</td><td>✅ Principal</td><td>✅</td></tr>
+    <tr><td>Comunidade</td><td>—</td><td>—</td><td>✅ Principal</td><td>✅</td></tr>
+    <tr><td>Escassez</td><td>—</td><td>—</td><td>✅</td><td>✅ Principal</td></tr>
+    <tr><td>Urgência</td><td>—</td><td>—</td><td>✅</td><td>✅ Principal</td></tr>
+    <tr><td>Medo de Perda</td><td>—</td><td>—</td><td>—</td><td>✅ Principal</td></tr>
+    <tr><td>Contraste</td><td>—</td><td>—</td><td>✅ Principal</td><td>✅</td></tr>
+  </tbody>
+</table>`
           }
         ],
         locked: false
@@ -927,86 +1490,207 @@ Ensine 3-5 conceitos/táticas genuinamente úteis. Não retenha o melhor — ent
             title: "A Anatomia do Copy Perfeito",
             duration: "25 min",
             type: "text",
-            keyPoints: ["AIDA, PAS, PASTOR", "Headlines que param o scroll", "A estrutura da VSL (Video Sales Letter)"],
-            content: `<h2>Copywriting: A Arte de Vender com Palavras</h2>
-<p>Claude Hopkins escreveu em 1923: "A única função do copy é vender. Não entreter, não impressionar — vender." Um século depois, isso continua verdade absoluta.</p>
+            keyPoints: ["AIDA, PAS e PASTOR aplicados com exemplos reais — não só a teoria", "8 fórmulas de headline com variações prontas para cada nicho", "O exercício de reescrita que treina o olho para copy que converte"],
+            exercise: "Pegue um post ou email que você escreveu recentemente. Identifique qual fórmula (AIDA, PAS ou PASTOR) ele usa — ou se não usa nenhuma. Reescreva o mesmo conteúdo usando PAS. Compare os dois: qual tem mais urgência? Qual faz a dor parecer mais real? Esse exercício, feito 30 vezes, forma o olho de copywriter.",
+            content: `<h2>Copy Perfeito: As Fórmulas com Exemplos Reais</h2>
 
-<h3>As 3 Fórmulas Fundamentais</h3>
+<p>Fórmulas de copy não são receitas que você segue cegamente — são esqueletos sobre os quais você coloca sua voz, seus dados e suas histórias. Mas sem o esqueleto, o copy desmorona.</p>
 
-<h3>AIDA — O Clássico</h3>
-<ul>
-  <li><strong>A</strong>tenção: Pare o scroll</li>
-  <li><strong>I</strong>nteresse: Mantenha lendo</li>
-  <li><strong>D</strong>esejo: Crie querer</li>
-  <li><strong>A</strong>ção: Provoque a compra</li>
-</ul>
+<h2>Fórmula 1 — AIDA: O Clássico Que Ainda Domina</h2>
 
-<h3>PAS — Para Produtos de Solução de Dor</h3>
-<ul>
-  <li><strong>P</strong>roblema: Identifique e agite a dor</li>
-  <li><strong>A</strong>gitação: Amplifique as consequências</li>
-  <li><strong>S</strong>olução: Apresente o produto como alívio</li>
-</ul>
+<p><strong>Use quando:</strong> post de redes sociais, email, anúncio, qualquer copy que precisa capturar e conduzir em sequência</p>
 
-<h3>PASTOR — Para Copy Longo</h3>
-<ul>
-  <li><strong>P</strong>roblema</li>
-  <li><strong>A</strong>mplify (consequências)</li>
-  <li><strong>S</strong>tory (prova através de narrativa)</li>
-  <li><strong>T</strong>ransformation (mudança que o produto gera)</li>
-  <li><strong>O</strong>ffer (a oferta)</li>
-  <li><strong>R</strong>esponse (o CTA)</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Letra</th><th>Função</th><th>Pergunta que responde</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A — Atenção</td><td>Parar o scroll / abrir o email</td><td>"Por que devo prestar atenção?"</td></tr>
+    <tr><td>I — Interesse</td><td>Manter lendo</td><td>"Isso é relevante para mim?"</td></tr>
+    <tr><td>D — Desejo</td><td>Criar querer</td><td>"Eu quero esse resultado?"</td></tr>
+    <tr><td>A — Ação</td><td>Converter</td><td>"O que eu faço agora?"</td></tr>
+  </tbody>
+</table>
 
-<h3>Headlines que Param o Scroll</h3>
-<p>8 fórmulas de headline com altas taxas de abertura:</p>
-<ol>
-  <li>"Como [resultado desejado] sem [objeção principal]"</li>
-  <li>"[Número] [adjetivo] jeitos de [resultado] em [tempo]"</li>
-  <li>"O segredo de [autoridade/especialista] para [resultado]"</li>
-  <li>"Por que [crença comum] está errada (e o que fazer)"</li>
-  <li>"[Resultado chocante]: o estudo que ninguém quer que você veja"</li>
-  <li>"Se você [condição], você precisa ler isto"</li>
-  <li>"Aviso: [afirmação provocativa]"</li>
-  <li>"[Pergunta direta que levanta dor/desejo]?"</li>
-</ol>`
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">AIDA APLICADO — EMAIL DE LANÇAMENTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>[A] Atenção — Assunto do email:</strong><br/>
+"O lançamento que ninguém acreditou que funcionaria (e os números)"<br/><br/>
+
+<strong>[I] Interesse — Abertura:</strong><br/>
+"Em março eu anunciei que faria um lançamento com uma lista de 900 pessoas e orçamento de R$3.000 em anúncios. A maioria das pessoas me disse que era ambição demais. Resultado final: R$214.000 em 6 dias."<br/><br/>
+
+<strong>[D] Desejo — Corpo:</strong><br/>
+"O que fez diferença não foi verba, não foi lista grande, não foi afiliado. Foi a sequência de pré-aquecimento que fiz nos 21 dias antes. Cada step está documentado no [produto]. Qualquer pessoa com uma audiência de nicho pode replicar."<br/><br/>
+
+<strong>[A] Ação — CTA:</strong><br/>
+"→ O [produto] abre amanhã às 8h. Você está na lista VIP — então tem acesso antes de todo mundo e com o bônus exclusivo de fundador."
+</p>
+</div>
+
+<h2>Fórmula 2 — PAS: Para Produtos de Solução de Dor</h2>
+
+<p><strong>Use quando:</strong> a audiência já tem consciência do problema mas não da solução. Funciona muito bem para produtos que resolvem uma frustração crônica.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">PAS APLICADO — LEGENDA DE FEED</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>[P] Problema:</strong><br/>
+"Você passa meses construindo audiência, cria um produto excelente, investe em tráfego pago — e no dia de abertura vende 8 unidades."<br/><br/>
+
+<strong>[A] Agitação:</strong><br/>
+"O pior não é a receita baixa. É perceber que você não tem como saber onde errou. Foi o produto? O tráfego? O copy da página? A sequência de email? Sem dados, você vai repetir o mesmo lançamento e ter o mesmo resultado."<br/><br/>
+
+<strong>[S] Solução:</strong><br/>
+"O [produto] mapeia exatamente onde o funil quebrou — e entrega o protocolo de correção por fase. Não genérico: específico para o que aconteceu no seu lançamento."
+</p>
+</div>
+
+<p><strong>Por que a Agitação é a parte mais importante do PAS:</strong> a maioria das pessoas vai direto da dor para a solução. Mas sem ampliar as consequências da dor, a pessoa não sente urgência suficiente para agir. A agitação é o que faz a solução parecer necessária, não apenas desejável.</p>
+
+<h2>Fórmula 3 — PASTOR: Para Copy Longo</h2>
+
+<p><strong>Use quando:</strong> página de vendas, VSL, email longo, apresentação de produto de alto ticket (R$2k+)</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">PASTOR APLICADO — ESTRUTURA DE PÁGINA DE VENDAS</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>[P] Problema:</strong> "Para quem tenta lançar um produto digital pela primeira vez..."<br/><br/>
+<strong>[A] Amplify:</strong> "O custo de um lançamento mal executado não é só a receita perdida — é o tempo desperdiçado, a audiência que esfria e a confiança que você perde em si mesmo."<br/><br/>
+<strong>[S] Story:</strong> "Três anos atrás eu estava exatamente nesse lugar. Tinha feito tudo certo 'no papel' — e vendido 4 unidades. Foi quando entendi o que estava faltando..."<br/><br/>
+<strong>[T] Transformation:</strong> "Hoje, o mesmo método gerou mais de R$2,4M em lançamentos para mim e para meus alunos. A diferença não foi mais esforço — foi uma sequência diferente."<br/><br/>
+<strong>[O] Offer:</strong> "O [produto] é o método completo, documentado, passo a passo. [Detalhes do que está incluído]."<br/><br/>
+<strong>[R] Response:</strong> "Clique abaixo. Abre só até [data]."
+</p>
+</div>
+
+<h2>8 Fórmulas de Headline — Com Exemplos Prontos</h2>
+
+<table>
+  <thead>
+    <tr><th>Fórmula</th><th>Estrutura</th><th>Exemplo aplicado</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Como + Sem</td><td>"Como [resultado] sem [objeção]"</td><td>"Como lançar R$100k sem lista de email"</td></tr>
+    <tr><td>Número + Resultado</td><td>"[N] [adjetivo] formas de [resultado] em [tempo]"</td><td>"7 ajustes que triplicaram o ROAS em 48h"</td></tr>
+    <tr><td>Controvérsia + Prova</td><td>"Por que [crença] está errado — e os dados que provam"</td><td>"Por que postar todo dia prejudica lançamentos — e os dados que provam"</td></tr>
+    <tr><td>Resultado Chocante</td><td>"[Número específico] em [tempo surpreendente]"</td><td>"R$847k em 6 dias com uma lista de 2.300 pessoas"</td></tr>
+    <tr><td>Condição + Alerta</td><td>"Se você [condição], leia isso antes de [ação]"</td><td>"Se você vai abrir seu primeiro carrinho, leia isso antes"</td></tr>
+    <tr><td>Erro + Custo</td><td>"O erro de [contexto] que custa [custo real]"</td><td>"O erro de configuração de pixel que custou R$40k em leads desperdiçados"</td></tr>
+    <tr><td>Segredo Revelado</td><td>"O que [referência de autoridade] faz que ninguém ensina"</td><td>"O que os maiores lançamentos do Brasil fazem na semana antes de abrir"</td></tr>
+    <tr><td>Pergunta de Dor</td><td>"[Situação dolorosa específica]?"</td><td>"Sua campanha gasta R$200/dia e não gera uma venda sequer?"</td></tr>
+  </tbody>
+</table>
+
+<h2>O Teste do "E daí?" — Para Fortalecer Qualquer Copy</h2>
+
+<p>Depois de escrever qualquer afirmação de benefício, pergunte "e daí?" até não ter mais resposta. Cada nível revela um benefício mais profundo — e mais persuasivo.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">EXEMPLO — TESTE DO "E DAÍ?"</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"Você vai aprender a configurar campanhas de Meta Ads."<br/>
+E daí? → "Você vai gerar leads mais baratos."<br/>
+E daí? → "Você vai ter mais verba disponível para escalar."<br/>
+E daí? → "Você vai poder faturar mais sem aumentar o orçamento."<br/>
+E daí? → "Você vai ter previsibilidade de receita que não depende de um único lançamento anual."<br/><br/>
+<strong>O copy correto usa a última resposta — não a primeira.</strong> Não venda "configurar campanhas" — venda "previsibilidade de receita".
+</p>
+</div>`
           },
           {
             id: "copy-2",
-            title: "VSL: Video Sales Letter do Zero",
+            title: "VSL: Roteiro Completo Pronto para Adaptar",
             duration: "35 min",
             type: "text",
-            keyPoints: ["Roteiro completo de VSL", "Os 15 blocos de uma VSL vencedora", "Erros fatais que matam a conversão"],
-            content: `<h2>VSL: A Ferramenta de Vendas Mais Poderosa</h2>
-<p>Uma VSL bem estruturada pode converter de 3% a 15% dos visitantes em clientes. É o elemento mais importante de qualquer funil de vendas de produto digital acima de R$500.</p>
+            keyPoints: ["Os primeiros 5 minutos de VSL escritos — adapte ao seu produto", "A transição exata do conteúdo para o pitch sem parecer forçado", "Erros que fazem visitantes abandonar antes da oferta"],
+            exercise: "Use o roteiro desta aula para escrever os primeiros 3 minutos da sua VSL. Não grave ainda — só escreva. Leia em voz alta e cronometre. Se demorar mais de 3:30 para chegar na 'promessa de resultado', corte. O visitante não espera. Grave o hook (primeiros 30s) e assista. Você scrollaria?",
+            content: `<h2>VSL: O Roteiro Que Converte de 3% a 15% dos Visitantes</h2>
 
-<h3>Os 15 Blocos de uma VSL Vencedora</h3>
-<ol>
-  <li><strong>Hook de abertura</strong> — 10-15 segundos. Para o visitante.</li>
-  <li><strong>Promessa de resultado</strong> — O que eles vão descobrir</li>
-  <li><strong>Por que acreditar em mim</strong> — Credenciais rápidas</li>
-  <li><strong>Identificação com a dor</strong> — "Eu sei como você se sente..."</li>
-  <li><strong>Agitação da dor</strong> — Consequências de não mudar</li>
-  <li><strong>Historia de transformação</strong> — Sua ou de um aluno</li>
-  <li><strong>Introdução da solução</strong> — O método/produto</li>
-  <li><strong>O que está dentro</strong> — Módulos, conteúdos, bônus</li>
-  <li><strong>Stack de valor</strong> — Quanto valeria cada parte</li>
-  <li><strong>Provas sociais</strong> — Depoimentos em vídeo</li>
-  <li><strong>Destruição de objeções</strong> — Q&A antecipado</li>
-  <li><strong>A oferta</strong> — Preço, condições, bônus</li>
-  <li><strong>Garantia</strong> — Remove risco da compra</li>
-  <li><strong>Urgência/Escassez</strong> — Razão para agir agora</li>
-  <li><strong>CTA final</strong> — Instrução clara de como comprar</li>
-</ol>
+<p>Uma VSL (Video Sales Letter) é o elemento mais importante de qualquer funil de produto digital acima de R$800. A diferença entre uma VSL que converte e uma que não converte não é produção — é roteiro.</p>
 
-<h3>Duração Ideal por Ticket</h3>
-<ul>
-  <li>R$97-R$497: 15-25 minutos</li>
-  <li>R$500-R$1.500: 25-40 minutos</li>
-  <li>R$1.500+: 40-60 minutos</li>
-</ul>
+<p>Esta aula entrega o roteiro completo com o copy real dos primeiros 5 minutos — a parte mais crítica — e a estrutura para os próximos 35-55 minutos.</p>
 
-<blockquote>Uma VSL não é um vídeo de vendas. É uma jornada emocional cuidadosamente orquestrada onde, ao final, o visitante sente que seria irracional NÃO comprar.</blockquote>`
+<h2>Os Primeiros 5 Minutos: Roteiro Pronto para Adaptar</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BLOCO 1 — HOOK (0:00 - 0:30)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Se você está assistindo esse vídeo, provavelmente já tentou [resultado desejado pelo avatar] pelo menos uma vez. E provavelmente não chegou onde queria. Nos próximos [X] minutos, vou te mostrar exatamente por que — e o que você pode fazer diferente a partir de hoje."<br/><br/>
+<em style="color:#a0aec0;font-size:13px">⚠️ Adapte: substitua [resultado desejado] pelo objetivo específico do seu avatar. Seja cirúrgico — "escalar seu negócio" é vago. "Faturar R$10k/mês consistentemente" é específico.</em></p>
+</div>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BLOCO 2 — PROMESSA DE RESULTADO (0:30 - 1:00)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Nesse vídeo você vai descobrir: [benefício 1 específico], [benefício 2 específico] e [benefício 3 — o mais chocante ou contraintuitivo]. E ao final, vou te apresentar algo que vai mudar completamente como você [ação do avatar]."<br/><br/>
+<em style="color:#a0aec0;font-size:13px">Exemplo: "Você vai descobrir por que 80% do budget de anúncios é desperdiçado nas primeiras 48h, como identificar isso em 10 minutos, e a configuração que dobrou o ROAS de 12 campanhas que acompanhei."</em></p>
+</div>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BLOCO 3 — CREDENCIAIS RÁPIDAS (1:00 - 1:45)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Meu nome é [nome]. Nos últimos [X] anos, [resultado específico que você gerou para outros]. Já [prova de autoridade — número, case, mídia]. Mas mais importante: [por que você está ensinando isso — motivação genuína]."<br/><br/>
+<em style="color:#a0aec0;font-size:13px">Regra: credenciais máximo 45s. Mais do que isso, o visitante desliga. Foco em resultado gerado para outros, não em diplomas.</em></p>
+</div>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BLOCO 4 — IDENTIFICAÇÃO COM A DOR (1:45 - 3:00)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Deixa eu adivinhar. Você [descreva a situação dolorosa em detalhes — cena específica]. Você já tentou [solução 1 que não funcionou] e [solução 2]. E o resultado foi [frustração específica]. Você começa a se perguntar se o problema é você."<br/><br/>
+<em style="color:#a0aec0;font-size:13px">Quanto mais específica a cena, mais a pessoa se reconhece. "Você fica frustrado com resultados" não funciona. "Você publica conteúdo todo dia, gasta R$500 em anúncio e abre o painel de vendas de manhã esperando uma notificação — e não tem nenhuma" funciona.</em></p>
+</div>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">BLOCO 5 — A VIRADA (3:00 - 5:00)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Eu sei exatamente como isso sente porque [sua história de dor — breve e honesto]. Mas há [X anos/meses] eu descobri algo que mudou tudo. Não foi uma técnica nova. Foi entender [o insight central do seu método]. A partir daí, [o que mudou especificamente]. E foi isso que me levou a criar [o produto]."<br/><br/>
+<em style="color:#a0aec0;font-size:13px">A virada deve ser um insight genuíno — não "descobri um método secreto". O que você aprendeu que era contraintuitivo ou que a maioria ignora?</em></p>
+</div>
+
+<h2>A Estrutura dos 15 Blocos — Com Timing</h2>
+
+<table>
+  <thead>
+    <tr><th>Bloco</th><th>Timing</th><th>Função</th><th>Duração recomendada</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1. Hook</td><td>0:00</td><td>Parar o visitante</td><td>30s</td></tr>
+    <tr><td>2. Promessa de resultado</td><td>0:30</td><td>Dar razão para continuar</td><td>30s</td></tr>
+    <tr><td>3. Credenciais</td><td>1:00</td><td>Construir confiança</td><td>45s</td></tr>
+    <tr><td>4. Identificação com a dor</td><td>1:45</td><td>Criar conexão emocional</td><td>75s</td></tr>
+    <tr><td>5. Agitação da dor</td><td>3:00</td><td>Ampliar urgência</td><td>60s</td></tr>
+    <tr><td>6. A virada / Insight</td><td>4:00</td><td>Introduzir o método</td><td>60-90s</td></tr>
+    <tr><td>7. Conteúdo de valor</td><td>5:30</td><td>Provar expertise + reciprocidade</td><td>10-20 min</td></tr>
+    <tr><td>8. História de transformação</td><td>~20:00</td><td>Prova social narrativa</td><td>3-5 min</td></tr>
+    <tr><td>9. Apresentação do produto</td><td>~25:00</td><td>Revelar a solução</td><td>3-5 min</td></tr>
+    <tr><td>10. Stack de valor</td><td>~30:00</td><td>Ancoragem de preço</td><td>2-3 min</td></tr>
+    <tr><td>11. Depoimentos</td><td>~33:00</td><td>Validação social</td><td>3-5 min</td></tr>
+    <tr><td>12. Destruição de objeções</td><td>~38:00</td><td>Eliminar resistência</td><td>3-4 min</td></tr>
+    <tr><td>13. Oferta + preço</td><td>~42:00</td><td>Apresentar o investimento</td><td>2-3 min</td></tr>
+    <tr><td>14. Garantia</td><td>~45:00</td><td>Remover risco</td><td>60s</td></tr>
+    <tr><td>15. Urgência + CTA final</td><td>~46:00</td><td>Mover para ação</td><td>60-90s</td></tr>
+  </tbody>
+</table>
+
+<h2>A Transição do Conteúdo para o Pitch — A Mais Difícil</h2>
+
+<p>A maioria das VSLs converte mal não pelo pitch — mas pela transição. Se o visitante sentir que você "virou a chave" de educar para vender, ele desconfia.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">TRANSIÇÃO QUE FUNCIONA</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">"Você acabou de ver [resumo de 2 linhas do que ensinou]. Isso é o suficiente para [resultado parcial]. Mas a realidade é que isso é só uma parte do framework completo. Para quem quiser ir mais fundo — e aplicar o sistema inteiro — criei o [produto]. Deixa eu te mostrar o que tem dentro..."<br/><br/>
+<em style="color:#a0aec0;font-size:13px">O segredo: a transição não "corta" o conteúdo — ela o estende. O produto não é vendido como algo separado do que você ensinou: é a continuação natural.</em></p>
+</div>
+
+<h2>Duração Ideal por Ticket</h2>
+<table>
+  <thead>
+    <tr><th>Ticket</th><th>Duração</th><th>Foco principal</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>R$97-R$497</td><td>15-25 min</td><td>Hook forte + oferta direta — menos conteúdo</td></tr>
+    <tr><td>R$500-R$1.500</td><td>25-40 min</td><td>Conteúdo de valor + prova social densa</td></tr>
+    <tr><td>R$1.500-R$5.000</td><td>40-60 min</td><td>Storytelling longo + destruição de objeções</td></tr>
+    <tr><td>R$5.000+</td><td>60-90 min ou webinar</td><td>Alta transformação + case studies detalhados</td></tr>
+  </tbody>
+</table>`
           }
         ],
         locked: false
@@ -1035,192 +1719,378 @@ Ensine 3-5 conceitos/táticas genuinamente úteis. Não retenha o melhor — ent
             title: "Lançamento Semente: Venda Antes de Criar",
             duration: "22 min",
             type: "text",
-            keyPoints: ["O que é o lançamento semente", "Como vender sem produto pronto", "Validação de mercado com risco zero", "Quando usar e quando evitar"],
-            content: `<h2>Lançamento Semente: A Arte de Vender o que Ainda Não Existe</h2>
-<p>O lançamento semente é o modelo mais inteligente para quem está começando ou testando uma nova ideia. A lógica é simples e poderosa: <em>você vende primeiro, cria depois</em>. Isso elimina o maior risco do empreendedorismo digital — criar algo que ninguém quer comprar.</p>
+            keyPoints: ["Copy completo de oferta de fundador — email + WhatsApp prontos para adaptar", "A fórmula de precificação do semente: como calcular o preço de fundador certo", "Timeline de 60 dias do semente ao lançamento completo"],
+            exercise: "Defina agora a ideia do seu semente em 3 frases: (1) Para quem é, (2) Qual resultado entrega, (3) Em quanto tempo. Depois calcule: qual seria o preço cheio? Multiplique por 0,5 — esse é seu preço de fundador inicial. Com essas 4 informações, você consegue escrever o email de oferta usando o template desta aula.",
+            content: `<h2>Lançamento Semente: Venda Antes de Criar — Com os Scripts Prontos</h2>
 
-<h3>Como Funciona na Prática</h3>
-<p>Você apresenta a ideia do produto para uma audiência pequena (sua lista de email, grupo de WhatsApp, seguidores próximos) e oferece acesso a um preço de fundador — significativamente mais barato que o preço final. Em troca, o comprador sabe que está adquirindo algo em construção e que terá participação no processo.</p>
+<p>A lógica é simples e poderosa: <em>você vende primeiro, cria depois</em>. Isso elimina o maior risco do empreendedorismo digital — criar algo que ninguém quer comprar.</p>
 
-<p>O número mínimo viável é <strong>entre 10 e 30 compradores</strong>. Esse volume já valida a demanda, gera receita para cobrir a produção e cria um grupo de "co-criadores" que darão feedback valioso.</p>
+<p>O número mínimo viável é <strong>entre 10 e 30 compradores</strong>. Esse volume valida a demanda, gera receita para cobrir a produção e cria um grupo de "co-criadores" que darão feedback que melhora o produto.</p>
 
-<h3>A Estrutura em 4 Etapas</h3>
-<ol>
-  <li><strong>Pré-anúncio:</strong> Compartilhe a ideia informalmente. "Estou pensando em criar X. Você teria interesse?" — colete reações sem compromisso.</li>
-  <li><strong>Oferta de Fundador:</strong> Apresente formalmente com preço reduzido (30-50% do preço final), prazo curto (48-72h) e transparência sobre o estágio atual.</li>
-  <li><strong>Criação com Feedback:</strong> Entregue módulos progressivamente. Cada entrega é uma oportunidade de coletar feedback e ajustar o conteúdo.</li>
-  <li><strong>Lançamento Completo:</strong> Com produto pronto, provas sociais reais e depoimentos dos fundadores, você relança para o mercado amplo a preço cheio.</li>
-</ol>
+<h2>A Fórmula de Precificação do Semente</h2>
 
-<h3>Quando Usar o Lançamento Semente</h3>
-<ul>
-  <li>Primeiro produto digital — validar antes de investir tempo em produção</li>
-  <li>Nova área ou nicho — testar demanda sem assumir que você sabe o que o mercado quer</li>
-  <li>Produto de alto ticket — o risco de criar sem validação é maior quando o investimento de produção é alto</li>
-  <li>Audiência pequena — mesmo com 200 seguidores é possível fazer um semente bem-sucedido</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Preço final planejado</th><th>Preço de fundador</th><th>Número mínimo de vendas</th><th>Receita mínima de validação</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>R$497</td><td>R$247 (50%)</td><td>15 fundadores</td><td>R$3.705</td></tr>
+    <tr><td>R$997</td><td>R$497 (50%)</td><td>10 fundadores</td><td>R$4.970</td></tr>
+    <tr><td>R$1.997</td><td>R$997 (50%)</td><td>10 fundadores</td><td>R$9.970</td></tr>
+    <tr><td>R$2.500</td><td>R$1.200 (48%)</td><td>8 fundadores</td><td>R$9.600</td></tr>
+  </tbody>
+</table>
 
-<h3>Quando Evitar</h3>
-<ul>
-  <li>Produtos físicos com custo de produção alto — o modelo não se aplica bem</li>
-  <li>Quando você não consegue entregar em 30-60 dias — compromisso com o comprador é sagrado</li>
-  <li>Se sua audiência já espera produto acabado — certos mercados não aceitam "em construção"</li>
-</ul>
+<p><strong>Regra:</strong> o desconto de fundador deve ser real e justificado — não um truque. A justificativa é: o comprador entra com o produto em construção, participa do processo, e sua opinião molda o produto final. Isso tem valor — para você e para ele.</p>
 
-<blockquote>Jeff Walker, criador da PLF, começou com um lançamento semente para sua própria lista de email. Faturou US$34.000 em uma semana com um produto que ainda não existia. O semente não é gambito de iniciante — é estratégia de risco calculado.</blockquote>
+<h2>O Email de Oferta de Fundador — Template Completo</h2>
 
-<h3>Erros Fatais no Semente</h3>
-<ul>
-  <li><strong>Prometer mais do que pode entregar:</strong> Transparência é o ativo principal deste modelo</li>
-  <li><strong>Não ter deadline na oferta de fundador:</strong> Sem urgência, "vou pensar" vira nunca</li>
-  <li><strong>Precificar muito barato:</strong> Preço de fundador deve ser especial, não irrisório. Produto de R$1.000 pode ter fundador a R$497, não a R$97</li>
-  <li><strong>Ignorar o feedback dos compradores:</strong> Eles são seus co-criadores, não apenas primeiros clientes</li>
-</ul>`
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL DE OFERTA DE FUNDADOR — ADAPTE AO SEU CONTEXTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> Uma pergunta direta (com resposta honesta)<br/><br/>
+Oi [nome],<br/><br/>
+Tenho trabalhado em algo há [X meses/semanas]. Antes de concluir, quero saber se faz sentido para você.<br/><br/>
+Estou criando [nome do produto/método] — um [formato: programa, curso, método] para [avatar] que quer [resultado principal] sem [obstáculo principal].<br/><br/>
+A estrutura é [X módulos / X semanas]. Entregas incluem [elemento 1], [elemento 2] e [elemento 3].<br/><br/>
+Estou abrindo para um grupo pequeno de fundadores — pessoas que entram agora, com o produto ainda em construção, por [preço de fundador] (o preço final será [preço cheio]).<br/><br/>
+Em troca do desconto, peço que:<br/>
+- Participe ativamente e me dê feedback real<br/>
+- Se tiver resultado, compartilhe comigo (para usar como depoimento)<br/><br/>
+Estou abrindo apenas [N] vagas. Fecha [data/dia] à meia-noite.<br/><br/>
+Se quiser entrar: [link de pagamento]<br/><br/>
+Qualquer dúvida, responde esse email.<br/><br/>
+[Assinatura]
+</p>
+</div>
+
+<h2>O WhatsApp de Oferta de Fundador — Template</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">MENSAGEM WHATSAPP — OFERTA DE FUNDADOR (200 palavras)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"Oi [nome]! Tenho algo diferente pra te contar.<br/><br/>
+Estou lançando o [produto] — um método para [resultado] em [tempo] para quem [perfil do avatar].<br/><br/>
+Antes de abrir pra todo mundo, estou escolhendo [N] pessoas para entrar como fundadores. O que muda pra quem entra agora: preço de R$[cheio] por R$[fundador] + participação direta na construção do método.<br/><br/>
+Fecha em 48h.<br/><br/>
+Você topa? Se sim, te mando o link agora."
+</p>
+</div>
+
+<h2>A Estrutura em 4 Etapas — Com Timing</h2>
+
+<table>
+  <thead>
+    <tr><th>Etapa</th><th>Dias</th><th>O que fazer</th><th>Ferramenta</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Pré-anúncio</td><td>D-5 a D-3</td><td>Testar a ideia informalmente ("Estou pensando em criar X — faz sentido pra você?")</td><td>DM, WhatsApp, stories com caixinha</td></tr>
+    <tr><td>Oferta de Fundador</td><td>D-2 a D+0</td><td>Email + WhatsApp de oferta com link de pagamento. Deadline real de 48-72h</td><td>Hotmart/Kiwify + email</td></tr>
+    <tr><td>Criação com Feedback</td><td>D+1 a D+45</td><td>Entregar módulos semanalmente. Pesquisa de feedback a cada entrega.</td><td>Área de membros + grupo fechado</td></tr>
+    <tr><td>Relançamento Completo</td><td>D+60</td><td>Produto pronto, depoimentos coletados, relança para audiência ampla a preço cheio</td><td>Lançamento PLF ou perpétuo</td></tr>
+  </tbody>
+</table>
+
+<h2>Erros Que Matam o Semente</h2>
+
+<table>
+  <thead>
+    <tr><th>Erro</th><th>Consequência</th><th>Como evitar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Prometer mais do que pode entregar</td><td>Refund + reputação destruída</td><td>Seja honesto sobre o que está pronto e o que está sendo construído</td></tr>
+    <tr><td>Sem deadline na oferta de fundador</td><td>Nenhuma venda — "vou pensar" vira nunca</td><td>48-72h de janela — não mais que isso</td></tr>
+    <tr><td>Preço muito barato</td><td>Comprador não valoriza + você perde margem</td><td>Mínimo 40-50% do preço final — não abaixo</td></tr>
+    <tr><td>Ignorar o feedback dos fundadores</td><td>Produto que não resolve o problema real</td><td>Check-in semanal + pesquisa formal após cada módulo</td></tr>
+    <tr><td>Entregar tudo de uma vez</td><td>Perde o feedback ao longo do processo</td><td>Entregar em partes — 1 módulo/semana</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "perpetuo",
             title: "Lançamento Perpétuo: A Máquina de Vendas 24/7",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Funil perpétuo vs. lançamento pontal", "Sequência de email automatizada", "Webinar evergreen", "Quando escalar para perpétuo"],
-            content: `<h2>Perpétuo: Quando Seu Funil Trabalha Enquanto Você Dorme</h2>
-<p>O lançamento perpétuo (também chamado de evergreen) é um sistema de vendas automatizado que roda continuamente — sem janelas de abertura e fechamento de carrinho, sem pico de estresse, sem dependência de você estar online.</p>
+            keyPoints: ["A sequência de 7 emails do funil perpétuo — assuntos e copy pronto", "As métricas que indicam se o funil está saudável ou sangrando budget", "Como montar o webinar evergreen que converte: estrutura minuto a minuto"],
+            exercise: "Escreva o assunto + primeiras 3 linhas dos 7 emails do seu funil perpétuo usando os templates desta aula. Não precisa ser perfeito — escreva uma versão rascunho de cada um. O objetivo é ter a estrutura da sequência antes de qualquer configuração técnica. Isso deve tomar 90 minutos.",
+            content: `<h2>Funil Perpétuo: A Receita Que Cresce Enquanto Você Dorme</h2>
 
-<p>A diferença fundamental: enquanto o lançamento pontual gera picos de receita, o perpétuo gera receita <em>previsível e crescente</em>. É a diferença entre sprint e maratona.</p>
+<p>O lançamento perpétuo (evergreen) é um sistema de vendas automatizado que roda continuamente — sem janelas de abertura e fechamento, sem pico de estresse, sem dependência de você estar online. É receita previsível.</p>
 
-<h3>Como Funciona a Estrutura Perpétua</h3>
-<p>O visitante entra no funil via anúncio ou conteúdo orgânico, assiste a um webinar gravado (que ele percebe como ao vivo graças à tecnologia de "simulação de ao vivo"), recebe uma sequência de emails de 5-7 dias e é apresentado à oferta com um deadline individual — geralmente 48-72h após o cadastro.</p>
+<p><strong>Mas atenção:</strong> um funil perpétuo mal construído é uma máquina de queimar dinheiro. A sequência correta antes de construir o perpétuo: semente → 1-2 lançamentos pontuais → perpétuo. Escale o que funciona — não pule etapas.</p>
 
-<h3>Os 4 Pilares do Funil Perpétuo</h3>
+<h2>A Estrutura do Funil Perpétuo em 4 Pilares</h2>
 
-<h3>1. A Isca (Lead Magnet)</h3>
-<p>O ponto de entrada. Deve resolver um problema específico e imediato. Mini-curso, checklist, calculadora. Quanto mais específico o problema que resolve, melhor a qualidade do lead.</p>
+<table>
+  <thead>
+    <tr><th>Pilar</th><th>O que é</th><th>Métrica de sucesso</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Lead Magnet (Isca)</td><td>Material gratuito que resolve um problema específico do avatar</td><td>Taxa opt-in LP &gt;35%</td></tr>
+    <tr><td>Webinar Evergreen</td><td>60-90 min gravado — conteúdo de valor + oferta</td><td>Comparecimento &gt;25%, Conversão 5-15%</td></tr>
+    <tr><td>Sequência de Email</td><td>7 emails em 7 dias — nutrir, convencer, converter</td><td>Taxa abertura &gt;25%, Conversão sequência &gt;3%</td></tr>
+    <tr><td>Deadline Individual</td><td>Contador único por usuário — 48-72h após o webinar</td><td>60%+ das vendas acontecem nos últimos 12h</td></tr>
+  </tbody>
+</table>
 
-<h3>2. O Webinar Evergreen</h3>
-<p>O coração do funil perpétuo. Um webinar de 60-90 minutos com estrutura: gancho → conteúdo de valor → transição → oferta. A chave é que ele deve converter tão bem gravado quanto ao vivo.</p>
-<p>Ferramentas: EverWebinar, WebinarJam, Demio (modo simulado), ou simplesmente uma página com vídeo do YouTube não listado.</p>
+<h2>A Sequência de 7 Emails — Assuntos + Estrutura Prontos</h2>
 
-<h3>3. A Sequência de Email</h3>
-<p>7 emails disparados ao longo de 7 dias após o cadastro. Cada email tem um papel:</p>
-<ul>
-  <li>Email 1: Entrega o lead magnet + expectativa do que vem</li>
-  <li>Email 2: Conteúdo de valor direto (sem vender)</li>
-  <li>Email 3: Sua história de transformação</li>
-  <li>Email 4: Prova social de alunos</li>
-  <li>Email 5: Destruição da objeção principal</li>
-  <li>Email 6: A oferta direta com deadline</li>
-  <li>Email 7: Última chance + por que agir agora</li>
-</ul>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL 1 — ENTREGA + EXPECTATIVA (imediato após opt-in)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> "Seu [lead magnet] está aqui + o que vem depois"<br/>
+<strong>Estrutura:</strong> Entrega o link do lead magnet → Agradece pelo interesse → Anuncia o que a sequência vai entregar nos próximos dias (cria expectativa) → CTA: "Assiste o webinar — te enviei o link separado"
+</p>
+</div>
 
-<h3>4. O Deadline Individual</h3>
-<p>Cada pessoa que entra no funil recebe um deadline personalizado (ex: 72h após o webinar). Ferramentas como Deadline Funnel criam contadores genuinamente únicos por usuário — não é fake, é real.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL 2 — CONTEÚDO DE VALOR (D+1)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> "O erro que [avatar] comete antes de [ação principal]"<br/>
+<strong>Estrutura:</strong> Conteúdo educacional direto — sem vender nada. O objetivo é demonstrar expertise e criar reciprocidade. Finaliza com: "Amanhã vou te falar sobre [próximo conteúdo]" — cria abertura do próximo email.
+</p>
+</div>
 
-<h3>Quando Migrar para o Perpétuo</h3>
-<p>O erro mais comum é ir direto para o perpétuo antes de validar a oferta. A sequência correta é:</p>
-<ol>
-  <li>Lançamento semente (valida a ideia)</li>
-  <li>1-2 lançamentos pontuais (refina a oferta, coleta provas sociais)</li>
-  <li>Perpétuo (escala o que já funciona)</li>
-</ol>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL 3 — HISTÓRIA DE TRANSFORMAÇÃO (D+2)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> "Como eu [resultado chocante] depois de [situação difícil]"<br/>
+<strong>Estrutura:</strong> Sua história real de antes/depois → O insight que mudou tudo → Como esse insight virou o método que você usa hoje. Sem vender — apenas contar a história. CTA: "Amanhã compartilho o caso de um aluno que aplicou e [resultado específico]"
+</p>
+</div>
 
-<blockquote>Um funil perpétuo mal construído é uma máquina de queimar dinheiro em anúncios. Um funil perpétuo bem construído é um ativo que se valoriza com o tempo — quanto mais dados, melhor a otimização.</blockquote>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL 4 — PROVA SOCIAL (D+3)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> "[Nome do aluno] foi de [situação antes] para [resultado] em [tempo]"<br/>
+<strong>Estrutura:</strong> Case detalhado de um aluno — situação antes, o que aplicou, resultado específico. Termina: "O mesmo método que o [Nome] usou está disponível para você. Mas é para um perfil específico — no email de amanhã conto quem é esse perfil."
+</p>
+</div>
 
-<h3>Métricas do Funil Perpétuo Saudável</h3>
-<ul>
-  <li>Taxa de opt-in da landing page: &gt;35%</li>
-  <li>Taxa de comparecimento ao webinar: &gt;25% dos inscritos</li>
-  <li>Taxa de conversão do webinar: 5-15% dos participantes</li>
-  <li>ROAS mínimo para escalar: 3x</li>
-</ul>`
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL 5 — DESTRUIÇÃO DE OBJEÇÃO (D+4)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> "Mas e se [objeção principal]?"<br/>
+<strong>Estrutura:</strong> Enfrenta diretamente a principal objeção do avatar ("não tenho tempo", "não tenho audiência", "já tentei antes") → Resposta honesta + prova de que não é obstáculo real → Transição: "Então o [produto] é para você. Deixa eu explicar o que está incluso."
+</p>
+</div>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL 6 — OFERTA DIRETA (D+5)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> "[Produto] — o que está incluso e o investimento"<br/>
+<strong>Estrutura:</strong> Apresenta o produto com todos os módulos e bônus → Stack de valor (quanto cada parte valeria separado) → Preço real + formas de pagamento → Garantia → Deadline individual (48h) → CTA direto com link<br/><br/>
+<strong>Este é o email mais importante da sequência.</strong> Se as conversões estão baixas, geralmente é aqui que está o problema — ou o preço, ou a oferta, ou a garantia.
+</p>
+</div>
+
+<div style="background:#1a1a2e;border-left:3px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#f87171;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL 7 — ÚLTIMA CHANCE (D+6 — última hora antes do deadline)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> "Fecha em [X horas] — última chance"<br/>
+<strong>Estrutura:</strong> Recapitulação rápida (3 frases) → O que acontece quando fechar (sem rodeios — o desconto/bônus sai) → 1 CTA final → P.S. com resposta à última objeção<br/><br/>
+<strong>Nota:</strong> 40-60% das vendas de um funil perpétuo acontecem neste email. Não pule — e mande no horário exato do deadline.
+</p>
+</div>
+
+<h2>Métricas do Funil Perpétuo Saudável</h2>
+
+<table>
+  <thead>
+    <tr><th>Métrica</th><th>Ruim</th><th>Bom</th><th>Excelente</th><th>O que fazer se ruim</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Taxa opt-in LP</td><td>&lt;20%</td><td>30-45%</td><td>&gt;50%</td><td>Reescrever headline + CTA da LP</td></tr>
+    <tr><td>Comparecimento webinar</td><td>&lt;15%</td><td>25-35%</td><td>&gt;40%</td><td>Melhorar email/reminder pré-webinar</td></tr>
+    <tr><td>Conversão no webinar</td><td>&lt;3%</td><td>5-10%</td><td>&gt;12%</td><td>Revisar transição conteúdo→pitch</td></tr>
+    <tr><td>Taxa abertura email</td><td>&lt;15%</td><td>25-35%</td><td>&gt;40%</td><td>Reescrever assuntos dos emails</td></tr>
+    <tr><td>Conversão sequência</td><td>&lt;1%</td><td>2-4%</td><td>&gt;5%</td><td>Revisar email 5 (objeção) e 6 (oferta)</td></tr>
+    <tr><td>ROAS (para escalar)</td><td>&lt;2x</td><td>3-5x</td><td>&gt;6x</td><td>Não escale abaixo de 3x — otimize primeiro</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "interno-externo",
             title: "Lançamento Interno e Externo",
             duration: "18 min",
             type: "text",
-            keyPoints: ["Interno: sua própria audiência", "Externo: parceiros e afiliados", "Co-lançamento e JV (Joint Venture)", "Como estruturar comissões e acordos"],
-            content: `<h2>Interno vs. Externo: Aproveitando Cada Audiência</h2>
+            keyPoints: ["Template de proposta de JV — o email que abre parceria sem constrangimento", "Como calcular e apresentar os números de um lançamento para convencer parceiros", "Os critérios para escolher parceiros de JV que multiplicam (e os que prejudicam)"],
+            exercise: "Faça uma lista de 5 nomes que têm a audiência que você quer alcançar — produtores do seu nicho ou nichos complementares. Para cada um, anote: tamanho estimado da audiência, nível de alinhamento com seu produto (1-5), e se você já tem algum relacionamento com eles. Classifique por prioridade e planeje o primeiro contato nos próximos 30 dias.",
+            content: `<h2>Interno vs. Externo: Como Multiplicar Receita Sem Mais Budget</h2>
 
-<h3>Lançamento Interno</h3>
-<p>O lançamento interno é feito exclusivamente para sua própria audiência — sua lista de email, seguidores nas redes, grupo de WhatsApp. Você controla tudo: timing, mensagem, frequência.</p>
+<h2>Lançamento Interno: Sua Base, Seu Controle</h2>
 
-<p><strong>Vantagens:</strong></p>
-<ul>
-  <li>Margem 100% para você (sem comissões)</li>
-  <li>Relacionamento mais próximo — audiência que já te conhece e confia</li>
-  <li>Velocidade de execução — não depende de parceiros</li>
-  <li>Controle total da mensagem e posicionamento</li>
-</ul>
+<p>O lançamento interno usa exclusivamente sua própria audiência — lista de email, seguidores, grupos de WhatsApp/Telegram. Você controla tudo: timing, mensagem, frequência, posicionamento.</p>
 
-<p><strong>Limitação:</strong> o teto de receita é limitado pelo tamanho da sua audiência. Para crescer, você precisa ou aumentar a lista constantemente, ou trazer audiências externas.</p>
+<table>
+  <thead>
+    <tr><th>Variável</th><th>Interno</th><th>Externo (JV)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Margem</td><td>100% sua</td><td>50-70% sua (após comissão)</td></tr>
+    <tr><td>Controle</td><td>Total</td><td>Compartilhado</td></tr>
+    <tr><td>Dependência</td><td>Do tamanho da sua lista</td><td>Da qualidade da lista do parceiro</td></tr>
+    <tr><td>Velocidade</td><td>Você decide</td><td>Depende da agenda do parceiro</td></tr>
+    <tr><td>Teto de receita</td><td>Limitado pela sua audiência</td><td>Escala com o número de parceiros</td></tr>
+    <tr><td>Risco</td><td>Baixo</td><td>Reputação ligada ao parceiro</td></tr>
+  </tbody>
+</table>
 
-<h3>Lançamento Externo</h3>
-<p>No lançamento externo, você apresenta seu produto para a audiência de outra pessoa — um parceiro que tem a confiança de um público que você ainda não alcança. O parceiro (chamado de JV — Joint Venture) promove seu produto para a lista dele em troca de comissão sobre as vendas.</p>
+<h2>Lançamento Externo (JV): A Alavanca de Crescimento</h2>
 
-<p><strong>Como estruturar um JV:</strong></p>
-<ul>
-  <li>Comissão padrão no mercado: 30-50% do valor do produto</li>
-  <li>O JV cede a lista e faz os disparos; você entrega o produto e o suporte</li>
-  <li>Acordar antecipadamente: reciprocidade futura, materiais de divulgação, tracking de vendas</li>
-  <li>Ferramenta: Hotmart, Kiwify ou Eduzz têm sistema de afiliados embutido</li>
-</ul>
+<p>No JV, você apresenta seu produto para a audiência de outro produtor. O parceiro promove para a lista dele — em troca de comissão sobre cada venda. Sem lista grande, sem budget extra: a audiência já existe, só precisa ser ativada.</p>
 
-<h3>Lançamento Co-criado</h3>
-<p>Modelo híbrido onde dois produtores unem audiências e criam um produto juntos. Cada um contribui com sua área de expertise e divide a receita 50/50 (ou conforme acordo).</p>
-<p><em>Exemplo clássico:</em> nutricionista + personal trainer criando um programa de emagrecimento completo.</p>
+<h3>Como Estruturar a Comissão de JV</h3>
 
-<h3>Como Encontrar Parceiros de JV</h3>
-<ol>
-  <li>Mapeie quem tem a audiência que você quer alcançar (mesmo tamanho ou maior)</li>
-  <li>Construa relacionamento genuíno antes de pedir parceria</li>
-  <li>Apresente a proposta com dados: taxa de conversão histórica, ticket médio, suporte ao aluno</li>
-  <li>Comece com trocas menores para construir confiança mútua</li>
-</ol>
+<table>
+  <thead>
+    <tr><th>Ticket do produto</th><th>Comissão padrão</th><th>O que é negociável</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>R$97-R$497</td><td>40-50%</td><td>Bônus de performance (acima de X vendas)</td></tr>
+    <tr><td>R$500-R$1.500</td><td>30-40%</td><td>Reciprocidade futura + % do upsell</td></tr>
+    <tr><td>R$1.500-R$5.000</td><td>25-35%</td><td>Comissão em 2 camadas (JV + sub-afiliados)</td></tr>
+    <tr><td>R$5.000+</td><td>20-30%</td><td>Revenue share + acesso exclusivo ao produto</td></tr>
+  </tbody>
+</table>
 
-<blockquote>Um único lançamento externo com o parceiro certo pode multiplicar sua receita em 5-10x em relação ao interno. Mas a reputação do parceiro é sua reputação — escolha com cuidado.</blockquote>`
+<h2>O Email de Proposta de JV — Template Que Funciona</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL DE PROPOSTA JV — ADAPTE AO SEU CONTEXTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> Proposta de parceria — [seu nome] + [nome do parceiro]<br/><br/>
+Oi [nome],<br/><br/>
+Sou [seu nome]. [Uma linha de credencial relevante — o que você já fez que o parceiro reconheceria].<br/><br/>
+Tenho acompanhado seu trabalho há algum tempo, especificamente [algo genuinamente específico sobre o trabalho dele — não genérico].<br/><br/>
+Tenho um produto, [nome], voltado para [avatar]. Em lançamentos anteriores, tive uma taxa de conversão de [X]% com tickets de R$[valor]. A minha estimativa é que para a sua audiência o CPL seria em torno de R$[X] com conversão de [X]% — o que geraria uma comissão de aproximadamente R$[estimativa] para você.<br/><br/>
+A proposta é simples:<br/>
+- Você cede [X disparos] para sua lista durante [período]<br/>
+- Eu forneço todos os materiais de divulgação e suporte completo ao aluno<br/>
+- Comissão de [X]% de cada venda rastreada pelo seu link<br/><br/>
+Se fizer sentido, podemos agendar uma call de 30 minutos para alinhar detalhes.<br/><br/>
+[Assinatura]
+</p>
+</div>
+
+<p><strong>Por que esse email funciona:</strong> ele é específico (não é copy genérico de proposta), apresenta os números antes de pedir o sim, e reduz o risco do parceiro ao mostrar projeção realista.</p>
+
+<h2>Como Encontrar e Qualificar Parceiros de JV</h2>
+
+<table>
+  <thead>
+    <tr><th>Critério</th><th>Por que importa</th><th>Como avaliar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Alinhamento de audiência</td><td>Lista desalinhada = baixa conversão</td><td>Conteúdo dele resolve dores complementares ao seu produto?</td></tr>
+    <tr><td>Engajamento da lista</td><td>Lista grande e fria é pior que lista pequena e quente</td><td>Taxa abertura dos emails dele (peça — ou observe os posts)</td></tr>
+    <tr><td>Reputação no mercado</td><td>Sua credibilidade está atrelada à dele</td><td>Pesquise reclamações, verifique entrega do produto, converse com alunos</td></tr>
+    <tr><td>Histórico de JVs anteriores</td><td>Parceiros experientes têm processos — iniciantes criam problemas</td><td>Pergunte diretamente se já fez parcerias e como foi</td></tr>
+    <tr><td>Relacionamento prévio</td><td>Proposta fria tem 5% de resposta. Com relação prévia: 60%+</td><td>Interagiu com o conteúdo dele antes? Trocou mensagens?</td></tr>
+  </tbody>
+</table>
+
+<h2>Co-lançamento: O Modelo Mais Poderoso (e Mais Complexo)</h2>
+
+<p>No co-lançamento, dois produtores unem audiências <em>e</em> criam o produto juntos. Cada um traz expertise diferente + audiência diferente. A receita é dividida (50/50 ou conforme acordo) — mas o potencial é muito maior.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">AVISO IMPORTANTE — CO-LANÇAMENTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Co-lançamento sem contrato escrito é co-conflito agendado. Formalize antes: quem decide o preço, quem controla os acessos, como é dividido o suporte, o que acontece em caso de discordância sobre direção do produto, e o que acontece se um dos parceiros quiser sair. Mesmo (especialmente) entre amigos.</p>
+</div>`
           },
           {
             id: "afiliado",
             title: "Lançamento de Afiliado: Lucro Sem Produto Próprio",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Como funciona o modelo de afiliado", "Escolhendo o produto certo para promover", "Estratégias de afiliado avançado: bônus e posicionamento", "A transição de afiliado para produtor"],
-            content: `<h2>Afiliado: A Porta de Entrada para o Mercado Digital</h2>
-<p>O lançamento de afiliado é quando você promove o produto de outra pessoa para sua audiência em troca de comissão. Não há criação de produto, suporte ao cliente ou infraestrutura — apenas geração de tráfego e conversão.</p>
+            keyPoints: ["O post de afiliado avançado — com bônus exclusivo — copy pronto para adaptar", "Scorecard para escolher produto certo: 5 critérios com peso", "Como fazer R$10k+ em comissões com uma lista de menos de 1.000 pessoas"],
+            exercise: "Escolha agora 1 produto do seu nicho que você genuinamente acredita — um que você usaria ou já usou. Calcule: se você vender 10 unidades, qual é sua comissão total? O que você poderia criar como bônus exclusivo (template, checklist, sessão, mini-curso) que diferenciaria sua promoção? Escreva o primeiro rascunho do post de promoção usando o template desta aula.",
+            content: `<h2>Afiliado Avançado: A Diferença Entre Promover e Converter</h2>
 
-<p>Para quem está começando, o modelo de afiliado é a forma mais rápida de gerar receita enquanto aprende como o mercado funciona. Para quem já tem produto, o afiliado é uma linha de receita adicional com esforço incremental.</p>
+<p>O afiliado mediano compartilha o link. O afiliado avançado cria contexto, constrói desejo e oferece algo que não existe em nenhum outro lugar. A diferença na comissão pode ser 10x.</p>
 
-<h3>Como Escolher o Produto Certo para Promover</h3>
-<p>Critérios não negociáveis:</p>
-<ul>
-  <li><strong>Alinhamento com sua audiência:</strong> Promover algo fora do seu contexto destrói credibilidade rapidamente</li>
-  <li><strong>Produto que você usaria:</strong> Autenticidade na promoção é detectável — e sua ausência também</li>
-  <li><strong>Produtor com boa reputação:</strong> O suporte e a entrega do produto refletem em você</li>
-  <li><strong>Comissão justa:</strong> Produtos digitais pagam 30-50%. Abaixo disso, o math raramente fecha</li>
-  <li><strong>Material de divulgação de qualidade:</strong> Página de vendas, banners, copy pronto facilitam a promoção</li>
-</ul>
+<h2>Scorecard: Como Escolher o Produto Certo Para Promover</h2>
 
-<h3>A Estratégia do Bônus Exclusivo</h3>
-<p>O afiliado mediano promove o produto. O afiliado avançado cria um <em>bônus exclusivo</em> que só quem comprar pelo seu link recebe. Esse bônus pode ser:</p>
-<ul>
-  <li>Uma consultoria de 1h com você</li>
-  <li>Um template ou ferramenta complementar</li>
-  <li>Um mini-curso de implementação do produto principal</li>
-  <li>Acesso a um grupo fechado de suporte</li>
-</ul>
-<p>A pergunta que o comprador faz é: "Por que comprar pelo link do João e não direto?" Seu bônus é a resposta.</p>
+<table>
+  <thead>
+    <tr><th>Critério</th><th>Peso</th><th>Como avaliar</th><th>Nota mínima para promover</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Alinhamento com sua audiência</td><td>30%</td><td>Sua audiência tem a dor que esse produto resolve?</td><td>8/10</td></tr>
+    <tr><td>Reputação do produtor</td><td>25%</td><td>Pesquise reclamações, entregou o que prometeu, suporte funcionou?</td><td>7/10</td></tr>
+    <tr><td>Comissão (math viável)</td><td>20%</td><td>Com sua taxa de conversão estimada, o CPL compensa? Mín: 30%</td><td>6/10</td></tr>
+    <tr><td>Qualidade do produto</td><td>15%</td><td>Você usou ou testou? Ou tem depoimentos verificáveis?</td><td>8/10</td></tr>
+    <tr><td>Materiais de divulgação</td><td>10%</td><td>Página de vendas, copy, banners prontos facilitam muito</td><td>5/10</td></tr>
+  </tbody>
+</table>
 
-<h3>Posicionamento de Afiliado: Curation vs. Promoção</h3>
-<p>Há dois posicionamentos possíveis:</p>
-<ul>
-  <li><strong>Curador:</strong> "Testei 12 cursos de X e só recomendo este" — autoridade de quem seleciona o melhor</li>
-  <li><strong>Usuário:</strong> "Comprei, usei, tive resultado Y" — prova social de quem viveu a transformação</li>
-</ul>
-<p>O posicionamento de curador funciona mesmo sem ter comprado — desde que o filtro seja real. O de usuário exige experiência genuína mas converte melhor.</p>
+<p><strong>Regra prática:</strong> se o critério de alinhamento ou reputação estiver abaixo de 7, não promova independente dos outros fatores. Sua credibilidade é mais valiosa que qualquer comissão.</p>
 
-<h3>A Transição Natural: De Afiliado a Produtor</h3>
-<p>O modelo de afiliado é excelente escola. Você aprende o que vende, o que converte, quais objeções existem e como o mercado reage. Com esse conhecimento, a transição para produto próprio é muito mais assertiva.</p>
-<p>A sequência inteligente: afiliado → semente → lançamento pontual → perpétuo.</p>`
+<h2>A Estratégia do Bônus Exclusivo — O Que Diferencia</h2>
+
+<p>A pergunta que qualquer comprador faz antes de usar um link de afiliado: "Por que comprar pelo link de X em vez de comprar direto ou pelo link de Y?" Sem uma resposta clara, a maioria vai comprar pela rota mais óbvia — sem o seu link.</p>
+
+<p>O bônus exclusivo responde essa pergunta.</p>
+
+<table>
+  <thead>
+    <tr><th>Tipo de bônus</th><th>Valor percebido</th><th>Custo para você</th><th>Melhor para</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Sessão 1:1 (1h)</td><td>Muito alto</td><td>Seu tempo (1h por venda)</td><td>Produtos de alto ticket</td></tr>
+    <tr><td>Template / ferramenta</td><td>Alto</td><td>Baixo (cria uma vez, distribui sempre)</td><td>Qualquer ticket</td></tr>
+    <tr><td>Mini-curso de implementação</td><td>Alto</td><td>Médio (gravar uma vez)</td><td>Produtos com curva de aprendizado</td></tr>
+    <tr><td>Acesso a grupo fechado</td><td>Médio-alto</td><td>Moderado (moderação)</td><td>Comunidades, nichos específicos</td></tr>
+    <tr><td>Checklist exclusivo</td><td>Médio</td><td>Muito baixo</td><td>Primeiros bônus — nível iniciante</td></tr>
+  </tbody>
+</table>
+
+<h2>O Post de Afiliado Avançado — Template de Copy</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">POST DE AFILIADO — ESTRUTURA QUE CONVERTE</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>[HOOK — resultado ou controvérsia]</strong><br/>
+"Recomendo poucas coisas. Quando recomendo, é porque testei ou acompanhei de perto o resultado."<br/><br/>
+
+<strong>[CONTEXTO — por que você está falando disso]</strong><br/>
+"Nos últimos [X meses] acompanhei [N] pessoas usando o [produto do nicho]. Os resultados que vi foram [resultado específico]. Um caso específico: [case real de 2 frases]."<br/><br/>
+
+<strong>[O QUE É — sem jargão]</strong><br/>
+"O [produto] é um [formato] para [avatar] que quer [resultado] em [tempo]. Ele cobre [módulos/tópicos principais]."<br/><br/>
+
+<strong>[POR QUE COMPRAR PELO SEU LINK]</strong><br/>
+"Quem entrar pelo meu link leva de bônus: [bônus específico]. Isso não está disponível em nenhum outro lugar — só pelo meu link porque [justificativa curta]."<br/><br/>
+
+<strong>[CTA]</strong><br/>
+"Link na bio. Fecha [data]. Qualquer dúvida me manda uma mensagem."
+</p>
+</div>
+
+<h2>O Posicionamento Certo: Curador vs. Usuário</h2>
+
+<table>
+  <thead>
+    <tr><th>Posicionamento</th><th>Quando usar</th><th>Copy de abertura</th><th>Conversão relativa</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Curador</td><td>Quando você testou ou avaliou múltiplas opções</td><td>"Avaliei [N] opções de [tema] e esse é o único que recomendo porque..."</td><td>Alta — autoridade de filtro</td></tr>
+    <tr><td>Usuário</td><td>Quando você comprou e teve resultado</td><td>"Usei o [produto] e [resultado específico]. O que funcionou foi..."</td><td>Muito alta — prova viva</td></tr>
+    <tr><td>Observador</td><td>Quando você acompanhou alunos usando</td><td>"Acompanhei [N] pessoas usando e vi [resultado]. O que me convenceu foi..."</td><td>Média — prova indireta</td></tr>
+  </tbody>
+</table>
+
+<h2>Como Fazer R$10k+ com Lista Pequena</h2>
+
+<p>Com uma lista de 800 pessoas e taxa de abertura de 30% = 240 pessoas lendo. Taxa de clique de 10% = 24 pessoas na página. Conversão de 15% = 3-4 vendas. Com produto de R$2.500 e 40% de comissão = R$3.000-4.000 por lançamento de afiliado.</p>
+
+<p>Para chegar a R$10k: ou mais lançamentos de afiliado por ano, ou produto de ticket maior, ou aumentar a lista. As três alavancas são independentes — você pode trabalhar qualquer uma.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">REGRA DE OURO DO AFILIADO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Você não está vendendo o produto de alguém. Você está curadorizando opções para sua audiência e assumindo responsabilidade pela qualidade do que recomenda. Se o produto for ruim, sua audiência vai saber que foi você que recomendou — e vai lembrar. A comissão passa, a reputação fica.</p>
+</div>`
           },
           {
             id: "comparativo-modelos",
@@ -1290,133 +2160,238 @@ Não → afiliado enquanto produz</p>
         lessons: [
           {
             id: "escada-1",
-            title: "Escada de Valor: Da Isca ao High Ticket",
+            title: "Escada de Valor: Mapeando Sua Jornada de Produtos",
             duration: "25 min",
             type: "text",
-            keyPoints: ["O conceito de escada de valor (Value Ladder)", "Da isca digital ao produto premium", "Como cada produto financia o próximo", "Ticket médio vs. LTV"],
-            content: `<h2>A Escada de Valor: Arquitetura de Receita Inteligente</h2>
-<p>Russell Brunson popularizou o conceito de Value Ladder (escada de valor) no livro DotCom Secrets. A ideia é simples: em vez de ter um produto, você tem uma <em>jornada de produtos</em> — cada um entregando mais valor a um preço mais alto, para quem está pronto para subir o próximo degrau.</p>
+            keyPoints: ["Planilha de mapeamento da escada de valor — preencha durante a aula", "Como calcular o LTV de cada degrau e usar para definir budget de aquisição", "Os 3 erros mais comuns na escada que fazem a maioria dos produtores parar no degrau 2"],
+            exercise: "Preencha agora os 5 degraus da sua escada de valor. Para cada degrau: (1) qual é o produto ou oferta, (2) qual é o preço, (3) qual problema específico ele resolve. Se algum degrau está vazio, esse é seu próximo produto a criar. Não é necessário ter todos os 5 — mas você precisa ter pelo menos os degraus 1, 2 e 3 mapeados.",
+            content: `<h2>Escada de Valor: A Arquitetura de Receita de Todo Negócio Digital Escalável</h2>
 
-<h3>Por Que a Escada Funciona</h3>
-<p>O custo de aquisição de um cliente é alto. Uma vez que alguém comprou de você, a barreira da confiança foi vencida. Vender para quem já comprou custa <strong>5 a 7 vezes menos</strong> do que adquirir um novo cliente. A escada de valor é a estrutura que aproveita isso sistematicamente.</p>
+<p>A ideia é simples mas poderosa: em vez de ter um produto, você tem uma jornada de produtos — cada um entregando mais valor a um preço mais alto, para quem está pronto para o próximo degrau. O custo de vender para quem já comprou é 5-7x menor do que adquirir um novo cliente. A escada aproveita isso sistematicamente.</p>
 
-<h3>Os 5 Degraus da Escada</h3>
+<h2>Os 5 Degraus: Estrutura + Exemplos Reais</h2>
 
-<h3>Degrau 1: Isca Digital (Gratuito ou R$9-R$47)</h3>
-<p>Objetivo: capturar o lead ou fazer a primeira venda de baixíssima resistência. Não precisa gerar lucro — precisa gerar cadastro e primeira experiência positiva com sua entrega.</p>
-<p><em>Exemplos:</em> ebook, mini-curso, checklist, template, calculadora.</p>
+<table>
+  <thead>
+    <tr><th>Degrau</th><th>Faixa de preço</th><th>Objetivo estratégico</th><th>Exemplo de produto</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1 — Isca Digital</td><td>Grátis a R$47</td><td>Gerar cadastro + primeira experiência positiva</td><td>Ebook, checklist, mini-curso, calculadora</td></tr>
+    <tr><td>2 — Produto de Entrada</td><td>R$47-R$297</td><td>Primeira compra real + financiar o CAC</td><td>Workshop gravado, guia completo, curso curto</td></tr>
+    <tr><td>3 — Produto Core</td><td>R$297-R$1.997</td><td>Solução completa — principal fonte de receita</td><td>Curso completo, mentoria em grupo, programa</td></tr>
+    <tr><td>4 — High Ticket</td><td>R$2.000-R$20.000</td><td>Personalização e resultado garantido</td><td>Mentoria 1:1, consultoria, mastermind</td></tr>
+    <tr><td>5 — Continuidade</td><td>R$10.000+/ano</td><td>Parceria estratégica, fee por resultado</td><td>Revenue share, participação societária</td></tr>
+  </tbody>
+</table>
 
-<h3>Degrau 2: Produto de Entrada (R$47-R$297)</h3>
-<p>A primeira compra real. Resolve um problema específico com profundidade suficiente para gerar resultado rápido. Este degrau financia os anúncios e mostra que você entrega o prometido.</p>
-<p><em>Exemplos:</em> curso curto, workshop gravado, guia completo.</p>
+<h2>Como Calcular o LTV de Cada Degrau</h2>
 
-<h3>Degrau 3: Produto Core (R$297-R$1.997)</h3>
-<p>O produto principal do seu negócio. Solução completa para o problema central da sua audiência. A maioria dos produtores vive neste degrau — é onde está a maior parte da receita.</p>
-<p><em>Exemplos:</em> curso completo, mentoria em grupo, programa com acompanhamento.</p>
+<p>LTV (Lifetime Value) é a receita total que um cliente gera ao longo do tempo. A escada de valor serve exatamente para maximizá-lo.</p>
 
-<h3>Degrau 4: High Ticket (R$2.000-R$20.000)</h3>
-<p>Acesso direto a você ou resultado garantido. A entrega é muito mais personalizada: mentoria 1:1, consultoria, mastermind fechado. 20% dos seus clientes têm potencial para este degrau.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EXEMPLO DE CÁLCULO DE LTV</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Suponha que você tenha:<br/>
+- Isca: gratuita (lead magnet)<br/>
+- Produto de entrada: R$197<br/>
+- Produto core: R$997<br/>
+- High ticket: R$5.000<br/><br/>
+Se 100% compra o produto de entrada, 40% sobe para o core e 10% vai para o high ticket:<br/>
+LTV médio = R$197 + (40% × R$997) + (10% × R$5.000)<br/>
+LTV médio = R$197 + R$399 + R$500 = <strong>R$1.096 por cliente</strong><br/><br/>
+Isso significa que você pode gastar até ~R$350-400 para adquirir cada cliente e ainda ter margem saudável.
+</p>
+</div>
 
-<h3>Degrau 5: Ultra High Ticket / Continuidade (R$10.000+)</h3>
-<p>Parcerias estratégicas, participação societária, fee mensal por resultado. Só faz sentido para quem já tem casos de sucesso sólidos nos degraus anteriores.</p>
+<h2>Os 3 Erros Que Travam a Maioria dos Produtores no Degrau 2</h2>
 
-<h3>Como Construir Sua Escada</h3>
-<ol>
-  <li>Mapeie o resultado final que seu cliente quer alcançar</li>
-  <li>Quebre essa jornada em etapas menores</li>
-  <li>Crie um produto para cada etapa</li>
-  <li>Garanta que cada produto entrega resultado real — não apenas "prepara" para o próximo</li>
-  <li>Construa a subida naturalmente: quem tem resultado quer mais</li>
-</ol>
+<table>
+  <thead>
+    <tr><th>Erro</th><th>O que acontece</th><th>Como resolver</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Não existe degrau 1 gratuito</td><td>Leads frios precisam comprar de primeira — resistência alta, CPL alto</td><td>Crie uma isca que resolve um problema real em 30 minutos</td></tr>
+    <tr><td>Pulo de degrau: da isca direto para o core</td><td>Lead não aquecido o suficiente para ticket alto — baixa conversão</td><td>Produto de entrada de R$97-197 que "qualifica" antes do core</td></tr>
+    <tr><td>Degrau 3 sem oferta clara de degrau 4</td><td>Clientes do core não sabem que existe próximo nível — você perde receita</td><td>Após onboarding do degrau 3, apresente a oferta do degrau 4</td></tr>
+  </tbody>
+</table>
 
-<blockquote>A escada de valor não é um funil de vendas agressivo — é uma jornada de transformação progressiva. Cada degrau deve ser completo em si mesmo. Se o cliente parar no degrau 2, ele deve ter tido uma experiência excelente.</blockquote>`
+<h2>Como Mapear Sua Escada Agora</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">PLANILHA DE MAPEAMENTO — PREENCHA AGORA</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Para cada linha, responda:<br/><br/>
+<strong>Degrau 1 (Isca):</strong> Produto: ___ | Preço: ___ | Problema que resolve: ___<br/>
+<strong>Degrau 2 (Entrada):</strong> Produto: ___ | Preço: ___ | Quem é o comprador ideal: ___<br/>
+<strong>Degrau 3 (Core):</strong> Produto: ___ | Preço: ___ | Resultado que entrega: ___<br/>
+<strong>Degrau 4 (HT):</strong> Produto: ___ | Preço: ___ | O que torna exclusivo: ___<br/>
+<strong>Degrau 5 (Continuidade):</strong> Modelo: ___ | Fee/termos: ___<br/><br/>
+Identifique o degrau que está faltando ou vazio — esse é seu próximo produto a criar.
+</p>
+</div>
+
+<p><strong>Nota importante:</strong> cada degrau deve ser completo em si mesmo. Um cliente que compra o degrau 2 e nunca sobe deve ter tido uma experiência excelente e resultado real. A escada não é uma armadilha — é uma jornada. Forçar a subida sem resultado no degrau atual aumenta churn e prejudica reputação.</p>`
           },
           {
             id: "upsell-downsell",
-            title: "Upsell, Downsell e Order Bump",
+            title: "Upsell, Downsell e Order Bump: Copy e Estrutura",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Order Bump: +20-35% de receita no checkout", "Upsell de 1 clique pós-compra", "Downsell para quem recusa", "Como sequenciar sem parecer agressivo"],
-            content: `<h2>Maximizando o Valor de Cada Transação</h2>
-<p>A maioria dos produtores para de otimizar quando o cliente decide comprar. Esse é o momento em que a receita pode crescer 40-80% sem nenhum cliente adicional — apenas com técnicas de otimização do checkout.</p>
+            keyPoints: ["Copy de order bump pronto para usar no checkout — com taxa de aceitação esperada", "A regra dos 3 segundos do upsell: o que dizer logo depois da confirmação de compra", "Como calcular o impacto de cada elemento no seu faturamento total"],
+            exercise: "Calcule o impacto do order bump no seu próximo lançamento. Se você tem meta de 50 vendas a R$997, e adicionar um order bump de R$197 com 30% de aceitação: isso adiciona R$2.955 sem um único novo cliente. Descreva em 3 linhas qual seria o produto de order bump ideal para o seu produto principal — algo que complementa e entrega resultado rápido.",
+            content: `<h2>Upsell, Downsell e Order Bump: Mais Receita Sem Mais Clientes</h2>
 
-<h3>Order Bump: A Técnica Mais Simples e Poderosa</h3>
-<p>O order bump é uma oferta adicional apresentada <em>dentro do checkout</em>, antes da confirmação de pagamento. É um checkbox que o cliente pode marcar para adicionar um produto complementar à compra com um único clique.</p>
+<p>A maioria dos produtores para de otimizar quando o cliente decide comprar. É exatamente nesse momento que a receita pode crescer 40-80% sem nenhum cliente adicional — com a sequência certa de ofertas.</p>
 
-<p><strong>Características do order bump ideal:</strong></p>
-<ul>
-  <li>Preço baixo em relação ao produto principal (10-30% do valor)</li>
-  <li>Complementar e imediatamente relevante à compra</li>
-  <li>Resultado rápido e tangível</li>
-  <li>Taxa de aceitação de mercado: 20-40%</li>
-</ul>
+<h2>Order Bump: A Oferta Mais Simples e Mais Lucrativa</h2>
 
-<p><em>Exemplo prático:</em> Você vende um curso de tráfego pago por R$997. No checkout, oferece uma "Biblioteca de Criativos Prontos" por R$197. Quem está comprando um curso de tráfego claramente precisa de criativos.</p>
+<p>O order bump é uma oferta adicional apresentada dentro do checkout, antes da confirmação. Um checkbox. O cliente marca para adicionar. Taxa de aceitação de mercado: 20-40%.</p>
 
-<h3>Upsell de 1 Clique</h3>
-<p>Apresentado <em>depois</em> da confirmação de pagamento, o upsell é uma oferta de maior valor que o cliente pode aceitar com um único clique — sem preencher cartão novamente.</p>
+<h3>O que faz um order bump bom vs. um que ninguém clica</h3>
 
-<p><strong>A psicologia por trás:</strong> o cliente acabou de tomar uma decisão de compra e está no pico de excitação. O "modo compra" está ativado. Apresentar uma oferta complementar neste momento encontra muito menos resistência do que em qualquer outro.</p>
+<table>
+  <thead>
+    <tr><th>Característica</th><th>Order Bump Bom</th><th>Order Bump Que Não Funciona</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Preço</td><td>10-30% do valor do produto principal</td><td>Mais de 40% — parece outro produto</td></tr>
+    <tr><td>Relação com o produto</td><td>Complementa diretamente o que foi comprado</td><td>Produto separado sem conexão óbvia</td></tr>
+    <tr><td>Entrega</td><td>Resultado rápido (template, checklist, bônus prático)</td><td>Curso longo — parece mais trabalho</td></tr>
+    <tr><td>Descrição</td><td>2-3 linhas — sem precisar sair do checkout para entender</td><td>Longo demais — pessoa pulou sem ler</td></tr>
+  </tbody>
+</table>
 
-<p><strong>Regra de ouro do upsell:</strong> deve ser uma versão superior ou mais completa do que foi comprado — nunca algo completamente diferente. "Quer o curso básico que você comprou + o avançado + mentoria mensal por R$500 a mais?" funciona. "Quer comprar meu curso de culinária?" não funciona.</p>
+<h3>Copy de Order Bump — Template</h3>
 
-<h3>Downsell: Recuperando Quem Recusa</h3>
-<p>Quando o cliente recusa o upsell, você apresenta uma versão menor e mais barata. O cliente já disse não ao R$500; ofereça o núcleo daquilo por R$197.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ORDER BUMP — COPY PRONTO PARA ADAPTAR</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>☑ SIM! Adicionar [Nome do Order Bump] por apenas R$[X]</strong><br/><br/>
+[2 linhas descrevendo o que é + resultado que entrega]<br/>
+Normalmente R$[preço cheio]. Por ser complemento do [produto principal], disponível aqui por apenas R$[preço de bump].<br/><br/>
+<em style="color:#a0aec0;font-size:13px">Exemplo real: "☑ SIM! Adicionar a Biblioteca de 40 Criativos Prontos por apenas R$97. Templates de anúncio já formatados para o Meta Ads — você só substitui as informações do seu produto. Normalmente R$197. Disponível aqui por R$97."</em>
+</p>
+</div>
 
-<p>Taxa de aceitação de downsell: 10-20% dos que recusaram o upsell. Isso representa receita que seria perdida sem o sistema.</p>
+<h2>Upsell de 1 Clique: O Momento Mais Precioso da Jornada</h2>
 
-<h3>A Sequência Completa</h3>
-<p>Produto principal → Order Bump (checkout) → Upsell 1 → Recusa → Downsell 1 → Upsell 2 (opcional)</p>
+<p>Apresentado imediatamente após a confirmação de pagamento, o upsell é a oferta de maior valor que o cliente aceita com um único clique — sem preencher cartão novamente.</p>
 
-<p>Não crie mais de 2 níveis de upsell. A experiência se torna frustrante e queima confiança.</p>
+<p><strong>Por que funciona:</strong> o cliente acabou de tomar uma decisão de compra e está no pico de excitação. O "modo compra" está ativado. A resistência é 3-5x menor nesse momento do que em qualquer outro ponto do funil.</p>
 
-<blockquote>Jeff Bezos disse que a Amazon seria um negócio sem sentido se não fosse pelas compras repetidas. O mesmo vale para infoprodutos. A primeira venda é o custo de aquisição do cliente; as vendas seguintes são o lucro real.</blockquote>`
+<h3>A Regra dos 3 Primeiros Segundos do Upsell</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COPY DE ABERTURA DO UPSELL</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"Parabéns — sua compra está confirmada. Antes de você acessar o [produto], tenho uma oferta única disponível <em>apenas neste momento</em>."<br/><br/>
+[Apresente o upsell em 2-3 linhas]<br/><br/>
+"Normalmente vendido por R$[preço cheio], você pode adicionar agora por R$[preço de upsell] — sem precisar inserir os dados do cartão novamente. Se você fechar essa página, essa oferta não estará disponível."
+</p>
+</div>
+
+<h3>Regra de Ouro do Upsell</h3>
+<p>O upsell deve ser uma versão superior ou mais completa do que foi comprado — nunca algo completamente diferente.</p>
+
+<table>
+  <thead>
+    <tr><th>Produto principal</th><th>Upsell que funciona</th><th>Upsell que não funciona</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Curso de tráfego pago (R$997)</td><td>Mentoria mensal de tráfego (R$497/mês)</td><td>Curso de copywriting (sem conexão direta)</td></tr>
+    <tr><td>Método de lançamento (R$1.997)</td><td>Implementação 1:1 — 3 sessões (R$2.500)</td><td>Qualquer produto de nicho diferente</td></tr>
+    <tr><td>Programa de emagrecimento (R$497)</td><td>Kit de suplementos ou plano premium (R$297)</td><td>Curso de finanças pessoais</td></tr>
+  </tbody>
+</table>
+
+<h2>Downsell: Recuperando Quem Disse Não</h2>
+
+<p>Quando o cliente recusa o upsell, você apresenta uma versão menor e mais barata. O cliente disse não ao R$500; ofereça o núcleo daquilo por R$197.</p>
+
+<p>Taxa de aceitação de downsell: 10-20% dos que recusaram o upsell. Sem essa oferta, essa receita é simplesmente perdida.</p>
+
+<h2>A Sequência Completa e o Impacto Calculado</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">CÁLCULO DE IMPACTO — 50 VENDAS DE R$997</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Receita base: 50 × R$997 = R$49.850<br/><br/>
++ Order Bump (R$197 | 30% de aceitação): 15 × R$197 = R$2.955<br/>
++ Upsell (R$997 | 15% de aceitação): 7 × R$997 = R$6.979<br/>
++ Downsell (R$397 | 15% de quem recusou o upsell): 6 × R$397 = R$2.382<br/><br/>
+<strong>Receita total com sequência: R$62.166 (+25%)</strong><br/>
+Sem mais um novo cliente — apenas com a sequência de ofertas.
+</p>
+</div>
+
+<p><strong>Limite da sequência:</strong> não mais de 2 níveis de upsell. Acima disso, a experiência se torna frustrante e queima confiança — e a segunda venda ao mesmo cliente é mais valiosa que qualquer upsell agressivo agora.</p>`
           },
           {
             id: "recorrencia",
             title: "Modelos de Recorrência: A Receita Previsível",
             duration: "22 min",
             type: "text",
-            keyPoints: ["Assinatura vs. mensalidade vs. retainer", "Membership sites e comunidades pagas", "Como calcular o LTV ideal", "Churn: o inimigo silencioso"],
-            content: `<h2>Recorrência: O Santo Graal da Renda Digital</h2>
-<p>Receita recorrente é o ativo mais valioso que um negócio digital pode construir. Enquanto lançamentos geram picos de receita, a recorrência cria a <em>base</em> — o chão que sustenta toda a operação mesmo nos meses sem lançamento.</p>
+            keyPoints: ["Tabela comparativa dos 4 modelos de recorrência: ticket, escala, churn típico e melhor nicho para cada", "Fórmula de LTV e o cálculo de quanto você pode gastar para adquirir um assinante", "Os 4 redutores de churn com o impacto esperado de cada um — em números"],
+            exercise: "Calcule agora o potencial de recorrência do seu negócio: qual dos 4 modelos se encaixa melhor com seu produto e audiência? Defina o ticket (R$___/mês), o número de membros-alvo em 12 meses (___), o churn esperado (___%). Com esses números, calcule: qual seria o MRR ao final de 12 meses? Esse número muda sua estratégia de lançamento?",
+            content: `<h2>Recorrência: O Chão que Sustenta Toda a Operação</h2>
 
-<h3>Os 4 Modelos de Recorrência para Infoprodutores</h3>
+<p>Receita recorrente não é apenas "renda passiva" — é previsibilidade. Com R$50k de MRR, você toma decisões de investimento completamente diferentes do que com zero recorrência e lançamentos esporádicos. É a diferença entre empreender no modo ofensivo e no modo defensivo.</p>
 
-<h3>1. Membership / Comunidade Paga</h3>
-<p>Acesso a uma comunidade exclusiva, conteúdo novo mensalmente, encontros ao vivo periódicos. O valor está no pertencimento, na atualização constante e no networking.</p>
-<p><em>Ticket típico:</em> R$47-R$297/mês</p>
-<p><em>O que retém o membro:</em> qualidade das relações na comunidade e relevância do conteúdo novo</p>
+<h2>Os 4 Modelos de Recorrência: Tabela Comparativa</h2>
 
-<h3>2. Atualização de Produto (Content Club)</h3>
-<p>O cliente paga mensalmente para receber novos materiais, templates, estudos de caso ou atualizações do conteúdo principal. Funciona bem para nichos que mudam rápido (marketing, tecnologia, finanças).</p>
-<p><em>Ticket típico:</em> R$37-R$197/mês</p>
+<table>
+  <thead>
+    <tr><th>Modelo</th><th>Ticket típico</th><th>Escala</th><th>Churn típico</th><th>Melhor para</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Membership / Comunidade Paga</td><td>R$47-R$297/mês</td><td>Alta — sem limite de vagas</td><td>5-12%/mês</td><td>Nichos com transformação contínua (marketing, saúde, desenvolvimento pessoal)</td></tr>
+    <tr><td>Content Club (atualização)</td><td>R$37-R$197/mês</td><td>Muito alta — automático</td><td>8-15%/mês</td><td>Nichos que mudam rápido: marketing digital, tech, finanças</td></tr>
+    <tr><td>Mentoria Recorrente em Grupo</td><td>R$297-R$997/mês</td><td>Média — limitado pelas calls</td><td>3-8%/mês</td><td>Nichos de negócios, alta renda, alto engajamento necessário</td></tr>
+    <tr><td>Retainer de Resultado</td><td>R$2.000-R$10.000/mês</td><td>Baixa — seu tempo é o limite</td><td>2-5%/mês</td><td>Agências, consultores, gestores de tráfego</td></tr>
+  </tbody>
+</table>
 
-<h3>3. Mentoria / Acompanhamento Recorrente</h3>
-<p>Calls mensais em grupo, sessões de Q&A, revisão de trabalhos. Você oferece acesso contínuo à sua expertise por uma mensalidade.</p>
-<p><em>Ticket típico:</em> R$297-R$997/mês</p>
-<p><em>Limitação:</em> escala limitada pelo seu tempo — cada novo membro demanda atenção</p>
+<h2>A Fórmula do LTV e o Teto de CAC</h2>
 
-<h3>4. Retainer de Resultado</h3>
-<p>Você é contratado mensalmente para entregar um resultado específico — não conteúdo. Geralmente para agências ou consultores: "R$3.000/mês para gerenciar e otimizar sua estratégia de tráfego".</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">CÁLCULO DE LTV E CAC MÁXIMO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>LTV = Ticket Mensal × Tempo Médio de Permanência (meses)</strong><br/><br/>
+Exemplo: R$197/mês × 8 meses = LTV de R$1.576<br/><br/>
+<strong>CAC máximo saudável = LTV ÷ 3</strong><br/>
+R$1.576 ÷ 3 = R$525 de CAC máximo com margem de 66%<br/><br/>
+Isso significa: você pode gastar R$525 em ads para adquirir 1 assinante de R$197/mês e ainda ter negócio lucrativo. Compare com uma venda única de R$297: CAC máximo de R$99.<br/><br/>
+<strong>A recorrência não apenas gera MRR — ela eleva o teto de quanto você pode investir em aquisição.</strong>
+</p>
+</div>
 
-<h3>Calculando o LTV (Lifetime Value)</h3>
-<p>LTV = Ticket Médio Mensal × Tempo Médio de Permanência (em meses)</p>
-<p>Se seu membership custa R$197/mês e os membros ficam em média 8 meses, seu LTV é R$1.576.</p>
-<p>Isso significa que você pode gastar até R$500 para adquirir um assinante e ainda ter margem saudável.</p>
+<h2>Churn: O Inimigo Silencioso — Com Números</h2>
 
-<h3>Churn: O Inimigo Silencioso</h3>
-<p>Churn é a taxa de cancelamento mensal. Um churn de 10% ao mês significa que você perde metade da base em 7 meses. Para crescer, você precisa adquirir mais do que perde — o que se torna uma corrida sem fim.</p>
+<p>Churn de 10%/mês: você perde metade da base em 7 meses. Crescer se torna uma corrida sem fim. O objetivo é churn abaixo de 5% ao mês — que significa LTV médio acima de 20 meses de permanência.</p>
 
-<p>Redutores de churn que funcionam:</p>
-<ul>
-  <li>Onboarding excepcional nos primeiros 30 dias</li>
-  <li>Quick wins visíveis logo no início da assinatura</li>
-  <li>Comunidade ativa — cancelar significa perder o grupo</li>
-  <li>Plano anual com desconto: além de melhorar o fluxo de caixa, reduz churn (quem paga por 1 ano raramente cancela nos primeiros meses)</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Redutor de churn</th><th>Como implementar</th><th>Impacto esperado</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Onboarding de 7 dias</td><td>Sequência de 5 emails + quick win no dia 2</td><td>Redução de 30-40% do churn do primeiro mês</td></tr>
+    <tr><td>Comunidade ativa</td><td>Grupo com moderador + desafios semanais</td><td>Cancelar = perder as relações; churn 40% menor que sem comunidade</td></tr>
+    <tr><td>Plano anual com desconto</td><td>Desconto de 2 meses grátis (= 17% off)</td><td>Quem paga anual cancela 80% menos nos primeiros 6 meses</td></tr>
+    <tr><td>Check-in de risco</td><td>Email de Dia 5: "Como está indo?" + alerta para quem não abriu</td><td>Identifica em risco antes do cancelamento — 25% de resgate com suporte proativo</td></tr>
+  </tbody>
+</table>
 
-<blockquote>Um membership com 200 membros a R$297/mês gera R$59.400 previsíveis por mês — sem lançamento, sem sprint, sem estresse. Esse chão muda completamente a psicologia do empreendedor e a qualidade das decisões de negócio.</blockquote>`
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">PROJEÇÃO DE MRR — SIMULAÇÃO REAL</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">
+Membership R$297/mês | Aquisição: 20 membros/mês | Churn: 5%/mês<br/>
+Mês 3: ~57 membros × R$297 = R$16.929<br/>
+Mês 6: ~90 membros × R$297 = R$26.730<br/>
+Mês 12: ~136 membros × R$297 = <strong>R$40.392/mês</strong><br/><br/>
+Sem aumentar o preço, sem novos lançamentos — só mantendo o churn baixo.
+</p>
+</div>`
           },
           {
             id: "monetizacao-quiz",
@@ -1447,80 +2422,158 @@ Não → afiliado enquanto produz</p>
             title: "Onboarding: Os Primeiros 7 Dias Decidem Tudo",
             duration: "18 min",
             type: "text",
-            keyPoints: ["Por que 70% dos abandonos acontecem na primeira semana", "Sequência de boas-vindas de alto impacto", "Quick wins planejados", "Gamificação no onboarding"],
-            content: `<h2>Os 7 Dias Mais Importantes da Jornada do Aluno</h2>
-<p>Pesquisas de SaaS e produtos digitais são consistentes: <strong>70% dos cancelamentos e abandonos acontecem nos primeiros 7 dias</strong>. O comprador que não vê valor rápido racionaliza a compra como erro e desengaja — primeiro dos conteúdos, depois da comunidade, depois do produto inteiro.</p>
+            keyPoints: ["A sequência de 5 emails de boas-vindas — copy pronto para adaptar", "Como identificar o quick win certo para o seu produto específico", "O check-in de Dia 5: como identificar alunos em risco antes que cancelem"],
+            exercise: "Escreva agora o email de Dia 1 do seu onboarding usando o template desta aula. Foque em: confirmar a decisão de compra, criar expectativa clara para os próximos 7 dias, e dar um passo imediato que o aluno pode fazer em 5 minutos. Esse email costuma ter a taxa de abertura mais alta de toda a sequência — vale dedicar 45 minutos para acertar.",
+            content: `<h2>Onboarding: A Arquitetura da Primeira Experiência</h2>
 
-<p>Onboarding não é burocracia de acesso. É a arquitetura da primeira experiência.</p>
+<p>70% dos cancelamentos e abandonos acontecem nos primeiros 7 dias. O comprador que não vê valor rápido racionaliza a compra como erro — e desengaja. O onboarding não é burocracia de acesso. É a sequência que separa clientes que completam e indicam de clientes que reembolsam e reclamam.</p>
 
-<h3>A Sequência de Boas-Vindas em 7 Dias</h3>
+<h2>A Sequência de 5 Emails de Boas-Vindas — Copy Pronto</h2>
 
-<p><strong>Dia 1 — A Boas-Vindas Calorosa:</strong><br/>
-Email pessoal do produtor (não da plataforma). Tom humano, não corporativo. Confirma a decisão de compra. Diz o que esperar. Link de acesso.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">DIA 1 — BOAS-VINDAS (enviar imediatamente após compra)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> Bem-vindo(a) — seus próximos passos (leia agora)<br/><br/>
+Oi [nome],<br/><br/>
+Você acabou de tomar uma das melhores decisões para [resultado do produto]. Sério.<br/><br/>
+Seu acesso está ativo em: [link]<br/><br/>
+Nos próximos 7 dias você vai receber alguns emails meus com o que você precisa para [resultado rápido]. Leia todos — são curtos e diretos.<br/><br/>
+Para começar ainda hoje: [ação específica de 5 minutos — ex: "Baixe o mapa do método na área de membros e leia a primeira página"]<br/><br/>
+[Seu nome]<br/><br/>
+P.S. Qualquer dúvida, responde este email. Eu (ou alguém do meu time) responde em até 24h.
+</p>
+</div>
 
-<p><strong>Dia 2 — O Quick Win:</strong><br/>
-Entregue algo acionável que o aluno pode implementar em 30 minutos e ver resultado. Não precisa ser grande — precisa ser rápido e visível. Isso cria o ciclo: "funciona, vou continuar".</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">DIA 2 — O QUICK WIN</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> Em 30 minutos você consegue [resultado específico]<br/><br/>
+Oi [nome],<br/><br/>
+Antes de entrar em qualquer módulo, vou te dar uma vitória rápida.<br/><br/>
+Faça isso agora: [instrução passo a passo que leva 20-30 minutos e gera um resultado mensurável].<br/><br/>
+Quando terminar, [o que eles vão ter / ver / conseguir].<br/><br/>
+Isso é a base de tudo que você vai aprender. E você já vai ter na prática.<br/><br/>
+[Seu nome]
+</p>
+</div>
 
-<p><strong>Dia 3 — A Comunidade:</strong><br/>
-Apresente o grupo/comunidade. Peça que o aluno se apresente. Crie o primeiro senso de pertencimento.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">DIA 3 — COMUNIDADE + PERTENCIMENTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> Você não está sozinho(a) nessa jornada<br/><br/>
+Oi [nome],<br/><br/>
+Além do método, você entrou em algo mais importante: um grupo de pessoas que estão no mesmo caminho que você.<br/><br/>
+Nosso grupo [WhatsApp/Telegram/Comunidade] está em: [link]<br/><br/>
+Quando entrar, faz uma coisa só: se apresenta com seu nome + onde você está agora + onde quer chegar. Demora 2 minutos e já vai gerar as primeiras conexões.<br/><br/>
+[Seu nome]
+</p>
+</div>
 
-<p><strong>Dia 5 — O Check-in:</strong><br/>
-"Já acessou? Tem alguma dúvida? O que achou até agora?" — humaniza o suporte e identifica alunos em risco de churn.</p>
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">DIA 5 — CHECK-IN (identificação de risco de churn)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> Como está indo? (pergunta genuína)<br/><br/>
+Oi [nome],<br/><br/>
+Já se passaram 5 dias desde que você começou. Queria saber: você conseguiu acessar o conteúdo? Fez o exercício do Dia 2?<br/><br/>
+Se sim: ótimo — o que você achou? Manda uma mensagem, gosto de saber.<br/>
+Se não: sem problema — o que está travando? Responde aqui e a gente resolve.<br/><br/>
+[Seu nome]<br/><br/>
+<em style="color:#a0aec0;font-size:13px">Por que isso é importante: quem não responde este email tem 3x mais chance de cancelar. Configure uma automação: se não abriu o email do Dia 2, marque como "at risk" e acione suporte proativo.</em>
+</p>
+</div>
 
-<p><strong>Dia 7 — O Primeiro Marco:</strong><br/>
-Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento público no grupo cria narrativa de progresso.</p>
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">DIA 7 — CELEBRAÇÃO DO PRIMEIRO MARCO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> 1 semana. Você chegou até aqui — isso já é mais que a maioria.<br/><br/>
+Oi [nome],<br/><br/>
+Primeira semana concluída. Pode parecer pouco, mas as estatísticas mostram que quem passa da primeira semana completa o programa em 70% dos casos.<br/><br/>
+Você está no caminho certo.<br/><br/>
+Nos próximos dias, [o que está por vir — crie expectativa para o próximo módulo].<br/><br/>
+[Seu nome]
+</p>
+</div>
 
-<h3>Quick Wins Planejados</h3>
+<h2>Como Identificar o Quick Win Certo Para Seu Produto</h2>
+
 <p>O quick win ideal tem 3 características:</p>
-<ol>
-  <li>Pode ser feito em menos de 1 hora</li>
-  <li>Gera um resultado visível (número, resultado, screenshot)</li>
-  <li>É o primeiro passo real para o resultado final do produto</li>
-</ol>
 
-<blockquote>O aluno que implementa algo na primeira semana tem 5x mais chance de completar o curso e 8x mais chance de indicar para alguém. O investimento em onboarding tem o maior ROI de toda a operação de pós-venda.</blockquote>`
+<table>
+  <thead>
+    <tr><th>Característica</th><th>Critério</th><th>Exemplo por nicho</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Tempo de execução</td><td>Menos de 30 minutos</td><td>Marketing: configurar o pixel no site; Fitness: fazer a primeira avaliação de medidas; Finanças: listar todas as dívidas em uma planilha</td></tr>
+    <tr><td>Resultado visível</td><td>Gera um número, um screenshot ou uma mudança mensurável</td><td>"Você vai ter sua lista de dívidas ordenada por taxa de juros"</td></tr>
+    <tr><td>Conexão com o resultado final</td><td>É o primeiro passo real — não um exercício artificial</td><td>"Sem essa lista, você não pode aplicar o Módulo 3"</td></tr>
+  </tbody>
+</table>
+
+<p><strong>O aluno que implementa algo na primeira semana tem 5x mais chance de completar o curso e 8x mais chance de indicar para alguém.</strong> O investimento de 3 horas para escrever uma sequência de onboarding gera o maior ROI de toda a operação de pós-venda.</p>`
           },
           {
             id: "indicacoes",
             title: "Programa de Indicação: Crescimento Orgânico pelo Boca a Boca",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Por que indicação é o canal mais barato e de maior qualidade", "Como estruturar um programa formal de indicação", "Incentivos que funcionam", "NPS e como usar o feedback"],
-            content: `<h2>Indicação: O Canal que a Maioria Subutiliza</h2>
-<p>Um lead vindo de indicação converte em média <strong>3-5x mais</strong> do que um lead de anúncio pago. A razão é óbvia: ele chega com prova social embutida — alguém de confiança já validou o produto para ele.</p>
+            keyPoints: ["Os 3 modelos de programa de indicação: qual usar para cada estágio do produto e audiência", "NPS: como interpretar e o que fazer com cada segmento (promotor, passivo, detrator)", "O email de convite para embaixadores — copy pronto para adaptar"],
+            exercise: "Hoje mesmo: envie o NPS para seus últimos 20-30 clientes (formulário Google Forms de 1 pergunta: 'de 0 a 10, qual a probabilidade de você recomendar [produto] a um amigo?'). Quando receber as respostas: contate todos os 9-10 individualmente com o email de convite para embaixadores desta aula. Nem que seja 3 pessoas — um embaixador ativo vale 10 afiliados passivos.",
+            content: `<h2>Indicação: O Canal com Maior Taxa de Conversão e Menor CAC</h2>
 
-<p>Apesar disso, a maioria dos produtores deixa as indicações acontecerem organicamente, sem estrutura. Criar um programa formal de indicação pode dobrar esse volume sem custo adicional de aquisição.</p>
+<p>Um lead vindo de indicação converte em média <strong>3-5x mais</strong> que um lead de anúncio pago — com CAC próximo de zero. A razão: chega com prova social embutida de alguém de confiança. Apesar disso, a maioria dos produtores deixa as indicações acontecerem ao acaso. Criar um programa formal pode dobrar esse volume.</p>
 
-<h3>Os 3 Modelos de Programa de Indicação</h3>
+<h2>Os 3 Modelos de Programa de Indicação</h2>
 
-<h3>1. Programa de Afiliados para Alunos</h3>
-<p>Transforme seus melhores alunos em afiliados. Eles promovem porque acreditam no produto; você paga comissão apenas quando há venda. Sem resultado, sem custo.</p>
-<p>Critério de elegibilidade: alunos que concluíram o produto + tiveram resultado documentado.</p>
+<table>
+  <thead>
+    <tr><th>Modelo</th><th>Quem pode participar</th><th>Incentivo</th><th>Melhor para</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Afiliados de alunos</td><td>Alunos que completaram + tiveram resultado documentado</td><td>Comissão de 20-40% por venda — só paga no resultado</td><td>Produtos de R$500+ com audiência de alunos engajados</td></tr>
+    <tr><td>Give to Get</td><td>Qualquer aluno atual</td><td>Bônus por indicação que se cadastra (não necessariamente compra)</td><td>Gerar leads qualificados com lista pequena</td></tr>
+    <tr><td>Embaixadores</td><td>Grupo seleto dos melhores alunos (10-20 pessoas)</td><td>Acesso privilegiado (calls exclusivas, conteúdo antecipado, créditos)</td><td>Construir autoridade de marca + evangelização contínua</td></tr>
+  </tbody>
+</table>
 
-<h3>2. Give to Get (Dê para Receber)</h3>
-<p>O aluno ganha algo de valor ao indicar alguém que se cadastra (não necessariamente compra). Pode ser uma aula bônus, um mês de membership grátis, desconto na próxima compra.</p>
-<p>Funciona bem para gerar leads qualificados mesmo sem venda imediata.</p>
+<h2>O Email de Convite para Embaixadores — Copy Pronto</h2>
 
-<h3>3. Programa de Embaixadores</h3>
-<p>Um grupo seleto de alunos que têm acesso privilegiado (calls exclusivas com você, conteúdo antecipado, créditos) em troca de representar o produto ativamente — criando conteúdo, respondendo dúvidas, sendo referência para o mercado.</p>
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EMAIL DE CONVITE PARA EMBAIXADORES — ADAPTE E USE</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Assunto:</strong> [Nome], eu quero te oferecer algo especial<br/><br/>
+Oi [nome],<br/><br/>
+Você foi um dos alunos que mais me impressionou no [produto]. [Mencione algo específico — resultado, participação, transformação].<br/><br/>
+Estou montando um grupo seleto de 15 embaixadores — pessoas que acreditam no método e querem fazer parte de algo maior.<br/><br/>
+O que você ganha:<br/>
+→ Acesso a todas as atualizações antes de todo mundo<br/>
+→ Call mensal exclusiva comigo (30 min com o grupo)<br/>
+→ [Bônus específico — ex: créditos, desconto em futuros produtos]<br/><br/>
+O que eu peço:<br/>
+→ Quando alguém perguntar sobre [produto] na sua rede, compartilhe sua experiência real<br/>
+→ Nada de script — só a sua verdade<br/><br/>
+Você topa?<br/>
+[Seu nome]
+</p>
+</div>
 
-<h3>NPS: Medindo a Satisfação de Forma Acionável</h3>
-<p>O NPS (Net Promoter Score) é a métrica mais simples e poderosa de satisfação. Uma única pergunta: "Em uma escala de 0 a 10, qual a probabilidade de você recomendar este produto a um amigo ou colega?"</p>
-<ul>
-  <li>9-10: Promotores — seus potenciais embaixadores</li>
-  <li>7-8: Passivos — satisfeitos mas não entusiasmados</li>
-  <li>0-6: Detratores — risco de churn e reputação negativa</li>
-</ul>
-<p>NPS = % Promotores - % Detratores. Acima de 50 é excelente para o mercado de infoprodutos.</p>
+<h2>NPS: Como Medir e Como Agir</h2>
 
-<p>Use o NPS não apenas para medir — use para agir:</p>
-<ul>
-  <li>Promotores: convide para o programa de embaixadores</li>
-  <li>Passivos: entenda o que falta para virar promotor</li>
-  <li>Detratores: reaja rápido, ofereça suporte, salve o relacionamento</li>
-</ul>
+<p>Uma única pergunta: "Em uma escala de 0 a 10, qual a probabilidade de você recomendar [produto] a um amigo?"</p>
 
-<blockquote>Cada Detrator que você transforma em Promotor vale duas vezes: você eliminou a ameaça de reputação negativa e criou um novo canal de indicação. A gestão de Detratores é o trabalho mais rentável do pós-venda.</blockquote>`
+<table>
+  <thead>
+    <tr><th>Pontuação</th><th>Classificação</th><th>O que fazer</th><th>Objetivo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>9-10</td><td>Promotores</td><td>Convide para o programa de embaixadores + peça um depoimento em vídeo</td><td>Transformar satisfação em ativo de vendas</td></tr>
+    <tr><td>7-8</td><td>Passivos</td><td>Pergunta de follow-up: "O que faria virar 10?"</td><td>Identificar o gap entre satisfeito e entusiasmado</td></tr>
+    <tr><td>0-6</td><td>Detratores</td><td>Ligue ou mande DM — não email. Entenda o problema real. Resolva.</td><td>Resgate + evitar review negativo</td></tr>
+  </tbody>
+</table>
+
+<p><strong>NPS = % Promotores - % Detratores.</strong> Acima de 50 é excelente. Abaixo de 30, o produto tem problema de entrega que nenhuma estratégia de marketing resolve.</p>
+
+<p>Aplique o NPS no Dia 30 após a compra (quando o entusiasmo inicial passou mas o resultado ainda está sendo construído) e no Dia 90 (quando você tem o feedback de quem realmente aplicou).</p>`
           }
         ],
         locked: false
@@ -1546,64 +2599,96 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
         lessons: [
           {
             id: "tiktok-algoritmo",
-            title: "TikTok: O Algoritmo que Democratizou o Alcance",
+            title: "TikTok: Como Funciona e Como Crescer Sistematicamente",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Como o FYP (For You Page) funciona de verdade", "Os 3 estágios de distribuição de um vídeo", "Retenção é a métrica-rainha", "Estratégia de nicho antes de escalar"],
-            content: `<h2>TikTok: A Plataforma que Quebrou as Regras do Jogo</h2>
-<p>O TikTok é a única plataforma onde uma conta com zero seguidores pode viralizar no primeiro vídeo. Isso não é marketing — é a arquitetura do algoritmo. Entender isso muda completamente sua estratégia.</p>
+            keyPoints: ["Os 3 estágios de distribuição — e o que você precisa fazer para passar de cada um", "10 hooks de abertura prontos com variações por nicho", "O framework de criação de 1 vídeo/dia em 45 minutos"],
+            exercise: "Grave hoje um vídeo de 30 segundos usando um dos 10 hooks desta aula. Não precisa ser perfeito — precisa ter: (1) hook nos primeiros 3s, (2) conteúdo acionável de 20s, (3) CTA de 5s. Publique e anote a taxa de retenção nos primeiros 30 minutos. Se estiver abaixo de 50%, experimente um hook diferente amanhã.",
+            content: `<h2>TikTok: A Plataforma Que Quebrou as Regras do Jogo — E Como Jogar</h2>
 
-<h3>Como o Algoritmo do TikTok Realmente Funciona</h3>
-<p>Cada vídeo passa por estágios progressivos de distribuição. O TikTok não entrega seu conteúdo para toda a base — ele testa em grupos pequenos e expande para grupos maiores com base nas métricas de performance.</p>
+<p>O TikTok é a única plataforma onde uma conta com zero seguidores pode viralizar no primeiro vídeo. Isso não é acidente — é a arquitetura do algoritmo. Entender isso muda completamente a estratégia.</p>
 
-<h3>Estágio 1: Pequeno Grupo de Teste (100-500 visualizações)</h3>
-<p>Seu vídeo é mostrado para um grupo inicial. O algoritmo mede: taxa de conclusão do vídeo, taxa de interação (likes, comentários, shares, saves) e taxa de rewatch (pessoas que assistem mais de uma vez). Se as métricas ficam acima do threshold do nicho, o vídeo avança.</p>
+<h2>Os 3 Estágios de Distribuição — O Que Acontece Com Cada Vídeo</h2>
 
-<h3>Estágio 2: Expansão Moderada (1.000-50.000 visualizações)</h3>
-<p>Vídeos que passaram no estágio 1 são mostrados para um grupo maior. As mesmas métricas são medidas, com threshold mais exigente. É aqui que a maioria dos vídeos para.</p>
+<table>
+  <thead>
+    <tr><th>Estágio</th><th>Visualizações</th><th>O que o algoritmo mede</th><th>Threshold para avançar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1 — Grupo de teste</td><td>100-500 views</td><td>Retenção, likes, comments, shares, rewatches</td><td>Retenção &gt;65% (vídeos curtos) ou &gt;40% (longos)</td></tr>
+    <tr><td>2 — Expansão moderada</td><td>1k-50k views</td><td>Mesmas métricas + consistência vs. conteúdo anterior</td><td>Engajamento acima da média do nicho</td></tr>
+    <tr><td>3 — FYP global</td><td>100k+</td><td>Taxa de compartilhamento + saves + completion rate</td><td>Shares e saves acima de 5% dos views</td></tr>
+  </tbody>
+</table>
 
-<h3>Estágio 3: Viral (100k+)</h3>
-<p>Vídeos que consistentemente superam os thresholds dos dois primeiros estágios entram no pool de distribuição ampla — o FYP global. Isso pode acontecer 2 dias ou 3 meses depois da publicação.</p>
+<p><strong>O que a maioria não sabe:</strong> um vídeo pode sair do Estágio 1 para o Estágio 3 dias ou semanas depois de publicado. O TikTok não tem janela de tempo — ele continua testando conteúdo antigo se as métricas eram boas.</p>
 
-<h3>A Métrica-Rainha: Taxa de Retenção</h3>
-<p>De todas as métricas, a que o TikTok mais valoriza é a retenção — quanto do vídeo as pessoas assistem. Um vídeo de 30 segundos assistido até o fim supera um vídeo de 3 minutos assistido até a metade.</p>
+<h2>A Métrica-Rainha: Taxa de Retenção</h2>
 
-<p>Benchmarks por tipo de conteúdo:</p>
-<ul>
-  <li>Vídeos de 15-30s: retenção alvo &gt;80%</li>
-  <li>Vídeos de 1-2 min: retenção alvo &gt;60%</li>
-  <li>Vídeos de 3-5 min: retenção alvo &gt;45%</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Duração do vídeo</th><th>Retenção ruim</th><th>Retenção boa</th><th>Retenção excelente</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>15-30 segundos</td><td>&lt;50%</td><td>65-80%</td><td>&gt;85%</td></tr>
+    <tr><td>1-2 minutos</td><td>&lt;35%</td><td>50-65%</td><td>&gt;70%</td></tr>
+    <tr><td>3-5 minutos</td><td>&lt;25%</td><td>40-55%</td><td>&gt;60%</td></tr>
+  </tbody>
+</table>
 
-<h3>Estrutura dos Primeiros 3 Segundos</h3>
-<p>O hook decide tudo. As primeiras palavras ou imagem do vídeo determinam se a pessoa vai parar o scroll ou seguir em frente. Hooks que funcionam:</p>
-<ul>
-  <li><strong>Promessa de resultado:</strong> "Em 60 segundos vou te mostrar como faturei R$30k este mês"</li>
-  <li><strong>Contraintuitivo:</strong> "Pare de postar todo dia no TikTok — isso está te prejudicando"</li>
-  <li><strong>Pergunta polarizante:</strong> "Você ainda acredita que precisa de muita audiência para vender?"</li>
-  <li><strong>Número específico:</strong> "7 erros que 95% dos produtores digitais cometem"</li>
-</ul>
+<p><strong>Retenção baixa = queda de alcance.</strong> Se a maioria das pessoas sai nos primeiros 3 segundos, o algoritmo para de distribuir. O hook decide a retenção — e a retenção decide tudo.</p>
 
-<h3>Estratégia de Nicho antes de Escalar</h3>
-<p>O erro mais comum no TikTok é tentar ser relevante para todos. O algoritmo aprende com o tempo quem é sua audiência. Quanto mais consistente o nicho, mais eficiente a distribuição.</p>
-<p>Defina: 1 problema central + 1 audiência específica. Fique nesse eixo por pelo menos 30 vídeos antes de diversificar.</p>
+<h2>10 Hooks de Abertura Prontos — Variações por Nicho</h2>
 
-<h3>Ferramentas Essenciais para TikTok</h3>
-<ul>
-  <li><strong>TikTok Studio:</strong> analytics nativo, tendências de hashtags, performance por vídeo</li>
-  <li><strong>CapCut:</strong> editor nativo integrado ao TikTok, templates virais, legendas automáticas</li>
-  <li><strong>Tokboard / Pentos:</strong> análise competitiva — veja o que está viralizando no seu nicho</li>
-  <li><strong>Creator Search Insights:</strong> ferramenta nativa que mostra o que as pessoas estão buscando no TikTok</li>
-</ul>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">HOOKS PRONTOS — ADAPTE O [CONTEXTO] PARA SEU NICHO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. "Em 60 segundos vou te mostrar [resultado específico] que levou [tempo] para descobrir"<br/>
+2. "Pare de [ação comum do nicho] — você está desperdiçando [recurso]"<br/>
+3. "Por que [resultado desejado] é mais simples do que todo mundo pensa"<br/>
+4. "[Número] coisas que [referência de autoridade] faz e ninguém fala"<br/>
+5. "Se você tem [condição do avatar], assiste isso até o final"<br/>
+6. "Fiz [resultado chocante específico] com [recurso mínimo]. Deixa eu mostrar como"<br/>
+7. "O erro que [profissão/nicho] comete todo dia sem perceber"<br/>
+8. "Me diz nos comentários se você já passou por isso: [situação dolorosa específica]"<br/>
+9. "Confia em mim — fica até o final. Tem uma virada que [contexto]"<br/>
+10. "[Afirmação contraintuitiva]. Sim, é sério. E vou te explicar por quê"
+</p>
+</div>
 
-<blockquote>O TikTok é a plataforma que mais recompensa consistência e qualidade de retenção. Um produtor com 500 seguidores pode ter mais impacto de vendas que outro com 50 mil — se seus vídeos terminam no FYP certo.</blockquote>`
+<h2>O Framework de 1 Vídeo/Dia em 45 Minutos</h2>
+
+<table>
+  <thead>
+    <tr><th>Etapa</th><th>Tempo</th><th>O que fazer</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Escolher o tema</td><td>5 min</td><td>TikTok Creator Search Insights → sua palavra-chave de nicho → escolha 1 busca trending</td></tr>
+    <tr><td>Escrever o roteiro</td><td>10 min</td><td>Hook (3s) + conteúdo acionável (20s) + CTA (5s) = 30s total. Escreva 3-4 frases.</td></tr>
+    <tr><td>Gravar</td><td>10 min</td><td>3-5 takes. Não busque perfeição — busque naturalidade. Olhe na câmera.</td></tr>
+    <tr><td>Editar no CapCut</td><td>15 min</td><td>Cortar pausas longas, adicionar legendas automáticas, música de fundo (-5dB), captions no hook.</td></tr>
+    <tr><td>Publicar</td><td>5 min</td><td>Título = hook do vídeo. 3-5 hashtags (mix de nicho + tendência). Horário: 18h-21h.</td></tr>
+  </tbody>
+</table>
+
+<h2>Estratégia de Nicho: Por que Você Não Deve Postar Sobre Tudo</h2>
+
+<p>O TikTok aprende com o tempo quem é sua audiência. Quanto mais consistente o nicho do seu conteúdo, mais eficiente a distribuição — porque o algoritmo sabe para quem enviar.</p>
+
+<p><strong>Regra prática:</strong> defina 1 problema central + 1 avatar específico. Fique nesse eixo por pelo menos 30 vídeos antes de diversificar. Essa consistência cria o "efeito de acumulação" — cada vídeo novo beneficia os anteriores porque o algoritmo já sabe quem te segue.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">AVISO: ERRO MAIS COMUM</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">Postar 1 vídeo sobre marketing, depois 1 sobre viagens, depois 1 sobre fitness confunde o algoritmo. Ele não sabe para quem te distribuir — então distribui para ninguém. Nichos específicos crescem mais rápido que nichos genéricos, sempre.</p>
+</div>`
           },
           {
             id: "instagram-estrategia",
             title: "Instagram: Reels, Carrosséis e a Estratégia de Conversão",
             duration: "28 min",
             type: "text",
-            keyPoints: ["Reels vs. Feed vs. Stories: o papel de cada formato", "O algoritmo do Instagram em 2025", "Carrosséis de alto salvamento", "Bio e link na bio como funil"],
+            keyPoints: ["Os 4 formatos do Instagram e o papel de cada um no funil — com duração ideal e benchmark de conclusão", "Estrutura de carrossel de 9 slides que maximiza save rate — com exemplo de cada slide", "Bio como mini landing page: template de 3 linhas + critérios de link na bio"],
+            exercise: "Audite sua bio agora: ela diz claramente quem você ajuda, com qual resultado, e tem um CTA? Se não, reescreva usando o template de 3 linhas desta aula. Depois, olhe seus últimos 5 Carrosséis: o Slide 1 tem uma promessa irresistível? O slide final tem um CTA claro? Se não, refaça esses dois slides antes de publicar o próximo.",
             content: `<h2>Instagram: A Plataforma de Relacionamento e Conversão</h2>
 <p>O Instagram perdeu a batalha do alcance orgânico puro para o TikTok, mas ganhou outra batalha: <em>profundidade de relacionamento</em>. Enquanto o TikTok viraliza, o Instagram converte. Entender isso define a estratégia certa para cada plataforma.</p>
 
@@ -1660,7 +2745,8 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
             title: "Facebook e YouTube: Audiência Madura e Conteúdo Longo",
             duration: "22 min",
             type: "text",
-            keyPoints: ["Facebook Groups como comunidade de lançamento", "YouTube: o maior buscador de vídeo do mundo", "Shorts vs. vídeos longos: quando usar cada um", "SEO de vídeo no YouTube"],
+            keyPoints: ["Cronograma de grupo de lançamento no Facebook: o que postar do D-21 ao D0", "YouTube: Shorts vs. vídeos longos — qual gera assinante vs. qual gera lead", "Stack de ferramentas de análise do YouTube Studio que 90% dos criadores nunca abre"],
+            exercise: "Se você não tem canal no YouTube: pesquise as 5 keywords mais buscadas do seu nicho usando YouTube Search Suggest e escolha o tema do seu primeiro vídeo com potencial de SEO. Se já tem canal: abra o YouTube Studio → Analytics → Audience Retention e identifique em qual segundo exato as pessoas saem dos seus vídeos. Esse segundo é onde você vai melhorar o próximo hook.",
             content: `<h2>Facebook e YouTube: Onde Está a Audiência com Poder de Compra</h2>
 
 <h3>Facebook em 2025: Grupos e Comunidade</h3>
@@ -1712,9 +2798,10 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
             title: "Stack de Ferramentas: Do Zero ao Profissional",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Ferramentas gratuitas vs. pagas: o que priorizar", "Stack de criação de conteúdo", "Ferramentas de agendamento e automação", "Analytics e monitoramento"],
+            keyPoints: ["Stack completo por nível: Nível 1 (grátis), Nível 2 (R$100-500/mês), Nível 3 (escala) — com função de cada ferramenta", "As 5 ferramentas de IA que cortam 60% do tempo de produção de conteúdo", "A regra do stack mínimo viável: por que a maioria começa com ferramentas demais"],
+            exercise: "Faça o inventário do seu stack atual: liste todas as ferramentas que você paga hoje. Para cada uma, responda: uso isso pelo menos 3x por semana? Se não, cancele ou downgrade. A meta é ter no máximo 7 ferramentas pagas — uma por função. Foco, não acumulação.",
             content: `<h2>O Stack de Ferramentas do Produtor Digital Profissional</h2>
-<p>A maioria dos iniciantes erra na ordem: compra ferramentas antes de saber o que fazer com elas. Este guia organiza o stack por estágio — começando pelo essencial gratuito e progredindo para ferramentas pagas conforme o negócio cresce.</p>
+<p>A maioria dos iniciantes erra na ordem: compra ferramentas antes de saber o que fazer com elas. Este guia organiza o stack por estágio — começando pelo essencial gratuito e progredindo para ferramentas pagas conforme o negócio cresce. A regra de ouro: uma ferramenta por função. Redundância é custo.</p>
 
 <h3>Nível 1: Começando (Gratuito)</h3>
 <ul>
@@ -1782,102 +2869,173 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
             title: "Business Manager: Configuração Profissional do Zero",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Por que nunca anunciar pelo perfil pessoal", "Configuração completa do BM", "Pixel de conversão e eventos", "Domínio verificado e CAPI"],
+            keyPoints: ["Checklist completo de configuração do BM — passo a passo verificável", "Como testar se o pixel está disparando corretamente antes de gastar R$1", "CAPI: por que sem isso você está deixando 30-40% das conversões invisíveis"],
+            exercise: "Se você ainda não tem BM configurado: siga o checklist desta aula e configure tudo hoje — leva 45-90 minutos. Se já tem: abra o Gerenciador de Eventos e verifique se todos os 5 eventos padrão estão disparando. Se 'Purchase' não aparecer, você está otimizando às cegas.",
             content: `<h2>Business Manager: A Infraestrutura que Protege seus Anúncios</h2>
-<p>O erro mais comum de quem começa no Meta Ads é anunciar diretamente pela conta pessoal ou pela página sem o Business Manager. Isso é frágil — qualquer problema na conta pessoal derruba tudo. O Business Manager é a infraestrutura empresarial da Meta.</p>
 
-<h3>O Que é o Business Manager</h3>
-<p>É uma plataforma separada (business.facebook.com) que centraliza ativos de negócio: páginas, contas de anúncio, pixels, catálogos, públicos, equipe. Diferentes pessoas podem ter acesso a diferentes ativos com permissões granulares — sem compartilhar senha.</p>
+<p>O erro mais comum de quem começa no Meta Ads é anunciar pelo perfil pessoal ou pela página sem o Business Manager. Resultado: qualquer problema na conta pessoal derruba tudo. BM é infraestrutura empresarial — separada do pessoal, com controle granular por ativo.</p>
 
-<h3>Configuração em 8 Passos</h3>
-<ol>
-  <li>Acesse business.facebook.com e crie o negócio</li>
-  <li>Adicione sua Página do Facebook (ou crie uma)</li>
-  <li>Crie uma Conta de Anúncios (nunca use a pessoal)</li>
-  <li>Adicione um método de pagamento à conta de anúncios</li>
-  <li>Crie e instale o Pixel no site (via código ou integração)</li>
-  <li>Verifique o domínio do seu site (crucial para rastreamento pós-iOS 14)</li>
-  <li>Configure os eventos de conversão prioritários no gerenciador de eventos</li>
-  <li>Ative a API de Conversões (CAPI) — essencial para rastreamento server-side</li>
-</ol>
+<h2>Checklist Completo de Configuração — Siga na Ordem</h2>
 
-<h3>O Pixel: Seu Ativo Mais Valioso</h3>
-<p>O Pixel é um código JavaScript que você instala no site. Ele rastreia o comportamento dos visitantes e envia esses dados para o Meta — permitindo que o algoritmo encontre pessoas parecidas com quem já comprou de você.</p>
+<table>
+  <thead>
+    <tr><th>#</th><th>Passo</th><th>Onde</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Criar o Business Manager</td><td>business.facebook.com</td><td>☐</td></tr>
+    <tr><td>2</td><td>Adicionar Página do Facebook (ou criar uma)</td><td>BM → Ativos → Páginas</td><td>☐</td></tr>
+    <tr><td>3</td><td>Criar Conta de Anúncios separada (nunca use a pessoal)</td><td>BM → Ativos → Contas de Anúncio</td><td>☐</td></tr>
+    <tr><td>4</td><td>Adicionar método de pagamento</td><td>Conta de Anúncios → Configurações</td><td>☐</td></tr>
+    <tr><td>5</td><td>Criar o Pixel e instalar no site</td><td>Gerenciador de Eventos → Adicionar Fonte</td><td>☐</td></tr>
+    <tr><td>6</td><td>Verificar o domínio</td><td>BM → Configurações → Domínios</td><td>☐</td></tr>
+    <tr><td>7</td><td>Configurar os 5 eventos padrão</td><td>Gerenciador de Eventos</td><td>☐</td></tr>
+    <tr><td>8</td><td>Ativar API de Conversões (CAPI)</td><td>Gerenciador de Eventos → Configurações</td><td>☐</td></tr>
+    <tr><td>9</td><td>Testar pixel com Meta Pixel Helper</td><td>Extensão Chrome</td><td>☐</td></tr>
+    <tr><td>10</td><td>Adicionar conta do Instagram ao BM</td><td>BM → Ativos → Contas do Instagram</td><td>☐</td></tr>
+  </tbody>
+</table>
 
-<p>Eventos essenciais para configurar:</p>
-<ul>
-  <li><strong>PageView:</strong> disparado em todas as páginas — mínimo obrigatório</li>
-  <li><strong>ViewContent:</strong> visita à página de vendas</li>
-  <li><strong>InitiateCheckout:</strong> início do processo de compra</li>
-  <li><strong>Purchase:</strong> compra concluída — com Value e Currency</li>
-  <li><strong>Lead:</strong> cadastro de email ou WhatsApp</li>
-</ul>
+<h2>Os 5 Eventos de Pixel que Você Precisa Ter Configurados</h2>
 
-<h3>CAPI: A Solução para o Mundo Pós-iOS 14</h3>
-<p>Com as restrições de privacidade do iOS 14+, o Pixel de navegador perdeu capacidade de rastreamento. A API de Conversões (CAPI) envia eventos diretamente do servidor — sem depender de cookies ou navegador.</p>
-<p>Com CAPI configurado corretamente, a taxa de rastreamento sobe de 50-60% (só pixel) para 85-95%. Isso não é detalhe — é a diferença entre um algoritmo cego e um algoritmo preciso.</p>
+<table>
+  <thead>
+    <tr><th>Evento</th><th>Quando dispara</th><th>Por que é essencial</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>PageView</td><td>Em qualquer página carregada</td><td>Rastreamento mínimo — sem isso você não tem dados</td></tr>
+    <tr><td>ViewContent</td><td>Visita à página de vendas</td><td>Cria público de remarketing de página de vendas</td></tr>
+    <tr><td>Lead</td><td>Cadastro de email ou WhatsApp</td><td>Permite otimizar para geração de leads</td></tr>
+    <tr><td>InitiateCheckout</td><td>Início do processo de compra</td><td>Público de abandono de checkout — conversão altíssima</td></tr>
+    <tr><td>Purchase</td><td>Compra concluída (com Value + Currency)</td><td>Permite calcular ROAS — sem isso você não sabe se está lucrando</td></tr>
+  </tbody>
+</table>
 
-<h3>Verificação de Domínio</h3>
-<p>Após o iOS 14, a Meta exige que você verifique a propriedade do domínio antes de rastrear eventos. Sem isso, o Facebook pode restringir os eventos que aparecem nos seus relatórios.</p>
-<p>Processo: Gerenciador de Negócios → Configurações → Domínios → Adicionar domínio → inserir meta-tag no cabeçalho do site ou arquivo DNS.</p>`
+<h2>Como Testar se o Pixel Está Disparando</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">PROTOCOLO DE TESTE — 5 MINUTOS</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. Instale a extensão "Meta Pixel Helper" no Chrome<br/>
+2. Abra sua página de vendas — o ícone deve mostrar "PageView" + "ViewContent" disparando<br/>
+3. Clique em "comprar" e inicie o checkout — deve mostrar "InitiateCheckout"<br/>
+4. Complete uma compra teste — deve mostrar "Purchase" com o valor correto<br/>
+5. No Gerenciador de Eventos, verifique em "Testar Eventos" que os eventos chegaram<br/><br/>
+<strong>Se algum evento não aparece: pare tudo e resolva antes de gastar qualquer verba.</strong>
+</p>
+</div>
+
+<h2>CAPI: Por Que Sem Isso Você Perde 30-40% das Conversões</h2>
+
+<p>Com as restrições de privacidade do iOS 14+, o Pixel de navegador perdeu capacidade de rastreamento. Usuários com bloqueadores de anúncio, navegação privada ou dispositivos iOS com "Não rastrear" ativo ficam invisíveis para o pixel.</p>
+
+<p>A API de Conversões (CAPI) envia eventos diretamente do servidor — sem depender de cookies ou navegador. É uma segunda linha de rastreamento.</p>
+
+<table>
+  <thead>
+    <tr><th>Configuração</th><th>Taxa de rastreamento</th><th>Qualidade do algoritmo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Só Pixel (sem CAPI)</td><td>50-60% das conversões</td><td>Algoritmo otimiza com dados incompletos</td></tr>
+    <tr><td>Pixel + CAPI</td><td>85-95% das conversões</td><td>Algoritmo tem visão completa — otimiza melhor</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Como ativar:</strong> Gerenciador de Eventos → sua fonte de dados → Configurações → API de Conversões → Configurar manualmente (ou via integração com Hotmart/Kiwify/WordPress).</p>
+
+<h2>Verificação de Domínio: Por Que é Obrigatório</h2>
+
+<p>Após o iOS 14, a Meta exige que você verifique a propriedade do domínio antes de rastrear eventos. Sem isso, o Facebook pode restringir os eventos nos relatórios — e você perde controle sobre quais eventos são priorizados para otimização.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COMO VERIFICAR O DOMÍNIO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+BM → Configurações → Domínios → Adicionar domínio → Escolha o método:<br/>
+• Meta-tag: cole no &lt;head&gt; do site<br/>
+• DNS: adicione registro TXT no painel do seu domínio (GoDaddy, Cloudflare, etc.)<br/><br/>
+Tempo: 5 minutos para o DNS propagar. Depois clique "Verificar".
+</p>
+</div>`
           },
           {
             id: "meta-estrutura",
             title: "Estrutura de Campanha: CBO, ABO e Objetivos",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Hierarquia: campanha → conjunto → anúncio", "CBO vs. ABO: quando usar cada um", "Objetivos corretos por fase do funil", "Como estruturar a primeira campanha"],
+            keyPoints: ["A primeira campanha estruturada para quem começa com pixel zerado — copy da estrutura pronta", "CBO vs. ABO: a tabela de decisão com exemplos reais", "Os 3 erros de configuração que queimam budget antes de gerar dados"],
+            exercise: "Monte a estrutura da sua primeira campanha de teste agora: 1 campanha ABO, 3 conjuntos de R$20/dia cada, 2 anúncios por conjunto. Defina: objetivo, público por conjunto (amplo, lookalike, interesse), e o evento de otimização. Não precise rodar hoje — mas ter a estrutura desenhada elimina os erros de configuração na hora de criar.",
             content: `<h2>Estrutura de Campanha: A Hierarquia que Define Resultados</h2>
-<p>O Meta Ads tem 3 níveis: Campanha (objetivo e orçamento global), Conjunto de Anúncios (público, placement, horário) e Anúncio (criativo, copy, CTA). Entender o papel de cada nível evita 90% dos erros de configuração.</p>
 
-<h3>CBO: Orçamento ao Nível de Campanha</h3>
-<p>No CBO (Campaign Budget Optimization), você define um orçamento total e o algoritmo distribui automaticamente entre os conjuntos — colocando mais verba em quem está performando melhor.</p>
+<p>O Meta Ads tem 3 níveis: Campanha (objetivo e orçamento global), Conjunto de Anúncios (público, placement, horário) e Anúncio (criativo, copy, CTA). Cada nível tem responsabilidades específicas — misturá-las é um dos erros mais caros.</p>
 
-<p><strong>Quando usar CBO:</strong></p>
-<ul>
-  <li>Quando você já tem dados históricos (pixel com pelo menos 50 conversões/semana)</li>
-  <li>Quando quer escalar — o algoritmo tem mais liberdade para otimizar</li>
-  <li>Quando os conjuntos dentro da campanha são competitivos entre si</li>
-</ul>
+<h2>CBO vs. ABO: Tabela de Decisão</h2>
 
-<h3>ABO: Orçamento ao Nível de Conjunto</h3>
-<p>No ABO (Ad Set Budget Optimization), você controla quanto cada conjunto recebe. Mais controle, menos otimização automática.</p>
+<table>
+  <thead>
+    <tr><th>Situação</th><th>Use ABO</th><th>Use CBO</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Pixel com histórico</td><td>Menos de 50 conversões/semana</td><td>50+ conversões/semana</td></tr>
+    <tr><td>Objetivo do momento</td><td>Fase de testes — dados iguais por conjunto</td><td>Fase de escala — algoritmo distribui livremente</td></tr>
+    <tr><td>Controle necessário</td><td>Retargeting com verba garantida</td><td>Múltiplos públicos competindo</td></tr>
+    <tr><td>Tamanho da conta</td><td>Budget total &lt;R$200/dia</td><td>Budget total &gt;R$300/dia</td></tr>
+  </tbody>
+</table>
 
-<p><strong>Quando usar ABO:</strong></p>
-<ul>
-  <li>Fase de testes — você precisa de dados iguais por conjunto para comparação justa</li>
-  <li>Quando um conjunto específico precisa de verba garantida (retargeting, por exemplo)</li>
-  <li>Testes de público no início, antes de escalar</li>
-</ul>
+<h2>Objetivos de Campanha: Qual Usar em Cada Fase</h2>
 
-<h3>Objetivos de Campanha por Fase do Funil</h3>
+<table>
+  <thead>
+    <tr><th>Fase do funil</th><th>Objetivo</th><th>Quando usar</th><th>KPI de sucesso</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Aquecimento</td><td>Visualizações de Vídeo</td><td>D-21 a D-8 do lançamento</td><td>CPV &lt;R$0,10 | VTR &gt;25%</td></tr>
+    <tr><td>Captura de leads</td><td>Geração de Leads (formulário)</td><td>Quando LP converte menos de 30%</td><td>CPL &lt;10% do ticket</td></tr>
+    <tr><td>Captura via LP</td><td>Conversões → Lead</td><td>Quando LP tem bom histórico de conversão</td><td>CPL &lt;10% do ticket</td></tr>
+    <tr><td>Carrinho aberto</td><td>Conversões → Purchase</td><td>Dias de carrinho aberto</td><td>ROAS &gt;3x (fundo)</td></tr>
+    <tr><td>High ticket</td><td>Mensagens (WhatsApp)</td><td>Produtos acima de R$3.000</td><td>Custo por conversa &lt;R$50</td></tr>
+  </tbody>
+</table>
 
-<p><strong>Topo de Funil (descoberta):</strong></p>
-<ul>
-  <li>Awareness: alcance máximo, ótimo para branding e lançamento de novo produto</li>
-  <li>Tráfego: leva pessoas ao site, bom para aquecer pixel com pouco investimento inicial</li>
-  <li>Engajamento: otimiza para interações — útil para crescimento de página e testes de copy</li>
-</ul>
+<h2>A Primeira Campanha: Estrutura Pronta para Copiar</h2>
 
-<p><strong>Meio de Funil (consideração):</strong></p>
-<ul>
-  <li>Geração de Leads: formulário nativo do Meta — zero fricção, alta quantidade, qualidade variável</li>
-  <li>Visualizações de Vídeo: ótimo para aquecimento de audiência para listas de retargeting</li>
-</ul>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ESTRUTURA DE CAMPANHA — PIXEL SEM HISTÓRICO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Campanha:</strong> Conversões (Lead) | ABO | R$60/dia total<br/><br/>
+├── <strong>Conjunto 1: Público Amplo</strong> | R$20/dia<br/>
+│   Segmentação: só faixa etária + localização. Sem interesses.<br/>
+│   2 anúncios: variação A (abordagem dor) e B (abordagem resultado)<br/><br/>
+├── <strong>Conjunto 2: Lookalike 1%</strong> | R$20/dia<br/>
+│   Fonte: lista de compradores anteriores ou visitantes da LP (mín. 300 pessoas)<br/>
+│   2 anúncios: mesmos A e B do Conjunto 1<br/><br/>
+└── <strong>Conjunto 3: Interesses Específicos</strong> | R$20/dia<br/>
+    Interesses: 3-4 interesses do nicho, empilhados em um único conjunto<br/>
+    2 anúncios: mesmos A e B<br/><br/>
+<strong>Duração do teste:</strong> 7 dias sem mexer. Não pause, não altere. Deixe o algoritmo aprender.<br/>
+<strong>Decisão com dados:</strong> após 7 dias, compare CPL dos 3 conjuntos. Pause o pior, escale os melhores.
+</p>
+</div>
 
-<p><strong>Fundo de Funil (conversão):</strong></p>
-<ul>
-  <li>Vendas / Conversões: o objetivo principal para quem quer compras — exige pixel configurado com evento de Purchase</li>
-  <li>Mensagens: leva para WhatsApp ou Messenger — altíssima taxa de fechamento para high ticket</li>
-</ul>
+<h2>Os 3 Erros Que Queimam Budget Antes de Gerar Dados</h2>
 
-<h3>A Estrutura da Primeira Campanha</h3>
-<p>Para quem está começando com pixel sem histórico:</p>
-<pre>Campanha: Conversões (Lead) | ABO | R$50/dia total
-├── Conjunto 1: Público Amplo (só segmentação por interesse 1) | R$20/dia
-├── Conjunto 2: Lookalike 1% (de lista de clientes ou visitantes) | R$20/dia
-└── Conjunto 3: Interesses específicos do nicho | R$10/dia</pre>
-<p>Rode por 7 dias sem mexer. Deixe o algoritmo aprender. Analise CPL (custo por lead) e tome decisão com dados.</p>`
+<table>
+  <thead>
+    <tr><th>Erro</th><th>Por que acontece</th><th>Consequência</th><th>Como evitar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Mexer na campanha antes de 7 dias</td><td>Impaciência — resultados ruins no dia 2-3</td><td>Reinicia a fase de aprendizado</td><td>Só analise depois de 7 dias com R$50+/dia gastos</td></tr>
+    <tr><td>Orçamento muito baixo por conjunto</td><td>Tentativa de economizar</td><td>Sem dados suficientes para otimizar — algoritmo fica cego</td><td>Mínimo R$20/dia por conjunto de anúncios</td></tr>
+    <tr><td>Muitos conjuntos competindo</td><td>Querer testar tudo de uma vez</td><td>Budget diluído — nenhum conjunto aprende</td><td>Máximo 3-4 conjuntos por campanha no início</td></tr>
+  </tbody>
+</table>
+
+<h2>Fase de Aprendizado: O Que É e Por Que Importa</h2>
+
+<p>O Meta precisa de pelo menos 50 eventos de otimização por semana por conjunto para sair da fase de aprendizado. Abaixo disso, o algoritmo está "tentando" — não otimizando de verdade.</p>
+
+<p><strong>Sinais de que está na fase de aprendizado:</strong> tag "Aprendendo" no gerenciador, CPL muito variável dia a dia, nenhuma consistência de performance.</p>
+
+<p><strong>Como sair mais rápido:</strong> use evento de otimização mais amplo (Lead em vez de Purchase), aumente o budget diário, ou consolide conjuntos similares em um só para concentrar os dados.</p>`
           },
           {
             id: "meta-publicos",
@@ -1939,70 +3097,212 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
           },
           {
             id: "meta-criativos",
-            title: "Criativos que Convertem: Vídeo, Imagem e Copy",
+            title: "Criativos que Convertem: Copy e Estrutura Prontos",
             duration: "30 min",
             type: "text",
-            keyPoints: ["Os 3 segundos que decidem o resultado", "Estrutura de vídeo de anúncio que vende", "Copy de anúncio: primary text, headline e descrição", "Testes A/B de criativo", "UGC vs. produção profissional"],
-            content: `<h2>Criativos: O Elemento que Mais Impacta o Resultado</h2>
-<p>Dentro do Meta Ads, o criativo (imagem/vídeo + copy) é o fator que mais influencia a performance — muito mais do que público ou estrutura de campanha. Porque o criativo é o que determina quem clica e quem ignora.</p>
+            keyPoints: ["Primary text completo de 5 variações por ângulo — copie e adapte", "A estrutura do vídeo de anúncio minuto a minuto", "O sistema de teste que descobre o criativo vencedor em 48h"],
+            exercise: "Escreva 3 variações de primary text para o seu produto usando os templates desta aula: uma usando ângulo de dor, outra de resultado e uma de prova social. Escreva também 3 headlines de 40 caracteres. Esse banco de copy é o que você vai rodar na sua próxima campanha.",
+            content: `<h2>Criativos que Convertem: O Copy e a Estrutura</h2>
 
-<h3>O Hook: Os 3 Primeiros Segundos</h3>
-<p>Em um feed onde o usuário faz scroll em 1,7 segundo por post, você tem 3 segundos para parar o polegar. O hook do vídeo é o ativo mais valioso de todo o anúncio.</p>
+<p>O criativo (vídeo/imagem + copy) é o fator que mais impacta a performance do Meta Ads — mais do que público ou estrutura. E é o único elemento que você pode trocar sem reiniciar a fase de aprendizado. Isso faz do criativo o principal laboratório de otimização.</p>
 
-<p><strong>Tipos de hook que funcionam:</strong></p>
-<ul>
-  <li><strong>Visual disruptivo:</strong> algo fora do padrão que forçe o olhar (contraste de cor, movimento, texto grande)</li>
-  <li><strong>Pergunta de dor:</strong> "Você já tentou vender um produto digital e não vendeu nada?" — ativa o self-recognition</li>
-  <li><strong>Resultado específico:</strong> "Como faturei R$87.420 em 7 dias com uma lista de 800 pessoas"</li>
-  <li><strong>Contraintuitivo:</strong> "Pare de criar conteúdo todo dia" — vai contra o que a pessoa espera ouvir</li>
-  <li><strong>Demonstração imediata:</strong> mostre o produto/resultado funcionando nos primeiros 2 segundos</li>
-</ul>
+<h2>Primary Text: 5 Variações por Ângulo</h2>
 
-<h3>Estrutura do Vídeo de Anúncio</h3>
-<p>Para vídeos de 30-90 segundos (os mais eficazes em 2025):</p>
-<ol>
-  <li><strong>0-3s: Hook</strong> — para o scroll</li>
-  <li><strong>3-10s: Problema</strong> — aprofunda a dor ou o desejo</li>
-  <li><strong>10-40s: Solução</strong> — como você resolve (sem revelar tudo)</li>
-  <li><strong>40-60s: Prova</strong> — resultado específico, depoimento, screenshot</li>
-  <li><strong>60-90s: CTA</strong> — instrução clara do que fazer agora</li>
-</ol>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ÂNGULO 1 — DOR (primeiras 3 linhas visíveis)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"Você passa meses construindo audiência, cria um produto excelente — e no dia de abertura vende 8 unidades.<br/><br/>
+O pior não é a receita baixa. É não saber onde foi que errou.<br/><br/>
+O [produto] resolve isso: mapeia onde o funil quebrou e entrega o protocolo de correção. → Saiba mais no link"
+</p>
+</div>
 
-<h3>UGC vs. Produção Profissional</h3>
-<p>UGC (User Generated Content) — vídeos gravados de forma "caseira", geralmente na câmera frontal do celular — frequentemente superam produções profissionais em Meta Ads. Por quê?</p>
-<ul>
-  <li>Parece conteúdo orgânico, não anúncio — menos resistência do usuário</li>
-  <li>Transmite autenticidade — mais confiança</li>
-  <li>Menor custo de produção — permite mais testes</li>
-</ul>
-<p>Para produtos de alto ticket ou com forte componente aspiracional, produção profissional ainda tem seu lugar. Para o dia a dia, teste UGC primeiro.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ÂNGULO 2 — RESULTADO CHOCANTE</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"R$[X] em [Y] dias com uma lista de [Z] pessoas.<br/><br/>
+Não foi sorte, não foi lista grande, não foi afiliado. Foi uma sequência de [N] passos que qualquer pessoa de nicho pode replicar.<br/><br/>
+O método completo está no [produto]. Vagas abertas até [data]. → Clique para ver"
+</p>
+</div>
 
-<h3>Copy de Anúncio: Cada Campo Tem uma Função</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ÂNGULO 3 — PROVA SOCIAL</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"[Nome] aplicou o método em março. Resultado: R$[X].<br/><br/>
+[Nome 2] começou do zero em [nicho]. Primeiro lançamento: R$[Y].<br/><br/>
+São [N] histórias como essas. O que elas têm em comum? O mesmo método. → Veja como"
+</p>
+</div>
 
-<p><strong>Primary Text (texto principal):</strong> O que aparece acima da imagem/vídeo. Primeiras 3 linhas são o mais importante — é o que aparece antes do "Ver mais". Estrutura: Hook de texto → Problema → Solução → CTA.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ÂNGULO 4 — CONTRAINTUITIVO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"O erro que destrói 90% dos lançamentos não é falta de tráfego.<br/><br/>
+É uma coisa específica que acontece entre o lead entrar na lista e o carrinho abrir. E quase ninguém corrige.<br/><br/>
+No [produto], mostro exatamente o que é e como resolver em 48h. → Saiba mais"
+</p>
+</div>
 
-<p><strong>Headline (título):</strong> Aparece abaixo da mídia, em negrito. Deve ser a maior promessa em menos de 40 caracteres. Ex: "De R$0 a R$10k: o método completo"</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ÂNGULO 5 — URGÊNCIA + ESCASSEZ</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"Fechamos para [N] novos alunos nessa turma.<br/><br/>
+[X vagas] foram preenchidas nas primeiras [Y]h.<br/><br/>
+Restam [Z]. Fecha [data/hora]. → Garantir minha vaga agora"
+</p>
+</div>
 
-<p><strong>Descrição:</strong> Aparece abaixo do título. Reforce o benefício ou adicione urgência. Ex: "Mais de 2.000 alunos já aplicaram"</p>
+<h2>Headlines: 3 Fórmulas com Exemplos</h2>
 
-<h3>Quantos Criativos Testar?</h3>
-<p>Para um conjunto de anúncios ativo, mantenha 3-5 criativos rodando simultaneamente. Quando um criativo começa a perder performance (CPM subindo, CTR caindo), substitua por novo — não pause o vencedor até que o novo prove ser melhor.</p>
+<table>
+  <thead>
+    <tr><th>Fórmula</th><th>Exemplo</th><th>Caracteres</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Promessa direta</td><td>"De R$0 a R$10k: o método completo"</td><td>36</td></tr>
+    <tr><td>Resultado + Objeção</td><td>"Fature mais sem lista grande"</td><td>29</td></tr>
+    <tr><td>Urgência</td><td>"Último dia | Vagas abertas até meia-noite"</td><td>41</td></tr>
+  </tbody>
+</table>
 
-<blockquote>O criativo é o único elemento do Meta Ads que você pode mudar sem reiniciar a fase de aprendizado. Mude público → campanha reinicia. Mude criativo → mantém o aprendizado. Por isso, o criativo deve ser seu principal laboratório de otimização.</blockquote>`
+<h2>Estrutura do Vídeo de Anúncio (30-90s)</h2>
+
+<table>
+  <thead>
+    <tr><th>Bloco</th><th>Timing</th><th>Objetivo</th><th>Duração</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Hook visual + verbal</td><td>0-3s</td><td>Parar o scroll</td><td>3s máximo</td></tr>
+    <tr><td>Problema / Dor</td><td>3-10s</td><td>Criar identificação</td><td>7s</td></tr>
+    <tr><td>Solução (sem entregar tudo)</td><td>10-40s</td><td>Criar desejo pela solução completa</td><td>30s</td></tr>
+    <tr><td>Prova</td><td>40-60s</td><td>Validar a promessa</td><td>20s</td></tr>
+    <tr><td>CTA claro</td><td>60-90s</td><td>Instruir a ação</td><td>10-30s</td></tr>
+  </tbody>
+</table>
+
+<h2>UGC vs. Produção Profissional: Quando Usar Cada Um</h2>
+
+<table>
+  <thead>
+    <tr><th>Tipo</th><th>Quando converte melhor</th><th>Por quê</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>UGC (câmera frontal, "caseiro")</td><td>Topo de funil, público frio, fase de teste</td><td>Parece conteúdo orgânico — menos resistência, mais confiança</td></tr>
+    <tr><td>Produção profissional</td><td>Retargeting, produtos aspiracionais, alto ticket</td><td>Reforça credibilidade e posicionamento premium</td></tr>
+    <tr><td>Screen recording / tutorial</td><td>Produtos de tecnologia, ferramentas, software</td><td>Demonstração direta — remove dúvida sobre "como funciona"</td></tr>
+  </tbody>
+</table>
+
+<h2>O Sistema de Teste que Descobre o Vencedor em 48h</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">PROTOCOLO DE TESTE DE CRIATIVO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. Mesmo conjunto de anúncios → 4-6 variações de criativo<br/>
+2. Budget igual por criativo → dados comparáveis<br/>
+3. Rodar 48h → analisar Hook Rate (% assistiu 3s) e CTR<br/>
+4. Pausar os 2-3 com pior performance<br/>
+5. Criar 2-3 variações dos vencedores — iterar<br/><br/>
+<strong>Métricas que decidem o vencedor:</strong><br/>
+Hook Rate &gt;30% (% assistiu primeiros 3s) + CTR &gt;1% + CPL abaixo da meta
+</p>
+</div>`
           },
           {
             id: "meta-otimizacao",
             title: "Otimização e Escala: Do R$50 ao R$5.000/dia",
             duration: "30 min",
             type: "text",
-            keyPoints: ["Métricas que importam: CPM, CPC, CTR, CPL, ROAS", "Fase de aprendizado: o erro de mexer cedo", "Escala horizontal vs. vertical", "Regras de automatização e alertas", "Diagnóstico de campanha por problema"],
-            content: `<h2>Otimização e Escala: Quando e Como Crescer</h2>
-<p>A maioria das pessoas perde dinheiro no Meta Ads não porque as campanhas são ruins — mas porque mexem nelas cedo demais. Entender a fase de aprendizado e os sinais corretos para otimizar é o que separa quem escala de quem desperdiça verba.</p>
+            keyPoints: ["Tabela de diagnóstico: problema → causa → solução para as 5 falhas mais comuns", "Benchmarks reais de CPM, CTR, CPL e ROAS por nicho no Brasil", "A regra de 20% para escala sem resetar o aprendizado"],
+            exercise: "Abra sua campanha ativa agora e preencha esta checklist: CPM está dentro do benchmark do seu nicho? CTR do link está acima de 1%? CPL está abaixo de 10% do ticket? Se algum está fora, use a tabela de diagnóstico desta aula para identificar a causa raiz antes de fazer qualquer mudança.",
+            content: `<h2>Otimização e Escala: O Que Fazer e Em Que Ordem</h2>
 
-<h3>Métricas Essenciais e o que Significam</h3>
+<p>A maioria das pessoas perde dinheiro no Meta Ads não porque as campanhas são ruins — mas porque mexem nelas cedo demais. A fase de aprendizado deve ser respeitada. Depois dela, você otimiza com dados — não com intuição.</p>
+
+<h2>Benchmarks Reais por Nicho — Brasil 2025</h2>
+
+<table>
+  <thead>
+    <tr><th>Nicho</th><th>CPM médio</th><th>CTR link alvo</th><th>CPL aceitável</th><th>ROAS mín. para escalar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Educação / Infoprodutos</td><td>R$15-35</td><td>&gt;1,5%</td><td>&lt;8% do ticket</td><td>&gt;3x</td></tr>
+    <tr><td>Finanças / Investimentos</td><td>R$40-80</td><td>&gt;1%</td><td>&lt;10% do ticket</td><td>&gt;3,5x</td></tr>
+    <tr><td>Saúde / Fitness</td><td>R$12-25</td><td>&gt;2%</td><td>&lt;7% do ticket</td><td>&gt;3x</td></tr>
+    <tr><td>Marketing / Negócios</td><td>R$20-45</td><td>&gt;1,2%</td><td>&lt;10% do ticket</td><td>&gt;3x</td></tr>
+    <tr><td>Relacionamentos / Coaching</td><td>R$18-38</td><td>&gt;1,8%</td><td>&lt;8% do ticket</td><td>&gt;3x</td></tr>
+  </tbody>
+</table>
+
+<h2>Diagnóstico de Campanha: Problema → Causa → Solução</h2>
+
+<table>
+  <thead>
+    <tr><th>Sintoma</th><th>Causa mais provável</th><th>Ação corretiva</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CPM alto + alcance baixo</td><td>Público muito restrito ou CPM alto do nicho</td><td>Expanda o público ou teste horários de menor leilão (madrugada)</td></tr>
+    <tr><td>CTR baixo (&lt;0,8%)</td><td>Criativo ou hook não está parando o scroll</td><td>Troque o hook — teste 4-6 variações nos próximos 48h</td></tr>
+    <tr><td>CTR bom + CPL alto</td><td>Problema na landing page (copy, velocidade, oferta)</td><td>Revise a LP: headline, benefícios, CTA. Teste Hotjar para ver onde saem</td></tr>
+    <tr><td>CPL bom + sem vendas</td><td>Lead mal qualificado ou funil pós-lead fraco</td><td>Revise a segmentação do público e o copy da sequência de nutrição</td></tr>
+    <tr><td>Performance boa → deteriora rápido</td><td>Saturação — frequência acima de 3x para público frio</td><td>Renove criativos ou expanda o público. Frequência ideal frio: 1,5-2,5x</td></tr>
+  </tbody>
+</table>
+
+<h2>A Regra dos 20% para Escalar Sem Resetar</h2>
+
+<p>Quando uma campanha está performando bem e você quer escalar, não duplique o budget de uma vez. O algoritmo leva a campanha de volta para a fase de aprendizado se o aumento for muito brusco.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">PROTOCOLO DE ESCALA</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Regra:</strong> aumente máximo 20% do budget a cada 3-4 dias<br/><br/>
+Exemplo: R$100/dia → R$120/dia (3 dias) → R$144/dia (3 dias) → R$172/dia...<br/><br/>
+<strong>Escala horizontal</strong> (mais segura): duplique o conjunto vencedor em uma nova campanha ABO separada. O original continua rodando sem interferência.<br/><br/>
+<strong>Escala vertical</strong> (mais arriscada): aumenta budget no conjunto existente. Maior chance de resetar aprendizado.
+</p>
+</div>
+
+<h2>Quando NÃO Mexer na Campanha</h2>
+
+<table>
+  <thead>
+    <tr><th>Situação</th><th>O que fazer</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Menos de 7 dias rodando</td><td>Não mexa em nada — fase de aprendizado</td></tr>
+    <tr><td>Dia de fim de semana com performance baixa</td><td>Normal — comportamento de audiência muda no fim de semana</td></tr>
+    <tr><td>CPL variou 30% vs. ontem</td><td>Variação diária é normal — analise tendência de 7 dias</td></tr>
+    <tr><td>Frequência abaixo de 2x para público frio</td><td>Ainda não saturou — deixe rodar</td></tr>
+  </tbody>
+</table>
+
+<h2>Regras de Automação: Proteja o Budget com Alerts</h2>
+
+<p>Configure regras automáticas no gerenciador para agir enquanto você dorme:</p>
+
+<table>
+  <thead>
+    <tr><th>Regra</th><th>Condição</th><th>Ação</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Proteção de CTR</td><td>CTR &lt; 0,5% após 48h</td><td>Pausar o anúncio</td></tr>
+    <tr><td>Alerta de CPL</td><td>CPL &gt; 150% da meta</td><td>Notificar por email</td></tr>
+    <tr><td>Frequência</td><td>Frequência &gt; 4x para frio</td><td>Pausar o conjunto</td></tr>
+    <tr><td>Gasto diário</td><td>Gasto &gt; 110% do orçamento diário</td><td>Pausar campanha</td></tr>
+  </tbody>
+</table>
+
+<h3>Diagnóstico por Problema</h3>
 <ul>
-  <li><strong>CPM (Custo por Mil Impressões):</strong> o preço que você paga pela atenção. Alto CPM não é problema se a conversão compensar. CPM médio Brasil por nicho: educação R$15-R$35, finanças R$40-R$80, fitness R$12-R$25.</li>
-  <li><strong>CTR (Taxa de Cliques):</strong> % de quem viu o anúncio e clicou. Benchmarks: CTR no link &gt;1% é bom, &gt;2% é excelente. CTR baixo = criativo ou público errado.</li>
+  <li><strong>CPM alto + CTR baixo → Público muito restrito ou saturado:</strong> expanda o público ou troque de segmento</li>
+  <li><strong>CTR bom + CPL alto → Problema na landing page:</strong> a pessoa clica mas não converte — revise a página</li>
+  <li><strong>CPL bom + nenhuma venda → Problema na qualidade do lead:</strong> revise a segmentação ou a oferta</li>
+  <li><strong>Performance boa depois deteriorando → Saturação:</strong> freqüência acima de 3 para público frio — renove criativos ou expanda público</li>
+</ul>
+
+<blockquote>O maior inimigo do Meta Ads não é o algoritmo — é a impaciência. Campanhas que seriam vencedoras são pausadas antes de completar a aprendizagem. Dados sem paciência são apenas ruído.</blockquote>`
   <li><strong>CPC (Custo por Clique):</strong> quanto custa cada clique. Relevante mas não isoladamente — um CPC alto com alta conversão é melhor que CPC baixo com zero conversão.</li>
   <li><strong>CPL (Custo por Lead):</strong> o que realmente importa em campanhas de captura. Compare com o LTV do seu cliente.</li>
   <li><strong>ROAS (Retorno sobre Gasto em Anúncio):</strong> receita ÷ gasto em ads. ROAS de 3x significa que cada R$1 investido gerou R$3. Ponto de equilíbrio depende da margem do produto.</li>
@@ -2443,146 +3743,231 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
             title: "O que é um Algoritmo de Recomendação e o que ele Quer",
             duration: "22 min",
             type: "text",
-            keyPoints: ["O objetivo real de todo algoritmo: maximizar tempo na plataforma", "Sinal implícito vs. sinal explícito", "O loop de feedback que alimenta o algoritmo", "Por que o algoritmo não é seu inimigo — é um espelho"],
-            content: `<h2>O Algoritmo não é Mágica — é Otimização</h2>
-<p>Todo algoritmo de recomendação de plataforma digital tem um único objetivo central: <strong>maximizar o tempo que o usuário passa na plataforma</strong>. Não é para ajudar o criador, não é para entregar o melhor conteúdo do mundo — é para manter as pessoas rolando, assistindo e interagindo o máximo possível.</p>
+            keyPoints: ["A equação que determina distribuição em qualquer plataforma — com benchmarks por sinal", "Sinais implícitos vs. explícitos: qual peso cada um tem no algoritmo", "Como auditar seu próprio conteúdo e identificar onde o algoritmo está parando de distribuir"],
+            exercise: "Abra os analytics de um post seu que teve alcance baixo. Responda: qual foi o tempo médio de visualização? A taxa de conclusão estava abaixo do benchmark? Identifique o sinal mais fraco — e proponha um ajuste específico de conteúdo que melhoraria esse sinal no próximo post.",
+            content: `<h2>Algoritmos de Recomendação: A Lógica Que Governa Toda Distribuição</h2>
 
-<p>Entender isso muda completamente a perspectiva. Você não precisa "enganar" o algoritmo. Você precisa <em>criar conteúdo que faz as pessoas ficarem</em> — e o algoritmo distribui automaticamente.</p>
+<p>Todo algoritmo de recomendação de plataforma digital tem um único objetivo central: maximizar o tempo que o usuário passa na plataforma. Não é para ajudar o criador — é para manter as pessoas consumindo. Entender isso muda a perspectiva: você não precisa enganar o algoritmo. Você precisa criar conteúdo que faz pessoas ficarem — e o algoritmo distribui automaticamente.</p>
 
-<h3>A Equação Fundamental</h3>
-<p>Todo algoritmo de recomendação, em qualquer plataforma, resolve uma variante da mesma equação:</p>
-<pre>Score do Conteúdo = f(Engajamento, Retenção, Relevância, Frescor)</pre>
+<h2>A Equação Universal dos Algoritmos</h2>
 
-<ul>
-  <li><strong>Engajamento:</strong> curtidas, comentários, compartilhamentos, saves, cliques — interações que sinalizam que o conteúdo provocou uma reação</li>
-  <li><strong>Retenção:</strong> quanto tempo a pessoa passou consumindo aquele conteúdo — o sinal mais honesto de valor</li>
-  <li><strong>Relevância:</strong> o quão bem o conteúdo combina com o histórico e os interesses daquele usuário específico</li>
-  <li><strong>Frescor:</strong> conteúdo recente tem vantagem inicial, mas perde para conteúdo com mais sinais acumulados com o tempo</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Fator</th><th>O que é</th><th>Peso relativo</th><th>Como melhorar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Retenção</td><td>% do conteúdo que a pessoa consumiu</td><td>Muito alto — sinal mais difícil de manipular</td><td>Hooks mais fortes, ritmo sem pausas, CTAs internos</td></tr>
+    <tr><td>Engajamento</td><td>Curtidas, saves, compartilhamentos, comentários</td><td>Alto — especialmente saves e shares</td><td>Peça ação específica no final do conteúdo</td></tr>
+    <tr><td>Relevância</td><td>Match entre conteúdo e interesses do usuário</td><td>Alto — decide para quem distribui</td><td>Nicho consistente, keywords certas, hashtags específicas</td></tr>
+    <tr><td>Velocidade de engajamento</td><td>Rapidez com que chegam os primeiros sinais</td><td>Médio-alto — influencia expansão inicial</td><td>Publique quando a audiência está ativa</td></tr>
+    <tr><td>Frescor</td><td>Quão recente é o conteúdo</td><td>Médio — varia por plataforma</td><td>Frequência consistente de publicação</td></tr>
+  </tbody>
+</table>
 
-<h3>Sinais Implícitos vs. Explícitos</h3>
-<p>Os algoritmos aprenderam a confiar mais em sinais <em>implícitos</em> — comportamento do usuário que revela preferência real — do que em sinais <em>explícitos</em> como curtidas.</p>
+<h2>Sinais Implícitos vs. Explícitos: Os Pesos Que Importam</h2>
 
-<p><strong>Sinais implícitos (mais pesados no algoritmo):</strong></p>
-<ul>
-  <li>Tempo de visualização do vídeo (retenção)</li>
-  <li>Rolar de volta para reler uma parte</li>
-  <li>Assistir ao vídeo mais de uma vez (rewatch)</li>
-  <li>Parar o scroll e ficar na tela por mais de 3 segundos</li>
-  <li>Abrir o perfil depois de ver o conteúdo</li>
-  <li>Salvar o post para ver depois</li>
-</ul>
+<p>Os algoritmos evoluíram para confiar mais em comportamento do que em declarações. Um usuário pode curtir todo conteúdo de fitness que aparece, mas se não assiste até o final, o algoritmo entende que fitness não retém — e distribui menos.</p>
 
-<p><strong>Sinais explícitos (menos peso, mais fáceis de manipular):</strong></p>
-<ul>
-  <li>Curtidas</li>
-  <li>Comentários</li>
-  <li>Cliques no "não me mostrar mais"</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Sinal</th><th>Tipo</th><th>Peso no algoritmo</th><th>O que revela</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Taxa de conclusão do vídeo</td><td>Implícito</td><td>⭐⭐⭐⭐⭐</td><td>Valor real do conteúdo — difícil de fingir</td></tr>
+    <tr><td>Rewatch (assistiu 2x+)</td><td>Implícito</td><td>⭐⭐⭐⭐⭐</td><td>Conteúdo com densidade alta — excepcional</td></tr>
+    <tr><td>Tempo parado na tela (3s+)</td><td>Implícito</td><td>⭐⭐⭐⭐</td><td>Capturou atenção visual — para scroll</td></tr>
+    <tr><td>Save / Favoritar</td><td>Explícito/implícito</td><td>⭐⭐⭐⭐</td><td>Intenção de revisitar — utilidade percebida</td></tr>
+    <tr><td>Compartilhamento</td><td>Explícito</td><td>⭐⭐⭐⭐</td><td>Aprovação social — endosso a outro usuário</td></tr>
+    <tr><td>Comentário longo</td><td>Explícito</td><td>⭐⭐⭐</td><td>Engajamento profundo — provocou reflexão</td></tr>
+    <tr><td>Curtida</td><td>Explícito</td><td>⭐⭐</td><td>Menor peso — muito fácil de dar sem consumir</td></tr>
+  </tbody>
+</table>
 
-<blockquote>O algoritmo aprende com o que as pessoas <em>fazem</em>, não com o que dizem que gostam. Um usuário pode curtir todo conteúdo de fitness que aparece, mas se ele não assiste até o final, o algoritmo entende que fitness não retém esse usuário — e distribui menos.</blockquote>
+<h2>O Loop de Feedback: Como um Post Chega (ou Não) ao Alcance Alto</h2>
 
-<h3>O Loop de Feedback</h3>
-<p>Todo algoritmo funciona em loop:</p>
-<ol>
-  <li>Conteúdo novo é publicado</li>
-  <li>Algoritmo testa com grupo pequeno de usuários potencialmente interessados</li>
-  <li>Mede sinais de engajamento e retenção</li>
-  <li>Se sinais são positivos → expande distribuição para grupo maior</li>
-  <li>Repete até saturar ou o conteúdo perder performance</li>
-</ol>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">O CICLO DE DISTRIBUIÇÃO — UNIVERSAL EM TODAS AS PLATAFORMAS</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. Conteúdo publicado → distribuído para grupo pequeno de usuários potencialmente interessados<br/>
+2. Algoritmo mede: retenção, engajamento, velocidade dos sinais<br/>
+3. Se sinais acima do threshold do nicho → expande para grupo maior<br/>
+4. Se sinais abaixo → para distribuição (não pune, apenas não expande)<br/>
+5. Repete até saturar ou o conteúdo perder performance<br/><br/>
+<strong>Implicação prática:</strong> se seu post não performou, ele não foi punido. Ele simplesmente não passou do grupo de teste. Publique o próximo com hook mais forte.
+</p>
+</div>
 
-<p>Cada plataforma tem parâmetros diferentes para "positivo" neste loop — mas a estrutura é universal.</p>
+<h2>Como Auditar um Post com Baixo Alcance</h2>
 
-<h3>O Algoritmo como Espelho</h3>
-<p>Se seu conteúdo não está sendo distribuído, há duas possibilidades: ou o algoritmo está com problema (raro) ou seu conteúdo não está gerando retenção suficiente (quase sempre). O algoritmo não te pune — ele simplesmente reflete o comportamento real da audiência. Culpar o algoritmo é evitar a pergunta certa: <em>por que as pessoas não estão ficando?</em></p>`
+<table>
+  <thead>
+    <tr><th>Pergunta</th><th>Sinal problemático</th><th>Correção</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Qual foi o tempo médio de visualização?</td><td>Abaixo de 50% da duração</td><td>Hook mais forte — os primeiros 3s estão falhando</td></tr>
+    <tr><td>Qual foi a taxa de save?</td><td>Abaixo de 2% dos alcançados</td><td>Adicione lista, checklist ou template — algo para salvar depois</td></tr>
+    <tr><td>Qual foi a taxa de compartilhamento?</td><td>Abaixo de 1%</td><td>O conteúdo não é "envio para um amigo" — mude o ângulo para mais específico ou contraintuitivo</td></tr>
+    <tr><td>Havia CTA explícito?</td><td>Não</td><td>Sempre peça uma ação específica no final — "salva esse post", "manda para quem precisa ver"</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "algo-psicologia",
             title: "A Psicologia por Trás dos Sinais de Engajamento",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Por que o cérebro para o scroll", "O papel da dopamina na distribuição de conteúdo", "Curiosity gap: a lacuna que força a continuação", "Pattern interrupt: quebrando o piloto automático", "Como emocionar em 3 segundos"],
-            content: `<h2>A Neurociência do Scroll: Por Que Paramos</h2>
-<p>Para usar o algoritmo a seu favor, você precisa entender o que está do outro lado: um cérebro humano em modo de piloto automático, tomando micro-decisões a cada 1,7 segundo. O algoritmo distribui para quem sabe interromper esse piloto automático.</p>
+            keyPoints: ["5 templates de hook baseados em cada gatilho psicológico — com exemplos por nicho", "Como criar loops abertos dentro do conteúdo para manter retenção", "O princípio do menor esforço cognitivo: como estruturar cada frase e cena"],
+            exercise: "Escreva 5 hooks diferentes para o mesmo conteúdo — um usando cada gatilho desta aula: curiosidade, reconhecimento de identidade, dissonância, FOMO e antecipação de recompensa. Publique o que parecer mais forte e anote qual métrica mede o sucesso desse gatilho específico (ex: hook de FOMO → mede completion rate).",
+            content: `<h2>A Psicologia do Scroll: O Que Para o Polegar</h2>
 
-<h3>O Cérebro no Scroll: O Estado Default</h3>
-<p>Quando alguém está fazendo scroll no feed, o córtex pré-frontal — a parte do cérebro responsável por decisões conscientes — está parcialmente desativado. É um estado quase meditativo de processamento baixo de informação. Nesse estado, o conteúdo é processado de forma rápida e superficial.</p>
+<p>Para usar o algoritmo a seu favor, você precisa entender o que está do outro lado: um cérebro em piloto automático, tomando micro-decisões a cada 1,7 segundo. O algoritmo distribui para quem sabe interromper esse piloto automático — e os 5 gatilhos abaixo são os mecanismos exatos.</p>
 
-<p>Para parar esse estado, o conteúdo precisa ativar uma das respostas do sistema límbico — a parte emocional e primitiva do cérebro que processa ameaças, oportunidades e novidades.</p>
+<h2>Os 5 Gatilhos Psicológicos — Templates Prontos</h2>
 
-<h3>Os 5 Gatilhos que Param o Scroll</h3>
+<h3>1. Curiosity Gap (Lacuna de Curiosidade)</h3>
+<p>O cérebro tem aversão a lacunas de conhecimento. Quando percebe que sabe apenas parte de algo, sente desconforto e busca completar. A pessoa precisa chegar ao final.</p>
 
-<h3>1. Curiosidade (Curiosity Gap)</h3>
-<p>O cérebro humano tem aversão a lacunas de conhecimento. Quando percebe que sabe apenas parte de algo, sente desconforto e busca completar a informação.</p>
-<p>Como usar: crie uma promessa no início que só se completa no final. "O erro que 99% dos produtores cometem no dia de abertura do carrinho" — a pessoa <em>precisa</em> saber qual é o erro.</p>
-<p>O Curiosity Gap é a base do copywriting de alto engajamento e do clickbait legítimo (quando entrega o que promete).</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">TEMPLATE — CURIOSITY GAP</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">
+"O erro que [autoridade/99% das pessoas] comete[m] no [momento crítico do nicho]"<br/>
+"A razão por que [resultado desejado] é mais difícil do que parece — e a solução que ninguém fala"<br/><br/>
+<em style="color:#a0aec0">Exemplo: "O erro que 99% dos produtores cometem no dia de abertura do carrinho" → a pessoa precisa saber qual é o erro. Completion rate: alto.</em>
+</p>
+</div>
 
-<h3>2. Reconhecimento de Si Mesmo (Self-Reference Effect)</h3>
-<p>O cérebro processa mais rapidamente informações que parecem relevantes para si mesmo. Quando alguém lê "Você ainda faz isso ao lançar seu produto?", o "você" ativa uma resposta de atenção involuntária.</p>
-<p>Como usar: personalize o hook para a identidade específica do seu público. "Se você vende cursos online e está travado no mesmo patamar há 3 meses..." — quem se encaixa não consegue ignorar.</p>
+<h3>2. Self-Reference Effect (Reconhecimento de Identidade)</h3>
+<p>O cérebro processa mais rapidamente informações que parecem relevantes para si mesmo. "Você" ativa atenção involuntária. Identidade específica funciona melhor que público amplo.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">TEMPLATE — IDENTIDADE ESPECÍFICA</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">
+"Se você [ação específica do avatar] e [situação atual específica]..."<br/><br/>
+<em style="color:#a0aec0">Exemplo: "Se você vende cursos online e está travado no mesmo faturamento há 3 meses, isso é para você." Quem se encaixa não consegue ignorar — quem não se encaixa sai (e isso é ok — filtra audiência certa).</em>
+</p>
+</div>
 
 <h3>3. Dissonância Cognitiva (Pattern Interrupt)</h3>
-<p>O cérebro automaticamente filtra o que já conhece. Algo que contraria uma crença estabelecida força atenção consciente — o sistema ativa para resolver o conflito.</p>
-<p>Como usar: comece com uma afirmação contraintuitiva. "Postar todo dia no Instagram está destruindo seu alcance" — vai contra o que a maioria acredita, forçando atenção para resolver a dissonância.</p>
+<p>O cérebro filtra automaticamente o que já conhece. Uma afirmação que contraria crença estabelecida força atenção consciente — o sistema precisa "resolver" o conflito.</p>
 
-<h3>4. Ameaça e FOMO (Fear of Missing Out)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">TEMPLATE — CONTRAINTUITIVO</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">
+"[Ação comum que todos acreditam que é certa] está [consequência negativa oposta ao esperado]"<br/><br/>
+<em style="color:#a0aec0">Exemplo: "Postar todo dia no Instagram está destruindo seu alcance." — vai contra o que a maioria acredita. O cérebro para para "resolver" essa afirmação.</em>
+</p>
+</div>
+
+<h3>4. FOMO (Fear of Missing Out — Ameaça Social)</h3>
 <p>O cérebro primitivo prioriza ameaças. FOMO é uma ameaça social — a sensação de ficar para trás enquanto outros avançam.</p>
-<p>Como usar: "Enquanto você lê isso, produtores menores que você estão faturando 3x mais com esse método". Não é manipulação — é ativação de urgência real quando o conteúdo entrega valor genuíno.</p>
 
-<h3>5. Dopamina Antecipada</h3>
-<p>A dopamina é liberada não apenas quando recebemos uma recompensa, mas quando <em>antecipamos</em> recebê-la. Isso é o mecanismo central do scroll infinito — cada novo card pode ser a recompensa.</p>
-<p>Como usar: crie loops abertos dentro do conteúdo. Em um vídeo de 5 minutos, abra uma nova pergunta no minuto 2 que só será respondida no minuto 4. A antecipação mantém a retenção.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">TEMPLATE — FOMO</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">
+"Enquanto você [ação que o avatar está fazendo], [pessoas similares] estão [resultado superior]"<br/><br/>
+<em style="color:#a0aec0">Exemplo: "Enquanto você otimiza seu funil pelo 15º mês, produtores com metade da sua audiência estão faturando o dobro com essa estratégia."</em>
+</p>
+</div>
 
-<h3>O Princípio do Menor Esforço Cognitivo</h3>
-<p>O cérebro sempre escolhe o caminho de menor resistência cognitiva. Conteúdo complexo, denso ou difícil de processar é abandonado — não porque seja ruim, mas porque exige esforço demais no estado de scroll.</p>
-<p>Regra prática: <strong>uma ideia por frase</strong>. Uma cena por segundo de vídeo. Um conceito por slide de carrossel. Cada unidade deve ser imediatamente compreensível sem esforço.</p>`
+<h3>5. Dopamina Antecipada (Loop Aberto)</h3>
+<p>A dopamina é liberada não quando recebemos a recompensa — mas quando antecipamos recebê-la. Crie loops abertos que forçam a pessoa a ficar até o final para "fechar" o loop.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">TEMPLATE — LOOP ABERTO</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">
+"Fique até o final porque vou revelar [algo específico] que [consequência]"<br/>
+Em vídeo de 5 min: abra uma nova pergunta no minuto 2 que só responde no minuto 4.<br/><br/>
+<em style="color:#a0aec0">Exemplo: "Antes de ir embora — no final desse vídeo vou te mostrar a planilha que uso para calcular isso automaticamente." A antecipação mantém 20-30% a mais de conclusão.</em>
+</p>
+</div>
+
+<h2>O Princípio do Menor Esforço Cognitivo</h2>
+
+<p>No estado de scroll, o cérebro escolhe sempre o caminho de menor resistência cognitiva. Conteúdo complexo é abandonado — não porque seja ruim, mas porque exige esforço demais.</p>
+
+<table>
+  <thead>
+    <tr><th>Regra</th><th>Aplicação em vídeo</th><th>Aplicação em texto</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Uma ideia por unidade</td><td>Uma cena por segundo de vídeo</td><td>Uma ideia por parágrafo, máximo 3 linhas</td></tr>
+    <tr><td>Linguagem imediata</td><td>Fale para uma pessoa, não para uma plateia</td><td>Frases curtas. Sem jargão. Direto ao ponto.</td></tr>
+    <tr><td>Progressão lógica</td><td>Cada segundo deve justificar o próximo</td><td>Cada frase deve fazer o leitor querer ler a próxima</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "algo-metricas-universais",
             title: "As 7 Métricas que Todo Algoritmo Mede",
             duration: "18 min",
             type: "text",
-            keyPoints: ["Hook Rate: a taxa de parada do scroll", "Completion Rate: a métrica mais honesta", "Rewatch Rate: o sinal de conteúdo excepcional", "Share Rate: o multiplicador orgânico", "Save Rate: o indicador de valor percebido", "Comment Quality: interação profunda vs. superficial", "Profile Visit Rate: o sinal de conversão de audiência"],
-            content: `<h2>As 7 Métricas Universais que Definem Distribuição</h2>
-<p>Cada plataforma tem sua nomenclatura e ênfase diferente, mas estas 7 métricas aparecem, de alguma forma, em todos os algoritmos de recomendação. Otimize para elas e qualquer plataforma distribui seu conteúdo.</p>
+            keyPoints: ["Tabela de benchmarks: metas numéricas específicas para cada métrica em cada tipo de conteúdo", "Como melhorar cada uma das 7 métricas com técnicas concretas", "O diagnóstico de conteúdo: um framework para identificar qual métrica está te travando"],
+            exercise: "Escolha seu último post com menor alcance. Abra os analytics e anote as métricas que a plataforma mostra. Compare com os benchmarks desta aula. Identifique a 1 métrica mais fraca. Escreva 3 ações concretas que melhorariam especificamente essa métrica no próximo conteúdo.",
+            content: `<h2>As 7 Métricas Que Definem Distribuição em Qualquer Plataforma</h2>
 
-<h3>1. Hook Rate (Taxa de Parada)</h3>
-<p><strong>O que mede:</strong> % das pessoas que para o scroll e começa a consumir o conteúdo<br/>
-<strong>Janela de medição:</strong> primeiros 1-3 segundos de vídeo, primeira linha visível de texto<br/>
-<strong>Benchmark alvo:</strong> &gt;30% para vídeo, &gt;5% CTR para imagem<br/>
-<strong>Como melhorar:</strong> teste múltiplos hooks para o mesmo conteúdo; o primeiro frame/palavra decide tudo</p>
+<p>Cada plataforma tem nomenclatura diferente, mas estas 7 métricas aparecem em todos os algoritmos de recomendação. Conheça os benchmarks e você consegue diagnosticar qualquer problema de alcance.</p>
 
-<h3>2. Completion Rate (Taxa de Conclusão)</h3>
-<p><strong>O que mede:</strong> % das pessoas que consome o conteúdo até o final<br/>
-<strong>Por que importa:</strong> é o sinal mais difícil de manipular — reflete valor real entregue<br/>
-<strong>Benchmark alvo:</strong> &gt;70% para vídeos curtos (&lt;30s), &gt;50% para vídeos médios (30-90s), &gt;40% para longos<br/>
-<strong>Como melhorar:</strong> elimine qualquer segundo "vazio" no vídeo; ritmo constante do primeiro ao último segundo</p>
+<h2>Benchmarks por Métrica e Tipo de Conteúdo</h2>
 
-<h3>3. Rewatch Rate (Taxa de Revisita)</h3>
-<p><strong>O que mede:</strong> % das pessoas que assiste o conteúdo mais de uma vez<br/>
-<strong>Por que importa:</strong> é o sinal mais raro e mais valorizado — significa que o conteúdo tem densidade de informação suficiente para justificar rever<br/>
-<strong>Como gerar:</strong> inclua informações muito densas (lista longa, número específico, revelação surpresa no final)</p>
+<table>
+  <thead>
+    <tr><th>Métrica</th><th>Vídeo curto (&lt;30s)</th><th>Vídeo médio (30s-3min)</th><th>Carrossel/Post</th><th>Como melhorar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Hook Rate</strong> (% que para e assiste 3s)</td><td>&gt;30%</td><td>&gt;25%</td><td>CTR &gt;3%</td><td>Teste 5 hooks diferentes no mesmo conteúdo</td></tr>
+    <tr><td><strong>Completion Rate</strong> (% que assiste até o fim)</td><td>&gt;75%</td><td>&gt;50%</td><td>&gt;70% swipe through</td><td>Corte pausas, adicione CTAs internos no meio</td></tr>
+    <tr><td><strong>Rewatch Rate</strong> (% que viu 2x+)</td><td>&gt;15%</td><td>&gt;8%</td><td>N/A</td><td>Informação muito densa, lista no final, revelação surpresa</td></tr>
+    <tr><td><strong>Share Rate</strong> (% que compartilhou)</td><td>&gt;3%</td><td>&gt;2%</td><td>&gt;2%</td><td>Crie conteúdo "enviaria para um amigo específico"</td></tr>
+    <tr><td><strong>Save Rate</strong> (% que salvou)</td><td>&gt;2%</td><td>&gt;3%</td><td>&gt;5%</td><td>Checklist, template, guia referência — algo para "usar depois"</td></tr>
+    <tr><td><strong>Comment Quality</strong> (comentários &gt;10 palavras)</td><td>&gt;20% dos comments</td><td>&gt;30%</td><td>&gt;25%</td><td>Termine com pergunta de divisão de opinião</td></tr>
+    <tr><td><strong>Profile Visit Rate</strong></td><td>&gt;3%</td><td>&gt;4%</td><td>&gt;2%</td><td>O conteúdo deve gerar curiosidade sobre quem o criou</td></tr>
+  </tbody>
+</table>
 
-<h3>4. Share Rate (Taxa de Compartilhamento)</h3>
-<p><strong>O que mede:</strong> % das pessoas que compartilha o conteúdo com outro usuário ou em story<br/>
-<strong>Por que importa:</strong> compartilhamento é endosso social — o algoritmo trata como sinal de qualidade excepcionalmente alta<br/>
-<strong>Como gerar:</strong> conteúdo que as pessoas querem mandar para alguém específico: "isso é exatamente o que meu amigo X precisa ver"</p>
+<h2>Cada Métrica em Detalhe — Como Gerar na Prática</h2>
 
-<h3>5. Save Rate (Taxa de Salvamento)</h3>
-<p><strong>O que mede:</strong> % das pessoas que salva para ver depois<br/>
-<strong>Por que importa:</strong> sinaliza utilidade prática — "vou precisar disso depois"<br/>
-<strong>Como gerar:</strong> conteúdo de referência (checklists, templates, listas, guias passo-a-passo)</p>
+<h3>1. Hook Rate — A Taxa de Parada</h3>
+<p>Janela crítica: primeiros 1-3 segundos de vídeo ou primeira linha visível de texto. Determine o hook antes de qualquer outra decisão de criação.</p>
 
-<h3>6. Comment Quality Score</h3>
-<p><strong>O que mede:</strong> profundidade dos comentários (alguns algoritmos analisam sentimento e comprimento)<br/>
-<strong>Por que importa:</strong> comentários longos e debates sinalizam conteúdo que provocou reflexão genuína<br/>
-<strong>Como gerar:</strong> termine com uma pergunta aberta que provoca divisão de opiniões ou auto-reflexão</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:12px 16px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">HOOKS QUE PARAM O SCROLL</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">
+• Número chocante específico: "R$87k em 7 dias com 800 pessoas"<br/>
+• Contraintuitivo: "Quanto mais você posta, menos te veem"<br/>
+• Identidade: "Se você vende infoproduto e está travado no R$10k..."<br/>
+• Curiosity gap: "O erro que destrói 90% dos lançamentos (não é o que você pensa)"
+</p>
+</div>
 
-<h3>7. Profile Visit Rate</h3>
-<p><strong>O que mede:</strong> % das pessoas que visita seu perfil após o conteúdo<br/>
-<strong>Por que importa:</strong> sinaliza interesse em saber mais sobre quem criou — intenção de seguir<br/>
-<strong>Como melhorar:</strong> construa suspense sobre quem você é; o conteúdo isolado deve gerar curiosidade sobre o criador</p>`
+<h3>2. Completion Rate — O Sinal Mais Honesto</h3>
+<p>Cada segundo "vazio" no vídeo custa pontos de completion rate. Regras práticas: corte qualquer introdução que não é o hook. Corte qualquer pausa acima de 1 segundo. Adicione um CTA interno no meio do vídeo ("continua porque tem uma virada no final").</p>
+
+<h3>3. Rewatch Rate — O Multiplicador</h3>
+<p>Vídeos que as pessoas assistem em loop geram o maior boost algorítmico. Para gerar rewatch: inclua uma informação muito densa que requer ver duas vezes, ou faça uma revelação impactante nos últimos 5 segundos que motiva ver desde o início.</p>
+
+<h3>4. Share Rate — Endosso Social</h3>
+<p>As pessoas compartilham conteúdo quando pensam "isso é exatamente o que [pessoa específica] precisa ver". Para gerar shares: seja muito específico com o avatar. "Isso aqui é para quem..." — quanto mais específico, mais as pessoas que se encaixam vão querer enviar.</p>
+
+<h3>5. Save Rate — Utilidade Percebida</h3>
+<p>As pessoas salvam conteúdo quando vão precisar de novo. Tipos de conteúdo com save rate alto: listas numeradas, checklists de ação, templates para preencher, benchmarks e números de referência, guias passo-a-passo.</p>
+
+<h3>6. Comment Quality — Profundidade de Engajamento</h3>
+<p>Alguns algoritmos analisam o comprimento e sentimento dos comentários — não apenas a quantidade. Para gerar comentários longos: termine com uma pergunta que não tem resposta óbvia, ou que provoca discordância saudável. "Você concorda com isso? Me conta nos comentários" gera mais resposta que "O que você achou?".</p>
+
+<h3>7. Profile Visit Rate — Intenção de Seguir</h3>
+<p>Quando alguém visita seu perfil após ver um conteúdo, o algoritmo interpreta que o criador gerou curiosidade além de um post isolado. Para aumentar: dê indicações de que tem mais conteúdo valioso no perfil. "Tenho mais 3 posts sobre isso aqui no perfil" — direcionamento explícito.</p>
+
+<h2>Framework de Diagnóstico de Conteúdo</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">DIAGNÓSTICO EM 3 PASSOS</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. Meça: hook rate, completion rate, save, share (disponíveis nos insights nativos de cada plataforma)<br/>
+2. Compare com benchmarks desta aula — identifique a métrica mais abaixo do esperado<br/>
+3. Aplique a correção específica daquela métrica no próximo conteúdo — uma métrica por vez<br/><br/>
+<strong>Regra:</strong> não tente melhorar tudo de uma vez. Uma variável por post permite saber o que funcionou.
+</p>
+</div>`
           }
         ]
       },
@@ -2602,136 +3987,241 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
             duration: "28 min",
             type: "text",
             glossaryTerms: ["fyp", "completion-rate", "rewatch-rate", "hook-rate", "ctr", "algoritmo-de-recomendacao"],
-            keyPoints: ["O modelo de distribuição progressiva em detalhe", "Os pesos reais de cada sinal (baseado em patentes e estudos)", "Como o TikTok classifica conteúdo por tópico", "O papel da velocidade de engajamento nas primeiras horas", "Por que vídeos antigos ainda viralizam"],
-            content: `<h2>O Sistema de Distribuição Progressiva do TikTok em Profundidade</h2>
-<p>O TikTok é uma empresa de tecnologia chinesa com raízes no processamento de dados em escala. O algoritmo deles não é uma lista de regras — é um modelo de machine learning que decide, a cada milissegundo, qual vídeo mostrar para qual usuário para maximizar o tempo total na plataforma.</p>
+            keyPoints: ["Tabela de pesos dos sinais com benchmarks por tipo de vídeo", "Como o TikTok classifica o tópico do seu vídeo — e como fazer isso a seu favor", "O protocolo de publicação para maximizar velocidade de engajamento nas primeiras 2h"],
+            exercise: "Abra o TikTok Studio e olhe os analytics dos seus últimos 10 vídeos. Identifique: qual tinha a maior completion rate? Qual era o assunto e o formato? Esse é o seu 'template vencedor' do algoritmo. Crie 3 variações do próximo vídeo usando o mesmo formato e anote qual completion rate você vai bater.",
+            content: `<h2>O Sistema de Pontuação do TikTok: O Que Realmente Mede</h2>
 
-<h3>A Arquitetura Técnica (Simplificada)</h3>
-<p>O sistema do TikTok tem dois componentes principais:</p>
-<ul>
-  <li><strong>Modelo de Candidatos:</strong> seleciona um pool de vídeos potencialmente relevantes para aquele usuário específico, com base em histórico, localização, idioma e tópicos de interesse</li>
-  <li><strong>Modelo de Ranking:</strong> ordena esses candidatos por probabilidade de engajamento — combinando sinais do vídeo + perfil do usuário + contexto (hora, dispositivo, velocidade de internet)</li>
-</ul>
+<p>O algoritmo do TikTok não é uma lista de regras — é um modelo de machine learning que decide, a cada milissegundo, qual vídeo mostrar para qual usuário para maximizar o tempo na plataforma. Entender os fatores de ranking muda o que você prioriza ao criar.</p>
 
-<h3>Os Fatores de Ranking em Ordem de Peso</h3>
-<p>Com base em documentos internos vazados e pesquisas independentes, estes são os fatores aproximados e seus pesos relativos:</p>
+<h2>Os Fatores de Ranking e Seus Pesos</h2>
 
-<ol>
-  <li><strong>Completion Rate (peso: ~35%):</strong> de longe o fator mais importante. Um vídeo de 15s com 90% de conclusão supera um vídeo de 3min com 30% de conclusão na maioria dos casos.</li>
-  <li><strong>Rewatch Rate (peso: ~25%):</strong> assistir mais de uma vez é sinal de conteúdo excepcional. O TikTok prioriza fortemente vídeos que as pessoas assistem em loop.</li>
-  <li><strong>Compartilhamento (peso: ~20%):</strong> o TikTok valoriza shares para fora da plataforma (WhatsApp, Instagram Stories) como sinal de que o conteúdo tem vida além do app.</li>
-  <li><strong>Comentários (peso: ~12%):</strong> especialmente comentários que geram respostas — cria atividade no vídeo por mais tempo.</li>
-  <li><strong>Curtidas (peso: ~8%):</strong> o sinal mais fácil de dar e por isso tem menos peso relativo.</li>
-</ol>
+<table>
+  <thead>
+    <tr><th>Fator</th><th>Peso estimado</th><th>Benchmark para passar ao próximo estágio</th><th>Como otimizar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Completion Rate</td><td>~35%</td><td>&gt;70% (vídeos &lt;30s); &gt;45% (vídeos 30-90s)</td><td>Corte introduções, mantenha ritmo, CTA interno no meio</td></tr>
+    <tr><td>Rewatch Rate</td><td>~25%</td><td>&gt;10% (vídeos &lt;30s)</td><td>Informação muito densa, revelação surpresa no final 5s</td></tr>
+    <tr><td>Shares (especialmente fora do app)</td><td>~20%</td><td>&gt;2% dos views</td><td>Conteúdo "envio para alguém específico" — problema identificável</td></tr>
+    <tr><td>Comentários (threads longas)</td><td>~12%</td><td>&gt;1% dos views</td><td>Pergunta polarizante no final — opinião dividida</td></tr>
+    <tr><td>Curtidas</td><td>~8%</td><td>&gt;5% dos views</td><td>Menor peso — não otimize só para curtidas</td></tr>
+  </tbody>
+</table>
 
-<h3>O Conceito de "Velocidade de Engajamento"</h3>
-<p>Não é apenas a quantidade de engajamento — é a velocidade com que chega. Um vídeo que recebe 100 curtidas nas primeiras 2 horas de publicação tem score maior que um que recebe 100 curtidas ao longo de 24 horas.</p>
-<p>Implicação prática: o momento de publicação importa. Publique quando sua audiência está ativa para acelerar a velocidade inicial.</p>
+<h2>Velocidade de Engajamento: A Janela das Primeiras 2h</h2>
 
-<h3>O Sistema de Tópicos e Clusters</h3>
-<p>O TikTok classifica todo conteúdo em uma taxonomia de tópicos com centenas de subcategorias. Quando você publica, o sistema analisa:</p>
-<ul>
-  <li>Transcrição do áudio (o que você fala)</li>
-  <li>Texto sobreposto no vídeo</li>
-  <li>Hashtags e caption</li>
-  <li>Descrição do som usado</li>
-  <li>Análise visual (objetos, cenário, faces reconhecidas)</li>
-</ul>
-<p>Com base nisso, classifica o vídeo em tópicos e distribui para usuários com histórico de interesse naqueles tópicos. <strong>A consistência de tópico na conta acelera a classificação</strong> — uma conta que sempre faz conteúdo sobre finanças pessoais tem distribuição mais eficiente que uma conta que mistura finanças, culinária e humor.</p>
+<p>O algoritmo não apenas mede a quantidade de engajamento — mede a velocidade com que chega. Um vídeo com 100 curtidas nas primeiras 2 horas tem score maior que um que recebe 100 curtidas ao longo de 24 horas.</p>
 
-<h3>Por que Vídeos Antigos Ainda Viralizam</h3>
-<p>O TikTok não tem "feed cronológico" — tem feed de relevância. Um vídeo de 6 meses pode viralizar hoje se um usuário de alta influência (com muitos seguidores) compartilhar ou se o algoritmo encontrar um novo cluster de usuários com perfil compatível.</p>
-<p>Isso significa que todo conteúdo publicado tem potencial de longa vida — diferente do Instagram, onde posts ficam relevantes por 24-48h no máximo.</p>`
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">PROTOCOLO DE PUBLICAÇÃO — MÁXIMA VELOCIDADE DE ENGAJAMENTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. Publique quando sua audiência está ativa (use Analytics → Seguidores → Horários ativos)<br/>
+2. Nos primeiros 30 min: responda cada comentário que chegar (multiplica engajamento por 1,5-2x)<br/>
+3. Cole o link nos seus outros Stories (Instagram) para tráfego cruzado<br/>
+4. Fixe o vídeo no perfil temporariamente — novos visitantes assistem um vídeo fixado com mais frequência<br/>
+5. Interaja em conteúdos do mesmo nicho ANTES de publicar — o algoritmo associa sua conta ao cluster
+</p>
+</div>
+
+<h2>Como o TikTok Classifica o Tópico do Seu Vídeo</h2>
+
+<p>O TikTok analisa 5 fontes para classificar o tópico:</p>
+
+<table>
+  <thead>
+    <tr><th>Fonte</th><th>O que o algoritmo lê</th><th>Como otimizar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Transcrição do áudio</td><td>Palavras-chave faladas</td><td>Fale a keyword do nicho nos primeiros 10s do vídeo</td></tr>
+    <tr><td>Texto sobreposto</td><td>Captions no vídeo</td><td>Primeira caption deve conter a keyword principal</td></tr>
+    <tr><td>Título e caption</td><td>Texto descritivo do post</td><td>Título = pergunta que o avatar digitaria no buscador</td></tr>
+    <tr><td>Hashtags</td><td>Categorização manual</td><td>3-5 hashtags: 1 muito específica + 1 médio + 1 ampla</td></tr>
+    <tr><td>Análise visual</td><td>Objetos, cenário, faces (IA de visão)</td><td>Background consistente por nicho ajuda a classificação</td></tr>
+  </tbody>
+</table>
+
+<h2>Por Que Vídeos Antigos Ainda Viralizam — E Como Usar Isso</h2>
+
+<p>O TikTok não tem feed cronológico — tem feed de relevância. Um vídeo de 6 meses pode viralizar hoje se um usuário de alta influência compartilhar ou se o algoritmo encontrar um novo cluster compatível.</p>
+
+<p><strong>Implicação prática:</strong> todo conteúdo publicado tem potencial de longa vida. Não apague vídeos com baixa performance inicial — eles podem ainda alcançar o estágio 2-3 semanas depois. Crie conteúdo "evergreen" (não date-specific) sempre que possível.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">DICA: REPOSTING DE CONTEÚDO ANTIGO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Se um vídeo teve 2.000-5.000 views mas baixo engajamento: edite nos primeiros 3 segundos (hook diferente), reposte. O algoritmo trata como conteúdo novo. Muitos criadores duplicam o alcance do mesmo conteúdo com um hook revisado — sem recriar tudo do zero.
+</p>
+</div>`
           },
           {
             id: "tiktok-deep-2",
             title: "Estratégia de Conta: Como Construir Autoridade de Nicho no TikTok",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Por que o algoritmo prefere contas especializadas", "A estratégia dos 30 primeiros vídeos", "Como usar o TikTok Search a seu favor", "Duets, Stitches e colaborações como alavanca de alcance", "TikTok LIVE: o algoritmo separado que expande a conta"],
-            content: `<h2>Construindo uma Conta com Autoridade de Nicho</h2>
+            keyPoints: ["O plano dos 30 primeiros vídeos — com tipos de conteúdo por semana", "TikTok Search: como encontrar keywords de nicho e criar vídeos que aparecem em buscas", "Duets e Stitches: script pronto para alcance emprestado sem parecer oportunista"],
+            exercise: "Abra o TikTok Creator Search Insights agora e pesquise 3 palavras-chave do seu nicho. Anote os volumes de busca e as perguntas relacionadas. Escolha a pergunta com maior volume e menor competição — esse é o roteiro do próximo vídeo. Título do vídeo = a pergunta exata.",
+            content: `<h2>Construindo Autoridade de Nicho no TikTok: Estratégia Completa</h2>
 
-<h3>Por que Especialização Bate Generalização no TikTok</h3>
-<p>O algoritmo do TikTok funciona melhor quando consegue classificar sua conta com clareza. Uma conta sobre "como vender online" tem distribuição mais eficiente que uma conta sobre "empreendedorismo, viagens e saúde". Não porque o algoritmo pune generalistas — mas porque as listas de usuários potencialmente interessados são muito menores quando o tópico é amplo demais.</p>
+<h2>Por Que Especialização Bate Generalização — Com Dados</h2>
 
-<p>Conta especializada → classificação clara → pool de usuários maior dentro daquele nicho → mais probabilidade de chegar no FYP certo.</p>
+<p>O algoritmo aprende quem é sua audiência com base nos vídeos anteriores. Quanto mais consistente o nicho, mais preciso o modelo — e mais eficiente a distribuição para novos usuários.</p>
 
-<h3>Os 30 Primeiros Vídeos: A Fase de Calibração</h3>
-<p>Nos primeiros 30 vídeos de uma conta nova (ou reposicionada), o algoritmo está aprendendo quem é você. Nessa fase:</p>
-<ul>
-  <li>Mantenha o <strong>mesmo nicho</strong> sem exceções — cada vídeo reforça a classificação</li>
-  <li>Use <strong>formatos variados</strong> (vídeo falado, texto na tela, demonstração, história) para descobrir o que mais ressoa com a audiência</li>
-  <li>Publique com <strong>frequência consistente</strong> (pelo menos 3-5x por semana) — consistência acelera a calibração</li>
-  <li>Analise os primeiros 100 seguidores que ganhar — eles revelam quem o algoritmo classificou como sua audiência ideal</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Tipo de conta</th><th>Resultado típico nos 30 primeiros vídeos</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Conta generalista (mistura de tópicos)</td><td>Algoritmo não consegue classificar → distribuição fragmentada → crescimento lento</td></tr>
+    <tr><td>Conta de nicho específico (1 tema)</td><td>Classificação clara → pool de usuários maior dentro do nicho → crescimento composto</td></tr>
+  </tbody>
+</table>
 
-<h3>TikTok Search: O Canal Subaproveitado</h3>
-<p>O TikTok virou um buscador. Uma pesquisa da Adobe em 2023 revelou que 40% dos usuários da Geração Z preferem buscar no TikTok antes do Google para descobrir novos produtos, restaurantes e serviços.</p>
+<h2>O Plano dos 30 Primeiros Vídeos</h2>
 
-<p>Como aproveitar:</p>
-<ul>
-  <li>Use o TikTok Search Insights (nativo) para descobrir o que as pessoas buscam no seu nicho</li>
-  <li>Crie vídeos cujo título é literalmente a pergunta que as pessoas fazem: "Como vender um infoproduto sem audiência" — isso aparece tanto no FYP quanto nas buscas</li>
-  <li>Inclua palavras-chave faladas no vídeo (o TikTok transcreve o áudio) e escritas no caption</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Semana</th><th>Tipos de conteúdo</th><th>Objetivo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1-2 (vídeos 1-10)</td><td>3 formatos diferentes: vídeo falado, texto na tela, demonstração/tutorial</td><td>Descobrir qual formato tem maior completion rate para o seu nicho</td></tr>
+    <tr><td>3-4 (vídeos 11-20)</td><td>Dobrar o formato vencedor. 1 vídeo de busca (responde pergunta específica do nicho)</td><td>Calibrar o algoritmo com o formato que retém melhor</td></tr>
+    <tr><td>5-6 (vídeos 21-30)</td><td>1 Stitch por semana, 1 vídeo de pergunta para audiência, 3 vídeos no formato principal</td><td>Crescimento via alcance emprestado + feedbacks da audiência para refinar</td></tr>
+  </tbody>
+</table>
 
-<h3>Duets e Stitches: Alcance Emprestado</h3>
-<p>Quando você cria um Duet ou Stitch com um vídeo popular, seu conteúdo herdas parte do alcance do vídeo original — porque o algoritmo mostra seu vídeo para quem interagiu com o original.</p>
+<h2>TikTok Search: O Canal Subaproveitado que Gera Views Consistentes</h2>
 
-<p>Estratégia: identifique os 10 vídeos mais virais do seu nicho dos últimos 30 dias. Crie Stitches com comentário analítico ou contra-argumento respeitoso. Opiniões divergentes sobre conteúdo viral geram debate nos comentários — o algoritmo ama.</p>
+<p>40% dos usuários da Geração Z preferem buscar no TikTok antes do Google. Vídeos otimizados para busca geram tráfego por meses — não apenas nas primeiras 48h.</p>
 
-<h3>TikTok LIVE: O Algoritmo Diferente</h3>
-<p>O LIVE no TikTok tem um algoritmo próprio, separado dos vídeos gravados. As lives são distribuídas com base em: duração da live (quanto mais longa, mais distribuição), presentes recebidos (sinal de valor percebido) e usuários simultâneos.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">PROTOCOLO DE SEO PARA TIKTOK</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. Abra TikTok Creator Search Insights (disponível no TikTok Studio)<br/>
+2. Pesquise sua palavra-chave de nicho → veja perguntas relacionadas com volume<br/>
+3. Escolha a pergunta com volume médio-alto e baixa quantidade de vídeos respondendo<br/>
+4. Título do vídeo = a pergunta exata que as pessoas digitam<br/>
+5. Fale a keyword nos primeiros 10s do vídeo (transcrição de áudio)<br/>
+6. Caption: "[Keyword] | resposta completa em 60 segundos"<br/><br/>
+Exemplo: busca "como fazer lançamento digital" → keyword em baixa competição → "lançamento semente para iniciantes"
+</p>
+</div>
 
-<p>Para criadores de conteúdo educacional, a live é poderosa porque:</p>
-<ul>
-  <li>Aparece numa tab separada no feed, com maior visibilidade</li>
-  <li>Usuários que estavam dormindo para o seu conteúdo gravado podem redescobrir sua conta via live</li>
-  <li>Gera notificação push para seguidores — contato proativo</li>
-</ul>`
+<h2>Duets e Stitches: Alcance Emprestado</h2>
+
+<p>Quando você cria um Stitch com um vídeo popular, seu conteúdo herda parte do alcance do original — o algoritmo mostra para quem interagiu com o vídeo original.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">SCRIPT DE STITCH — TEMPLATE PRONTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+"[Reproduz 3-5s do vídeo original]<br/><br/>
+Esse ponto que [nome] trouxe é real — [confirme com experiência ou dado próprio].<br/>
+O que eu adicionaria é: [complemento com insight único seu].<br/><br/>
+E tem um detalhe que muda tudo: [virada contraintuitiva ou dado específico]."<br/><br/>
+<em style="color:#a0aec0;font-size:12px">Nunca Stitch apenas para discordar de forma negativa. A estratégia mais eficaz é complementar e adicionar — você herda a audiência positiva do original.</em>
+</p>
+</div>
+
+<h2>TikTok LIVE: O Algoritmo Separado que Expande a Conta</h2>
+
+<p>O LIVE tem algoritmo próprio. Distribuído com base em: duração (quanto mais longa, mais alcance), presentes recebidos (sinaliza valor) e usuários simultâneos.</p>
+
+<table>
+  <thead>
+    <tr><th>Duração da LIVE</th><th>Alcance típico</th><th>Notificação para seguidores</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Menos de 15 min</td><td>Baixo — algoritmo não prioriza lives curtas</td><td>Sim, mas notificação apaga com a live</td></tr>
+    <tr><td>30-60 min</td><td>Médio — aparece na tab de lives</td><td>Sim + aparece no Explore de não-seguidores</td></tr>
+    <tr><td>60-90 min</td><td>Alto — algoritmo distribui ativamente</td><td>Notificação push + posição de destaque</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Estratégia para lançamento:</strong> 3 dias antes do carrinho abrir, faça uma LIVE de 45-60 min com conteúdo educacional do nicho. Anuncie o lançamento ao vivo. Gera urgência e audiência quente em tempo real.</p>`
           },
           {
             id: "tiktok-deep-3",
             title: "Conteúdo de Conversão no TikTok: Do Scroll à Venda",
             duration: "22 min",
             type: "text",
-            keyPoints: ["TikTok não é plataforma de venda direta — e como usar isso a seu favor", "A sequência de conteúdo que aquece e converte", "TikTok Shop e Link in Bio: a jornada do comprador", "O funil TikTok → Instagram → WhatsApp → Venda"],
-            content: `<h2>Transformando Alcance em Receita no TikTok</h2>
-<p>O TikTok tem o maior alcance orgânico de qualquer plataforma — mas também a menor intenção de compra imediata. As pessoas estão no TikTok para se entreter e descobrir, não para comprar. Entender isso define a estratégia certa.</p>
+            keyPoints: ["O script exato dos 3 tipos de CTA para link na bio que convertem no TikTok", "A sequência de 10 vídeos de pré-lançamento — dia a dia, tema por tema", "Como calcular quantos leads o TikTok pode gerar para seu próximo lançamento"],
+            exercise: "Planeje agora os 10 vídeos de pré-lançamento do seu próximo produto usando o calendário desta aula. Para cada vídeo: defina o tema, o hook de abertura (máx. 10 palavras) e o CTA para o link na bio. Isso é a campanha TikTok do lançamento — montada em 30 minutos.",
+            content: `<h2>Conteúdo de Conversão no TikTok: Do Scroll à Venda</h2>
 
-<h3>O Papel do TikTok no Funil</h3>
-<p>O TikTok funciona melhor como <strong>topo de funil</strong> — gerador de consciência e audiência — do que como canal de conversão direta. A jornada mais eficiente é:</p>
+<p>O TikTok tem o maior alcance orgânico de qualquer plataforma — mas também a menor intenção de compra imediata. Quem tenta vender direto do TikTok (especialmente produtos acima de R$500) colide com esse comportamento. A estratégia certa usa o TikTok como gerador de audiência quente que vai para outros canais.</p>
 
-<pre>
-TikTok (descoberta + interesse)
-    ↓
-Instagram (aprofundamento + relacionamento)
-    ↓
-WhatsApp ou Email (confiança + conversão)
-    ↓
-Venda
-</pre>
+<h2>O Funil TikTok → Conversão</h2>
 
-<p>Tente vender direto do TikTok para produtos de alto ticket e a conversão vai ser baixa. Use o TikTok para trazer a pessoa para o Instagram (onde você tem mais profundidade) ou diretamente para o WhatsApp (onde o contato é 1:1).</p>
+<table>
+  <thead>
+    <tr><th>Faixa de ticket</th><th>Rota recomendada</th><th>Taxa de conversão esperada</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Até R$297</td><td>TikTok → Link na bio → Checkout direto</td><td>0,5-2% dos views do vídeo</td></tr>
+    <tr><td>R$297-R$997</td><td>TikTok → Link na bio → LP de captura → Email/WhatsApp → Venda</td><td>3-8% dos leads gerados</td></tr>
+    <tr><td>Acima de R$997</td><td>TikTok → Instagram → WhatsApp (1:1) → Venda</td><td>10-25% das conversas iniciadas</td></tr>
+  </tbody>
+</table>
 
-<h3>O Conteúdo que Migra a Audiência</h3>
-<p>Para que alguém siga de uma plataforma para outra, você precisa de um motivo forte. Três estratégias que funcionam:</p>
+<h2>Os 3 CTAs para Link na Bio que Realmente Convertem</h2>
 
-<ol>
-  <li><strong>Continuação exclusiva:</strong> "Mostrei o passo 1 aqui. Os passos 2, 3 e 4 com template estão no link da bio" — cria razão de sair do TikTok</li>
-  <li><strong>Lead magnet:</strong> "Tenho uma planilha gratuita que calcula automaticamente o que mostrei nesse vídeo — link na bio" — troca de valor por contato</li>
-  <li><strong>Comunidade exclusiva:</strong> "Quem quiser acesso ao grupo onde posto os bastidores, link na bio" — apelo de pertencimento</li>
-</ol>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">TIPO 1 — CONTINUAÇÃO EXCLUSIVA (conversão mais alta)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Diga no vídeo: "Esse foi o Passo 1. Os passos 2, 3 e 4 com o template completo estão no link da bio — deixa lá por enquanto."<br/>
+Por que funciona: cria lacuna de informação. A pessoa precisa completar o que você começou.
+</p>
+</div>
 
-<h3>A Sequência de Conteúdo de 10 Vídeos</h3>
-<p>Para um lançamento, uma sequência de 10 vídeos pré-lançamento no TikTok pode gerar centenas de leads qualificados:</p>
-<ul>
-  <li>Vídeos 1-3: Problema (mostre a dor com especificidade)</li>
-  <li>Vídeos 4-6: Educação (ensine parte da solução — gere resultado rápido)</li>
-  <li>Vídeos 7-8: Prova social (mostre resultados de outros com o método)</li>
-  <li>Vídeo 9: Teaser da oferta ("semana que vem abrindo as vagas")</li>
-  <li>Vídeo 10: CTA direto com link na bio</li>
-</ul>`
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">TIPO 2 — LEAD MAGNET (maior volume de leads)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Diga no vídeo: "Tenho uma planilha que faz o cálculo que mostrei automaticamente. De graça. Link na bio."<br/>
+Por que funciona: troca de valor imediata. Baixo atrito — sem precisar vender nada.
+</p>
+</div>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:10px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">TIPO 3 — LISTA DE ESPERA (para lançamentos)</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Diga no vídeo: "Semana que vem abro as vagas do [produto]. Tem uma lista de espera no link da bio — quem entrar recebe 24h antes de todo mundo."<br/>
+Por que funciona: urgência + exclusividade. Quem se inscreve na lista de espera tem taxa de conversão 3-4x maior que lead frio.
+</p>
+</div>
+
+<h2>A Sequência de 10 Vídeos de Pré-Lançamento — Calendário</h2>
+
+<table>
+  <thead>
+    <tr><th>Vídeo</th><th>Tema</th><th>CTA</th><th>Objetivo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>O problema central — com dado específico</td><td>"Comenta aqui se você já passou por isso"</td><td>Criar identificação + comentários</td></tr>
+    <tr><td>2</td><td>O erro mais comum que perpetua o problema</td><td>"Link na bio para o guia completo"</td><td>Lead magnet</td></tr>
+    <tr><td>3</td><td>Por que soluções convencionais não funcionam</td><td>Nenhum — só conteúdo puro</td><td>Conteúdo viral (alto share rate)</td></tr>
+    <tr><td>4</td><td>Resultado de alguém que resolveu o problema (prova)</td><td>"Segue para ver o método completo"</td><td>Prova social + seguidores</td></tr>
+    <tr><td>5</td><td>Passo 1 da solução (ensinável em 60s)</td><td>"Passo 2 no link da bio"</td><td>Continuação exclusiva</td></tr>
+    <tr><td>6</td><td>Bastidores / making of / processo</td><td>"Vem no grupo — link na bio"</td><td>Comunidade + WhatsApp</td></tr>
+    <tr><td>7</td><td>Outro resultado / prova social diferente</td><td>"Lista de espera no link da bio"</td><td>Aquecimento para abertura</td></tr>
+    <tr><td>8</td><td>O método resumido em 60s</td><td>"Vagas abertas [data] — lista de espera no link"</td><td>Teaser da abertura</td></tr>
+    <tr><td>9</td><td>FAQ / objeção mais comum respondida</td><td>"Inscreva-se na lista de espera — 24h antes"</td><td>Conversão de lista</td></tr>
+    <tr><td>10</td><td>Carrinho aberto — CTA direto</td><td>"Link na bio — vagas por [X]h"</td><td>Conversão direta</td></tr>
+  </tbody>
+</table>
+
+<h2>Como Calcular o Potencial de Leads do TikTok</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">CÁLCULO DE ESTIMATIVA DE LEADS</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+10 vídeos × 5.000 views médios = 50.000 views totais<br/>
+Taxa de clique no link da bio: ~2%<br/>
+Taxa de cadastro na LP: ~40%<br/><br/>
+<strong>Leads estimados = 50.000 × 0,02 × 0,40 = 400 leads</strong><br/><br/>
+Se seu produto converte 3% da lista → 12 vendas.<br/>
+Se seu ticket é R$997 → R$11.964 de TikTok orgânico.<br/><br/>
+Isso com 10 vídeos e zero reais em tráfego pago.
+</p>
+</div>`
           }
         ],
         locked: false
@@ -2752,103 +4242,147 @@ Venda
             duration: "28 min",
             type: "text",
             glossaryTerms: ["saves", "collab-post", "completion-rate", "shadow-ban", "rewatch-rate"],
-            keyPoints: ["Feed: o algoritmo de relacionamento", "Explore: o algoritmo de descoberta", "Reels: o algoritmo de retenção de vídeo", "Stories: o algoritmo de frequência e proximidade", "Como otimizar para cada superfície separadamente"],
-            content: `<h2>Instagram: Quatro Superfícies, Quatro Lógicas</h2>
-<p>Adam Mosseri, chefe do Instagram, confirmou publicamente que cada superfície do app usa sistemas diferentes. Isso não é detalhe técnico — é a diferença entre uma estratégia que funciona em todas as partes do app e uma que funciona apenas em uma.</p>
+            keyPoints: ["Tabela completa de sinais e benchmarks por superfície (Feed, Explore, Reels, Stories)", "Como a performance no Feed alimenta o Explore — e o que isso significa para a ordem de publicação", "O protocolo de 60 minutos pós-publicação que maximiza o alcance em todas as superfícies"],
+            exercise: "Nos próximos 7 dias, publique o mesmo conteúdo adaptado para 2 superfícies do Instagram: um Reel (para alcance novo) e um Carrossel (para Feed/seguidores). Compare: qual gerou mais saves? Qual gerou mais alcance? Qual gerou mais cliques no link da bio? Essa análise mostra onde sua audiência atual está e de onde vem audiência nova.",
+            content: `<h2>Instagram: Quatro Superfícies, Quatro Lógicas — e Como Usar Cada Uma</h2>
 
-<h3>O Feed: Algoritmo de Relacionamento</h3>
-<p>O Feed mostra conteúdo de quem você já segue. O algoritmo ordena com base em:</p>
-<ul>
-  <li><strong>Probabilidade de interação:</strong> com base no histórico de interação entre você e aquela conta específica</li>
-  <li><strong>Tempo de visualização:</strong> quanto tempo a pessoa costuma passar em posts daquele formato (imagem vs. carrossel vs. vídeo)</li>
-  <li><strong>Frescor:</strong> posts mais recentes têm vantagem, mas não exclusividade — um post viral de 3 dias atrás ainda aparece</li>
-  <li><strong>Uso do app:</strong> o Instagram tenta garantir que posts importantes não sejam perdidos — se você não abriu o app por 2 dias, ele prioriza o que você teria mais probabilidade de ver</li>
-</ul>
+<p>Adam Mosseri confirmou publicamente que cada superfície do Instagram usa sistemas diferentes. Isso não é detalhe técnico — é a diferença entre uma estratégia que funciona em todo o app e uma que só funciona numa parte.</p>
 
-<p><strong>O que isso significa na prática:</strong> para crescer no Feed, você precisa de <em>frequência de interação alta</em> com seus seguidores. Responda todos os comentários (especialmente nas primeiras horas), responda DMs, use curtidas nos comentários. Cada interação aumenta o score de relacionamento e garante mais visibilidade futura.</p>
+<h2>Tabela Completa: Sinais e Benchmarks por Superfície</h2>
 
-<h3>O Explore: Algoritmo de Descoberta</h3>
-<p>A aba Explore é o único lugar onde usuários que não te seguem podem te descobrir. O algoritmo aqui funciona diferente do Feed:</p>
-<ul>
-  <li>Analisa os posts com que um usuário interagiu recentemente</li>
-  <li>Busca posts com sinais similares (temática, estética, engajamento) que tiveram alta performance nas últimas horas</li>
-  <li>Prioriza conteúdo com alta taxa de salvamento e compartilhamento para stories</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Superfície</th><th>Para quem mostra</th><th>Principal sinal</th><th>Benchmark alvo</th><th>Como otimizar</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Feed</td><td>Seus seguidores</td><td>Histórico de interação com a conta</td><td>Taxa de saves &gt;3% + comentários nas 1as horas</td><td>Responda cada comentário nas primeiras horas</td></tr>
+    <tr><td>Explore</td><td>Não-seguidores com perfil similar aos seus seguidores</td><td>Alta performance no Feed primeiro</td><td>Save rate &gt;5% + shares para Stories</td><td>Seu post no Explore só depois de performar bem no Feed</td></tr>
+    <tr><td>Reels</td><td>Seguidores + expansão para não-seguidores</td><td>Completion rate + rewatch + shares</td><td>Completion &gt;65% (Reels curtos)</td><td>Hook nos primeiros 2s, sem introdução, ritmo constante</td></tr>
+    <tr><td>Stories</td><td>Seguidores que interagem com você</td><td>Frequência de visualização + DMs trocados</td><td>Taxa de resposta às enquetes &gt;5%</td><td>Use enquetes e perguntas — interação recíproca</td></tr>
+  </tbody>
+</table>
 
-<p><strong>Para chegar no Explore:</strong> seu post precisa ter performance acima da média <em>entre seus seguidores primeiro</em>. O Explore distribui para não-seguidores conteúdo que já provou ser bom com quem já te conhece.</p>
+<h2>O Fluxo Entre Superfícies: Como Elas se Alimentam</h2>
 
-<h3>Reels: Algoritmo de Retenção</h3>
-<p>O Reels é a tentativa do Instagram de competir com o TikTok, e o algoritmo reflete isso:</p>
-<ul>
-  <li><strong>Completion Rate:</strong> principal métrica — % de pessoas que assiste o Reel até o final</li>
-  <li><strong>Rewatch:</strong> Reels assistidos mais de uma vez recebem boost significativo</li>
-  <li><strong>Shares para Stories:</strong> quando alguém compartilha um Reel nos próprios Stories, é sinal poderoso de que o conteúdo foi impactante</li>
-  <li><strong>Audio original vs. trending:</strong> Reels com áudio original que viraliza recebem distribuição extra retroativa — o Instagram promove a conta que criou o som original</li>
-</ul>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">COMO O ALCANCE SE PROPAGA</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Passo 1:</strong> Você publica um post. Vai para o Feed dos seguidores primeiro.<br/>
+<strong>Passo 2:</strong> Se a performance é boa entre seguidores (saves, comentários rápidos) → algoritmo expande para Explore.<br/>
+<strong>Passo 3:</strong> Explore entrega para usuários com perfil similar aos seus seguidores que interagiram com posts similares.<br/>
+<strong>Passo 4:</strong> Novo alcance gera novos seguidores → próximo post começa com base maior de seguidores → ciclo composto.<br/><br/>
+<strong>Implicação:</strong> o Feed é a prova social interna que libera o Explore. Priorize performance com seguidores existentes antes de focar em alcance novo.
+</p>
+</div>
 
-<p><strong>Diferença do TikTok:</strong> o Instagram Reels prioriza mais os seguidores existentes nos primeiros estágios de distribuição. No TikTok, até contas com zero seguidores chegam ao FYP. No Reels, a prova social com seguidores existentes é mais importante antes da expansão.</p>
+<h2>O Protocolo de 60 Minutos Pós-Publicação</h2>
 
-<h3>Stories: Algoritmo de Frequência e Proximidade</h3>
-<p>Stories têm o algoritmo mais simples dos quatro — é basicamente uma medida de quão próximo o algoritmo acha que você e aquela conta são:</p>
-<ul>
-  <li>Com que frequência você visualiza os Stories daquela conta</li>
-  <li>Com que frequência você interage (responde, reage, vota em enquetes)</li>
-  <li>Se vocês já trocaram DMs</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Tempo após publicação</th><th>Ação</th><th>Por que importa</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>0-5 min</td><td>Compartilhe o post nos seus Stories com sticker de link ou "novo post"</td><td>Direciona seguidores ativos ao post imediatamente</td></tr>
+    <tr><td>0-30 min</td><td>Responda cada comentário que chegar</td><td>Cada resposta é um sinal adicional de engajamento — multiplica</td></tr>
+    <tr><td>0-60 min</td><td>Mande por DM para 5-8 pessoas que genuinamente vão se importar com aquele conteúdo</td><td>Acelera os primeiros saves e comentários — vitrine para o algoritmo</td></tr>
+    <tr><td>1-3h</td><td>Engaje nos Stories e posts de quem comentou no seu</td><td>Interação recíproca sobe sua conta na lista de Stories deles</td></tr>
+  </tbody>
+</table>
 
-<p>Contas que você ignora por semanas desaparecem da frente da lista. Contas com quem você interage diariamente aparecem primeiro — sempre.</p>
+<h2>Diferenças Reels vs. TikTok: O Que Muda na Estratégia</h2>
 
-<p><strong>Implicação para criadores:</strong> engajar ativamente com seus seguidores nos Stories deles (visitar os Stories de quem comenta) sobe sua conta na lista deles. É recíproco.</p>`
+<table>
+  <thead>
+    <tr><th>Aspecto</th><th>Instagram Reels</th><th>TikTok</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Distribuição inicial</td><td>Prioriza seguidores existentes primeiro</td><td>Distribui para desconhecidos imediatamente</td></tr>
+    <tr><td>Conta nova / zero seguidores</td><td>Alcance muito limitado no início</td><td>Pode viralizar no primeiro vídeo</td></tr>
+    <tr><td>Audio trending</td><td>Moderado — áudio trending ajuda no Explore</td><td>Alto impacto — áudio trending multiplica alcance</td></tr>
+    <tr><td>Duração ideal</td><td>7-30 segundos (Reels curtos convertem mais)</td><td>15-60 segundos para topo, 3-5 min para educação</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "ig-crescimento-estrategia",
             title: "Estratégia de Crescimento Acelerado no Instagram",
             duration: "28 min",
             type: "text",
-            keyPoints: ["O método de 90 dias para crescimento orgânico", "Hashtags em 2025: mortas ou vivas?", "O papel dos primeiros 60 minutos após publicação", "Collab Posts: alcance dobrado instantâneo", "Como usar o Instagram Broadcast Channel para retenção"],
-            content: `<h2>Crescimento Orgânico no Instagram: O que Funciona em 2025</h2>
+            keyPoints: ["Plano de 90 dias: semana por semana — tipos de post, frequência e objetivo", "Como usar Collab Posts para dobrar o alcance de lançamento sem custo", "Broadcast Channel: taxa de abertura 60%+ e como usar para lista de espera de lançamento"],
+            exercise: "Identifique agora 3 contas do seu nicho com audiência similar à sua que seriam ótimos parceiros de Collab Post. Mande uma DM hoje para pelo menos uma delas propondo um Collab Post — o pitch: 'Tenho uma ideia de conteúdo que beneficia a audiência de nós dois. 5 minutos de chamada?' Collab Posts bem executados geram 100-500 novos seguidores em 24h.",
+            content: `<h2>Crescimento Orgânico Acelerado no Instagram: O Sistema de 90 Dias</h2>
 
-<h3>Os Primeiros 60 Minutos: A Janela de Ouro</h3>
-<p>O algoritmo do Instagram avalia a performance do post nas primeiras horas e usa isso para decidir o alcance futuro. Os primeiros 60 minutos são desproporcionalmente importantes — o engajamento nessa janela sinaliza se o conteúdo vai ser expandido ou não.</p>
+<h2>O Plano de 90 Dias — Semana por Semana</h2>
 
-<p>Como maximizar os primeiros 60 minutos:</p>
-<ul>
-  <li>Publique quando sua audiência está mais ativa (use "Insights" → "Audiência" → "Dias e horários mais ativos")</li>
-  <li>Responda cada comentário nos primeiros 60 min — cada resposta é um sinal adicional de engajamento</li>
-  <li>Adicione o post nos seus próprios Stories logo após publicar — direciona seguidores ao post imediatamente</li>
-  <li>Mande por DM para 5-10 pessoas que você sabe que vão genuinamente se importar com aquele conteúdo</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Semana</th><th>Formatos</th><th>Frequência</th><th>Objetivo</th><th>Proibido</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1-4</td><td>1 Reel + 2 Carrosséis</td><td>3x/semana</td><td>Descobrir qual formato tem maior save rate para o nicho</td><td>Não venda nada — só entregue valor</td></tr>
+    <tr><td>5-8</td><td>Formato vencedor + Stories diários</td><td>5x/semana</td><td>Engajamento com seguidores, feed de relacionamento</td><td>Não pule nenhum dia de Stories</td></tr>
+    <tr><td>9-12</td><td>1 Collab Post/semana + Broadcast Channel + Aquecimento</td><td>5x/semana</td><td>Crescimento via alcance emprestado + construção de lista de espera</td><td>Não faça Collab Post com conta muito maior que a sua — audiência incompatível</td></tr>
+  </tbody>
+</table>
 
-<h3>Hashtags em 2025: A Verdade</h3>
-<p>As hashtags perderam muito de seu poder de descoberta no Instagram ao longo dos anos. Em 2025, a posição oficial do Instagram (confirmada por Mosseri) é que hashtags são <em>classificadoras de conteúdo</em>, não amplificadoras de alcance.</p>
+<p><strong>Meta de crescimento alcançável:</strong> 500-2.000 seguidores por mês no nicho certo com esse sistema e conteúdo de qualidade. Não é viral — é consistente e composto.</p>
 
-<p>O que isso significa: hashtags ajudam o algoritmo a <em>classificar</em> seu post, não a distribuí-lo para mais pessoas. Use hashtags descritivas e específicas do nicho — não hashtags massivas como #motivação ou #vida.</p>
+<h2>Collab Posts: A Ferramenta de Alcance Mais Subestimada</h2>
 
-<p>Regra prática: 3-5 hashtags muito específicas superam 30 hashtags genéricas. Qualidade de classificação &gt; quantidade.</p>
+<p>O Collab Post é uma funcionalidade nativa onde dois criadores publicam o mesmo post. Ele aparece no feed dos seguidores de AMBAS as contas — com os dois nomes no cabeçalho.</p>
 
-<h3>Collab Posts: Alcance Dobrado sem Trabalho Extra</h3>
-<p>O Collab Post é uma funcionalidade nativa do Instagram onde dois criadores publicam o mesmo post — e ele aparece no feed dos seguidores de ambos, com os dois nomes no cabeçalho.</p>
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">COMO USAR COLLAB POST PARA LANÇAMENTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+1. Identifique 3-5 parceiros do mesmo nicho com audiência similar à sua<br/>
+2. Proponha 1 post colaborativo de valor (não de venda) — ensine algo que beneficia a audiência de ambos<br/>
+3. No dia de abertura do carrinho: Collab Post com CTA para o lançamento<br/>
+4. Resultado: seu post alcança a audiência do parceiro + a sua = alcance dobrado sem custo<br/><br/>
+<strong>Critério de parceiro ideal:</strong> mesma faixa de seguidores (±30%), mesmo nicho ou complementar, público que pode comprar seu produto
+</p>
+</div>
 
-<p>Para um lançamento, o Collab Post com um parceiro JV no momento de abertura do carrinho pode dobrar o alcance orgânico instantaneamente. Nenhuma outra funcionalidade nativa oferece essa alavancagem de alcance sem custo.</p>
+<h2>Hashtags em 2025: A Posição Oficial</h2>
 
-<h3>Broadcast Channel: Retenção de Audiência Quente</h3>
-<p>O Broadcast Channel é um canal de transmissão unidirecional dentro do Instagram onde você manda mensagens para quem optou por entrar. Características:</p>
-<ul>
-  <li>Notificação push para membros (taxa de abertura &gt;60% — muito superior ao email)</li>
-  <li>Membros não podem responder publicamente (sem ruído)</li>
-  <li>Perfeito para avisos de lançamento, conteúdo exclusivo, bastidores</li>
-</ul>
+<p>Adam Mosseri confirmou: hashtags em 2025 são <em>classificadoras de conteúdo</em>, não amplificadoras de alcance. Elas ajudam o algoritmo a entender o tema — não distribuem para mais pessoas.</p>
 
-<p>Use o Broadcast Channel para a "lista de espera" do lançamento dentro do Instagram. É o equivalente do grupo de WhatsApp, mas sem o caos das respostas em grupo.</p>
+<table>
+  <thead>
+    <tr><th>Estratégia</th><th>Resultado esperado</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>30 hashtags genéricas (#motivação #vida #empreendedorismo)</td><td>Classificação confusa → pouco impacto</td></tr>
+    <tr><td>5 hashtags muito específicas do nicho</td><td>Classificação precisa → melhor distribuição para audiência certa</td></tr>
+    <tr><td>Mistura: 1 ampla + 2 médias + 2 específicas</td><td>Boa prática — equilibra alcance e precisão</td></tr>
+  </tbody>
+</table>
 
-<h3>O Método de 90 Dias para Crescimento Real</h3>
-<p>Crescimento orgânico consistente não acontece com posts virais isolados — acontece com sistema:</p>
-<ul>
-  <li><strong>Semanas 1-4:</strong> Publique 1 Reel + 2 Carrosséis por semana. Foco absoluto em um nicho. Sem vender.</li>
-  <li><strong>Semanas 5-8:</strong> Adicione Stories diários (enquetes, perguntas, bastidores). Responda 100% dos comentários e DMs.</li>
-  <li><strong>Semanas 9-12:</strong> 1 Collab Post com conta do mesmo tamanho. Primeiro Broadcast Channel. Início do aquecimento para lançamento.</li>
-</ul>
-<p>Com esse sistema e conteúdo de qualidade, crescimento de 500-2.000 seguidores por mês no nicho certo é consistentemente alcançável.</p>`
+<h2>Broadcast Channel: Taxa de Abertura de 60%+ Para Lançamentos</h2>
+
+<p>O Broadcast Channel é um canal unidirecional dentro do Instagram — você manda mensagens, membros leem (e podem reagir, mas não respondem publicamente).</p>
+
+<table>
+  <thead>
+    <tr><th>Aspecto</th><th>Broadcast Channel</th><th>Comparação</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Taxa de abertura</td><td>60-80%</td><td>Email: 20-35% | WhatsApp Group: 40-60%</td></tr>
+    <tr><td>Notificação</td><td>Push notification automática</td><td>Mais proativo que posts do feed</td></tr>
+    <tr><td>Ruído</td><td>Zero — membros não respondem publicamente</td><td>Muito mais limpo que grupos de WhatsApp</td></tr>
+    <tr><td>Uso ideal</td><td>Lista de espera de lançamento, conteúdo exclusivo, bastidores</td><td>Equivalente premium ao grupo de WhatsApp</td></tr>
+  </tbody>
+</table>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">SEQUÊNCIA DE BROADCAST PARA LANÇAMENTO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+D-14: "Vou revelar algo importante aqui antes do que em qualquer outro lugar. Fica de olho."<br/>
+D-7: Revele parte do que está vindo — teaser de conteúdo ou produto<br/>
+D-3: "Abertura em 72h — aqui você vai saber 24h antes de todo mundo"<br/>
+D-1: "Amanhã. Prepara."<br/>
+D0 (abertura): Link direto + desconto ou bônus exclusivo para membros do Channel
+</p>
+</div>`
           }
         ],
         locked: false
@@ -2869,103 +4403,174 @@ Venda
             duration: "28 min",
             type: "text",
             glossaryTerms: ["avd", "watch-time", "ctr", "seo", "keyword", "backlinks"],
-            keyPoints: ["Tráfego de busca vs. tráfego de sugeridos: diferenças fundamentais", "CTR de thumbnail: o fator mais subestimado", "Watch Time e AVD (Average View Duration)", "Como o YouTube decide o que sugerir depois", "Playlists como alavanca de watch time"],
+            keyPoints: ["Benchmarks de CTR de thumbnail por tipo de canal — e o checklist dos 4 elementos", "AVD vs. % de conclusão: qual o YouTube realmente prioriza em cada sistema", "Como organizar playlists para multiplicar o watch time de sessão"],
+            exercise: "Abra o YouTube Studio e olhe o CTR de thumbnail dos seus últimos 5 vídeos. Compare com os benchmarks desta aula. Se algum está abaixo de 2%, redesenhe a thumbnail: rosto + texto de 5 palavras + contraste alto. Teste a thumbnail nova no vídeo com menor CTR e anote a diferença em 7 dias.",
             content: `<h2>YouTube: Dois Sistemas de Distribuição em Um</h2>
-<p>O YouTube é a única grande plataforma que tem dois sistemas de descoberta completamente distintos operando simultaneamente: o motor de busca (como o Google, mas para vídeo) e o sistema de recomendação (que decide o que aparece na home e nos "vídeos sugeridos").</p>
 
-<p>Criadores que entendem os dois e otimizam para ambos crescem muito mais rápido — porque cada vídeo pode trazer tráfego via busca E via sugestão, multiplicando o alcance.</p>
+<p>O YouTube é a única grande plataforma com dois sistemas de descoberta distintos operando simultaneamente: motor de busca (como o Google, mas para vídeo) e sistema de recomendação (home e sugeridos). Criadores que otimizam para ambos crescem 2-3x mais rápido.</p>
 
-<h3>Motor 1: Busca</h3>
-<p>Quando alguém busca "como criar um lançamento semente", o YouTube ranqueia os resultados com base em:</p>
+<h2>Motor 1: Busca — Como Ranquear por Anos</h2>
 
-<ul>
-  <li><strong>Relevância do título e descrição:</strong> a keyword precisa estar no título (preferencialmente no início) e nos primeiros 200 caracteres da descrição</li>
-  <li><strong>CTR (Click-Through Rate):</strong> % das pessoas que veem o resultado e clicam na thumbnail. Um CTR alto sinaliza que o título + thumbnail são relevantes para aquela busca</li>
-  <li><strong>Watch Time da busca:</strong> após clicar, quantos minutos assistem? Alguém que clicou e saiu em 30 segundos sinaliza que o vídeo não entregou o que prometeu</li>
-  <li><strong>Satisfação da busca:</strong> após assistir, a pessoa fez outra busca relacionada ou foi embora? Se foi embora satisfeita, o YouTube interpreta isso positivamente</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Fator de ranqueamento</th><th>Onde otimizar</th><th>Impacto</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Keyword no título (início)</td><td>Título do vídeo — primeiras 40 chars</td><td>Alto — principal sinal de relevância</td></tr>
+    <tr><td>Keyword na descrição</td><td>Primeiros 200 chars antes do "ver mais"</td><td>Alto — indexado pelo algoritmo de busca</td></tr>
+    <tr><td>CTR da thumbnail</td><td>Design da miniatura + força do título</td><td>Muito alto — baixo CTR mata distribuição</td></tr>
+    <tr><td>Watch time pós-clique</td><td>Hook dos primeiros 30s</td><td>Alto — quem sai em 30s sinaliza desalinhamento</td></tr>
+    <tr><td>Capítulos (timestamps)</td><td>Descrição — formato "0:00 Introdução"</td><td>Médio — aparece como key moments no Google</td></tr>
+  </tbody>
+</table>
 
-<h3>Motor 2: Recomendação (Home + Sugeridos)</h3>
-<p>O sistema de sugestão decide quais vídeos aparecem na home do usuário e na coluna lateral "próximos vídeos". Aqui os fatores são diferentes:</p>
+<h2>Motor 2: Recomendação (Home + Sugeridos)</h2>
 
-<ul>
-  <li><strong>Histórico de consumo do usuário:</strong> o algoritmo modela um "perfil de interesse" de cada usuário e recomenda vídeos que se encaixam</li>
-  <li><strong>Performance do vídeo com audiências similares:</strong> se pessoas com perfil parecido assistiram e gostaram, você vai receber recomendação</li>
-  <li><strong>AVD (Average View Duration):</strong> a duração média de visualização — não apenas a porcentagem. Um vídeo de 20 minutos com AVD de 12 minutos supera um vídeo de 3 minutos com AVD de 2 minutos no sistema de sugestão</li>
-</ul>
+<p>O sistema de sugestão usa métricas diferentes do motor de busca:</p>
 
-<h3>CTR de Thumbnail: O Fator Mais Subestimado</h3>
-<p>O CTR de thumbnail (% de impressões que viram o vídeo e clicaram) é o fator que mais impacta a distribuição inicial no YouTube. Um CTR baixo mata a distribuição antes que o watch time seja medido.</p>
+<table>
+  <thead>
+    <tr><th>Métrica</th><th>O que mede</th><th>Benchmark alvo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>AVD (Average View Duration)</td><td>Minutos médios assistidos por visita</td><td>Acima de 40% da duração total</td></tr>
+    <tr><td>Click-Through Rate (CTR)</td><td>% de impressões que clicaram</td><td>Canal novo: &gt;2%; Canal estabelecido: &gt;5%</td></tr>
+    <tr><td>Watch time de sessão</td><td>Minutos que o usuário ficou no YouTube após o vídeo</td><td>Quanto mais alto, mais o vídeo é sugerido depois</td></tr>
+    <tr><td>Satisfação pós-visualização</td><td>O usuário foi embora ou fez outra busca</td><td>Usuário satisfeito = sinal positivo</td></tr>
+  </tbody>
+</table>
 
-<p>Benchmarks por tipo de canal:</p>
-<ul>
-  <li>Canal novo sem audiência estabelecida: 2-4% é normal</li>
-  <li>Canal crescendo com audiência engajada: 4-8%</li>
-  <li>Canal com audiência muito fiel (nicho específico): 8-15%</li>
-</ul>
+<p><strong>AVD vs. % de conclusão:</strong> o sistema de sugestão prioriza AVD absoluto (minutos). Um vídeo de 20 min com AVD de 12 min (60%) supera um vídeo de 3 min com AVD de 2,5 min (83%) — porque gerou mais tempo no YouTube.</p>
 
-<p>Elementos da thumbnail de alto CTR:</p>
-<ul>
-  <li>Rosto humano com expressão emocional clara (surpresa, curiosidade, alegria)</li>
-  <li>Texto de no máximo 5 palavras com promessa ou pergunta</li>
-  <li>Contraste alto (fundo que se destaca no feed predominantemente branco do YouTube)</li>
-  <li>Elemento visual inesperado (algo fora do padrão do nicho chama atenção por contraste)</li>
-</ul>
+<h2>CTR de Thumbnail: O Checklist dos 4 Elementos</h2>
 
-<h3>Playlists: A Alavanca de Watch Time Ignorada</h3>
-<p>Vídeos organizados em playlists têm watch time significativamente maior porque o YouTube reproduz automaticamente o próximo vídeo da playlist. Isso eleva o watch time total da sessão — um dos sinais mais importantes para o algoritmo de recomendação.</p>
+<table>
+  <thead>
+    <tr><th>Elemento</th><th>Regra</th><th>Exemplo prático</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Rosto humano</td><td>Expressão emocional clara (surpresa, curiosidade)</td><td>Foto com boca aberta, sobrancelhas levantadas</td></tr>
+    <tr><td>Texto</td><td>Máximo 5 palavras — promessa ou pergunta</td><td>"Faturei R$100k sem lista" ou "Isso destruiu meu lançamento"</td></tr>
+    <tr><td>Contraste</td><td>Fundo que se destaca no feed branco do YouTube</td><td>Fundo vermelho, laranja, amarelo — evite branco e cinza</td></tr>
+    <tr><td>Elemento inesperado</td><td>Algo visualmente incomum no nicho</td><td>Seta apontando, antes/depois lado a lado, número grande</td></tr>
+  </tbody>
+</table>
 
-<p>Estratégia: organize seus vídeos em playlists temáticas. Um visitante que assiste 3 vídeos em sequência de uma playlist gera 3x mais watch time que 3 visitas independentes — e o algoritmo atribui esse engagement ao canal como um todo.</p>`
+<h2>Playlists: A Alavanca de Watch Time Ignorada</h2>
+
+<p>Vídeos em playlists têm watch time de sessão significativamente maior porque o YouTube reproduz o próximo automaticamente. Um visitante que assiste 3 vídeos em sequência gera 3x mais watch time — e o algoritmo atribui ao canal inteiro.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ESTRUTURA DE PLAYLISTS PARA PRODUTORES</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Organize por resultado desejado, não por módulo de conteúdo:<br/>
+• "Como fazer seu primeiro lançamento" (vídeos sequenciais para iniciantes)<br/>
+• "Meta Ads: do zero ao R$50k" (jornada de aprendizado)<br/>
+• "Estudos de caso reais" (prova social agrupada)<br/><br/>
+<strong>Dica:</strong> o último vídeo de cada playlist deve ter uma recomendação explícita de qual playlist assistir em seguida — mantendo o usuário no YouTube e acumulando watch time de sessão para o seu canal.
+</p>
+</div>
+
+<h2>Benchmarks de CTR por Tipo de Canal</h2>
+
+<table>
+  <thead>
+    <tr><th>Estágio do canal</th><th>CTR esperado</th><th>Se estiver abaixo disso</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Canal novo (0-1.000 inscritos)</td><td>2-4%</td><td>Thumbnail fraca — revise os 4 elementos</td></tr>
+    <tr><td>Canal crescendo (1k-50k)</td><td>4-8%</td><td>Título fraco — keyword não está forte o suficiente</td></tr>
+    <tr><td>Canal estabelecido (50k+)</td><td>8-15%</td><td>Nicho perdendo relevância — diversifique temas</td></tr>
+  </tbody>
+</table>`
           },
           {
             id: "yt-seo",
             title: "YouTube SEO Avançado: Apareça em Buscas por Anos",
             duration: "22 min",
             type: "text",
-            keyPoints: ["Pesquisa de keywords para YouTube", "Títulos que ranqueiam e têm CTR alto simultaneamente", "Descrição otimizada: estrutura dos 5 blocos", "Tags e chapters: impacto real vs. mito", "Como aparecer no Google com vídeos do YouTube"],
-            content: `<h2>YouTube SEO: A Estratégia de Longo Prazo</h2>
-<p>Um vídeo bem otimizado para busca pode gerar leads orgânicos por 3-5 anos. Um Reel do Instagram dura 48 horas de pico. O YouTube SEO é o único canal de conteúdo com esse horizonte temporal — e poucos produtores levam a sério.</p>
+            keyPoints: ["O protocolo de pesquisa de keyword em 4 ferramentas — com critérios de seleção", "Fórmula de título que ranqueia E tem CTR alto (com 5 exemplos reais)", "Template completo de descrição com os 5 blocos"],
+            exercise: "Pesquise agora sua keyword principal de nicho no YouTube Search Suggest e no TubeBuddy/VidIQ. Encontre 3 keywords com volume médio e baixa competição. Escreva o título do próximo vídeo usando a fórmula [Keyword]: [Promessa] desta aula. Copie o template de descrição e preencha todos os 5 blocos.",
+            content: `<h2>YouTube SEO: A Estratégia de Longo Prazo Que Ninguém Faz</h2>
 
-<h3>Pesquisa de Keywords para YouTube</h3>
-<p>Ferramentas para encontrar o que as pessoas buscam no YouTube:</p>
-<ul>
-  <li><strong>YouTube Search Suggest:</strong> comece a digitar no buscador do YouTube — as sugestões automáticas são as buscas mais frequentes</li>
-  <li><strong>TubeBuddy / VidIQ:</strong> mostram volume de busca estimado, dificuldade de ranqueamento e score de oportunidade por keyword</li>
-  <li><strong>Google Keyword Planner:</strong> keywords que ranqueiam no Google frequentemente também ranqueiam no YouTube</li>
-  <li><strong>Aba "Pesquisa" no YouTube Studio:</strong> mostra as buscas que trouxeram pessoas ao seu canal — ouro para descobrir oportunidades</li>
-</ul>
+<p>Um vídeo bem otimizado para busca pode gerar leads orgânicos por 3-5 anos. Um Reel do Instagram dura 48h de pico. O YouTube SEO é o único canal de conteúdo com esse horizonte temporal — e é o mais subestimado.</p>
 
-<p>Critério de keyword ideal: volume médio (não as mais competitivas), alta intenção de aprendizado (palavras como "como", "tutorial", "passo a passo") e baixa competição de canais grandes.</p>
+<h2>Pesquisa de Keywords: 4 Ferramentas e Como Usar</h2>
 
-<h3>Títulos que Ranqueiam E Têm CTR Alto</h3>
-<p>Existe tensão entre título de SEO (keyword no início) e título de CTR (promessa emocional). A solução é combinar os dois:</p>
+<table>
+  <thead>
+    <tr><th>Ferramenta</th><th>Como usar</th><th>O que revela</th><th>Custo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>YouTube Search Suggest</td><td>Digite a keyword + pare antes de confirmar — veja as sugestões</td><td>Buscas mais frequentes do YouTube em tempo real</td><td>Grátis</td></tr>
+    <tr><td>TubeBuddy</td><td>Instale a extensão → aparece no gerenciador de vídeos</td><td>Volume estimado, dificuldade, oportunidade de keyword</td><td>Freemium</td></tr>
+    <tr><td>VidIQ</td><td>Extensão Chrome — aparece ao lado dos vídeos do YouTube</td><td>Velocidade de crescimento dos concorrentes, keywords usadas</td><td>Freemium</td></tr>
+    <tr><td>YouTube Studio → Pesquisa</td><td>Analytics → Pesquisa</td><td>Termos que já trouxeram pessoas ao seu canal — ouro para oportunidades</td><td>Grátis</td></tr>
+  </tbody>
+</table>
 
-<p>Fórmula: [Keyword Principal]: [Promessa ou Curiosidade]</p>
-<ul>
-  <li>"Lançamento Semente: Como Vendi R$47k Antes de Criar o Produto"</li>
-  <li>"Meta Ads para Iniciantes: A Estrutura Que Ninguém Explica"</li>
-  <li>"Funil Perpétuo: Por Que o Meu Fatura R$30k/mês no Piloto Automático"</li>
-</ul>
+<p><strong>Critérios da keyword ideal:</strong> intenção de aprendizado ("como", "tutorial", "passo a passo") + volume médio-baixo (menos competição) + canais grandes sem responder especificamente aquela query.</p>
 
-<h3>Estrutura da Descrição Otimizada</h3>
-<p>Os primeiros 200 caracteres são os mais importantes (aparecem antes do "ver mais" no mobile e são os mais indexados pelo algoritmo).</p>
+<h2>Títulos que Ranqueiam E Têm CTR Alto</h2>
 
-<p>Estrutura dos 5 blocos:</p>
-<ol>
-  <li><strong>Resumo + keyword (0-200 chars):</strong> primeira frase com keyword principal + o que o vídeo entrega</li>
-  <li><strong>Recursos mencionados no vídeo:</strong> links de ferramentas, templates, livros citados</li>
-  <li><strong>Timestamps / Chapters:</strong> facilita navegação + aparece como mini-sumário no Google</li>
-  <li><strong>Links de outros vídeos relacionados:</strong> cria navegação interna, melhora watch time de sessão</li>
-  <li><strong>Keywords secundárias:</strong> parágrafo natural mencionando termos relacionados ao tema principal</li>
-</ol>
+<p>Existe tensão entre título de SEO (keyword no início) e título de CTR (promessa emocional). A solução é a fórmula que combina os dois:</p>
 
-<h3>Como Aparecer no Google com Vídeos</h3>
-<p>O Google mostra vídeos do YouTube para queries de "como fazer", "tutorial" e comparações. Para aparecer no Google:</p>
-<ul>
-  <li>Adicione timestamps/chapters (o Google usa esses como "key moments" no resultado de busca)</li>
-  <li>Use a mesma keyword do título do vídeo como keyword-alvo no Google Search Console do seu site (o Google correlaciona)</li>
-  <li>Embedde o vídeo em um post do blog com o mesmo tema — o Google favorece páginas que combinam texto e vídeo relevante</li>
-</ul>`
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">FÓRMULA: [KEYWORD PRINCIPAL]: [PROMESSA OU CURIOSIDADE]</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+✓ "Lançamento Semente: Como Vendi R$47k Antes de Criar o Produto"<br/>
+✓ "Meta Ads para Iniciantes: A Estrutura Que Ninguém Explica"<br/>
+✓ "Funil Perpétuo: Por Que o Meu Fatura R$30k/mês Sozinho"<br/>
+✓ "Copywriting de Lançamento: Os 5 Emails que Fizeram R$210k"<br/>
+✓ "TikTok para Infoprodutos: Do Zero a 50k Seguidores em 90 Dias"<br/><br/>
+<strong>Regra:</strong> keyword nos primeiros 40 caracteres (antes do corte no resultado de busca). Promessa depois — quanto mais específica, maior o CTR.
+</p>
+</div>
+
+<h2>Template de Descrição com os 5 Blocos</h2>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">TEMPLATE COMPLETO DE DESCRIÇÃO — COPIE E PREENCHA</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>BLOCO 1 (0-200 chars) — Resumo indexável:</strong><br/>
+"Nesse vídeo eu mostro [o que o vídeo entrega] para [avatar] que quer [resultado]. [Keyword principal] de forma [diferencial]."<br/><br/>
+
+<strong>BLOCO 2 — Recursos mencionados:</strong><br/>
+"Ferramentas citadas nesse vídeo:<br/>
+→ [Ferramenta 1]: [link]<br/>
+→ [Template gratuito]: [link]<br/>
+→ [Livro/recurso citado]: [link]"<br/><br/>
+
+<strong>BLOCO 3 — Capítulos (timestamps):</strong><br/>
+"0:00 Introdução<br/>
+2:15 [Tópico 1]<br/>
+8:30 [Tópico 2]<br/>
+15:45 [Resultado final / conclusão]"<br/><br/>
+
+<strong>BLOCO 4 — Outros vídeos relacionados:</strong><br/>
+"Se gostou desse vídeo, assista também:<br/>
+→ [Link vídeo relacionado 1]<br/>
+→ [Link vídeo relacionado 2]"<br/><br/>
+
+<strong>BLOCO 5 — Keywords secundárias (parágrafo natural):</strong><br/>
+"[3-4 linhas mencionando naturalmente termos relacionados ao tema — variações da keyword, sinônimos, tópicos adjacentes]"
+</p>
+</div>
+
+<h2>Como Aparecer no Google com Vídeos do YouTube</h2>
+
+<p>O Google mostra vídeos para queries de "como fazer", "tutorial" e comparações. Para aparecer:</p>
+
+<table>
+  <thead>
+    <tr><th>Ação</th><th>Por que funciona</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Adicione capítulos (timestamps) à descrição</td><td>Google usa como "key moments" no resultado — aparece como mini-menu abaixo do vídeo</td></tr>
+    <tr><td>Embedde o vídeo em um post do blog com o mesmo tema</td><td>Google favorece páginas com texto + vídeo relevante — dupla exposição</td></tr>
+    <tr><td>Use a keyword do título como meta title da página de blog</td><td>Google correlaciona video + página — reforça relevância para a keyword</td></tr>
+  </tbody>
+</table>`
           }
         ],
         locked: false
@@ -2985,90 +4590,126 @@ Venda
             title: "Facebook Groups: O Algoritmo que Ainda Entrega Alcance",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Por que grupos têm alcance orgânico que páginas não têm", "Os sinais que o algoritmo do grupo usa", "Estratégia de grupo de lançamento passo-a-passo", "Facebook Feed para páginas: o que ainda funciona", "Events do Facebook como canal de notificação"],
-            content: `<h2>Facebook em 2025: Grupos São o Ativo Real</h2>
+            keyPoints: ["Por que grupos alcançam 15-40% dos membros enquanto páginas alcançam 1,5% — e o que fazer com isso", "Cronograma de grupo de lançamento: 21 dias de conteúdo planejado dia a dia", "Os 3 tipos de post que disparam o algoritmo do grupo nas primeiras horas"],
+            exercise: "Se você vai fazer um lançamento nos próximos 60 dias, planeje agora o grupo de lançamento: defina o nome (baseado no resultado do produto, não no produto), a data de criação (D-21), e liste 7 temas de conteúdo para a primeira semana. O grupo criado agora, antes do lançamento começar, é um dos ativações mais impactantes da pré-abertura.",
+            content: `<h2>Facebook Groups: O Algoritmo Que Ainda Entrega</h2>
 
-<h3>Por que o Alcance de Páginas Morreu</h3>
-<p>O declínio do alcance orgânico de páginas no Facebook não foi acidente — foi política deliberada. O Facebook precisa monetizar o espaço no feed. Quanto menos conteúdo de páginas aparece organicamente, mais essas páginas precisam pagar para aparecer.</p>
+<h2>Páginas vs. Grupos: A Diferença de Alcance em Números</h2>
 
-<p>O alcance médio de uma postagem de página para seus seguidores em 2025: <strong>1,5-3%</strong>. Uma página com 10.000 seguidores alcança 150-300 pessoas por post organicamente.</p>
+<table>
+  <thead>
+    <tr><th>Tipo de ativo</th><th>Alcance orgânico médio</th><th>Para uma base de 5.000 pessoas</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Página do Facebook</td><td>1,5-3% dos seguidores</td><td>75-150 pessoas por post</td></tr>
+    <tr><td>Grupo bem gerenciado</td><td>15-40% dos membros</td><td>750-2.000 pessoas por post</td></tr>
+    <tr><td>Diferença</td><td colspan="2">10-20x mais alcance orgânico — mesma plataforma, ativo diferente</td></tr>
+  </tbody>
+</table>
 
-<h3>Por que Grupos Sobreviveram ao Declínio</h3>
-<p>Grupos têm um status especial no Facebook: são considerados "espaços de comunidade", não "espaços de mídia". O algoritmo ainda distribui conteúdo de grupos para membros com muito mais liberalidade — especialmente quando o engajamento dentro do grupo é alto.</p>
+<p>Grupos têm status de "espaço de comunidade" no algoritmo do Facebook — não "espaço de mídia". O resultado é que o algoritmo ainda distribui posts de grupos para membros com muito mais liberalidade.</p>
 
-<p>Taxa de alcance orgânico em grupos bem gerenciados: <strong>15-40% dos membros</strong>. Uma diferença de 10-20x em relação às páginas.</p>
+<h2>Os 3 Tipos de Post que Disparam o Algoritmo do Grupo</h2>
 
-<h3>Os Sinais do Algoritmo de Grupos</h3>
-<p>Para um post receber boa distribuição dentro de um grupo, o algoritmo mede:</p>
-<ul>
-  <li><strong>Comentários e threads:</strong> posts que geram discussão aparecem para mais membros — o Facebook prioriza conteúdo que mantém as pessoas no app</li>
-  <li><strong>Reações diversas:</strong> mistura de reações (💙❤️😲) sinaliza conteúdo que provoca emoção — mais valioso que só curtidas</li>
-  <li><strong>Velocidade de engajamento:</strong> posts que recebem 5+ comentários nos primeiros 30 minutos disparam o algoritmo de distribuição</li>
-  <li><strong>Histórico do criador no grupo:</strong> membros que consistentemente postam conteúdo bem recebido têm seus posts distribuídos mais amplamente</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Tipo de post</th><th>Por que funciona</th><th>Exemplo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Pergunta polarizante</td><td>Gera comentários divergentes — algoritmo vê atividade e amplia</td><td>"Você prefere lançamento semente ou perpétuo? Por quê?" — sem resposta errada</td></tr>
+    <tr><td>Vitória de membro</td><td>Cria narrativa de progresso + celebração coletiva</td><td>"[Nome] acabou de me mandar isso 👇" + screenshot de resultado</td></tr>
+    <tr><td>Conteúdo de referência</td><td>Alto save rate — algoritmo vê como valioso</td><td>Checklist ou template que o membro vai usar — "Salva esse post"</td></tr>
+  </tbody>
+</table>
 
-<h3>Estratégia de Grupo de Lançamento</h3>
-<p>A estratégia mais poderosa de Facebook orgânico para produtores digitais é o grupo de lançamento — criado especificamente para um lançamento, fechado após o fechamento do carrinho.</p>
+<h2>Cronograma de Grupo de Lançamento — 21 Dias</h2>
 
-<p>Cronograma típico:</p>
-<ul>
-  <li><strong>D-21:</strong> Cria o grupo com nome baseado no resultado ("Desafio: Primeira Venda Online em 7 Dias")</li>
-  <li><strong>D-21 a D-8:</strong> Conteúdo de valor diário — vídeos curtos, PDFs, enquetes, perguntas. Sem venda.</li>
-  <li><strong>D-7 a D-1:</strong> Pré-lançamento — estudos de caso, AMA (Ask Me Anything) ao vivo, countdown</li>
-  <li><strong>D0:</strong> Abertura do carrinho — post de lançamento com link, live de 30-60min tirando dúvidas</li>
-  <li><strong>D1-D5:</strong> Posts de prova social (capturas de novos alunos), respostas a objeções, posts de urgência crescente</li>
-  <li><strong>D6:</strong> Fechamento — "últimas horas" posts a cada 3-4h</li>
-</ul>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">D-21 a D-0 — CALENDÁRIO COMPLETO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>D-21:</strong> Cria o grupo. Nome = resultado ("Desafio: Primeira Venda em 7 Dias"), não o produto.<br/>
+<strong>D-21 a D-15:</strong> Conteúdo de aquecimento — vídeo curto/dia, PDF gratuito, enquete de diagnóstico. Zero menção ao produto.<br/>
+<strong>D-14 a D-8:</strong> Educação profunda — respostas a perguntas do grupo, mini-treinamentos, apresentação de método. Cria dependência de conteúdo.<br/>
+<strong>D-7 a D-2:</strong> Pré-lançamento — estudos de caso, AMA (Ask Me Anything) ao vivo, anúncio da data de abertura. Cria antecipação.<br/>
+<strong>D-1:</strong> "Amanhã abrimos. Última chance de entrar na lista VIP dentro do grupo."<br/>
+<strong>D0 (abertura):</strong> Post de lançamento com link + Live de 45-60min respondendo dúvidas ao vivo.<br/>
+<strong>D+1 a D+5:</strong> Prova social diária (capturas de novos alunos), respostas a objeções, urgência crescente.<br/>
+<strong>D+6 (fechamento):</strong> Posts a cada 3h — "faltam 6h", "faltam 3h", "faltam 1h", "carrinho fechado".
+</p>
+</div>
 
-<h3>Facebook Events: Notificação Gratuita</h3>
-<p>Quando você cria um evento e as pessoas marcam "Interessado" ou "Vou", o Facebook manda notificações automáticas nos dias antes do evento. Para um webinar de lançamento, isso é um canal de lembrete gratuito com taxa de abertura alta.</p>`
+<h2>Facebook Events: Canal de Notificação Gratuito</h2>
+
+<p>Crie um Event do Facebook para o webinar de abertura. Quando as pessoas marcam "Interessado" ou "Vou", o Facebook manda notificações automáticas nos dias anteriores.</p>
+
+<table>
+  <thead>
+    <tr><th>Notificação automática do Facebook Events</th><th>Quando dispara</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Lembrete de evento próximo</td><td>7 dias antes</td></tr>
+    <tr><td>Lembrete de evento amanhã</td><td>1 dia antes</td></tr>
+    <tr><td>Lembrete de evento hoje</td><td>Manhã do evento</td></tr>
+    <tr><td>Lembrete "está começando"</td><td>15 min antes</td></tr>
+  </tbody>
+</table>
+
+<p>Para um webinar de lançamento com 500 "Vou", isso são 2.000 notificações push sem custo adicional. Taxa de abertura de notificação do Facebook: 60-80%.</p>`
           },
           {
             id: "google-seo-intencao",
             title: "Google Search: O Algoritmo de Maior Intenção de Compra",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Por que quem busca no Google converte melhor que quem descobre no TikTok", "Intenção de busca: informacional, navegacional, transacional", "Os 200+ fatores de ranqueamento simplificados", "E-E-A-T: o framework de autoridade do Google", "SEO para landing pages de produto"],
-            content: `<h2>Google Search: O Canal com Maior Intenção de Compra</h2>
-<p>Uma pessoa que busca "curso de lançamento digital" no Google está ativamente procurando por uma solução — ela já identificou o problema e está em modo de pesquisa de compra. Isso é radicalmente diferente de alguém que encontrou um conteúdo no TikTok passivamente.</p>
+            keyPoints: ["Os 3 tipos de intenção de busca: tabela com exemplos, estratégia de conteúdo e objetivo para cada um", "E-E-A-T: como sinalizar Experience, Expertise, Authority e Trust para o Google com exemplos práticos", "Checklist de 5 otimizações de landing page que afetam ranqueamento — com onde configurar cada uma"],
+            exercise: "Pesquise agora no Google as 3 keywords mais relevantes para o seu produto (use a barra de busca do Google + seção 'Pessoas também perguntam'). Para cada keyword: qual é o tipo de intenção? Existe conteúdo seu ranqueando? Se não, escreva o título do artigo ou da landing page que você criaria para capturar essa busca nos próximos 30 dias.",
+            content: `<h2>Google Search: O Canal com Maior Intenção de Compra do Marketing Digital</h2>
 
-<p>Essa diferença de intenção explica por que tráfego orgânico do Google converte em média 2-5x melhor que tráfego de redes sociais para a maioria dos produtos digitais.</p>
+<p>Uma pessoa que busca "curso de lançamento digital" no Google já identificou o problema e está em modo de pesquisa ativa de solução. Isso é radicalmente diferente de alguém que encontrou um conteúdo no TikTok passivamente. Essa diferença de intenção explica por que tráfego orgânico do Google converte 2-5x melhor que redes sociais para produtos digitais.</p>
 
-<h3>Os 3 Tipos de Intenção de Busca</h3>
+<h2>Os 3 Tipos de Intenção de Busca</h2>
 
-<p><strong>1. Intenção Informacional</strong> (60-70% das buscas)<br/>
-A pessoa quer aprender: "como fazer lançamento semente", "o que é funil perpétuo".<br/>
-<em>Como aproveitar:</em> posts de blog, vídeos YouTube embedados, guias completos. Objetivo é capturar o lead em troca do conteúdo.</p>
+<table>
+  <thead>
+    <tr><th>Tipo</th><th>% das buscas</th><th>Exemplo real</th><th>Estratégia de conteúdo</th><th>Objetivo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Informacional</td><td>60-70%</td><td>"como fazer lançamento semente", "o que é funil perpétuo"</td><td>Artigo 1.500+ palavras, guia completo, vídeo YouTube embedado</td><td>Capturar lead em troca do conteúdo</td></tr>
+    <tr><td>Comparativa</td><td>20-25%</td><td>"melhor curso de marketing digital", "Hotmart vs Kiwify"</td><td>Posts de comparação, reviews, cases de resultado</td><td>Aparecer quando a pessoa está decidindo</td></tr>
+    <tr><td>Transacional</td><td>5-10%</td><td>"comprar curso lançamento digital", "[seu produto] preço"</td><td>Landing page otimizada + Google Ads</td><td>Conversão imediata — menor volume, maior intenção</td></tr>
+  </tbody>
+</table>
 
-<p><strong>2. Intenção Comparativa / de Consideração</strong><br/>
-A pessoa está avaliando opções: "melhor curso de marketing digital", "NexOS vs. ClickFunnels".<br/>
-<em>Como aproveitar:</em> conteúdo de comparação, cases de resultado, reviews. Objetivo é aparecer quando a pessoa está decidindo.</p>
+<h2>E-E-A-T: Como Sinalizar Autoridade para o Google</h2>
 
-<p><strong>3. Intenção Transacional</strong> (alta conversão)<br/>
-A pessoa quer agir: "comprar curso de lançamento digital", "assinar plataforma de automação de marketing".<br/>
-<em>Como aproveitar:</em> landing pages de produto otimizadas, Google Ads para capturar quem está pronto para comprar.</p>
+<p>O Google avalia conteúdo com base em E-E-A-T. Cada letra tem sinais práticos que você pode implementar:</p>
 
-<h3>E-E-A-T: O Framework de Autoridade do Google</h3>
-<p>O Google avalia conteúdo com base em E-E-A-T: Experience (Experiência), Expertise (Especialidade), Authoritativeness (Autoridade) e Trustworthiness (Confiabilidade).</p>
+<table>
+  <thead>
+    <tr><th>Letra</th><th>Significa</th><th>Como sinalizar</th><th>Exemplo prático</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>E — Experience</td><td>Experiência direta com o assunto</td><td>Mencione casos reais, números, datas específicas. Use primeira pessoa.</td><td>"Na minha primeira campanha, gastei R$3.400 e faturei R$47k. Aqui está o que funcionou."</td></tr>
+    <tr><td>E — Expertise</td><td>Profundidade de conhecimento real</td><td>Vá além do óbvio. O Google distingue conteúdo superficial de especialista.</td><td>Inclua benchmarks, nuances, erros comuns, edge cases</td></tr>
+    <tr><td>A — Authoritativeness</td><td>Autoridade percebida por outros</td><td>Backlinks de sites relevantes do nicho + menções em mídias</td><td>Guest posts, podcasts como convidado, menções no nicho</td></tr>
+    <tr><td>T — Trustworthiness</td><td>Sinais de confiabilidade do site</td><td>HTTPS, política de privacidade, página de contato, sobre o autor</td><td>Adicione "Sobre o autor" com credenciais no final de cada artigo</td></tr>
+  </tbody>
+</table>
 
-<ul>
-  <li><strong>Experience:</strong> o criador tem experiência direta com o assunto? Mencione casos reais, números específicos, datas. Primeira pessoa ("na minha primeira campanha...") sinaliza experiência.</li>
-  <li><strong>Expertise:</strong> a profundidade do conteúdo demonstra conhecimento real? O Google consegue diferenciar conteúdo superficial de conteúdo de especialista.</li>
-  <li><strong>Authoritativeness:</strong> outros sites relevantes linkam para você? Backlinks de sites de autoridade são o principal sinal externo de autoridade.</li>
-  <li><strong>Trustworthiness:</strong> o site tem HTTPS? Política de privacidade? Informações de contato? Esses sinais básicos afetam a confiabilidade percebida.</li>
-</ul>
+<h2>Checklist de Otimização de Landing Page para SEO</h2>
 
-<h3>SEO para Landing Pages de Produto Digital</h3>
-<p>Muitos produtores ignoram SEO para páginas de venda — mas ranquear organicamente para termos transacionais é uma das aquisições de cliente mais baratas possíveis.</p>
-
-<p>Otimizações essenciais para landing pages:</p>
-<ul>
-  <li>Title tag (aparece na aba do navegador e no resultado do Google): keyword principal + diferencial único</li>
-  <li>Meta description (o texto que aparece no resultado de busca): 155 caracteres com CTA</li>
-  <li>H1 único com keyword principal</li>
-  <li>Schema markup de produto (ajuda o Google a entender que é uma página de produto)</li>
-  <li>Velocidade de carregamento abaixo de 2.5s no mobile (Core Web Vitals é fator de ranking)</li>
-</ul>`
+<table>
+  <thead>
+    <tr><th>Elemento</th><th>Regra</th><th>Onde configurar</th><th>Impacto</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Title tag</td><td>Keyword principal nos primeiros 60 chars + diferencial único</td><td>Rank Math / Yoast (WordPress) | Page Settings (Webflow)</td><td>Alto — aparece no resultado do Google e determina CTR</td></tr>
+    <tr><td>Meta description</td><td>155 chars — keyword + promessa clara + CTA</td><td>Mesmo plugin — afeta CTR, não diretamente o ranking</td><td>Médio — CTA forte aumenta cliques</td></tr>
+    <tr><td>H1 único</td><td>Um por página, contém keyword principal</td><td>Primeiro heading da página</td><td>Alto — sinal de relevância do tema</td></tr>
+    <tr><td>Schema de produto</td><td>Markup JSON-LD de Product/Course</td><td>Plugin Schema Pro ou direto no &lt;head&gt;</td><td>Médio — habilita rich results (preço, avaliações no Google)</td></tr>
+    <tr><td>Core Web Vitals</td><td>LCP &lt;2.5s no mobile, CLS &lt;0.1</td><td>PageSpeed Insights → identifica problemas específicos</td><td>Alto — fator direto de ranking desde 2021</td></tr>
+  </tbody>
+</table>`
           }
         ],
         locked: false
@@ -3088,103 +4729,129 @@ A pessoa quer agir: "comprar curso de lançamento digital", "assinar plataforma 
             title: "A Estratégia de Conteúdo Multi-Plataforma que Multiplica Alcance",
             duration: "25 min",
             type: "text",
-            keyPoints: ["O modelo Hub & Spoke de distribuição de conteúdo", "Repurposing inteligente: um conteúdo, 7 formatos", "Como as plataformas se alimentam mutuamente", "A audiência própria: o ativo que os algoritmos não controlam"],
-            content: `<h2>Multi-Plataforma: Quando 1+1+1 = 10</h2>
-<p>Presença em múltiplas plataformas não significa criar conteúdo diferente para cada uma — significa criar um conteúdo central e distribuí-lo em formatos adaptados para cada plataforma. Isso é o modelo Hub & Spoke.</p>
+            keyPoints: ["O modelo Hub & Spoke: como um vídeo de 20 minutos vira 12 peças de conteúdo — com ferramentas específicas", "A tabela de papel de cada plataforma no funil — quem alimenta quem", "O KPI que importa mais que seguidores: crescimento semanal da lista própria"],
+            exercise: "Pegue o seu próximo conteúdo planejado (vídeo YouTube, podcast ou artigo longo). Antes de produzi-lo, liste todos os formatos derivados que vai criar a partir dele usando o modelo Hub & Spoke desta aula. Mínimo 5 derivados em 3 plataformas diferentes. Produza todos essa semana — o hub uma vez, os spokes na sequência.",
+            content: `<h2>Multi-Plataforma: Um Conteúdo, 12 Peças, 6 Plataformas</h2>
 
-<h3>O Modelo Hub & Spoke</h3>
-<p><strong>Hub (conteúdo central):</strong> um vídeo longo do YouTube, um podcast, um artigo aprofundado — conteúdo denso que você produziu uma vez.</p>
+<p>Presença multi-plataforma não significa criar conteúdo diferente para cada uma — significa criar um conteúdo central e distribuí-lo em formatos adaptados. Isso é o modelo Hub & Spoke: produção única, distribuição máxima.</p>
 
-<p><strong>Spokes (derivados):</strong> a partir do hub, você cria:</p>
-<ul>
-  <li>3-5 Shorts/Reels/TikToks dos melhores momentos (ferramenta: Opus Clip faz isso automaticamente)</li>
-  <li>1 Carrossel do Instagram com os pontos principais</li>
-  <li>1 Thread para LinkedIn/Twitter com os insights</li>
-  <li>1 Email para a lista com o link + resumo dos pontos principais</li>
-  <li>3-5 Stories com enquete ou pergunta derivada do tema</li>
-</ul>
+<h2>O Modelo Hub & Spoke: Como Funciona</h2>
 
-<p>Um vídeo de 20 minutos vira 12 peças de conteúdo distribuídas em 6 plataformas. Custo de produção de uma, alcance de doze.</p>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">UM VÍDEO DE 20 MIN = 12 PEÇAS DE CONTEÚDO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Hub:</strong> Vídeo longo YouTube (20-40 min) — produzido uma vez<br/><br/>
+<strong>Spokes (derivados automáticos):</strong><br/>
+→ 3-5 Shorts/Reels/TikToks dos melhores 60s (ferramenta: Opus Clip faz automaticamente)<br/>
+→ 1 Carrossel Instagram com os 5-7 pontos principais<br/>
+→ 1 Thread LinkedIn/Twitter com insights extraídos<br/>
+→ 1 Email para lista: link do vídeo + resumo dos 3 pontos mais importantes<br/>
+→ 3 Stories: enquete derivada do tema + bastidores de gravação + CTA<br/>
+→ 1 Post no grupo Facebook com "o que você achou dessa estratégia?"<br/><br/>
+<strong>Custo:</strong> produção de 1 conteúdo. <strong>Alcance:</strong> 6 plataformas × 40h de presença.
+</p>
+</div>
 
-<h3>Como as Plataformas se Alimentam Mutuamente</h3>
-<p>Cada plataforma tem um papel específico no funil e deve alimentar as outras:</p>
+<h2>O Papel de Cada Plataforma no Funil</h2>
 
-<p><strong>TikTok → Instagram:</strong> TikTok tem o maior alcance orgânico para novos públicos. Instagram tem maior profundidade de relacionamento. Use TikTok para descoberta, Instagram para conversão de seguidores em leads.</p>
+<table>
+  <thead>
+    <tr><th>Plataforma</th><th>Papel no funil</th><th>Alimenta</th><th>Métrica-chave</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>TikTok</td><td>Descoberta — novo público frio</td><td>Instagram, WhatsApp, Email</td><td>Leads gerados via link na bio</td></tr>
+    <tr><td>Instagram Reels</td><td>Descoberta + aquecimento</td><td>WhatsApp, Email, Feed seguidor</td><td>Seguidores convertidos em lista</td></tr>
+    <tr><td>YouTube</td><td>Autoridade + SEO longo prazo</td><td>Google, Email, WhatsApp</td><td>Leads por vídeo (30/60/90 dias)</td></tr>
+    <tr><td>Facebook Group</td><td>Comunidade + conversão</td><td>Email, vendas diretas</td><td>Membros ativos + membros convertidos</td></tr>
+    <tr><td>WhatsApp/Telegram</td><td>Conversão — contato direto</td><td>Vendas</td><td>Taxa de abertura de disparo</td></tr>
+    <tr><td>Email</td><td>Conversão + relacionamento</td><td>Vendas recorrentes</td><td>Taxa de abertura + clique</td></tr>
+  </tbody>
+</table>
 
-<p><strong>YouTube → Google:</strong> Vídeos do YouTube aparecem no Google para buscas de "como fazer". O YouTube ranqueado traz tráfego do Google sem custo adicional.</p>
+<h2>A Audiência Própria: O Ativo que os Algoritmos Não Controlam</h2>
 
-<p><strong>Instagram/TikTok → WhatsApp/Email:</strong> Redes sociais para descoberta, WhatsApp e email para conversão. Alguém que está no seu WhatsApp tem 8x mais probabilidade de comprar que alguém que só te segue no Instagram.</p>
+<p>Seguidores nas redes sociais não são seus — são do Instagram, do TikTok, do YouTube. Quando uma plataforma muda o algoritmo, seu alcance pode cair 70% da noite para o dia. Isso já aconteceu: algoritmo do Facebook em 2012, Instagram em 2019, TikTok com regulações.</p>
 
-<p><strong>Facebook Group → Email:</strong> Grupos geram engajamento e confiança. Use para converter membros em assinantes da lista — o ativo que você controla completamente.</p>
+<table>
+  <thead>
+    <tr><th>Ativo</th><th>Você controla?</th><th>Taxa de abertura</th><th>Valor por contato</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Seguidores (Instagram/TikTok/YouTube)</td><td>Não — plataforma controla</td><td>2-15% (alcance algorítmico)</td><td>Baixo — intermediado por algoritmo</td></tr>
+    <tr><td>Lista de email</td><td>Sim — você tem o endereço</td><td>20-45%</td><td>Médio-alto — contato direto</td></tr>
+    <tr><td>Lista de WhatsApp</td><td>Sim</td><td>70-90%</td><td>Alto — maior taxa de conversão</td></tr>
+    <tr><td>Comunidade paga</td><td>Sim</td><td>N/A — acesso por escolha</td><td>Muito alto — pagaram para estar lá</td></tr>
+  </tbody>
+</table>
 
-<h3>A Audiência Própria: O Ativo que os Algoritmos Não Controlam</h3>
-<p>Seguidores nas redes sociais não são seus — são do Instagram, do TikTok, do YouTube. Quando uma plataforma muda o algoritmo, seu alcance pode cair 70% da noite para o dia.</p>
+<p><strong>O KPI mais importante:</strong> não é o número de seguidores — é o crescimento semanal da lista própria (email + WhatsApp). Construa isso primeiro. Use as redes sociais como motores de alimentação dessa lista — nunca como destino final.</p>
 
-<p>Audiência própria é aquela que você controla:</p>
-<ul>
-  <li><strong>Lista de email:</strong> você tem o endereço. Pode enviar quando e como quiser.</li>
-  <li><strong>Lista de WhatsApp:</strong> taxa de abertura de 90%+. Contato direto.</li>
-  <li><strong>Membros de comunidade paga:</strong> pagaram para estar com você — maior engajamento possível.</li>
-</ul>
-
-<p>A métrica mais importante de qualquer estratégia de conteúdo não é seguidores — é o crescimento semanal da lista própria.</p>
-
-<blockquote>Um algoritmo muda. Duas plataformas fecham por ano. A única proteção real é ter uma audiência que você pode contatar diretamente, independente de qualquer plataforma. Construa o email e o WhatsApp primeiro. Use as redes sociais como motores de alimentação dessa lista — nunca como destino final.</blockquote>`
+<div style="background:#1a1a2e;border-left:3px solid #10b981;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#34d399;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">META SEMANAL DE LISTA — CÁLCULO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+Se você adiciona 100 novos contatos/semana à lista de email + 50 ao WhatsApp, em 12 meses você tem:<br/>
+Email: 5.200 contatos | WhatsApp: 2.600 contatos<br/><br/>
+Para um produto de R$997 com 3% de conversão na lista de email:<br/>
+5.200 × 3% = 156 vendas × R$997 = <strong>R$155.532</strong> — de um único lançamento.<br/><br/>
+Essa é a lista que você construiu organicamente. O custo: R$0 em tráfego pago.
+</p>
+</div>`
           },
           {
             id: "algoritmo-acompanhar",
             title: "Como Acompanhar as Mudanças de Algoritmo sem Enlouquecer",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Fontes confiáveis para atualizações de algoritmo", "O que realmente muda vs. o que é ruído", "Como testar hipóteses de algoritmo sistematicamente", "Construindo um sistema de aprendizado contínuo"],
-            content: `<h2>Algoritmos Mudam — Seu Sistema de Aprendizado não Pode Parar</h2>
-<p>O maior erro de quem aprende sobre algoritmos é pensar que o conhecimento é fixo. TikTok, Instagram e Google atualizam seus algoritmos centenas de vezes por ano. A maioria das mudanças é pequena e incremental — mas algumas mudam radicalmente as regras do jogo.</p>
+            keyPoints: ["Tabela de fontes confiáveis por plataforma — o que seguir, o que ignorar", "O protocolo de 4 passos para testar hipóteses de algoritmo com seus próprios dados", "O que realmente muda vs. o que é ruído: a regra do comunicado oficial"],
+            exercise: "Escolha uma hipótese sobre o algoritmo da sua plataforma principal que você quer testar. Escreva: a hipótese em 1 frase, o que você vai mudar (variável independente), o que vai medir (variável dependente), quantos posts vai testar e por quantas semanas. Execute o teste antes de acreditar em qualquer 'hack de algoritmo' que ler no próximo mês.",
+            content: `<h2>Acompanhando Mudanças de Algoritmo: Fontes Confiáveis e Sistema de Teste</h2>
 
-<h3>Fontes Confiáveis por Plataforma</h3>
+<p>O maior erro de quem aprende sobre algoritmos é pensar que o conhecimento é fixo. TikTok, Instagram e Google atualizam seus sistemas centenas de vezes por ano. A maioria das mudanças é incremental — mas algumas mudam radicalmente as regras. Saber o que seguir e o que ignorar vale meses de esforço desperdiçado.</p>
 
-<p><strong>Instagram:</strong></p>
-<ul>
-  <li>Blog oficial do Instagram (@creators no Instagram) — updates diretos de Adam Mosseri</li>
-  <li>@socialmediaexaminer — análise de tendências com dados reais</li>
-</ul>
+<h2>Fontes Confiáveis por Plataforma</h2>
 
-<p><strong>TikTok:</strong></p>
-<ul>
-  <li>TikTok Newsroom — comunicados oficiais</li>
-  <li>TikTok Creator Academy — guias oficiais de boas práticas</li>
-</ul>
+<table>
+  <thead>
+    <tr><th>Plataforma</th><th>Fonte oficial</th><th>Fonte de análise confiável</th><th>Ignore</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Instagram</td><td>@creators (Instagram) — updates de Adam Mosseri</td><td>Social Media Examiner — com dados reais</td><td>Qualquer "guru" que não cita fonte oficial</td></tr>
+    <tr><td>TikTok</td><td>TikTok Newsroom + Creator Academy</td><td>TikTok Studio → Your Analytics (seus próprios dados)</td><td>"Hack secreto do FYP" sem link de fonte</td></tr>
+    <tr><td>YouTube</td><td>YouTube Creator Blog — único oficial</td><td>@TeamYouTube no X/Twitter</td><td>Qualquer afirmação sobre "morte do YouTube SEO"</td></tr>
+    <tr><td>Google</td><td>Google Search Central Blog</td><td>@searchliaison no X/Twitter</td><td>Listas de "200 fatores de ranking" sem fonte</td></tr>
+    <tr><td>Meta Ads</td><td>Meta Business Blog</td><td>Jon Loomer Digital — dados verificados</td><td>Capturas de tela de "hacks de campanha" sem contexto</td></tr>
+  </tbody>
+</table>
 
-<p><strong>YouTube:</strong></p>
-<ul>
-  <li>YouTube Creator Blog — único canal oficial confiável</li>
-  <li>@TeamYouTube no X/Twitter — updates rápidos</li>
-</ul>
+<h2>A Regra do Comunicado Oficial</h2>
 
-<p><strong>Google:</strong></p>
-<ul>
-  <li>Google Search Central Blog — onde todas as updates de algoritmo são documentadas</li>
-  <li>@searchliaison no X/Twitter — porta-voz oficial do Google Search</li>
-</ul>
+<div style="background:#1a1a2e;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">FILTRO DE RUÍDO</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0">
+<strong>Ignore se:</strong> afirmação sem link para comunicado oficial, "o algoritmo mudou completamente" sem data específica, estratégia revelada por "ex-funcionário", "teste este hack antes que removam"<br/><br/>
+<strong>Preste atenção se:</strong> comunicado de blog oficial com data, mudança confirmada por múltiplas fontes independentes com dados, estudo com metodologia clara (tamanho de amostra + período de teste)
+</p>
+</div>
 
-<h3>O que Realmente Muda vs. Ruído</h3>
-<p>A internet de marketing digital gera pânico a cada boato de mudança de algoritmo. Regra simples para filtrar:</p>
+<h2>O Protocolo de Teste de Hipóteses — 4 Passos</h2>
 
-<p><strong>Ignore:</strong> afirmações sem fonte oficial, "estratégias secretas reveladas", qualquer conteúdo que diz "o algoritmo foi completamente mudado" sem link para comunicado oficial.</p>
+<p>Ao invés de acreditar em tudo que lê, teste você mesmo. Seus dados valem mais que a opinião de qualquer guru — porque seu nicho e audiência são únicos.</p>
 
-<p><strong>Preste atenção:</strong> comunicados de blog oficial das plataformas, mudanças confirmadas por múltiplas fontes independentes com dados, estudos com metodologia clara (não "eu percebi que...").</p>
+<table>
+  <thead>
+    <tr><th>Passo</th><th>Ação</th><th>Exemplo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1. Hipótese</td><td>1 frase clara: "Se eu [mudança], então [resultado esperado]"</td><td>"Se eu publicar às 19h em vez de 9h, o alcance vai aumentar"</td></tr>
+    <tr><td>2. Variável única</td><td>Mude apenas 1 coisa — múltiplas mudanças impossibilitam análise</td><td>Mude só o horário. Mantenha formato, nicho e copy iguais.</td></tr>
+    <tr><td>3. Tamanho de amostra</td><td>Mínimo 8-10 posts por condição — nunca 2-3</td><td>10 posts às 19h vs. 10 posts às 9h ao longo de 4 semanas</td></tr>
+    <tr><td>4. Métrica correta</td><td>Não curtidas — alcance orgânico, saves e CPL se for tráfego</td><td>Compare alcance orgânico médio das duas condições</td></tr>
+  </tbody>
+</table>
 
-<h3>Sistema de Teste de Hipóteses</h3>
-<p>Ao invés de acreditar em tudo que lê sobre algoritmos, teste você mesmo:</p>
-<ol>
-  <li>Formule uma hipótese: "Posts publicados às 19h têm mais alcance que às 9h para minha audiência"</li>
-  <li>Crie um teste controlado: publique conteúdo similar em horários diferentes por 4 semanas</li>
-  <li>Meça a variável certa: não curtidas — alcance orgânico e salvamentos</li>
-  <li>Tome conclusão baseada em dados: não em 2 posts, mas em pelo menos 8-10</li>
-</ol>
+<p><strong>Por que isso importa:</strong> algoritmos se comportam diferente por nicho. Um horário que funciona para saúde pode ser irrelevante para finanças. Suas hipóteses testadas geram conhecimento real sobre seu negócio específico — mais valioso que qualquer regra genérica.</p>
 
-<p>Essa abordagem científica tem dois benefícios: gera conhecimento real sobre seu nicho específico (algoritmos se comportam diferente por nicho) e imuniza contra o ruído do "guru descobriu novo hack do algoritmo".</p>
-
-<blockquote>O algoritmo muda. A psicologia humana não. Conteúdo que retém atenção, gera emoção genuína e entrega valor real sempre vai ser distribuído — independente das mudanças. Domine a psicologia e você estará sempre à frente das mudanças de algoritmo.</blockquote>`
+<p>O algoritmo muda. A psicologia humana não. Conteúdo que retém atenção, gera emoção genuína e entrega valor real sempre vai ser distribuído — independente das mudanças. Domine a psicologia e você estará à frente das mudanças, sempre.</p>`
           },
           {
             id: "algoritmo-exercicio-final",
