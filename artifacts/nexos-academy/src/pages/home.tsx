@@ -101,6 +101,48 @@ export default function Home({ onNavigate, progress, hasAccess }: HomeProps) {
         ))}
       </div>
 
+      {/* Creator / Authority Section */}
+      <div className="card-nexos rounded-xl overflow-hidden">
+        <div className="bg-gradient-to-r from-[hsl(250_30%_8%)] to-[hsl(270_25%_6%)] p-6">
+          <div className="flex items-start gap-5">
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[hsl(250_90%_60%)] to-[hsl(280_80%_50%)] flex items-center justify-center text-3xl shrink-0 shadow-[0_0_30px_hsl(250_90%_60%/0.4)]">
+              ⚡
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                <span className="badge-primary badge-gold">Fundador & Criador</span>
+                <span className="badge-primary">NexOS AI</span>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Criador do NexOS AI — A Única Plataforma que Automatiza o Marketing Digital Completo</h3>
+              <p className="text-sm text-[hsl(220_10%_65%)] leading-relaxed">
+                Desenvolveu o NexOS AI do zero: o único sistema operacional de marketing digital que automatiza todas as estruturas de um lançamento em um único lugar. Gera copies com IA, integra Meta, Google, TikTok, WhatsApp e email, sincroniza disparos automáticos por fase, e orquestra 44 agentes de IA especializados trabalhando em paralelo — do briefing inicial ao carrinho fechado.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
+            {[
+              { label: "Agentes de IA", value: "44", desc: "trabalhando em paralelo" },
+              { label: "Plataformas", value: "12+", desc: "integradas nativamente" },
+              { label: "Fases Auto.", value: "7", desc: "do brief ao carrinho" },
+              { label: "Tipo de Copy", value: "∞", desc: "geradas por IA" },
+            ].map(s => (
+              <div key={s.label} className="bg-[hsl(220_20%_6%)] rounded-lg p-3 text-center border border-[hsl(250_90%_65%/0.12)]">
+                <div className="text-xl font-extrabold" style={{ background: "var(--gradient-primary)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{s.value}</div>
+                <div className="text-[11px] font-semibold text-white mt-0.5">{s.label}</div>
+                <div className="text-[10px] text-[hsl(220_10%_40%)] mt-0.5">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-[hsl(220_20%_10%)] bg-[hsl(220_20%_5%)] px-6 py-4">
+          <p className="text-xs text-[hsl(220_10%_45%)] leading-relaxed">
+            <strong className="text-[hsl(250_90%_70%)]">Sobre esta metodologia:</strong> Cada aula foi construída com base em lançamentos reais executados com o NexOS AI — benchmarks reais, copies testadas, estruturas validadas. Não é teoria de livro: é o sistema operacional que já rodou campanhas digitais no Brasil usando os 44 agentes de IA para cada decisão de marketing.
+          </p>
+        </div>
+      </div>
+
       {/* Modules Overview */}
       <div>
         <div className="flex items-center justify-between mb-5">
