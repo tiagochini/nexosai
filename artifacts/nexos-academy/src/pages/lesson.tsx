@@ -61,6 +61,7 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
   const chapterIndex = allChapters.findIndex(c => c.id === chapterId);
   const nextChapter = allChapters[chapterIndex + 1];
+  const prevChapter = chapterIndex > 0 ? allChapters[chapterIndex - 1] : null;
   const lessonDone = progress[activeLesson.id];
   const moduleId = CURRICULUM.find(m => m.chapters.some(c => c.id === chapterId))?.id ?? "";
 
@@ -90,6 +91,34 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
 
   return (
     <div className="flex gap-6 min-h-[calc(100vh-120px)]">
+      {/* ── Mobile top bar ──────────────────────────────────── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[hsl(220_20%_10%)] bg-[hsl(222_25%_4%/0.97)] backdrop-blur-sm px-4 py-2.5 flex items-center justify-between gap-2">
+        <button
+          className="btn-outline text-xs px-3 py-2 flex items-center gap-1.5"
+          onClick={() => {
+            if (prevLesson) setActiveLesson(prevLesson);
+            else if (prevChapter) onNavigate("lesson", { chapterId: prevChapter.id, lessonId: prevChapter.lessons[prevChapter.lessons.length - 1].id });
+            else onNavigate("module", { moduleId });
+          }}
+        >
+          ← {prevLesson ? "Anterior" : prevChapter ? "Cap. Anterior" : "Módulo"}
+        </button>
+        <span className="text-xs text-[hsl(220_10%_45%)] truncate px-2 text-center flex-1">
+          {activeLesson.title}
+        </span>
+        <button
+          className="btn-primary text-xs px-3 py-2 flex items-center gap-1.5"
+          onClick={() => {
+            if (!lessonDone) onComplete(activeLesson.id);
+            if (nextLesson) setActiveLesson(nextLesson);
+            else if (nextChapter && !nextChapter.locked) onNavigate("lesson", { chapterId: nextChapter.id });
+            else onNavigate("modules");
+          }}
+        >
+          {nextLesson ? "Próxima →" : nextChapter ? "Cap. →" : "Concluir ✓"}
+        </button>
+      </div>
+
       {/* ── Sidebar ─────────────────────────────────────────── */}
       <aside className="w-64 shrink-0 hidden lg:block">
         <div className="sticky top-4 space-y-3">
@@ -337,7 +366,9 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
               {prevLesson ? (
-                <button className="btn-outline text-sm" onClick={() => setActiveLesson(prevLesson)}>← Anterior</button>
+                <button className="btn-outline text-sm" onClick={() => setActiveLesson(prevLesson)}>← Aula Anterior</button>
+              ) : prevChapter ? (
+                <button className="btn-outline text-sm" onClick={() => onNavigate("lesson", { chapterId: prevChapter.id, lessonId: prevChapter.lessons[prevChapter.lessons.length - 1].id })}>← Capítulo Anterior</button>
               ) : (
                 <button className="btn-outline text-sm" onClick={() => onNavigate("module", { moduleId })}>← Módulo</button>
               )}
