@@ -11,6 +11,7 @@ interface LessonProps {
 }
 
 const LOG_KEY = (id: string) => `nexos-log-${id}`;
+const TUTOR_KEY = (id: string) => `nexos-tutor-${id}`;
 
 function loadLog(id: string): string {
   try { return localStorage.getItem(LOG_KEY(id)) ?? ""; } catch { return ""; }
@@ -18,6 +19,48 @@ function loadLog(id: string): string {
 function saveLog(id: string, text: string) {
   try { localStorage.setItem(LOG_KEY(id), text); } catch { /* noop */ }
 }
+
+interface TutorMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+function loadTutorHistory(id: string): TutorMessage[] {
+  try {
+    const raw = localStorage.getItem(TUTOR_KEY(id));
+    if (!raw) return [];
+    return JSON.parse(raw) as TutorMessage[];
+  } catch { return []; }
+}
+function saveTutorHistory(id: string, msgs: TutorMessage[]) {
+  try { localStorage.setItem(TUTOR_KEY(id), JSON.stringify(msgs.slice(-30))); } catch { /* noop */ }
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 5000);
+}
+
+function getAllLessonsInOrder() {
+  return CURRICULUM.flatMap(m =>
+    m.chapters.flatMap(c =>
+      c.lessons.map(l => ({ lessonId: l.id, title: l.title, chapterId: c.id }))
+    )
+  );
+}
+
+function renderMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+    .replace(/^• (.+)$/gm, "<li>$1</li>")
+    .replace(/^- (.+)$/gm, "<li>$1</li>")
+    .replace(/(<li>.*<\/li>(\n|$))+/g, m => `<ul>${m}</ul>`)
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/^(?!<[uop]|<li)(.+)$/gm, "$1")
+    .replace(/\n/g, "<br/>");
+}
+
+const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/../../api";
 
 export default function Lesson({ chapterId, lessonId, onNavigate, progress, onComplete }: LessonProps) {
   const chapter = CURRICULUM.flatMap(m => m.chapters).find(c => c.id === chapterId);
@@ -33,6 +76,15 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
   const [showGlossaryTerm, setShowGlossaryTerm] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Tutor state
+  const [tutorOpen, setTutorOpen] = useState(false);
+  const [tutorHistory, setTutorHistory] = useState<TutorMessage[]>([]);
+  const [tutorInput, setTutorInput] = useState("");
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [tutorError, setTutorError] = useState<string | null>(null);
+  const tutorEndRef = useRef<HTMLDivElement>(null);
+  const tutorInputRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (chapter && !activeLesson) setActiveLesson(chapter.lessons[0]);
   }, [chapter, activeLesson]);
@@ -43,8 +95,17 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
       setLogSaved(false);
       setShowExercise(false);
       setShowGlossaryTerm(null);
+      setTutorHistory(loadTutorHistory(activeLesson.id));
+      setTutorInput("");
+      setTutorError(null);
     }
   }, [activeLesson?.id]);
+
+  useEffect(() => {
+    if (tutorOpen && tutorEndRef.current) {
+      tutorEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [tutorHistory, tutorOpen, tutorLoading]);
 
   if (!chapter || !activeLesson) {
     return (
@@ -88,6 +149,78 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
 
   const completedCount = chapter.lessons.filter(l => progress[l.id]).length;
   const chapterPct = Math.round((completedCount / chapter.lessons.length) * 100);
+
+  // Build tutor context
+  function buildTutorContext() {
+    const allLessons = getAllLessonsInOrder();
+    const currentIdx = allLessons.findIndex(l => l.lessonId === activeLesson!.id);
+    const previousTopics = allLessons.slice(0, currentIdx).map(l => l.title);
+    const upcomingTopics = allLessons.slice(currentIdx + 1).map(l => l.title);
+    return {
+      lessonTitle: activeLesson!.title,
+      chapterTitle: chapter!.title,
+      lessonContent: stripHtml(activeLesson!.content),
+      keyPoints: activeLesson!.keyPoints,
+      previousTopics,
+      upcomingTopics,
+    };
+  }
+
+  async function sendTutorQuestion() {
+    const q = tutorInput.trim();
+    if (!q || tutorLoading) return;
+
+    const ctx = buildTutorContext();
+    const newUserMsg: TutorMessage = { role: "user", content: q };
+    const updatedHistory = [...tutorHistory, newUserMsg];
+
+    setTutorHistory(updatedHistory);
+    setTutorInput("");
+    setTutorLoading(true);
+    setTutorError(null);
+    saveTutorHistory(activeLesson!.id, updatedHistory);
+
+    try {
+      const res = await fetch(`${API_BASE}/academy/tutor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...ctx,
+          question: q,
+          history: updatedHistory.slice(0, -1).slice(-10),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Erro ao consultar o professor.");
+      }
+
+      const data = await res.json() as { answer: string };
+      const assistantMsg: TutorMessage = { role: "assistant", content: data.answer };
+      const finalHistory = [...updatedHistory, assistantMsg];
+      setTutorHistory(finalHistory);
+      saveTutorHistory(activeLesson!.id, finalHistory);
+    } catch (err) {
+      setTutorError(err instanceof Error ? err.message : "Erro inesperado.");
+    } finally {
+      setTutorLoading(false);
+    }
+  }
+
+  function handleTutorKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendTutorQuestion();
+    }
+  }
+
+  function clearTutorHistory() {
+    if (!activeLesson) return;
+    if (!confirm("Apagar o histórico desta conversa?")) return;
+    setTutorHistory([]);
+    saveTutorHistory(activeLesson.id, []);
+  }
 
   return (
     <div className="flex gap-6 min-h-[calc(100vh-120px)]">
@@ -206,6 +339,25 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
               <p className="text-xs text-[hsl(220_10%_40%)] mt-0.5 line-clamp-2">{logText}</p>
             </div>
           )}
+
+          {/* Tutor shortcut in sidebar */}
+          <button
+            onClick={() => setTutorOpen(v => !v)}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border"
+            style={{
+              borderColor: tutorOpen ? "hsl(250 90% 60% / 40%)" : "hsl(220 20% 15%)",
+              background: tutorOpen ? "hsl(250 90% 60% / 8%)" : "transparent",
+              color: tutorOpen ? "hsl(250 90% 75%)" : "hsl(220 10% 50%)",
+            }}
+          >
+            <span className="text-base">🎓</span>
+            <span className="flex-1 text-left">Professor IA</span>
+            {tutorHistory.length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-[hsl(250_90%_60%)] text-white text-[9px] flex items-center justify-center font-bold">
+                {Math.min(tutorHistory.filter(m => m.role === "assistant").length, 9)}
+              </span>
+            )}
+          </button>
         </div>
       </aside>
 
@@ -296,6 +448,172 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
             )}
           </div>
         )}
+
+        {/* ── AI Tutor Panel ───────────────────────────────────── */}
+        <div className="card-nexos rounded-xl overflow-hidden border border-[hsl(250_90%_60%/20%)]">
+          {/* Header — always visible */}
+          <button
+            onClick={() => setTutorOpen(v => !v)}
+            className="w-full flex items-center justify-between p-5 text-left hover:bg-[hsl(220_20%_8%)] transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
+                style={{ background: "hsl(250 90% 60% / 15%)" }}>
+                🎓
+              </div>
+              <div>
+                <p className="font-bold text-white text-sm">Professor IA</p>
+                <p className="text-xs text-[hsl(220_10%_45%)]">
+                  {tutorHistory.length === 0
+                    ? "Dúvidas sobre esta aula? Pergunte aqui"
+                    : `${tutorHistory.filter(m => m.role === "assistant").length} resposta${tutorHistory.filter(m => m.role === "assistant").length !== 1 ? "s" : ""} nesta aula`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {tutorHistory.length > 0 && !tutorOpen && (
+                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                  style={{ background: "hsl(250 90% 60%)" }}>
+                  {Math.min(tutorHistory.filter(m => m.role === "assistant").length, 9)}
+                </span>
+              )}
+              <span className={`text-[hsl(220_10%_40%)] transition-transform duration-200 ${tutorOpen ? "rotate-180" : ""}`}>▼</span>
+            </div>
+          </button>
+
+          {tutorOpen && (
+            <div className="border-t border-[hsl(220_20%_10%)]">
+              {/* Scope notice */}
+              <div className="px-5 pt-4 pb-2">
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-[hsl(250_90%_60%/6%)] border border-[hsl(250_90%_60%/15%)]">
+                  <span className="text-xs shrink-0">🔍</span>
+                  <p className="text-xs text-[hsl(220_10%_50%)] leading-relaxed">
+                    O professor responde sobre <strong className="text-[hsl(250_90%_75%)]">{activeLesson.title}</strong> e aulas já estudadas. Tópicos futuros são mencionados mas não antecipados.
+                  </p>
+                </div>
+              </div>
+
+              {/* Message history */}
+              <div className="px-5 py-3 space-y-4 max-h-96 overflow-y-auto">
+                {tutorHistory.length === 0 && (
+                  <div className="text-center py-6 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-2xl"
+                      style={{ background: "hsl(250 90% 60% / 10%)" }}>
+                      🎓
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Olá! Sou seu professor de IA.</p>
+                      <p className="text-xs text-[hsl(220_10%_45%)] mt-1">
+                        Estou especializado em <strong className="text-[hsl(250_90%_70%)]">{activeLesson.title}</strong>.<br />
+                        Pergunte sobre o conteúdo desta aula — exemplos, aplicações, dúvidas conceituais.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {[
+                        "Como aplicar isso na prática?",
+                        "Pode dar um exemplo real?",
+                        "Qual o erro mais comum aqui?",
+                      ].map(q => (
+                        <button
+                          key={q}
+                          onClick={() => { setTutorInput(q); tutorInputRef.current?.focus(); }}
+                          className="px-3 py-1.5 rounded-lg text-xs border border-[hsl(250_90%_60%/25%)] text-[hsl(250_90%_75%)] hover:bg-[hsl(250_90%_60%/10%)] transition-colors"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {tutorHistory.map((msg, i) => (
+                  <div key={i} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                    <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-sm font-bold mt-0.5 ${
+                      msg.role === "user"
+                        ? "bg-[hsl(220_20%_12%)] text-[hsl(220_10%_50%)]"
+                        : "bg-[hsl(250_90%_60%/15%)] text-[hsl(250_90%_70%)]"
+                    }`}>
+                      {msg.role === "user" ? "V" : "🎓"}
+                    </div>
+                    <div className={`flex-1 max-w-[85%] ${msg.role === "user" ? "flex justify-end" : ""}`}>
+                      {msg.role === "user" ? (
+                        <div className="inline-block px-4 py-2.5 rounded-2xl rounded-tr-sm bg-[hsl(250_90%_60%/12%)] border border-[hsl(250_90%_60%/20%)]">
+                          <p className="text-sm text-[hsl(220_10%_80%)]">{msg.content}</p>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-[hsl(222_25%_7%)] border border-[hsl(220_20%_12%)]">
+                          <div
+                            className="text-sm text-[hsl(220_10%_75%)] leading-relaxed prose-tutor"
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {tutorLoading && (
+                  <div className="flex gap-3">
+                    <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-sm bg-[hsl(250_90%_60%/15%)] text-[hsl(250_90%_70%)]">🎓</div>
+                    <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-[hsl(222_25%_7%)] border border-[hsl(220_20%_12%)] flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[hsl(250_90%_60%)] animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[hsl(250_90%_60%)] animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[hsl(250_90%_60%)] animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  </div>
+                )}
+
+                {tutorError && (
+                  <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                    {tutorError}
+                  </div>
+                )}
+
+                <div ref={tutorEndRef} />
+              </div>
+
+              {/* Input */}
+              <div className="px-5 pb-5">
+                <div className="border border-[hsl(220_20%_14%)] rounded-xl bg-[hsl(222_25%_5%)] focus-within:border-[hsl(250_90%_60%/50%)] transition-colors">
+                  <textarea
+                    ref={tutorInputRef}
+                    value={tutorInput}
+                    onChange={e => setTutorInput(e.target.value)}
+                    onKeyDown={handleTutorKeyDown}
+                    placeholder="Sua dúvida sobre esta aula..."
+                    rows={2}
+                    disabled={tutorLoading}
+                    className="w-full px-4 pt-3 pb-2 bg-transparent text-sm text-[hsl(220_10%_80%)] placeholder-[hsl(220_10%_30%)] resize-none focus:outline-none disabled:opacity-50"
+                  />
+                  <div className="flex items-center justify-between px-3 pb-3 gap-2">
+                    <p className="text-[10px] text-[hsl(220_10%_30%)]">Enter para enviar • Shift+Enter para nova linha</p>
+                    <div className="flex items-center gap-2">
+                      {tutorHistory.length > 0 && (
+                        <button
+                          onClick={clearTutorHistory}
+                          className="text-[10px] text-[hsl(220_10%_35%)] hover:text-red-400 transition-colors"
+                        >
+                          Limpar
+                        </button>
+                      )}
+                      <button
+                        onClick={sendTutorQuestion}
+                        disabled={!tutorInput.trim() || tutorLoading}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                          background: tutorInput.trim() && !tutorLoading ? "var(--gradient-primary)" : "hsl(220 20% 12%)",
+                          color: tutorInput.trim() && !tutorLoading ? "white" : "hsl(220 10% 40%)",
+                        }}
+                      >
+                        {tutorLoading ? "Pensando..." : "Perguntar →"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Linked glossary terms — mobile inline list */}
         {linkedTerms.length > 0 && (

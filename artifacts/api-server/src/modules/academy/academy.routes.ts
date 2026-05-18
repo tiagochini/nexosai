@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { eq, or } from "drizzle-orm";
+import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@workspace/db";
 import { academyPurchasesTable, academyLeadsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
@@ -353,6 +354,93 @@ router.get("/purchases", async (req, res): Promise<void> => {
 
   const total = await db.$count(academyPurchasesTable);
   res.json({ purchases: rows.reverse(), total });
+});
+
+// POST /api/academy/tutor
+// AI professor — answers student questions scoped to the current lesson context
+const tutorSchema = z.object({
+  lessonTitle: z.string().max(200),
+  chapterTitle: z.string().max(200),
+  lessonContent: z.string().max(6000),
+  keyPoints: z.array(z.string()).max(20),
+  previousTopics: z.array(z.string()).max(60),
+  upcomingTopics: z.array(z.string()).max(60),
+  question: z.string().min(1).max(1000),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().max(2000),
+  })).max(20).optional(),
+});
+
+function getAnthropicForAcademy(): Anthropic {
+  if (env.ANTHROPIC_API_KEY) {
+    return new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  }
+  const integrationKey = process.env["AI_INTEGRATIONS_ANTHROPIC_API_KEY"];
+  const integrationUrl = process.env["AI_INTEGRATIONS_ANTHROPIC_BASE_URL"];
+  if (integrationKey && integrationUrl) {
+    return new Anthropic({ apiKey: integrationKey, baseURL: integrationUrl });
+  }
+  throw new Error("No Anthropic API key configured for academy tutor.");
+}
+
+router.post("/tutor", async (req, res): Promise<void> => {
+  let parsed;
+  try {
+    parsed = tutorSchema.parse(req.body);
+  } catch {
+    res.status(400).json({ error: "Dados inválidos." });
+    return;
+  }
+
+  const systemPrompt = `Você é um professor especialista em marketing digital e lançamentos online, responsável pela aula "${parsed.lessonTitle}" do capítulo "${parsed.chapterTitle}".
+
+CONTEÚDO DA AULA ATUAL (sua base de conhecimento para esta sessão):
+${parsed.lessonContent}
+
+PONTOS-CHAVE QUE O ALUNO DEVE DOMINAR NESTA AULA:
+${parsed.keyPoints.map(p => `• ${p}`).join("\n")}
+
+TÓPICOS JÁ ESTUDADOS PELO ALUNO (pode fazer referências e conexões):
+${parsed.previousTopics.length > 0 ? parsed.previousTopics.map(t => `• ${t}`).join("\n") : "• Nenhum — esta é a primeira aula"}
+
+TÓPICOS FUTUROS NO CURRÍCULO (NÃO antecipe, NÃO explique em detalhes — apenas mencione que será coberto mais adiante):
+${parsed.upcomingTopics.length > 0 ? parsed.upcomingTopics.map(t => `• ${t}`).join("\n") : "• Nenhum — esta é a última aula"}
+
+SUAS REGRAS COMO PROFESSOR:
+1. Responda APENAS com base no conteúdo desta aula ou de aulas já estudadas pelo aluno
+2. Se o aluno perguntar sobre um tópico futuro, diga em qual aula será coberto e redirecione gentilmente para o conteúdo atual: "Isso vai ser aprofundado em [nome da aula] — por agora, vamos nos concentrar em [ponto relevante da aula atual]"
+3. Se a pergunta for totalmente fora do escopo do curso, diga gentilmente que não é o foco desta metodologia
+4. Seja específico e prático — use exemplos concretos do contexto da aula
+5. Não repita todo o conteúdo da aula — responda diretamente à dúvida do aluno
+6. Máximo 400 palavras por resposta, a não ser que a pergunta exija mais detalhes técnicos
+7. Use português do Brasil, tom de professor acessível, direto e especializado
+8. Use **negrito** para termos-chave, listas quando fizer sentido, evite respostas genéricas`;
+
+  const messages: Anthropic.MessageParam[] = [
+    ...(parsed.history ?? []).map(h => ({
+      role: h.role as "user" | "assistant",
+      content: h.content,
+    })),
+    { role: "user", content: parsed.question },
+  ];
+
+  try {
+    const client = getAnthropicForAcademy();
+    const response = await client.messages.create({
+      model: "claude-3-5-sonnet-20241022",
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages,
+    });
+
+    const answer = response.content[0]?.type === "text" ? response.content[0].text : "";
+    logger.info({ lessonTitle: parsed.lessonTitle, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens }, "academy: tutor response");
+    res.json({ answer });
+  } catch (err) {
+    logger.error({ err }, "academy: tutor error");
+    res.status(502).json({ error: "Não foi possível consultar o professor agora. Tente novamente em instantes." });
+  }
 });
 
 // POST /api/academy/simulate-confirm (dev/owner only — manually confirms a pending purchase)
