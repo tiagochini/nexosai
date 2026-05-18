@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Home from "@/pages/home";
 import Modules from "@/pages/modules";
@@ -6,10 +6,11 @@ import Lesson from "@/pages/lesson";
 import Products from "@/pages/products";
 import ProgressPage from "@/pages/progress-page";
 import Glossary from "@/pages/glossary";
+import Owner, { isOwnerMode } from "@/pages/owner";
 
 const queryClient = new QueryClient();
 
-type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary";
+type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner";
 
 interface NavState {
   page: Page;
@@ -38,15 +39,37 @@ const NAV_ITEMS = [
   { id: "progress", label: "Progresso", icon: "📊" },
 ];
 
+function getInitialPage(): NavState {
+  if (typeof window !== "undefined" && window.location.hash === "#owner") {
+    return { page: "owner", params: {} };
+  }
+  return { page: "home", params: {} };
+}
+
 function AcademyApp() {
-  const [nav, setNav] = useState<NavState>({ page: "home", params: {} });
+  const [nav, setNav] = useState<NavState>(getInitialPage);
   const [progress, setProgress] = useState<Record<string, boolean>>(loadProgress);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [ownerMode, setOwnerMode] = useState<boolean>(isOwnerMode);
+
+  useEffect(() => {
+    function onHashChange() {
+      if (window.location.hash === "#owner") {
+        setNav({ page: "owner", params: {} });
+        setMobileMenuOpen(false);
+      }
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   const navigate = useCallback((page: string, params: Record<string, string> = {}) => {
     setNav({ page: page as Page, params });
     setMobileMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    if (page !== "owner") {
+      history.replaceState(null, "", window.location.pathname);
+    }
   }, []);
 
   const markComplete = useCallback((lessonId: string) => {
@@ -64,7 +87,11 @@ function AcademyApp() {
     }
   }, []);
 
-  const totalLessons = 17;
+  const handleOwnerChange = useCallback((val: boolean) => {
+    setOwnerMode(val);
+  }, []);
+
+  const totalLessons = 118;
   const completedLessons = Object.values(progress).filter(Boolean).length;
   const pct = Math.round((completedLessons / totalLessons) * 100);
 
@@ -95,6 +122,8 @@ function AcademyApp() {
         return <ProgressPage onNavigate={navigate} progress={progress} onReset={resetProgress} />;
       case "glossary":
         return <Glossary onNavigate={navigate} />;
+      case "owner":
+        return <Owner onNavigate={navigate} onOwnerChange={handleOwnerChange} isOwner={ownerMode} />;
       default:
         return <Home onNavigate={navigate} progress={progress} />;
     }
@@ -133,8 +162,16 @@ function AcademyApp() {
             ))}
           </nav>
 
-          {/* Progress pill */}
+          {/* Right side */}
           <div className="hidden md:flex items-center gap-3">
+            {ownerMode && (
+              <button
+                onClick={() => navigate("owner")}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[hsl(250_90%_65%/0.2)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.3)] hover:bg-[hsl(250_90%_65%/0.3)] transition-colors"
+              >
+                ⚡ Dono
+              </button>
+            )}
             {completedLessons > 0 && (
               <div className="flex items-center gap-2">
                 <div className="w-24 h-1.5 rounded-full bg-[hsl(220_20%_10%)] overflow-hidden">
@@ -146,12 +183,14 @@ function AcademyApp() {
                 <span className="text-xs text-[hsl(250_90%_75%)] font-semibold">{pct}%</span>
               </div>
             )}
-            <button
-              className="btn-primary text-xs px-3 py-1.5"
-              onClick={() => navigate("products")}
-            >
-              Adquirir
-            </button>
+            {!ownerMode && (
+              <button
+                className="btn-primary text-xs px-3 py-1.5"
+                onClick={() => navigate("products")}
+              >
+                Adquirir
+              </button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -176,6 +215,15 @@ function AcademyApp() {
                 <span>{item.label}</span>
               </button>
             ))}
+            {ownerMode && (
+              <button
+                className="sidebar-link w-full text-[hsl(250_90%_75%)]"
+                onClick={() => navigate("owner")}
+              >
+                <span>⚡</span>
+                <span>Painel do Dono</span>
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -203,6 +251,9 @@ function AcademyApp() {
                 {NAV_ITEMS.find(n => n.id === nav.page)?.label}
               </span>
             )}
+            {nav.page === "owner" && (
+              <span className="text-[hsl(250_90%_75%)]">Painel do Dono</span>
+            )}
           </div>
         </div>
       )}
@@ -228,6 +279,13 @@ function AcademyApp() {
             <span>PT-BR</span>
             <span>·</span>
             <span>Suporte: suporte@nexos.ai</span>
+            <span>·</span>
+            <button
+              className="hover:text-[hsl(250_90%_75%)] transition-colors"
+              onClick={() => navigate("owner")}
+            >
+              ⚡
+            </button>
           </div>
         </div>
       </footer>
