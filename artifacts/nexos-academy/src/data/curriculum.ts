@@ -665,7 +665,7 @@ POR QUE FUNCIONA: ___
 <blockquote>Uma VSL não é um vídeo de vendas. É uma jornada emocional cuidadosamente orquestrada onde, ao final, o visitante sente que seria irracional NÃO comprar.</blockquote>`
           }
         ],
-        locked: true
+        locked: false
       }
     ]
   },
@@ -1086,7 +1086,7 @@ Não → afiliado enquanto produz</p>
 <p>Clique em "Começar Avaliação" para iniciar as 12 questões.</p>`
           }
         ],
-        locked: true
+        locked: false
       },
       {
         id: "pos-venda",
@@ -1179,7 +1179,7 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
 <blockquote>Cada Detrator que você transforma em Promotor vale duas vezes: você eliminou a ameaça de reputação negativa e criou um novo canal de indicação. A gestão de Detratores é o trabalho mais rentável do pós-venda.</blockquote>`
           }
         ],
-        locked: true
+        locked: false
       }
     ]
   },
@@ -1412,7 +1412,7 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
 <blockquote>Ferramenta não substitui estratégia. Um funil mal pensado com as melhores ferramentas do mundo ainda vai falhar. Mas uma boa estratégia com ferramentas corretas escala sem esforço adicional. Invista em aprender o jogo antes de comprar o equipamento.</blockquote>`
           }
         ],
-        locked: true
+        locked: false
       }
     ]
   },
@@ -1694,7 +1694,7 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
 <blockquote>O maior inimigo do Meta Ads não é o algoritmo — é a impaciência. Campanhas que seriam vencedoras são pausadas antes de completar a aprendizagem. Dados sem paciência são apenas ruído.</blockquote>`
           }
         ],
-        locked: true
+        locked: false
       },
       {
         id: "meta-avancado",
@@ -1814,7 +1814,7 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
 <blockquote>Tratar o dashboard do Meta como verdade absoluta é o erro mais caro do tráfego pago. O Meta mede o que é conveniente para ele medir. Sua planilha, com dados da plataforma de venda + UTMs, é a fonte de verdade.</blockquote>`
           }
         ],
-        locked: true
+        locked: false
       }
     ]
   },
@@ -2073,7 +2073,7 @@ Celebre quem concluiu a primeira semana. Mesmo que seja pequeno. Reconhecimento 
 <blockquote>O NexOS não é uma promessa de resultado — é uma alavanca de execução. Quanto mais você domina a metodologia que aprendeu neste portal, mais inteligentemente você usa a plataforma. Você é o estrategista; o NexOS é o time de execução.</blockquote>`
           }
         ],
-        locked: true
+        locked: false
       }
     ]
   },
@@ -2390,7 +2390,7 @@ Venda
 </ul>`
           }
         ],
-        locked: true
+        locked: false
       },
       {
         id: "algoritmo-instagram-profundo",
@@ -2507,7 +2507,7 @@ Venda
 <p>Com esse sistema e conteúdo de qualidade, crescimento de 500-2.000 seguidores por mês no nicho certo é consistentemente alcançável.</p>`
           }
         ],
-        locked: true
+        locked: false
       },
       {
         id: "algoritmo-youtube-profundo",
@@ -2624,7 +2624,7 @@ Venda
 </ul>`
           }
         ],
-        locked: true
+        locked: false
       },
       {
         id: "algoritmo-facebook-google",
@@ -2727,7 +2727,7 @@ A pessoa quer agir: "comprar curso de lançamento digital", "assinar plataforma 
 </ul>`
           }
         ],
-        locked: true
+        locked: false
       },
       {
         id: "algoritmo-dominio-total",
@@ -2886,7 +2886,7 @@ A pessoa quer agir: "comprar curso de lançamento digital", "assinar plataforma 
 <blockquote>O produtor que vence algoritmicamente não é o que sabe tudo sobre os algoritmos — é o que tem um sistema de aprendizado contínuo, testa hipóteses com dados e otimiza consistentemente. Você acabou de adquirir o mapa. O caminho é construído com execução.</blockquote>`
           }
         ],
-        locked: true
+        locked: false
       },
       {
         id: "segredo-redes-sociais",
@@ -3713,6 +3713,65 @@ Conta Eduzz
 <tr><td>Recuperação abandonado</td><td>Básica</td><td>✓ Melhor</td><td>Básica</td></tr>
 <tr><td>Ticket alto (+R$2k)</td><td>✓ Funciona</td><td>✓ Funciona</td><td>Funciona</td></tr>
 </table>`
+          },
+          {
+            id: "asaas-configuracao",
+            title: "Asaas: Gateway Financeiro Completo para Negócios Digitais",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Asaas vs. Hotmart/Kiwify: quando usar cada um", "PIX, boleto, cartão e recorrência no Asaas", "Criando cobranças e links de pagamento", "Asaas como plataforma de gestão financeira do negócio", "API Asaas: automatizando cobranças e liberação de acesso"],
+            content: `<h2>Asaas: O Gateway que Vai Além do Infoproduto</h2>
+<p>Enquanto Hotmart e Kiwify são plataformas de infoprodutos (marketplace + processamento), o Asaas é um gateway financeiro completo — desenvolvido para negócios que precisam de mais controle sobre recebimentos, faturamento e gestão financeira.</p>
+
+<h3>Quando Usar Asaas (vs. Hotmart/Kiwify)</h3>
+<table>
+<tr><th>Cenário</th><th>Use Asaas</th><th>Use Hotmart/Kiwify</th></tr>
+<tr><td>Venda de serviços + produtos juntos</td><td>✓ Ideal</td><td>Limitado a produtos digitais</td></tr>
+<tr><td>Assinatura/recorrência com controle total</td><td>✓ Ideal</td><td>Funciona, mas menos flexível</td></tr>
+<tr><td>Marketplace com afiliados</td><td>Não tem</td><td>✓ Ideal</td></tr>
+<tr><td>Área de membros nativa</td><td>Não tem</td><td>✓ Hotmart tem</td></tr>
+<tr><td>PIX sem taxa por transação</td><td>✓ PIX gratuito em planos pagos</td><td>Taxa por transação</td></tr>
+<tr><td>Gestão financeira completa (DRE, fluxo de caixa)</td><td>✓ Nativo</td><td>Não tem</td></tr>
+<tr><td>Cobrança de clientes B2B</td><td>✓ Ideal</td><td>Não é o foco</td></tr>
+<tr><td>Split de pagamentos (parceria/co-autoria)</td><td>✓ Tem</td><td>Via afiliados</td></tr>
+</table>
+
+<h3>Estrutura de Taxas Asaas</h3>
+<p>O Asaas opera em 3 planos:</p>
+<ul>
+  <li><strong>Gratuito:</strong> PIX 1,99%, Boleto R$1,99/unidade, Cartão 3,49% + R$0,49</li>
+  <li><strong>Standard (R$49,90/mês):</strong> PIX 0,99%, Boleto R$1,49, Cartão 2,99% + R$0,49</li>
+  <li><strong>Business (R$199,90/mês):</strong> PIX 0%, Boleto R$0,99, Cartão 2,49% + R$0,49</li>
+</ul>
+<p>Comparando com Hotmart (9,9% + R$1): para produtos acima de R$200 com volume consistente, o Asaas no plano Business é significativamente mais barato.</p>
+
+<h3>Criando um Link de Pagamento no Asaas</h3>
+<ol>
+  <li>Asaas → Cobranças → Criar Cobrança → Link de Pagamento</li>
+  <li>Configure: nome do produto, valor, formas de pagamento aceitas</li>
+  <li>Recorrência: ative se for assinatura, defina ciclo (mensal/trimestral/anual) e número de parcelas</li>
+  <li>Copie o link gerado e use em anúncios, WhatsApp ou email</li>
+  <li>Personalize a página de pagamento: logo, cores, texto de confirmação</li>
+</ol>
+
+<h3>Automação via API Asaas</h3>
+<p>O Asaas tem API REST completa que permite:</p>
+<ul>
+  <li>Criar cobranças automaticamente quando um lead converte (via Zapier/Make)</li>
+  <li>Liberar acesso a conteúdo quando pagamento é confirmado (webhook de confirmação)</li>
+  <li>Cancelar acesso quando assinatura cancela (webhook de cancelamento)</li>
+  <li>Enviar boleto por WhatsApp automaticamente via integração com Z-API</li>
+</ul>
+<p>Webhook Asaas: configure em Configurações → Notificações → Webhook. Eventos principais: <code>PAYMENT_CONFIRMED</code>, <code>PAYMENT_OVERDUE</code>, <code>SUBSCRIPTION_INACTIVATED</code>.</p>
+
+<h3>Asaas + Área de Membros Externa</h3>
+<p>Como o Asaas não tem área de membros, você precisa integrar com plataformas externas:</p>
+<ul>
+  <li>Memberkit, Ead Plataforma, Hotmart Sparkle (só área de membros): recebem o evento de pagamento via webhook e liberam acesso automaticamente</li>
+  <li>Via Zapier: Asaas Webhook → ferramenta de membros → liberar acesso + enviar credenciais por email</li>
+</ul>
+
+<blockquote>Use Asaas como gateway principal quando você vende serviços + produtos, quando quer controle total da gestão financeira, ou quando o volume de vendas torna as taxas das plataformas de infoproduto proibitivas. Para um negócio fazendo R$100k/mês, a diferença de taxa pode ser R$5.000-8.000/mês em favor do Asaas.</blockquote>`
           },
           {
             id: "checkout-email-whatsapp-flow",
@@ -4822,6 +4881,1121 @@ ROAS esperado: R$100.000 ÷ R$4.167 = 24x
 </ul>
 
 <p><em>Este cronograma completo, com todos os itens do checklist marcados, é o que separa um lançamento profissional de um lançamento amador. O trabalho que você faz antes do carrinho abrir determina quanto você vai faturar quando ele abrir.</em></p>`
+          }
+        ],
+        locked: false
+      }
+    ]
+  },
+
+  // ══════════════════════════════════════════════════════════════════
+  // MÓDULO 9 — COPYWRITING E PERSUASÃO: A CIÊNCIA DE CONVERTER PALAVRAS EM VENDAS
+  // ══════════════════════════════════════════════════════════════════
+  {
+    id: "copywriting-persuasao",
+    number: 9,
+    title: "Copywriting e Persuasão: A Ciência de Converter Palavras em Vendas",
+    description: "A habilidade que multiplica o resultado de tudo que você já aprendeu. Copy não é dom — é estrutura, psicologia e técnica testável. Aqui você aprende as fórmulas, os gatilhos e os casos reais internacionais que documentaram o poder das palavras certas no momento certo.",
+    badge: "Copy",
+    chapters: [
+
+      // ── CAPÍTULO 28: GATILHOS MENTAIS APLICADOS ──
+      {
+        id: "gatilhos-aplicados",
+        number: 28,
+        title: "Gatilhos Mentais Aplicados: Do Conceito ao Copy Real",
+        subtitle: "Os 12 gatilhos do NexOS em profundidade — com exemplos reais e templates prontos",
+        icon: "🧠",
+        color: "from-purple-800 to-pink-900",
+        duration: "2h",
+        summary: "Listar gatilhos mentais é fácil. Saber usá-los no copy certo, no momento certo, para o público certo — isso é o que separa um copy de R$10k de um copy de R$1M. Este capítulo vai fundo em cada gatilho com exemplos reais e templates aplicáveis imediatamente.",
+        lessons: [
+          {
+            id: "autoridade-prova-social-aplicados",
+            title: "Autoridade e Prova Social: Os Dois Gatilhos que Vencem o Ceticismo",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Por que o cérebro obedece à autoridade sem questionar", "Tipos de autoridade: credencial, resultados, terceiros, mídia", "Prova social: números, depoimentos, casos e o efeito manada", "Como usar sem mentir: a linha entre persuasão e manipulação", "Templates prontos para 5 formatos de prova social"],
+            content: `<h2>A Hierarquia da Confiança no Mercado Digital</h2>
+<p>Robert Cialdini documentou no livro "Influence" (1984) um experimento que mudou o marketing: quando médicos prescreviam, as enfermeiras obedeciam automaticamente — mesmo quando a prescrição estava errada. O título de "Dr." ativava um bypass no sistema crítico do cérebro.</p>
+<p>No marketing digital, funciona da mesma forma. O consumidor está sobrecarregado de informação e usa atalhos cognitivos para decidir em quem confiar. Autoridade e Prova Social são os dois atalhos mais poderosos.</p>
+
+<h3>Os 4 Tipos de Autoridade que Funcionam no Mercado PT-BR</h3>
+<p><strong>1. Autoridade de Credencial:</strong> Formação, certificações, histórico profissional.<br/>
+Template: <em>"Depois de 12 anos como [profissão] e [número] de clientes atendidos..."</em></p>
+<p><strong>2. Autoridade de Resultado Próprio:</strong> Você mesmo alcançou o resultado que ensina.<br/>
+Template: <em>"Eu fui de R$3.200/mês de salário para R$87.000/mês no primeiro ano usando exatamente este método."</em></p>
+<p><strong>3. Autoridade de Terceiros (Social Proof de Especialistas):</strong> Quem você conhece, quem validou seu trabalho.<br/>
+Template: <em>"Método validado por [autoridade reconhecida] como 'o sistema mais completo disponível'"</em></p>
+<p><strong>4. Autoridade de Mídia:</strong> Onde você apareceu — mas use com honestidade.<br/>
+Template: <em>"Como visto em [veículo] — [o que foi dito sobre você/seu método]"</em></p>
+
+<h3>Prova Social: Os 5 Formatos por Força Persuasiva</h3>
+<table>
+<tr><th>Formato</th><th>Força</th><th>Quando usar</th></tr>
+<tr><td>Depoimento em vídeo com nome, foto e resultado específico</td><td>★★★★★</td><td>Página de vendas, VSL</td></tr>
+<tr><td>Resultado documentado (print de receita, de ranking)</td><td>★★★★☆</td><td>Redes sociais, anúncios</td></tr>
+<tr><td>Depoimento escrito com nome completo e foto</td><td>★★★☆☆</td><td>Email, landing page</td></tr>
+<tr><td>Número de clientes/alunos ("mais de X pessoas")</td><td>★★☆☆☆</td><td>Headline, bio</td></tr>
+<tr><td>Depoimento anônimo</td><td>★☆☆☆☆</td><td>Evitar — mata credibilidade</td></tr>
+</table>
+
+<h3>Template: Como Pedir um Depoimento que Converte</h3>
+<p>O depoimento ruim: "Adorei o curso, recomendo a todos! — Maria S."</p>
+<p>O depoimento que vende: "Antes do [produto], eu tentava faturar R$10k por mês há 2 anos e nunca chegava. Três semanas depois de aplicar o método do módulo 3, fechei R$34.800 em um único lançamento. O que mudou foi [detalhe específico]. — Maria Silva, 34 anos, [cidade], coach de carreira"</p>
+<p>Peça ao aluno que responda 3 perguntas:</p>
+<ol>
+  <li>Qual era sua situação ANTES do [produto]?</li>
+  <li>Qual foi o resultado específico que você alcançou DEPOIS?</li>
+  <li>O que mais te surpreendeu no processo?</li>
+</ol>`
+          },
+          {
+            id: "escassez-urgencia-aplicados",
+            title: "Escassez e Urgência: O Gatilho que Quebra a Procrastinação",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["A neurociência da procrastinação e como a escassez a vence", "Escassez real vs. falsa: o custo de mentir para sua lista", "Urgência de tempo: como criar deadlines que o mercado acredita", "Escassez de vagas vs. bônus vs. preço: quando usar cada uma", "O script de fechamento de carrinho com 3 camadas de urgência"],
+            content: `<h2>Por que as Pessoas Compram nos Últimos 2 Dias (e o que Fazer a Respeito)</h2>
+<p>Análise de dados de 100+ lançamentos no mercado PT-BR mostra consistentemente: 30-40% da receita total de um lançamento acontece no último dia de carrinho. A maioria dessas vendas ocorre nas últimas 2 horas.</p>
+<p>Isso não é acidente — é neurociência. O cérebro humano adia decisões enquanto existir a opção de decidir depois. Quando essa opção desaparece, ele age. A escassez e a urgência são os gatilhos que removem a opção de "decidir depois".</p>
+
+<h3>A Regra de Ouro: Escassez Só Funciona Quando é Real</h3>
+<p>Mercado PT-BR já está educado. "Só 10 vagas" em página com tráfego de 50.000 visitantes, para um produto digital que não tem limite físico — ninguém acredita. E quando não acredita no gatilho, não acredita em nada mais que você diz.</p>
+<p><strong>Escassez real que funciona:</strong></p>
+<ul>
+  <li>Bônus com limitação real: "As primeiras 50 compras ganham uma sessão 1:1 comigo" (você tem 50 horas disponíveis — é real)</li>
+  <li>Preço com data de expiração: "R$997 até sexta. Depois volta para R$1.497" (mude o preço de fato)</li>
+  <li>Turma fechada: "A próxima turma abre em 6 meses" (se for verdade)</li>
+  <li>Acesso antecipado: "Primeiros 100 ganham acesso a [módulo bônus]" (se existir o módulo)</li>
+</ul>
+
+<h3>O Script de 3 Camadas para Fechamento de Carrinho</h3>
+<p><strong>Camada 1 — Urgência de Bônus (D-2):</strong><br/>
+"Os bônus [X], [Y] e [Z] saem amanhã à meia-noite. Quem entrar depois paga o mesmo preço mas não tem acesso a essas três adições — no total R$847 em bônus que vão embora em 36 horas."</p>
+<p><strong>Camada 2 — Urgência de Preço (D-1):</strong><br/>
+"Amanhã é o último dia com este preço. Na segunda-feira [produto] volta para R$1.997 — o mesmo que nossos alunos antigos pagaram. Você está a 24 horas de economizar R$1.000."</p>
+<p><strong>Camada 3 — Urgência de Acesso (Último Dia, às 22h):</strong><br/>
+"Em 2 horas o carrinho fecha automaticamente. Não tem prorrogação, não tem extensão — o sistema bloqueia a compra à meia-noite. Esta é a última vez que envio esta mensagem."</p>
+<p>E feche de verdade. Quem tenta comprar às 00:05 e não consegue aprende que você é confiável. Na próxima abertura, age mais cedo.</p>`
+          },
+          {
+            id: "reciprocidade-antecipacao-aplicados",
+            title: "Reciprocidade, Antecipação e Curiosidade: Os Gatilhos de Aquecimento",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Reciprocidade: o princípio de Dale Carnegie aplicado ao marketing", "Como entregar valor antes de pedir a venda", "Antecipação: criando expectativa que vende antes do carrinho abrir", "Curiosidade: o loop aberto que mantém a lista engajada", "Contraste: comparando para justificar o preço"],
+            content: `<h2>Os Gatilhos que Vendem Antes do Carrinho Abrir</h2>
+<p>Um lançamento bem executado começa a vender antes do carrinho abrir. O gatilho de reciprocidade, quando ativado corretamente, faz a lista sentir que "deve" uma chance ao produto antes de ver qualquer argumento de venda.</p>
+
+<h3>Reciprocidade: A Dívida que Vende</h3>
+<p>Robert Cialdini documentou em "Influence": voluntários que receberam uma Coca-Cola "por acidente" compraram 2x mais rifas do que os que não receberam. O valor da Coca-Cola era R$2 equivalente. As rifas custavam R$15. A proporção não importou — o gatilho de dívida sim.</p>
+<p>No marketing digital: entregue conteúdo genuinamente útil gratuitamente — um tutorial completo, uma planilha real, um framework que funciona — antes de qualquer venda. A lista que recebeu valor sem pagar sente a dívida cognitiva de reciprocidade.</p>
+<p><strong>Template de sequência de reciprocidade:</strong></p>
+<pre>
+D-14: Tutorial completo (valor real, não isca vazia)
+D-11: Planilha ou template pronto para usar
+D-8: Webinar gratuito com conteúdo de verdade
+D-5: Mini-guia PDF com insights exclusivos
+D+0: Oferta de venda
+</pre>
+
+<h3>Antecipação: O Loop que Não Fecha</h3>
+<p>O cérebro humano tem dificuldade com loops abertos — ele busca completar padrões. Use isso:</p>
+<ul>
+  <li>"Na próxima semana vou revelar o método que uso para [resultado] — e que nunca ensinei antes"</li>
+  <li>"Parte 1 de 3: [conteúdo incompleto que gera pergunta sobre o que vem a seguir]"</li>
+  <li>"Você vai entender o porquê disso quando eu revelar o passo 2 — fique de olho no próximo email"</li>
+</ul>
+
+<h3>Contraste: Fazendo o Preço Parecer Pequeno</h3>
+<p>Nenhum preço existe no vácuo — todo preço é avaliado em comparação a algo. Controle a comparação:</p>
+<ul>
+  <li>"Uma consultoria comigo de 1h custa R$3.000. Você tem acesso a 60 horas por R$997."</li>
+  <li>"Um MBA custa R$40.000 e 2 anos. Este método entrega os resultados práticos em 30 dias por R$1.497."</li>
+  <li>"Se aplicar o método uma única vez e faturar R$10k, o investimento de R$997 retorna em 30 dias."</li>
+</ul>`
+          },
+          {
+            id: "medo-perda-transformacao-aplicados",
+            title: "Medo de Perda e Transformação: Os Gatilhos que Movem a Decisão Final",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Loss aversion: por que perder dói mais do que ganhar satisfaz", "Transformação: vendendo o antes/depois, não o produto", "Identidade: quando o produto se torna parte de quem a pessoa quer ser", "Como combinar medo de perda + transformação em um mesmo copy", "O parágrafo de fechamento que combina todos os gatilhos"],
+            content: `<h2>Loss Aversion: A Descoberta que Mudou o Marketing</h2>
+<p>Daniel Kahneman e Amos Tversky documentaram em 1979 (Prospect Theory — Prêmio Nobel de Economia 2002): perder R$100 gera o dobro do impacto psicológico que ganhar R$100. Não é 1:1 — é 2:1. Perder dói duas vezes mais do que ganhar satisfaz.</p>
+<p>Implicação direta: copy que foca no que o lead perde ao não comprar converte melhor que copy que foca no que ganha ao comprar.</p>
+
+<h3>Reescrevendo Benefícios como Perdas</h3>
+<table>
+<tr><th>Copy orientado a ganho (fraco)</th><th>Copy orientado a perda (forte)</th></tr>
+<tr><td>"Você vai faturar R$10k por mês"</td><td>"Cada mês que passa sem sistema é R$10k que ficou na mesa"</td></tr>
+<tr><td>"Aprenda a criar anúncios que convertem"</td><td>"Sem esse conhecimento, você continuará pagando 3x mais por lead do que deveria"</td></tr>
+<tr><td>"Ganhe mais tempo com automação"</td><td>"Você está perdendo 15 horas/semana em tarefas que poderiam ser automáticas"</td></tr>
+</table>
+
+<h3>Transformação: Não Venda o Produto — Venda o Depois</h3>
+<p>Ninguém compra um curso. Ninguém compra uma ferramenta. As pessoas compram quem elas vão se tornar ao usar o produto.</p>
+<p>Steve Jobs não vendia MP3 players — vendia "1.000 músicas no seu bolso".<br/>
+Nike não vende tênis — vende a identidade do atleta que vence.<br/>
+Você não vende um curso de copywriting — vende a capacidade de nunca mais precisar de ninguém para escrever copy que converte.</p>
+<p><strong>Template de parágrafo de transformação:</strong><br/>
+"Imagina [resultado concreto em cenário detalhado]. Imagina [segundo resultado que descreve o estilo de vida]. Essa é a realidade de quem domina [o que o produto ensina]. É onde [aluno X] chegou depois de [tempo]. É onde você pode estar em [tempo realista] — se você agir hoje."</p>
+
+<h3>O Parágrafo de Fechamento Definitivo</h3>
+<p>Combine todos os gatilhos no parágrafo final da VSL ou email de fechamento:</p>
+<blockquote>
+"Você chegou até aqui porque algo nessa história ressoou com você [autoridade/empatia]. Mais de [X] pessoas já fizeram essa escolha e estão colhendo resultados [prova social]. O carrinho fecha em [tempo] — depois disso, volta para R$[preço maior] [urgência real]. Cada dia que passa é [perda concreta] [loss aversion]. Você merece ver como é do outro lado [transformação]. A decisão é sua — e você já sabe o que quer fazer."
+</blockquote>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 29: ESTRUTURAS DE COPY ──
+      {
+        id: "estruturas-copy",
+        number: 29,
+        title: "Estruturas de Copy: Fórmulas, Headlines e CTAs para Cada Canal",
+        subtitle: "O arsenal completo de copy — da bio do Instagram à página de vendas de R$1M",
+        icon: "✍️",
+        color: "from-indigo-800 to-violet-900",
+        duration: "2h 20min",
+        summary: "Copy não é criatividade — é estrutura. As mesmas fórmulas que David Ogilvy usou em 1955 funcionam no Instagram de 2025 porque a psicologia humana não mudou. Aqui você aprende a estrutura por trás de cada formato de copy e como adaptar para cada canal.",
+        lessons: [
+          {
+            id: "copy-landing-page",
+            title: "Copy de Landing Page e Página de Vendas: Do Headline ao Fechamento",
+            duration: "32 min",
+            type: "text",
+            keyPoints: ["A hierarquia de atenção em uma página de vendas", "O headline que para o scroll: 8 fórmulas testadas", "Seção de benefícios vs. features: a diferença que dobra a conversão", "A seção de objeções: antecipe e destrua antes que apareçam", "O CTA perfeito: texto, cor, posição e repetição"],
+            content: `<h2>A Estrutura da Página de Vendas que Converte</h2>
+<p>David Ogilvy escreveu para a Rolls-Royce em 1958: "At 60 miles an hour the loudest noise in the new Rolls-Royce comes from the electric clock." Esse anúncio de uma linha vendeu mais Rolls-Royces do que qualquer campanha anterior. Por quê? Porque o headline era tão específico, tão credível e tão orientado ao benefício do comprador que passou imediatamente pelo filtro do ceticismo.</p>
+<p>A estrutura de uma boa página de vendas segue essa mesma lógica: cada elemento passa pelo filtro "por que o leitor se importaria com isso?"</p>
+
+<h3>A Hierarquia de uma Página de Vendas</h3>
+<pre>
+1. HEADLINE (a promessa principal — único elemento que determina se leem o resto)
+2. SUBHEADLINE (expande e especifica a promessa)
+3. VÍDEO DE VSL ou ABERTURA DE COPY (história + identificação com a dor)
+4. AGITAÇÃO DO PROBLEMA (consequências de não resolver)
+5. APRESENTAÇÃO DA SOLUÇÃO (o produto como transformação)
+6. O QUE ESTÁ DENTRO (módulos, lições, bônus)
+7. PROVA SOCIAL (depoimentos com resultados específicos)
+8. SOBRE O CRIADOR (credenciais que importam para ESTE público)
+9. OFERTA + PREÇO (com stack de valor e âncora de preço)
+10. GARANTIA (remove o risco da decisão)
+11. URGÊNCIA E ESCASSEZ (razão para agir agora)
+12. FAQ (destrói as 5 principais objeções)
+13. CTA FINAL (instrução clara)
+</pre>
+
+<h3>Headlines: As 8 Fórmulas de Alto Impacto</h3>
+<ol>
+  <li><strong>Benefício + Especificidade:</strong> "Como Gerar R$23.400 em 7 Dias Usando Apenas o Celular e Sem Investir em Anúncios"</li>
+  <li><strong>Segredo/Revelação:</strong> "O Método que 347 Produtores Usam em Silêncio para Lançar R$500k Enquanto a Maioria Lança R$50k"</li>
+  <li><strong>Pergunta com Dor:</strong> "Você Cria Conteúdo Todo Dia e Ainda Assim Não Consegue Vender? Aqui Está o Motivo Real"</li>
+  <li><strong>Aviso:</strong> "AVISO: Se Você Está Usando Copywriting Tradicional em 2025, Está Perdendo 60% das Suas Vendas"</li>
+  <li><strong>Quem Mais Quer:</strong> "Quem Mais Quer Lançar um Produto Digital e Faturar R$10k no Primeiro Mês?"</li>
+  <li><strong>Prova pelo Número:</strong> "2.847 Alunos Faturaram Mais de R$100k Usando Esta Fórmula em 12 Meses"</li>
+  <li><strong>Como + Sem:</strong> "Como Dobrar Suas Vendas Sem Aumentar o Orçamento de Anúncios"</li>
+  <li><strong>Antes/Depois:</strong> "De Professora Municipal de R$2.800/mês a R$87.000 no Primeiro Lançamento"</li>
+</ol>
+
+<h3>Benefícios vs. Features: A Diferença que Dobra Conversão</h3>
+<table>
+<tr><th>Feature (fraco)</th><th>Benefício (forte)</th></tr>
+<tr><td>"15 horas de vídeo-aulas"</td><td>"Você implementa o método em 2 semanas sem precisar pausar a vida"</td></tr>
+<tr><td>"6 módulos de copywriting"</td><td>"Você nunca mais paga R$3k para um copywriter escrever sua página de vendas"</td></tr>
+<tr><td>"Planilha de métricas"</td><td>"Você vê em 5 minutos se sua campanha vai lucrar ou sangrar — sem precisar calcular nada"</td></tr>
+</table>
+
+<h3>CTAs que Funcionam</h3>
+<p>Evite: "Comprar", "Clique Aqui", "Saiba Mais"</p>
+<p>Use: verbos que descrevem o resultado ou a ação positiva:</p>
+<ul>
+  <li>"Quero [resultado]" → "Quero Dobrar Meu Faturamento"</li>
+  <li>"Começar [o resultado]" → "Começar Meu Primeiro Lançamento"</li>
+  <li>"Me inscrever em [transformação]" → "Me inscrever no Método"</li>
+  <li>"Garantir minha vaga" (escassez implícita)</li>
+  <li>"Acessar agora" (imediatismo)</li>
+</ul>`
+          },
+          {
+            id: "copy-anuncio-avancado",
+            title: "Copy de Anúncio Avançado: Meta Ads, Google e TikTok",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["A estrutura do anúncio de texto (primary text, headline, descrição)", "Hook de vídeo: os primeiros 3 segundos que determinam tudo", "Copy de anúncio para cada temperatura de público (frio, morno, quente)", "Testes A/B de copy: o que testar e como interpretar", "Os formatos de anúncio que mais vendem por objetivo"],
+            content: `<h2>Copy de Anúncio: Menos é Mais, Mas Precisa Ser Certo</h2>
+<p>Um anúncio tem 1,7 segundo para capturar atenção no feed (dado da Meta, 2023). Nesse tempo, o usuário decide subconscientemente: "isso me interessa ou rolo para o próximo?"</p>
+<p>Copy de anúncio não é sobre criatividade literária — é sobre interromper o padrão e gerar relevância em menos de 2 segundos.</p>
+
+<h3>Estrutura do Anúncio de Texto no Meta Ads</h3>
+<p><strong>Primary Text (o corpo):</strong> 125 caracteres antes do "ver mais" em mobile. Os primeiros 125 caracteres são tudo — se não capturar ali, o restante não será lido.</p>
+<p>Fórmulas para os primeiros 125 caracteres:</p>
+<ul>
+  <li><strong>Pergunta de dor:</strong> "Você está investindo em anúncios mas suas vendas ainda não decolaram? Aqui está o erro invisível que 90% dos produtores cometem."</li>
+  <li><strong>Declaração ousada:</strong> "Eu fui de R$1.800/mês em emprego fixo para R$64.000 no primeiro lançamento. Sem audiência prévia. Sem lista. Aqui está o método."</li>
+  <li><strong>Revelação:</strong> "A razão pela qual seu produto digital não vende não é o preço, não é a copy e não é o produto. É algo que a maioria nunca percebe."</li>
+</ul>
+
+<h3>Hook de Vídeo: Os 3 Segundos que Decidem Tudo</h3>
+<p>Para anúncios em vídeo, o hook (primeira fala ou texto na tela) é mais importante do que todo o resto combinado. Se não retém em 3 segundos, o algoritmo para de entregar.</p>
+<p><strong>Tipos de hook de alta retenção:</strong></p>
+<ul>
+  <li><strong>Declaração contraintuitiva:</strong> "Para de criar conteúdo. Sério."</li>
+  <li><strong>Número específico:</strong> "Esse método me deu R$127.400 em 11 dias"</li>
+  <li><strong>Pergunta direcionada:</strong> "Se você está tentando vender curso online, precisa ver isso"</li>
+  <li><strong>Objeção virada:</strong> "Não, você não precisa de audiência para lançar"</li>
+  <li><strong>Promessa rápida:</strong> "Em 90 segundos vou te mostrar o sistema que mudou meu negócio"</li>
+</ul>
+
+<h3>Copy por Temperatura de Público</h3>
+<table>
+<tr><th>Público</th><th>Copy focus</th><th>Duração</th></tr>
+<tr><td>Frio (não te conhece)</td><td>Dor/problema + prova social rápida</td><td>Curto — máximo impacto em 3 seg</td></tr>
+<tr><td>Morno (engajou mas não comprou)</td><td>Objeções + prova social + urgência</td><td>Médio — já conhece o problema</td></tr>
+<tr><td>Quente (visitou PV/checkout)</td><td>Urgência + benefício específico + garantia</td><td>Curto — já conhece a oferta</td></tr>
+</table>`
+          },
+          {
+            id: "copy-redes-sociais",
+            title: "Copy para Redes Sociais: Legendas, Bio e Carrossel que Convertem",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["A legenda de Instagram que vende sem parecer vender", "Bio: os 150 caracteres que convertem visitantes em seguidores", "Estrutura de carrossel que mantém swipe até o último slide", "Copy de Stories: sequência de engajamento e CTA", "O post de \"só para quem\" que hipersegmenta a audiência"],
+            content: `<h2>Copy Orgânico: Vendendo sem o Filtro de "É Anúncio"</h2>
+<p>Conteúdo orgânico tem um poder que anúncio não tem: ausência de ceticismo inicial. O usuário no feed orgânico não está em modo defensivo — está em modo de consumo. Copy orgânico que tenta "anunciar" perde esse privilégio imediatamente. O segredo é vender enquanto parece educar.</p>
+
+<h3>A Legenda que Educavende (Educa + Vende Simultaneamente)</h3>
+<p>Estrutura de legenda de alto engajamento e conversão:</p>
+<pre>
+Linha 1-2: Hook (parar o scroll — declaração ousada ou pergunta)
+Linha 3-5: O problema/situação que a audiência reconhece
+Linha 6-10: O insight/ensinamento real (valor genuíno)
+Linha 11-14: Aplicação prática (como usar)
+Linha 15-17: Soft CTA (não "compre" — "salve isso", "me responde", "se você quer X, comenta abaixo")
+</pre>
+
+<h3>Bio de Instagram que Converte</h3>
+<p>150 caracteres. Você tem 4 linhas. Use assim:</p>
+<pre>
+Linha 1: Quem você ajuda + resultado
+Linha 2: Como/método (credencial ou diferenciador)
+Linha 3: Prova social em número
+Linha 4: CTA para o link na bio
+</pre>
+<p>Exemplo ruim: "Coach | Mentora | Apaixonada por café ☕ | DM aberto"</p>
+<p>Exemplo bom: "Ajudo produtores digitais a lançar R$100k+ em 7 dias | Método da PLF Brasileira | 2.400 alunos | ↓ Acesse o método gratuito"</p>
+
+<h3>Estrutura de Carrossel que Completa</h3>
+<pre>
+Slide 1: Hook (a promessa que força o swipe)
+Slide 2: O problema (identificação)
+Slide 3-6: O conteúdo real (cada slide = 1 insight)
+Slide 7: A síntese (o mais importante dos slides)
+Slide 8: Prova social (resultado de quem aplicou)
+Slide 9: CTA (salvar + comentar + seguir)
+</pre>
+<p>Regra: cada slide deve ter motivo para avançar. Se o slide não cria curiosidade pelo próximo, você perdeu a atenção ali.</p>
+
+<h3>Copy de "Só Para Quem"</h3>
+<p>O post mais poderoso para qualificar audiência é a hipersegmentação por identidade:</p>
+<blockquote>
+"Este post é só para quem:
+→ Tem um produto digital ou está criando um
+→ Já tentou lançar e não chegou a R$30k
+→ Tem audiência mas ela não compra
+Se isso é você, leia com atenção o que vou compartilhar..."
+</blockquote>
+<p>Quem não está nesse público vai embora. Quem está lê tudo. Você perde alcance e ganha conversão.</p>`
+          },
+          {
+            id: "copy-email-whatsapp",
+            title: "Copy de Email e WhatsApp: A Voz que Chega no Mais Íntimo do Contato",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Subject line: os 50 caracteres que determinam se o email é aberto", "Copy de email: tom de conversa, não de panfleto", "A estrutura P.S. que funciona melhor que o corpo do email", "Copy de WhatsApp: pessoal sem ser invasivo", "Segmentação de copy: como mensagem diferente para hot/warm/cold"],
+            content: `<h2>Email e WhatsApp: Onde a Voz Importa Mais do que a Formatação</h2>
+<p>Email e WhatsApp têm uma característica única: chegam em espaços íntimos (inbox pessoal, celular). O usuário espera uma comunicação pessoal — não um banner de loja. Copy que ignora isso soa como spam, mesmo que tecnicamente não seja.</p>
+
+<h3>Subject Lines: A Taxa de Abertura é Determinada Aqui</h3>
+<p>Benchmark do mercado PT-BR: 25-35% de abertura é bom, acima de 40% é excelente, abaixo de 15% é problema de entregabilidade ou relevância.</p>
+<p><strong>Fórmulas de subject line de alta abertura:</strong></p>
+<ul>
+  <li><strong>Curiosidade simples:</strong> "isso me surpreendeu ontem"</li>
+  <li><strong>Urgência específica:</strong> "só hoje: bônus [X] sai à meia-noite"</li>
+  <li><strong>Personalização:</strong> "[NOME], você viu o resultado do [aluno]?"</li>
+  <li><strong>Pergunta de dor:</strong> "ainda não está funcionando?"</li>
+  <li><strong>Contradição:</strong> "por que você não deveria comprar [produto]"</li>
+  <li><strong>Número específico:</strong> "R$34.800 em 72 horas — aqui está como"</li>
+</ul>
+<p>Evite: CAPS LOCK excessivo, "!" em excesso, palavras de spam ("grátis", "urgente", "oferta"), subject lines acima de 50 caracteres (cortadas em mobile).</p>
+
+<h3>A Estrutura do Email que Lêem até o Final</h3>
+<pre>
+Linha 1: Abertura pessoal (nome ou referência ao dia/momento)
+Parágrafos 1-2: História ou contexto que conecta com a dor
+Parágrafo 3: O insight ou a revelação
+Parágrafo 4: Como isso se aplica ao leitor
+CTA: Claro e único (um único link, não vários)
+P.S.: A segunda parte mais lida de qualquer email
+</pre>
+<p>O P.S. (post-scriptum) é lido por 79% dos leitores (dado histórico de copy direto). Use para o argumento mais forte, não para algo secundário:</p>
+<p><em>"P.S. — Se você só ler uma coisa nesse email, que seja esta: o carrinho fecha às 23h59 de sexta. Depois disso, não tem como entrar no preço de hoje. [LINK]"</em></p>
+
+<h3>Copy de WhatsApp: Tom de Amigo, Substância de Vendedor</h3>
+<p>WhatsApp é o canal mais íntimo. Copy que soa como broadcast corporativo é deletado. Copy que soa como mensagem pessoal é lido.</p>
+<p>Regras:</p>
+<ul>
+  <li>Sempre comece com o nome (personalização mínima)</li>
+  <li>Parágrafos curtos — máximo 3 linhas por bloco</li>
+  <li>Uma mensagem = uma ideia</li>
+  <li>CTA na penúltima linha, não na última (a última cria espaço para resposta)</li>
+  <li>Sempre abra possibilidade de resposta: "me fala o que achou"</li>
+</ul>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 30: STORYTELLING COMO ARMA DE VENDA ──
+      {
+        id: "storytelling-vendas",
+        number: 30,
+        title: "Storytelling como Arma de Venda",
+        subtitle: "Por que histórias vendem mais do que argumentos — e como estruturar a sua",
+        icon: "📖",
+        color: "from-amber-800 to-orange-900",
+        duration: "1h 40min",
+        summary: "Números convençem mentes lógicas. Histórias convencem a mente emocional — que é quem de fato toma a decisão de compra. Toda VSL, todo email de abertura, toda live de lançamento que converte tem uma estrutura narrativa. Aqui você aprende essa estrutura.",
+        lessons: [
+          {
+            id: "jornada-heroi-marketing",
+            title: "A Jornada do Herói no Marketing: A Estrutura que Todo Copy de Conversão Usa",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Por que histórias ativam espelhos neurais (neurociência do storytelling)", "A Jornada do Herói de Joseph Campbell adaptada para VSL e copy", "Como posicionar o CLIENTE como herói (não você)", "O mentor como papel: você facilita, não resolve", "Estrutura da história de 8 atos para lançamentos"],
+            content: `<h2>Por que o Cérebro Compra Histórias, Não Produtos</h2>
+<p>Paul Zak (neurocientista, Claremont Graduate University) documentou em 2014: quando pessoas ouvem histórias com estrutura narrativa, o cérebro libera oxitocina — o hormônio da confiança e conexão. Quando ouvem listas de benefícios e dados, essa resposta não ocorre.</p>
+<p>Conclusão: histórias criam confiança neurologicamente. Argumentos lógicos não.</p>
+
+<h3>A Estrutura de Jornada do Herói no Copy de Lançamento</h3>
+<p>Joseph Campbell identificou em "O Herói de Mil Faces" (1949) que toda grande história segue a mesma estrutura. George Lucas a usou conscientemente em Star Wars. Todo marketer de elite a usa inconscientemente — ou conscientemente, quando aprende o padrão.</p>
+
+<p><strong>Adaptação para o copy de produto digital:</strong></p>
+<ol>
+  <li><strong>O Mundo Ordinário:</strong> A vida do herói (seu cliente) antes — o status quo que ele aceita mas não gosta. <em>"Você trabalha 60 horas por semana, ganha bem, mas sente que o teto chegou..."</em></li>
+  <li><strong>O Chamado à Aventura:</strong> O momento que muda tudo — quando o herói descobre que é possível mais. <em>"Então você descobriu que [pessoa similar] fez R$200k em 30 dias — e essa história não saiu da sua cabeça..."</em></li>
+  <li><strong>A Recusa do Chamado:</strong> O herói hesita. Como seus clientes hesitam. <em>"Você pensou 'isso não é pra mim', 'meu nicho é diferente', 'não tenho audiência'..."</em></li>
+  <li><strong>O Mentor:</strong> Alguém (você) aparece com o método. <em>"Foi quando eu encontrei [método/pessoa] que entendi o que estava faltando..."</em></li>
+  <li><strong>A Travessia do Portal:</strong> O herói toma a decisão de mudar. <em>"Decidi que ia tentar de verdade — e apliquei o método exatamente como aprendi..."</em></li>
+  <li><strong>Testes, Aliados, Inimigos:</strong> Os obstáculos reais. <em>"Não foi perfeito. O primeiro lançamento deu R$12k — longe da meta. Mas o segundo..."</em></li>
+  <li><strong>A Provação:</strong> O momento mais difícil antes da virada. <em>"Estava prestes a desistir quando..."</em></li>
+  <li><strong>A Recompensa:</strong> O resultado — que é o resultado que seu cliente quer alcançar. <em>"R$287.000 em 7 dias. Mais do que eu ganhava em 2 anos."</em></li>
+</ol>
+
+<h3>O Erro Fatal: Você Não é o Herói — Seu Cliente É</h3>
+<p>O erro mais comum em copy de lançamento: o criador se posiciona como herói ("olha o que eu fiz, olha meu resultado"). O cliente não se identifica com o herói — se identifica com quem ele era antes de se tornar herói.</p>
+<p>Posicione-se como Gandalf, não como Frodo. Como Yoda, não como Luke. Você é o mentor que equipa o herói para a jornada — e o herói é seu cliente.</p>`
+          },
+          {
+            id: "historia-origem-fundadora",
+            title: "A História de Origem: Como Contar Sua Jornada de Forma que Vende",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Por que sua história pessoal é seu ativo mais valioso", "Os 4 elementos que tornam uma história de origem irresistível", "Como ser vulnerável sem perder autoridade", "A história de \"antes e depois\" que conecta com diferentes avatares", "Template: escreva sua história de origem em 500 palavras"],
+            content: `<h2>Sua História É a Prova Mais Poderosa de Que o Método Funciona</h2>
+<p>Nenhum depoimento de aluno é mais persuasivo do que a história autêntica do criador — porque ela responde à objeção mais fundamental: "se isso funciona, por que você precisou aprender?"</p>
+
+<h3>Os 4 Elementos da História de Origem que Vende</h3>
+<p><strong>1. O Vale (o fundo do poço):</strong> Onde você estava antes. Quanto mais específico e reconhecível pelo seu avatar, melhor. Não "estava passando por dificuldades" — "estava com R$400 na conta, contas em atraso e com vergonha de encontrar conhecidos".</p>
+<p><strong>2. O Catalisador (o momento de virada):</strong> O evento específico que forçou a mudança. Uma demissão, uma conta que venceu, uma conversa que abriu os olhos. Dê data, local, detalhes sensoriais.</p>
+<p><strong>3. A Descoberta (o método):</strong> Como você encontrou a solução. Não foi fácil — enfatize o custo (tempo, dinheiro, tentativas) antes de chegar no método que funcionou.</p>
+<p><strong>4. A Transformação (o resultado):</strong> O depois com números específicos e mudança de identidade. Não só "faturei mais" — "pela primeira vez em 5 anos, tirei férias sem trabalhar".</p>
+
+<h3>Template: Sua História de Origem em 500 Palavras</h3>
+<pre>
+PARÁGRAFO 1 (O Vale): "Em [data/período], eu estava [situação específica com detalhes]."
+PARÁGRAFO 2 (A Dor): "A sensação era [emoção honesta]. Eu tentei [o que você tentou antes] mas [por que não funcionou]."
+PARÁGRAFO 3 (O Catalisador): "Foi quando [evento específico] que eu percebi que precisava mudar."
+PARÁGRAFO 4 (A Descoberta): "Comecei a [a jornada de descoberta]. Falhei em [tentativas anteriores]. Então encontrei [o insight/método]."
+PARÁGRAFO 5 (A Aplicação): "Implementei [o que você fez]. Os primeiros resultados foram [resultado inicial honesto]."
+PARÁGRAFO 6 (A Transformação): "Hoje, [o resultado completo com números]. Mas mais do que isso: [a mudança de identidade/estilo de vida]."
+PARÁGRAFO 7 (A Conexão): "Se você está onde eu estava em [data], eu sei exatamente como você se sente. E eu sei que [o que é possível] — porque eu passei pelo mesmo caminho."
+</pre>
+
+<blockquote>Vulnerabilidade calculada é a forma mais poderosa de autoridade. Mostrar que você passou pelo fracasso — e sobreviveu — é mais persuasivo do que qualquer credencial acadêmica.</blockquote>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 31: PROVA SOCIAL — CASOS INTERNACIONAIS DOCUMENTADOS ──
+      {
+        id: "prova-social-internacional",
+        number: 31,
+        title: "Prova Social Internacional: Casos Reais Documentados e Como Replicar",
+        subtitle: "Os estudos de caso que provam — com dados — que copy e persuasão são ciência",
+        icon: "🌎",
+        color: "from-teal-800 to-cyan-900",
+        duration: "2h",
+        summary: "Estes não são casos inventados ou generalizações. São campanhas documentadas com dados reais, publicados em livros, artigos acadêmicos, relatórios públicos e declarações das próprias empresas. Estudar o que funcionou — e por quê — é a forma mais eficiente de aprender copy.",
+        lessons: [
+          {
+            id: "casos-ogilvy-halbert",
+            title: "David Ogilvy e Gary Halbert: Os Fundadores do Copy Moderno",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["O anúncio de Rolls-Royce de Ogilvy (1958) e por que funcionou", "O Princípio da Especificidade: dados são mais persuasivos do que adjetivos", "A Carta do Colar de Gary Halbert: o copy direto mais estudado da história", "A-pile vs. B-pile: a estratégia de personalização que nenhum digital faz", "Como aplicar esses princípios em anúncios digitais de 2025"],
+            content: `<h2>Os Homens que Transformaram Copy em Ciência</h2>
+
+<h3>David Ogilvy e o Anúncio de Rolls-Royce (1958)</h3>
+<p>Em 1958, David Ogilvy escreveu o anúncio mais estudado da história da publicidade para a Rolls-Royce. O headline: <em>"At 60 miles an hour the loudest noise in the new Rolls-Royce comes from the electric clock."</em></p>
+<p>Resultado: A Rolls-Royce relatou aumento de 50% nas vendas nos EUA no ano seguinte ao anúncio.</p>
+<p><strong>Por que funcionou:</strong></p>
+<ul>
+  <li><strong>Especificidade extrema:</strong> "60 miles an hour" e "electric clock" — não "silencioso" ou "luxuoso". O específico cria credibilidade que o genérico não cria.</li>
+  <li><strong>Prova por implicação:</strong> Se o barulho mais alto é o relógio elétrico, a engenharia deve ser extraordinária. A conclusão é tirada pelo leitor — não empurrada por ele.</li>
+  <li><strong>Zero hipérbole:</strong> Ogilvy disse sobre esse anúncio: "Quando não tenho nada a dizer, não digo nada. Quando tenho algo a dizer, digo com fatos."</li>
+</ul>
+<p><strong>Aplicação digital:</strong> Troque adjetivos por dados. Em vez de "produto de alta qualidade", use "97,3% dos alunos completam o módulo 1 na primeira semana". Específico bate genérico em todas as métricas de conversão.</p>
+
+<h3>Gary Halbert e a Carta de Colar (1971)</h3>
+<p>Gary Halbert, considerado por muitos o maior copywriter de mala direta da história, criou em 1971 a "Coat of Arms Letter" — uma carta enviada a famílias americanas com o brasão do sobrenome delas personalizado no envelope.</p>
+<p><strong>Resultado documentado:</strong> Taxa de resposta de 2-3% em mala direta massiva (benchmark da época era 0,5-1%). Gerou mais de $1M em vendas no primeiro ano.</p>
+<p><strong>O Princípio A-pile vs. B-pile de Halbert:</strong></p>
+<blockquote>
+"Quando você abre seu correio, você faz dois montes. O A-pile tem cartas que você vai ler com certeza — de pessoas que você conhece, contas, coisas que parecem pessoais. O B-pile é lixo corporativo que vai direto para o lixo. A missão do copywriter é fazer o marketing entrar no A-pile."
+</blockquote>
+<p>No digital: email que parece pessoal (texto simples, sem banner, assunto conversacional) vai para o "A-pile" mental. Email que parece newsletter corporativa vai para spam — mental ou literal.</p>
+
+<h3>Claude Hopkins e a Cerveja Schlitz (1919)</h3>
+<p>Em "Scientific Advertising" (1923, domínio público), Hopkins descreveu como transformou a Schlitz de 8ª para 1ª cerveja nos EUA. O método: visitar a fábrica, descobrir como a cerveja era feita, e contar essa história no anúncio.</p>
+<p>A Schlitz usava vapor para esterilizar as garrafas — mas todas as marcas faziam isso. Ninguém tinha contado essa história ainda. Hopkins contou. Resultado: a percepção de "pureza" foi associada exclusivamente à Schlitz.</p>
+<p><strong>Lição aplicada:</strong> O que é óbvio para você sobre o seu produto pode ser fascinante para o seu cliente. Conte o que está por trás — o processo, a decisão, o detalhe técnico. "Óbvio" para o criador é frequentemente "surpreendente" para o comprador.</p>`
+          },
+          {
+            id: "casos-digitais-documentados",
+            title: "Dollar Shave Club, Dropbox e ConvertKit: Copy Digital que Mudou Mercados",
+            duration: "30 min",
+            type: "text",
+            keyPoints: ["Dollar Shave Club 2012: o vídeo de $4.500 que gerou $100M/ano em receita", "Dropbox referral: copy de convite que gerou 3.900% de crescimento em 15 meses", "ConvertKit: a proposta de valor que triplicou receita em 12 meses", "O que esses casos têm em comum que você pode replicar", "Como analisar campanhas internacionais para extrair princípios aplicáveis"],
+            content: `<h2>Três Campanhas Documentadas que Transformaram Indústrias</h2>
+
+<h3>Dollar Shave Club: O Vídeo de $4.500 que Vendeu Uma Empresa por $1 Bilhão</h3>
+<p>Em março de 2012, o Dollar Shave Club lançou um vídeo de 93 segundos produzido por $4.500. Michael Dubin, o CEO, escreveu o roteiro e protagonizou o vídeo.</p>
+<p><strong>Resultados documentados (relatório público da empresa):</strong></p>
+<ul>
+  <li>12.000 pedidos nas primeiras 48 horas após o lançamento</li>
+  <li>O site travou por horas com o volume</li>
+  <li>4,75 milhões de visualizações na primeira semana</li>
+  <li>Receita anual cresceu para $100M em 3 anos</li>
+  <li>Vendida para Unilever em 2016 por $1 bilhão</li>
+</ul>
+<p><strong>Por que o roteiro funcionou:</strong></p>
+<ul>
+  <li>Headline direto: "Our Blades Are F***ing Great" — sem eufemismo, sem corporativismo</li>
+  <li>Atacou o "vilão" explicitamente: "Do you think your razor needs a vibrating handle, a flashlight, a backscratcher, and 10 blades? Your handsome-ass grandfather had one blade... and polio."</li>
+  <li>Proposta única de valor em uma frase: "$1 a month. No commitment. Blades shipped to your door."</li>
+  <li>Humor que humanizou uma categoria completamente sem carisma</li>
+</ul>
+<p><strong>Lição replicável:</strong> Identifique o "absurdo" da indústria que seu cliente está aceitando sem questionar. Nomeie-o explicitamente. Posicione seu produto como a alternativa racional.</p>
+
+<h3>Dropbox Referral: O Copy de Convite que Gerou 3.900% de Crescimento</h3>
+<p>Em 2008, o Dropbox tinha 100.000 usuários. Em 15 meses, chegou a 4 milhões. Drew Houston (CEO) documentou publicamente em apresentações (incluindo no Y Combinator) como o crescimento aconteceu.</p>
+<p><strong>O mecanismo:</strong> Um sistema de indicação onde o remetente recebia 500MB de espaço extra e o indicado também. Mas o que impulsionou foi o copy da mensagem de convite:</p>
+<blockquote>
+"[NOME] quer compartilhar arquivos com você usando Dropbox. O Dropbox deixa você trazer seus arquivos a qualquer lugar e compartilhá-los facilmente. Você ganhará espaço extra de graça ao se registrar com este convite."
+</blockquote>
+<p>Simples. Pessoal. Benefício imediato claro. Sem jargão técnico.</p>
+<p><strong>Resultado:</strong> 35% dos usuários novos vieram de referral durante o período de crescimento de 3.900% (documentado pelo próprio Drew Houston em apresentação de 2010).</p>
+<p><strong>Lição replicável:</strong> Copy de indicação funciona quando o benefício para o remetente e para o indicado é claro, imediato e específico. Vague is broke. Specific converts.</p>
+
+<h3>ConvertKit: A Proposta de Valor que Triplicou Receita</h3>
+<p>Em 2014, Nathan Barry (fundador do ConvertKit) documentou publicamente em seu blog a estratégia que passou de $1.500/mês para $5.000/mês em MRR em 6 meses.</p>
+<p>A proposta de valor original (que não funcionava): "Email marketing para bloggers"</p>
+<p>A proposta reformulada (que triplicou a receita): <em>"Email marketing para criadores de conteúdo profissionais. Tudo o que você precisa de uma ferramenta de email — e nada do que você não precisa."</em></p>
+<p>Adicionou um elemento de serviço de migração: "Se você tem menos de 5.000 assinantes, eu pessoalmente faço a migração para o ConvertKit de graça." Nathan Barry fez isso manualmente por meses.</p>
+<p><strong>Resultado:</strong> O copy pessoal e a oferta de serviço humano geraram tração viral no nicho de blogueiros. O MRR chegou a $100k em 2015 e o ConvertKit ultrapassou $30M ARR em 2021 (dado público do próprio Nathan Barry).</p>
+<p><strong>Lição replicável:</strong> Uma oferta pessoal, com custo alto de tempo para o criador, mas que resolve especificamente o maior atrito da migração, pode ser o catalisador de crescimento. "Eu farei isso por você pessoalmente" é o copy mais poderoso que existe.</p>`
+          },
+          {
+            id: "casos-brasileiros-documentados",
+            title: "Casos Brasileiros Documentados: PLF, Hotmart e Lançamentos de Referência",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Jeff Walker e a PLF: o caso que criou o mercado de lançamentos", "Como o copy de lançamento brasileiro evoluiu da PLF americana", "Os princípios documentados dos maiores lançamentos PT-BR", "O que funciona diferente no mercado brasileiro vs. americano", "Como adaptar qualquer framework internacional para o contexto PT-BR"],
+            content: `<h2>A Genealogia do Copy de Lançamento Brasileiro</h2>
+
+<h3>Jeff Walker e a Product Launch Formula (1996-2005)</h3>
+<p>Jeff Walker documentou em detalhes no livro "Launch" (2014) como criou e testou a PLF ao longo de 9 anos. O ponto de partida: em 1996, ele enviou uma newsletter de investimentos para 19 pessoas. Em 2005, lançou um produto por $1M usando a mesma estrutura de sequência de pré-lançamento — agora chamada PLF.</p>
+<p><strong>O insight central documentado por Walker:</strong></p>
+<blockquote>
+"A revelação foi que eu poderia vender antes de ter o produto pronto — e as pessoas que compravam antecipadamente me diziam exatamente o que queriam aprender. Eu criava o produto baseado no que o mercado já havia demonstrado que compraria."
+</blockquote>
+<p>Este é o fundamento do Lançamento Semente — testado e documentado por Walker antes de ter nome.</p>
+
+<h3>As Diferenças Críticas: Mercado Americano vs. PT-BR</h3>
+<table>
+<tr><th>Aspecto</th><th>Mercado Americano</th><th>Mercado PT-BR</th></tr>
+<tr><td>Canal primário</td><td>Email dominante</td><td>WhatsApp + Instagram + Email</td></tr>
+<tr><td>Desconfiança</td><td>Moderada</td><td>Alta (histórico de pirâmides e promessas vazias)</td></tr>
+<tr><td>Storytelling</td><td>Mais racional/estrutural</td><td>Mais emocional/relacional</td></tr>
+<tr><td>Urgência</td><td>Timer funciona bem</td><td>Timer sozinho não basta — precisa de WhatsApp e relação</td></tr>
+<tr><td>Garantia</td><td>30 dias padrão</td><td>30-60 dias funciona melhor pela desconfiança maior</td></tr>
+<tr><td>Prova social</td><td>Nomes reconhecidos</td><td>Pessoas "como eu" superam celebridades</td></tr>
+</table>
+
+<h3>Princípios que Transcendem Mercados</h3>
+<p>Independente do país, esses princípios se confirmaram em todos os mercados documentados:</p>
+<ol>
+  <li><strong>Específico supera genérico</strong> sempre em taxas de conversão</li>
+  <li><strong>Relacionamento supera oferta</strong> — a lista que te conhece compra mais do que a lista fria com desconto maior</li>
+  <li><strong>Consistência de mensagem</strong> entre canais (o que você diz no email precisa ser o que você diz no WhatsApp e no anúncio)</li>
+  <li><strong>Reciprocidade antes de pedido</strong> — sempre entregue antes de pedir</li>
+  <li><strong>Fechamento não é opcional</strong> — quem não fecha, não vende. A maioria dos produtores perde 30-40% da receita por não fazer follow-up de fechamento</li>
+</ol>`
+          },
+          {
+            id: "como-coletar-prova-social",
+            title: "Como Coletar, Formatar e Usar Prova Social que Converte",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["O sistema de coleta de depoimentos que gera prova social automaticamente", "Formatos de depoimento por canal (vídeo, texto, print)", "Como pedir sem parecer desesperado: o template que funciona", "Usando dados agregados como prova social quando não tem depoimentos", "Ética na prova social: o que pode e o que não pode"],
+            content: `<h2>O Sistema de Coleta de Prova Social</h2>
+<p>Produtores que têm prova social não é porque têm mais alunos — é porque têm um sistema para coletá-la. Sem sistema, mesmo com 1.000 alunos satisfeitos, você não terá depoimentos quando precisar.</p>
+
+<h3>O Sistema Automático de Coleta de Depoimentos</h3>
+<p>Configure na sequência de onboarding:</p>
+<pre>
+D+3: Email "Quick win — me conta o seu resultado"
+D+14: Email "Resultado de 2 semanas — posso compartilhar?"
+D+30: Email formal de pedido de depoimento com formulário
+D+90: Pedido de depoimento em vídeo para os melhores resultados
+</pre>
+
+<h3>O Formulário de Depoimento que Gera Copy Pronto</h3>
+<p>Nunca peça "escreva um depoimento". Peça respostas para perguntas específicas:</p>
+<ol>
+  <li>Qual era sua situação/desafio ANTES de [produto]? (seja específico)</li>
+  <li>Qual foi o resultado ou mudança mais significativa DEPOIS? (com números se possível)</li>
+  <li>Qual foi o momento em que você percebeu que valeu a pena?</li>
+  <li>O que você diria para alguém que está em dúvida sobre [produto]?</li>
+  <li>Posso usar seu nome, cidade e foto? (sempre peça permissão explícita)</li>
+</ol>
+
+<h3>Quando Não Tem Depoimentos: Dados Agregados como Prova Social</h3>
+<p>Se você está começando e não tem depoimentos ainda:</p>
+<ul>
+  <li><strong>Número de downloads:</strong> "Mais de 2.400 downloads do guia gratuito em 30 dias"</li>
+  <li><strong>Resultados da pesquisa de mercado:</strong> "87% dos respondentes relataram [problema que você resolve]"</li>
+  <li><strong>Validação de pares/especialistas:</strong> "Revisado por [nome com credencial]"</li>
+  <li><strong>Resultado próprio documentado:</strong> Você é a prova mais honesta de que o método funciona</li>
+</ul>
+
+<h3>Ética na Prova Social: Linhas que Não Cruzar</h3>
+<ul>
+  <li>✗ Nunca invente ou exagere resultados</li>
+  <li>✗ Nunca use resultados excepcionais sem deixar claro que são excepcionais</li>
+  <li>✗ Nunca use nome de pessoa sem permissão explícita por escrito</li>
+  <li>✓ Sempre adicione: "Resultados variam. Estes são resultados de alunos dedicados e não são típicos."</li>
+  <li>✓ Use resultados reais — eles sempre são mais persuasivos do que os inventados, porque têm detalhes e imperfeições que criam credibilidade</li>
+</ul>
+
+<blockquote>A prova social mais poderosa é a que você não controlou. Um aluno que você não pediu que falasse e que publicou por conta própria — esse é o depoimento que converte mais. Crie os resultados, não os depoimentos. Os depoimentos aparecem naturalmente quando os resultados são reais.</blockquote>`
+          }
+        ],
+        locked: false
+      }
+    ]
+  },
+
+  // ══════════════════════════════════════════════════════════════════
+  // MÓDULO 10 — PRODUTO DIGITAL: AUDIÊNCIA, CRIAÇÃO E ENTREGA
+  // ══════════════════════════════════════════════════════════════════
+  {
+    id: "produto-digital",
+    number: 10,
+    title: "Produto Digital: Audiência, Criação e Entrega",
+    description: "O produto certo para o público certo muda tudo. Este módulo cobre o processo completo: como entender profundamente sua audiência, transformar esse entendimento em um produto que o mercado já quer comprar, validar antes de criar, escolher a plataforma correta e entregar uma experiência que retém e gera indicações.",
+    badge: "Produto",
+    chapters: [
+
+      // ── CAPÍTULO 32: ENTENDENDO SUA AUDIÊNCIA ──
+      {
+        id: "entendendo-audiencia",
+        number: 32,
+        title: "Entendendo Sua Audiência: Do Seguidor ao Cliente",
+        subtitle: "A pesquisa de mercado que revela o que seu público realmente quer comprar",
+        icon: "🎯",
+        color: "from-blue-800 to-cyan-900",
+        duration: "2h",
+        summary: "A diferença entre um produto que vende R$10k e um que vende R$1M não está no produto — está em como profundamente o criador entende o que o cliente realmente quer. Não o que diz querer, não o que pensa que quer, mas o que o comportamento revela que ele comprará.",
+        lessons: [
+          {
+            id: "jobs-to-be-done",
+            title: "Jobs to Be Done: O Framework que Explica Por que as Pessoas Realmente Compram",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["Por que o avatar tradicional não é suficiente", "Jobs to Be Done (JTBD): o trabalho que o produto faz para o cliente", "Dimensões funcionais, emocionais e sociais de uma compra", "Como usar JTBD para criar copy que ressoa profundamente", "Entrevistas de JTBD: as 5 perguntas que revelam tudo"],
+            content: `<h2>O Problema com o Avatar de Marketing Tradicional</h2>
+<p>O avatar tradicional diz: "Maria, 34 anos, casada, 2 filhos, renda R$5k/mês, gosta de receitas saudáveis e yoga." Isso é útil para targeting de anúncio. Não é útil para entender por que ela compraria seu produto.</p>
+<p>Clayton Christensen (Harvard Business School) desenvolveu o framework Jobs to Be Done: as pessoas não compram produtos — elas "contratam" produtos para fazer um trabalho (job) específico em suas vidas.</p>
+
+<h3>O Experimento da Milkshake (JTBD na prática)</h3>
+<p>Christensen documentou em "Competing Against Luck" (2016): uma rede de fast food queria aumentar vendas de milkshake. Pesquisa tradicional mostrou que clientes queriam sabores mais intensos e preços menores. Implementaram — vendas não mudaram.</p>
+<p>A equipe de JTBD observou quem comprava milkshake e quando. Descoberta: 40% das vendas eram de manhã cedo, para clientes sozinhos, em viagem de carro para o trabalho. Eles "contratavam" o milkshake para: matar a fome, ter algo para fazer durante a viagem e ter energia para chegar no escritório.</p>
+<p>O milkshake estava competindo com banana e bagel — não com outros milkshakes. E perdia para ambos em alguns jobs, mas ganhava em outros (não suja as mãos, dura a viagem inteira, não cai).</p>
+
+<h3>Os 3 Jobs de Toda Compra</h3>
+<p><strong>Job Funcional:</strong> O que o produto literalmente faz. "Me ajuda a criar anúncios que convertem."</p>
+<p><strong>Job Emocional:</strong> Como faz a pessoa se sentir. "Me sinto confiante e no controle do meu negócio."</p>
+<p><strong>Job Social:</strong> Como muda como os outros a veem. "Minha família vê que eu sei o que faço. Meus amigos me pedem conselho."</p>
+<p>A maioria do copy foca no job funcional. Os melhores copywriters focam no job emocional e social — porque é onde a decisão real de compra é tomada.</p>
+
+<h3>As 5 Perguntas de Entrevista JTBD</h3>
+<p>Entreviste 5-10 clientes reais com essas perguntas:</p>
+<ol>
+  <li>"Me conta sobre o momento em que você decidiu comprar [produto/buscar solução]. O que estava acontecendo na sua vida naquela época?"</li>
+  <li>"O que você tinha tentado antes? Por que não funcionou?"</li>
+  <li>"Quando você comprou, o que você esperava que mudasse na sua vida?"</li>
+  <li>"O que te fez hesitar antes de comprar?"</li>
+  <li>"O que mudou depois que você começou a usar?"</li>
+</ol>
+<p>Grave com permissão. Transcreva. As frases literais dos clientes — não o que você interpreta — são o copy mais poderoso que existe.</p>`
+          },
+          {
+            id: "pesquisa-mercado-pratica",
+            title: "Pesquisa de Mercado Prática: 5 Métodos para Descobrir o que Sua Audiência Comprará",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Mining de comentários: encontrando dores onde ninguém procura", "Pesquisa de lançamento: o formulário de intenção de compra", "Análise de concorrentes: o que o mercado já está comprando", "Grupos e comunidades: a mineração de dor em tempo real", "A pesquisa de produto: as 7 perguntas que revelam tudo"],
+            content: `<h2>5 Métodos de Pesquisa que Custam R$0 e Revelam Tudo</h2>
+
+<h3>Método 1: Mining de Comentários (Amazon, YouTube, Grupos)</h3>
+<p>Os comentários de produtos relacionados no seu nicho são um tesouro de linguagem do cliente e dores reais.</p>
+<p>Amazon: procure livros no seu nicho com muitas avaliações. Leia as avaliações de 3 estrelas — elas mostram o que o mercado queria e não recebeu. Essa é exatamente a oportunidade do seu produto.</p>
+<p>YouTube: nos vídeos de concorrentes, leia os comentários mais curtidos. As perguntas mais curtidas revelam as maiores dúvidas não respondidas do público.</p>
+<p>Grupos do Facebook no nicho: pesquise palavras de dor ("não consigo", "alguém sabe como", "preciso de ajuda com"). Catalogue as perguntas mais recorrentes — elas são os módulos do seu produto.</p>
+
+<h3>Método 2: A Pesquisa de Intenção de Compra</h3>
+<p>Antes de criar qualquer produto, envie para sua lista:</p>
+<blockquote>
+"Estou pensando em criar [produto sobre X]. Antes de começar, quero entender se faz sentido para você. Você pagaria por um produto que [promessa central]?
+☐ Sim — pagaria até R$[faixa 1]
+☐ Sim — pagaria até R$[faixa 2]
+☐ Talvez, dependendo do que inclui
+☐ Não, porque: [campo aberto]"
+</blockquote>
+<p>Taxa de "sim" acima de 15% da lista: produto viável. Abaixo: ajuste a proposta ou o público antes de criar.</p>
+
+<h3>Método 3: Análise de Concorrentes com Dados</h3>
+<ul>
+  <li><strong>Hotmart/Kiwify:</strong> Pesquise produtos no seu nicho pelo volume de vendas (indicado pelo número de avaliações). Leia as avaliações negativas — são as melhorias que o mercado já pagou para ter mas não recebeu.</li>
+  <li><strong>Google Trends:</strong> Veja a curva de interesse do seu tema nos últimos 5 anos. Subindo = mercado em crescimento. Estável = mercado maduro. Caindo = cuidado.</li>
+  <li><strong>SEMrush/Ubersuggest (grátis):</strong> Volume de busca das palavras do seu nicho. 1.000+ buscas/mês: existe demanda. Abaixo de 100: nicho muito pequeno ou muito novo.</li>
+</ul>
+
+<h3>Método 4: Comunidades e Grupos como Radar de Dor</h3>
+<p>Configure alerta no Google Alerts para palavras-chave do seu nicho. Monitore semanalmente:</p>
+<ul>
+  <li>Grupos no Facebook (entre nos maiores do seu nicho)</li>
+  <li>Reddit em inglês (subreddits do seu tema têm discussões detalhadas)</li>
+  <li>Quora: perguntas mais seguidas no seu tema</li>
+  <li>Comentários dos posts de concorrentes no Instagram</li>
+</ul>`
+          },
+          {
+            id: "avatar-real-versus-imaginado",
+            title: "Avatar Real vs. Avatar Imaginado: Como Validar Quem É Seu Cliente de Verdade",
+            duration: "20 min",
+            type: "text",
+            keyPoints: ["A diferença entre quem você acha que é seu cliente e quem realmente é", "Analisando os dados reais: seus compradores são quem você pensa?", "Segmentação real: os 3 tipos de cliente que todo negócio tem", "Expandindo e contraindo o avatar com dados", "O erro de criar produto para o cliente que você quer ter, não o que você tem"],
+            content: `<h2>O Avatar que Você Imagina vs. Quem Realmente Compra</h2>
+<p>Um produtor de um grande curso de marketing digital imaginava que seu cliente principal era o empreendedor jovem de 22-28 anos, digital nativo, que queria escalar um negócio online. Ao analisar os dados reais de compradores: 60% eram entre 35-50 anos, profissionais empregados que queriam transição de carreira ou renda extra. A linguagem, os exemplos, o horário de disparo de emails — tudo mudou. O faturamento dobrou em 6 meses.</p>
+
+<h3>Como Analisar Quem São Seus Compradores Reais</h3>
+<ol>
+  <li>Hotmart/Kiwify → Relatórios → dados demográficos dos compradores</li>
+  <li>Email marketing → segmentação por comportamento (quem abriu, quem clicou, quem comprou)</li>
+  <li>Meta Ads Manager → Audience Insights para custom audience de compradores</li>
+  <li>Formulário pós-compra: "Conte-nos sobre você" com 3 perguntas abertas</li>
+</ol>
+
+<h3>Os 3 Tipos de Cliente de Todo Negócio</h3>
+<p><strong>Cliente Ideal (20%):</strong> Compra tudo, implementa tudo, dá resultados, faz indicações, vira embaixador. Seus esforços de retenção e upsell devem focar 80% aqui.</p>
+<p><strong>Cliente Médio (60%):</strong> Compra o produto principal, implementa parcialmente, pode comprar novamente com nutrição. É a maioria — e a maioria do copy é para converter esse perfil.</p>
+<p><strong>Cliente Problemático (20%):</strong> Pede reembolso, não implementa, reclamam sem agir. Aprenda a identificar sinais antes da venda e ajuste o copy para atrair menos deste perfil — mais seletividade de audiência resulta em maior LTV médio.</p>`
+          },
+          {
+            id: "audiencia-para-cliente",
+            title: "Da Audiência ao Cliente: O Funil de Confiança que Transforma Seguidores em Compradores",
+            duration: "22 min",
+            type: "text",
+            glossaryTerms: ["ltv", "cac", "lead-magnet", "nurturing", "opt-in"],
+            keyPoints: ["Por que a maioria da audiência nunca compra — e como mudar isso", "Os 5 estágios de consciência do cliente (Eugene Schwartz)", "O funil de confiança: da descoberta à fidelidade", "Métricas de cada estágio: o que acompanhar", "O erro de tentar vender para quem está no estágio errado"],
+            content: `<h2>Por que Sua Audiência de 50.000 Seguidores Gera R$2.000 de Venda</h2>
+<p>Audiência não é igual a cliente em potencial. Cada seguidor está em um estágio diferente de consciência sobre o problema que você resolve — e tentar vender para quem ainda não está consciente do problema é o erro mais comum e mais custoso do marketing digital.</p>
+
+<h3>Os 5 Estágios de Consciência de Eugene Schwartz</h3>
+<p>Eugene Schwartz mapeou em "Breakthrough Advertising" (1966, considerado o livro de copy mais valioso já escrito) os estágios pelos quais todo comprador passa:</p>
+<ol>
+  <li><strong>Inconsciente:</strong> Não sabe que tem o problema. Conteúdo necessário: educação sobre o sintoma, não a solução.</li>
+  <li><strong>Consciente do Problema:</strong> Sabe que tem o problema, não sabe que existe solução. Conteúdo: "isso tem solução".</li>
+  <li><strong>Consciente da Solução:</strong> Sabe que existe solução, não conhece seu produto. Conteúdo: seu método é a melhor solução.</li>
+  <li><strong>Consciente do Produto:</strong> Conhece seu produto, ainda não decidiu. Conteúdo: prova social, detalhe da oferta, garantia.</li>
+  <li><strong>Mais Consciente:</strong> Está pronto para comprar, precisa apenas do CTA e da oferta correta. Conteúdo: urgência, condições, CTA direto.</li>
+</ol>
+
+<h3>O Funil de Confiança: Da Descoberta à Fidelidade</h3>
+<pre>
+DESCOBERTA: Conteúdo orgânico/anúncio de tráfego
+    ↓ (10-20% avançam)
+INTERESSE: Lead magnet / conteúdo de valor aprofundado
+    ↓ (30-50% avançam)
+CONSIDERAÇÃO: Sequência de nutrição (7-14 dias)
+    ↓ (10-20% avançam)
+INTENÇÃO: Evento de conversão (webinar, pré-lançamento, carrinho)
+    ↓ (2-5% convertem)
+COMPRA: Produto principal
+    ↓ (50-70% ficam ativos)
+FIDELIDADE: Upsell, membership, comunidade
+</pre>
+
+<h3>Métricas de Cada Estágio para Acompanhar</h3>
+<table>
+<tr><th>Estágio</th><th>Métrica principal</th><th>Benchmark saudável</th></tr>
+<tr><td>Descoberta</td><td>Alcance / impressões</td><td>Crescimento de 10%/mês</td></tr>
+<tr><td>Interesse</td><td>Taxa de opt-in do lead magnet</td><td>20-40%</td></tr>
+<tr><td>Consideração</td><td>Taxa de abertura de email</td><td>25-35%</td></tr>
+<tr><td>Intenção</td><td>Presença no webinar ou evento</td><td>30-50% dos inscritos</td></tr>
+<tr><td>Compra</td><td>Taxa de conversão de evento</td><td>2-8%</td></tr>
+<tr><td>Fidelidade</td><td>Taxa de conclusão e NPS</td><td>NPS &gt; 50</td></tr>
+</table>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 33: CRIANDO PRODUTOS DIGITAIS ──
+      {
+        id: "criacao-produtos-digitais",
+        number: 33,
+        title: "Criando Produtos Digitais: Do Zero ao Produto que o Mercado Quer",
+        subtitle: "Tipos, estruturas, produção e o processo de criação que elimina a paralisia",
+        icon: "🛠️",
+        color: "from-emerald-800 to-green-900",
+        duration: "2h 10min",
+        summary: "Existe uma ordem errada de criar produtos digitais: criar primeiro, vender depois. E uma certa: vender primeiro, criar depois. Este capítulo cobre os tipos de produto, como estruturar cada um, como produzir com qualidade e o processo de validação antes de investir meses em criação.",
+        lessons: [
+          {
+            id: "tipos-produtos-digitais",
+            title: "Os 8 Tipos de Produto Digital e Quando Usar Cada Um",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Ebook e guia PDF: o produto de entrada mais versátil", "Mini-curso (3-7 aulas): a isca que converte audiência em compradores", "Curso online completo: o produto principal de 6 a 8 dígitos", "Mentoria e consultoria: o produto de maior ticket e menor escala", "Membership e recorrência: a receita previsível", "Templates e ferramentas: o produto que resolve um problema específico", "Evento ao vivo (online ou presencial): a conversão mais alta", "Comunidade paga: o modelo que cresce com os membros"],
+            content: `<h2>O Mapa de Produtos Digitais: Do Menor ao Maior Ticket</h2>
+<p>A maioria dos produtores começa com o produto errado — geralmente um curso completo que leva 6 meses para criar e não sabe se vai vender. A ordem inteligente é outra: comece pelo produto mais simples, valide a demanda, e suba a escada de valor.</p>
+
+<h3>A Escada de Produtos Digitais</h3>
+<table>
+<tr><th>Produto</th><th>Ticket</th><th>Tempo de criação</th><th>Escala</th></tr>
+<tr><td>Lead magnet (gratuito)</td><td>R$0</td><td>1-3 dias</td><td>Ilimitado</td></tr>
+<tr><td>Ebook / PDF</td><td>R$27-97</td><td>3-10 dias</td><td>Ilimitado</td></tr>
+<tr><td>Mini-curso (3-7 aulas)</td><td>R$97-297</td><td>1-2 semanas</td><td>Ilimitado</td></tr>
+<tr><td>Curso completo</td><td>R$297-2.997</td><td>1-3 meses</td><td>Ilimitado</td></tr>
+<tr><td>Membership mensal</td><td>R$47-297/mês</td><td>Setup 2 semanas + cont.</td><td>Ilimitado</td></tr>
+<tr><td>Mentoria em grupo</td><td>R$997-5.997</td><td>Setup 1 semana</td><td>20-50 pessoas</td></tr>
+<tr><td>Mentoria individual</td><td>R$3.000-30.000</td><td>Zero criação</td><td>5-15 pessoas</td></tr>
+<tr><td>Evento ao vivo</td><td>R$297-9.997</td><td>2-3 meses de prep</td><td>50-1.000 pessoas</td></tr>
+</table>
+
+<h3>O Mini-Curso: O Produto mais Estratégico para Começar</h3>
+<p>O mini-curso (3-7 aulas, 1-3 horas de conteúdo, R$97-297) é o produto mais estratégico para quem está começando porque:</p>
+<ul>
+  <li>Cria em 1-2 semanas — sem meses de produção</li>
+  <li>Valida a demanda com baixo risco (se não vende a R$147, o curso completo a R$1.497 também não venderia)</li>
+  <li>Gera depoimentos para o produto principal</li>
+  <li>Serve como Order Bump ou Upsell do produto maior no futuro</li>
+</ul>
+
+<h3>Membership: O Modelo que Cria Receita Previsível</h3>
+<p>Um membership de R$97/mês com 200 membros = R$19.400/mês garantidos — antes de qualquer lançamento. Mas membership exige comprometimento de conteúdo contínuo (pelo menos 4 novas entregas/mês) e comunidade ativa.</p>
+<p>Funciona para: nichos com demanda de atualização constante (marketing, finanças, fitness, idiomas) e criadores que gostam de interação com a comunidade.</p>
+<p>Não funciona para: nichos em que o problema é resolvido uma vez (ex: "como fazer o ENEM") ou criadores que preferem criar uma vez e não precisar de manutenção contínua.</p>`
+          },
+          {
+            id: "estrutura-curso-online",
+            title: "Estrutura de Curso Online: Do Briefing às Aulas Gravadas",
+            duration: "28 min",
+            type: "text",
+            keyPoints: ["O briefing de curso: o trabalho de 2 horas que economiza 2 meses", "Estrutura de módulo e aula: a hierarquia que mantém o aluno progredindo", "Script ou improviso: qual gera mais retenção", "Produção de qualidade: o que importa e o que não importa", "Edição: o mínimo necessário vs. o diferencial de qualidade"],
+            content: `<h2>Criando um Curso que os Alunos Terminam</h2>
+<p>A taxa de conclusão média de cursos online no mundo é de 3-8% (dado do MIT OpenCourseWare e Coursera). No mercado de infoprodutos, um curso com 20-30% de conclusão é considerado excelente. A estrutura do curso é o principal determinante da conclusão — não a qualidade do conteúdo.</p>
+
+<h3>O Briefing de Curso: Faça Antes de Gravar Uma Aula</h3>
+<p>Responda estas perguntas por escrito antes de criar qualquer conteúdo:</p>
+<ol>
+  <li><strong>Qual a transformação central?</strong> "Ao final, o aluno será capaz de [resultado específico e mensurável]"</li>
+  <li><strong>Qual o pré-requisito mínimo?</strong> "O aluno precisa saber X e ter Y antes de começar"</li>
+  <li><strong>Qual o quick win?</strong> "O aluno consegue implementar [resultado pequeno] no módulo 1, em menos de [tempo]"</li>
+  <li><strong>Qual a ordem lógica?</strong> Liste os módulos na ordem que cria a progressão de habilidade — não na ordem que faz sentido para você como especialista</li>
+  <li><strong>Quais são as objeções em cada módulo?</strong> "No módulo 3, o aluno vai pensar [objeção] — como você antecipa isso?"</li>
+</ol>
+
+<h3>Estrutura de Módulo Que Funciona</h3>
+<pre>
+Módulo X: [Resultado específico que o aluno alcança neste módulo]
+├── Aula 1: Conceito central (máx. 15 min)
+├── Aula 2: Como fazer (máx. 20 min)
+├── Aula 3: Exemplo prático / caso real (máx. 15 min)
+├── Recurso: Template/planilha/checklist
+└── Exercício: O que implementar antes do próximo módulo
+</pre>
+<p>Regra dos 15 minutos: aulas acima de 15 minutos têm queda de retenção acima de 40%. Se o conteúdo precisa de 30 minutos, divida em duas aulas de 15 — com títulos que criam curiosidade para a segunda.</p>
+
+<h3>O que Realmente Importa na Produção</h3>
+<table>
+<tr><th>Elemento</th><th>Importância real</th><th>Impacto no aluno</th></tr>
+<tr><td>Áudio limpo (sem eco, sem ruído)</td><td>🔴 Crítico</td><td>Alunos param por áudio ruim, não por vídeo ruim</td></tr>
+<tr><td>Iluminação adequada</td><td>🟡 Importante</td><td>Afeta percepção de profissionalismo</td></tr>
+<tr><td>Resolução de vídeo</td><td>🟢 Menor</td><td>720p é suficiente, 1080p é ótimo</td></tr>
+<tr><td>Background</td><td>🟢 Menor</td><td>Limpo e consistente — não precisa ser estúdio</td></tr>
+<tr><td>Edição elaborada</td><td>🟢 Menor</td><td>Cortes básicos são suficientes</td></tr>
+</table>
+
+<p>Equipamento mínimo para começar: microfone de lapela (R$80-150), luz de anel básica (R$120-200), Canva para slides. Total: menos de R$400 para produção profissional.</p>`
+          },
+          {
+            id: "validacao-antes-criar",
+            title: "Validar Antes de Criar: O Método que Elimina o Risco de Criar Produto que Não Vende",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["O Lançamento Semente: vender antes de criar", "Mínimo Produto Viável (MVP) para infoprodutos", "O pré-venda: como funciona, riscos e como comunicar com transparência", "Testando a proposta de valor com R$0 de investimento", "O que fazer quando a validação falha (e o que isso te diz)"],
+            content: `<h2>A Regra de Ouro: Nunca Crie um Produto Antes de Vender</h2>
+<p>Esta é a lição mais contra-intuitiva — e mais valiosa — do mercado de infoprodutos. Produtores que criam produtos por meses antes de validar a demanda são a maioria. Produtores que faturam consistentemente validam antes de criar — sempre.</p>
+
+<h3>O Lançamento Semente: Validação Máxima com Risco Zero</h3>
+<p>Jeff Walker documentou o lançamento semente em "Launch" (2014) como o método que ele chama de "o poder do pré-venda". A versão brasileira foi popularizada por Érico Rocha e outros como "Lançamento Semente".</p>
+<p><strong>Como funciona:</strong></p>
+<ol>
+  <li>Defina a proposta de valor do produto (não crie ainda)</li>
+  <li>Abra uma conversa pública: "Estou pensando em criar X. Se você compraria, me conta por que"</li>
+  <li>Receba as respostas e refine a proposta com base nelas</li>
+  <li>Abra pré-venda para lista pequena com preço de fundador (30-50% abaixo do preço final)</li>
+  <li>Se 10-20 pessoas comprarem: produto validado. Agora crie.</li>
+  <li>Se menos de 5 comprarem: a proposta precisa de ajuste. Você economizou meses de trabalho.</li>
+</ol>
+<p>A chave: seja transparente. "Estou criando este produto e você terá acesso antes de qualquer um, por um preço de fundador, porque seu feedback vai moldar o conteúdo." Compradores de semente geralmente são os clientes mais engajados — eles querem ver o produto existir.</p>
+
+<h3>O MVP de Infoproduto: Conteúdo Mínimo que Entrega a Promessa</h3>
+<p>MVP (Minimum Viable Product) em infoproduto não é um produto ruim — é o produto mínimo que entrega a transformação prometida. Se a promessa é "ensinar a criar anúncios no Meta em 7 dias", o MVP pode ser:</p>
+<ul>
+  <li>7 aulas de 15 minutos (não 40 aulas de 20 minutos)</li>
+  <li>1 template de campanha (não uma biblioteca completa)</li>
+  <li>1 sessão de Q&A ao vivo por mês (substitui o suporte elaborado)</li>
+</ul>
+<p>Você cria em 2 semanas. Vende. Recebe feedback. Melhora nas versões seguintes com o dinheiro das vendas — em vez de investir 3 meses sem receita.</p>
+
+<h3>O Teste de Proposta com R$0</h3>
+<p>Antes de qualquer investimento:</p>
+<ol>
+  <li>Crie um post no Instagram descrevendo o produto (sem preço, sem link)</li>
+  <li>Na legenda: "Se você quereria aprender isso, comenta QUERO"</li>
+  <li>Conte os comentários: &lt;20 = proposta fraca ou audiência errada; 20-100 = validado para mini-lançamento; &gt;100 = produto de alta demanda</li>
+</ol>`
+          },
+          {
+            id: "precificacao-produto-digital",
+            title: "Precificação: Como Definir o Preço que Vende Mais (Não o Mais Barato)",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Por que preço mais barato frequentemente vende menos", "Precificação por valor vs. precificação por custo", "O efeito âncora: como o preço mais caro faz o do meio parecer razoável", "Precificação por resultados: cobrando com base no ROI que o aluno terá", "Quando e como fazer desconto sem destruir a percepção de valor"],
+            content: `<h2>A Psicologia do Preço que a Maioria dos Produtores Ignora</h2>
+<p>Um experimento clássico de psicologia do consumidor (Dan Ariely, "Predictably Irrational", 2008): a revista The Economist ofereceu 3 planos:</p>
+<ul>
+  <li>Digital: $59/ano → 68% escolhiam</li>
+  <li>Impresso: $125/ano → 0% escolhiam</li>
+  <li>Digital + Impresso: $125/ano → 32% escolhiam</li>
+</ul>
+<p>Quando retiraram a opção do meio (impresso só), apenas 16% escolheram o plano mais caro. A opção "isca" (que ninguém comprava) existia apenas para fazer o mais caro parecer razoável por comparação. Isso é o efeito âncora.</p>
+
+<h3>3 Cenários de Precificação com Análise</h3>
+<p><strong>Cenário A (Preço baixo):</strong><br/>
+Curso a R$197 → 100 vendas → R$19.700<br/>
+Percepção do mercado: "barato demais para ser sério"<br/>
+Qualidade do aluno: comprador oportunista, menor taxa de implementação, mais reembolsos</p>
+<p><strong>Cenário B (Preço médio):</strong><br/>
+Curso a R$997 → 30 vendas → R$29.910<br/>
+Percepção: produto legítimo com valor real<br/>
+Qualidade do aluno: comprometido, implementa, gera depoimentos</p>
+<p><strong>Cenário C (Preço alto):</strong><br/>
+Curso a R$1.997 → 15 vendas → R$29.955<br/>
+Percepção: premium, autoridade, exclusividade<br/>
+Qualidade do aluno: o mais comprometido, maior LTV, maiores indicações</p>
+<p>Resultado financeiro B e C são similares. Mas o resultado em depoimentos, reembolsos e qualidade da comunidade favorece massivamente o preço mais alto.</p>
+
+<h3>Como Precificar por Valor (Não por Custo)</h3>
+<p>A fórmula: calcule o valor econômico que o aluno recebe ao implementar o produto.</p>
+<p>Exemplo: curso de copy que ensina a escrever sua própria página de vendas. Um copywriter cobra R$3.000-8.000 por página. O aluno que aprende nunca mais paga por isso. Valor econômico: mínimo R$3.000 por uso. Preço do curso: R$997 = 1/3 do valor de uma aplicação. É fácil justificar.</p>
+
+<h3>Estrutura de Preços com Âncora</h3>
+<pre>
+Plano Básico: R$497 (acesso ao curso + comunidade)
+Plano Completo: R$997 (curso + comunidade + templates + 1 sessão de grupo/mês)
+Plano VIP: R$2.997 (tudo + 3 sessões individuais + revisão de copy)
+</pre>
+<p>A maioria comprará o Plano Completo — que é o produto que você realmente quer vender. O Plano Básico faz o Completo parecer razoável. O VIP faz o Completo parecer econômico.</p>`
+          }
+        ],
+        locked: false
+      },
+
+      // ── CAPÍTULO 34: ESCOLHA DE PLATAFORMA E ENTREGA ──
+      {
+        id: "escolha-plataforma-entrega",
+        number: 34,
+        title: "Escolha de Plataforma, Teste e Entrega do Produto",
+        subtitle: "Como escolher onde vender, como testar antes de lançar e como entregar uma experiência que retém",
+        icon: "🚀",
+        color: "from-violet-800 to-purple-900",
+        duration: "1h 50min",
+        summary: "A plataforma certa não é a mais famosa — é a que melhor serve o modelo de negócio e o produto específico. Este capítulo cobre os critérios de escolha, como testar toda a jornada antes de lançar, e como entregar a experiência que transforma compradores em fãs que indicam.",
+        lessons: [
+          {
+            id: "criterios-escolha-plataforma",
+            title: "Como Escolher a Plataforma Certa para Seu Produto",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Os 7 critérios de escolha de plataforma de venda", "Hotmart vs. Kiwify vs. Eduzz vs. Asaas vs. plataforma própria", "Quando migrar de plataforma (e o custo real da migração)", "Área de membros: nativa vs. externa — prós e contras", "A decisão de plataforma que você não deve tomar sozinho — e quem consultar"],
+            content: `<h2>Não Existe Plataforma Perfeita — Existe a Certa para Cada Caso</h2>
+<p>A escolha de plataforma é uma decisão de longo prazo — migrar leva tempo, pode perder avaliações e afeta afiliados. Faça certo na primeira vez.</p>
+
+<h3>Os 7 Critérios de Escolha</h3>
+<ol>
+  <li><strong>Tipo de produto:</strong> Curso com área de membros complexa → Hotmart. Checkout simples e conversão alta → Kiwify. Produto de serviço ou recorrência B2B → Asaas. Produto simples sem plataforma de membros → qualquer um com webhook para plataforma externa.</li>
+  <li><strong>Volume mensal de vendas:</strong> Abaixo de R$10k/mês: taxas de plataforma não são críticas. Acima de R$50k/mês: diferença de 2% de taxa = R$1.000/mês. Vale otimizar.</li>
+  <li><strong>Necessidade de afiliados:</strong> Quer programa de afiliados ativo? Hotmart tem o maior ecossistema PT-BR. Kiwify está crescendo. Asaas e plataformas próprias não têm.</li>
+  <li><strong>Integrações necessárias:</strong> Liste as integrações que seu negócio precisa (CRM, email, WhatsApp) e verifique se a plataforma tem nativo ou webhook. Hotmart e Kiwify têm Zapier. Asaas tem API completa.</li>
+  <li><strong>Controle da relação com o cliente:</strong> Em marketplaces (Hotmart), o cliente é "deles" — você tem acesso limitado aos dados. Com Asaas + plataforma própria, o cliente é 100% seu.</li>
+  <li><strong>Suporte e uptime:</strong> Verifique o histórico de estabilidade. Uma hora fora do ar no dia de fechamento de carrinho pode custar R$50k em vendas.</li>
+  <li><strong>Custo total de operação:</strong> Calcule: taxa por venda + mensalidade da plataforma de membros + custo de integrações + horas de suporte técnico. O mais barato na taxa pode ser o mais caro no total.</li>
+</ol>
+
+<h3>Matriz de Decisão Rápida</h3>
+<table>
+<tr><th>Situação</th><th>Plataforma recomendada</th></tr>
+<tr><td>Primeiro produto, menos de R$5k/mês</td><td>Kiwify (taxa menor, setup simples)</td></tr>
+<tr><td>Produto com área de membros complexa</td><td>Hotmart (nativo e maduro)</td></tr>
+<tr><td>Volume &gt;R$100k/mês, quer controle total</td><td>Asaas + Memberkit/Ead Plataforma</td></tr>
+<tr><td>Venda de serviços profissionais + cursos</td><td>Asaas (consolida em um gateway)</td></tr>
+<tr><td>Afiliados como canal principal</td><td>Hotmart (maior rede)</td></tr>
+<tr><td>Produto físico + digital</td><td>Shopify + Asaas ou WooCommerce</td></tr>
+</table>`
+          },
+          {
+            id: "teste-completo-produto",
+            title: "Testando Tudo Antes de Lançar: O Checklist de 42 Pontos",
+            duration: "22 min",
+            type: "text",
+            keyPoints: ["Por que 90% dos problemas de lançamento poderiam ser evitados com teste", "O checklist completo de produto, checkout, automação e entrega", "Teste de experiência: percorra a jornada como seu cliente faria", "Grupos de beta-teste: como usar para encontrar o que você não veria", "O protocolo de teste de 72 horas antes do carrinho abrir"],
+            content: `<h2>O Erro que Custa R$50k: Lançar Sem Testar</h2>
+<p>Em todo lançamento existem problemas técnicos. Nos lançamentos de produtores profissionais, esses problemas são descobertos na fase de teste. Nos lançamentos de amadores, são descobertos quando o carrinho está aberto e clientes reais estão tentando comprar.</p>
+
+<h3>O Checklist Completo de 42 Pontos</h3>
+<p><strong>Produto (10 pontos):</strong></p>
+<ul>
+  <li>[ ] Todas as aulas/módulos estão acessíveis e em ordem</li>
+  <li>[ ] Vídeos carregam em conexões lentas (teste com 3G simulado)</li>
+  <li>[ ] Áudio de todas as aulas está claro (sem eco, sem ruído)</li>
+  <li>[ ] Materiais complementares (PDFs, planilhas) acessíveis para download</li>
+  <li>[ ] Módulo 1 entrega quick win em menos de 30 minutos</li>
+  <li>[ ] Exercícios estão claros e implementáveis</li>
+  <li>[ ] Navegação entre aulas funciona (anterior/próximo)</li>
+  <li>[ ] Versão mobile da área de membros funcional</li>
+  <li>[ ] Certificado de conclusão (se prometido) gerado corretamente</li>
+  <li>[ ] Área de comunidade acessível e moderada</li>
+</ul>
+<p><strong>Checkout (8 pontos):</strong></p>
+<ul>
+  <li>[ ] Compra de teste realizada (com cupom 100%)</li>
+  <li>[ ] Pixel disparou corretamente (verificar Pixel Helper)</li>
+  <li>[ ] Order Bump aparece e funciona</li>
+  <li>[ ] Upsell aparece após compra e funciona</li>
+  <li>[ ] Página de obrigado aparece com próximos passos</li>
+  <li>[ ] PIX, boleto e cartão testados individualmente</li>
+  <li>[ ] Parcelamento no cartão funciona no máximo de parcelas configurado</li>
+  <li>[ ] Domínio do checkout é seu (não hotmart.com/pay) para mais conversão</li>
+</ul>
+<p><strong>Automações (12 pontos):</strong></p>
+<ul>
+  <li>[ ] Email de boas-vindas chega em menos de 5 minutos</li>
+  <li>[ ] WhatsApp de boas-vindas chega em menos de 5 minutos</li>
+  <li>[ ] Tag de comprador aplicada no CRM</li>
+  <li>[ ] Sequência de onboarding iniciada automaticamente</li>
+  <li>[ ] Acesso na área de membros liberado automaticamente</li>
+  <li>[ ] Teste de reembolso: acesso revogado, sequência de recuperação iniciada</li>
+  <li>[ ] Webhook funcionando (verificar logs do Zapier)</li>
+  <li>[ ] Pixel de Purchase disparando com valor correto</li>
+  <li>[ ] Remarketing de compradores excluído dos anúncios</li>
+  <li>[ ] Relatório interno de venda criado (planilha ou CRM)</li>
+  <li>[ ] Alerta de nova venda no Slack/email interno funcionando</li>
+  <li>[ ] Teste de boleto expirado: sequência de recuperação ativa</li>
+</ul>
+<p><strong>Suporte (6 pontos):</strong></p>
+<ul>
+  <li>[ ] Canal de suporte definido e comunicado (email, WhatsApp, Telegram)</li>
+  <li>[ ] Tempo de resposta de suporte definido e comunicado</li>
+  <li>[ ] FAQ documentado com as 10 perguntas mais comuns</li>
+  <li>[ ] Responsável por suporte durante o lançamento definido</li>
+  <li>[ ] Protocolo de reembolso documentado</li>
+  <li>[ ] Acesso de emergência à área de membros para suporte</li>
+</ul>
+<p><strong>Comunicação (6 pontos):</strong></p>
+<ul>
+  <li>[ ] Sequência completa de emails escrita e agendada</li>
+  <li>[ ] Templates de WhatsApp escritos e aprovados</li>
+  <li>[ ] Conteúdo orgânico pré-produzido para toda a semana de carrinho</li>
+  <li>[ ] Anúncios criados e aprovados pela Meta</li>
+  <li>[ ] Copy de fechamento revisado (último dia)</li>
+  <li>[ ] Plano B para se algo der errado (outra plataforma, email manual)</li>
+</ul>`
+          },
+          {
+            id: "entrega-experiencia-cliente",
+            title: "Entrega e Experiência do Cliente: O que Acontece Depois da Venda Decide Tudo",
+            duration: "25 min",
+            type: "text",
+            keyPoints: ["Os primeiros 7 dias definem a retenção de longo prazo", "O onboarding que transforma comprador em fã", "Comunidade como produto: o diferencial que nenhuma IA substitui", "Medindo satisfação: NPS, entrevistas e sinais de churn", "Expandindo o produto com feedback: a versão 2.0 que o mercado pediu"],
+            content: `<h2>A Venda é o Início — Não o Fim</h2>
+<p>Todo o trabalho de marketing serve para trazer a pessoa para a porta. O que acontece depois da porta determina se ela fica, se indica e se compra novamente.</p>
+
+<h3>Os Primeiros 7 Dias: A Janela que Define o LTV</h3>
+<p>Dados de plataformas de cursos online (Teachable, relatório 2022) mostram: alunos que completam o módulo 1 nos primeiros 3 dias têm 4x mais probabilidade de completar o curso. Alunos que não acessam nos primeiros 7 dias têm 70% de probabilidade de nunca acessar.</p>
+<p>Ação: crie "missão impossível de resistir" no módulo 1. Uma aula que entrega resultado em 20 minutos. Um template que o aluno usa imediatamente. Um quick win que prova que comprou certo.</p>
+
+<h3>Comunidade como Produto</h3>
+<p>A comunidade — seja no WhatsApp, Telegram, Skool ou Discord — frequentemente é o motivo real pelo qual os alunos ficam, mais do que o conteúdo. Ninguém cancela uma membership onde tem amigos e conexões reais.</p>
+<p>Para construir comunidade ativa:</p>
+<ul>
+  <li>Apresentação obrigatória de novos membros (o admin apresenta, não o membro)</li>
+  <li>Desafio semanal com premiação simbólica</li>
+  <li>Celebração pública de resultados dos membros</li>
+  <li>Pergunta semanal provocativa que gera discussão</li>
+  <li>O criador presente — mesmo que 30 minutos/semana</li>
+</ul>
+
+<h3>NPS: A Métrica que Prediz Crescimento</h3>
+<p>Net Promoter Score: "Em uma escala de 0-10, quanto você recomendaria este produto para um amigo?"</p>
+<ul>
+  <li>9-10: Promotores (indicam ativamente)</li>
+  <li>7-8: Passivos (satisfeitos mas não indicam)</li>
+  <li>0-6: Detratores (podem falar mal)</li>
+</ul>
+<p>NPS = % Promotores - % Detratores. Acima de 50: excelente. Acima de 70: classe mundial. Abaixo de 0: o produto tem problemas sérios.</p>
+<p>Envie a pesquisa de NPS em D+30 (quando o aluno já usou o produto o suficiente para opinar). Para cada Detrator, entre em contato pessoalmente — a resposta que você recebe deles é o feedback mais valioso que existe.</p>`
           }
         ],
         locked: false
