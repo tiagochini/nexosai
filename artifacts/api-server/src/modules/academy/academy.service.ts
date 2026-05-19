@@ -3,7 +3,7 @@ import { logger } from "../../lib/logger.js";
 
 const ASAAS_BASE = env.ASAAS_SANDBOX === "true"
   ? "https://sandbox.asaas.com/api/v3"
-  : "https://api.asaas.com/api/v3";
+  : "https://www.asaas.com/api/v3";
 
 const ASAAS_KEY = env.ASAAS_API_KEY;
 
@@ -21,6 +21,10 @@ export interface AsaasCustomer {
   cpfCnpj?: string;
 }
 
+function sanitizeCpfCnpj(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export interface AsaasPayment {
   id: string;
   status: string;
@@ -31,7 +35,7 @@ export interface AsaasPayment {
 }
 
 // Find existing customer by email, or create a new one
-export async function findOrCreateCustomer(name: string, email: string): Promise<AsaasCustomer> {
+export async function findOrCreateCustomer(name: string, email: string, cpfCnpj?: string): Promise<AsaasCustomer> {
   // Search existing
   const searchResp = await fetch(
     `${ASAAS_BASE}/customers?email=${encodeURIComponent(email)}&limit=1`,
@@ -44,14 +48,26 @@ export async function findOrCreateCustomer(name: string, email: string): Promise
   }
   const searchData = await searchResp.json() as { data?: AsaasCustomer[] };
   if (searchData.data && searchData.data.length > 0) {
-    return searchData.data[0];
+    const existing = searchData.data[0];
+    // Update CPF if customer exists but doesn't have one yet
+    if (cpfCnpj && !existing.cpfCnpj) {
+      await fetch(`${ASAAS_BASE}/customers/${existing.id}`, {
+        method: "PUT",
+        headers: asaasHeaders(),
+        body: JSON.stringify({ cpfCnpj: sanitizeCpfCnpj(cpfCnpj) }),
+      }).catch(() => undefined);
+    }
+    return existing;
   }
 
   // Create new
+  const createBody: Record<string, string> = { name, email };
+  if (cpfCnpj) createBody["cpfCnpj"] = sanitizeCpfCnpj(cpfCnpj);
+
   const createResp = await fetch(`${ASAAS_BASE}/customers`, {
     method: "POST",
     headers: asaasHeaders(),
-    body: JSON.stringify({ name, email }),
+    body: JSON.stringify(createBody),
   });
   if (!createResp.ok) {
     const text = await createResp.text();
@@ -67,7 +83,6 @@ export async function createPayment(opts: {
   amountBrl: number;
   description: string;
   externalReference: string;
-  successUrl: string;
 }): Promise<AsaasPayment> {
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 3);
@@ -83,10 +98,6 @@ export async function createPayment(opts: {
       dueDate: dueDateStr,
       description: opts.description,
       externalReference: opts.externalReference,
-      callback: {
-        successUrl: opts.successUrl,
-        autoRedirect: true,
-      },
     }),
   });
 

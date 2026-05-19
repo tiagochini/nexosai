@@ -58,3 +58,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 META_APP_ID = "992748096543542"
+ASAAS_SANDBOX = "false"

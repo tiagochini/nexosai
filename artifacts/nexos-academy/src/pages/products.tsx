@@ -15,6 +15,7 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
   const [checkoutProduct, setCheckoutProduct] = useState<string | null>(null);
   const [checkoutName, setCheckoutName] = useState("");
   const [checkoutEmail, setCheckoutEmail] = useState("");
+  const [checkoutCpf, setCheckoutCpf] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
 
@@ -43,6 +44,7 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
         body: JSON.stringify({
           name: checkoutName,
           email: checkoutEmail,
+          cpfCnpj: checkoutCpf.replace(/\D/g, ""),
           productId: checkoutProduct,
         }),
       });
@@ -294,6 +296,7 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
                           setCheckoutProduct(product.id);
                           setCheckoutName("");
                           setCheckoutEmail("");
+                          setCheckoutCpf("");
                           setCheckoutError("");
                         }}
                         style={product.type === "premium" ? { background: "var(--gradient-gold)" } : {}}
@@ -376,6 +379,18 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
                   className="w-full px-3 py-2.5 rounded-lg bg-[hsl(222_25%_10%)] border border-[hsl(220_20%_12%)] text-white text-sm placeholder:text-[hsl(220_10%_30%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.4)]"
                 />
                 <p className="text-[10px] text-[hsl(220_10%_40%)] mt-1">Seu código de acesso será enviado para este e-mail</p>
+              </div>
+              <div>
+                <label className="text-xs text-[hsl(220_10%_55%)] mb-1.5 block">CPF ou CNPJ</label>
+                <input
+                  type="text"
+                  required
+                  value={checkoutCpf}
+                  onChange={e => setCheckoutCpf(e.target.value)}
+                  placeholder="000.000.000-00"
+                  maxLength={18}
+                  className="w-full px-3 py-2.5 rounded-lg bg-[hsl(222_25%_10%)] border border-[hsl(220_20%_12%)] text-white text-sm placeholder:text-[hsl(220_10%_30%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.4)]"
+                />
               </div>
               {checkoutError && (
                 <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{checkoutError}</p>

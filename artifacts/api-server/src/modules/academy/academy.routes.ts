@@ -29,6 +29,7 @@ const ACADEMY_PRODUCTS: Record<string, { name: string; amountBrl: number }> = {
 const checkoutSchema = z.object({
   name: z.string().min(2).max(200),
   email: z.email(),
+  cpfCnpj: z.string().min(11).max(18).optional(),
   productId: z.enum(["mini-guide", "complete-bundle"]),
 });
 
@@ -79,7 +80,7 @@ router.post("/checkout", async (req, res): Promise<void> => {
 
   try {
     // Create or find Asaas customer
-    const customer = await findOrCreateCustomer(parsed.name, parsed.email.toLowerCase());
+    const customer = await findOrCreateCustomer(parsed.name, parsed.email.toLowerCase(), parsed.cpfCnpj);
 
     // Pre-generate the access token and create the pending purchase record
     const accessToken = generateAccessToken();
@@ -98,13 +99,11 @@ router.post("/checkout", async (req, res): Promise<void> => {
       .returning();
 
     // Create Asaas payment
-    const successUrl = `${env.APP_URL}/nexos-academy/?payment=success`;
     const payment = await createPayment({
       customerId: customer.id,
       amountBrl: product.amountBrl,
       description: product.name,
       externalReference: purchase.id,
-      successUrl,
     });
 
     // Update purchase with Asaas payment ID and URL
