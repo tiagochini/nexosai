@@ -37,7 +37,7 @@ function buildEmailHtml(step: number, firstName: string): string {
       <h1 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px">Seu guia chegou, ${name}! 🎁</h1>
       <p style="color:#a0aec0;line-height:1.7;margin:0 0 16px">Aqui está o link para acessar <strong style="color:#e2e8f0">Os 7 Erros do Primeiro Lançamento</strong>:</p>
       <div style="text-align:center;margin:24px 0">
-        <a href="${PORTAL_URL}" style="display:inline-block;background:linear-gradient(135deg,#6d4aff,#a78bfa);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">📖 Baixar o Guia →</a>
+        <a href="${PORTAL_URL}#guia-gratuito" style="display:inline-block;background:linear-gradient(135deg,#6d4aff,#a78bfa);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">📖 Ler o Guia Agora →</a>
       </div>
       <p style="color:#a0aec0;line-height:1.7;margin:0 0 16px">Nos próximos dias vou te mandar mais conteúdo sobre o que <em>realmente</em> separa quem fatura seis dígitos em um lançamento de quem patina no mesmo lugar.</p>
       <p style="color:#a0aec0;line-height:1.7;margin:0">Fique de olho — o próximo e-mail chega em 48 horas e é o mais importante que você vai ler sobre lançamentos esse ano.</p>

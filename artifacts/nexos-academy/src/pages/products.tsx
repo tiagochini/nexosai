@@ -23,7 +23,6 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
   const [token, setToken] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [tokenError, setTokenError] = useState("");
-  const [miniGuideAccess, setMiniGuideAccess] = useState(false);
 
   // Free guide state
   const [freeEmail, setFreeEmail] = useState("");
@@ -78,8 +77,7 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
       const data = await resp.json() as { valid?: boolean; productId?: string; error?: string };
       if (data.valid) {
         if (data.productId === "mini-guide") {
-          setMiniGuideAccess(true);
-          setTokenError("");
+          onNavigate("mini-guide");
           return;
         }
         if (data.productId !== "complete-bundle") {

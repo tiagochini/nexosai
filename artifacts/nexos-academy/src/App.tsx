@@ -7,10 +7,12 @@ import Products from "@/pages/products";
 import ProgressPage from "@/pages/progress-page";
 import Glossary from "@/pages/glossary";
 import Owner, { isOwnerMode } from "@/pages/owner";
+import MiniGuide from "@/pages/mini-guide";
+import FreeGuide from "@/pages/free-guide";
 
 const queryClient = new QueryClient();
 
-type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner";
+type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner" | "mini-guide" | "free-guide";
 
 interface NavState {
   page: Page;
@@ -56,6 +58,7 @@ const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress"];
 function getInitialPage(): NavState {
   if (typeof window !== "undefined") {
     if (window.location.hash === "#owner") return { page: "owner", params: {} };
+    if (window.location.hash === "#guia-gratuito") return { page: "free-guide", params: {} };
     const search = new URLSearchParams(window.location.search);
     if (search.get("payment") === "success") return { page: "products", params: { paymentSuccess: "1" } };
   }
@@ -178,6 +181,10 @@ function AcademyApp() {
         return <Glossary onNavigate={navigate} />;
       case "owner":
         return <Owner onNavigate={navigate} onOwnerChange={handleOwnerChange} isOwner={ownerMode} />;
+      case "mini-guide":
+        return <MiniGuide onNavigate={navigate} />;
+      case "free-guide":
+        return <FreeGuide onNavigate={navigate} />;
       default:
         return <Home onNavigate={navigate} progress={progress} hasAccess={canAccess} />;
     }
