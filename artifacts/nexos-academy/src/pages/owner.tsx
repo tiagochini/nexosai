@@ -22,9 +22,10 @@ const OWNER_PIN = "nexos2025";
 const OWNER_KEY = "nexos-owner-mode";
 const OWNER_SECRET = "nexos2025";
 
+// sessionStorage: expires when browser tab/window is closed — PIN required every session
 export function isOwnerMode(): boolean {
   try {
-    return localStorage.getItem(OWNER_KEY) === "true";
+    return sessionStorage.getItem(OWNER_KEY) === "true";
   } catch {
     return false;
   }
@@ -32,8 +33,8 @@ export function isOwnerMode(): boolean {
 
 function setOwnerMode(val: boolean) {
   try {
-    if (val) localStorage.setItem(OWNER_KEY, "true");
-    else localStorage.removeItem(OWNER_KEY);
+    if (val) sessionStorage.setItem(OWNER_KEY, "true");
+    else sessionStorage.removeItem(OWNER_KEY);
   } catch {}
 }
 
@@ -110,6 +111,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const [copyMsg, setCopyMsg] = useState("");
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmMsg, setConfirmMsg] = useState<Record<string, string>>({});
+  const [confirmedModal, setConfirmedModal] = useState<Purchase | null>(null);
 
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
   const allLessons = allChapters.flatMap(c => c.lessons);
@@ -204,27 +206,28 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     }
   }
 
-  async function confirmPurchase(purchaseId: string, token: string) {
-    setConfirmingId(purchaseId);
+  async function confirmPurchase(purchase: Purchase) {
+    setConfirmingId(purchase.id);
     try {
       const r = await fetch(`/api/academy/admin/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
-        body: JSON.stringify({ purchaseId }),
+        body: JSON.stringify({ purchaseId: purchase.id }),
       });
       const j = await r.json() as { ok?: boolean; error?: string };
       if (j.ok) {
-        setConfirmMsg(prev => ({ ...prev, [purchaseId]: "✅ Confirmado!" }));
-        navigator.clipboard.writeText(token).catch(() => undefined);
+        navigator.clipboard.writeText(purchase.accessToken).catch(() => undefined);
         await fetchPurchases();
+        setConfirmedModal(purchase);
       } else {
-        setConfirmMsg(prev => ({ ...prev, [purchaseId]: `Erro: ${j.error}` }));
+        setConfirmMsg(prev => ({ ...prev, [purchase.id]: `Erro: ${j.error}` }));
+        setTimeout(() => setConfirmMsg(prev => { const n = { ...prev }; delete n[purchase.id]; return n; }), 4000);
       }
     } catch {
-      setConfirmMsg(prev => ({ ...prev, [purchaseId]: "Erro de rede" }));
+      setConfirmMsg(prev => ({ ...prev, [purchase.id]: "Erro de rede" }));
+      setTimeout(() => setConfirmMsg(prev => { const n = { ...prev }; delete n[purchase.id]; return n; }), 4000);
     } finally {
       setConfirmingId(null);
-      setTimeout(() => setConfirmMsg(prev => { const n = { ...prev }; delete n[purchaseId]; return n; }), 4000);
     }
   }
 
@@ -630,19 +633,25 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
                         </td>
                         <td className="px-4 py-3">
                           {confirmMsg[p.id] ? (
-                            <span className="text-xs text-green-400 font-semibold">{confirmMsg[p.id]}</span>
+                            <span className="text-xs text-red-400 font-semibold">{confirmMsg[p.id]}</span>
                           ) : p.status === "pending" ? (
                             <button
-                              onClick={() => confirmPurchase(p.id, p.accessToken)}
+                              onClick={() => confirmPurchase(p)}
                               disabled={confirmingId === p.id}
                               className="text-xs px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors disabled:opacity-50 font-semibold whitespace-nowrap"
                             >
-                              {confirmingId === p.id ? "Confirmando..." : "✓ Confirmar + Copiar Token"}
+                              {confirmingId === p.id ? "Confirmando..." : "✓ Confirmar Pagamento"}
                             </button>
                           ) : (
-                            <span className="text-xs text-[hsl(220_10%_35%)]">
-                              {p.confirmedAt ? `✓ ${fmt(p.confirmedAt)}` : "—"}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs text-green-400">✓ Confirmado</span>
+                              <button
+                                onClick={() => setConfirmedModal(p)}
+                                className="text-xs text-[hsl(250_90%_70%)] hover:text-white transition-colors underline"
+                              >
+                                Ver token
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -763,6 +772,89 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
       <div className="text-center text-xs text-[hsl(220_10%_30%)] py-4">
         Painel acessível apenas via <code className="text-[hsl(220_10%_40%)]">/nexos-academy/#owner</code> — não aparece em nenhum menu público.
       </div>
+
+      {/* ── Modal de confirmação de pagamento ── */}
+      {confirmedModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}
+          onClick={e => e.target === e.currentTarget && setConfirmedModal(null)}
+        >
+          <div className="w-full max-w-md rounded-2xl border border-green-500/30 bg-[hsl(222_25%_6%)] p-8 space-y-6 shadow-2xl">
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <div className="text-4xl">✅</div>
+              <h2 className="text-xl font-bold text-white">Pagamento Confirmado!</h2>
+              <p className="text-sm text-[hsl(220_10%_50%)]">Entregue o código abaixo ao cliente</p>
+            </div>
+
+            {/* Cliente info */}
+            <div className="rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_14%)] p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-[hsl(220_10%_45%)]">Cliente</span>
+                <span className="text-white font-semibold">{confirmedModal.customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[hsl(220_10%_45%)]">E-mail</span>
+                <span className="text-white">{confirmedModal.customerEmail}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[hsl(220_10%_45%)]">Produto</span>
+                <span className="text-[hsl(250_90%_75%)] font-semibold">
+                  {confirmedModal.productId === "complete-bundle"
+                    ? "Metodologia NexOS — Edição Completa"
+                    : confirmedModal.productId === "mini-guide"
+                    ? "Mini-Guia: Primeiros R$10k Online"
+                    : confirmedModal.productId}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[hsl(220_10%_45%)]">Valor</span>
+                <span className="text-white font-semibold">{fmtBrl(confirmedModal.amountCents)}</span>
+              </div>
+            </div>
+
+            {/* Token em destaque */}
+            <div className="rounded-xl border-2 border-[hsl(250_90%_65%/0.5)] bg-[hsl(250_90%_65%/0.08)] p-5 text-center space-y-3">
+              <p className="text-xs text-[hsl(250_90%_70%)] uppercase tracking-widest font-bold">Código de Acesso</p>
+              <p className="text-3xl font-extrabold text-white tracking-[0.25em] font-mono">{confirmedModal.accessToken}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(confirmedModal.accessToken);
+                  setCopyMsg("Copiado!");
+                  setTimeout(() => setCopyMsg(""), 2000);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[hsl(250_90%_65%/0.2)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.4)] hover:bg-[hsl(250_90%_65%/0.3)] transition-colors text-sm font-semibold"
+              >
+                {copyMsg === "Copiado!" ? "✓ Copiado!" : "📋 Copiar Código"}
+              </button>
+            </div>
+
+            {/* Ações */}
+            <div className="space-y-3">
+              {/* WhatsApp */}
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `Olá ${confirmedModal.customerName?.split(" ")[0] ?? ""}! 🎉\n\nSeu acesso à *${confirmedModal.productId === "complete-bundle" ? "Metodologia NexOS — Edição Completa" : "Mini-Guia NexOS"}* está liberado!\n\n*Código de acesso:* \`${confirmedModal.accessToken}\`\n\n👉 Acesse em: ${window.location.origin}/nexos-academy/\n\nClique em "Já tenho um código" e digite o código acima.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold transition-colors text-sm"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Enviar por WhatsApp
+              </a>
+
+              <button
+                onClick={() => setConfirmedModal(null)}
+                className="w-full py-2.5 rounded-xl border border-[hsl(220_20%_15%)] text-[hsl(220_10%_50%)] hover:text-white hover:border-[hsl(220_20%_25%)] transition-colors text-sm"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
