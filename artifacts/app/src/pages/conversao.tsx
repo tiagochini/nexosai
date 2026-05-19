@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 
 // ─── CONFIGURAÇÃO — atualizar antes da abertura ───────────────────────────────
 const CONFIG = {
-  precoFundador:       "R$297",
-  precoFundadorSufixo: "/mês",
-  precoCheio:          "R$1.497",
-  precoCheioSufixo:    "/mês",
+  precoFundador:       "R$3.990",
+  precoFundadorSufixo: " acesso único",
+  precoCheio:          "R$9.990",
+  precoCheioSufixo:    " acesso único",
   horasFundador:       24,
   cartUrl:             "/comprar",
   // URL do vídeo de IA — substituir pelo link real antes do lançamento

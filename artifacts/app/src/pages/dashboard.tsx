@@ -715,14 +715,14 @@ export default function Dashboard() {
         <KpiCard
           label="Créditos de IA"
           value={creditsBalance.toLocaleString("pt-BR")}
-          sub={`${creditsPct}% de ${totalCredits.toLocaleString("pt-BR")} cr/mês`}
+          sub={`${creditsPct}% de ${totalCredits.toLocaleString("pt-BR")} cr incluídos`}
           icon={CreditCard}
           color={creditsLow ? "yellow" : "primary"}
           href="/credits"
           loading={loadingCredits}
           breakdown={[
             { label: "Saldo atual",  value: creditsBalance.toLocaleString("pt-BR") },
-            { label: "Cota mensal",  value: totalCredits.toLocaleString("pt-BR") },
+            { label: "Créditos incluídos",  value: totalCredits.toLocaleString("pt-BR") },
             { label: "Utilizado",    value: `${100 - creditsPct}%` },
           ]}
           expanded={expandedKpi === "credits"}

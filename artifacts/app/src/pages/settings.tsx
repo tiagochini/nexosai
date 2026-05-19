@@ -369,7 +369,7 @@ function WorkspaceTab() {
                     <div>
                       <div className="font-mono font-bold text-sm uppercase tracking-widest">{p.name}</div>
                       <div className="font-mono text-xs text-muted-foreground mt-0.5">
-                        R$ {parseFloat(p.priceMonthlyBrl).toLocaleString("pt-BR")}/mês
+                        R$ {parseFloat(p.priceMonthlyBrl).toLocaleString("pt-BR")} — acesso único
                       </div>
                     </div>
                     {isCurrent && (
@@ -380,7 +380,7 @@ function WorkspaceTab() {
                   </div>
                   <div className="space-y-1.5 mb-4">
                     {[
-                      `${p.creditsMonthly.toLocaleString("pt-BR")} créditos/mês`,
+                      `${p.creditsMonthly.toLocaleString("pt-BR")} créditos incluídos`,
                       `${p.maxCampaigns} campanhas simultâneas`,
                       ...(p.whiteLabel ? ["White-label incluso"] : []),
                     ].map((feat) => (

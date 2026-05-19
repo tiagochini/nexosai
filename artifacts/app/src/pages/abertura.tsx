@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 
 // ─── CONFIGURAÇÃO — editar aqui antes de abrir o carrinho ──────────────────────
 const CART_CONFIG = {
-  precoFundador:       "R$297",
-  precoFundadorSufixo: "/mês",
-  precoCheio:          "R$1.497",
-  precoCheioSufixo:    "/mês",
+  precoFundador:       "R$3.990",
+  precoFundadorSufixo: " acesso único",
+  precoCheio:          "R$9.990",
+  precoCheioSufixo:    " acesso único",
   horasFundador:       24,       // janela real em horas
   cartUrl:             "/comprar",
 };

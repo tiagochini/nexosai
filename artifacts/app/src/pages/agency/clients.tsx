@@ -335,7 +335,7 @@ export default function AgencyClientsPage() {
           <Shield className="h-10 w-10 text-yellow-400 mx-auto mb-4" />
           <h2 className="font-mono font-bold text-base uppercase tracking-wide text-yellow-400 mb-2">Funcionalidade Exclusiva — Plano Agency</h2>
           <p className="font-mono text-sm text-muted-foreground/70 mb-6 max-w-md mx-auto">
-            Gerencie múltiplos clientes, delegue acesso e acompanhe as campanhas de cada um em um só lugar. Disponível no Plano Agency (R$1.497/mês).
+            Gerencie múltiplos clientes, delegue acesso e acompanhe as campanhas de cada um em um só lugar. Disponível no Plano Agency.
           </p>
           <Link href="/settings">
             <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">

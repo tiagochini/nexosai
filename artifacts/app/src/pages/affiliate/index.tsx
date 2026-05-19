@@ -150,7 +150,7 @@ export default function AffiliatePage() {
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Programa de Afiliados</h1>
           </div>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-            Lance o NexOS AI para o seu público e ganhe comissões recorrentes
+            Lance o NexOS AI para o seu público e ganhe comissões por cada indicação
           </p>
         </div>
 
@@ -300,9 +300,9 @@ export default function AffiliatePage() {
           color="primary"
         />
         <StatCard
-          label="Assinantes Ativos"
+          label="Clientes Ativos"
           value={(affiliate.totalConversions || 0).toLocaleString("pt-BR")}
-          sub="pagando mensalmente"
+          sub="com acesso ativo"
           icon={Target}
           color="success"
         />
