@@ -11,11 +11,32 @@
  * Day 10 → Step 4: Última chance / urgência perpétua
  */
 
+import nodemailer from "nodemailer";
 import { and, eq, isNull, lte, ne } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
+
+async function sendViaGmailFunnel(opts: { to: string; subject: string; html: string }): Promise<boolean> {
+  if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) return false;
+  try {
+    const transport = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: env.GMAIL_USER, pass: env.GMAIL_APP_PASSWORD },
+    });
+    await transport.sendMail({
+      from: `"NexOS Academy" <${env.GMAIL_USER}>`,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+    });
+    return true;
+  } catch (err) {
+    logger.error({ err }, "academy-funnel: gmail send failed");
+    return false;
+  }
+}
 
 // Day offset for each step (from enrolledAt)
 export const FUNNEL_STEPS: { step: number; dayOffset: number; subject: string }[] = [
@@ -168,44 +189,61 @@ async function sendFunnelEmail(opts: {
   const firstName = (opts.name ?? "").split(" ")[0] || "";
   const html = buildEmailHtml(opts.step, firstName);
 
-  if (!env.RESEND_API_KEY) {
-    // No Resend configured — log and mark as sent (dev mode)
+  // Try Gmail first (if configured), then Resend, then log-only
+  const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
+  const useResend = !!env.RESEND_API_KEY;
+
+  if (!useGmail && !useResend) {
     logger.info(
       { email: opts.email, step: opts.step, subject: stepMeta.subject },
-      "academy-funnel: [NO RESEND] would send email"
+      "academy-funnel: [NO EMAIL PROVIDER] would send email — configure GMAIL_USER+GMAIL_APP_PASSWORD or RESEND_API_KEY"
     );
     await db.update(academyFunnelEmailsTable)
-      .set({ status: "sent", sentAt: new Date(), resendId: "dev-no-resend" })
+      .set({ status: "sent", sentAt: new Date(), resendId: "dev-no-provider" })
       .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
     return;
   }
 
   try {
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: env.RESEND_FROM_EMAIL,
-        to: opts.email,
-        subject: stepMeta.subject,
-        html,
-      }),
-    });
+    let sent = false;
 
-    if (!resp.ok) {
-      const text = await resp.text();
-      throw new Error(`Resend error ${resp.status}: ${text}`);
+    if (useGmail) {
+      sent = await sendViaGmailFunnel({ to: opts.email, subject: stepMeta.subject, html });
+      if (sent) {
+        await db.update(academyFunnelEmailsTable)
+          .set({ status: "sent", sentAt: new Date(), resendId: "gmail" })
+          .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
+        logger.info({ email: opts.email, step: opts.step, via: "gmail" }, "academy-funnel: email sent via Gmail");
+        return;
+      }
     }
 
-    const data = await resp.json() as { id?: string };
-    await db.update(academyFunnelEmailsTable)
-      .set({ status: "sent", sentAt: new Date(), resendId: data.id ?? null })
-      .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
+    if (useResend && !sent) {
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: env.RESEND_FROM_EMAIL,
+          to: opts.email,
+          subject: stepMeta.subject,
+          html,
+        }),
+      });
 
-    logger.info({ email: opts.email, step: opts.step, resendId: data.id }, "academy-funnel: email sent");
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`Resend error ${resp.status}: ${text}`);
+      }
+
+      const data = await resp.json() as { id?: string };
+      await db.update(academyFunnelEmailsTable)
+        .set({ status: "sent", sentAt: new Date(), resendId: data.id ?? null })
+        .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
+      logger.info({ email: opts.email, step: opts.step, resendId: data.id, via: "resend" }, "academy-funnel: email sent via Resend");
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     await db.update(academyFunnelEmailsTable)

@@ -1,9 +1,12 @@
+import Watermark from "@/components/Watermark";
+
 interface MiniGuideProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
 
 export default function MiniGuide({ onNavigate }: MiniGuideProps) {
   return (
+    <Watermark>
     <div className="max-w-3xl mx-auto space-y-10 pb-16">
 
       {/* Header */}
@@ -363,5 +366,6 @@ export default function MiniGuide({ onNavigate }: MiniGuideProps) {
       </section>
 
     </div>
+    </Watermark>
   );
 }

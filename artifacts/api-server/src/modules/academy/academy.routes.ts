@@ -539,8 +539,16 @@ router.post("/admin/confirm", async (req, res): Promise<void> => {
     .where(eq(academyPurchasesTable.id, purchaseId));
 
   // Fire access email (non-blocking)
-  sendAccessEmail(purchase.customerEmail, purchase.customerName ?? "", purchase.accessToken)
-    .catch(err => logger.error({ err }, "academy: admin resend email error"));
+  const productInfo = ACADEMY_PRODUCTS[purchase.productId as keyof typeof ACADEMY_PRODUCTS];
+  setImmediate(() => {
+    sendAccessEmail({
+      email: purchase.customerEmail,
+      name: purchase.customerName ?? "",
+      token: purchase.accessToken,
+      productName: productInfo?.name ?? purchase.productId,
+      portalUrl: `${env.APP_URL}/nexos-academy/`,
+    }).catch(err => logger.error({ err }, "academy: admin resend email error"));
+  });
 
   res.json({ ok: true, token: purchase.accessToken, email: purchase.customerEmail });
 });

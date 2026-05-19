@@ -74,8 +74,11 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
     setTokenError("");
     try {
       const resp = await fetch(`${API_BASE}/verify/${encodeURIComponent(token.trim().toUpperCase())}`);
-      const data = await resp.json() as { valid?: boolean; productId?: string; error?: string };
+      const data = await resp.json() as { valid?: boolean; productId?: string; error?: string; email?: string; name?: string };
       if (data.valid) {
+        // Save identifying info for watermark
+        if (data.email) localStorage.setItem("nexos-academy-email", data.email);
+        if (data.name) localStorage.setItem("nexos-academy-name", data.name);
         if (data.productId === "mini-guide") {
           onNavigate("mini-guide");
           return;
@@ -162,56 +165,6 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
           {tokenError && (
             <p className="text-xs text-red-400 mt-2">{tokenError}</p>
           )}
-        </div>
-      )}
-
-      {/* Mini-Guide access — shown after valid mini-guide token */}
-      {miniGuideAccess && (
-        <div className="rounded-2xl border-2 border-[hsl(250_90%_65%/0.4)] bg-[hsl(250_90%_65%/0.06)] p-8 space-y-6">
-          <div className="text-center space-y-2">
-            <div className="text-4xl">📘</div>
-            <h2 className="text-xl font-bold text-white">Acesso Liberado — Mini-Guia!</h2>
-            <p className="text-sm text-[hsl(220_10%_55%)]">Código verificado com sucesso. Seu material está disponível abaixo.</p>
-          </div>
-
-          <div className="rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_14%)] p-5 space-y-4">
-            <h3 className="text-base font-bold text-white">Mini-Guia: Primeiros R$10k Online</h3>
-            <ul className="space-y-2 text-sm text-[hsl(220_10%_65%)]">
-              {["47 páginas de conteúdo denso", "Checklist de lançamento em 7 dias", "Planilha de projeção de receita", "3 estudos de caso reais"].map(f => (
-                <li key={f} className="flex items-center gap-2">
-                  <span className="text-[hsl(250_90%_70%)]">✓</span> {f}
-                </li>
-              ))}
-            </ul>
-            <div className="pt-2 border-t border-[hsl(220_20%_12%)]">
-              <a
-                href="https://drive.google.com/drive/folders/SEU_LINK_AQUI"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[hsl(250_90%_65%)] hover:bg-[hsl(250_90%_60%)] text-white font-bold transition-colors text-sm"
-                onClick={e => {
-                  e.preventDefault();
-                  alert("O link de download será disponibilizado em breve. Entre em contato pelo WhatsApp para receber o arquivo.");
-                }}
-              >
-                📥 Baixar Mini-Guia (PDF)
-              </a>
-              <p className="text-xs text-center text-[hsl(220_10%_40%)] mt-2">
-                Dúvidas? Fale conosco:{" "}
-                <a href="mailto:suporte@nexos.ai" className="text-[hsl(250_90%_70%)] hover:underline">suporte@nexos.ai</a>
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-[hsl(168_100%_42%/0.2)] bg-[hsl(168_100%_42%/0.05)] p-4 text-sm text-center space-y-2">
-            <p className="text-[hsl(220_10%_60%)]">Quer acesso ao <strong className="text-white">curso completo</strong> com todos os módulos e aulas?</p>
-            <button
-              onClick={() => { setMiniGuideAccess(false); setCheckoutProduct("complete-bundle"); }}
-              className="text-[hsl(250_90%_75%)] hover:underline text-sm font-semibold"
-            >
-              Ver Metodologia NexOS — Edição Completa →
-            </button>
-          </div>
         </div>
       )}
 

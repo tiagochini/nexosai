@@ -59,6 +59,8 @@ function getInitialPage(): NavState {
   if (typeof window !== "undefined") {
     if (window.location.hash === "#owner") return { page: "owner", params: {} };
     if (window.location.hash === "#guia-gratuito") return { page: "free-guide", params: {} };
+    if (window.location.hash === "#mini-guide") return { page: "mini-guide", params: {} };
+    if (window.location.hash === "#products") return { page: "products", params: {} };
     const search = new URLSearchParams(window.location.search);
     if (search.get("payment") === "success") return { page: "products", params: { paymentSuccess: "1" } };
   }
@@ -83,10 +85,12 @@ function AcademyApp() {
 
   useEffect(() => {
     function onHashChange() {
-      if (window.location.hash === "#owner") {
-        setNav({ page: "owner", params: {} });
-        setMobileMenuOpen(false);
-      }
+      const hash = window.location.hash;
+      if (hash === "#owner") setNav({ page: "owner", params: {} });
+      else if (hash === "#guia-gratuito") setNav({ page: "free-guide", params: {} });
+      else if (hash === "#mini-guide") setNav({ page: "mini-guide", params: {} });
+      else if (hash === "#products") setNav({ page: "products", params: {} });
+      setMobileMenuOpen(false);
     }
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);

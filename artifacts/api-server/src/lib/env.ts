@@ -38,6 +38,9 @@ export const env = {
   // ISO date string (e.g. "2025-06-01T20:00:00-03:00") — set to start the launch countdown
   ASAAS_API_KEY: process.env["ASAAS_API_KEY"] ?? "",
   ASAAS_SANDBOX: process.env["ASAAS_SANDBOX"] ?? "true",
+  // Gmail SMTP (alternative to Resend — set both GMAIL_USER and GMAIL_APP_PASSWORD to enable)
+  GMAIL_USER: process.env["GMAIL_USER"] ?? "",
+  GMAIL_APP_PASSWORD: process.env["GMAIL_APP_PASSWORD"] ?? "",
   LAUNCH_CAMPAIGN_DATE: process.env["LAUNCH_CAMPAIGN_DATE"] ?? "",
   // Simulator / lead funnel config
   SIMULATOR_CART_OPEN: process.env["SIMULATOR_CART_OPEN"] === "true",

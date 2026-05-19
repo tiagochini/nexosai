@@ -1,9 +1,12 @@
+import Watermark from "@/components/Watermark";
+
 interface FreeGuideProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
 
 export default function FreeGuide({ onNavigate }: FreeGuideProps) {
   return (
+    <Watermark>
     <div className="max-w-3xl mx-auto space-y-10 pb-16">
 
       {/* Header */}
@@ -157,5 +160,6 @@ export default function FreeGuide({ onNavigate }: FreeGuideProps) {
       </section>
 
     </div>
+    </Watermark>
   );
 }

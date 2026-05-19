@@ -1,5 +1,31 @@
+import nodemailer from "nodemailer";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
+
+function getGmailTransport() {
+  if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) return null;
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: env.GMAIL_USER, pass: env.GMAIL_APP_PASSWORD },
+  });
+}
+
+async function sendViaGmail(opts: { to: string; subject: string; html: string; from?: string }): Promise<boolean> {
+  const transport = getGmailTransport();
+  if (!transport) return false;
+  try {
+    await transport.sendMail({
+      from: opts.from ?? `"NexOS Academy" <${env.GMAIL_USER}>`,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+    });
+    return true;
+  } catch (err) {
+    logger.error({ err }, "academy: gmail send failed");
+    return false;
+  }
+}
 
 const ASAAS_BASE = env.ASAAS_SANDBOX === "true"
   ? "https://sandbox.asaas.com/api/v3"
@@ -120,7 +146,7 @@ export function generateAccessToken(): string {
   return token;
 }
 
-// Send access token via Resend (if configured)
+// Send access token via Gmail or Resend
 export async function sendAccessEmail(opts: {
   email: string;
   name: string;
@@ -128,8 +154,11 @@ export async function sendAccessEmail(opts: {
   productName: string;
   portalUrl: string;
 }): Promise<void> {
-  if (!env.RESEND_API_KEY) {
-    logger.info({ email: opts.email, token: opts.token }, "academy: access token generated (Resend not configured — log only)");
+  const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
+  const useResend = !!env.RESEND_API_KEY;
+
+  if (!useGmail && !useResend) {
+    logger.info({ email: opts.email, token: opts.token }, "academy: access token generated (no email provider configured — log only)");
     return;
   }
 
@@ -152,24 +181,38 @@ export async function sendAccessEmail(opts: {
     </div>
   `;
 
-  const resp = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: env.RESEND_FROM_EMAIL,
-      to: opts.email,
-      subject: `Seu acesso à NexOS Academy — Código: ${opts.token}`,
-      html,
-    }),
-  });
+  const subject = `Seu acesso à NexOS Academy — Código: ${opts.token}`;
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    logger.error({ status: resp.status, body: text }, "academy: failed to send access email");
-  } else {
-    logger.info({ email: opts.email }, "academy: access email sent");
+  // Try Gmail first
+  if (useGmail) {
+    const sent = await sendViaGmail({ to: opts.email, subject, html });
+    if (sent) {
+      logger.info({ email: opts.email, via: "gmail" }, "academy: access email sent via Gmail");
+      return;
+    }
+  }
+
+  // Fallback to Resend
+  if (useResend) {
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.RESEND_FROM_EMAIL,
+        to: opts.email,
+        subject,
+        html,
+      }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      logger.error({ status: resp.status, body: text }, "academy: failed to send access email via Resend");
+    } else {
+      logger.info({ email: opts.email, via: "resend" }, "academy: access email sent via Resend");
+    }
   }
 }
