@@ -33,6 +33,9 @@ export const academyLeadsTable = pgTable("academy_leads", {
   funnelStep: integer("funnel_step").default(-1).notNull(),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
   convertedAt: timestamp("converted_at", { withTimezone: true }),
+  crmStatus: varchar("crm_status", { length: 30 }).default("novo").notNull(),
+  crmNotes: text("crm_notes"),
+  crmLastActionAt: timestamp("crm_last_action_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

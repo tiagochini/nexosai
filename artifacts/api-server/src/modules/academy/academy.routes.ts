@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { eq, or } from "drizzle-orm";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@workspace/db";
-import { academyPurchasesTable, academyLeadsTable } from "@workspace/db";
+import { academyPurchasesTable, academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 import {
@@ -590,6 +590,79 @@ router.post("/admin/gift-codes", async (req, res): Promise<void> => {
 
   logger.info({ count: inserted.length, productId }, "academy: gift codes generated");
   res.status(201).json({ codes: inserted.map(r => r.accessToken), total: inserted.length });
+});
+
+// ── CRM endpoints ────────────────────────────────────────────────────────────
+
+const CRM_SECRET = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
+function checkCrm(req: import("express").Request, res: import("express").Response): boolean {
+  const s = req.headers["x-admin-secret"] ?? req.query["secret"];
+  if (s !== CRM_SECRET) { res.status(401).json({ error: "Unauthorized" }); return false; }
+  return true;
+}
+
+// GET /api/academy/leads/:id — lead detail + funnel email history
+router.get("/leads/:id", async (req, res): Promise<void> => {
+  if (!checkCrm(req, res)) return;
+  const { id } = req.params;
+  const [lead] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, id)).limit(1);
+  if (!lead) { res.status(404).json({ error: "Lead not found" }); return; }
+
+  const emails = await db
+    .select()
+    .from(academyFunnelEmailsTable)
+    .where(eq(academyFunnelEmailsTable.leadId, id))
+    .orderBy(academyFunnelEmailsTable.step);
+
+  // Check if they purchased
+  const purchases = await db
+    .select({ id: academyPurchasesTable.id, productId: academyPurchasesTable.productId, status: academyPurchasesTable.status, confirmedAt: academyPurchasesTable.confirmedAt })
+    .from(academyPurchasesTable)
+    .where(eq(academyPurchasesTable.customerEmail, lead.email));
+
+  res.json({ lead, funnelEmails: emails, purchases });
+});
+
+// PATCH /api/academy/leads/:id — update CRM status + notes
+router.patch("/leads/:id", async (req, res): Promise<void> => {
+  if (!checkCrm(req, res)) return;
+  const { id } = req.params;
+  const { crmStatus, crmNotes } = req.body as { crmStatus?: string; crmNotes?: string };
+  const allowed = ["novo", "contatado", "qualificado", "convertido", "perdido"];
+  if (crmStatus && !allowed.includes(crmStatus)) { res.status(400).json({ error: "Status inválido" }); return; }
+
+  await db.update(academyLeadsTable)
+    .set({
+      ...(crmStatus ? { crmStatus, crmLastActionAt: new Date() } : {}),
+      ...(crmNotes !== undefined ? { crmNotes } : {}),
+    })
+    .where(eq(academyLeadsTable.id, id));
+
+  const [updated] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, id)).limit(1);
+  res.json({ lead: updated });
+});
+
+// POST /api/academy/leads/:id/enroll — manually enroll lead in funnel
+router.post("/leads/:id/enroll", async (req, res): Promise<void> => {
+  if (!checkCrm(req, res)) return;
+  const { id } = req.params;
+  const [lead] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, id)).limit(1);
+  if (!lead) { res.status(404).json({ error: "Lead not found" }); return; }
+  await enrollLeadInFunnel(id);
+  res.json({ ok: true });
+});
+
+// POST /api/academy/leads/:id/convert — manually mark lead as converted
+router.post("/leads/:id/convert", async (req, res): Promise<void> => {
+  if (!checkCrm(req, res)) return;
+  const { id } = req.params;
+  const [lead] = await db.select().from(academyLeadsTable).where(eq(academyLeadsTable.id, id)).limit(1);
+  if (!lead) { res.status(404).json({ error: "Lead not found" }); return; }
+  await markLeadConverted(lead.email);
+  await db.update(academyLeadsTable)
+    .set({ crmStatus: "convertido", crmLastActionAt: new Date() })
+    .where(eq(academyLeadsTable.id, id));
+  res.json({ ok: true });
 });
 
 // POST /api/academy/funnel-tick (owner only — force-runs the funnel scheduler tick)

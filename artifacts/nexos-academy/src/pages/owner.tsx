@@ -95,7 +95,29 @@ interface Lead {
   utmMedium: string | null;
   utmCampaign: string | null;
   ipAddress: string | null;
+  funnelStep: number;
+  funnelEnrolledAt: string | null;
+  convertedAt: string | null;
+  unsubscribedAt: string | null;
+  crmStatus: string;
+  crmNotes: string | null;
+  crmLastActionAt: string | null;
   createdAt: string;
+}
+
+interface FunnelEmail {
+  id: string;
+  step: number;
+  status: string;
+  scheduledAt: string;
+  sentAt: string | null;
+  errorMessage: string | null;
+}
+
+interface LeadDetail {
+  lead: Lead;
+  funnelEmails: FunnelEmail[];
+  purchases: { id: string; productId: string; status: string; confirmedAt: string | null }[];
 }
 
 interface Purchase {
@@ -163,6 +185,17 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const [giftLoading, setGiftLoading] = useState(false);
   const [giftGenerating, setGiftGenerating] = useState(false);
   const [giftCopied, setGiftCopied] = useState<string | null>(null);
+
+  // CRM state
+  const [leadSearch, setLeadSearch] = useState("");
+  const [crmFilter, setCrmFilter] = useState<string>("todos");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadDetail, setLeadDetail] = useState<LeadDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState("");
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
   const allLessons = allChapters.flatMap(c => c.lessons);
@@ -265,6 +298,87 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     try { await navigator.clipboard.writeText(code); } catch { /* ignore */ }
     setGiftCopied(code);
     setTimeout(() => setGiftCopied(null), 2000);
+  };
+
+  // ── CRM functions ──────────────────────────────────────────────────────────
+  const openLead = useCallback(async (lead: Lead) => {
+    setSelectedLead(lead);
+    setNotesValue(lead.crmNotes ?? "");
+    setEditingNotes(false);
+    setActionMsg(null);
+    setLeadDetail(null);
+    setLoadingDetail(true);
+    try {
+      const r = await fetch(`/api/academy/leads/${lead.id}?secret=${OWNER_SECRET}`);
+      const j = await r.json();
+      setLeadDetail(j);
+    } catch { /* ignore */ }
+    finally { setLoadingDetail(false); }
+  }, []);
+
+  const closeLead = () => { setSelectedLead(null); setLeadDetail(null); setActionMsg(null); };
+
+  const updateStatus = async (leadId: string, status: string) => {
+    setSavingStatus(true);
+    try {
+      const r = await fetch(`/api/academy/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
+        body: JSON.stringify({ crmStatus: status }),
+      });
+      const j = await r.json();
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, crmStatus: status } : l));
+      if (selectedLead?.id === leadId) { setSelectedLead(j.lead); }
+      setActionMsg("✓ Status atualizado");
+    } catch { setActionMsg("Erro ao atualizar status"); }
+    finally { setSavingStatus(false); setTimeout(() => setActionMsg(null), 2500); }
+  };
+
+  const saveNotes = async (leadId: string) => {
+    setSavingStatus(true);
+    try {
+      await fetch(`/api/academy/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
+        body: JSON.stringify({ crmNotes: notesValue }),
+      });
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, crmNotes: notesValue } : l));
+      if (selectedLead) setSelectedLead({ ...selectedLead, crmNotes: notesValue });
+      setEditingNotes(false);
+      setActionMsg("✓ Nota salva");
+    } catch { setActionMsg("Erro ao salvar nota"); }
+    finally { setSavingStatus(false); setTimeout(() => setActionMsg(null), 2500); }
+  };
+
+  const enrollLead = async (leadId: string) => {
+    setSavingStatus(true);
+    try {
+      await fetch(`/api/academy/leads/${leadId}/enroll`, {
+        method: "POST", headers: { "x-admin-secret": OWNER_SECRET },
+      });
+      await openLead(selectedLead!);
+      setActionMsg("✓ Lead inscrito no funil");
+    } catch { setActionMsg("Erro ao inscrever no funil"); }
+    finally { setSavingStatus(false); setTimeout(() => setActionMsg(null), 3000); }
+  };
+
+  const convertLead = async (leadId: string) => {
+    setSavingStatus(true);
+    try {
+      await fetch(`/api/academy/leads/${leadId}/convert`, {
+        method: "POST", headers: { "x-admin-secret": OWNER_SECRET },
+      });
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, crmStatus: "convertido", convertedAt: new Date().toISOString() } : l));
+      if (selectedLead) setSelectedLead({ ...selectedLead, crmStatus: "convertido", convertedAt: new Date().toISOString() });
+      setActionMsg("✓ Lead marcado como convertido");
+    } catch { setActionMsg("Erro ao converter lead"); }
+    finally { setSavingStatus(false); setTimeout(() => setActionMsg(null), 3000); }
+  };
+
+  const copyCrmEmail = async (email: string) => {
+    try { await navigator.clipboard.writeText(email); setActionMsg("✓ E-mail copiado"); }
+    catch { setActionMsg("Erro ao copiar"); }
+    setTimeout(() => setActionMsg(null), 2000);
   };
 
   useEffect(() => {
@@ -481,92 +595,318 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
         ))}
       </div>
 
-      {/* TAB: LEADS */}
-      {tab === "leads" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h2 className="text-lg font-bold text-white">Leads Capturados</h2>
-              <p className="text-sm text-[hsl(220_10%_45%)]">
-                {leadsTotal} lead{leadsTotal !== 1 ? "s" : ""} no total
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={copyEmails}
-                className="btn-outline text-sm px-3 py-1.5"
-              >
-                {copyMsg || "Copiar e-mails"}
-              </button>
-              <button
-                onClick={exportLeadsCsv}
-                className="btn-outline text-sm px-3 py-1.5"
-                disabled={leads.length === 0}
-              >
-                ↓ CSV
-              </button>
-              <button
-                onClick={fetchLeads}
-                className="btn-outline text-sm px-3 py-1.5"
-              >
-                ↻
-              </button>
-            </div>
-          </div>
+      {/* TAB: LEADS — CRM */}
+      {tab === "leads" && (() => {
+        const CRM_STATUSES = [
+          { key: "novo",        label: "Novo",        dot: "bg-[hsl(220_10%_40%)]",  text: "text-[hsl(220_10%_60%)]" },
+          { key: "contatado",   label: "Contatado",   dot: "bg-blue-400",             text: "text-blue-300" },
+          { key: "qualificado", label: "Qualificado", dot: "bg-yellow-400",           text: "text-yellow-300" },
+          { key: "convertido",  label: "Convertido",  dot: "bg-green-400",            text: "text-green-300" },
+          { key: "perdido",     label: "Perdido",     dot: "bg-red-400",              text: "text-red-400" },
+        ];
+        const getStatus = (lead: Lead) => {
+          if (lead.convertedAt) return "convertido";
+          if (lead.unsubscribedAt) return "descadastrado";
+          return lead.crmStatus ?? "novo";
+        };
+        const statusInfo = (s: string) => CRM_STATUSES.find(x => x.key === s) ?? { key: s, label: s, dot: "bg-gray-400", text: "text-gray-400" };
 
-          {leadsLoading ? (
-            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">Carregando...</div>
-          ) : leads.length === 0 ? (
-            <div className="card p-10 text-center text-[hsl(220_10%_45%)]">
-              <div className="text-4xl mb-3">📭</div>
-              <p className="font-semibold text-white mb-1">Nenhum lead ainda</p>
-              <p className="text-sm">Quando alguém preencher o formulário do guia gratuito, aparece aqui.</p>
-            </div>
-          ) : (
-            <div className="card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[hsl(220_20%_15%)]">
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">E-mail</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden sm:table-cell">Nome</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden md:table-cell">Fonte</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden lg:table-cell">UTM</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Data</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leads.map((lead, i) => (
-                      <tr
-                        key={lead.id}
-                        className={`border-b border-[hsl(220_20%_12%)] hover:bg-[hsl(220_20%_8%)] transition-colors ${i === leads.length - 1 ? "border-b-0" : ""}`}
-                      >
-                        <td className="px-4 py-3 text-white font-medium">{lead.email}</td>
-                        <td className="px-4 py-3 text-[hsl(220_10%_60%)] hidden sm:table-cell">
-                          {lead.name ?? <span className="text-[hsl(220_10%_35%)] italic">—</span>}
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(250_90%_65%/0.1)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.2)]">
-                            {lead.source}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-[hsl(220_10%_50%)] text-xs hidden lg:table-cell">
-                          {lead.utmSource ? (
-                            <span>{lead.utmSource}{lead.utmMedium ? ` / ${lead.utmMedium}` : ""}{lead.utmCampaign ? ` / ${lead.utmCampaign}` : ""}</span>
-                          ) : (
-                            <span className="text-[hsl(220_10%_35%)] italic">orgânico</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-[hsl(220_10%_50%)] text-xs whitespace-nowrap">{fmt(lead.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        const filtered = leads.filter(l => {
+          const q = leadSearch.toLowerCase();
+          const matchSearch = !q || l.email.toLowerCase().includes(q) || (l.name ?? "").toLowerCase().includes(q) || (l.utmSource ?? "").toLowerCase().includes(q);
+          const s = getStatus(l);
+          const matchFilter = crmFilter === "todos" || s === crmFilter || (crmFilter === "funil" && !!l.funnelEnrolledAt && !l.convertedAt && !l.unsubscribedAt);
+          return matchSearch && matchFilter;
+        });
+
+        const FUNNEL_STEPS: Record<number, string> = { 0: "Boas-vindas", 1: "Valor", 2: "Prova Social", 3: "Objeções", 4: "Oferta" };
+
+        return (
+          <div className="flex gap-4 h-[calc(100vh-280px)] min-h-[500px]">
+            {/* ── Left: Lead list ─────────────────────────────────────── */}
+            <div className={`flex flex-col gap-3 ${selectedLead ? "hidden md:flex md:w-80 lg:w-96 shrink-0" : "flex-1"}`}>
+              {/* Header */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h2 className="text-base font-bold text-white">CRM de Leads</h2>
+                  <p className="text-xs text-[hsl(220_10%_45%)]">{leadsTotal} total · {filtered.length} exibidos</p>
+                </div>
+                <div className="flex gap-1.5">
+                  <button onClick={copyEmails} className="btn-outline text-xs px-2.5 py-1.5">{copyMsg || "📋 E-mails"}</button>
+                  <button onClick={exportLeadsCsv} className="btn-outline text-xs px-2.5 py-1.5" disabled={leads.length === 0}>↓ CSV</button>
+                  <button onClick={fetchLeads} className="btn-outline text-xs px-2.5 py-1.5">↻</button>
+                </div>
               </div>
+
+              {/* Search */}
+              <input
+                type="text"
+                placeholder="Buscar por e-mail, nome ou UTM…"
+                value={leadSearch}
+                onChange={e => setLeadSearch(e.target.value)}
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%)]"
+              />
+
+              {/* Status filters */}
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { key: "todos", label: "Todos" },
+                  { key: "novo", label: "Novos" },
+                  { key: "contatado", label: "Contatados" },
+                  { key: "qualificado", label: "Qualificados" },
+                  { key: "convertido", label: "Convertidos" },
+                  { key: "funil", label: "No Funil" },
+                  { key: "perdido", label: "Perdidos" },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setCrmFilter(f.key)}
+                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${crmFilter === f.key ? "bg-[hsl(250_90%_65%)] border-[hsl(250_90%_65%)] text-white" : "border-[hsl(220_20%_18%)] text-[hsl(220_10%_50%)] hover:text-white"}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* List */}
+              {leadsLoading ? (
+                <div className="card p-8 text-center text-[hsl(220_10%_45%)]">Carregando…</div>
+              ) : filtered.length === 0 ? (
+                <div className="card p-8 text-center text-[hsl(220_10%_45%)]">
+                  <p className="font-semibold text-white mb-1">Nenhum lead encontrado</p>
+                  <p className="text-xs">Ajuste o filtro ou a busca.</p>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto space-y-1 pr-1">
+                  {filtered.map(lead => {
+                    const s = getStatus(lead);
+                    const si = statusInfo(s);
+                    const isSelected = selectedLead?.id === lead.id;
+                    return (
+                      <button
+                        key={lead.id}
+                        onClick={() => openLead(lead)}
+                        className={`w-full text-left rounded-lg px-3 py-2.5 border transition-all ${isSelected ? "bg-[hsl(250_90%_65%/0.12)] border-[hsl(250_90%_65%/0.4)]" : "bg-[hsl(220_20%_6%)] border-[hsl(220_20%_12%)] hover:border-[hsl(220_20%_22%)] hover:bg-[hsl(220_20%_8%)]"}`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <span className="text-sm font-semibold text-white truncate">{lead.name ?? lead.email.split("@")[0]}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={`w-1.5 h-1.5 rounded-full ${si.dot}`} />
+                            <span className={`text-[11px] font-medium ${si.text}`}>{si.label}</span>
+                          </div>
+                        </div>
+                        <div className="text-xs text-[hsl(220_10%_45%)] truncate">{lead.email}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {lead.funnelEnrolledAt && (
+                            <span className="text-[11px] px-1.5 py-0.5 rounded bg-[hsl(250_90%_65%/0.1)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.2)]">
+                              Funil E{lead.funnelStep + 1}
+                            </span>
+                          )}
+                          {lead.utmSource && (
+                            <span className="text-[11px] text-[hsl(220_10%_40%)]">{lead.utmSource}</span>
+                          )}
+                          {lead.crmNotes && (
+                            <span className="text-[11px] text-[hsl(220_10%_40%)]">📝</span>
+                          )}
+                          <span className="text-[11px] text-[hsl(220_10%_35%)] ml-auto">{new Date(lead.createdAt).toLocaleDateString("pt-BR")}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* ── Right: Lead drawer ───────────────────────────────────── */}
+            {selectedLead && (
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
+                {/* Drawer header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-bold text-white truncate">{selectedLead.name ?? selectedLead.email.split("@")[0]}</h2>
+                    <button onClick={() => copyCrmEmail(selectedLead.email)} className="text-sm text-[hsl(250_90%_75%)] hover:underline text-left">
+                      {selectedLead.email}
+                    </button>
+                  </div>
+                  <div className="flex gap-2 items-center shrink-0">
+                    {actionMsg && <span className="text-xs text-green-400 font-medium">{actionMsg}</span>}
+                    <button onClick={closeLead} className="btn-outline text-xs px-2.5 py-1.5">✕ Fechar</button>
+                  </div>
+                </div>
+
+                {/* Pipeline status selector */}
+                <div className="card p-4">
+                  <p className="text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider mb-3">Pipeline de Status</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {CRM_STATUSES.map(s => {
+                      const isActive = (selectedLead.convertedAt ? "convertido" : selectedLead.crmStatus) === s.key;
+                      return (
+                        <button
+                          key={s.key}
+                          onClick={() => updateStatus(selectedLead.id, s.key)}
+                          disabled={savingStatus}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${isActive ? `bg-[hsl(220_20%_12%)] border-[hsl(220_20%_25%)] ${s.text}` : "border-[hsl(220_20%_14%)] text-[hsl(220_10%_40%)] hover:border-[hsl(220_20%_25%)] hover:text-white"}`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${s.dot} ${isActive ? "shadow-[0_0_6px_2px_currentColor]" : ""}`} />
+                          {s.label}
+                          {isActive && <span className="ml-1">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Info grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: "Fonte", value: selectedLead.source },
+                    { label: "UTM Source", value: selectedLead.utmSource ?? "—" },
+                    { label: "UTM Medium", value: selectedLead.utmMedium ?? "—" },
+                    { label: "UTM Campaign", value: selectedLead.utmCampaign ?? "—" },
+                    { label: "Capturado em", value: fmt(selectedLead.createdAt) },
+                    { label: "IP", value: selectedLead.ipAddress ?? "—" },
+                  ].map(item => (
+                    <div key={item.label} className="card px-3 py-2.5">
+                      <p className="text-[11px] text-[hsl(220_10%_40%)] uppercase tracking-wider mb-0.5">{item.label}</p>
+                      <p className="text-sm text-white font-medium truncate">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Funnel status */}
+                <div className="card p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Funil de E-mails</p>
+                    {!selectedLead.funnelEnrolledAt && (
+                      <button
+                        onClick={() => enrollLead(selectedLead.id)}
+                        disabled={savingStatus}
+                        className="btn-primary text-xs px-3 py-1.5"
+                      >
+                        {savingStatus ? "…" : "+ Inscrever no Funil"}
+                      </button>
+                    )}
+                  </div>
+
+                  {!selectedLead.funnelEnrolledAt ? (
+                    <p className="text-sm text-[hsl(220_10%_40%)] italic">Lead ainda não inscrito no funil de nutrição.</p>
+                  ) : loadingDetail ? (
+                    <p className="text-sm text-[hsl(220_10%_40%)]">Carregando…</p>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-[hsl(220_10%_50%)]">
+                        <span>Inscrito em {fmt(selectedLead.funnelEnrolledAt)}</span>
+                        {selectedLead.convertedAt && (
+                          <span className="text-green-400 font-semibold">· Convertido {fmt(selectedLead.convertedAt)}</span>
+                        )}
+                        {selectedLead.unsubscribedAt && (
+                          <span className="text-red-400">· Descadastrado</span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[0, 1, 2, 3, 4].map(step => {
+                          const email = leadDetail?.funnelEmails.find(e => e.step === step);
+                          const statusColor = !email ? "border-[hsl(220_20%_14%)] text-[hsl(220_10%_35%)]"
+                            : email.status === "sent" ? "border-green-500/30 bg-green-500/10 text-green-400"
+                            : email.status === "scheduled" ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-400"
+                            : email.status === "failed" ? "border-red-500/30 bg-red-500/10 text-red-400"
+                            : "border-[hsl(220_20%_14%)] text-[hsl(220_10%_40%)]";
+                          return (
+                            <div key={step} className={`rounded-lg p-2 border text-center ${statusColor}`}>
+                              <div className="text-[11px] font-bold">E{step + 1}</div>
+                              <div className="text-[10px] mt-0.5 truncate">{FUNNEL_STEPS[step]}</div>
+                              <div className="text-[10px] mt-0.5">
+                                {!email ? "—" : email.status === "sent" ? "✓ Enviado" : email.status === "scheduled" ? "Agendado" : email.status === "failed" ? "✗ Falhou" : email.status}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Purchases */}
+                {leadDetail && leadDetail.purchases.length > 0 && (
+                  <div className="card p-4">
+                    <p className="text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider mb-3">Compras</p>
+                    <div className="space-y-2">
+                      {leadDetail.purchases.map(p => (
+                        <div key={p.id} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-white font-medium">{p.productId === "complete-bundle" ? "Metodologia NexOS — Completa" : "Mini-Guia R$10k"}</span>
+                          <StatusBadge status={p.status} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div className="card p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Notas CRM</p>
+                    {!editingNotes && (
+                      <button onClick={() => { setEditingNotes(true); setNotesValue(selectedLead.crmNotes ?? ""); }} className="btn-outline text-xs px-2.5 py-1">
+                        {selectedLead.crmNotes ? "Editar" : "+ Adicionar nota"}
+                      </button>
+                    )}
+                  </div>
+                  {editingNotes ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={notesValue}
+                        onChange={e => setNotesValue(e.target.value)}
+                        rows={4}
+                        placeholder="Observações sobre este lead…"
+                        className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%)] resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => saveNotes(selectedLead.id)} disabled={savingStatus} className="btn-primary text-xs px-3 py-1.5">{savingStatus ? "Salvando…" : "Salvar"}</button>
+                        <button onClick={() => setEditingNotes(false)} className="btn-outline text-xs px-3 py-1.5">Cancelar</button>
+                      </div>
+                    </div>
+                  ) : selectedLead.crmNotes ? (
+                    <p className="text-sm text-[hsl(220_10%_70%)] whitespace-pre-wrap">{selectedLead.crmNotes}</p>
+                  ) : (
+                    <p className="text-sm text-[hsl(220_10%_35%)] italic">Nenhuma nota adicionada.</p>
+                  )}
+                </div>
+
+                {/* Quick actions */}
+                <div className="card p-4">
+                  <p className="text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider mb-3">Ações Rápidas</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => copyCrmEmail(selectedLead.email)} className="btn-outline text-xs px-3 py-1.5">📋 Copiar E-mail</button>
+                    <button onClick={() => copyCrmEmail(`${selectedLead.name ?? ""} <${selectedLead.email}>`)} className="btn-outline text-xs px-3 py-1.5">👤 Copiar Nome + E-mail</button>
+                    <a href={`mailto:${selectedLead.email}`} className="btn-outline text-xs px-3 py-1.5 no-underline">✉️ Abrir no Mail</a>
+                    {!selectedLead.convertedAt && (
+                      <button
+                        onClick={() => { if (confirm(`Marcar ${selectedLead.email} como convertido?`)) convertLead(selectedLead.id); }}
+                        disabled={savingStatus}
+                        className="btn-primary text-xs px-3 py-1.5"
+                      >
+                        ✅ Marcar Convertido
+                      </button>
+                    )}
+                    {!selectedLead.funnelEnrolledAt && (
+                      <button onClick={() => enrollLead(selectedLead.id)} disabled={savingStatus} className="btn-outline text-xs px-3 py-1.5">
+                        📧 Inscrever no Funil
+                      </button>
+                    )}
+                    <button
+                      onClick={() => updateStatus(selectedLead.id, "contatado")}
+                      disabled={savingStatus || selectedLead.crmStatus === "contatado"}
+                      className="btn-outline text-xs px-3 py-1.5"
+                    >
+                      📞 Marcar Contatado
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* TAB: FUNIL */}
       {tab === "funil" && (
