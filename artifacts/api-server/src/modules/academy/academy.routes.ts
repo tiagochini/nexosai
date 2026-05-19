@@ -14,6 +14,7 @@ import {
 } from "./academy.service.js";
 import {
   enrollLeadInFunnel,
+  sendWelcomeEmailNow,
   markLeadConverted,
   markLeadUnsubscribed,
   getFunnelStats,
@@ -293,13 +294,17 @@ router.post("/leads", async (req, res): Promise<void> => {
 
   logger.info({ email: parsed.email, source: parsed.source }, "academy: free lead captured");
 
-  // Auto-enroll in perpetual sales funnel (fire-and-forget)
+  // Auto-enroll in perpetual sales funnel + send welcome email immediately
   if (inserted.length > 0 && inserted[0]) {
     const leadId = inserted[0].id;
-    setImmediate(() => {
-      enrollLeadInFunnel(leadId).catch(err => {
-        logger.error({ err, leadId }, "academy: failed to enroll lead in funnel");
-      });
+    setImmediate(async () => {
+      try {
+        await enrollLeadInFunnel(leadId);
+        // Fire step-0 welcome email right away (don't wait for hourly scheduler)
+        await sendWelcomeEmailNow(leadId);
+      } catch (err) {
+        logger.error({ err, leadId }, "academy: failed to enroll/email lead");
+      }
     });
   }
 

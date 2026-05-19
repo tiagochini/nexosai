@@ -254,6 +254,42 @@ async function sendFunnelEmail(opts: {
   }
 }
 
+// ─── Fire welcome email immediately after enrollment ─────────────────────────
+
+export async function sendWelcomeEmailNow(leadId: string): Promise<void> {
+  const lead = await db.query.academyLeadsTable.findFirst({
+    where: eq(academyLeadsTable.id, leadId),
+  });
+  if (!lead) return;
+
+  // Find the step-0 funnel email row
+  const funnelEmailRows = await db
+    .select()
+    .from(academyFunnelEmailsTable)
+    .where(
+      and(
+        eq(academyFunnelEmailsTable.leadId, leadId),
+        eq(academyFunnelEmailsTable.step, 0),
+        ne(academyFunnelEmailsTable.status, "sent")
+      )
+    )
+    .limit(1);
+
+  if (funnelEmailRows.length === 0) return;
+  const row = funnelEmailRows[0]!;
+
+  await sendFunnelEmail({
+    email: lead.email,
+    name: lead.name,
+    step: 0,
+    funnelEmailId: row.id,
+  });
+
+  await db.update(academyLeadsTable)
+    .set({ funnelStep: 0 })
+    .where(eq(academyLeadsTable.id, leadId));
+}
+
 // ─── Hourly scheduler tick ───────────────────────────────────────────────────
 
 export async function runFunnelSchedulerTick(): Promise<void> {
