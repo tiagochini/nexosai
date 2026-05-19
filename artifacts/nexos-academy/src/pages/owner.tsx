@@ -592,73 +592,110 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
               <p className="text-sm">As compras via Asaas aparecem aqui após a confirmação do webhook.</p>
             </div>
           ) : (
-            <div className="card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[hsl(220_20%_15%)]">
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Cliente</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden sm:table-cell">Produto</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Status</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Token de Acesso</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchases.map((p, i) => (
-                      <tr
-                        key={p.id}
-                        className={`border-b border-[hsl(220_20%_12%)] hover:bg-[hsl(220_20%_8%)] transition-colors ${i === purchases.length - 1 ? "border-b-0" : ""}`}
-                      >
-                        <td className="px-4 py-3">
-                          <p className="text-white font-medium">{p.customerName}</p>
-                          <p className="text-[hsl(220_10%_50%)] text-xs">{p.customerEmail}</p>
-                          <p className="text-[hsl(220_10%_35%)] text-xs">{fmt(p.createdAt)}</p>
-                        </td>
-                        <td className="px-4 py-3 text-[hsl(220_10%_60%)] text-xs hidden sm:table-cell">{p.productId}</td>
-                        <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <code className="text-sm font-bold text-[hsl(250_90%_75%)] bg-[hsl(250_90%_65%/0.15)] px-2 py-1 rounded border border-[hsl(250_90%_65%/0.3)]">
-                              {p.accessToken}
-                            </code>
-                            <button
-                              onClick={() => copyToken(p.accessToken)}
-                              className="text-xs text-[hsl(220_10%_45%)] hover:text-white transition-colors px-1.5 py-0.5 rounded border border-[hsl(220_20%_15%)] hover:border-[hsl(220_20%_25%)]"
-                              title="Copiar token"
-                            >
-                              📋
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {confirmMsg[p.id] ? (
-                            <span className="text-xs text-red-400 font-semibold">{confirmMsg[p.id]}</span>
-                          ) : p.status === "pending" ? (
-                            <button
-                              onClick={() => confirmPurchase(p)}
-                              disabled={confirmingId === p.id}
-                              className="text-xs px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors disabled:opacity-50 font-semibold whitespace-nowrap"
-                            >
-                              {confirmingId === p.id ? "Confirmando..." : "✓ Confirmar Pagamento"}
-                            </button>
-                          ) : (
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs text-green-400">✓ Confirmado</span>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {purchases.map((p) => {
+                const productLabel = p.productId === "complete-bundle"
+                  ? "Metodologia NexOS Completa"
+                  : p.productId === "mini-guide"
+                  ? "Mini-Guia: Primeiros R$10k"
+                  : p.productId;
+                const isConfirmed = p.status === "confirmed";
+                return (
+                  <div
+                    key={p.id}
+                    className="rounded-2xl border border-[hsl(220_20%_14%)] bg-[hsl(222_25%_6%)] overflow-hidden"
+                  >
+                    {/* Card header */}
+                    <div className="px-5 py-4 border-b border-[hsl(220_20%_12%)] flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-white font-semibold text-sm truncate">{p.customerName}</p>
+                        <p className="text-[hsl(220_10%_40%)] text-xs mt-0.5">{fmt(p.createdAt)}</p>
+                      </div>
+                      <StatusBadge status={p.status} />
+                    </div>
+
+                    {/* Campo / Status table */}
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-[hsl(220_20%_12%)]">
+                          <th className="text-left px-5 py-2.5 text-xs font-bold text-[hsl(220_10%_45%)] uppercase tracking-wider w-1/2">Campo</th>
+                          <th className="text-left px-5 py-2.5 text-xs font-bold text-[hsl(220_10%_45%)] uppercase tracking-wider">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-[hsl(220_20%_10%)]">
+                          <td className="px-5 py-3 text-[hsl(220_10%_55%)]">Token</td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-2">
+                              <code className="text-[hsl(250_90%_75%)] font-bold tracking-wider text-xs">{p.accessToken}</code>
                               <button
-                                onClick={() => setConfirmedModal(p)}
-                                className="text-xs text-[hsl(250_90%_70%)] hover:text-white transition-colors underline"
-                              >
-                                Ver token
-                              </button>
+                                onClick={() => copyToken(p.accessToken)}
+                                className="text-[hsl(220_10%_40%)] hover:text-white transition-colors shrink-0"
+                                title="Copiar"
+                              >📋</button>
                             </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-[hsl(220_20%_10%)]">
+                          <td className="px-5 py-3 text-[hsl(220_10%_55%)]">Email</td>
+                          <td className="px-5 py-3 text-white text-xs break-all">{p.customerEmail}</td>
+                        </tr>
+                        <tr className="border-b border-[hsl(220_20%_10%)]">
+                          <td className="px-5 py-3 text-[hsl(220_10%_55%)]">Produto</td>
+                          <td className="px-5 py-3 text-white text-xs">{productLabel}</td>
+                        </tr>
+                        <tr className="border-b border-[hsl(220_20%_10%)]">
+                          <td className="px-5 py-3 text-[hsl(220_10%_55%)]">Pagamento</td>
+                          <td className="px-5 py-3">
+                            <span className={`text-xs font-semibold ${isConfirmed ? "text-green-400" : "text-yellow-400"}`}>
+                              {isConfirmed ? "Confirmado" : "Pendente"}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="px-5 py-3 text-[hsl(220_10%_55%)]">Acesso</td>
+                          <td className="px-5 py-3">
+                            <span className={`text-xs font-semibold ${isConfirmed ? "text-green-400" : "text-[hsl(220_10%_45%)]"}`}>
+                              {isConfirmed ? "Válido" : "Aguardando pagamento"}
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* Actions */}
+                    <div className="px-5 py-3 border-t border-[hsl(220_20%_12%)] flex gap-2">
+                      {confirmMsg[p.id] ? (
+                        <span className="text-xs text-red-400 font-semibold">{confirmMsg[p.id]}</span>
+                      ) : !isConfirmed ? (
+                        <button
+                          onClick={() => confirmPurchase(p)}
+                          disabled={confirmingId === p.id}
+                          className="flex-1 text-xs py-2 rounded-lg bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors disabled:opacity-50 font-semibold"
+                        >
+                          {confirmingId === p.id ? "Confirmando..." : "✓ Confirmar Pagamento"}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => setConfirmedModal(p)}
+                            className="flex-1 text-xs py-2 rounded-lg bg-[hsl(250_90%_65%/0.12)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.25)] hover:bg-[hsl(250_90%_65%/0.2)] transition-colors font-semibold"
+                          >
+                            📨 Reenviar Email
+                          </button>
+                          <button
+                            onClick={() => copyToken(p.accessToken)}
+                            className="text-xs px-3 py-2 rounded-lg bg-[hsl(220_20%_8%)] text-[hsl(220_10%_55%)] border border-[hsl(220_20%_14%)] hover:text-white transition-colors"
+                            title="Copiar token"
+                          >
+                            📋
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
