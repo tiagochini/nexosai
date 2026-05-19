@@ -835,19 +835,19 @@ export default function AdminPage() {
                 size="sm"
                 variant="outline"
                 className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2"
-                onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "agency" })}
+                onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "solo" })}
                 disabled={generateInvitesMutation.isPending}
               >
-                {generateInvitesMutation.isPending ? <><RefreshCw className="h-3 w-3 animate-spin" /> Gerando...</> : "+ 10 Agency"}
+                {generateInvitesMutation.isPending ? <><RefreshCw className="h-3 w-3 animate-spin" /> Gerando...</> : "+ 10 Individual"}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2"
-                onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "solo" })}
+                onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "agency" })}
                 disabled={generateInvitesMutation.isPending}
               >
-                + 10 Solo
+                + 10 Agency
               </Button>
               <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline" onClick={() => refetchInvites()}>
                 <RefreshCw className="h-3 w-3" />
@@ -864,8 +864,8 @@ export default function AdminPage() {
           ) : !inviteCodes || inviteCodes.length === 0 ? (
             <div className="border border-border/30 bg-card/20 p-12 text-center space-y-3">
               <p className="font-mono text-sm text-muted-foreground/50">Nenhum código gerado ainda.</p>
-              <Button size="sm" onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "agency" })} className="rounded-none font-mono uppercase text-xs tracking-widest">
-                Gerar 10 Códigos Agency
+              <Button size="sm" onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "solo" })} className="rounded-none font-mono uppercase text-xs tracking-widest">
+                Gerar 10 Códigos Individual
               </Button>
             </div>
           ) : (
