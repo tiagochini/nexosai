@@ -9,6 +9,7 @@ import Glossary from "@/pages/glossary";
 import Owner, { isOwnerMode, loadBrand, type BrandConfig } from "@/pages/owner";
 import MiniGuide from "@/pages/mini-guide";
 import FreeGuide from "@/pages/free-guide";
+import { useAntiPiracy, clearSession } from "@/hooks/useAntiPiracy";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,9 @@ function AcademyApp() {
   const [ownerMode, setOwnerMode] = useState<boolean>(isOwnerMode);
   const [hasAccess, setHasAccess] = useState<boolean>(() => hasStoredAccess() || isOwnerMode());
   const [brand, setBrand] = useState<BrandConfig>(() => loadBrand());
+  const [sessionConflict, setSessionConflict] = useState(false);
+  const [studentName] = useState<string>(() => localStorage.getItem("nexos-student-name") ?? "");
+  const [studentEmail] = useState<string>(() => localStorage.getItem("nexos-student-email") ?? "");
 
   useEffect(() => {
     const onBrandUpdated = () => setBrand(loadBrand());
@@ -141,6 +145,13 @@ function AcademyApp() {
 
   const canAccess = hasAccess || ownerMode;
 
+  useAntiPiracy({
+    studentName,
+    studentEmail,
+    enabled: canAccess && !ownerMode,
+    onSessionConflict: () => setSessionConflict(true),
+  });
+
   const isActive = (id: string) =>
     nav.page === id || (id === "modules" && (nav.page === "module" || nav.page === "lesson"));
 
@@ -182,6 +193,8 @@ function AcademyApp() {
             onNavigate={navigate}
             progress={progress}
             onComplete={markComplete}
+            studentName={studentName}
+            studentEmail={studentEmail}
           />
         );
       case "products":
@@ -346,6 +359,49 @@ function AcademyApp() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
         {renderPage()}
       </main>
+
+      {/* Session Conflict Modal */}
+      {sessionConflict && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[hsl(222_25%_7%)] border border-red-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center space-y-5">
+            <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-3xl mx-auto">
+              🔐
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Sessão Ativa em Outro Dispositivo</h2>
+              <p className="text-sm text-[hsl(220_10%_55%)] leading-relaxed">
+                Detectamos que sua conta está sendo usada simultaneamente em outro dispositivo ou aba. 
+                Por segurança, apenas uma sessão é permitida por vez.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                className="btn-primary w-full py-3"
+                onClick={() => {
+                  clearSession();
+                  setSessionConflict(false);
+                }}
+              >
+                Assumir esta Sessão
+              </button>
+              <button
+                className="btn-outline w-full py-2 text-sm"
+                onClick={() => {
+                  setHasAccess(false);
+                  localStorage.removeItem(ACCESS_KEY);
+                  setSessionConflict(false);
+                  setNav({ page: "home", params: {} });
+                }}
+              >
+                Sair
+              </button>
+            </div>
+            <p className="text-xs text-[hsl(220_10%_35%)]">
+              Se você não reconhece outra sessão, considere trocar sua senha.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-[hsl(220_20%_10%)] mt-16">

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { CURRICULUM } from "@/data/curriculum";
 import { GLOSSARY } from "@/data/glossary";
+import { useAntiPiracy } from "@/hooks/useAntiPiracy";
+import PiracyWatermark from "@/components/PiracyWatermark";
 
 interface LessonProps {
   chapterId: string;
@@ -8,6 +10,8 @@ interface LessonProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
   progress: Record<string, boolean>;
   onComplete: (lessonId: string) => void;
+  studentName?: string;
+  studentEmail?: string;
 }
 
 const LOG_KEY = (id: string) => `nexos-log-${id}`;
@@ -62,7 +66,8 @@ function renderMarkdown(text: string): string {
 
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/../../api";
 
-export default function Lesson({ chapterId, lessonId, onNavigate, progress, onComplete }: LessonProps) {
+export default function Lesson({ chapterId, lessonId, onNavigate, progress, onComplete, studentName, studentEmail }: LessonProps) {
+  useAntiPiracy({ studentName, studentEmail, enabled: true });
   const chapter = CURRICULUM.flatMap(m => m.chapters).find(c => c.id === chapterId);
 
   const [activeLesson, setActiveLesson] = useState(
@@ -415,8 +420,9 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
         )}
 
         {/* Content */}
-        <div className="card-nexos rounded-xl p-6 md:p-8">
-          <div className="lesson-content" dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
+        <div className="card-nexos rounded-xl p-6 md:p-8 relative" data-lesson-content>
+          <PiracyWatermark studentName={studentName} studentEmail={studentEmail} visible={!!(studentName || studentEmail)} />
+          <div className="lesson-content relative z-10" dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
         </div>
 
         {/* Exercise section */}
@@ -439,9 +445,10 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
               <span className={`text-[hsl(220_10%_40%)] transition-transform duration-200 ${showExercise ? "rotate-180" : ""}`}>▼</span>
             </button>
             {showExercise && (
-              <div className="px-6 pb-6 border-t border-[hsl(220_20%_10%)] pt-5">
+              <div className="px-6 pb-6 border-t border-[hsl(220_20%_10%)] pt-5 relative" data-lesson-content>
+                <PiracyWatermark studentName={studentName} studentEmail={studentEmail} visible={!!(studentName || studentEmail)} />
                 <div
-                  className="lesson-content text-sm"
+                  className="lesson-content text-sm relative z-10"
                   dangerouslySetInnerHTML={{ __html: activeLesson.exercise }}
                 />
               </div>
