@@ -115,6 +115,15 @@ const AGENT_INFO: Record<string, AgentInfo> = {
   whatsapp_response: { name: "Neil", tagline: "Atendimento Inteligente", provider: "Claude", icon: MessageCircle, accentColor: "primary",
     description: "Classifica mensagens do WhatsApp e gera respostas contextuais para leads e clientes.",
     suggestions: ["Como responder 'tá caro' sem dar desconto?", "Crie respostas para as 5 objeções mais comuns", "Como identificar intenção de compra numa mensagem?", "Monte roteiro de resposta para lead que sumiu por 3 dias"] },
+  mental_frequency_coach: { name: "Viktor", tagline: "Engenheiro de Frequência Mental", provider: "Claude", icon: Brain, accentColor: "violet",
+    description: "Diagnostica em qual das 4 Frequências Mentais você está e aplica protocolos de PNL para instalar a Mente de Destino.",
+    suggestions: ["Diagnostique em qual frequência estou operando agora", "Como instalo a Mente de Destino no dia a dia?", "Sinto que oscilo muito — como estabilizar minha identidade?", "Me guie pelo exercício da Ponte ao Futuro Reversa"] },
+  identity_architect: { name: "Nadia", tagline: "Arquiteta de Identidade", provider: "Claude", icon: Brain, accentColor: "violet",
+    description: "Reconstrói a identidade do empreendedor desvinculada dos resultados com metaprogramas e colapso de âncoras.",
+    suggestions: ["Quais metaprogramas estão me sabotando?", "Como desvincular minha identidade dos resultados diários?", "Me guie pelo exercício de colapso de âncoras", "Como criar uma âncora de estado poderoso?"] },
+  obstinacy_trainer: { name: "Krav", tagline: "Instrutor de Obstinação", provider: "Claude", icon: Brain, accentColor: "violet",
+    description: "Sessões de treino ativo de obstinação — desafios progressivos de execução e instalação da frieza cirúrgica.",
+    suggestions: ["Quero uma sessão de treino de obstinação agora", "Como perseguir minha meta mesmo quando não tenho vontade?", "Me desafie a executar algo difícil hoje", "Como agir com a frieza da Frequência 4 em situações de crise?"] },
 };
 
 type ContextMode = "brainstorm" | "review" | "strategy" | "question" | "optimize";

@@ -358,9 +358,35 @@ const AGENTS: AgentDef[] = [
     specialties: ["Order Bump", "OTO", "Downsell", "LTV"],
     isNew: true,
   },
+
+  // ── MENTALIDADE & PERFORMANCE ─────────────────────────────────────────────
+  {
+    role: "mental_frequency_coach", name: "Viktor", tagline: "Engenheiro de Frequência Mental",
+    description: "Diagnostica em qual das 4 Frequências Mentais você está operando e aplica protocolos de PNL de terceira geração para instalar progressivamente a Mente de Destino — obstinação cirúrgica, ciclo invertido e decreto inabalável.",
+    category: "Mentalidade", provider: "Claude", icon: Brain,
+    accent: "border-violet-500/40 hover:border-violet-500",
+    specialties: ["4 Frequências", "PNL", "Obstinação", "Mente de Destino"],
+    isNew: true,
+  },
+  {
+    role: "identity_architect", name: "Nadia", tagline: "Arquiteta de Identidade",
+    description: "Mapeia os metaprogramas dominantes que sabotam sua execução e reconstrói a identidade do empreendedor desvinculada dos resultados. Especialista em estabilização hormonal e colapso de âncoras.",
+    category: "Mentalidade", provider: "Claude", icon: Crosshair,
+    accent: "border-violet-500/40 hover:border-violet-500",
+    specialties: ["Metaprogramas", "Identidade", "Âncoras", "PNL"],
+    isNew: true,
+  },
+  {
+    role: "obstinacy_trainer", name: "Krav", tagline: "Instrutor de Obstinação",
+    description: "Sessões de treino ativo de obstinação — desafios progressivos de execução, confronto de objeções internas e instalação da Ponte ao Futuro Reversa. Treina você a perseguir conquistas com a frieza de quem já sabe o resultado.",
+    category: "Mentalidade", provider: "Claude", icon: Flame,
+    accent: "border-violet-500/40 hover:border-violet-500",
+    specialties: ["Obstinação", "Execução", "Treino", "Frequência 4"],
+    isNew: true,
+  },
 ];
 
-const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação"];
+const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação", "Mentalidade"];
 
 const PROVIDER_COLOR: Record<string, string> = {
   "Claude":  "text-orange-400 border-orange-400/30 bg-orange-400/8",

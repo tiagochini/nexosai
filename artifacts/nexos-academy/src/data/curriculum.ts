@@ -11300,6 +11300,659 @@ Plano VIP: R$2.997 (tudo + 3 sessões individuais + revisão de copy)
         locked: false
       }
     ]
+  },
+  // ──────────────────────────────────────────────────────────────────────────
+  // MÓDULO 11: AS 4 FREQUÊNCIAS MENTAIS
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    id: "frequencias-mentais",
+    number: 11,
+    title: "As 4 Frequências Mentais",
+    description: "Engenharia mental de elite: mapeie em qual frequência você opera hoje, quebre os bloqueios do ciclo neuroestrutural e instale a Mente de Destino — a frequência que dobra a realidade à execução, não o contrário.",
+    badge: "Mentalidade de Elite",
+    chapters: [
+      // ── CAPÍTULO 1: O CICLO DA REALIDADE PERCEBIDA ────────────────────────
+      {
+        id: "ciclo-neuroestrutural",
+        number: 1,
+        title: "O Ciclo Neuroestrutural da Realidade",
+        subtitle: "Entenda a engrenagem que roda no motor biológico e cognitivo",
+        icon: "🧠",
+        color: "from-violet-600 to-purple-700",
+        duration: "50 min",
+        summary: "Antes de mapear as 4 Frequências, você precisa entender a linha de montagem interna que transforma pensamentos em resultados. Este capítulo desmonta o Ciclo da Realidade Percebida — o mecanismo que trava ou libera qualquer nível de performance.",
+        locked: false,
+        lessons: [
+          {
+            id: "fm-ciclo-1",
+            title: "A Linha de Montagem Interna",
+            duration: "18 min",
+            type: "text" as const,
+            keyPoints: [
+              "A realidade não é o que acontece, é o resultado da linha de montagem interna",
+              "Os 6 elos do ciclo: Pensamento → Sentimento → Emoção → Ação → Resultado → Reforço",
+              "Por que mudar só o comportamento (ação) nunca resolve o problema raiz",
+              "Como o reforço prende qualquer frequência em loop automático"
+            ],
+            content: `<div style="background:#1e1b4b;border:1px solid #4c1d95;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Fundamento Neuroestrutural</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">A realidade não é o que acontece ao redor. É o produto de uma linha de montagem interna que processa o mundo segundo a frequência em que você opera. Trocar resultados sem trocar a frequência é como pintar o carro sem consertar o motor.</p>
+</div>
+
+<h2 style="color:#a78bfa">🧠 O Mauriz da Realidade Percebida</h2>
+
+<p>A maioria das pessoas tenta mudar seus resultados trabalhando na ponta visível do iceberg — as <strong>ações</strong>. Trabalha mais horas, aplica novas técnicas, muda de estratégia. O resultado muda por algumas semanas, depois volta para o ponto de equilíbrio original. Por quê?</p>
+
+<p>Porque os resultados são apenas a <strong>sombra de um processo muito mais profundo</strong>. O Ciclo da Realidade Percebida tem 6 elos que se retroalimentam:</p>
+
+<h3 style="color:#e2e8f0">Os 6 Elos do Ciclo</h3>
+
+<p><strong style="color:#a78bfa">① Pensamentos — Software Cognitivo:</strong> O diálogo interno, as imagens mentais e as submodalidades que você escolhe focar. É o código que roda antes de qualquer ação. Onde a maioria das pessoas jamais olha com profundidade técnica.</p>
+
+<p><strong style="color:#a78bfa">② Sentimentos — A Resposta Química Central:</strong> A tradução dos pensamentos em neurotransmissores e hormônios pelo sistema límbico. Não é "sentimento" no sentido popular — é uma resposta bioquímica mensurável. Cortisol = medo. Dopamina = motivação. Serotonina = satisfação. Ocitocina = confiança. Cada frequência gera um coquetê hormonal diferente.</p>
+
+<p><strong style="color:#a78bfa">③ Emoções — A Expressão Fisiológica:</strong> A somatização do sentimento no corpo. Alteração do batimento cardíaco, variabilidade da frequência cardíaca (HRV), microexpressões, postura, tônus muscular. É a energia em movimento que dita a capacidade bruta de execução.</p>
+
+<p><strong style="color:#a78bfa">④ Ações — A Execução Mecânica:</strong> O comportamento observável gerado pelo estado emocional. Note: as ações não são a causa. São o efeito de tudo que veio antes. Tentar mudar as ações sem mudar os 3 elos anteriores é combater a febre sem tratar a infecção.</p>
+
+<p><strong style="color:#a78bfa">⑤ Resultados — A Realidade Concreta:</strong> O feedback do ambiente físico, financeiro ou relacional. O faturamento, a audiência, os contratos. O que o mundo externo devolve como resposta à execução.</p>
+
+<p><strong style="color:#a78bfa">⑥ Reforço — O Fechamento do Loop:</strong> O resultado valida ou contradiz o pensamento inicial, fechando o ciclo e recalibrando o software cognitivo para o próximo round. Se o resultado confirma o pensamento de escassez, o ciclo de escassez se aprofunda. Se confirma o pensamento de abundância, o ciclo de abundância se acelera.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Por Que Cada Frequência é Um Loop Diferente</h3>
+
+<p>As 4 Frequências Mentais operam esse mesmo ciclo de 6 elos, mas cada uma <strong>trava o ciclo em um ponto diferente</strong>. A Frequência 1 trava no Pensamento → Sentimento (gerando medo crônico). A Frequência 2 trava na Ação → Resultado (gerando fricção e estresse por processo). A Frequência 3 trava no Sentimento → Emoção (gerando oscilação dopaminérgica). A Frequência 4 <strong>inverte o ciclo inteiro</strong> — começa pelo Resultado projetado no futuro e trabalha de trás para frente.</p>
+
+<p>A mudança real de frequência não acontece pela força de vontade. Acontece pela <strong>intervenção técnica no elo específico onde o ciclo está travado</strong>.</p>`
+          },
+          {
+            id: "fm-ciclo-2",
+            title: "Diagnóstico: Em Qual Frequência Você Está Agora?",
+            duration: "22 min",
+            type: "exercise" as const,
+            keyPoints: [
+              "Os sintomas-diagnóstico de cada frequência — reconheça o padrão pelo comportamento observável",
+              "Tabela de diagnóstico de fluxo: do sintoma à intervenção correta",
+              "Como identificar o elo travado sem auto-sabotagem diagnóstica",
+              "A maioria dos empreendedores oscila entre frequências — como estabilizar"
+            ],
+            exercise: "Leia cada sintoma da tabela de diagnóstico abaixo. Marque quais frases você disse ou pensou nos últimos 30 dias. Some os marcadores por frequência. A frequência com mais marcadores é onde você está operando agora — não onde você acha que está. A maioria das pessoas se auto-diagnostica 1 frequência acima da real.",
+            content: `<h2 style="color:#a78bfa">🎯 Tabela de Diagnóstico de Fluxo</h2>
+
+<p>Use esta tabela para identificar onde o seu Ciclo da Realidade está travado. Seja honesto — o diagnóstico incorreto gera a intervenção incorreta.</p>
+
+<div style="overflow-x:auto;margin:20px 0">
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead>
+<tr style="background:#1e1b4b">
+<th style="padding:10px 12px;text-align:left;color:#a78bfa;border:1px solid #2d1b69">Sintoma / Frase Típica</th>
+<th style="padding:10px 12px;text-align:left;color:#a78bfa;border:1px solid #2d1b69">Frequência</th>
+<th style="padding:10px 12px;text-align:left;color:#a78bfa;border:1px solid #2d1b69">Elo Travado</th>
+<th style="padding:10px 12px;text-align:left;color:#a78bfa;border:1px solid #2d1b69">Intervenção</th>
+</tr>
+</thead>
+<tbody>
+<tr style="background:#0f0f1a">
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#e2e8f0">"Tenho medo de investir e perder o que juntei"</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#ef4444;font-weight:700">1 — Operacional</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Pensamento → Medo</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Submodalidades: focar em aproximar</td>
+</tr>
+<tr style="background:#0a0a14">
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#e2e8f0">"Só lanço quando estiver tudo perfeito"</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#ef4444;font-weight:700">1 — Operacional</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Pensamento → Paralisação</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Desassociação do Locus</td>
+</tr>
+<tr style="background:#0f0f1a">
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#e2e8f0">"Minha equipe não segue o processo perfeito"</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#f59e0b;font-weight:700">2 — Gestora</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Ação → Fricção</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Posições Perceptivas</td>
+</tr>
+<tr style="background:#0a0a14">
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#e2e8f0">"Preciso controlar tudo para funcionar"</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#f59e0b;font-weight:700">2 — Gestora</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Micro-gestão compulsiva</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Pivot de Metaprograma</td>
+</tr>
+<tr style="background:#0f0f1a">
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#e2e8f0">"Faturei muito, mas este mês estou sem energia"</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#3b82f6;font-weight:700">3 — Empreendedora</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Oscilação dopaminérgica</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Colapso de Âncoras</td>
+</tr>
+<tr style="background:#0a0a14">
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#e2e8f0">"Se o mercado não der sinal, não executo"</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#3b82f6;font-weight:700">3 — Empreendedora</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Identidade validada pelo resultado</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Estabilização Hormonal</td>
+</tr>
+<tr style="background:#0f0f1a">
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#e2e8f0">"Não importa o obstáculo — o plano será executado"</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#10b981;font-weight:700">4 — Destino</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Nenhum — ciclo invertido</td>
+<td style="padding:10px 12px;border:1px solid #1e1b4b;color:#94a3b8">Manutenção ecológica</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Importante: A Maioria Oscila Entre Frequências</h3>
+<p>Não existe pessoa que opere em uma única frequência o tempo todo. O que existe é uma <strong>frequência dominante</strong> — o ponto de equilíbrio para o qual o sistema nervoso retorna quando há pressão. O objetivo não é estar sempre na Frequência 4, mas elevar o piso da frequência dominante progressivamente.</p>`
+          }
+        ]
+      },
+
+      // ── CAPÍTULO 2: FREQUÊNCIA 1 — MENTE OPERACIONAL ─────────────────────
+      {
+        id: "frequencia-1-operacional",
+        number: 2,
+        title: "Frequência 1: A Mente Operacional",
+        subtitle: "A Roda da Sobrevivência — diagnóstico e quebra do ciclo do medo",
+        icon: "🔴",
+        color: "from-red-700 to-red-900",
+        duration: "55 min",
+        summary: "A Mente Operacional opera a partir do medo, da escassez e da reatividade. É o modo de sobrevivência aplicado ao empreendedorismo — funciona para não afundar, mas nunca para voar. Aprenda a diagnosticar, entender e sair desta frequência com técnicas de PNL de submodalidades.",
+        locked: false,
+        lessons: [
+          {
+            id: "fm-op-1",
+            title: "O Mapa da Mente Operacional",
+            duration: "20 min",
+            type: "text" as const,
+            keyPoints: [
+              "Pensamento focado na falta e no perigo — o software do medo crônico",
+              "Cortisol alto como estado basal: como isso destrói a tomada de decisão",
+              "Ações defensivas e reativas que geram resultados medíocres que reforçam o ciclo",
+              "A crença núcleo da Frequência 1: 'o mundo é injusto e difícil'",
+              "Por que pessoas inteligentes ficam presas nesta frequência por anos"
+            ],
+            content: `<div style="background:#450a0a;border:1px solid #7f1d1d;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#fca5a5;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Frequência 1 — Mente Operacional</p>
+<p style="color:#fecaca;font-size:13px;margin:0">Estado: Sobrevivência Crônica | Emoção dominante: Medo/Ansiedade | Hormônio-chave: Cortisol | Resultado típico: Estabilidade precária sem crescimento</p>
+</div>
+
+<h2 style="color:#fca5a5">🔴 A Roda da Sobrevivência</h2>
+
+<p>A Mente Operacional não é fraqueza. É o modo que o sistema nervoso ativa quando o ambiente (real ou percebido) é de ameaça. O problema é quando este modo torna-se o <strong>estado padrão</strong> de quem está empreendendo.</p>
+
+<h3 style="color:#e2e8f0">O Ciclo Travado da Frequência 1</h3>
+
+<p><strong>Pensamento:</strong> Focado na falta e no perigo. "E se não fechar o mês?", "E se o cliente cancelar?", "E se eu investir e perder tudo?" — O software cognitivo roda cenários de ameaça em loop, mesmo quando a ameaça é hipotética.</p>
+
+<p><strong>Sentimento:</strong> Escassez crônica. O sistema límbico interpreta esse padrão de pensamento como sinal de perigo real e dispara cortisol e adrenalina como resposta de sobrevivência. Isso <strong>literalmente reduz o córtex pré-frontal</strong> — a região do cérebro responsável pelo pensamento estratégico e criativo.</p>
+
+<p><strong>Emoção:</strong> Ansiedade crônica de baixa intensidade, raramente identificada porque tornou-se o "normal". Pode manifestar como procrastinação compulsiva, perfeccionismo paralisante, ou urgência constante sem direção.</p>
+
+<p><strong>Ação:</strong> Defensiva e reativa. Age para apagar incêndios, não para criar vantagem. Evita riscos mesmo calculados. Trabalha em reação ao ambiente, não em criação do ambiente.</p>
+
+<p><strong>Resultado:</strong> Medíocre ou instável. O suficiente para não afundar, mas nunca o suficiente para decolar. E esses resultados reforçam a crença de que "o mundo é difícil e injusto", fechando o ciclo.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Os Metaprogramas da Frequência 1</h3>
+<p>Em PNL, cada frequência tem metaprogramas dominantes — filtros pelos quais o cérebro processa a realidade:</p>
+<ul>
+<li><strong>Direção:</strong> "Afastar-se de" (motivado pelo medo de perder, não pelo desejo de ganhar)</li>
+<li><strong>Referência:</strong> Externa (precisa de aprovação do mercado, das pessoas, dos resultados para agir)</li>
+<li><strong>Escopo:</strong> Detalhes (vê os problemas micro, perde a visão macro)</li>
+<li><strong>Tempo:</strong> Presente imediato (reage ao que está acontecendo agora, sem planejamento de médio prazo)</li>
+</ul>
+<p>O objetivo da intervenção é <strong>mudar o metaprograma de direção</strong> — de "afastar-se do problema" para "aproximar-se da solução".</p>`
+          },
+          {
+            id: "fm-op-2",
+            title: "Exercício PNL: A Desassociação do Locus",
+            duration: "35 min",
+            type: "exercise" as const,
+            keyPoints: [
+              "Romper o metaprograma de Referência Externa com submodalidades",
+              "A técnica de reposicionamento espacial da ameaça percebida",
+              "Ancoragem interna: a pergunta que muda o locus de controle",
+              "Como instalar o novo padrão de resposta em situações de pressão"
+            ],
+            exercise: "Execute o protocolo completo sozinho ou com um parceiro de prática. Repita por 7 dias consecutivos logo ao acordar (quando o cortisol está naturalmente mais alto). Registre diariamente: Qual foi o pensamento de ameaça que surgiu? Qual foi a pergunta de ancoragem que você usou? Como mudou a qualidade da decisão tomada nas próximas 2 horas?",
+            content: `<h2 style="color:#fca5a5">🎯 Exercício de PNL: A Desassociação do Locus</h2>
+
+<p><strong>Objetivo:</strong> Romper o metaprograma de Referência Externa e reverter a direção motivacional de "Afastar-se" para "Aproximar-se".</p>
+
+<div style="background:#1a0a0a;border:1px solid #7f1d1d;border-radius:8px;padding:16px 20px;margin:20px 0">
+<p style="color:#fca5a5;font-weight:700;margin:0 0 8px">⏱ Duração do Protocolo: 10-15 minutos</p>
+<p style="color:#fecaca;margin:0;font-size:13px">Ambiente: Silencioso, sentado confortavelmente, olhos fechados. Pode ser feito em autoaplicação ou conduzido por mentor.</p>
+</div>
+
+<h3 style="color:#e2e8f0">Passo 1 — Identificação da Ameaça Percebida</h3>
+<p>Feche os olhos e traga à mente o maior problema, obrigação ou medo atual relacionado ao negócio. Seja específico: <em>"Tenho que pagar R$12.000 em fornecedores e não tenho o dinheiro"</em>. Deixe a imagem ou pensamento aparecer naturalmente.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Passo 2 — Mapeamento das Submodalidades</h3>
+<p>Com o problema em mente, observe onde essa imagem está no seu espaço mental:</p>
+<ul>
+<li>Que tamanho ela tem? (geralmente grande)</li>
+<li>Está próxima ou distante? (geralmente muito próxima)</li>
+<li>É colorida ou em preto e branco?</li>
+<li>Tem som, voz ou barulho associado?</li>
+<li>Tem peso ou textura emocional?</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Passo 3 — Intervenção de Submodalidades</h3>
+<p>Agora, conscientemente, faça as seguintes mudanças na imagem mental:</p>
+<ol>
+<li><strong>Empurre a imagem para longe</strong> — coloque-a a 10, 20, 50 metros de distância</li>
+<li><strong>Reduza o tamanho</strong> — deixe-a pequena como um post-it</li>
+<li><strong>Tire as cores</strong> — torne-a preta e branca</li>
+<li><strong>Tire o som</strong> — deixe-a muda, sem voz interna associada</li>
+<li><strong>Diminua o brilho</strong> — como uma foto antiga, desbotada</li>
+</ol>
+<p>Observe como a carga emocional da ameaça diminui conforme você manipula as submodalidades.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Passo 4 — Ancoragem Interna (A Pergunta-Pivô)</h3>
+<p>Com a ameaça diminuída e distante, faça a si mesmo a pergunta de ancoragem interna:</p>
+
+<div style="background:#1e1b4b;border-left:3px solid #a78bfa;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0">
+<p style="color:#c4b5fd;font-style:italic;margin:0;font-size:15px">"Se você fosse o único dono do seu tempo e o dinheiro fosse infinito, qual seria a primeira solução criativa que você desenharia agora para resolver isso?"</p>
+</div>
+
+<p>Esta pergunta força o cérebro a sair do modo de ameaça e entrar no modo de design de solução. Espere a resposta emergir — não force. Quando vier, ela será de uma qualidade diferente do que você pensaria normalmente.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Passo 5 — Ancoragem Fisiológica</h3>
+<p>No momento em que a resposta criativa chegar e você sentir o alívio fisiológico associado (respiração mais lenta, ombros descem, tônus muscular relaxa), instale uma âncora física: um toque específico no pulso, apertar os três primeiros dedos da mão direita, ou qualquer gesto que possa ser discretamente repetido em qualquer ambiente.</p>
+<p>Esta âncora será acionada em situações de pressão futura para recuperar o estado de locus interno em segundos.</p>`
+          }
+        ]
+      },
+
+      // ── CAPÍTULO 3: FREQUÊNCIA 2 — MENTE GESTORA ─────────────────────────
+      {
+        id: "frequencia-2-gestora",
+        number: 3,
+        title: "Frequência 2: A Mente Gestora/Executiva",
+        subtitle: "A Roda do Controle — quebrando o teto do esgotamento",
+        icon: "🟡",
+        color: "from-amber-600 to-yellow-700",
+        duration: "50 min",
+        summary: "A Mente Gestora é obcecada pelo Como — pelo processo, pela execução perfeita, pelo controle de variáveis. Gera estabilidade, mas cria um teto de esgotamento que impede o crescimento exponencial. Aprenda o Pivot de Metaprograma para enxergar além do processo.",
+        locked: false,
+        lessons: [
+          {
+            id: "fm-gest-1",
+            title: "O Mapa da Mente Gestora",
+            duration: "18 min",
+            type: "text" as const,
+            keyPoints: [
+              "Obsessão pelo 'Como' — ignorando o 'Por quê' e o 'Para quem'",
+              "Estresse por fricção: frustração quando pessoas e processos falham o padrão",
+              "O teto do esgotamento: como a Frequência 2 gera estabilidade sem escala",
+              "Microgerenciamento como sintoma de metaprograma de Procedimento dominante",
+              "A transição legítima da Frequência 2 para a 3 — e o erro mais comum nessa passagem"
+            ],
+            content: `<div style="background:#451a03;border:1px solid #92400e;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#fcd34d;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Frequência 2 — Mente Gestora/Executiva</p>
+<p style="color:#fef3c7;font-size:13px;margin:0">Estado: Controle e Ordem | Emoção dominante: Estresse por fricção | Hormônio-chave: Adrenalina funcional | Resultado típico: Estabilidade com teto de esgotamento</p>
+</div>
+
+<h2 style="color:#fcd34d">🟡 A Roda do Controle</h2>
+
+<p>A Mente Gestora é uma evolução da Mente Operacional. A pessoa saiu do medo de sobreviver e chegou ao medo de perder o controle. É uma frequência valiosa — sem ela, nada é executado com consistência. O problema é quando ela se torna o <strong>limite superior</strong> da operação.</p>
+
+<h3 style="color:#e2e8f0">O Ciclo Travado da Frequência 2</h3>
+
+<p><strong>Pensamento:</strong> Obcecado pelo "Como". Como vai ser executado, quem vai fazer, qual o processo, qual o padrão. A mente está sempre no nível operacional da execução — raramente no nível estratégico do propósito ou no nível inovador das possibilidades.</p>
+
+<p><strong>Sentimento:</strong> Alerta e necessidade de ordem. Qualquer desvio do processo gera desconforto imediato. O sistema nervoso está calibrado para detectar inconsistências e falhas — o que é útil para gestão, mas devastador para inovação.</p>
+
+<p><strong>Emoção:</strong> Estresse por fricção. Diferente do medo agudo da Frequência 1, aqui é uma frustração crônica de baixo nível — sempre que pessoas ou processos não performam dentro do padrão esperado. Com o tempo, esse estado consome a energia criativa e a capacidade de visão de longo prazo.</p>
+
+<p><strong>Ação:</strong> Microgerencial. Dificuldade de delegar porque "ninguém faz tão bem quanto eu". Foco no detalhe que sacrifica o macro. Alta competência operacional com baixa capacidade de escala.</p>
+
+<p><strong>Resultado:</strong> Estabilidade, mas sem crescimento exponencial. O negócio funciona, as contas são pagas, a operação é consistente — mas há um teto invisível. E quanto mais a pessoa tenta forçar esse teto com mais processo e mais controle, mais o esgotamento aumenta.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Os Metaprogramas da Frequência 2</h3>
+<ul>
+<li><strong>Direção:</strong> Misto (move em direção à ordem, afasta-se do caos)</li>
+<li><strong>Referência:</strong> Interna (tem seus próprios padrões — mas esses padrões são rígidos demais)</li>
+<li><strong>Escopo:</strong> Detalhes dominam (o macro é ignorado em favor do micro)</li>
+<li><strong>Decisão:</strong> Procedimento (segue regras e processos estabelecidos, dificuldade com alternativas criativas)</li>
+</ul>`
+          },
+          {
+            id: "fm-gest-2",
+            title: "Exercício PNL: O Pivot de Metaprograma",
+            duration: "32 min",
+            type: "exercise" as const,
+            keyPoints: [
+              "A técnica das 3 Posições Perceptivas aplicada a crises de negócio",
+              "Como pensar com a mente de Elon Musk, Steve Jobs ou Jeff Bezos sobre seu negócio",
+              "O novo padrão linguístico: substituir 'a regra diz que' por 'qual é a alternativa mais lucrativa'",
+              "Instalação do metaprograma de Opção para coexistir com o de Procedimento"
+            ],
+            exercise: "Escolha um processo atual no seu negócio que você sente que está funcionando 'bem o suficiente'. Aplique as 3 posições perceptivas a esse processo. Na 3ª posição, pergunte: 'Como uma mente disruptiva destruiria e reconstruiria isso em 48 horas?' Anote 3 alternativas que violam suas regras atuais. Não precisa implementar — apenas registrar que elas existem já expande o metaprograma.",
+            content: `<h2 style="color:#fcd34d">🎯 Exercício: O Pivot de Metaprograma (Procedimento → Opção)</h2>
+
+<p><strong>Objetivo:</strong> Forçar o cérebro a sair do foco em detalhes e regras para enxergar o macro e novas possibilidades. Não eliminar o metaprograma de Procedimento (ele é útil), mas instalar o de Opção como alternativa disponível.</p>
+
+<h3 style="color:#e2e8f0">A Técnica das 3 Posições Perceptivas</h3>
+
+<p>Escolha uma crise estrutural atual: um processo que não funciona como deveria, um colaborador que não performa, uma meta que não está sendo atingida.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">1ª Posição — Você Mesmo (O Gestor)</h3>
+<p>Descreva o problema como você normalmente o vê: através dos seus processos, regras e padrões. Fale livremente por 2-3 minutos sobre o que não está funcionando e por quê. Esta é a perspectiva do Procedimento — necessária, mas limitante quando é a única.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">2ª Posição — O Concorrente Disruptivo</h3>
+<p>Agora se coloque fisicamente no lugar de uma mente disruptiva de referência (Elon Musk, Jeff Bezos, ou o maior concorrente do seu mercado que você respeita). Entre no estado de quem pensa em escala, não em processo.</p>
+
+<div style="background:#1a1000;border-left:3px solid #fcd34d;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0">
+<p style="color:#fef3c7;font-style:italic;margin:0;font-size:14px">"Como essa mente destruiria e reconstruiria a minha operação em 48 horas? Sem restrições de processo, sem respeito às regras atuais, sem limite orçamentário. O que seria eliminado imediatamente? O que seria triplicado?"</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:20px">3ª Posição — O Observador Isento</h3>
+<p>Afaste-se do cenário. Imagine que você está em um helicóptero olhando para o seu negócio de 500 metros de altitude. Veja toda a operação como um sistema — sem apego a nenhum processo específico, sem defender nenhuma regra.</p>
+<p>Descreva o que vê: onde estão os gargalos reais? O que está consumindo energia desproporcional? Onde o sistema está hipertrofiado e onde está anêmico?</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Instalação do Novo Padrão Linguístico</h3>
+<p>Substitua conscientemente estas frases no seu diálogo interno e com sua equipe:</p>
+
+<div style="overflow-x:auto;margin:16px 0">
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead><tr style="background:#1a1000">
+<th style="padding:8px 12px;text-align:left;color:#fcd34d;border:1px solid #292000">Padrão Antigo (Procedimento)</th>
+<th style="padding:8px 12px;text-align:left;color:#10b981;border:1px solid #292000">Padrão Novo (Opção)</th>
+</tr></thead>
+<tbody>
+<tr style="background:#0f0a00"><td style="padding:8px 12px;border:1px solid #1a1000;color:#e2e8f0">"A regra diz que não podemos fazer isso"</td><td style="padding:8px 12px;border:1px solid #1a1000;color:#e2e8f0">"Qual é a alternativa mais lucrativa que ignora essa regra?"</td></tr>
+<tr style="background:#1a1000"><td style="padding:8px 12px;border:1px solid #1a1000;color:#e2e8f0">"Isso não está no processo"</td><td style="padding:8px 12px;border:1px solid #1a1000;color:#e2e8f0">"O que acontece se testarmos isso por 7 dias?"</td></tr>
+<tr style="background:#0f0a00"><td style="padding:8px 12px;border:1px solid #1a1000;color:#e2e8f0">"Preciso entender tudo antes de agir"</td><td style="padding:8px 12px;border:1px solid #1a1000;color:#e2e8f0">"Qual é o menor teste que me dá informação suficiente?"</td></tr>
+</tbody>
+</table>
+</div>`
+          }
+        ]
+      },
+
+      // ── CAPÍTULO 4: FREQUÊNCIA 3 — MENTE EMPREENDEDORA ───────────────────
+      {
+        id: "frequencia-3-empreendedora",
+        number: 4,
+        title: "Frequência 3: A Mente Empreendedora",
+        subtitle: "A Roda da Validação — estabilizando a montanha-russa dopaminérgica",
+        icon: "🔵",
+        color: "from-blue-600 to-indigo-700",
+        duration: "55 min",
+        summary: "A Mente Empreendedora vê oportunidades em tudo, executa em massa e fatura em picos — mas oscila entre euforia e crise na mesma velocidade. O ciclo da validação prende o empreendedor à necessidade do resultado para se sentir seguro. Aprenda a estabilizar a identidade independente dos resultados.",
+        locked: false,
+        lessons: [
+          {
+            id: "fm-emp-1",
+            title: "O Mapa da Mente Empreendedora",
+            duration: "20 min",
+            type: "text" as const,
+            keyPoints: [
+              "Visão ampla + execução massiva: os superpoderes da Frequência 3",
+              "A montanha-russa dopaminérgica: euforia no pico, colapso no vale",
+              "Identidade dependente do resultado — o maior perigo desta frequência",
+              "Ações inconsistentes guiadas pelo humor do mercado, não pela tese do negócio",
+              "Por que empreendedores de Frequência 3 nunca constroem negócios — constroem faturamentos"
+            ],
+            content: `<div style="background:#0c1a4a;border:1px solid #1e3a8a;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#93c5fd;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Frequência 3 — Mente Empreendedora</p>
+<p style="color:#bfdbfe;font-size:13px;margin:0">Estado: Validação Constante | Emoção dominante: Euforia/Colapso alternados | Hormônio-chave: Dopamina oscilante | Resultado típico: Picos de faturamento com vales de crise</p>
+</div>
+
+<h2 style="color:#93c5fd">🔵 A Roda da Validação</h2>
+
+<p>A Frequência 3 é onde a maioria dos empreendedores bem-sucedidos opera — e onde ficam presos por anos sem perceber. É a frequência do possível, da abundância, da visão. Tem os ingredientes para construir algo grande. Falta apenas um elemento: <strong>estabilidade de identidade</strong>.</p>
+
+<h3 style="color:#e2e8f0">O Ciclo Travado da Frequência 3</h3>
+
+<p><strong>Pensamento:</strong> Focado em grandes visões e oportunidades. A mente vê potencial em tudo. Novos produtos, novos nichos, novas parcerias — a capacidade de enxergar oportunidades é genuína e valiosa. O problema é a <strong>ausência de hierarquia entre as visões</strong>.</p>
+
+<p><strong>Sentimento:</strong> Oscila entre euforia extrema (dopamina alta no pico do lançamento, no mês recorde, na campanha que bombou) e medo velado (quando os resultados caem, quando o mercado muda, quando um concorrente aparece). A dopamina é o hormônio da antecipação — e a Frequência 3 vive em antecipação constante, o que gera dependência química do próximo pico.</p>
+
+<p><strong>Emoção:</strong> Acompanha a montanha-russa. Alta energia e criatividade nos momentos de ascensão. Baixa energia, irritabilidade ou paralisia nos momentos de queda. Equipe nunca sabe qual versão do líder vai aparecer na reunião.</p>
+
+<p><strong>Ação:</strong> Massiva, porém inconsistente. Age muito quando está na euforia — lança campanhas, contrata, investe. Age pouco quando está no vale — cancela reuniões, adia decisões, entra em modo de análise paralisia.</p>
+
+<p><strong>Resultado:</strong> Oscila entre picos de faturamento e vales de crise. O negócio nunca colapsa porque a Frequência 3 tem habilidade real — mas nunca estabiliza porque a <strong>identidade está ancorada no resultado</strong>. Se o resultado é bom, o empreendedor é bom. Se o resultado é ruim, o empreendedor é ruim.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">A Distinção Crítica</h3>
+<p>A diferença entre a Frequência 3 e a Frequência 4 não é a competência nem a inteligência. É uma única distinção:</p>
+<div style="background:#0c1a4a;border-left:3px solid #3b82f6;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0">
+<p style="color:#bfdbfe;margin:0;font-size:14px"><strong>Frequência 3:</strong> "Estou bem porque o resultado foi bom."<br/><strong>Frequência 4:</strong> "O resultado será bom porque eu decretei que será. O resultado atual é apenas um dado de otimização do caminho."</p>
+</div>`
+          },
+          {
+            id: "fm-emp-2",
+            title: "Exercício PNL: A Estabilização Hormonal da Identidade",
+            duration: "35 min",
+            type: "exercise" as const,
+            keyPoints: [
+              "Identificar os gatilhos de oscilação pessoais — o mapa da montanha-russa",
+              "A Ancoragem Colapsada: sobrepor vitória sobre frustração no nível bioquímico",
+              "Reprogramação do diálogo interno: o resultado como dado, não como veredito",
+              "Automação do novo padrão: como instalar sem precisar de força de vontade"
+            ],
+            exercise: "Durante 21 dias, sempre que um resultado negativo aparecer (cancelamento, queda de tráfego, meta não atingida), execute os 4 passos do protocolo. Registre: Qual foi o gatilho? Qual foi o tempo de recuperação (quanto tempo até voltar ao estado de execução)? O objetivo é reduzir esse tempo progressivamente. De horas para minutos. De dias para horas.",
+            content: `<h2 style="color:#93c5fd">🎯 Exercício: A Estabilização Hormonal da Identidade</h2>
+
+<p><strong>Objetivo:</strong> Desvincular o sentimento de identidade dos resultados flutuantes. Criar um estado basal de poder independente do que o ambiente externo devolve.</p>
+
+<h3 style="color:#e2e8f0">Passo 1 — Mapeamento dos Gatilhos de Oscilação</h3>
+<p>Liste os 5 gatilhos que mais derrubam seu estado emocional no negócio. Seja específico:</p>
+<ul>
+<li>Cancelamento de cliente de alto valor?</li>
+<li>Campanha que não entregou o resultado esperado?</li>
+<li>Crítica pública ou avaliação negativa?</li>
+<li>Mês abaixo da meta por 2 semanas consecutivas?</li>
+<li>Concorrente lançando produto similar?</li>
+</ul>
+<p>Cada um desses gatilhos tem uma resposta química automática que foi instalada por experiências passadas. O objetivo não é eliminar a resposta, mas <strong>reduzir o tempo de recuperação</strong>.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Passo 2 — Construção da Âncora de Vitória Absoluta</h3>
+<p>Encontre um momento de vitória absoluta no passado — não precisa ser o maior resultado financeiro. Pode ser o momento em que você sabia, com certeza total, que era capaz. Quando a confiança era plena, o corpo estava em postura de poder, a respiração era profunda e cadenciada.</p>
+<p>Reviva esse momento com máximo de submodalidades:</p>
+<ul>
+<li>O que você estava vendo naquele momento?</li>
+<li>O que estava ouvindo — sons externos, sua própria voz interna?</li>
+<li>Onde no corpo estava esse sentimento de poder? Peito? Estômago? Coluna?</li>
+<li>Que cor ou temperatura tem esse estado?</li>
+</ul>
+<p>No pico desse estado, instale a âncora: <strong>feche o punho direito com força</strong> por 5 segundos enquanto permanece completamente associado à memória. Repita 3 vezes.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Passo 3 — A Ancoragem Colapsada</h3>
+<p>Agora traga à mente o gatilho de frustração mais recente. Deixe ele aparecer com todas as submodalidades — a imagem, o som, a sensação corporal.</p>
+<p>No momento em que estiver totalmente associado à frustração, acione a âncora de vitória (feche o punho direito com força). Mantenha as duas experiências ativas ao mesmo tempo por 15-20 segundos, até que a frustração perca intensidade e o estado de poder comece a dominar.</p>
+<p>Este é o colapso: a resposta química da vitória literalmente sobrepõe a resposta química da frustração no sistema nervoso.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Passo 4 — Instalação do Novo Diálogo Interno</h3>
+<p>Substitua o padrão de avaliação diante de resultados negativos:</p>
+
+<div style="background:#0c1a4a;border-left:3px solid #3b82f6;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0">
+<p style="color:#bfdbfe;font-style:italic;margin:0;font-size:14px">"Esse resultado negativo não define meu valor. Ele é apenas um dado de otimização para a minha tese. O que esse dado me está dizendo sobre o ajuste que precisa ser feito?"</p>
+</div>
+
+<p>Pratique dizer essa frase em voz alta (mesmo que não acredite de imediato) cada vez que o gatilho aparecer. Com repetição + âncora colapsada, o padrão se instala como resposta automática.</p>`
+          }
+        ]
+      },
+
+      // ── CAPÍTULO 5: FREQUÊNCIA 4 — MENTE DE DESTINO ──────────────────────
+      {
+        id: "frequencia-4-destino",
+        number: 5,
+        title: "Frequência 4: A Mente de Destino",
+        subtitle: "O Decreto Inabalável — instalando a obstinação cirúrgica",
+        icon: "⚡",
+        color: "from-emerald-500 to-teal-600",
+        duration: "75 min",
+        summary: "A Mente de Destino não espera o resultado para agir. Ela decreta o futuro como fato consumado e trabalha de trás para frente. O ciclo da realidade é invertido: a Memória de Futuro é mais real que o presente. Este capítulo instala o nível mais avançado de obstinação — precisa, cirúrgica, inabalável.",
+        locked: false,
+        lessons: [
+          {
+            id: "fm-dest-1",
+            title: "O Ciclo Invertido: Como a Frequência 4 Hackeia a Realidade",
+            duration: "25 min",
+            type: "text" as const,
+            keyPoints: [
+              "A inversão do ciclo: resultado futuro como ponto de partida, não como destino",
+              "Memória de Futuro — como o cérebro processa o futuro projetado como fato passado",
+              "Paz cirúrgica e frieza estratégica: a emoção da Frequência 4 não é euforia, é certeza",
+              "Baixa reatividade límbica: por que nada abala quem opera nesta frequência",
+              "A distinção entre obstinação saudável e rigidez disfuncional"
+            ],
+            content: `<div style="background:#022c22;border:1px solid #065f46;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#6ee7b7;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Frequência 4 — Mente de Destino</p>
+<p style="color:#a7f3d0;font-size:13px;margin:0">Estado: Decreto Inabalável | Emoção dominante: Paz cirúrgica e certeza absoluta | Hormônio-chave: Serotonina + Dopamina calibrada | Resultado: O ambiente inevitavelmente se dobra à execução</p>
+</div>
+
+<h2 style="color:#6ee7b7">⚡ O Decreto Inabalável</h2>
+
+<p>A Frequência 4 não é uma versão mais entusiasmada da Frequência 3. É uma arquitetura cognitiva fundamentalmente diferente. O ciclo da realidade não roda da mesma forma — ele roda <strong>invertido</strong>.</p>
+
+<h3 style="color:#e2e8f0">O Ciclo Hackeado</h3>
+
+<p>Enquanto as Frequências 1, 2 e 3 começam o ciclo pelo Pensamento (reagindo ao presente), a Mente de Destino começa pelo <strong>Resultado Futuro</strong>. Ela projeta o futuro desejado com tanta densidade de submodalidades que o cérebro o processa neurologicamente como um fato já ocorrido — uma <strong>Memória de Futuro</strong>.</p>
+
+<p>A consequência disso é profunda:</p>
+
+<ul>
+<li><strong>O Pensamento</strong> não é sobre o presente (com suas limitações). É sobre um futuro já consolidado, operado como fato.</li>
+<li><strong>O Sentimento</strong> não é de euforia (que é instável) nem de medo (que é paralisante). É de <em>paz cirúrgica</em> — a certeza de quem já sabe o final do filme.</li>
+<li><strong>A Emoção</strong> é foco laser. Não há espaço para ansiedade sobre o resultado porque o resultado já foi decretado. A energia emocional vai inteiramente para a execução do próximo passo.</li>
+<li><strong>A Ação</strong> é implacável, precisa e cirúrgica. Não há hesitação, porque hesitar seria duvidar de algo que já aconteceu.</li>
+<li><strong>O Resultado</strong> inevitavelmente se dobra à execução. Não por misticismo — por matemática: quando alguém executa com essa consistência e precisão ao longo do tempo suficiente, o resultado é inevitável.</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:24px">O Que Não É a Frequência 4</h3>
+
+<p>A obstinação da Mente de Destino é frequentemente confundida com dois padrões disfuncionais:</p>
+
+<p><strong>Não é teimosia:</strong> A teimosia mantém o mesmo caminho mesmo quando os dados indicam que ele está errado. A Frequência 4 é flexível no caminho e inabalável no destino. Se algo dá errado, não é visto como falha — é visto como <em>um ajuste obrigatório do roteiro</em>.</p>
+
+<p><strong>Não é arrogância:</strong> A arrogância ignora o feedback do ambiente. A Frequência 4 absorve feedback como dados de navegação, não como ameaças à identidade.</p>
+
+<div style="background:#022c22;border-left:3px solid #10b981;padding:12px 16px;margin:20px 0;border-radius:0 6px 6px 0">
+<p style="color:#a7f3d0;font-size:14px;margin:0"><strong>A distinção cirúrgica:</strong> "Não importa o que aconteça no caminho. O destino já foi decretado. O que aconteceu hoje é apenas informação sobre o ajuste de rota. A execução continua amanhã com a mesma precisão."</p>
+</div>`
+          },
+          {
+            id: "fm-dest-2",
+            title: "A Ponte ao Futuro Reversa — Construindo a Memória de Futuro",
+            duration: "30 min",
+            type: "exercise" as const,
+            keyPoints: [
+              "Fase 1: Transe leve e projeção do futuro consolidado com máxima densidade de submodalidades",
+              "Fase 2: Engenharia Reversa do Destino — olhar do futuro para o presente para resolver crises do hoje",
+              "Fase 3: O Desligamento Límbico — instalação da âncora 'Decretado'",
+              "Como manter a ecologia do sistema: frequência 4 não é supressão emocional"
+            ],
+            exercise: "Pratique a Fase 1 diariamente por 10 minutos (ideal ao acordar ou antes de dormir) durante 30 dias. Use sempre o mesmo cenário futuro — quanto mais vezes o cérebro processar essa memória de futuro, mais ela se consolida como referência neurológica. A partir do dia 7-10, você notará que começa a tomar decisões no presente a partir desse estado futuro, não a partir das circunstâncias atuais.",
+            content: `<h2 style="color:#6ee7b7">🎯 Exercício Avançado: A Ponte ao Futuro Reversa</h2>
+
+<p><strong>Objetivo:</strong> Instalar a Memória de Futuro no sistema nervoso como referência neurológica dominante. Este é o exercício central da Frequência 4 — a base sobre a qual toda a obstinação cirúrgica é construída.</p>
+
+<div style="background:#022c22;border:1px solid #065f46;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#6ee7b7;font-weight:700;margin:0 0 6px">⚠️ Aviso de Densidade</p>
+<p style="color:#a7f3d0;font-size:13px;margin:0">Este é um protocolo de alta densidade neurológica. Execute quando tiver 20-30 minutos de total privacidade e ausência de interrupções. A eficácia depende da profundidade do estado de foco interno atingido.</p>
+</div>
+
+<h3 style="color:#e2e8f0">FASE 1 — Construção da Memória de Futuro</h3>
+
+<p><strong>Preparação:</strong> Sente-se confortavelmente com a coluna ereta. Respire em ciclos de 4-2-4 (inspira 4 tempos, segura 2, expira 4) por 2 minutos até atingir estado de foco interno (mente quieta, foco no momento presente, respiração cadenciada).</p>
+
+<p><strong>Projeção:</strong> Projete sua mente exatamente para o dia em que seu projeto central está consolidado. Seja específico quanto possível:</p>
+<ul>
+<li>O faturamento ou resultado que representa a conquista</li>
+<li>A estrutura física — onde você está, o que está vendo</li>
+<li>As pessoas ao redor — quem está presente</li>
+<li>O reconhecimento de mercado — como outros se referem ao seu trabalho</li>
+</ul>
+
+<p><strong>Maximização de Submodalidades:</strong></p>
+<div style="background:#011a12;border-left:3px solid #10b981;padding:12px 16px;margin:12px 0;border-radius:0 6px 6px 0">
+<p style="color:#a7f3d0;font-style:italic;margin:0;font-size:13px">"O que você está vendo agora, nesse dia da conquista? Sinta a textura da mesa na sua frente. Ouça o tom da sua própria voz quando você fala sobre o que construiu. Veja as métricas na tela — quais números estão ali? Deixe essa imagem colorida, brilhante, gigante. Agora traga-a para dentro do seu peito, como se você estivesse dentro da cena, não olhando de fora."</p>
+</div>
+
+<p>Permaneça nesse estado por 3-5 minutos. Deixe o cérebro registrar isso não como um desejo futuro, mas como uma <strong>lembrança</strong> — algo que já aconteceu e que você está revisitando.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">FASE 2 — A Engenharia Reversa do Destino</h3>
+
+<p>Ainda associado ao futuro consolidado, olhe para trás em direção ao presente. A pergunta-chave de modelagem:</p>
+
+<div style="background:#011a12;border-left:3px solid #10b981;padding:12px 16px;margin:16px 0;border-radius:0 6px 6px 0">
+<p style="color:#a7f3d0;font-style:italic;margin:0;font-size:14px">"Olhando daqui de cima, onde você já venceu — como você resolveu a maior crise de 2026? Qual foi o movimento frio, calculado e cirúrgico que você fez para superar aquela objeção, aquele obstáculo, aquela escassez de recurso que parecia intransponível?"</p>
+</div>
+
+<p>O cérebro, operando a partir do futuro consolidado, traz respostas livres das carências, medos e cansaços do presente. Anote o que vier — mesmo que pareça óbvio ou improvável. São instruções do sistema operando em frequência mais alta.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">FASE 3 — O Desligamento Límbico</h3>
+
+<p>Instale a âncora de comando mental para situações de alta pressão:</p>
+<ol>
+<li>Escolha um gesto físico discreto e único (tocar o pulso esquerdo com dois dedos é o mais comum)</li>
+<li>Escolha uma palavra-âncora: <strong>"Decretado"</strong> ou <strong>"Fato Consumado"</strong></li>
+<li>No estado de certeza absoluta do futuro consolidado, acione o gesto + palavra simultaneamente por 10 segundos</li>
+<li>Repita 5 vezes na mesma sessão</li>
+</ol>
+
+<p>A instrução neurológica instalada nessa âncora:</p>
+
+<div style="background:#022c22;border:1px solid #065f46;border-radius:8px;padding:14px 18px;margin:16px 0">
+<p style="color:#a7f3d0;font-size:13px;margin:0"><strong>Ao acionar a âncora em situações de caos externo:</strong> Desligar a necessidade de aprovação do ambiente. Ignorar o cansaço físico como sinal de parada. Executar o próximo passo matemático com a precisão de um cirurgião — independente do que estiver acontecendo ao redor.</p>
+</div>`
+          },
+          {
+            id: "fm-dest-3",
+            title: "Manutenção Ecológica da Frequência 4",
+            duration: "20 min",
+            type: "text" as const,
+            keyPoints: [
+              "A distinção entre obstinação e supressão emocional — por que a ecologia importa",
+              "Os 3 sinais de que a Frequência 4 saiu de alinhamento ecológico",
+              "Como integrar as 4 frequências: cada uma tem função — o erro é ficar preso em uma",
+              "O protocolo de manutenção semanal para quem opera no nível de Destino"
+            ],
+            content: `<h2 style="color:#6ee7b7">⚡ A Ecologia da Frequência 4</h2>
+
+<p>A Mente de Destino operando em pleno alinhamento gera resultados extraordinários. Mas existe uma versão desequilibrada desta frequência — quando a obstinação cirúrgica cruza a linha para a rigidez disfuncional. Reconhecer essa distinção é o que separa performance sustentável de colapso em alta velocidade.</p>
+
+<h3 style="color:#e2e8f0">Os 3 Sinais de Desalinhamento Ecológico</h3>
+
+<p><strong>① Frieza Funcional → Desconexão Relacional:</strong> A baixa reatividade límbica da Frequência 4 é uma ferramenta estratégica — não é um estado de ser permanente em todas as áreas da vida. Quando a frieza estratégica invade os relacionamentos pessoais, é sinal de que o estado está contaminando contextos onde ele não pertence.</p>
+
+<p><strong>② Decreto → Negação de Dados:</strong> A Mente de Destino absorve feedback como dado de navegação. Quando o empreendedor começa a ignorar feedback real porque "o destino já foi decretado", a frequência virou rigidez. O decreto é sobre o destino, nunca sobre o caminho.</p>
+
+<p><strong>③ Execução Implacável → Exaustão Sistêmica:</strong> A ação implacável da Frequência 4 requer recuperação de alta qualidade. Se o corpo e a mente não estão sendo nutridos com sono, alimentação e descompressão adequados, a "execução implacável" é na verdade adrenalina disfarçada de Frequência 4.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">A Integração das 4 Frequências</h3>
+
+<p>O objetivo final não é viver permanentemente na Frequência 4. É ter <strong>acesso fluido às 4 frequências</strong> e saber qual activar em cada contexto:</p>
+
+<ul>
+<li><strong>Frequência 1</strong> — ainda é útil: ativa o senso de urgência, impede a arrogância de quem não tem mais "medo" de nada</li>
+<li><strong>Frequência 2</strong> — essencial: sem ela, o decreto vira caos operacional. A gestão precisa existir.</li>
+<li><strong>Frequência 3</strong> — necessária: a visão empreendedora identifica oportunidades que a Frequência 4 executa</li>
+<li><strong>Frequência 4</strong> — a âncora: é onde você vai quando o ambiente fica caótico, quando os dados são contra você, quando a equipe duvida</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Protocolo de Manutenção Semanal</h3>
+
+<div style="overflow-x:auto;margin:16px 0">
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead><tr style="background:#011a12">
+<th style="padding:8px 12px;text-align:left;color:#6ee7b7;border:1px solid #022c22">Momento</th>
+<th style="padding:8px 12px;text-align:left;color:#6ee7b7;border:1px solid #022c22">Prática</th>
+<th style="padding:8px 12px;text-align:left;color:#6ee7b7;border:1px solid #022c22">Duração</th>
+</tr></thead>
+<tbody>
+<tr style="background:#0a1a10"><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Diário — Manhã</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Ativação da Memória de Futuro + âncora "Decretado"</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">10 min</td></tr>
+<tr style="background:#011a12"><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Diário — Noite</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Registro: quais dados de otimização o dia trouxe?</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">5 min</td></tr>
+<tr style="background:#0a1a10"><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Semanal — Domingo</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Checagem ecológica: os 3 sinais de desalinhamento presentes?</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">15 min</td></tr>
+<tr style="background:#011a12"><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Mensal</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">Sessão completa: Ponte ao Futuro Reversa + Engenharia Reversa</td><td style="padding:8px 12px;border:1px solid #011a12;color:#e2e8f0">30 min</td></tr>
+</tbody>
+</table>
+</div>`
+          }
+        ]
+      }
+    ]
   }
 ];
 
