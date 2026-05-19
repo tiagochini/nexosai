@@ -363,8 +363,8 @@ const tutorSchema = z.object({
   chapterTitle: z.string().max(200),
   lessonContent: z.string().max(6000),
   keyPoints: z.array(z.string()).max(20),
-  previousTopics: z.array(z.string()).max(60),
-  upcomingTopics: z.array(z.string()).max(60),
+  previousTopics: z.array(z.string()).max(150),
+  upcomingTopics: z.array(z.string()).max(150),
   question: z.string().min(1).max(1000),
   history: z.array(z.object({
     role: z.enum(["user", "assistant"]),

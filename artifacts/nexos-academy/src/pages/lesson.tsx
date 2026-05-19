@@ -159,8 +159,8 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
   function buildTutorContext() {
     const allLessons = getAllLessonsInOrder();
     const currentIdx = allLessons.findIndex(l => l.lessonId === activeLesson!.id);
-    const previousTopics = allLessons.slice(0, currentIdx).map(l => l.title);
-    const upcomingTopics = allLessons.slice(currentIdx + 1).map(l => l.title);
+    const previousTopics = allLessons.slice(0, currentIdx).slice(-30).map(l => l.title);
+    const upcomingTopics = allLessons.slice(currentIdx + 1).slice(0, 30).map(l => l.title);
     return {
       lessonTitle: activeLesson!.title,
       chapterTitle: chapter!.title,
