@@ -17,6 +17,7 @@ import {
   markLeadConverted,
   markLeadUnsubscribed,
   getFunnelStats,
+  runFunnelSchedulerTick,
 } from "./academy-funnel.service.js";
 
 const router = Router();
@@ -479,6 +480,17 @@ router.post("/simulate-confirm", async (req, res): Promise<void> => {
     .where(eq(academyPurchasesTable.id, purchase.id));
 
   res.json({ ok: true, token: purchase.accessToken, email: purchase.customerEmail });
+});
+
+// POST /api/academy/funnel-tick (owner only — force-runs the funnel scheduler tick)
+router.post("/funnel-tick", async (req, res): Promise<void> => {
+  try {
+    await runFunnelSchedulerTick();
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "academy: funnel-tick error");
+    res.status(500).json({ error: "tick failed" });
+  }
 });
 
 export default router;
