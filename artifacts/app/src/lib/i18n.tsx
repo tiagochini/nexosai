@@ -39,10 +39,10 @@ export const APP_TRANSLATIONS = {
       operations: "Operações Inteligentes",
     },
     mode: {
-      beginner: "Iniciante",
-      advanced: "Avançado",
-      beginner_desc: "Menu simplificado · foco no lançamento",
-      advanced_desc: "Acesso completo a todas as ferramentas",
+      beginner: "Individual",
+      advanced: "Agency",
+      beginner_desc: "Menu simplificado · foco no seu lançamento",
+      advanced_desc: "Gestão de múltiplos clientes e campanhas",
     },
     credits: {
       label: "Créditos IA",
@@ -137,10 +137,10 @@ export const APP_TRANSLATIONS = {
       operations: "Smart Operations",
     },
     mode: {
-      beginner: "Beginner",
-      advanced: "Advanced",
-      beginner_desc: "Simplified menu · launch focus",
-      advanced_desc: "Full access to all tools",
+      beginner: "Individual",
+      advanced: "Agency",
+      beginner_desc: "Simplified menu · your launch focus",
+      advanced_desc: "Manage multiple clients and campaigns",
     },
     credits: {
       label: "AI Credits",
@@ -235,10 +235,10 @@ export const APP_TRANSLATIONS = {
       operations: "Smart Operations",
     },
     mode: {
-      beginner: "Beginner",
-      advanced: "Advanced",
-      beginner_desc: "Simplified menu · launch focus",
-      advanced_desc: "Full access to all tools",
+      beginner: "Individual",
+      advanced: "Agency",
+      beginner_desc: "Simplified menu · your launch focus",
+      advanced_desc: "Manage multiple clients and campaigns",
     },
     credits: {
       label: "AI Credits",
@@ -333,10 +333,10 @@ export const APP_TRANSLATIONS = {
       operations: "Operaciones Inteligentes",
     },
     mode: {
-      beginner: "Principiante",
-      advanced: "Avanzado",
-      beginner_desc: "Menú simplificado · enfoque en lanzamiento",
-      advanced_desc: "Acceso completo a todas las herramientas",
+      beginner: "Individual",
+      advanced: "Agency",
+      beginner_desc: "Menú simplificado · enfoque en tu lanzamiento",
+      advanced_desc: "Gestión de múltiples clientes y campañas",
     },
     credits: {
       label: "Créditos IA",

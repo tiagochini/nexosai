@@ -73,7 +73,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const isLow   = pct < 15;
   const barColor = isLow ? "hsl(var(--destructive))" : pct < 35 ? "hsl(45 100% 50%)" : "hsl(var(--primary))";
 
-  const isAgency = planSlug === "agency" || isAdmin;
+  const isAgency = planSlug === "agency" || isAdmin || isExpert;
 
   type NavItem  = { name: string; href: string; icon: React.ElementType; badge?: string };
   type NavGroup = { label: string; items: NavItem[]; expertOnly?: boolean };
