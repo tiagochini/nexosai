@@ -482,6 +482,69 @@ router.post("/simulate-confirm", async (req, res): Promise<void> => {
   res.json({ ok: true, token: purchase.accessToken, email: purchase.customerEmail });
 });
 
+// GET /api/academy/admin/purchases — owner dashboard (protected by ACADEMY_ADMIN_SECRET)
+router.get("/admin/purchases", async (req, res): Promise<void> => {
+  const secret = req.headers["x-admin-secret"] ?? req.query["secret"];
+  const adminSecret = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
+  if (secret !== adminSecret) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const purchases = await db
+      .select()
+      .from(academyPurchasesTable)
+      .orderBy(academyPurchasesTable.createdAt);
+
+    const result = purchases.map(p => ({
+      id: p.id,
+      name: p.customerName,
+      email: p.customerEmail,
+      product: p.productId,
+      status: p.status,
+      token: p.accessToken,
+      asaasPaymentId: p.asaasPaymentId,
+      createdAt: p.createdAt,
+      confirmedAt: p.confirmedAt,
+    }));
+
+    res.json({ purchases: result });
+  } catch (err) {
+    logger.error({ err }, "academy: admin purchases error");
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+// POST /api/academy/admin/confirm — manually confirm a purchase and (re)send access email
+router.post("/admin/confirm", async (req, res): Promise<void> => {
+  const secret = req.headers["x-admin-secret"] ?? req.query["secret"];
+  const adminSecret = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
+  if (secret !== adminSecret) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const { purchaseId } = req.body as { purchaseId?: string };
+  if (!purchaseId) { res.status(400).json({ error: "purchaseId required" }); return; }
+
+  const [purchase] = await db
+    .select()
+    .from(academyPurchasesTable)
+    .where(eq(academyPurchasesTable.id, purchaseId))
+    .limit(1);
+
+  if (!purchase) { res.status(404).json({ error: "Not found" }); return; }
+
+  await db.update(academyPurchasesTable)
+    .set({ status: "confirmed", confirmedAt: new Date() })
+    .where(eq(academyPurchasesTable.id, purchaseId));
+
+  // Fire access email (non-blocking)
+  sendAccessEmail(purchase.customerEmail, purchase.customerName ?? "", purchase.accessToken)
+    .catch(err => logger.error({ err }, "academy: admin resend email error"));
+
+  res.json({ ok: true, token: purchase.accessToken, email: purchase.customerEmail });
+});
+
 // POST /api/academy/funnel-tick (owner only — force-runs the funnel scheduler tick)
 router.post("/funnel-tick", async (req, res): Promise<void> => {
   try {

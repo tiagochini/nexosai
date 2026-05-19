@@ -108,6 +108,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const [funnelStats, setFunnelStats] = useState<FunnelStats | null>(null);
   const [funnelLoading, setFunnelLoading] = useState(false);
   const [copyMsg, setCopyMsg] = useState("");
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [confirmMsg, setConfirmMsg] = useState<Record<string, string>>({});
 
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
   const allLessons = allChapters.flatMap(c => c.lessons);
@@ -200,6 +202,37 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
       onOwnerChange(false);
       onNavigate("home");
     }
+  }
+
+  async function confirmPurchase(purchaseId: string, token: string) {
+    setConfirmingId(purchaseId);
+    try {
+      const r = await fetch(`/api/academy/admin/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
+        body: JSON.stringify({ purchaseId }),
+      });
+      const j = await r.json() as { ok?: boolean; error?: string };
+      if (j.ok) {
+        setConfirmMsg(prev => ({ ...prev, [purchaseId]: "✅ Confirmado!" }));
+        navigator.clipboard.writeText(token).catch(() => undefined);
+        await fetchPurchases();
+      } else {
+        setConfirmMsg(prev => ({ ...prev, [purchaseId]: `Erro: ${j.error}` }));
+      }
+    } catch {
+      setConfirmMsg(prev => ({ ...prev, [purchaseId]: "Erro de rede" }));
+    } finally {
+      setConfirmingId(null);
+      setTimeout(() => setConfirmMsg(prev => { const n = { ...prev }; delete n[purchaseId]; return n; }), 4000);
+    }
+  }
+
+  function copyToken(token: string) {
+    navigator.clipboard.writeText(token).then(() => {
+      setCopyMsg("Token copiado!");
+      setTimeout(() => setCopyMsg(""), 2000);
+    });
   }
 
   function copyEmails() {
@@ -563,10 +596,9 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
                     <tr className="border-b border-[hsl(220_20%_15%)]">
                       <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Cliente</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden sm:table-cell">Produto</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Valor</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Status</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider hidden md:table-cell">Token</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Data</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Token de Acesso</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-[hsl(220_10%_40%)] uppercase tracking-wider">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -578,16 +610,41 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
                         <td className="px-4 py-3">
                           <p className="text-white font-medium">{p.customerName}</p>
                           <p className="text-[hsl(220_10%_50%)] text-xs">{p.customerEmail}</p>
+                          <p className="text-[hsl(220_10%_35%)] text-xs">{fmt(p.createdAt)}</p>
                         </td>
                         <td className="px-4 py-3 text-[hsl(220_10%_60%)] text-xs hidden sm:table-cell">{p.productId}</td>
-                        <td className="px-4 py-3 text-white font-semibold">{fmtBrl(p.amountCents)}</td>
                         <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <code className="text-xs text-[hsl(250_90%_70%)] bg-[hsl(250_90%_65%/0.1)] px-2 py-0.5 rounded">
-                            {p.accessToken}
-                          </code>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <code className="text-sm font-bold text-[hsl(250_90%_75%)] bg-[hsl(250_90%_65%/0.15)] px-2 py-1 rounded border border-[hsl(250_90%_65%/0.3)]">
+                              {p.accessToken}
+                            </code>
+                            <button
+                              onClick={() => copyToken(p.accessToken)}
+                              className="text-xs text-[hsl(220_10%_45%)] hover:text-white transition-colors px-1.5 py-0.5 rounded border border-[hsl(220_20%_15%)] hover:border-[hsl(220_20%_25%)]"
+                              title="Copiar token"
+                            >
+                              📋
+                            </button>
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-[hsl(220_10%_50%)] text-xs whitespace-nowrap">{fmt(p.createdAt)}</td>
+                        <td className="px-4 py-3">
+                          {confirmMsg[p.id] ? (
+                            <span className="text-xs text-green-400 font-semibold">{confirmMsg[p.id]}</span>
+                          ) : p.status === "pending" ? (
+                            <button
+                              onClick={() => confirmPurchase(p.id, p.accessToken)}
+                              disabled={confirmingId === p.id}
+                              className="text-xs px-3 py-1.5 rounded-lg bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25 transition-colors disabled:opacity-50 font-semibold whitespace-nowrap"
+                            >
+                              {confirmingId === p.id ? "Confirmando..." : "✓ Confirmar + Copiar Token"}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-[hsl(220_10%_35%)]">
+                              {p.confirmedAt ? `✓ ${fmt(p.confirmedAt)}` : "—"}
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
