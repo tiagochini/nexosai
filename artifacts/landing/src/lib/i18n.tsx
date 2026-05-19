@@ -175,7 +175,7 @@ export const TRANSLATIONS = {
       stats: [
         { num: "100+", label: "Aulas estruturadas" },
         { num: "6", label: "Módulos completos" },
-        { num: "Incluído", label: "No plano Solo e Agency" },
+        { num: "Vitalício", label: "Acesso permanente ao conteúdo" },
       ],
       box_label: "O que é uma caixa de metodologia",
       box_p: "Cada aula do NexOS Academy vem com um bloco de metodologia: conceito teórico, aplicação prática e resultado esperado. É a mesma lógica que a IA aplica automaticamente nas suas campanhas — agora disponível para você estudar e dominar.",
@@ -486,7 +486,7 @@ export const TRANSLATIONS = {
       stats: [
         { num: "100+", label: "Structured lessons" },
         { num: "6", label: "Complete modules" },
-        { num: "Included", label: "In Solo and Agency plans" },
+        { num: "Lifetime", label: "Permanent access to content" },
       ],
       box_label: "What is a methodology box",
       box_p: "Every NexOS Academy lesson comes with a methodology block: theoretical concept, practical application and expected result. It's the same logic the AI automatically applies in your campaigns — now available for you to study and master.",
@@ -797,7 +797,7 @@ export const TRANSLATIONS = {
       stats: [
         { num: "100+", label: "Clases estructuradas" },
         { num: "6", label: "Módulos completos" },
-        { num: "Incluido", label: "En planes Solo y Agency" },
+        { num: "Vitalicio", label: "Acceso permanente al contenido" },
       ],
       box_label: "Qué es una caja de metodología",
       box_p: "Cada clase de NexOS Academy incluye un bloque de metodología: concepto teórico, aplicación práctica y resultado esperado. Es la misma lógica que la IA aplica automáticamente en tus campañas — ahora disponible para que la estudies y domines.",

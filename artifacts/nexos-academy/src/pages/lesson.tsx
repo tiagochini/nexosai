@@ -103,7 +103,7 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
 
   useEffect(() => {
     if (tutorOpen && tutorEndRef.current) {
-      tutorEndRef.current.scrollIntoView({ behavior: "smooth" });
+      tutorEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [tutorHistory, tutorOpen, tutorLoading]);
 
