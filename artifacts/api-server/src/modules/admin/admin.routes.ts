@@ -3,6 +3,8 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { getAdminOverview, getAdminFinancials, getAdminPayments } from "./admin.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
 import { UnauthorizedError } from "../../lib/errors.js";
+import { db, inviteCodesTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 
 const ADMIN_EMAILS = new Set([
   "admin@nexos.ai",
@@ -42,13 +44,72 @@ router.post("/payments/:paymentId/confirm", requireAuth, async (req, res): Promi
   const paymentId = req.params["paymentId"] as string;
   const note = (req.body as { note?: string }).note ?? `Confirmado manualmente por ${req.auth.email}`;
 
-  // markPaymentPaid expects workspaceId — load payment first, then use its workspaceId
   const payments = await getAdminPayments({ limit: 1000 });
   const p = payments.find(x => x.id === paymentId);
   if (!p) { res.status(404).json({ error: "Pagamento não encontrado" }); return; }
 
   const updated = await markPaymentPaid(p.workspaceId, paymentId, note);
   res.json({ payment: updated, message: "Pagamento confirmado com sucesso" });
+});
+
+// ─── Invite Codes ─────────────────────────────────────────────────────────────
+
+function generateInviteCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 12; i++) {
+    if (i === 4 || i === 8) code += "-";
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+// GET /api/admin/invite-codes — list all invite codes
+router.get("/invite-codes", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const codes = await db
+    .select()
+    .from(inviteCodesTable)
+    .orderBy(desc(inviteCodesTable.createdAt));
+  res.json({ codes });
+});
+
+// POST /api/admin/invite-codes/generate — generate N new invite codes
+router.post("/invite-codes/generate", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const { count = 10, planSlug = "agency", label } = req.body as {
+    count?: number;
+    planSlug?: string;
+    label?: string;
+  };
+
+  const toInsert = Array.from({ length: Math.min(count, 50) }, () => ({
+    code: generateInviteCode(),
+    planSlug,
+    label: label ?? null,
+  }));
+
+  const inserted = await db
+    .insert(inviteCodesTable)
+    .values(toInsert)
+    .returning();
+
+  res.status(201).json({ codes: inserted });
+});
+
+// DELETE /api/admin/invite-codes/:id — delete a free invite code
+router.delete("/invite-codes/:id", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const id = req.params["id"] as string;
+  const [code] = await db
+    .select()
+    .from(inviteCodesTable)
+    .where(eq(inviteCodesTable.id, id))
+    .limit(1);
+  if (!code) { res.status(404).json({ error: "Código não encontrado" }); return; }
+  if (code.used) { res.status(409).json({ error: "Código já utilizado — não pode ser deletado" }); return; }
+  await db.delete(inviteCodesTable).where(eq(inviteCodesTable.id, id));
+  res.json({ ok: true });
 });
 
 export default router;

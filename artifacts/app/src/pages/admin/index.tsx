@@ -129,7 +129,7 @@ const PAYMENT_STATUS: Record<string, { label: string; cls: string }> = {
 export default function AdminPage() {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos">("pagamentos");
+  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites">("pagamentos");
   const [payFilter, setPayFilter] = useState<"all" | "pending" | "paid">("pending");
   const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
 
@@ -160,6 +160,46 @@ export default function AdminPage() {
       const data = await customFetch<{ payments: AdminPaymentRow[] }>(`/api/admin/payments${qs}`);
       return data.payments;
     },
+  });
+
+  interface InviteCode {
+    id: string; code: string; planSlug: string; label: string | null;
+    used: boolean; usedByEmail: string | null; usedAt: string | null; createdAt: string;
+  }
+
+  const { data: inviteCodes, isLoading: loadingInvites, refetch: refetchInvites } = useQuery({
+    queryKey: ["/api/admin/invite-codes"],
+    enabled: isAdmin && tab === "convites",
+    queryFn: async (): Promise<InviteCode[]> => {
+      const data = await customFetch<{ codes: InviteCode[] }>("/api/admin/invite-codes");
+      return data.codes;
+    },
+  });
+
+  const generateInvitesMutation = useMutation({
+    mutationFn: async ({ count, planSlug }: { count: number; planSlug: string }) => {
+      return customFetch<{ codes: InviteCode[] }>("/api/admin/invite-codes/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count, planSlug }),
+      });
+    },
+    onSuccess: () => {
+      toast.success("Códigos gerados com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
+    },
+    onError: (err: Error) => toast.error(err.message ?? "Erro ao gerar códigos"),
+  });
+
+  const deleteInviteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return customFetch<{ ok: boolean }>(`/api/admin/invite-codes/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => {
+      toast.success("Código removido.");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/invite-codes"] });
+    },
+    onError: (err: Error) => toast.error(err.message ?? "Erro ao remover código"),
   });
 
   const confirmMutation = useMutation({
@@ -201,6 +241,7 @@ export default function AdminPage() {
     { id: "financials" as const,  label: "Financeiro" },
     { id: "upsell" as const,      label: "Oportunidades" },
     { id: "users" as const,       label: "Usuários" },
+    { id: "convites" as const,    label: "🎟️ Convites" },
   ];
 
   return (
@@ -775,6 +816,126 @@ export default function AdminPage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ─── TAB: CONVITES ─────────────────────────────────────────────────────── */}
+      {tab === "convites" && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">🎟️ Códigos de Convite — NexOS AI</h2>
+              <p className="font-mono text-xs text-muted-foreground/60 mt-1">
+                {(inviteCodes ?? []).filter(c => !c.used).length} disponíveis ·{" "}
+                {(inviteCodes ?? []).filter(c => c.used).length} utilizados
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2"
+                onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "agency" })}
+                disabled={generateInvitesMutation.isPending}
+              >
+                {generateInvitesMutation.isPending ? <><RefreshCw className="h-3 w-3 animate-spin" /> Gerando...</> : "+ 10 Agency"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2"
+                onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "solo" })}
+                disabled={generateInvitesMutation.isPending}
+              >
+                + 10 Solo
+              </Button>
+              <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline" onClick={() => refetchInvites()}>
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          <p className="font-mono text-[11px] text-muted-foreground/50 border border-border/30 bg-card/30 px-4 py-3">
+            💡 Para usar: na tela de cadastro do NexOS AI, o convidado digita o código de convite e ganha acesso ao plano correspondente sem pagar.
+          </p>
+
+          {loadingInvites ? (
+            <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-none" />)}</div>
+          ) : !inviteCodes || inviteCodes.length === 0 ? (
+            <div className="border border-border/30 bg-card/20 p-12 text-center space-y-3">
+              <p className="font-mono text-sm text-muted-foreground/50">Nenhum código gerado ainda.</p>
+              <Button size="sm" onClick={() => generateInvitesMutation.mutate({ count: 10, planSlug: "agency" })} className="rounded-none font-mono uppercase text-xs tracking-widest">
+                Gerar 10 Códigos Agency
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Disponíveis */}
+              {inviteCodes.filter(c => !c.used).length > 0 && (
+                <div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2 pb-1 border-b border-border/30">
+                    ⚪ Disponíveis — {inviteCodes.filter(c => !c.used).length}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {inviteCodes.filter(c => !c.used).map(c => (
+                      <div key={c.id} className="border border-border/40 bg-card/30 px-4 py-3 flex items-center justify-between gap-3">
+                        <div>
+                          <span className="font-mono text-base font-bold text-primary tracking-widest">{c.code}</span>
+                          <span className={`ml-3 text-[11px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${c.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
+                            {c.planSlug}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm" variant="outline"
+                            className="rounded-none font-mono text-[11px] uppercase tracking-widest h-7 px-2 btn-weapon-outline"
+                            onClick={async () => {
+                              try { await navigator.clipboard.writeText(c.code); toast.success("Copiado!"); } catch { /* ignore */ }
+                            }}
+                          >
+                            Copiar
+                          </Button>
+                          <Button
+                            size="sm" variant="ghost"
+                            className="rounded-none h-7 w-7 p-0 text-muted-foreground/40 hover:text-destructive"
+                            onClick={() => { if (confirm(`Remover código ${c.code}?`)) deleteInviteMutation.mutate(c.id); }}
+                            disabled={deleteInviteMutation.isPending}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Utilizados */}
+              {inviteCodes.filter(c => c.used).length > 0 && (
+                <div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2 pb-1 border-b border-border/30">
+                    ✅ Utilizados — {inviteCodes.filter(c => c.used).length}
+                  </div>
+                  <div className="space-y-1">
+                    {inviteCodes.filter(c => c.used).map(c => (
+                      <div key={c.id} className="border border-border/20 bg-card/20 px-4 py-3 flex items-center justify-between gap-3 opacity-60">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="font-mono text-sm font-bold text-muted-foreground tracking-widest line-through">{c.code}</span>
+                          <span className={`text-[11px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${c.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
+                            {c.planSlug}
+                          </span>
+                        </div>
+                        <div className="text-right min-w-0">
+                          {c.usedByEmail && <p className="font-mono text-xs text-muted-foreground/60 truncate">{c.usedByEmail}</p>}
+                          {c.usedAt && <p className="font-mono text-[11px] text-muted-foreground/40">{fmtDate(c.usedAt)}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -553,6 +553,45 @@ router.post("/admin/confirm", async (req, res): Promise<void> => {
   res.json({ ok: true, token: purchase.accessToken, email: purchase.customerEmail });
 });
 
+// POST /api/academy/admin/gift-codes — generate N gift access codes (owner only)
+router.post("/admin/gift-codes", async (req, res): Promise<void> => {
+  const secret = req.headers["x-admin-secret"] ?? req.query["secret"];
+  const adminSecret = process.env["ACADEMY_ADMIN_SECRET"] ?? "nexos2025";
+  if (secret !== adminSecret) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const { count = 5, productId = "complete-bundle" } = req.body as { count?: number; productId?: string };
+  const product = ACADEMY_PRODUCTS[productId as keyof typeof ACADEMY_PRODUCTS];
+  if (!product) { res.status(400).json({ error: "Produto inválido" }); return; }
+
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function makeToken() {
+    let t = "";
+    for (let i = 0; i < 12; i++) {
+      if (i === 4 || i === 8) t += "-";
+      t += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return t;
+  }
+
+  const rows = Array.from({ length: Math.min(count, 50) }, () => ({
+    accessToken: makeToken(),
+    customerEmail: "brinde@nexos.ai",
+    customerName: "Convidado",
+    productId,
+    status: "confirmed" as const,
+    amountCents: 0,
+    confirmedAt: new Date(),
+  }));
+
+  const inserted = await db
+    .insert(academyPurchasesTable)
+    .values(rows)
+    .returning({ id: academyPurchasesTable.id, accessToken: academyPurchasesTable.accessToken });
+
+  logger.info({ count: inserted.length, productId }, "academy: gift codes generated");
+  res.status(201).json({ codes: inserted.map(r => r.accessToken), total: inserted.length });
+});
+
 // POST /api/academy/funnel-tick (owner only — force-runs the funnel scheduler tick)
 router.post("/funnel-tick", async (req, res): Promise<void> => {
   try {

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod/v4";
 import { registerUser, loginUser, refreshTokens } from "./auth.service.js";
 import { requireAuth } from "./auth.middleware.js";
-import { db, usersTable, workspacesTable, plansTable } from "@workspace/db";
+import { db, usersTable, workspacesTable, plansTable, inviteCodesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { AppError } from "../../lib/errors.js";
 
@@ -14,6 +14,7 @@ const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().optional(),
   locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).default("pt-BR"),
+  inviteCode: z.string().optional(),
 });
 
 const loginSchema = z.object({
@@ -34,6 +35,66 @@ router.post("/register", async (req, res): Promise<void> => {
 
   try {
     const tokens = await registerUser(parsed.data, req.log);
+
+    // Apply invite code after registration — upgrades workspace plan and marks code used
+    if (parsed.data.inviteCode) {
+      const code = parsed.data.inviteCode.toUpperCase().trim();
+      const [invite] = await db
+        .select()
+        .from(inviteCodesTable)
+        .where(eq(inviteCodesTable.code, code))
+        .limit(1);
+
+      if (invite && !invite.used) {
+        // Find the target plan
+        const [targetPlan] = await db
+          .select()
+          .from(plansTable)
+          .where(eq(plansTable.slug, invite.planSlug))
+          .limit(1);
+
+        if (targetPlan) {
+          // Find the user+workspace just created
+          const [user] = await db
+            .select({ id: usersTable.id })
+            .from(usersTable)
+            .where(eq(usersTable.email, parsed.data.email.toLowerCase()))
+            .limit(1);
+
+          const [workspace] = await db
+            .select()
+            .from(workspacesTable)
+            .where(eq(workspacesTable.ownerId, user!.id))
+            .limit(1);
+
+          if (workspace) {
+            // Upgrade to target plan
+            await db
+              .update(workspacesTable)
+              .set({
+                planId: targetPlan.id,
+                creditsBalance: targetPlan.creditsMonthly,
+              })
+              .where(eq(workspacesTable.id, workspace.id));
+
+            // Mark invite code as used
+            await db
+              .update(inviteCodesTable)
+              .set({
+                used: true,
+                usedByEmail: parsed.data.email.toLowerCase(),
+                usedByUserId: user!.id,
+                usedByWorkspaceId: workspace.id,
+                usedAt: new Date(),
+              })
+              .where(eq(inviteCodesTable.code, code));
+
+            req.log.info({ code, planSlug: invite.planSlug, email: parsed.data.email }, "Invite code applied");
+          }
+        }
+      }
+    }
+
     res.status(201).json(tokens);
   } catch (err) {
     if (err instanceof AppError) {
