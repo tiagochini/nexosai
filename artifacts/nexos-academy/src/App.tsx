@@ -19,6 +19,7 @@ interface NavState {
 
 const STORAGE_KEY = "nexos-academy-progress";
 const ACCESS_KEY = "nexos-academy-access";
+const PRODUCT_KEY = "nexos-academy-product";
 
 function loadProgress(): Record<string, boolean> {
   try {
@@ -33,7 +34,11 @@ function saveProgress(p: Record<string, boolean>) {
 }
 
 function hasStoredAccess(): boolean {
-  return localStorage.getItem(ACCESS_KEY) === "true";
+  // Requires both the access flag AND the correct product (complete-bundle)
+  return (
+    localStorage.getItem(ACCESS_KEY) === "true" &&
+    localStorage.getItem(PRODUCT_KEY) === "complete-bundle"
+  );
 }
 
 const ALL_NAV_ITEMS = [
@@ -68,6 +73,7 @@ function AcademyApp() {
 
   const grantAccess = useCallback((token?: string) => {
     localStorage.setItem(ACCESS_KEY, "true");
+    localStorage.setItem(PRODUCT_KEY, "complete-bundle");
     if (token) localStorage.setItem(ACADEMY_TOKEN_KEY, token);
     setHasAccess(true);
   }, []);

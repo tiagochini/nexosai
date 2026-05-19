@@ -74,8 +74,12 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
     setTokenError("");
     try {
       const resp = await fetch(`${API_BASE}/verify/${encodeURIComponent(token.trim().toUpperCase())}`);
-      const data = await resp.json() as { valid?: boolean; error?: string };
+      const data = await resp.json() as { valid?: boolean; productId?: string; error?: string };
       if (data.valid) {
+        if (data.productId !== "complete-bundle") {
+          setTokenError("Este código é para o Mini-Guia (produto digital), não para a Academia Completa. Para acessar todos os módulos, adquira a Metodologia NexOS — Edição Completa.");
+          return;
+        }
         onAccessGranted(token.trim().toUpperCase());
       } else {
         setTokenError(data.error ?? "Código inválido.");
