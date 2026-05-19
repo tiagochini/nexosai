@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { CURRICULUM, PRODUCTS } from "@/data/curriculum";
+import { type BrandConfig, DEFAULT_BRAND } from "@/pages/owner";
 
 interface HomeProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
   progress: Record<string, boolean>;
   hasAccess: boolean;
+  brand?: BrandConfig;
 }
 
-export default function Home({ onNavigate, progress, hasAccess }: HomeProps) {
+export default function Home({ onNavigate, progress, hasAccess, brand: brandProp }: HomeProps) {
+  const brand = brandProp ?? DEFAULT_BRAND;
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
 
   const totalLessons = CURRICULUM.flatMap(m => m.chapters).flatMap(c => c.lessons).length;
@@ -25,17 +28,25 @@ export default function Home({ onNavigate, progress, hasAccess }: HomeProps) {
       <div className="relative overflow-hidden rounded-2xl border border-[hsl(250_90%_65%/0.2)] bg-gradient-to-br from-[hsl(222_25%_7%)] to-[hsl(250_30%_8%)] p-8 md:p-12 hero-glow">
         <div className="relative z-10 max-w-2xl">
           <div className="flex items-center gap-2 mb-4">
-            <span className="badge-primary">⚡ NexOS Academy</span>
-            <span className="badge-primary badge-gold">10 Módulos · 34 Capítulos · 118 Aulas</span>
+            <span className="badge-primary">⚡ {brand.academyName}</span>
+            <span className="badge-primary badge-gold">{CURRICULUM.length} Módulos · {CURRICULUM.flatMap(m => m.chapters).length} Capítulos · {totalLessons} Aulas</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-white leading-tight mb-4">
-            Crie, Lance e Venda{" "}
+            {brand.heroTitle}{" "}
             <br />
-            <span className="shimmer-text">Produtos Digitais</span>
+            <span className="shimmer-text" style={{ background: brand.primaryColor ? `linear-gradient(135deg, ${brand.primaryColor}, ${brand.primaryColor}99)` : undefined, WebkitBackgroundClip: brand.primaryColor ? "text" : undefined, WebkitTextFillColor: brand.primaryColor ? "transparent" : undefined }}>
+              {brand.heroHighlight}
+            </span>
           </h1>
           <p className="text-[hsl(220_10%_70%)] text-lg leading-relaxed mb-6">
-            Formação completa em lançamentos: estratégia, tráfego pago e orgânico, copywriting, automações, criação de produto e como transformar sua audiência em clientes.
+            {brand.heroDescription}
           </p>
+          {brand.ownerName && (
+            <p className="text-sm text-[hsl(220_10%_45%)] mb-2">
+              Por <strong className="text-[hsl(220_10%_65%)]">{brand.ownerName}</strong>
+              {brand.ownerEmail && <> · {brand.ownerEmail}</>}
+            </p>
+          )}
           <div className="flex flex-wrap gap-3">
             {hasAccess ? (
               nextChapter ? (

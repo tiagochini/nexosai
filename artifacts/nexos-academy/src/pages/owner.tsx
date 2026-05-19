@@ -1,6 +1,48 @@
 import { useState, useEffect, useCallback } from "react";
 import { CURRICULUM } from "@/data/curriculum";
 
+// ── Brand Config ─────────────────────────────────────────────────────────────
+export interface BrandConfig {
+  academyName: string;
+  ownerName: string;
+  ownerEmail: string;
+  logoLetter: string;
+  tagline: string;
+  heroTitle: string;
+  heroHighlight: string;
+  heroDescription: string;
+  primaryColor: string;
+}
+
+const BRAND_KEY = "nexos-academy-brand";
+
+export const DEFAULT_BRAND: BrandConfig = {
+  academyName: "NexOS Academy",
+  ownerName: "",
+  ownerEmail: "",
+  logoLetter: "N",
+  tagline: "Formação completa em lançamentos digitais",
+  heroTitle: "Crie, Lance e Venda",
+  heroHighlight: "Produtos Digitais",
+  heroDescription: "Formação completa em lançamentos: estratégia, tráfego pago e orgânico, copywriting, automações, criação de produto e como transformar sua audiência em clientes.",
+  primaryColor: "#7c3aed",
+};
+
+export function loadBrand(): BrandConfig {
+  try {
+    const raw = localStorage.getItem(BRAND_KEY);
+    if (!raw) return DEFAULT_BRAND;
+    return { ...DEFAULT_BRAND, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_BRAND;
+  }
+}
+
+function saveBrand(b: BrandConfig) {
+  localStorage.setItem(BRAND_KEY, JSON.stringify(b));
+  window.dispatchEvent(new Event("brand-updated"));
+}
+
 interface FunnelStep {
   step: number;
   subject: string;
@@ -68,7 +110,7 @@ interface Purchase {
   confirmedAt: string | null;
 }
 
-type Tab = "leads" | "compras" | "funil" | "curso" | "acesso";
+type Tab = "leads" | "compras" | "funil" | "curso" | "acesso" | "marca";
 
 function fmt(iso: string) {
   const d = new Date(iso);
@@ -112,6 +154,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [confirmMsg, setConfirmMsg] = useState<Record<string, string>>({});
   const [confirmedModal, setConfirmedModal] = useState<Purchase | null>(null);
+  const [brand, setBrand] = useState<BrandConfig>(() => loadBrand());
+  const [brandSaved, setBrandSaved] = useState(false);
 
   const allChapters = CURRICULUM.flatMap(m => m.chapters);
   const allLessons = allChapters.flatMap(c => c.lessons);
@@ -370,8 +414,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)]">
-        {(["leads", "funil", "compras", "curso", "acesso"] as Tab[]).map(t => (
+      <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)]">
+        {(["leads", "funil", "compras", "curso", "acesso", "marca"] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -385,6 +429,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
               : t === "funil" ? "🔄 Funil"
               : t === "compras" ? "💳 Compras"
               : t === "curso" ? "📦 Curso"
+              : t === "marca" ? "🎨 Marca"
               : "🔑 Acesso"}
           </button>
         ))}
@@ -892,6 +937,218 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
           </div>
         </div>
       )}
+      {/* TAB: MARCA */}
+      {tab === "marca" && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-white">Configuração da Marca</h2>
+            <p className="text-sm text-[hsl(220_10%_45%)] mt-0.5">
+              Personalize como sua academy aparece para os alunos. As alterações são aplicadas imediatamente.
+            </p>
+          </div>
+
+          {/* Preview */}
+          <div className="rounded-xl border border-[hsl(250_90%_65%/0.25)] bg-[hsl(250_30%_6%)] overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[hsl(220_20%_12%)] flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+              </div>
+              <span className="text-[10px] text-[hsl(220_10%_40%)] font-mono ml-2">preview — como os alunos vão ver</span>
+            </div>
+            {/* Nav preview */}
+            <div className="flex items-center gap-3 px-5 py-3 border-b border-[hsl(220_20%_10%)] bg-[hsl(222_25%_4%)]">
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-extrabold text-white shrink-0"
+                style={{ background: brand.primaryColor || "var(--gradient-primary)" }}
+              >
+                {brand.logoLetter || "N"}
+              </div>
+              <span className="font-bold text-white text-sm">{brand.academyName || "NexOS Academy"}</span>
+              {brand.ownerName && (
+                <span className="ml-auto text-[11px] text-[hsl(220_10%_45%)]">por {brand.ownerName}</span>
+              )}
+            </div>
+            {/* Hero preview */}
+            <div className="p-5 space-y-1.5">
+              <div className="text-[10px] text-[hsl(250_90%_70%)] font-bold uppercase tracking-widest">⚡ {brand.academyName || "NexOS Academy"}</div>
+              <div className="text-lg font-extrabold text-white leading-tight">
+                {brand.heroTitle || "Crie, Lance e Venda"}<br />
+                <span style={{ color: brand.primaryColor || "hsl(250 90% 65%)" }}>{brand.heroHighlight || "Produtos Digitais"}</span>
+              </div>
+              <p className="text-[12px] text-[hsl(220_10%_60%)] leading-relaxed max-w-md">{brand.heroDescription || DEFAULT_BRAND.heroDescription}</p>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Nome da Academy */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Nome da Academy</label>
+              <input
+                type="text"
+                value={brand.academyName}
+                onChange={e => setBrand(b => ({ ...b, academyName: e.target.value }))}
+                placeholder="Ex: Academia do João"
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)]"
+              />
+            </div>
+
+            {/* Letra do Logo */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Letra do Logo</label>
+              <input
+                type="text"
+                maxLength={2}
+                value={brand.logoLetter}
+                onChange={e => setBrand(b => ({ ...b, logoLetter: e.target.value.toUpperCase() }))}
+                placeholder="Ex: J"
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)]"
+              />
+            </div>
+
+            {/* Seu nome */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Seu Nome</label>
+              <input
+                type="text"
+                value={brand.ownerName}
+                onChange={e => setBrand(b => ({ ...b, ownerName: e.target.value }))}
+                placeholder="Ex: João Silva"
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)]"
+              />
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Seu Email</label>
+              <input
+                type="email"
+                value={brand.ownerEmail}
+                onChange={e => setBrand(b => ({ ...b, ownerEmail: e.target.value }))}
+                placeholder="Ex: joao@minhacademy.com"
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)]"
+              />
+            </div>
+
+            {/* Cor Principal */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Cor Principal</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={brand.primaryColor}
+                  onChange={e => setBrand(b => ({ ...b, primaryColor: e.target.value }))}
+                  className="w-10 h-10 rounded-lg border border-[hsl(220_20%_15%)] bg-transparent cursor-pointer p-1"
+                />
+                <input
+                  type="text"
+                  value={brand.primaryColor}
+                  onChange={e => setBrand(b => ({ ...b, primaryColor: e.target.value }))}
+                  placeholder="#7c3aed"
+                  className="flex-1 bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)] font-mono"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap mt-1">
+                {["#7c3aed", "#2563eb", "#059669", "#dc2626", "#d97706", "#0891b2", "#be185d"].map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setBrand(b => ({ ...b, primaryColor: c }))}
+                    title={c}
+                    className="w-6 h-6 rounded-full border-2 transition-all"
+                    style={{
+                      background: c,
+                      borderColor: brand.primaryColor === c ? "white" : "transparent",
+                      transform: brand.primaryColor === c ? "scale(1.2)" : "scale(1)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Tagline */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Tagline</label>
+              <input
+                type="text"
+                value={brand.tagline}
+                onChange={e => setBrand(b => ({ ...b, tagline: e.target.value }))}
+                placeholder="Ex: Formação completa em lançamentos"
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)]"
+              />
+            </div>
+
+            {/* Título do hero */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Título do Hero (linha 1)</label>
+              <input
+                type="text"
+                value={brand.heroTitle}
+                onChange={e => setBrand(b => ({ ...b, heroTitle: e.target.value }))}
+                placeholder="Ex: Aprenda, Crie e Venda"
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)]"
+              />
+            </div>
+
+            {/* Destaque do hero */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Título do Hero (linha 2 — colorida)</label>
+              <input
+                type="text"
+                value={brand.heroHighlight}
+                onChange={e => setBrand(b => ({ ...b, heroHighlight: e.target.value }))}
+                placeholder="Ex: com Consistência e Método"
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)]"
+              />
+            </div>
+
+            {/* Descrição do hero */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="block text-xs font-semibold text-[hsl(220_10%_60%)] uppercase tracking-wider">Descrição da Página Inicial</label>
+              <textarea
+                rows={3}
+                value={brand.heroDescription}
+                onChange={e => setBrand(b => ({ ...b, heroDescription: e.target.value }))}
+                placeholder="Descreva o que os alunos vão aprender..."
+                className="w-full bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_15%)] rounded-lg px-3 py-2.5 text-sm text-white placeholder-[hsl(220_10%_35%)] focus:outline-none focus:border-[hsl(250_90%_65%/0.5)] resize-none"
+              />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => {
+                saveBrand(brand);
+                setBrandSaved(true);
+                setTimeout(() => setBrandSaved(false), 2500);
+              }}
+              className="btn-primary text-sm px-5 py-2.5"
+            >
+              {brandSaved ? "✓ Salvo!" : "💾 Salvar Configurações"}
+            </button>
+            <button
+              onClick={() => {
+                if (confirm("Resetar para os padrões NexOS?")) {
+                  setBrand(DEFAULT_BRAND);
+                  saveBrand(DEFAULT_BRAND);
+                }
+              }}
+              className="btn-outline text-sm px-4 py-2.5"
+            >
+              Restaurar Padrão
+            </button>
+            {brand.ownerName && (
+              <span className="text-xs text-[hsl(220_10%_40%)]">
+                Publicado por <strong className="text-[hsl(220_10%_60%)]">{brand.ownerName}</strong>
+                {brand.ownerEmail && <> · {brand.ownerEmail}</>}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

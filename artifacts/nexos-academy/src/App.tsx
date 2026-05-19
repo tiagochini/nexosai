@@ -6,7 +6,7 @@ import Lesson from "@/pages/lesson";
 import Products from "@/pages/products";
 import ProgressPage from "@/pages/progress-page";
 import Glossary from "@/pages/glossary";
-import Owner, { isOwnerMode } from "@/pages/owner";
+import Owner, { isOwnerMode, loadBrand, type BrandConfig } from "@/pages/owner";
 import MiniGuide from "@/pages/mini-guide";
 import FreeGuide from "@/pages/free-guide";
 
@@ -73,6 +73,13 @@ function AcademyApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [ownerMode, setOwnerMode] = useState<boolean>(isOwnerMode);
   const [hasAccess, setHasAccess] = useState<boolean>(() => hasStoredAccess() || isOwnerMode());
+  const [brand, setBrand] = useState<BrandConfig>(() => loadBrand());
+
+  useEffect(() => {
+    const onBrandUpdated = () => setBrand(loadBrand());
+    window.addEventListener("brand-updated", onBrandUpdated);
+    return () => window.removeEventListener("brand-updated", onBrandUpdated);
+  }, []);
 
   const ACADEMY_TOKEN_KEY = "nexos-academy-token";
 
@@ -162,7 +169,7 @@ function AcademyApp() {
 
     switch (nav.page) {
       case "home":
-        return <Home onNavigate={navigate} progress={progress} hasAccess={canAccess} />;
+        return <Home onNavigate={navigate} progress={progress} hasAccess={canAccess} brand={brand} />;
       case "modules":
         return <Modules onNavigate={navigate} progress={progress} />;
       case "module":
@@ -206,11 +213,16 @@ function AcademyApp() {
           >
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-extrabold text-white"
-              style={{ background: "var(--gradient-primary)" }}
+              style={{ background: brand.primaryColor || "var(--gradient-primary)" }}
             >
-              N
+              {brand.logoLetter || "N"}
             </div>
-            <span className="font-bold text-white text-sm hidden sm:block">NexOS Academy</span>
+            <div className="hidden sm:flex flex-col items-start leading-none">
+              <span className="font-bold text-white text-sm">{brand.academyName || "NexOS Academy"}</span>
+              {brand.ownerName && (
+                <span className="text-[10px] text-[hsl(220_10%_40%)]">por {brand.ownerName}</span>
+              )}
+            </div>
           </button>
 
           {/* Desktop nav */}
