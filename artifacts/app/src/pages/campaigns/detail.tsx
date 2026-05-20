@@ -19,8 +19,9 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
-  RefreshCw,
+  RefreshCw, Rocket,
 } from "lucide-react";
+import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
 import { CampaignBrief } from "@/components/campaign-brief";
 import { SocialPostPreview } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -1216,6 +1217,7 @@ export default function CampaignDetail() {
   const [bypassLaunchLoading, setBypassLaunchLoading] = useState(false);
   const [reorientOpen, setReorientOpen] = useState(false);
   const [reorientDirective, setReorientDirective] = useState("");
+  const [showLaunchSequence, setShowLaunchSequence] = useState(false);
 
   const reorientMutation = useMutation({
     mutationFn: async (directive: string) => {
@@ -1446,6 +1448,21 @@ export default function CampaignDetail() {
     },
   });
 
+  // ── Connected integrations (for launch sequence overlay) ───────────────────
+  const { data: integrationsData } = useQuery({
+    queryKey: ["/api/workspaces/me/integrations"],
+    enabled: !!campaignId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/workspaces/me/integrations");
+      if (!res.ok) return { integrations: [] };
+      return res.json() as Promise<{ integrations: { provider: string; status: string }[] }>;
+    },
+  });
+  const connectedProviders = (integrationsData?.integrations ?? [])
+    .filter(i => i.status === "connected")
+    .map(i => i.provider);
+
   // ── Real-time agent streaming via Socket.io ────────────────────────────────────
   const [liveEvents, setLiveEvents] = useState<CampaignEvent[]>([]);
   const liveRef = useRef<HTMLDivElement>(null);
@@ -1673,6 +1690,16 @@ export default function CampaignDetail() {
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
+
+      {/* ── Launch Sequence Overlay ── */}
+      {showLaunchSequence && (
+        <LaunchSequenceOverlay
+          campaignId={campaignId}
+          campaignTitle={campaign.title ?? "Campanha"}
+          connectedProviders={connectedProviders}
+          onClose={() => setShowLaunchSequence(false)}
+        />
+      )}
 
       {/* ── Missing Integrations Modal (hard block) ── */}
       {missingIntegrations && !connectingEntry && (() => {
@@ -2007,7 +2034,12 @@ export default function CampaignDetail() {
                   <h3 className="font-mono font-bold text-lg text-foreground uppercase tracking-wide">{nextAction.label}</h3>
                   <p className="text-xs text-muted-foreground font-mono mt-1">{nextAction.description}</p>
                 </div>
-                {nextAction.phase ? (
+                {nextAction.phase === "launch" ? (
+                  <LaunchRocketButton
+                    onClick={() => setShowLaunchSequence(true)}
+                    loading={executeMutation.isPending}
+                  />
+                ) : nextAction.phase ? (
                   <Button
                     className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto"
                     onClick={() => executeMutation.mutate({ campaignId, data: { phase: nextAction.phase! } })}
