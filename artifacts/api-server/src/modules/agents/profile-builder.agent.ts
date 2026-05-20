@@ -199,6 +199,42 @@ Use benchmarks reais do mercado digital brasileiro. CPL, taxa de conversão e RO
 
 Se não houver benchmark exato, estime conservadoramente e sinalize como estimativa.
 
+### FRAMEWORK 8 — AS 6 NECESSIDADES HUMANAS (Tony Robbins)
+
+Toda decisão de compra é motivada por uma ou mais das 6 necessidades fundamentais. Identifique qual é a dominante para ESTE avatar — ela é a alavanca de copy mais poderosa:
+
+1. **Certeza:** Precisa de garantia que vai funcionar. Responde a: garantias, provas, passo-a-passo, redução de risco.
+2. **Variedade:** Entedia-se com o óbvio. Responde a: novidade, mecanismo único, contraintuitivo, abordagem diferente.
+3. **Significância:** Quer ser especial, único, melhor que os outros. Responde a: identidade de elite, exclusividade, "para quem realmente leva a sério".
+4. **Conexão/Amor:** Quer pertencer, ser aceito, fazer parte de algo. Responde a: comunidade, tribo, "você não está sozinho", pertencimento.
+5. **Crescimento:** Quer evoluir, aprender, melhorar. Responde a: transformação, aprendizado, maestria, desenvolvimento.
+6. **Contribuição:** Quer fazer diferença, deixar legado, ajudar outros. Responde a: impacto, missão, "o que você vai criar vai mudar a vida de outros".
+
+**Output obrigatório:** Identifique a necessidade dominante (1ª) e secundária (2ª) do avatar. A copy deve ativar a dominante em primeiro plano e a secundária como reforço.
+
+### FRAMEWORK 9 — MAPEAMENTO DE MICRO-CONVICÇÕES
+
+A decisão de compra é a última micro-convicção numa cadeia de 6-10. Mapeie a cadeia específica para este avatar:
+
+Cada micro-convicção é uma crença pequena que o avatar precisa adotar antes de chegar à próxima. A campanha deve instalá-las em ordem — nunca pule etapas.
+
+**Exemplo para produto de produtividade:**
+→ "Eu perco tempo com ferramentas" → "Ferramentas fragmentadas são o problema real" → "Existe uma forma melhor de integrar" → "Este mecanismo específico funciona" → "Funciona para pessoas como eu" → "Eu consigo implementar" → "O preço faz sentido" → "Agir agora é melhor do que esperar" → COMPRA
+
+Mapeie a cadeia completa para este produto e este avatar. Cada item da sequência de lançamento deve instalar UMA micro-convicção específica.
+
+### FRAMEWORK 10 — VOZ DO CLIENTE LITERAL
+
+O copy que mais converte não é o que o copywriter escreveu — é o que o avatar disse com as próprias palavras.
+
+Minere a linguagem exata do avatar em:
+- Reviews 1-2 estrelas dos concorrentes (o que eles odeiam na alternativa — é o que você precisa resolver)
+- Reviews 5 estrelas dos concorrentes (o que eles amam — é o que você precisa oferecer e enfatizar)
+- Fóruns, grupos de Facebook, comentários de YouTube no nicho
+- Perguntas frequentes que aparecem em lives e stories do nicho
+
+**Output obrigatório:** Liste 8-12 frases literais que o avatar usa para descrever o problema e o resultado desejado. Estas frases devem aparecer TEXTUALMENTE no copy — não parafraseadas.
+
 ---
 
 ## REGRAS INVIOLÁVEIS

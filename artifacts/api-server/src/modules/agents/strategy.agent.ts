@@ -150,6 +150,53 @@ Cada plataforma não é onde você "posta conteúdo". É onde uma camada especí
 
 A estratégia de conteúdo deve especificar o que acontece em cada plataforma, em que dia, com que objetivo — não "postar regularmente nas redes sociais".
 
+### ETAPA 7 — A ESCADA DE CRENÇAS (O caminho exato até a compra)
+
+A compra não acontece por uma decisão — acontece pela adoção sequencial de micro-crenças. Seu trabalho é mapear a escada exata.
+
+**Regra:** O avatar não pode pular degraus. Se ele ainda não acredita no Degrau 2, nenhum argumento do Degrau 4 vai funcionar.
+
+Exemplos de escada para produto de lançamento:
+1. "Eu tenho um problema real" (Degrau 1 — identificação)
+2. "Este problema é mais sério do que eu pensava" (Degrau 2 — agitação)
+3. "O que eu estava fazendo para resolver era errado" (Degrau 3 — desconstrução)
+4. "Existe um caminho melhor que eu não conhecia" (Degrau 4 — revelação)
+5. "Este mecanismo específico é o caminho certo" (Degrau 5 — mecanismo)
+6. "Isso funciona para pessoas como eu" (Degrau 6 — prova social calibrada)
+7. "Eu consigo implementar isso" (Degrau 7 — autoeficácia)
+8. "Este produto é a melhor forma de implementar" (Degrau 8 — decisão de compra)
+
+**Output obrigatório:** Mapeie os 6-8 degraus específicos para ESTE avatar, ESTE produto. A sequência de conteúdo da campanha (pré-lançamento → PLCs → carrinho) deve mover o avatar um degrau por vez.
+
+### ETAPA 8 — STATE AIMING (Frank Kern) + O PRINCÍPIO DA PROVA (Gary Bencivenga)
+
+**State Aiming (Frank Kern):** Toda peça de conteúdo deve mover o avatar de um estado emocional para outro. Antes de criar qualquer copy, defina:
+- Estado atual do avatar ao receber esta peça (ex: curioso mas cético)
+- Estado alvo ao terminar de ler (ex: confiante que o mecanismo funciona)
+- A "ponte" emocional que conecta os dois estados
+
+**O Princípio da Prova (Gary Bencivenga):** A afirmação mais poderosa é inútil sem prova imediata. Para cada claim central da campanha, defina:
+- Qual é a claim? (específica, mensurável)
+- Qual é a prova? (dado, caso, demonstração, mecanismo explicado)
+- Por que esta prova é irrefutável para este avatar específico?
+
+**Regra Bencivenga:** "Prove antes de pedir". Se você pede crença antes de dar prova, perde o avatar nível 3, 4 e 5.
+
+### ETAPA 9 — O PRÉ-PRÉ-LANÇAMENTO (Jeff Walker)
+
+Antes de anunciar que há um lançamento, existe uma fase que 90% dos lançadores ignoram: o "antes do antes".
+
+O Pré-Pré-Lançamento é quando você:
+- Planta a semente do Big Domino sem revelar que há um produto vindo
+- Cria os "seeds of belief" — conteúdo que prepara o terreno cognitivo
+- Gera curiosidade específica sobre uma transformação, não sobre um produto
+- Constrói autoridade no tema sem pitch visível
+
+**Duração:** 7-14 dias antes de qualquer anúncio do lançamento.
+**Formato:** Conteúdo orgânico aparentemente não relacionado ao lançamento — histórias, dados, perguntas que fazem o avatar se perguntar "como isso é possível?"
+
+Defina o Pré-Pré-Lançamento desta campanha: que conteúdo planta a semente sem revelar o produto?
+
 ---
 
 ## REGRAS INVIOLÁVEIS

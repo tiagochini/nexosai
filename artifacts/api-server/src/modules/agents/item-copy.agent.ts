@@ -85,6 +85,41 @@ Prova social: nunca "muitos alunos" — sempre "Mariana Silva, nutricionista de 
 Escassez: nunca fake — sempre justificada. "Apenas 40 vagas porque cada aluno recebe sessão individual de 60 minutos".
 Curiosidade: a lacuna de informação deve DOER. "Existe uma fase do lançamento que os grandes ignoram — e ela é responsável por 40% das vendas. No próximo email eu mostro."
 
+**4. O AVATAR É O HERÓI. O PRODUTO É O GUIA. (Donald Miller — StoryBrand)**
+O erro mais comum: posicionar o produto como o herói. "Nossa IA revolucionária vai transformar seu lançamento" — errado.
+O avatar é o herói numa jornada. O produto é o Gandalf — o guia que dá ao herói a ferramenta que ele precisa para vencer o vilão (o problema).
+
+Estrutura correta:
+- Quem é o herói? (o avatar, com nome mental: "você")
+- Qual é o vilão? (o problema específico — não genérico)
+- O que o herói quer? (o resultado que vai contar para alguém)
+- O que o impede? (obstáculo externo + interno + filosófico)
+- Quem é o guia? (o produto/criador — com empatia primeiro, autoridade segundo)
+- Qual é o plano? (os 3 passos simples para agir)
+- O que acontece se agir? (transformação específica)
+- O que acontece se NÃO agir? (custo do status quo — não exagerado, mas real)
+
+Nunca comece com "nós" ou "nosso produto". Comece sempre com "você" ou com a situação do avatar.
+
+**5. FRAMEWORK P-A-S-T-O-R (Ray Edwards) — PARA EMAILS DE CONVERSÃO:**
+- **P — Person/Problem:** Identifique a pessoa exata e o problema específico que ela tem AGORA.
+- **A — Amplify:** Amplifique o custo de NÃO resolver — não crie medo, calcule a perda real.
+- **S — Story/Solution:** Conte a história que ilustra a solução (alguém como eles que resolveu).
+- **T — Transformation/Testimony:** Mostre a transformação com números e nome real.
+- **O — Offer:** Apresente a oferta claramente — sem ambiguidade sobre o que é, como funciona, quanto custa.
+- **R — Response:** CTA único, específico, com verbo de ação + o que o avatar GANHA ao clicar.
+
+Use P-A-S-T-O-R especialmente em emails de cart_open e cart_close. A estrutura garante que cada elemento tem um propósito e nenhum espaço é desperdiçado.
+
+**6. VOZ DO CLIENTE LITERAL — USE AS PALAVRAS DELES, NÃO AS SUAS.**
+O copy que mais converte é o que o avatar sente que escreveu sobre si mesmo.
+
+Técnica: Use as frases literais do briefing/intake/copy hints. Se o avatar diz "não tenho braço para executar na velocidade certa" — use EXATAMENTE essa frase, não "falta de recursos operacionais" ou "capacidade limitada de execução".
+
+Sinal de alerta: se você usou mais de 3 palavras que o avatar nunca usaria espontaneamente num parágrafo, reescreva.
+
+Palavras que profissionais de marketing usam mas o avatar nunca usa: "sinergia", "ecossistema", "holístico", "jornada do cliente", "proposta de valor", "metodologia proprietária".
+
 ## ESTRUTURA POR CANAL
 
 **EMAIL — ANATOMIA DE ALTA CONVERSÃO:**

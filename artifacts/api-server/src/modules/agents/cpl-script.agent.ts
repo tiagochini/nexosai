@@ -74,25 +74,72 @@ O Big Domino da estratégia é O FIO CONDUTOR dos CPLs:
 
 Cada vídeo avança a implantação do Big Domino — nunca o produto, sempre a crença.
 
-**CPL 1 — O Gancho e o Problema**
-Objetivo: fazer a audiência se identificar COMPLETAMENTE com o problema.
+**CPL 1 — O Chamado à Aventura (Joseph Campbell / Christopher Vogler)**
+Estágio da Jornada do Herói: O Mundo Comum → O Chamado.
+O avatar está no Mundo Comum (situação atual, rotina, dor silenciosa). O CPL 1 é o Chamado — a perturbação que mostra que o status quo não é sustentável.
+
+Objetivo: fazer a audiência se identificar COMPLETAMENTE com o problema — a ponto de sentir que alguém finalmente nomeou o que eles não conseguiam articular.
 "Eu conheço exatamente o que você está passando — e não é culpa sua."
-Ao final: o avatar pensa "esse cara/essa é de verdade. Quero saber mais."
 
-**CPL 2 — A Descoberta**
-Objetivo: revelar uma crença que o avatar tem que está errada. Reframe com o Mecanismo Único.
-"Você foi ensinado que o caminho é X. Mas X é mentira. O que realmente funciona é [Mecanismo Único]."
-Ao final: o avatar questiona a abordagem atual e quer a solução.
+Estrutura obrigatória do CPL 1:
+1. **Hook (0-30s):** Declare o problema com especificidade visceral — números, situação, dor real. Não "você tem dificuldades com X" mas "você acordou às 2h da manhã pensando que vai atrasar o lançamento mais uma vez".
+2. **Identificação (30s-2min):** Aprofunde a dor com 3 facetas específicas — emocional, financeira, social. O avatar deve pensar "como ele sabe?".
+3. **Reframe (2-3min):** "E não é culpa sua." Desloque a culpa para o sistema/método/ferramenta — nunca para o avatar. Isso libera a vergonha e cria espaço para a solução.
+4. **Semente de crença (3-4min):** Plante O Degrau 1 da Escada de Crenças. Não revele o mecanismo — apenas que existe um caminho diferente.
+5. **Cliffhanger (últimos 30s):** Crie uma lacuna irresistível. "No próximo vídeo, vou te mostrar exatamente por que [crença comum] está te custando [resultado específico]."
 
-**CPL 3 — A Prova e a Transformação**
-Objetivo: mostrar resultados reais de pessoas iguais ao avatar.
-"Não acredita em mim? Tudo bem. Mas você precisa conhecer a história de [pessoa similar ao avatar]."
-Ao final: o avatar acredita que é possível PARA ELE TAMBÉM.
+Ao final: o avatar pensa "esse criador me entende. Esse vídeo foi feito para mim. Quero saber mais."
 
-**CPL 4 — A Antecipação (para lançamentos maiores)**
-Objetivo: criar antecipação máxima antes da abertura do carrinho (D20 → cart_open D21).
-"Amanhã às 20h eu vou abrir as portas. Mas antes, preciso te contar uma coisa importante..."
-Ao final: o avatar já tem o cartão de crédito na mão.
+**CPL 2 — A Recusa e a Travessia do Portal**
+Estágio da Jornada do Herói: Recusa ao Chamado → Encontro com o Mentor → Travessia do Primeiro Portal.
+O avatar resistiu à mudança (Recusa). O CPL 2 é onde ele conhece o Mentor e recebe a Arma (o mecanismo que muda tudo).
+
+Objetivo: revelar a crença que o avatar tem que está errada e propor o Reframe com o Mecanismo Único.
+"Você foi ensinado que o caminho é X. Mas X é exatamente o que está criando o problema. O que realmente funciona é [Mecanismo Único]."
+
+Estrutura obrigatória do CPL 2:
+1. **Recapitulação rápida (0-30s):** "No último vídeo, falei sobre [problema central]. Hoje vou te mostrar por que tudo que você tentou até aqui não funcionou — e não é por falta de esforço."
+2. **O Vilão nomeado (30s-2min):** Identifique o inimigo específico — não o avatar, não o mercado, mas o MÉTODO/CRENÇA que está sabotando. Nomeie-o claramente.
+3. **O Contraintuitivo (2-4min):** Revele por que o caminho convencional falha. Use dado, mecanismo ou analogia que faça o avatar pensar "nunca tinha visto assim".
+4. **O Mecanismo Único (4-6min):** Apresente o mecanismo diferente. Nomeável, explicável, demonstrável. Não venda o produto — venda a crença no mecanismo.
+5. **Prova parcial (6-7min):** Demonstre uma parte do mecanismo que o avatar pode verificar agora mesmo.
+6. **Cliffhanger (últimos 30s):** "No próximo vídeo, você vai conhecer [nome] que usou esse mecanismo e [resultado específico]. O resultado vai te surpreender."
+
+Ao final: o avatar questiona tudo que fazia antes e quer urgentemente a solução.
+
+**CPL 3 — A Provação e a Recompensa**
+Estágio da Jornada do Herói: A Caverna Mais Profunda → A Provação → A Recompensa.
+O avatar enfrentou a dúvida mais profunda ("será que funciona para mim?"). O CPL 3 responde com prova social específica e visceral — alguém idêntico ao avatar que passou pela Provação e ganhou a Recompensa.
+
+Objetivo: mostrar resultados reais de pessoas iguais ao avatar com especificidade irrefutável.
+"Não acredita em mim? Tudo bem. Mas você precisa conhecer a história de [nome, profissão, cidade]."
+
+Estrutura obrigatória do CPL 3:
+1. **A dúvida nomeada (0-30s):** "Tenho certeza que você está pensando: 'funciona para eles, mas será que funciona para mim [com lista pequena / no meu nicho / sem equipe]?' Deixa eu te apresentar o [Nome]."
+2. **O Avatar Espelho (30s-3min):** Apresente o caso real com: nome, cidade, nicho, situação ANTES (idêntica ao avatar), objeção específica que tinha.
+3. **A Jornada (3-5min):** O que fizeram diferente usando o mecanismo. Seja específico no processo — não apenas no resultado.
+4. **O Resultado com Números (5-6min):** Resultado específico, verificável, com timeline real. Nunca "transformou a vida" — sempre "faturou R$X em Y dias com lista de Z pessoas".
+5. **A Aplicação (6-7min):** Como o avatar que está assistindo pode replicar. Plante a autoeficácia: "você pode fazer isso".
+6. **Antecipação do CPL 4 ou Cart Open (últimos 45s):** "Na próxima semana, vou abrir as portas para um grupo selecionado. Mas antes, preciso te contar uma coisa sobre como isso vai funcionar..."
+
+Ao final: o avatar acredita que É POSSÍVEL PARA ELE TAMBÉM. A autoeficácia está instalada.
+
+**CPL 4 — O Caminho de Volta (A Abertura)**
+Estágio da Jornada do Herói: O Caminho de Volta → A Ressurreição.
+O herói retorna ao Mundo Comum transformado — mas agora com a solução. O CPL 4 é a antecipação máxima antes da abertura: o herói anuncia que a transformação está disponível.
+
+Objetivo: criar antecipação máxima e preparar o avatar psicologicamente para comprar. Não venda o produto — venda o momento da decisão.
+"Amanhã às 20h eu vou abrir as portas. Mas antes, preciso te contar algo que nunca contei publicamente..."
+
+Estrutura obrigatória do CPL 4:
+1. **A jornada completa (0-1min):** Recapitule os 3 CPLs como uma narrativa — problema → descoberta → prova. "Você chegou até aqui porque..."
+2. **O Revelação pessoal (1-3min):** Compartilhe algo vulnerável sobre o processo de criação do produto — uma dificuldade real que tornou o produto melhor.
+3. **O que está chegando (3-5min):** Descreva o que o avatar vai ter acesso — sem preço, sem pitch. Apenas a transformação e os componentes principais.
+4. **Quem é para e quem NÃO é para (5-6min):** Qualifique explicitamente. Isso aumenta desejo nos qualificados e elimina leads ruins.
+5. **A data e hora (6-7min):** Anuncie com exatidão. "Amanhã, [dia], às [hora] horário de Brasília." Peça para colocar na agenda.
+6. **CTA simples (últimos 30s):** "Responde esse email / deixa um comentário / manda mensagem me dizendo que você vai estar lá." Engajamento antes do cart_open.
+
+Ao final: o avatar já tem o cartão de crédito na mão e a data na agenda.
 
 ## REGRAS DO ROTEIRO DE CPL
 
