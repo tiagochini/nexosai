@@ -279,6 +279,44 @@ export default function Home({ onNavigate, progress, hasAccess, brand: brandProp
               </div>
             ))}
           </div>
+
+          {/* Shifting Decisions — cross-link to NexOS AI platform */}
+          <div className="mt-8 rounded-xl border border-[hsl(250_90%_65%/0.25)] bg-gradient-to-br from-[hsl(250_30%_8%)] to-[hsl(222_25%_6%)] p-7">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-[hsl(250_90%_65%/0.55)] mb-2">
+                  ⚡ Próximo nível
+                </div>
+                <h3 className="text-lg font-extrabold text-white leading-snug mb-2">
+                  Já domina a estratégia?{" "}
+                  <span style={{ color: "hsl(250 90% 70%)" }}>
+                    A plataforma executa por você.
+                  </span>
+                </h3>
+                <p className="text-sm text-[hsl(220_10%_52%)] leading-relaxed max-w-md">
+                  A Academia te dá o mapa. A <strong className="text-[hsl(220_10%_72%)]">NexOS AI</strong> faz o lançamento acontecer — 44 agentes de IA, do briefing à venda, sem precisar de equipe.
+                </p>
+                <div className="flex flex-wrap gap-4 mt-4">
+                  {["Do briefing à venda em 7 dias", "44 agentes trabalhando 24h", "Sem contratar equipe"].map(item => (
+                    <span key={item} className="text-[11px] font-mono text-[hsl(250_90%_65%/0.7)] flex items-center gap-1.5">
+                      <span className="text-[hsl(250_90%_65%)]">✓</span> {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 shrink-0">
+                <a
+                  href="/landing/"
+                  className="inline-flex items-center justify-center gap-2 px-7 py-3 font-mono text-[11px] uppercase tracking-widest font-bold text-white rounded-none border border-[hsl(250_90%_65%/0.5)] hover:border-[hsl(250_90%_65%/0.9)] hover:bg-[hsl(250_90%_65%/0.08)] transition-all whitespace-nowrap"
+                >
+                  Conhecer a plataforma →
+                </a>
+                <p className="text-[10px] font-mono text-[hsl(220_10%_35%)] text-center">
+                  Dois caminhos. Destino idêntico.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

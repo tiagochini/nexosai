@@ -180,7 +180,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
   const [brandSaved, setBrandSaved] = useState(false);
 
   // Gift codes state
-  interface GiftCode { id: string; accessToken: string; customerEmail: string; customerName: string; productId: string; confirmedAt: string | null; }
+  interface GiftCode { id: string; accessToken: string; customerEmail: string; customerName: string; productId: string; amountCents: number; confirmedAt: string | null; }
   const [giftCodes, setGiftCodes] = useState<GiftCode[]>([]);
   const [giftLoading, setGiftLoading] = useState(false);
   const [giftGenerating, setGiftGenerating] = useState(false);

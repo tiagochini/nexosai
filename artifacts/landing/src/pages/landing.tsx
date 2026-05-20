@@ -8,6 +8,7 @@ import {
   BrainCircuit, Lock, Shield, Zap, Target, Activity,
   Layers, Clock, TrendingDown, Users, TrendingUp,
   BookOpen, GraduationCap, BarChart3,
+  Play, Download, Maximize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LiveDemoSection, SimulatorSection } from "@/components/landing-demo-sections";
@@ -371,7 +372,81 @@ function SolutionSection() {
   );
 }
 
-// ─── Section 5b: NEXOS ACADEMY ────────────────────────────────────────────────
+// ─── Section 5b: VIDEO DEMO ───────────────────────────────────────────────────
+function VideoSection() {
+  const { ref, inView } = useInView(0.1);
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20" id="video">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-1.5 mb-5 font-mono text-[10px] uppercase tracking-[0.3em] text-primary">
+              <Play className="h-3 w-3 fill-primary" /> Veja em ação
+            </div>
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-tight mb-3">
+              44 agentes.<br /><span className="text-primary">Um lançamento completo.</span>
+            </h2>
+            <p className="font-mono text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              Do briefing à venda — tudo acontece enquanto você dorme. Veja a NexOS AI executando um lançamento de 6 dígitos sem equipe.
+            </p>
+          </div>
+
+          {/* Video embed */}
+          <div
+            className={`relative w-full overflow-hidden border border-primary/25 bg-black/80 shadow-[0_0_60px_hsl(var(--primary)/0.15)] transition-all duration-700 delay-200 ${inView ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+            style={{ aspectRatio: "16/9" }}
+          >
+            <iframe
+              src="/video-nexos/"
+              className="absolute inset-0 w-full h-full"
+              style={{ border: "none" }}
+              title="NexOS AI — Marketing Video"
+              allow="autoplay"
+            />
+            {/* corner accents */}
+            <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary/60 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary/60 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary/60 pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary/60 pointer-events-none" />
+          </div>
+
+          {/* Action row */}
+          <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 transition-all duration-700 delay-300 ${inView ? "opacity-100" : "opacity-0"}`}>
+            <div className="flex items-center gap-4">
+              <a
+                href="/video-nexos/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 hover:text-primary transition-colors border border-border/30 hover:border-primary/30 px-4 py-2"
+              >
+                <Maximize2 className="h-3 w-3" /> Tela cheia
+              </a>
+              <a
+                href="/video-nexos/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-primary/70 hover:text-primary transition-colors border border-primary/20 hover:border-primary/50 px-4 py-2"
+                title="Clique com botão direito → Salvar como"
+              >
+                <Download className="h-3 w-3" /> Baixar vídeo
+              </a>
+            </div>
+            <a href="#oferta" className="shrink-0">
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-10 px-6 gap-2">
+                Quero executar assim <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </a>
+          </div>
+
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section 5c: NEXOS ACADEMY ────────────────────────────────────────────────
 function AcademySection() {
   const { ref, inView } = useInView(0.15);
   const { t } = useI18n();
@@ -725,6 +800,94 @@ function EmJogoSection() {
   );
 }
 
+// ─── Section 8b: SHIFTING DECISIONS — escolha seu caminho ─────────────────────
+function AcademyBridgeSection() {
+  const { ref, inView } = useInView(0.15);
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+
+          <div className="text-center mb-10">
+            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">
+              — Dois caminhos. Destino idêntico. —
+            </div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-tight">
+              Qual é o seu<br /><span className="text-primary">ponto de entrada?</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border border-border/30">
+            {/* Caminho A — Plataforma */}
+            <div className={`border-r border-border/30 bg-primary/5 p-8 flex flex-col gap-6 transition-all duration-600 delay-100 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}>
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary/60 mb-3">→ Caminho A</div>
+                <div className="font-mono font-black text-2xl uppercase tracking-tight text-foreground leading-tight mb-3">
+                  A IA executa<br /><span className="text-primary">o lançamento por você</span>
+                </div>
+                <p className="font-mono text-sm text-muted-foreground leading-relaxed">
+                  Você tem um produto. Quer velocidade, automação e resultado em 7 dias. A NexOS AI faz o trabalho pesado — 44 agentes, do briefing à venda.
+                </p>
+              </div>
+              <div className="space-y-2.5">
+                {[
+                  "Produto validado ou em fase de lançamento",
+                  "Quer escalar sem contratar equipe",
+                  "Precisa de automação e execução imediata",
+                ].map(item => (
+                  <div key={item} className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
+                    <span className="text-primary shrink-0 mt-0.5">✓</span> {item}
+                  </div>
+                ))}
+              </div>
+              <a href="#oferta" className="mt-auto">
+                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-12 gap-2 w-full">
+                  Quero a plataforma <ArrowRight className="h-4 w-4" />
+                </Button>
+              </a>
+            </div>
+
+            {/* Caminho B — Academia */}
+            <div className={`bg-card/10 p-8 flex flex-col gap-6 transition-all duration-600 delay-200 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}>
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-amber-400/50 mb-3">→ Caminho B</div>
+                <div className="font-mono font-black text-2xl uppercase tracking-tight text-foreground leading-tight mb-3">
+                  Primeiro o método.<br /><span className="text-amber-400/80">Depois a execução.</span>
+                </div>
+                <p className="font-mono text-sm text-muted-foreground leading-relaxed">
+                  Ainda construindo sua base? A NexOS Academy tem o framework completo — estratégia, posicionamento e o mapa que a plataforma vai executar.
+                </p>
+              </div>
+              <div className="space-y-2.5">
+                {[
+                  "Está estruturando produto ou oferta",
+                  "Quer entender a estratégia antes de automatizar",
+                  "Prefere dominar o método com profundidade",
+                ].map(item => (
+                  <div key={item} className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
+                    <span className="text-amber-400/60 shrink-0 mt-0.5">✓</span> {item}
+                  </div>
+                ))}
+              </div>
+              <a href="/nexos-academy/" className="mt-auto">
+                <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-xs h-12 gap-2 w-full border-amber-400/25 text-amber-400/70 hover:text-amber-400 hover:border-amber-400/50 hover:bg-amber-400/5">
+                  <GraduationCap className="h-4 w-4" /> Quero a Academia primeiro
+                </Button>
+              </a>
+            </div>
+          </div>
+
+          <p className="font-mono text-[11px] text-muted-foreground/30 text-center uppercase tracking-widest mt-6">
+            Os dois se complementam. Muitos começam pela Academia e ativam a plataforma em seguida.
+          </p>
+
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
 // ─── Section 9: A JANELA ──────────────────────────────────────────────────────
 function JanelaSection() {
   const { ref, inView } = useInView(0.2);
@@ -956,6 +1119,7 @@ export default function Landing() {
       <CustoRealSection />
       <RotinaSection />
       <SolutionSection />
+      <VideoSection />
       <AcademySection />
       <ModelosSection />
       <ComoFuncionaSection />
@@ -964,6 +1128,7 @@ export default function Landing() {
       <ProvaSection />
       <AoVivoSection />
       <EmJogoSection />
+      <AcademyBridgeSection />
       <JanelaSection />
       <OfferSection />
     </div>
