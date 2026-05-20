@@ -435,6 +435,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto flex flex-col flex-1 min-h-0">
             {children}
           </div>
+          <div className="shrink-0 py-3 px-6 flex justify-center">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/25 select-none">
+              Criado e desenvolvido por Bruce Allan
+            </span>
+          </div>
         </main>
       </div>
     </div>
