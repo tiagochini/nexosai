@@ -10,6 +10,10 @@ import { runContinuousSalesManagerAgent } from "./continuous-sales-manager.agent
 import { runPerpetualLaunchManagerAgent } from "./perpetual-launch-manager.agent.js";
 import { runFinancialProjectorAgent } from "./financial-projector.agent.js";
 import { runTrafficIntelligenceAgent, type TrafficIntelligenceOutput } from "./traffic-intelligence.agent.js";
+import { runExecutionGovernor, type ExecutionPlan } from "./execution-governor.agent.js";
+import { runBusinessIntelligenceAgent, type BusinessIntelligenceOutput } from "./business-intelligence.agent.js";
+import { runMemoryCompression } from "./memory-compression.agent.js";
+import { runUXSimplificationEngine } from "./ux-simplification.agent.js";
 import {
   initializeCampaignMemory,
   getCampaignMemory,
@@ -36,6 +40,8 @@ export interface OrchestrationResult {
   launchPlan?: Record<string, unknown>;
   financialProjection?: Record<string, unknown>;
   trafficPlan?: Record<string, unknown>;
+  executionPlan?: ExecutionPlan;
+  businessIntelligence?: BusinessIntelligenceOutput;
   checkpointsPending: string[];
   status: string;
 }
@@ -349,6 +355,56 @@ Retorne o JSON de avaliação.`,
   let launchPlan: Record<string, unknown> | undefined;
   let financialProjection: Record<string, unknown> | undefined;
   let trafficPlan: TrafficIntelligenceOutput | undefined;
+  let executionPlan: ExecutionPlan | undefined;
+  let biOutput: BusinessIntelligenceOutput | undefined;
+
+  // ── 0b. Execution Governor ─────────────────────────────────────────────────
+  // Decides executionMode (quick/standard/premium), classifies agents,
+  // and produces the execution plan the pipeline respects.
+  // Runs immediately after Command validates readiness — before all other agents.
+  try {
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_thinking",
+      agentType: "command",
+      message: "Execution Governor analisando complexidade e otimizando pipeline...",
+      timestamp: new Date().toISOString(),
+    });
+    executionPlan = await runExecutionGovernor(
+      campaignId,
+      workspaceId,
+      type,
+      track,
+      intakeData,
+      hasTraffic,
+      commandPlan.campaignComplexity ?? "standard",
+      500,
+      log,
+    );
+    agentsRun.push("execution_governor");
+    log.info({
+      campaignId,
+      executionMode: executionPlan.executionMode,
+      skippedAgents: executionPlan.skippedAgents,
+      estimatedCost: executionPlan.estimatedCost,
+      operationalRisk: executionPlan.operationalRisk,
+      estimatedComplexity: executionPlan.estimatedComplexity,
+      confidenceScore: executionPlan.confidenceScore,
+    }, "Execution Governor plan established");
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_thinking",
+      agentType: "command",
+      message: `Pipeline: modo ${executionPlan.executionMode.toUpperCase()} | ${executionPlan.activeAgents.length} agentes | ${executionPlan.skippedAgents.length} pulados | risco ${executionPlan.operationalRisk}`,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (govErr) {
+    log.warn({ govErr, campaignId }, "Execution Governor failed — using default execution plan (all agents run)");
+  }
+
+  // Helper: check if an agent was skipped by the Execution Governor
+  const isSkippedByGovernor = (agentId: string): boolean =>
+    executionPlan?.skippedAgents?.includes(agentId) ?? false;
 
   // ── 1. Profile Builder Agent (all campaign types — runs first) ─────────────
   // Builds deep product, avatar, segmentation and market intelligence.
@@ -477,7 +533,8 @@ Retorne o JSON de avaliação.`,
   // Diagnoses consciousness stage, market sophistication, lead temperature.
   // Produces Campaign Doctrine, Launch Logic, Emotional Sequence, Strategic Warnings.
   // Doctrine is stored in memory and injected into every downstream agent.
-  if (strategy && strategicBrief && campaignMemory) {
+  // Skipped by Execution Governor for simple campaigns (flash_sale, quick mode).
+  if (strategy && strategicBrief && campaignMemory && !isSkippedByGovernor("strategic_doctrine")) {
     try {
       emitCampaignEvent({
         campaignId,
@@ -641,11 +698,61 @@ Retorne o JSON de avaliação.`,
     }
   }
 
+  // ── 5b. Business Intelligence Layer (after Financial Projector — fire-and-forget) ──
+  // Analyzes campaign viability: CAC, LTV, ROAS, margin, sustainability, monetization.
+  // Passive agent — never blocks the pipeline. Stores result for dashboard use.
+  if (financialProjection && strategy && !isSkippedByGovernor("business_intelligence")) {
+    try {
+      biOutput = await runBusinessIntelligenceAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        financialProjection as any,
+        strategy,
+        log,
+        memoryContext,
+      );
+      agentsRun.push("business_intelligence");
+      log.info({
+        campaignId,
+        sustainabilityScore: biOutput.sustainabilityScore,
+        sustainabilityVerdict: biOutput.sustainabilityVerdict,
+        businessRisk: biOutput.businessRisk,
+        ltvCacRatio: biOutput.ltvCacRatio,
+        alertCount: biOutput.businessAlerts.length,
+        monetizationOps: biOutput.monetizationOpportunities.length,
+      }, "Business Intelligence Layer completed");
+
+      // Critical alerts get emitted as campaign events so the frontend can surface them
+      const criticalAlerts = biOutput.businessAlerts.filter((a) => a.severity === "critical");
+      if (criticalAlerts.length > 0) {
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_completed",
+          agentType: "business_intelligence",
+          message: `Business Intelligence: ${criticalAlerts.length} alerta(s) crítico(s) — ${biOutput.sustainabilityVerdict} | Score ${biOutput.sustainabilityScore}/100`,
+          data: { criticalAlerts, sustainabilityScore: biOutput.sustainabilityScore },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Store BI output alongside financial projection
+      setImmediate(() => {
+        db.update(campaignsTable)
+          .set({ offerData: { financialProjection, businessIntelligence: biOutput } as any })
+          .where(eq(campaignsTable.id, campaignId))
+          .catch((e: unknown) => log.warn({ e, campaignId }, "Failed to persist BI output"));
+      });
+    } catch (biErr) {
+      log.warn({ biErr, campaignId }, "Business Intelligence Layer failed — continuing without BI analysis");
+    }
+  }
+
   // ── 6. Traffic Intelligence Agent (only when hasTraffic) ──────────────────
   // Plans paid traffic across Meta, TikTok, Google and YouTube.
   // Conservative, technical, auditable — requires ad_set_approval checkpoint.
   // NEVER publishes autonomously. Every budget change requires human sign-off.
-  if (hasTraffic && strategy) {
+  if (hasTraffic && strategy && !isSkippedByGovernor("traffic_intelligence")) {
     try {
       emitCampaignEvent({
         campaignId,
@@ -723,15 +830,76 @@ Retorne o JSON de avaliação.`,
     campaignId,
     action: "campaign.orchestration.completed",
     actor: "system",
-    data: { type, agentsRun, checkpointsPending, finalStatus },
+    data: {
+      type,
+      agentsRun,
+      checkpointsPending,
+      finalStatus,
+      executionMode: executionPlan?.executionMode ?? "standard",
+      skippedAgents: executionPlan?.skippedAgents ?? [],
+      biSustainabilityScore: biOutput?.sustainabilityScore,
+      biVerdict: biOutput?.sustainabilityVerdict,
+    },
   });
 
   emitCampaignEvent({
     campaignId,
     type: "phase_changed",
-    message: `Orquestração concluída — ${agentsRun.length} agentes executados`,
+    message: `Orquestração concluída — ${agentsRun.length} agentes executados | modo ${executionPlan?.executionMode ?? "standard"}`,
     data: { agentsRun, checkpointsPending, status: finalStatus },
     timestamp: new Date().toISOString(),
+  });
+
+  // ── 7. UX Simplification Engine (fire-and-forget — post-pipeline) ──────────
+  // Analyzes perceived complexity of the generated campaign results.
+  // Output informs the frontend how to present info with minimal cognitive load.
+  setImmediate(() => {
+    const offerScore = (offerAnalysis as any)?.overallScore ?? (offerAnalysis as any)?.launchReadinessScore;
+    const strategyPhases = (strategy as any)?.phases?.length ?? (strategy as any)?.prelaunchPhase ? 4 : undefined;
+    runUXSimplificationEngine(
+      campaignId,
+      workspaceId,
+      {
+        agentsRun,
+        checkpointsPending,
+        campaignType: type,
+        campaignTrack: track,
+        hasTraffic,
+        offerScore,
+        financialScenariosCount: financialProjection ? 3 : 0,
+        strategyPhases,
+      },
+      log,
+    ).then((uxResult) => {
+      log.info({
+        campaignId,
+        uxComplexityScore: uxResult.uxComplexityScore,
+        cognitiveLoadScore: uxResult.cognitiveLoadScore,
+        uxVerdict: uxResult.uxVerdict,
+        frictionPoints: uxResult.frictionPoints.length,
+        criticalFixes: uxResult.criticalFixes.length,
+      }, "UX Simplification Engine completed");
+    }).catch((uxErr: unknown) => {
+      log.warn({ uxErr, campaignId }, "UX Simplification Engine failed");
+    });
+  });
+
+  // ── 8. Memory Compression (fire-and-forget — only if entries exceed threshold) ──
+  // Keeps memory lean, segmented and relevant for future agents.
+  setImmediate(() => {
+    runMemoryCompression(campaignId, workspaceId, log)
+      .then((comprResult) => {
+        if (comprResult) {
+          log.info({
+            campaignId,
+            compressionRatio: comprResult.compressionRatio,
+            memoryHealth: comprResult.memoryHealth,
+          }, "Memory Compression completed");
+        }
+      })
+      .catch((comprErr: unknown) => {
+        log.warn({ comprErr, campaignId }, "Memory Compression failed");
+      });
   });
 
   return {
@@ -745,6 +913,8 @@ Retorne o JSON de avaliação.`,
     launchPlan,
     financialProjection,
     trafficPlan: trafficPlan as unknown as Record<string, unknown> | undefined,
+    executionPlan,
+    businessIntelligence: biOutput,
     checkpointsPending,
     status: finalStatus,
   };

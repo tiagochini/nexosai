@@ -56,7 +56,12 @@ export type AgentRole =
   | "video_hook"
   | "market_intel"
   | "ab_test_designer"
-  | "testimonial_curator";
+  | "testimonial_curator"
+  // ── Governance & Intelligence Layer ───────────────────────────────────────
+  | "execution_governor"
+  | "memory_compression"
+  | "business_intelligence"
+  | "ux_simplification";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -121,6 +126,11 @@ const AGENT_PROVIDER_MAP: Record<
   market_intel:         { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   ab_test_designer:     { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
   testimonial_curator:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Governance & Intelligence Layer ──────────────────────────────────────
+  execution_governor:   { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  memory_compression:   { provider: "gemini",    model: GEMINI_FLASH_NATIVE },
+  business_intelligence:{ provider: "gemini",    model: GEMINI_NATIVE_MODEL },
+  ux_simplification:    { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {
