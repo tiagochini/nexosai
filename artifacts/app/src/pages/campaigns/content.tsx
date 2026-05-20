@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
+import { ContentCinemaOverlay } from "@/components/campaign-stage-experience";
+import type { CinemaPiece } from "@/components/campaign-stage-experience";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1351,6 +1353,7 @@ export default function ContentApproval() {
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<Tab>("platform");
+  const [cinemaActive, setCinemaActive] = useState(false);
   const [editingPiece, setEditingPiece] = useState<ContentPiece | null>(null);
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
   const [rejectingPiece, setRejectingPiece] = useState<ContentPiece | null>(null);
@@ -1624,8 +1627,35 @@ export default function ContentApproval() {
     { id: "segmentation", label: "Segmentação",     icon: Users },
   ];
 
+  // Build cinema pieces from current pieces
+  const cinemaPieces: CinemaPiece[] = pieces
+    .filter(p => p.status === "pending")
+    .map(p => ({
+      id: p.id,
+      platform: p.platform,
+      type: p.type,
+      title: p.title,
+      body: p.body,
+      hook: p.tiktokHook,
+      headline: undefined,
+      cta: p.callToAction,
+      dayIndex: p.dayIndex,
+      status: p.status,
+    }));
+
   return (
     <>
+      {cinemaActive && cinemaPieces.length > 0 && (
+        <ContentCinemaOverlay
+          pieces={cinemaPieces}
+          onClose={() => setCinemaActive(false)}
+          onApprove={(id) => void handleApprove(id)}
+          onReject={(id) => {
+            const piece = pieces.find(p => p.id === id);
+            if (piece) setRejectingPiece(piece);
+          }}
+        />
+      )}
       {generateMoreTarget && (
         <GenerateMoreModal
           platform={generateMoreTarget}
@@ -1668,6 +1698,15 @@ export default function ContentApproval() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
+              {pendingCount > 0 && (
+                <Button
+                  onClick={() => setCinemaActive(true)}
+                  variant="outline"
+                  className="rounded-none font-mono uppercase tracking-widest gap-1.5 border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10 h-9 text-xs flex-1 sm:flex-none"
+                >
+                  <Eye className="h-3.5 w-3.5" />Cinema Mode ({pendingCount})
+                </Button>
+              )}
               {pendingCount > 0 && (
                 <Button onClick={handleApproveAll} className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none">
                   <CheckCircle2 className="h-3.5 w-3.5" />Aprovar Tudo ({pendingCount})

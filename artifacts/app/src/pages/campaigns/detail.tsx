@@ -22,6 +22,14 @@ import {
   RefreshCw, Rocket,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
+import {
+  AnalyzingDisplay,
+  StrategyReadyBanner,
+  GeneratingDisplay,
+  ContentReadyCinemaPrompt,
+  ExecutingLiveDisplay,
+  LiveMissionControl,
+} from "@/components/campaign-stage-experience";
 import { CampaignBrief } from "@/components/campaign-brief";
 import { SocialPostPreview } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -2080,6 +2088,19 @@ export default function CampaignDetail() {
             </div>
           )}
 
+          {/* ─ Awaiting approval: cinema prompt ─ */}
+          {campaign.status === "awaiting_approval" && (
+            <ContentReadyCinemaPrompt
+              campaignId={campaignId}
+              totalPieces={previewContentData?.pieces?.length ?? 0}
+            />
+          )}
+
+          {/* ─ Live: mission control strip ─ */}
+          {(campaign.status === "live" || campaign.status === "executing") && (
+            <LiveMissionControl campaignId={campaignId} />
+          )}
+
           {/* ─ Creatives Preview (awaiting_approval) ─ */}
           {campaign.status === "awaiting_approval" && (
             <div className="border border-yellow-400/30 bg-card/40 p-4 space-y-3">
@@ -2179,8 +2200,21 @@ export default function CampaignDetail() {
       {activeTab === "agentes" && (
         <div className="space-y-4">
 
-          {/* ─ Live feed (Socket.io) — shown while AI is running OR has recent events ─ */}
-          {(isActive || liveEvents.length > 0) && (
+          {/* ─ Analyzing: cinematic agent activation ─ */}
+          {campaign.status === "analyzing" && <AnalyzingDisplay />}
+
+          {/* ─ Generating: live content generation progress ─ */}
+          {campaign.status === "generating" && liveEvents.length === 0 && <GeneratingDisplay />}
+
+          {/* ─ Executing / Live: mission ticker ─ */}
+          {(campaign.status === "executing" || campaign.status === "live") && (
+            <ExecutingLiveDisplay events={liveEvents} />
+          )}
+
+          {/* ─ Live feed (Socket.io) — for other active statuses or when events exist ─ */}
+          {(isActive || liveEvents.length > 0) &&
+           !["analyzing", "executing", "live"].includes(campaign.status) &&
+           !(campaign.status === "generating" && liveEvents.length === 0) && (
             <div className="border border-primary/30 bg-primary/5 relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
               <div className="px-4 py-2.5 border-b border-primary/20 flex items-center gap-2">
@@ -2238,6 +2272,11 @@ export default function CampaignDetail() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* ─ Strategy ready: cinematic reveal banner ─ */}
+          {campaign.status === "strategy_ready" && (
+            <StrategyReadyBanner onReview={() => setActiveTab("estrategia")} />
           )}
 
           {/* ─ Strategy Approval Board — shown only when strategy is ready for approval ─ */}
