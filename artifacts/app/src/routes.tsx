@@ -42,6 +42,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Landing from "@/pages/landing";
 import IntegracoesPage from "@/pages/integracoes/index";
+import PipelinePage from "@/pages/pipeline/index";
 import ProdutosPage from "@/pages/produtos/index";
 import ComprarPage from "@/pages/comprar/index";
 import VideoEditorPage from "@/pages/video-editor/index";
@@ -216,6 +217,11 @@ export default function AppRoutes() {
       {/* Integrações */}
       <Route path="/integracoes">
         {() => <ProtectedRoute><IntegracoesPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Pipeline Regional */}
+      <Route path="/pipeline">
+        {() => <ProtectedRoute><PipelinePage /></ProtectedRoute>}
       </Route>
 
       {/* Editor de Vídeo (full-screen, sem sidebar) */}

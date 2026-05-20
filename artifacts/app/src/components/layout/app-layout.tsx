@@ -6,7 +6,7 @@ import { useGetCreditsBalance, getGetCreditsBalanceQueryKey, getGetMeQueryKey } 
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu,
+  LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu, Network,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
   Brain, Receipt, Link2, Globe, Clapperboard, ShoppingBag,
@@ -106,6 +106,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         { name: tr.sidebar.social,       href: "/social",            icon: Share2     },
         { name: tr.sidebar.moderation,   href: "/social/moderation", icon: Shield     },
         { name: tr.sidebar.sequences,    href: "/sequences",         icon: Workflow   },
+        { name: "Pipeline Regional",    href: "/pipeline",          icon: Network    },
         { name: tr.sidebar.revenue,      href: "/revenue",           icon: DollarSign },
         { name: tr.sidebar.compliance,   href: "/compliance",        icon: Shield     },
         { name: tr.sidebar.site_builder, href: "/site-builder",      icon: Globe      },

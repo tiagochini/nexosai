@@ -156,6 +156,16 @@ export async function updateCampaignStatus(
         log.warn({ err, campaignId }, "Failed to auto-activate linked sequences"),
       ),
     );
+    // ── Pipeline: trigger next campaign capture phase ──────────────────────────
+    setImmediate(() =>
+      import("../pipeline/pipeline.service.js")
+        .then(({ triggerPipelineCapture }) =>
+          triggerPipelineCapture(campaignId, workspaceId, log),
+        )
+        .catch((err) =>
+          log.warn({ err, campaignId }, "Failed to trigger pipeline capture"),
+        ),
+    );
   }
 
   // Decrement workspace active campaign counter when terminal status reached
