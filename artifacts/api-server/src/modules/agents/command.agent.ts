@@ -4,6 +4,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
 import { runStrategyAgent } from "./strategy.agent.js";
 import { runOfferAgent } from "./offer.agent.js";
+import { runStrategicCoreBriefing, type StrategicBrief } from "./strategic-core.agent.js";
 import { runLaunchManagerAgent } from "./launch-manager.agent.js";
 import { runContinuousSalesManagerAgent } from "./continuous-sales-manager.agent.js";
 import { runPerpetualLaunchManagerAgent } from "./perpetual-launch-manager.agent.js";
@@ -329,6 +330,7 @@ Retorne o JSON de avaliação.`,
   const checkpointsPending: string[] = [];
   let profile: ProfileBuilderOutput | undefined;
   let strategy: Record<string, unknown> | undefined;
+  let strategicBrief: StrategicBrief | undefined;
   let offerAnalysis: Record<string, unknown> | undefined;
   let launchPlan: Record<string, unknown> | undefined;
   let financialProjection: Record<string, unknown> | undefined;
@@ -403,6 +405,38 @@ Retorne o JSON de avaliação.`,
   } catch (err) {
     log.error({ err, campaignId }, "Strategy agent failed");
     emitAgentError(campaignId, "strategy", err);
+  }
+
+  // ── 2b. Strategic Core Briefing (after strategy — before all other agents) ──
+  // Produces the Global Strategic Brief that every downstream agent references.
+  // Validates coherence, emits consistency/risk/confidence scores.
+  if (strategy) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_thinking",
+        agentType: "strategy",
+        message: "NEXOS Strategic Core consolidando memória estratégica global...",
+        timestamp: new Date().toISOString(),
+      });
+      strategicBrief = await runStrategicCoreBriefing(
+        campaignId,
+        workspaceId,
+        strategy as any,
+        intakeData,
+        log,
+      );
+      agentsRun.push("strategic_core");
+      log.info({
+        campaignId,
+        consistencyScore: strategicBrief.consistencyScore,
+        riskScore: strategicBrief.riskScore,
+        confidence: strategicBrief.operationalConfidence,
+        warnings: strategicBrief.coreWarnings.length,
+      }, "Strategic Core brief generated");
+    } catch (err) {
+      log.warn({ err, campaignId }, "Strategic Core briefing failed — continuing without brief");
+    }
   }
 
   // ── 3. Offer Agent (all types with a product for sale) ─────────────────────

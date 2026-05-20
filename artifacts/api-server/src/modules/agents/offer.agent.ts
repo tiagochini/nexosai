@@ -1,160 +1,335 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
 
-export interface OfferAnalysisOutput {
+// ─── Output types ──────────────────────────────────────────────────────────────
+
+export interface OfferArchitectOutput {
+  // ── CONSTRUCTION PHASE ────────────────────────────────────────────────────
+  offerName: string;
+  uniqueMechanism: {
+    name: string;
+    explanation: string;
+    whyCompetitorsFail: string;
+    ahaStatement: string;
+  };
+  psychologicalStack: {
+    primaryDesire: string;
+    primaryFear: string;
+    desiredStatus: string;
+    emotionalJourney: string;
+    dominantTrigger: string;
+    triggerLogic: string;
+  };
+  offerStructure: {
+    corePromise: string;
+    deliveryMechanism: string;
+    timeline: string;
+    guarantee: {
+      type: string;
+      terms: string;
+      psychologicalRole: string;
+    };
+    bonusStack: {
+      name: string;
+      perceivedValue: number;
+      psychologicalRole: string;
+      deliveryType: string;
+    }[];
+    anchoringLogic: {
+      perceivedValue: number;
+      strategicPrice: number;
+      justification: string;
+    };
+  };
+  urgencyArchitecture: {
+    type: "legitimate_scarcity" | "time_limited" | "bonus_expiry" | "cohort_close" | "price_increase";
+    mechanism: string;
+    messaging: string;
+    ethicalBoundary: string;
+  };
+  differentiationMap: {
+    primaryDifferentiator: string;
+    vsMainAlternative: string;
+    categoryCreation: string;
+  };
+
+  // ── SELF-AUDIT PHASE ───────────────────────────────────────────────────────
   overallScore: number;
-  verdict: "strong" | "moderate" | "weak" | "unlaunchable";
-  summary: string;
+  verdict: "irresistible" | "strong" | "moderate" | "weak" | "unlaunchable";
   dimensions: {
-    valueClarity: { score: number; diagnosis: string; fix: string };
-    pricePerception: { score: number; diagnosis: string; fix: string };
-    trustElements: { score: number; diagnosis: string; fix: string };
-    uniqueness: { score: number; diagnosis: string; fix: string };
-    urgency: { score: number; diagnosis: string; fix: string };
-    socialProof: { score: number; diagnosis: string; fix: string };
-    deliveryClarity: { score: number; diagnosis: string; fix: string };
-    bonusStack: { score: number; diagnosis: string; fix: string };
+    valueClarity:          { score: number; diagnosis: string; fix: string };
+    pricePerception:       { score: number; diagnosis: string; fix: string };
+    trustElements:         { score: number; diagnosis: string; fix: string };
+    uniqueness:            { score: number; diagnosis: string; fix: string };
+    urgency:               { score: number; diagnosis: string; fix: string };
+    socialProof:           { score: number; diagnosis: string; fix: string };
+    deliveryClarity:       { score: number; diagnosis: string; fix: string };
+    bonusStack:            { score: number; diagnosis: string; fix: string };
+    psychologicalPrecision:{ score: number; diagnosis: string; fix: string };
+    categoryOwnership:     { score: number; diagnosis: string; fix: string };
   };
-  criticalIssues: {
-    issue: string;
+  criticalWeaknesses: {
+    weakness: string;
     severity: "critical" | "major" | "minor";
-    recommendation: string;
+    fix: string;
   }[];
-  offerUpgrades: {
-    upgrade: string;
-    expectedImpact: string;
-    effort: "low" | "medium" | "high";
-  }[];
-  pricingAnalysis: {
-    currentPrice: number;
-    perceivedValue: number;
-    recommendedRange: { min: number; max: number };
-    pricingStrategy: string;
-  };
-  bonusRecommendations: string[];
-  guaranteeRecommendation: string;
-  offerStackSuggestion: string;
+  confidenceScore: number;
+  launchReadiness: "ready" | "needs_minor_adjustments" | "needs_major_rework" | "not_ready";
+  architectNotes: string;
 }
 
-const OFFER_SYSTEM_PROMPT = `Você é o Agente de Análise de Oferta da NexOS AI — o crítico mais honesto e implacável de lançamentos digitais.
+// ─── System Prompt ─────────────────────────────────────────────────────────────
 
-Seu trabalho é DISSECAR a oferta do criador com olho clínico. Você encontra os problemas que o criador não quer ver. Você faz o que consultores de R$50k por projeto fazem.
+const OFFER_ARCHITECT_PROMPT = `Você é o Arquiteto de Oferta e Psicologia de Conversão da NexOS AI.
 
-## SUAS DIRETRIZES
+Seu trabalho NÃO é apenas avaliar ofertas existentes.
+Seu trabalho é CONSTRUIR ofertas irresistíveis do zero — e depois auditar o que você construiu com olho clínico.
 
-**SEJA BRUTALMENTE HONESTO.** Se a oferta é fraca, diga. Se o preço está errado, explique por quê. Se vai fracassar, avise antes que o criador perca dinheiro.
+Você opera em dois modos sequenciais obrigatórios:
 
-**Pontuação é sagrada.** Use a escala de 0-10 com precisão. 7 não é "bom o suficiente" — é "precisa de trabalho". 5 é "risco real de fracasso". Abaixo de 4 em qualquer dimensão crítica é alerta vermelho.
+---
 
-**Problemas específicos, soluções específicas.** Não diga "melhore a proposta de valor". Diga COMO, com exemplos reais.
+## MODO 1 — CONSTRUÇÃO
 
-**Você analisa:**
-- Clareza do valor entregue
-- Percepção de preço vs. valor percebido
-- Elementos de confiança (prova social, garantia, credenciais)
-- Unicidade — o quão diferente é dos concorrentes
-- Urgência — o quão forte é o gatilho de tempo/escassez
-- Prova social — quantidade e qualidade dos depoimentos
-- Clareza de entrega — o cliente sabe exatamente o que vai receber?
-- Stack de bônus — relevância e valor percebido dos extras
+Você pensa como Alex Hormozi construindo o "$100M Offer", Cialdini identificando gatilhos de influência e Eugene Schwartz nomeando mecanismos que criam categoria própria.
 
-**Retorne APENAS JSON válido** no formato exato solicitado.
+### PASSO 1 — MECANISMO ÚNICO NOMEÁVEL
+O mecanismo único é a espinha dorsal da oferta. Sem ele, você tem um produto. Com ele, você tem uma categoria.
+
+Requisitos do mecanismo:
+- Deve ser NOMEÁVEL (ex: "O Protocolo de Aquecimento Reverso", "A Matriz de 7 Dias", "O Sistema de Ativação Progressiva")
+- Deve explicar mecanicamente POR QUE este produto produz o resultado — diferente de qualquer alternativa
+- Deve eliminar comparação de preço (quando o avatar entende o mecanismo, não existe mais "mas o outro curso custa menos")
+- Deve ter um "aha statement": a frase que o avatar vai pensar ao entender o mecanismo
+
+### PASSO 2 — STACK PSICOLÓGICO DO AVATAR
+Vá além das dores superficiais. Mapeie:
+- Desejo primário: o que o avatar quer AO NÍVEL MAIS PROFUNDO (não "ganhar dinheiro" — o que ganhar dinheiro representa para ELE)
+- Medo primário: o que o paralisa (não "não funcionar" — qual é o medo real e específico)
+- Status desejado: em quem ele se transforma ao comprar? Como ele se vê? Como os outros o veem?
+- Jornada emocional: estado antes vs. estado depois — descrição densa e específica
+- Gatilho dominante: de todos os 12 gatilhos (autoridade, prova social, reciprocidade, comunidade, escassez, urgência, antecipação, evento, transformação, medo de perda, curiosidade, contraste), qual é O mais poderoso para ESTE avatar específico?
+
+### PASSO 3 — ESTRUTURA DA OFERTA
+Construa a oferta completa:
+- Promessa central (1 frase, específica, mensurável, sem hipérbole)
+- Mecanismo de entrega (como exatamente o resultado acontece)
+- Timeline de resultado (quando o avatar vê o primeiro sinal de progresso)
+- Garantia: tipo, termos exatos e papel psicológico dela na decisão de compra
+- Stack de bônus: máximo 4, cada um resolve uma objeção específica antes de ser verbalizada
+- Ancoragem de preço: valor percebido vs. preço estratégico + justificativa da diferença
+
+### PASSO 4 — URGÊNCIA LEGÍTIMA
+Urgência sem lastro real destrói confiança. Crie urgência que:
+- Existe de verdade (não inventada)
+- O avatar entende por que existe
+- Não empurra — atrai
+
+Defina o mecanismo de urgência específico e o limite ético do que NÃO pode ser dito.
+
+### PASSO 5 — MAPA DE DIFERENCIAÇÃO
+Defina como esta oferta cria sua própria categoria. Uma oferta em categoria própria não compete — domina.
+
+---
+
+## MODO 2 — AUTO-AUDITORIA
+
+Depois de construir, você vira o crítico mais honesto do que acabou de criar.
+
+Avalie cada dimensão de 0 a 10 com diagnóstico específico e correção acionável:
+- 9-10: Excelente, não mexa
+- 7-8: Bom, mas tem margem
+- 5-6: Risco real, precisa de trabalho
+- Abaixo de 5: Alerta vermelho — pode destruir a conversão
+
+REGRAS ABSOLUTAS DA AUDITORIA:
+- Se o mecanismo único não é verdadeiramente único: nota 3 máximo em "uniqueness"
+- Se a promessa é genérica ("transforme sua vida"): nota 2 máximo em "valueClarity"
+- Se a urgência é fabricada: nota 2 máximo em "urgency"
+- Se o stack de bônus tem mais de 4 itens ou algum não resolve objeção específica: nota 5 máximo em "bonusStack"
+- Se o avatar não se vê no "desiredStatus": nota 4 máximo em "psychologicalPrecision"
+
+---
+
+## SAÍDA OBRIGATÓRIA
+
+Retorne APENAS JSON válido. Nenhum texto fora do bloco.
 
 \`\`\`json
 {
+  "offerName": "string — nome da oferta que cria identidade e pertencimento",
+  "uniqueMechanism": {
+    "name": "string — nome nomeável do mecanismo (cria categoria)",
+    "explanation": "string — o que é e como funciona mecanicamente",
+    "whyCompetitorsFail": "string — por que alternativas não têm este mecanismo",
+    "ahaStatement": "string — a frase que o avatar pensa ao entender"
+  },
+  "psychologicalStack": {
+    "primaryDesire": "string — desejo mais profundo, não superficial",
+    "primaryFear": "string — medo específico e real do avatar",
+    "desiredStatus": "string — em quem ele se transforma, como os outros o veem",
+    "emotionalJourney": "string — antes vs depois: estado emocional denso e específico",
+    "dominantTrigger": "string — o gatilho mais poderoso para ESTE avatar",
+    "triggerLogic": "string — por que este gatilho domina dado o perfil psicográfico"
+  },
+  "offerStructure": {
+    "corePromise": "string — 1 frase, específica, mensurável, sem hipérbole",
+    "deliveryMechanism": "string — como exatamente o resultado acontece",
+    "timeline": "string — quando o avatar vê o primeiro sinal concreto de progresso",
+    "guarantee": {
+      "type": "string — tipo da garantia",
+      "terms": "string — termos exatos",
+      "psychologicalRole": "string — por que ela elimina a objeção de risco"
+    },
+    "bonusStack": [
+      {
+        "name": "string",
+        "perceivedValue": 0,
+        "psychologicalRole": "string — qual objeção específica este bônus elimina antes de ser dita",
+        "deliveryType": "string"
+      }
+    ],
+    "anchoringLogic": {
+      "perceivedValue": 0,
+      "strategicPrice": 0,
+      "justification": "string — por que este preço é justo dado o valor percebido"
+    }
+  },
+  "urgencyArchitecture": {
+    "type": "legitimate_scarcity|time_limited|bonus_expiry|cohort_close|price_increase",
+    "mechanism": "string — o mecanismo específico de urgência (deve ser real)",
+    "messaging": "string — como comunicar sem manipular",
+    "ethicalBoundary": "string — o que NÃO fazer/dizer"
+  },
+  "differentiationMap": {
+    "primaryDifferentiator": "string — o que diferencia de forma irrefutável",
+    "vsMainAlternative": "string — por que esta oferta sobre a alternativa mais comum",
+    "categoryCreation": "string — como esta oferta cria sua própria categoria"
+  },
   "overallScore": 0,
-  "verdict": "strong|moderate|weak|unlaunchable",
-  "summary": "string — diagnóstico executivo direto e honesto",
+  "verdict": "irresistible|strong|moderate|weak|unlaunchable",
   "dimensions": {
-    "valueClarity": { "score": 0, "diagnosis": "string", "fix": "string" },
-    "pricePerception": { "score": 0, "diagnosis": "string", "fix": "string" },
-    "trustElements": { "score": 0, "diagnosis": "string", "fix": "string" },
-    "uniqueness": { "score": 0, "diagnosis": "string", "fix": "string" },
-    "urgency": { "score": 0, "diagnosis": "string", "fix": "string" },
-    "socialProof": { "score": 0, "diagnosis": "string", "fix": "string" },
-    "deliveryClarity": { "score": 0, "diagnosis": "string", "fix": "string" },
-    "bonusStack": { "score": 0, "diagnosis": "string", "fix": "string" }
+    "valueClarity":           { "score": 0, "diagnosis": "string", "fix": "string" },
+    "pricePerception":        { "score": 0, "diagnosis": "string", "fix": "string" },
+    "trustElements":          { "score": 0, "diagnosis": "string", "fix": "string" },
+    "uniqueness":             { "score": 0, "diagnosis": "string", "fix": "string" },
+    "urgency":                { "score": 0, "diagnosis": "string", "fix": "string" },
+    "socialProof":            { "score": 0, "diagnosis": "string", "fix": "string" },
+    "deliveryClarity":        { "score": 0, "diagnosis": "string", "fix": "string" },
+    "bonusStack":             { "score": 0, "diagnosis": "string", "fix": "string" },
+    "psychologicalPrecision": { "score": 0, "diagnosis": "string", "fix": "string" },
+    "categoryOwnership":      { "score": 0, "diagnosis": "string", "fix": "string" }
   },
-  "criticalIssues": [
-    { "issue": "string", "severity": "critical|major|minor", "recommendation": "string" }
+  "criticalWeaknesses": [
+    { "weakness": "string", "severity": "critical|major|minor", "fix": "string" }
   ],
-  "offerUpgrades": [
-    { "upgrade": "string", "expectedImpact": "string", "effort": "low|medium|high" }
-  ],
-  "pricingAnalysis": {
-    "currentPrice": 0,
-    "perceivedValue": 0,
-    "recommendedRange": { "min": 0, "max": 0 },
-    "pricingStrategy": "string"
-  },
-  "bonusRecommendations": ["string"],
-  "guaranteeRecommendation": "string",
-  "offerStackSuggestion": "string"
+  "confidenceScore": 0.0,
+  "launchReadiness": "ready|needs_minor_adjustments|needs_major_rework|not_ready",
+  "architectNotes": "string — o que o criador PRECISA entender antes de lançar. Sem filtro."
 }
 \`\`\``;
+
+// ─── Runner ────────────────────────────────────────────────────────────────────
 
 export async function runOfferAgent(
   campaignId: string,
   workspaceId: string,
   intakeData: Record<string, unknown>,
   log: Logger,
-): Promise<OfferAnalysisOutput> {
+): Promise<OfferArchitectOutput> {
   const intakeJson = JSON.stringify(intakeData, null, 2);
 
   const result = await runAgent({
     campaignId,
     workspaceId,
     agentRole: "offer",
-    systemPrompt: OFFER_SYSTEM_PROMPT,
+    systemPrompt: OFFER_ARCHITECT_PROMPT,
     messages: [
       {
         role: "user",
-        content: `Analise a oferta com base nos dados abaixo e produza o diagnóstico completo.
+        content: `Construa a oferta irresistível para este produto e depois audite o que você construiu.
 
-**Dados da campanha:**
+**Dados do produto e campanha:**
 \`\`\`json
 ${intakeJson}
 \`\`\`
 
-Retorne APENAS o JSON da análise. Seja cirúrgico e honesto.`,
+Percorra os 5 passos de construção na sequência:
+1. Mecanismo Único Nomeável
+2. Stack Psicológico do Avatar
+3. Estrutura da Oferta (promessa, entrega, garantia, bônus, ancoragem)
+4. Urgência Legítima
+5. Mapa de Diferenciação
+
+Depois audite o que você construiu com rigor cirúrgico.
+
+Retorne APENAS o JSON. Sem texto fora do bloco.`,
       },
     ],
     log,
     requiresApproval: false,
     thinkingMessages: [
-      "Analisando proposta de valor e clareza da oferta...",
-      "Verificando percepção de preço vs. valor entregue...",
-      "Auditando elementos de confiança e prova social...",
-      "Comparando unicidade no mercado...",
-      "Avaliando stack de bônus e garantia...",
-      "Diagnosticando pontos críticos de melhoria...",
+      "Mapeando psicografia profunda do avatar...",
+      "Construindo mecanismo único e nomeável...",
+      "Arquitetando stack de oferta com ancoragem de valor...",
+      "Estruturando bônus para eliminar objeções específicas...",
+      "Definindo urgência legítima e mapa de diferenciação...",
+      "Auditando a oferta construída com rigor clínico...",
     ],
   });
 
-  return parseAgentJSON<OfferAnalysisOutput>(result.content, {
+  return parseAgentJSON<OfferArchitectOutput>(result.content, {
+    offerName: String(intakeData["product.name"] ?? "Oferta Principal"),
+    uniqueMechanism: {
+      name: "",
+      explanation: result.content,
+      whyCompetitorsFail: "",
+      ahaStatement: "",
+    },
+    psychologicalStack: {
+      primaryDesire: "",
+      primaryFear: "",
+      desiredStatus: "",
+      emotionalJourney: "",
+      dominantTrigger: "",
+      triggerLogic: "",
+    },
+    offerStructure: {
+      corePromise: "",
+      deliveryMechanism: "",
+      timeline: "",
+      guarantee: { type: "", terms: "", psychologicalRole: "" },
+      bonusStack: [],
+      anchoringLogic: { perceivedValue: 0, strategicPrice: Number(intakeData["product.price"] ?? 0), justification: "" },
+    },
+    urgencyArchitecture: {
+      type: "time_limited",
+      mechanism: "",
+      messaging: "",
+      ethicalBoundary: "",
+    },
+    differentiationMap: {
+      primaryDifferentiator: "",
+      vsMainAlternative: "",
+      categoryCreation: "",
+    },
     overallScore: 0,
     verdict: "weak",
-    summary: result.content,
     dimensions: {
-      valueClarity: { score: 0, diagnosis: "", fix: "" },
-      pricePerception: { score: 0, diagnosis: "", fix: "" },
-      trustElements: { score: 0, diagnosis: "", fix: "" },
-      uniqueness: { score: 0, diagnosis: "", fix: "" },
-      urgency: { score: 0, diagnosis: "", fix: "" },
-      socialProof: { score: 0, diagnosis: "", fix: "" },
-      deliveryClarity: { score: 0, diagnosis: "", fix: "" },
-      bonusStack: { score: 0, diagnosis: "", fix: "" },
+      valueClarity:           { score: 0, diagnosis: "", fix: "" },
+      pricePerception:        { score: 0, diagnosis: "", fix: "" },
+      trustElements:          { score: 0, diagnosis: "", fix: "" },
+      uniqueness:             { score: 0, diagnosis: "", fix: "" },
+      urgency:                { score: 0, diagnosis: "", fix: "" },
+      socialProof:            { score: 0, diagnosis: "", fix: "" },
+      deliveryClarity:        { score: 0, diagnosis: "", fix: "" },
+      bonusStack:             { score: 0, diagnosis: "", fix: "" },
+      psychologicalPrecision: { score: 0, diagnosis: "", fix: "" },
+      categoryOwnership:      { score: 0, diagnosis: "", fix: "" },
     },
-    criticalIssues: [],
-    offerUpgrades: [],
-    pricingAnalysis: {
-      currentPrice: 0,
-      perceivedValue: 0,
-      recommendedRange: { min: 0, max: 0 },
-      pricingStrategy: "",
-    },
-    bonusRecommendations: [],
-    guaranteeRecommendation: "",
-    offerStackSuggestion: "",
+    criticalWeaknesses: [],
+    confidenceScore: 0,
+    launchReadiness: "not_ready",
+    architectNotes: result.content,
   });
 }
