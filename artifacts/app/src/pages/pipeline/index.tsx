@@ -323,7 +323,7 @@ export default function PipelinePage() {
             <div>
               <h1 className="text-base font-semibold text-zinc-100 leading-none">{pipeline.name}</h1>
               <p className="text-xs text-zinc-500 mt-0.5">
-                {completedCount} de {totalCampaigns} regiões concluídas
+                {completedCount} de {totalCampaigns} regiões · Ciclo: <span className="text-zinc-400 font-medium">Sexta → Quinta (7 dias)</span> · Carrinho abre Segunda
               </p>
             </div>
           </div>

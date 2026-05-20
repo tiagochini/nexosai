@@ -1,8 +1,14 @@
+import { useEffect } from "react";
+
 export default function PrivacyPolicy() {
   const lastUpdated = "15 de maio de 2026";
   const contactEmail = "privacy@nexos.ai";
   const companyName = "NexOS AI";
   const appUrl = "https://app.nexos.ai";
+
+  useEffect(() => {
+    document.title = "NexOS AI Privacy Policy";
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -12,7 +18,7 @@ export default function PrivacyPolicy() {
           <a href="/" className="font-mono text-sm font-bold tracking-widest text-white hover:text-white/70 transition-colors">
             ← NEXOS AI
           </a>
-          <span className="font-mono text-xs text-white/30 uppercase tracking-widest">Privacy Policy</span>
+          <span className="font-mono text-xs text-white/30 uppercase tracking-widest">NexOS AI Privacy Policy</span>
         </div>
       </div>
 
@@ -20,7 +26,7 @@ export default function PrivacyPolicy() {
         {/* Title */}
         <div className="mb-12">
           <div className="font-mono text-xs uppercase tracking-widest text-white/30 mb-3">Política de Privacidade</div>
-          <h1 className="font-mono text-3xl font-bold text-white mb-2">Privacy Policy</h1>
+          <h1 className="font-mono text-3xl font-bold text-white mb-2">NexOS AI Privacy Policy</h1>
           <p className="font-mono text-sm text-white/40">Última atualização: {lastUpdated}</p>
         </div>
 

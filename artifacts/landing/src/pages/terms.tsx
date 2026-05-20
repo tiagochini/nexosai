@@ -1,9 +1,28 @@
+import { useEffect } from "react";
+
 export default function TermsOfService() {
+  useEffect(() => {
+    document.title = "NexOS AI Terms of Service";
+  }, []);
+
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-black/80 backdrop-blur sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+          <a href="/" className="font-mono text-sm font-bold tracking-widest text-white hover:text-white/70 transition-colors">
+            ← NEXOS AI
+          </a>
+          <span className="font-mono text-xs text-white/30 uppercase tracking-widest">NexOS AI Terms of Service</span>
+        </div>
+      </div>
+
       <div className="max-w-3xl mx-auto px-6 py-16">
-        <h1 className="text-3xl font-bold mb-2">Termos de Uso</h1>
-        <p className="text-gray-400 mb-10 text-sm">Última atualização: 15 de maio de 2026</p>
+        <div className="mb-12">
+          <div className="font-mono text-xs uppercase tracking-widest text-white/30 mb-3">Termos de Uso</div>
+          <h1 className="font-mono text-3xl font-bold text-white mb-2">NexOS AI Terms of Service</h1>
+          <p className="font-mono text-sm text-white/40">Última atualização: 15 de maio de 2026</p>
+        </div>
 
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3">1. Aceitação dos Termos</h2>
