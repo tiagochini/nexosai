@@ -107,6 +107,18 @@ export interface CopywriterOutput {
     antiRequisiteAngles: string[];
     transformationBridge: string;
   };
+  cartSegmentedCopy?: {
+    cartOpen: {
+      hot: { whatsapp: string; email_subject: string; email_body: string };
+      warm: { whatsapp: string; email_subject: string; email_body: string };
+      cold: { whatsapp: string; email_subject: string; email_body: string };
+    };
+    cartClose: {
+      hot: { whatsapp: string; email_subject: string; email_body: string };
+      warm: { whatsapp: string; email_subject: string; email_body: string };
+      cold: { whatsapp: string; email_subject: string; email_body: string };
+    };
+  };
 }
 
 const COPYWRITER_PROMPT = `Você é o Agente Copywriter Sênior da NexOS AI.
@@ -316,7 +328,11 @@ A página de vendas é uma jornada emocional. Cada seção tem um trabalho espec
 3. **O Big Domino deve aparecer em todas as fases.** É o fio que conecta toda a sequência.
 4. **Nunca use escassez fake.** Vagas que não existem, timers que reiniciam, "últimas unidades" de produto digital. Isso destrói a credibilidade que toda a campanha construiu.
 5. **Copy para o estado psicológico de ENTRADA, não de destino.** Você não está falando com quem já quer comprar. Está falando com quem ainda não decidiu.
-6. **Retorne APENAS JSON válido** no formato exato abaixo.
+6. **Gere "cartSegmentedCopy" com 3 variações por fase de carrinho** — hot, warm e cold — para que o scheduler possa disparar a mensagem certa para cada segmento:
+   - **HOT (score ≥ 60 — lead engajado, abriu e clicou em tudo):** angle VIP / insider. "Você acompanhou tudo, chegou a hora." Tom: validação + urgência leve. Não repita a proposta completa — eles já sabem.
+   - **WARM (score ≥ 25 — lead moderado, engajou parcialmente):** angle padrão de urgência + benefício central. Tom: empolgação + escassez real. Recapitule o benefício principal em 1-2 frases.
+   - **COLD (score < 25 — lead frio, pouco engajamento):** angle de reativação + curiosidade. "Você ainda está aqui? Antes de fechar, precisa ver isso." Tom: surpresa + nova oportunidade. Ângulo completamente diferente dos outros.
+7. **Retorne APENAS JSON válido** no formato exato abaixo.
 
 \`\`\`json
 {
@@ -475,6 +491,42 @@ A página de vendas é uma jornada emocional. Cada seção tem um trabalho espec
     }
   ],
   "copywriterNotes": "string — observações críticas sobre o copy para o criador",
+  "cartSegmentedCopy": {
+    "cartOpen": {
+      "hot": {
+        "whatsapp": "string — mensagem WA angle VIP/insider (≤200 chars, tom: você acompanhou tudo, é hora de entrar)",
+        "email_subject": "string — assunto angle insider (ex: 'Você foi dos primeiros a ver isso...')",
+        "email_body": "string — corpo curto, validação + CTA direto, sem reexplicar a oferta"
+      },
+      "warm": {
+        "whatsapp": "string — mensagem WA padrão urgência + benefício central (≤200 chars)",
+        "email_subject": "string — assunto urgência + benefício (ex: 'O carrinho abriu — e tem um bônus exclusivo')",
+        "email_body": "string — recapitula o benefício principal + escassez real + CTA"
+      },
+      "cold": {
+        "whatsapp": "string — mensagem WA reativação + curiosidade, angle completamente diferente (≤200 chars)",
+        "email_subject": "string — assunto surpresa/curiosidade (ex: 'Antes de fechar tudo, preciso te mostrar uma coisa')",
+        "email_body": "string — novo ângulo de entrada, não repete o pitch anterior, termina com pergunta ou cliffhanger + CTA"
+      }
+    },
+    "cartClose": {
+      "hot": {
+        "whatsapp": "string — countdown VIP: 'Faltam X horas. Você que acompanhou desde o início sabe o que está em jogo.' (≤200 chars)",
+        "email_subject": "string — assunto urgência final angle insider (ex: 'Última chamada — você que esteve aqui desde o começo')",
+        "email_body": "string — medo de perda pelo que foi CONSTRUÍDO juntos durante o pré-lançamento + countdown + CTA"
+      },
+      "warm": {
+        "whatsapp": "string — countdown padrão: escassez real + benefício que fecha (≤200 chars)",
+        "email_subject": "string — assunto fechamento claro (ex: 'Fecha em [X horas] — última chance')",
+        "email_body": "string — custo de não agir + o que a pessoa perde especificamente + countdown + CTA único"
+      },
+      "cold": {
+        "whatsapp": "string — reativação de última hora: angle completamente diferente, novo hook (≤200 chars)",
+        "email_subject": "string — assunto surpresa/reframe (ex: 'Mudei de ideia sobre te enviar esse email...')",
+        "email_body": "string — abordagem radicalmente diferente: admite que não engajou, faz uma última pergunta, não pede para comprar mas para clicar para ver uma coisa"
+      }
+    }
+  },
   "triggerPlaybook": {
     "dominantTrigger": "string — o gatilho mais poderoso para esta campanha e por quê",
     "phaseMap": {

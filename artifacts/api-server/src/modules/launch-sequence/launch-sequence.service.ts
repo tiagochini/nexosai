@@ -8,6 +8,8 @@ import {
 } from "@workspace/db";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { runLaunchSequenceBuilderAgent } from "../agents/launch-sequence-builder.agent.js";
+import type { StrategyOutput } from "../agents/strategy.agent.js";
+import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
 import { runItemCopyAgent } from "../agents/item-copy.agent.js";
 import { deductCredits } from "../credits/credits.service.js";
 import { getSequenceAnalytics, recordEngagementEvent } from "./sequence-analytics.service.js";
@@ -188,12 +190,25 @@ export async function generateSequencePlan(
   }
 
   let intakeData: Record<string, unknown> = {};
+  let strategy: StrategyOutput | undefined;
+  let profile: ProfileBuilderOutput | undefined;
+
   if (sequence.campaignId) {
     const [campaign] = await db
-      .select({ intakeData: campaignsTable.intakeData })
+      .select({
+        intakeData: campaignsTable.intakeData,
+        strategyData: campaignsTable.strategyData,
+        audienceData: campaignsTable.audienceData,
+      })
       .from(campaignsTable)
       .where(eq(campaignsTable.id, sequence.campaignId));
-    if (campaign) intakeData = campaign.intakeData as Record<string, unknown>;
+    if (campaign) {
+      intakeData = campaign.intakeData as Record<string, unknown>;
+      if (campaign.strategyData) strategy = campaign.strategyData as unknown as StrategyOutput;
+      if (campaign.audienceData && (campaign.audienceData as any)["primaryAvatar"]) {
+        profile = campaign.audienceData as unknown as ProfileBuilderOutput;
+      }
+    }
   }
 
   const plan = await runLaunchSequenceBuilderAgent(
@@ -209,6 +224,8 @@ export async function generateSequencePlan(
       cartOpenDate: sequence.cartOpenDate ?? undefined,
       cartCloseDate: sequence.cartCloseDate ?? undefined,
       intakeData,
+      strategy,
+      profile,
     },
     log,
   );

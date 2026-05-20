@@ -8,6 +8,7 @@ export interface CPLVideo {
   title: string;
   subtitle: string;
   releaseTiming: string;
+  dayIndex: number;
   durationMinutes: number;
   objective: string;
   psychologicalJob: string;
@@ -53,23 +54,43 @@ O CPL resolve o problema fundamental do lançamento: como fazer alguém que nunc
 
 Resposta: você não vende — você cria a transformação antes da oferta.
 
+## ALINHAMENTO COM O SEQUENCE BUILDER (PLF padrão)
+
+Os vídeos CPL DEVEM usar os dayIndex numéricos abaixo para sincronizar com a sequência de lançamento:
+- CPL 1: dayIndex 14-15 (fase plc1) — A Grande Oportunidade, mecanismo único
+- CPL 2: dayIndex 16-17 (fase plc2) — A Transformação, prova social
+- CPL 3: dayIndex 18-19 (fase plc3) — A Comunidade, reciprocidade
+- CPL 4: dayIndex 20 (fase plc3, opcional) — Antecipação máxima antes do cart_open
+
+Cada "dayIndex" indica em qual dia da sequência o vídeo deve ser publicado.
+
+## O BIG DOMINO NOS CPLs
+
+O Big Domino da estratégia é O FIO CONDUTOR dos CPLs:
+- CPL 1: planta a semente da crença (o problema existe e não é culpa do avatar)
+- CPL 2: apresenta o insight que redefine a crença (o caminho convencional está errado)
+- CPL 3: prova que a crença nova funciona (caso real de alguém igual ao avatar)
+- CPL 4: cria urgência em torno da crença instalada (a solução chega amanhã)
+
+Cada vídeo avança a implantação do Big Domino — nunca o produto, sempre a crença.
+
 **CPL 1 — O Gancho e o Problema**
 Objetivo: fazer a audiência se identificar COMPLETAMENTE com o problema.
 "Eu conheço exatamente o que você está passando — e não é culpa sua."
 Ao final: o avatar pensa "esse cara/essa é de verdade. Quero saber mais."
 
 **CPL 2 — A Descoberta**
-Objetivo: revelar uma crença que o avatar tem que está errada. Reframe.
-"Você foi ensinado que o caminho é X. Mas X é mentira. Vou te mostrar por quê."
+Objetivo: revelar uma crença que o avatar tem que está errada. Reframe com o Mecanismo Único.
+"Você foi ensinado que o caminho é X. Mas X é mentira. O que realmente funciona é [Mecanismo Único]."
 Ao final: o avatar questiona a abordagem atual e quer a solução.
 
 **CPL 3 — A Prova e a Transformação**
 Objetivo: mostrar resultados reais de pessoas iguais ao avatar.
-"Não acredita em mim? Tudo bem. Mas você precisa conhecer a história de [pessoa similar]."
+"Não acredita em mim? Tudo bem. Mas você precisa conhecer a história de [pessoa similar ao avatar]."
 Ao final: o avatar acredita que é possível PARA ELE TAMBÉM.
 
-**CPL 4 — A Antecipação (opcional, para lançamentos maiores)**
-Objetivo: criar antecipação máxima antes da abertura do carrinho.
+**CPL 4 — A Antecipação (para lançamentos maiores)**
+Objetivo: criar antecipação máxima antes da abertura do carrinho (D20 → cart_open D21).
 "Amanhã às 20h eu vou abrir as portas. Mas antes, preciso te contar uma coisa importante..."
 Ao final: o avatar já tem o cartão de crédito na mão.
 
@@ -78,8 +99,10 @@ Ao final: o avatar já tem o cartão de crédito na mão.
 1. **Cada CPL termina com um cliffhanger** — o próximo vídeo deve parecer inevitável
 2. **Nunca mencione o produto diretamente nos CPL 1 e 2** — construa o desejo, não a oferta
 3. **O CPL 3 pode mencionar que algo vem aí**, mas sem preço ou nome do produto
-4. **Tom é conversacional, vulnerável, de igual para igual** — não palco, não apresentação
-5. **Especificidade é tudo** — dados reais, histórias reais, números reais
+4. **O CPL 4 anuncia a abertura** com data e hora específicas, mas sem revelar preço ainda
+5. **Tom é conversacional, vulnerável, de igual para igual** — não palco, não apresentação
+6. **Especificidade é tudo** — dados reais, histórias reais, números reais
+7. **Cada "releaseTiming" deve ser descritivo** (ex: "D14 — Dia 1 do PLC") E o "dayIndex" deve ser o número exato
 
 **Retorne APENAS JSON válido** no formato exato abaixo.
 
@@ -94,7 +117,8 @@ Ao final: o avatar já tem o cartão de crédito na mão.
       "videoNumber": 1,
       "title": "string — título do vídeo (para uso interno e thumbnail)",
       "subtitle": "string — subtítulo ou tagline do vídeo",
-      "releaseTiming": "string — ex: Dia -14 do lançamento",
+      "releaseTiming": "string — ex: D14 — Dia 1 do PLC (plc1)",
+      "dayIndex": 14,
       "durationMinutes": 0,
       "objective": "string — o que este vídeo precisa fazer na cabeça do avatar",
       "psychologicalJob": "string — qual crença ou emoção este vídeo está trabalhando",
