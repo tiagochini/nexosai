@@ -52,9 +52,9 @@ const ALL_NAV_ITEMS = [
   { id: "progress", label: "Progresso", icon: "📊" },
 ];
 
-const PUBLIC_NAV_ITEMS = ALL_NAV_ITEMS.filter(n => ["home", "products", "glossary"].includes(n.id));
+const PUBLIC_NAV_ITEMS = ALL_NAV_ITEMS.filter(n => ["home", "products"].includes(n.id));
 
-const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress"];
+const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress", "glossary"];
 
 function getInitialPage(): NavState {
   if (typeof window !== "undefined") {

@@ -296,10 +296,12 @@ export default function Glossary({ onNavigate }: Props) {
                                 </span>
                               </div>
 
-                              {/* Preview — always visible */}
-                              <p className={`text-[hsl(220_10%_60%)] text-sm leading-relaxed mt-2 ${isExpanded ? "" : "line-clamp-2"}`}>
-                                {term.definition}
-                              </p>
+                              {/* Preview — shown only when collapsed */}
+                              {!isExpanded && (
+                                <p className="text-[hsl(220_10%_60%)] text-sm leading-relaxed mt-2 line-clamp-2">
+                                  {term.definition}
+                                </p>
+                              )}
                             </div>
                           </button>
 
