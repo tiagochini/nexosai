@@ -1,8 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
-import { buildCampaignBrain } from "../campaign-brain/campaign-brain.service.js";
+import { buildCampaignBrain, getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
-import { updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
 import { runStrategyAgent } from "./strategy.agent.js";
@@ -26,6 +25,8 @@ import {
   type CampaignMemory,
 } from "./campaign-memory.service.js";
 import { runStrategicDoctrineEngine, type DoctrineOutput } from "./strategic-doctrine.agent.js";
+import { checkDoctrineAsync } from "../campaign-brain/doctrine-gate.service.js";
+import { runSelfCritique } from "../campaign-brain/self-critique.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { validateIntakeCompleteness, type CampaignType, type CampaignTrack } from "../intake/intake.service.js";
@@ -578,6 +579,17 @@ Retorne o JSON de avaliação.`,
       .update(campaignsTable)
       .set({ status: "strategy_ready", strategyData: result as any })
       .where(eq(campaignsTable.id, campaignId));
+
+    // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)
+    setImmediate(() => {
+      const strategySnapshot = strategy ?? {};
+      getCampaignBrain(campaignId).then(brainSnap => {
+        if (brainSnap?.offer) {
+          checkDoctrineAsync(campaignId, workspaceId, "strategy", strategySnapshot, brainSnap, log);
+        }
+      }).catch(() => {});
+      runSelfCritique(campaignId, workspaceId, "strategy", strategySnapshot, log).catch(() => {});
+    });
   } catch (err) {
     log.error({ err, campaignId }, "Strategy agent failed");
     emitAgentError(campaignId, "strategy", err);
@@ -600,7 +612,7 @@ Retorne o JSON de avaliação.`,
       const result = await runOfferAgent(campaignId, workspaceId, intakeData, log, memoryContext);
       offerAnalysis = result as unknown as Record<string, unknown>;
       agentsRun.push("offer");
-      // Log offer output summary to memory
+      // Log offer output summary to memory + Doctrine Gate + Self-Critique (all fire-and-forget)
       setImmediate(() => {
         if (campaignMemory) {
           addMemoryEntry(campaignId, "agent_output_summary",
@@ -608,6 +620,13 @@ Retorne o JSON de avaliação.`,
             "offer_agent", { uniqueMechanism: result.uniqueMechanism?.name }, log,
           ).catch(() => {});
         }
+        const offerSnapshot = offerAnalysis ?? {};
+        getCampaignBrain(campaignId).then(brainForOffer => {
+          if (brainForOffer?.offer) {
+            checkDoctrineAsync(campaignId, workspaceId, "offer", offerSnapshot, brainForOffer, log);
+          }
+        }).catch(() => {});
+        runSelfCritique(campaignId, workspaceId, "offer", offerSnapshot, log).catch(() => {});
       });
     } catch (err) {
       log.error({ err, campaignId }, "Offer agent failed");

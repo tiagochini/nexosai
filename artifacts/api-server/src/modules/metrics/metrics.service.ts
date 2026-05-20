@@ -11,6 +11,14 @@ import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { runOptimizationAgent } from "../agents/optimization.agent.js";
 import { processTrafficFeedback, analyzeCreativeFatigue } from "../campaign-brain/traffic-feedback.service.js";
+import {
+  getDecisionWeights,
+  getAlertThresholds,
+  buildDecisionContext,
+  DEFAULT_WEIGHTS,
+  DEFAULT_THRESHOLDS,
+  type WeightProfile,
+} from "../campaign-brain/decision-weighting.service.js";
 import type { Logger } from "pino";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -54,7 +62,9 @@ function calculateHealthScore(
   targetRoas: number,
   benchmarkCpl: number,
   previousScore: number | null,
+  weights: WeightProfile = DEFAULT_WEIGHTS,
 ): HealthScoreResult {
+  const w = weights;
   const components: HealthComponents = {
     revenue: 0,
     roas: 0,
@@ -63,48 +73,52 @@ function calculateHealthScore(
     trend: 0,
   };
 
-  // Revenue vs projection (35 pts)
+  // Revenue vs projection (dynamic pts)
   if (projectedRevenue > 0 && (metric.revenueBrl ?? 0) >= 0) {
     const ratio = (metric.revenueBrl ?? 0) / projectedRevenue;
-    components.revenue = Math.min(35, Math.round(ratio * 35));
+    components.revenue = Math.min(w.revenue, Math.round(ratio * w.revenue));
   } else if (projectedRevenue === 0) {
-    components.revenue = 20; // neutral when no projection
+    components.revenue = Math.round(w.revenue * 0.57); // neutral when no projection
   }
 
-  // ROAS vs target (25 pts)
+  // ROAS vs target (dynamic pts)
   if (targetRoas > 0 && metric.roas != null) {
     const ratio = metric.roas / targetRoas;
-    components.roas = Math.min(25, Math.round(ratio * 25));
+    components.roas = Math.min(w.roas, Math.round(ratio * w.roas));
   } else if (metric.roas == null) {
-    components.roas = 12; // neutral when no roas data yet
+    components.roas = Math.round(w.roas * 0.48); // neutral when no roas data yet
   }
 
-  // CPL vs benchmark (20 pts) — lower is better
+  // CPL vs benchmark (dynamic pts) — lower is better
   if (benchmarkCpl > 0 && metric.cplBrl != null) {
     const ratio = benchmarkCpl / metric.cplBrl; // inverted — CPL below benchmark = ratio > 1
-    components.cpl = Math.min(20, Math.round(Math.max(0, ratio) * 20));
+    components.cpl = Math.min(w.cpl, Math.round(Math.max(0, ratio) * w.cpl));
   } else if (metric.cplBrl == null) {
-    components.cpl = 10; // neutral
+    components.cpl = Math.round(w.cpl * 0.5); // neutral
   }
 
-  // Email engagement (10 pts)
+  // Email engagement (dynamic pts)
   if (metric.openRate != null) {
-    const openScore = Math.min(1, metric.openRate / 0.25) * 7; // 25% = full score
+    const openFraction  = w.email * 0.70; // 70% of email pts come from open rate
+    const clickFraction = w.email * 0.30;
+    const openScore  = Math.min(1, metric.openRate / 0.25) * openFraction;
     const clickScore = metric.clickRate != null
-      ? Math.min(1, metric.clickRate / 0.04) * 3
-      : 1.5;
+      ? Math.min(1, metric.clickRate / 0.04) * clickFraction
+      : clickFraction * 0.5;
     components.email = Math.round(openScore + clickScore);
   } else {
-    components.email = 5; // neutral when no email data
+    components.email = Math.round(w.email * 0.5); // neutral when no email data
   }
 
-  // Trend (10 pts) — is performance improving?
+  // Trend (dynamic pts) — is performance improving?
   if (previousScore != null) {
     const currentRaw = components.revenue + components.roas + components.cpl + components.email;
     const prevRaw = previousScore * 0.9; // scale previous to 90 max for comparison
-    components.trend = currentRaw >= prevRaw ? 10 : Math.max(0, Math.round(10 - (prevRaw - currentRaw) / 5));
+    components.trend = currentRaw >= prevRaw
+      ? w.trend
+      : Math.max(0, Math.round(w.trend - (prevRaw - currentRaw) / 5));
   } else {
-    components.trend = 5; // neutral on first day
+    components.trend = Math.round(w.trend * 0.5); // neutral on first day
   }
 
   const score = Math.min(100, Math.max(0,
@@ -152,7 +166,9 @@ function generateAlertCandidates(
   benchmarkCpl: number,
   historicalPeakCtr: number = 0,
   historicalMetrics: Array<Record<string, unknown>> = [],
+  thresholds = DEFAULT_THRESHOLDS,
 ): AlertCandidate[] {
+  const AT = thresholds;
   const alerts: AlertCandidate[] = [];
 
   // Health-based alerts
@@ -181,21 +197,21 @@ function generateAlertCandidates(
   }
 
   // ROAS drop
-  if (targetRoas > 0 && metric.roas != null && metric.roas < targetRoas * ALERT_THRESHOLDS.roasDropPercent) {
+  if (targetRoas > 0 && metric.roas != null && metric.roas < targetRoas * AT.roasDropPercent) {
     alerts.push({
       alertType: "roas_drop",
       severity: "critical",
       title: `ROAS crítico: ${metric.roas.toFixed(1)}x (meta: ${targetRoas}x)`,
-      description: `O ROAS atual de ${metric.roas.toFixed(1)}x está abaixo de 50% da meta de ${targetRoas}x. Cada R$1 investido está gerando R$${metric.roas.toFixed(2)}.`,
+      description: `O ROAS atual de ${metric.roas.toFixed(1)}x está abaixo de ${(AT.roasDropPercent * 100).toFixed(0)}% da meta de ${targetRoas}x. Cada R$1 investido está gerando R$${metric.roas.toFixed(2)}.`,
       recommendation: "Pause imediatamente anúncios com ROAS abaixo de 2x. Concentre budget nos públicos lookalike 1% e nos criativos vencedores.",
       metricKey: "roas",
       metricValue: Number(metric.roas),
-      thresholdValue: targetRoas * ALERT_THRESHOLDS.roasDropPercent,
+      thresholdValue: targetRoas * AT.roasDropPercent,
     });
   }
 
   // CPL spike
-  if (benchmarkCpl > 0 && metric.cplBrl != null && metric.cplBrl > benchmarkCpl * ALERT_THRESHOLDS.cplSpikeMultiplier) {
+  if (benchmarkCpl > 0 && metric.cplBrl != null && metric.cplBrl > benchmarkCpl * AT.cplSpikeMultiplier) {
     alerts.push({
       alertType: "cpl_spike",
       severity: "critical",
@@ -204,14 +220,15 @@ function generateAlertCandidates(
       recommendation: "Pause públicos com CPL acima de 3x o benchmark. Teste novos criativos com abordagem de problema diferente.",
       metricKey: "cpl_brl",
       metricValue: Number(metric.cplBrl),
-      thresholdValue: benchmarkCpl * ALERT_THRESHOLDS.cplSpikeMultiplier,
+      thresholdValue: benchmarkCpl * AT.cplSpikeMultiplier,
     });
   }
 
-  // Revenue gap
+  // Revenue gap — use context-aware warning threshold; critical = warning * 1.7
   if (projectedRevenue > 0 && (metric.revenueBrl ?? 0) >= 0) {
     const gap = 1 - (metric.revenueBrl ?? 0) / projectedRevenue;
-    if (gap >= ALERT_THRESHOLDS.revenueGapCritical) {
+    const gapCritical = Math.min(0.8, AT.revenueGapWarning * 1.7);
+    if (gap >= gapCritical) {
       alerts.push({
         alertType: "revenue_gap",
         severity: "critical",
@@ -220,9 +237,9 @@ function generateAlertCandidates(
         recommendation: "Ative sequência de urgência antecipada. Considere oferta de bump ou bônus adicional para aumentar conversão. Execute análise de otimização.",
         metricKey: "revenue_brl",
         metricValue: Number(metric.revenueBrl ?? 0),
-        thresholdValue: projectedRevenue * (1 - ALERT_THRESHOLDS.revenueGapCritical),
+        thresholdValue: projectedRevenue * (1 - gapCritical),
       });
-    } else if (gap >= ALERT_THRESHOLDS.revenueGapWarning) {
+    } else if (gap >= AT.revenueGapWarning) {
       alerts.push({
         alertType: "revenue_gap",
         severity: "warning",
@@ -231,22 +248,22 @@ function generateAlertCandidates(
         recommendation: "Reforce sequência de e-mail e WhatsApp com prova social adicional. Revise copy do carrinho.",
         metricKey: "revenue_brl",
         metricValue: Number(metric.revenueBrl ?? 0),
-        thresholdValue: projectedRevenue * (1 - ALERT_THRESHOLDS.revenueGapWarning),
+        thresholdValue: projectedRevenue * (1 - AT.revenueGapWarning),
       });
     }
   }
 
   // Email engagement drop
-  if (metric.openRate != null && metric.openRate < ALERT_THRESHOLDS.emailOpenRateMin && (metric.emailsSent ?? 0) > 100) {
+  if (metric.openRate != null && metric.openRate < AT.emailOpenRateMin && (metric.emailsSent ?? 0) > 100) {
     alerts.push({
       alertType: "email_engagement_drop",
       severity: "warning",
       title: `Taxa de abertura de e-mail baixa: ${(metric.openRate * 100).toFixed(1)}%`,
-      description: `Taxa de abertura de ${(metric.openRate * 100).toFixed(1)}% está abaixo do mínimo de 15%. E-mails podem estar caindo em spam.`,
+      description: `Taxa de abertura de ${(metric.openRate * 100).toFixed(1)}% está abaixo do mínimo de ${(AT.emailOpenRateMin * 100).toFixed(0)}%. E-mails podem estar caindo em spam.`,
       recommendation: "Verifique autenticação SPF/DKIM/DMARC. Teste assuntos com personalização por nome. Considere higienização da lista.",
       metricKey: "open_rate",
       metricValue: metric.openRate,
-      thresholdValue: ALERT_THRESHOLDS.emailOpenRateMin,
+      thresholdValue: AT.emailOpenRateMin,
     });
   }
 
@@ -269,9 +286,9 @@ function generateAlertCandidates(
     });
   } else if (
     // Fallback: single-signal CTR check (backward compat for low-data scenarios)
-    historicalPeakCtr > 0.005 &&
+    historicalPeakCtr > AT.minPeakCtrForFatigue &&
     metric.ctr != null &&
-    Number(metric.ctr) < historicalPeakCtr * 0.70 &&
+    Number(metric.ctr) < historicalPeakCtr * AT.ctrFatigueThreshold &&
     historicalMetrics.length < 2
   ) {
     const dropPct = Math.round((1 - Number(metric.ctr) / historicalPeakCtr) * 100);
@@ -283,7 +300,7 @@ function generateAlertCandidates(
       recommendation: "Renove criativos com novos ângulos e gatilhos diferentes.",
       metricKey: "ctr",
       metricValue: Number(metric.ctr),
-      thresholdValue: historicalPeakCtr * 0.70,
+      thresholdValue: historicalPeakCtr * AT.ctrFatigueThreshold,
     });
   }
 
@@ -356,13 +373,27 @@ export async function ingestMetrics(
     return c > max ? c : max;
   }, 0);
 
-  // Calculate health score
+  // Build decision context for context-aware health scoring (Camada 8)
+  const brainData = (campaign as any).brainData as Record<string, unknown> | null;
+  const intakeForWeights = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const dayIndexForCtx = input.dayIndex ?? 0;
+  const decisionCtx = buildDecisionContext(
+    intakeForWeights,
+    { type: campaign.type, currentPhase: (campaign as any).currentPhase ?? null },
+    brainData,
+    dayIndexForCtx,
+  );
+  const contextWeights = getDecisionWeights(decisionCtx);
+  const contextThresholds = getAlertThresholds(decisionCtx);
+
+  // Calculate health score with context-aware weights
   const health = calculateHealthScore(
     input,
     projectedRevenue,
     targetRoas,
     benchmarkCpl,
     prevMetric?.healthScore ?? null,
+    contextWeights,
   );
 
   const revenueGapPercent = projectedRevenue > 0
@@ -432,6 +463,7 @@ export async function ingestMetrics(
     benchmarkCpl,
     historicalPeakCtr,
     historicalCtrRows as Array<Record<string, unknown>>,
+    contextThresholds,
   );
 
   const savedAlerts = [];
