@@ -907,10 +907,8 @@ export default function CampaignIntake() {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
-                    if (isMobile || e.ctrlKey || e.metaKey) {
-                      e.preventDefault();
-                      void handleSend();
-                    }
+                    e.preventDefault();
+                    void handleSend();
                   }
                 }}
                 placeholder="Digite sua resposta aqui... ou use o microfone para falar (a IA entende tudo)"
@@ -957,17 +955,16 @@ export default function CampaignIntake() {
 
                 {/* Send */}
                 <Button
-                  onPointerDown={(e) => { if (e.pointerType === "touch") { e.preventDefault(); void handleSend(); } }}
-                  onClick={() => { if (!isMobile) void handleSend(); }}
+                  onClick={() => void handleSend()}
                   disabled={sending || (inputValue.trim() === "" && pendingFiles.length === 0) || confirmingType}
-                  title={isMobile ? "Enviar" : "Enviar (Ctrl+Enter)"}
+                  title="Enviar (Enter)"
                   className="font-mono rounded-sm h-9 px-4 btn-weapon-primary shrink-0 gap-1.5">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /><span className="hidden sm:inline text-[11px] uppercase tracking-widest">Enviar</span></>}
                 </Button>
               </div>
 
               <p className="text-[10px] font-mono text-muted-foreground/40 text-right">
-                {isMobile ? "Enter = enviar" : "Ctrl+Enter = enviar · Enter = nova linha"} · suporta texto, código, imagens, PDF
+                Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF
               </p>
             </div>
           ))}
