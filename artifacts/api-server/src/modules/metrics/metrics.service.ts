@@ -10,6 +10,7 @@ import {
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { runOptimizationAgent } from "../agents/optimization.agent.js";
+import { processTrafficFeedback, analyzeCreativeFatigue } from "../campaign-brain/traffic-feedback.service.js";
 import type { Logger } from "pino";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -150,6 +151,7 @@ function generateAlertCandidates(
   targetRoas: number,
   benchmarkCpl: number,
   historicalPeakCtr: number = 0,
+  historicalMetrics: Array<Record<string, unknown>> = [],
 ): AlertCandidate[] {
   const alerts: AlertCandidate[] = [];
 
@@ -248,25 +250,40 @@ function generateAlertCandidates(
     });
   }
 
-  // ── Creative fatigue detection ─────────────────────────────────────────────
-  // Alert when CTR drops >30% from historical peak (requires at least 3 days of history)
-  const FATIGUE_THRESHOLD = 0.70; // current must be < 70% of peak to trigger
-  const MIN_PEAK_CTR = 0.005; // ignore if peak was below 0.5% (avoid noise)
-  if (
-    historicalPeakCtr > MIN_PEAK_CTR &&
+  // ── Enhanced creative fatigue detection (multi-signal) ────────────────────
+  // Checks CTR drop, CPM spike, conversion rate drop, social engagement drop.
+  // Uses historicalMetrics passed from ingestMetrics (has ctr + any extra fields present).
+  const currentMetricObj = metric as Record<string, unknown>;
+  const fatigue = analyzeCreativeFatigue(currentMetricObj, historicalMetrics);
+
+  if (fatigue.isFatigued) {
+    alerts.push({
+      alertType: "kpi_breach",
+      severity: fatigue.severity === "critical" ? "critical" : "warning",
+      title: `Fadiga criativa detectada (score ${fatigue.fatigueScore}/100): ${fatigue.signals[0] ?? "múltiplos sinais"}`,
+      description: `${fatigue.signals.join(" • ")}. Criativos perderam impacto em múltiplas dimensões.`,
+      recommendation: fatigue.recommendation,
+      metricKey: "ctr",
+      metricValue: Number(metric.ctr ?? 0),
+      thresholdValue: historicalPeakCtr * 0.70,
+    });
+  } else if (
+    // Fallback: single-signal CTR check (backward compat for low-data scenarios)
+    historicalPeakCtr > 0.005 &&
     metric.ctr != null &&
-    metric.ctr < historicalPeakCtr * FATIGUE_THRESHOLD
+    Number(metric.ctr) < historicalPeakCtr * 0.70 &&
+    historicalMetrics.length < 2
   ) {
-    const dropPct = Math.round((1 - metric.ctr / historicalPeakCtr) * 100);
+    const dropPct = Math.round((1 - Number(metric.ctr) / historicalPeakCtr) * 100);
     alerts.push({
       alertType: "kpi_breach",
       severity: dropPct >= 50 ? "critical" : "warning",
       title: `Fadiga criativa detectada: CTR caiu ${dropPct}% do pico`,
-      description: `CTR atual de ${(metric.ctr * 100).toFixed(2)}% está ${dropPct}% abaixo do pico histórico de ${(historicalPeakCtr * 100).toFixed(2)}%. Os criativos perderam impacto.`,
-      recommendation: "Renove criativos com novos ângulos e gatilhos diferentes. Teste headlines com curiosidade vs. prova social. Pause os anúncios com menor CTR e ative variações de criativos virgens.",
+      description: `CTR atual de ${(Number(metric.ctr) * 100).toFixed(2)}% está ${dropPct}% abaixo do pico histórico de ${(historicalPeakCtr * 100).toFixed(2)}%.`,
+      recommendation: "Renove criativos com novos ângulos e gatilhos diferentes.",
       metricKey: "ctr",
-      metricValue: metric.ctr,
-      thresholdValue: historicalPeakCtr * FATIGUE_THRESHOLD,
+      metricValue: Number(metric.ctr),
+      thresholdValue: historicalPeakCtr * 0.70,
     });
   }
 
@@ -414,6 +431,7 @@ export async function ingestMetrics(
     targetRoas,
     benchmarkCpl,
     historicalPeakCtr,
+    historicalCtrRows as Array<Record<string, unknown>>,
   );
 
   const savedAlerts = [];
@@ -535,6 +553,14 @@ export async function ingestMetrics(
       alertsGenerated: alertCandidates.length,
       autoOptimizationTriggered,
     },
+  });
+
+  // Traffic Feedback Loop — fire-and-forget — updates Campaign Brain with live traffic learnings
+  setImmediate(() => {
+    processTrafficFeedback(campaignId, workspaceId, metric as Record<string, unknown>, log)
+      .catch((err: unknown) => {
+        log.warn({ err, campaignId }, "Traffic Feedback Loop failed — non-blocking");
+      });
   });
 
   return {

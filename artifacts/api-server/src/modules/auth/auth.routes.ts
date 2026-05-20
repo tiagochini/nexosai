@@ -50,7 +50,7 @@ router.post("/register", async (req, res): Promise<void> => {
         const [targetPlan] = await db
           .select()
           .from(plansTable)
-          .where(eq(plansTable.slug, invite.planSlug))
+          .where(eq(plansTable.slug, invite.planSlug as "solo" | "agency"))
           .limit(1);
 
         if (targetPlan) {

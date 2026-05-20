@@ -1,5 +1,8 @@
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
+import { buildCampaignBrain } from "../campaign-brain/campaign-brain.service.js";
+import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
+import { updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
 import { runStrategyAgent } from "./strategy.agent.js";
@@ -902,6 +905,39 @@ Retorne o JSON de avaliação.`,
       })
       .catch((comprErr: unknown) => {
         log.warn({ comprErr, campaignId }, "Memory Compression failed");
+      });
+  });
+
+  // ── 9. Campaign Brain Build + Strategic Alignment Engine (fire-and-forget) ──
+  // Assembles canonical truth from all agent outputs. Detects misalignments and
+  // contradictions between agents BEFORE they reach the launch phase.
+  setImmediate(() => {
+    buildCampaignBrain(campaignId, log)
+      .then((brain) => {
+        if (!brain) return;
+        return runStrategicAlignmentEngine(campaignId, brain, log)
+          .then(async (report) => {
+            await updateBrainSection(campaignId, "alignment", {
+              score: report.alignmentScore,
+              criticalConflicts: report.criticalConflicts,
+              warnings: report.warnings,
+              dimensions: report.dimensions,
+              isMisaligned: report.isMisaligned,
+              checkedAt: report.checkedAt,
+            }, log);
+            await updateBrainSection(campaignId, "contradictions", report.contradictions, log);
+            if (report.isMisaligned) {
+              log.warn({
+                campaignId,
+                alignmentScore: report.alignmentScore,
+                criticalConflicts: report.criticalConflicts.length,
+                contradictions: report.contradictions.length,
+              }, "Campaign Brain: strategic misalignment detected");
+            }
+          });
+      })
+      .catch((brainErr: unknown) => {
+        log.warn({ brainErr, campaignId }, "Campaign Brain + Alignment Engine failed — non-blocking");
       });
   });
 

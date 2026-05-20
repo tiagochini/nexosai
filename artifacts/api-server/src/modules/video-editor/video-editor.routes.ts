@@ -160,8 +160,8 @@ async function processJob(
           .setDuration(clip.endTime - clip.startTime)
           .outputOptions(["-c:v libx264", "-c:a aac", "-avoid_negative_ts make_zero"])
           .output(clipPath)
-          .on("end", resolve)
-          .on("error", reject)
+          .on("end", () => resolve())
+          .on("error", (err: Error) => reject(err))
           .run();
       });
 
@@ -207,8 +207,8 @@ async function processJob(
           ])
           .output(outputPath)
           .on("progress", (p) => { job.progress = 70 + Math.round((p.percent ?? 0) * 0.25); })
-          .on("end", resolve)
-          .on("error", reject)
+          .on("end", () => resolve())
+          .on("error", (err: Error) => reject(err))
           .run();
       });
 
@@ -221,8 +221,8 @@ async function processJob(
           .outputOptions(["-c:v libx264", "-c:a aac"])
           .output(outputPath)
           .on("progress", (p) => { job.progress = 70 + Math.round((p.percent ?? 0) * 0.25); })
-          .on("end", resolve)
-          .on("error", reject)
+          .on("end", () => resolve())
+          .on("error", (err: Error) => reject(err))
           .run();
       });
     }

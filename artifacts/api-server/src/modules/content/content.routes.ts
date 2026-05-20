@@ -16,6 +16,8 @@ import {
 } from "./content.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { autoPostApprovedContent } from "../social/social.autopost.service.js";
+import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
+import { getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { ContentTypeSchema } from "@workspace/db";
 
 const router = Router();
@@ -103,7 +105,7 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
       req.auth.workspaceId,
       pieceId,
     );
-    // Fire-and-forget: memory save + social auto-post — never blocks response
+    // Fire-and-forget: memory save + social auto-post + contradiction re-check — never blocks response
     processContentPieceApproval(
       req.auth.workspaceId,
       campaignId,
@@ -112,6 +114,21 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
       true,
     ).catch(() => undefined);
     autoPostApprovedContent(req.auth.workspaceId, campaignId, pieceId).catch(() => undefined);
+    // Contradiction Detector — re-run alignment after each content approval to catch new conflicts
+    setImmediate(() => {
+      getCampaignBrain(campaignId)
+        .then((brain) => {
+          if (!brain) return;
+          return runStrategicAlignmentEngine(campaignId, brain, req.log)
+            .then((report) => {
+              if (report.contradictions.length > 0) {
+                return updateBrainSection(campaignId, "contradictions", report.contradictions, req.log);
+              }
+              return undefined;
+            });
+        })
+        .catch(() => undefined);
+    });
     res.json({ message: "Content piece approved", piece });
   } catch (err) {
     if (err instanceof AppError) {

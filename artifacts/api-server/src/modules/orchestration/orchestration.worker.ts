@@ -1,6 +1,7 @@
 import { Worker, type Job } from "bullmq";
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
+import { saveVerticalLearning } from "../campaign-brain/vertical-memory.service.js";
 import { QUEUE_NAMES, type CampaignOrchestrationJob } from "../queue/queue.service.js";
 import { orchestrateCampaign } from "../agents/command.agent.js";
 import { generateCampaignContent } from "../content/content.service.js";
@@ -210,6 +211,13 @@ async function processComplete(job: Job<CampaignOrchestrationJob>): Promise<void
   });
 
   log.info({ campaignId }, "Campaign completed");
+
+  // Learning Memory per Vertical — fire-and-forget — accumulates intelligence across campaigns
+  setImmediate(() => {
+    saveVerticalLearning(campaignId, workspaceId, log).catch((err: unknown) => {
+      log.warn({ err, campaignId }, "Vertical Memory save failed — non-blocking");
+    });
+  });
 }
 
 // ── Worker factory ─────────────────────────────────────────────────────────────

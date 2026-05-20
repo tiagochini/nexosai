@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
+import { runCrossAgentValidation } from "../campaign-brain/cross-validation.service.js";
 import {
   getExecutionStatus,
   triggerNextPhase,
@@ -265,6 +266,18 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
         data: { missing: integrationCheck.missing, connectUrl: "/integracoes" },
       });
       return;
+    }
+
+    // Cross-Agent Validation — blocks launch if critical financial/alignment conflicts found
+    const validation = await runCrossAgentValidation(campaignId, req.auth.workspaceId, req.log);
+    if (!validation.isViable && !skipWarning) {
+      const criticalBlocker = validation.blockers[0];
+      throw new AppError(
+        422,
+        `Validação cruzada de agentes detectou ${validation.blockers.length} conflito(s) crítico(s): ${criticalBlocker?.description ?? "verificar agentes"}`,
+        "CROSS_VALIDATION_FAILED",
+        { blockers: validation.blockers, warnings: validation.warnings, metrics: validation.metrics },
+      );
     }
 
     await checkCreditsForPhase(req.auth.workspaceId, campaignId, "launch");

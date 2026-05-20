@@ -89,6 +89,7 @@ export const campaignsTable = pgTable("campaigns", {
   targetingData: jsonb("targeting_data").notNull().default({}),
   audienceData: jsonb("audience_data").notNull().default({}),
   memoryData: jsonb("memory_data").notNull().default({}),
+  brainData: jsonb("brain_data").notNull().default({}),
   durationDays: integer("duration_days"),
   budgetTotal: integer("budget_total"),
   revenueTarget: text("revenue_target"),
