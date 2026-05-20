@@ -9,11 +9,12 @@ import Glossary from "@/pages/glossary";
 import Owner, { isOwnerMode, loadBrand, type BrandConfig } from "@/pages/owner";
 import MiniGuide from "@/pages/mini-guide";
 import FreeGuide from "@/pages/free-guide";
+import LeadMagnet from "@/pages/lead-magnet";
 import { useAntiPiracy, clearSession } from "@/hooks/useAntiPiracy";
 
 const queryClient = new QueryClient();
 
-type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner" | "mini-guide" | "free-guide";
+type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner" | "mini-guide" | "free-guide" | "lead-magnet";
 
 interface NavState {
   page: Page;
@@ -59,6 +60,7 @@ const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress", "gl
 function getInitialPage(): NavState {
   if (typeof window !== "undefined") {
     if (window.location.hash === "#owner") return { page: "owner", params: {} };
+    if (window.location.hash === "#guia") return { page: "lead-magnet", params: {} };
     if (window.location.hash === "#guia-gratuito") return { page: "free-guide", params: {} };
     if (window.location.hash === "#mini-guide") return { page: "mini-guide", params: {} };
     if (window.location.hash === "#products") return { page: "products", params: {} };
@@ -209,6 +211,8 @@ function AcademyApp() {
         return <MiniGuide onNavigate={navigate} />;
       case "free-guide":
         return <FreeGuide onNavigate={navigate} />;
+      case "lead-magnet":
+        return <LeadMagnet onNavigate={navigate} />;
       default:
         return <Home onNavigate={navigate} progress={progress} hasAccess={canAccess} />;
     }
