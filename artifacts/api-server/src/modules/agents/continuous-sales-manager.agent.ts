@@ -208,12 +208,14 @@ export async function runContinuousSalesManagerAgent(
   intakeData: Record<string, unknown>,
   strategy: StrategyOutput,
   log: Logger,
+  memoryContext?: string,
 ): Promise<ContinuousSalesPlanOutput> {
   const result = await runAgent({
     campaignId,
     workspaceId,
     agentRole: "launch_manager",
     systemPrompt: CONTINUOUS_SALES_PROMPT,
+    memoryContext,
     messages: [
       {
         role: "user",

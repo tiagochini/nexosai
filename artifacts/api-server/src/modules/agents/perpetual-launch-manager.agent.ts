@@ -147,12 +147,14 @@ export async function runPerpetualLaunchManagerAgent(
   intakeData: Record<string, unknown>,
   strategy: StrategyOutput,
   log: Logger,
+  memoryContext?: string,
 ): Promise<PerpetualLaunchOutput> {
   const result = await runAgent({
     campaignId,
     workspaceId,
     agentRole: "launch_manager",
     systemPrompt: PERPETUAL_LAUNCH_PROMPT,
+    memoryContext,
     messages: [
       {
         role: "user",

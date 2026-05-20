@@ -274,6 +274,7 @@ export async function runFinancialProjectorAgent(
   strategy: StrategyOutput,
   launchPlan: LaunchPlanOutput,
   log: Logger,
+  memoryContext?: string,
 ): Promise<FinancialProjectionOutput> {
   const isPhysicalProduct =
     intakeData["product.deliveryMethod"] !== "100_online";
@@ -283,6 +284,7 @@ export async function runFinancialProjectorAgent(
     workspaceId,
     agentRole: "analytics",
     systemPrompt: FINANCIAL_PROJECTOR_PROMPT,
+    memoryContext,
     messages: [
       {
         role: "user",

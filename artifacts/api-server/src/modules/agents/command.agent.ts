@@ -9,6 +9,12 @@ import { runLaunchManagerAgent } from "./launch-manager.agent.js";
 import { runContinuousSalesManagerAgent } from "./continuous-sales-manager.agent.js";
 import { runPerpetualLaunchManagerAgent } from "./perpetual-launch-manager.agent.js";
 import { runFinancialProjectorAgent } from "./financial-projector.agent.js";
+import {
+  initializeCampaignMemory,
+  addMemoryEntry,
+  assembleCampaignContext,
+  type CampaignMemory,
+} from "./campaign-memory.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { validateIntakeCompleteness, type CampaignType, type CampaignTrack } from "../intake/intake.service.js";
@@ -331,6 +337,8 @@ Retorne o JSON de avaliação.`,
   let profile: ProfileBuilderOutput | undefined;
   let strategy: Record<string, unknown> | undefined;
   let strategicBrief: StrategicBrief | undefined;
+  let campaignMemory: CampaignMemory | undefined;
+  let memoryContext: string | undefined;
   let offerAnalysis: Record<string, unknown> | undefined;
   let launchPlan: Record<string, unknown> | undefined;
   let financialProjection: Record<string, unknown> | undefined;
@@ -436,6 +444,23 @@ Retorne o JSON de avaliação.`,
         warnings: strategicBrief.coreWarnings.length,
         prohibitedPromises: strategicBrief.prohibitedPromises.length,
       }, "Strategic Core brief generated");
+
+      // ── Campaign Memory Layer — initialize from Strategic Brief ──────────────
+      // The brief becomes the source of truth. Every downstream agent gets the
+      // assembled context block so no agent contradicts the approved positioning.
+      try {
+        campaignMemory = await initializeCampaignMemory(
+          campaignId,
+          intakeData,
+          strategicBrief,
+          log,
+        );
+        memoryContext = assembleCampaignContext(campaignMemory);
+        agentsRun.push("campaign_memory");
+        log.info({ campaignId, memoryVersion: campaignMemory.version }, "Campaign memory initialized");
+      } catch (memErr) {
+        log.warn({ memErr, campaignId }, "Campaign memory init failed — agents will run without memory context");
+      }
     } catch (err) {
       log.warn({ err, campaignId }, "Strategic Core briefing failed — continuing without brief");
     }
@@ -455,9 +480,18 @@ Retorne o JSON de avaliação.`,
 
   if (typesWithOfferAnalysis.includes(type)) {
     try {
-      const result = await runOfferAgent(campaignId, workspaceId, intakeData, log);
+      const result = await runOfferAgent(campaignId, workspaceId, intakeData, log, memoryContext);
       offerAnalysis = result as unknown as Record<string, unknown>;
       agentsRun.push("offer");
+      // Log offer output summary to memory
+      setImmediate(() => {
+        if (campaignMemory) {
+          addMemoryEntry(campaignId, "agent_output_summary",
+            `Oferta: ${result.offerName} | Preço: R$${result.offerStructure?.anchoringLogic?.strategicPrice ?? ""} | Garantia: ${result.offerStructure?.guarantee?.type ?? ""}`,
+            "offer_agent", { uniqueMechanism: result.uniqueMechanism?.name }, log,
+          ).catch(() => {});
+        }
+      });
     } catch (err) {
       log.error({ err, campaignId }, "Offer agent failed");
       emitAgentError(campaignId, "offer", err);
@@ -475,6 +509,7 @@ Retorne o JSON de avaliação.`,
           strategy as any,
           track,
           log,
+          memoryContext,
         );
         launchPlan = result as unknown as Record<string, unknown>;
         agentsRun.push("launch_manager");
@@ -491,6 +526,7 @@ Retorne o JSON de avaliação.`,
           intakeData,
           strategy as any,
           log,
+          memoryContext,
         );
         launchPlan = result as unknown as Record<string, unknown>;
         agentsRun.push("continuous_sales_manager");
@@ -507,6 +543,7 @@ Retorne o JSON de avaliação.`,
           intakeData,
           strategy as any,
           log,
+          memoryContext,
         );
         launchPlan = result as unknown as Record<string, unknown>;
         agentsRun.push("perpetual_launch_manager");
@@ -534,6 +571,7 @@ Retorne o JSON de avaliação.`,
         strategy as any,
         launchPlan as any,
         log,
+        memoryContext,
       );
       financialProjection = result as unknown as Record<string, unknown>;
       agentsRun.push("financial_projector");

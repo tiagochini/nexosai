@@ -30,6 +30,8 @@ export interface RunAgentOptions {
   requiresApproval?: boolean;
   checkpointType?: string;
   thinkingMessages?: string[];
+  /** Campaign Memory Layer context — injected before system prompt when provided. */
+  memoryContext?: string;
 }
 
 export interface RunAgentResult {
@@ -87,8 +89,13 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     thinkingMessages = [],
   } = opts;
 
-  // Always inject current date so agents never suggest past dates
-  const enrichedSystemPrompt = buildTemporalContextBlock() + systemPrompt;
+  // Always inject current date so agents never suggest past dates.
+  // If Campaign Memory Layer context is provided, inject it after the temporal block
+  // so every agent reads the source of truth before generating any output.
+  const memoryBlock = opts.memoryContext
+    ? opts.memoryContext
+    : "";
+  const enrichedSystemPrompt = buildTemporalContextBlock() + memoryBlock + systemPrompt;
 
   const [ws] = await db
     .select({

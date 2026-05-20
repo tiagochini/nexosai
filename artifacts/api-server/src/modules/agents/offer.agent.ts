@@ -236,6 +236,7 @@ export async function runOfferAgent(
   workspaceId: string,
   intakeData: Record<string, unknown>,
   log: Logger,
+  memoryContext?: string,
 ): Promise<OfferArchitectOutput> {
   const intakeJson = JSON.stringify(intakeData, null, 2);
 
@@ -244,6 +245,7 @@ export async function runOfferAgent(
     workspaceId,
     agentRole: "offer",
     systemPrompt: OFFER_ARCHITECT_PROMPT,
+    memoryContext,
     messages: [
       {
         role: "user",

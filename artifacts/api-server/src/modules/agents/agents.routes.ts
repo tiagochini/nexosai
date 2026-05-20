@@ -14,6 +14,7 @@ import {
   workspacesTable,
   usersTable,
 } from "@workspace/db";
+import { addMemoryEntry } from "./campaign-memory.service.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -175,6 +176,17 @@ router.post("/:campaignId/approve", async (req, res): Promise<void> => {
         .set({ status: "approved" })
         .where(eq(campaignsTable.id, campaignId));
     }
+
+    // Campaign Memory Layer — record human decision (fire-and-forget, never blocks)
+    setImmediate(() => {
+      const category = parsed.data.approved ? "decision_approved" : "decision_rejected";
+      const content = `${checkpoint.checkpointType} — ${parsed.data.approved ? "APROVADO" : "REJEITADO"}${parsed.data.feedback ? `: ${parsed.data.feedback}` : ""}`;
+      addMemoryEntry(campaignId, category, content, "human", {
+        checkpointId: parsed.data.checkpointId,
+        checkpointType: checkpoint.checkpointType,
+        feedback: parsed.data.feedback,
+      }).catch(() => {});
+    });
 
     res.json({
       checkpoint: updatedCheckpoint,

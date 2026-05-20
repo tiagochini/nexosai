@@ -150,12 +150,14 @@ export async function runLaunchManagerAgent(
   strategy: StrategyOutput,
   track: string,
   log: Logger,
+  memoryContext?: string,
 ): Promise<LaunchPlanOutput> {
   const result = await runAgent({
     campaignId,
     workspaceId,
     agentRole: "launch_manager",
     systemPrompt: LAUNCH_MANAGER_PROMPT,
+    memoryContext,
     messages: [
       {
         role: "user",
