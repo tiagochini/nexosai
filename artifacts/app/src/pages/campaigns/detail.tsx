@@ -39,6 +39,7 @@ import {
 } from "@/components/integration-connect-modal";
 import { CreativeIntentPanel } from "@/components/CreativeIntentPanel";
 import { DecisionTracePanel } from "@/components/DecisionTracePanel";
+import { CampaignMindMap } from "@/components/CampaignMindMap";
 import { useMode } from "@/lib/mode";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1330,7 +1331,7 @@ export default function CampaignDetail() {
   // ── Content query ──────────────────────────────────────────────────────────────
   const { data: contentData, isLoading: contentLoading } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}/content`],
-    enabled: !!campaignId && activeTab === "conteudo",
+    enabled: !!campaignId && (activeTab === "conteudo" || activeTab === "agentes"),
     refetchInterval: isActive ? 5000 : false,
     staleTime: 0,
     queryFn: async () => {
@@ -2354,12 +2355,17 @@ export default function CampaignDetail() {
             </div>
           ))}
 
-          {/* ─ Agent run log (collapsible) ─ */}
-          {agentsLoading && (
-            <div className="space-y-2">{[1,2].map(i => <Skeleton key={i} className="h-12 bg-muted/20" />)}</div>
-          )}
-          {(agentsData?.agents ?? []).length > 0 && (
-            <AgentRunLog agents={agentsData?.agents ?? []} />
+          {/* ─ Campaign Mind Map — expandable phase/agent/content tree ─ */}
+          {agentsLoading ? (
+            <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-16 bg-muted/20" />)}</div>
+          ) : (
+            <CampaignMindMap
+              campaign={campaign}
+              agents={agentsData?.agents ?? []}
+              checkpoints={agentsData?.checkpoints ?? []}
+              pieces={contentData?.pieces ?? []}
+              campaignId={campaignId}
+            />
           )}
 
         </div>
