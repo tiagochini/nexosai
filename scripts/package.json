@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "seed-plans": "tsx ./src/seed-plans.ts",
     "nexos-audit-test": "tsx ./src/nexos-audit-test.ts",
+    "nexos-launch-sim": "tsx ./src/nexos-launch-sim.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
