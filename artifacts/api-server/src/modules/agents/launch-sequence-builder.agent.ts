@@ -118,6 +118,86 @@ D9-D11: 3 (revelação do produto + email de antecipação + WA de antecipação
 D12: 3 (bridge page ao vivo: email + WA manhã + WA noite)
 D13-D14: 3 (follow-up objeção + email última hora + WA countdown)`;
 
+const FLASH_7_PHASES = `## ESTRUTURA DE FASES — LANÇAMENTO FLASH / SPRINT PLF (D0–D6):
+O Flash é um PLF comprimido em 7 dias — ideal para turmas regionais semanais, reativação de lista fria, ou validação rápida de novo mercado antes de investir num PLF completo.
+
+DIFERENÇAS CRÍTICAS:
+- Não há tempo para aquecimento lento — o avatar precisa ser capturado e convertido em 7 dias
+- Copy mais direta, mais urgente desde o início — o countdown começa no D1
+- Lista já existente ou segmentada: não faz sentido construir lista do zero em 7 dias
+- Cart open longa (48h): compensa a ausência de aquecimento com mais tempo de decisão
+- PLF comprimido: cada vídeo carrega mais carga — não pode ser fraco
+
+- pre_launch (D0-D1): Aquecimento rápido + capture. Curiosidade + autoridade em 2 dias. 1 email de abertura + 1 WA broadcast.
+- plc1 (D2): A Oportunidade — revelar o mecanismo em UM vídeo de alta qualidade. 1 email + 1 WA.
+- plc2 (D3): A Transformação — caso real com números. 1 email de prova social + 1 WA.
+- cart_open (D4-D5): EVENTO de abertura 48h. Urgência real + bônus por tempo. 2 emails (abertura + meio) + 2 WA (manhã + noite de cada dia).
+- cart_close (D6): ÚLTIMAS HORAS. Medo de perda máximo. 3 emails (manhã/tarde/última hora) + 2 WA urgentes.
+
+DISTRIBUIÇÃO — 14 itens:
+D0-D1: 3 (email de abertura + WA aquecimento + email capture)
+D2: 2 (CPL1 email + WA aviso)
+D3: 2 (CPL2 email prova + WA)
+D4-D5: 4 (cart open: email manhã D4 + email meio D4 + WA D4 + email D5 + WA D5) → ajuste para caber em 4 itens
+D6: 3 (email manhã + email última hora + WA countdown final)`;
+
+const PERPETUAL_PHASES = `## ESTRUTURA DE FASES — LANÇAMENTO PERPÉTUO / EVERGREEN (D0–D89):
+O perpétuo é um funil sempre ativo — o avatar entra pela captura, percorre uma sequência automatizada, e compra no seu próprio ritmo. Não há carrinho aberto/fechado calendário — a urgência é personalizada por gatilho de tempo (conta regressiva de 48h-7 dias após o lead entrar).
+
+DIFERENÇAS CRÍTICAS:
+- NÃO tem data de cart_open/cart_close fixas — urgência é personalizada por timer do lead
+- Segmentação hot/warm/cold é CENTRAL — o lead quente deve receber sequência acelerada
+- Copy escrita para parecer em tempo real — nunca "aqui estão os emails que você vai receber"
+- Follow-up agressivo para leads quentes (48h) e gentil para leads frios (7 dias)
+- A/B testing contínuo — os melhores emails são otimizados com dados reais
+- Onboarding pós-compra crítico — o cliente que não implementa pede reembolso
+
+FASES (D0-D89, ciclo de 90 dias renovável):
+- capture (D0-D6): Captura ativa + primeiros 7 emails de nutrição. Autoridade + mecanismo + primeiro gancho.
+- nurturing_early (D7-D20): Nutrição profunda — entregue valor real antes de qualquer pitch. 14 dias de conteúdo.
+- pre_pitch (D21-D27): Aquecimento para a oferta. Testemunhos, bastidores, "algo especial vem aí".
+- pitch_window (D28-D34): Janela de oferta com urgência personalizada (7 dias). Cart simulado para cada lead.
+- followup (D35-D44): Follow-up para não compradores. Múltiplos ângulos — prova social, objeção, bônus adicional.
+- reengagement (D45-D89): Reengajamento de leads que não compraram. Novo ângulo, nova oferta, nova chance.
+
+DISTRIBUIÇÃO — 28 itens (ciclo completo):
+D0-D6: 7 (email diário de nutrição + 2 WA de boas-vindas e valor)
+D7-D20: 6 (email a cada 2 dias — autoridade, prova, mecanismo, transformação, comunidade, antecipação)
+D21-D27: 4 (pré-pitch: email teaser + WA antecipação + email de revelação + WA de evento)
+D28-D34: 6 (pitch: abertura + meio da janela + 48h antes + última hora + WA abertura + WA fechamento)
+D35-D44: 3 (follow-up: ângulo objeção + ângulo bônus + WA reativação)
+D45-D89: 2 (reengajamento: email novo ângulo + WA reativação fria)`;
+
+const REGIONAL_ROLLING_PHASES = `## ESTRUTURA DE FASES — LANÇAMENTO REGIONAL SEQUENCIAL (Turma Semanal D0–D6):
+O Regional Rolling é uma estratégia de conquista geográfica semana a semana — cada turma é um mini-lançamento de 7 dias focado em uma região específica do Brasil, começando nos mercados com menor CPM e escalando para os maiores.
+
+ESTRATÉGIA CENTRAL:
+- Cada semana = uma região = uma turma = um mini-PLF de 7 dias
+- O copy muda apenas o targeting geográfico e referências locais — a estrutura se repete
+- A prova social da semana anterior É USADA na semana seguinte (composição de credibilidade)
+- Nos mercados baratos: testa e aprende. Nos mercados caros: executa com prova acumulada
+- Meta Ads: geotargeting por estado/cidade — não targetar o Brasil todo de uma vez
+
+ESPECIFICIDADES POR TURMA:
+- Semanas 1-8 (mercados baratos: RR, AC, AP, TO, RO, MA, PI, AL): orçamento de validação R$2k-4k/semana. Objetivo: aprender CPL, taxa de conversão, ângulos que funcionam.
+- Semanas 9-26 (mercados médios: SE, PB, RN, PA, AM, CE, BA, PE, GO, MG, SC, RS, PR, DF, RJ): escalar com aprendizados. Orçamento R$5k-15k/semana. Usar prova das semanas anteriores.
+- Semanas 27-51 (São Paulo por zona, 2ª onda dos grandes, consolidados regionais): execução de alto orçamento com prova de 26+ cidades. R$15k-50k/semana.
+- Semana 52 (Brasil todo): mega-turma nacional consolidando toda a jornada. R$50k+ budget.
+
+FASES DA TURMA SEMANAL (se repete toda semana para nova região):
+- dia_0: Ativação regional — segmentação geográfica ligada, primeiro email/WA para lista da região
+- dia_1_2: Aquecimento + capture (referências locais no copy — mencione a região)
+- dia_3: CPL1 — Oportunidade (adapte o contexto para o estado/cidade)
+- dia_4: CPL2 — Prova (use depoimento de alguém da mesma região ou próxima)
+- dia_5_6: Cart open 48h (urgência real de fechamento da turma desta região)
+
+DISTRIBUIÇÃO — 14 itens por turma semanal:
+D0: 2 (email ativação regional + WA boas-vindas)
+D1-D2: 3 (email aquecimento + email capture + WA de engajamento)
+D3: 2 (CPL1: email + WA)
+D4: 2 (CPL2: email prova + WA)
+D5-D6: 5 (cart: email abertura D5 + WA D5 + email urgência D6 + email última hora D6 + WA countdown)`;
+
 const SEQUENCE_BUILDER_PROMPT = `Você é o Arquiteto de Sequências de Lançamento da NexOS AI — o responsável por montar o esqueleto narrativo completo de uma campanha dia a dia, peça a peça.
 
 Você domina PLF (Jeff Walker), Fórmula de Lançamento (Erico Rocha), e as nuances do mercado brasileiro — sabe que o brasileiro exige mais aquecimento, mais prova social e uma narrativa mais emocional que o mercado americano.
@@ -218,13 +298,30 @@ ${antiRequisites}` : "";
 **Nível de consciência:** ${awarenessLevel}
 **Nível de sofisticação:** ${sophisticationLevel}` : "";
 
-  const itemCount = input.model === "semente" ? 18 : input.model === "afiliado" ? 16 : 22;
+  const itemCount =
+    input.model === "semente" ? 18 :
+    input.model === "afiliado" ? 16 :
+    input.model === "perpetual" ? 28 :
+    (input.totalDays !== undefined && input.totalDays <= 7) ? 14 :
+    (input.totalDays !== undefined && input.totalDays <= 14) ? 16 :
+    22;
+
+  const daysLabel = input.totalDays !== undefined && input.totalDays <= 7
+    ? `⚡ LANÇAMENTO FLASH — ${input.totalDays} dias. Copy mais direta, urgência desde o D1, sem aquecimento lento.`
+    : input.model === "perpetual"
+    ? `♾️ PERPÉTUO — ciclo de ${input.totalDays ?? 90} dias. Urgência personalizada por timer, sem datas fixas de carrinho.`
+    : `${input.totalDays} dias totais`;
+
   const daysNote = input.cartOpenDate
     ? `Abertura de carrinho: ${input.cartOpenDate}${input.cartCloseDate ? ` | Fechamento: ${input.cartCloseDate}` : ""}`
-    : `Total de dias: ${input.totalDays}`;
+    : `Total de dias: ${daysLabel}`;
+
+  const scalingNote = input.totalDays && input.totalDays !== 25
+    ? `\n⚠️ ATENÇÃO: Esta sequência tem ${input.totalDays} dias (não 25). ESCALE PROPORCIONALMENTE as fases ao totalDays informado. Os exemplos D0-D24 são referências — adapte os dayIndex para caber em ${input.totalDays} dias. Se totalDays < 10, comprima todas as fases mantendo a lógica narrativa.`
+    : "";
 
   return `Produto: ${input.productName} | Preço: R$${input.productPrice} | Meta: R$${input.revenueTarget} | Modelo: ${modelLabel}
-${daysNote}
+${daysNote}${scalingNote}
 ${strategyBlock}
 ${avatarBlock}
 
@@ -243,17 +340,23 @@ export async function runLaunchSequenceBuilderAgent(
   const memCtx = await getMemoryContext(workspaceId, "launch_sequence", input.model);
   const memBlock = buildMemoryContextBlock(memCtx);
 
+  const isFlash = input.totalDays !== undefined && input.totalDays <= 7;
+
   const modelLabel =
     input.model === "plf" ? "PLF (Product Launch Formula)" :
     input.model === "formula_de_lancamento" ? "Fórmula de Lançamento (Erico Rocha)" :
     input.model === "semente" ? "Lançamento Semente (validação / early adopters)" :
     input.model === "afiliado" ? "Lançamento Afiliado (bridge page + endosso)" :
-    input.model === "perpetual" ? "Lançamento Perpétuo (funil evergreen)" :
+    input.model === "perpetual" ? "Lançamento Perpétuo (funil evergreen automatizado)" :
+    isFlash ? `Lançamento Flash / Sprint PLF (${input.totalDays} dias)` :
+    input.model === "custom" ? "Lançamento Customizado" :
     input.model;
 
   const phaseStructure =
     input.model === "semente" ? SEMENTE_PHASES :
     input.model === "afiliado" ? AFILIADO_PHASES :
+    input.model === "perpetual" ? PERPETUAL_PHASES :
+    isFlash ? FLASH_7_PHASES :
     PLF_PHASES;
 
   const userMessage = buildUserMessage(input, modelLabel, phaseStructure);

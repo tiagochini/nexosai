@@ -26,7 +26,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   model: z.enum(["plf", "formula_de_lancamento", "semente", "afiliado", "perpetual", "custom"]),
   campaignId: z.string().uuid().optional(),
-  totalDays: z.number().int().min(7).max(60).optional(),
+  totalDays: z.number().int().min(3).max(730).optional(),
   launchStartDate: z.string().optional(),
   cartOpenDate: z.string().optional(),
   cartCloseDate: z.string().optional(),

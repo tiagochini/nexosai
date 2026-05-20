@@ -47,6 +47,17 @@ export interface ContactInput {
   metadata?: Record<string, unknown>;
 }
 
+// ─── Model-aware duration defaults ────────────────────────────────────────────
+
+const MODEL_DEFAULT_DAYS: Record<string, number> = {
+  plf: 25,
+  formula_de_lancamento: 25,
+  semente: 14,
+  afiliado: 14,
+  perpetual: 90,
+  custom: 21,
+};
+
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 export async function createLaunchSequence(
@@ -73,7 +84,7 @@ export async function createLaunchSequence(
       campaignId: input.campaignId ?? null,
       name: input.name,
       model: input.model,
-      totalDays: input.totalDays ?? 21,
+      totalDays: input.totalDays ?? MODEL_DEFAULT_DAYS[input.model] ?? 21,
       launchStartDate: input.launchStartDate ?? null,
       cartOpenDate: input.cartOpenDate ?? null,
       cartCloseDate: input.cartCloseDate ?? null,
