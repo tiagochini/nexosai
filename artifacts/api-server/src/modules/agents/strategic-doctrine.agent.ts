@@ -343,7 +343,7 @@ export async function runStrategicDoctrineEngine(
   campaignId: string,
   workspaceId: string,
   intakeData: Record<string, unknown>,
-  strategy: StrategyOutput,
+  strategy: StrategyOutput | null,
   brief: StrategicBrief,
   log: Logger,
   profile?: ProfileBuilderOutput,

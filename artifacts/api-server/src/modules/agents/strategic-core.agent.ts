@@ -21,7 +21,7 @@
  */
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
-import type { StrategyOutput } from "./strategy.agent.js";
+import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 
 // ─── Output Types ──────────────────────────────────────────────────────────────
@@ -247,10 +247,39 @@ Retorne APENAS JSON válido.
 export async function runStrategicCoreBriefing(
   campaignId: string,
   workspaceId: string,
-  strategy: StrategyOutput,
+  profile: ProfileBuilderOutput | null,
   intakeData: Record<string, unknown>,
   log: Logger,
 ): Promise<StrategicBrief> {
+  const profileBlock = profile
+    ? `
+**Inteligência de Perfil (Profile Builder — use como base):**
+
+USP: ${profile.product.usp}
+Mecanismo único: ${profile.positioning.uniqueMechanism}
+Big Idea: ${profile.positioning.campaignBigIdea}
+Elevator Pitch: ${profile.positioning.elevatorPitch}
+
+Avatar primário — ${profile.primaryAvatar.name}:
+- Desejo mais profundo: ${profile.primaryAvatar.deepestDesire}
+- Nível de consciência: ${profile.primaryAvatar.awarenessLevel}
+- Sofisticação: ${profile.primaryAvatar.sophisticationLevel}
+- Objeções típicas: ${profile.primaryAvatar.typicalObjections.slice(0, 4).join("; ")}
+- O que os faz confiar: ${profile.primaryAvatar.whatMakesThemTrust.slice(0, 3).join("; ")}
+- Keywords que usam: ${profile.primaryAvatar.keywordsTheyUse.slice(0, 5).join(", ")}
+
+Mercado — maturidade: ${profile.marketIntelligence.maturity} | concorrência: ${profile.marketIntelligence.competitionLevel}
+Oportunidades: ${profile.marketIntelligence.opportunities.slice(0, 3).join("; ")}
+Red flags: ${profile.marketIntelligence.redFlags.slice(0, 3).join("; ")}
+
+Segmentos:
+${profile.segments.map((s) => `- ${s.name} [${s.priority}]: ${s.messageAngle}`).join("\n")}
+
+Score PMF: ${profile.profileScore}/100
+Avisos de validação: ${profile.validationWarnings.join("; ") || "nenhum"}
+Insights críticos: ${profile.criticalInsights.join("; ")}`
+    : "(Perfil não disponível — baseie-se nos dados de intake abaixo)";
+
   const result = await runAgent({
     campaignId,
     workspaceId,
@@ -267,41 +296,18 @@ export async function runStrategicCoreBriefing(
 **Meta de faturamento:** R$${String(intakeData["campaign.revenueTarget"] ?? 0)}
 **Track:** ${String(intakeData["campaign.revenueTrack"] ?? "")}
 **Tipo de campanha:** ${String(intakeData["campaign.type"] ?? "")}
+**Canal de vendas:** ${String(intakeData["campaign.salesChannel"] ?? "")}
+**Duração:** ${String(intakeData["campaign.durationDays"] ?? "")} dias
+**Tom:** ${String(intakeData["content.tone"] ?? "")}
 
-**Estratégia produzida:**
+${profileBlock}
 
-Sumário executivo: ${strategy.executiveSummary}
-
-Posicionamento: ${strategy.offerPositioning.positioning}
-UVP: ${strategy.offerPositioning.uniqueValueProposition}
-Diferenciador primário: ${strategy.offerPositioning.primaryDifferentiator}
-Vantagens competitivas: ${strategy.offerPositioning.competitiveAdvantages.slice(0, 4).join("; ")}
-
-Avatar primário: ${strategy.audienceSegmentation.primaryAvatar}
-Perfil psicográfico: ${strategy.audienceSegmentation.psychographicProfile}
-Sofisticação de mercado: ${strategy.audienceSegmentation.sophisticationStrategy}
-Gatilhos de compra: ${strategy.audienceSegmentation.buyingTriggers.slice(0, 5).join("; ")}
-Objeções: ${strategy.audienceSegmentation.objections.slice(0, 5).join("; ")}
-
-Narrativa central: ${strategy.campaignArchitecture.coreNarrative}
-Hook emocional: ${strategy.campaignArchitecture.emotionalHook}
-Pilares de conteúdo: ${strategy.campaignArchitecture.contentPillars.slice(0, 3).join("; ")}
-CTA strategy: ${strategy.campaignArchitecture.callToActionStrategy}
-
-Gatilho dominante: ${strategy.triggerMap?.dominantTrigger ?? ""}
-Justificativa Big Domino: ${strategy.triggerMap?.dominantTriggerJustification ?? ""}
-Sequência de triggers: ${(strategy.triggerMap?.triggerStackSequence ?? []).join(" → ")}
-
-Riscos principais: ${strategy.risks.mainRisks.slice(0, 3).join("; ")}
-Nível de risco: ${strategy.risks.level}
-Mitigações: ${strategy.risks.mitigations.slice(0, 3).join("; ")}
-Notas do estrategista: ${strategy.strategistNotes}
-
-Com base em tudo isso, gere o Brief Estratégico Global completo.
-Inclua promessas PERMITIDAS e PROIBIDAS com base nos dados reais do produto.
-Inclua limites LEGAIS específicos para o setor/categoria.
+Com base no perfil do produto e nos dados de intake, gere o Brief Estratégico Global completo.
+Este brief será lido por TODOS os agentes especializados — inclusive o Agente de Estratégia.
+Seja específico: inclua promessas PERMITIDAS e PROIBIDAS com base nos dados reais do produto.
+Inclua limites LEGAIS específicos para este setor/categoria.
 Inclua critérios de sucesso mensuráveis.
-Defina requiresHumanReview com rigor — use true se houver qualquer risco sério.
+Defina requiresHumanReview=true se houver qualquer risco sério.
 
 Retorne APENAS o JSON do Brief Estratégico Global.`,
       },
@@ -309,23 +315,26 @@ Retorne APENAS o JSON do Brief Estratégico Global.`,
     log,
     requiresApproval: false,
     thinkingMessages: [
-      "Consolidando memória estratégica global...",
+      "Analisando perfil do produto e avatar primário...",
+      "Definindo identidade estratégica da campanha...",
       "Mapeando promessas permitidas e proibidas...",
-      "Definindo limites éticos e legais...",
+      "Estabelecendo limites éticos e legais...",
       "Emitindo scores de consistência, risco e confiança...",
     ],
   });
 
   return parseAgentJSON<StrategicBrief>(result.content, {
     campaignId,
-    campaignObjective: strategy.executiveSummary,
-    primaryAvatar: strategy.audienceSegmentation.primaryAvatar,
-    centralPain: strategy.audienceSegmentation.psychographicProfile,
-    dominantDesire: strategy.campaignArchitecture.emotionalHook,
-    uniqueMechanism: strategy.offerPositioning.primaryDifferentiator,
+    campaignObjective: String(intakeData["campaign.revenueTarget"]
+      ? `Gerar R$${intakeData["campaign.revenueTarget"]} em ${intakeData["campaign.durationDays"] ?? 7} dias`
+      : "Executar campanha com sucesso"),
+    primaryAvatar: profile?.primaryAvatar.name ?? "",
+    centralPain: profile?.primaryAvatar.typicalObjections[0] ?? "",
+    dominantDesire: profile?.primaryAvatar.deepestDesire ?? "",
+    uniqueMechanism: profile?.positioning.uniqueMechanism ?? "",
     permittedPromises: [],
     prohibitedPromises: ["garantir resultado específico de renda", "prometer retorno em prazo fixo sem base"],
-    tone: "direto, autoridade, linguagem de praticante",
+    tone: String(intakeData["content.tone"] ?? "direto, autoridade, linguagem de praticante"),
     language: "",
     channels: [],
     acquisitionStrategy: "",
@@ -334,19 +343,19 @@ Retorne APENAS o JSON do Brief Estratégico Global.`,
     ethicalBoundaries: [],
     legalBoundaries: ["respeitar LGPD na coleta de dados", "não fazer claims médicos ou financeiros sem comprovação"],
     successCriteria: [],
-    valueProposition: strategy.offerPositioning.uniqueValueProposition,
-    positioning: strategy.offerPositioning.positioning,
-    bigDomino: strategy.campaignArchitecture.emotionalHook,
-    dominantTrigger: strategy.triggerMap?.dominantTrigger ?? "",
+    valueProposition: profile?.positioning.elevatorPitch ?? "",
+    positioning: profile?.positioning.campaignBigIdea ?? "",
+    bigDomino: profile?.primaryAvatar.deepestDesire ?? "",
+    dominantTrigger: "",
     emotionalPains: [],
-    mainObjections: strategy.audienceSegmentation.objections,
-    differentials: strategy.offerPositioning.competitiveAdvantages,
+    mainObjections: profile?.primaryAvatar.typicalObjections ?? [],
+    differentials: [],
     funnelStage: "",
     consistencyScore: 75,
-    riskScore: strategy.risks.level === "high" ? 75 : strategy.risks.level === "medium" ? 50 : 25,
+    riskScore: 25,
     confidenceScore: 0.75,
-    requiresHumanReview: strategy.risks.level === "high",
-    coreWarnings: strategy.risks.mainRisks,
+    requiresHumanReview: false,
+    coreWarnings: profile?.validationWarnings ?? [],
   });
 }
 

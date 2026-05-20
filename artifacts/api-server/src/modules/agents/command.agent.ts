@@ -455,86 +455,63 @@ Retorne o JSON de avaliação.`,
     emitAgentError(campaignId, "profile_builder", err);
   }
 
-  // ── 2. Strategy Agent (all campaign types) ──────────────────────────────────
+  // ── 2. Strategic Core Briefing (after Profile Builder — before all other agents) ──
+  // Produces the Global Strategic Brief that every downstream agent references.
+  // Runs on Profile Builder output + intake data — BEFORE Strategy.
+  // Strategy agent then receives this brief as its foundation.
   try {
-    const result = await runStrategyAgent(
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_thinking",
+      agentType: "strategy",
+      message: "NEXOS Strategic Core definindo identidade estratégica global da campanha...",
+      timestamp: new Date().toISOString(),
+    });
+    strategicBrief = await runStrategicCoreBriefing(
       campaignId,
       workspaceId,
+      profile ?? null,
       intakeData,
-      track,
       log,
-      profile, // pass profile as context — makes strategy much richer
     );
-    strategy = result as unknown as Record<string, unknown>;
-    agentsRun.push("strategy");
-    checkpointsPending.push("strategy_approval");
+    agentsRun.push("strategic_core");
+    log.info({
+      campaignId,
+      consistencyScore: strategicBrief.consistencyScore,
+      riskScore: strategicBrief.riskScore,
+      confidenceScore: strategicBrief.confidenceScore,
+      requiresHumanReview: strategicBrief.requiresHumanReview,
+      warnings: strategicBrief.coreWarnings.length,
+      prohibitedPromises: strategicBrief.prohibitedPromises.length,
+    }, "Strategic Core brief generated");
 
-    await db
-      .update(campaignsTable)
-      .set({ status: "strategy_ready", strategyData: result as any })
-      .where(eq(campaignsTable.id, campaignId));
-  } catch (err) {
-    log.error({ err, campaignId }, "Strategy agent failed");
-    emitAgentError(campaignId, "strategy", err);
-  }
-
-  // ── 2b. Strategic Core Briefing (after strategy — before all other agents) ──
-  // Produces the Global Strategic Brief that every downstream agent references.
-  // Validates coherence, emits consistency/risk/confidence scores.
-  if (strategy) {
+    // ── Campaign Memory Layer — initialize from Strategic Brief ──────────────
+    // The brief becomes the source of truth. Every downstream agent gets the
+    // assembled context block so no agent contradicts the approved positioning.
     try {
-      emitCampaignEvent({
+      campaignMemory = await initializeCampaignMemory(
         campaignId,
-        type: "agent_thinking",
-        agentType: "strategy",
-        message: "NEXOS Strategic Core consolidando memória estratégica global...",
-        timestamp: new Date().toISOString(),
-      });
-      strategicBrief = await runStrategicCoreBriefing(
-        campaignId,
-        workspaceId,
-        strategy as any,
         intakeData,
+        strategicBrief,
         log,
       );
-      agentsRun.push("strategic_core");
-      log.info({
-        campaignId,
-        consistencyScore: strategicBrief.consistencyScore,
-        riskScore: strategicBrief.riskScore,
-        confidenceScore: strategicBrief.confidenceScore,
-        requiresHumanReview: strategicBrief.requiresHumanReview,
-        warnings: strategicBrief.coreWarnings.length,
-        prohibitedPromises: strategicBrief.prohibitedPromises.length,
-      }, "Strategic Core brief generated");
-
-      // ── Campaign Memory Layer — initialize from Strategic Brief ──────────────
-      // The brief becomes the source of truth. Every downstream agent gets the
-      // assembled context block so no agent contradicts the approved positioning.
-      try {
-        campaignMemory = await initializeCampaignMemory(
-          campaignId,
-          intakeData,
-          strategicBrief,
-          log,
-        );
-        memoryContext = assembleCampaignContext(campaignMemory);
-        agentsRun.push("campaign_memory");
-        log.info({ campaignId, memoryVersion: campaignMemory.version }, "Campaign memory initialized");
-      } catch (memErr) {
-        log.warn({ memErr, campaignId }, "Campaign memory init failed — agents will run without memory context");
-      }
-    } catch (err) {
-      log.warn({ err, campaignId }, "Strategic Core briefing failed — continuing without brief");
+      memoryContext = assembleCampaignContext(campaignMemory);
+      agentsRun.push("campaign_memory");
+      log.info({ campaignId, memoryVersion: campaignMemory.version }, "Campaign memory initialized");
+    } catch (memErr) {
+      log.warn({ memErr, campaignId }, "Campaign memory init failed — agents will run without memory context");
     }
+  } catch (err) {
+    log.warn({ err, campaignId }, "Strategic Core briefing failed — continuing without brief");
   }
 
-  // ── 2c. Strategic Doctrine Engine (after memory init — enriches context for all agents) ──
+  // ── 2b. Strategic Doctrine Engine (after memory init — enriches context for all agents) ──
   // Diagnoses consciousness stage, market sophistication, lead temperature.
   // Produces Campaign Doctrine, Launch Logic, Emotional Sequence, Strategic Warnings.
   // Doctrine is stored in memory and injected into every downstream agent.
   // Skipped by Execution Governor for simple campaigns (flash_sale, quick mode).
-  if (strategy && strategicBrief && campaignMemory && !isSkippedByGovernor("strategic_doctrine")) {
+  // Runs BEFORE Strategy — strategy agent receives doctrine context via memoryContext.
+  if (strategicBrief && campaignMemory && !isSkippedByGovernor("strategic_doctrine")) {
     try {
       emitCampaignEvent({
         campaignId,
@@ -547,7 +524,7 @@ Retorne o JSON de avaliação.`,
         campaignId,
         workspaceId,
         intakeData,
-        strategy as any,
+        null,
         strategicBrief,
         log,
         profile,
@@ -575,6 +552,32 @@ Retorne o JSON de avaliação.`,
     } catch (docErr) {
       log.warn({ docErr, campaignId }, "Strategic Doctrine Engine failed — agents proceed without doctrine");
     }
+  }
+
+  // ── 3. Strategy Agent (all campaign types) ──────────────────────────────────
+  // Runs AFTER Strategic Core + Doctrine — uses the brief as its foundation.
+  // MemoryContext already contains doctrine enrichment when available.
+  try {
+    const result = await runStrategyAgent(
+      campaignId,
+      workspaceId,
+      intakeData,
+      track,
+      log,
+      profile,
+      strategicBrief ?? undefined,
+    );
+    strategy = result as unknown as Record<string, unknown>;
+    agentsRun.push("strategy");
+    checkpointsPending.push("strategy_approval");
+
+    await db
+      .update(campaignsTable)
+      .set({ status: "strategy_ready", strategyData: result as any })
+      .where(eq(campaignsTable.id, campaignId));
+  } catch (err) {
+    log.error({ err, campaignId }, "Strategy agent failed");
+    emitAgentError(campaignId, "strategy", err);
   }
 
   // ── 3. Offer Agent (all types with a product for sale) ─────────────────────

@@ -1,5 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
+import type { StrategicBrief } from "./strategic-core.agent.js";
 import type { Logger } from "pino";
 
 export interface StrategyOutput {
@@ -245,11 +246,40 @@ export async function runStrategyAgent(
   track: string,
   log: Logger,
   profile?: import("./profile-builder.agent.js").ProfileBuilderOutput,
+  strategicBrief?: StrategicBrief,
 ): Promise<StrategyOutput> {
   const memCtx = await getMemoryContext(workspaceId, "strategy", String(intakeData["product.category"] ?? ""));
   const memBlock = buildMemoryContextBlock(memCtx);
 
   const intakeJson = JSON.stringify(intakeData, null, 2);
+
+  const briefContext = strategicBrief
+    ? `
+## BRIEF ESTRATÉGICO GLOBAL (Strategic Core — siga rigorosamente)
+
+Objetivo da campanha: ${strategicBrief.campaignObjective}
+Posicionamento: ${strategicBrief.positioning}
+Proposta de valor: ${strategicBrief.valueProposition}
+Tom: ${strategicBrief.tone}
+Linguagem: ${strategicBrief.language}
+Big Domino: ${strategicBrief.bigDomino}
+Mecanismo único: ${strategicBrief.uniqueMechanism}
+Gatilho dominante: ${strategicBrief.dominantTrigger}
+Aquisição: ${strategicBrief.acquisitionStrategy}
+Retenção: ${strategicBrief.retentionStrategy}
+Urgência: ${strategicBrief.urgencyLevel}
+Canais: ${strategicBrief.channels.join(", ")}
+Funil: ${strategicBrief.funnelStage}
+Promessas PERMITIDAS: ${strategicBrief.permittedPromises.join("; ") || "ver diferenciais do produto"}
+Promessas PROIBIDAS: ${strategicBrief.prohibitedPromises.join("; ")}
+Limites éticos: ${strategicBrief.ethicalBoundaries.join("; ") || "nenhum listado"}
+Limites legais: ${strategicBrief.legalBoundaries.join("; ")}
+Critérios de sucesso: ${strategicBrief.successCriteria.join("; ")}
+Avisos do Core: ${strategicBrief.coreWarnings.join("; ") || "nenhum"}
+Requer revisão humana: ${strategicBrief.requiresHumanReview}
+
+A estratégia DEVE estar alinhada a este brief em todos os pontos. Não contradiga nenhuma diretriz acima.`
+    : "";
 
   const profileContext = profile
     ? `
@@ -297,6 +327,7 @@ Use este perfil como base para aprofundar a estratégia. Não repita as mesmas i
         content: `Produza a estratégia completa da campanha para este produto.
 
 **Track de receita:** ${track}
+${briefContext}
 ${profileContext}
 
 **Dados de Intake:**
