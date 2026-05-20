@@ -431,8 +431,10 @@ Retorne o JSON de avaliação.`,
         campaignId,
         consistencyScore: strategicBrief.consistencyScore,
         riskScore: strategicBrief.riskScore,
-        confidence: strategicBrief.operationalConfidence,
+        confidenceScore: strategicBrief.confidenceScore,
+        requiresHumanReview: strategicBrief.requiresHumanReview,
         warnings: strategicBrief.coreWarnings.length,
+        prohibitedPromises: strategicBrief.prohibitedPromises.length,
       }, "Strategic Core brief generated");
     } catch (err) {
       log.warn({ err, campaignId }, "Strategic Core briefing failed — continuing without brief");
