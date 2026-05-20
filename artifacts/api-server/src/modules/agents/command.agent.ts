@@ -9,6 +9,7 @@ import { runLaunchManagerAgent } from "./launch-manager.agent.js";
 import { runContinuousSalesManagerAgent } from "./continuous-sales-manager.agent.js";
 import { runPerpetualLaunchManagerAgent } from "./perpetual-launch-manager.agent.js";
 import { runFinancialProjectorAgent } from "./financial-projector.agent.js";
+import { runTrafficIntelligenceAgent, type TrafficIntelligenceOutput } from "./traffic-intelligence.agent.js";
 import {
   initializeCampaignMemory,
   getCampaignMemory,
@@ -34,6 +35,7 @@ export interface OrchestrationResult {
   offerAnalysis?: Record<string, unknown>;
   launchPlan?: Record<string, unknown>;
   financialProjection?: Record<string, unknown>;
+  trafficPlan?: Record<string, unknown>;
   checkpointsPending: string[];
   status: string;
 }
@@ -346,6 +348,7 @@ Retorne o JSON de avaliação.`,
   let offerAnalysis: Record<string, unknown> | undefined;
   let launchPlan: Record<string, unknown> | undefined;
   let financialProjection: Record<string, unknown> | undefined;
+  let trafficPlan: TrafficIntelligenceOutput | undefined;
 
   // ── 1. Profile Builder Agent (all campaign types — runs first) ─────────────
   // Builds deep product, avatar, segmentation and market intelligence.
@@ -638,6 +641,75 @@ Retorne o JSON de avaliação.`,
     }
   }
 
+  // ── 6. Traffic Intelligence Agent (only when hasTraffic) ──────────────────
+  // Plans paid traffic across Meta, TikTok, Google and YouTube.
+  // Conservative, technical, auditable — requires ad_set_approval checkpoint.
+  // NEVER publishes autonomously. Every budget change requires human sign-off.
+  if (hasTraffic && strategy) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_thinking",
+        agentType: "media_buyer",
+        message: "Traffic Intelligence Agent planejando campanhas pagas — pré-validação, estrutura, públicos, benchmarks...",
+        timestamp: new Date().toISOString(),
+      });
+
+      trafficPlan = await runTrafficIntelligenceAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy,
+        offerAnalysis,
+        financialProjection,
+        log,
+        memoryContext,
+      );
+      agentsRun.push("traffic_intelligence");
+      checkpointsPending.push("ad_set_approval");
+
+      // Merge traffic plan into targetingData
+      await db
+        .update(campaignsTable)
+        .set({
+          targetingData: {
+            trafficPlan: trafficPlan as any,
+          } as any,
+        })
+        .where(eq(campaignsTable.id, campaignId));
+
+      // Log to campaign memory
+      setImmediate(() => {
+        if (campaignMemory) {
+          addMemoryEntry(campaignId, "agent_output_summary",
+            `Tráfego: ${trafficPlan?.campaignStructure?.platforms?.map((p) => p.platform).join(", ") ?? ""} | Budget total: R$${trafficPlan?.campaignStructure?.totalBudgetBrl ?? 0} | Clearance: ${trafficPlan?.prePublishValidation?.overallClearance ?? ""}`,
+            "traffic_intelligence_agent",
+            {
+              platforms: trafficPlan?.campaignStructure?.platforms?.length,
+              overallClearance: trafficPlan?.prePublishValidation?.overallClearance,
+              readinessScore: trafficPlan?.campaignReadinessScore,
+            },
+            log,
+          ).catch(() => {});
+        }
+      });
+
+      log.info(
+        {
+          campaignId,
+          platforms: trafficPlan.campaignStructure?.platforms?.map((p) => p.platform),
+          overallClearance: trafficPlan.prePublishValidation.overallClearance,
+          blockers: trafficPlan.prePublishValidation.blockers.length,
+          campaignReadinessScore: trafficPlan.campaignReadinessScore,
+        },
+        "Traffic Intelligence Agent completed",
+      );
+    } catch (err) {
+      log.error({ err, campaignId }, "Traffic Intelligence Agent failed");
+      emitAgentError(campaignId, "traffic_intelligence", err);
+    }
+  }
+
   const finalStatus =
     checkpointsPending.length > 0 ? "awaiting_approval" : "generating";
 
@@ -672,6 +744,7 @@ Retorne o JSON de avaliação.`,
     offerAnalysis,
     launchPlan,
     financialProjection,
+    trafficPlan: trafficPlan as unknown as Record<string, unknown> | undefined,
     checkpointsPending,
     status: finalStatus,
   };
