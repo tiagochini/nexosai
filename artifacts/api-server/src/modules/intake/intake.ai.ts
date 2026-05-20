@@ -520,7 +520,13 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
     ...(Object.keys(extracted).length > 0 ? extracted : {}),
     [HIST_KEY]: updatedHistory,
   };
-  await saveIntakeData(campaignId, workspaceId, mergedData, log);
+  try {
+    await saveIntakeData(campaignId, workspaceId, mergedData, log);
+  } catch (saveErr) {
+    // Campaign may not be in 'intake' status (e.g. live, completed) — allow
+    // read-only AI conversation without persisting intake data.
+    log.warn({ saveErr }, "saveIntakeData skipped (campaign status prevents update)");
+  }
 
   // Re-check completeness with new data
   const newCompleteness = validateIntakeCompleteness(type, track, mergedData);
