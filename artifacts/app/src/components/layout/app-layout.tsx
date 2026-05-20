@@ -220,34 +220,34 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           </div>
           <div className="flex gap-1 border border-border/40 bg-muted/10 p-0.5">
             <button
-              onClick={() => setMode("guided")}
+              onClick={() => setMode("fundador")}
               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[11px] uppercase tracking-widest transition-all
-                ${mode === "guided"
+                ${mode === "fundador"
                   ? "bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Gauge className="h-2.5 w-2.5" />
-              {tr.mode.beginner}
+              Fundador
             </button>
             <button
-              onClick={() => setMode("expert")}
+              onClick={() => setMode("arquiteto")}
               className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 font-mono text-[11px] uppercase tracking-widest transition-all
-                ${mode === "expert"
-                  ? "bg-primary text-primary-foreground shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+                ${mode === "arquiteto"
+                  ? "bg-cyan-500/20 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.3)] border border-cyan-500/20"
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               <Zap className="h-2.5 w-2.5" />
-              {tr.mode.advanced}
+              Arquiteto
             </button>
           </div>
-          {mode === "guided" && (
+          {mode === "fundador" && (
             <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              {tr.mode.beginner_desc}
+              Visão e resultado · foco no lançamento
             </p>
           )}
-          {mode === "expert" && (
-            <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
-              {tr.mode.advanced_desc}
+          {mode === "arquiteto" && (
+            <p className="font-mono text-[11px] text-cyan-500/40 uppercase tracking-widest mt-1.5 px-1 leading-relaxed">
+              Profundidade total · agentes · traces · pesos
             </p>
           )}
         </div>

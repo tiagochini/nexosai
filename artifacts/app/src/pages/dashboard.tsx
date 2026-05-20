@@ -12,6 +12,7 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { useMode } from "@/lib/mode";
+import { IdentityMemoryCard } from "@/components/IdentityMemoryCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -444,7 +445,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [expandedKpi, setExpandedKpi] = useState<string | null>(null);
-  const { isExpert, isGuided } = useMode();
+  const { isArquiteto, isFundador, isExpert, isGuided } = useMode();
 
   // ── Data fetching ──
   const { data: campaignsData, isLoading: loadingCampaigns } = useListCampaigns({
@@ -782,6 +783,9 @@ export default function Dashboard() {
 
       {/* ── Execution Flowchart ── */}
       {campaigns.length > 0 && <ExecutionFlowchart campaigns={campaigns} />}
+
+      {/* ── Identity Memory — Modo Arquiteto only ── */}
+      {isArquiteto && <IdentityMemoryCard />}
 
       {/* ── Smart Next Action ── */}
       <div className={`border ${action.bg} p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 relative overflow-hidden group`}>

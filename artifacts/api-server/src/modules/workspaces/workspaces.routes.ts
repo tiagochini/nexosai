@@ -121,4 +121,18 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   res.status(201).json({ integration });
 });
 
+// GET /workspaces/me/identity — Longitudinal strategic profile
+router.get("/me/identity", async (req, res): Promise<void> => {
+  const { getIdentityProfile } = await import("../campaign-brain/identity-memory.service.js");
+  const profile = await getIdentityProfile(req.auth.workspaceId);
+  res.json({ profile });
+});
+
+// POST /workspaces/me/identity/refresh — Rebuild profile from campaign history
+router.post("/me/identity/refresh", async (req, res): Promise<void> => {
+  const { refreshIdentityProfile } = await import("../campaign-brain/identity-memory.service.js");
+  const profile = await refreshIdentityProfile(req.auth.workspaceId, req.log);
+  res.json({ profile });
+});
+
 export default router;

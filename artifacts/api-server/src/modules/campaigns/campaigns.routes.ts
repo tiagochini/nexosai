@@ -210,4 +210,20 @@ router.patch("/:id/status", async (req, res): Promise<void> => {
   }
 });
 
+// GET /campaigns/:id/decision-trace — Arquiteto mode explainability
+router.get("/:id/decision-trace", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  try {
+    const { getDecisionTrace } = await import("../campaign-brain/decision-trace.service.js");
+    const trace = await getDecisionTrace(id, req.auth.workspaceId);
+    res.json({ trace });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
 export default router;

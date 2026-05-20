@@ -38,6 +38,8 @@ import {
   type CatalogEntry, type Provider,
 } from "@/components/integration-connect-modal";
 import { CreativeIntentPanel } from "@/components/CreativeIntentPanel";
+import { DecisionTracePanel } from "@/components/DecisionTracePanel";
+import { useMode } from "@/lib/mode";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -1220,6 +1222,7 @@ export default function CampaignDetail() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas">("comando");
+  const { isArquiteto } = useMode();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
@@ -2283,6 +2286,11 @@ export default function CampaignDetail() {
           {/* ─ Creative Intent Panel — define visual direction before production ─ */}
           {campaign.status === "strategy_ready" && (
             <CreativeIntentPanel campaignId={campaignId} />
+          )}
+
+          {/* ─ Decision Trace Panel — Modo Arquiteto only ─ */}
+          {isArquiteto && campaign.status !== "draft" && (
+            <DecisionTracePanel campaignId={campaignId} />
           )}
 
           {/* ─ Strategy Approval Board — shown only when strategy is ready for approval ─ */}
