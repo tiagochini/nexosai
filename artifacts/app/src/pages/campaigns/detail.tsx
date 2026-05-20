@@ -37,6 +37,7 @@ import {
   ConnectModal, INTEGRATION_CATALOG,
   type CatalogEntry, type Provider,
 } from "@/components/integration-connect-modal";
+import { CreativeIntentPanel } from "@/components/CreativeIntentPanel";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -2277,6 +2278,11 @@ export default function CampaignDetail() {
           {/* ─ Strategy ready: cinematic reveal banner ─ */}
           {campaign.status === "strategy_ready" && (
             <StrategyReadyBanner onReview={() => setActiveTab("estrategia")} />
+          )}
+
+          {/* ─ Creative Intent Panel — define visual direction before production ─ */}
+          {campaign.status === "strategy_ready" && (
+            <CreativeIntentPanel campaignId={campaignId} />
           )}
 
           {/* ─ Strategy Approval Board — shown only when strategy is ready for approval ─ */}

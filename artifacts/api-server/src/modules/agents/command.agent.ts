@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
 import { buildCampaignBrain, getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
+import { getCreativeIntent, getApprovedDirectionContext } from "../creative-intent/creative-intent.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
@@ -541,6 +542,21 @@ Retorne o JSON de avaliação.`,
       // all downstream agents see consciousness stage, launch logic, warnings, etc.
       const refreshedMemory = await getCampaignMemory(campaignId);
       if (refreshedMemory) memoryContext = assembleCampaignContext(refreshedMemory);
+
+      // Inject approved Creative Direction into memoryContext (if user approved one)
+      // This transparently propagates the approved direction to ALL downstream agents.
+      try {
+        const creativeIntent = await getCreativeIntent(campaignId, workspaceId);
+        const directionCtx = getApprovedDirectionContext(creativeIntent);
+        if (directionCtx && memoryContext) {
+          memoryContext = memoryContext + "\n\n" + directionCtx;
+          log.info({ campaignId }, "Approved creative direction injected into agent context");
+        } else if (directionCtx) {
+          memoryContext = directionCtx;
+        }
+      } catch {
+        // Creative intent is optional — never block execution if not found
+      }
 
       log.info({
         campaignId,

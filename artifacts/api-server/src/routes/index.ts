@@ -40,6 +40,7 @@ import productCheckoutRouter from "../modules/product-checkout/product-checkout.
 import metaDeletionRouter from "../modules/meta/meta-deletion.routes.js";
 import academyRouter from "../modules/academy/academy.routes.js";
 import videoEditorRouter from "../modules/video-editor/video-editor.routes.js";
+import creativeIntentRouter from "../modules/creative-intent/creative-intent.routes.js";
 
 const router: IRouter = Router();
 
@@ -80,6 +81,7 @@ router.use("/events", serverEventsRouter);
 router.use("/integrations/oauth", oauthRouter);
 router.use("/social-moderation", socialModerationRouter);
 router.use("/campaigns", creativesRouter);
+router.use("/campaigns", creativeIntentRouter);
 router.use("/products", productCheckoutRouter);
 router.use("/academy", academyRouter);
 router.use("/video-editor", videoEditorRouter);
