@@ -11,10 +11,13 @@ import { runPerpetualLaunchManagerAgent } from "./perpetual-launch-manager.agent
 import { runFinancialProjectorAgent } from "./financial-projector.agent.js";
 import {
   initializeCampaignMemory,
+  getCampaignMemory,
   addMemoryEntry,
   assembleCampaignContext,
+  setDoctrine,
   type CampaignMemory,
 } from "./campaign-memory.service.js";
+import { runStrategicDoctrineEngine, type DoctrineOutput } from "./strategic-doctrine.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { validateIntakeCompleteness, type CampaignType, type CampaignTrack } from "../intake/intake.service.js";
@@ -339,6 +342,7 @@ Retorne o JSON de avaliação.`,
   let strategicBrief: StrategicBrief | undefined;
   let campaignMemory: CampaignMemory | undefined;
   let memoryContext: string | undefined;
+  let doctrine: DoctrineOutput | undefined;
   let offerAnalysis: Record<string, unknown> | undefined;
   let launchPlan: Record<string, unknown> | undefined;
   let financialProjection: Record<string, unknown> | undefined;
@@ -463,6 +467,53 @@ Retorne o JSON de avaliação.`,
       }
     } catch (err) {
       log.warn({ err, campaignId }, "Strategic Core briefing failed — continuing without brief");
+    }
+  }
+
+  // ── 2c. Strategic Doctrine Engine (after memory init — enriches context for all agents) ──
+  // Diagnoses consciousness stage, market sophistication, lead temperature.
+  // Produces Campaign Doctrine, Launch Logic, Emotional Sequence, Strategic Warnings.
+  // Doctrine is stored in memory and injected into every downstream agent.
+  if (strategy && strategicBrief && campaignMemory) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_thinking",
+        agentType: "strategy",
+        message: "Strategic Doctrine Engine aplicando frameworks de Walker, Hormozi, Schwartz e Cialdini...",
+        timestamp: new Date().toISOString(),
+      });
+      doctrine = await runStrategicDoctrineEngine(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy as any,
+        strategicBrief,
+        log,
+        profile,
+        memoryContext,
+      );
+      agentsRun.push("strategic_doctrine");
+      // Persist doctrine into memory — downstream agents get it via memoryContext
+      await setDoctrine(campaignId, doctrine, log);
+      // Rebuild memoryContext with the enriched doctrine block so
+      // all downstream agents see consciousness stage, launch logic, warnings, etc.
+      const refreshedMemory = await getCampaignMemory(campaignId);
+      if (refreshedMemory) memoryContext = assembleCampaignContext(refreshedMemory);
+
+      log.info({
+        campaignId,
+        consciousnessStage: doctrine.audienceConsciousnessStage,
+        marketSophistication: doctrine.marketSophistication,
+        leadTemperature: doctrine.leadTemperature,
+        urgencyLevel: doctrine.urgencyLevel,
+        launchLogicCount: doctrine.launchLogic.length,
+        emotionalPhases: doctrine.emotionalSequence.length,
+        warnings: doctrine.strategicWarnings.length,
+        confidenceScore: doctrine.confidenceScore,
+      }, "Strategic Doctrine Engine completed");
+    } catch (docErr) {
+      log.warn({ docErr, campaignId }, "Strategic Doctrine Engine failed — agents proceed without doctrine");
     }
   }
 

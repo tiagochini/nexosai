@@ -21,6 +21,13 @@
 import { eq } from "drizzle-orm";
 import { db, campaignsTable } from "@workspace/db";
 import type { StrategicBrief } from "./strategic-core.agent.js";
+import type {
+  DoctrineOutput,
+  ConsciousnessStage,
+  MarketSophistication,
+  LeadTemperature,
+  UrgencyLevel,
+} from "./strategic-doctrine.agent.js";
 import type { Logger } from "pino";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -104,6 +111,23 @@ export interface CampaignMemory {
   campaignLearnings: MemoryEntry[];
   historicalMetrics: MemoryEntry[];
   agentOutputSummaries: MemoryEntry[];
+  // ── Strategic Doctrine (populated by Doctrine Engine, step 2c) ────────────
+  doctrine?: {
+    consciousnessStage: ConsciousnessStage;
+    marketSophistication: MarketSophistication;
+    leadTemperature: LeadTemperature;
+    bigDomino: string;
+    uniqueMechanism: string;
+    campaignDoctrine: string;
+    launchLogic: string[];
+    emotionalPhaseCount: number;
+    urgencyLevel: UrgencyLevel;
+    strategicWarnings: string[];
+    adaptationNotes: string[];
+    anticipationDays: number;
+    primaryFramework: string;
+    confidenceScore: number;
+  };
   // ── Meta ───────────────────────────────────────────────────────────────────
   operationStatus: string;
   confidenceScore: number;   // 0–1: how reliable is this memory
@@ -340,6 +364,46 @@ export async function patchCampaignMemory(
 }
 
 /**
+ * Store Strategic Doctrine Engine output into campaign memory.
+ * Called once after step 2c completes. The doctrine becomes part of the
+ * context injected into all downstream agents via assembleCampaignContext().
+ */
+export async function setDoctrine(
+  campaignId: string,
+  doctrine: DoctrineOutput,
+  log?: Logger,
+): Promise<void> {
+  const memory = await getCampaignMemory(campaignId);
+  if (!memory) return;
+
+  memory.doctrine = {
+    consciousnessStage: doctrine.audienceConsciousnessStage,
+    marketSophistication: doctrine.marketSophistication,
+    leadTemperature: doctrine.leadTemperature,
+    bigDomino: doctrine.bigDomino,
+    uniqueMechanism: doctrine.uniqueMechanism,
+    campaignDoctrine: doctrine.campaignDoctrine,
+    launchLogic: doctrine.launchLogic,
+    emotionalPhaseCount: doctrine.emotionalSequence.length,
+    urgencyLevel: doctrine.urgencyLevel,
+    strategicWarnings: doctrine.strategicWarnings,
+    adaptationNotes: doctrine.adaptationNotes,
+    anticipationDays: doctrine.anticipationStrategy.durationDays,
+    primaryFramework: doctrine.primaryFrameworkApplied,
+    confidenceScore: doctrine.confidenceScore,
+  };
+
+  // Also strengthen the core narrative fields from doctrine if missing
+  if (!memory.bigDomino && doctrine.bigDomino) memory.bigDomino = doctrine.bigDomino;
+  if (!memory.uniqueMechanism && doctrine.uniqueMechanism) memory.uniqueMechanism = doctrine.uniqueMechanism;
+
+  memory.lastUpdated = new Date().toISOString();
+  memory.version += 1;
+  await persistMemory(campaignId, memory);
+  log?.info({ campaignId, hasDoc: true }, "Doctrine stored in campaign memory");
+}
+
+/**
  * Persist memory to DB.
  */
 async function persistMemory(campaignId: string, memory: CampaignMemory): Promise<void> {
@@ -466,6 +530,38 @@ export function assembleCampaignContext(memory: CampaignMemory): string {
   if (memory.requiresHumanReview) {
     lines.push("⛔ **ATENÇÃO: Esta campanha requer revisão humana antes de avançar.**");
     lines.push("");
+  }
+
+  // Strategic Doctrine block — injected when Doctrine Engine has run
+  if (memory.doctrine) {
+    const d = memory.doctrine;
+    lines.push("### DOUTRINA ESTRATÉGICA (Strategic Doctrine Engine)");
+    lines.push(`- Estágio de consciência: **${d.consciousnessStage}**`);
+    lines.push(`- Sofisticação do mercado: **${d.marketSophistication}**`);
+    lines.push(`- Temperatura dos leads: **${d.leadTemperature}**`);
+    lines.push(`- Urgência aprovada: **${d.urgencyLevel}**`);
+    lines.push(`- Antecipação: ${d.anticipationDays} dias`);
+    lines.push(`- Framework primário: ${d.primaryFramework}`);
+    lines.push("");
+    if (d.campaignDoctrine) {
+      lines.push(`**Doutrina:** ${d.campaignDoctrine}`);
+      lines.push("");
+    }
+    if (d.launchLogic.length > 0) {
+      lines.push("**Lógica de Lançamento (princípios desta campanha):**");
+      d.launchLogic.slice(0, 6).forEach(l => lines.push(`→ ${l}`));
+      lines.push("");
+    }
+    if (d.strategicWarnings.length > 0) {
+      lines.push("**Avisos Estratégicos do Doctrine Engine:**");
+      d.strategicWarnings.slice(0, 4).forEach(w => lines.push(`🚫 ${w}`));
+      lines.push("");
+    }
+    if (d.adaptationNotes.length > 0) {
+      lines.push("**Notas de Adaptação de Frameworks:**");
+      d.adaptationNotes.slice(0, 3).forEach(n => lines.push(`📌 ${n}`));
+      lines.push("");
+    }
   }
 
   lines.push("---");
