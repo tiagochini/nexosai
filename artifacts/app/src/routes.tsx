@@ -23,6 +23,7 @@ import SocialModerationPage from "@/pages/social/moderation";
 import AgencyClientsPage from "@/pages/agency/clients";
 import AgencyProfilesPage from "@/pages/agency/profiles";
 import AdminPage from "@/pages/admin/index";
+import AuditLogsPage from "@/pages/admin/audit-logs";
 import VslsPage from "@/pages/vsls/index";
 import RevenuePage from "@/pages/revenue/index";
 import ContentApproval from "@/pages/campaigns/content";
@@ -183,6 +184,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/agency/profiles">
         {() => <ProtectedRoute><AgencyProfilesPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/admin/audit-logs">
+        {() => <ProtectedRoute><AuditLogsPage /></ProtectedRoute>}
       </Route>
       <Route path="/admin">
         {() => <ProtectedRoute><AdminPage /></ProtectedRoute>}

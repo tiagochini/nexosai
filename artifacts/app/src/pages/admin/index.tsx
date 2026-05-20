@@ -12,7 +12,7 @@ import {
   Activity, TrendingUp, CreditCard, AlertTriangle, ArrowLeft,
   DollarSign, BarChart3, Bot, Target, TrendingDown, Clock,
   RefreshCw, CheckCircle2, ArrowUpRight, Percent,
-  QrCode, FileText, CheckCheck, Filter, Wallet,
+  QrCode, FileText, CheckCheck, Filter, Wallet, Shield,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -263,14 +263,25 @@ export default function AdminPage() {
             {ov?.total ?? 0} usuários registrados · {ov?.byStatus?.["ativo_lancando"] ?? 0} lançando agora
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 shrink-0"
-          onClick={() => window.location.reload()}
-        >
-          <RefreshCw className="h-3 w-3" />Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/audit-logs">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 shrink-0"
+            >
+              <Shield className="h-3 w-3" />Audit Logs
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 shrink-0"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw className="h-3 w-3" />Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}

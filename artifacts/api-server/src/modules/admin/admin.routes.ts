@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { getAdminOverview, getAdminFinancials, getAdminPayments } from "./admin.service.js";
+import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
 import { UnauthorizedError } from "../../lib/errors.js";
 import { db, inviteCodesTable } from "@workspace/db";
@@ -110,6 +111,42 @@ router.delete("/invite-codes/:id", requireAuth, async (req, res): Promise<void> 
   if (code.used) { res.status(409).json({ error: "Código já utilizado — não pode ser deletado" }); return; }
   await db.delete(inviteCodesTable).where(eq(inviteCodesTable.id, id));
   res.json({ ok: true });
+});
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+// GET /api/admin/audit-logs/summary — aggregate stats
+router.get("/audit-logs/summary", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const summary = await getAgentExecutionLogsSummary();
+  res.json(summary);
+});
+
+// GET /api/admin/audit-logs — list with filters
+router.get("/audit-logs", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const q = req.query as Record<string, string>;
+  const logs = await queryAgentExecutionLogs({
+    campaignId:       q["campaignId"],
+    agentName:        q["agentName"],
+    executionStatus:  q["executionStatus"],
+    minRiskScore:     q["minRiskScore"] !== undefined ? parseFloat(q["minRiskScore"]) : undefined,
+    approvalRequired: q["approvalRequired"] !== undefined ? q["approvalRequired"] === "true" : undefined,
+    isDryRun:         q["isDryRun"] !== undefined ? q["isDryRun"] === "true" : undefined,
+    dateFrom:         q["dateFrom"],
+    dateTo:           q["dateTo"],
+    limit:            q["limit"] !== undefined ? parseInt(q["limit"], 10) : 50,
+    offset:           q["offset"] !== undefined ? parseInt(q["offset"], 10) : 0,
+  });
+  res.json({ logs });
+});
+
+// GET /api/admin/audit-logs/:id — single log detail
+router.get("/audit-logs/:id", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const log = await getAgentExecutionLogById(req.params["id"] as string);
+  if (!log) { res.status(404).json({ error: "Log não encontrado" }); return; }
+  res.json({ log });
 });
 
 export default router;

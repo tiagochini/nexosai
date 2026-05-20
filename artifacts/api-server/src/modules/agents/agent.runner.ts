@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, and, gte, lte, ilike, sql, type SQL } from "drizzle-orm";
 import {
   db,
   campaignAgentsTable,
@@ -7,6 +7,7 @@ import {
   workspacesTable,
   usersTable,
   auditLogsTable,
+  agentExecutionLogsTable,
   type CampaignAgent,
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole, type AIMessage } from "../ai-gateway/ai-gateway.service.js";
@@ -18,6 +19,7 @@ import {
   emitCampaignEvent,
 } from "../realtime/realtime.service.js";
 import { InsufficientCreditsError } from "../../lib/errors.js";
+import { env } from "../../lib/env.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -74,6 +76,27 @@ function buildTemporalContextBlock(): string {
 ---
 
 `;
+}
+
+/** Extract confidence/risk scores from parsed agent JSON output (best-effort). */
+function extractScores(content: string): { confidenceScore?: number; riskScore?: number } {
+  try {
+    const raw = content.match(/\{[\s\S]*\}/)?.[0] ?? "";
+    const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    const conf = typeof parsed["confidenceScore"] === "number" ? parsed["confidenceScore"] : undefined;
+    const risk = typeof parsed["riskScore"] === "number" ? parsed["riskScore"] : undefined;
+    return { confidenceScore: conf, riskScore: risk };
+  } catch {
+    return {};
+  }
+}
+
+/** Build a short plain-text summary of a messages array (≤300 chars). */
+function buildInputSummary(messages: AIMessage[]): string {
+  const last = messages[messages.length - 1];
+  if (!last) return "";
+  const text = typeof last.content === "string" ? last.content : JSON.stringify(last.content);
+  return text.slice(0, 300).replace(/\s+/g, " ").trim();
 }
 
 export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
@@ -139,6 +162,33 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     agentRecord = inserted;
   }
 
+  // ── Audit Log: insert "started" row ──────────────────────────────────────────
+  const execLogStartedAt = new Date();
+  let execLogId: string | undefined;
+  try {
+    const [execLog] = await db
+      .insert(agentExecutionLogsTable)
+      .values({
+        campaignId: isValidCampaignId ? (campaignId as string) : undefined,
+        workspaceId,
+        userId: ws.ownerId ?? undefined,
+        agentName: agentRole,
+        actionType: `agent.${agentRole}.run`,
+        inputSummary: buildInputSummary(messages),
+        approvalRequired: requiresApproval,
+        approvalStatus: "not_required",
+        executionStatus: "started",
+        isDryRun: env.DRY_RUN_MODE,
+        startedAt: execLogStartedAt,
+      })
+      .returning({ id: agentExecutionLogsTable.id });
+    execLogId = execLog?.id;
+  } catch (logErr) {
+    log.warn({ logErr, agentRole }, "Failed to insert agent execution log start row");
+  }
+
+  log.info({ campaignId, workspaceId, agentRole, isDryRun: env.DRY_RUN_MODE }, `Agent ${agentRole} started`);
+
   emitAgentStarted(campaignId ?? "system", agentRole);
 
   for (const thought of thinkingMessages) {
@@ -160,6 +210,63 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       msg.includes("ANTHROPIC_API_KEY") ||
       msg.includes("GEMINI_API_KEY")
     );
+  }
+
+  // ── DRY_RUN_MODE: skip real AI call ──────────────────────────────────────────
+  if (env.DRY_RUN_MODE) {
+    content = JSON.stringify({
+      _dryRun: true,
+      agentRole,
+      message: `[DRY_RUN] Agente ${agentRole} simulado — nenhuma chamada real foi feita`,
+      confidenceScore: 0.85,
+      riskScore: 15,
+      timestamp: new Date().toISOString(),
+    });
+
+    log.info({ agentRole, campaignId }, `[DRY_RUN] Agent ${agentRole} simulated`);
+
+    if (agentRecord) {
+      await db
+        .update(campaignAgentsTable)
+        .set({
+          status: "completed",
+          output: { content, metadata: { dryRun: true } },
+          completedAt: new Date(),
+          creditsUsed: 0,
+        })
+        .where(eq(campaignAgentsTable.id, agentRecord.id));
+    }
+
+    // Persist dry-run execution log
+    if (execLogId) {
+      await db
+        .update(agentExecutionLogsTable)
+        .set({
+          executionStatus: "dry_run",
+          outputSummary: `[DRY_RUN] Simulado com sucesso — sem chamada real`,
+          confidenceScore: 0.85,
+          riskScore: 15,
+          approvalStatus: requiresApproval ? "pending" : "not_required",
+          completedAt: new Date(),
+        })
+        .where(eq(agentExecutionLogsTable.id, execLogId));
+    }
+
+    emitAgentCompleted(campaignId ?? "system", agentRole, `${agentRole} simulado (DRY_RUN)`);
+
+    if (agentRecord) {
+      const [updated] = await db
+        .select()
+        .from(campaignAgentsTable)
+        .where(eq(campaignAgentsTable.id, agentRecord.id))
+        .limit(1);
+      return { agentRecord: updated!, content, creditsCharged: 0 };
+    }
+    return {
+      agentRecord: { id: "none", campaignId: null, agentType: agentRole, status: "completed" } as unknown as CampaignAgent,
+      content,
+      creditsCharged: 0,
+    };
   }
 
   try {
@@ -231,6 +338,42 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         data: { creditsCharged, provider: result.provider },
       });
     }
+
+    // ── Audit Log: update execution log with results ──────────────────────────
+    const scores = extractScores(content);
+    if (execLogId) {
+      await db
+        .update(agentExecutionLogsTable)
+        .set({
+          executionStatus: "completed",
+          outputSummary: content.slice(0, 500).replace(/\s+/g, " ").trim(),
+          confidenceScore: scores.confidenceScore,
+          riskScore: scores.riskScore,
+          approvalRequired: requiresApproval,
+          approvalStatus: requiresApproval ? "pending" : "not_required",
+          providerUsed: result.provider,
+          modelUsed: result.model,
+          tokensUsed: result.inputTokens + result.outputTokens,
+          estimatedCostUsd: result.costUsd,
+          completedAt: new Date(),
+        })
+        .where(eq(agentExecutionLogsTable.id, execLogId));
+    }
+
+    log.info(
+      {
+        campaignId,
+        agentRole,
+        creditsCharged,
+        provider: result.provider,
+        model: result.model,
+        tokens: result.inputTokens + result.outputTokens,
+        costUsd: result.costUsd,
+        requiresApproval,
+        durationMs: Date.now() - execLogStartedAt.getTime(),
+      },
+      `Agent ${agentRole} completed`,
+    );
 
     let checkpointId: string | undefined;
 
@@ -308,6 +451,18 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
           .where(eq(campaignAgentsTable.id, agentRecord.id));
       }
 
+      if (execLogId) {
+        await db
+          .update(agentExecutionLogsTable)
+          .set({
+            executionStatus: "completed",
+            outputSummary: "[DEV MODE] Resposta simulada — sem API key",
+            providerUsed: "mock",
+            completedAt: new Date(),
+          })
+          .where(eq(agentExecutionLogsTable.id, execLogId));
+      }
+
       emitAgentCompleted(campaignId ?? "system", agentRole, `${agentRole} simulado (dev mode — sem API key)`);
 
       if (agentRecord) {
@@ -326,12 +481,27 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       };
     }
 
+    // Real error — update execution log and campaign agent
+    const errMsg = err instanceof Error ? err.message : String(err);
+    log.error({ err, campaignId, agentRole }, `Agent ${agentRole} failed`);
+
+    if (execLogId) {
+      await db
+        .update(agentExecutionLogsTable)
+        .set({
+          executionStatus: "failed",
+          errorMessage: errMsg.slice(0, 1000),
+          completedAt: new Date(),
+        })
+        .where(eq(agentExecutionLogsTable.id, execLogId));
+    }
+
     if (agentRecord) {
       await db
         .update(campaignAgentsTable)
         .set({
           status: "failed",
-          errorMessage: err instanceof Error ? err.message : String(err),
+          errorMessage: errMsg,
           completedAt: new Date(),
         })
         .where(eq(campaignAgentsTable.id, agentRecord.id));
@@ -341,12 +511,107 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       campaignId: campaignId ?? "system",
       type: "agent_failed",
       agentType: agentRole,
-      message: `${agentRole} falhou: ${err instanceof Error ? err.message : String(err)}`,
+      message: `${agentRole} falhou: ${errMsg}`,
       timestamp: new Date().toISOString(),
     });
 
     throw err;
   }
+}
+
+// ─── Query helpers (used by admin audit routes) ───────────────────────────────
+
+export interface AuditLogFilter {
+  campaignId?: string;
+  agentName?: string;
+  executionStatus?: string;
+  minRiskScore?: number;
+  approvalRequired?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
+  isDryRun?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export async function queryAgentExecutionLogs(filter: AuditLogFilter) {
+  const conditions: SQL[] = [];
+
+  if (filter.campaignId) {
+    conditions.push(eq(agentExecutionLogsTable.campaignId, filter.campaignId));
+  }
+  if (filter.agentName) {
+    conditions.push(ilike(agentExecutionLogsTable.agentName, `%${filter.agentName}%`));
+  }
+  if (filter.executionStatus) {
+    conditions.push(eq(agentExecutionLogsTable.executionStatus, filter.executionStatus as any));
+  }
+  if (filter.minRiskScore !== undefined) {
+    conditions.push(gte(agentExecutionLogsTable.riskScore, filter.minRiskScore));
+  }
+  if (filter.approvalRequired !== undefined) {
+    conditions.push(eq(agentExecutionLogsTable.approvalRequired, filter.approvalRequired));
+  }
+  if (filter.isDryRun !== undefined) {
+    conditions.push(eq(agentExecutionLogsTable.isDryRun, filter.isDryRun));
+  }
+  if (filter.dateFrom) {
+    conditions.push(gte(agentExecutionLogsTable.startedAt, new Date(filter.dateFrom)));
+  }
+  if (filter.dateTo) {
+    conditions.push(lte(agentExecutionLogsTable.startedAt, new Date(filter.dateTo)));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const rows = await db
+    .select()
+    .from(agentExecutionLogsTable)
+    .where(where)
+    .orderBy(desc(agentExecutionLogsTable.startedAt))
+    .limit(filter.limit ?? 50)
+    .offset(filter.offset ?? 0);
+
+  return rows;
+}
+
+export async function getAgentExecutionLogById(id: string) {
+  const [row] = await db
+    .select()
+    .from(agentExecutionLogsTable)
+    .where(eq(agentExecutionLogsTable.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getAgentExecutionLogsSummary() {
+  const [totals] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      completed: sql<number>`count(*) filter (where execution_status = 'completed')::int`,
+      failed: sql<number>`count(*) filter (where execution_status = 'failed')::int`,
+      dryRun: sql<number>`count(*) filter (where is_dry_run = true)::int`,
+      pendingApproval: sql<number>`count(*) filter (where approval_status = 'pending')::int`,
+      totalTokens: sql<number>`coalesce(sum(tokens_used), 0)::int`,
+      totalCostUsd: sql<number>`coalesce(sum(estimated_cost_usd), 0)`,
+      avgRiskScore: sql<number>`coalesce(avg(risk_score), 0)`,
+      avgConfidence: sql<number>`coalesce(avg(confidence_score), 0)`,
+    })
+    .from(agentExecutionLogsTable);
+
+  const byAgent = await db
+    .select({
+      agentName: agentExecutionLogsTable.agentName,
+      runs: sql<number>`count(*)::int`,
+      failures: sql<number>`count(*) filter (where execution_status = 'failed')::int`,
+      avgCostUsd: sql<number>`coalesce(avg(estimated_cost_usd), 0)`,
+    })
+    .from(agentExecutionLogsTable)
+    .groupBy(agentExecutionLogsTable.agentName)
+    .orderBy(desc(sql`count(*)`))
+    .limit(20);
+
+  return { totals: totals ?? {}, byAgent };
 }
 
 export function sleep(ms: number): Promise<void> {

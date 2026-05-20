@@ -35,3 +35,4 @@ export * from "./products";
 export * from "./product-sales";
 export * from "./academy-purchases";
 export * from "./invite-codes";
+export * from "./agent-execution-logs";

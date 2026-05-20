@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-plans": "tsx ./src/seed-plans.ts",
+    "nexos-audit-test": "tsx ./src/nexos-audit-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

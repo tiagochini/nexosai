@@ -47,6 +47,9 @@ export const env = {
   SIMULATOR_CHECKOUT_URL: process.env["SIMULATOR_CHECKOUT_URL"] ?? "",
   SIMULATOR_WHATSAPP_URL: process.env["SIMULATOR_WHATSAPP_URL"] ?? "",
   SIMULATOR_TELEGRAM_URL: process.env["SIMULATOR_TELEGRAM_URL"] ?? "",
+  // DRY_RUN_MODE: skips real AI calls, real payments, real ad publishing.
+  // All agent executions are simulated and logged with is_dry_run=true.
+  DRY_RUN_MODE: process.env["DRY_RUN_MODE"] === "true",
 } as const;
 
 // ─── Production guard ──────────────────────────────────────────────────────────
