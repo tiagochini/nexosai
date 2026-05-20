@@ -43,9 +43,9 @@ export function AnalyzingDisplay() {
 
   const PHASE_LABELS = [
     "Conectando ao NEXOS AI CORE...",
-    "Lendo briefing da campanha...",
-    "Ativando agentes especializados...",
-    "Análise em progresso...",
+    "Lendo seu briefing e contexto de mercado...",
+    "Preparando diagnóstico estratégico para revisão...",
+    "Construindo plano de ação — pronto em breve para sua avaliação...",
   ];
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export function AnalyzingDisplay() {
           </div>
           <div>
             <div className="font-mono text-sm font-bold text-primary uppercase tracking-widest">
-              NEXOS AI CORE — INICIALIZANDO
+              Agentes Trabalhando para Você
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5 transition-all duration-500">
               {PHASE_LABELS[phase]}
@@ -101,7 +101,7 @@ export function AnalyzingDisplay() {
         </div>
         <div className="flex items-center gap-2 font-mono text-[11px] text-primary/70 border border-primary/30 bg-primary/5 px-3 py-1.5 shrink-0">
           <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-          PROCESSANDO
+          EM ANÁLISE
         </div>
       </div>
 
@@ -150,7 +150,7 @@ export function AnalyzingDisplay() {
       {/* Progress bar */}
       <div className="px-4 pb-5 space-y-2">
         <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest text-muted-foreground/45">
-          <span>Análise em progresso</span>
+          <span>Diagnóstico em construção</span>
           <span>{activeCount}/{AGENTS.length} agentes · {Math.round(Math.max(progress, (activeCount / AGENTS.length) * 100))}%</span>
         </div>
         <div className="h-1 bg-muted/20 overflow-hidden">
@@ -160,7 +160,7 @@ export function AnalyzingDisplay() {
           />
         </div>
         <p className="font-mono text-[10px] text-muted-foreground/35 text-center pt-0.5">
-          Tempo estimado: 1–3 minutos · Página atualiza automaticamente quando concluído
+          O plano estratégico será apresentado para sua revisão e aprovação · Tempo estimado: 1–3 minutos
         </p>
       </div>
     </div>
@@ -494,10 +494,10 @@ export function ExecutingLiveDisplay({
           </div>
           <div>
             <div className="font-mono text-sm font-bold text-success uppercase tracking-widest">
-              MISSÃO EM ANDAMENTO
+              CAMPANHA EM EXECUÇÃO
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
-              NEXOS AI operando todos os canais automaticamente
+              Operando nos canais aprovados · Sob sua supervisão estratégica
             </div>
           </div>
         </div>
@@ -579,7 +579,7 @@ export function LiveMissionControl({ campaignId }: { campaignId: string }) {
               <span className="font-mono text-base font-bold text-success uppercase tracking-widest">CAMPANHA AO VIVO</span>
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/60">
-              Todos os canais operacionais · NexOS AI monitorando e otimizando em tempo real
+              Todos os canais operacionais · Acompanhe resultados em tempo real pelo painel
             </div>
           </div>
         </div>
