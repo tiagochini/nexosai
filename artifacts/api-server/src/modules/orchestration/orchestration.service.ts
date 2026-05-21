@@ -170,13 +170,18 @@ async function enqueueOrExecute(
     // prevents double-click race conditions where two requests arrive before the
     // "running agents" guard can detect the first execution has started.
     // jobId format: campaignId-action ensures one pending job per campaign per phase.
+    // RC-008 FIX: attempts reduced from 3 → 1. Campaign orchestration jobs charge
+    // real AI credits on every execution. Automatic retries would silently
+    // double/triple-charge credits without user consent after a transient failure.
+    // If a job fails, the campaign is reset to a recoverable status (strategy_ready
+    // or intake) by boot cleanup, and the user can manually re-trigger via the UI.
+    // This also partially mitigates RC-010 (stale job race with boot cleanup).
     const bullJob = await queue.add(
       `campaign-${job.campaignId}-${job.action}`,
       job,
       {
         jobId: `${job.campaignId}-${job.action}`,
-        attempts: 3,
-        backoff: { type: "exponential", delay: 2000 },
+        attempts: 1,
         removeOnComplete: { age: 3600 },
         removeOnFail: { age: 86400 },
       },

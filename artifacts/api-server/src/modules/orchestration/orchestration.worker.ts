@@ -26,6 +26,31 @@ async function processRunStrategy(job: Job<CampaignOrchestrationJob>): Promise<v
   const { campaignId, workspaceId } = job.data;
   const log = logger.child({ jobId: job.id, campaignId, action: "run_strategy" });
 
+  // RC-010 FIX: Pre-check campaign status before executing.
+  // A stale BullMQ job (queued before a server crash/restart) may arrive AFTER
+  // boot cleanup has already reset the campaign to a different status. If the
+  // campaign is in a late-pipeline status (live, completed, cancelled, approved,
+  // executing, awaiting_approval) it was already processed — skip gracefully.
+  const [pre] = await db
+    .select({ status: campaignsTable.status })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!pre) {
+    log.warn({ campaignId }, "RC-010: Campaign not found — skipping stale strategy job");
+    return;
+  }
+
+  const strategyEligible = ["intake", "analyzing", "strategy_ready"];
+  if (!strategyEligible.includes(pre.status)) {
+    log.warn(
+      { campaignId, status: pre.status },
+      "RC-010: Campaign not in strategy-eligible state — skipping stale retry job (prevents double credit charge)",
+    );
+    return;
+  }
+
   emitCampaignEvent({
     campaignId,
     type: "execution_update",
@@ -61,6 +86,33 @@ async function processRunStrategy(job: Job<CampaignOrchestrationJob>): Promise<v
 async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promise<void> {
   const { campaignId, workspaceId } = job.data;
   const log = logger.child({ jobId: job.id, campaignId, action: "generate_content" });
+
+  // RC-010 FIX: Same pre-check as processRunStrategy. After boot cleanup resets
+  // "generating" → "strategy_ready", a stale BullMQ content job could arrive and
+  // re-generate content + re-charge credits. Skip if campaign is no longer in a
+  // content-eligible state.
+  const [pre] = await db
+    .select({ status: campaignsTable.status })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!pre) {
+    log.warn({ campaignId }, "RC-010: Campaign not found — skipping stale content job");
+    return;
+  }
+
+  // "generating" is intentionally excluded: if campaign was reset from "generating"
+  // to "strategy_ready" by boot cleanup, we do NOT want to re-run content automatically.
+  // User must explicitly trigger again via UI (manual consent = no surprise credit charge).
+  const contentEligible = ["strategy_ready", "awaiting_approval", "approved"];
+  if (!contentEligible.includes(pre.status)) {
+    log.warn(
+      { campaignId, status: pre.status },
+      "RC-010: Campaign not in content-eligible state — skipping stale retry job (prevents double credit charge)",
+    );
+    return;
+  }
 
   emitCampaignEvent({
     campaignId,
@@ -255,6 +307,12 @@ export function initOrchestrationWorker(): Worker | null {
         connection: redisConnection,
         concurrency: 3,
         limiter: { max: 10, duration: 60_000 },
+        // RC-008/010 FIX: maxStalledCount: 0 prevents BullMQ from automatically
+        // re-queuing stalled jobs (process crashed mid-execution) back into the
+        // active queue for another worker attempt. Campaign jobs are not safe to
+        // re-run automatically because they charge AI credits on every agent call.
+        // Boot cleanup + manual UI retry is the correct recovery path.
+        maxStalledCount: 0,
       },
     );
 
