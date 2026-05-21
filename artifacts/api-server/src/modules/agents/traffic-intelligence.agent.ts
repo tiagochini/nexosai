@@ -313,17 +313,32 @@ Documente explicitamente o que é proibido usar como segmentação.
 
 ---
 
-## ETAPA 4 — PLANO DE BUDGET
+## ETAPA 4 — RECOMENDAÇÃO DE INVESTIMENTO (engenharia reversa)
+
+Você CALCULA o budget necessário a partir da meta de resultado, não distribui um budget pré-definido.
+
+Se "trafficBudgetBrl" for 0 ou ausente nos dados da campanha:
+1. Leia o "revenueTarget" e o preço do produto
+2. Estime vendas necessárias (revenueTarget / preço)
+3. Estime leads necessários com taxa de conversão realista para o nicho/público
+4. Calcule o budget recomendado por plataforma usando CPL de mercado para este ticket
+5. Apresente como "investimento recomendado" — o usuário configura esse valor nas plataformas, não na NexOS
+
+Se "trafficBudgetBrl" já informado pelo usuário:
+- Valide se é suficiente para atingir o revenueTarget com os CPLs de mercado
+- Se insuficiente: sinalize no prePublishValidation (checkpoint "budget" → "needs_review") e mostre quanto faltaria
+- Se suficiente: distribua por fase normalmente
 
 Por fase (aquecimento → abertura → carrinho aberto → fechamento → remarketing pós-evento):
-- Budget diário por fase
-- Plataforma foco
-- Objetivo de fase
+- Investimento diário recomendado por fase
+- Plataforma prioritária por fase
+- Objetivo e entrega esperada por fase
 
 Hard rules:
 - ROAS mínimo: se cair abaixo, pausa automática (requer autorização para retomar)
 - CPA máximo: se ultrapassar, pausa imediata (requer decisão humana)
 - Todo aumento de budget acima de 20% requer autorização explícita
+- Budget é configurado pelo usuário nas plataformas (Meta Ads Manager, TikTok Ads, Google Ads) — nunca na NexOS
 
 ---
 
