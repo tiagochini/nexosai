@@ -19,7 +19,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
-  RefreshCw, Rocket,
+  RefreshCw, Rocket, Brain,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
 import {
@@ -1238,6 +1238,7 @@ export default function CampaignDetail() {
   const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
   const [bypassLaunchLoading, setBypassLaunchLoading] = useState(false);
   const [reorientOpen, setReorientOpen] = useState(false);
+  const [rerunStrategyLoading, setRerunStrategyLoading] = useState(false);
   const [reorientDirective, setReorientDirective] = useState("");
   const [showLaunchSequence, setShowLaunchSequence] = useState(false);
 
@@ -2300,8 +2301,66 @@ export default function CampaignDetail() {
             </div>
           )}
 
-          {/* ─ Strategy ready: cinematic reveal banner ─ */}
-          {campaign.status === "strategy_ready" && (
+          {/* ─ Empty strategy warning — strategy_ready but no data (bulk-created or agent failed) ─ */}
+          {campaign.status === "strategy_ready" && Object.keys(strategyD).length === 0 && (
+            <div className="border border-yellow-400/30 bg-yellow-400/5 p-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-yellow-400/60" />
+              <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-yellow-400/60" />
+              <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-yellow-400/60" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-yellow-400/60" />
+              <div className="font-mono text-[11px] uppercase tracking-widest text-yellow-400 flex items-center gap-2 mb-2">
+                <AlertCircle className="h-3.5 w-3.5" />Estratégia não gerada
+              </div>
+              <p className="text-xs text-muted-foreground font-mono mb-4 leading-relaxed">
+                {Object.keys(intakeD).length === 0
+                  ? "Esta campanha não tem briefing completo. Complete o intake antes de gerar a estratégia de IA."
+                  : "A IA ainda não gerou a estratégia para esta campanha. Clique em Gerar Estratégia para que os agentes elaborem a proposta completa, ou pule direto para a geração de conteúdo."}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {Object.keys(intakeD).length === 0 ? (
+                  <Link href={`/campaigns/${campaignId}/intake`}>
+                    <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs">
+                      <FileText className="h-3 w-3" />Completar Briefing
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button
+                    className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs"
+                    disabled={rerunStrategyLoading || executeMutation.isPending}
+                    onClick={async () => {
+                      setRerunStrategyLoading(true);
+                      try {
+                        await customFetch(`/api/campaigns/${campaignId}/execute/strategy`, { method: "POST" });
+                        toast.success("Estratégia iniciada. Os agentes estão elaborando a proposta.");
+                        setActiveTab("agentes");
+                        queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+                      } catch (err: unknown) {
+                        const e = err as { data?: { error?: string } };
+                        toast.error(e?.data?.error ?? "Falha ao iniciar estratégia.", { duration: 6000 });
+                      } finally {
+                        setRerunStrategyLoading(false);
+                      }
+                    }}
+                  >
+                    {rerunStrategyLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}
+                    Gerar Estratégia
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="font-mono uppercase tracking-widest rounded-none gap-2 border-border/50 hover:border-primary/50 h-9 px-4 text-xs"
+                  disabled={executeMutation.isPending || rerunStrategyLoading}
+                  onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
+                >
+                  {executeMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                  Pular e Gerar Conteúdo
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ─ Strategy ready: cinematic reveal banner — only when strategy data exists ─ */}
+          {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (
             <StrategyReadyBanner onReview={() => setActiveTab("estrategia")} />
           )}
 
@@ -2315,8 +2374,8 @@ export default function CampaignDetail() {
             <DecisionTracePanel campaignId={campaignId} />
           )}
 
-          {/* ─ Strategy Approval Board — shown only when strategy is ready for approval ─ */}
-          {campaign.status === "strategy_ready" && (
+          {/* ─ Strategy Approval Board — shown only when strategy data exists ─ */}
+          {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (
             <StrategyApprovalBoard
               strategyD={strategyD}
               audienceD={audienceD}

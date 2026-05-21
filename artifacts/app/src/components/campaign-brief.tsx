@@ -299,6 +299,19 @@ export function CampaignBrief({
         <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest text-center">
           Estratégia ainda não gerada.<br />Execute a fase de análise para gerar a proposta completa.
         </p>
+        {showApproveButton && onApprove && (
+          <div className="flex flex-wrap gap-3 justify-center mt-2">
+            <Button
+              className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs"
+              onClick={onApprove}
+              disabled={approveLoading}
+            >
+              {approveLoading
+                ? <><ArrowRight className="h-3 w-3 animate-spin" />Gerando...</>
+                : <><Zap className="h-3 w-3" />Gerar Conteúdo Agora</>}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

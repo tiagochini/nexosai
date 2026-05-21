@@ -113,6 +113,19 @@ db.update(campaignsTable)
   })
   .catch((err) => logger.error({ err }, "Boot cleanup (generating reset) failed"));
 
+// ── Boot cleanup: reset campaigns stuck in "analyzing" → "intake" ─────────
+// Strategy generation also runs in-process; a restart leaves them in "analyzing".
+// Reset to "intake" so the user can re-trigger strategy generation.
+db.update(campaignsTable)
+  .set({ status: "intake", updatedAt: new Date() })
+  .where(eq(campaignsTable.status, "analyzing"))
+  .then((result) => {
+    if (result.rowCount && result.rowCount > 0) {
+      logger.warn({ count: result.rowCount }, "Boot cleanup: reset analyzing campaigns to intake");
+    }
+  })
+  .catch((err) => logger.error({ err }, "Boot cleanup (analyzing reset) failed"));
+
 httpServer.listen(port, (err?: Error) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
