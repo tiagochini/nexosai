@@ -692,8 +692,10 @@ export async function runTrafficIntelligenceAgent(
   log: Logger,
   memoryContext?: string,
 ): Promise<TrafficIntelligenceOutput> {
-  const trafficBudget = intakeData["campaign.trafficBudget"] as number | undefined;
-  const paidTrafficChannels = intakeData["campaign.paidTraffic"] ?? intakeData["campaign.salesChannel"];
+  // Intake saves budget as "campaign.budget.traffic"; older sessions may use "campaign.trafficBudget"
+  const trafficBudget = (intakeData["campaign.budget.traffic"] ?? intakeData["campaign.trafficBudget"]) as number | undefined;
+  // Intake saves channel preference as "campaign.salesChannel"; older sessions may use "campaign.paidTraffic"
+  const paidTrafficChannels = intakeData["campaign.paidTraffic"] ?? intakeData["campaign.salesChannel"] ?? intakeData["campaign.traffic"];
   const productPrice = Number(intakeData["product.price"] ?? 0);
   const campaignType = String(intakeData["campaign.type"] ?? "launch");
   const revenueTarget = intakeData["campaign.revenueTarget"];

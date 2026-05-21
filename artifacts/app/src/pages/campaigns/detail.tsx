@@ -1533,7 +1533,11 @@ export default function CampaignDetail() {
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
       onError: (err: unknown) => {
-        const errData = (err as { response?: { data?: { error?: string; code?: string; data?: { shortage?: number; balance?: number; required?: number; missing?: { category: string; providers: string[] }[] } } } })?.response?.data;
+        // ApiError from customFetch exposes parsed JSON body in .data directly
+        // (.response is the raw Fetch Response object, not { data: ... })
+        type ErrBody = { error?: string; code?: string; data?: { shortage?: number; balance?: number; required?: number; missing?: { category: string; providers: string[]; reason?: string }[] } };
+        const apiErr = err as { data?: ErrBody; status?: number };
+        const errData = apiErr?.data;
         const code = errData?.code;
         const msg = errData?.error;
         if (code === "INSUFFICIENT_CREDITS" && errData?.data) {
@@ -1547,7 +1551,7 @@ export default function CampaignDetail() {
         } else if (code === "PARTIAL_INTEGRATIONS") {
           setPartialIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[]; reason?: string }) => m));
         } else {
-          toast.error(msg ?? "Falha ao iniciar fase.");
+          toast.error(msg ?? "Falha ao iniciar fase.", { duration: 6000 });
         }
       },
     },
