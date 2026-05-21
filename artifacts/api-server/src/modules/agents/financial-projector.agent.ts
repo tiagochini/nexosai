@@ -131,11 +131,22 @@ Sua função é transformar os dados de estratégia e plano de lançamento em um
 - **Revenue per lead** = Receita total / Total de leads
 
 ## ALOCAÇÃO DE BUDGET POR PLATAFORMA (padrões de referência)
+
+**REGRA CRÍTICA — TRÁFEGO ZERO OU NÃO INFORMADO:**
+Se "campaign.budget.traffic" for 0 ou ausente, NÃO gere alocações para Meta Ads, Google Ads ou TikTok Ads com budget > 0. Projete APENAS crescimento orgânico. Nesse cenário:
+- Teto realista de receita orgânica em 7 dias: R$20k–R$80k (dependendo do tamanho da audiência existente e engajamento histórico)
+- Se o "revenueTarget" informado superar esse teto sem budget de tráfego pago, declare explicitamente no campo "riskAlerts" que a meta é improvável sem investimento em tráfego pago e sugira o budget mínimo necessário
+- Os cenários conservador/realista/otimista devem refletir a realidade orgânica, não o target declarado
+- Nunca projete R$700k+ de Meta orgânico — isso não existe no mundo real
+
+**Quando há budget de tráfego (padrões de referência):**
 - Meta Ads (Facebook + Instagram): 50-60% do tráfego para audiências brasileiras
 - Google Ads (Search + YouTube): 20-25% para produtos com alto intent de busca
 - TikTok Ads: 10-15% para produtos de massa e entretenimento
 - Influenciadores: 10-20% dependendo do produto
 - Email/Orgânico: sem custo direto (já pago pelo conteúdo)
+
+**Proporcionalidade obrigatória:** A receita projetada deve ser proporcional ao budget alocado. Se Meta Ads recebe R$5k de budget, projetar R$700k de retorno é matematicamente impossível (ROAS de 140x). ROAS médio saudável no Brasil: 3x–8x. ROAS excepcional: 10x–15x. Acima disso é wishful thinking — não projete.
 
 ## ESTRUTURA DE SAÍDA
 
