@@ -732,6 +732,12 @@ function StrategyApprovalBoard({
   });
   const [userNotes, setUserNotes] = useState<Record<string, string>>({});
   const [savedNotes, setSavedNotes] = useState<Record<string, string>>({});
+  const [localLoading, setLocalLoading] = useState(false);
+
+  // Reset local loading state when the parent mutation finishes (success or error)
+  useEffect(() => {
+    if (!proceedLoading) setLocalLoading(false);
+  }, [proceedLoading]);
 
   const allDecided = secA !== "pending" && secA !== "editing" && secB !== "pending" && secB !== "editing" && secC !== "pending" && secC !== "editing" && briefs.every(b => platStates[b.platform] !== "pending" && platStates[b.platform] !== "editing");
   const hasNotes = Object.values(savedNotes).some(v => v?.trim());
@@ -744,9 +750,12 @@ function StrategyApprovalBoard({
   };
 
   const approveAll = () => {
+    setLocalLoading(true);
     setSecA("approved"); setSecB("approved"); setSecC("approved");
     setPlatStates({ instagram: "approved", tiktok: "approved", facebook: "approved", whatsapp: "approved", email: "approved" });
-    setTimeout(() => onProceed(savedNotes), 80);
+    setTimeout(() => {
+      onProceed(savedNotes);
+    }, 80);
   };
   const setPlt = (p: PlatformId, s: ApprovalState) => setPlatStates(prev => ({ ...prev, [p]: s }));
 
@@ -788,9 +797,9 @@ function StrategyApprovalBoard({
             </div>
           </div>
         </div>
-        <button onClick={approveAll} disabled={proceedLoading}
+        <button onClick={approveAll} disabled={proceedLoading || localLoading}
           className="font-mono text-[11px] uppercase tracking-widest text-success border border-success/40 hover:bg-success/10 px-3 py-1.5 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 disabled:opacity-50">
-          {proceedLoading ? <><Loader2 className="h-3 w-3 animate-spin" />Gerando...</> : <><Zap className="h-3 w-3" />Aprovar Tudo e Gerar</>}
+          {(proceedLoading || localLoading) ? <><Loader2 className="h-3 w-3 animate-spin" />Gerando...</> : <><Zap className="h-3 w-3" />Aprovar Tudo e Gerar</>}
         </button>
       </div>
 
@@ -1556,6 +1565,14 @@ export default function CampaignDetail() {
       },
     },
   });
+
+  // Reset execute mutation when campaign is strategy_ready (prevents stuck "isPending" state
+  // from a previous attempt that was interrupted e.g. by API server restart)
+  useEffect(() => {
+    if (campaign?.status === "strategy_ready" && executeMutation.isPending) {
+      executeMutation.reset();
+    }
+  }, [campaign?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-trigger launch when redirected from content approval with ?autolaunch=1
   useEffect(() => {
