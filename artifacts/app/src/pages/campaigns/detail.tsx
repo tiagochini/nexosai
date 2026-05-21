@@ -148,10 +148,22 @@ const PIPELINE = [
 ];
 
 function getPipelineState(status: string, stepStatuses: string[]): "done" | "active" | "pending" {
+  // RC-005 FIX: "paused" and "cancelled" are not in the PIPELINE statuses array.
+  // order.indexOf() returns -1 for these → cur = -1 → all steps appear "pending".
+  // Map "paused" to "live" (mid-launch, same pipeline position) so 04·LANÇAMENTO
+  // shows as active. "cancelled" maps to "" so all steps remain pending (unknown
+  // cancellation point — safest neutral display).
+  const statusAlias: Record<string, string> = { paused: "live" };
+  const effectiveStatus = statusAlias[status] ?? status;
+
   const order = PIPELINE.map((s) => s.statuses).flat();
-  const cur = order.indexOf(status);
-  const first = Math.min(...stepStatuses.map((s) => order.indexOf(s)));
-  const last = Math.max(...stepStatuses.map((s) => order.indexOf(s)));
+  const cur = order.indexOf(effectiveStatus);
+  if (cur === -1) return "pending"; // cancelled or unknown status — no active step
+
+  const indices = stepStatuses.map((s) => order.indexOf(s)).filter((i) => i !== -1);
+  if (indices.length === 0) return "pending";
+  const first = Math.min(...indices);
+  const last = Math.max(...indices);
   if (cur > last) return "done";
   if (cur >= first && cur <= last) return "active";
   return "pending";

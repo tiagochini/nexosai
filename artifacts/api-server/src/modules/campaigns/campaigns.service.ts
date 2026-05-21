@@ -35,7 +35,12 @@ export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   approved: ["executing", "cancelled"],
   executing: ["live", "paused", "cancelled"],
   live: ["paused", "completed", "cancelled"],
-  paused: ["live", "cancelled"],
+  // RC-006 FIX: "executing" added — the orchestration worker transitions paused
+  // campaigns through paused → executing → live (processExecute). Without this,
+  // updateCampaign() would reject the paused→executing transition if called via
+  // the state machine. Worker currently bypasses updateCampaign (direct DB write)
+  // but this ensures the declared state machine matches actual execution paths.
+  paused: ["executing", "live", "cancelled"],
   completed: [],
   cancelled: [],
 };

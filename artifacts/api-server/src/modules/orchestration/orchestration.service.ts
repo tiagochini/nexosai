@@ -165,10 +165,16 @@ async function enqueueOrExecute(
 ): Promise<{ queued: boolean; jobId?: string }> {
   try {
     const queue = getQueue(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION);
+    // RC-004 FIX: Use jobId for BullMQ deduplication. BullMQ ignores duplicate
+    // add() calls with an existing jobId that is still waiting/active. This
+    // prevents double-click race conditions where two requests arrive before the
+    // "running agents" guard can detect the first execution has started.
+    // jobId format: campaignId-action ensures one pending job per campaign per phase.
     const bullJob = await queue.add(
       `campaign-${job.campaignId}-${job.action}`,
       job,
       {
+        jobId: `${job.campaignId}-${job.action}`,
         attempts: 3,
         backoff: { type: "exponential", delay: 2000 },
         removeOnComplete: { age: 3600 },
@@ -259,10 +265,14 @@ export async function triggerContentPhase(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  const allowedStatuses = ["strategy_ready", "approved", "generating", "awaiting_approval"];
+  // RC-002 FIX: "generating" removed — a campaign in "generating" means content
+  // production is already running. Allowing re-trigger from "generating" enables
+  // duplicate jobs, double credit charges, and conflicting DB writes.
+  // Must stay in sync with CONTENT_GENERATION_ALLOWED_STATUSES in content.service.ts.
+  const allowedStatuses = ["strategy_ready", "approved", "awaiting_approval"];
   if (!allowedStatuses.includes(campaign.status)) {
     throw new ValidationError(
-      `Cannot start content generation from status "${campaign.status}". Strategy phase must complete first.`,
+      `Cannot start content generation from status "${campaign.status}". Allowed: ${allowedStatuses.join(", ")}.`,
     );
   }
 

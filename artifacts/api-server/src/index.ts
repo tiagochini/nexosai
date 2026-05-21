@@ -82,56 +82,66 @@ startSocialScheduler();
 initSequenceScheduler();
 startFunnelScheduler();
 
-// ── Boot cleanup: mark orphaned "running" agents as failed ────────────────────
-// If the server was restarted mid-execution, agents stay stuck as "running"
-// forever. This cleanup runs once on boot to recover those campaigns.
-db.update(campaignAgentsTable)
-  .set({
-    status: "failed",
-    errorMessage: "Servidor reiniciado — execução interrompida",
-    completedAt: new Date(),
-  })
-  .where(eq(campaignAgentsTable.status, "running"))
-  .then((result) => {
-    if (result.rowCount && result.rowCount > 0) {
-      logger.warn({ count: result.rowCount }, "Boot cleanup: marked orphaned running agents as failed");
-    }
-  })
-  .catch((err) => logger.error({ err }, "Boot cleanup failed"));
+// ── Boot cleanup: recover orphaned campaigns before accepting any requests ────
+// RC-007 FIX: All three cleanup operations are awaited via Promise.all() before
+// httpServer.listen() is called. Previously these ran as fire-and-forget
+// (.then() chains) and the server could begin accepting connections before the
+// DB was in a consistent state, leaving stale "analyzing"/"generating" campaigns
+// visible to the first incoming requests.
+//
+// Cleanup order:
+//   1. Mark all "running" agents as failed (orphaned from crashed process)
+//   2. Reset campaigns stuck in "generating" → "strategy_ready" (content interrupted)
+//   3. Reset campaigns stuck in "analyzing"  → "intake"          (strategy interrupted)
+//
+// All are idempotent — safe to run on every boot even if no cleanup is needed.
+Promise.all([
+  db.update(campaignAgentsTable)
+    .set({
+      status: "failed",
+      errorMessage: "Servidor reiniciado — execução interrompida",
+      completedAt: new Date(),
+    })
+    .where(eq(campaignAgentsTable.status, "running"))
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup: marked orphaned running agents as failed");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup (agents) failed")),
 
-// ── Boot cleanup: reset campaigns stuck in "generating" → "strategy_ready" ───
-// Content generation runs in-process (setImmediate when Redis unavailable).
-// A server restart kills the process, leaving campaigns stuck in "generating".
-// Reset them so the user can trigger generation again cleanly.
-db.update(campaignsTable)
-  .set({ status: "strategy_ready", updatedAt: new Date() })
-  .where(eq(campaignsTable.status, "generating"))
-  .then((result) => {
-    if (result.rowCount && result.rowCount > 0) {
-      logger.warn({ count: result.rowCount }, "Boot cleanup: reset generating campaigns to strategy_ready");
-    }
-  })
-  .catch((err) => logger.error({ err }, "Boot cleanup (generating reset) failed"));
+  db.update(campaignsTable)
+    .set({ status: "strategy_ready", updatedAt: new Date() })
+    .where(eq(campaignsTable.status, "generating"))
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup: reset generating campaigns to strategy_ready");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup (generating reset) failed")),
 
-// ── Boot cleanup: reset campaigns stuck in "analyzing" → "intake" ─────────
-// Strategy generation also runs in-process; a restart leaves them in "analyzing".
-// Reset to "intake" so the user can re-trigger strategy generation.
-db.update(campaignsTable)
-  .set({ status: "intake", updatedAt: new Date() })
-  .where(eq(campaignsTable.status, "analyzing"))
-  .then((result) => {
-    if (result.rowCount && result.rowCount > 0) {
-      logger.warn({ count: result.rowCount }, "Boot cleanup: reset analyzing campaigns to intake");
+  db.update(campaignsTable)
+    .set({ status: "intake", updatedAt: new Date() })
+    .where(eq(campaignsTable.status, "analyzing"))
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup: reset analyzing campaigns to intake");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup (analyzing reset) failed")),
+]).then(() => {
+  httpServer.listen(port, (err?: Error) => {
+    if (err) {
+      logger.error({ err }, "Error listening on port");
+      process.exit(1);
     }
-  })
-  .catch((err) => logger.error({ err }, "Boot cleanup (analyzing reset) failed"));
-
-httpServer.listen(port, (err?: Error) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-  logger.info({ port }, "NexOS AI API Server listening");
+    logger.info({ port }, "NexOS AI API Server listening");
+  });
+}).catch((err) => {
+  logger.error({ err }, "Boot cleanup failed — starting server anyway to avoid complete outage");
+  httpServer.listen(port, () => {
+    logger.info({ port }, "NexOS AI API Server listening (cleanup failed)");
+  });
 });
 
 async function shutdown(signal: string): Promise<void> {

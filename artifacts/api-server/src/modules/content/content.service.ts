@@ -39,11 +39,14 @@ export interface ContentGenerationResult {
   status: "completed" | "partial" | "failed";
 }
 
+// RC-001 FIX: "generating" removed — a campaign already in "generating" means
+// content production is in progress. Re-triggering would cause duplicate jobs,
+// double credit charges, and conflicting DB writes. Valid entry points only:
+// strategy_ready → start fresh | awaiting_approval → regenerate | approved → regenerate
 const CONTENT_GENERATION_ALLOWED_STATUSES = [
   "strategy_ready",
-  "generating",
-  "approved",
   "awaiting_approval",
+  "approved",
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -95,14 +98,21 @@ export async function generateCampaignContent(
   const profile = campaign.audienceData
     ? extractProfile(campaign.audienceData)
     : undefined;
-  const strategy = campaign.strategyData as unknown as StrategyOutput | undefined;
+  // RC-003 FIX: DB schema enforces notNull().default({}) on strategyData, so
+  // strategy is NEVER null at runtime. The previous `if (!strategy) throw` guard
+  // was dead code. We now cast with a safe fallback ({} as StrategyOutput) so
+  // TypeScript is satisfied and callers always receive a typed object (possibly empty).
+  // Empty strategy is allowed for the "skip strategy → generate content" user flow.
+  const strategy = ((campaign.strategyData ?? {}) as unknown) as StrategyOutput;
   const launchPlan = (campaign.timelineData ?? undefined) as
     | Record<string, unknown>
     | undefined;
 
-  if (!strategy) {
-    throw new ValidationError(
-      "Campaign strategy not found. Run orchestration first.",
+  const strategyIsEmpty = Object.keys(campaign.strategyData as Record<string, unknown> ?? {}).length === 0;
+  if (strategyIsEmpty) {
+    log.warn(
+      { campaignId },
+      "Content generation started with empty strategy data — agents will use intake data only. Quality may be reduced.",
     );
   }
 
