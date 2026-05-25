@@ -1,18 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import nexosLogo from "/nexos-logo.png";
 import {
   ArrowRight, CheckCircle2, ArrowDown,
   BrainCircuit, Lock, Shield, Zap, Target, Activity,
   Layers, Clock, TrendingDown, Users, TrendingUp,
-  BookOpen, GraduationCap, BarChart3,
-  Play, Download, Maximize2,
+  BarChart3, Play, ChevronDown, AlertTriangle,
+  Cpu, Network, GitBranch, Crosshair, DollarSign,
+  GraduationCap, LayoutDashboard,
 } from "lucide-react";
-import { toast } from "sonner";
-import { LiveDemoSection, SimulatorSection } from "@/components/landing-demo-sections";
-import { useI18n, LANG_LABELS, type Lang } from "@/lib/i18n";
 
 // ─── Scroll-snap section wrapper ──────────────────────────────────────────────
 function useInView(threshold = 0.3) {
@@ -41,33 +37,8 @@ const Section = React.forwardRef<HTMLElement, { children: React.ReactNode; class
   )
 );
 
-// ─── Language switcher ────────────────────────────────────────────────────────
-function LangSwitcher() {
-  const { lang, setLang } = useI18n();
-  const langs: Lang[] = ["pt-BR", "en-US", "es-LA"];
-  return (
-    <div className="flex items-center gap-0.5">
-      {langs.map((l) => (
-        <button
-          key={l}
-          onClick={() => setLang(l)}
-          title={LANG_LABELS[l].label}
-          className={`text-base leading-none px-1 py-0.5 rounded-sm transition-all ${
-            lang === l
-              ? "opacity-100 ring-1 ring-primary/50 bg-primary/10"
-              : "opacity-40 hover:opacity-70"
-          }`}
-        >
-          {LANG_LABELS[l].flag}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 function Nav({ scrolled }: { scrolled: boolean }) {
-  const { t } = useI18n();
   return (
     <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-border/40 bg-background/90 backdrop-blur-xl" : "bg-transparent"}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
@@ -75,28 +46,19 @@ function Nav({ scrolled }: { scrolled: boolean }) {
           <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 sm:h-14 sm:w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
           <div className="hidden sm:block">
             <div className="font-mono font-black text-xl tracking-[0.15em] uppercase">NexOS <span className="text-primary">AI</span></div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">{t.nav.tagline}</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">Sistema de Lançamento Autônomo</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <LangSwitcher />
-          <a href="/landing/simulador" className="hidden sm:block">
-            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-primary/80 hover:text-primary border border-primary/20 hover:border-primary/40 h-9 px-4 gap-1.5">
-              <Zap className="h-3 w-3" />{t.nav.simulate}
-            </Button>
-          </a>
-          <a href="/landing/simulador" className="sm:hidden">
-            <Button variant="ghost" size="sm" className="font-mono border border-primary/20 h-8 w-8 p-0 text-primary/80">
-              <Zap className="h-3.5 w-3.5" />
-            </Button>
-          </a>
           <a href="/login">
-            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground hidden sm:flex">{t.nav.login}</Button>
+            <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest text-muted-foreground hover:text-foreground hidden sm:flex">
+              Entrar
+            </Button>
           </a>
           <a href="#oferta">
             <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] sm:text-xs tracking-widest font-bold h-8 sm:h-9 px-3 sm:px-5">
-              <span className="hidden sm:inline">{t.nav.cta}</span>
-              <span className="sm:hidden">{t.nav.cta_mobile}</span>
+              <span className="hidden sm:inline">Garantir Acesso</span>
+              <span className="sm:hidden">Acessar</span>
             </Button>
           </a>
         </div>
@@ -107,69 +69,74 @@ function Nav({ scrolled }: { scrolled: boolean }) {
 
 function ScrollHint() {
   return (
-    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
-      <ArrowDown className="h-4 w-4 text-primary/30" />
+    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce opacity-30">
+      <ArrowDown className="h-4 w-4 text-primary" />
     </div>
   );
 }
 
-// ─── Section 1: HERO ──────────────────────────────────────────────────────────
+// ─── Section 1: HERO — Mechanism Lead para Avatar Sofisticado ─────────────────
 function HeroSection() {
   const { ref, inView } = useInView(0.1);
-  const { t } = useI18n();
-  const h = t.hero;
   return (
     <Section id="hero" className="auth-bg-gradient" ref={ref as React.Ref<HTMLElement>}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 w-full pb-28 sm:pb-20">
         <div className={`transition-all duration-1000 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
+
+          {/* Identity badge — o avatar se reconhece imediatamente */}
           <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 sm:px-4 py-2 mb-6 sm:mb-10 font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-            <span className="hidden sm:inline">{h.badge}</span>
-            <span className="sm:hidden">{h.badge_mobile}</span>
+            Para quem já tem produto · já fez anúncio · já investiu em tráfego
           </div>
 
-          <h1 className="text-[2.2rem] sm:text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
-            {h.h1_1}<br />{h.h1_2}<br />
+          {/* Headline — mechanism lead, não promessa de resultado */}
+          <h1 className="text-[2rem] sm:text-6xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
+            Seu lançamento<br />está perdendo<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              {h.h1_3}
+              dinheiro na operação.
             </span>
           </h1>
 
-          <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-8 sm:mb-12 max-w-2xl">
-            {h.p_pre}<strong className="text-foreground">{h.p_bold}</strong>{h.p_post}<br /><br />
-            <strong className="text-foreground">{h.p2}</strong>
+          {/* Subheadline — framing de mecanismo, não de resultado */}
+          <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-4 sm:mb-6 max-w-2xl">
+            Não é falta de estratégia. Não é falta de tráfego.<br className="hidden sm:block" />
+            É a <strong className="text-foreground">fragmentação da execução</strong> que está comendo sua margem.
+          </p>
+          <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed mb-8 sm:mb-12 max-w-2xl">
+            NexOS AI é o sistema nervoso do seu lançamento — <strong className="text-foreground">29 agentes de IA em orquestração paralela</strong>, do briefing ao carrinho fechado, integrado diretamente ao algoritmo da Meta e ao TikTok Ads.
           </p>
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <a href="/landing/simulador" className="w-full sm:w-auto">
+              <a href="#oferta" className="w-full sm:w-auto">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs sm:text-base h-12 sm:h-16 px-6 sm:px-10 gap-2 sm:gap-3 w-full sm:w-auto">
-                  <Zap className="h-4 w-4 sm:h-5 sm:w-5" />{h.btn_sim}
+                  <Zap className="h-4 w-4 sm:h-5 sm:w-5" /> Quero o Sistema Completo
                 </Button>
               </a>
-              <a href="#oferta" className="w-full sm:w-auto">
+              <a href="#mecanismo" className="w-full sm:w-auto">
                 <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-xs sm:text-base h-12 sm:h-16 px-5 sm:px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
-                  {h.btn_offer} <ArrowRight className="h-4 w-4" />
+                  Ver como funciona <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
             <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground/40">
               <Lock className="h-3.5 w-3.5" />
-              {h.access}
+              Acesso imediato · 30 dias de garantia · cancele quando quiser
             </div>
           </div>
         </div>
       </div>
 
+      {/* Stats bar — prova social de volume */}
       <div className="absolute bottom-0 sm:bottom-10 left-0 right-0 border-t border-border/15 bg-background/60 backdrop-blur-md py-2.5 sm:py-3">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-1">
           {[
-            { n: "R$41k",  label: h.s1, hide: false },
-            { n: "R$78k",  label: h.s2, hide: false },
-            { n: "R$134k", label: h.s3, hide: false },
-            { n: "44",     label: h.s4, hide: false },
-            { n: "100%",   label: h.s5, hide: true  },
-            { n: "24h",    label: h.s6, hide: true  },
+            { n: "29",      label: "Agentes IA", hide: false },
+            { n: "R$41k",   label: "Menor lançamento", hide: false },
+            { n: "R$134k",  label: "Maior lançamento", hide: false },
+            { n: "847+",    label: "Produtores", hide: false },
+            { n: "7 dias",  label: "Time to launch", hide: true },
+            { n: "100%",    label: "Automatizado", hide: true },
           ].map(({ n, label, hide }) => (
             <div key={label} className={`flex flex-col items-center ${hide ? "hidden md:flex" : ""}`}>
               <div className="font-mono font-black text-xs sm:text-base text-primary leading-none">{n}</div>
@@ -183,25 +150,41 @@ function HeroSection() {
   );
 }
 
-// ─── Section 2: A FERIDA ──────────────────────────────────────────────────────
-function FeriadaSection() {
+// ─── Section 2: IDENTIDADE — Avatar se reconhece na situação ─────────────────
+function IdentidadeSection() {
   const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const p = t.pain;
+  const dores = [
+    {
+      situacao: "Você tem produto e já fez anúncios",
+      realidade: "Mas cada lançamento ainda exige 3-4 meses de preparação, uma equipe de gestão de tráfego, redatores, designers e gerentes de projeto. O ROI existe — mas a operação consome mais do que deveria.",
+    },
+    {
+      situacao: "Você conhece a Fórmula de Lançamento",
+      realidade: "Já fez o FL. Talvez já tenha dado certo. Mas sabe que a execução burocrática — briefings, aprovações, feedbacks infinitos — cria gargalos que custam dinheiro e janelas de mercado.",
+    },
+    {
+      situacao: "Você investe em tráfego pago",
+      realidade: "Você já sabe o que é hook rate, frequência, ROAS, lookalike. Mas o algoritmo da Meta funciona melhor quando há consistência de conteúdo, dados e oferta — e manter isso manualmente é exaustivo.",
+    },
+    {
+      situacao: "Você paga R$8k–R$20k/mês em ferramentas e equipe",
+      realidade: "Copy.ai, Jasper, Canva Pro, RD Station, ActiveCampaign, gestor de anúncios, designer, copywriter, gestor de tráfego. Cada ferramenta separada. Nenhuma conversa com a outra. Você é o sistema nervoso — e isso drena.",
+    },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 delay-100 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">{p.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
-            {p.h2_1}<br />{p.h2_2}<br />
-            <span className="text-destructive/80">{p.h2_3}</span>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">— Reconhecimento —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4 sm:mb-6">
+            Se isso soa<br />familiar,<br />
+            <span className="text-destructive/80">continue lendo.</span>
           </h2>
-          <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-12">
-            {p.p}<strong className="text-foreground">{p.p_bold}</strong>
+          <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Não é falta de habilidade. Não é falta de dedicação. É que você está usando ferramentas de 2018 para executar campanhas de 2025 — e <strong className="text-foreground">o mercado evoluiu mais rápido que as ferramentas disponíveis.</strong>
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {p.dores.map((item, i) => (
+            {dores.map((item, i) => (
               <div
                 key={i}
                 className={`border border-border/30 bg-card/20 p-7 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
@@ -214,8 +197,8 @@ function FeriadaSection() {
           </div>
           <div className={`mt-6 border border-destructive/20 bg-destructive/5 px-6 py-4 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} style={{ transitionDelay: "640ms" }}>
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              {p.closing}<strong className="text-foreground">{p.closing_bold}</strong>{p.closing2}{" "}
-              <span className="text-destructive/70 font-bold">{p.closing_red}</span>
+              O problema não é você. É que <strong className="text-foreground">nenhuma ferramenta do mercado foi construída para orquestrar o lançamento completo como um sistema único.</strong>{" "}
+              <span className="text-destructive/70 font-bold">Até agora.</span>
             </p>
           </div>
         </div>
@@ -225,23 +208,28 @@ function FeriadaSection() {
   );
 }
 
-// ─── Section 3: O CUSTO REAL ──────────────────────────────────────────────────
+// ─── Section 3: O CUSTO REAL — Comparativo que ancora o preço ────────────────
 function CustoRealSection() {
   const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const c = t.cost;
+  const alternativas = [
+    { nome: "Gestor de tráfego (CLT ou PJ)", nota: "R$3.500–R$8.000/mês", preco: "R$8k/mês" },
+    { nome: "Copywriter especialista em lançamento", nota: "R$3.000–R$6.000/mês", preco: "R$5k/mês" },
+    { nome: "Designer + editor de vídeo", nota: "R$2.000–R$4.000/mês", preco: "R$3k/mês" },
+    { nome: "Stack de ferramentas (RD + AC + IA)", nota: "Ferramentas fragmentadas", preco: "R$2k/mês" },
+    { nome: "Gerente de projeto", nota: "Coordenação da equipe", preco: "R$3k/mês" },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">{c.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
-            {c.h2_1}<br />{c.h2_2}<br />
-            <span className="text-destructive/80">{c.h2_3}</span>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">— Lógica de Valor —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
+            O que você paga<br />hoje pela mesma<br />
+            <span className="text-destructive/80">capacidade manual.</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-3">
-              {c.alt.map((item, i) => (
+              {alternativas.map((item, i) => (
                 <div
                   key={i}
                   className={`flex items-center justify-between border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"}`}
@@ -256,10 +244,10 @@ function CustoRealSection() {
               ))}
               <div
                 className={`flex items-center justify-between border border-destructive/40 bg-destructive/5 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"}`}
-                style={{ transitionDelay: "420ms" }}
+                style={{ transitionDelay: "500ms" }}
               >
-                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-black">{c.total_label}</div>
-                <div className="font-mono font-black text-base text-destructive text-right ml-4 shrink-0">{c.total}</div>
+                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-black">Total mensal sem NexOS AI</div>
+                <div className="font-mono font-black text-base text-destructive text-right ml-4 shrink-0">R$21k+/mês</div>
               </div>
             </div>
 
@@ -267,20 +255,20 @@ function CustoRealSection() {
               className={`border border-primary/30 bg-primary/5 p-8 flex flex-col justify-center transition-all duration-700 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
               style={{ transitionDelay: "200ms" }}
             >
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">{c.box_label}</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">Com NexOS AI</div>
               <p className="font-mono font-black text-2xl text-foreground leading-snug mb-6">
-                {c.box_p}<span className="text-primary">{c.box_p_accent}</span>
+                Mesma capacidade.<br /><span className="text-primary">Uma fração do custo.</span>
               </p>
               <div className="border-l-2 border-primary/50 pl-4 mb-6">
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  {c.box_body_1}<br />{c.box_body_2}<br />
-                  <strong className="text-foreground">{c.box_body_3}</strong><br /><br />
-                  {c.box_body_4}
+                  29 agentes de IA trabalhando em paralelo no seu lançamento — estratégia, copy, anúncios, email, WhatsApp, análise de performance e otimização em tempo real.<br /><br />
+                  <strong className="text-foreground">Tudo integrado. Tudo orquestrado. Um sistema único.</strong><br /><br />
+                  Por R$297/mês no plano Solo — ou R$1.497/mês para agências com múltiplos clientes.
                 </p>
               </div>
               <a href="#oferta">
-                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 w-full">
-                  {c.box_cta} <ArrowRight className="h-4 w-4" />
+                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs">
+                  Ver planos completos <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -292,338 +280,76 @@ function CustoRealSection() {
   );
 }
 
-// ─── Section 4: A ROTINA ──────────────────────────────────────────────────────
-function RotinaSection() {
-  const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const r = t.routine;
-  return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
-      <div className="max-w-5xl mx-auto px-6 w-full">
-        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">{r.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-10">
-            {r.h2_1}<br />{r.h2_2}<br />
-            <span className="text-primary">{r.h2_3}</span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
-            {r.items.map((item, i) => (
-              <div
-                key={i}
-                className={`flex items-start gap-3 border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
-                style={{ transitionDelay: `${i * 80}ms` }}
-              >
-                <div className="w-5 h-5 border border-destructive/30 bg-destructive/10 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="font-mono text-[10px] text-destructive/60 font-bold">{i + 1}</span>
-                </div>
-                <span className="font-mono text-sm text-muted-foreground leading-relaxed">{item}</span>
-              </div>
-            ))}
-          </div>
-          <p className="font-mono text-base text-muted-foreground/70 leading-relaxed border-l-2 border-destructive/30 pl-6">
-            {r.closing}<strong className="text-foreground">{r.closing_bold}</strong>
-          </p>
-        </div>
-      </div>
-      <ScrollHint />
-    </Section>
-  );
-}
-
-// ─── Section 5: SOLUÇÃO ───────────────────────────────────────────────────────
-function SolutionSection() {
-  const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const s = t.solution;
-  const icons = [BrainCircuit, Target, Users, Activity, TrendingUp, Shield];
-  return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
-      <div className="max-w-5xl mx-auto px-6 w-full text-center">
-        <div className={`transition-all duration-1000 ${inView ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}>
-          <img src={nexosLogo} alt="NexOS AI" className="h-24 w-24 object-contain mx-auto mb-8" style={{ filter: "drop-shadow(0 0 28px hsl(var(--primary)/0.8))" }} />
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">{s.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8">
-            {s.h2_1}<br />
-            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{s.h2_2}</span>
-          </h2>
-          <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-10 sm:mb-12 max-w-2xl mx-auto">
-            {s.p}<strong className="text-foreground">{s.p_bold}</strong>
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-12">
-            {s.features.map(({ label, sub }, i) => {
-              const Icon = icons[i]!;
-              return (
-                <div
-                  key={i}
-                  className={`border border-primary/20 bg-primary/5 p-5 text-center transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                  style={{ transitionDelay: `${300 + i * 100}ms` }}
-                >
-                  <Icon className="h-6 w-6 text-primary mx-auto mb-3" />
-                  <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-1">{label}</div>
-                  <div className="font-mono text-[11px] text-muted-foreground leading-relaxed">{sub}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-      <ScrollHint />
-    </Section>
-  );
-}
-
-// ─── Section 5b: VIDEO DEMO ───────────────────────────────────────────────────
-function VideoSection() {
-  const { ref, inView } = useInView(0.1);
-  return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20" id="video">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 w-full">
-        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-1.5 mb-5 font-mono text-[10px] uppercase tracking-[0.3em] text-primary">
-              <Play className="h-3 w-3 fill-primary" /> Veja em ação
-            </div>
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-tight mb-3">
-              44 agentes.<br /><span className="text-primary">Um lançamento completo.</span>
-            </h2>
-            <p className="font-mono text-sm text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Do briefing à venda — tudo acontece enquanto você dorme. Veja a NexOS AI executando um lançamento de 6 dígitos sem equipe.
-            </p>
-          </div>
-
-          {/* Video embed */}
-          <div
-            className={`relative w-full overflow-hidden border border-primary/25 bg-black/80 shadow-[0_0_60px_hsl(var(--primary)/0.15)] transition-all duration-700 delay-200 ${inView ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
-            style={{ aspectRatio: "16/9" }}
-          >
-            <iframe
-              src="/video-nexos/"
-              className="absolute inset-0 w-full h-full"
-              style={{ border: "none" }}
-              title="NexOS AI — Marketing Video"
-              allow="autoplay"
-            />
-            {/* corner accents */}
-            <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary/60 pointer-events-none" />
-            <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary/60 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary/60 pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary/60 pointer-events-none" />
-          </div>
-
-          {/* Action row */}
-          <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 mt-5 transition-all duration-700 delay-300 ${inView ? "opacity-100" : "opacity-0"}`}>
-            <div className="flex items-center gap-4">
-              <a
-                href="/video-nexos/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 hover:text-primary transition-colors border border-border/30 hover:border-primary/30 px-4 py-2"
-              >
-                <Maximize2 className="h-3 w-3" /> Tela cheia
-              </a>
-              <a
-                href="/video-nexos/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-primary/70 hover:text-primary transition-colors border border-primary/20 hover:border-primary/50 px-4 py-2"
-                title="Clique com botão direito → Salvar como"
-              >
-                <Download className="h-3 w-3" /> Baixar vídeo
-              </a>
-            </div>
-            <a href="#oferta" className="shrink-0">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-10 px-6 gap-2">
-                Quero executar assim <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            </a>
-          </div>
-
-        </div>
-      </div>
-      <ScrollHint />
-    </Section>
-  );
-}
-
-// ─── Section 5c: NEXOS ACADEMY ────────────────────────────────────────────────
-function AcademySection() {
+// ─── Section 4: O MECANISMO — Orquestração, não ferramenta ───────────────────
+function MecanismoSection() {
   const { ref, inView } = useInView(0.15);
-  const { t } = useI18n();
-  const a = t.academy;
+  const fases = [
+    {
+      num: "01",
+      tag: "Intake + Estratégia",
+      title: "Inteligência de Campanha",
+      desc: "Os agentes de Intake e Estratégia processam seu produto, avatar e objetivos. Definem posicionamento, mecanismo único, big idea e trilha de lançamento (6, 8 ou 10 dígitos). Nenhuma decisão estratégica é genérica — tudo calibrado para o seu mercado.",
+      icon: BrainCircuit,
+    },
+    {
+      num: "02",
+      tag: "Copy + Anúncios",
+      title: "Produção de Conteúdo Paralela",
+      desc: "Copywriter, VSL Script, Ad Copy, Hook Factory e Landing Page Agent trabalham simultaneamente — não em sequência. Em horas, você tem roteiro de VSL, 15+ variações de anúncio, emails de nurturing e a estrutura completa da landing page, tudo calibrado para o avatar.",
+      icon: Layers,
+    },
+    {
+      num: "03",
+      tag: "Algoritmo + Pixel",
+      title: "Integração Direta com o Algoritmo",
+      desc: "O agente de Anúncios não apenas cria copy — ele mapeia audiências por estágio de consciência, segmenta retargeting por comportamento e recência, e dispara eventos CAPI (Meta) e TikTok Events API server-side. O pixel recebe sinal limpo. O algoritmo treina mais rápido.",
+      icon: Crosshair,
+    },
+    {
+      num: "04",
+      tag: "Sequência + Automação",
+      title: "Nutrição e Fechamento Automático",
+      desc: "O sistema ativa sequências de email e WhatsApp por segmento (quente/morno/frio), adapta o copy por temperatura de lead e horário de engajamento, detecta fadiga criativa e rotaciona automáticamente. O carrinho fecha — e o remarketing começa — sem que você precise tocar em nada.",
+      icon: Activity,
+    },
+    {
+      num: "05",
+      tag: "Métricas + Otimização",
+      title: "Otimização em Tempo Real",
+      desc: "O agente de Otimização monitora hook rate, CPL, ROAS e taxa de conversão por etapa do funil. Compara com benchmarks validados do mercado brasileiro. Identifica o gargalo real (não o mais óbvio) e gera um plano de ação priorizado por impacto nas próximas 48h.",
+      icon: BarChart3,
+    },
+  ];
   return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20" id="academy">
-      <div className="max-w-6xl mx-auto px-6 w-full py-20">
-        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-            {/* Left: heading + stats + methodology box */}
-            <div>
-              <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-5 flex items-center gap-2">
-                <GraduationCap className="h-3.5 w-3.5 text-primary/60" />
-                {a.label}
-              </div>
-              <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-                {a.h2_1}<br />
-                <span className="text-primary">{a.h2_2}</span>
-              </h2>
-              <p className="font-mono text-sm text-muted-foreground leading-relaxed mb-2">
-                {a.p}
-              </p>
-              <p className="font-mono text-sm text-foreground font-bold leading-relaxed mb-8">
-                {a.p_bold}
-              </p>
-
-              {/* Stats */}
-              <div className="flex gap-0 mb-10">
-                {a.stats.map((s, i) => (
-                  <div key={i} className="flex-1 border border-border/30 px-4 py-3 bg-card/20 text-center">
-                    <div className="font-mono font-black text-2xl text-primary leading-none mb-1">{s.num}</div>
-                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Methodology box example */}
-              <div className="border border-[#334155] bg-[#0f172a] p-5 space-y-3">
-                <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60 flex items-center gap-1.5">
-                  <BookOpen className="h-3 w-3" />
-                  {a.box_label}
-                </div>
-                <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{a.box_p}</p>
-                <div className="space-y-1.5 pt-1">
-                  {["A) Conceito — a lógica que a IA aplica", "B) Aplicação prática — como você executa ou aprova", "C) Resultado esperado — o que medir para saber que funcionou"].map((item, i) => (
-                    <div key={i} className="font-mono text-[10px] text-[#a78bfa] leading-relaxed">{item}</div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: modules grid */}
-            <div className="space-y-2">
-              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-1.5">
-                <BarChart3 className="h-3 w-3" />
-                6 módulos · {a.stats[0].num} aulas
-              </div>
-              {a.modules.map((mod, i) => (
-                <div
-                  key={i}
-                  className={`border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}
-                  style={{ transitionDelay: `${200 + i * 80}ms` }}
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="font-mono font-black text-2xl text-primary/15 leading-none shrink-0 mt-0.5">{mod.code}</span>
-                    <div>
-                      <div className="font-mono text-xs font-black uppercase tracking-widest text-foreground mb-1">{mod.nome}</div>
-                      <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{mod.desc}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <div className={`mt-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
-                <a href="#oferta">
-                  <Button className="btn-weapon-primary w-full rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs">
-                    {a.cta} <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </a>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-      <ScrollHint />
-    </Section>
-  );
-}
-
-// ─── Section 5c: MODELOS & TRACKS ─────────────────────────────────────────────
-function ModelosSection() {
-  const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const m = t.models;
-  return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
+    <Section id="mecanismo" ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">{m.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-3">
-            {m.h2_1}<br />
-            <span className="text-primary">{m.h2_2}</span>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— O Sistema —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
+            29 agentes.<br /><span className="text-primary">Um sistema nervoso.</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">{m.p}</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-            {m.list.map((item, i) => (
-              <div
-                key={item.code}
-                className={`border border-border/30 bg-card/20 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                style={{ transitionDelay: `${100 + i * 80}ms` }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-mono text-[9px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5 uppercase tracking-widest shrink-0">{item.code}</span>
-                  <span className="font-mono text-xs font-black uppercase tracking-wide text-foreground leading-tight">{item.nome}</span>
-                </div>
-                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {m.tracks.map((track, i) => (
-              <div
-                key={track.label}
-                className={`border border-primary/20 bg-primary/5 p-5 text-center transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
-                style={{ transitionDelay: `${580 + i * 80}ms` }}
-              >
-                <div className="font-mono font-black text-lg text-primary mb-0.5">{track.label}</div>
-                <div className="font-mono font-black text-sm text-foreground mb-1">{track.range}</div>
-                <div className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">{track.sub}</div>
-                <div className="font-mono text-[9px] text-primary/60 uppercase tracking-widest mt-0.5">{track.plano}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <ScrollHint />
-    </Section>
-  );
-}
-
-// ─── Section 6: COMO FUNCIONA ─────────────────────────────────────────────────
-function ComoFuncionaSection() {
-  const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const h = t.howto;
-  const icons = [BrainCircuit, Layers, Zap];
-  return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
-      <div className="max-w-5xl mx-auto px-6 w-full">
-        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">{h.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8 sm:mb-12">
-            {h.h2_1}<br /><span className="text-primary">{h.h2_2}</span>
-          </h2>
-          <div className="space-y-5">
-            {h.steps.map((step, i) => {
-              const Icon = icons[i]!;
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Não é uma ferramenta de copy. Não é um chatbot de estratégia. É a orquestração completa do lançamento — cada agente especialista em uma função, todos trocando contexto entre si em tempo real.
+          </p>
+          <div className="space-y-4">
+            {fases.map((step, i) => {
+              const Icon = step.icon;
               return (
                 <div
                   key={i}
-                  className={`grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 border border-border/30 bg-card/20 p-7 transition-all duration-600 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}
-                  style={{ transitionDelay: `${i * 150}ms` }}
+                  className={`grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6 border border-border/30 bg-card/20 p-6 transition-all duration-600 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}
+                  style={{ transitionDelay: `${i * 130}ms` }}
                 >
                   <div className="flex items-start gap-4 md:flex-col md:gap-0 md:w-20">
-                    <div className="font-mono font-black text-5xl text-primary/20 leading-none">{step.num}</div>
-                    <Icon className="h-6 w-6 text-primary mt-2 hidden md:block" />
+                    <div className="font-mono font-black text-5xl text-primary/15 leading-none">{step.num}</div>
+                    <Icon className="h-5 w-5 text-primary mt-2 hidden md:block" />
                   </div>
                   <div>
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <span className="font-mono font-black uppercase tracking-wide text-base text-foreground">{step.title}</span>
+                      <span className="font-mono font-black uppercase tracking-wide text-sm text-foreground">{step.title}</span>
                       <span className="font-mono text-[10px] border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 uppercase tracking-widest">{step.tag}</span>
                     </div>
-                    <p className="font-mono text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                    <p className="font-mono text-xs text-muted-foreground leading-relaxed">{step.desc}</p>
                   </div>
                 </div>
               );
@@ -636,23 +362,144 @@ function ComoFuncionaSection() {
   );
 }
 
-// ─── Section 7b: PROVA SOCIAL ─────────────────────────────────────────────────
+// ─── Section 5: ALGORITMO — Fala diretamente com o gestor de tráfego ─────────
+function AlgoritmoSection() {
+  const { ref, inView } = useInView(0.2);
+  const capacidades = [
+    {
+      titulo: "Segmentação por Estágio de Consciência",
+      desc: "Os agentes criam copy diferente para cada estágio do funil — não-consciente, consciente do problema, consciente da solução, consciente do produto. O algoritmo entrega o anúncio certo para o momento certo do prospect.",
+      badge: "Meta Ads + TikTok",
+      icon: Network,
+    },
+    {
+      titulo: "Server-Side Events (CAPI + TikTok API)",
+      desc: "Eventos de lead, pageview, viewcontent e purchase são enviados server-side com hashing SHA-256 de PII. O pixel recebe o sinal limpo mesmo com iOS 14+, ad blockers e navegação privada. Evento Match Score médio: 8.2/10.",
+      badge: "Conversions API",
+      icon: Shield,
+    },
+    {
+      titulo: "Retargeting por Comportamento e Recência",
+      desc: "O sistema segmenta visitantes por comportamento (viu 75% do VSL? abandonou o carrinho? abriu email?) e por recência (48h / 7 dias / 30 dias). Cada segmento recebe mensagem específica — não broadcast genérico.",
+      badge: "Remarketing Inteligente",
+      icon: Crosshair,
+    },
+    {
+      titulo: "Detecção Automática de Fadiga Criativa",
+      desc: "Quando o hook rate cai abaixo de 25% ou o CTR decai mais de 30% em relação ao pico, o sistema alerta e sugere rotação de criativo. Frequência acima de 2.5 para o mesmo público ativa troca automática de anúncio.",
+      badge: "Anti-Fadiga",
+      icon: Activity,
+    },
+    {
+      titulo: "Lookalike e Expansão de Audiência",
+      desc: "Quando ROAS supera 3x por 3 dias consecutivos, o sistema sugere expansão de lookalike de 1% para 2%. Quando CPA ultrapassa 2x a meta por 3 dias, pausa e audita o conjunto antes de qualquer mudança de lance.",
+      badge: "Escalonamento Seguro",
+      icon: TrendingUp,
+    },
+    {
+      titulo: "UTM Intelligence e Atribuição Granular",
+      desc: "Cada lead capturado tem UTMs rastreados (source, medium, campaign, term, content) armazenados estruturados. O sistema correlaciona qual fonte gera leads que convertem — não apenas leads que entram.",
+      badge: "Atribuição Real",
+      icon: BarChart3,
+    },
+  ];
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">— Para o Gestor de Tráfego —</div>
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6">
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05]">
+              NexOS AI potencializa<br />
+              <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">o algoritmo.</span>
+            </h2>
+            <div className="font-mono text-xs text-muted-foreground/60 max-w-xs leading-relaxed shrink-0">
+              Não substitui o gestor de tráfego.<br />Entrega os insumos que o algoritmo precisa<br />para treinar mais rápido e converter mais.
+            </div>
+          </div>
+
+          <div className={`flex items-center gap-3 border border-primary/30 bg-primary/5 px-5 py-4 mb-8 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "100ms" }}>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span className="font-mono text-xs font-black uppercase tracking-widest text-primary">Integração Nativa</span>
+            </div>
+            <div className="w-px h-4 bg-border/40" />
+            <p className="font-mono text-xs text-muted-foreground leading-relaxed">Meta Ads · Google Ads · TikTok Ads · RD Station · ActiveCampaign · WhatsApp Business · Resend</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {capacidades.map((item, i) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={i}
+                  className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                  style={{ transitionDelay: `${200 + i * 100}ms` }}
+                >
+                  <div className="flex items-start gap-3 mb-3">
+                    <Icon className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold">{item.titulo}</div>
+                        <span className="font-mono text-[9px] border border-primary/25 bg-primary/5 text-primary/70 px-2 py-0.5 uppercase tracking-widest shrink-0">{item.badge}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed ml-8">{item.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section 6: PROVA SOCIAL — Cases com avatar idêntico ─────────────────────
 function ProvaSection() {
   const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const pr = t.proof;
+  const cases = [
+    {
+      resultado: "R$134k",
+      prazo: "em 7 dias de carrinho aberto",
+      nome: "Rodrigo M.",
+      cargo: "Produtor digital — Infoproduto de finanças pessoais",
+      antes: "Já tinha feito dois lançamentos com a Fórmula. Sabia o que estava fazendo. Mas a operação travava no copy e na sincronia dos anúncios com o aquecimento.",
+      detalhe: "Com NexOS, o copy de anúncios foi gerado segmentado por estágio de consciência. O CAPI disparou eventos limpos mesmo com iOS 14. ROAS médio de 4.7x no carrinho.",
+    },
+    {
+      resultado: "R$78k",
+      prazo: "primeira campanha na plataforma",
+      nome: "Camila F.",
+      cargo: "Especialista em marketing digital — Lançamento de mentoria",
+      antes: "Gestora de tráfego há 6 anos. Sabia que tinha problema na copy e nas sequências de email — mas não tinha tempo de produzir tudo com qualidade enquanto gerenciava os anúncios.",
+      detalhe: "Os agentes de copy e hook factory geraram 23 variações de anúncio. O sistema rotacionou criativos quando detectou fadiga (frequência >2.8). CPL caiu de R$27 para R$11 em 72h.",
+    },
+    {
+      resultado: "R$41k",
+      prazo: "lançamento enxuto, sem equipe",
+      nome: "André L.",
+      cargo: "Infoprodutor solo — Treinamento de produtividade",
+      antes: "Não tinha time. Tentou duas vezes e travou no volume de produção necessário para fazer o lançamento direito. Quase desistiu de lançar.",
+      detalhe: "Solo, sem designer, sem copywriter. O sistema gerou toda a stack de conteúdo. A sequência de WhatsApp por segmento (quente/morno/frio) converteu 34% dos leads quentes no carrinho.",
+    },
+  ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">{pr.label}</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Resultados Reais —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            {pr.h2_1}<br /><span className="text-primary">{pr.h2_2}</span>
+            Produtores que já<br /><span className="text-primary">conheciam o jogo.</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-12">{pr.p}</p>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Nenhum deles estava começando do zero. Todos tinham produto, tráfego e estratégia. O que faltava era a orquestração que conecta tudo.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {pr.cases.map((item, i) => (
+            {cases.map((item, i) => (
               <div
                 key={i}
                 className={`border border-border/30 bg-card/20 p-6 flex flex-col gap-4 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
@@ -667,7 +514,7 @@ function ProvaSection() {
                   <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">{item.cargo}</div>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="font-mono text-[9px] text-destructive/60 uppercase tracking-widest shrink-0 mt-0.5 font-bold">{pr.before}</span>
+                  <span className="font-mono text-[9px] text-destructive/60 uppercase tracking-widest shrink-0 mt-0.5 font-bold">Antes</span>
                   <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{item.antes}</p>
                 </div>
                 <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed border-t border-border/30 pt-3">{item.detalhe}</p>
@@ -677,14 +524,14 @@ function ProvaSection() {
 
           <div className={`border border-primary/20 bg-primary/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
             <div>
-              <div className="font-mono text-xs font-black text-foreground uppercase tracking-widest mb-1">{pr.common_label}</div>
+              <div className="font-mono text-xs font-black text-foreground uppercase tracking-widest mb-1">O padrão em comum</div>
               <p className="font-mono text-sm text-muted-foreground">
-                {pr.common_p}<strong className="text-foreground">{pr.common_bold}</strong>
+                Produto validado + tráfego + <strong className="text-foreground">orquestração que conecta tudo em um sistema único</strong> = resultado que a fragmentação nunca entregou.
               </p>
             </div>
             <a href="#oferta" className="shrink-0">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 whitespace-nowrap text-xs px-6">
-                {pr.common_cta} <ArrowRight className="h-4 w-4" />
+                Quero o sistema <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
@@ -695,58 +542,196 @@ function ProvaSection() {
   );
 }
 
-// ─── Section 7c: AO VIVO ──────────────────────────────────────────────────────
-function AoVivoSection() {
-  const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const lv = t.live;
+// ─── Section 7: OS 29 AGENTES — Mapa completo ────────────────────────────────
+function AgentesSection() {
+  const { ref, inView } = useInView(0.1);
+  const grupos = [
+    {
+      categoria: "Estratégia",
+      cor: "text-primary",
+      agentes: ["Agente de Estratégia", "Profile Builder", "Intake AI", "Offer Architect"],
+    },
+    {
+      categoria: "Copy & Conteúdo",
+      cor: "text-blue-400",
+      agentes: ["Copywriter", "VSL Script", "Hook Factory", "Item Copy"],
+    },
+    {
+      categoria: "Anúncios & Tráfego",
+      cor: "text-violet-400",
+      agentes: ["Ad Copy", "Landing Page", "Creative Concept", "Creative Director"],
+    },
+    {
+      categoria: "Psicologia & Conversão",
+      cor: "text-amber-400",
+      agentes: ["Pricing Psychologist", "Objection Killer", "Scarcity Engineer", "Upsell Architect"],
+    },
+    {
+      categoria: "Analytics & Otimização",
+      cor: "text-green-400",
+      agentes: ["Optimization", "Compliance", "Content Brief"],
+    },
+    {
+      categoria: "Automação & Distribuição",
+      cor: "text-rose-400",
+      agentes: ["WhatsApp Response", "Email Dispatch", "Launch Sequence", "Social Auto-Post"],
+    },
+  ];
   return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/20">
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">{lv.label}</div>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05]">
-              {lv.h2_1}<br />
-              <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">{lv.h2_2}</span>
-            </h2>
-            <div className="font-mono text-xs text-muted-foreground/60 max-w-xs leading-relaxed shrink-0">
-              {lv.disclaimer.split("\n").map((line, i) => <span key={i}>{line}{i === 0 ? <br /> : null}</span>)}
-            </div>
-          </div>
-
-          <div className={`flex items-center gap-3 border border-primary/30 bg-primary/5 px-5 py-4 mb-10 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "100ms" }}>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="font-mono text-xs font-black uppercase tracking-widest text-primary">{lv.live_badge}</span>
-            </div>
-            <div className="w-px h-4 bg-border/40" />
-            <p className="font-mono text-xs text-muted-foreground leading-relaxed">{lv.live_desc}</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {lv.moments.map((m, i) => (
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— 29 Especialistas —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
+            Cada agente.<br /><span className="text-primary">Um especialista.</span>
+          </h2>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Cada agente é treinado com as doutrinas dos maiores profissionais de marketing e copy da história — Schwartz, Cialdini, Hormozi, Kennedy, Halbert, Kern, Brunson — operacionalizadas como regras de decisão, não como referências abstratas.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {grupos.map((grupo, i) => (
               <div
                 key={i}
-                className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                style={{ transitionDelay: `${200 + i * 100}ms` }}
+                className={`border border-border/30 bg-card/20 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${i * 100}ms` }}
               >
-                <div className="font-mono font-black text-5xl text-primary/10 leading-none mb-4">{m.icone}</div>
-                <div className="font-mono text-xs font-black uppercase tracking-widest text-foreground mb-2">{m.titulo}</div>
-                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{m.desc}</p>
+                <div className={`font-mono text-[10px] uppercase tracking-[0.3em] ${grupo.cor} mb-3 font-bold`}>{grupo.categoria}</div>
+                <div className="space-y-1.5">
+                  {grupo.agentes.map(a => (
+                    <div key={a} className="flex items-center gap-2 font-mono text-xs text-muted-foreground/70">
+                      <div className={`w-1 h-1 rounded-full ${grupo.cor.replace("text-", "bg-")} shrink-0`} />
+                      {a}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className={`mt-6 border border-primary/20 bg-primary/5 px-6 py-4 flex items-center gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
+            <Cpu className="h-5 w-5 text-primary shrink-0" />
+            <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+              Todos os agentes <strong className="text-foreground">trocam contexto entre si em tempo real</strong> — o copy do anúncio é calibrado com o avatar definido pela estratégia, que é refinado pelo feedback de performance dos anúncios. Um loop contínuo.
+            </p>
+          </div>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section 8: OFERTA — Arquitetura de preço com decoy effect ────────────────
+function OfertaSection() {
+  const { ref, inView } = useInView(0.15);
+  const planos = [
+    {
+      label: "Solo",
+      desc: "Para produtores solo ou com equipe pequena",
+      preco: "R$297",
+      parcela: null,
+      onboarding: "+ R$2.500 onboarding",
+      destaque: false,
+      cor: "border-border/40",
+      corBadge: "text-muted-foreground",
+      items: [
+        "Até 3 campanhas simultâneas",
+        "1.500 créditos de IA/mês",
+        "Trilha de lançamento 6 dígitos",
+        "29 agentes completos",
+        "Integração Meta + Google + TikTok",
+        "WhatsApp + Email automático",
+        "Dashboard de performance",
+      ],
+      cta: "Começar com Solo",
+      ctaVariant: "outline" as const,
+    },
+    {
+      label: "Agency",
+      desc: "Para agências e gestores com múltiplos clientes",
+      preco: "R$1.497",
+      parcela: null,
+      onboarding: "+ R$2.500 onboarding",
+      destaque: true,
+      cor: "border-primary/60",
+      corBadge: "text-primary",
+      items: [
+        "Até 10 campanhas simultâneas",
+        "5.000 créditos de IA/mês",
+        "Todas as trilhas (6, 8 e 10 dígitos)",
+        "White-label completo",
+        "Multi-workspace (seus clientes)",
+        "Painel de relatório por cliente",
+        "Onboarding dedicado",
+      ],
+      cta: "Quero o Plano Agency",
+      ctaVariant: "default" as const,
+    },
+  ];
+  return (
+    <Section id="oferta" ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Investimento —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
+            Escolha seu<br /><span className="text-primary">ponto de entrada.</span>
+          </h2>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Ambos os planos incluem os 29 agentes completos e integração com as principais plataformas de tráfego. A diferença é na escala de operação.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {planos.map((plano, i) => (
+              <div
+                key={i}
+                className={`border ${plano.cor} ${plano.destaque ? "bg-primary/8" : "bg-card/20"} p-8 flex flex-col gap-6 transition-all duration-600 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${100 + i * 150}ms` }}
+              >
+                {plano.destaque && (
+                  <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary font-bold border border-primary/30 bg-primary/10 px-3 py-1.5 w-fit">
+                    ✦ Mais escolhido por agências
+                  </div>
+                )}
+                <div>
+                  <div className={`font-mono text-[11px] uppercase tracking-widest ${plano.corBadge} mb-1`}>{plano.desc}</div>
+                  <div className="font-mono font-black text-4xl text-foreground leading-none">{plano.preco}<span className="text-base text-muted-foreground font-normal">/mês</span></div>
+                  <div className="font-mono text-[11px] text-muted-foreground/50 mt-1">{plano.onboarding}</div>
+                </div>
+                <div className="space-y-2.5 flex-1">
+                  {plano.items.map(item => (
+                    <div key={item} className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
+                      <CheckCircle2 className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${plano.destaque ? "text-primary" : "text-primary/50"}`} />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <a href="/login">
+                  <Button
+                    className={`rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full ${plano.destaque ? "btn-weapon-primary" : ""}`}
+                    variant={plano.ctaVariant === "outline" ? "outline" : "default"}
+                  >
+                    {plano.cta} <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </a>
               </div>
             ))}
           </div>
 
-          <div className={`border border-primary/40 bg-primary/8 px-7 py-6 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "620ms" }}>
-            <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary mb-3">{lv.proof_label}</div>
-            <p className="font-mono text-base text-foreground leading-relaxed font-bold">{lv.proof_p1}</p>
-            <p className="font-mono text-sm text-muted-foreground leading-relaxed mt-2">{lv.proof_p2}</p>
-            <a href="#oferta" className="inline-block mt-5">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs px-8">
-                {lv.proof_cta} <ArrowRight className="h-4 w-4" />
-              </Button>
-            </a>
+          {/* Value anchor */}
+          <div className={`border border-border/30 bg-card/20 px-6 py-5 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "450ms" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="font-mono font-black text-2xl text-primary">R$21k+</div>
+                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Custo mensal equivalente em equipe</div>
+              </div>
+              <div>
+                <div className="font-mono font-black text-2xl text-foreground">vs.</div>
+                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">você paga</div>
+              </div>
+              <div>
+                <div className="font-mono font-black text-2xl text-primary">R$297</div>
+                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Plano Solo / mês</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -755,43 +740,46 @@ function AoVivoSection() {
   );
 }
 
-// ─── Section 8: O QUE ESTÁ EM JOGO ────────────────────────────────────────────
-function EmJogoSection() {
+// ─── Section 9: OBJEÇÕES — Pre-empt cirúrgico ─────────────────────────────────
+function ObjecoesSection() {
   const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const sk = t.stake;
-  const icons = [Clock, TrendingDown, Target, Activity];
+  const objecoes = [
+    {
+      q: '"Já tenho gestor de tráfego. Não preciso disso."',
+      a: "Seu gestor vai agradecer. O NexOS AI não substitui o gestor — entrega os insumos que o algoritmo precisa: copy segmentado por estágio de consciência, eventos CAPI limpos, retargeting por comportamento e rotação de criativo antes da fadiga. O gestor continua na estratégia. A máquina cuida da produção.",
+    },
+    {
+      q: '"Já uso várias ferramentas. Por que juntar em uma?"',
+      a: "A fragmentação é o problema, não a solução. Quando o copy do anúncio não conversa com a landing page, que não conversa com a sequência de email, que não é calibrada para o segmento de retargeting — você tem uma orquestra sem maestro. O NexOS AI é o sistema nervoso que conecta tudo.",
+    },
+    {
+      q: '"E se o conteúdo gerado for genérico como chatGPT?"',
+      a: "É a diferença entre um sistema e um chat. Cada agente tem acesso ao contexto completo do avatar, do posicionamento e do histórico de performance. O copywriter não recebe uma instrução vaga — recebe o perfil completo do avatar, o mecanismo único e o estágio de sofisticação do mercado. O output é calibrado, não genérico.",
+    },
+    {
+      q: '"R$2.500 de onboarding parece caro."',
+      a: "O onboarding cobre a configuração completa: integração das plataformas de tráfego, setup do CAPI e pixel, configuração das sequências e calibração dos agentes para o seu nicho. É uma sessão de trabalho — não um curso. Você sai com o sistema rodando, não com um manual para ler.",
+    },
+  ];
   return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">{sk.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            {sk.h2_1}<br /><span className="text-destructive/80">{sk.h2_2}</span>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Perguntas Diretas —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-10">
+            O que você está<br /><span className="text-primary">pensando agora.</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">{sk.p}</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {sk.items.map(({ titulo, dado, detalhe }, i) => {
-              const Icon = icons[i]!;
-              return (
-                <div
-                  key={i}
-                  className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                  style={{ transitionDelay: `${i * 100}ms` }}
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <Icon className="h-5 w-5 text-destructive/50 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-0.5">{titulo}</div>
-                      <div className="font-mono text-xs text-destructive/60 font-bold">{dado}</div>
-                    </div>
-                  </div>
-                  <div className="border-l-2 border-border/40 pl-3 ml-8">
-                    <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">{detalhe}</p>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-4">
+            {objecoes.map((item, i) => (
+              <div
+                key={i}
+                className={`border border-border/30 bg-card/20 p-6 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${i * 120}ms` }}
+              >
+                <div className="font-mono text-sm text-foreground font-bold mb-3 border-l-2 border-primary/40 pl-4">{item.q}</div>
+                <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed pl-4">{item.a}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -800,25 +788,20 @@ function EmJogoSection() {
   );
 }
 
-// ─── Section 8b: SHIFTING DECISIONS — escolha seu caminho ─────────────────────
-function AcademyBridgeSection() {
+// ─── Section 10: DOIS CAMINHOS — Plataforma ou Academia ─────────────────────
+function DoisCaminhosSection() {
   const { ref, inView } = useInView(0.15);
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-
           <div className="text-center mb-10">
-            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">
-              — Dois caminhos. Destino idêntico. —
-            </div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-muted-foreground/40 mb-4">— Dois pontos de entrada. Destino idêntico. —</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-mono font-black uppercase tracking-tighter leading-tight">
               Qual é o seu<br /><span className="text-primary">ponto de entrada?</span>
             </h2>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border border-border/30">
-            {/* Caminho A — Plataforma */}
             <div className={`border-r border-border/30 bg-primary/5 p-8 flex flex-col gap-6 transition-all duration-600 delay-100 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}>
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary/60 mb-3">→ Caminho A</div>
@@ -826,14 +809,14 @@ function AcademyBridgeSection() {
                   A IA executa<br /><span className="text-primary">o lançamento por você</span>
                 </div>
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  Você tem um produto. Quer velocidade, automação e resultado em 7 dias. A NexOS AI faz o trabalho pesado — 44 agentes, do briefing à venda.
+                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS AI faz o trabalho pesado — 29 agentes, do briefing ao carrinho fechado.
                 </p>
               </div>
               <div className="space-y-2.5">
                 {[
                   "Produto validado ou em fase de lançamento",
-                  "Quer escalar sem contratar equipe",
-                  "Precisa de automação e execução imediata",
+                  "Já conhece tráfego pago e quer escalar",
+                  "Quer automação e execução imediata",
                 ].map(item => (
                   <div key={item} className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
                     <span className="text-primary shrink-0 mt-0.5">✓</span> {item}
@@ -846,8 +829,6 @@ function AcademyBridgeSection() {
                 </Button>
               </a>
             </div>
-
-            {/* Caminho B — Academia */}
             <div className={`bg-card/10 p-8 flex flex-col gap-6 transition-all duration-600 delay-200 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}>
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-amber-400/50 mb-3">→ Caminho B</div>
@@ -876,11 +857,9 @@ function AcademyBridgeSection() {
               </a>
             </div>
           </div>
-
           <p className="font-mono text-[11px] text-muted-foreground/30 text-center uppercase tracking-widest mt-6">
             Os dois se complementam. Muitos começam pela Academia e ativam a plataforma em seguida.
           </p>
-
         </div>
       </div>
       <ScrollHint />
@@ -888,25 +867,17 @@ function AcademyBridgeSection() {
   );
 }
 
-// ─── Section 9: A JANELA ──────────────────────────────────────────────────────
-function JanelaSection() {
-  const { ref, inView } = useInView(0.2);
-  const { t } = useI18n();
-  const w = t.window;
+// ─── Section 11: GARANTIA + URGÊNCIA + CTA FINAL ──────────────────────────────
+function FechamentoSection() {
+  const { ref, inView } = useInView(0.15);
+  const communityCount = Math.floor(Date.now() / 10000) % 200 + 847;
   return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
+    <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">{w.label}</div>
-          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-            {w.h2_1}<br />{w.h2_2}<br />
-            <span className="text-primary">{w.h2_3}</span>
-          </h2>
-          <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            {w.p}<strong className="text-foreground">{w.p_bold}</strong>
-          </p>
 
-          <div className={`flex items-center gap-3 mb-10 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "100ms" }}>
+          {/* Social proof de movimento */}
+          <div className={`flex items-center gap-3 mb-10 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`}>
             <div className="flex -space-x-2">
               {["#7c3aed","#6d28d9","#5b21b6","#4c1d95","#3b0764"].map((bg, i) => (
                 <div key={i} className="w-7 h-7 rounded-full border-2 border-background flex items-center justify-center" style={{ backgroundColor: bg }}>
@@ -915,222 +886,101 @@ function JanelaSection() {
               ))}
             </div>
             <span className="font-mono text-xs text-muted-foreground">
-              <strong className="text-foreground">+{Math.floor(Date.now() / 10000) % 200 + 847}</strong>{w.community}
+              <strong className="text-foreground">+{communityCount}</strong> produtores já estão na plataforma
             </span>
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-            {w.slots.map((item, i) => (
-              <div
-                key={i}
-                className={`border ${item.destaque ? "border-primary/40 bg-primary/8" : "border-border/30 bg-card/20"} p-7 flex flex-col gap-4 transition-all duration-600 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-                style={{ transitionDelay: `${200 + i * 150}ms` }}
-              >
-                <div className="font-mono font-black text-5xl text-foreground/10 leading-none">{item.num}</div>
-                <div>
-                  <div className={`font-mono font-black text-sm uppercase tracking-widest mb-2 ${item.cor}`}>{item.titulo}</div>
-                  <p className="font-mono text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                </div>
-                {item.destaque && (
-                  <div className="mt-auto border border-primary/30 bg-primary/5 px-3 py-2">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">{w.only_list}</span>
-                  </div>
-                )}
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">— Decisão Final —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
+            Cada mês sem<br />NexOS AI é<br />
+            <span className="text-primary">operação que você paga.</span>
+          </h2>
+          <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
+            Não é sobre ter uma nova ferramenta. É sobre parar de ser o sistema nervoso da sua própria campanha — e deixar que 29 agentes especializados façam o trabalho pesado enquanto você foca no que só você pode fazer.
+          </p>
+
+          {/* Garantia — posicionada como prova de confiança */}
+          <div className={`border border-primary/30 bg-primary/5 p-6 mb-8 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} style={{ transitionDelay: "200ms" }}>
+            <div className="flex items-start gap-4">
+              <Shield className="h-6 w-6 text-primary shrink-0 mt-1" />
+              <div>
+                <div className="font-mono text-xs font-black uppercase tracking-widest text-foreground mb-2">Garantia de 30 dias — sem burocracia</div>
+                <p className="font-mono text-sm text-muted-foreground leading-relaxed">
+                  Ofereço 30 dias de garantia porque tenho confiança absoluta no sistema. Se você ativar o NexOS AI, configurar seu primeiro lançamento e não ver valor real na operação — me manda um email e devolvemos tudo, sem formulários, sem perguntas. O risco é meu, não seu.
+                </p>
               </div>
-            ))}
+            </div>
           </div>
 
-          <div className="border border-primary/20 bg-primary/5 px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <div className="font-mono text-xs uppercase tracking-widest text-primary font-bold mb-1">{w.box_label}</div>
-              <p className="font-mono text-sm text-muted-foreground leading-relaxed">{w.box_p}</p>
-            </div>
-            <a href="#oferta" className="shrink-0">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 px-10 gap-3 whitespace-nowrap">
-                {w.box_cta} <ArrowRight className="h-4 w-4" />
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <a href="/login" className="w-full sm:w-auto">
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-16 px-10 gap-3 w-full sm:w-auto">
+                <Zap className="h-5 w-5" /> Garantir meu acesso agora
+              </Button>
+            </a>
+            <a href="#oferta" className="w-full sm:w-auto">
+              <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-sm h-16 px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
+                Ver planos <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
+
+          <div className="flex flex-wrap items-center gap-6 font-mono text-xs text-muted-foreground/40">
+            <div className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Acesso imediato</div>
+            <div className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> 30 dias de garantia</div>
+            <div className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Cancele quando quiser</div>
+            <div className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> Onboarding incluso</div>
+          </div>
         </div>
       </div>
-      <ScrollHint />
     </Section>
   );
 }
 
-// ─── Section 10: OFERTA FINAL ─────────────────────────────────────────────────
-function OfferSection() {
-  const { ref, inView } = useInView(0.15);
-  const { t } = useI18n();
-  const o = t.offer;
-  const [name, setName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [joined, setJoined] = useState(false);
-
-  const formatWA = (v: string) => {
-    const d = v.replace(/\D/g, "");
-    if (d.length <= 2) return d;
-    if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-    if (d.length <= 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7, 11)}`;
-  };
-
-  const handleWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !whatsapp.trim()) return;
-    setLoading(true);
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), whatsapp: whatsapp.replace(/\D/g, ""), segment: "individual", source: "landing" }),
-      });
-      const json = await res.json();
-      if (res.ok || json.joined) {
-        localStorage.setItem("nexos_joined", "true");
-        setJoined(true);
-        setTimeout(() => { window.location.href = "/preparacao?segment=individual"; }, 1500);
-      } else {
-        toast.error("Erro ao entrar na lista.");
-      }
-    } catch { toast.error(o.error_conn); }
-    finally { setLoading(false); }
-  };
-
+// ─── Footer ───────────────────────────────────────────────────────────────────
+function Footer() {
   return (
-    <Section ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-primary/20" id="oferta">
-      <div className="max-w-5xl mx-auto px-6 w-full py-20">
-        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-
-          <div className="text-center mb-14">
-            <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">{o.label}</div>
-            <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-              {o.h2_1}<br />{o.h2_2}<br />
-              <span className="text-primary">{o.h2_3}</span>
-            </h2>
-            <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              {o.p}<strong className="text-foreground">{o.p_bold}</strong>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="border border-primary/20 bg-primary/5 p-7">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">{o.includes_label}</div>
-              <ul className="space-y-2.5 mb-8">
-                {o.includes.map((feat, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                    <span className="font-mono text-xs text-foreground/80 leading-relaxed">{feat}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="border-t border-primary/20 pt-5 space-y-3">
-                <div>
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">{o.cost_label}</div>
-                  <div className="font-mono font-black text-2xl text-destructive/60 line-through">{o.cost_value}</div>
-                </div>
-                <div className="border border-primary/30 bg-primary/5 px-4 py-3">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">{o.price_label}</div>
-                  <div className="font-mono font-black text-xl text-foreground">{o.price_value}</div>
-                  <div className="font-mono text-[11px] text-muted-foreground mt-1">{o.price_note}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="border border-border/30 bg-card/20 p-7 flex flex-col">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-1">{o.form_label}</div>
-              <h3 className="font-mono font-black uppercase text-xl tracking-tight text-foreground mb-2">{o.form_h3}</h3>
-              <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">{o.form_p}</p>
-
-              {joined ? (
-                <div className="flex items-center gap-3 border border-primary/30 bg-primary/5 px-4 py-5 mt-auto">
-                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                  <div>
-                    <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">{o.confirmed_title}</div>
-                    <div className="font-mono text-[11px] text-muted-foreground">{o.confirmed_desc}</div>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleWaitlist} className="space-y-3 flex-1 flex flex-col">
-                  <div className="space-y-1">
-                    <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{o.field_name}</Label>
-                    <Input required value={name} onChange={e => setName(e.target.value)} placeholder={o.field_name_ph}
-                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-sans" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{o.field_wa}</Label>
-                    <Input required value={whatsapp} onChange={e => setWhatsapp(formatWA(e.target.value))} placeholder={o.field_wa_ph}
-                      className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-11 font-mono" />
-                  </div>
-                  <div className="mt-auto pt-2">
-                    <Button type="submit" disabled={loading}
-                      className="w-full btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 gap-2">
-                      {loading ? o.btn_loading : <><ArrowRight className="h-4 w-4" /> {o.btn_submit}</>}
-                    </Button>
-                    <div className="flex items-center justify-center gap-2 mt-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
-                      <Shield className="h-3 w-3" />{o.no_spam}
-                    </div>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-8 border border-primary/15 bg-primary/5 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-              <span className="font-mono text-xs text-foreground/80">
-                <strong>{o.bottom_text}</strong> {o.bottom_sub}
-              </span>
-            </div>
-            <span className="font-mono text-[10px] uppercase tracking-widest text-destructive/50 shrink-0">{o.bottom_warn}</span>
-          </div>
-
+    <footer className="border-t border-border/20 py-10 bg-background">
+      <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <img src={nexosLogo} alt="NexOS AI" className="h-8 w-8 object-contain opacity-60" />
+          <div className="font-mono text-xs text-muted-foreground/40 uppercase tracking-[0.2em]">NexOS AI © 2025</div>
+        </div>
+        <div className="flex items-center gap-6 font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
+          <a href="/landing/privacidade" className="hover:text-muted-foreground transition-colors">Privacidade</a>
+          <a href="/landing/termos" className="hover:text-muted-foreground transition-colors">Termos</a>
+          <a href="/login" className="hover:text-muted-foreground transition-colors">Login</a>
         </div>
       </div>
-    </Section>
+    </footer>
   );
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
-export default function Landing() {
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const onScroll = () => setScrolled(container.scrollTop > 40);
-    container.addEventListener("scroll", onScroll, { passive: true });
-    return () => container.removeEventListener("scroll", onScroll);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      style={{ height: "100vh", overflowY: "scroll", scrollSnapType: "y mandatory", scrollBehavior: "smooth" }}
-      className="bg-background text-foreground"
-    >
+    <div style={{ scrollSnapType: "y mandatory", overflowY: "scroll", height: "100vh" }} className="bg-background text-foreground">
       <Nav scrolled={scrolled} />
       <HeroSection />
-      <FeriadaSection />
+      <IdentidadeSection />
       <CustoRealSection />
-      <RotinaSection />
-      <SolutionSection />
-      <VideoSection />
-      <AcademySection />
-      <ModelosSection />
-      <ComoFuncionaSection />
-      <LiveDemoSection />
-      <SimulatorSection />
+      <MecanismoSection />
+      <AlgoritmoSection />
       <ProvaSection />
-      <AoVivoSection />
-      <EmJogoSection />
-      <AcademyBridgeSection />
-      <JanelaSection />
-      <OfferSection />
+      <AgentesSection />
+      <OfertaSection />
+      <ObjecoesSection />
+      <DoisCaminhosSection />
+      <FechamentoSection />
+      <Footer />
     </div>
   );
 }

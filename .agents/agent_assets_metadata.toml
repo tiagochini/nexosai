@@ -19,31 +19,7 @@ type = "image"
 title = "diagnostic_grid"
 
 [[outputs]]
-id = "AQQ5sBmzcHyazMze0m2Az"
-uri = "file://NexOS_AI_Audit_Report_2026.pdf"
-type = "pdf"
-title = "NexOS AI — Relatório de Auditoria Técnica 2026 (PT-BR + EN-US)"
-
-[[outputs]]
-id = "e1QYfZzpa0SCC7ZY2tKl0"
-uri = "file://NexOS_AI_Auditoria_PT.pdf"
-type = "pdf"
-title = "NexOS AI — Auditoria Técnica 2026 (Português)"
-
-[[outputs]]
-id = "qYhiWdPXC04MqPnWWJhWn"
-uri = "file://NexOS_AI_Audit_EN.pdf"
-type = "pdf"
-title = "NexOS AI — Technical Audit Report 2026 (English)"
-
-[[outputs]]
 id = "Am3AKOGMz4EZf6QdTqhBd"
 uri = "file://artifacts/app/public/nexos_ai_logo_1024x1024.png"
 type = "image"
 title = "NexOS AI — Logo 1024x1024 PNG (sem distorção)"
-
-[[outputs]]
-id = "UUevGA9RwD01rkuhFsAzy"
-uri = "file://auditoria-agentes-nexos.pdf"
-type = "pdf"
-title = "Auditoria Técnica Estrutural — Sistema de Agentes NexOS AI"
