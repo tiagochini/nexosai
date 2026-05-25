@@ -164,7 +164,7 @@ export default function AdminPage() {
 
   interface InviteCode {
     id: string; code: string; planSlug: string; label: string | null;
-    used: boolean; usedByEmail: string | null; usedAt: string | null; createdAt: string;
+    used: boolean; usedByEmail: string | null; usedByName: string | null; usedAt: string | null; createdAt: string;
   }
 
   const { data: inviteCodes, isLoading: loadingInvites, refetch: refetchInvites } = useQuery({
@@ -921,24 +921,36 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Utilizados */}
+              {/* Utilizados / Usuários Ativos */}
               {inviteCodes.filter(c => c.used).length > 0 && (
                 <div>
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2 pb-1 border-b border-border/30">
-                    ✅ Utilizados — {inviteCodes.filter(c => c.used).length}
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-success/70 mb-2 pb-1 border-b border-success/20">
+                    ✅ Usuários Ativos — {inviteCodes.filter(c => c.used).length} código(s) utilizados
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {inviteCodes.filter(c => c.used).map(c => (
-                      <div key={c.id} className="border border-border/20 bg-card/20 px-4 py-3 flex items-center justify-between gap-3 opacity-60">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="font-mono text-sm font-bold text-muted-foreground tracking-widest line-through">{c.code}</span>
-                          <span className={`text-[11px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${c.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
+                      <div key={c.id} className="border border-success/15 bg-success/5 px-4 py-3 flex items-center justify-between gap-3">
+                        {/* Código riscado à esquerda */}
+                        <div className="flex items-center gap-3 min-w-0 shrink-0">
+                          <span className="font-mono text-sm font-bold text-muted-foreground/50 tracking-widest line-through select-none">
+                            {c.code}
+                          </span>
+                          <span className={`text-[10px] font-mono uppercase tracking-widest px-1.5 py-0.5 border ${c.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
                             {c.planSlug}
                           </span>
                         </div>
-                        <div className="text-right min-w-0">
-                          {c.usedByEmail && <p className="font-mono text-xs text-muted-foreground/60 truncate">{c.usedByEmail}</p>}
-                          {c.usedAt && <p className="font-mono text-[11px] text-muted-foreground/40">{fmtDate(c.usedAt)}</p>}
+
+                        {/* Nome + email + data à direita */}
+                        <div className="text-right min-w-0 flex-1">
+                          {c.usedByName && (
+                            <p className="font-mono text-sm font-bold text-foreground truncate">{c.usedByName}</p>
+                          )}
+                          {c.usedByEmail && (
+                            <p className="font-mono text-xs text-muted-foreground/70 truncate">{c.usedByEmail}</p>
+                          )}
+                          {c.usedAt && (
+                            <p className="font-mono text-[10px] text-muted-foreground/40 mt-0.5">Ativado em {fmtDate(c.usedAt)}</p>
+                          )}
                         </div>
                       </div>
                     ))}

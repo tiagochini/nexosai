@@ -4,7 +4,7 @@ import { getAdminOverview, getAdminFinancials, getAdminPayments } from "./admin.
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
 import { UnauthorizedError } from "../../lib/errors.js";
-import { db, inviteCodesTable } from "@workspace/db";
+import { db, inviteCodesTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 const ADMIN_EMAILS = new Set([
@@ -65,14 +65,27 @@ function generateInviteCode(): string {
   return code;
 }
 
-// GET /api/admin/invite-codes — list all invite codes
+// GET /api/admin/invite-codes — list all invite codes (with used-by name via join)
 router.get("/invite-codes", requireAuth, async (req, res): Promise<void> => {
   requireAdmin(req.auth.email);
-  const codes = await db
-    .select()
+  const rows = await db
+    .select({
+      id: inviteCodesTable.id,
+      code: inviteCodesTable.code,
+      planSlug: inviteCodesTable.planSlug,
+      label: inviteCodesTable.label,
+      used: inviteCodesTable.used,
+      usedByEmail: inviteCodesTable.usedByEmail,
+      usedByUserId: inviteCodesTable.usedByUserId,
+      usedByWorkspaceId: inviteCodesTable.usedByWorkspaceId,
+      usedAt: inviteCodesTable.usedAt,
+      createdAt: inviteCodesTable.createdAt,
+      usedByName: usersTable.name,
+    })
     .from(inviteCodesTable)
+    .leftJoin(usersTable, eq(inviteCodesTable.usedByUserId, usersTable.id))
     .orderBy(desc(inviteCodesTable.createdAt));
-  res.json({ codes });
+  res.json({ codes: rows });
 });
 
 // POST /api/admin/invite-codes/generate — generate N new invite codes
