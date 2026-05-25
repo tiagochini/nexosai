@@ -8,6 +8,7 @@
     "seed-plans": "tsx ./src/seed-plans.ts",
     "nexos-audit-test": "tsx ./src/nexos-audit-test.ts",
     "nexos-launch-sim": "tsx ./src/nexos-launch-sim.ts",
+    "nexos-full-funnel": "tsx ./src/nexos-full-funnel-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
