@@ -417,7 +417,7 @@ function AcademyApp() {
             >
               N
             </div>
-            <span>© 2025 NexOS AI — Metodologia de Lançamentos</span>
+            <span>© 2026 NexOS AI — Metodologia de Lançamentos</span>
           </div>
           <div className="flex items-center gap-4">
             <span>PT-BR</span>

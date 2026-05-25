@@ -304,6 +304,56 @@ const CRITICAL_INTEGRATIONS = [
   { provider: "rd_station",        label: "RD Station",icon: Mail,          color: "text-orange-400" },
 ];
 
+function SalesTeamPanel() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/sales-team/analytics"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/sales-team/analytics");
+      if (!res.ok) return null;
+      return res.json() as Promise<{ analytics: { active: number; converted: number; todayConversions: number; conversionRate: number } }>;
+    },
+    staleTime: 60_000,
+  });
+
+  const analytics = data?.analytics;
+  if (isLoading || !analytics) return null;
+
+  const hasActivity = analytics.active > 0 || analytics.converted > 0;
+
+  return (
+    <div className="border border-border/30 bg-card/20 px-4 py-3 flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-1.5 text-cyan-400 shrink-0">
+        <MessageSquare className="h-3.5 w-3.5" />
+        <span className="font-mono text-[11px] uppercase tracking-widest font-bold">Time de Vendas</span>
+      </div>
+      <div className="w-px h-4 bg-border/40 shrink-0" />
+      <div className="flex items-center gap-4 flex-1 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[11px] text-muted-foreground/60">Ativos:</span>
+          <span className={`font-mono text-[11px] font-bold ${analytics.active > 0 ? "text-primary" : "text-muted-foreground/40"}`}>{analytics.active}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-[11px] text-muted-foreground/60">Convertidos hoje:</span>
+          <span className={`font-mono text-[11px] font-bold ${analytics.todayConversions > 0 ? "text-green-400" : "text-muted-foreground/40"}`}>{analytics.todayConversions}</span>
+        </div>
+        {hasActivity && (
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[11px] text-muted-foreground/60">Taxa:</span>
+            <span className="font-mono text-[11px] font-bold text-amber-400">{analytics.conversionRate}%</span>
+          </div>
+        )}
+      </div>
+      <Link href="/atendimento" className="shrink-0">
+        <Button size="sm" variant="outline"
+          className="rounded-none font-mono text-[10px] uppercase tracking-widest h-6 px-2 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10 gap-1">
+          <ChevronRight className="h-3 w-3" />
+          {hasActivity ? "Ver Atendimentos" : "Iniciar Atendimento"}
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
 function IntegrationHealthPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
@@ -780,6 +830,9 @@ export default function Dashboard() {
 
       {/* ── Integration Health / Full Auto Status ── */}
       <IntegrationHealthPanel />
+
+      {/* ── Time de Vendas Panel ── */}
+      <SalesTeamPanel />
 
       {/* ── Execution Flowchart ── */}
       {campaigns.length > 0 && <ExecutionFlowchart campaigns={campaigns} />}

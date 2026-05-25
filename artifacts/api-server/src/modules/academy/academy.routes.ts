@@ -366,14 +366,14 @@ router.get("/purchases", async (req, res): Promise<void> => {
 const tutorSchema = z.object({
   lessonTitle: z.string().max(200),
   chapterTitle: z.string().max(200),
-  lessonContent: z.string().max(6000),
-  keyPoints: z.array(z.string()).max(20),
-  previousTopics: z.array(z.string()).max(150),
-  upcomingTopics: z.array(z.string()).max(150),
-  question: z.string().min(1).max(1000),
+  lessonContent: z.string().max(20000),
+  keyPoints: z.array(z.string()).max(30),
+  previousTopics: z.array(z.string()).max(200),
+  upcomingTopics: z.array(z.string()).max(200),
+  question: z.string().min(1).max(2000),
   history: z.array(z.object({
     role: z.enum(["user", "assistant"]),
-    content: z.string().max(2000),
+    content: z.string().max(5000),
   })).max(20).optional(),
 });
 
@@ -416,15 +416,17 @@ ${parsed.previousTopics.length > 0 ? parsed.previousTopics.map(t => `• ${t}`).
 TÓPICOS FUTUROS NO CURRÍCULO (NÃO antecipe, NÃO explique em detalhes — apenas mencione que será coberto mais adiante):
 ${parsed.upcomingTopics.length > 0 ? parsed.upcomingTopics.map(t => `• ${t}`).join("\n") : "• Nenhum — esta é a última aula"}
 
-SUAS REGRAS COMO PROFESSOR ALLAN:
-1. Responda APENAS com base no conteúdo desta aula ou de aulas já estudadas pelo aluno
-2. Se o aluno perguntar sobre um tópico futuro, diga em qual aula será coberto e redirecione gentilmente: "Isso vai ser aprofundado em [nome da aula] — por agora, vamos focar em [ponto da aula atual]"
-3. Se a pergunta for totalmente fora do escopo do curso, diga gentilmente que não é o foco desta metodologia
-4. Conecte sempre o conteúdo teórico à aplicação prática na NexOS AI quando relevante
-5. Não repita todo o conteúdo da aula — responda diretamente à dúvida do aluno
-6. Máximo 400 palavras por resposta, a não ser que a pergunta exija mais detalhes técnicos
-7. Use português do Brasil, tom de professor acessível, direto e especializado
-8. Use **negrito** para termos-chave, listas quando fizer sentido, evite respostas genéricas`;
+SUAS DIRETRIZES COMO PROFESSOR ALLAN:
+1. Responda com base no conteúdo desta aula e nas aulas já estudadas. Você pode EXPANDIR com exemplos práticos, analogias e aplicações reais que ilustrem o conceito — mesmo que não estejam textualmente na aula. O objetivo é que o aluno ENTENDA e consiga APLICAR, não apenas recitar.
+2. Quando o aluno pedir um exemplo prático (de um nicho, produto, mercado específico), DÊ o exemplo completo e detalhado. Não peça para o aluno imaginar — mostre o raciocínio aplicado àquele contexto específico.
+3. Se a pergunta envolver tópico futuro, mencione em qual aula será aprofundado mas ainda assim responda o que for possível com o conhecimento atual do aluno.
+4. Se a pergunta for fora do escopo do curso mas relacionada a marketing digital, lançamentos ou negócios digitais, responda brevemente e redirecione para o conteúdo relevante do curso.
+5. Conecte SEMPRE o conteúdo teórico à aplicação prática na NexOS AI: como o aluno usaria essa estratégia dentro da plataforma, qual agente seria ativado, qual etapa do lançamento isso afeta.
+6. Não repita o conteúdo da aula textualmente — responda diretamente à dúvida com suas próprias palavras, enriquecidas com exemplos.
+7. Máximo 600 palavras por resposta padrão. Se a pergunta exigir um breakdown técnico detalhado, pode ir além.
+8. Use português do Brasil, tom de professor prático, direto e entusiasmado — como um mentor que quer ver o aluno aplicar hoje, não amanhã.
+9. Use **negrito** para termos-chave, listas numeradas para processos, bullets para exemplos. Evite respostas genéricas.
+10. Quando der exemplos de negócios específicos (como academia de BJJ, e-commerce, curso online), use dados e números realistas do mercado brasileiro.`;
 
   const messages: Anthropic.MessageParam[] = [
     ...(parsed.history ?? []).map(h => ({
@@ -438,7 +440,7 @@ SUAS REGRAS COMO PROFESSOR ALLAN:
     const { client, model } = getAnthropicForAcademy();
     const response = await client.messages.create({
       model,
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       messages,
     });

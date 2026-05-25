@@ -103,7 +103,7 @@ function HeroSection() {
             É a <strong className="text-foreground">fragmentação da execução</strong> que está comendo sua margem.
           </p>
           <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed mb-8 sm:mb-12 max-w-2xl">
-            NexOS AI é o sistema nervoso do seu lançamento — <strong className="text-foreground">29 agentes de IA em orquestração paralela</strong>, do briefing ao carrinho fechado, integrado diretamente ao algoritmo da Meta e ao TikTok Ads.
+            NexOS AI é o sistema nervoso do seu lançamento — <strong className="text-foreground">34 agentes de IA em orquestração paralela</strong>, do briefing ao carrinho fechado, integrado diretamente ao algoritmo da Meta e ao TikTok Ads.
           </p>
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
@@ -131,7 +131,7 @@ function HeroSection() {
       <div className="absolute bottom-0 sm:bottom-10 left-0 right-0 border-t border-border/15 bg-background/60 backdrop-blur-md py-2.5 sm:py-3">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-1">
           {[
-            { n: "29",      label: "Agentes IA", hide: false },
+            { n: "34",      label: "Agentes IA", hide: false },
             { n: "R$41k",   label: "Menor lançamento", hide: false },
             { n: "R$134k",  label: "Maior lançamento", hide: false },
             { n: "847+",    label: "Produtores", hide: false },
@@ -268,7 +268,7 @@ function DreamStateSection() {
           <div className={`border border-primary/20 bg-primary/5 px-6 py-5 flex items-start gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
             <Cpu className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              Não é um chatbot. Não é um prompt genérico. São <strong className="text-foreground">29 agentes de IA especializados</strong>, cada um treinado com as doutrinas dos maiores profissionais de marketing do mundo, trocando contexto entre si em tempo real — e agindo sobre seus dados reais de performance.
+              Não é um chatbot. Não é um prompt genérico. São <strong className="text-foreground">34 agentes de IA especializados</strong>, cada um treinado com as doutrinas dos maiores profissionais de marketing do mundo, trocando contexto entre si em tempo real — e agindo sobre seus dados reais de performance.
             </p>
           </div>
 
@@ -332,7 +332,7 @@ function CustoRealSection() {
               </p>
               <div className="border-l-2 border-primary/50 pl-4 mb-6">
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  29 agentes de IA trabalhando em paralelo no seu lançamento — estratégia, copy, anúncios, email, WhatsApp, análise de performance e otimização em tempo real.<br /><br />
+                  34 agentes de IA trabalhando em paralelo no seu lançamento — estratégia, copy, anúncios, email, WhatsApp, atendimento de vendas, análise de performance e otimização em tempo real.<br /><br />
                   <strong className="text-foreground">Tudo integrado. Tudo orquestrado. Um sistema único.</strong><br /><br />
                   Ticket único de acesso. Você usa o sistema de gerenciamento completo — os agentes de IA são opcionais e podem ser ativados por crédito quando quiser, sem mensalidade.
                 </p>
@@ -397,7 +397,7 @@ function MecanismoSection() {
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— O Sistema —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            29 agentes.<br /><span className="text-primary">Um sistema nervoso.</span>
+            34 agentes.<br /><span className="text-primary">Um sistema nervoso.</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
             Não é uma ferramenta de copy. Não é um chatbot de estratégia. É a orquestração completa do lançamento — cada agente especialista em uma função, todos trocando contexto entre si em tempo real.
@@ -629,46 +629,51 @@ function ProvaSection() {
   );
 }
 
-// ─── Section 7: OS 29 AGENTES — Mapa completo ────────────────────────────────
+// ─── Section 7: OS 34 AGENTES — Mapa completo ────────────────────────────────
 function AgentesSection() {
   const { ref, inView } = useInView(0.1);
   const grupos = [
     {
       categoria: "Estratégia",
       cor: "text-primary",
-      agentes: ["Agente de Estratégia", "Profile Builder", "Intake AI", "Offer Architect"],
+      agentes: ["Comandante IA", "Arquiteto de Lançamento", "Coordenador de Fases", "Arquiteto de Ofertas", "Product Builder", "Compliance", "Gestor Perpétuo"],
     },
     {
       categoria: "Copy & Conteúdo",
       cor: "text-blue-400",
-      agentes: ["Copywriter", "VSL Script", "Hook Factory", "Item Copy"],
+      agentes: ["Copywriter", "Creative Director", "Ad Copy", "Social Media", "Stories Sequence", "Media Brief", "Landing Page", "Affiliate Campaign", "VSL Script", "CPL Script"],
     },
     {
-      categoria: "Anúncios & Tráfego",
+      categoria: "Audiência & Mídia",
       cor: "text-violet-400",
-      agentes: ["Ad Copy", "Landing Page", "Creative Concept", "Creative Director"],
+      agentes: ["Targeting Expert", "Media Buyer", "Organic Traffic"],
     },
     {
-      categoria: "Psicologia & Conversão",
-      cor: "text-amber-400",
-      agentes: ["Pricing Psychologist", "Objection Killer", "Scarcity Engineer", "Upsell Architect"],
-    },
-    {
-      categoria: "Analytics & Otimização",
+      categoria: "Analytics & Vídeo",
       cor: "text-green-400",
-      agentes: ["Optimization", "Compliance", "Content Brief"],
+      agentes: ["Analytics", "Optimization", "Video Strategy", "Creator Growth"],
     },
     {
-      categoria: "Automação & Distribuição",
+      categoria: "Automação & Monetização",
       cor: "text-rose-400",
-      agentes: ["WhatsApp Response", "Email Dispatch", "Launch Sequence", "Social Auto-Post"],
+      agentes: ["Launch Sequence Builder", "Continuous Sales Manager", "WhatsApp Auto-Response"],
+    },
+    {
+      categoria: "Mentalidade",
+      cor: "text-amber-400",
+      agentes: ["Mental Frequency Coach", "Identity Architect", "Obstinacy Trainer"],
+    },
+    {
+      categoria: "Time de Vendas",
+      cor: "text-cyan-400",
+      agentes: ["Especialista em Aquecimento", "Especialista em Desejo", "Especialista em Fechamento", "Quebrador de Objeções", "Consultor NexOS AI"],
     },
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— 29 Especialistas —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— 34 Especialistas —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
             Cada agente.<br /><span className="text-primary">Um especialista.</span>
           </h2>
@@ -721,7 +726,7 @@ function OfertaSection() {
         "Até 3 campanhas simultâneas",
         "Créditos de IA inclusos — cobre 2 lançamentos completos",
         "Trilha de 6 dígitos (R$100k–R$999k em 7 dias)",
-        "29 agentes completos",
+        "34 agentes especializados",
         "Integração Meta + Google + TikTok",
         "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
         "Dashboard de performance",
@@ -775,7 +780,7 @@ function OfertaSection() {
               >
                 {track.destaque && (
                   <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary font-bold border border-primary/30 bg-primary/10 px-3 py-1.5 w-fit">
-                    ✦ Para operações de maior escala
+                    ✦ Para agências e operações de maior escala
                   </div>
                 )}
                 <div>

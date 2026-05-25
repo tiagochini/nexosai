@@ -42,6 +42,7 @@ import academyRouter from "../modules/academy/academy.routes.js";
 import videoEditorRouter from "../modules/video-editor/video-editor.routes.js";
 import creativeIntentRouter from "../modules/creative-intent/creative-intent.routes.js";
 import pipelineRouter from "../modules/pipeline/pipeline.routes.js";
+import salesTeamRouter from "../modules/sales-team/sales-team.routes.js";
 
 const router: IRouter = Router();
 
@@ -87,6 +88,7 @@ router.use("/products", productCheckoutRouter);
 router.use("/academy", academyRouter);
 router.use("/video-editor", videoEditorRouter);
 router.use("/pipelines", pipelineRouter);
+router.use("/sales-team", salesTeamRouter);
 router.use("/", metaDeletionRouter);
 
 export default router;

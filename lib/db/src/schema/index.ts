@@ -38,3 +38,4 @@ export * from "./invite-codes";
 export * from "./agent-execution-logs";
 export * from "./vertical-memory";
 export * from "./launch-pipelines";
+export * from "./sales-conversations";

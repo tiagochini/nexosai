@@ -47,6 +47,7 @@ import ProdutosPage from "@/pages/produtos/index";
 import ComprarPage from "@/pages/comprar/index";
 import VideoEditorPage from "@/pages/video-editor/index";
 import SiteBuilderPage from "@/pages/site-builder/index";
+import AtendimentoPage from "@/pages/atendimento/index";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -232,6 +233,11 @@ export default function AppRoutes() {
       {/* Construtor de Sites IA */}
       <Route path="/site-builder">
         {() => <ProtectedRoute><SiteBuilderPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Time de Vendas / Atendimento */}
+      <Route path="/atendimento">
+        {() => <ProtectedRoute><AtendimentoPage /></ProtectedRoute>}
       </Route>
 
       {/* Account */}

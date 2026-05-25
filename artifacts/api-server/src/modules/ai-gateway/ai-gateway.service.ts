@@ -66,7 +66,13 @@ export type AgentRole =
   // ── Mentalidade & Identidade ──────────────────────────────────────────────
   | "mental_frequency_coach"
   | "identity_architect"
-  | "obstinacy_trainer";
+  | "obstinacy_trainer"
+  // ── Time de Vendas / Atendimento ─────────────────────────────────────────
+  | "sales_warmer"
+  | "sales_desire"
+  | "sales_closer"
+  | "sales_objection"
+  | "sales_consultant";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -141,6 +147,12 @@ const AGENT_PROVIDER_MAP: Record<
   mental_frequency_coach:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   identity_architect:      { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   obstinacy_trainer:       { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Time de Vendas / Atendimento ─────────────────────────────────────────
+  sales_warmer:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  sales_desire:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  sales_closer:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  sales_objection:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  sales_consultant: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

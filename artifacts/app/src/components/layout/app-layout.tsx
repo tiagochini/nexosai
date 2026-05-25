@@ -9,7 +9,7 @@ import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu, Network,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
-  Brain, Receipt, Link2, Globe, Clapperboard, ShoppingBag,
+  Brain, Receipt, Link2, Globe, Clapperboard, ShoppingBag, MessageSquare,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -89,7 +89,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: tr.nav.ai_team,
       items: [
-        { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "44" },
+        { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "39" },
       ],
     },
     {
@@ -126,8 +126,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: tr.nav.automations,
       items: [
-        { name: tr.sidebar.products,     href: "/produtos",    icon: ShoppingBag },
-        { name: tr.sidebar.integrations, href: "/integracoes", icon: Link2, badge: "!" },
+        { name: tr.sidebar.products,       href: "/produtos",      icon: ShoppingBag },
+        { name: "Atendimento",             href: "/atendimento",   icon: MessageSquare },
+        { name: tr.sidebar.integrations,   href: "/integracoes",   icon: Link2, badge: "!" },
       ],
     },
     {

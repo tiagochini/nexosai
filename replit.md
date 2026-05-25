@@ -203,6 +203,20 @@ Launch tracks by revenue target:
   - Registered in `routes/index.ts` at `/api/events`.
 - **LGPD audit trail** (`lead-capture.routes.ts`): Each lead capture stores `metadata.lgpd` (consentAt ISO timestamp, captureIp, consentText, source, userAgent). Writes a non-blocking `lead.captured` row to `auditLogsTable` with full context (sequenceId, contactId, utm, referralCode, IP, consentText).
 
+## Time de Vendas (Post-session)
+
+- **DB schema**: `lib/db/src/schema/sales-conversations.ts` — `salesConversationsTable` (id, workspaceId, campaignId, contactName, contactHandle, channel, funnelStage, status, notes, metadata) + `salesMessagesTable` (id, conversationId, role, content, agentRole, isAiGenerated). Migrated via `pnpm --filter @workspace/db run push`.
+- **Backend module**: `artifacts/api-server/src/modules/sales-team/` — `sales-team.service.ts` (CRUD + analytics + `suggestSalesReply`) + `sales-team.routes.ts` (all routes with `req.auth` pattern). Registered at `/api/sales-team` in `routes/index.ts`.
+- **5 new AgentRole types**: `sales_warmer`, `sales_desire`, `sales_closer`, `sales_objection`, `sales_consultant` — added to `AGENT_PROVIDER_MAP` in `ai-gateway.service.ts` (all map to `anthropic` / `claude-sonnet-4-6`).
+- **AI suggestion endpoint**: `POST /api/sales-team/:id/suggest` — detects funnel stage → picks specialist agent → calls `completeWithAgent(agentRole, systemPrompt, messages, workspaceId, log, campaignId?)` → returns `{ suggestion, agentRole, funnelStage }`. System prompts for each stage defined in `SALES_SYSTEM_PROMPTS` map in service.
+- **Frontend**: `artifacts/app/src/pages/atendimento/index.tsx` — full conversation manager with kanban-by-stage, message history, AI suggestion button. Route `/atendimento` registered in `routes.tsx`. "Atendimento" nav item added to sidebar. `SalesTeamPanel` added to dashboard. 5 agents (Marco/Renata/Vitor/Clara/Alex) added to `agents/index.tsx` under "Vendas" category.
+- **`completeWithAgent` signature**: positional args `(agentRole, systemPrompt, messages, workspaceId, log, campaignId?)` — NOT an object. Returns `AICompletionResult` with `.content` string field. `AppError` constructor is `(statusCode, message, code?)` — status code is FIRST arg.
+
+## Landing Page + Academy (Post-session)
+
+- **Landing page**: All 6 occurrences of "29 agentes" → "34 agentes". `AgentesSection` updated with 7 categories (added Mentalidade + Time de Vendas with 5 agents). Solo plan item updated. Copyright 2025 → 2026 in `nexos-academy/src/App.tsx`.
+- **Professor Allan fix**: Zod schema limits raised (`lessonContent` 20 000, `question` 2 000, history content 5 000). `max_tokens` 1 024 → 2 048. System prompt expanded with 10 directives (practical examples, Brazilian context, APPLY not just recite). Frontend `lesson.tsx` truncates `lessonContent` to 15 000 chars + caps `keyPoints`/`previousTopics`/`upcomingTopics` before sending to API.
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

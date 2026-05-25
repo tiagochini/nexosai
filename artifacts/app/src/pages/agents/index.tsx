@@ -392,9 +392,51 @@ const AGENTS: AgentDef[] = [
     specialties: ["Obstinação", "Execução", "Treino", "Frequência 4"],
     isNew: true,
   },
+
+  // ── TIME DE VENDAS ────────────────────────────────────────────────────────
+  {
+    role: "sales_warmer", name: "Marco", tagline: "Especialista em Aquecimento",
+    description: "Conduz a primeira abordagem com o lead usando o protocolo PLF + Daniel Godri. Cria rapport, agita o problema e planta curiosidade genuína antes de qualquer pitch.",
+    category: "Vendas", provider: "Claude", icon: Flame,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["PLF", "Rapport", "Godri", "Warming"],
+    isNew: true,
+  },
+  {
+    role: "sales_desire", name: "Renata", tagline: "Especialista em Desejo",
+    description: "Cria ancoragem profunda de valor antes de revelar o preço. Usa Dale Carnegie para espelhar os sonhos do lead e conectar cada funcionalidade ao problema específico dele.",
+    category: "Vendas", provider: "Claude", icon: Sparkles,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Carnegie", "Ancoragem", "Valor", "Desejo"],
+    isNew: true,
+  },
+  {
+    role: "sales_closer", name: "Vitor", tagline: "Especialista em Fechamento",
+    description: "Opera no momento decisivo do funil com protocolo PLF de carrinho. Usa custo de inação como alavanca principal e sempre define o próximo passo com clareza.",
+    category: "Vendas", provider: "Claude", icon: Target,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["PLF", "Fechamento", "Urgência", "Escassez"],
+    isNew: true,
+  },
+  {
+    role: "sales_objection", name: "Clara", tagline: "Quebradora de Objeções",
+    description: "Especialista no framework ACR (Acknowledge → Challenge → Redirect). Tem respostas precisas para as 7 objeções mais comuns de SaaS e produto digital.",
+    category: "Vendas", provider: "Claude", icon: Shield,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Objeções", "ACR", "Técnica", "Conversão"],
+    isNew: true,
+  },
+  {
+    role: "sales_consultant", name: "Alex", tagline: "Consultor NexOS AI",
+    description: "Especialista técnico e comercial completo: conhece cada funcionalidade, plano, caso de uso e integração. Responde dúvidas com precisão e transforma informação em confiança.",
+    category: "Vendas", provider: "Claude", icon: Bot,
+    accent: "border-cyan-500/40 hover:border-cyan-500",
+    specialties: ["Produto", "Técnico", "Comercial", "Consultoria"],
+    isNew: true,
+  },
 ];
 
-const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação", "Mentalidade"];
+const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação", "Mentalidade", "Vendas"];
 
 const PROVIDER_COLOR: Record<string, string> = {
   "Claude":  "text-orange-400 border-orange-400/30 bg-orange-400/8",

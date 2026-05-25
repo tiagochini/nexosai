@@ -161,13 +161,14 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
     const currentIdx = allLessons.findIndex(l => l.lessonId === activeLesson!.id);
     const previousTopics = allLessons.slice(0, currentIdx).slice(-30).map(l => l.title);
     const upcomingTopics = allLessons.slice(currentIdx + 1).slice(0, 30).map(l => l.title);
+    const rawContent = stripHtml(activeLesson!.content);
     return {
       lessonTitle: activeLesson!.title,
       chapterTitle: chapter!.title,
-      lessonContent: stripHtml(activeLesson!.content),
-      keyPoints: activeLesson!.keyPoints,
-      previousTopics,
-      upcomingTopics,
+      lessonContent: rawContent.length > 15000 ? rawContent.slice(0, 15000) + "\n[conteúdo truncado]" : rawContent,
+      keyPoints: (activeLesson!.keyPoints ?? []).slice(0, 25),
+      previousTopics: previousTopics.slice(0, 150),
+      upcomingTopics: upcomingTopics.slice(0, 150),
     };
   }
 
