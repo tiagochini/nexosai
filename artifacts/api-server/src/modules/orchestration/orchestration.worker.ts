@@ -1,6 +1,11 @@
 import { Worker, type Job } from "bullmq";
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
+import {
+  transitionCampaign,
+  STRATEGY_PHASE_ENTRY_STATUSES,
+  CONTENT_PHASE_ENTRY_STATUSES,
+} from "../campaigns/campaigns.service.js";
 import { saveVerticalLearning } from "../campaign-brain/vertical-memory.service.js";
 import { QUEUE_NAMES, type CampaignOrchestrationJob } from "../queue/queue.service.js";
 import { orchestrateCampaign } from "../agents/command.agent.js";
@@ -42,8 +47,8 @@ async function processRunStrategy(job: Job<CampaignOrchestrationJob>): Promise<v
     return;
   }
 
-  const strategyEligible = ["intake", "analyzing", "strategy_ready"];
-  if (!strategyEligible.includes(pre.status)) {
+  // PIPELINE_KERNEL: single source of truth
+  if (!(STRATEGY_PHASE_ENTRY_STATUSES as readonly string[]).includes(pre.status)) {
     log.warn(
       { campaignId, status: pre.status },
       "RC-010: Campaign not in strategy-eligible state — skipping stale retry job (prevents double credit charge)",
@@ -102,11 +107,9 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
     return;
   }
 
-  // "generating" is intentionally excluded: if campaign was reset from "generating"
-  // to "strategy_ready" by boot cleanup, we do NOT want to re-run content automatically.
+  // PIPELINE_KERNEL: single source of truth — RC-001 FIX preserved: "generating" excluded.
   // User must explicitly trigger again via UI (manual consent = no surprise credit charge).
-  const contentEligible = ["strategy_ready", "awaiting_approval", "approved"];
-  if (!contentEligible.includes(pre.status)) {
+  if (!(CONTENT_PHASE_ENTRY_STATUSES as readonly string[]).includes(pre.status)) {
     log.warn(
       { campaignId, status: pre.status },
       "RC-010: Campaign not in content-eligible state — skipping stale retry job (prevents double credit charge)",
@@ -173,10 +176,9 @@ async function processExecute(job: Job<CampaignOrchestrationJob>): Promise<void>
 
   // approved → executing → live
   if (campaign.status === "approved") {
-    await db
-      .update(campaignsTable)
-      .set({ status: "executing", executionStartedAt: new Date() })
-      .where(eq(campaignsTable.id, campaignId));
+    await transitionCampaign(campaignId, workspaceId, "executing", "launch phase activated", log, {
+      executionStartedAt: new Date(),
+    });
 
     emitCampaignEvent({
       campaignId,
@@ -198,10 +200,7 @@ async function processExecute(job: Job<CampaignOrchestrationJob>): Promise<void>
     await new Promise((r) => setTimeout(r, 1500));
   }
 
-  await db
-    .update(campaignsTable)
-    .set({ status: "live" })
-    .where(eq(campaignsTable.id, campaignId));
+  await transitionCampaign(campaignId, workspaceId, "live", "campaign channels active", log);
 
   await db.insert(auditLogsTable).values({
     workspaceId,
@@ -241,10 +240,9 @@ async function processComplete(job: Job<CampaignOrchestrationJob>): Promise<void
   const { campaignId, workspaceId } = job.data;
   const log = logger.child({ jobId: job.id, campaignId, action: "complete" });
 
-  await db
-    .update(campaignsTable)
-    .set({ status: "completed", completedAt: new Date() })
-    .where(eq(campaignsTable.id, campaignId));
+  await transitionCampaign(campaignId, workspaceId, "completed", "campaign lifecycle complete", log, {
+    completedAt: new Date(),
+  });
 
   await db.insert(auditLogsTable).values({
     workspaceId,

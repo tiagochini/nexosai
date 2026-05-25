@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { orchestrateCampaign } from "./command.agent.js";
+import { transitionCampaign } from "../campaigns/campaigns.service.js";
 import { completeWithAgent, callVisionChat, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { AppError } from "../../lib/errors.js";
 import { eq, and, desc } from "drizzle-orm";
@@ -171,10 +172,14 @@ router.post("/:campaignId/approve", async (req, res): Promise<void> => {
       );
 
     if (pendingCheckpoints.length === 0 && parsed.data.approved) {
-      await db
-        .update(campaignsTable)
-        .set({ status: "approved" })
-        .where(eq(campaignsTable.id, campaignId));
+      // PIPELINE_KERNEL: was direct DB mutation — now routed through transitionCampaign
+      await transitionCampaign(
+        campaignId,
+        req.auth.workspaceId,
+        "approved",
+        "all approval checkpoints approved by human reviewer",
+        req.log,
+      );
     }
 
     // Campaign Memory Layer — record human decision (fire-and-forget, never blocks)

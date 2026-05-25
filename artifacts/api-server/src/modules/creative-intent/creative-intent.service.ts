@@ -82,8 +82,9 @@ export async function generateCreativeIntent(
     throw new NotFoundError("Campaign");
   }
 
-  const allowedStatuses = ["strategy_ready", "generating", "awaiting_approval", "approved"];
-  if (!allowedStatuses.includes(campaign.status)) {
+  // PIPELINE_KERNEL: single source of truth
+  const { CREATIVE_INTENT_PHASE_ENTRY_STATUSES } = await import("../campaigns/campaigns.service.js");
+  if (!(CREATIVE_INTENT_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {
     throw new ValidationError(
       `Cannot generate creative intent for campaign in status "${campaign.status}". Campaign must have a strategy first.`,
     );

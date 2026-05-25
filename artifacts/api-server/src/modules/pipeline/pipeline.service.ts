@@ -7,6 +7,7 @@ import {
 } from "@workspace/db";
 import { NotFoundError } from "../../lib/errors.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
+import { transitionCampaign } from "../campaigns/campaigns.service.js";
 import type { Logger } from "pino";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -202,10 +203,13 @@ export async function triggerPipelineCapture(
     return;
   }
 
-  await db
-    .update(campaignsTable)
-    .set({ status: "approved" as any })
-    .where(eq(campaignsTable.id, nextCampaign.id));
+  await transitionCampaign(
+    nextCampaign.id,
+    workspaceId,
+    "approved",
+    `pipeline auto-progression: previous campaign (pos ${nextPosition - 1}) entered executing`,
+    log,
+  );
 
   await db
     .update(launchPipelinesTable)

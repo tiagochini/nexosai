@@ -26,24 +26,105 @@ export const DIGIT_TRACK_LABELS = {
   ten_digits: "10 Digits (R$100M+ in 7 days)",
 } as const;
 
+// ── Pipeline Kernel: State Machine ────────────────────────────────────────────
+// SINGLE SOURCE OF TRUTH for all campaign status transitions.
+// All workers, services, routes, and agents must validate against this table.
+// Level 3 enforcement: transitionCampaign() will throw (not warn) on violation.
 export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   intake: ["analyzing", "cancelled"],
-  analyzing: ["strategy_ready", "intake", "cancelled"],
-  strategy_ready: ["generating", "analyzing", "cancelled"],
-  generating: ["awaiting_approval", "analyzing", "cancelled"],
+  // "awaiting_approval" and "generating" added: command.agent can end in either
+  // state after running all agents (checkpointsPending > 0 → awaiting_approval,
+  // else → generating). Both are valid exits from the analyzing phase.
+  analyzing: ["strategy_ready", "intake", "awaiting_approval", "generating", "cancelled"],
+  // "approved" added: pipeline auto-progression sets next campaign to "approved"
+  // when previous campaign enters executing (triggerPipelineCapture).
+  strategy_ready: ["generating", "analyzing", "approved", "cancelled"],
+  generating: ["awaiting_approval", "strategy_ready", "cancelled"],
   awaiting_approval: ["approved", "generating", "analyzing", "cancelled"],
   approved: ["executing", "cancelled"],
   executing: ["live", "paused", "cancelled"],
   live: ["paused", "completed", "cancelled"],
-  // RC-006 FIX: "executing" added — the orchestration worker transitions paused
-  // campaigns through paused → executing → live (processExecute). Without this,
-  // updateCampaign() would reject the paused→executing transition if called via
-  // the state machine. Worker currently bypasses updateCampaign (direct DB write)
-  // but this ensures the declared state machine matches actual execution paths.
+  // RC-006 FIX: "executing" added — orchestration worker transitions paused
+  // campaigns through paused → executing → live (processExecute).
   paused: ["executing", "live", "cancelled"],
   completed: [],
   cancelled: [],
 };
+
+// ── Pipeline Kernel: Phase Entry Constants ─────────────────────────────────────
+// Derived phase-entry lists — replaces the 9 scattered inline allowedStatuses
+// arrays across workers, services, and agents. Import from here, never redeclare.
+export const STRATEGY_PHASE_ENTRY_STATUSES = ["intake", "analyzing", "strategy_ready"] as const;
+export const CONTENT_PHASE_ENTRY_STATUSES = ["strategy_ready", "awaiting_approval", "approved"] as const;
+export const LAUNCH_PHASE_ENTRY_STATUSES = ["approved", "paused"] as const;
+export const CREATIVE_INTENT_PHASE_ENTRY_STATUSES = [
+  "strategy_ready",
+  "generating",
+  "awaiting_approval",
+  "approved",
+] as const;
+
+// ── Pipeline Kernel: transitionCampaign() ─────────────────────────────────────
+// Internal engine transition function. Use this everywhere instead of direct
+// db.update(campaignsTable).set({ status }) calls.
+//
+// Difference from updateCampaignStatus():
+//   updateCampaignStatus() — HTTP API layer, strict (throws), has side-effects
+//     (sequence auto-activation, workspace counter, pipeline triggers)
+//   transitionCampaign()   — Internal engine layer, observability mode (warns but
+//     does NOT throw on invalid — Level 3 will flip to throw), accepts arbitrary
+//     extra fields, no side-effects beyond the DB write + audit log.
+//
+// Level 3 hardening: change log.warn → throw new ValidationError
+export async function transitionCampaign(
+  campaignId: string,
+  workspaceId: string,
+  toStatus: string,
+  reason: string,
+  log: Logger,
+  extra?: Record<string, unknown>,
+): Promise<void> {
+  const [campaign] = await db
+    .select({ status: campaignsTable.status })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!campaign) {
+    log.warn({ campaignId, toStatus, reason }, "PIPELINE_KERNEL: campaign not found — transition skipped");
+    return;
+  }
+
+  const allowed = VALID_STATUS_TRANSITIONS[campaign.status] ?? [];
+  if (!allowed.includes(toStatus)) {
+    // Level 2: warn mode. Level 3 will change this to: throw new ValidationError(...)
+    log.warn(
+      { campaignId, from: campaign.status, to: toStatus, reason },
+      `PIPELINE_KERNEL: undeclared transition ${campaign.status} → ${toStatus} — executing (enforcement deferred to Level 3)`,
+    );
+  } else {
+    log.info(
+      { campaignId, from: campaign.status, to: toStatus, reason },
+      `PIPELINE_KERNEL: ${campaign.status} → ${toStatus}`,
+    );
+  }
+
+  await db
+    .update(campaignsTable)
+    .set({ status: toStatus as any, updatedAt: new Date(), ...(extra ?? {}) } as any)
+    .where(eq(campaignsTable.id, campaignId));
+
+  // Non-blocking audit — never delay the pipeline for a log write
+  db.insert(auditLogsTable)
+    .values({
+      workspaceId,
+      campaignId,
+      action: "campaign.status.transition",
+      actor: "system",
+      data: { from: campaign.status, to: toStatus, reason, ts: new Date().toISOString() },
+    })
+    .catch((err) => log.warn({ err, campaignId }, "PIPELINE_KERNEL: failed to write audit log"));
+}
 
 export async function createCampaign(
   workspaceId: string,

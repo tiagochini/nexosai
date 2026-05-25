@@ -1,5 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
+import { transitionCampaign, VALID_STATUS_TRANSITIONS, STRATEGY_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
 import { buildCampaignBrain, getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { getCreativeIntent, getApprovedDirectionContext } from "../creative-intent/creative-intent.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
@@ -245,8 +246,8 @@ export async function orchestrateCampaign(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  const allowedStatuses = ["intake", "analyzing", "strategy_ready"];
-  if (!allowedStatuses.includes(campaign.status)) {
+  // PIPELINE_KERNEL: single source of truth — STRATEGY_PHASE_ENTRY_STATUSES from campaigns.service
+  if (!(STRATEGY_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {
     throw new ValidationError(
       `Campaign is in status '${campaign.status}' and cannot be orchestrated`,
     );
@@ -274,10 +275,7 @@ export async function orchestrateCampaign(
     timestamp: new Date().toISOString(),
   });
 
-  await db
-    .update(campaignsTable)
-    .set({ status: "analyzing" })
-    .where(eq(campaignsTable.id, campaignId));
+  await transitionCampaign(campaignId, workspaceId, "analyzing", "command agent activated — orchestration started", log);
 
   await db.insert(auditLogsTable).values({
     workspaceId,
@@ -333,10 +331,7 @@ Retorne o JSON de avaliação.`,
   });
 
   if (commandPlan.readinessVerdict === "blocked") {
-    await db
-      .update(campaignsTable)
-      .set({ status: "intake" })
-      .where(eq(campaignsTable.id, campaignId));
+    await transitionCampaign(campaignId, workspaceId, "intake", "command agent blocked — intake incomplete, returning to intake", log);
 
     return {
       campaignId,
@@ -591,10 +586,9 @@ Retorne o JSON de avaliação.`,
     agentsRun.push("strategy");
     checkpointsPending.push("strategy_approval");
 
-    await db
-      .update(campaignsTable)
-      .set({ status: "strategy_ready", strategyData: result as any })
-      .where(eq(campaignsTable.id, campaignId));
+    await transitionCampaign(campaignId, workspaceId, "strategy_ready", "strategy agent completed", log, {
+      strategyData: result as any,
+    });
 
     // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)
     setImmediate(() => {
@@ -861,10 +855,13 @@ Retorne o JSON de avaliação.`,
   const finalStatus =
     checkpointsPending.length > 0 ? "awaiting_approval" : "generating";
 
-  await db
-    .update(campaignsTable)
-    .set({ status: finalStatus as any })
-    .where(eq(campaignsTable.id, campaignId));
+  await transitionCampaign(
+    campaignId,
+    workspaceId,
+    finalStatus,
+    `command agent pipeline completed — ${checkpointsPending.length} checkpoints pending`,
+    log,
+  );
 
   await db.insert(auditLogsTable).values({
     workspaceId,

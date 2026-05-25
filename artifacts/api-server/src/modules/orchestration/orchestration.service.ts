@@ -6,6 +6,11 @@ import {
   approvalCheckpointsTable,
   auditLogsTable,
 } from "@workspace/db";
+import {
+  STRATEGY_PHASE_ENTRY_STATUSES,
+  CONTENT_PHASE_ENTRY_STATUSES,
+  LAUNCH_PHASE_ENTRY_STATUSES,
+} from "../campaigns/campaigns.service.js";
 import { getQueue, QUEUE_NAMES, type CampaignOrchestrationJob } from "../queue/queue.service.js";
 import { executeDirectly } from "./orchestration.worker.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
@@ -213,8 +218,8 @@ export async function triggerStrategyPhase(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  const allowedStatuses = ["intake", "analyzing", "strategy_ready"];
-  if (!allowedStatuses.includes(campaign.status)) {
+  // PIPELINE_KERNEL: single source of truth
+  if (!(STRATEGY_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {
     throw new ValidationError(
       `Cannot start strategy phase from status "${campaign.status}"`,
     );
@@ -270,14 +275,11 @@ export async function triggerContentPhase(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  // RC-002 FIX: "generating" removed — a campaign in "generating" means content
-  // production is already running. Allowing re-trigger from "generating" enables
-  // duplicate jobs, double credit charges, and conflicting DB writes.
-  // Must stay in sync with CONTENT_GENERATION_ALLOWED_STATUSES in content.service.ts.
-  const allowedStatuses = ["strategy_ready", "approved", "awaiting_approval"];
-  if (!allowedStatuses.includes(campaign.status)) {
+  // PIPELINE_KERNEL: single source of truth — CONTENT_PHASE_ENTRY_STATUSES from campaigns.service
+  // RC-002 FIX preserved: "generating" excluded — already in progress, no re-trigger.
+  if (!(CONTENT_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {
     throw new ValidationError(
-      `Cannot start content generation from status "${campaign.status}". Allowed: ${allowedStatuses.join(", ")}.`,
+      `Cannot start content generation from status "${campaign.status}". Allowed: ${[...CONTENT_PHASE_ENTRY_STATUSES].join(", ")}.`,
     );
   }
 
@@ -331,8 +333,8 @@ export async function triggerExecutionPhase(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  const allowedStatuses = ["approved", "paused"];
-  if (!allowedStatuses.includes(campaign.status)) {
+  // PIPELINE_KERNEL: single source of truth
+  if (!(LAUNCH_PHASE_ENTRY_STATUSES as readonly string[]).includes(campaign.status)) {
     throw new ValidationError(
       `Cannot launch from status "${campaign.status}". Campaign must be approved first.`,
     );

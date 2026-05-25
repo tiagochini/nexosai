@@ -6,6 +6,7 @@ import {
   mediaBriefsTable,
   auditLogsTable,
 } from "@workspace/db";
+import { transitionCampaign, CONTENT_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
 import { runAgent, parseAgentJSON } from "../agents/agent.runner.js";
 import { runCopywriterAgent } from "../agents/copywriter.agent.js";
 import { runSocialMediaAgent } from "../agents/social-media.agent.js";
@@ -39,15 +40,10 @@ export interface ContentGenerationResult {
   status: "completed" | "partial" | "failed";
 }
 
-// RC-001 FIX: "generating" removed — a campaign already in "generating" means
-// content production is in progress. Re-triggering would cause duplicate jobs,
-// double credit charges, and conflicting DB writes. Valid entry points only:
-// strategy_ready → start fresh | awaiting_approval → regenerate | approved → regenerate
-const CONTENT_GENERATION_ALLOWED_STATUSES = [
-  "strategy_ready",
-  "awaiting_approval",
-  "approved",
-];
+// PIPELINE_KERNEL: CONTENT_PHASE_ENTRY_STATUSES replaces this local array.
+// Imported from campaigns.service.ts — single source of truth.
+// RC-001 FIX preserved: "generating" excluded to prevent double-trigger.
+const CONTENT_GENERATION_ALLOWED_STATUSES = CONTENT_PHASE_ENTRY_STATUSES;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -88,9 +84,9 @@ export async function generateCampaignContent(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  if (!CONTENT_GENERATION_ALLOWED_STATUSES.includes(campaign.status)) {
+  if (!(CONTENT_GENERATION_ALLOWED_STATUSES as readonly string[]).includes(campaign.status)) {
     throw new ValidationError(
-      `Cannot generate content from status "${campaign.status}". Allowed: ${CONTENT_GENERATION_ALLOWED_STATUSES.join(", ")}.`,
+      `Cannot generate content from status "${campaign.status}". Allowed: ${[...CONTENT_GENERATION_ALLOWED_STATUSES].join(", ")}.`,
     );
   }
 
@@ -128,10 +124,7 @@ export async function generateCampaignContent(
   const isCreatorCampaign = ["audience_growth", "creator_monetization"].includes(campaignType);
   const isVideoFocused = isCreatorCampaign || salesChannel === "youtube";
 
-  await db
-    .update(campaignsTable)
-    .set({ status: "generating" })
-    .where(eq(campaignsTable.id, campaignId));
+  await transitionCampaign(campaignId, workspaceId, "generating", "content generation phase started", log);
 
   emitCampaignEvent({
     campaignId,
@@ -1101,10 +1094,9 @@ export async function generateCampaignContent(
       );
   }
 
-  await db
-    .update(campaignsTable)
-    .set({ status: finalStatus, executionStartedAt: new Date() })
-    .where(eq(campaignsTable.id, campaignId));
+  await transitionCampaign(campaignId, workspaceId, finalStatus, "content generation phase completed", log, {
+    executionStartedAt: new Date(),
+  });
 
   await db.insert(auditLogsTable).values({
     workspaceId,
