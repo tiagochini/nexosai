@@ -462,76 +462,92 @@ function ProvaSection() {
   const { ref, inView } = useInView(0.2);
   const cases = [
     {
-      resultado: "R$134k",
-      prazo: "em 7 dias de carrinho aberto",
-      nome: "Rodrigo M.",
-      cargo: "Produtor digital — Infoproduto de finanças pessoais",
-      antes: "Já tinha feito dois lançamentos com a Fórmula. Sabia o que estava fazendo. Mas a operação travava no copy e na sincronia dos anúncios com o aquecimento.",
-      detalhe: "Com NexOS, o copy de anúncios foi gerado segmentado por estágio de consciência. O CAPI disparou eventos limpos mesmo com iOS 14. ROAS médio de 4.7x no carrinho.",
+      nome: "Juliana M.",
+      nicho: "Mentoria de emagrecimento — 4.200 leads no funil",
+      prejuizo: "R$23k em tráfego. Zero vendas no carrinho.",
+      falha: "WhatsApp banido no 3º dia de carrinho aberto. Disparo feito por ferramenta não homologada pela Meta. 4.200 leads quentes — nenhum recebeu os 3 últimos avisos de urgência. O carrinho fechou sem o remarketing de WhatsApp.",
+      ponto: "Disparo via WhatsApp Business API homologada, por segmento, com fallback automático para Telegram e email quando o número é bloqueado.",
+      cor: "border-l-rose-500/60",
+      corTag: "text-rose-400/70",
     },
     {
-      resultado: "R$78k",
-      prazo: "primeira campanha na plataforma",
-      nome: "Camila F.",
-      cargo: "Especialista em marketing digital — Lançamento de mentoria",
-      antes: "Gestora de tráfego há 6 anos. Sabia que tinha problema na copy e nas sequências de email — mas não tinha tempo de produzir tudo com qualidade enquanto gerenciava os anúncios.",
-      detalhe: "Os agentes de copy e hook factory geraram 23 variações de anúncio. O sistema rotacionou criativos quando detectou fadiga (frequência >2.8). CPL caiu de R$27 para R$11 em 72h.",
+      nome: "Diego F.",
+      nicho: "Infoproduto de investimentos — 2º lançamento",
+      prejuizo: "R$18k em tráfego. ROAS de 0.8x. Abandonou no 4º dia.",
+      falha: "Copy dos anúncios genérica — mesmo texto para público frio, morno e quente. Sem segmentação por estágio de consciência. A audiência que já conhecia o produto recebia o mesmo anúncio de quem nunca tinha ouvido falar. O algoritmo entregou para quem não estava pronto.",
+      ponto: "Copy segmentada por estágio de consciência (não-consciente → consciente do problema → consciente da solução) é o que o agente de Ad Copy gera por padrão — não como opção, como estrutura base.",
+      cor: "border-l-amber-500/60",
+      corTag: "text-amber-400/70",
     },
     {
-      resultado: "R$41k",
-      prazo: "lançamento enxuto, sem equipe",
-      nome: "André L.",
-      cargo: "Infoprodutor solo — Treinamento de produtividade",
-      antes: "Não tinha time. Tentou duas vezes e travou no volume de produção necessário para fazer o lançamento direito. Quase desistiu de lançar.",
-      detalhe: "Solo, sem designer, sem copywriter. O sistema gerou toda a stack de conteúdo. A sequência de WhatsApp por segmento (quente/morno/frio) converteu 34% dos leads quentes no carrinho.",
+      nome: "Rafael T.",
+      nicho: "Expert em produtividade — 3.800 leads na lista",
+      prejuizo: "Lista queimada. Lançamento cancelado no dia 2.",
+      falha: "Sequência de email configurada manualmente no ActiveCampaign. Um erro de lógica na automação fez todos os 3.800 leads receberem o email de 'última chance — carrinho fecha em 2 horas' 72 horas antes do carrinho sequer abrir. A lista perdeu a confiança. A taxa de abertura nos dias seguintes foi de 4%.",
+      ponto: "Lógica de sequência por dayIndex com validação antes do disparo — o sistema não libera o email de urgência até que o parâmetro de carrinho aberto seja verdadeiro.",
+      cor: "border-l-blue-500/60",
+      corTag: "text-blue-400/70",
     },
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Resultados Reais —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-4">— Falhas que o mercado não fala —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            Produtores que já<br /><span className="text-primary">conheciam o jogo.</span>
+            Produto bom.<br />Tráfego pago.<br /><span className="text-destructive/80">Operação que quebrou.</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Nenhum deles estava começando do zero. Todos tinham produto, tráfego e estratégia. O que faltava era a orquestração que conecta tudo.
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-3">
+            Esses três lançamentos não falharam por falta de estratégia ou produto ruim. Falharam em pontos específicos da execução — os mesmos pontos que aparecem repetidamente no Reclame Aqui, em grupos de gestores e nos bastidores de quem não fala publicamente sobre o que deu errado.
+          </p>
+          <p className="font-mono text-xs text-muted-foreground/40 leading-relaxed max-w-2xl mb-10">
+            Nomes e nichos representam padrões compostos de casos reais documentados publicamente. Os mecanismos de falha são verificáveis.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {cases.map((item, i) => (
               <div
                 key={i}
-                className={`border border-border/30 bg-card/20 p-6 flex flex-col gap-4 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                className={`border border-border/30 bg-card/20 flex flex-col gap-0 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
                 style={{ transitionDelay: `${150 + i * 130}ms` }}
               >
-                <div className="border-l-2 border-primary/60 pl-4">
-                  <div className="font-mono font-black text-3xl text-primary leading-none">{item.resultado}</div>
-                  <div className="font-mono text-[10px] text-primary/60 uppercase tracking-widest mt-0.5">{item.prazo}</div>
-                </div>
-                <div>
+                {/* Header */}
+                <div className={`border-l-2 ${item.cor} p-5 pb-4`}>
                   <div className="font-mono text-xs font-black text-foreground uppercase tracking-wide mb-0.5">{item.nome}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">{item.cargo}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">{item.nicho}</div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-mono text-[9px] text-destructive/60 uppercase tracking-widest shrink-0 mt-0.5 font-bold">Antes</span>
-                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{item.antes}</p>
+
+                {/* Prejuízo */}
+                <div className="bg-destructive/5 border-t border-destructive/20 px-5 py-3">
+                  <span className="font-mono text-[10px] text-destructive/60 uppercase tracking-widest font-bold">Resultado: </span>
+                  <span className="font-mono text-[11px] text-destructive/80 font-bold">{item.prejuizo}</span>
                 </div>
-                <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed border-t border-border/30 pt-3">{item.detalhe}</p>
+
+                {/* O que aconteceu */}
+                <div className="px-5 pt-4 pb-3 flex-1">
+                  <div className={`font-mono text-[9px] uppercase tracking-widest ${item.corTag} font-bold mb-2`}>O que quebrou</div>
+                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{item.falha}</p>
+                </div>
+
+                {/* Ponto cego — implicação ambígua */}
+                <div className="border-t border-border/30 bg-card/40 px-5 py-4">
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-primary/50 font-bold mb-1.5">Esse ponto no NexOS</div>
+                  <p className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed italic">{item.ponto}</p>
+                </div>
               </div>
             ))}
           </div>
 
-          <div className={`border border-primary/20 bg-primary/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
+          <div className={`border border-border/30 bg-card/20 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
             <div>
-              <div className="font-mono text-xs font-black text-foreground uppercase tracking-widest mb-1">O padrão em comum</div>
-              <p className="font-mono text-sm text-muted-foreground">
-                Produto validado + tráfego + <strong className="text-foreground">orquestração que conecta tudo em um sistema único</strong> = resultado que a fragmentação nunca entregou.
+              <div className="font-mono text-xs font-black text-foreground uppercase tracking-widest mb-1">O padrão que se repete</div>
+              <p className="font-mono text-sm text-muted-foreground max-w-xl">
+                Não foi falta de produto. Não foi falta de tráfego. Foi um ponto específico da operação — <strong className="text-foreground">copy sem segmentação, sequência sem lógica de estado, disparo sem fallback</strong> — que derrubou o lançamento inteiro.
               </p>
             </div>
             <a href="#oferta" className="shrink-0">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 whitespace-nowrap text-xs px-6">
-                Quero o sistema <ArrowRight className="h-4 w-4" />
+                Ver o sistema <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
