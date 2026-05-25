@@ -121,7 +121,7 @@ function HeroSection() {
             </div>
             <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground/40">
               <Lock className="h-3.5 w-3.5" />
-              Acesso imediato · 30 dias de garantia · cancele quando quiser
+              Acesso imediato · 30 dias de garantia · ticket único sem mensalidade
             </div>
           </div>
         </div>
@@ -263,12 +263,12 @@ function CustoRealSection() {
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
                   29 agentes de IA trabalhando em paralelo no seu lançamento — estratégia, copy, anúncios, email, WhatsApp, análise de performance e otimização em tempo real.<br /><br />
                   <strong className="text-foreground">Tudo integrado. Tudo orquestrado. Um sistema único.</strong><br /><br />
-                  Por R$297/mês no plano Solo — ou R$1.497/mês para agências com múltiplos clientes.
+                  Ticket único de acesso. Você usa o sistema de gerenciamento completo — os agentes de IA são opcionais e podem ser ativados por crédito quando quiser, sem mensalidade.
                 </p>
               </div>
               <a href="#oferta">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs">
-                  Ver planos completos <ArrowRight className="h-4 w-4" />
+                  Como funciona o acesso <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -620,50 +620,46 @@ function AgentesSection() {
   );
 }
 
-// ─── Section 8: OFERTA — Arquitetura de preço com decoy effect ────────────────
+// ─── Section 8: OFERTA — Modelo de acesso ────────────────────────────────────
 function OfertaSection() {
   const { ref, inView } = useInView(0.15);
-  const planos = [
+  const tracks = [
     {
       label: "Solo",
-      desc: "Para produtores solo ou com equipe pequena",
-      preco: "R$297",
-      parcela: null,
-      onboarding: "+ R$2.500 onboarding",
+      desc: "Produtor solo ou equipe pequena",
       destaque: false,
       cor: "border-border/40",
       corBadge: "text-muted-foreground",
       items: [
         "Até 3 campanhas simultâneas",
-        "1.500 créditos de IA/mês",
-        "Trilha de lançamento 6 dígitos",
+        "Créditos de IA inclusos — cobre 2 lançamentos completos",
+        "Trilha de 6 dígitos (R$100k–R$999k em 7 dias)",
         "29 agentes completos",
         "Integração Meta + Google + TikTok",
         "WhatsApp + Email automático",
         "Dashboard de performance",
+        "Créditos adicionais disponíveis à vontade",
       ],
-      cta: "Começar com Solo",
+      cta: "Solicitar Acesso Solo",
       ctaVariant: "outline" as const,
     },
     {
       label: "Agency",
-      desc: "Para agências e gestores com múltiplos clientes",
-      preco: "R$1.497",
-      parcela: null,
-      onboarding: "+ R$2.500 onboarding",
+      desc: "Agências e gestores com múltiplos clientes",
       destaque: true,
       cor: "border-primary/60",
       corBadge: "text-primary",
       items: [
         "Até 10 campanhas simultâneas",
-        "5.000 créditos de IA/mês",
+        "Créditos de IA inclusos — cobertura ampliada",
         "Todas as trilhas (6, 8 e 10 dígitos)",
-        "White-label completo",
-        "Multi-workspace (seus clientes)",
-        "Painel de relatório por cliente",
+        "White-label completo com sua marca",
+        "Multi-workspace por cliente",
+        "Painel de relatório consolidado",
         "Onboarding dedicado",
+        "Créditos adicionais disponíveis à vontade",
       ],
-      cta: "Quero o Plano Agency",
+      cta: "Solicitar Acesso Agency",
       ctaVariant: "default" as const,
     },
   ];
@@ -671,65 +667,70 @@ function OfertaSection() {
     <Section id="oferta" ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Investimento —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Modelo de Acesso —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            Escolha seu<br /><span className="text-primary">ponto de entrada.</span>
+            Ticket único.<br /><span className="text-primary">Sem mensalidade.</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Ambos os planos incluem os 29 agentes completos e integração com as principais plataformas de tráfego. A diferença é na escala de operação.
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-4">
+            O acesso ao NexOS AI é um investimento único que cobre sua operação completa. Os créditos inclusos cobrem dois lançamentos inteiros — com saldo para iniciar o planejamento do terceiro.
+          </p>
+          <p className="font-mono text-xs text-muted-foreground/60 leading-relaxed max-w-2xl mb-10">
+            Se quiser acionar mais agentes de IA ao longo do tempo, créditos adicionais estão disponíveis em packs ou avulsos — sem contrato, sem obrigação. Se preferir gerenciar suas campanhas manualmente, o sistema funciona sem acionar nenhum agente.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {planos.map((plano, i) => (
+            {tracks.map((track, i) => (
               <div
                 key={i}
-                className={`border ${plano.cor} ${plano.destaque ? "bg-primary/8" : "bg-card/20"} p-8 flex flex-col gap-6 transition-all duration-600 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                className={`border ${track.cor} ${track.destaque ? "bg-primary/8" : "bg-card/20"} p-8 flex flex-col gap-6 transition-all duration-600 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
                 style={{ transitionDelay: `${100 + i * 150}ms` }}
               >
-                {plano.destaque && (
+                {track.destaque && (
                   <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary font-bold border border-primary/30 bg-primary/10 px-3 py-1.5 w-fit">
-                    ✦ Mais escolhido por agências
+                    ✦ Para operações de maior escala
                   </div>
                 )}
                 <div>
-                  <div className={`font-mono text-[11px] uppercase tracking-widest ${plano.corBadge} mb-1`}>{plano.desc}</div>
-                  <div className="font-mono font-black text-4xl text-foreground leading-none">{plano.preco}<span className="text-base text-muted-foreground font-normal">/mês</span></div>
-                  <div className="font-mono text-[11px] text-muted-foreground/50 mt-1">{plano.onboarding}</div>
+                  <div className={`font-mono text-[11px] uppercase tracking-widest ${track.corBadge} mb-1`}>{track.desc}</div>
+                  <div className="font-mono font-black text-2xl text-foreground leading-snug mt-2">
+                    {track.label}
+                  </div>
+                  <div className="font-mono text-[11px] text-muted-foreground/50 mt-1">Ticket único · Créditos inclusos · Sem mensalidade</div>
                 </div>
                 <div className="space-y-2.5 flex-1">
-                  {plano.items.map(item => (
+                  {track.items.map(item => (
                     <div key={item} className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
-                      <CheckCircle2 className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${plano.destaque ? "text-primary" : "text-primary/50"}`} />
+                      <CheckCircle2 className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${track.destaque ? "text-primary" : "text-primary/50"}`} />
                       {item}
                     </div>
                   ))}
                 </div>
                 <a href="/login">
                   <Button
-                    className={`rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full ${plano.destaque ? "btn-weapon-primary" : ""}`}
-                    variant={plano.ctaVariant === "outline" ? "outline" : "default"}
+                    className={`rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full ${track.destaque ? "btn-weapon-primary" : ""}`}
+                    variant={track.ctaVariant === "outline" ? "outline" : "default"}
                   >
-                    {plano.cta} <ArrowRight className="h-4 w-4" />
+                    {track.cta} <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
               </div>
             ))}
           </div>
 
-          {/* Value anchor */}
+          {/* Value anchor — equipe vs sistema */}
           <div className={`border border-border/30 bg-card/20 px-6 py-5 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "450ms" }}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div>
-                <div className="font-mono font-black text-2xl text-primary">R$21k+</div>
-                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Custo mensal equivalente em equipe</div>
+                <div className="font-mono font-black text-2xl text-destructive/80">R$21k+/mês</div>
+                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Custo de equipe equivalente</div>
               </div>
               <div>
                 <div className="font-mono font-black text-2xl text-foreground">vs.</div>
-                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">você paga</div>
+                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">você investe uma vez</div>
               </div>
               <div>
-                <div className="font-mono font-black text-2xl text-primary">R$297</div>
-                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Plano Solo / mês</div>
+                <div className="font-mono font-black text-2xl text-primary">NexOS AI</div>
+                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Ticket único · Sem recorrência obrigatória</div>
               </div>
             </div>
           </div>
@@ -757,8 +758,8 @@ function ObjecoesSection() {
       a: "É a diferença entre um sistema e um chat. Cada agente tem acesso ao contexto completo do avatar, do posicionamento e do histórico de performance. O copywriter não recebe uma instrução vaga — recebe o perfil completo do avatar, o mecanismo único e o estágio de sofisticação do mercado. O output é calibrado, não genérico.",
     },
     {
-      q: '"R$2.500 de onboarding parece caro."',
-      a: "O onboarding cobre a configuração completa: integração das plataformas de tráfego, setup do CAPI e pixel, configuração das sequências e calibração dos agentes para o seu nicho. É uma sessão de trabalho — não um curso. Você sai com o sistema rodando, não com um manual para ler.",
+      q: '"Preciso usar os agentes de IA ou posso gerenciar manualmente?"',
+      a: "Os dois. O sistema funciona completamente sem acionar nenhum agente — você gerencia campanhas, sequências, métricas e integrações pelo painel. Os agentes de IA são uma camada opcional: quando quiser gerar copy, estratégia ou análise com IA, você usa créditos. Sem pressão, sem mensalidade, sem lock-in.",
     },
   ];
   return (
@@ -921,7 +922,7 @@ function FechamentoSection() {
             </a>
             <a href="#oferta" className="w-full sm:w-auto">
               <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-sm h-16 px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
-                Ver planos <ArrowRight className="h-4 w-4" />
+                Como funciona o acesso <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
@@ -929,7 +930,7 @@ function FechamentoSection() {
           <div className="flex flex-wrap items-center gap-6 font-mono text-xs text-muted-foreground/40">
             <div className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Acesso imediato</div>
             <div className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> 30 dias de garantia</div>
-            <div className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Cancele quando quiser</div>
+            <div className="flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" /> Ticket único sem mensalidade</div>
             <div className="flex items-center gap-1.5"><Zap className="h-3.5 w-3.5" /> Onboarding incluso</div>
           </div>
         </div>

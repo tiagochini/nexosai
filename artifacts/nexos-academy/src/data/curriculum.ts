@@ -5649,22 +5649,26 @@ AUTOMAÇÃO (Multi):        Orchestrator, Sequence Builder, Webhook
           },
           {
             id: "nexos-planos",
-            title: "Planos, Créditos e Como Começar",
+            title: "Acesso, Créditos e Como Começar",
             duration: "15 min",
             type: "text",
-            keyPoints: ["Plano Solo vs. Agency", "Como funcionam os créditos de IA", "Primeiros passos: de zero a primeiro lançamento", "Suporte e comunidade"],
+            keyPoints: ["Solo vs. Agency: qual se encaixa no seu momento", "Como funcionam os créditos de IA — e quando você não precisa deles", "O sistema funciona sem agentes: gerenciamento manual é uma opção real", "Primeiros passos: de zero a primeiro lançamento", "Suporte e comunidade"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
-<p style="color:#e2e8f0;font-size:13px;margin:0">Esta é a aula final do portal. Aqui você recebe o mapa claro de como os planos funcionam, como o sistema de créditos de IA é calculado, os primeiros 3 passos para ir de zero a primeiro lançamento no NexOS, e onde encontrar suporte e comunidade.</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Esta é a aula final do portal. Aqui você recebe o mapa claro de como o acesso ao NexOS funciona, como o sistema de créditos de IA é calculado, quando você precisa deles (e quando não precisa), e os 3 primeiros passos para ir de zero ao primeiro lançamento.</p>
 </div>
 
-<h2 style="color:#a78bfa">🚀 Como Começar no NexOS: Planos, Créditos e Primeiros Passos</h2>
+<h2 style="color:#a78bfa">🚀 Como Funciona o Acesso ao NexOS AI</h2>
 
-<h3 style="color:#e2e8f0;margin-top:20px">A) Planos: Solo vs. Agency</h3>
+<h3 style="color:#e2e8f0;margin-top:20px">A) O Modelo: Ticket Único, Sem Mensalidade Obrigatória</h3>
 
-<p>O NexOS tem dois planos projetados para momentos diferentes do negócio. O plano <strong>Solo</strong> (R$297/mês + R$2.500 onboarding) é o ponto de entrada: 3 campanhas simultâneas, 1.500 créditos mensais de IA, acesso à trilha de 6 dígitos (R$100k-999k em 7 dias). É o plano para quem está construindo o primeiro produto de informação escalável ou quer profissionalizar um negócio que já vende organicamente.</p>
+<p>O NexOS AI funciona com um modelo de <strong>ticket único de acesso</strong> — não uma assinatura mensal. Você adquire o acesso uma vez e o sistema permanece seu. Os créditos de IA inclusos no acesso cobrem dois lançamentos completos, com saldo suficiente para iniciar o planejamento do terceiro.</p>
 
-<p>O plano <strong>Agency</strong> (R$1.497/mês + R$2.500 onboarding) é para agências e produtores com múltiplos produtos: 10 campanhas simultâneas, 5.000 créditos mensais, acesso a todas as trilhas (6, 8 e 10 dígitos), e white-label para atender clientes com a sua marca. É o plano para quem gerencia lançamentos de terceiros ou tem portfólio de produtos simultâneos.</p>
+<p>A distinção importante: <strong>os créditos de IA são opcionais, não obrigatórios.</strong> O sistema de gerenciamento de campanhas — criação de lançamentos, sequências de email e WhatsApp, dashboard de métricas, integração com plataformas de tráfego, calendário operacional — funciona completamente sem acionar nenhum agente de IA. Se você já domina copywriting e estratégia, pode usar o NexOS como sistema operacional de gerenciamento e acionar os agentes apenas quando quiser agilidade ou sugestões de IA.</p>
+
+<p>O plano <strong>Solo</strong> é o ponto de entrada: 3 campanhas simultâneas, acesso à trilha de 6 dígitos (R$100k–R$999k em 7 dias), e créditos que cobrem a operação completa de dois lançamentos. Para quem está construindo o primeiro produto escalável ou profissionalizando um negócio que já vende organicamente.</p>
+
+<p>O plano <strong>Agency</strong> é para agências e produtores com múltiplos produtos: 10 campanhas simultâneas, acesso a todas as trilhas (6, 8 e 10 dígitos), white-label para atender clientes com a sua marca, e créditos com cobertura ampliada. É o plano para quem gerencia lançamentos de terceiros ou tem portfólio de produtos simultâneos.</p>
 
 <h3 style="color:#e2e8f0;margin-top:24px">B) Como Funcionam os Créditos de IA</h3>
 
