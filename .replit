@@ -24,6 +24,10 @@ args = "NEXOS Full Audit Test"
 task = "workflow.run"
 args = "NEXOS Full Launch Simulation"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "NEXOS Full Platform Stress Test"
+
 [[workflows.workflow]]
 name = "NEXOS Full Audit Test"
 author = "agent"
@@ -42,6 +46,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/scripts run nexos-launch-sim"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "NEXOS Full Platform Stress Test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "SAMPLE=3 pnpm --filter @workspace/scripts run stress-full"
 
 [workflows.workflow.metadata]
 outputType = "console"

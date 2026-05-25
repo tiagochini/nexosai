@@ -62,7 +62,11 @@ export type AgentRole =
   | "memory_compression"
   | "business_intelligence"
   | "ux_simplification"
-  | "organic_traffic";
+  | "organic_traffic"
+  // ── Mentalidade & Identidade ──────────────────────────────────────────────
+  | "mental_frequency_coach"
+  | "identity_architect"
+  | "obstinacy_trainer";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -132,7 +136,11 @@ const AGENT_PROVIDER_MAP: Record<
   memory_compression:   { provider: "gemini",    model: GEMINI_FLASH_NATIVE },
   business_intelligence:{ provider: "gemini",    model: GEMINI_NATIVE_MODEL },
   ux_simplification:    { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
-  organic_traffic:      { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  organic_traffic:         { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  // ── Mentalidade & Identidade ──────────────────────────────────────────────
+  mental_frequency_coach:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  identity_architect:      { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  obstinacy_trainer:       { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {
@@ -324,28 +332,36 @@ async function callGemini(
     return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
   }
 
-  const client = getGemini();
-  const effectiveModel = env.GEMINI_API_KEY ? model : "gemini-3-flash-preview";
-  const geminiModel = client.getGenerativeModel({
-    model: effectiveModel,
-    systemInstruction: systemPrompt,
-  });
+  try {
+    const client = getGemini();
+    const effectiveModel = env.GEMINI_API_KEY ? model : "gemini-3-flash-preview";
+    const geminiModel = client.getGenerativeModel({
+      model: effectiveModel,
+      systemInstruction: systemPrompt,
+    });
 
-  const history = messages.slice(0, -1).map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
+    const history = messages.slice(0, -1).map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
 
-  const chat = geminiModel.startChat({ history });
-  const lastMessage = messages[messages.length - 1];
-  const result = await chat.sendMessage(lastMessage?.content ?? "", { signal } as any);
-  const response = await result.response;
+    const chat = geminiModel.startChat({ history });
+    const lastMessage = messages[messages.length - 1];
+    const result = await chat.sendMessage(lastMessage?.content ?? "", { signal } as any);
+    const response = await result.response;
 
-  return {
-    content: response.text(),
-    inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
-    outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
-  };
+    return {
+      content: response.text(),
+      inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
+      outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+    };
+  } catch (geminiErr) {
+    // Gemini unavailable or quota exceeded — fall back to Anthropic integration
+    if (hasAnthropicIntegration()) {
+      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
+    }
+    throw geminiErr;
+  }
 }
 
 // ── Vision support (images → Claude) ─────────────────────────────────────────

@@ -13,6 +13,12 @@
     "stress-test-dry": "DRY_RUN_MODE=true tsx ./src/stress-test/stress-test-runner.ts",
     "stress-test-extreme": "DRY_RUN_MODE=true EXTREME_ONLY=true tsx ./src/stress-test/stress-test-runner.ts",
     "stress-test-all": "DRY_RUN_MODE=true SAMPLE=50 OUTPUT=json tsx ./src/stress-test/stress-test-runner.ts",
+    "stress-full": "tsx ./src/stress-test/nexos-stress-full.ts",
+    "stress-full-3": "SAMPLE=3 tsx ./src/stress-test/nexos-stress-full.ts",
+    "stress-full-10": "SAMPLE=10 tsx ./src/stress-test/nexos-stress-full.ts",
+    "stress-full-critico": "DIFFICULTY=critico tsx ./src/stress-test/nexos-stress-full.ts",
+    "stress-full-extreme": "EXTREME_ONLY=true tsx ./src/stress-test/nexos-stress-full.ts",
+    "stress-full-all": "ALL=true tsx ./src/stress-test/nexos-stress-full.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

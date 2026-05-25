@@ -158,13 +158,14 @@ export async function runCrossAgentValidation(
 
   // ── Rule 4: Alignment score check ──
   const alignmentScore = brain?.alignment?.score ?? 0;
-  if (brain && alignmentScore < 50 && brain.alignment.criticalConflicts.length > 0) {
+  const criticalConflicts = brain?.alignment?.criticalConflicts ?? [];
+  if (brain && alignmentScore < 50 && criticalConflicts.length > 0) {
     blockers.push({
       rule: "CRITICAL_MISALIGNMENT",
-      description: `Alignment score ${alignmentScore}/100 com ${brain.alignment.criticalConflicts.length} conflito(s) crítico(s) entre agentes`,
+      description: `Alignment score ${alignmentScore}/100 com ${criticalConflicts.length} conflito(s) crítico(s) entre agentes`,
       severity: "critical",
       agents: ["strategy", "offer", "copywriter", "creative_director"],
-      suggestion: `Resolver conflitos antes de lançar: ${brain.alignment.criticalConflicts.slice(0, 2).join("; ")}`,
+      suggestion: `Resolver conflitos antes de lançar: ${criticalConflicts.slice(0, 2).join("; ")}`,
     });
   } else if (brain && alignmentScore < 70) {
     warnings.push({

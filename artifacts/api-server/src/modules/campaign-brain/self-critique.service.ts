@@ -114,17 +114,23 @@ function buildSelfCritiquePrompt(
   // Truncate large outputs to stay within token budget
   const outputStr = JSON.stringify(agentOutput).slice(0, 2000);
 
+  const offer = brain.offer as (typeof brain.offer & Record<string, unknown>) | undefined;
+  const icp = brain.icp as (typeof brain.icp & Record<string, unknown>) | undefined;
+  const narrative = brain.narrative as (typeof brain.narrative & Record<string, unknown>) | undefined;
+  const alignment = brain.alignment;
+  const conflicts: string[] = (alignment?.criticalConflicts as unknown as string[] | undefined) ?? [];
+
   return `
 ## CONTEXTO DA CAMPANHA
-- Produto: ${brain.offer.name || String(intake["product.name"] ?? "produto")}
-- Preço: R$${brain.offer.price}
-- Posicionamento: ${brain.offer.positioning}
-- Mecanismo único: ${brain.offer.uniqueMechanism || "não definido"}
-- ICP: ${brain.icp.description || "não definido"} (awareness: ${brain.icp.sophisticationLevel})
-- Tom aprovado: ${brain.narrative.tone}
-- Emoção dominante: ${brain.narrative.dominantEmotion}
-- Alignment score atual: ${brain.alignment.score}/100
-${brain.alignment.criticalConflicts.length > 0 ? `- Conflitos já detectados: ${brain.alignment.criticalConflicts.join("; ")}` : ""}
+- Produto: ${offer?.["name"] || String(intake["product.name"] ?? "produto")}
+- Preço: R$${offer?.["price"] ?? 0}
+- Posicionamento: ${offer?.["positioning"] ?? "não definido"}
+- Mecanismo único: ${offer?.["uniqueMechanism"] || "não definido"}
+- ICP: ${icp?.["description"] || "não definido"} (awareness: ${icp?.["sophisticationLevel"] ?? "–"})
+- Tom aprovado: ${narrative?.["tone"] ?? "não definido"}
+- Emoção dominante: ${narrative?.["dominantEmotion"] ?? "não definida"}
+- Alignment score atual: ${alignment?.score ?? 0}/100
+${conflicts.length > 0 ? `- Conflitos já detectados: ${conflicts.join("; ")}` : ""}
 
 ## OUTPUT DO AGENTE "${agentType.toUpperCase()}"
 ${outputStr}
