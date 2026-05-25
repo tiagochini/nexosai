@@ -155,12 +155,12 @@ function IdentidadeSection() {
   const { ref, inView } = useInView(0.2);
   const dores = [
     {
-      situacao: "Você tem produto e já fez anúncios",
-      realidade: "Mas cada lançamento ainda exige 3-4 meses de preparação, uma equipe de gestão de tráfego, redatores, designers e gerentes de projeto. O ROI existe — mas a operação consome mais do que deveria.",
+      situacao: "Você vende online — lançamento, perpétuo ou live de vendas",
+      realidade: "Seja um lançamento clássico em 7 dias, um funil evergreen rodando o ano todo ou uma live de vendas semanal — a operação exige as mesmas peças: copy, tráfego, sequência, criativos, pixel, análise. E tudo isso ao mesmo tempo.",
     },
     {
-      situacao: "Você conhece a Fórmula de Lançamento",
-      realidade: "Já fez o FL. Talvez já tenha dado certo. Mas sabe que a execução burocrática — briefings, aprovações, feedbacks infinitos — cria gargalos que custam dinheiro e janelas de mercado.",
+      situacao: "Você já tem produto e audiência — o gargalo é a execução",
+      realidade: "Você sabe vender. O problema é que cada campanha exige um time: gestor de tráfego, copywriter, editor de vídeo, social media, analista. Ou você delega e perde controle — ou faz tudo e perde velocidade.",
     },
     {
       situacao: "Você investe em tráfego pago",
@@ -201,6 +201,77 @@ function IdentidadeSection() {
               <span className="text-destructive/70 font-bold">Até agora.</span>
             </p>
           </div>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section 2.5: DREAM STATE — O que seria possível ─────────────────────────
+function DreamStateSection() {
+  const { ref, inView } = useInView(0.15);
+  const especialistas = [
+    { role: "Time de Tráfego Pago", desc: "Cria, segmenta, rotaciona e escala anúncios em Meta, Google e TikTok — 24h por dia, 7 dias por semana", cor: "text-primary" },
+    { role: "Time de Copywriting", desc: "Gera copy calibrada por estágio de consciência para cada canal, avatar e temperatura de lead", cor: "text-blue-400" },
+    { role: "Time de Criação de Conteúdo", desc: "Produz roteiros de VSL, hooks de anúncio, emails, mensagens de WhatsApp e scripts de lives", cor: "text-violet-400" },
+    { role: "Time de Social Media", desc: "Monitora engajamento, posta nos momentos certos e garante consistência de marca em todas as plataformas", cor: "text-emerald-400" },
+    { role: "Time de Automação", desc: "Configura e dispara sequências de email, WhatsApp, Telegram e Instagram com lógica de segmento", cor: "text-amber-400" },
+    { role: "Time de Analytics", desc: "Acompanha métricas em tempo real, detecta gargalos e entrega plano de ação com prioridade por impacto", cor: "text-rose-400" },
+  ];
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-primary/10">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+
+          {/* Hook de abertura */}
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">— E se fosse possível —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-8">
+            Imagine ter um time<br />
+            <span className="text-primary">completo de especialistas</span><br />
+            <span className="text-foreground/60">a um clique de distância.</span>
+          </h2>
+
+          {/* Copy aspiracional em blocos */}
+          <div className="space-y-5 mb-10 max-w-3xl">
+            <p className="font-mono text-base text-muted-foreground leading-relaxed">
+              Um time de vendas altamente especializado trabalhando para você. Um time de criação de anúncios testando variações enquanto você dorme. Um time de edição de vídeo produzindo hooks e criativos. Um time gerenciando suas redes sociais e buscando clientes potenciais — todos os dias, 24 horas por dia.
+            </p>
+            <p className="font-mono text-base text-muted-foreground leading-relaxed">
+              Tudo isso com <strong className="text-foreground">uma única decisão.</strong> Sem salários. Sem encargos. Sem contratos com freelancers. Sem briefings que nunca capturam exatamente o que você quis dizer. Sem esperar 3 semanas por um criativo que você vai rejeitar.
+            </p>
+            <p className="font-mono text-base text-muted-foreground leading-relaxed">
+              Uma máquina 100% alinhada com você — que conhece seu produto, seu avatar, seu posicionamento e seu histórico de performance — e age a partir desse contexto em tempo real.
+            </p>
+            <div className="border-l-2 border-primary/50 pl-5 py-1">
+              <p className="font-mono text-sm text-foreground/80 leading-relaxed italic">
+                "Parece bom demais para ser verdade." — É exatamente o que alguém pensa quando vê pela primeira vez. E é exatamente por isso que a próxima seção mostra o que cada especialista faz, em detalhe técnico, para que você julgue por conta própria.
+              </p>
+            </div>
+          </div>
+
+          {/* Grid de especialistas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-8">
+            {especialistas.map((item, i) => (
+              <div
+                key={i}
+                className={`border border-border/30 bg-card/20 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${200 + i * 80}ms` }}
+              >
+                <div className={`font-mono text-[10px] uppercase tracking-widest font-bold ${item.cor} mb-2`}>{item.role}</div>
+                <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Credibilidade técnica — ponte para o próximo */}
+          <div className={`border border-primary/20 bg-primary/5 px-6 py-5 flex items-start gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
+            <Cpu className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+            <p className="font-mono text-sm text-muted-foreground leading-relaxed">
+              Não é um chatbot. Não é um prompt genérico. São <strong className="text-foreground">29 agentes de IA especializados</strong>, cada um treinado com as doutrinas dos maiores profissionais de marketing do mundo, trocando contexto entre si em tempo real — e agindo sobre seus dados reais de performance.
+            </p>
+          </div>
+
         </div>
       </div>
       <ScrollHint />
@@ -1067,6 +1138,7 @@ export default function LandingPage() {
       <Nav scrolled={scrolled} />
       <HeroSection />
       <IdentidadeSection />
+      <DreamStateSection />
       <CustoRealSection />
       <MecanismoSection />
       <AlgoritmoSection />
