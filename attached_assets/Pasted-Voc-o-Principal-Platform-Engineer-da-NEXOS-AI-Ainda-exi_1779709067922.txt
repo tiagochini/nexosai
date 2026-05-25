@@ -1,0 +1,141 @@
+Você é o Principal Platform Engineer da NEXOS AI.
+
+Ainda existem problemas de fluxo de execução. Não quero mais patches locais. Quero uma correção estrutural definitiva baseada em um único núcleo central de orquestração.
+
+Objetivo:
+Criar um Pipeline Orchestration Kernel centralizado que seja a única fonte de verdade para:
+
+- estados da campanha
+- transições permitidas
+- locks
+- retries
+- idempotência
+- execução de fases
+- recovery
+- eventos
+- rollback
+- logs
+- validação de fluxo
+
+Regras obrigatórias:
+
+1. Nenhum worker, route, scheduler ou agente pode alterar status diretamente sem passar pelo PipelineKernel.
+
+2. Criar um arquivo central, por exemplo:
+   pipeline-kernel.service.ts
+
+Responsável por:
+
+- canTransition(from, to)
+- transitionCampaign(campaignId, from, to, reason)
+- acquireLock(campaignId, phase)
+- releaseLock(campaignId, phase)
+- generateExecutionId(campaignId, phase)
+- ensureIdempotency(campaignId, phase, action)
+- emitCampaignEvent(campaignId, eventType, payload)
+- recoverCampaign(campaignId)
+- getPipelineState(campaignId)
+- validatePhaseStart(campaignId, phase)
+- validatePhaseCompletion(campaignId, phase)
+
+3. Criar uma state machine única e formal:
+
+- intake
+- briefing_ready
+- analyzing
+- strategy_ready
+- awaiting_strategy_approval
+- creative_intent_ready
+- creative_intent_approved
+- generating_content
+- awaiting_content_approval
+- approved
+- scheduled
+- launching
+- live
+- paused
+- cancelled
+- completed
+- failed
+
+4. Todas as transições precisam estar declaradas em um único objeto VALID_STATUS_TRANSITIONS.
+
+5. Remover qualquer allowedStatuses duplicado espalhado pelo sistema.
+
+6. Implementar idempotência global:
+
+- API idempotency
+- BullMQ jobId determinístico
+- scheduler idempotency
+- retry idempotency
+- websocket event idempotency
+
+7. Criar CampaignEventTimeline:
+   Cada mudança relevante deve gerar evento:
+
+- CAMPAIGN_CREATED
+- BRIEFING_COMPLETED
+- STRATEGY_STARTED
+- STRATEGY_COMPLETED
+- STRATEGY_APPROVED
+- CREATIVE_INTENT_GENERATED
+- CREATIVE_INTENT_APPROVED
+- CONTENT_STARTED
+- CONTENT_COMPLETED
+- CONTENT_APPROVED
+- SCHEDULING_STARTED
+- SCHEDULING_COMPLETED
+- LAUNCH_STARTED
+- LAUNCH_COMPLETED
+- METRICS_INGESTED
+- PIPELINE_PAUSED
+- PIPELINE_FAILED
+- PIPELINE_RECOVERED
+- PIPELINE_COMPLETED
+
+8. Criar correlationId, executionId e traceId para cada execução.
+
+9. Implementar recovery robusto:
+   Ao reiniciar servidor, detectar campanhas presas em:
+
+- analyzing
+- generating_content
+- launching
+- scheduled
+  e decidir corretamente se:
+- continua
+- reverte
+- pausa
+- marca como failed
+- solicita ação humana
+
+10. Criar testes de regressão obrigatórios:
+
+- double click em gerar conteúdo
+- refresh durante execução
+- servidor reinicia durante analyzing
+- servidor reinicia durante generating_content
+- job duplicado no BullMQ
+- websocket falha
+- approval negado
+- campaign paused
+- campaign cancelled
+- créditos insuficientes
+- provider timeout
+- JSON inválido
+- retry depois de falha parcial
+- scheduler rodando item já executado
+
+11. Nenhuma correção pode ser considerada concluída sem:
+
+- relatório de causa raiz
+- arquivos alterados
+- transições removidas
+- estados centralizados
+- testes executados
+- riscos restantes
+- validação ponta a ponta
+
+Resultado esperado:
+O sistema deve ter apenas uma autoridade de fluxo: PipelineKernel.
+Qualquer tentativa de alterar fluxo fora dele deve ser removida ou bloqueada.
