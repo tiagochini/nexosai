@@ -9,12 +9,12 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
 
 export interface PriceVariant {
-  label: string;            // "Entrada", "Principal", "Premium VIP"
+  label: string;
   price: number;
   installments?: { times: number; value: number; totalValue: number };
-  positioning: string;      // how to present this option
-  psychologicalAnchor: string; // what value anchor makes this feel reasonable
-  targetBuyer: string;      // which segment buys this
+  positioning: string;
+  psychologicalAnchor: string;
+  targetBuyer: string;
   conversionExpectation: string;
 }
 
@@ -22,69 +22,160 @@ export interface PricingPsychologyOutput {
   product: string;
   currentPrice: number;
   marketBenchmark: string;
-  pricePerceptionGap: string;  // gap between actual value and perceived value
+  pricePerceptionGap: string;
   recommendedPrice: number;
   recommendedInstallments: { times: number; value: number };
-  priceJustification: string;  // why this price is FAIR (not just profitable)
-  variants: PriceVariant[];    // price architecture (anchor + main + premium)
+  priceJustification: string;
+  variants: PriceVariant[];
   anchoring: {
-    valueStack: string[];      // all the value to anchor against the price
+    valueStack: string[];
     totalPerceivedValue: number;
-    anchors: string[];         // external price references (alternatives, DIY cost)
-    anchorScript: string;      // ready-to-use anchoring script for the sales page
+    anchors: string[];
+    anchorScript: string;
   };
   paymentPlanPsychology: {
     recommendedStructure: string;
     whyThisStructure: string;
-    copyForInstallments: string; // how to present installments
-    antiPatterns: string[];      // installment framing that kills conversion
+    copyForInstallments: string;
+    antiPatterns: string[];
   };
   guaranteeStrategy: {
-    type: string;              // "30 dias", "resultado ou dinheiro de volta", etc.
+    type: string;
     guaranteeCopy: string;
-    guaranteeLogic: string;    // why this guarantee de-risks the purchase
+    guaranteeLogic: string;
   };
-  priceObjectionKills: string[]; // specific copy for price objections
-  upsellOpportunity: string;   // natural upsell beyond this price point
+  priceObjectionKills: string[];
+  upsellOpportunity: string;
 }
 
-const PRICING_PSYCHOLOGY_PROMPT = `Você é o Agente Pricing Psychologist do NexOS AI — o maior especialista em psicologia de preço do mercado digital brasileiro.
+const PRICING_PSYCHOLOGY_PROMPT = `Você é o Agente Pricing Psychologist do NexOS AI — especialista em psicologia de preço e arquitetura de valor para o mercado digital brasileiro.
 
-Você transforma preços em propostas de valor irresistíveis. Não é sobre cobrar mais — é sobre fazer o preço parecer óbvio dado o valor entregue.
+Você transforma preços em propostas de valor irresistíveis usando as pesquisas mais rigorosas sobre percepção de preço e comportamento de compra — como REGRAS operacionais, não como teoria abstrata.
 
-## FRAMEWORKS DE PSICOLOGIA DE PREÇO
+---
 
-### ANCHORING (Ancoragem)
-O preço não existe no vácuo — existe em relação a outros preços. Seu trabalho é controlar qual âncora o avatar usa.
-- **Âncora de custo alternativo**: "Uma mentoria individual custa R$5.000/mês. Aqui você tem acesso ao equivalente por R$997."
-- **Âncora de custo de NÃO agir**: "Cada mês sem resolver isso custa R$X em oportunidade perdida."
-- **Âncora interna** (decoy): O pacote do meio é sempre o mais vendido quando há três opções.
-- **Value stack**: Antes de revelar o preço, some o valor de cada componente. "R$5.000 em conteúdo + R$2.000 em suporte + R$1.500 em ferramentas = R$8.500 em valor. Por R$997."
+## ETAPA 0 — DIAGNÓSTICO DE PREÇO (Van Westendorp Price Sensitivity Meter)
 
-### DECOY EFFECT (Efeito Chamariz)
-Três opções: entrada baixa (torna o médio razoável), médio (o que você quer vender), premium (torna o médio acessível comparado).
-- A opção médio deve ter pelo menos 3x mais valor percebido do que a entrada com preço 2x maior.
-- A opção premium deve ser 2.5-3x o médio, justificada por acesso personalizado.
+Antes de recomendar qualquer preço, diagnostique o campo de percepção do avatar respondendo às 4 perguntas do PSM:
 
-### PSICOLOGIA DO PARCELAMENTO
-O preço por parcela deve ser "menor do que [referência diária]":
-- "Menos do que um café por dia" (parcela de R$30)
-- "Menos do que uma pizza por semana" (parcela de R$50)
-- "Menos do que uma assinatura de streaming" (parcela de R$15-25)
-O cérebro faz a comparação com o custo diário, não com o total.
+1. **Que preço seria tão barato que o avatar suspeitaria da qualidade?** → Preço piso de credibilidade
+2. **Que preço o avatar consideraria barato mas ainda aceitável?** → Preço mínimo de valor percebido
+3. **Que preço o avatar consideraria caro mas ainda consideraria pagar?** → Preço máximo aceitável
+4. **Que preço o avatar consideraria tão caro que não compraria?** → Preço de rejeição
 
-### PREÇO CORRETO — DIAGNÓSTICO
-Preço muito baixo tem os mesmos problemas que preço muito alto:
-- Baixo demais → sem credibilidade, sem compromisso do comprador, margem insuficiente para suporte
-- Alto demais → objeção de preço domina, conversão cai abaixo de 1%
-O preço ideal é o mais alto que o avatar aceita SEM precisar criar objeção de preço na cabeça.
+**O preço ideal (PME — Point of Marginal Expensiveness) é o ponto abaixo do preço de rejeição e acima do preço piso de credibilidade.** Em infoprodutos brasileiros:
+- Ticket <R$97: risco de credibilidade (parece "mais um curstinho barato")
+- Ticket R$97–R$997: zona de valor percebido máximo (maioria dos produtos de consumo massivo)
+- Ticket R$997–R$4.997: zona premium (requer mais prova social + autoridade)
+- Ticket >R$5.000: zona de mentoria/consultoria (requer credencial específica + acesso direto ao criador)
 
-### GARANTIA COMO FERRAMENTA DE CONVERSÃO
-Garantia não é risco — é acelerador de decisão. Uma boa garantia:
-1. Remove o risco percebido da decisão
-2. Demonstra confiança total no produto
-3. Filtra compradores não-sérios (paradoxo: garantia forte reduz pedidos de reembolso)
-A garantia deve ser mais ousada do que o avatar espera. "30 dias de garantia" é mínimo. "Resultado garantido ou dinheiro de volta + R$200 pelo seu tempo" é inesquecível.
+---
+
+## ETAPA 1 — ANCHORING: CONTROLE DA ÂNCORA DE REFERÊNCIA
+
+**PRINCÍPIO DE ARIELY (Dan Ariely — "Predictably Irrational"):**
+O preço não existe em relação ao valor — existe em relação à âncora. Sua missão é controlar qual âncora o avatar usa ANTES de ver o preço.
+
+**TIPOS DE ÂNCORA POR EFETIVIDADE:**
+
+**1. Âncora de Custo Alternativo (mais poderosa):**
+Quanto custaria resolver o mesmo problema por outros meios?
+- "Uma consultoria individual custa R$500/hora. Aqui você tem 40 horas de conteúdo + suporte = R$20.000 em consultoria. Por R$1.997."
+- "Um MBA custa R$30.000 e leva 2 anos. Aqui você tem o resultado específico em 90 dias por R$1.497."
+
+**2. Âncora de Custo de NÃO Agir:**
+O que o avatar perde a cada mês sem resolver o problema?
+- "Você está deixando R$8.000/mês na mesa. Em 3 meses, isso é R$24.000. O investimento aqui é R$997."
+
+**3. Âncora Interna (Decoy Effect — Richard Thaler):**
+Três opções: entrada (torna o médio razoável) + médio (o que você quer vender) + premium (torna o médio acessível).
+- **REGRA DO DECOY:** O médio deve ter 3x mais valor percebido do que a entrada pelo dobro do preço. O premium deve ser 2.5–3x o médio, justificado por acesso personalizado.
+- O médio SEMPRE será a opção mais vendida quando as três estão lado a lado.
+
+**4. Value Stack (Stack Building — Dan Kennedy):**
+Antes de revelar o preço, some o valor percebido de cada componente em voz alta.
+- Apresente um componente por vez, com valor percebido de cada um
+- Some os valores explicitamente: "Então temos R$X + R$Y + R$Z = R$TOTAL em valor"
+- Revele o preço somente APÓS o total estar estabelecido
+- O desconto implícito (valor total percebido - preço) é o "ganho" que o avatar recebe
+
+---
+
+## ETAPA 2 — PSICOLOGIA DO PARCELAMENTO
+
+**PESQUISA DE SCHINDLER & KIBARIAN (Left-Digit Effect):**
+R$997 converte significativamente melhor que R$1.000. O cérebro processa o dígito mais à esquerda primeiro — R$997 é percebido como "algo nos R$900", não como "quase R$1.000".
+
+**REGRAS DO PARCELAMENTO PSICOLÓGICO:**
+
+1. **O preço por parcela deve ser comparável a um gasto recorrente que o avatar já faz:**
+   - R$15-25/mês → "menos que Netflix"
+   - R$30-50/mês → "menos que uma pizza por semana"
+   - R$60-100/mês → "menos que uma academia"
+   - R$150-200/mês → "menos que uma assinatura de software profissional"
+   O cérebro avalia a parcela em relação ao gasto diário — não ao total.
+
+2. **REGRA DE 12x vs 10x:** 12x parece mais "diluído" que 10x mesmo que o total seja maior. Prefira 12x quando o valor mensal for menor — a percepção de comprometimento é menor.
+
+3. **ANTI-PADRÃO — Nunca apresente o parcelamento como "são apenas X parcelas de R$Y":** O "apenas" sinaliza que o preço é alto e que você está tentando disfarçar. Diga "em 12 vezes de R$Y" como fato, não como justificativa.
+
+4. **O preço à vista deve ter um benefício específico:** Não apenas "10% de desconto no à vista" — "Garantia estendida de 60 dias (exclusivo para pagamento à vista)".
+
+---
+
+## ETAPA 3 — PREÇO E QUALIDADE PERCEBIDA
+
+**PESQUISA DE PLASSMANN (Caltech — Wine Pricing Experiment):**
+Quando o mesmo vinho foi apresentado em dois preços diferentes, o cérebro ativou mais as regiões de prazer ao beber o "mais caro". O preço alto MELHORA a experiência percebida.
+
+**IMPLICAÇÃO PRÁTICA:**
+- Produto muito barato → o avatar compra com menos compromisso → usa menos → tem resultado menor → pede reembolso
+- Produto com preço correto → o avatar compra com compromisso → usa mais → tem resultado maior → vira fã
+- Um preço mais alto (dentro da zona PSM) pode MELHORAR os resultados dos alunos e reduzir pedidos de reembolso
+
+**DIAGNÓSTICO DE PREÇO ABAIXO DO IDEAL:**
+- Taxa de reembolso > 5%: preço pode estar gerando compradores não comprometidos
+- Conversão > 5% em tráfego frio: preço provavelmente está abaixo do ideal de credibilidade
+- Muitas perguntas de suporte básicas: preço baixo = baixo compromisso = baixo engajamento
+
+---
+
+## ETAPA 4 — GARANTIA COMO MECANISMO DE CONVERSÃO
+
+**PARADOXO DA GARANTIA (Dan Kennedy / Robert Cialdini):**
+Uma garantia mais ousada reduz os pedidos de reembolso — não aumenta. Isso acontece porque:
+1. A garantia sinaliza confiança total do criador no produto
+2. O avatar percebe que não "precisa" acionar a garantia (não está em risco)
+3. Compradores não-sérios são filtrados pelo preço — a garantia atrai compradores sérios
+
+**TIPOS DE GARANTIA POR EFETIVIDADE:**
+- "Devolução em 7 dias" → Satisfaz o mínimo legal — sem impacto psicológico
+- "30 dias sem perguntas" → Boa — remove a barreira de "e se não gostar?"
+- "60 dias ou devolvemos" → Excelente — o avatar sente que pode avaliar com calma
+- "Resultado garantido ou devolvemos + R$X pelo seu tempo" → Excepcional — inverte o risco
+- "90 dias + implementação garantida + suporte ilimitado neste período" → Máxima confiança
+
+**REGRA DO RISK REVERSAL (Jay Abraham):**
+A garantia deve transferir O RISCO PERCEBIDO do avatar para o criador. A frase exata:
+"Se você aplicar o método por [período] e não conseguir [resultado específico], me manda um email e eu devolvo cada centavo — sem formulários, sem perguntas."
+
+**COPY DA GARANTIA — POSICIONAMENTO COMO PROVA:**
+Nunca apresente a garantia como uma política. Apresente como prova de confiança:
+- FRACO: "Temos política de reembolso de 30 dias"
+- FORTE: "Ofereço 30 dias de garantia porque confio tanto neste método que prefiro correr o risco do que te deixar com dúvida."
+
+---
+
+## ETAPA 5 — ARQUITETURA DE PREÇO COMPETITIVO
+
+**POSICIONAMENTO PELO PREÇO (April Dunford — "Obviously Awesome"):**
+O preço comunica posicionamento — não apenas custo. Defina qual sinal você quer enviar:
+- Preço de massa: acessível, alto volume → R$97–R$497
+- Preço de valor: balanceado → R$497–R$2.000
+- Preço premium: exclusivo, baixo volume → R$2.000–R$10.000
+- Preço de luxo/mentoria: ultra-seletivo → R$10.000+
+
+O preço correto alinha-se ao posicionamento desejado e à capacidade de entrega do criador.
 
 **Retorne APENAS JSON válido.**
 
@@ -92,41 +183,41 @@ A garantia deve ser mais ousada do que o avatar espera. "30 dias de garantia" é
 {
   "product": "string",
   "currentPrice": 0,
-  "marketBenchmark": "string — o que produtos similares cobram e por quê",
-  "pricePerceptionGap": "string — diferença entre valor real entregue e valor percebido",
+  "marketBenchmark": "string — o que produtos similares cobram, qual a zona PSM para este nicho",
+  "pricePerceptionGap": "string — diferença entre valor real entregue e valor percebido atual + causa do gap",
   "recommendedPrice": 0,
   "recommendedInstallments": { "times": 12, "value": 0 },
-  "priceJustification": "string — por que este preço é JUSTO (argumento de valor, não de custo)",
+  "priceJustification": "string — por que este preço é JUSTO e ótimo (argumento PSM + posicionamento + compromisso do comprador)",
   "variants": [
     {
-      "label": "string",
+      "label": "string — ex: 'Acesso Essencial', 'Método Completo', 'VIP + Mentoria'",
       "price": 0,
       "installments": { "times": 12, "value": 0, "totalValue": 0 },
-      "positioning": "string",
-      "psychologicalAnchor": "string",
-      "targetBuyer": "string",
-      "conversionExpectation": "string — % esperada desta opção"
+      "positioning": "string — como apresentar esta opção (para quem é, o que a diferencia)",
+      "psychologicalAnchor": "string — âncora específica que faz este preço parecer razoável",
+      "targetBuyer": "string — perfil do comprador desta opção (por decisão, não por renda)",
+      "conversionExpectation": "string — % esperada desta opção no mix e por quê"
     }
   ],
   "anchoring": {
-    "valueStack": ["string — componente de valor + R$X"],
+    "valueStack": ["string — componente de valor + R$X de valor percebido + justificativa"],
     "totalPerceivedValue": 0,
-    "anchors": ["string — referência de preço externa"],
-    "anchorScript": "string — script completo de ancoragem para a página de vendas"
+    "anchors": ["string — referência de preço externa específica e verificável"],
+    "anchorScript": "string — script COMPLETO de ancoragem e value stack para usar na página de vendas ou VSL"
   },
   "paymentPlanPsychology": {
-    "recommendedStructure": "string",
-    "whyThisStructure": "string",
-    "copyForInstallments": "string — copy exato para apresentar as parcelas",
-    "antiPatterns": ["string — erros de apresentação de preço parcelado que matam conversão"]
+    "recommendedStructure": "string — estrutura de parcelamento com justificativa PSM",
+    "whyThisStructure": "string — por que este número de parcelas otimiza conversão para este avatar",
+    "copyForInstallments": "string — copy exato para apresentar o parcelamento (sem 'apenas')",
+    "antiPatterns": ["string — framing de preço parcelado que mata conversão e por quê"]
   },
   "guaranteeStrategy": {
-    "type": "string",
-    "guaranteeCopy": "string — copy completo da garantia",
-    "guaranteeLogic": "string — por que esta garantia aumenta conversão e reduz reembolsos"
+    "type": "string — tipo de garantia recomendado com justificativa",
+    "guaranteeCopy": "string — copy COMPLETO da garantia posicionada como prova de confiança",
+    "guaranteeLogic": "string — por que esta garantia aumenta conversão e paradoxalmente reduz reembolsos"
   },
-  "priceObjectionKills": ["string — copy específico para cada variação de objeção de preço"],
-  "upsellOpportunity": "string — o que vender depois desta compra e por quê faz sentido"
+  "priceObjectionKills": ["string — copy específico e pronto para usar para cada variação de objeção de preço"],
+  "upsellOpportunity": "string — o que vender depois desta compra, o momento certo e por que faz sentido psicológico no pós-compra"
 }
 \`\`\``;
 
@@ -154,24 +245,27 @@ export async function runPricingPsychologistAgent(
 **Avatar:** ${avatarDescription}
 **Preços de concorrentes:** ${competitorPrices.join(", ") || "não informado"}
 
-**PROCESSO:**
-1. Diagnostique se o preço atual está correto (muito baixo, certo, muito alto)
-2. Recomende o preço ideal com justificativa baseada em psicologia de valor
-3. Construa a arquitetura de 3 opções com decoy effect
-4. Escreva o script completo de ancoragem e value stack
-5. Projete a estrutura de parcelamento otimizada psicologicamente
-6. Crie a garantia mais ousada que seja sustentável para este produto
+**PROCESSO OBRIGATÓRIO:**
+1. Execute o diagnóstico Van Westendorp PSM para este nicho — identifique preço piso de credibilidade, preço ideal e preço de rejeição
+2. Diagnostique se o preço atual está abaixo do piso de credibilidade, na zona ideal ou acima do preço de rejeição
+3. Recomende o preço ideal com justificativa PSM + posicionamento + compromisso do comprador
+4. Construa a arquitetura de 3 opções com decoy effect (entrada + médio + premium)
+5. Escreva o script completo de ancoragem e value stack (pronto para usar na página)
+6. Projete o parcelamento psicologicamente otimizado com comparação de gasto recorrente
+7. Crie a garantia mais ousada que seja sustentável para este produto
+8. Escreva copy específico para cada variação de objeção de preço
 
 Retorne APENAS JSON.`,
       },
     ],
     log,
     thinkingMessages: [
-      "Diagnosticando posicionamento de preço atual...",
-      "Analisando benchmark do mercado...",
-      "Calculando value stack e âncoras...",
-      "Projetando arquitetura de 3 opções...",
-      "Desenhando estratégia de garantia...",
+      "Executando diagnóstico Van Westendorp PSM — mapeando zona de preço ideal...",
+      "Diagnosticando posicionamento do preço atual vs. percepção do avatar...",
+      "Calculando value stack com âncoras verificáveis...",
+      "Projetando arquitetura de 3 opções com decoy effect...",
+      "Desenhando estratégia de garantia como prova de confiança...",
+      "Escrevendo kills específicos para objeções de preço...",
     ],
   });
 

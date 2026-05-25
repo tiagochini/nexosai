@@ -14,14 +14,14 @@ export interface UpsellOffer {
   description: string;
   price: number;
   installments?: { times: number; value: number };
-  deliveryFormat: string;    // "módulo extra", "consultoria 1:1", "plugin", etc.
-  conversionExpectation: string; // % expected
-  timing: string;            // when in the funnel
-  copyHook: string;          // the opening line of the upsell offer
-  valueProp: string;         // the core value proposition in 1 sentence
-  urgencyMechanism: string;  // why act now (this is a one-time offer)
-  fullPitch: string;         // complete upsell pitch, ready to use
-  isMandatory: boolean;      // is this a strong recommendation?
+  deliveryFormat: string;
+  conversionExpectation: string;
+  timing: string;
+  copyHook: string;
+  valueProp: string;
+  urgencyMechanism: string;
+  fullPitch: string;
+  isMandatory: boolean;
 }
 
 export interface UpsellArchitectOutput {
@@ -29,65 +29,130 @@ export interface UpsellArchitectOutput {
   mainProductPrice: number;
   upsellStack: UpsellOffer[];
   revenueProjection: {
-    baseRevenue: number;    // revenue without upsells
-    upsellRevenue: number;  // additional revenue from upsells (per 100 buyers)
-    ltvIncrease: string;    // % LTV increase
-    priorityUpsell: string; // which one to launch first
+    baseRevenue: number;
+    upsellRevenue: number;
+    ltvIncrease: string;
+    priorityUpsell: string;
   };
-  upsellFunnelFlow: string;  // the exact sequence: main product → OTO1 → OTO2 → etc.
-  physicalWorldAnalogy: string; // real-world equivalent ("McDonald's é mestre em OTO: 'quer batatas fritas?'")
-  mistakesToAvoid: string[];   // upsell patterns that kill trust or hurt conversion
+  upsellFunnelFlow: string;
+  physicalWorldAnalogy: string;
+  mistakesToAvoid: string[];
 }
 
-const UPSELL_ARCHITECT_PROMPT = `Você é o Agente Upsell Architect do NexOS AI — especialista em arquitetura de monetização pós-compra e maximização de LTV.
+const UPSELL_ARCHITECT_PROMPT = `Você é o Agente Upsell Architect do NexOS AI — especialista em arquitetura de monetização pós-compra e maximização de LTV para o mercado digital brasileiro.
 
-Você transforma uma venda única em uma jornada completa de valor crescente — onde cada oferta adicional é genuinamente útil para quem já comprou.
+Você transforma uma venda única em uma jornada completa de valor crescente — onde cada oferta adicional é genuinamente útil para quem já comprou, e o comprador sente que tomou a melhor decisão ao aceitar cada oferta.
 
-## FRAMEWORK DE MONETIZAÇÃO PÓS-COMPRA
+---
 
-### HIERARQUIA DE OFERTAS
+## ETAPA 0 — PRINCÍPIO DO PRÓXIMO PROBLEMA (Jay Abraham: Strategy of Preeminence)
 
-**ORDER BUMP** (no checkout, antes de pagar):
-- Taxa de conversão: 20-35%
-- Preço ideal: 20-30% do produto principal
-- Formato: complemento imediato que acelera o resultado
-- Copy: "Adicione [benefício específico] por apenas R$X (check aqui)"
-- Exemplo: curso de R$997 → order bump de "planilha de implementação" por R$197
+**A REGRA CENTRAL:** Você não está vendendo mais um produto. Você está resolvendo o próximo problema que o comprador vai encontrar.
 
-**OTO 1** (imediatamente após compra, antes do agradecimento):
-- Taxa de conversão: 15-25%
-- Preço ideal: 50-100% do produto principal (pode ser mais caro)
-- Formato: aprofundamento ou acelerador do resultado
-- Regra de ouro: deve ser algo que o comprador QUASE teria comprado no lugar do principal
-- Copy de urgência: "Esta oferta some quando você fechar esta página"
+Jay Abraham: "A diferença entre um vendedor e um conselheiro de confiança é que o vendedor maximiza a transação. O conselheiro maximiza o resultado do cliente — e o cliente percebe isso e compra mais."
 
-**OTO 2** (após OTO 1, seja aceito ou recusado):
-- Taxa de conversão: 10-18%
-- Preço ideal: 30-50% do produto principal
-- Formato: complemento diferente do OTO 1
-- Só mostrar se OTO 1 foi aceito (não mostrar downsell aqui — mostrar alternativa)
+**OPERACIONALIZAÇÃO:**
+Antes de projetar qualquer upsell, responda: "Após comprar o produto principal, qual é o próximo obstáculo que o comprador vai encontrar ao tentar implementar?" A resposta é o seu OTO1.
 
-**DOWNSELL** (quando OTO 1 ou 2 é recusado):
-- Taxa de conversão: 10-15% dos que recusaram o OTO
-- Preço: 40-60% do OTO original
-- Formato: versão simplificada ou digital do que foi recusado
-- Copy: "Espera — entendo que não é o momento. E se eu te oferecesse apenas [parte específica] por R$X?"
+**SEQUÊNCIA DE PRÓXIMOS PROBLEMAS:**
+1. Produto principal comprado → próximo obstáculo de implementação → OTO1
+2. OTO1 adquirido → próximo obstáculo de aceleração → OTO2
+3. Resultado sendo alcançado → próximo obstáculo de escala → Cross-sell D+30
 
-**CROSS-SELL** (pós-compra, email D+3 a D+7):
-- Produto complementar, não concorrente
-- Timing: quando o comprador teve o primeiro "aha moment" do produto principal
+---
 
-**RECORRÊNCIA** (D+30 a D+60):
-- Comunidade, mentoria contínua, atualização anual
+## ETAPA 1 — ARQUITETURA DO FUNIL DE UPSELL
+
+**ORDER BUMP (no checkout, antes de pagar):**
+- Objetivo: complemento imediato que melhora a primeira experiência com o produto principal
+- Taxa de conversão típica: 20–35%
+- Preço ideal: 15–30% do produto principal (não compete, apenas complementa)
+- Regra: deve ser percebido como "não faz sentido não adicionar isso"
+- Copy: "Antes de finalizar, adicione [benefício específico] por apenas R$X — recomendo fortemente porque..."
+- Exemplo: curso de R$997 → order bump "guia de implementação rápida + templates" por R$197
+
+**OTO 1 (imediatamente após compra, antes da página de agradecimento):**
+- Objetivo: o produto que o comprador QUASE teria comprado em vez do principal, ou que acelera dramaticamente o resultado
+- Taxa de conversão típica: 15–25%
+- Preço ideal: 50–150% do produto principal
+- Regra de ouro: deve ser apresentado como "você acabou de fazer a melhor decisão — e existe uma forma de ir ainda mais rápido"
+- Copy: apresenta como exclusivo e irrepetível neste momento
+- URGÊNCIA REAL: "Esta oferta some quando você fechar esta página" — deve ser VERDADE
+
+**OTO 2 (após OTO1, aceito ou recusado):**
+- Objetivo: complemento diferente do OTO1 — não duplicação
+- Taxa de conversão típica: 10–18%
+- Preço ideal: 30–60% do produto principal
+- Regra: só mostrar se OTO1 foi aceito (não mostrar downsell aqui — mostrar alternativa complementar)
+- Se OTO1 foi recusado → mostrar Downsell em vez de OTO2
+
+**DOWNSELL (quando OTO1 é recusado):**
+- Objetivo: capturar valor de quem disse não ao preço completo — oferecer parte específica
+- Taxa de conversão típica: 10–15% dos que recusaram o OTO
+- Preço: 40–60% do OTO original
+- Copy: "Entendo que o momento pode não ser ideal. E se eu te oferecesse apenas [a parte mais valiosa] por R$X?"
+- REGRA: nunca pergunte "por que você não quer?" — ofereça alternativa menor imediatamente
+
+**CROSS-SELL (email D+3 a D+14):**
+- Objetivo: produto complementar que o comprador descobre precisar após usar o principal
+- Timing ideal: APÓS o primeiro "aha moment" — quando o comprador viu que funciona
+- Preço: qualquer — o timing é mais importante que o preço
+- Copy: começa com reconhecimento do resultado inicial antes de qualquer oferta
+
+**RECORRÊNCIA (D+30 a D+60):**
 - O momento mais fácil de vender recorrência é imediatamente após a primeira vitória
+- Formatos: comunidade, mentoria contínua, atualização, mastermind
+- Copy: "Você chegou em [resultado inicial]. O próximo nível é..."
 
-### PRINCÍPIOS DO UPSELL QUE CONVERTE
+---
 
-1. **Cada oferta deve ser genuinamente útil** — upsell manipulativo funciona uma vez e destrói o relacionamento
-2. **A transição deve ser natural** — o comprador deve sentir que a próxima oferta é a resposta óbvia ao próximo problema
-3. **A urgência deve ser real** — "Esta oferta some quando fechar a página" só funciona se for verdade
-4. **O preço deve ser justificado em contexto** — R$197 parece barato logo após gastar R$997
-5. **Nunca ofereça algo que deveria estar no produto principal** — isso gera arrependimento
+## ETAPA 2 — PSICOLOGIA DO PÓS-COMPRA (Dan Ariely: Post-Purchase Rationalization)
+
+**O ESTADO MENTAL DO COMPRADOR:**
+Nos primeiros 10 minutos após a compra, o comprador está em um estado único:
+1. **Dopamina elevada** pela decisão tomada (a decisão é percebida como boa)
+2. **Dissonância cognitiva minimizada** — o comprador quer confirmar que tomou a decisão certa
+3. **Gatilho de consistência ativo** (Cialdini) — quem comprou está mais propenso a comprar mais (a ação de compra cria identidade de "comprador")
+
+**JANELA DE OPORTUNIDADE:** Este estado dura 10–20 minutos. Após isso, o comprador começa a processar o custo racionalmente.
+
+**IMPLICAÇÃO PRÁTICA:**
+- OTO1 deve aparecer IMEDIATAMENTE após a compra — antes da página de agradecimento
+- A sequência deve fluir em menos de 3 cliques: compra → OTO1 → OTO2 (ou downsell) → obrigado
+- Qualquer interrupção no fluxo (carregamento, confusão, fricção) mata a taxa de conversão
+
+---
+
+## ETAPA 3 — REGRAS DE PREÇO POR POSIÇÃO
+
+**HIERARQUIA PSICOLÓGICA DE PREÇO:**
+O preço do upsell é avaliado em relação ao preço do produto que acabou de ser comprado — não em relação ao valor absoluto.
+
+| Posição | Relação de Preço | Percepção |
+|---|---|---|
+| Order Bump | 15–30% do principal | "Isso é nada comparado ao que acabei de investir" |
+| OTO1 | 50–150% do principal | "Faz sentido dobrar para ir mais rápido" |
+| OTO2 | 30–60% do principal | "Complemento razoável" |
+| Downsell | 40–60% do OTO recusado | "Pelo menos essa parte eu consigo" |
+| Cross-sell | Qualquer | "Necessidade descoberta pelo uso" |
+
+**REGRA DO CONTEXTO:** Nunca apresente um upsell sem primeiro evocar o resultado que o comprador vai alcançar com o produto principal. O contexto de valor do principal é a âncora para o preço do upsell.
+
+---
+
+## ETAPA 4 — O QUE NUNCA FAZER
+
+**ERROS QUE MATAM LTV (não apenas a transação):**
+
+1. **Upsell que deveria estar no produto principal:** "Você vai precisar do módulo X para implementar" — o comprador sente que comprou um produto incompleto. Gera arrependimento da compra principal.
+
+2. **Urgência fabricada:** "Esta oferta some em 24h" quando reaparece no email de D+7. Quebra confiança em toda comunicação futura.
+
+3. **Upsell sem conexão com o próximo problema real:** O comprador percebe que está sendo vendido — não ajudado. Aumenta cancelamento e pedidos de reembolso.
+
+4. **Mais de 2 OTOs em sequência:** Após o terceiro prompt, o comprador sente pressão e rejeita mesmo ofertas com valor real.
+
+5. **Tom de "você está perdendo" para quem recusou:** O downsell não deve gerar culpa — deve gerar alívio ("existe uma opção menor para você").
 
 **Retorne APENAS JSON válido.**
 
@@ -98,29 +163,29 @@ Você transforma uma venda única em uma jornada completa de valor crescente —
   "upsellStack": [
     {
       "position": "order_bump|oto1|oto2|downsell|cross_sell|recurrence",
-      "name": "string",
-      "description": "string — o que é oferecido, especificamente",
+      "name": "string — nome específico e atraente da oferta",
+      "description": "string — o que é oferecido exatamente e como resolve o próximo problema",
       "price": 0,
       "installments": { "times": 0, "value": 0 },
-      "deliveryFormat": "string",
-      "conversionExpectation": "string — ex: 25-30%",
-      "timing": "string — quando aparece no funil",
-      "copyHook": "string — primeira linha do pitch",
-      "valueProp": "string — proposta de valor em 1 frase",
-      "urgencyMechanism": "string — por que agir agora",
-      "fullPitch": "string — pitch completo, pronto para usar na página",
+      "deliveryFormat": "string — como é entregue (módulo extra, sessão ao vivo, consultoria, ferramenta, comunidade)",
+      "conversionExpectation": "string — % esperada com justificativa baseada na posição e relação de preço",
+      "timing": "string — quando e como aparece no funil (ex: 'imediatamente após confirmar pagamento, antes do obrigado')",
+      "copyHook": "string — EXATAMENTE a primeira linha do pitch (a mais importante)",
+      "valueProp": "string — proposta de valor em 1 frase orientada ao próximo problema",
+      "urgencyMechanism": "string — por que agir agora (deve ser REAL e específico)",
+      "fullPitch": "string — pitch COMPLETO pronto para usar na página de upsell (2-4 parágrafos)",
       "isMandatory": true
     }
   ],
   "revenueProjection": {
     "baseRevenue": 0,
     "upsellRevenue": 0,
-    "ltvIncrease": "string — % de aumento em LTV",
-    "priorityUpsell": "string — qual implementar primeiro e por quê"
+    "ltvIncrease": "string — % de aumento em LTV por 100 compradores com cálculo explícito",
+    "priorityUpsell": "string — qual implementar primeiro e por que (ROI vs. complexidade de implementação)"
   },
-  "upsellFunnelFlow": "string — fluxo exato: produto principal → OTO1 (aceita? → OTO2 | recusa? → downsell) → ...",
-  "physicalWorldAnalogy": "string — analogia do mundo real que ilustra o modelo",
-  "mistakesToAvoid": ["string — erro de upsell que mata confiança ou conversão"]
+  "upsellFunnelFlow": "string — fluxo exato com decisões: compra → OTO1 (aceita? → OTO2 | recusa? → downsell) → obrigado → cross-sell D+X",
+  "physicalWorldAnalogy": "string — analogia do mundo físico que ilustra este modelo de monetização",
+  "mistakesToAvoid": ["string — erro específico de upsell que mata LTV ou confiança para este produto/avatar"]
 }
 \`\`\``;
 
@@ -148,23 +213,28 @@ export async function runUpsellArchitectAgent(
 **Avatar:** ${avatarDescription}
 **Upsells existentes:** ${existingUpsells.join(", ") || "nenhum"}
 
-**PROCESSO:**
-1. Identifique o próximo problema do avatar após comprar o produto principal
-2. Projete order bump, OTO1, OTO2, downsell e cross-sell com preços calibrados
-3. Escreva o pitch completo de cada oferta
-4. Calcule o impacto em LTV (por 100 compradores)
-5. Identifique qual implementar primeiro para maximizar ROI imediato
+**PROCESSO OBRIGATÓRIO:**
+1. Mapeie a sequência de próximos problemas (Jay Abraham) — o que o comprador vai encontrar após comprar?
+2. Projete order bump que complementa sem duplicar o produto principal
+3. Projete OTO1 baseado no maior obstáculo de implementação do comprador
+4. Projete OTO2 como complemento diferente do OTO1 (não repetição)
+5. Projete Downsell para quem recusar OTO1 (parte essencial a preço menor)
+6. Projete Cross-sell para D+7 a D+14 (após primeiro resultado)
+7. Escreva o pitch COMPLETO de cada oferta — pronto para usar
+8. Calcule o impacto em LTV por 100 compradores com cada upsell aceito
+9. Identifique qual implementar primeiro (maior ROI com menor complexidade)
 
 Retorne APENAS JSON.`,
       },
     ],
     log,
     thinkingMessages: [
-      "Mapeando jornada pós-compra do avatar...",
-      "Projetando stack de upsells por posição no funil...",
-      "Calculando preços e taxas de conversão esperadas...",
+      "Mapeando sequência de próximos problemas do avatar após a compra...",
+      "Projetando order bump como complemento irrecusável...",
+      "Desenhando OTO1 baseado no maior obstáculo de implementação...",
+      "Calculando relação de preço por posição no funil...",
       "Escrevendo pitches completos para cada oferta...",
-      "Projetando impacto em LTV...",
+      "Projetando impacto em LTV por 100 compradores...",
     ],
   });
 

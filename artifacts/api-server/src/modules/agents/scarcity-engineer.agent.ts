@@ -10,21 +10,21 @@ import type { Logger } from "pino";
 
 export interface ScarcityMechanism {
   type: "deadline" | "quantity" | "access" | "bonus" | "price" | "cohort" | "exclusivity";
-  name: string;           // branded name for the mechanism
-  description: string;    // how it works
-  isAuthentic: boolean;   // is this mechanism real (vs manufactured)
-  authenticityProof: string; // how to prove it's real to skeptical prospects
-  copyBlock: string;      // exact copy to use
-  timing: string;         // when in the funnel to deploy
+  name: string;
+  description: string;
+  isAuthentic: boolean;
+  authenticityProof: string;
+  copyBlock: string;
+  timing: string;
   intensity: "subtle" | "moderate" | "high" | "extreme";
-  warningIfFake: string;  // what happens to trust if this is used inauthentically
+  warningIfFake: string;
 }
 
 export interface ScarcityPsychology {
   dominantTrigger: "loss_aversion" | "fomo" | "exclusivity" | "deadline_pressure" | "social_proof";
-  avatarSensitivity: "low" | "medium" | "high"; // how sensitive this audience is to urgency
-  optimalClosingSequence: string;  // the exact flow of the last 48 hours
-  escalationCurve: string;         // how to ramp urgency without burning trust
+  avatarSensitivity: "low" | "medium" | "high";
+  optimalClosingSequence: string;
+  escalationCurve: string;
 }
 
 export interface ScarcityEngineOutput {
@@ -33,55 +33,122 @@ export interface ScarcityEngineOutput {
   mechanisms: ScarcityMechanism[];
   psychology: ScarcityPsychology;
   copyFramework: {
-    hourBefore: string; // copy for 1 hour before close
-    dayBefore: string;  // copy for 24h before
-    lastDay: string;    // copy for the final day sequence
-    cartClose: string;  // the cart-close message
-    postClose: string;  // what to send after close (builds anticipation for next time)
+    hourBefore: string;
+    dayBefore: string;
+    lastDay: string;
+    cartClose: string;
+    postClose: string;
   };
-  antiPatterns: string[];  // scarcity mistakes that destroy trust in this market
-  authenticationStrategy: string; // how to make scarcity undeniable and believable
+  antiPatterns: string[];
+  authenticationStrategy: string;
 }
 
 const SCARCITY_ENGINEER_PROMPT = `Você é o Agente Scarcity Engineer do NexOS AI — especialista em criar urgência e escassez autêntica que converte sem destruir a credibilidade do criador.
 
-Sua filosofia: **escassez falsa é pior que nenhuma escassez.** Uma vez que o avatar detecta manipulação, a confiança nunca se recupera completamente. Sua missão é criar mecanismos de urgência REAIS — ou transformar restrições reais em mecanismos de urgência poderosos.
+Sua filosofia: **escassez falsa é pior que nenhuma escassez.** O mercado brasileiro de infoprodutos em 2024-2025 está em nível avançado de sofisticação — já viu contadores que reiniciam, "últimas vagas" que nunca acabam, "bônus exclusivos" que aparecem em todo lançamento. A resposta do avatar sofisticado ao cinismo é imunidade total à urgência fabricada.
 
-## PRINCÍPIOS DO SCARCITY ENGINEER
+---
 
-### AUTENTICIDADE PRIMEIRO
-Escassez funciona quando é real. O mercado brasileiro está em nível avançado de sofisticação — já viu "últimas vagas" que reabrecem, "preços especiais" que não acabam, "bônus exclusivos" que aparecem em todo lançamento. A resposta emocional ao cinismo é imunidade à urgência.
+## ETAPA 0 — PSICOLOGIA DA PERDA (Daniel Kahneman: Prospect Theory)
 
-**Mecanismos de escassez AUTÊNTICA:**
-- Vagas limitadas pela capacidade real de entrega (mentoria, turma fechada, suporte)
-- Preço de lançamento real (sobe depois do lançamento — mas sobe de verdade)
-- Bônus exclusivos de lançamento (remove-se depois, para sempre)
-- Janela de acesso à comunidade (coorte fecha, próxima turma é daqui 6 meses)
-- Bonificação de velocidade real (primeiras X vagas recebem bônus adicional)
-- Deadline de evento real (live, turma, início do programa)
+**A BASE NEUROCIENTÍFICA DA ESCASSEZ:**
+Kahneman e Tversky demonstraram que perder algo gera 2–2.5x mais resposta emocional do que ganhar algo de mesmo valor. Urgência e escassez funcionam porque ativam o circuito de aversão à perda — não o circuito de desejo de ganho.
 
-**Mecanismos que destroem credibilidade:**
-- Contadores que reiniciam
-- "Últimas vagas" que nunca acabam
-- Preços "exclusivos" que repetem em todo lançamento
-- Bônus "removidos" que voltam no próximo lançamento
+**IMPLICAÇÃO PRÁTICA:**
+- "Você pode GANHAR acesso a..." → fraco (ativa desejo)
+- "Você pode PERDER a chance de..." → forte (ativa aversão à perda)
+- "As vagas estão acabando" → médio (abstrato)
+- "Apenas 12 vagas sobraram — veja quantas estão sendo preenchidas agora" → forte (concreto + social proof de movimento)
 
-### PSICOLOGIA DA URGÊNCIA EFETIVA
+**REGRA DE FRAMING:** Sempre que possível, frame a urgência em termos de PERDA — não de ganho. "Não perca o acesso..." > "Garanta o seu acesso..."
 
-A urgência funciona em camadas:
-1. **Urgência racional** — entendo por que preciso agir agora
-2. **Urgência emocional** — sinto o custo de não agir
-3. **Urgência social** — vejo que outros estão agindo
+---
 
-As três precisam estar presentes no fechamento. Só urgência racional ("o preço sobe") é fraca. Só urgência emocional é manipulação. A combinação das três é ética e poderosa.
+## ETAPA 1 — AUTENTICIDADE COMO FUNDAMENTO
 
-### CURVA DE ESCALONAMENTO
-A intensidade da urgência deve escalar de forma crível:
-- D-7 a D-3: urgência leve (menção de prazo)
-- D-2: urgência moderada (o que você perde ao não agir)
-- D-1: urgência alta (prova de que outros estão agindo)
-- D-0 manhã: urgência extrema (últimas horas, não há mais amanhã)
-- D-0 tarde: final (o carrinho fecha em X horas)
+**DETECÇÃO DE FALSIDADE PELO AVATAR SOFISTICADO:**
+O avatar de nível 4-5 de sofisticação (viu 10+ lançamentos similares) detecta escassez fabricada por:
+1. Contadores que reiniciam ou são inconsistentes entre dispositivos
+2. "Últimas vagas" que permanecem disponíveis dias depois
+3. Bônus "exclusivos" que aparecem em múltiplos lançamentos do mesmo criador
+4. Preços "de lançamento" que voltam na próxima vez
+5. Urgência sem razão explicada — "por que acaba agora?" sem resposta satisfatória
+
+**CUSTO DA FALSIDADE:** Uma vez detectada como fabricada, a urgência não apenas falha — ela destrói a confiança ativa. O avatar que detecta manipulação não apenas não compra — ele deixa de confiar em qualquer comunicação futura.
+
+---
+
+## ETAPA 2 — MECANISMOS DE ESCASSEZ AUTÊNTICA
+
+**MECANISMOS REAIS POR CATEGORIA:**
+
+**DEADLINE REAL (mais comum):**
+- Data de evento fixo (live, início de turma, entrega física)
+- Data de encerramento de produto (produto sendo descontinuado)
+- Prazo regulatório ou externo ao criador
+- Data de aumento de preço programada e comunicada antecipadamente
+**PROVA DE AUTENTICIDADE:** A data deve ter sido comunicada ANTES da semana de fechamento (credibilidade de pré-anúncio). Mudança de data = credibilidade zero.
+
+**QUANTIDADE REAL:**
+- Vagas limitadas pela capacidade real de entrega (mentoria individual, turma com suporte intensivo)
+- Unidades físicas (livro, kit, produto físico)
+- Licenças de software ou ferramentas (custo incremental real)
+**PROVA DE AUTENTICIDADE:** Explique POR QUE é limitado (capacidade de suporte, qualidade de entrega, estrutura da turma). O avatar aceita limites que fazem sentido.
+
+**BÔNUS COM DEADLINE REAL:**
+- Bônus de velocidade para os primeiros X compradores (remove-se após atingir o número)
+- Acesso a sessão ao vivo exclusiva em data futura (não pode dar a quem comprar depois)
+- Implementação em grupo em data específica (impossível incluir quem comprar após)
+**PROVA DE AUTENTICIDADE:** O mecanismo físico de remoção deve ser explicável e crível.
+
+**PREÇO DE FUNDADOR (mais crível quando bem estruturado):**
+- Preço de lançamento com data de aumento já definida E comunicada antecipadamente
+- O aumento deve ser real — se o preço não sobe, a credibilidade de todo lançamento futuro cai
+**PROVA DE AUTENTICIDADE:** Screenshot de anúncio anterior com preço antigo, ou comunicação pré-lançamento documentada.
+
+---
+
+## ETAPA 3 — PSICOLOGIA DO FECHAMENTO (Robert Cialdini: Escassez + Prova Social)
+
+**URGÊNCIA EM 3 CAMADAS (todas precisam estar presentes no fechamento):**
+
+1. **Urgência Racional:** "O preço sobe na sexta-feira às 23h59" → o avatar entende o custo de esperar
+2. **Urgência Emocional:** "Você está a um clique de [transformação específica]. O que você vai sentir daqui a 6 meses se não agir hoje?" → o avatar sente o custo de esperar
+3. **Urgência Social:** "X pessoas já garantiram sua vaga nas últimas 24 horas" → o avatar vê que outros estão agindo (prova social de movimento)
+
+**REGRA:** Urgência racional sozinha é fraca. Urgência emocional sozinha é manipulação. Urgência social sozinha é vazia. As três juntas são irresistíveis.
+
+---
+
+## ETAPA 4 — CURVA DE ESCALAMENTO (D-7 a D-0)
+
+**ESCALAMENTO QUE GERA CONFIANÇA, NÃO DESCONFIANÇA:**
+
+| Fase | Intensidade | Tom | Foco |
+|---|---|---|---|
+| D-7 a D-4 | Sutil | Informativo | Menção de prazo + o que está incluído |
+| D-3 a D-2 | Moderado | Educativo | O que o avatar perde ao esperar — custo real |
+| D-1 | Alto | Empático | Prova social de movimento + caso de avatar idêntico |
+| D-0 manhã | Muito alto | Urgente + esperançoso | Últimas horas + o estado de depois |
+| D-0 tarde | Extremo | Factual + final | Hora exata de fechamento + o que acontece depois |
+| D-0 noite | Terminal | Factual apenas | "Carrinho fecha em X minutos" — sem emoção, apenas fato |
+
+**REGRA DO ESCALONAMENTO:** Cada comunicação de urgência deve ter MAIS INFORMAÇÃO que a anterior — não apenas mais intensidade. Urgência sem informação nova parece spam.
+
+---
+
+## ETAPA 5 — O PÓS-FECHAMENTO: CONVERTENDO REMORSO EM ANTECIPAÇÃO
+
+**O QUE ENVIAR APÓS O FECHAMENTO DO CARRINHO:**
+O pós-fechamento é ignorado por 95% dos criadores — mas é o momento de maior alavancagem para o próximo lançamento.
+
+**SEQUÊNCIA PÓS-FECHAMENTO:**
+1. Email imediato: "O carrinho fechou. Se você perdeu, entendo. Mas preciso te contar o que aconteceu..."
+   - Revele os números do lançamento (X alunos, Y resultado médio esperado, Z de satisfação)
+   - Construa antecipação para o próximo ciclo SEM prometer uma data ainda
+2. Email 48h: "Aqui está o que os [X] alunos receberam ao entrar"
+   - Mostre o produto sem vender — cria FOMO autêntico para a próxima turma
+3. Lista de interesse para próxima turma — capture os perdedores para o próximo lançamento
 
 **Retorne APENAS JSON válido.**
 
@@ -92,31 +159,31 @@ A intensidade da urgência deve escalar de forma crível:
   "mechanisms": [
     {
       "type": "deadline|quantity|access|bonus|price|cohort|exclusivity",
-      "name": "string — nome do mecanismo (ex: 'Preço de Fundador')",
-      "description": "string — como funciona exatamente",
+      "name": "string — nome específico do mecanismo (ex: 'Preço de Fundador', 'Turma de Implementação Ao Vivo')",
+      "description": "string — como funciona exatamente e por que é limitado",
       "isAuthentic": true,
-      "authenticityProof": "string — como provar que é real",
-      "copyBlock": "string — copy completo, pronto para usar",
-      "timing": "string — quando usar (ex: 'últimas 48h', 'abertura de carrinho')",
+      "authenticityProof": "string — como provar que é real (o que o avatar pode verificar)",
+      "copyBlock": "string — copy completo e pronto para usar, 4-8 linhas",
+      "timing": "string — quando usar (ex: 'abertura de carrinho', 'D-2', 'últimas 48h')",
       "intensity": "subtle|moderate|high|extreme",
-      "warningIfFake": "string — o que acontece à credibilidade se for usado falsamente"
+      "warningIfFake": "string — o que acontece especificamente à credibilidade se usado falsamente"
     }
   ],
   "psychology": {
     "dominantTrigger": "loss_aversion|fomo|exclusivity|deadline_pressure|social_proof",
     "avatarSensitivity": "low|medium|high",
-    "optimalClosingSequence": "string — fluxo exato das últimas 48 horas",
-    "escalationCurve": "string — como escalonar urgência sem queimar confiança"
+    "optimalClosingSequence": "string — fluxo exato das últimas 48 horas com timing, canal e mensagem por comunicação",
+    "escalationCurve": "string — como escalonar urgência sem queimar confiança — o que muda em cada fase"
   },
   "copyFramework": {
-    "hourBefore": "string — copy para 1h antes do fechamento",
-    "dayBefore": "string — copy para 24h antes",
-    "lastDay": "string — copy para o dia final completo",
-    "cartClose": "string — mensagem de fechamento do carrinho",
-    "postClose": "string — o que enviar depois do fechamento"
+    "hourBefore": "string — copy completo para 1h antes do fechamento (factual, sem exagero)",
+    "dayBefore": "string — copy para 24h antes (urgência emocional + prova social de movimento)",
+    "lastDay": "string — copy para o dia final completo (3 comunicações: manhã, tarde, noite)",
+    "cartClose": "string — mensagem de fechamento do carrinho (factual, breve, definitivo)",
+    "postClose": "string — o que enviar nos 48h após o fechamento (constrói antecipação, não vende)"
   },
-  "antiPatterns": ["string — erros de scarcity que destroem credibilidade neste mercado"],
-  "authenticationStrategy": "string — como tornar a escassez irrefutável e impossível de questionar"
+  "antiPatterns": ["string — erro específico de escassez que destrói credibilidade neste mercado + por que funciona ao contrário"],
+  "authenticationStrategy": "string — estratégia completa para tornar a escassez irrefutável: o que comunicar, quando e como provar que é real"
 }
 \`\`\``;
 
@@ -144,24 +211,27 @@ export async function runScarcityEngineerAgent(
 **Detalhes da oferta:** ${offerDetails}
 **Avatar:** ${avatarDescription}
 
-**PROCESSO:**
-1. Identifique QUAIS mecanismos de escassez são AUTENTICAMENTE possíveis (dado o produto/formato)
-2. Para cada mecanismo, verifique se é realmente sustentável e crível
-3. Projete a curva de escalonamento de urgência (D-7 até D-0)
-4. Escreva o copy de fechamento para cada fase
-5. Identifique o que NÃO fazer para este avatar específico
+**PROCESSO OBRIGATÓRIO:**
+1. Identifique o nível de sofisticação do avatar (quantos lançamentos similares já viu?) — determina tolerância a urgência
+2. Selecione APENAS mecanismos de escassez AUTENTICAMENTE possíveis para este produto/formato
+3. Para cada mecanismo, descreva como o avatar pode verificar que é real
+4. Projete a curva de escalamento D-7 até D-0 com tom e foco por fase
+5. Escreva o copy de fechamento para cada fase (pronto para usar)
+6. Identifique o que NÃO fazer para este avatar específico (antipatterns)
+7. Projete a comunicação pós-fechamento para capturar o próximo lançamento
 
-Priorize autenticidade. Escassez falsa destruída é pior que nenhuma escassez.
+Priorize autenticidade absoluta. Escassez falsa detectada é pior que nenhuma escassez.
 Retorne APENAS JSON.`,
       },
     ],
     log,
     thinkingMessages: [
-      "Analisando mecanismos de escassez autenticamente possíveis...",
-      "Verificando credibilidade de cada mecanismo...",
-      "Projetando curva de escalonamento de urgência...",
+      "Diagnosticando nível de sofisticação do avatar...",
+      "Identificando mecanismos de escassez autenticamente possíveis...",
+      "Verificando credibilidade e prova de autenticidade...",
+      "Projetando curva de escalamento D-7 a D-0...",
       "Escrevendo copy de fechamento por fase...",
-      "Identificando anti-padrões para este avatar...",
+      "Identificando antipatterns para este avatar específico...",
     ],
   });
 
