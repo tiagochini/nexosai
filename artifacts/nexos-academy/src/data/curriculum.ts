@@ -11954,6 +11954,648 @@ Plano VIP: R$2.997 (tudo + 3 sessões individuais + revisão de copy)
       }
     ]
   }
+,
+  {
+    id: "psicologia-avancada",
+    number: 12,
+    title: "Psicologia Avançada de Vendas",
+    description: "Os 8 frameworks que os melhores copywriters e estrategistas do mundo usam para mover decisões de compra — operacionalizados como regras de decisão, não conceitos abstratos.",
+    badge: "Premium",
+    chapters: [
+      {
+        id: "mente-comprador",
+        number: 35,
+        title: "A Mente do Comprador",
+        subtitle: "Kahneman, Ariely e Thaler: a neurociência das decisões de compra",
+        icon: "🧠",
+        color: "from-violet-700 to-purple-800",
+        duration: "65 min",
+        summary: "Decisões de compra não são racionais — são racionalizações pós-hoc de impulsos emocionais. Entenda os três sistemas de decisão e como engenheirar cada um.",
+        lessons: [
+          {
+            id: "psi-kahneman-1",
+            title: "Prospect Theory: Por Que Perder Dói Mais Que Ganhar",
+            duration: "20 min",
+            type: "text" as const,
+            glossaryTerms: ["aversao-perda", "framing", "ancoragem", "efeito-posse"],
+            keyPoints: [
+              "Perder gera 2–2,5x mais resposta emocional que ganhar o mesmo valor",
+              "Como reescrever qualquer copy de 'ganho' para 'perda' — com exemplos prontos",
+              "O efeito posse: como fazer o prospect sentir que já possui o resultado",
+              "Framing de urgência pela aversão à perda — não pela escassez fabricada",
+            ],
+            exercise: "Pegue sua última oferta ou anúncio. Identifique quantas vezes você usou 'ganhe', 'conquiste' ou 'obtenha'. Reescreva cada uma dessas frases usando framing de perda — 'não perca', 'evite', 'não deixe de'. Compare as duas versões. Qual ativa mais resposta emocional?",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Esta aula transforma o trabalho de Daniel Kahneman e Amos Tversky em regras de copy operacionais. A Prospect Theory ganhou o Nobel de Economia em 2002 — mas suas implicações para marketing ainda são subutilizadas no mercado brasileiro. Você vai sair com copy reescrita, não apenas com conceitos novos.</p>
+</div>
+
+<h2 style="color:#a78bfa">🧠 Prospect Theory: A Base Neurocientífica da Persuasão</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">A) O Que Kahneman e Tversky Descobriram</h3>
+
+<p>Em 1979, Daniel Kahneman e Amos Tversky publicaram um paper que mudou a economia — e que deveria mudar o marketing. A descoberta central: <strong>humanos não avaliam resultados em termos absolutos. Avaliam em termos de ganhos e perdas relativas a um ponto de referência</strong>.</p>
+
+<p>E mais importante para quem faz marketing: a função de valor é <strong>assimétrica</strong>. A dor de perder R$1.000 é neurologicamente mais intensa que o prazer de ganhar R$1.000 — e Kahneman e Tversky mediram essa assimetria em 2 a 2,5 vezes. Você não precisa dar mais para que seu prospect aja — você precisa mostrar o que ele vai <em>perder</em> se não agir.</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
+<div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ A ASSIMETRIA DE VALOR — A MATEMÁTICA</div>
+Prazer de ganhar R$1.000: +10 unidades de utilidade subjetiva<br>
+Dor de perder R$1.000: −20 a −25 unidades de utilidade subjetiva<br><br>
+IMPLICAÇÃO: uma oferta que <em>remove</em> o risco de perda ativa 2x mais resposta<br>
+que uma oferta que <em>promete</em> o mesmo ganho.
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">B) Os Dois Sistemas de Decisão (Sistema 1 e Sistema 2)</h3>
+
+<p>Kahneman descreve dois sistemas de pensamento em seu livro "Rápido e Devagar":</p>
+
+<p><strong>Sistema 1 — Rápido, automático, emocional:</strong> Processa em milissegundos. Não consulta. Decide por associação, padrão e emoção. É o sistema que decide se alguém vai clicar no anúncio, abrir o email, ou sentir que "algo está certo" nesta oferta. <strong>80-90% das decisões de compra começam aqui.</strong></p>
+
+<p><strong>Sistema 2 — Lento, deliberado, racional:</strong> Racionaliza as decisões do Sistema 1. Constrói argumentos lógicos para justificar o que o Sistema 1 já decidiu. É o sistema que lê a lista de benefícios, compara preços, e "avalia" a oferta — mas raramente muda o que o Sistema 1 já estabeleceu.</p>
+
+<p><strong>Implicação para copy:</strong> você precisa vender para o Sistema 1 primeiro (hook emocional, identidade, medo de perda) e dar munição para o Sistema 2 depois (lógica, especificidade, garantia). Inversão desta sequência — lógica antes de emoção — gera copy que "faz sentido" mas não vende.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">C) Framing de Perda — Copy Pronto para Usar</h3>
+
+<p>A regra operacional: <strong>sempre que possível, frame a proposta em termos de perda — não de ganho.</strong></p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:12px">
+<tr style="background:#1e293b">
+<th style="padding:10px;text-align:left;color:#94a3b8;font-weight:600;border:1px solid #334155">Frame de Ganho (fraco)</th>
+<th style="padding:10px;text-align:left;color:#94a3b8;font-weight:600;border:1px solid #334155">Frame de Perda (forte)</th>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">Aprenda a lançar seu produto</td>
+<td style="padding:10px;color:#e2e8f0">Pare de perder cada janela de lançamento</td>
+</tr>
+<tr style="background:#0f172a;border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">Aumente seu faturamento</td>
+<td style="padding:10px;color:#e2e8f0">Não deixe mais dinheiro na mesa por cada mês que passa</td>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">Conquiste sua liberdade financeira</td>
+<td style="padding:10px;color:#e2e8f0">Cada dia sem sistema próprio é um dia a mais dependendo de emprego</td>
+</tr>
+<tr style="background:#0f172a;border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">Garanta acesso ao método</td>
+<td style="padding:10px;color:#e2e8f0">Não perca a janela de preço de fundador — ela fecha sexta</td>
+</tr>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">D) O Efeito Posse (Endowment Effect) — Richard Thaler</h3>
+
+<p>O Prêmio Nobel de Economia de 2017 foi para Richard Thaler, que documentou o <strong>Efeito Posse</strong>: quando as pessoas sentem que "possuem" algo, valorizam em 2-3x mais do que quando não possuem. Isso é exploração da mesma assimetria de Kahneman — mas aplicada de forma diferente.</p>
+
+<p><strong>Operacionalização em copy:</strong></p>
+<ul>
+<li><strong>Trial antes de comprar:</strong> "Experimente por 7 dias sem pagar nada. Se não quiser ficar, é só cancelar." O prospect já sentiu que possui — a perda de cancelar ativa aversão à perda.</li>
+<li><strong>Linguagem de posse antecipada:</strong> "Quando você acessar o portal, a primeira coisa que vai ver é..." — o prospect já se imaginou com o produto.</li>
+<li><strong>Checklist de resultado:</strong> "Quando você terminar este módulo, você vai saber exatamente como..." — o prospect já "possui" o resultado mentalmente.</li>
+</ul>
+
+<blockquote style="border-left:3px solid #6d4aff;padding:12px 16px;margin:16px 0;background:#0f172a;color:#94a3b8;font-style:italic">
+"A única diferença entre uma decisão de compra e uma não-compra é qual imagem mental está mais vívida no momento da decisão — a imagem de possuir o resultado, ou a imagem de perder o dinheiro." — Aplicação prática da Prospect Theory
+</blockquote>`,
+          },
+          {
+            id: "psi-ariely-1",
+            title: "Irracionalidade Previsível: Dan Ariely e as Anomalias de Decisão",
+            duration: "18 min",
+            type: "text" as const,
+            glossaryTerms: ["efeito-decoy", "ancoragem", "custo-zero", "norma-social"],
+            keyPoints: [
+              "O Efeito Decoy — como uma terceira opção torna a segunda irresistível",
+              "O poder do Custo Zero — por que 'grátis' ativa um circuito diferente do 'barato'",
+              "Ancoragem de preço: como o primeiro número define o frame de avaliação",
+              "Normas sociais vs. normas de mercado — qual usar em cada etapa do funil",
+            ],
+            exercise: "Olhe para a sua estrutura de preços atual. Você tem 2 opções? Adicione uma terceira — mais cara e com menos valor relativo que a opção do meio. Observe o que acontece com a conversão da opção do meio. Esta é a operacionalização do Efeito Decoy.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Dan Ariely é professor do MIT e autor de "Previsivelmente Irracional". Ele demonstrou experimentalmente que a irracionalidade humana não é aleatória — é sistemática e previsível. Isso significa que pode ser engenheirada. Esta aula desmonta os três mecanismos mais aplicáveis ao marketing digital.</p>
+</div>
+
+<h2 style="color:#a78bfa">♟ Irracionalidade Previsível — O que Dan Ariely Provou</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">A) O Efeito Decoy — A Terceira Opção que Muda Tudo</h3>
+
+<p>Em um dos experimentos mais replicados de Ariely, a The Economist oferecia 3 opções de assinatura:</p>
+<ul>
+<li>Assinatura digital: US$59</li>
+<li>Assinatura impressa: US$125</li>
+<li>Assinatura digital + impressa: US$125</li>
+</ul>
+
+<p>Quando a opção do meio (impressa apenas, US$125) estava presente, 84% escolhiam o pacote completo (US$125). Quando Ariely removeu a opção do meio, apenas 32% escolheram o pacote completo. <strong>Uma opção que quase ninguém escolhe pode mais que dobrar a conversão da opção que você quer vender.</strong></p>
+
+<p><strong>Regra de aplicação:</strong> Sempre que você tiver uma opção "target" (a que você quer que o prospect escolha), adicione uma opção "isca" que seja ligeiramente inferior e de preço similar. A isca não existe para ser comprada — existe para fazer a opção target parecer óbvia.</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
+<div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ DECOY EM PRÁTICA — ESTRUTURA DE PREÇOS</div>
+Opção A (isca):  R$297/mês — apenas automação de email<br>
+Opção B (target): R$297/mês — automação completa + anúncios + WhatsApp  ← você quer este<br>
+Opção C (premium): R$1.497/mês — agência, 10 campanhas, white-label<br><br>
+A Opção A faz a B parecer um absurdo de valor.<br>
+A Opção C faz a B parecer razoável pelo mesmo preço.
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">B) O Custo Zero — Por Que "Grátis" É Uma Anomalia</h3>
+
+<p>Ariely demonstrou que "grátis" não é simplesmente um preço muito baixo — é uma categoria psicológica diferente. Quando algo é gratuito, o circuito de avaliação risco-benefício é <em>desativado</em>. O prospect não avalia "vale a pena?". Ele apenas pega.</p>
+
+<p><strong>Implicação para lead magnets:</strong> um lead magnet de R$0 converte mais que um de R$1, mesmo que o segundo seja percebido como mais valioso. O custo zero elimina a fricção de decisão completamente.</p>
+
+<p><strong>Implicação para garantias:</strong> "30 dias de garantia — se não quiser, devolvemos tudo" ativa o mesmo mecanismo. O prospect sente que está adquirindo com risco zero — essencialmente grátis, com a opção de ficar.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">C) Normas Sociais vs. Normas de Mercado</h3>
+
+<p>Ariely documentou que quando você introduz dinheiro em um relacionamento baseado em normas sociais, o relacionamento muda fundamentalmente — e é quase impossível reverter. Aplicação direta:</p>
+
+<ul>
+<li><strong>Nas redes sociais (orgânico):</strong> não fale de venda. Construa na lógica de normas sociais — ajuda, generosidade, comunidade. Mencionar preço ou produto neste espaço ativa normas de mercado e destrói a percepção de autenticidade.</li>
+<li><strong>Na página de vendas:</strong> você pode e deve ativar normas de mercado — especificidade de preço, comparações, ROI. Aqui o prospect já espera transação.</li>
+<li><strong>No pós-compra:</strong> volte para normas sociais — celebre a decisão, construa identidade de grupo, não venda imediatamente. O upsell prematuro destrói a relação de confiança recém-formada.</li>
+</ul>`,
+          },
+        ],
+      },
+      {
+        id: "sofisticacao-mercado",
+        number: 36,
+        title: "Sofisticação de Mercado — Eugene Schwartz",
+        subtitle: "Os 5 níveis que determinam o tipo de lead, headline e promessa da campanha",
+        icon: "🎯",
+        color: "from-blue-700 to-indigo-800",
+        duration: "55 min",
+        summary: "A distinção mais importante em copywriting — e a mais ignorada no Brasil. O nível de sofisticação do seu mercado determina tudo: o tipo de headline, a promessa, o mecanismo e o lead de abertura.",
+        lessons: [
+          {
+            id: "psi-schwartz-1",
+            title: "Os 5 Níveis de Sofisticação de Schwartz — Com Exemplos Reais",
+            duration: "22 min",
+            type: "text" as const,
+            glossaryTerms: ["sofisticacao-mercado", "mecanismo-unico", "lead-mecanismo", "lead-direto"],
+            keyPoints: [
+              "Nível 1: mercado virgem — promessa direta sem mecanismo",
+              "Nível 2: mercado consciente — mesma promessa, mecanismo único necessário",
+              "Nível 3: mercado saturado — headline de mecanismo, não de resultado",
+              "Nível 4: mercado cínico — lead de identidade ou conceito novo",
+              "Nível 5: mercado imune — lead de curiosidade ou autoridade máxima",
+              "Como diagnosticar o nível do seu mercado em 10 minutos",
+            ],
+            exercise: "Pesquise os últimos 10 anúncios dos seus 3 maiores concorrentes. Categorize: quantos usam promessa direta (Nível 1-2)? Quantos usam mecanismo (Nível 3)? Qual é o nível real de sofisticação do seu mercado? Agora releia seu último anúncio — ele está calibrado para este nível?",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Eugene Schwartz publicou "Breakthrough Advertising" em 1966 — e o livro é mais relevante hoje do que quando foi escrito. O conceito de Sofisticação de Mercado é a única variável que explica por que o mesmo produto, com copy quase idêntica, converte em 0,5% em um mercado e em 5% em outro. Esta aula operacionaliza cada nível com exemplos do mercado brasileiro de infoprodutos.</p>
+</div>
+
+<h2 style="color:#a78bfa">🎯 Os 5 Níveis de Sofisticação de Mercado</h2>
+
+<p>Schwartz observou que mercados evoluem em resposta ao marketing que recebem. Quando um mercado é exposto repetidamente à mesma promessa, essa promessa perde impacto — e o copywriter precisa escalar a sofisticação da mensagem para continuar convertendo.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Nível 1 — Mercado Virgem (Consciência Zero)</h3>
+
+<p>O prospect nunca ouviu falar desta categoria de solução. Nunca foi exposto a promessas similares. A promessa direta e simples funciona com máxima força.</p>
+
+<p><strong>Headline que funciona:</strong> "Perca 10 kg em 30 dias" (quando ninguém ainda tinha ouvido sobre dietas)</p>
+<p><strong>Headline que funciona hoje (Nível 1 no digital brasileiro, circa 2018):</strong> "Ganhe dinheiro na internet"</p>
+<p><strong>Regra:</strong> se o seu mercado ainda está no nível 1, seja específico e direto. Não invente mecanismo — a promessa sozinha é suficiente.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Nível 2 — Mercado Consciente da Promessa</h3>
+
+<p>O prospect já ouviu a promessa. Já viu resultados similares prometidos. Ainda acredita que é possível — mas precisa de uma razão para escolher ESTA promessa, não as outras.</p>
+
+<p><strong>A solução de Schwartz:</strong> o Mecanismo Único. Não é apenas "perca peso" — é "perca peso com o Método X que faz Y de forma Z". O mecanismo diferencia a promessa sem criar desconfiança.</p>
+
+<p><strong>Headline que funciona no Nível 2:</strong> "A Fórmula de Lançamento que fez X gerar R$Y em Z dias" — a promessa ainda está presente, mas o mecanismo (Fórmula de Lançamento) diferencia.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Nível 3 — Mercado Saturado (Céu de Copycats)</h3>
+
+<p>O prospect já viu dezenas de promessas similares. Já viu dezenas de mecanismos "únicos". O ceticismo começa a dominar. A promessa direta já não funciona — e novos mecanismos são recebidos com suspeita.</p>
+
+<p><strong>A solução de Schwartz:</strong> lead de Mecanismo — você apresenta o mecanismo em primeiro lugar, sem prometer resultado. O prospect curioso sobre o mecanismo descobre o resultado por dedução própria. É mais poderoso porque o prospect faz a conexão sozinho.</p>
+
+<p><strong>Headline que funciona no Nível 3:</strong> "O sistema nervoso do seu lançamento: 29 agentes de IA em orquestração paralela" — nenhuma promessa de resultado. O mecanismo cria curiosidade e o resultado é implícito.</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
+<div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ O MERCADO BRASILEIRO DE INFOPRODUTOS EM 2024-2025</div>
+Nível de Sofisticação Estimado por Nicho:<br><br>
+Marketing Digital (geral): NÍVEL 4 — viu tudo, desconfia de tudo<br>
+Lançamento / FL: NÍVEL 3-4 — conhece o mecanismo, quer diferenciação real<br>
+Fitness / Emagrecimento: NÍVEL 4-5 — promessas iguais há 20 anos<br>
+Finanças Pessoais: NÍVEL 3 — crescente ceticismo, mecanismo ainda funciona<br>
+B2B / Consultoria: NÍVEL 2-3 — menos saturado, promessa com mecanismo converte<br>
+Educação online (nicho): NÍVEL 1-2 — ainda tem espaço para promessa direta
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Níveis 4 e 5 — Mercado Cínico e Mercado Imune</h3>
+
+<p><strong>Nível 4 — Mercado Cínico:</strong> O prospect viu todos os mecanismos. Já foi queimado por produto com mecanismo "único" que não entregou. O ceticismo é ativo. Aqui, nem o mecanismo funciona sozinho.</p>
+
+<p><strong>Solução para Nível 4:</strong> lead de Identidade ou Conceito Novo. Você não está vendendo um produto — está convidando para uma identidade. "Não é uma ferramenta. É o sistema operacional do produtor digital que pensa diferente." O prospect se reconhece na identidade antes de avaliar o produto.</p>
+
+<p><strong>Nível 5 — Mercado Imune:</strong> O prospect foi exposto a tudo. Qualquer promessa, mecanismo ou identidade ativa imunidade. Apenas autoridade extrema, curiosidade extrema ou prova irrefutável funciona.</p>
+
+<p><strong>Solução para Nível 5:</strong> lead de Autoridade ("depois de 10 anos e R$50M em lançamentos...") ou lead de Curiosidade que revela algo genuinamente novo que o prospect não sabia que não sabia.</p>`,
+          },
+          {
+            id: "psi-masterson-1",
+            title: "O Resistance Meter de Michael Masterson",
+            duration: "15 min",
+            type: "text" as const,
+            keyPoints: [
+              "Os 4 níveis de resistência do avatar — e por que o mesmo kill pode agravar a resistência se aplicado no nível errado",
+              "Nível 1 (baixo): kills diretos, foco em urgência e garantia",
+              "Nível 2 (médio): kills de prova e mecanismo, especificidade de cases",
+              "Nível 3 (alto): inoculação — nomear o ceticismo antes de matar",
+              "Nível 4 (máximo): kills de identidade com avatar idêntico",
+            ],
+            exercise: "Pense no seu avatar ideal. Em uma escala de 1 a 4, qual é o nível de resistência típico dele? Liste os últimos 3 objeções que você recebeu (de prospects ou clientes). Agora identifique: você estava usando kills de Nível 1 em um avatar de Nível 3? Reescreva uma kill response para o nível correto.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Michael Masterson (Mark Ford) é co-fundador da American Writers & Artists Inc. e autor de dezenas de controles de copy. Seu conceito de Resistance Meter é uma das contribuições mais práticas para o diagnóstico de por que copy bem escrita não converte — o problema não é a qualidade do copy, é a calibração para o nível de resistência do avatar.</p>
+</div>
+
+<h2 style="color:#a78bfa">🛡 O Resistance Meter — 4 Níveis de Resistência do Avatar</h2>
+
+<p>A resistência do avatar não é binária (compra ou não compra). É uma escala de 4 níveis — e o copy que funciona no Nível 1 pode ativamente aumentar a resistência de um avatar no Nível 3.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Nível 1 — Resistência Baixa</h3>
+<p>O avatar está ativamente buscando uma solução. Sabe que precisa agir. Pode estar comparando opções mas não tem ceticismo profundo.</p>
+<p><strong>Kills que funcionam:</strong> urgência direta, garantia explícita, CTA imediato. Não precisa de história ou warm-up longo.</p>
+<p><strong>Erro comum:</strong> criar copy longa e elaborada para um avatar de Nível 1. Ele já está convencido — você está atrasando a decisão.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Nível 2 — Resistência Média</h3>
+<p>O avatar quer o resultado mas tem ceticismo se ESTE produto entrega. Já foi decepcionado antes, mas ainda está aberto.</p>
+<p><strong>Kills que funcionam:</strong> prova específica e verificável, cases com números reais, mecanismo explicado com transparência.</p>
+<p><strong>Erro comum:</strong> usar apenas urgência sem prova. O avatar de Nível 2 não age por urgência — age por confiança.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Nível 3 — Resistência Alta</h3>
+<p>O avatar foi queimado antes por produto similar. Está em modo defensivo. Qualquer promessa ativa ceticismo automático.</p>
+<p><strong>Kills que funcionam:</strong> inoculação — nomear o ceticismo ANTES que o prospect o formule. "Você provavelmente está pensando que isso é mais uma promessa vazia. E faz sentido pensar assim. Mas o que este sistema faz diferente é..."</p>
+<p><strong>Por que funciona:</strong> quando você nomeia o pensamento do prospect antes que ele pense, você demonstra que o entende. E quem te entende, você confia. A confiança abre a janela para a kill real.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Nível 4 — Resistência Máxima</h3>
+<p>O avatar acha que "isso não funciona para mim especificamente". Não é ceticismo geral — é identidade: "eu sou do tipo que não consegue". Esta é a resistência mais difícil.</p>
+<p><strong>Kills que funcionam:</strong> identidade. Mostrar alguém IDÊNTICO ao avatar — mesma situação, mesmo ceticismo, mesmo "mas no meu caso..." — que superou a barreira específica.</p>
+<p><strong>Por que funciona:</strong> o avatar de Nível 4 não se convence por argumento. Se convence por espelho — ver alguém como ele mesmo que mudou.</p>`,
+          },
+        ],
+      },
+      {
+        id: "pre-suasao",
+        number: 37,
+        title: "Pre-Suasão e Framing — Cialdini",
+        subtitle: "A persuasão começa antes da mensagem: como preparar o frame mental do prospect",
+        icon: "🔮",
+        color: "from-emerald-700 to-teal-800",
+        duration: "50 min",
+        summary: "Robert Cialdini descobriu que o momento mais influente na persuasão não é durante a mensagem — é o que vem antes. Pre-Suasion muda o foco de atenção antes da oferta principal.",
+        lessons: [
+          {
+            id: "psi-cialdini-presuasion",
+            title: "Pre-Suasion: O que Vem Antes Determina o que Vem Depois",
+            duration: "20 min",
+            type: "text" as const,
+            glossaryTerms: ["pre-suasion", "ancoragem", "priming", "gatilho-reciprocidade"],
+            keyPoints: [
+              "O princípio central: o que está em foco no momento da decisão determina a decisão",
+              "Como usar o conteúdo orgânico como primer para a oferta paga",
+              "A inoculação de Cialdini: nomear a objeção antes que o prospect a formule",
+              "Os 7 princípios de influência aplicados ao funil de lançamento",
+              "Por que dar valor antes de pedir é neurológica, não apenas estrategicamente eficaz",
+            ],
+            exercise: "Mapeie o funil do seu último lançamento. Identifique: quais conteúdos vieram antes da oferta principal? Eles primeraram os conceitos e identidade que sua oferta resolve? Ou foram conteúdos genéricos desconectados? Redesenhe o sequenciamento de conteúdo para criar um arco de pre-suasão de 7 dias antes do carrinho abrir.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">"Pre-Suasion" (2016) é o livro mais importante de Robert Cialdini desde "Influence" (1984). A descoberta central: o momento de maior influência não é durante a mensagem — é o segundo imediatamente anterior. O que você coloca em foco no mente do prospect antes da oferta determina como ele avaliará a oferta. Esta aula operacionaliza isso para lançamentos digitais.</p>
+</div>
+
+<h2 style="color:#a78bfa">🔮 Pre-Suasion — A Persuasão Começa Antes da Mensagem</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">A) O Princípio Central</h3>
+
+<p>Cialdini conduziu um experimento clássico: dois grupos de prospects viram o mesmo produto. Mas antes de ver o produto, um grupo foi exposto a imagens de nuvens fofas (associação com conforto e suavidade). O outro viu moedas (associação com preço e valor monetário).</p>
+
+<p>Resultado: o grupo que viu nuvens avaliou o produto como mais confortável e priorizou esse atributo na decisão. O grupo que viu moedas comparou mais preços e focou no custo-benefício. <strong>O que estava em foco antes da oferta determinou o critério de avaliação.</strong></p>
+
+<p>Implicação direta: <strong>o conteúdo que você publica na semana antes do carrinho abrir é tão importante quanto a página de vendas.</strong> Você está definindo o frame pelo qual a oferta será avaliada.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">B) Os 7 Princípios de Cialdini no Funil de Lançamento</h3>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:12px">
+<tr style="background:#1e293b">
+<th style="padding:10px;text-align:left;color:#94a3b8;font-weight:600;border:1px solid #334155">Princípio</th>
+<th style="padding:10px;text-align:left;color:#94a3b8;font-weight:600;border:1px solid #334155">Fase do Funil</th>
+<th style="padding:10px;text-align:left;color:#94a3b8;font-weight:600;border:1px solid #334155">Operacionalização</th>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#a78bfa;font-weight:600">Reciprocidade</td>
+<td style="padding:10px;color:#64748b">Aquecimento (D-14 a D-7)</td>
+<td style="padding:10px;color:#e2e8f0">Dar conteúdo de alto valor sem pedir nada. Cria débito psicológico que é pago na abertura do carrinho.</td>
+</tr>
+<tr style="background:#0f172a;border:1px solid #1e293b">
+<td style="padding:10px;color:#a78bfa;font-weight:600">Comprometimento</td>
+<td style="padding:10px;color:#64748b">Pré-lançamento (D-7 a D-3)</td>
+<td style="padding:10px;color:#e2e8f0">Pedir micro-comprometimentos (comentar, compartilhar, entrar na lista). Cada "sim" pequeno aumenta probabilidade do "sim" grande.</td>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#a78bfa;font-weight:600">Prova Social</td>
+<td style="padding:10px;color:#64748b">Abertura do carrinho</td>
+<td style="padding:10px;color:#e2e8f0">Mostrar quantas pessoas já compraram / entraram na lista. "X pessoas garantiram nas primeiras 2 horas" — volume como validação.</td>
+</tr>
+<tr style="background:#0f172a;border:1px solid #1e293b">
+<td style="padding:10px;color:#a78bfa;font-weight:600">Autoridade</td>
+<td style="padding:10px;color:#64748b">VSL / Apresentação</td>
+<td style="padding:10px;color:#e2e8f0">Credenciais, resultados de alunos, cases documentados. Autoridade antes da promessa — não depois.</td>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#a78bfa;font-weight:600">Afinidade</td>
+<td style="padding:10px;color:#64748b">Toda a sequência</td>
+<td style="padding:10px;color:#e2e8f0">Compartilhar vulnerabilidades reais, história de origem, valores. Pessoas compram de quem se parece com elas.</td>
+</tr>
+<tr style="background:#0f172a;border:1px solid #1e293b">
+<td style="padding:10px;color:#a78bfa;font-weight:600">Escassez</td>
+<td style="padding:10px;color:#64748b">Fechamento (D-2 a D-0)</td>
+<td style="padding:10px;color:#e2e8f0">Limite real de vagas ou prazo fixo. Escassez falsa detectada por avatar sofisticado = perda de credibilidade permanente.</td>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#a78bfa;font-weight:600">Unidade</td>
+<td style="padding:10px;color:#64748b">Pós-compra</td>
+<td style="padding:10px;color:#e2e8f0">Criar identidade de grupo: "você agora faz parte de..." — o comprador se torna embaixador porque a identidade grupal importa.</td>
+</tr>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">C) Inoculação de Objeção — A Técnica Mais Subutilizada</h3>
+
+<p>Cialdini demonstrou que quando você <strong>nomeia uma objeção antes que o prospect a formule</strong>, você:</p>
+<ol>
+<li>Demonstra que entende o avatar (gera confiança automática)</li>
+<li>Retira a objeção do arsenal do prospect (não pode mais usá-la como bloqueio)</li>
+<li>Controla o frame de onde a objeção vive (você define o contexto)</li>
+</ol>
+
+<p><strong>Estrutura de inoculação:</strong> "Você provavelmente está pensando: [objeção exata nas palavras do avatar]. E faz todo sentido pensar assim — eu pensaria a mesma coisa. Mas o que a maioria não percebe é [reframe que transforma a objeção em argumento para agir]."</p>
+
+<blockquote style="border-left:3px solid #10b981;padding:12px 16px;margin:16px 0;background:#0f172a;color:#94a3b8;font-style:italic">
+"O canal de atenção que está aberto no momento da decisão é o canal que determina qual informação vai ser processada como relevante. Controlar o canal é controlar a decisão." — Robert Cialdini, Pre-Suasion
+</blockquote>`,
+          },
+          {
+            id: "psi-blair-warren",
+            title: "Blair Warren: Uma Frase. Toda Persuasão.",
+            duration: "15 min",
+            type: "text" as const,
+            keyPoints: [
+              "A única frase que contém os 5 elementos de toda persuasão efetiva",
+              "Como validar o desejo, justificar os fracassos e ativar inimigos imaginários",
+              "Por que pessoas compram para confirmar a visão que têm de si mesmas",
+              "O paradoxo da persuasão: quanto mais você empurra, mais afasta",
+            ],
+            exercise: "Escreva sua 'One Sentence Persuasion' para o seu produto principal. Ela deve conter: (1) validação de um desejo específico do avatar, (2) justificativa para seus fracassos anteriores, (3) ativação de um inimigo imaginário ou real, (4) confirmação de sua identidade e (5) a visão de um futuro específico. Agora use essa estrutura para reescrever o email de abertura do seu próximo lançamento.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Blair Warren é um dos copywriters mais estudados mas menos citados do marketing de resposta direta americano. Sua "One Sentence Persuasion" é uma estrutura de 5 elementos que, quando presente em qualquer copy, cria conexão emocional imediata. Esta aula desmonta cada elemento com exemplos práticos.</p>
+</div>
+
+<h2 style="color:#a78bfa">⚡ One Sentence Persuasion — Blair Warren</h2>
+
+<p>A frase mais famosa de Blair Warren sobre persuasão:</p>
+
+<blockquote style="border-left:3px solid #6d4aff;padding:12px 16px;margin:16px 0;background:#0f172a;color:#e2e8f0;font-style:italic;font-size:14px">
+"People will do anything for those who encourage their dreams, justify their failures, allay their fears, confirm their suspicions, and help them throw rocks at their enemies."
+</blockquote>
+
+<p>Tradução operacional para o marketing brasileiro:</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">1. Encoraje os sonhos do avatar (não os seus)</h3>
+<p>O avatar compra para avançar em direção à visão que tem de si mesmo — não para ter um produto. A pergunta certa não é "o que meu produto faz?" mas "qual visão de si mesmo o avatar está tentando confirmar ao comprar isso?"</p>
+<p><strong>Aplicação:</strong> "Você não está buscando uma ferramenta de marketing. Você está construindo um negócio que funciona sem você estar presente 12 horas por dia."</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">2. Justifique os fracassos anteriores</h3>
+<p>O avatar tentou antes e não funcionou. Ele carrega isso como prova de que "não é para ele". Quando você diz "não funcionou porque o sistema estava errado, não você" — você remove a barreira de identidade mais profunda.</p>
+<p><strong>Aplicação:</strong> "Você não fracassou no lançamento anterior porque faltou habilidade. O sistema que você usava foi construído para exigir uma equipe de 8 pessoas e 3 meses de preparação. Claro que não escala."</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">3. Dissolva os medos específicos</h3>
+<p>Não ignore os medos — nomeie-os e dissolva-os com prova, não com promessa. "Não se preocupe" não funciona. "Aqui está o que acontece se você se arrepender..." + garantia concreta funciona.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">4. Confirme as suspeitas do avatar</h3>
+<p>O avatar já suspeita que o mercado tem problemas, que os cursos são fracos, que as agências cobram caro por pouco. Quando você confirma essas suspeitas com dados, você se torna o aliado — o único que fala a verdade.</p>
+<p><strong>Aplicação:</strong> "Você sabe que 90% das agências de marketing digital entregam relatórios bonitos mas não conseguem explicar o que realmente gerou a venda. Você está certo em suspeitar disso."</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">5. Ajude a lançar pedras nos inimigos</h3>
+<p>O avatar tem "inimigos" — podem ser ferramentas que não funcionam, o mercado que favorece quem tem equipe grande, gurus que vendem método incompleto, ou o próprio sistema. Alinhe-se ao lado do avatar contra o inimigo compartilhado.</p>
+<p><strong>Aplicação:</strong> "O mercado de tráfego pago foi construído para favorecer quem tem R$50k de verba mensal e um time de 5 pessoas. Você não está em desvantagem por incompetência — o jogo foi desenhado assim. Nós mudamos isso."</p>`,
+          },
+        ],
+      },
+      {
+        id: "precificacao-psicologica",
+        number: 38,
+        title: "Precificação Psicológica",
+        subtitle: "Van Westendorp, ancoragem, decoy e a psicologia do preço ótimo",
+        icon: "💰",
+        color: "from-amber-700 to-orange-800",
+        duration: "45 min",
+        summary: "Preço não é uma decisão financeira — é uma decisão psicológica. Esta aula entrega o PSM de Van Westendorp e 4 técnicas de ancoragem que transformam qualquer preço em percepção de valor.",
+        lessons: [
+          {
+            id: "psi-van-westendorp",
+            title: "Van Westendorp PSM: Encontrando o Preço Ótimo com 4 Perguntas",
+            duration: "18 min",
+            type: "text" as const,
+            keyPoints: [
+              "As 4 perguntas do Price Sensitivity Meter e o que cada uma revela",
+              "Como plotar o ponto ótimo de preço antes de lançar",
+              "Por que preço muito baixo gera tanta resistência quanto preço muito alto",
+              "O efeito de qualidade percebida pelo preço — Plassmann (Caltech)",
+            ],
+            exercise: "Faça o PSM para o seu produto principal. Envie as 4 perguntas para 30 pessoas do seu público (pode ser via stories, direct ou formulário). Plote os 4 pontos no gráfico. Onde as linhas se cruzam é o seu preço ótimo aceitável. Compare com o preço atual.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">O Price Sensitivity Meter foi desenvolvido pelo economista holandês Peter van Westendorp nos anos 1970 e permanece como o método mais robusto para descobrir o preço ótimo de um produto antes do lançamento. Diferente de pesquisa de intenção de compra (imprecisa), o PSM mede resistência psicológica em 4 dimensões. Esta aula operacionaliza o método para produtos digitais brasileiros.</p>
+</div>
+
+<h2 style="color:#a78bfa">💰 Van Westendorp PSM — As 4 Perguntas</h2>
+
+<p>O PSM (Price Sensitivity Meter) usa 4 perguntas para mapear a psicologia de preço do seu mercado:</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:16px 20px;margin:16px 0">
+<div style="color:#6d4aff;font-weight:700;margin-bottom:12px">AS 4 PERGUNTAS DO PSM</div>
+<p style="color:#e2e8f0;margin:0 0 8px"><strong style="color:#a78bfa">P1 — Muito caro:</strong> "A partir de qual preço você consideraria este produto caro demais e não compraria?" → Teto de rejeição por preço alto</p>
+<p style="color:#e2e8f0;margin:0 0 8px"><strong style="color:#a78bfa">P2 — Caro mas aceitável:</strong> "A partir de qual preço você consideraria este produto caro, mas ainda compraria se realmente quisesse?" → Zona de esforço</p>
+<p style="color:#e2e8f0;margin:0 0 8px"><strong style="color:#a78bfa">P3 — Barato:</strong> "A partir de qual preço você consideraria este produto barato — mas ainda compraria?" → Zona de barganha</p>
+<p style="color:#e2e8f0;margin:0"><strong style="color:#a78bfa">P4 — Muito barato:</strong> "A partir de qual preço você consideraria este produto tão barato que duvidaria da qualidade?" → Piso de rejeição por preço baixo</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Interpretando os Resultados</h3>
+
+<p>Quando você plota as 4 curvas, dois pontos de interseção são críticos:</p>
+<ul>
+<li><strong>PME (Ponto de Margem Estável):</strong> onde P1 (muito caro) cruza P4 (muito barato) → preço que maximiza aceitabilidade sem gerar suspeita de qualidade</li>
+<li><strong>POA (Ponto de Preço Ótimo Aceitável):</strong> onde P2 (caro mas aceitável) cruza P3 (barato mas aceitável) → o centro da zona de conforto do mercado</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:24px">O Paradoxo do Preço Muito Baixo — Plassmann (Caltech)</h3>
+
+<p>Em 2008, Hilke Plassmann e colegas do Caltech demonstraram algo contraintuitivo: quando pessoas bebiam o mesmo vinho, mas acreditavam que o vinho mais caro era diferente, o prazer neurológico medido por fMRI era significativamente maior com o vinho apresentado como mais caro.</p>
+
+<p><strong>Conclusão operacional:</strong> preço é um sinal de qualidade antes mesmo da experiência com o produto. Um produto "barato" cria expectativa de experiência ruim — que então se confirma como profecia autorrealizável.</p>
+
+<p><strong>Regra prática:</strong> nunca precifique um produto premium a preço baixo para "facilitar a entrada". Você está destruindo a experiência antes que ela comece. Use bônus, garantias e parcelamento para reduzir a fricção — não preço baixo.</p>`,
+          },
+        ],
+      },
+      {
+        id: "prova-credibilidade",
+        number: 39,
+        title: "Prova e Credibilidade — Gary Bencivenga",
+        subtitle: "A pirâmide de evidência que elimina o ceticismo racional de forma irrefutável",
+        icon: "📊",
+        color: "from-rose-700 to-red-800",
+        duration: "40 min",
+        summary: "Gary Bencivenga é considerado o maior copywriter vivo. Sua obsessão com prova transformou sua regra fundamental: 'o ceticismo do prospect é racional — a única resposta é evidência irracionalmente específica'.",
+        lessons: [
+          {
+            id: "psi-bencivenga-1",
+            title: "O Princípio da Prova — Gary Bencivenga",
+            duration: "20 min",
+            type: "text" as const,
+            keyPoints: [
+              "A pirâmide de evidência: 6 níveis de prova, do mais fraco ao mais forte",
+              "Por que 'muita gente teve resultado' é declaração — e como transformar em prova",
+              "Especificidade como credibilidade: R$11.400 em 19 dias vs. 'bons resultados'",
+              "Prova científica vs. prova de resultado: quando usar cada uma",
+              "Como construir um swipe file de prova que funciona no seu nicho",
+            ],
+            exercise: "Audit de prova do seu produto: liste todas as provas que você usa atualmente (depoimentos, resultados, dados). Categorize cada uma na pirâmide de Bencivenga (nível 1 a 6). Quantas são nível 1-2 (declarações)? Quantas são nível 5-6 (prova específica verificável)? O objetivo: 80% do seu arsenal de prova no nível 4 ou acima.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Gary Bencivenga escreveu controles de copy que bateram outros controles por décadas. Sua principal filosofia: o copywriter não é um artista — é um advogado de defesa. Seu trabalho é construir um caso de provas tão sólido que o juiz (o prospect) não tem escolha a não ser votar pela compra. Esta aula operacionaliza sua pirâmide de evidência para o mercado digital.</p>
+</div>
+
+<h2 style="color:#a78bfa">📊 A Pirâmide de Evidência — 6 Níveis de Prova</h2>
+
+<p>Bencivenga classificou provas em 6 níveis de credibilidade crescente. O erro da maioria dos criadores: usar apenas os 3 primeiros níveis.</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:16px 20px;margin:16px 0">
+<div style="color:#6d4aff;font-weight:700;margin-bottom:12px">A PIRÂMIDE DE EVIDÊNCIA</div>
+
+<p style="color:#64748b;margin:0 0 4px"><strong style="color:#ef4444">Nível 1 — Declaração:</strong> "Meu produto é excelente." → Credibilidade: zero.</p>
+<p style="color:#64748b;margin:0 0 4px"><strong style="color:#f97316">Nível 2 — Benefício genérico:</strong> "Muitas pessoas tiveram ótimos resultados." → Credibilidade: mínima.</p>
+<p style="color:#64748b;margin:0 0 4px"><strong style="color:#eab308">Nível 3 — Depoimento vago:</strong> "Transformou minha vida!" — sem nome verificável, sem número. → Credibilidade: baixa.</p>
+<p style="color:#64748b;margin:0 0 4px"><strong style="color:#84cc16">Nível 4 — Depoimento específico:</strong> "Joana Martins, professora de BH, fez R$11.400 em 19 dias." → Credibilidade: média-alta.</p>
+<p style="color:#64748b;margin:0 0 4px"><strong style="color:#22c55e">Nível 5 — Prova verificável:</strong> Screenshot de conta, print de pagamento, depoimento gravado em vídeo com face. → Credibilidade: alta.</p>
+<p style="color:#64748b;margin:0"><strong style="color:#10b981">Nível 6 — Prova científica ou de terceiro independente:</strong> Dado de pesquisa citável, estudo de caso documentado, auditoria externa, menção em mídia verificável. → Credibilidade: máxima.</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">A Regra da Especificidade</h3>
+
+<p>Bencivenga observou que especificidade funciona como proxy de credibilidade no sistema límbico. O prospect não verifica os números — mas a especificidade dos números ativa o processamento de "isso parece real".</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:12px">
+<tr style="background:#1e293b">
+<th style="padding:10px;text-align:left;color:#94a3b8;font-weight:600;border:1px solid #334155">Declaração Vaga (fraca)</th>
+<th style="padding:10px;text-align:left;color:#94a3b8;font-weight:600;border:1px solid #334155">Declaração Específica (forte)</th>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">Bons resultados em poucos dias</td>
+<td style="padding:10px;color:#e2e8f0">R$11.400 em 19 dias de carrinho aberto</td>
+</tr>
+<tr style="background:#0f172a;border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">Muitos alunos tiveram sucesso</td>
+<td style="padding:10px;color:#e2e8f0">847 produtores ativos, 3 lançamentos acima de R$100k</td>
+</tr>
+<tr style="border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">CPL muito baixo com nossa estratégia</td>
+<td style="padding:10px;color:#e2e8f0">CPL caiu de R$27 para R$11 em 72 horas de otimização</td>
+</tr>
+<tr style="background:#0f172a;border:1px solid #1e293b">
+<td style="padding:10px;color:#64748b">Sistema rápido de implementar</td>
+<td style="padding:10px;color:#e2e8f0">Primeira campanha ativa em 4h37min do zero</td>
+</tr>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Como Construir um Arsenal de Prova</h3>
+
+<p>Bencivenga recomendava o que ele chamava de "proof file" — um arquivo vivo de provas que cresce com cada resultado de cliente:</p>
+
+<ol>
+<li><strong>Screenshots com contexto:</strong> não apenas o número — a tela completa mostrando data, plataforma e contexto do resultado</li>
+<li><strong>Antes e depois documentado:</strong> situação específica antes (com data) vs. situação após</li>
+<li><strong>Depoimento com especificidade tripla:</strong> nome completo + cidade + profissão + resultado com número + prazo</li>
+<li><strong>Case de avatar idêntico:</strong> um caso detalhado de cliente com situação de partida idêntica ao seu prospect ideal</li>
+<li><strong>Dados de terceiros:</strong> pesquisas de mercado, dados de plataforma, estudos acadêmicos que corroboram seus claims</li>
+</ol>`,
+          },
+          {
+            id: "psi-jay-abraham",
+            title: "Jay Abraham: Strategy of Preeminence e o Próximo Problema",
+            duration: "18 min",
+            type: "text" as const,
+            keyPoints: [
+              "Por que consultor de confiança converte mais que vendedor — e como ser o primeiro",
+              "A sequência do 'próximo problema': como cada upsell deve resolver o obstáculo real pós-compra",
+              "3 formas de aumentar receita: mais clientes, maior ticket, mais frequência",
+              "Como transformar compradores únicos em clientes vitalícios",
+            ],
+            exercise: "Mapeie a jornada do seu cliente após a compra. Qual é o primeiro obstáculo que ele encontra ao tentar implementar o produto? Esse obstáculo é o seu OTO1 natural. Qual é o segundo obstáculo? Esse é o seu cross-sell de D+14. Construa o mapa completo de 'próximos problemas' para os próximos 90 dias pós-compra.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Jay Abraham é considerado um dos maiores consultores de marketing do mundo — trabalhou com mais de 10.000 empresas em 400+ nichos. Sua "Strategy of Preeminence" é a base de uma relação de longo prazo que maximiza LTV sem precisar de manipulação ou pressão. Esta aula operacionaliza o framework para monetização de infoprodutos.</p>
+</div>
+
+<h2 style="color:#a78bfa">🏆 Strategy of Preeminence — Jay Abraham</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">A) A Distinção Fundamental: Vendedor vs. Conselheiro</h3>
+
+<p>Abraham define a diferença entre um vendedor e um conselheiro de confiança:</p>
+
+<ul>
+<li><strong>Vendedor:</strong> maximiza a transação. Está preocupado com o que você vai pagar hoje.</li>
+<li><strong>Conselheiro de confiança:</strong> maximiza o resultado do cliente. Às vezes isso significa vender menos hoje para construir uma relação que vale 10x mais ao longo do tempo.</li>
+</ul>
+
+<p>O paradoxo: <strong>o conselheiro de confiança quase sempre vende mais</strong> — porque o cliente volta, indica, e tem ticket médio crescente. O vendedor fecha uma venda e perde o cliente.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">B) O Princípio do Próximo Problema</h3>
+
+<p>Abraham: "O upsell perfeito não é o produto que você quer vender. É a solução para o próximo obstáculo que o cliente vai encontrar ao implementar o produto que acabou de comprar."</p>
+
+<p><strong>Sequência de próximos problemas — exemplo para um curso de lançamento:</strong></p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
+D+0: Comprou o curso → PROBLEMA: "Por onde começo? Tenho muito conteúdo"<br>
+→ OTO1: Guia de implementação em 7 dias + templates prontos<br><br>
+D+7: Começou a implementar → PROBLEMA: "Meu copy não está convertendo"<br>
+→ OTO2: Sessão de revisão de copy em grupo<br><br>
+D+14: Copy feita → PROBLEMA: "Não sei configurar os anúncios"<br>
+→ Cross-sell: Mini-curso de Meta Ads para lançamentos<br><br>
+D+30: Lançou → PROBLEMA: "Quero escalar mas não sei o que otimizar"<br>
+→ Mentoria mensal de otimização
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">C) As 3 Formas de Aumentar Receita (Abraham)</h3>
+
+<p>Abraham sistematizou que existem apenas 3 formas matematicamente possíveis de aumentar receita:</p>
+
+<ol>
+<li><strong>Mais clientes</strong> — a única que a maioria pensa em fazer (e a mais cara)</li>
+<li><strong>Maior ticket médio por cliente</strong> — upsell, cross-sell, premium tier</li>
+<li><strong>Maior frequência de compra</strong> — recorrência, assinatura, novo produto para mesma base</li>
+</ol>
+
+<p>A estratégia mais eficiente: foque em 2 e 3 antes de 1. Um cliente existente custa 5-7x menos para vender do que um novo cliente. A maioria dos produtores digitais neglencia completamente suas bases existentes.</p>
+
+<blockquote style="border-left:3px solid #f59e0b;padding:12px 16px;margin:16px 0;background:#0f172a;color:#94a3b8;font-style:italic">
+"Se você trata seus clientes como adultos inteligentes que você genuinamente se importa em ajudar a alcançar seus objetivos, eles vão comprar mais, voltar mais, e trazer outros. Preeminência não é uma estratégia de venda — é uma estratégia de resultado do cliente que produz mais vendas como consequência." — Jay Abraham
+</blockquote>`,
+          },
+        ],
+      },
+    ],
+  }
 ];
 
 export const PRODUCTS = [
