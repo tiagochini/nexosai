@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod/v4";
+import multer from "multer";
 import { requireAuth } from "../auth/auth.middleware.js";
 import {
   getIntakeQuestions,
@@ -24,9 +25,34 @@ import {
   calculateReadinessScore,
   recommendTrackFromRevenue,
 } from "./intake.scoring.js";
+import { transcribeAudio } from "../ai-gateway/ai-gateway.service.js";
 import { AppError } from "../../lib/errors.js";
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, usersTable } from "@workspace/db";
+
+// ─── Multer: in-memory, 100 MB limit, audio/video only ───────────────────────
+const ALLOWED_AUDIO_VIDEO_MIMES = [
+  "audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/mp3",
+  "audio/wav", "audio/x-wav", "audio/m4a", "audio/x-m4a",
+  "video/mp4", "video/webm", "video/ogg", "video/quicktime",
+  "video/x-msvideo", "video/mpeg", "video/3gpp",
+];
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (
+      ALLOWED_AUDIO_VIDEO_MIMES.includes(file.mimetype) ||
+      file.mimetype.startsWith("audio/") ||
+      file.mimetype.startsWith("video/")
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Tipo de arquivo não suportado: ${file.mimetype}. Use áudio ou vídeo.`));
+    }
+  },
+});
 
 const router = Router();
 router.use(requireAuth);
@@ -178,6 +204,66 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
     throw err;
   }
 });
+
+// ─── Audio / video transcription via Whisper ─────────────────────────────────
+
+router.post(
+  "/:campaignId/transcribe",
+  upload.single("file"),
+  async (req, res): Promise<void> => {
+    const campaignId = req.params["campaignId"] as string;
+
+    if (!req.file) {
+      res.status(400).json({ error: "Nenhum arquivo enviado.", code: "NO_FILE" });
+      return;
+    }
+
+    // Verify campaign ownership before transcribing
+    const [campaign] = await db
+      .select({ id: campaignsTable.id })
+      .from(campaignsTable)
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, req.auth.workspaceId)))
+      .limit(1);
+
+    if (!campaign) {
+      res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" });
+      return;
+    }
+
+    try {
+      const base64 = req.file.buffer.toString("base64");
+      const mimeType = req.file.mimetype || "audio/webm";
+
+      req.log.info(
+        { campaignId, mimeType, bytes: req.file.size, originalName: req.file.originalname },
+        "Transcribing audio/video via Whisper",
+      );
+
+      const transcript = await transcribeAudio(base64, mimeType, req.log);
+
+      if (!transcript || transcript.trim().length === 0) {
+        res.status(422).json({
+          error: "Não foi possível detectar fala no arquivo. Verifique o áudio e tente novamente.",
+          code: "EMPTY_TRANSCRIPT",
+        });
+        return;
+      }
+
+      req.log.info({ campaignId, transcriptLength: transcript.length }, "Whisper transcription complete");
+      res.json({ transcript: transcript.trim() });
+    } catch (err) {
+      req.log.error({ err, campaignId }, "Whisper transcription failed");
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ error: err.message, code: err.code });
+        return;
+      }
+      res.status(502).json({
+        error: "Erro ao transcrever áudio. Verifique se o arquivo contém fala audível e tente novamente.",
+        code: "TRANSCRIPTION_ERROR",
+      });
+    }
+  },
+);
 
 // ─── Natural language extraction ──────────────────────────────────────────────
 

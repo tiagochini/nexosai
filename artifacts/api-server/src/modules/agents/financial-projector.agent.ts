@@ -170,6 +170,22 @@ ROAS saudável: 3x–8x. Excepcional: 10x–15x. Acima disso = improvável sem l
 - Influenciadores: 10-20% — quando há parceria planejada
 - Email/Orgânico: sem custo de mídia (incluir na projeção como canal complementar)
 
+## LINHA DE ORÇAMENTO ESPECIAL — META LIVE (obrigatório quando há live de vendas)
+
+Quando o tipo de campanha inclui live de vendas (live_sale, lançamento com cart_open via live, flash sale com live), inclua obrigatoriamente uma linha de orçamento "Meta Live Campaign" nas platformAllocations e nos dailyCosts dos dias de live.
+
+Esta linha representa o investimento em 3 campanhas Meta simultâneas durante a live:
+
+| Camada | Objetivo Meta | CPM Referência | CPC Referência | Papel |
+|--------|--------------|---------------|---------------|-------|
+| Engajamento | Engajamento | ~R$12 | — | Volume de pessoas ao vivo (30-40% do dia) |
+| Tráfego | Tráfego | ~R$15-20 | ~R$1,04 | Acesso qualificado à live (40-50% do dia) |
+| Vendas | Vendas | ~R$30,98 | ~R$1,66 | Retargeting de compradores (20-30% do dia) |
+
+- **Budget total estimado por dia de live:** calcular com base no ticket e no tamanho de audiência esperado (mínimo R$300/dia para live pequena, R$1.500-5.000/dia para lançamentos de 6 dígitos)
+- **Observação obrigatória em projectorNotes:** "O budget da Meta Live Campaign é investido diretamente no Gerenciador de Anúncios da Meta, em 3 campanhas simultâneas (Engajamento + Tráfego + Vendas). Não é pago à NexOS AI. Programar todas as campanhas para iniciar 5 minutos após o horário da live."
+- Inclua "Meta Live Campaign (3 camadas)" como uma entrada separada em platformAllocations com rationale explicando as 3 camadas
+
 ## ESTRUTURA DE SAÍDA
 
 Retorne APENAS JSON válido exatamente no formato abaixo:

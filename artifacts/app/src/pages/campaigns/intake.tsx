@@ -20,7 +20,7 @@ import {
   MessageSquare, LayoutList, ChevronRight, Zap,
   Rocket, RefreshCw, Radio, TrendingUp, BarChart3,
   Users, Mail, Check, X, BarChart2, ChevronDown, ChevronUp, CornerDownLeft,
-  Mic, MicOff, Paperclip, ImageIcon, File,
+  Mic, MicOff, Paperclip, ImageIcon, File, FileAudio, FileVideo,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -238,11 +238,13 @@ export default function CampaignIntake() {
   }, [inputValue, draftKey]);
 
   const [isListening, setIsListening]           = useState(false);
-  const [pendingFiles, setPendingFiles]         = useState<Array<{ name: string; content?: string; url: string; isImage: boolean }>>([]);
+  const [isTranscribing, setIsTranscribing]     = useState(false);
+  const [pendingFiles, setPendingFiles]         = useState<Array<{ name: string; content?: string; url: string; isImage: boolean; isAudioVideo?: boolean }>>([]);
   const aiTriggered = useRef(false);
   const chatEndRef  = useRef<HTMLDivElement>(null);
   const inputRef    = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const audioInputRef   = useRef<HTMLInputElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -428,7 +430,7 @@ export default function CampaignIntake() {
     toast("Ouvindo… fale agora.", { duration: 2500 });
   };
 
-  // ── File select ───────────────────────────────────────────────────────────────
+  // ── File select (text / images / docs) ───────────────────────────────────────
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -449,6 +451,60 @@ export default function CampaignIntake() {
     }));
     setPendingFiles(prev => [...prev, ...added]);
     e.target.value = "";
+  };
+
+  // ── Audio / video select → Whisper transcription ──────────────────────────────
+  const handleAudioVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const isAudio = file.type.startsWith("audio/");
+    const isVideo = file.type.startsWith("video/");
+    if (!isAudio && !isVideo) {
+      toast.error("Use um arquivo de áudio ou vídeo.");
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx 100 MB).");
+      return;
+    }
+
+    setIsTranscribing(true);
+    const toastId = toast.loading(
+      isAudio ? "Transcrevendo áudio via Whisper AI…" : "Extraindo e transcrevendo áudio do vídeo…",
+      { duration: Infinity },
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const resp = await customFetch<{ transcript: string }>(
+        `/api/intake/${campaignId}/transcribe`,
+        { method: "POST", body: formData },
+      );
+
+      toast.dismiss(toastId);
+      if (!resp.transcript) {
+        toast.error("Nenhuma fala detectada no arquivo. Verifique o áudio e tente novamente.");
+        return;
+      }
+
+      // Inject transcript into the textarea so user can review before sending
+      setInputValue(prev => prev ? `${prev}\n\n${resp.transcript}` : resp.transcript);
+      toast.success(
+        `Transcrição concluída — ${resp.transcript.length} caracteres extraídos. Revise e envie.`,
+        { duration: 5000 },
+      );
+      setTimeout(() => inputRef.current?.focus(), 200);
+    } catch (err) {
+      toast.dismiss(toastId);
+      const msg = err instanceof Error ? err.message : "Erro ao transcrever arquivo.";
+      toast.error(msg, { duration: 7000 });
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const removeFile = (idx: number) => {
@@ -869,10 +925,13 @@ export default function CampaignIntake() {
           (
             <div className="border border-t-0 border-border/50 p-3 shrink-0 flex flex-col gap-2">
 
-              {/* Hidden file input */}
+              {/* Hidden file inputs */}
               <input ref={fileInputRef} type="file" multiple className="hidden"
                 accept=".txt,.md,.csv,.json,.html,.xml,.ts,.tsx,.js,.jsx,.py,.sql,.pdf,.doc,.docx,image/*"
                 onChange={e => { void handleFileSelect(e); }} />
+              <input ref={audioInputRef} type="file" className="hidden"
+                accept="audio/*,video/*,.mp3,.mp4,.wav,.ogg,.m4a,.webm,.mov,.avi,.mkv"
+                onChange={e => { void handleAudioVideoSelect(e); }} />
 
               {/* Pending files preview */}
               {pendingFiles.length > 0 && (
@@ -881,6 +940,8 @@ export default function CampaignIntake() {
                     <div key={i} className="flex items-center gap-1.5 border border-border/50 bg-muted/20 px-2 py-1">
                       {f.isImage
                         ? <ImageIcon className="h-3 w-3 text-primary/70 shrink-0" />
+                        : f.isAudioVideo
+                        ? <FileAudio className="h-3 w-3 text-violet-400 shrink-0" />
                         : <File className="h-3 w-3 text-muted-foreground shrink-0" />}
                       <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{f.name}</span>
                       <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-destructive ml-1">
@@ -891,8 +952,16 @@ export default function CampaignIntake() {
                 </div>
               )}
 
+              {/* Transcribing indicator */}
+              {isTranscribing && (
+                <div className="flex items-center gap-2 px-2 py-1 border border-violet-500/40 bg-violet-500/10">
+                  <Loader2 className="w-3 h-3 text-violet-400 animate-spin shrink-0" />
+                  <span className="font-mono text-[11px] text-violet-400 uppercase tracking-widest">Whisper AI transcrevendo… aguarde</span>
+                </div>
+              )}
+
               {/* Listening indicator */}
-              {isListening && (
+              {isListening && !isTranscribing && (
                 <div className="flex items-center gap-2 px-2 py-1 border border-destructive/40 bg-destructive/10">
                   <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
                   <span className="font-mono text-[11px] text-destructive uppercase tracking-widest">Ouvindo… fale agora</span>
@@ -930,7 +999,7 @@ export default function CampaignIntake() {
                   {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </button>
 
-                {/* Attach */}
+                {/* Attach text/image */}
                 <button type="button" onClick={() => fileInputRef.current?.click()}
                   title="Anexar arquivo ou imagem"
                   className="h-9 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0">
@@ -939,6 +1008,23 @@ export default function CampaignIntake() {
                   {pendingFiles.length > 0 && (
                     <span className="text-[9px] font-bold text-primary bg-primary/20 px-1 rounded-sm">{pendingFiles.length}</span>
                   )}
+                </button>
+
+                {/* Attach audio/video → Whisper transcription */}
+                <button type="button"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={isTranscribing || sending}
+                  title="Subir áudio ou vídeo — transcrição automática via Whisper AI (MP3, MP4, WAV, WebM…)"
+                  className={`h-9 px-2.5 flex items-center gap-1.5 border transition-all rounded-sm shrink-0
+                    ${isTranscribing
+                      ? "border-violet-500/60 bg-violet-500/20 text-violet-400 cursor-not-allowed"
+                      : "border-border/50 bg-muted/10 hover:bg-violet-500/10 hover:border-violet-500/40 text-muted-foreground hover:text-violet-400"}`}>
+                  {isTranscribing
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <FileAudio className="h-4 w-4" />}
+                  <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">
+                    {isTranscribing ? "Transcrevendo…" : "Áudio/Vídeo"}
+                  </span>
                 </button>
 
                 <div className="flex-1" />
@@ -964,7 +1050,7 @@ export default function CampaignIntake() {
               </div>
 
               <p className="text-[10px] font-mono text-muted-foreground/40 text-right">
-                Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF
+                Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF · áudio/vídeo transcrito por Whisper AI
               </p>
             </div>
           ))}

@@ -89,6 +89,32 @@ Igual ao acima mas com:
 - **Abertura do carrinho**: TODAS as plataformas ao mesmo tempo — Instagram + Facebook Live, TikTok ao vivo, Email blast, WhatsApp broadcast, Stories de contagem
 - **Fechamento / Cart Close**: Stories urgência (Instagram + Facebook), TikTok last-chance, Email de última hora, WhatsApp escassez real
 
+## ESTRATÉGIA META LIVE — OBRIGATÓRIO para fases cart_open com live de vendas
+
+Quando o lançamento inclui uma live de vendas (especialmente na abertura do carrinho), o Launch Manager DEVE incluir a estratégia de campanhas Meta Live em 3 camadas simultâneas no campo 'cartOpenStrategy':
+
+**Camada 1 — Engajamento (encher a sala)**
+- Objetivo: Engajamento (conversão: Vídeo ao vivo no Instagram)
+- Comportamento: Maior alcance, maior volume de ThruPlays, CPM ~R$12, custo por visualizador ~R$0,41
+- Papel: Escalar o volume de pessoas ao vivo criando prova social e efeito manada
+- Orçamento sugerido: 30–40% do budget do dia da live
+
+**Camada 2 — Tráfego (trazer os qualificados)**
+- Objetivo: Tráfego (conversão: Vídeo ao vivo no Instagram)
+- Comportamento: Menor CPC (~R$1,04), maior volume de cliques, CTR saudável ~1,57%
+- Papel: Levar as pessoas certas — quem clicou está ativamente interessado, não apenas alcançado
+- Orçamento sugerido: 40–50% do budget do dia da live
+
+**Camada 3 — Vendas (fechar os prontos para comprar)**
+- Objetivo: Vendas (conversão: Vídeo ao vivo no Instagram)
+- Comportamento: CPM mais alto (~R$30,98), entrega mais seletiva, CTR ~2,36%, 77 conversões qualificadas no teste
+- Papel: Retargeting de leads quentes durante e logo após a live — público que o algoritmo classifica como comprador
+- Orçamento sugerido: 20–30% do budget do dia da live
+
+**Timing crítico:** Programar as campanhas para iniciarem 5 minutos DEPOIS do horário combinado da live. Isso evita que a campanha inicie antes da live ao vivo, prevenindo falhas de entrega e "bug" no Gerenciador.
+
+**Observação técnica:** O criativo é a própria live — não é necessário subir criativo separado. A funcionalidade pode não estar disponível em todas as contas Meta; testar em modo rascunho primeiro.
+
 **Sinais de alerta são obrigatórios.** O criador precisa saber quando um dia está abaixo do esperado.
 
 **Contingências são parte do plano.** Um bom lançamento tem plano B para os 3 cenários críticos.
