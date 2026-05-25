@@ -221,6 +221,14 @@ const AGENTS: AgentDef[] = [
     specialties: ["Leads Frios", "Win-Back", "Segmentação", "Ângulos"],
     isNew: true,
   },
+  {
+    role: "organic_traffic", name: "Marcus", tagline: "Especialista de Tráfego Orgânico",
+    description: "Opera 24h preparando audiências, crescendo seguidores e construindo o ativo que tráfego pago não compra: confiança real. Domina algoritmos de Instagram, TikTok, YouTube e Facebook simultaneamente.",
+    category: "Audiência", provider: "GPT-4o", icon: TrendingUp,
+    accent: "border-yellow-500/40 hover:border-yellow-500",
+    specialties: ["Algoritmo", "Seguidores", "Engajamento", "Pré-aquecimento"],
+    isNew: true,
+  },
 
   // ── VÍDEO & SCRIPTS ───────────────────────────────────────────────────────
   {

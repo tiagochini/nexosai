@@ -61,7 +61,8 @@ export type AgentRole =
   | "execution_governor"
   | "memory_compression"
   | "business_intelligence"
-  | "ux_simplification";
+  | "ux_simplification"
+  | "organic_traffic";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -131,6 +132,7 @@ const AGENT_PROVIDER_MAP: Record<
   memory_compression:   { provider: "gemini",    model: GEMINI_FLASH_NATIVE },
   business_intelligence:{ provider: "gemini",    model: GEMINI_NATIVE_MODEL },
   ux_simplification:    { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  organic_traffic:      { provider: "openai",    model: OPENAI_NATIVE_MODEL },
 };
 
 export interface AIMessage {
