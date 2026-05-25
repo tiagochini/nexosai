@@ -1722,6 +1722,7 @@ export default function CampaignDetail() {
       case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A IA gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
       case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
+      case "live": return { href: `/campaigns/${campaignId}/content`, label: "Regenerar Conteúdo", description: "Campanha ao vivo. Gere novo conteúdo ou revise o que foi aprovado.", phase: undefined };
       default: return null;
     }
   };

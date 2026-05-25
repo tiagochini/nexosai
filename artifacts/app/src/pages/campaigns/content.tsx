@@ -12,6 +12,7 @@ import {
   Users, Loader2, Send, ArrowRight, Eye,
   BarChart3, Music2, ChevronRight, TrendingUp,
   Zap, Target, Activity, PlayCircle, Link2, Shield,
+  RefreshCw, Rocket,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -1362,6 +1363,7 @@ export default function ContentApproval() {
   const [generatingMore, setGeneratingMore] = useState(false);
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
   const [previewFilter, setPreviewFilter] = useState<Platform | "all">("all");
+  const [regeneratingContent, setRegeneratingContent] = useState(false);
 
   const [, setLocation] = useLocation();
 
@@ -1548,6 +1550,32 @@ export default function ContentApproval() {
       }).catch(() => null);
     }
     toast.success(`${pendingPieces.length} peças aprovadas`);
+    // If campaign is awaiting_approval, transition it to approved and redirect to launch
+    if (campaign?.status === "awaiting_approval") {
+      approveCampaignMutation.mutate();
+    }
+  };
+
+  const handleRegenerateContent = async () => {
+    setRegeneratingContent(true);
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/execute/content`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      if (!res.ok) {
+        const body = await res.json() as { error?: string };
+        throw new Error(body.error ?? "Erro ao regenerar conteúdo");
+      }
+      toast.success("Agentes ativados. Novo conteúdo sendo gerado — acompanhe o progresso na campanha.");
+      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
+      setLocation(`/campaigns/${campaignId}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao regenerar conteúdo");
+    } finally {
+      setRegeneratingContent(false);
+    }
   };
 
   const byPlatform = pieces.reduce<Record<string, ContentPiece[]>>((acc, p) => {
@@ -1698,6 +1726,29 @@ export default function ContentApproval() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
+              {/* When live: offer content regeneration via agents */}
+              {campaign?.status === "live" && (
+                <Button
+                  onClick={() => void handleRegenerateContent()}
+                  disabled={regeneratingContent}
+                  variant="outline"
+                  className="rounded-none font-mono uppercase tracking-widest gap-1.5 border-primary/40 text-primary hover:bg-primary/10 h-9 text-xs flex-1 sm:flex-none"
+                >
+                  {regeneratingContent ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  {regeneratingContent ? "Regenerando..." : "Regenerar Conteúdo"}
+                </Button>
+              )}
+              {/* When all approved but still awaiting: explicit launch CTA */}
+              {campaign?.status === "awaiting_approval" && pendingCount === 0 && approvedCount > 0 && (
+                <Button
+                  onClick={() => approveCampaignMutation.mutate()}
+                  disabled={approveCampaignMutation.isPending}
+                  className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none"
+                >
+                  {approveCampaignMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+                  Aprovar e Lançar
+                </Button>
+              )}
               {pendingCount > 0 && (
                 <Button
                   onClick={() => setCinemaActive(true)}
@@ -1708,7 +1759,7 @@ export default function ContentApproval() {
                 </Button>
               )}
               {pendingCount > 0 && (
-                <Button onClick={handleApproveAll} className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none">
+                <Button onClick={() => void handleApproveAll()} className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs flex-1 sm:flex-none">
                   <CheckCircle2 className="h-3.5 w-3.5" />Aprovar Tudo ({pendingCount})
                 </Button>
               )}

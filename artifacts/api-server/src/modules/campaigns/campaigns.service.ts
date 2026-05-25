@@ -43,7 +43,8 @@ export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   awaiting_approval: ["approved", "generating", "analyzing", "cancelled"],
   approved: ["executing", "cancelled"],
   executing: ["live", "paused", "cancelled"],
-  live: ["paused", "completed", "cancelled"],
+  // "generating" added: allows client to re-generate content while live (e.g. refresh copy mid-launch)
+  live: ["paused", "completed", "cancelled", "generating"],
   // RC-006 FIX: "executing" added — orchestration worker transitions paused
   // campaigns through paused → executing → live (processExecute).
   paused: ["executing", "live", "cancelled"],
@@ -55,7 +56,8 @@ export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
 // Derived phase-entry lists — replaces the 9 scattered inline allowedStatuses
 // arrays across workers, services, and agents. Import from here, never redeclare.
 export const STRATEGY_PHASE_ENTRY_STATUSES = ["intake", "analyzing", "strategy_ready"] as const;
-export const CONTENT_PHASE_ENTRY_STATUSES = ["strategy_ready", "awaiting_approval", "approved"] as const;
+// "live" added: allows re-generation of content while campaign is already live
+export const CONTENT_PHASE_ENTRY_STATUSES = ["strategy_ready", "awaiting_approval", "approved", "live"] as const;
 export const LAUNCH_PHASE_ENTRY_STATUSES = ["approved", "paused"] as const;
 export const CREATIVE_INTENT_PHASE_ENTRY_STATUSES = [
   "strategy_ready",
