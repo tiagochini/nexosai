@@ -9,6 +9,10 @@
     "nexos-audit-test": "tsx ./src/nexos-audit-test.ts",
     "nexos-launch-sim": "tsx ./src/nexos-launch-sim.ts",
     "nexos-full-funnel": "tsx ./src/nexos-full-funnel-test.ts",
+    "stress-test": "tsx ./src/stress-test/stress-test-runner.ts",
+    "stress-test-dry": "DRY_RUN_MODE=true tsx ./src/stress-test/stress-test-runner.ts",
+    "stress-test-extreme": "DRY_RUN_MODE=true EXTREME_ONLY=true tsx ./src/stress-test/stress-test-runner.ts",
+    "stress-test-all": "DRY_RUN_MODE=true SAMPLE=50 OUTPUT=json tsx ./src/stress-test/stress-test-runner.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
