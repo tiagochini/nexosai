@@ -7,7 +7,7 @@ import {
   Layers, Clock, TrendingDown, Users, TrendingUp,
   BarChart3, Play, ChevronDown, AlertTriangle,
   Cpu, Network, GitBranch, Crosshair, DollarSign,
-  GraduationCap, LayoutDashboard,
+  GraduationCap, LayoutDashboard, Gift, Radio, Trophy,
 } from "lucide-react";
 
 // ─── Scroll-snap section wrapper ──────────────────────────────────────────────
@@ -308,8 +308,8 @@ function MecanismoSection() {
     {
       num: "04",
       tag: "Sequência + Automação",
-      title: "Nutrição e Fechamento Automático",
-      desc: "O sistema ativa sequências de email e WhatsApp por segmento (quente/morno/frio), adapta o copy por temperatura de lead e horário de engajamento, detecta fadiga criativa e rotaciona automáticamente. O carrinho fecha — e o remarketing começa — sem que você precise tocar em nada.",
+      title: "Nutrição e Fechamento Automático — em Todas as Plataformas",
+      desc: "O sistema ativa sequências por segmento (quente/morno/frio) em paralelo: email, WhatsApp, Telegram, Instagram Direct, Facebook Messenger e TikTok. Copy adaptado por temperatura de lead e horário de engajamento. Quando o carrinho fecha, o remarketing já começou — em todos os canais — sem que você toque em nada.",
       icon: Activity,
     },
     {
@@ -636,7 +636,7 @@ function OfertaSection() {
         "Trilha de 6 dígitos (R$100k–R$999k em 7 dias)",
         "29 agentes completos",
         "Integração Meta + Google + TikTok",
-        "WhatsApp + Email automático",
+        "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
         "Dashboard de performance",
         "Créditos adicionais disponíveis à vontade",
       ],
@@ -657,6 +657,7 @@ function OfertaSection() {
         "Multi-workspace por cliente",
         "Painel de relatório consolidado",
         "Onboarding dedicado",
+        "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
         "Créditos adicionais disponíveis à vontade",
       ],
       cta: "Solicitar Acesso Agency",
@@ -868,6 +869,84 @@ function DoisCaminhosSection() {
   );
 }
 
+// ─── Section 10.5: LIVE SORTEIO ───────────────────────────────────────────────
+function LiveSorteioSection() {
+  const { ref, inView } = useInView(0.2);
+  const etapas = [
+    { num: "01", label: "Briefing ao vivo", desc: "Intake conversacional em tempo real com a audiência respondendo junto" },
+    { num: "02", label: "Estratégia gerada", desc: "29 agentes constroem posicionamento, big idea, copy, anúncios e sequências" },
+    { num: "03", label: "Campanha pronta", desc: "Criativos finalizados, sequências configuradas, pixel calibrado — a ponto de disparo" },
+    { num: "04", label: "Disparo nas mãos do sortudo", desc: "O lançamento está pronto. Ativar o disparo depende do sorteado adquirir o acesso — a campanha já foi construída por nós, ao vivo" },
+  ];
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/30">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+
+          {/* Live badge */}
+          <div className={`flex items-center gap-3 mb-8 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}>
+            <div className="flex items-center gap-2 border border-rose-500/40 bg-rose-500/10 px-4 py-2">
+              <Radio className="h-3.5 w-3.5 text-rose-400 animate-pulse" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.4em] text-rose-400 font-bold">Ao Vivo</span>
+            </div>
+            <div className="h-px flex-1 bg-rose-500/20" />
+          </div>
+
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Sorteio ao Vivo —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
+            Durante a live,<br />
+            <span className="text-primary">um lançamento completo</span><br />
+            <span className="text-foreground/70">construído na frente de todos.</span>
+          </h2>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Vou sortear um participante e, ao vivo, construir o lançamento completo dele — do briefing aos criativos finalizados, passando pela estratégia, copy, sequências de disparo e configuração de pixel. Em tempo real, com os 29 agentes trabalhando. A audiência inteira acompanha o processo.
+          </p>
+
+          {/* Etapas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {etapas.map((etapa, i) => (
+              <div
+                key={i}
+                className={`border ${i === 3 ? "border-primary/40 bg-primary/5" : "border-border/30 bg-card/20"} p-5 flex flex-col gap-3 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${i * 120}ms` }}
+              >
+                <div className="font-mono font-black text-4xl text-primary/15 leading-none">{etapa.num}</div>
+                <div className="font-mono text-xs font-black uppercase tracking-widest text-foreground">{etapa.label}</div>
+                <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">{etapa.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Nota de clareza */}
+          <div className={`border border-amber-500/25 bg-amber-500/5 px-6 py-5 flex items-start gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "600ms" }}>
+            <Trophy className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-mono text-xs font-black uppercase tracking-widest text-amber-400 mb-1.5">O que o sortudo recebe</div>
+              <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
+                A campanha vai estar 100% pronta — briefing, posicionamento, copy, criativos, sequências de email, WhatsApp, Telegram e Instagram, pixel configurado, tudo a ponto de disparo. O sortudo vai em casa com o lançamento montado. O disparo das sequências e a ativação dos anúncios depende de ele ter acesso à plataforma — mas o trabalho de construção, a audiência inteira viu acontecer.
+              </p>
+            </div>
+          </div>
+
+          {/* Gift CTA */}
+          <div className={`mt-6 flex flex-col sm:flex-row items-center gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "750ms" }}>
+            <a href="/login" className="w-full sm:w-auto">
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-14 gap-3 text-xs px-8 w-full sm:w-auto">
+                <Gift className="h-4 w-4" /> Quero estar na live + concorrer
+              </Button>
+            </a>
+            <p className="font-mono text-[11px] text-muted-foreground/40 text-center sm:text-left">
+              A participação na live é gratuita. O sorteio acontece durante a transmissão.
+            </p>
+          </div>
+
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
 // ─── Section 11: GARANTIA + URGÊNCIA + CTA FINAL ──────────────────────────────
 function FechamentoSection() {
   const { ref, inView } = useInView(0.15);
@@ -980,6 +1059,7 @@ export default function LandingPage() {
       <OfertaSection />
       <ObjecoesSection />
       <DoisCaminhosSection />
+      <LiveSorteioSection />
       <FechamentoSection />
       <Footer />
     </div>
