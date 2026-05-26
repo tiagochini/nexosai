@@ -50,6 +50,16 @@ export const env = {
   // DRY_RUN_MODE: skips real AI calls, real payments, real ad publishing.
   // All agent executions are simulated and logged with is_dry_run=true.
   DRY_RUN_MODE: process.env["DRY_RUN_MODE"] === "true",
+  // ── Video generation providers ─────────────────────────────────────────────
+  // Runway ML — text/image → video (Gen-3 Alpha). https://dev.runwayml.com
+  RUNWAY_API_KEY: process.env["RUNWAY_API_KEY"] ?? "",
+  RUNWAY_API_VERSION: process.env["RUNWAY_API_VERSION"] ?? "2024-11-06",
+  // Kling AI via fal.ai — text → video. https://fal.ai/models/fal-ai/kling-video
+  FAL_API_KEY: process.env["FAL_API_KEY"] ?? "",
+  // HeyGen — avatar talking-head videos. https://www.heygen.com/api
+  HEYGEN_API_KEY: process.env["HEYGEN_API_KEY"] ?? "",
+  // ElevenLabs — voice cloning. https://elevenlabs.io/docs/api
+  ELEVENLABS_API_KEY: process.env["ELEVENLABS_API_KEY"] ?? "",
 } as const;
 
 // ─── Production guard ──────────────────────────────────────────────────────────

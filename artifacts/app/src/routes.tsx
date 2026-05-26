@@ -51,6 +51,7 @@ import ComprarPage from "@/pages/comprar/index";
 import VideoEditorPage from "@/pages/video-editor/index";
 import SiteBuilderPage from "@/pages/site-builder/index";
 import AtendimentoPage from "@/pages/atendimento/index";
+import VideoProductionPage from "@/pages/video-production/index";
 import LauncherDashboard from "@/pages/launcher/index";
 import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
@@ -255,6 +256,11 @@ export default function AppRoutes() {
       {/* Time de Vendas / Atendimento */}
       <Route path="/atendimento">
         {() => <ProtectedRoute><AtendimentoPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Produção de Vídeo IA */}
+      <Route path="/video-production">
+        {() => <ProtectedRoute><VideoProductionPage /></ProtectedRoute>}
       </Route>
 
       {/* Dashboard do Lançador */}

@@ -78,7 +78,9 @@ export type AgentRole =
   // ── Validação, Onboarding & Lançamento Semente ────────────────────────────
   | "buyer_onboarding"
   | "semente_launch"
-  | "product_validator";
+  | "product_validator"
+  // ── Vídeo Production ─────────────────────────────────────────────────────
+  | "scene_director";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -164,6 +166,8 @@ const AGENT_PROVIDER_MAP: Record<
   // ── Validação, Onboarding & Lançamento Semente ────────────────────────────
   buyer_onboarding:   { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   semente_launch:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Vídeo Production ─────────────────────────────────────────────────────
+  scene_director:     { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
   product_validator:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 

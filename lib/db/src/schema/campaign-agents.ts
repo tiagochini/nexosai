@@ -51,6 +51,7 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "sales_closer",
   "sales_objection",
   "sales_consultant",
+  "scene_director",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [

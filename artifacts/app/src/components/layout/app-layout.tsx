@@ -9,7 +9,7 @@ import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu, Network,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
-  Brain, Receipt, Link2, Globe, Clapperboard, ShoppingBag, MessageSquare, Crosshair,
+  Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -96,8 +96,9 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: "Criação",
       items: [
-        { name: tr.sidebar.vsl,   href: "/vsls",         icon: Video      },
-        { name: tr.sidebar.video, href: "/video-editor", icon: Clapperboard },
+        { name: tr.sidebar.vsl,           href: "/vsls",             icon: Video        },
+        { name: "Produção de Vídeo IA",   href: "/video-production", icon: Clapperboard },
+        { name: tr.sidebar.video,         href: "/video-editor",     icon: Film         },
       ],
     },
     {

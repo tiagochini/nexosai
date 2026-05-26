@@ -97,8 +97,12 @@ export const CREDIT_COSTS: Record<string, number> = {
   nurturing_message: 2,         // item-copy per sequence item (flat, intentionally low)
   analytics_report: 5,          // direct AI chat message or analytics query
   video_concept: 3,             // media brief / gemini concept generation
-  video_low_res: 50,            // future: AI video low-res render
-  video_high_res: 150,          // future: AI video high-res render
+  video_script: 18,             // VSL/CPL script via GPT-4o (3k in + 4k out) → ~$0.115 → ~18 cr
+  video_storyboard: 12,         // Scene Director storyboard via Gemini (2k in + 3k out) → ~$0.075 → ~12 cr
+  video_low_res: 50,            // per-scene low-res clip (Runway/Kling) — preview approval gate
+  video_high_res: 150,          // per-scene HD final clip (Runway/Kling 1080p)
+  video_avatar: 80,             // HeyGen avatar talking-head per scene
+  video_voice_clone: 30,        // ElevenLabs voice clone creation (one-time per project)
 };
 
 // ─── Campaign Credit Estimates ────────────────────────────────────────────────
