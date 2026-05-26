@@ -71,118 +71,73 @@ export interface MediaBriefOutput {
 
 const MEDIA_BRIEF_PROMPT = `Você é o Agente de Briefing de Mídia da NexOS AI — especialista em direção de arte para lançamentos digitais.
 
-Você cria briefings visuais precisos que qualquer designer ou editor pode executar sem precisar de reuniões adicionais.
+Crie briefings visuais precisos que qualquer designer pode executar sem reuniões adicionais.
 
-## FILOSOFIA DO BRIEFING VISUAL
-
-**Um bom briefing visual tem:**
-1. Contexto de uso claro (onde vai, quando vai, para quem)
-2. Paleta de cores com códigos ou referências
-3. Mood/estilo com referências culturais ("pense no estilo de Instagram do @X")
-4. Instrução de composição precisa
-5. O que NÃO fazer — tão importante quanto o que fazer
-6. Tipografia e hierarquia visual
-
-**Tipos de conteúdo visual num lançamento:**
-- Thumbnails de vídeos (YT, VSL, Reels)
-- Posts de feed (carrossel, estático)
-- Stories (sequência narrativa)
-- Banners de anúncio (Meta, Google Display)
-- Capas de e-book/bônus
-- Background de lives e webinários
-- Imagens de página de vendas
-- Mockups de produto
-
-**Para vídeos:**
-- Vídeos de tráfego pago (Reels, TikTok Ads): estilo UGC, nativo, sem parecer anúncio
-- Vídeos de conteúdo orgânico: mais polido mas ainda humano
-- VSL: background simples, apresentador em destaque
-- Lives: identidade visual da marca, luz adequada
-
-## REGRA CRÍTICA DE APROVAÇÃO
-
-**TODO conceito de imagem ou vídeo exige aprovação do cliente antes da produção.**
-
-O fluxo é:
-1. Agente gera o conceito (este JSON)
-2. Sistema cria checkpoint de aprovação
-3. Cliente aprova ou rejeita com feedback
-4. Após aprovação: produção de low-res/preview
-5. Aprovação do preview
-6. Produção final em alta resolução
-
-**Retorne APENAS JSON válido** no formato exato abaixo.
+Retorne APENAS JSON válido no formato abaixo. Seja conciso: máximo 5 imageConcepts e 3 videoConcepts.
 
 \`\`\`json
 {
   "campaignTitle": "string",
   "brandIdentity": {
-    "primaryColors": ["string — hex ou descrição"],
-    "secondaryColors": ["string"],
-    "fontPrimary": "string — fonte principal (headlines)",
-    "fontSecondary": "string — fonte secundária (body)",
-    "logoPlacement": "string — onde e como posicionar o logo",
-    "overallAesthetic": "string — estética geral da campanha"
+    "primaryColors": ["#hex"],
+    "secondaryColors": ["#hex"],
+    "fontPrimary": "string",
+    "fontSecondary": "string",
+    "logoPlacement": "string",
+    "overallAesthetic": "string — 1 frase"
   },
   "imageConcepts": [
     {
-      "conceptId": "string — slug único (ex: thumbnail_vsl_principal)",
-      "title": "string — título descritivo",
-      "usageContext": "string — onde exatamente vai ser usada",
-      "phase": "string — fase da campanha",
-      "dayIndex": null,
+      "conceptId": "slug_unico",
+      "title": "string",
+      "usageContext": "string — onde e quando",
+      "phase": "pre_launch|launch|cart_open|cart_close",
+      "dayIndex": 0,
       "format": "square_1x1|portrait_4x5|landscape_16x9|story_9x16|banner|thumbnail",
-      "colorPalette": ["string"],
-      "mood": "string — descrição do mood/sentimento",
-      "visualElements": ["string — elementos específicos a incluir"],
-      "typography": "string — como usar a tipografia nesta imagem",
-      "textOverlay": "string ou null — texto exato que aparece na imagem",
-      "composition": "string — regra dos terços, centralizado, etc.",
-      "lightingStyle": "string — tipo de iluminação",
-      "references": "string — referências culturais ou de estilo",
-      "doNot": ["string — o que evitar absolutamente"],
-      "brandConsistency": "string — como garantir consistência com a identidade da marca",
+      "colorPalette": ["#hex"],
+      "mood": "string — 1 frase",
+      "visualElements": ["elemento 1", "elemento 2"],
+      "typography": "string",
+      "textOverlay": "texto exato ou null",
+      "composition": "string",
+      "lightingStyle": "string",
+      "references": "string",
+      "doNot": ["item 1"],
+      "brandConsistency": "string",
       "approvalRequired": true
     }
   ],
   "videoConcepts": [
     {
-      "conceptId": "string",
+      "conceptId": "slug_unico",
       "title": "string",
       "usageContext": "string",
       "phase": "string",
-      "dayIndex": null,
-      "duration": "string — ex: 15-30 segundos",
+      "dayIndex": 0,
+      "duration": "15-30s",
       "format": "reels|tiktok|youtube_short|youtube_long|stories|ad",
-      "hook": "string — os primeiros 2-3 segundos em detalhe",
-      "structure": "string — estrutura narrativa do vídeo",
-      "visualStyle": "string — estilo visual geral",
-      "colorGrading": "string — tom de cor/grading",
-      "music": "string — tipo de trilha/música",
-      "textAnimations": "string — como os textos aparecem na tela",
-      "transitions": "string — tipo de transições",
-      "callToAction": "string — como o CTA aparece visualmente",
+      "hook": "string — primeiros 3 segundos",
+      "structure": "string",
+      "visualStyle": "string",
+      "colorGrading": "string",
+      "music": "string",
+      "textAnimations": "string",
+      "transitions": "string",
+      "callToAction": "string",
       "references": "string",
-      "doNot": ["string"],
+      "doNot": ["item 1"],
       "approvalRequired": true
     }
   ],
   "productionPriority": [
-    {
-      "conceptId": "string",
-      "priority": "urgent|high|medium|low",
-      "deadline": "string — ex: antes do Dia 1 da campanha",
-      "reason": "string"
-    }
+    { "conceptId": "string", "priority": "urgent|high|medium|low", "deadline": "string", "reason": "string" }
   ],
   "approvalProcess": [
-    {
-      "step": 0,
-      "action": "string",
-      "responsible": "string"
-    }
+    { "step": 1, "action": "Revisar e aprovar conceitos", "responsible": "criador" },
+    { "step": 2, "action": "Produzir preview low-res", "responsible": "designer" },
+    { "step": 3, "action": "Aprovar e produzir final", "responsible": "criador + designer" }
   ],
-  "mediaBriefNotes": "string — observações críticas para o criador sobre a produção visual"
+  "mediaBriefNotes": "string — 2-3 observações críticas de produção"
 }
 \`\`\``;
 
@@ -209,35 +164,16 @@ export async function runMediaBriefAgent(
     messages: [
       {
         role: "user",
-        content: `Crie todos os briefings visuais para a campanha — imagens e vídeos com instruções precisas de produção.
+        content: `Crie os briefings visuais prioritários para o lançamento. Máximo 5 imagens + 3 vídeos.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")}
-**Estilo de conteúdo:** ${Array.isArray(intakeData["content.style"]) ? (intakeData["content.style"] as string[]).join(", ") : String(intakeData["content.style"] ?? "")}
 **Tom:** ${String(intakeData["content.tone"] ?? "")}
 ${brandContext}
 
-**Temas proibidos:** ${String(intakeData["content.forbiddenTopics"] ?? "nenhum")}
+Imagens obrigatórias (5): thumbnail VSL, hero da página de vendas, banner Meta feed, stories de abertura de carrinho, mockup do produto.
+Vídeos obrigatórios (3): reel de captura (pré-lançamento), reel de abertura de carrinho, TikTok ad nativo.
 
-**BRIEFINGS NECESSÁRIOS (mínimo):**
-
-Imagens:
-- Thumbnail do VSL (principal)
-- Cover do lead magnet / isca digital
-- Posts de feed para cada fase (mínimo 1 por fase)
-- Stories para abertura e fechamento de carrinho
-- Banners de anúncio Meta (feed + stories)
-- Imagem hero da página de vendas
-- Mockup do produto digital
-
-Vídeos:
-- Reels de captura (pré-lançamento, fase de aquecimento)
-- Reels de abertura de carrinho (o post mais importante)
-- TikTok Ad (nativo, UGC-style)
-- Histórias/Stories de countdown (últimas 24h)
-
-**LEMBRE:** Todo conceito gera checkpoint de aprovação obrigatória antes da produção.
-
-Retorne APENAS o JSON de todos os briefings.`,
+Retorne APENAS o JSON.`,
       },
     ],
     log,

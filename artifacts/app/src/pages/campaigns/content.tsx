@@ -1147,6 +1147,269 @@ interface WorkspaceIntegration {
   accountName?: string;
 }
 
+// ── Landing Page Preview Component ────────────────────────────────────────────
+
+interface LandingPageSection {
+  sectionId: string;
+  sectionName?: string;
+  order?: number;
+  purpose?: string;
+  layoutType?: string;
+  backgroundColor?: string;
+  headline: string;
+  subheadline?: string;
+  bodyContent?: string;
+  visualElements?: string[];
+  cta?: { text: string; color?: string; placement?: string };
+  socialProofElement?: string;
+  mobileNotes?: string;
+  conversionPrinciple?: string;
+  aboveTheFold?: boolean;
+}
+
+interface LandingPageData {
+  pageTitle?: string;
+  pageType?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  overallStructure?: string;
+  colorScheme?: { primary: string; secondary: string; accent: string; background: string; text: string };
+  typography?: { headline: string; body: string; cta: string };
+  aboveFoldAnalysis?: { headline: string; subheadline: string; primaryCTA: string; trustElements: string[] };
+  sections?: LandingPageSection[];
+  exitIntentPopup?: { headline: string; offer: string; cta: string };
+  urgencyMechanisms?: { type: string; placement: string; implementation: string }[];
+  landingPageNotes?: string;
+}
+
+function LandingPagePreview({
+  data, onApprove, onReject, isApproved, isRejected, loading,
+}: {
+  data: LandingPageData;
+  onApprove?: () => void;
+  onReject?: () => void;
+  isApproved?: boolean;
+  isRejected?: boolean;
+  loading?: boolean;
+}) {
+  const [expandedSection, setExpandedSection] = useState<number | null>(null);
+  const sections = data.sections ?? [];
+  const colorScheme = data.colorScheme;
+  const primary = colorScheme?.primary ?? "hsl(var(--primary))";
+  const aboveFold = data.aboveFoldAnalysis;
+
+  return (
+    <div className="space-y-4 max-w-4xl">
+      {/* Meta / Info */}
+      <div className="border border-border/50 bg-card/40 p-4 space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Página de Vendas Gerada pela IA</p>
+            <h2 className="font-mono font-bold text-base uppercase tracking-wide">{data.pageTitle ?? "Página de Vendas"}</h2>
+            <p className="font-mono text-xs text-muted-foreground/60 mt-0.5">{data.metaDescription}</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 border-primary/30 text-primary">{data.pageType ?? "sales_page"}</Badge>
+            <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 border-border/40 text-muted-foreground">{sections.length} seções</Badge>
+          </div>
+        </div>
+
+        {/* Color palette */}
+        {colorScheme && (
+          <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Paleta:</span>
+            {[colorScheme.primary, colorScheme.secondary, colorScheme.accent, colorScheme.background, colorScheme.text].filter(Boolean).map((color, i) => (
+              <div key={i} className="group relative">
+                <div className="w-6 h-6 border border-border/40 cursor-pointer" style={{ backgroundColor: color }} title={color} />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-1.5 py-0.5 bg-background border border-border/50 font-mono text-[9px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                  {color}
+                </div>
+              </div>
+            ))}
+            {data.typography && (
+              <span className="font-mono text-[10px] text-muted-foreground/50 ml-2">{data.typography.headline}</span>
+            )}
+          </div>
+        )}
+
+        {/* Approval bar */}
+        {(onApprove || onReject) && (
+          <div className="flex gap-2 pt-2 border-t border-border/30">
+            {!isApproved && !isRejected && (
+              <>
+                <Button size="sm" onClick={onApprove} disabled={loading} className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-xs bg-success/20 text-success border border-success/30 hover:bg-success/30">
+                  <CheckCircle2 className="h-3 w-3" />Aprovar Estrutura
+                </Button>
+                <Button size="sm" variant="ghost" onClick={onReject} disabled={loading} className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-8 px-3 text-xs text-muted-foreground hover:text-destructive">
+                  <XCircle className="h-3 w-3" />Rejeitar
+                </Button>
+              </>
+            )}
+            {isApproved && <span className="font-mono text-xs text-success flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5" />Estrutura aprovada</span>}
+            {isRejected && <span className="font-mono text-xs text-destructive flex items-center gap-1.5"><XCircle className="h-3.5 w-3.5" />Rejeitado</span>}
+          </div>
+        )}
+      </div>
+
+      {/* Above the fold */}
+      {aboveFold && (
+        <div className="border border-primary/20 bg-primary/5 p-0 overflow-hidden">
+          <div className="bg-primary/10 px-4 py-2 border-b border-primary/20 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+            <span className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">Above the Fold — Primeira Dobra</span>
+          </div>
+          <div className="p-5 space-y-3">
+            <div className="border-l-2 pl-4" style={{ borderColor: primary }}>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Headline Principal</p>
+              <p className="font-mono text-sm font-bold text-foreground leading-tight">{aboveFold.headline}</p>
+            </div>
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Sub-headline</p>
+              <p className="font-mono text-xs text-muted-foreground/80">{aboveFold.subheadline}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="border px-4 py-2 font-mono text-xs font-bold uppercase tracking-widest" style={{ borderColor: primary, color: primary, backgroundColor: `${primary}18` }}>
+                {aboveFold.primaryCTA}
+              </div>
+            </div>
+            {(aboveFold.trustElements ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {aboveFold.trustElements.map((t, i) => (
+                  <span key={i} className="font-mono text-[10px] text-muted-foreground/60 border border-border/30 px-2 py-0.5">✓ {t}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Sections wireframe */}
+      <div className="space-y-2">
+        <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Estrutura da Página — {sections.length} Seções</p>
+        {sections.map((section, i) => {
+          const isExpanded = expandedSection === i;
+          const isAboveFold = section.aboveTheFold;
+          return (
+            <div key={i} className={`border transition-colors ${isAboveFold ? "border-primary/30 bg-primary/3" : "border-border/40 bg-card/30"} hover:border-border/70`}>
+              {/* Section header */}
+              <button
+                onClick={() => setExpandedSection(isExpanded ? null : i)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left"
+              >
+                <div className={`w-6 h-6 border flex items-center justify-center shrink-0 font-mono text-[10px] font-bold ${isAboveFold ? "border-primary/40 text-primary" : "border-border/40 text-muted-foreground"}`}>
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold uppercase tracking-wide truncate">{section.headline}</span>
+                    {isAboveFold && <span className="font-mono text-[9px] text-primary border border-primary/30 px-1.5 py-0.5">FOLD</span>}
+                    {section.cta && <span className="font-mono text-[9px] text-green-400 border border-green-400/30 px-1.5 py-0.5">CTA</span>}
+                  </div>
+                  {section.purpose && !isExpanded && (
+                    <p className="font-mono text-[10px] text-muted-foreground/50 truncate mt-0.5">{section.purpose}</p>
+                  )}
+                </div>
+                {section.layoutType && (
+                  <span className="font-mono text-[9px] text-muted-foreground/40 border border-border/20 px-1.5 py-0.5 shrink-0 hidden sm:block">{section.layoutType}</span>
+                )}
+                <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground/30 shrink-0 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+              </button>
+
+              {/* Expanded detail */}
+              {isExpanded && (
+                <div className="px-4 pb-4 space-y-3 border-t border-border/30">
+                  {section.subheadline && (
+                    <div className="pt-3">
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Sub-headline</p>
+                      <p className="font-mono text-xs text-muted-foreground/80 italic">"{section.subheadline}"</p>
+                    </div>
+                  )}
+                  {section.bodyContent && (
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Copy do Corpo</p>
+                      <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed whitespace-pre-wrap">{section.bodyContent}</p>
+                    </div>
+                  )}
+                  {section.purpose && (
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Objetivo da Seção</p>
+                      <p className="font-mono text-xs text-muted-foreground/70">{section.purpose}</p>
+                    </div>
+                  )}
+                  {section.conversionPrinciple && (
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Princípio de Conversão</p>
+                      <p className="font-mono text-xs text-primary/80">{section.conversionPrinciple}</p>
+                    </div>
+                  )}
+                  {section.visualElements && section.visualElements.length > 0 && (
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Elementos Visuais</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {section.visualElements.map((el, j) => (
+                          <span key={j} className="font-mono text-[10px] border border-border/30 bg-muted/10 px-2 py-0.5 text-muted-foreground/70">{el}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {section.cta && (
+                    <div className="border border-green-400/20 bg-green-400/5 p-3">
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-green-400/70 mb-1.5">CTA desta Seção</p>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-green-400 border border-green-400/40 px-3 py-1.5">{section.cta.text}</span>
+                        {section.cta.placement && <span className="font-mono text-[10px] text-muted-foreground/50">Posição: {section.cta.placement}</span>}
+                      </div>
+                    </div>
+                  )}
+                  {section.socialProofElement && (
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Prova Social</p>
+                      <p className="font-mono text-xs text-muted-foreground/70">{section.socialProofElement}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Exit Intent */}
+      {data.exitIntentPopup && (
+        <div className="border border-border/40 bg-card/30 p-4">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Pop-up de Saída</p>
+          <p className="font-mono text-xs font-bold">{data.exitIntentPopup.headline}</p>
+          <p className="font-mono text-xs text-muted-foreground/60 mt-0.5">{data.exitIntentPopup.offer}</p>
+          <span className="font-mono text-[10px] text-primary border border-primary/30 px-2 py-0.5 inline-block mt-1.5">{data.exitIntentPopup.cta}</span>
+        </div>
+      )}
+
+      {/* Urgency */}
+      {data.urgencyMechanisms && data.urgencyMechanisms.length > 0 && (
+        <div className="border border-border/40 bg-card/30 p-4">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Mecanismos de Urgência</p>
+          <div className="space-y-2">
+            {data.urgencyMechanisms.map((m, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="font-mono text-[9px] text-yellow-400 border border-yellow-400/30 px-1.5 py-0.5 shrink-0 mt-0.5">{m.type}</span>
+                <span className="font-mono text-xs text-muted-foreground/70">{m.implementation}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {data.landingPageNotes && (
+        <div className="border border-border/30 bg-muted/5 px-4 py-3">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Notas do Agente de CRO</p>
+          <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{data.landingPageNotes}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SocialLaunchGate({
   activePlatforms,
   onLaunch,
@@ -1344,7 +1607,7 @@ function SocialLaunchGate({
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
-type Tab = "platform" | "preview" | "flowchart" | "schedule" | "segmentation";
+type Tab = "platform" | "preview" | "flowchart" | "schedule" | "segmentation" | "landing";
 
 const VISUAL_PLATFORMS: Platform[] = ["instagram", "facebook", "tiktok"];
 
@@ -1647,12 +1910,17 @@ export default function ContentApproval() {
     );
   }
 
-  const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+  // Raw landing page piece from API (not flattened into ContentPiece children)
+  const rawLandingPiece = apiContentData?.pieces?.find(p => p.type === "landing_page_structure");
+  const landingPageData = rawLandingPiece?.content as LandingPageData | undefined;
+
+  const TABS: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: "flowchart",    label: "Fluxograma",      icon: Activity },
     { id: "preview",      label: "Preview Visual",  icon: Eye },
     { id: "platform",     label: "Por Plataforma",  icon: Globe },
     { id: "schedule",     label: "Cronograma",      icon: Calendar },
     { id: "segmentation", label: "Segmentação",     icon: Users },
+    ...(landingPageData ? [{ id: "landing" as Tab, label: "Landing Page", icon: Globe, badge: "LP" }] : []),
   ];
 
   // Build cinema pieces from current pieces
@@ -1789,10 +2057,15 @@ export default function ContentApproval() {
             const Icon = tab.icon;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap flex-1 justify-center
+                className={`relative flex items-center gap-1.5 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-mono uppercase tracking-widest transition-all whitespace-nowrap flex-1 justify-center
                   ${activeTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}>
                 <Icon className="h-3 w-3 shrink-0" />
                 <span className="hidden sm:inline">{tab.label}</span>
+                {tab.badge && (
+                  <span className={`ml-0.5 font-mono text-[8px] px-1 py-0.5 border ${activeTab === tab.id ? "border-primary-foreground/40 text-primary-foreground/80" : "border-primary/40 text-primary"}`}>
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -2008,6 +2281,37 @@ export default function ContentApproval() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Landing Page Tab ── */}
+        {activeTab === "landing" && (
+          <div>
+            {landingPageData ? (
+              <LandingPagePreview
+                data={landingPageData}
+                onApprove={rawLandingPiece ? () => void handleApprove(rawLandingPiece.id) : undefined}
+                onReject={rawLandingPiece ? async () => {
+                  setLoadingPiece(rawLandingPiece.id);
+                  try {
+                    await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${rawLandingPiece.id}/reject`, {
+                      method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ reason: "Estrutura rejeitada — gerar nova versão" }),
+                    });
+                    await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+                    toast.success("Estrutura da landing page rejeitada.");
+                  } catch { toast.error("Erro ao rejeitar"); }
+                  finally { setLoadingPiece(null); }
+                } : undefined}
+                isApproved={rawLandingPiece?.status === "approved"}
+                isRejected={rawLandingPiece?.status === "rejected"}
+                loading={loadingPiece === rawLandingPiece?.id}
+              />
+            ) : (
+              <div className="text-center py-20 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
+                Landing page ainda não gerada
+              </div>
+            )}
           </div>
         )}
 
