@@ -23,3 +23,9 @@ id = "Am3AKOGMz4EZf6QdTqhBd"
 uri = "file://artifacts/app/public/nexos_ai_logo_1024x1024.png"
 type = "image"
 title = "NexOS AI — Logo 1024x1024 PNG (sem distorção)"
+
+[[outputs]]
+id = "8ocnlupuZgEt6LFPfXcxR"
+uri = "file://scripts/nexos-audit-report.pdf"
+type = "pdf"
+title = "NEXOS AI — Relatório de Auditoria Estrutural"

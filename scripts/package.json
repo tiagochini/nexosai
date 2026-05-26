@@ -19,11 +19,14 @@
     "stress-full-critico": "DIFFICULTY=critico tsx ./src/stress-test/nexos-stress-full.ts",
     "stress-full-extreme": "EXTREME_ONLY=true tsx ./src/stress-test/nexos-stress-full.ts",
     "stress-full-all": "ALL=true tsx ./src/stress-test/nexos-stress-full.ts",
+    "generate-audit-pdf": "tsx ./src/generate-audit-pdf.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@types/pdfkit": "^0.17.6",
     "@workspace/db": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "pdfkit": "^0.18.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
