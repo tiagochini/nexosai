@@ -74,7 +74,11 @@ export type AgentRole =
   | "sales_objection"
   | "sales_consultant"
   // ── DOMINO CORE ──────────────────────────────────────────────────────────
-  | "domino";
+  | "domino"
+  // ── Validação, Onboarding & Lançamento Semente ────────────────────────────
+  | "buyer_onboarding"
+  | "semente_launch"
+  | "product_validator";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -157,6 +161,10 @@ const AGENT_PROVIDER_MAP: Record<
   sales_consultant: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   // ── DOMINO CORE ──────────────────────────────────────────────────────────
   domino:           { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Validação, Onboarding & Lançamento Semente ────────────────────────────
+  buyer_onboarding:   { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  semente_launch:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  product_validator:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

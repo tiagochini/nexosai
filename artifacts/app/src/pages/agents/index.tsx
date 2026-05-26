@@ -434,9 +434,34 @@ const AGENTS: AgentDef[] = [
     specialties: ["Produto", "Técnico", "Comercial", "Consultoria"],
     isNew: true,
   },
+  // ── Lançamento & Validação ─────────────────────────────────────────────────
+  {
+    role: "product_validator", name: "Diogenes", tagline: "Validador de Produto",
+    description: "O analista mais honesto do ecossistema. Avalia viabilidade real de produto digital: promessa, mercado, avatar, diferenciação e fit score — com veredito GO/NO_GO e próximo passo concreto.",
+    category: "Lançamento", provider: "Claude", icon: Target,
+    accent: "border-violet-500/40 hover:border-violet-500",
+    specialties: ["Fit Score", "Mercado", "Diferenciação", "Viabilidade"],
+    isNew: true,
+  },
+  {
+    role: "semente_launch", name: "Semeador", tagline: "Especialista em Lançamento Semente",
+    description: "Estrutura o lançamento semente completo: validação pré-produto, PLC, oferta de fundador, lives de vendas e turma beta. Venda antes de criar, valide com dinheiro real.",
+    category: "Lançamento", provider: "Claude", icon: Sparkles,
+    accent: "border-violet-500/40 hover:border-violet-500",
+    specialties: ["PLF", "PLC", "Semente", "Early Adopter"],
+    isNew: true,
+  },
+  {
+    role: "buyer_onboarding", name: "Acolhe", tagline: "Especialista em Onboarding",
+    description: "Transforma os primeiros 7 dias do comprador em retenção, fidelidade e indicação. Quick win no dia 1, comunidade no dia 2-3, NPS no dia 6, convite de referral no dia 7. Zero chargeback.",
+    category: "Lançamento", provider: "Claude", icon: Flame,
+    accent: "border-violet-500/40 hover:border-violet-500",
+    specialties: ["Retenção", "Quick Win", "Chargeback", "Referral"],
+    isNew: true,
+  },
 ];
 
-const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação", "Mentalidade", "Vendas"];
+const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo", "Analytics", "Automação", "Mentalidade", "Vendas", "Lançamento"];
 
 const PROVIDER_COLOR: Record<string, string> = {
   "Claude":  "text-orange-400 border-orange-400/30 bg-orange-400/8",

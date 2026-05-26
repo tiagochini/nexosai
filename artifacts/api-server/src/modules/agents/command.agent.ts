@@ -276,7 +276,10 @@ export async function orchestrateCampaign(
     timestamp: new Date().toISOString(),
   });
 
-  await transitionCampaign(campaignId, workspaceId, "analyzing", "command agent activated — orchestration started", log);
+  // Only transition if not already in analyzing (intake finalize already sets analyzing)
+  if (campaign.status !== "analyzing") {
+    await transitionCampaign(campaignId, workspaceId, "analyzing", "command agent activated — orchestration started", log);
+  }
 
   await db.insert(auditLogsTable).values({
     workspaceId,

@@ -1333,6 +1333,7 @@ D+5   →  Fechar carrinho → pausar Display, manter Search branded
             type: "text",
             keyPoints: ["O calendário exato de 21 dias com ação por dia", "O que postar/enviar em cada fase — com copy real", "A anatomia de um PLC que converte 3-8% da lista", "Por que 60-70% das vendas ocorrem nas últimas 24h e como usar isso"],
             exercise: "Preencha seu calendário PLF: Escolha uma data de abertura de carrinho. Conte 21 dias para trás — esse é seu D-21. Abra uma planilha e preencha cada linha com: Data | Fase | Canal | Ação | Copy (use os modelos desta aula). Até o fim desta aula você terá seu plano de lançamento completo.",
+            bibliographyRefs: ["launch-walker", "presuasion-cialdini", "dotcom-brunson", "influence-cialdini"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">A PLF (Product Launch Formula) de Jeff Walker gerou mais de US$1 bilhão em vendas. Esta aula entrega o calendário de 21 dias executável — ação por dia, copy real, com o mecanismo psicológico por trás de cada fase e a anatomia de copy que converte 3-8% da lista.</p>
@@ -1631,6 +1632,7 @@ Ensine 3-5 conceitos/táticas genuinamente úteis. Não retenha o melhor — ent
             type: "text",
             keyPoints: ["A copy completa de uma landing page de lista VIP — pronta para adaptar", "Os 7 emails da sequência pré-lançamento com assuntos e corpo real", "Como escolher o lead magnet certo para seu nicho (com exemplos)", "WhatsApp + Instagram: scripts de captação para cada canal"],
             exercise: "Escreva hoje o copy da sua landing page de lista VIP usando o template desta aula. Preencha as lacunas com informações do seu produto e nicho. Meta: página no ar em 48h. Copie a estrutura exatamente — não tente inventar agora. Melhore depois, com dados.",
+            bibliographyRefs: ["launch-walker", "expert-secrets-brunson", "dotcom-brunson", "story-brand-miller"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">Redes sociais emprestam audiência. Lista é propriedade. Esta aula entrega o template completo de landing page VIP, os 7 emails da sequência pré-lançamento com copy real, e a estratégia de lead magnet que maximiza taxa de conversão por tipo de produto.</p>
@@ -1859,6 +1861,7 @@ Conversão 3-7x maior que leads frios
               "Escassez sem justificativa logística real destrói credibilidade de forma irreversível"
             ],
             exercise: "Escreva 3 versões do seu parágrafo de apresentação: uma usando apenas títulos acadêmicos, uma usando resultados numéricos específicos, e uma usando método próprio + números. Mostre as 3 para alguém do seu nicho e pergunte qual parece mais confiável. A resposta vai reconfigurar como você se apresenta.",
+            bibliographyRefs: ["influence-cialdini", "thinking-kahneman", "irrational-ariely", "contagious-berger"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">Autoridade, Prova Social e Escassez são os três gatilhos de credibilidade que fundamentam toda relação comercial. Sem esses três operando em conjunto, os outros gatilhos não têm onde se apoiar. Esta aula entrega a anatomia precisa de como ativá-los com exemplos de copy reais — e o erro que anula cada um.</p>
@@ -2027,6 +2030,7 @@ A escassez mais crível raramente é sobre número de vagas — é sobre condiç
               "Comunidade vende identidade e status, não conteúdo — quem compra quer pertencer a um grupo específico de pessoas"
             ],
             exercise: "Mapeie os últimos 30 dias de conteúdo que você publicou. Quanto do que você entregou gratuitamente tem valor real de mercado (algo que você poderia cobrar)? Agora escreva um parágrafo de reciprocidade que referencia especificamente esse conteúdo — não 'tenho dado muito' mas 'no vídeo de terça entreguei X que resolvia Y'. A especificidade é o que converte débito em decisão.",
+            bibliographyRefs: ["influence-cialdini", "influence-new-cialdini", "made-stick-heath", "presuasion-cialdini"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0;line-height:1.6">Cada gatilho deste bloco é desmontado em três camadas: <strong>(A) o mecanismo psicológico profundo</strong>, <strong>(B) como construir esse estado</strong> — a engenharia em passos, e <strong>(C) a anatomia do copy em ação</strong> com cada frase anotada. Mais o erro fatal que anula o gatilho mesmo quando tudo mais está certo.</p>
@@ -2181,6 +2185,7 @@ Os depoimentos mais poderosos para comunidade não são sobre o que a pessoa apr
               "Medo de Perda (Kahneman): a perda pesa 2,5x mais que o ganho equivalente — mostrar o custo de NÃO comprar converte mais que mostrar o benefício de comprar"
             ],
             exercise: "Escreva dois parágrafos sobre o seu produto: no primeiro, descreva o que o aluno vai aprender (benefícios diretos). No segundo, descreva quem o aluno vai se tornar depois de 90 dias usando o método. Compare os dois em termos de apelo emocional. O segundo parágrafo é o gatilho de Transformação — use-o como abertura da sua página de vendas e o primeiro como detalhe de módulos.",
+            bibliographyRefs: ["influence-cialdini", "irrational-ariely", "thinking-kahneman", "hooked-eyal"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0;line-height:1.6">Os gatilhos de Desejo operam na camada mais profunda do processo de compra — antecipação, transformação e medo de perda. Cada um é desmontado em (A) mecanismo psicológico, (B) como engenheirar esse estado, (C) copy anotado. Mais o erro fatal que torna o gatilho contraproducente.</p>
@@ -2336,6 +2341,7 @@ Enquanto você avalia, o tempo passa. Audiência que poderia ser sua está sendo
               "Contraste funciona pela âncora de referência: qualquer preço parece razoável quando comparado ao custo da alternativa real"
             ],
             exercise: "Escolha um elemento do seu lançamento (bônus, live, sessão de Q&A) e reescreva sua descrição usando o frame de Evento em vez de feature: adicione data e horário específico, o que só acontece nesse momento, e o que a pessoa perde se não estiver presente. Compare com a versão original. O delta de urgência que você vai sentir na leitura é exatamente o que sua audiência vai sentir.",
+            bibliographyRefs: ["influence-new-cialdini", "influence-cialdini", "made-stick-heath", "contagious-berger"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0;line-height:1.6">O bloco de Ação fecha o sistema: Curiosidade, Evento e Contraste precipitam a decisão final. Cada gatilho é desmontado em (A) mecanismo psicológico, (B) engenharia de ativação, (C) copy anotado. Ao final: o mapa completo de 12 gatilhos por fase de lançamento.</p>
@@ -2536,6 +2542,7 @@ Duas ou três perspectivas de contraste (custo da alternativa + custo do problem
             type: "text",
             keyPoints: ["AIDA, PAS e PASTOR aplicados com exemplos reais — não só a teoria", "8 fórmulas de headline com variações prontas para cada nicho", "O exercício de reescrita que treina o olho para copy que converte"],
             exercise: "Pegue um post ou email que você escreveu recentemente. Identifique qual fórmula (AIDA, PAS ou PASTOR) ele usa — ou se não usa nenhuma. Reescreva o mesmo conteúdo usando PAS. Compare os dois: qual tem mais urgência? Qual faz a dor parecer mais real? Esse exercício, feito 30 vezes, forma o olho de copywriter.",
+            bibliographyRefs: ["breakthrough-schwartz", "ogilvy-advertising", "confessions-ogilvy", "scientific-hopkins", "positioning-ries"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">Copywriting é a habilidade isolada com maior ROI no marketing digital. Esta aula entrega as fórmulas estruturais (AIDA, PAS, PASTOR) com exemplos reais de alto desempenho, 8 frameworks de headline prontos para adaptação, e a anatomia de copy anotada linha por linha.</p>
@@ -2689,6 +2696,7 @@ E daí? → "Você vai ter previsibilidade de receita que não depende de um ún
             type: "text",
             keyPoints: ["Os primeiros 5 minutos de VSL escritos — adapte ao seu produto", "A transição exata do conteúdo para o pitch sem parecer forçado", "Erros que fazem visitantes abandonar antes da oferta"],
             exercise: "Use o roteiro desta aula para escrever os primeiros 3 minutos da sua VSL. Não grave ainda — só escreva. Leia em voz alta e cronometre. Se demorar mais de 3:30 para chegar na 'promessa de resultado', corte. O visitante não espera. Grave o hook (primeiros 30s) e assista. Você scrollaria?",
+            bibliographyRefs: ["boron-letters-halbert", "ultimate-letter-kennedy", "ogilvy-advertising", "story-brand-miller", "breakthrough-schwartz"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">A VSL é o elemento de maior alavancagem em qualquer funil acima de R$800. Esta aula entrega o roteiro dos primeiros 5 minutos com copy real adaptável, a estrutura completa de 15 blocos com timing, e a transição conteúdo→pitch que a maioria erra e que determina 60% da conversão.</p>
@@ -2845,6 +2853,7 @@ E daí? → "Você vai ter previsibilidade de receita que não depende de um ún
             type: "text",
             keyPoints: ["Copy completo de oferta de fundador — email + WhatsApp prontos para adaptar", "A fórmula de precificação do semente: como calcular o preço de fundador certo", "Timeline de 60 dias do semente ao lançamento completo"],
             exercise: "Defina agora a ideia do seu semente em 3 frases: (1) Para quem é, (2) Qual resultado entrega, (3) Em quanto tempo. Depois calcule: qual seria o preço cheio? Multiplique por 0,5 — esse é seu preço de fundador inicial. Com essas 4 informações, você consegue escrever o email de oferta usando o template desta aula.",
+            bibliographyRefs: ["launch-walker", "war-of-art-pressfield", "expert-secrets-brunson"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">O Semente valida demanda antes de existir o produto. Esta aula entrega o copy completo de oferta de fundador, a fórmula de precificação, e o timeline de 60 dias do semente ao lançamento completo — com scripts reais prontos para adaptar.</p>
@@ -2978,6 +2987,7 @@ Você topa? Se sim, te mando o link agora."
             type: "text",
             keyPoints: ["A sequência de 7 emails do funil perpétuo — assuntos e copy pronto", "As métricas que indicam se o funil está saudável ou sangrando budget", "Como montar o webinar evergreen que converte: estrutura minuto a minuto"],
             exercise: "Escreva o assunto + primeiras 3 linhas dos 7 emails do seu funil perpétuo usando os templates desta aula. Não precisa ser perfeito — escreva uma versão rascunho de cada um. O objetivo é ter a estrutura da sequência antes de qualquer configuração técnica. Isso deve tomar 90 minutos.",
+            bibliographyRefs: ["dotcom-brunson", "expert-secrets-brunson", "hooked-eyal", "way-up-abraham"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">O Perpétuo é receita previsível — mas um funil mal construído queima budget sem retorno. Esta aula entrega a estrutura dos 4 pilares, a sequência completa de 7 emails com copy real, e as métricas que indicam se o funil está saudável ou sangrando.</p>
@@ -3269,6 +3279,7 @@ Se fizer sentido, podemos agendar uma call de 30 minutos para alinhar detalhes.<
             type: "text",
             keyPoints: ["O post de afiliado avançado — com bônus exclusivo — copy pronto para adaptar", "Scorecard para escolher produto certo: 5 critérios com peso", "Como fazer R$10k+ em comissões com uma lista de menos de 1.000 pessoas"],
             exercise: "Escolha agora 1 produto do seu nicho que você genuinamente acredita — um que você usaria ou já usou. Calcule: se você vender 10 unidades, qual é sua comissão total? O que você poderia criar como bônus exclusivo (template, checklist, sessão, mini-curso) que diferenciaria sua promoção? Escreva o primeiro rascunho do post de promoção usando o template desta aula.",
+            bibliographyRefs: ["way-up-abraham", "dotcom-brunson", "influence-cialdini"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">Afiliado avançado não é quem tem o maior link — é quem cria o contexto que torna a compra inevitável. Esta aula entrega o scorecard de seleção de produto, a estratégia de bônus exclusivo que diferencia, e o copy de post que converte sem parecer publicidade.</p>
@@ -3480,6 +3491,7 @@ Não → afiliado enquanto produz</p>
             type: "text",
             keyPoints: ["Planilha de mapeamento da escada de valor — preencha durante a aula", "Como calcular o LTV de cada degrau e usar para definir budget de aquisição", "Os 3 erros mais comuns na escada que fazem a maioria dos produtores parar no degrau 2"],
             exercise: "Preencha agora os 5 degraus da sua escada de valor. Para cada degrau: (1) qual é o produto ou oferta, (2) qual é o preço, (3) qual problema específico ele resolve. Se algum degrau está vazio, esse é seu próximo produto a criar. Não é necessário ter todos os 5 — mas você precisa ter pelo menos os degraus 1, 2 e 3 mapeados.",
+            bibliographyRefs: ["dotcom-brunson", "way-up-abraham", "irrational-ariely", "blue-ocean-kim"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">A escada de valor é a arquitetura que transforma um produto em um negócio escalável. Vender para quem já comprou custa 5-7x menos que adquirir cliente novo. Esta aula entrega a planilha de mapeamento dos 5 degraus, o cálculo de LTV por degrau, e os 3 erros que travam a maioria nos degraus iniciais.</p>
@@ -3600,6 +3612,7 @@ Identifique o degrau que está faltando ou vazio — esse é seu próximo produt
             type: "text",
             keyPoints: ["Copy de order bump pronto para usar no checkout — com taxa de aceitação esperada", "A regra dos 3 segundos do upsell: o que dizer logo depois da confirmação de compra", "Como calcular o impacto de cada elemento no seu faturamento total"],
             exercise: "Calcule o impacto do order bump no seu próximo lançamento. Se você tem meta de 50 vendas a R$997, e adicionar um order bump de R$197 com 30% de aceitação: isso adiciona R$2.955 sem um único novo cliente. Descreva em 3 linhas qual seria o produto de order bump ideal para o seu produto principal — algo que complementa e entrega resultado rápido.",
+            bibliographyRefs: ["dotcom-brunson", "irrational-ariely", "way-up-abraham", "innovators-dilemma"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">Upsell, downsell e order bump aumentam receita 40-80% sem um único cliente adicional. Esta aula entrega o copy de order bump pronto para usar, a regra dos 3 segundos do upsell pós-compra, e o cálculo do impacto financeiro de cada elemento no faturamento total.</p>

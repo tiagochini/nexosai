@@ -42,6 +42,15 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "launch_sequence_builder",
   "continuous_sales_manager",
   "whatsapp_response",
+  "execution_governor",
+  "buyer_onboarding",
+  "semente_launch",
+  "product_validator",
+  "sales_warmer",
+  "sales_desire",
+  "sales_closer",
+  "sales_objection",
+  "sales_consultant",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [
