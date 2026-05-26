@@ -20,7 +20,7 @@ import {
 } from "../realtime/realtime.service.js";
 import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
-import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC } from "./domino-core.js";
+import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY } from "./domino-core.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -64,6 +64,29 @@ const CHECKPOINT_TYPE_MAP: Record<string, string> = {
  * pensamento sistêmico e ética operacional.
  */
 const NEXOS_MASTER_EVOLUTION_PROMPT = `## NEXOS AI — PROTOCOLO DE OPERAÇÃO ESTRATÉGICA
+
+## FÓRMULA DE LANÇAMENTO / PLF — ARQUITETURA SOBERANA
+
+Você opera dentro da Fórmula de Lançamento (Érico Rocha) + Product Launch Formula (Jeff Walker).
+Essa é a ARQUITETURA-MÃE de toda operação da NEXOS AI.
+
+TODA literatura, framework e técnica existe para fortalecer uma etapa específica do lançamento.
+Nenhum framework cria estrutura paralela ao PLF. Todos servem ao PLF.
+
+Antes de qualquer output estratégico, identifique:
+→ Qual etapa PLF está sendo servida?
+→ Qual objetivo psicológico dessa etapa?
+→ Qual literatura é mais eficaz para ESTA etapa específica?
+
+Hierarquia de governança:
+NÍVEL 0: Fórmula de Lançamento / PLF (governa tudo)
+NÍVEL 1: Estratégia (Schwartz, Hormozi, Miller, Sutherland, Jay Abraham)
+NÍVEL 2: Psicologia (Kahneman, Cialdini, Zaltman, Voss, Miner, Shotton)
+NÍVEL 3: Copy/VSL/Criativos (Sugarman, Halbert, Bencivenga, Hauge, Albuquerque)
+NÍVEL 4: Vendas com Impacto (Belfort, Keenan, Challenger, SPIN)
+NÍVEL 5: UX/Conversão (Gardner, Laja, Fogg, Yablonski, Berger)
+
+---
 
 Você faz parte do sistema operacional estratégico da NEXOS AI.
 
@@ -240,13 +263,15 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     : "";
   // Universal injection order:
   // 1. Temporal context (date awareness)
-  // 2. DOMINO CORE (philosophical persuasion engine — governs ALL communication)
-  // 3. NEXOS Master Evolution Prompt (quality criteria, anti-hallucination, ethics)
-  // 4. Campaign Memory Layer (workspace-specific context)
-  // 5. Agent-specific system prompt (role expertise)
-  // 6. DOMINO Self-Critic (mandatory pre-output review checklist)
+  // 2. PLF SUPREMACY (Fórmula de Lançamento governa toda a arquitetura — NÍVEL 0)
+  // 3. DOMINO CORE (philosophical persuasion engine — governs ALL communication)
+  // 4. NEXOS Master Evolution Prompt (quality criteria, anti-hallucination, ethics)
+  // 5. Campaign Memory Layer (workspace-specific context)
+  // 6. Agent-specific system prompt (role expertise)
+  // 7. DOMINO Self-Critic (mandatory pre-output review checklist)
   const enrichedSystemPrompt =
     buildTemporalContextBlock() +
+    DOMINO_PLF_SUPREMACY +
     DOMINO_CORE_PREAMBLE +
     NEXOS_MASTER_EVOLUTION_PROMPT +
     memoryBlock +

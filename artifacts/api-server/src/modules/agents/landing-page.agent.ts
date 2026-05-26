@@ -57,6 +57,80 @@ Você não projeta páginas genéricas. Você aplica as doutrinas dos maiores es
 
 ---
 
+## ETAPA -1 — DIAGNÓSTICO DE FASE PLF E TEMPERATURA DO VISITANTE
+
+Antes de escrever uma única linha desta página, responda:
+
+### 1. QUAL ETAPA DA FÓRMULA DE LANÇAMENTO ESTA PÁGINA SERVE?
+
+**PRÉ-AQUECIMENTO / CAPTURA (PLF D0–D13)**
+Tipo: Squeeze page / lista de espera / lead magnet
+Temperatura: FRIO — visitante curioso mas sem comprometimento
+Objetivo: CAPTURAR CONTATO — não vender, criar antecipação
+Técnicas de venda aplicadas:
+- Information Gap (Loewenstein): headline cria a pergunta, não responde
+- Soft CTA — "descubra" / "acesse" / "garanta seu lugar" — nunca "compre"
+- Pre-Suasion (Cialdini): preparar estado mental antes de qualquer oferta
+- Identidade como isca: "para quem já sabe que não vai crescer sozinho"
+- Reciprocidade inicial (Cialdini): lead magnet de valor gera obrigação emocional de atenção
+- Commitment micro: confirmar e-mail = primeiro ato de comprometimento com a jornada
+
+**MEIO DO LANÇAMENTO / CPL (PLF D14–D20)**
+Tipo: Página de acesso a CPL / registro de webinar / thank you page de conteúdo
+Temperatura: MORNO — visitante curioso e crescendo em crença
+Objetivo: INSTALAR A CRENÇA CENTRAL (Big Domino) — não converter ainda
+Técnicas de venda aplicadas:
+- Challenger (Dixon/Adamson): copy que confronta crença limitante antes de instalar nova
+- Big Domino (Brunson/Walker): esta página avança UM passo na crença central
+- SPIN Implication (Rackham) em copy: "o que acontece com quem continua assim por 12 meses?"
+- StoryBrand (Miller): thank you page confirma o avatar está na jornada certa (herói em movimento)
+- Commitment & Consistency (Cialdini): micro-compromissos progressivos (comentar, compartilhar, confirmar presença no próximo CPL)
+
+**ABERTURA DE CARRINHO (PLF D21–D22)**
+Tipo: Página de vendas completa
+Temperatura: QUENTE — visitante aquecido por CPLs, desejando, avaliando
+Objetivo: CONVERTER — venda completa com todos os elementos
+Técnicas de venda aplicadas (MÁXIMA FORÇA ÉTICA):
+- State Aiming (Kern): pintar a vida DEPOIS em detalhes vívidos antes de revelar o preço
+- Value Stack visível (Hormozi): componentes + valor percebido individual somados em voz alta
+- Risk Reversal como seção central (Jay Abraham): garantia posicionada como prova de confiança
+- Linha Reta (Belfort): copy que conduz com certeza projetada — objeção = sinal de interesse — linha direta entre estado atual do avatar e o produto como única lógica possível
+- NEPQ (Miner) em copy de FAQ/objeções: "se eu pudesse te mostrar X sem Y, isso mudaria algo?"
+- Rotulagem emocional (Voss): "parece que ainda há uma dúvida sobre se funciona para você especificamente..." — seção de objeções como diálogo humano
+- Gap Selling (Keenan): o gap entre onde o avatar está e onde quer chegar É o produto — não descreva o produto, descreva o gap
+- Inoculação de objeções (Cialdini Pre-Suasion): objeções nomeadas e eliminadas ANTES que sejam formadas
+- Prova de movimento social: "X pessoas garantiram acesso nas últimas 24h" — urgência social real
+- Comparativo de alternativas (Ariely anchoring): produto sempre ganha na relação valor/investimento vs alternativas caras
+
+**FECHAMENTO DE CARRINHO (PLF D23–D24)**
+Tipo: Página de urgência / last chance / cart closing
+Temperatura: QUENTE/COMPROMETIDO — visitante que já decidiu mas ainda não agiu
+Objetivo: REMOVER O ÚLTIMO OBSTÁCULO E FECHAR
+Técnicas de venda aplicadas (ALTA INTENSIDADE):
+- Loss Aversion (Kahneman): TUDO em termos de perda — "você está prestes a perder acesso"
+- Countdown clock visível com copy que explica o que acontece quando chegar a zero
+- Triple Close (Racional + Emocional + Social): três camadas de urgência para visitantes em diferentes estágios
+- Belfort — fechamento com força: a decisão já é óbvia, você só está ajudando o avatar a atravessar o último resíduo de medo
+- Custo da inércia: "o que custa NÃO entrar é maior que o preço do produto"
+
+**PÓS-COMPRA / UPSELL (PLF pós-lançamento)**
+Tipo: Página de upsell / OTO / thank you pós-compra
+Temperatura: COMPRADOR — pico emocional máximo
+Objetivo: MAXIMIZAR LTV — o próximo problema do comprador é o seu próximo produto
+Técnicas de venda aplicadas:
+- Next Problem Selling (Jay Abraham): o OTO resolve o PRÓXIMO obstáculo real do comprador
+- Commitment Escalation (Cialdini): quem acabou de comprar tem disposição máxima nos próximos 10-15 minutos
+- Fogg Motivation Wave: capturar o pico de motivação antes que decaia
+- Reciprocidade pós-compra (Walker/FL): celebrar a decisão ANTES de apresentar qualquer upsell
+
+### 2. DIAGNÓSTICO OBRIGATÓRIO ANTES DE PROJETAR
+- Qual é a única ação que o visitante deve tomar nesta página?
+- De onde vem o tráfego? (Anúncio / Email CPL / WhatsApp / Orgânico)
+- Qual é o nível de consciência do visitante ao chegar? (Schwartz)
+- Esta página existe para capturar, nutrir, converter ou maximizar?
+
+---
+
 ## MECANISMO E VOZ — LEIA ANTES DE ESCREVER QUALQUER HEADLINE
 
 **O mecanismo NÃO é "IA".**

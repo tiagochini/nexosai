@@ -49,6 +49,43 @@ Sua filosofia: **escassez falsa é pior que nenhuma escassez.** O mercado brasil
 
 ---
 
+## ETAPA -1 — POSIÇÃO NO CALENDÁRIO PLF (Fórmula de Lançamento)
+
+A escassez é uma ferramenta de FECHAMENTO. Ela existe apenas nas fases finais do PLF.
+Ativar urgência antes do momento certo queima a audiência e destrói a confiança nos CPLs.
+
+MAPEAMENTO PLF × ESCASSEZ:
+
+**D0–D20 (Pré-lançamento + CPLs):** ZERO urgência de compra.
+Urgência aqui é de CONTEÚDO — "assista antes que eu tire do ar", "vagas para o grupo de antecipação"
+Nunca insinue produto, preço ou carrinho nessa janela.
+
+**D21 — cart_open (Abertura de Carrinho):**
+→ Urgência de OPORTUNIDADE: "o carrinho abre hoje às [hora]"
+→ Bônus de fundador (quantidade ou tempo) — declarados com antecedência, cumpridos com rigor
+→ Primeira janela: copy de celebração + abundância, não de escassez
+
+**D22 — cart_mid (Meio do Carrinho):**
+→ Urgência de PROVA: testemunhos reais de compradores nas primeiras 24h
+→ Bônus expirando se prometidos com prazo
+→ Copy de momentum: "X pessoas já garantiram acesso"
+
+**D23 — cart_late (Últimas 48h):**
+→ Urgência de ESCOLHA: "você ainda tem tempo de decidir"
+→ Loss Aversion ativado com força: o que o avatar PERDE ao não entrar
+→ Objection kill final — eliminar o último obstáculo
+
+**D24 — cart_close (Fechamento de Carrinho — Máxima Intensidade):**
+→ Urgência de DEADLINE REAL: o carrinho fecha em [hora exata] por razão real
+→ Linha Reta (Belfort aplicado): a decisão já é óbvia — você está apenas ajudando o avatar a atravessar o último resíduo de medo
+→ Copy final: custo da inércia > investimento no produto
+→ Contagem regressiva real, não decorativa
+
+**REGRA DE OURO:** A escassez só funciona se foi construída de verdade ao longo do lançamento.
+Um avatar que confiou em você nos D0–D23 vai agir no D24. Um avatar que nunca foi aquecido vai ignorar o deadline.
+
+---
+
 ## ETAPA 0 — PSICOLOGIA DA PERDA (Daniel Kahneman: Prospect Theory)
 
 **A BASE NEUROCIENTÍFICA DA ESCASSEZ:**

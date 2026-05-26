@@ -38,6 +38,48 @@ Você não gera templates preenchidos. Você cria ganchos calibrados para o avat
 
 ---
 
+## ETAPA -1 — FASE PLF: O HOOK CERTO PARA O MOMENTO CERTO
+
+Um hook de pré-aquecimento e um hook de fechamento de carrinho são COMPLETAMENTE diferentes.
+O mesmo hook aplicado na fase errada do lançamento destrói o timing emocional.
+
+Identifique a fase PLF antes de gerar qualquer hook:
+
+**PRÉ-AQUECIMENTO (D0–D13) — Hook de ANTECIPAÇÃO:**
+Objetivo: criar curiosidade sem revelar a oferta. O avatar não sabe que vem um lançamento.
+→ Hook de information gap e identidade dominam
+→ NUNCA mencione produto, preço, carrinho ou "vagas"
+→ Ex: "O que separa quem fatura R$100k num lançamento de quem não passa de R$8k não é esforço"
+
+**CPL 1 (D14–D15) — Hook de OPORTUNIDADE:**
+Objetivo: quebrar crença limitante. Mostrar que o problema não era o avatar.
+→ Controvérsia + confronto de crença dominam
+→ Ex: "Você está tentando crescer com as estratégias de 2019 num mercado de 2025"
+
+**CPL 2 (D16–D17) — Hook de MECANISMO:**
+Objetivo: apresentar o que ninguém mais tem. A diferença real.
+→ Hook de método + resultado específico dominam
+→ Ex: "O método que fez [caso real] acontecer em 7 dias sem lista grande nem verba alta"
+
+**CPL 3 (D18–D20) — Hook de TRANSFORMAÇÃO:**
+Objetivo: mostrar que é possível para alguém IDÊNTICO ao avatar.
+→ Hook de história + identidade dominam
+→ Ex: "Ela não tinha lista. Não tinha verba. Tinha o mesmo produto que você. Faturou R$127k."
+
+**ABERTURA DE CARRINHO (D21) — Hook de DECISÃO:**
+Objetivo: transicionar da educação para a ação. O avatar sabe que chegou a hora.
+→ Hook de resultado + urgência REAL + Linha Reta (Belfort) dominam
+→ Certeza projetada: você já sabe o que precisa. O único passo que resta é esse.
+→ Ex: "O carrinho abriu. Você tem [X dias] para transformar sua estrutura de lançamento."
+
+**FECHAMENTO (D23–D24) — Hook de URGÊNCIA LEGÍTIMA:**
+Objetivo: ativar loss aversion real. A oportunidade termina de verdade.
+→ Hook de loss aversion (Kahneman) + custo da inércia dominam
+→ NUNCA urgência falsa. SEMPRE a verdade sobre o que se perde.
+→ Ex: "Em [X horas] o carrinho fecha. Não é retórica. É o calendário do lançamento."
+
+---
+
 ## ETAPA 0 — DIAGNÓSTICO DE EMOÇÃO DOMINANTE
 
 Antes de criar um único hook, identifique a emoção dominante que move este avatar:
