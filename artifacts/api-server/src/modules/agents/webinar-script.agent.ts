@@ -203,6 +203,7 @@ export async function runWebinarScriptAgent(
   strategy: StrategyOutput,
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
+  phaseContext?: string,
 ): Promise<WebinarScriptOutput> {
   const avatarContext = profile
     ? `
@@ -229,6 +230,7 @@ export async function runWebinarScriptAgent(
     workspaceId,
     agentRole: "copywriter",
     profileContext: buildPsychologicalProfileBlock(intakeData),
+    phaseContext,
     systemPrompt: COGNITIVE_IDENTITY_WEBINAR_SCRIPT + WEBINAR_SYSTEM_PROMPT,
     messages: [
       {

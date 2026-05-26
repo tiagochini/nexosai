@@ -8,7 +8,28 @@
  *
  * This is the bridge that closes the pipeline gap:
  *   intake → _psychologicalProfile (DB) → Profile Injector → runAgent()
+ *
+ * Also includes the Campaign Emotional Arc overview when available.
  */
+
+import { buildArcBlockFromIntakeData } from "./dynamic-avatar-state.js";
+
+/**
+ * EMOTIONAL_MEMORY_ANCHORS — The 7 intakeData keys that MUST survive
+ * memory compression. These are the non-negotiable psychological anchors
+ * that govern every creative decision across the entire campaign.
+ *
+ * Memory compression agents should preserve these even when trimming noise.
+ */
+export const EMOTIONAL_MEMORY_ANCHORS = [
+  "_psychologicalProfile.emocao.dominante",     // Medo central — the fear that drives behavior
+  "_psychologicalProfile.desejo.real",           // Desejo dominante — the real (not declared) desire
+  "_psychologicalProfile.identidade.querSeTornar", // Identidade — who they want to become
+  "_psychologicalProfile.objecao.principal",     // Objeção principal — what blocks the purchase
+  "_psychologicalProfile.linguagem.palavrasChave", // Linguagem — exact words and phrases
+  "_psychologicalProfile.mercado.mentiraDominante", // Traumas de mercado — promises already broken
+  "_psychologicalProfile.desejo.identitario",    // Mecanismo desejado — identity-level desire
+] as const;
 
 interface PsychologicalProfile {
   linguagem?: {
@@ -205,6 +226,13 @@ export function buildPsychologicalProfileBlock(
     );
     parts.push(`\n${voiceFile}`);
     parts.push(``);
+  }
+
+  // Campaign Emotional Arc — 9-phase psychological progression of the avatar
+  // Provides the full funnel map so agents understand WHERE in the journey each piece fits
+  const arcBlock = buildArcBlockFromIntakeData(intakeData);
+  if (arcBlock) {
+    parts.push(arcBlock);
   }
 
   parts.push(

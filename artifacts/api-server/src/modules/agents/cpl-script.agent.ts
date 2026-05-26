@@ -228,6 +228,7 @@ export async function runCPLScriptAgent(
   profile: ProfileBuilderOutput | undefined,
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
+  phaseContext?: string,
 ): Promise<CPLScriptOutput> {
   const avatarContext = profile
     ? `
@@ -252,6 +253,7 @@ export async function runCPLScriptAgent(
     workspaceId,
     agentRole: "copywriter",
     profileContext: buildPsychologicalProfileBlock(intakeData),
+    phaseContext,
     systemPrompt: COGNITIVE_IDENTITY_CPL_SCRIPT + CPL_SYSTEM_PROMPT,
     messages: [
       {

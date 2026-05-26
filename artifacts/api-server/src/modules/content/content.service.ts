@@ -30,6 +30,13 @@ import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
 import type { StrategyOutput } from "../agents/strategy.agent.js";
 import type { Logger } from "pino";
+import { generateCampaignEmotionalArc } from "../agents/campaign-emotional-arc.agent.js";
+import {
+  getArcFromIntakeData,
+  buildArcOverviewBlock,
+  getAvatarStateForPhase,
+  buildPhaseStateBlock,
+} from "../agents/dynamic-avatar-state.js";
 
 export interface ContentGenerationResult {
   campaignId: string;
@@ -90,7 +97,7 @@ export async function generateCampaignContent(
     );
   }
 
-  const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  let intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
   const profile = campaign.audienceData
     ? extractProfile(campaign.audienceData)
     : undefined;
@@ -148,6 +155,21 @@ export async function generateCampaignContent(
       hasTrafficBudget,
     },
   });
+
+  // ── Campaign Emotional Arc ────────────────────────────────────────────────────
+  // Generated BEFORE any content agent runs. Provides the 9-phase psychological
+  // progression map so every agent knows WHERE in the funnel each piece belongs.
+  // Fire-and-wait: arc must exist before CPL/live/stories/webinar agents consume it.
+  const existingArc = getArcFromIntakeData(intakeData);
+  const arc = existingArc ?? await generateCampaignEmotionalArc(campaignId, workspaceId, intakeData, strategy, log);
+  if (arc && !existingArc) {
+    intakeData = { ...intakeData, _emotionalArc: arc };
+  }
+
+  // Pre-compute phase contexts for phase-aware agents
+  const arcOverviewBlock = arc ? buildArcOverviewBlock(arc) : "";
+  const cartOpenState = arc ? getAvatarStateForPhase(arc, "cart_open") : null;
+  const cartPhaseBlock = cartOpenState ? buildPhaseStateBlock(cartOpenState) : arcOverviewBlock;
 
   // Capture copy and ad content references for compliance agent (set after generation)
   let capturedCopyContent: Record<string, unknown> | undefined;
@@ -615,6 +637,7 @@ export async function generateCampaignContent(
         profile,
         launchPlan,
         log,
+        arcOverviewBlock || undefined,
       );
 
       const [piece] = await db
@@ -673,6 +696,7 @@ export async function generateCampaignContent(
         strategy,
         profile,
         log,
+        cartPhaseBlock || undefined,
       );
 
       const [piece] = await db
@@ -731,6 +755,7 @@ export async function generateCampaignContent(
         profile,
         launchPlan,
         log,
+        cartPhaseBlock || undefined,
       );
 
       const [piece] = await db
@@ -786,6 +811,7 @@ export async function generateCampaignContent(
       profile,
       launchPlan,
       log,
+      arcOverviewBlock || undefined,
     );
 
     const [piece] = await db

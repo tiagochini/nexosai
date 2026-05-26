@@ -164,6 +164,7 @@ export async function runStoriesSequenceAgent(
   profile: ProfileBuilderOutput | undefined,
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
+  phaseContext?: string,
 ): Promise<StoriesSequenceOutput> {
   const avatarContext = profile
     ? `
@@ -184,6 +185,7 @@ export async function runStoriesSequenceAgent(
     workspaceId,
     agentRole: "copywriter",
     profileContext: buildPsychologicalProfileBlock(intakeData),
+    phaseContext,
     systemPrompt: STORIES_SYSTEM_PROMPT,
     messages: [
       {

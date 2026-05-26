@@ -233,6 +233,7 @@ export async function runLiveScriptAgent(
   profile: ProfileBuilderOutput | undefined,
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
+  phaseContext?: string,
 ): Promise<LiveScriptOutput> {
   const avatarContext = profile
     ? `
@@ -253,6 +254,7 @@ export async function runLiveScriptAgent(
     workspaceId,
     agentRole: "copywriter",
     profileContext: buildPsychologicalProfileBlock(intakeData),
+    phaseContext,
     systemPrompt: COGNITIVE_IDENTITY_LIVE_SCRIPT + LIVE_SYSTEM_PROMPT,
     messages: [
       {
