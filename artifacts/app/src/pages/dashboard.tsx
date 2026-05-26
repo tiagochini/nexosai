@@ -552,7 +552,7 @@ export default function Dashboard() {
     if (loadingCampaigns) return;
     if (campaigns.length === 0 && planSlug !== null) {
       setOnboardingChecked(true);
-      setLocation("/onboarding");
+      setLocation("/welcome");
     } else {
       setOnboardingChecked(true);
     }
@@ -584,6 +584,170 @@ export default function Dashboard() {
         <Skeleton className="h-36 bg-muted/20" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 bg-muted/20" />)}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Fundador View — guided, simplified, emotional ─────────────────────────
+  if (isFundador) {
+    const firstName = user?.name?.split(" ")[0] ?? "você";
+    const MISSION_PHASES = [
+      { id: "intake",    label: "Briefing",    desc: "IA conversa com você", icon: "01" },
+      { id: "strategy",  label: "Estratégia",  desc: "Plano gerado",         icon: "02" },
+      { id: "content",   label: "Conteúdo",    desc: "Copy pronto",          icon: "03" },
+      { id: "executing", label: "Execução",    desc: "Disparo automático",   icon: "04" },
+      { id: "live",      label: "Ao Vivo",     desc: "Carrinho aberto",      icon: "05" },
+    ];
+    const phaseIndex = activeCampaign
+      ? Math.max(0, MISSION_PHASES.findIndex(p => activeCampaign.status.includes(p.id)))
+      : -1;
+
+    return (
+      <div className="max-w-2xl mx-auto space-y-5 py-2">
+
+        {/* Greeting */}
+        <div className="text-center py-4">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="font-mono text-[11px] uppercase tracking-widest text-primary/70">
+              {liveCampaigns > 0 ? `${liveCampaigns} campanha ao vivo` : "Plataforma pronta"}
+            </span>
+          </div>
+          <h1 className="font-mono font-black text-2xl uppercase tracking-tight text-foreground mb-1">
+            Olá, <span className="text-primary">{firstName}</span>.
+          </h1>
+          <p className="font-mono text-sm text-muted-foreground/60">
+            {activeCampaign
+              ? "Aqui está onde sua missão está agora."
+              : "O time está esperando seu briefing."}
+          </p>
+        </div>
+
+        {/* Missão ativa ou CTA para criar */}
+        {activeCampaign ? (
+          <div className="border border-primary/30 bg-card/30 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/60" />
+            <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/60" />
+            <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary/60" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/60" />
+            <div className="p-5">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">
+                Missão em Andamento
+              </div>
+              <h2 className="font-mono font-bold text-base uppercase tracking-tight text-foreground mb-4">
+                {activeCampaign.title}
+              </h2>
+              {/* Phase progress */}
+              <div className="flex gap-1 mb-4">
+                {MISSION_PHASES.map((phase, idx) => (
+                  <div key={phase.id} className="flex-1 flex flex-col gap-1">
+                    <div className={`h-1 rounded-full transition-all ${
+                      idx < phaseIndex ? "bg-success" :
+                      idx === phaseIndex ? "bg-primary animate-pulse" :
+                      "bg-border/30"
+                    }`} />
+                    <span className={`font-mono text-[9px] uppercase tracking-widest text-center ${
+                      idx === phaseIndex ? "text-primary font-bold" : "text-muted-foreground/30"
+                    }`}>{phase.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                {(activeCampaign.status === "intake" || activeCampaign.status === "draft") ? (
+                  <Link href={`/campaigns/${activeCampaign.id}/intake`} className="flex-1">
+                    <Button className="w-full rounded-none font-mono uppercase tracking-widest text-xs h-10 btn-weapon-primary gap-2">
+                      <Bot className="h-3.5 w-3.5" />
+                      Continuar Briefing
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href={`/campaigns/${activeCampaign.id}`} className="flex-1">
+                    <Button className="w-full rounded-none font-mono uppercase tracking-widest text-xs h-10 btn-weapon-primary gap-2">
+                      <Rocket className="h-3.5 w-3.5" />
+                      Ver Minha Campanha
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="border border-primary/30 bg-primary/5 p-6 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/60" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary/60" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary/60" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/60" />
+            <Bot className="h-8 w-8 text-primary/60 mx-auto mb-3" />
+            <h2 className="font-mono font-black text-lg uppercase tracking-tight text-foreground mb-2">
+              O time está pronto para você.
+            </h2>
+            <p className="font-mono text-sm text-muted-foreground/60 mb-5 leading-relaxed">
+              Três minutos de conversa com a IA e você tem estratégia, copy e cronograma prontos.
+            </p>
+            <Link href="/onboarding">
+              <Button className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 px-8 text-sm">
+                <Bot className="h-4 w-4" />
+                Criar minha campanha
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {/* KPI strip simplificado */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="border border-border/30 bg-card/20 px-4 py-3">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Créditos de IA</div>
+            <div className={`font-mono font-bold text-xl ${creditsLow ? "text-yellow-400" : "text-foreground"}`}>
+              {creditsBalance.toLocaleString("pt-BR")}
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground/40">{creditsPct}% disponível</div>
+            <div className="mt-2 h-0.5 bg-muted/20">
+              <div className="h-full bg-primary transition-all" style={{ width: `${creditsPct}%` }} />
+            </div>
+          </div>
+          <div className="border border-border/30 bg-card/20 px-4 py-3">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Receita</div>
+            <div className="font-mono font-bold text-xl text-success">
+              {revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}` : "—"}
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground/40">
+              {revenueData?.transactionCount ? `${revenueData.transactionCount} vendas` : "Configure webhooks"}
+            </div>
+          </div>
+        </div>
+
+        {/* Próxima ação */}
+        <div className={`border ${action.bg} p-4 flex items-center gap-4`}>
+          <div className={`w-9 h-9 border border-current/20 bg-current/10 flex items-center justify-center shrink-0 ${action.color}`}>
+            <ActionIcon className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Próxima Ação</div>
+            <div className={`font-mono font-bold text-sm ${action.color}`}>{action.title}</div>
+          </div>
+          <Link href={action.href} className="shrink-0">
+            <Button variant="outline" size="sm"
+              className={`rounded-none font-mono uppercase text-[11px] tracking-widest border-current/30 hover:bg-current/10 ${action.color} gap-2 h-8`}>
+              {action.cta}<ArrowRight className="h-3 w-3" />
+            </Button>
+          </Link>
+        </div>
+
+        {/* Modo toggle hint */}
+        <div className="text-center pt-2">
+          <span className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest">
+            Quer ver todos os painéis técnicos?{" "}
+            <button
+              onClick={() => {}}
+              className="text-primary/50 hover:text-primary underline underline-offset-2 transition-colors"
+            >
+              Mude para Arquiteto na barra lateral
+            </button>
+          </span>
         </div>
       </div>
     );

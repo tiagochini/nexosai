@@ -57,7 +57,7 @@ export default function Register() {
         const raw = data as typeof data & { refreshToken?: string };
         setToken(data.accessToken, raw.refreshToken);
         toast.success(t.success);
-        setLocation("/onboarding");
+        setLocation("/welcome");
       },
       onError: () => {
         toast.error(t.error);

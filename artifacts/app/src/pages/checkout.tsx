@@ -328,7 +328,7 @@ export default function CheckoutPage() {
     localStorage.setItem("accessToken", accessToken);
     setToken(accessToken);
     setTimeout(() => {
-      navigate(newUser ? "/onboarding" : "/dashboard");
+      navigate(newUser ? "/welcome" : "/dashboard");
     }, 2200);
   };
 

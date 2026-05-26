@@ -1245,7 +1245,7 @@ export default function CampaignDetail() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos">("comando");
-  const { isArquiteto } = useMode();
+  const { isArquiteto, isFundador } = useMode();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
@@ -1728,6 +1728,146 @@ export default function CampaignDetail() {
     }
   };
   const nextAction = getNextAction();
+
+  // ── Fundador View — simplified, guided, emotional ────────────────────────────
+  if (isFundador) {
+    const FUNDADOR_STATUS: Record<string, { emoji: string; headline: string; desc: string }> = {
+      analyzing:        { emoji: "🧠", headline: "O time está estudando seu mercado", desc: "Agentes de estratégia analisando seu produto, público e concorrência. Isso leva de 1 a 3 minutos." },
+      strategy_ready:   { emoji: "📋", headline: "Sua estratégia está pronta para revisar", desc: "O Estrategista montou o plano completo. Revise e confirme antes de gerar o conteúdo." },
+      generating:       { emoji: "✍️", headline: "Copywriters gerando seu conteúdo", desc: "Agentes criando copy, sequências e scripts personalizados para o seu público. Quase lá." },
+      awaiting_approval:{ emoji: "👀", headline: "Seu conteúdo está esperando por você", desc: "Tudo pronto! Revise e aprove o conteúdo gerado antes do lançamento." },
+      approved:         { emoji: "🚀", headline: "Aprovado! Pronto para lançar", desc: "Conteúdo aprovado. Aperte o botão e a campanha entra em execução." },
+      executing:        { emoji: "⚡", headline: "Campanha em execução", desc: "Os agentes estão disparando sequências e monitorando os resultados em tempo real." },
+      live:             { emoji: "🔥", headline: "Campanha AO VIVO!", desc: "Carrinho aberto. Seus leads estão recebendo os emails e mensagens agora." },
+      completed:        { emoji: "✅", headline: "Lançamento concluído", desc: "Missão encerrada. Veja os resultados e comece o próximo lançamento." },
+    };
+    const statusInfo = FUNDADOR_STATUS[campaign.status] ?? { emoji: "⚙️", headline: STATUS_LABEL[campaign.status] ?? campaign.status, desc: "Processando..." };
+
+    const PHASE_MAP = [
+      { statuses: ["analyzing"],                     label: "Estratégia" },
+      { statuses: ["strategy_ready", "generating"],  label: "Conteúdo" },
+      { statuses: ["awaiting_approval", "approved"], label: "Aprovação" },
+      { statuses: ["executing"],                     label: "Execução" },
+      { statuses: ["live", "completed"],             label: "Resultado" },
+    ];
+    const currentPhaseIdx = PHASE_MAP.findIndex(p => p.statuses.includes(campaign.status));
+
+    return (
+      <div className="max-w-2xl mx-auto space-y-5 py-2">
+
+        {/* Back */}
+        <button onClick={() => setLocation("/campaigns")} className="flex items-center gap-1.5 text-muted-foreground/40 hover:text-muted-foreground/70 font-mono text-[11px] uppercase tracking-widest transition-colors">
+          <span>←</span> Minhas Campanhas
+        </button>
+
+        {/* Status emocional */}
+        <div className="border border-primary/30 bg-card/30 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/60" />
+          <div className="absolute top-0 right-0 w-3 h-3 border-t border-r border-primary/60" />
+          <div className="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-primary/60" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/60" />
+          <div className="p-6">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-3 truncate">
+              {campaign.title}
+            </div>
+            <div className="flex items-start gap-4 mb-5">
+              <span className="text-3xl shrink-0">{statusInfo.emoji}</span>
+              <div>
+                <h1 className="font-mono font-black text-lg md:text-xl uppercase tracking-tight text-foreground mb-1.5">
+                  {statusInfo.headline}
+                </h1>
+                <p className="font-mono text-sm text-muted-foreground/60 leading-relaxed">
+                  {statusInfo.desc}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress bar por fase */}
+            <div className="flex gap-1 mb-5">
+              {PHASE_MAP.map((phase, idx) => (
+                <div key={phase.label} className="flex-1 flex flex-col gap-1">
+                  <div className={`h-1 transition-all ${
+                    idx < currentPhaseIdx ? "bg-success" :
+                    idx === currentPhaseIdx ? "bg-primary" :
+                    "bg-border/30"
+                  }`} />
+                  <span className={`font-mono text-[9px] uppercase tracking-widest text-center ${
+                    idx === currentPhaseIdx ? "text-primary font-bold" : "text-muted-foreground/30"
+                  }`}>{phase.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Próxima ação */}
+            {nextAction && (
+              <div className="flex flex-col sm:flex-row gap-2">
+                {nextAction.href ? (
+                  <Link href={nextAction.href} className="flex-1">
+                    <Button className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm">
+                      {nextAction.label}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                ) : nextAction.phase ? (
+                  <Button
+                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: nextAction.phase! } })}
+                    disabled={executeMutation.isPending}
+                    className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
+                  >
+                    {executeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
+                    {executeMutation.isPending ? "Processando..." : nextAction.label}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button disabled className="flex-1 rounded-none font-mono uppercase tracking-widest h-12 text-sm">
+                    {nextAction.label}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Agentes recentes — versão simplificada */}
+        {(agentsData?.agents ?? []).length > 0 && (
+          <div className="border border-border/30 bg-card/20">
+            <div className="px-4 py-3 border-b border-border/20 flex items-center gap-2">
+              <Bot className="h-3.5 w-3.5 text-primary" />
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+                Agentes Trabalhando Agora
+              </span>
+            </div>
+            <div className="divide-y divide-border/20">
+              {(agentsData?.agents ?? []).slice(0, 5).map((a) => (
+                <div key={a.id} className="px-4 py-2.5 flex items-center gap-3">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.status === "completed" ? "bg-success" : a.status === "running" ? "bg-primary animate-pulse" : "bg-border/50"}`} />
+                  <span className="font-mono text-[11px] text-foreground/70 flex-1 truncate">
+                    {AGENT_ROLE_LABEL[a.agentRole] ?? a.agentRole}
+                  </span>
+                  <span className={`font-mono text-[10px] uppercase tracking-widest shrink-0 ${a.status === "completed" ? "text-success/60" : a.status === "running" ? "text-primary" : "text-muted-foreground/30"}`}>
+                    {a.status === "completed" ? "Concluído" : a.status === "running" ? "Ativo" : "Aguardando"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ver visão completa */}
+        <div className="text-center pt-2 pb-1">
+          <span className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest">
+            Quer ver todos os dados técnicos?{" "}
+            <button
+              onClick={() => setLocation("/settings?tab=preferences")}
+              className="text-primary/50 hover:text-primary underline underline-offset-2 transition-colors"
+            >
+              Mude para modo Arquiteto
+            </button>
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const TABS = [
     { id: "comando" as const, label: "Comando", icon: Zap },

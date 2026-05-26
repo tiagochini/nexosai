@@ -18,7 +18,7 @@ import nexosLogo from "/nexos-logo.png";
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos" | "has_audience";
 type AudienceSubPath = "micro_launch" | "members_area" | "product_from_audience";
-type UIStep = "path_select" | "audience_subpath" | "conversation" | "plan_preview" | "integration_setup";
+type UIStep = "welcome" | "path_select" | "audience_subpath" | "conversation" | "plan_preview" | "diagnosis_approval" | "integration_setup";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -337,7 +337,7 @@ export default function Onboarding() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const [step, setStep] = useState<UIStep>("path_select");
+  const [step, setStep] = useState<UIStep>("welcome");
   const [path, setPath] = useState<OnboardingPath | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -555,6 +555,10 @@ export default function Onboarding() {
     setStep("plan_preview");
   };
 
+  const handleGoToDiagnosis = () => {
+    setStep("diagnosis_approval");
+  };
+
   const handleGoToIntegrations = () => {
     setStep("integration_setup");
     void fetchConnectedIntegrations();
@@ -572,6 +576,84 @@ export default function Onboarding() {
   };
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
+
+  // ── Step: welcome — "Time de Briefing NEXOS" ─────────────────────────────────
+  if (step === "welcome") {
+    const firstName = user?.name?.split(" ")[0] ?? "você";
+    const BRIEFING_AGENTS = [
+      { name: "Business Discovery",  desc: "Entende seu negócio e produto" },
+      { name: "Market Psychology",   desc: "Analisa seu mercado e concorrência" },
+      { name: "Avatar Intelligence", desc: "Mapeia seu público ideal" },
+      { name: "Product Development", desc: "Valida e estrutura sua oferta" },
+      { name: "Monetization Agent",  desc: "Define modelo e precificação" },
+      { name: "Positioning Agent",   desc: "Encontra seu diferencial único" },
+      { name: "NEXOS Prime",         desc: "Orquestra toda a operação" },
+    ];
+
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4">
+        <div className="w-full max-w-2xl animate-in fade-in duration-700">
+
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <img src={nexosLogo} alt="NexOS AI" className="h-8 opacity-80" />
+          </div>
+
+          {/* Título */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+              <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">
+                Time de Briefing NEXOS · ativo
+              </span>
+            </div>
+            <h1 className="font-mono font-black text-2xl md:text-3xl uppercase tracking-tight text-foreground mb-4">
+              Olá, <span className="text-primary">{firstName}</span>.<br />
+              Sua equipe está pronta para você.
+            </h1>
+            <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed max-w-lg mx-auto">
+              Antes de montar sua campanha, vamos conversar. Um time de especialistas vai
+              entender seu negócio, seu público e sua oferta — e transformar tudo em um
+              plano estratégico personalizado.
+            </p>
+          </div>
+
+          {/* Time de agentes */}
+          <div className="border border-border/30 bg-card/20 p-5 mb-6">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-4 text-center">
+              Especialistas escalados para o seu briefing
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {BRIEFING_AGENTS.map((agent) => (
+                <div key={agent.name} className="flex items-center gap-2.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+                  <div>
+                    <span className="font-mono text-[11px] font-bold text-foreground/80">{agent.name}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground/40 ml-2">— {agent.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center">
+            <Button
+              onClick={() => setStep("path_select")}
+              className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-13 px-10 text-sm"
+            >
+              <Bot className="h-4 w-4" />
+              Vamos entender meu negócio
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <p className="font-mono text-[11px] text-muted-foreground/30 mt-3">
+              Leva menos de 5 minutos · Você pode salvar e continuar depois
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "audience_subpath") {
     const SUB_PATHS: { id: AudienceSubPath; icon: typeof Video; title: string; subtitle: string; desc: string; badge: string }[] = [
@@ -1314,20 +1396,118 @@ export default function Onboarding() {
           <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary" />
           <div className="text-center space-y-3">
             <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-              Próximo passo: Conectar integrações para o lançamento automático
+              Confirme o que entendemos antes de escalar o time
             </div>
             <Button
-              onClick={handleGoToIntegrations}
+              onClick={handleGoToDiagnosis}
               className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 text-sm"
             >
-              <Link2 className="h-4 w-4" />
-              Conectar Integrações
+              <CheckCircle2 className="h-4 w-4" />
+              Está correto — avançar
             </Button>
             <button
               onClick={handleLaunch}
               className="font-mono text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors uppercase tracking-widest underline underline-offset-2"
             >
               Pular por agora e ir para a campanha
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step: diagnosis_approval — confirmação do diagnóstico ────────────────────
+  if (step === "diagnosis_approval") {
+    const approvalItems = proposals
+      ? [
+          { label: "Produto identificado", value: proposals[0]?.name ?? "—" },
+          { label: "Público-alvo", value: proposals[0]?.targetAudience ?? "—" },
+          { label: "Dor principal", value: proposals[0]?.mainPain ?? "—" },
+          { label: "Transformação", value: proposals[0]?.transformation ?? "—" },
+          { label: "Track recomendado", value: proposals[0]?.suggestedTrack ?? "—" },
+        ]
+      : affiliateStrategy
+      ? [
+          { label: "Canal principal", value: affiliateStrategy.mainChannel },
+          { label: "Tamanho da audiência", value: affiliateStrategy.audienceSize },
+          { label: "Abordagem sugerida", value: affiliateStrategy.suggestedApproach },
+          { label: "Projeção de receita", value: affiliateStrategy.revenueProjection },
+        ]
+      : audienceMonetizationPlan
+      ? [
+          { label: "Modelo de monetização", value: audienceMonetizationPlan.approachTitle },
+          { label: "Produto sugerido", value: audienceMonetizationPlan.suggestedProductName },
+          { label: "Faixa de preço", value: audienceMonetizationPlan.priceRange },
+          { label: "Timeline de lançamento", value: audienceMonetizationPlan.launchTimeline },
+        ]
+      : [];
+
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4">
+        <div className="w-full max-w-2xl animate-in fade-in duration-700 space-y-6">
+
+          {/* Header */}
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">
+                Diagnóstico Concluído
+              </span>
+            </div>
+            <h2 className="font-mono font-black text-2xl uppercase tracking-tight text-foreground mb-2">
+              O que entendemos sobre você
+            </h2>
+            <p className="font-mono text-sm text-muted-foreground/60 leading-relaxed">
+              Revise o que o time identificou antes de escalarmos os especialistas de campanha.
+            </p>
+          </div>
+
+          {/* Diagnóstico resumido */}
+          {approvalItems.length > 0 && (
+            <div className="border border-border/40 bg-card/20 divide-y divide-border/20">
+              {approvalItems.map((item) => (
+                <div key={item.label} className="flex items-start justify-between gap-4 px-4 py-3">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 shrink-0 pt-0.5">
+                    {item.label}
+                  </span>
+                  <span className="font-mono text-[12px] text-foreground/80 text-right">
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Pergunta de confirmação */}
+          <div className="border border-primary/20 bg-primary/5 p-5 text-center">
+            <p className="font-mono text-sm text-foreground/80 mb-1">
+              Faltou algo importante ou podemos escalar o time de especialistas para planejar sua campanha?
+            </p>
+          </div>
+
+          {/* Botões */}
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={handleGoToIntegrations}
+              className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Está correto, avançar
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setStep("plan_preview")}
+              className="w-full rounded-none font-mono uppercase tracking-widest h-11 text-sm border-border/50 hover:border-primary/40"
+            >
+              Quero ajustar informações
+            </Button>
+            <button
+              onClick={handleLaunch}
+              className="font-mono text-[11px] text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors uppercase tracking-widest underline underline-offset-2 text-center"
+            >
+              Adicionar algo e ir para a campanha
             </button>
           </div>
         </div>

@@ -1,6 +1,9 @@
 import { Switch, Route, Redirect } from "wouter";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/lib/auth";
+import { hasSeenWelcome } from "@/pages/welcome/index";
+import Welcome from "@/pages/welcome/index";
+import WarRoom from "@/pages/war-room/index";
 import Dashboard from "@/pages/dashboard";
 import NewCampaign from "@/pages/campaigns/new";
 import CampaignDetail from "@/pages/campaigns/detail";
@@ -76,12 +79,24 @@ function OnboardingRoute() {
   return <AppLayout><Onboarding /></AppLayout>;
 }
 
+function WelcomeRoute() {
+  const { token } = useAuth();
+  if (!token) return <Redirect to="/login" />;
+  // After seeing welcome, go to onboarding
+  if (hasSeenWelcome()) return <Redirect to="/onboarding" />;
+  return <Welcome />;
+}
+
 export default function AppRoutes() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/welcome" component={WelcomeRoute} />
       <Route path="/onboarding" component={OnboardingRoute} />
+      <Route path="/war-room/:id">
+        {() => <ProtectedRoute><WarRoom /></ProtectedRoute>}
+      </Route>
       <Route path="/" component={HomeRoute} />
       <Route path="/campaigns">
         {() => (

@@ -1,3 +1,4 @@
 - [State Machine Governance](state-machine-governance.md) — Level 3 active: transitionCampaign() throws on invalid transitions; single source of truth is campaign-state-machine.ts
 - [Content Post-Approval Isolation](content-post-approval-isolation.md) — all approval side-effects isolated in content-post-approval.ts; content.routes.ts calls runPostApprovalHooks() only
 - [Agent Isolation Sandbox](agent-isolation-sandbox.md) — runIsolatedAgent() wraps runAgent() with typed result union, never throws; use for critical pipeline agents
+- [UX Fundador/Arquiteto System](ux-mode-system.md) — two-mode UX across dashboard/detail/onboarding; Fundador=guided/emotional, Arquiteto=full technical; canonical file is lib/mode.ts
