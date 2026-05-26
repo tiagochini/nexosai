@@ -21,6 +21,7 @@ import {
 import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
 import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY, DOMINO_APPLIED_FRAMEWORKS } from "./domino-core.js";
+import { NEXOS_COGNITIVE_FOUNDATIONS } from "./cognitive-foundations.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -274,6 +275,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     DOMINO_PLF_SUPREMACY +
     DOMINO_CORE_PREAMBLE +
     DOMINO_APPLIED_FRAMEWORKS +
+    NEXOS_COGNITIVE_FOUNDATIONS +
     NEXOS_MASTER_EVOLUTION_PROMPT +
     memoryBlock +
     systemPrompt +

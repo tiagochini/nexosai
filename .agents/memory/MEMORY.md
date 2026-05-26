@@ -4,3 +4,4 @@
 - [UX Fundador/Arquiteto System](ux-mode-system.md) — two-mode UX across dashboard/detail/onboarding; Fundador=guided/emotional, Arquiteto=full technical; canonical file is lib/mode.ts
 - [DOMINO CORE](domino-core-system.md) — central persuasion philosophy; injected into ALL agents via agent.runner.ts; canonical file is agents/domino-core.ts
 - [Deep Intelligence Layer](deep-intelligence-layer.md) — 3 cross-cutting intelligence systems: cross-campaign memory, output judge, DOMINO applied frameworks
+- [Cognitive Foundations Layer](cognitive-foundations-layer.md) — 16 thinkers (5 pillars) in sistema nervoso format; dogma "profundidade interna; simplicidade externa"; injected via agent.runner.ts between DOMINO_APPLIED_FRAMEWORKS and NEXOS_MASTER_EVOLUTION_PROMPT
