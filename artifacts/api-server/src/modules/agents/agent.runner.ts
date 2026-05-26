@@ -20,6 +20,7 @@ import {
 } from "../realtime/realtime.service.js";
 import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
+import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC } from "./domino-core.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -57,9 +58,10 @@ const CHECKPOINT_TYPE_MAP: Record<string, string> = {
 
 /**
  * NEXOS AI — Master Evolution Prompt
- * Injetado UNIVERSALMENTE em todos os 48 agentes antes do system prompt específico.
- * Define a filosofia operacional, os critérios de qualidade e os limites éticos
- * que toda resposta de agente deve respeitar — independente do papel ou mercado.
+ * Injetado UNIVERSALMENTE em todos os agentes antes do system prompt específico.
+ * O DOMINO CORE (filosofia persuasiva central) é injetado separadamente e precede este bloco.
+ * Este bloco cobre: contexto variável de mercado, critérios de qualidade, anti-alucinação,
+ * pensamento sistêmico e ética operacional.
  */
 const NEXOS_MASTER_EVOLUTION_PROMPT = `## NEXOS AI — PROTOCOLO DE OPERAÇÃO ESTRATÉGICA
 
@@ -238,16 +240,18 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     : "";
   // Universal injection order:
   // 1. Temporal context (date awareness)
-  // 2. NEXOS Master Evolution Prompt (philosophy, quality criteria, ethics — all 48 agents)
-  // 3. Campaign Memory Layer (workspace-specific context)
-  // 4. Agent-specific system prompt (role expertise)
-  // 5. Self-Critic suffix (mandatory pre-output review checklist)
+  // 2. DOMINO CORE (philosophical persuasion engine — governs ALL communication)
+  // 3. NEXOS Master Evolution Prompt (quality criteria, anti-hallucination, ethics)
+  // 4. Campaign Memory Layer (workspace-specific context)
+  // 5. Agent-specific system prompt (role expertise)
+  // 6. DOMINO Self-Critic (mandatory pre-output review checklist)
   const enrichedSystemPrompt =
     buildTemporalContextBlock() +
+    DOMINO_CORE_PREAMBLE +
     NEXOS_MASTER_EVOLUTION_PROMPT +
     memoryBlock +
     systemPrompt +
-    NEXOS_SELF_CRITIC_SUFFIX;
+    DOMINO_SELF_CRITIC;
 
   const [ws] = await db
     .select({

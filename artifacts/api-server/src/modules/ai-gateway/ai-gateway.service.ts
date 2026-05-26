@@ -72,7 +72,9 @@ export type AgentRole =
   | "sales_desire"
   | "sales_closer"
   | "sales_objection"
-  | "sales_consultant";
+  | "sales_consultant"
+  // ── DOMINO CORE ──────────────────────────────────────────────────────────
+  | "domino";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -153,6 +155,8 @@ const AGENT_PROVIDER_MAP: Record<
   sales_closer:     { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   sales_objection:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   sales_consultant: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── DOMINO CORE ──────────────────────────────────────────────────────────
+  domino:           { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

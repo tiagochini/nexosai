@@ -427,12 +427,12 @@ Retorne APENAS o JSON da estratégia, nada mais.`,
     requiresApproval: true,
     checkpointType: "strategy_approval",
     thinkingMessages: [
-      "Analisando dados do produto e mercado...",
-      "Mapeando landscape competitivo...",
-      "Identificando oportunidades não óbvias...",
-      "Segmentando avatares e triggers de compra...",
-      "Construindo arquitetura narrativa da campanha...",
-      "Calculando riscos e métricas de sucesso...",
+      "O Estrategista está mapeando o terreno — mercado, competição e oportunidades não óbvias...",
+      "Identificando a dor silenciosa do avatar e os gatilhos reais de compra...",
+      "Construindo a crença central que, implantada, colapsa todas as objeções...",
+      "Definindo o mecanismo único — o que torna esta campanha impossível de copiar...",
+      "Desenhando a arquitetura narrativa e a sequência emocional de cada fase...",
+      "Calculando riscos, métricas de sucesso e contingências operacionais...",
     ],
   });
 

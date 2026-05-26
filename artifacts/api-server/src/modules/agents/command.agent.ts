@@ -313,10 +313,10 @@ Retorne o JSON de avaliação.`,
     log,
     requiresApproval: false,
     thinkingMessages: [
-      "Identificando tipo e arquétipo da campanha...",
+      "O Comandante está avaliando a operação — tipo, modelo e arquétipo da campanha...",
       typeConfig.thinkingMessage,
-      "Avaliando completude do intake...",
-      "Verificando viabilidade e estimando recursos...",
+      "Verificando completude do briefing e gaps críticos de inteligência...",
+      "Avaliando viabilidade, estimando recursos e mapeando riscos operacionais...",
     ],
   });
 
