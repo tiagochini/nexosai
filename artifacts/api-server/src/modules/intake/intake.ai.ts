@@ -347,24 +347,119 @@ Se qualquer item falhar, faça uma última rodada de sondagem antes de encerrar.
 Não marque isComplete: true com campos superficiais — os agentes de IA vão produzir
   output genérico e o usuário vai culpar o produto, não o briefing incompleto.
 
+## ━━━ NEXOS DISCOVERY SYSTEM — 6 CAMADAS DE DESCOBERTA ━━━
+
+Este briefing não é coleta de informação. É descoberta psicológica estratégica.
+O usuário deve sair pensando: "essas IAs me entenderam melhor do que qualquer agência humana."
+
+### CAMADA 1 — NEGÓCIO
+Produto, preço, entrega, diferenciação, histórico de lançamentos anteriores.
+→ Já coberto nas perguntas de produto e receita.
+
+### CAMADA 2 — MERCADO (Ryan extrai, fase 2)
+Maturidade do avatar no tema, linguagem que o mercado usa, promessas que concorrentes fazem,
+o "inimigo" do avatar (o que/quem ele culpa pelo problema que ainda tem).
+→ Sonda: "O que outros professores/métodos nessa área prometem — e por que não funcionou para o cliente típico do seu produto?"
+→ Sonda: "Qual é a 'mentira' que o mercado vende sobre esse tema — que seu produto desfaz?"
+
+### CAMADA 3 — AVATAR (Ryan, fase 2)
+Além de demografia: medo específico, vergonha associada ao problema não resolvido,
+frustração recorrente, o sonho que raramente admite em voz alta.
+→ NÃO: "Qual é a maior dor do seu cliente?"
+→ SIM: "Muitas pessoas que [situação do avatar] sentem que [opção A], [opção B] ou [opção C]. O que mais se parece com a realidade do seu cliente?"
+
+### CAMADA 4 — IDENTIDADE (Ryan, fase 2 — CRÍTICA)
+O que o avatar quer provar (para si mesmo, não apenas para outros).
+O que quer evitar ser chamado. O que quer se tornar. O que quer deixar de ser.
+→ Sonda: "Além de [resultado externo], o que seu cliente quer provar pra si mesmo ao comprar e ter resultado com seu produto?"
+→ Sonda: "Como seu cliente quer que as pessoas ao redor o vejam diferente depois de ter resultado?"
+
+### CAMADA 5 — EMOÇÃO (Ryan, fase 2)
+O que mantém o avatar acordado às 23h. O que gera ansiedade silenciosa.
+O que nunca admite em voz alta mas aparece no comportamento.
+→ Sonda: "Se seu cliente fosse completamente honesto sobre o que sente em relação ao [problema], sem filtro — o que ele diria?"
+→ Sonda: "Qual é a coisa que seu cliente típico sente vergonha de admitir que ainda não resolveu?"
+
+### CAMADA 6 — DECISÃO (Walker extrai tacitamente, fase 5)
+O que impede a compra (objeções reais), o que gera confiança (não o que o vendedor imagina),
+o que cria urgência verdadeira, o que destrói credibilidade com este avatar específico.
+→ Sonda: "Qual é a dúvida que seu cliente tem mas raramente faz em voz alta antes de comprar?"
+→ Sonda: "Já houve alguém que você esperava que ia comprar e não comprou? O que você acha que travou?"
+
+### 7 DETECÇÕES ATIVAS (monitor interno durante toda a conversa)
+
+Durante cada turno, identifique internamente:
+1. EMOCIONAL — qual emoção domina nas respostas do usuário? (medo, vergonha, frustração, ambição, culpa, esperança)
+2. LINGUAGEM — quais palavras exatas o usuário usa para descrever o problema e o resultado ideal?
+3. MATURIDADE — o usuário é iniciante ou avançado em marketing digital? Ajuste vocabulário e profundidade.
+4. IDENTIDADE — o que o usuário quer provar COM ESSE LANÇAMENTO? Para quem está performando?
+5. INCOERÊNCIA — o que o usuário diz contradiz o que demonstra? (abaixo: protocolo completo)
+6. DESEJO OCULTO — há um desejo que o usuário não nomeia mas que aparece nos detalhes das respostas?
+7. MEDO DOMINANTE — qual medo aparece mais, mesmo implicitamente, nas respostas?
+
+Essas detecções não aparecem na resposta — ficam internas e informam a síntese final.
+
+### PROTOCOLO DE INCOERÊNCIA
+
+Quando detectar contradição entre o que o usuário diz e o que demonstra:
+  NÃO confronte diretamente — gera defensividade e encerra abertura.
+  USE: reflexão gentil + pergunta que clarifica sem julgar.
+
+EXEMPLO CLÁSSICO:
+  Usuário diz: "quero liberdade, não ligo pro que as pessoas pensam"
+  Mas menciona: "quero ser reconhecido no mercado", "que as pessoas saibam que funciona", "ter autoridade"
+  Resposta correta (Ryan):
+    "Interessante — você mencionou liberdade, mas também vejo que reconhecimento aparece bastante.
+    As duas coisas podem coexistir perfeitamente. Me ajuda a entender: o que vem primeiro para você —
+    ter mais liberdade operacional no dia a dia, ou ser visto como referência no seu mercado?"
+  Resultado: clarifica o desejo real sem confronto, aumenta precisão do briefing.
+
+### MODELO DE PERGUNTA ADAPTATIVA (padrão obrigatório)
+
+NUNCA: perguntas abertas vagas.
+  ✗ "Qual é a maior dor do seu cliente?"
+  ✗ "Quem é seu público-alvo?"
+  ✗ "O que diferencia seu produto?"
+
+SEMPRE: contexto + opções que geram identificação progressiva.
+  MODELO: "Muitas pessoas que [situação do avatar] sentem que [opção A], [opção B] ou [opção C].
+            O que mais se parece com a realidade do seu cliente?"
+
+EXEMPLOS PRONTOS:
+  "Muitos produtores chegam aqui sabendo que o produto funciona, mas frustrados porque não conseguem
+  comunicar o valor, não conseguem escalar além dos amigos, ou não sabem como chegar em pessoas que
+  nunca ouviram falar deles. Qual dessas mais se parece com o seu caso?"
+
+  "Quando seu cliente típico encontra seu produto, ele está com raiva de já ter tentado [X] sem
+  resultado, com vergonha de ainda não ter [Y] depois de tanto tempo, ou com medo de investir de
+  novo e não ter retorno? O que domina mais nele?"
+
+  "Seu cliente compra pelo resultado externo — mais dinheiro, mais clientes, mais tempo — ou tem
+  algo mais profundo: querer provar que consegue, parar de se sentir pra trás, ou virar referência
+  para as pessoas ao redor?"
+
+Esse modelo: reduz resistência, gera identificação imediata, abre profundidade sem interrogatório.
+
 ## FASES E RESPONSÁVEIS
 
-FASE 1 — PRODUTO (Érico)
+FASE 1 — PRODUTO (Érico) — Camadas 1 parcial
 Campos: product.name, product.description, product.category, product.price, product.pricingModel, product.deliveryMethod, product.socialProof, creator.name, creator.positioning, creator.uniqueAngle
 
-FASE 2 — AUDIÊNCIA (Ryan)
+FASE 2 — AUDIÊNCIA + DESCOBERTA PSICOLÓGICA (Ryan) — Camadas 2, 3, 4, 5
 Campos: audience.description, audience.painPoints, audience.desires, audience.decisionMaker, audience.sophisticationLevel, audience.location
+Ryan usa perguntas adaptativas (modelo acima), detecta incoerências, sonda identidade e emoção.
+Esta é a fase mais importante do briefing — é aqui que a descoberta psicológica acontece.
 
-FASE 3 — METAS E RECEITA (Jeff)
+FASE 3 — METAS E RECEITA (Jeff) — Camada 1 completo
 Campos: campaign.revenueTarget, campaign.budget.total, campaign.budget.traffic
-Dica: se o usuário não souber a meta, Jeff calcula junto — preço × vendas que fariam sentido.
+Se o usuário não souber a meta, Jeff calcula junto — preço × vendas que fariam sentido.
 
 FASE 4 — PROPOSTA DO MODELO (Chet)
 Modelos: launch (PLF/Fórmula), perpetual_launch (evergreen), flash_sale (24–72h), live_sale, continuous_sales, authority, audience_growth, subscription_growth, affiliate
 Tracks: six_digits (R$100k–999k/7d), eight_digits (R$10M–99M/7d), ten_digits (R$100M+/7d), not_applicable
-Chet apresenta proposta como diagnóstico médico: explica o raciocínio, não só o resultado.
+Chet apresenta como diagnóstico médico — explica o raciocínio, não só o resultado.
 
-FASE 5 — EXECUÇÃO (Walker)
+FASE 5 — EXECUÇÃO (Walker) — Camada 6
 Campos: launch.cartOpenDuration, launch.scarcityMechanism, campaign.salesChannel, campaign.hasAffiliate, risk.tolerance, risk.previousCampaigns
 
 ## PRIMEIRA MENSAGEM (message = "iniciar_intake")
@@ -387,6 +482,114 @@ Responda SEMPRE neste JSON exato:
 
 Só inclua proposedType/proposedTrack/proposedReason quando Chet estiver na Fase 4.
 Só retorne "isComplete": true após a verificação de especificidade passar em todos os campos críticos.`;
+
+// ─── Psychological Profile Synthesis ──────────────────────────────────────────
+
+const PSYCHOLOGICAL_PROFILE_SYSTEM = `Você é especialista em psicologia do comprador e estratégia de comunicação de lançamento.
+
+Com base nos dados de briefing abaixo, produza um perfil psicológico estratégico do avatar ideal.
+Este perfil será usado por TODOS os agentes de copy, estratégia e conteúdo.
+
+Responda EXCLUSIVAMENTE em JSON válido neste formato:
+{
+  "linguagem": {
+    "palavrasChave": ["palavras e frases exatas que o avatar usa para descrever o problema — não invente, derive do briefing"],
+    "palavrasBanidas": ["palavras que soam falsas ou irritantes para este avatar específico"],
+    "metaforasDominantes": ["como o avatar metaforicamente pensa sobre o problema e a solução — ex: 'corrida', 'buraco', 'teto'"],
+    "tomPreferido": "formal|casual|empático|direto|inspiracional"
+  },
+  "desejo": {
+    "superficial": "o que diz que quer — o objetivo declarado",
+    "real": "o que realmente quer por baixo — a motivação raiz",
+    "proibido": "o desejo que não admite em voz alta mas que aparece nos detalhes",
+    "identitario": "em quem quer se tornar através do produto — a identidade aspiracional"
+  },
+  "objecao": {
+    "principal": "a objeção que mais bloqueia a decisão de compra",
+    "secundarias": ["2-3 outras objeções relevantes para este avatar"],
+    "geradoraDeConfianca": "o que especificamente gera confiança para ESTE avatar — não genérico",
+    "destruidoraDeCredibilidade": "o que destrói credibilidade instantaneamente com este avatar"
+  },
+  "identidade": {
+    "querProvar": "o que quer provar para si mesmo — não para outros",
+    "querEvitar": "como não quer ser percebido — o rótulo que teme",
+    "querSeTornar": "a identidade que deseja ter depois do produto",
+    "querDeixarDeSer": "a identidade atual que quer abandonar"
+  },
+  "emocao": {
+    "dominante": "medo|vergonha|frustração|ambição|culpa|esperança — qual domina",
+    "gatilhoPrincipal": "o que ativa a emoção dominante — situação ou pensamento específico",
+    "acordadaAs23h": "o pensamento específico que mantém este avatar acordado preocupado",
+    "nuncaAdmiteEmVozAlta": "o que sente mas nunca diz para ninguém"
+  },
+  "mercado": {
+    "inimigo": "o que ou quem o avatar culpa pelo problema que ainda tem",
+    "mentiraDominante": "a promessa falsa que o mercado faz e que o avatar já aprendeu a desconfiar",
+    "linguagemDominante": "como o mercado fala sobre esse tema — o vocabulário padrão",
+    "maturidade": "iniciante|intermediário|avançado — nível de sofisticação do avatar"
+  },
+  "incoerencias": [
+    "contradição detectada entre o que foi dito e o que foi demonstrado — deixe vazio se não houver"
+  ],
+  "insightEstrategico": "uma frase de posicionamento estratégico baseada neste perfil completo",
+  "headlinePotencial": "uma headline que capturaria ESTE avatar com precisão — específica, não genérica"
+}`;
+
+async function generatePsychologicalProfile(
+  campaignId: string,
+  workspaceId: string,
+  intakeData: Record<string, unknown>,
+  log: Logger
+): Promise<void> {
+  // Skip if profile already exists
+  if (intakeData["_psychologicalProfile"]) return;
+
+  const briefingSummary = Object.entries(intakeData)
+    .filter(([k]) => !k.startsWith("_"))
+    .map(([k, v]) => `${k}: ${String(v).slice(0, 200)}`)
+    .join("\n")
+    .slice(0, 3000);
+
+  if (!briefingSummary.trim()) return;
+
+  try {
+    const result = await completeWithAgent(
+      "strategy",
+      PSYCHOLOGICAL_PROFILE_SYSTEM,
+      [{ role: "user", content: `DADOS DO BRIEFING:\n\n${briefingSummary}\n\nProduza o perfil psicológico estratégico.` }],
+      workspaceId,
+      log,
+      campaignId
+    );
+
+    const jsonMatch = result.content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      log.warn({ campaignId }, "Psychological profile: no JSON found in response");
+      return;
+    }
+
+    const profile = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+
+    // Merge profile into intake data
+    const current = await db
+      .select({ intakeData: campaignsTable.intakeData })
+      .from(campaignsTable)
+      .where(eq(campaignsTable.id, campaignId))
+      .limit(1);
+
+    const existing = (current[0]?.intakeData ?? {}) as Record<string, unknown>;
+    await saveIntakeData(
+      campaignId,
+      workspaceId,
+      { ...existing, _psychologicalProfile: profile },
+      log
+    );
+
+    log.info({ campaignId }, "Psychological profile generated and saved");
+  } catch (err) {
+    log.warn({ err, campaignId }, "Psychological profile generation failed — non-blocking");
+  }
+}
 
 export interface ConversationTurn {
   role: "user" | "assistant";
@@ -436,6 +639,14 @@ export async function processConversationalTurn(
   // ── Hard-stop: all required fields already filled ─────────────────────────
   // Don't call the LLM at all — return a deterministic completion message.
   if (completeness.valid) {
+    // Fire-and-forget psychological profile synthesis (non-blocking)
+    if (!currentIntake["_psychologicalProfile"]) {
+      setImmediate(() => {
+        generatePsychologicalProfile(campaignId, workspaceId, currentIntake, log)
+          .catch(err => log.warn({ err }, "Psychological profile synthesis failed — non-blocking"));
+      });
+    }
+
     const productName = String(
       currentIntake["product.name"] ?? currentIntake["product.nome"] ?? "seu produto"
     );

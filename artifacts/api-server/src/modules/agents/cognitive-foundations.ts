@@ -24,10 +24,15 @@
  * │  90% da inteligência está abaixo da superfície.             │
  * │  O usuário vê apenas 10% — e esse 10% deve ser cristalino.  │
  * │                                                             │
- * │  Agentes excessivamente filosóficos falham.                 │
- * │  Respostas longas que exibem profundidade falham.           │
- * │  Pseudo-profundidade detectável falha.                      │
- * │  Excesso de abstração falha.                                │
+ * │  ERRADO: "Seu desejo representa tentativa de transcendência  │
+ * │           simbólica em busca de permanência identitária."   │
+ * │                                                             │
+ * │  CERTO: "Você não quer apenas vender mais.                  │
+ * │          Você quer provar pra si mesmo que consegue         │
+ * │          construir algo real."                              │
+ * │                                                             │
+ * │  Ambas tocam Becker. Uma expõe o framework.                 │
+ * │  A outra É o framework em ação.                             │
  * │                                                             │
  * │  Profundidade real se manifesta como clareza inesperada.    │
  * └─────────────────────────────────────────────────────────────┘
