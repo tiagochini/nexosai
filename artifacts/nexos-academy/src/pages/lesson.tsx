@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CURRICULUM } from "@/data/curriculum";
 import { GLOSSARY } from "@/data/glossary";
+import { getBibliographyForLesson, DIFFICULTY_LABEL, DIFFICULTY_COLOR } from "@/data/bibliography";
 import { useAntiPiracy } from "@/hooks/useAntiPiracy";
 import PiracyWatermark from "@/components/PiracyWatermark";
 
@@ -52,6 +53,25 @@ function getAllLessonsInOrder() {
   );
 }
 
+const QUIZ_KEY = (id: string) => `nexos-quiz-${id}`;
+
+interface QuizState {
+  answers: Record<number, number>;
+  submitted: boolean;
+  score: number | null;
+}
+
+function loadQuizState(id: string): QuizState {
+  try {
+    const raw = localStorage.getItem(QUIZ_KEY(id));
+    if (!raw) return { answers: {}, submitted: false, score: null };
+    return JSON.parse(raw) as QuizState;
+  } catch { return { answers: {}, submitted: false, score: null }; }
+}
+function saveQuizState(id: string, state: QuizState) {
+  try { localStorage.setItem(QUIZ_KEY(id), JSON.stringify(state)); } catch { /* noop */ }
+}
+
 function renderMarkdown(text: string): string {
   return text
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
@@ -79,7 +99,13 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
   const [logSaved, setLogSaved] = useState(false);
   const [showExercise, setShowExercise] = useState(false);
   const [showGlossaryTerm, setShowGlossaryTerm] = useState<string | null>(null);
+  const [showBibliography, setShowBibliography] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Quiz state
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizScore, setQuizScore] = useState<number | null>(null);
 
   // Tutor state
   const [tutorOpen, setTutorOpen] = useState(false);
@@ -100,9 +126,21 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
       setLogSaved(false);
       setShowExercise(false);
       setShowGlossaryTerm(null);
+      setShowBibliography(false);
       setTutorHistory(loadTutorHistory(activeLesson.id));
       setTutorInput("");
       setTutorError(null);
+      // Load quiz state
+      if (activeLesson.type === "quiz" && activeLesson.questions?.length) {
+        const saved = loadQuizState(activeLesson.id);
+        setQuizAnswers(saved.answers);
+        setQuizSubmitted(saved.submitted);
+        setQuizScore(saved.score);
+      } else {
+        setQuizAnswers({});
+        setQuizSubmitted(false);
+        setQuizScore(null);
+      }
     }
   }, [activeLesson?.id]);
 
@@ -111,6 +149,43 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
       tutorEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [tutorHistory, tutorOpen, tutorLoading]);
+
+  // Quiz helpers
+  const quizQuestions = activeLesson?.questions ?? [];
+  const minPassScore = activeLesson?.minPassScore ?? 70;
+  const isQuizLesson = activeLesson?.type === "quiz" && quizQuestions.length > 0;
+  const quizPassed = quizSubmitted && quizScore !== null && quizScore >= minPassScore;
+  const answeredAll = isQuizLesson && Object.keys(quizAnswers).length === quizQuestions.length;
+
+  function submitQuiz() {
+    if (!isQuizLesson || !answeredAll) return;
+    let correct = 0;
+    quizQuestions.forEach((q, idx) => {
+      if (quizAnswers[idx] === q.correctIndex) correct++;
+    });
+    const score = Math.round((correct / quizQuestions.length) * 100);
+    const newState: QuizState = { answers: quizAnswers, submitted: true, score };
+    setQuizSubmitted(true);
+    setQuizScore(score);
+    saveQuizState(activeLesson!.id, newState);
+    if (score >= minPassScore && !lessonDone) {
+      onComplete(activeLesson!.id);
+    }
+  }
+
+  function resetQuiz() {
+    const fresh: QuizState = { answers: {}, submitted: false, score: null };
+    setQuizAnswers({});
+    setQuizSubmitted(false);
+    setQuizScore(null);
+    saveQuizState(activeLesson!.id, fresh);
+  }
+
+  // Can the user advance to next lesson/chapter?
+  const canAdvance = !isQuizLesson || quizPassed;
+
+  // Bibliography for this lesson
+  const bibliographyEntries = getBibliographyForLesson(activeLesson?.id ?? "");
 
   if (!chapter || !activeLesson) {
     return (
@@ -245,17 +320,23 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
         <span className="text-xs text-[hsl(220_10%_45%)] truncate px-2 text-center flex-1">
           {activeLesson.title}
         </span>
-        <button
-          className="btn-primary text-xs px-3 py-2 flex items-center gap-1.5"
-          onClick={() => {
-            if (!lessonDone) onComplete(activeLesson.id);
-            if (nextLesson) setActiveLesson(nextLesson);
-            else if (nextChapter && !nextChapter.locked) onNavigate("lesson", { chapterId: nextChapter.id });
-            else onNavigate("modules");
-          }}
-        >
-          {nextLesson ? "Próxima →" : nextChapter ? "Cap. →" : "Concluir ✓"}
-        </button>
+        {canAdvance ? (
+          <button
+            className="btn-primary text-xs px-3 py-2 flex items-center gap-1.5"
+            onClick={() => {
+              if (!lessonDone && !isQuizLesson) onComplete(activeLesson.id);
+              if (nextLesson) setActiveLesson(nextLesson);
+              else if (nextChapter && !nextChapter.locked) onNavigate("lesson", { chapterId: nextChapter.id });
+              else onNavigate("modules");
+            }}
+          >
+            {nextLesson ? "Próxima →" : nextChapter ? "Cap. →" : "Concluir ✓"}
+          </button>
+        ) : (
+          <button className="text-xs px-3 py-2 rounded-lg border border-[hsl(220_20%_20%)] text-[hsl(220_10%_35%)] cursor-not-allowed" disabled>
+            🔒 {nextLesson ? "Próxima" : nextChapter ? "Cap." : "Concluir"}
+          </button>
+        )}
       </div>
 
       {/* ── Sidebar ─────────────────────────────────────────── */}
@@ -420,11 +501,170 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
           </div>
         )}
 
-        {/* Content */}
-        <div className="card-nexos rounded-xl p-6 md:p-8 relative" data-lesson-content>
-          <PiracyWatermark studentName={studentName} studentEmail={studentEmail} visible={!!(studentName || studentEmail)} />
-          <div className="lesson-content relative z-10" dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
-        </div>
+        {/* Content or Quiz Engine */}
+        {isQuizLesson ? (
+          <div className="space-y-4">
+            {/* Quiz intro */}
+            {activeLesson.content && (
+              <div className="card-nexos rounded-xl p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0" style={{ background: "hsl(250 90% 60% / 15%)" }}>❓</div>
+                  <div>
+                    <p className="font-bold text-white text-sm">Prova de Conhecimento</p>
+                    <p className="text-xs text-[hsl(220_10%_45%)]">Nota mínima para avançar: <strong className="text-[hsl(250_90%_70%)]">{minPassScore}%</strong> ({Math.ceil(quizQuestions.length * minPassScore / 100)}/{quizQuestions.length} acertos)</p>
+                  </div>
+                  {quizPassed && <span className="ml-auto badge-success badge-primary text-xs shrink-0">✓ Aprovado</span>}
+                  {quizSubmitted && !quizPassed && <span className="ml-auto text-xs text-red-400 font-semibold shrink-0">✗ Reprovado</span>}
+                </div>
+                <div className="lesson-content text-sm" dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
+              </div>
+            )}
+
+            {/* Score result banner */}
+            {quizSubmitted && quizScore !== null && (
+              <div className={`rounded-xl p-5 border ${quizPassed ? "border-[hsl(168_100%_42%/30%)] bg-[hsl(168_100%_42%/6%)]" : "border-red-500/30 bg-red-500/6"}`}>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className={`text-2xl font-bold ${quizPassed ? "text-[hsl(168_100%_50%)]" : "text-red-400"}`}>{quizScore}%</p>
+                    <p className="text-sm text-[hsl(220_10%_55%)] mt-0.5">
+                      {Object.entries(quizAnswers).filter(([idx, ans]) => quizQuestions[parseInt(idx)]?.correctIndex === ans).length} de {quizQuestions.length} questões corretas
+                    </p>
+                    {quizPassed
+                      ? <p className="text-sm text-[hsl(168_100%_50%)] font-semibold mt-1">✓ Você foi aprovado — pode avançar ao próximo capítulo</p>
+                      : <p className="text-sm text-red-400 font-semibold mt-1">Você precisa de {minPassScore}% para avançar. Revise o conteúdo e tente novamente.</p>
+                    }
+                  </div>
+                  {!quizPassed && (
+                    <button className="btn-outline text-sm shrink-0" onClick={resetQuiz}>↺ Tentar Novamente</button>
+                  )}
+                  {quizPassed && (
+                    <button className="btn-outline text-sm shrink-0" onClick={resetQuiz}>↺ Refazer</button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Questions */}
+            <div className="space-y-4">
+              {quizQuestions.map((q, idx) => {
+                const selected = quizAnswers[idx];
+                const isCorrect = quizSubmitted && selected === q.correctIndex;
+                const isWrong = quizSubmitted && selected !== undefined && selected !== q.correctIndex;
+                return (
+                  <div key={q.id} className={`card-nexos rounded-xl p-5 border ${quizSubmitted ? (isCorrect ? "border-[hsl(168_100%_42%/30%)]" : isWrong ? "border-red-500/30" : "border-[hsl(220_20%_12%)]") : "border-[hsl(220_20%_12%)]"}`}>
+                    <p className="text-xs font-bold text-[hsl(220_10%_40%)] mb-2">Questão {idx + 1} de {quizQuestions.length}</p>
+                    <p className="font-semibold text-white text-sm leading-relaxed mb-4">{q.question}</p>
+                    <div className="space-y-2">
+                      {q.options.map((opt, oi) => {
+                        const isSel = selected === oi;
+                        const isRight = quizSubmitted && oi === q.correctIndex;
+                        const isErr = quizSubmitted && isSel && oi !== q.correctIndex;
+                        return (
+                          <button
+                            key={oi}
+                            disabled={quizSubmitted}
+                            onClick={() => !quizSubmitted && setQuizAnswers(prev => ({ ...prev, [idx]: oi }))}
+                            className={`w-full text-left px-4 py-3 rounded-lg text-sm border transition-all ${
+                              isRight
+                                ? "border-[hsl(168_100%_42%)] bg-[hsl(168_100%_42%/10%)] text-[hsl(168_100%_60%)] font-semibold"
+                                : isErr
+                                  ? "border-red-500 bg-red-500/10 text-red-300"
+                                  : isSel
+                                    ? "border-[hsl(250_90%_60%)] bg-[hsl(250_90%_60%/10%)] text-white"
+                                    : "border-[hsl(220_20%_15%)] bg-[hsl(220_20%_6%)] text-[hsl(220_10%_60%)] hover:border-[hsl(220_20%_25%)] hover:text-white"
+                            } ${quizSubmitted ? "cursor-default" : "cursor-pointer"}`}
+                          >
+                            <span className="mr-2 opacity-50">{["A", "B", "C", "D"][oi]}.</span>{opt}
+                            {isRight && <span className="ml-2">✓</span>}
+                            {isErr && <span className="ml-2">✗</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {quizSubmitted && (
+                      <div className={`mt-4 p-3 rounded-lg text-xs leading-relaxed ${isCorrect ? "bg-[hsl(168_100%_42%/6%)] text-[hsl(168_100%_70%)]" : "bg-[hsl(45_100%_55%/6%)] text-[hsl(45_100%_70%)]"}`}>
+                        <span className="font-bold mr-1">{isCorrect ? "✓ Correto." : "✗ Incorreto."}</span>
+                        {q.explanation}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Submit button */}
+            {!quizSubmitted && (
+              <div className="card-nexos rounded-xl p-5 flex items-center justify-between gap-4 flex-wrap">
+                <p className="text-sm text-[hsl(220_10%_50%)]">
+                  {answeredAll ? "Todas as questões respondidas. Pronto para enviar." : `${Object.keys(quizAnswers).length} de ${quizQuestions.length} questões respondidas`}
+                </p>
+                <button
+                  className="btn-primary text-sm"
+                  disabled={!answeredAll}
+                  onClick={submitQuiz}
+                  style={!answeredAll ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+                >
+                  Enviar Avaliação →
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="card-nexos rounded-xl p-6 md:p-8 relative" data-lesson-content>
+            <PiracyWatermark studentName={studentName} studentEmail={studentEmail} visible={!!(studentName || studentEmail)} />
+            <div className="lesson-content relative z-10" dangerouslySetInnerHTML={{ __html: activeLesson.content }} />
+          </div>
+        )}
+
+        {/* Bibliography section */}
+        {bibliographyEntries.length > 0 && (
+          <div className="card-nexos rounded-xl overflow-hidden border border-[hsl(250_90%_60%/15%)]">
+            <button
+              onClick={() => setShowBibliography(v => !v)}
+              className="w-full flex items-center justify-between p-5 text-left hover:bg-[hsl(220_20%_8%)] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0" style={{ background: "hsl(250 90% 60% / 12%)" }}>
+                  📚
+                </div>
+                <div>
+                  <p className="font-bold text-white text-sm">Leituras Recomendadas</p>
+                  <p className="text-xs text-[hsl(220_10%_45%)]">{bibliographyEntries.length} obra{bibliographyEntries.length !== 1 ? "s" : ""} selecionadas para aprofundar o tema desta aula</p>
+                </div>
+              </div>
+              <span className={`text-[hsl(220_10%_40%)] transition-transform duration-200 ${showBibliography ? "rotate-180" : ""}`}>▼</span>
+            </button>
+            {showBibliography && (
+              <div className="border-t border-[hsl(220_20%_10%)] p-5 space-y-4">
+                {bibliographyEntries.map(book => (
+                  <div key={book.id} className="flex gap-4 items-start">
+                    <div className="w-1 self-stretch rounded-full shrink-0" style={{ background: DIFFICULTY_COLOR[book.difficulty] }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div>
+                          <p className="font-bold text-white text-sm leading-snug">{book.title}</p>
+                          <p className="text-xs text-[hsl(220_10%_50%)] mt-0.5">{book.author} · {book.year} · {book.publisher}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs px-2 py-0.5 rounded-full border" style={{ borderColor: DIFFICULTY_COLOR[book.difficulty] + "40", color: DIFFICULTY_COLOR[book.difficulty] }}>
+                            {DIFFICULTY_LABEL[book.difficulty]}
+                          </span>
+                          {book.language === "en" && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(220_20%_10%)] text-[hsl(220_10%_45%)] border border-[hsl(220_20%_15%)]">Inglês</span>
+                          )}
+                          {book.language === "both" && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(220_20%_10%)] text-[hsl(220_10%_45%)] border border-[hsl(220_20%_15%)]">PT-BR disponível</span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-[hsl(220_10%_55%)] leading-relaxed mt-2">{book.why}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Exercise section */}
         {activeLesson.exercise && (
@@ -689,6 +929,18 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
 
         {/* Completion + Navigation */}
         <div className="card-nexos rounded-xl p-5">
+          {/* Quiz gate warning */}
+          {isQuizLesson && !quizPassed && (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[hsl(45_100%_55%/6%)] border border-[hsl(45_100%_55%/20%)] mb-4">
+              <span className="text-sm shrink-0">🔒</span>
+              <p className="text-xs text-[hsl(45_100%_65%)] leading-relaxed">
+                {quizSubmitted
+                  ? `Nota insuficiente (${quizScore}%). Estude o conteúdo das aulas anteriores e tente novamente.`
+                  : `Responda e envie a avaliação acima com nota mínima de ${minPassScore}% para desbloquear o próximo capítulo.`
+                }
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
               {prevLesson ? (
@@ -701,37 +953,45 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
-              {!lessonDone && (
-                <button
-                  className="btn-outline text-sm"
-                  onClick={() => onComplete(activeLesson.id)}
-                >
+              {!isQuizLesson && !lessonDone && (
+                <button className="btn-outline text-sm" onClick={() => onComplete(activeLesson.id)}>
                   ✓ Marcar concluída
                 </button>
               )}
-              {lessonDone && (
+              {lessonDone && !isQuizLesson && (
                 <span className="badge-success badge-primary text-sm">✓ Concluído</span>
+              )}
+              {quizPassed && (
+                <span className="badge-success badge-primary text-sm">✓ Aprovado {quizScore}%</span>
               )}
               {nextLesson ? (
                 <button
                   className="btn-primary text-sm"
-                  onClick={() => { if (!lessonDone) onComplete(activeLesson.id); setActiveLesson(nextLesson); }}
+                  onClick={() => { if (!lessonDone && !isQuizLesson) onComplete(activeLesson.id); setActiveLesson(nextLesson); }}
                 >
                   Próxima Aula →
                 </button>
-              ) : nextChapter && !nextChapter.locked ? (
+              ) : nextChapter && !nextChapter.locked && canAdvance ? (
                 <button
                   className="btn-primary text-sm"
-                  onClick={() => { if (!lessonDone) onComplete(activeLesson.id); onNavigate("lesson", { chapterId: nextChapter.id }); }}
+                  onClick={() => { if (!lessonDone && !isQuizLesson) onComplete(activeLesson.id); onNavigate("lesson", { chapterId: nextChapter.id }); }}
                 >
                   Próximo Capítulo →
                 </button>
+              ) : nextChapter && !nextChapter.locked && !canAdvance ? (
+                <button
+                  className="text-sm px-4 py-2 rounded-lg border border-[hsl(220_20%_20%)] text-[hsl(220_10%_35%)] cursor-not-allowed"
+                  disabled
+                >
+                  🔒 Próximo Capítulo
+                </button>
               ) : (
                 <button
-                  className="btn-primary text-sm"
-                  onClick={() => { if (!lessonDone) onComplete(activeLesson.id); onNavigate("modules"); }}
+                  className={canAdvance ? "btn-primary text-sm" : "text-sm px-4 py-2 rounded-lg border border-[hsl(220_20%_20%)] text-[hsl(220_10%_35%)] cursor-not-allowed"}
+                  disabled={!canAdvance}
+                  onClick={() => { if (canAdvance) { if (!lessonDone && !isQuizLesson) onComplete(activeLesson.id); onNavigate("modules"); } }}
                 >
-                  Concluir ✓
+                  {canAdvance ? "Concluir ✓" : "🔒 Concluir"}
                 </button>
               )}
             </div>

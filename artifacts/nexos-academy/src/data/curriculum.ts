@@ -1,3 +1,11 @@
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
 export interface Lesson {
   id: string;
   title: string;
@@ -8,6 +16,9 @@ export interface Lesson {
   glossaryTerms?: string[];
   exercise?: string;
   locked?: boolean;
+  questions?: QuizQuestion[];
+  minPassScore?: number;
+  bibliographyRefs?: string[];
 }
 
 export interface Chapter {
@@ -730,10 +741,132 @@ Secundárias: <strong>como fazer um lançamento</strong>, <strong>lançamento pa
             title: "Quiz: Fundamentos de Tráfego Orgânico",
             duration: "15 min",
             type: "quiz",
-            keyPoints: ["10 questões", "Nota mínima 7/10 para avançar", "Feedback imediato"],
-            content: `<h2>Quiz de Avaliação</h2>
-<p>Este quiz avalia sua compreensão dos fundamentos de tráfego orgânico. Você precisa de 7 acertos para desbloquear o próximo capítulo.</p>
-<p>O quiz será iniciado ao clicar em "Começar Avaliação".</p>`
+            keyPoints: ["10 questões", "Nota mínima 70% para avançar", "Feedback por questão"],
+            minPassScore: 70,
+            bibliographyRefs: ["contagious-berger", "made-stick-heath"],
+            content: `<p>Teste sua compreensão dos fundamentos de tráfego orgânico. Você precisa de <strong>70% de acertos</strong> para avançar ao próximo capítulo.</p>`,
+            questions: [
+              {
+                id: "org-q1",
+                question: "Qual é a função principal do algoritmo de recomendação nas redes sociais?",
+                options: [
+                  "Exibir apenas conteúdo pago e impulsionado",
+                  "Distribuir conteúdo que retém as pessoas na plataforma pelo maior tempo possível",
+                  "Ordenar posts por data de publicação",
+                  "Priorizar conteúdo de contas verificadas com mais seguidores"
+                ],
+                correctIndex: 1,
+                explanation: "O algoritmo não é curador de qualidade — é otimizador de retenção. Se o seu conteúdo faz as pessoas ficarem mais tempo na plataforma (completar vídeos, salvar, compartilhar, comentar), ele distribui mais. Isso explica por que conteúdo polêmico às vezes supera conteúdo educacional excelente."
+              },
+              {
+                id: "org-q2",
+                question: "O que é 'Hook Rate' em vídeos?",
+                options: [
+                  "Taxa de cliques no link da bio gerados pelo vídeo",
+                  "Porcentagem de pessoas que salvam o vídeo para ver depois",
+                  "Proporção de pessoas que assistem além dos primeiros 3 segundos",
+                  "Número de comentários dividido pelo número de visualizações"
+                ],
+                correctIndex: 2,
+                explanation: "Hook Rate mede se os primeiros 3 segundos são fortes o suficiente para segurar a atenção. Um Hook Rate abaixo de 30% indica que o início do vídeo precisa ser repensado — independentemente da qualidade do restante. O algoritmo decide em segundos se vai distribuir ou enterrar o vídeo."
+              },
+              {
+                id: "org-q3",
+                question: "Um post tem número médio de likes mas alto número de saves (salvamentos). O que isso indica estrategicamente?",
+                options: [
+                  "O conteúdo é polêmico e está gerando reação emocional",
+                  "O conteúdo tem alto valor de referência — as pessoas querem guardar para usar depois",
+                  "O algoritmo está penalizando o alcance orgânico do perfil",
+                  "O post tem pouco texto e muita imagem, o que favorece o save"
+                ],
+                correctIndex: 1,
+                explanation: "Save é o sinal mais valioso no Instagram — indica que o conteúdo tem valor prático que a pessoa quer acessar depois. O algoritmo interpreta saves como indicação de alta qualidade e distribui mais esse tipo de conteúdo. Para lançamentos, conteúdo que as pessoas salvam aquece a audiência sem precisar de budget de anúncio."
+              },
+              {
+                id: "org-q4",
+                question: "Na teoria do Arco Emocional da Campanha, qual é o objetivo do conteúdo na fase de 'Identificação'?",
+                options: [
+                  "Apresentar o produto com seus principais benefícios e preço",
+                  "Criar curiosidade sobre quem é o produtor e por que ele é autoridade",
+                  "Fazer o avatar reconhecer a própria dor e realidade na descrição do conteúdo",
+                  "Gerar urgência para que o avatar tome uma decisão antes do prazo"
+                ],
+                correctIndex: 2,
+                explanation: "Na fase de Identificação, o avatar ainda não sabe que você existe. Conteúdo que 'vende' aqui é rejeitado automaticamente. O que funciona é o espelho: a pessoa lê ou assiste e pensa 'esse conteúdo está falando exatamente de mim'. Esse reconhecimento é o que cria o seguidor que depois vira comprador."
+              },
+              {
+                id: "org-q5",
+                question: "Por que uma conta pode sofrer 'shadow ban' no Instagram?",
+                options: [
+                  "Por ter crescimento de seguidores muito rápido e suspeito",
+                  "Por publicar conteúdo de alta qualidade com frequência maior que a recomendada",
+                  "Por usar hashtags banidas ou comportamentos identificados como spam pela plataforma",
+                  "Por não investir em anúncios pagos nos últimos 30 dias"
+                ],
+                correctIndex: 2,
+                explanation: "Shadow ban é uma penalização silenciosa: o conteúdo aparece para os seguidores mas não é distribuído para novas pessoas via explorar, hashtags ou recomendação. É causado principalmente por hashtags banidas (que mudam constantemente), automações de engajamento, e comportamentos suspeitos como seguir/desseguir em massa."
+              },
+              {
+                id: "org-q6",
+                question: "Qual dos 4 tipos de conteúdo orgânico tem maior taxa de compartilhamento espontâneo?",
+                options: [
+                  "Educacional profundo — tutoriais passo a passo e aulas completas",
+                  "Produto/oferta direta — anúncios orgânicos e destaques de funcionalidades",
+                  "Entretenimento e identificação emocional — conteúdo que o avatar vê e pensa 'isso sou eu'",
+                  "Depoimentos de clientes com resultados detalhados"
+                ],
+                correctIndex: 2,
+                explanation: "Compartilhamento é essencialmente comunicação de identidade: quando alguém compartilha um post, está dizendo 'isso representa quem eu sou ou como me sinto'. Conteúdo de identificação emocional domina o compartilhamento porque toca nessa camada. Educacional é muito salvo e pouco compartilhado. Oferta direta quase nunca é compartilhada organicamente."
+              },
+              {
+                id: "org-q7",
+                question: "Qual estratégia de SEO no Instagram é mais eficaz para aparecer em resultados de pesquisa?",
+                options: [
+                  "Usar o máximo de hashtags possível em todos os posts",
+                  "Publicar com geolocalização para aparecer em buscas regionais",
+                  "Colocar a palavra-chave principal no campo Nome do perfil (não apenas na bio)",
+                  "Criar Stories diários com stickers de enquete para aumentar engajamento"
+                ],
+                correctIndex: 2,
+                explanation: "O campo Nome (não o @usuário) é indexado pela busca do Instagram. Se você é 'Coach de Emagrecimento', colocar 'Coach de Emagrecimento | Nome' no campo Nome faz você aparecer quando alguém pesquisa 'coach de emagrecimento'. Bio e hashtags têm peso significativamente menor para a busca interna."
+              },
+              {
+                id: "org-q8",
+                question: "Qual é a diferença correta entre 'Watch Time' e 'Completion Rate' como métricas de vídeo?",
+                options: [
+                  "São sinônimos — ambos medem o tempo médio de visualização",
+                  "Watch Time é tempo absoluto (segundos/minutos assistidos); Completion Rate é relativo (% do vídeo assistida)",
+                  "Watch Time é métrica exclusiva do YouTube; Completion Rate é exclusiva do Instagram",
+                  "Completion Rate só se aplica a Reels; Watch Time só se aplica a vídeos acima de 60 segundos"
+                ],
+                correctIndex: 1,
+                explanation: "Watch Time = quantos segundos/minutos no total seu conteúdo foi assistido. Completion Rate = que % do vídeo as pessoas assistem em média. Um vídeo de 60s com 80% Completion Rate retém mais do que um de 10min com 20% — mesmo que o Watch Time absoluto seja maior no longo. Para o algoritmo, Completion Rate é o sinal mais forte de qualidade."
+              },
+              {
+                id: "org-q9",
+                question: "Quando um algoritmo detecta alto engajamento nas primeiras 2 horas de publicação, o que normalmente acontece?",
+                options: [
+                  "O post é automaticamente marcado como conteúdo pago e exige aprovação",
+                  "O post é ocultado temporariamente para evitar saturação dos seguidores",
+                  "O algoritmo amplia progressivamente a distribuição para pessoas fora dos seguidores",
+                  "A conta recebe uma notificação de conta verificada automática"
+                ],
+                correctIndex: 2,
+                explanation: "O algoritmo funciona em ondas: primeiro distribui para uma amostra dos seus seguidores. Se o engajamento nessa amostra é alto, distribui para mais seguidores, depois para não-seguidores via explorar e recomendação. As primeiras 2h determinam o 'teto' de distribuição orgânica de cada post — daí a importância de publicar quando a audiência está ativa."
+              },
+              {
+                id: "org-q10",
+                question: "Por que um lançamento digital deve construir conteúdo de 'identificação' antes de qualquer conteúdo de 'oferta'?",
+                options: [
+                  "Porque o algoritmo penaliza perfis que publicam conteúdo de oferta direta no orgânico",
+                  "Porque o avatar só compra de quem ele sente que entende profundamente a própria realidade",
+                  "Porque a plataforma exige um mínimo de conteúdo educacional antes de permitir links de venda",
+                  "Porque conteúdo de identificação gera mais likes e salva a reputação do perfil"
+                ],
+                correctIndex: 1,
+                explanation: "Confiança precede conversão. Uma audiência que não se sente compreendida não compra — não importa quão boa seja a oferta. O conteúdo de identificação constrói a percepção de que 'esse produtor me entende', e essa percepção é o que transforma seguidor em lead e lead em comprador. É a mesma razão pela qual o médico que te examina convence mais do que o que te vê por 2 minutos."
+              }
+            ]
           }
         ]
       },
@@ -3711,13 +3844,158 @@ Sem aumentar o preço, sem novos lançamentos — só mantendo o churn baixo.
           {
             id: "monetizacao-quiz",
             title: "Quiz: Estratégia de Monetização",
-            duration: "10 min",
+            duration: "15 min",
             type: "quiz",
-            keyPoints: ["12 questões sobre escada de valor e modelos", "Análise do seu modelo atual", "Recomendação personalizada"],
-            content: `<h2>Quiz: Qual é a Sua Estratégia de Monetização?</h2>
-<p>Este quiz avalia sua compreensão dos modelos de monetização e ajuda a identificar gaps na sua estrutura atual.</p>
-<p>Ao concluir, você receberá uma análise do seu perfil e as principais oportunidades de crescimento de receita.</p>
-<p>Clique em "Começar Avaliação" para iniciar as 12 questões.</p>`
+            keyPoints: ["12 questões", "Nota mínima 70% para avançar", "Feedback por questão"],
+            minPassScore: 70,
+            bibliographyRefs: ["dotcom-brunson", "way-up-abraham", "irrational-ariely"],
+            content: `<p>Teste sua compreensão dos modelos de monetização, escada de valor e estratégias de lançamento. Você precisa de <strong>70% de acertos</strong> para avançar ao próximo capítulo.</p>`,
+            questions: [
+              {
+                id: "mon-q1",
+                question: "O que é 'Escada de Valor' no contexto de produtos digitais?",
+                options: [
+                  "Um sistema de preços que aumenta automaticamente ao longo do tempo",
+                  "Uma sequência de produtos de valor crescente que guia o cliente do ponto de entrada até ofertas premium",
+                  "Um ranking dos produtos mais vendidos dentro de um nicho",
+                  "A progressão de desconto aplicada ao longo de um lançamento"
+                ],
+                correctIndex: 1,
+                explanation: "A Escada de Valor (conceito popularizado por Russell Brunson) é a arquitetura de monetização de todo negócio digital sustentável: isca gratuita → produto de entrada → produto principal → continuidade/premium. A receita real vem dos degraus superiores, não do produto de entrada. O erro mais comum é tentar construir a escada de cima para baixo — começar pelo produto premium sem validar a base."
+              },
+              {
+                id: "mon-q2",
+                question: "Qual é a função estratégica do 'produto de entrada' (front-end) na Escada de Valor?",
+                options: [
+                  "Gerar o maior volume de receita bruta do negócio",
+                  "Substituir a necessidade de ter produto principal",
+                  "Qualificar e atrair novos clientes com barreira de entrada baixa",
+                  "Ser o produto que deve ter a maior margem de lucro"
+                ],
+                correctIndex: 2,
+                explanation: "O produto de entrada não é para lucrar — é para qualificar. Ele transforma um lead anônimo num comprador identificado que demonstrou disposição de pagar. Um comprador de R$97 converte muito mais para R$997 do que um lead que nunca pagou nada. O front-end cobre o CAC; o lucro real vem do upsell para os degraus seguintes."
+              },
+              {
+                id: "mon-q3",
+                question: "Em qual modelo de lançamento o produto é vendido ANTES de ser criado?",
+                options: [
+                  "Lançamento Perpétuo",
+                  "Lançamento Externo com JVs",
+                  "Lançamento Semente",
+                  "Lançamento de Afiliado"
+                ],
+                correctIndex: 2,
+                explanation: "O Lançamento Semente é o único modelo onde você vende antes de criar — e é o mais recomendado para quem ainda não validou seu produto. A lógica: você apresenta a oferta fundadora para um grupo pequeno, coleta os primeiros pagamentos, cria o produto junto com os alunos ao vivo, refina com feedback real. Risco zero de criar algo que ninguém quer."
+              },
+              {
+                id: "mon-q4",
+                question: "O que é um 'Order Bump'?",
+                options: [
+                  "Um desconto dado na página de checkout para reduzir abandono de carrinho",
+                  "Uma oferta complementar apresentada na própria página de checkout antes da confirmação de compra",
+                  "Um produto de upsell enviado por email algumas horas após a compra",
+                  "Uma campanha de retargeting para quem abandonou o carrinho"
+                ],
+                correctIndex: 1,
+                explanation: "Order Bump é a caixa de seleção que aparece na página de checkout: 'Adicione X por apenas R$Y'. É a técnica de upsell de maior conversão porque aparece no momento exato da decisão de compra, quando o cartão já está na mão. Taxas típicas de conversão: 15–35%. Um Order Bump bem posicionado pode aumentar o ticket médio em 25–40% sem nenhum custo adicional de aquisição."
+              },
+              {
+                id: "mon-q5",
+                question: "Qual é a principal vantagem estratégica do modelo de receita recorrente (assinatura) para o negócio?",
+                options: [
+                  "Gera ticket médio muito mais alto por transação individual",
+                  "Elimina completamente a necessidade de estratégia de tráfego pago",
+                  "Cria receita previsível e aumenta o LTV sem precisar de nova aquisição",
+                  "É o único modelo compatível com afiliados e JVs"
+                ],
+                correctIndex: 2,
+                explanation: "Receita recorrente transforma a operação: em vez de começar cada mês do zero, você tem um baseline garantido de receita. O LTV (valor do cliente ao longo do tempo) de um modelo de assinatura pode ser 5–10x maior do que em vendas únicas. Com LTV alto, você pode gastar muito mais para adquirir cada cliente — o que significa vencer em qualquer leilão de tráfego pago."
+              },
+              {
+                id: "mon-q6",
+                question: "Segundo a pesquisa de Van Westendorp (PSM), onde fica o preço psicologicamente ótimo de um produto?",
+                options: [
+                  "No preço que a maioria considera 'barato' — máxima acessibilidade",
+                  "Exatamente no preço médio entre 'barato' e 'caro'",
+                  "Entre o que a maioria considera 'caro mas compraria' e 'muito caro para comprar'",
+                  "No preço ligeiramente abaixo do principal concorrente"
+                ],
+                correctIndex: 2,
+                explanation: "A PSM (Price Sensitivity Meter) identifica: muito barato (suspeita de qualidade), barato, caro mas aceitável, e muito caro. O ponto ótimo fica acima de 'caro mas aceitável' — porque precificar abaixo desse ponto deixa receita na mesa e pode sinalizar baixo valor percebido. Na prática, a maioria dos produtores cobra menos do que poderia cobrar por medo de rejeição."
+              },
+              {
+                id: "mon-q7",
+                question: "Um produtor tem 5.000 leads na lista e lança um produto de R$2.000. Com taxa de conversão de 1%, qual é a receita bruta do lançamento?",
+                options: [
+                  "R$50.000",
+                  "R$100.000",
+                  "R$10.000",
+                  "R$200.000"
+                ],
+                correctIndex: 1,
+                explanation: "5.000 leads × 1% de conversão = 50 compradores. 50 compradores × R$2.000 = R$100.000. Essa conta simples revela por que aumentar a lista é tão importante: dobrando a lista para 10.000 leads (mantendo tudo igual), a receita dobra para R$200.000. Também mostra que aumentar a conversão de 1% para 2% tem o mesmo efeito — e às vezes é mais rápido do que dobrar a lista."
+              },
+              {
+                id: "mon-q8",
+                question: "O que é LTV (Lifetime Value) no contexto de negócios digitais?",
+                options: [
+                  "O lucro gerado por um único lançamento",
+                  "O tempo médio que um assinante permanece ativo antes de cancelar",
+                  "A receita total que um cliente gera ao longo de toda a relação com o negócio",
+                  "O valor máximo permitido de CAC para a operação ser lucrativa"
+                ],
+                correctIndex: 2,
+                explanation: "LTV = receita total de um cliente durante toda a relação. Se um cliente compra o produto de entrada (R$297), depois o principal (R$1.997), e depois assina a mentoria (R$497/mês por 12 meses), o LTV é R$8.258. Com esse LTV, você pode gastar até ~R$2.750 para adquirir cada cliente (regra LTV:CAC 3:1) — o que muda completamente a agressividade possível em tráfego pago."
+              },
+              {
+                id: "mon-q9",
+                question: "Em lançamentos com afiliados, qual faixa de comissão é mais comum no mercado brasileiro de infoprodutos?",
+                options: [
+                  "10–15% — suficiente para cobrir o esforço do afiliado",
+                  "20–30% — padrão de mercado consolidado",
+                  "40–50% — comissão que justifica o risco e esforço do afiliado",
+                  "60–70% — necessário para atrair os maiores afiliados"
+                ],
+                correctIndex: 2,
+                explanation: "40–50% é o padrão no mercado brasileiro de infoprodutos (Hotmart, Kiwify). Essa faixa existe porque o afiliado assume o risco de tráfego: se ele gasta R$5.000 em anúncios e não converte, o prejuízo é dele. Para justificar esse risco, a comissão precisa ser alta o suficiente para que um único lançamento bem-sucedido cubra vários fracassos. Produtos com ticket mais alto podem oferecer menos % mas o valor absoluto por venda justifica."
+              },
+              {
+                id: "mon-q10",
+                question: "Um negócio tem CAC (Custo de Aquisição de Cliente) de R$300 e LTV de R$600. Qual é a avaliação correta?",
+                options: [
+                  "O negócio é inviável — o CAC está alto demais para escalar",
+                  "O negócio sobrevive no curto prazo mas não escala — LTV:CAC de 2:1 é insuficiente para reinvestir em tráfego com segurança",
+                  "O negócio está saudável — margem de 50% por cliente é excelente",
+                  "O negócio é excepcional — poucos conseguem LTV maior que o CAC"
+                ],
+                correctIndex: 1,
+                explanation: "A regra geral de SaaS e infoprodutos: LTV:CAC mínimo de 3:1 para o negócio ser escalável. Com 2:1 (R$600/R$300), você tem margem para sobreviver mas não para crescer — qualquer variação de custo ou conversão pode tornar o negócio negativo. O objetivo é chegar a 4:1 ou 5:1 via upsells, recorrência e retenção, não necessariamente reduzindo o CAC."
+              },
+              {
+                id: "mon-q11",
+                question: "Qual é o erro mais comum no Lançamento Perpétuo que destrói a taxa de conversão ao longo do tempo?",
+                options: [
+                  "Preço muito alto para o nicho — o ticket não é compatível com a audiência fria",
+                  "Urgência artificial — deadlines falsos que a audiência percebe não serem reais",
+                  "Sequência de email longa demais — as pessoas se descadastram antes de chegar na oferta",
+                  "Webinar gravado em vez de ao vivo — perde o engajamento em tempo real"
+                ],
+                correctIndex: 1,
+                explanation: "Urgência falsa (contadores zerados que reiniciam, 'últimas vagas' que nunca acabam, descontos que sempre existem) é o veneno do perpétuo. A audiência é mais inteligente do que a maioria imagina: ela pesquisa, compara, e descobre a mentira. Quando percebe, a confiança colapsa e a conversão vai a zero permanentemente. Urgência real (data de abertura/fechamento, número real de vagas, bônus que somem) converte porque é crível."
+              },
+              {
+                id: "mon-q12",
+                question: "Para um produtor que ainda não tem produto validado, qual é a sequência correta de construção do negócio digital?",
+                options: [
+                  "Produto completo → Lista de email → Tráfego pago → Lançamento",
+                  "Tráfego pago → Lista grande → Produto → Lançamento externo",
+                  "Audiência mínima → Validação via Semente → Produto → Escada de Valor",
+                  "Lançamento → Produto (cria depois) → Audiência → Escala com perpétuo"
+                ],
+                correctIndex: 2,
+                explanation: "A sequência correta evita o erro mais caro do mercado: criar um produto que ninguém quer. Primeiro, construa audiência mínima viável (não precisa ser grande — 500–1.000 seguidores engajados bastam). Depois, valide com Semente: venda antes de criar, confirme que as pessoas pagam. Só então invista em criar o produto completo. Com produto validado e feedback real, construa a Escada de Valor."
+              }
+            ]
           }
         ],
         locked: false
