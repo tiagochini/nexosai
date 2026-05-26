@@ -1,4 +1,5 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
@@ -250,6 +251,7 @@ export async function runCPLScriptAgent(
     campaignId,
     workspaceId,
     agentRole: "copywriter",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_CPL_SCRIPT + CPL_SYSTEM_PROMPT,
     messages: [
       {

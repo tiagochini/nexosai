@@ -1,5 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runAgentWithCritique } from "./critique.runner.js";
+import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput, AudienceSegment } from "./profile-builder.agent.js";
@@ -337,6 +338,7 @@ Retorne APENAS o JSON do pacote de anúncios.`;
     campaignId,
     workspaceId,
     agentRole: "copywriter",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_AD_COPY + memBlock + AD_COPY_PROMPT,
     userMessage,
     log,

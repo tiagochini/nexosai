@@ -1,5 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runAgentWithCritique } from "./critique.runner.js";
+import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
@@ -426,6 +427,7 @@ Retorne APENAS o JSON da página completa.`;
     campaignId,
     workspaceId,
     agentRole: "landing_page",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: memBlock + LANDING_PAGE_PROMPT,
     userMessage,
     log,

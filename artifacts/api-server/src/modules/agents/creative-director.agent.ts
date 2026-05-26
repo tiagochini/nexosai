@@ -1,4 +1,5 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 import { COGNITIVE_IDENTITY_CREATIVE_DIRECTOR } from "./cognitive-identity-system.js";
@@ -252,6 +253,7 @@ Tom: ${String(intakeData["content.tone"] ?? "")}`;
     campaignId,
     workspaceId,
     agentRole: "creative_director",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_CREATIVE_DIRECTOR + CREATIVE_DIRECTOR_PROMPT,
     messages: [
       {

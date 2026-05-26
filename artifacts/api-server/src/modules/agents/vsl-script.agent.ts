@@ -1,5 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runAgentWithCritique } from "./critique.runner.js";
+import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
@@ -393,6 +394,7 @@ Retorne APENAS o JSON do roteiro completo.`;
     campaignId,
     workspaceId,
     agentRole: "copywriter",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_VSL_SCRIPT + memBlock + VSL_SCRIPT_PROMPT,
     userMessage,
     log,

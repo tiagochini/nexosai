@@ -12,6 +12,7 @@
  */
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import type { Logger } from "pino";
 import { COGNITIVE_IDENTITY_OFFER } from "./cognitive-identity-system.js";
 
@@ -638,6 +639,7 @@ export async function runOfferAgent(
     campaignId,
     workspaceId,
     agentRole: "offer",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_OFFER + OFFER_ARCHITECT_PROMPT,
     memoryContext,
     thinkingMessages: [

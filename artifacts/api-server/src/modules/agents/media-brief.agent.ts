@@ -1,4 +1,5 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { buildPsychologicalProfileBlock } from "./profile-injector.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 
@@ -160,6 +161,7 @@ export async function runMediaBriefAgent(
     campaignId,
     workspaceId,
     agentRole: "analytics",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: MEDIA_BRIEF_PROMPT,
     messages: [
       {
