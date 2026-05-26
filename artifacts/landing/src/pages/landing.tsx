@@ -719,18 +719,21 @@ function OfertaSection() {
     {
       label: "Solo",
       desc: "Produtor solo ou equipe pequena",
+      preco: "R$3.990",
+      precoRegular: "R$5.000",
       destaque: false,
       cor: "border-border/40",
       corBadge: "text-muted-foreground",
       items: [
+        "Acesso vitalício à plataforma",
+        "900 créditos incluídos — cobre 2 lançamentos completos",
         "Até 3 campanhas simultâneas",
-        "Créditos de IA inclusos — cobre 2 lançamentos completos",
         "Trilha de 6 dígitos (R$100k–R$999k em 7 dias)",
         "34 agentes especializados",
         "Integração Meta + Google + TikTok",
         "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
-        "Dashboard de performance",
-        "Créditos adicionais disponíveis à vontade",
+        "Dashboard de performance em tempo real",
+        "NexOS Academy inclusa como bônus",
       ],
       cta: "Solicitar Acesso Solo",
       ctaVariant: "outline" as const,
@@ -738,19 +741,22 @@ function OfertaSection() {
     {
       label: "Agency",
       desc: "Agências e gestores com múltiplos clientes",
+      preco: "R$9.990",
+      precoRegular: "R$14.000",
       destaque: true,
       cor: "border-primary/60",
       corBadge: "text-primary",
       items: [
+        "Acesso vitalício à plataforma",
+        "2.000 créditos incluídos — cobertura para ~5 lançamentos",
         "Até 10 campanhas simultâneas",
-        "Créditos de IA inclusos — cobertura ampliada",
         "Todas as trilhas (6, 8 e 10 dígitos)",
         "White-label completo com sua marca",
         "Multi-workspace por cliente",
         "Painel de relatório consolidado",
         "Onboarding dedicado",
         "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
-        "Créditos adicionais disponíveis à vontade",
+        "NexOS Academy inclusa como bônus",
       ],
       cta: "Solicitar Acesso Agency",
       ctaVariant: "default" as const,
@@ -788,7 +794,11 @@ function OfertaSection() {
                   <div className="font-mono font-black text-2xl text-foreground leading-snug mt-2">
                     {track.label}
                   </div>
-                  <div className="font-mono text-[11px] text-muted-foreground/50 mt-1">Ticket único · Créditos inclusos · Sem mensalidade</div>
+                  <div className="font-mono text-3xl font-black text-primary mt-2 leading-none">{track.preco}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/50 mt-1">
+                    <span className="line-through text-muted-foreground/30">{track.precoRegular}</span>
+                    {" "}&nbsp;·&nbsp; Ticket único · Sem mensalidade
+                  </div>
                 </div>
                 <div className="space-y-2.5 flex-1">
                   {track.items.map(item => (

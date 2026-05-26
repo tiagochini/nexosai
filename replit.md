@@ -70,8 +70,10 @@ AI-powered operating system for campaign execution, launch automation and digita
 ## Product
 
 NexOS AI sells to digital product launchers and agencies. Two plans:
-- **Solo** (R$297/mo + R$2500 onboarding): 3 campaigns, 1500 credits/month, 6-digit track
-- **Agency** (R$1497/mo + R$2500 onboarding): 10 campaigns, 5000 credits/month, all tracks, white-label
+- **Solo** (R$3.990 lançamento / R$5.000 regular — acesso único vitalício): 3 campaigns, 900 credits incluídos (~2 lançamentos), 6-digit track
+- **Agency** (R$9.990 lançamento / R$14.000 regular — acesso único vitalício): 10 campaigns, 2000 credits incluídos (~5 lançamentos), all tracks, white-label
+- **NexOS Academy** (R$2.500 lançamento / R$3.900 regular — acesso único): bônus incluso para quem adquire NexOS AI
+- MODELO: ticket único, sem mensalidade, sem recorrência. Créditos adicionais: 500cr/R$85, 1500cr/R$239, 3500cr/R$529, 7000cr/R$979
 
 Launch tracks by revenue target:
 - **6-digit**: R$100k–R$999k in 7 days
