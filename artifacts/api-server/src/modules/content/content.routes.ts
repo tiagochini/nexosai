@@ -277,6 +277,51 @@ router.post("/:campaignId/content/media-briefs/:briefId/reject", async (req, res
   }
 });
 
+// GET /campaigns/:campaignId/content/coherence — emotional coherence report
+router.get("/:campaignId/content/coherence", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const { db, campaignsTable } = await import("@workspace/db");
+  const { eq } = await import("drizzle-orm");
+
+  const [campaign] = await db
+    .select({ intakeData: campaignsTable.intakeData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+
+  if (!campaign) {
+    res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
+    return;
+  }
+
+  const intake = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const report = intake["_coherenceReport"] ?? null;
+
+  res.json({ report });
+});
+
+// POST /campaigns/:campaignId/content/coherence — manually trigger coherence check
+router.post("/:campaignId/content/coherence", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const { runEmotionalCoherenceCheck } = await import("../agents/emotional-coherence-checker.agent.js");
+
+  try {
+    const report = await runEmotionalCoherenceCheck(campaignId, req.auth.workspaceId, req.log);
+    if (!report) {
+      res.status(422).json({ error: "Não foi possível gerar o relatório. Verifique se o arco emocional e as peças de conteúdo existem.", code: "COHERENCE_UNAVAILABLE" });
+      return;
+    }
+    res.json({ report });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
 // POST /campaigns/:campaignId/content/optimize — run optimization agent with live metrics
 const optimizeSchema = z.object({
   metrics: z.record(z.string(), z.unknown()),

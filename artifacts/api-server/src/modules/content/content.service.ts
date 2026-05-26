@@ -25,6 +25,7 @@ import { runVideoStrategyAgent } from "../agents/video-strategy.agent.js";
 import { runCreatorGrowthAgent } from "../agents/creator-growth.agent.js";
 import { runComplianceAgent } from "../agents/compliance.agent.js";
 import { runOptimizationAgent } from "../agents/optimization.agent.js";
+import { runEmotionalCoherenceCheck } from "../agents/emotional-coherence-checker.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
@@ -1139,6 +1140,17 @@ export async function generateCampaignContent(
     data: { agentsRun, piecesGenerated, mediaBriefsGenerated, errors: errors.length },
     timestamp: new Date().toISOString(),
   });
+
+  // ── Emotional Coherence Check (fire-and-forget) ───────────────────────────
+  // Runs after content generation completes. Checks if pieces respect the arc
+  // progression. Non-blocking — saves report to campaign.metadata._coherenceReport.
+  if (!allFailed && piecesGenerated > 0) {
+    setImmediate(() => {
+      runEmotionalCoherenceCheck(campaignId, workspaceId, log).catch(err => {
+        log.error({ err, campaignId }, "Coherence check fire-and-forget failed");
+      });
+    });
+  }
 
   return {
     campaignId,
