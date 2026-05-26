@@ -6,6 +6,7 @@ import {
   type Campaign,
 } from "@workspace/db";
 import { completeWithAgent, buildLocaleInstruction } from "../ai-gateway/ai-gateway.service.js";
+import { generateAvatarVoiceFile } from "../agents/avatar-voice-file.agent.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { Logger } from "pino";
 import {
@@ -586,6 +587,13 @@ async function generatePsychologicalProfile(
     );
 
     log.info({ campaignId }, "Psychological profile generated and saved");
+
+    // Fire-and-forget Avatar Voice File — runs after profile is saved
+    const mergedIntake = { ...existing, _psychologicalProfile: profile };
+    setImmediate(() => {
+      generateAvatarVoiceFile(campaignId, workspaceId, mergedIntake, log)
+        .catch(err => log.warn({ err }, "Avatar Voice File generation failed — non-blocking"));
+    });
   } catch (err) {
     log.warn({ err, campaignId }, "Psychological profile generation failed — non-blocking");
   }

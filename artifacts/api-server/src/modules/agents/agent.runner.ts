@@ -36,6 +36,13 @@ export interface RunAgentOptions {
   thinkingMessages?: string[];
   /** Campaign Memory Layer context — injected before system prompt when provided. */
   memoryContext?: string;
+  /**
+   * Psychological Profile block — formatted output of buildPsychologicalProfileBlock().
+   * Injected between the memory layer and the agent-specific system prompt.
+   * Provides the 6-map avatar synthesis (linguagem, desejo, objeção, identidade, emoção, mercado)
+   * so every agent operates with full psychological context, not just raw intake fields.
+   */
+  profileContext?: string;
 }
 
 export interface RunAgentResult {
@@ -266,10 +273,13 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // 1. Temporal context (date awareness)
   // 2. PLF SUPREMACY (Fórmula de Lançamento governa toda a arquitetura — NÍVEL 0)
   // 3. DOMINO CORE (philosophical persuasion engine — governs ALL communication)
-  // 4. NEXOS Master Evolution Prompt (quality criteria, anti-hallucination, ethics)
-  // 5. Campaign Memory Layer (workspace-specific context)
-  // 6. Agent-specific system prompt (role expertise)
-  // 7. DOMINO Self-Critic (mandatory pre-output review checklist)
+  // 4. NEXOS Applied Frameworks + Cognitive Foundations (16 thinkers, 5 pillars)
+  // 5. NEXOS Master Evolution Prompt (quality criteria, anti-hallucination, ethics)
+  // 6. Campaign Memory Layer (workspace-specific context)
+  // 7. Psychological Profile (6-map avatar synthesis — bridges intake → agent pipeline)
+  // 8. Agent-specific system prompt (role expertise)
+  // 9. DOMINO Self-Critic (mandatory pre-output review checklist)
+  const profileBlock = opts.profileContext ?? "";
   const enrichedSystemPrompt =
     buildTemporalContextBlock() +
     DOMINO_PLF_SUPREMACY +
@@ -278,6 +288,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     NEXOS_COGNITIVE_FOUNDATIONS +
     NEXOS_MASTER_EVOLUTION_PROMPT +
     memoryBlock +
+    profileBlock +
     systemPrompt +
     DOMINO_SELF_CRITIC;
 

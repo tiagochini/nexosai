@@ -47,11 +47,15 @@ export async function runAgentWithCritique(opts: {
   systemPrompt: string;
   userMessage: string;
   log: Logger;
+  /** Psychological profile block from profile-injector — injected before the system prompt. */
+  profileContext?: string;
 }): Promise<CritiqueResult> {
   const { campaignId, workspaceId, agentRole, systemPrompt, userMessage, log } = opts;
 
   // Always inject current date so the critique loop never references past dates
-  const enrichedSystemPrompt = buildTemporalBlock() + systemPrompt;
+  // Inject psychological profile between temporal context and agent system prompt when available
+  const profileBlock = opts.profileContext ?? "";
+  const enrichedSystemPrompt = buildTemporalBlock() + profileBlock + systemPrompt;
 
   const checklist = AGENT_CRITIQUE_CHECKLIST[agentRole] ?? [];
   const checklistText = checklist.map((q, i) => `${i + 1}. ${q}`).join("\n");
