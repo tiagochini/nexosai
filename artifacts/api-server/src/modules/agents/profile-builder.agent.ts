@@ -1,5 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_AVATAR_INTELLIGENCE } from "./cognitive-identity-system.js";
 
 // ─── Output types ─────────────────────────────────────────────────────────────
 
@@ -409,7 +410,7 @@ export async function runProfileBuilderAgent(
     campaignId,
     workspaceId,
     agentRole: "command",
-    systemPrompt: PROFILE_BUILDER_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_AVATAR_INTELLIGENCE + PROFILE_BUILDER_PROMPT,
     messages: [
       {
         role: "user",

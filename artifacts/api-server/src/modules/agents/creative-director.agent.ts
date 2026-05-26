@@ -1,6 +1,7 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_CREATIVE_DIRECTOR } from "./cognitive-identity-system.js";
 
 export interface DesignToken {
   name: string;
@@ -251,7 +252,7 @@ Tom: ${String(intakeData["content.tone"] ?? "")}`;
     campaignId,
     workspaceId,
     agentRole: "creative_director",
-    systemPrompt: CREATIVE_DIRECTOR_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_CREATIVE_DIRECTOR + CREATIVE_DIRECTOR_PROMPT,
     messages: [
       {
         role: "user",

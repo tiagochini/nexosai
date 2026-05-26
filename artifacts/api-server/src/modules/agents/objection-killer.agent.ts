@@ -7,6 +7,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_OBJECTION_KILLER } from "./cognitive-identity-system.js";
 
 export interface ObjectionKill {
   objection: string;
@@ -199,7 +200,7 @@ export async function runObjectionKillerAgent(
     campaignId,
     workspaceId,
     agentRole: "objection_killer",
-    systemPrompt: OBJECTION_KILLER_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_OBJECTION_KILLER + OBJECTION_KILLER_PROMPT,
     messages: [
       {
         role: "user",

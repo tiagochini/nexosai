@@ -7,6 +7,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_PRICING } from "./cognitive-identity-system.js";
 
 export interface PriceVariant {
   label: string;
@@ -277,7 +278,7 @@ export async function runPricingPsychologistAgent(
     campaignId,
     workspaceId,
     agentRole: "pricing_psychologist",
-    systemPrompt: PRICING_PSYCHOLOGY_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_PRICING + PRICING_PSYCHOLOGY_PROMPT,
     messages: [
       {
         role: "user",

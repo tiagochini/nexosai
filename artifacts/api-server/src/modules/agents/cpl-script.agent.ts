@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_CPL_SCRIPT } from "./cognitive-identity-system.js";
 
 export interface CPLVideo {
   videoNumber: 1 | 2 | 3 | 4;
@@ -249,7 +250,7 @@ export async function runCPLScriptAgent(
     campaignId,
     workspaceId,
     agentRole: "copywriter",
-    systemPrompt: CPL_SYSTEM_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_CPL_SCRIPT + CPL_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",

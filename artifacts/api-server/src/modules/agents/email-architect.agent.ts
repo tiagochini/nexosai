@@ -7,6 +7,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_EMAIL_ARCHITECT } from "./cognitive-identity-system.js";
 
 export interface EmailInSequence {
   position: number;
@@ -174,7 +175,7 @@ export async function runEmailArchitectAgent(
     campaignId,
     workspaceId,
     agentRole: "email_architect",
-    systemPrompt: EMAIL_ARCHITECT_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_EMAIL_ARCHITECT + EMAIL_ARCHITECT_PROMPT,
     messages: [
       {
         role: "user",

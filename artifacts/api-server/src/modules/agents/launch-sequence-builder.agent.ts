@@ -3,6 +3,7 @@ import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.serv
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_LAUNCH_SEQUENCE_BUILDER } from "./cognitive-identity-system.js";
 
 export interface SequenceItemPlan {
   phase: string;
@@ -365,7 +366,7 @@ export async function runLaunchSequenceBuilderAgent(
     campaignId: null,
     workspaceId,
     agentRole: "strategy",
-    systemPrompt: memBlock + SEQUENCE_BUILDER_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_LAUNCH_SEQUENCE_BUILDER + memBlock + SEQUENCE_BUILDER_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     log,
   });

@@ -4,6 +4,7 @@ import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.serv
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput, AudienceSegment } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_AD_COPY } from "./cognitive-identity-system.js";
 
 export interface MetaAdVariation {
   variationId: string;
@@ -336,7 +337,7 @@ Retorne APENAS o JSON do pacote de anúncios.`;
     campaignId,
     workspaceId,
     agentRole: "copywriter",
-    systemPrompt: memBlock + AD_COPY_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_AD_COPY + memBlock + AD_COPY_PROMPT,
     userMessage,
     log,
   });

@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_MEDIA_BUYER } from "./cognitive-identity-system.js";
 
 // ─── Output types ──────────────────────────────────────────────────────────────
 
@@ -310,7 +311,7 @@ export async function runMediaBuyerAgent(
     campaignId,
     workspaceId,
     agentRole: "media_buyer",
-    systemPrompt: MEDIA_BUYER_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_MEDIA_BUYER + MEDIA_BUYER_PROMPT,
     messages: [
       {
         role: "user",

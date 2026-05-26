@@ -7,6 +7,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_LAUNCH_DEBRIEFING } from "./cognitive-identity-system.js";
 
 export interface LaunchLearning {
   category: "funnel" | "copy" | "traffic" | "offer" | "timing" | "audience" | "ops";
@@ -155,7 +156,7 @@ export async function runLaunchDebriefingAgent(
     campaignId,
     workspaceId,
     agentRole: "launch_debriefing",
-    systemPrompt: LAUNCH_DEBRIEFING_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_LAUNCH_DEBRIEFING + LAUNCH_DEBRIEFING_PROMPT,
     messages: [
       {
         role: "user",

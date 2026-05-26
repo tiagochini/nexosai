@@ -1,6 +1,7 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { ProfileBuilderOutput, AudienceSegment } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_TARGETING } from "./cognitive-identity-system.js";
 
 export interface MetaAudience {
   audienceId: string;
@@ -279,7 +280,7 @@ Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(
     campaignId,
     workspaceId,
     agentRole: "targeting",
-    systemPrompt: TARGETING_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_TARGETING + TARGETING_PROMPT,
     messages: [
       {
         role: "user",

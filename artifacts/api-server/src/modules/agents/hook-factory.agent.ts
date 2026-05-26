@@ -6,6 +6,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_HOOK_FACTORY } from "./cognitive-identity-system.js";
 
 export interface HookVariant {
   id: string;
@@ -277,7 +278,7 @@ export async function runHookFactoryAgent(
     campaignId,
     workspaceId,
     agentRole: "hook_factory",
-    systemPrompt: HOOK_FACTORY_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_HOOK_FACTORY + HOOK_FACTORY_PROMPT,
     messages: [
       {
         role: "user",

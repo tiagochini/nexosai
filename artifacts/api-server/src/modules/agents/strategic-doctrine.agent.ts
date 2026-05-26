@@ -40,6 +40,7 @@ import type { StrategyOutput } from "./strategy.agent.js";
 import type { StrategicBrief } from "./strategic-core.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_STRATEGIC_DOCTRINE } from "./cognitive-identity-system.js";
 
 // ─── Output Types ───────────────────────────────────────────────────────────────
 
@@ -384,7 +385,7 @@ export async function runStrategicDoctrineEngine(
     campaignId,
     workspaceId,
     agentRole: "strategy",
-    systemPrompt: DOCTRINE_SYSTEM_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_STRATEGIC_DOCTRINE + DOCTRINE_SYSTEM_PROMPT,
     memoryContext,
     thinkingMessages: [
       "Avaliando estágio de consciência do público com lente de Schwartz...",

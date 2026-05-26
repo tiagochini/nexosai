@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_SOCIAL_MEDIA } from "./cognitive-identity-system.js";
 
 export interface SocialPost {
   day: number;
@@ -218,7 +219,7 @@ export async function runSocialMediaAgent(
     campaignId,
     workspaceId,
     agentRole: "copywriter",
-    systemPrompt: SOCIAL_MEDIA_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_SOCIAL_MEDIA + SOCIAL_MEDIA_PROMPT,
     messages: [
       {
         role: "user",

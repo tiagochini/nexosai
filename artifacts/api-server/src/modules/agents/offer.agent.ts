@@ -13,6 +13,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_OFFER } from "./cognitive-identity-system.js";
 
 // ─── Output Types ───────────────────────────────────────────────────────────────
 
@@ -637,7 +638,7 @@ export async function runOfferAgent(
     campaignId,
     workspaceId,
     agentRole: "offer",
-    systemPrompt: OFFER_ARCHITECT_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_OFFER + OFFER_ARCHITECT_PROMPT,
     memoryContext,
     thinkingMessages: [
       "Analisando mercado — desejo dominante, medo principal, sofisticação...",

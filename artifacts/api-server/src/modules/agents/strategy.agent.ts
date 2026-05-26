@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { StrategicBrief } from "./strategic-core.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_STRATEGY } from "./cognitive-identity-system.js";
 
 export interface StrategyOutput {
   executiveSummary: string;
@@ -376,7 +377,7 @@ Use este perfil como base para aprofundar a estratégia. Não repita as mesmas i
     campaignId,
     workspaceId,
     agentRole: "strategy",
-    systemPrompt: memBlock + STRATEGY_SYSTEM_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_STRATEGY + memBlock + STRATEGY_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",

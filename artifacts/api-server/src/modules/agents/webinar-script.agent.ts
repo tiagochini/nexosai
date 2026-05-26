@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_WEBINAR_SCRIPT } from "./cognitive-identity-system.js";
 
 export interface WebinarSection {
   sectionId: string;
@@ -226,7 +227,7 @@ export async function runWebinarScriptAgent(
     campaignId,
     workspaceId,
     agentRole: "copywriter",
-    systemPrompt: WEBINAR_SYSTEM_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_WEBINAR_SCRIPT + WEBINAR_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",

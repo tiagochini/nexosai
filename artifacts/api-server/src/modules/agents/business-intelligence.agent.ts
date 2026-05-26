@@ -12,6 +12,7 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { FinancialProjectionOutput } from "./financial-projector.agent.js"; // eslint-disable-line @typescript-eslint/no-unused-vars
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_BUSINESS_INTELLIGENCE } from "./cognitive-identity-system.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -242,7 +243,7 @@ export async function runBusinessIntelligenceAgent(
     campaignId,
     workspaceId,
     agentRole: "business_intelligence",
-    systemPrompt: buildBISystemPrompt(),
+    systemPrompt: COGNITIVE_IDENTITY_BUSINESS_INTELLIGENCE + buildBISystemPrompt(),
     messages: [{ role: "user", content: userContent }],
     log,
     requiresApproval: false,

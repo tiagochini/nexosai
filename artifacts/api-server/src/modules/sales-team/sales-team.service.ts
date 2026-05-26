@@ -8,6 +8,7 @@ import {
 import { completeWithAgent, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { logger } from "../../lib/logger.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_SALES_TEAM } from "../agents/cognitive-identity-system.js";
 
 export type SalesFunnelStage = "warming" | "desire" | "scarcity" | "objection" | "post_sale";
 export type SalesConversationStatus = "active" | "converted" | "lost" | "paused";
@@ -160,7 +161,7 @@ export async function suggestSalesReply(conversationId: string, workspaceId: str
 
   const stage = conv.funnelStage as SalesFunnelStage;
   const agentRole = STAGE_TO_AGENT[stage] ?? "sales_consultant";
-  const systemPrompt = SALES_SYSTEM_PROMPTS[stage] ?? SALES_SYSTEM_PROMPTS.post_sale;
+  const systemPrompt = COGNITIVE_IDENTITY_SALES_TEAM + (SALES_SYSTEM_PROMPTS[stage] ?? SALES_SYSTEM_PROMPTS.post_sale);
 
   const messages = conv.messages ?? [];
   const historyText = messages.slice(-10).map(m => {

@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_ORGANIC_TRAFFIC } from "./cognitive-identity-system.js";
 
 export interface OrganicContentPiece {
   platform: "instagram" | "tiktok" | "youtube" | "facebook" | "linkedin" | "threads";
@@ -337,7 +338,7 @@ export async function runOrganicTrafficAgent(
     campaignId,
     workspaceId,
     agentRole: "organic_traffic",
-    systemPrompt: ORGANIC_TRAFFIC_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_ORGANIC_TRAFFIC + ORGANIC_TRAFFIC_PROMPT,
     memoryContext,
     messages: [
       {

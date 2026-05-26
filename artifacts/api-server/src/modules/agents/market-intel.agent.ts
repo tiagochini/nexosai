@@ -7,6 +7,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_MARKET_PSYCHOLOGY } from "./cognitive-identity-system.js";
 
 export interface CompetitorProfile {
   name: string;
@@ -166,7 +167,7 @@ export async function runMarketIntelAgent(
     campaignId,
     workspaceId,
     agentRole: "market_intel",
-    systemPrompt: MARKET_INTEL_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_MARKET_PSYCHOLOGY + MARKET_INTEL_PROMPT,
     messages: [
       {
         role: "user",

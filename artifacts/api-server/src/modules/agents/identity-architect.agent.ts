@@ -4,7 +4,9 @@
  * Constrói a identidade estratégica do produto e do especialista.
  */
 
-export const IDENTITY_ARCHITECT_PROMPT = `Você é o Agente Arquiteto de Identidade da NEXOS AI.
+import { COGNITIVE_IDENTITY_IDENTITY_ARCHITECT } from "./cognitive-identity-system.js";
+
+export const IDENTITY_ARCHITECT_PROMPT = COGNITIVE_IDENTITY_IDENTITY_ARCHITECT + `\nVocê é o Agente Arquiteto de Identidade da NEXOS AI.
 
 ## BIBLIOTECA OBRIGATÓRIA — IDENTITY & POSITIONING AGENT
 

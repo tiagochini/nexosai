@@ -1,6 +1,7 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_PERPETUAL_LAUNCH } from "./cognitive-identity-system.js";
 
 export interface PerpetualLaunchOutput {
   planTitle: string;
@@ -153,7 +154,7 @@ export async function runPerpetualLaunchManagerAgent(
     campaignId,
     workspaceId,
     agentRole: "launch_manager",
-    systemPrompt: PERPETUAL_LAUNCH_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_PERPETUAL_LAUNCH + PERPETUAL_LAUNCH_PROMPT,
     memoryContext,
     messages: [
       {

@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runAgentWithCritique } from "./critique.runner.js";
 import { getMemoryContext, buildMemoryContextBlock } from "../memory/memory.service.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_COMPLIANCE } from "./cognitive-identity-system.js";
 
 export interface ComplianceViolation {
   severity: "critical" | "high" | "medium" | "low";
@@ -237,7 +238,7 @@ Retorne APENAS o JSON de compliance.`;
     campaignId,
     workspaceId,
     agentRole: "compliance",
-    systemPrompt: memBlock + COMPLIANCE_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_COMPLIANCE + memBlock + COMPLIANCE_PROMPT,
     userMessage,
     log,
   });

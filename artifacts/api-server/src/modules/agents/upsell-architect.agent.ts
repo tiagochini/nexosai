@@ -7,6 +7,7 @@
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_UPSELL_ARCHITECT } from "./cognitive-identity-system.js";
 
 export interface UpsellOffer {
   position: "order_bump" | "oto1" | "oto2" | "downsell" | "cross_sell" | "recurrence";
@@ -202,7 +203,7 @@ export async function runUpsellArchitectAgent(
     campaignId,
     workspaceId,
     agentRole: "upsell_architect",
-    systemPrompt: UPSELL_ARCHITECT_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_UPSELL_ARCHITECT + UPSELL_ARCHITECT_PROMPT,
     messages: [
       {
         role: "user",

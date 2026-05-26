@@ -2,6 +2,7 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { LaunchPlanOutput } from "./launch-manager.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_FINANCIAL_PROJECTOR } from "./cognitive-identity-system.js";
 
 export interface DailyCostBreakdown {
   day: number;
@@ -332,7 +333,7 @@ export async function runFinancialProjectorAgent(
     campaignId,
     workspaceId,
     agentRole: "analytics",
-    systemPrompt: FINANCIAL_PROJECTOR_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_FINANCIAL_PROJECTOR + FINANCIAL_PROJECTOR_PROMPT,
     memoryContext,
     messages: [
       {

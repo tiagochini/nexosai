@@ -1,5 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_WHATSAPP_RESPONSE } from "./cognitive-identity-system.js";
 
 export interface WhatsAppIncomingMessage {
   from: string;
@@ -113,7 +114,7 @@ Classifique a intenção e gere a resposta ideal. Retorne APENAS o JSON.`;
     campaignId: `wa-response-${workspaceId}`,
     workspaceId,
     agentRole: "copywriter",
-    systemPrompt: RESPONSE_SYSTEM_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_WHATSAPP_RESPONSE + RESPONSE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     log,
   });

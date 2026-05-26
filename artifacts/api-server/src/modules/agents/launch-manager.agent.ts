@@ -1,6 +1,7 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { StrategyOutput } from "./strategy.agent.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_LAUNCH_MANAGER } from "./cognitive-identity-system.js";
 
 export interface LaunchPhase {
   phase: string;
@@ -182,7 +183,7 @@ export async function runLaunchManagerAgent(
     campaignId,
     workspaceId,
     agentRole: "launch_manager",
-    systemPrompt: LAUNCH_MANAGER_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_LAUNCH_MANAGER + LAUNCH_MANAGER_PROMPT,
     memoryContext,
     messages: [
       {

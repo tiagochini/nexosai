@@ -1,5 +1,6 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
+import { COGNITIVE_IDENTITY_OPTIMIZATION } from "./cognitive-identity-system.js";
 
 export interface OptimizationRecommendation {
   priority: "critical" | "high" | "medium" | "low";
@@ -230,7 +231,7 @@ export async function runOptimizationAgent(
     campaignId,
     workspaceId,
     agentRole: "optimization",
-    systemPrompt: OPTIMIZATION_PROMPT,
+    systemPrompt: COGNITIVE_IDENTITY_OPTIMIZATION + OPTIMIZATION_PROMPT,
     messages: [
       {
         role: "user",
