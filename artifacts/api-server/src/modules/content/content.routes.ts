@@ -14,6 +14,7 @@ import {
   rejectMediaBrief,
   optimizeCampaign,
 } from "./content.service.js";
+import { autoGenerateCreativesFromBrief } from "./creative-auto-gen.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { autoPostApprovedContent } from "../social/social.autopost.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
@@ -114,6 +115,12 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
       true,
     ).catch(() => undefined);
     autoPostApprovedContent(req.auth.workspaceId, campaignId, pieceId).catch(() => undefined);
+    // If media_brief approved → auto-generate creative concepts from image briefs (fire-and-forget)
+    if (piece.type === "media_brief") {
+      setImmediate(() => {
+        autoGenerateCreativesFromBrief(req.auth.workspaceId, campaignId, pieceId, req.log).catch(() => undefined);
+      });
+    }
     // Contradiction Detector — re-run alignment after each content approval to catch new conflicts
     setImmediate(() => {
       getCampaignBrain(campaignId)

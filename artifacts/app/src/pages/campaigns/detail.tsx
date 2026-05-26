@@ -40,6 +40,7 @@ import {
 import { CreativeIntentPanel } from "@/components/CreativeIntentPanel";
 import { DecisionTracePanel } from "@/components/DecisionTracePanel";
 import { CampaignMindMap } from "@/components/CampaignMindMap";
+import { GroupsTab } from "@/components/GroupsTab";
 import { useMode } from "@/lib/mode";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1243,7 +1244,7 @@ export default function CampaignDetail() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
-  const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas">("comando");
+  const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos">("comando");
   const { isArquiteto } = useMode();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
@@ -1734,6 +1735,7 @@ export default function CampaignDetail() {
     { id: "estrategia" as const, label: "Proposta", icon: BookOpen },
     { id: "conteudo" as const, label: "Conteúdo", icon: Layers },
     { id: "metricas" as const, label: "Métricas", icon: BarChart3 },
+    { id: "grupos" as const, label: "Grupos", icon: Users },
   ];
 
   return (
@@ -2540,6 +2542,11 @@ export default function CampaignDetail() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ══════════════ GRUPOS TAB ══════════════ */}
+      {activeTab === "grupos" && (
+        <GroupsTab campaignId={campaignId} />
       )}
 
       {/* ══════════════ MÉTRICAS TAB ══════════════ */}

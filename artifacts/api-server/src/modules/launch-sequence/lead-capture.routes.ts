@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { eq, and } from "drizzle-orm";
 import { db, launchSequencesTable, sequenceContactsTable, auditLogsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
+import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 
 const router = Router();
 
@@ -290,6 +291,95 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
     referralUrl: `${req.protocol}://${req.get("host")}/lead-capture/${sequenceId}?ref=${referralCode}`,
     message: "Lead registrado com sucesso",
   });
+});
+
+// ─── POST /api/lead-capture/:sequenceId/chat — AI agent responds to leads ─────
+
+const chatSchema = z.object({
+  message: z.string().min(1).max(2000),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().max(2000),
+  })).max(20).optional().default([]),
+  contactName: z.string().max(100).optional(),
+});
+
+router.post("/:sequenceId/chat", async (req, res): Promise<void> => {
+  const { sequenceId } = req.params;
+
+  const parsed = chatSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Payload inválido", details: parsed.error.issues });
+    return;
+  }
+
+  const [sequence] = await db
+    .select({
+      id: launchSequencesTable.id,
+      name: launchSequencesTable.name,
+      productName: launchSequencesTable.productName,
+      leadCaptureEnabled: launchSequencesTable.leadCaptureEnabled,
+      workspaceId: launchSequencesTable.workspaceId,
+      config: launchSequencesTable.config,
+    })
+    .from(launchSequencesTable)
+    .where(eq(launchSequencesTable.id, sequenceId))
+    .limit(1);
+
+  if (!sequence || !sequence.leadCaptureEnabled) {
+    res.status(404).json({ error: "Chat não disponível para esta sequência" });
+    return;
+  }
+
+  const { message, history, contactName } = parsed.data;
+  const productName = sequence.productName ?? sequence.name ?? "este produto";
+  const visitorName = contactName ?? "visitante";
+
+  const systemPrompt = `Você é um agente de vendas especializado que responde leads na landing page do produto "${productName}".
+
+Seu papel: converter curiosidade em desejo de compra — sem pressionar, sem ser vendedor, sem ser genérico.
+
+COMO VOCÊ ATUA:
+- Você identifica a dúvida real por trás da pergunta e a responde com clareza e especificidade
+- Você usa os próprios dados e características do produto para criar confiança
+- Você cria urgência quando adequado, mas nunca de forma artificial
+- Quando o lead está pronto, você direciona para a ação de compra de forma natural
+
+VOZ: Direta, quente, confiante. Como um amigo especialista que realmente quer ajudar — não um chatbot corporativo.
+
+REGRAS:
+- Responda em PT-BR sempre
+- Respostas curtas e objetivas — máximo 3 parágrafos
+- Se não souber algo específico do produto, diga que vai verificar e concentre-se no que sabe
+- Nunca diga "como IA" ou "como assistente" — você é o agente de vendas do produto
+- Se a pessoa estiver pronta para comprar, facilite a decisão sem hesitar`;
+
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+    ...(history ?? []).map((h) => ({ role: h.role, content: h.content })),
+    { role: "user" as const, content: `[${visitorName}]: ${message}` },
+  ];
+
+  try {
+    const result = await completeWithAgent(
+      "sales_consultant",
+      systemPrompt,
+      messages,
+      sequence.workspaceId,
+      logger,
+      undefined,
+    );
+
+    res.json({
+      reply: result.content,
+      agentRole: "sales_consultant",
+    });
+  } catch (err) {
+    logger.warn({ err, sequenceId }, "Lead chat agent failed");
+    res.json({
+      reply: "Estou verificando as informações para te responder melhor. Pode repetir sua pergunta?",
+      agentRole: "sales_consultant",
+    });
+  }
 });
 
 export default router;

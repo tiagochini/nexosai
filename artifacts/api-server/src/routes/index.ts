@@ -44,6 +44,7 @@ import creativeIntentRouter from "../modules/creative-intent/creative-intent.rou
 import pipelineRouter from "../modules/pipeline/pipeline.routes.js";
 import salesTeamRouter from "../modules/sales-team/sales-team.routes.js";
 import liveLauncherRouter from "../modules/live-launcher/live-launcher.routes.js";
+import campaignGroupsRouter from "../modules/campaigns/groups.routes.js";
 
 const router: IRouter = Router();
 
@@ -84,6 +85,7 @@ router.use("/events", serverEventsRouter);
 router.use("/integrations/oauth", oauthRouter);
 router.use("/social-moderation", socialModerationRouter);
 router.use("/campaigns", creativesRouter);
+router.use("/campaigns", campaignGroupsRouter);
 router.use("/campaigns", creativeIntentRouter);
 router.use("/products", productCheckoutRouter);
 router.use("/academy", academyRouter);
