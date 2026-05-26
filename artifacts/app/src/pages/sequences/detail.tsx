@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Play, Cpu, AlertTriangle, FileText } from "lucide-react";
+import { ArrowLeft, Play, Cpu, AlertTriangle, FileText, Link2, Copy, CheckCircle2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -17,6 +18,47 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+
+// ── Lead Capture Link Component ────────────────────────────────────────────────
+
+function LeadCaptureLink({ sequenceId }: { sequenceId: string }) {
+  const [copied, setCopied] = useState(false);
+  const baseUrl = window.location.origin;
+  const captureUrl = `${baseUrl}/c/${sequenceId}`;
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(captureUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="border border-primary/20 bg-primary/5 px-5 py-4 flex items-center gap-4 flex-wrap">
+      <Link2 className="h-4 w-4 text-primary shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-primary mb-1">Link público de captura de leads</p>
+        <p className="font-mono text-xs text-foreground/70 truncate">{captureUrl}</p>
+      </div>
+      <button
+        onClick={handleCopy}
+        className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest border border-primary/30 text-primary px-3 py-1.5 hover:bg-primary/10 transition-colors shrink-0"
+      >
+        {copied ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        {copied ? "Copiado!" : "Copiar"}
+      </button>
+      <a
+        href={captureUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest border border-border/40 text-muted-foreground px-3 py-1.5 hover:text-foreground hover:border-border transition-colors shrink-0"
+      >
+        <Link2 className="h-3 w-3" />
+        Abrir
+      </a>
+    </div>
+  );
+}
 
 export default function SequenceDetail() {
   const [match, params] = useRoute("/sequences/:id");
@@ -186,6 +228,11 @@ export default function SequenceDetail() {
           </div>
         </Link>
       </div>
+
+      {/* Lead Capture Link — shown when leadCaptureEnabled */}
+      {Boolean((sequence as unknown as Record<string, unknown>)["leadCaptureEnabled"]) && (
+        <LeadCaptureLink sequenceId={sequenceId} />
+      )}
 
       {sequence.items?.length === 0 ? (
         <div className="p-20 flex flex-col items-center justify-center text-center border border-border/50 bg-card/40 backdrop-blur-sm card-weapon">

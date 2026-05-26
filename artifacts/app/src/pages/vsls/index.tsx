@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Video, Plus, Loader2, CheckCircle2, XCircle, Eye,
-  FileText, Zap, ChevronRight,
+  FileText, Zap, ChevronRight, ArrowLeft,
 } from "lucide-react";
 
 interface VslItem {
@@ -31,10 +32,39 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function VslsPage() {
-  const [creating, setCreating] = useState(false);
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const fromCampaignId = params.get("campaignId");
+  const fromCampaign = params.get("from") === "campaign";
+
+  const [creating, setCreating] = useState(fromCampaign || false);
   const [selectedVsl, setSelectedVsl] = useState<VslItem | null>(null);
-  const [form, setForm] = useState({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "" });
+  const [form, setForm] = useState({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "", campaignId: fromCampaignId ?? "" });
   const queryClient = useQueryClient();
+
+  // Auto-load campaign data for pre-fill when coming from campaign detail
+  useEffect(() => {
+    if (!fromCampaignId) return;
+    customFetch<Response>(`/api/campaigns/${fromCampaignId}`)
+      .then((res) => {
+        if (!res.ok) return;
+        return res.json() as Promise<{ campaign: { title?: string; intakeData?: Record<string, unknown> } }>;
+      })
+      .then((data) => {
+        if (!data?.campaign) return;
+        const intake = data.campaign.intakeData ?? {};
+        setForm((prev) => ({
+          ...prev,
+          campaignId: fromCampaignId,
+          title: `VSL — ${data.campaign.title ?? ""}`.trim(),
+          productName: (intake["product.name"] as string | undefined) ?? "",
+          productPrice: (intake["product.price"] as string | undefined) ?? "",
+          targetAudience: (intake["campaign.targetAudience"] as string | undefined) ?? "",
+          mainPromise: (intake["product.mainPromise"] as string | undefined) ?? "",
+        }));
+      })
+      .catch(() => undefined);
+  }, [fromCampaignId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["/api/vsls"],
@@ -50,7 +80,10 @@ export default function VslsPage() {
       const res = await customFetch<Response>("/api/vsls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          campaignId: form.campaignId || undefined,
+        }),
       });
       if (!res.ok) {
         const e = await res.json() as { error?: string };
@@ -62,7 +95,7 @@ export default function VslsPage() {
       toast.success("VSL criada! Gerando roteiro com IA...");
       queryClient.invalidateQueries({ queryKey: ["/api/vsls"] });
       setCreating(false);
-      setForm({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "" });
+      setForm({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "", campaignId: "" });
       setSelectedVsl(d.vsl);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Erro"),
@@ -149,6 +182,12 @@ export default function VslsPage() {
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">VSL Studio</h1>
           </div>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Roteiros de video de vendas gerados por IA · VSL, Webinar, Masterclass</p>
+          {fromCampaign && (
+            <p className="text-xs font-mono text-primary mt-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Vinculado à campanha — dados pré-preenchidos automaticamente
+            </p>
+          )}
         </div>
         <Button onClick={() => setCreating(true)} className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11 px-5">
           <Plus className="h-4 w-4" />Nova VSL

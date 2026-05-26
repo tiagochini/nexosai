@@ -48,6 +48,8 @@ import ComprarPage from "@/pages/comprar/index";
 import VideoEditorPage from "@/pages/video-editor/index";
 import SiteBuilderPage from "@/pages/site-builder/index";
 import AtendimentoPage from "@/pages/atendimento/index";
+import LauncherDashboard from "@/pages/launcher/index";
+import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -240,6 +242,11 @@ export default function AppRoutes() {
         {() => <ProtectedRoute><AtendimentoPage /></ProtectedRoute>}
       </Route>
 
+      {/* Dashboard do Lançador */}
+      <Route path="/launcher">
+        {() => <ProtectedRoute><LauncherDashboard /></ProtectedRoute>}
+      </Route>
+
       {/* Account */}
       <Route path="/settings">
         {() => <ProtectedRoute><SettingsPage /></ProtectedRoute>}
@@ -259,6 +266,8 @@ export default function AppRoutes() {
       </Route>
 
       {/* Comprar — página pública de checkout de produto */}
+      {/* Página pública de captura de leads com chat IA */}
+      <Route path="/c/:sequenceId" component={LeadCapturePage} />
       <Route path="/comprar/:productId" component={ComprarPage} />
       <Route path="/preparacao" component={PreparacaoPage} />
       <Route path="/abertura" component={AberturaPage} />

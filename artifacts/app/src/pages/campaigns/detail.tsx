@@ -19,7 +19,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
-  RefreshCw, Rocket, Brain,
+  RefreshCw, Rocket, Brain, Video,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
 import {
@@ -2468,12 +2468,39 @@ export default function CampaignDetail() {
 
       {/* ══════════════ PROPOSTA / ESTRATÉGIA TAB ══════════════ */}
       {activeTab === "estrategia" && (
-        <CampaignBrief
-          campaign={campaign as Parameters<typeof CampaignBrief>[0]["campaign"]}
-          showApproveButton={campaign.status === "strategy_ready"}
-          approveLoading={executeMutation.isPending}
-          onApprove={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
-        />
+        <div className="space-y-4">
+          <CampaignBrief
+            campaign={campaign as Parameters<typeof CampaignBrief>[0]["campaign"]}
+            showApproveButton={campaign.status === "strategy_ready"}
+            approveLoading={executeMutation.isPending}
+            onApprove={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
+          />
+          {/* VSL quick-create — visible when strategy exists */}
+          {["strategy_ready", "approved", "generating", "awaiting_approval", "executing", "live", "completed"].includes(campaign.status) && (
+            <div className="border border-border/30 bg-card/20 p-5 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-sm border border-primary/30 bg-primary/5 flex items-center justify-center shrink-0">
+                  <Video className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">VSL — Roteiro de Vídeo de Vendas</p>
+                  <p className="font-mono text-xs text-muted-foreground mt-0.5">
+                    Gere automaticamente o roteiro completo do VSL com base na estratégia aprovada desta campanha.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-none font-mono text-xs uppercase tracking-widest h-8 px-4 border-primary/30 text-primary hover:bg-primary/10 shrink-0"
+                onClick={() => setLocation(`/vsls?campaignId=${campaignId}&from=campaign`)}
+              >
+                <Video className="h-3 w-3 mr-1.5" />
+                Criar VSL
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ══════════════ CONTEÚDO TAB ══════════════ */}
