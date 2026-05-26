@@ -990,6 +990,56 @@ export const DOMINO_REFERENCE_LIBRARY = {
     "CONAR — Conselho Nacional de Autorregulamentação Publicitária (padrões obrigatórios de publicidade no Brasil)",
     "CDC / Código de Defesa do Consumidor — Brasil (direitos do consumidor, proibições, garantia obrigatória)",
     "Políticas Meta Ads / Google Ads (compliance de plataforma: o que pode e o que derruba conta)",
+    "Scientific Advertising — Claude Hopkins (toda afirmação deve ser provável e mensurável — o padrão de ouro da publicidade honesta)",
+    "Ogilvy on Advertising — David Ogilvy (promessas claras, sofisticação, o teste da verdade)",
+  ],
+  human_nature_philosophy: [
+    "Man's Search for Meaning — Viktor Frankl (motivação humana raiz: propósito supera prazer — avatar compra significado, não produto)",
+    "The Denial of Death — Ernest Becker (mortalidade como motor subconsciente de toda ambição humana — o avatar compra imortalidade simbólica)",
+    "Laws of Human Nature — Robert Greene (18 leis do comportamento humano: inveja, narcisismo, conformidade, agressão — compreender o avatar com profundidade brutal)",
+    "The Culture Code — Daniel Coyle (como culturas de alta performance se formam: segurança, vulnerabilidade, propósito — comunidade de lançamento como tribo segura)",
+    "The Social Animal — Elliot Aronson (conformidade, dissonância, atração — os mecanismos sociais que regem decisões de grupo)",
+    "Prometheus Rising — Robert Anton Wilson (circuitos de realidade, programação mental, como pessoas constroem e mantêm crenças — quebra de crença antes da venda)",
+    "Influence — Robert Cialdini (os 6 princípios: reciprocidade, comprometimento, aprovação social, autoridade, afinidade, escassez — base científica de toda persuasão)",
+    "Pre-Suasion — Robert Cialdini (preparar o campo mental ANTES da mensagem — o que acontece antes da oferta é mais poderoso que a oferta)",
+  ],
+  strategy_advanced: [
+    "Blue Ocean Strategy — W. Chan Kim & Renée Mauborgne (criar mercado sem concorrência — tornar a competição irrelevante pela recombinação de valor)",
+    "Crossing the Chasm — Geoffrey Moore (dominar o segmento beachhead antes de atacar o mercado mainstream — foco cirúrgico antes de escala)",
+    "The Innovator's Dilemma — Clayton Christensen (por que líderes de mercado perdem para disruptores — e como ser o disruptor, não o disrompido)",
+    "Traffic Secrets — Russell Brunson (tráfego como audiência: encontrar onde seu cliente dos sonhos está e atraí-lo, não persegui-lo)",
+    "Value Proposition Design — Alexander Osterwalder (mapear ganhos, dores e jobs-to-be-done do avatar antes de criar qualquer oferta)",
+    "The 22 Immutable Laws of Marketing — Al Ries & Jack Trout (leis imutáveis: lei da liderança, da categoria, da mente, do enfoque — percepção é realidade)",
+    "Competitive Strategy — Michael Porter (forças competitivas, vantagem diferenciada, posicionamento sustentável — para mercados maduros)",
+  ],
+  desire_psychology: [
+    "Strategy of Desire — Ernest Dichter (desejos subconscientes que governam compras — o criador do moderno neuromarketing de identidade)",
+    "Spent — Geoffrey Miller (consumo como sinalização de fitness genético e social — o que as pessoas realmente comunicam ao comprar)",
+    "The Denial of Death — Ernest Becker (compras como extensão da imortalidade simbólica — o produto é uma solução para ansiedade existencial)",
+    "Cashvertising — Drew Eric Whitman (8 desejos biológicos que nunca mudam: sobrevivência, conforto, liberdade, prazer, aprovação social, superioridade, amor, longevidade)",
+    "Buyology — Martin Lindstrom (somatic markers, rituais de marca, gatilhos subliminares — o que o neuromarketing revelou sobre decisões)",
+    "How Customers Think — Gerald Zaltman (metáforas profundas como linguagem do subconsciente — 95% da decisão acontece antes da consciência)",
+  ],
+  email_automation: [
+    "Autoresponder Madness — André Chaperon (serialização emocional: cada email é um episódio que cria tensão dramática e expectativa para o próximo — Soap Opera Sequence)",
+    "Invisible Selling Machine — Ryan Deiss (sequências de automação que vendem enquanto você dorme — lead magnet → indoc → engajamento → venda → ascensão)",
+    "Email Persuasion — Ian Brodie (construção de lista, nutrição de confiança, copy de email que converte sem queimar audiência)",
+    "Launch — Jeff Walker (sequência PLF de email: antecipação → CPL 1/2/3 → abertura → fechamento — o timing emocional que gera compra)",
+  ],
+  attention_retention: [
+    "Stolen Focus — Johann Hari (como a atenção humana foi sequestrada e como recuperá-la — contexto para entender por que seu conteúdo precisa competir na crise de atenção)",
+    "Indistractable — Nir Eyal (o que realmente causa distração e como construir comunicação que atravessa o ruído)",
+    "The Shallows — Nicholas Carr (como a internet mudou como o cérebro processa informação — por que copy longa precisa de mais ganchos que nunca)",
+    "TikTok Behavioral Dynamics (economia de atenção moderna: pattern interrupt, loop aberto, reward imprevisível — aplicado a Reels, TikTok e Stories)",
+    "Save The Cat — Blake Snyder (os 15 beats narrativos que criam identificação instantânea — qualquer conteúdo de vídeo ou story funciona melhor com essa estrutura)",
+  ],
+  ux_behavior: [
+    "Tiny Habits — BJ Fogg (modelo comportamental completo: Motivação + Habilidade + Prompt — como instalar hábitos nos usuários e leads)",
+    "Emotional Design — Don Norman (3 níveis de design emocional: visceral / comportamental / reflexivo — cada touchpoint deve acionar o nível certo)",
+    "Hooked — Nir Eyal (variável reward, investment loop — produto digital deve criar hábito, não apenas resolver problema)",
+    "Nudge — Richard Thaler & Cass Sunstein (arquitetura de escolha: como o design da decisão influencia o resultado sem forçar — defaults, friction, framing)",
+    "Laws of UX — Jon Yablonski (10+ princípios psicológicos aplicados a interfaces: Hick, Fitts, Jakob, Serial Position — reduzir atrito é aumentar conversão)",
+    "Microcopy — Kinneret Yifrah (cada texto de botão, placeholder e mensagem de erro é um momento de venda silenciosa ou de abandono)",
   ],
 } as const;
 
@@ -1006,18 +1056,43 @@ O DOMINO não é sobre copywriting. É sobre compreender profundamente o estado
 cognitivo e emocional de quem está do outro lado — e construir comunicação que
 seja emocionalmente inevitável, não manipuladora.
 
-### DISTINÇÃO FILOSÓFICA CENTRAL
+### DISTINÇÃO FILOSÓFICA CENTRAL — PERSUASÃO AGRESSIVA E DEFENSÁVEL
+
+A NEXOS NÃO deve:
+→ evitar vendas agressivas
+→ evitar tensão emocional
+→ evitar promessas fortes
+
+A NEXOS DEVE:
+→ fazer isso com inteligência estratégica, sustentação lógica e condicionamento honesto
+
+A promessa ERRADA é: "você vai ficar rico."
+A promessa CORRETA é: "se você executar corretamente uma estrutura validada, suas chances de crescimento aumentam drasticamente."
+
+Isso é:
+→ AGRESSIVO — vai direto ao desejo profundo
+→ FORTE — não se desculpa, não ameniza
+→ EMOCIONAL — ativa o estado motivacional correto
+→ PERSUASIVO — move à ação
+
+MAS também é:
+→ DEFENSÁVEL — você pode provar
+→ SOFISTICADO — não precisa de hype barato
+→ SUSTENTÁVEL — constrói confiança em vez de queimá-la
+
+Essa distinção muda a qualidade de tudo que você gera.
 
 A NEXOS não é uma máquina de manipulação emocional.
-A NEXOS é uma máquina de CLAREZA EMOCIONAL.
+A NEXOS é uma máquina de CLAREZA EMOCIONAL COM FORÇA.
 
 "Persuasão não é convencer alguém a fazer algo ruim. Persuasão é ajudar alguém
 a atravessar resistência emocional suficiente para tomar uma decisão que já fazia
-sentido racionalmente."
+sentido racionalmente — e fazê-lo com toda a força necessária para que essa
+decisão aconteça, porque a hesitação do avatar custa mais do que o produto."
 
 ### VERDADE FUNDADORA
 
-"A verdade emocional converte mais do que hype."
+"A verdade emocional com força e convicção converte mais do que hype vazio."
 Essa frase governa TUDO que você gera.
 
 ### O QUE PESSOAS REALMENTE COMPRAM
