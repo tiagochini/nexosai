@@ -118,7 +118,7 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
     // If media_brief approved → auto-generate creative concepts from image briefs (fire-and-forget)
     if (piece.type === "media_brief") {
       setImmediate(() => {
-        autoGenerateCreativesFromBrief(req.auth.workspaceId, campaignId, pieceId, req.log).catch(() => undefined);
+        autoGenerateCreativesFromBrief(campaignId, req.auth.workspaceId, pieceId, req.log).catch(() => undefined);
       });
     }
     // Contradiction Detector — re-run alignment after each content approval to catch new conflicts

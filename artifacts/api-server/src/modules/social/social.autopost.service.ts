@@ -5,6 +5,7 @@ import {
   workspaceIntegrationsTable,
   socialPostsTable,
   mediaBriefsTable,
+  campaignCreativesTable,
 } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { publishToInstagram, publishToFacebook, publishToTikTok } from "./social.publisher.js";
@@ -74,13 +75,15 @@ function extractCaption(content: unknown): string {
 
 /**
  * Extracts media URLs from a content piece's JSONB content field.
- * Falls back to approved media briefs linked to the piece.
+ * Falls back to approved media briefs linked to the piece, then to
+ * approved campaign creatives (finalUrl from campaignCreativesTable).
  */
 async function extractMediaUrls(
   pieceId: string,
-  content: unknown
+  content: unknown,
+  campaignId?: string,
 ): Promise<string[]> {
-  // Try to extract from content JSONB
+  // 1. Try to extract from content JSONB
   if (content && typeof content === "object" && content !== null) {
     const c = content as Record<string, unknown>;
     const fromContent =
@@ -92,23 +95,45 @@ async function extractMediaUrls(
     if (typeof single === "string" && single) return [single];
   }
 
-  // Fall back to approved media briefs linked to this piece
+  // 2. Fall back to approved media briefs linked to this piece (legacy)
   const briefs = await db
     .select({ finalUrl: mediaBriefsTable.finalUrl })
     .from(mediaBriefsTable)
     .where(
       and(
         eq(mediaBriefsTable.contentPieceId, pieceId),
-        eq(mediaBriefsTable.conceptStatus, "concept_approved")
+        eq(mediaBriefsTable.conceptStatus, "concept_approved"),
       )
     )
-    .limit(10);
+    .limit(5);
 
-  const urls = briefs
+  const briefUrls = briefs
     .map((b) => b.finalUrl)
     .filter((u): u is string => typeof u === "string" && u.length > 0);
 
-  return urls;
+  if (briefUrls.length > 0) return briefUrls;
+
+  // 3. Fall back to approved campaign creatives with finalUrl (new system)
+  if (campaignId) {
+    const creatives = await db
+      .select({ finalUrl: campaignCreativesTable.finalUrl })
+      .from(campaignCreativesTable)
+      .where(
+        and(
+          eq(campaignCreativesTable.campaignId, campaignId),
+          eq(campaignCreativesTable.status, "approved"),
+        )
+      )
+      .limit(3);
+
+    const creativeUrls = creatives
+      .map((c) => c.finalUrl)
+      .filter((u): u is string => typeof u === "string" && u.length > 0);
+
+    if (creativeUrls.length > 0) return creativeUrls;
+  }
+
+  return [];
 }
 
 /**
@@ -156,7 +181,7 @@ export async function autoPostApprovedContent(
 
     const postType = (CONTENT_TYPE_POST_TYPE[contentType] ?? "feed_image") as SocialPost["postType"];
     const caption = extractCaption(piece.content);
-    const mediaUrls = await extractMediaUrls(pieceId, piece.content);
+    const mediaUrls = await extractMediaUrls(pieceId, piece.content, campaignId);
 
     const providerMap = new Map<string, WorkspaceIntegration>(
       integrations.map(i => [i.provider as string, i])
