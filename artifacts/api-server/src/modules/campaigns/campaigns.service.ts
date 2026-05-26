@@ -19,52 +19,27 @@ import {
 import { NotFoundError, ForbiddenError, ValidationError } from "../../lib/errors.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import type { Logger } from "pino";
+import {
+  VALID_STATUS_TRANSITIONS,
+  DIGIT_TRACK_LABELS,
+  STRATEGY_PHASE_ENTRY_STATUSES,
+  CONTENT_PHASE_ENTRY_STATUSES,
+  LAUNCH_PHASE_ENTRY_STATUSES,
+  CREATIVE_INTENT_PHASE_ENTRY_STATUSES,
+  isValidTransition,
+} from "./campaign-state-machine.js";
 
-export const DIGIT_TRACK_LABELS = {
-  six_digits: "6 Digits (R$100k–R$999k in 7 days)",
-  eight_digits: "8 Digits (R$10M–R$99M in 7 days)",
-  ten_digits: "10 Digits (R$100M+ in 7 days)",
-} as const;
-
-// ── Pipeline Kernel: State Machine ────────────────────────────────────────────
-// SINGLE SOURCE OF TRUTH for all campaign status transitions.
-// All workers, services, routes, and agents must validate against this table.
-// Level 3 enforcement: transitionCampaign() will throw (not warn) on violation.
-export const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
-  intake: ["analyzing", "cancelled"],
-  // "awaiting_approval" and "generating" added: command.agent can end in either
-  // state after running all agents (checkpointsPending > 0 → awaiting_approval,
-  // else → generating). Both are valid exits from the analyzing phase.
-  analyzing: ["strategy_ready", "intake", "awaiting_approval", "generating", "cancelled"],
-  // "approved" added: pipeline auto-progression sets next campaign to "approved"
-  // when previous campaign enters executing (triggerPipelineCapture).
-  strategy_ready: ["generating", "analyzing", "approved", "cancelled"],
-  generating: ["awaiting_approval", "strategy_ready", "cancelled"],
-  awaiting_approval: ["approved", "generating", "analyzing", "cancelled"],
-  approved: ["executing", "cancelled"],
-  executing: ["live", "paused", "cancelled"],
-  // "generating" added: allows client to re-generate content while live (e.g. refresh copy mid-launch)
-  live: ["paused", "completed", "cancelled", "generating"],
-  // RC-006 FIX: "executing" added — orchestration worker transitions paused
-  // campaigns through paused → executing → live (processExecute).
-  paused: ["executing", "live", "cancelled"],
-  completed: [],
-  cancelled: [],
-};
-
-// ── Pipeline Kernel: Phase Entry Constants ─────────────────────────────────────
-// Derived phase-entry lists — replaces the 9 scattered inline allowedStatuses
-// arrays across workers, services, and agents. Import from here, never redeclare.
-export const STRATEGY_PHASE_ENTRY_STATUSES = ["intake", "analyzing", "strategy_ready"] as const;
-// "live" added: allows re-generation of content while campaign is already live
-export const CONTENT_PHASE_ENTRY_STATUSES = ["strategy_ready", "awaiting_approval", "approved", "live"] as const;
-export const LAUNCH_PHASE_ENTRY_STATUSES = ["approved", "paused"] as const;
-export const CREATIVE_INTENT_PHASE_ENTRY_STATUSES = [
-  "strategy_ready",
-  "generating",
-  "awaiting_approval",
-  "approved",
-] as const;
+// ── Re-exports for backward compatibility ─────────────────────────────────────
+// All consumers that import from campaigns.service keep working unchanged.
+// Source of truth is campaign-state-machine.ts — edit only there.
+export {
+  VALID_STATUS_TRANSITIONS,
+  DIGIT_TRACK_LABELS,
+  STRATEGY_PHASE_ENTRY_STATUSES,
+  CONTENT_PHASE_ENTRY_STATUSES,
+  LAUNCH_PHASE_ENTRY_STATUSES,
+  CREATIVE_INTENT_PHASE_ENTRY_STATUSES,
+} from "./campaign-state-machine.js";
 
 // ── Pipeline Kernel: transitionCampaign() ─────────────────────────────────────
 // Internal engine transition function. Use this everywhere instead of direct
@@ -97,19 +72,18 @@ export async function transitionCampaign(
     return;
   }
 
-  const allowed = VALID_STATUS_TRANSITIONS[campaign.status] ?? [];
-  if (!allowed.includes(toStatus)) {
-    // Level 2: warn mode. Level 3 will change this to: throw new ValidationError(...)
-    log.warn(
-      { campaignId, from: campaign.status, to: toStatus, reason },
-      `PIPELINE_KERNEL: undeclared transition ${campaign.status} → ${toStatus} — executing (enforcement deferred to Level 3)`,
-    );
-  } else {
-    log.info(
-      { campaignId, from: campaign.status, to: toStatus, reason },
-      `PIPELINE_KERNEL: ${campaign.status} → ${toStatus}`,
+  // Level 3 enforcement: ACTIVE — invalid transitions throw, never silently execute.
+  if (!isValidTransition(campaign.status, toStatus)) {
+    throw new ValidationError(
+      `PIPELINE_KERNEL: undeclared transition ${campaign.status} → ${toStatus} (reason: ${reason}). ` +
+      `Edit campaign-state-machine.ts to add this edge if intentional.`,
     );
   }
+
+  log.info(
+    { campaignId, from: campaign.status, to: toStatus, reason },
+    `PIPELINE_KERNEL: ${campaign.status} → ${toStatus}`,
+  );
 
   await db
     .update(campaignsTable)
@@ -218,9 +192,8 @@ export async function updateCampaignStatus(
   data?: Record<string, unknown>,
 ): Promise<Campaign> {
   const campaign = await getCampaign(campaignId, workspaceId);
-  const allowed = VALID_STATUS_TRANSITIONS[campaign.status] ?? [];
 
-  if (!allowed.includes(newStatus)) {
+  if (!isValidTransition(campaign.status, newStatus)) {
     throw new ValidationError(
       `Cannot transition from '${campaign.status}' to '${newStatus}'`,
     );

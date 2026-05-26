@@ -14,11 +14,8 @@ import {
   rejectMediaBrief,
   optimizeCampaign,
 } from "./content.service.js";
-import { autoGenerateCreativesFromBrief } from "./creative-auto-gen.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
-import { autoPostApprovedContent } from "../social/social.autopost.service.js";
-import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
-import { getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
+import { runPostApprovalHooks } from "./content-post-approval.js";
 import { ContentTypeSchema } from "@workspace/db";
 
 const router = Router();
@@ -106,35 +103,13 @@ router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<v
       req.auth.workspaceId,
       pieceId,
     );
-    // Fire-and-forget: memory save + social auto-post + contradiction re-check — never blocks response
-    processContentPieceApproval(
-      req.auth.workspaceId,
+    // All post-approval side-effects are isolated in content-post-approval.ts
+    runPostApprovalHooks({
+      workspaceId: req.auth.workspaceId,
       campaignId,
       pieceId,
-      piece.type ?? "copywriter",
-      true,
-    ).catch(() => undefined);
-    autoPostApprovedContent(req.auth.workspaceId, campaignId, pieceId).catch(() => undefined);
-    // If media_brief approved → auto-generate creative concepts from image briefs (fire-and-forget)
-    if (piece.type === "media_brief") {
-      setImmediate(() => {
-        autoGenerateCreativesFromBrief(campaignId, req.auth.workspaceId, pieceId, req.log).catch(() => undefined);
-      });
-    }
-    // Contradiction Detector — re-run alignment after each content approval to catch new conflicts
-    setImmediate(() => {
-      getCampaignBrain(campaignId)
-        .then((brain) => {
-          if (!brain) return;
-          return runStrategicAlignmentEngine(campaignId, brain, req.log)
-            .then((report) => {
-              if (report.contradictions.length > 0) {
-                return updateBrainSection(campaignId, "contradictions", report.contradictions, req.log);
-              }
-              return undefined;
-            });
-        })
-        .catch(() => undefined);
+      pieceType: piece.type ?? "copywriter",
+      log: req.log,
     });
     res.json({ message: "Content piece approved", piece });
   } catch (err) {
