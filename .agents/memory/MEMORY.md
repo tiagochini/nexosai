@@ -4,5 +4,6 @@
 - [Agent Isolation Sandbox](agent-isolation-sandbox.md) — runIsolatedAgent() wraps runAgent() with typed result union, never throws; use for critical pipeline agents
 - [UX Fundador/Arquiteto System](ux-mode-system.md) — two-mode UX across dashboard/detail/onboarding; Fundador=guided/emotional, Arquiteto=full technical; canonical file is lib/mode.ts
 - [DOMINO CORE](domino-core-system.md) — central persuasion philosophy; injected into ALL agents via agent.runner.ts; canonical file is agents/domino-core.ts
+- [Constraint Reasoning Layer](constraint-reasoning-layer.md) — agents/constraint-reasoning.ts; injected at position 4.5 in agent.runner.ts (after Cognitive Foundations, before Master Evolution); ALLAN_CONSTRAINT_REASONING variant injected into academy.routes.ts systemPrompt.
 - [Deep Intelligence Layer](deep-intelligence-layer.md) — 3 cross-cutting intelligence systems: cross-campaign memory, output judge, DOMINO applied frameworks
 - [Cognitive Foundations Layer](cognitive-foundations-layer.md) — 16 thinkers (5 pillars) in sistema nervoso format; dogma "profundidade interna; simplicidade externa"; injected via agent.runner.ts between DOMINO_APPLIED_FRAMEWORKS and NEXOS_MASTER_EVOLUTION_PROMPT

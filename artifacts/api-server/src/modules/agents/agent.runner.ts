@@ -22,6 +22,7 @@ import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
 import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY, DOMINO_APPLIED_FRAMEWORKS } from "./domino-core.js";
 import { NEXOS_COGNITIVE_FOUNDATIONS } from "./cognitive-foundations.js";
+import { NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL } from "./constraint-reasoning.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -282,6 +283,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // 2. PLF SUPREMACY (Fórmula de Lançamento governa toda a arquitetura — NÍVEL 0)
   // 3. DOMINO CORE (philosophical persuasion engine — governs ALL communication)
   // 4. NEXOS Applied Frameworks + Cognitive Foundations (16 thinkers, 5 pillars)
+  // 4.5. CONSTRAINT RESOLUTION PROTOCOL (pre-response structural reasoning — camada zero)
   // 5. NEXOS Master Evolution Prompt (quality criteria, anti-hallucination, ethics)
   // 6. Campaign Memory Layer (workspace-specific context)
   // 7. Psychological Profile (6-map avatar synthesis — bridges intake → agent pipeline)
@@ -296,6 +298,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     DOMINO_CORE_PREAMBLE +
     DOMINO_APPLIED_FRAMEWORKS +
     NEXOS_COGNITIVE_FOUNDATIONS +
+    NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL +
     NEXOS_MASTER_EVOLUTION_PROMPT +
     memoryBlock +
     profileBlock +

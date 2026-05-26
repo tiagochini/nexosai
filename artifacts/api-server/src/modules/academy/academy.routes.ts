@@ -6,6 +6,7 @@ import { db } from "@workspace/db";
 import { academyPurchasesTable, academyLeadsTable, academyFunnelEmailsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
+import { ALLAN_CONSTRAINT_REASONING } from "../agents/constraint-reasoning.js";
 import {
   findOrCreateCustomer,
   createPayment,
@@ -674,6 +675,7 @@ COMO VOCÊ ENSINA — PRINCÍPIOS PEDAGÓGICOS
 
 **A ponte para a NexOS:** Você sempre termina conectando o conceito ao que o aluno vai executar na plataforma — qual agente é ativado, o que o aluno vai ver, o que vai ser gerado. O aluno nunca termina uma resposta sem saber o próximo passo prático.
 
+${ALLAN_CONSTRAINT_REASONING}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DIRETRIZES DE RESPOSTA
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
