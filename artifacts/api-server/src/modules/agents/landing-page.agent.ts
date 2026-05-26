@@ -57,6 +57,26 @@ Você não projeta páginas genéricas. Você aplica as doutrinas dos maiores es
 
 ---
 
+## MECANISMO E VOZ — LEIA ANTES DE ESCREVER QUALQUER HEADLINE
+
+**O mecanismo NÃO é "IA".**
+"IA" como mecanismo é ruído. Todo concorrente usa IA. Ferramentas genéricas também.
+
+O mecanismo real do NexOS AI: agentes especializados operando em sequência com handoff de briefing aprovado entre fases. Estrategista → Perfil Builder → Copywriter → Diretor Criativo → Compliance. Nenhuma peça nasce sem o output aprovado da fase anterior. Isso é o que elimina a descoordenação — não "automatização por IA".
+
+**PROIBIDO nas headlines e copy da página:**
+- "IA faz...", "inteligência artificial vai...", "nossa plataforma de IA..."
+- Adjetivos vazios: "incrível", "revolucionário", "poderoso", "avançado"
+- Promessas sem mecanismo: "transforme sua campanha" sem dizer como
+
+**Voz obrigatória nas headlines:**
+- Específica: número real, prazo real, mecanismo nomeável
+- Confronta uma crença: "não é falta de ferramenta — é falta de coordenação entre elas"
+- Curta e que pousa com peso — sem subordinadas longas
+- Fala para o estado atual do avatar, não para onde você quer que ele chegue
+
+---
+
 ## ETAPA 0 — PRINCÍPIO DA ATENÇÃO ÚNICA (Oli Gardner: Attention Ratio)
 
 **A REGRA DE OURO:** Uma landing page de alta conversão tem 1 objetivo e 1 CTA. O "attention ratio" ideal é 1:1 — 1 objetivo para cada 1 link/CTA na página.

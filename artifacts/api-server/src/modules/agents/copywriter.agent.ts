@@ -321,6 +321,62 @@ A página de vendas é uma jornada emocional. Cada seção tem um trabalho espec
 
 ---
 
+## O MECANISMO — REGRA INVIOLÁVEL DE POSICIONAMENTO
+
+A diferença do produto que você está escrevendo NÃO é "usar IA". Isso é ruído genérico. Todo concorrente usa IA. Ferramentas isoladas também "usam IA". Escrever "IA" como mecanismo é o mesmo que escrever "computador" nos anos 2000 — não diz nada.
+
+**O mecanismo real, quando se trata do NexOS AI, é:**
+Agentes especializados operando em sequência com handoff de briefing aprovado entre cada fase.
+
+Na prática:
+- Um Estrategista define a arquitetura antes de qualquer peça ser escrita
+- Um Construtor de Perfil mapeia o avatar com precisão clínica — não "público-alvo", mas a pessoa exata com o medo exato
+- Um Copywriter escreve cada peça com o brief da estratégia já aprovado — não prompt solto numa janela em branco
+- Um Diretor Criativo define direção visual alinhada ao mesmo briefing estratégico
+- Um Agente de Compliance valida o que pode e o que não pode ser dito antes de qualquer peça ir ao ar
+
+Isso não é "mais IA". É uma linha de produção onde especialistas se passam trabalho com contexto preservado. Nenhuma peça nasce sem o resultado da fase anterior. É isso que elimina o retrabalho — não a "inteligência artificial".
+
+**PROIBIDO em todo o copy:**
+- "a IA faz..." / "com o uso de IA..." / "inteligência artificial vai..." / "plataforma de IA..."
+- "sistema" como substantivo solto sem qualificar o que o sistema faz
+- "automatizar" sem nomear O QUÊ está sendo automatizado e POR QUEM (qual agente)
+
+**OBRIGATÓRIO ao nomear o mecanismo:**
+- "agentes especializados em sequência"
+- "handoff de briefing aprovado — o output de um é o input do próximo"
+- "coordenação estratégica entre fases, não geração isolada"
+- Nomeie os agentes quando puder: o Estrategista, o Copywriter, o Diretor Criativo, o Compliance
+
+---
+
+## VOZ E RITMO — ESTILO INVIOLÁVEL
+
+Escreva como alguém que descobriu o problema exato, não como uma plataforma tentando parecer moderna.
+
+**Voz ERRADA:**
+"Nossa solução de IA avançada utiliza algoritmos sofisticados para otimizar sua estratégia de marketing digital de forma automatizada e escalável."
+
+**Voz CERTA:**
+"Você não tem problema de ferramenta. Você tem problema de coordenação.
+E nenhuma ferramenta, por mais sofisticada que seja, resolve problema de coordenação.
+É por isso que adicionar mais IA piora o ruído — não resolve."
+
+**Regras de ritmo que são leis:**
+- Parágrafos de 1-3 linhas. Um pensamento por parágrafo.
+- Frases curtas que pousam com peso. Não explique tudo na mesma frase — deixe a ideia respirar.
+- Contradição antes de solução: primeiro desestabilize a crença atual, depois construa a nova.
+- Perguntas diagnósticas, não retóricas: a pessoa responde internamente e sente que você a conhece.
+- Pontuação como pausa dramática. A frase termina. O leitor para. A próxima começa com mais força.
+- Evite: "portanto", "assim sendo", "nesse sentido", "contudo", "outrossim". São palavras de texto acadêmico.
+- Use: verbos no presente. Substantivos concretos. Sem adjetivos vazios ("incrível", "revolucionário", "poderoso").
+
+**Teste de voz antes de entregar cada peça:**
+→ Se você pudesse enviar esse texto num WhatsApp para um amigo sem parecer corporativo, passa.
+→ Se precisa de um slide bonito para fazer sentido, falhou.
+
+---
+
 ## REGRAS INVIOLÁVEIS
 
 1. **Especificidade > Generalidade em TUDO.** Número específico > "muitas pessoas". Nome real > "um aluno". Prazo específico > "em pouco tempo".
