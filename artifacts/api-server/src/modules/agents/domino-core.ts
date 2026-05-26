@@ -1173,6 +1173,235 @@ Autoridade: Alta | Sofisticação: Alta | Humanidade: Máxima
 
 `;
 
+// ─── Applied Frameworks — IF→THEN→EXAMPLE ────────────────────────────────────
+
+/**
+ * DOMINO_APPLIED_FRAMEWORKS
+ *
+ * Converte a biblioteca teórica em padrões acionáveis.
+ * Quando identificar a situação descrita, aplique o framework EXATAMENTE como descrito.
+ * Não referencie o framework pelo nome no output — apenas aplique a estrutura.
+ *
+ * Injetado entre DOMINO_CORE_PREAMBLE e NEXOS_MASTER_EVOLUTION_PROMPT
+ * em todos os agentes via agent.runner.ts.
+ */
+export const DOMINO_APPLIED_FRAMEWORKS = `
+---
+## FRAMEWORKS DE APLICAÇÃO CONCRETA
+
+> Quando identificar a situação descrita abaixo, aplique o framework correspondente.
+> Não cite o nome do framework no output — apenas aplique a estrutura com precisão.
+
+---
+
+### 1. SCHWARTZ — 5 ESTÁGIOS DE CONSCIÊNCIA
+
+**ESTÁGIO 0 — Inconsciente do problema:**
+→ Situação: avatar não sabe que tem o problema; busca tópicos não relacionados
+→ Abertura correta: dado surpreendente ou história sem nomear o problema
+→ EXEMPLO: "Sabia que 73% das pessoas que fazem [ação comum] estão destruindo [resultado] sem perceber?"
+→ NUNCA: comece pela oferta, pelo produto ou pelo benefício
+
+**ESTÁGIO 1 — Consciente do problema, não da solução:**
+→ Situação: sabe que sofre, mas acha normal ou inevitável
+→ Abertura correta: validação da dor + ruptura da crença + nova causa
+→ EXEMPLO: "O que ninguém te conta sobre [problema] é que ele não é causado por [culpa que assume]. É causado por [causa real que a solução resolve]."
+→ Sequência: dor → amplificação → ruptura → nova causa → possibilidade de saída
+
+**ESTÁGIO 2 — Consciente da solução, não do produto:**
+→ Situação: pesquisa "como fazer X", conhece métodos, já tentou alternativas
+→ Abertura correta: comparação de abordagens → posicionar o mecanismo único
+→ EXEMPLO: "Existem 3 formas de [alcançar resultado]. A maioria tenta [método conhecido]. Por isso [resultado ruim]. O que funciona é [mecanismo único]."
+
+**ESTÁGIO 3 — Consciente do produto, não convicto:**
+→ Situação: conhece a oferta, está comparando, tem objeções
+→ Abertura correta: prova social específica + mecanismo + garantia — sem hype
+→ EXEMPLO: "[Nome real], [profissão], conseguiu [resultado específico com número] em [prazo]."
+
+**ESTÁGIO 4 — Convicto, precisa do gatilho:**
+→ Situação: pronto para comprar, precisa da permissão final
+→ Abertura correta: CTA direto + urgência real + consequência de não agir
+→ EXEMPLO: "Restam [N] vagas. Depois de [data], o preço volta para R$[X]."
+
+---
+
+### 2. HORMOZI — GRAND SLAM OFFER STACK
+
+Sequência obrigatória de construção de valor (nunca pule etapas):
+1. PROMESSA CORE: "[Em X tempo] você vai [resultado mensurável específico]"
+2. ACELERADOR: "Mais [bônus que elimina obstáculo 1 — o maior bloqueio]"
+3. PROTEÇÃO: "E ainda [bônus que elimina obstáculo 2]"
+4. ÂNCORA: "O valor total real deste conjunto é R$[X — custo real de mercado]"
+5. PREÇO REAL: "Mas porque [razão específica e real], você investe apenas R$[Y]"
+6. GARANTIA: "Se em [prazo] você não [resultado específico], eu [ação exata do reembolso]"
+7. ESCASSEZ: "Somente [N] vagas porque [razão operacional real e específica]"
+
+→ REGRA: nunca aumente o preço para criar valor. Empilhe entregáveis reais até o "valor injusto" ser óbvio.
+
+---
+
+### 3. KAHNEMAN — SISTEMA 1 vs SISTEMA 2
+
+**SISTEMA 1 (automático, emocional — cria a decisão):**
+→ Onde usar: headlines, hooks visuais, subject lines, CTAs, primeiras 3 linhas
+→ Técnicas: rima, contraste, número específico, surpresa, especificidade visual
+→ EXEMPLO Sistema 1: "R$47k em 7 dias. Sem lista. Sem tráfego pago. Veja como."
+→ NUNCA use jargão técnico ou frases longas em pontos Sistema 1
+
+**SISTEMA 2 (racional, lento — justifica a decisão já tomada):**
+→ Onde usar: seção de prova social, FAQ, descrição de bônus, garantia, mecanismo explicado
+→ Técnicas: dados, depoimentos com especificidade, lógica de ROI, custo comparado
+→ EXEMPLO Sistema 2: "Cada módulo foi validado em 47 turmas ao longo de 3 anos."
+→ O Sistema 2 não CRIA a compra — apenas JUSTIFICA o que o Sistema 1 já decidiu
+
+**Sequência correta:** Sistema 1 → Sistema 1 → Sistema 1 → Sistema 2 (prova) → Sistema 1 (CTA)
+
+---
+
+### 4. CIALDINI — 6 GATILHOS COM APLICAÇÃO CIRÚRGICA
+
+**RECIPROCIDADE:**
+→ Quando: topo de funil, email de boas-vindas, conteúdo de pré-lançamento
+→ Como: entregue valor real ANTES de pedir ação
+→ EXEMPLO: "Aqui está [conteúdo de alto valor]. Sem obrigação, sem cadastro."
+→ NUNCA mencione a reciprocidade — o mecanismo psicológico age sozinho
+
+**COMPROMISSO E CONSISTÊNCIA:**
+→ Quando: formulários de captura, pesquisas de segmentação, pré-inscrições
+→ Como: faça o lead dizer sim em algo pequeno → conecte ao grande
+→ EXEMPLO: "Como você disse que quer [resultado pequeno], aqui está o próximo passo."
+
+**PROVA SOCIAL:**
+→ Quando: sempre presente — especialmente em MOFU e BOFU
+→ Especificidade obrigatória: "[Nome real], [profissão], [cidade] — [resultado com número]"
+→ NUNCA: "clientes satisfeitos relatam melhorias significativas" — isso não converte
+
+**AUTORIDADE:**
+→ Quando: introdução, bio, press mentions, credenciais
+→ Como: credencial específica + resultado comprovado
+→ EXEMPLO: "Responsável por R$12M em lançamentos no nicho de [categoria] em 3 anos"
+→ NUNCA auto-proclamação sem âncora: "especialista líder do mercado" é invisível
+
+**AFEIÇÃO:**
+→ Quando: storytelling de origem, emails pessoais, bastidores do criador
+→ Como: vulnerabilidade real + transformação — avatar se identifica, não admira de longe
+→ Imperfeição controlada aumenta conexão — excesso de polish cria distância
+
+**ESCASSEZ E URGÊNCIA (regra absoluta):**
+→ NUNCA fake — urgência falsa detectada = perda permanente de credibilidade
+→ Escassez real: vagas por razão operacional, cohort fechado, data de evento, estoque físico
+→ EXEMPLO correto: "Somente 47 vagas — porque o grupo de mentoria tem limite operacional de acompanhamento"
+→ EXEMPLO correto: "Carrinho fecha [data] às [hora]h — a plataforma fecha o acesso automaticamente"
+
+---
+
+### 5. VOSS — NEGOCIAÇÃO POR MENSAGEM (WHATSAPP / OBJEÇÕES)
+
+**ESPELHAMENTO** → repita as últimas 3 palavras como pergunta:
+→ Lead: "Não sei se tenho tempo..."
+→ Resposta: "...não tem tempo?" → pausa → o lead explica a objeção real
+
+**ROTULAGEM** → nomeie a emoção antes que vire bloqueio:
+→ "Parece que você está em dúvida se [resultado] é possível para sua situação..."
+→ "Parece que você já tentou algo parecido e não funcionou da forma esperada..."
+
+**PERGUNTAS CALIBRADAS** → "Como" e "O que" — nunca "Por que" (defensivo):
+→ "Como isso funcionaria para você?"
+→ "O que seria diferente na sua vida se [resultado] fosse resolvido?"
+
+**ÂNCORA NEGATIVA** → quando preço é objeção:
+→ "Entendo. Soluções similares no mercado custam entre R$5k e R$15k. Aqui é R$[X]."
+
+---
+
+### 6. BELFORT — ESTRUTURA LINHA RETA (ética operacional, nunca manipulação)
+
+**CERTEZA PROJETADA** → nunca demonstre dúvida sobre o resultado:
+→ ERRADO: "Acho que pode funcionar para você..."
+→ CERTO: "Isso funciona. A questão é se faz sentido para o seu momento específico."
+
+**OBJEÇÃO COMO INTERESSE** → objeção = sinal de interesse, não de rejeição:
+→ Lead: "Vou pensar..." → "Entendo. O que especificamente você precisa pensar?"
+→ Lead: "Está caro..." → "Caro comparado com quê? Quanto custa continuar com [problema]?"
+
+**LOOP DE 3 PASSOS:**
+1. Confirme que entendeu a objeção
+2. Isole a objeção REAL (frequentemente não é a declarada)
+3. Resolva com especificidade — nunca com argumento genérico
+
+**LIMITE ÉTICO ABSOLUTO:** Esta estrutura serve para remover barreiras legítimas à decisão. NUNCA para pressionar quem genuinamente não pode ou não deve comprar.
+
+---
+
+### 7. PLF — SEQUÊNCIA EMOCIONAL FASE A FASE
+
+**PRÉ-LANÇAMENTO (dias -14 a -1):**
+→ Objetivo emocional: curiosidade → antecipação → pertencimento → identidade
+→ Conteúdo: história de origem, problema comum, primeira revelação parcial, comunidade
+→ Tom: educativo, generoso, pessoal — NUNCA mencione preço, produto ou oferta
+
+**ABERTURA DE CARRINHO (dia 0):**
+→ Objetivo emocional: excitação → decisão → urgência de oportunidade (não de pressão)
+→ Conteúdo: revelação completa da oferta, prova social pesada, bônus de fast mover
+→ Tom: celebrativo, confiante — "Este é o momento"
+
+**MEIO DE CARRINHO (dias 1-4):**
+→ Objetivo emocional: custo da inércia → identidade do comprador → prova social amplificada
+→ Conteúdo: depoimentos de resultados rápidos, Q&A de objeções, case studies por segmento
+→ Tom: consultivo, reassurando — "Veja quem já está dentro"
+
+**FECHAMENTO DE CARRINHO (últimas 24-48h):**
+→ Objetivo emocional: urgência real → medo de perder → decisão final
+→ Conteúdo: contagem regressiva real, últimas vagas, carta pessoal, "última chance"
+→ Tom: direto, empático mas firme — "Depois desta hora, a porta fecha"
+
+---
+
+### 8. NEPQ (MINER) — DESCOBERTA CONSULTIVA
+
+Sequência de perguntas (nesta ordem exata — nunca pule):
+1. "Me conta, como está [área relevante] hoje para você?" → situação
+2. "E isso [problema identificado] está te impedindo de [objetivo]?" → problema
+3. "Quanto isso está custando em [tempo/dinheiro/energia]?" → implicação
+4. "Se você resolvesse isso nos próximos [prazo], como mudaria [área da vida]?" → necessidade
+5. "Se eu mostrasse como, você teria [recurso] para implementar?" → comprometimento
+
+→ REGRA ABSOLUTA: nunca apresente a solução antes de o lead ter articulado verbalmente o próprio problema. A solução apresentada antes da dor articulada converte 10x menos.
+
+---
+
+### 9. McKEE — GAP DRAMÁTICO → RETENÇÃO
+
+**O princípio:** toda narrativa que mantém atenção tem um loop não fechado.
+**Aplicação:** nunca feche todos os loops em um único conteúdo.
+
+→ Email PLF: "Mas então descobri algo que ninguém menciona... [assunto do próximo email]"
+→ VSL: hook cria gap → narração amplifica → solução resolve → mas cria novo gap (próxima ação)
+→ Stories: cliffhanger a cada 3 → "O que aconteceu depois vai no próximo post"
+→ Carrinho: cada email fecha a objeção anterior E abre nova dimensão da oferta
+
+**Estrutura canônica:** Personagem quer algo → mundo resiste → personagem descobre a causa real → tudo muda → mas agora precisa de [próximo passo específico]
+
+---
+
+### 10. SUGARMAN — SLIPPERY SLOPE (copy que se lê sozinha)
+
+**Princípio:** o único objetivo de cada frase é fazer o leitor ler a próxima frase.
+
+**Técnicas de slope:**
+→ Final de parágrafo que abre loop: "Mas o que aconteceu a seguir me surpreendeu completamente."
+→ Número inesperado: "Em 17 dias, algo mudou."
+→ Contraintuição: "O motivo pelo qual você ainda não tem [resultado] não é o que você pensa."
+→ Pergunta retórica estratégica: "Você já se perguntou por que algumas pessoas conseguem e outras não?"
+
+**Estrutura dos 3 primeiros parágrafos (regra de ouro):**
+1. Hook Sistema 1 — dado/pergunta/contraste que choca
+2. Amplificação — por que isso importa especificamente para o leitor
+3. Promessa de revelação — "Neste [email/vídeo/página] você vai descobrir [resultado específico]"
+
+---
+`;
+
 // ─── Self-Critic DOMINO — versão completa ────────────────────────────────────
 
 export const DOMINO_SELF_CRITIC = `

@@ -20,7 +20,7 @@ import {
 } from "../realtime/realtime.service.js";
 import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
-import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY } from "./domino-core.js";
+import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY, DOMINO_APPLIED_FRAMEWORKS } from "./domino-core.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -273,6 +273,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     buildTemporalContextBlock() +
     DOMINO_PLF_SUPREMACY +
     DOMINO_CORE_PREAMBLE +
+    DOMINO_APPLIED_FRAMEWORKS +
     NEXOS_MASTER_EVOLUTION_PROMPT +
     memoryBlock +
     systemPrompt +
@@ -848,5 +849,179 @@ export function parseAgentJSON<T = Record<string, unknown>>(
     return JSON.parse(repairTruncatedJson(candidate)) as T;
   } catch {
     return fallback;
+  }
+}
+
+// ── Output-Judged Agent Runner ─────────────────────────────────────────────────
+
+/**
+ * runJudgedAgent — Wrapper around runAgent that automatically evaluates the
+ * output quality and, if below threshold (score < 70), runs a targeted
+ * refinement pass before returning.
+ *
+ * Only activates judge for the 5 most critical agent roles:
+ * copywriter, vsl_script, offer, landing_page, hook_factory
+ *
+ * Non-blocking on judge/refinement failure — always returns best available result.
+ */
+
+const JUDGED_AGENT_ROLES = new Set([
+  "copywriter",
+  "vsl_script",
+  "offer",
+  "landing_page",
+  "hook_factory",
+]);
+
+export interface RunJudgedAgentResult extends RunAgentResult {
+  judgeScore?: number;
+  wasRefined?: boolean;
+  critiqueLogId?: string;
+}
+
+export async function runJudgedAgent(
+  opts: RunAgentOptions,
+): Promise<RunJudgedAgentResult> {
+  // Run the agent normally
+  const result = await runAgent(opts);
+
+  // Only judge critical roles — skip for lightweight / governance agents
+  if (!JUDGED_AGENT_ROLES.has(opts.agentRole)) {
+    return result;
+  }
+
+  // Lazy-import to avoid circular deps at module load time
+  const {
+    judgeAgentOutput,
+    buildRefinementMessage,
+    saveCritiqueLog,
+    APPROVAL_THRESHOLD,
+    extractContextSummaryForJudge,
+  } = await import("./output-judge.agent.js");
+
+  // Build a short context summary for the judge (from memoryContext if available)
+  const ctxSummary = opts.memoryContext
+    ? extractContextSummaryForJudge(opts.memoryContext)
+    : "";
+
+  // ── First evaluation ────────────────────────────────────────────────────────
+  const initialScore = await judgeAgentOutput({
+    agentRole:             opts.agentRole,
+    rawOutput:             result.content,
+    campaignContextSummary: ctxSummary,
+    workspaceId:           opts.workspaceId,
+    campaignId:            opts.campaignId,
+    iteration:             1,
+    log:                   opts.log,
+  });
+
+  opts.log.info(
+    { agentRole: opts.agentRole, score: initialScore.overallScore, verdict: initialScore.verdict },
+    "runJudgedAgent: initial evaluation",
+  );
+
+  // Approved — no refinement needed
+  if (initialScore.overallScore >= APPROVAL_THRESHOLD) {
+    // Save approved critique log in background
+    if (opts.campaignId && /^[0-9a-f-]{36}$/i.test(opts.campaignId)) {
+      setImmediate(() => {
+        saveCritiqueLog({
+          workspaceId:   opts.workspaceId,
+          campaignId:    opts.campaignId as string,
+          agentRole:     opts.agentRole,
+          iteration:     1,
+          rawOutput:     result.content,
+          refinedOutput: result.content,
+          scoreBefore:   initialScore,
+          tokensUsed:    0,
+          log:           opts.log,
+        }).catch(() => {/* non-fatal */});
+      });
+    }
+    return {
+      ...result,
+      judgeScore:  initialScore.overallScore,
+      wasRefined:  false,
+    };
+  }
+
+  // ── Refinement pass ─────────────────────────────────────────────────────────
+  opts.log.info(
+    { agentRole: opts.agentRole, score: initialScore.overallScore },
+    "runJudgedAgent: score below threshold — running refinement pass",
+  );
+
+  try {
+    const refinementMessage = buildRefinementMessage(result.content, initialScore);
+
+    // Add the critique as a new user message and re-run the agent
+    const refinedMessages: typeof opts.messages = [
+      ...opts.messages,
+      { role: "assistant", content: result.content },
+      { role: "user",      content: refinementMessage },
+    ];
+
+    const refinedResult = await runAgent({
+      ...opts,
+      messages: refinedMessages,
+      requiresApproval: false, // No checkpoint for refinement pass
+    });
+
+    // Evaluate refined output
+    const refinedScore = await judgeAgentOutput({
+      agentRole:              opts.agentRole,
+      rawOutput:              refinedResult.content,
+      campaignContextSummary: ctxSummary,
+      workspaceId:            opts.workspaceId,
+      campaignId:             opts.campaignId,
+      iteration:              2,
+      log:                    opts.log,
+    });
+
+    opts.log.info(
+      {
+        agentRole:     opts.agentRole,
+        scoreBefore:   initialScore.overallScore,
+        scoreAfter:    refinedScore.overallScore,
+        improvement:   refinedScore.overallScore - initialScore.overallScore,
+      },
+      "runJudgedAgent: refinement complete",
+    );
+
+    // Save critique log with delta
+    let critiqueLogId: string | undefined;
+    if (opts.campaignId && /^[0-9a-f-]{36}$/i.test(opts.campaignId)) {
+      critiqueLogId = await saveCritiqueLog({
+        workspaceId:   opts.workspaceId,
+        campaignId:    opts.campaignId as string,
+        agentRole:     opts.agentRole,
+        iteration:     2,
+        rawOutput:     result.content,
+        refinedOutput: refinedResult.content,
+        scoreBefore:   initialScore,
+        scoreAfter:    refinedScore,
+        tokensUsed:    0,
+        log:           opts.log,
+      });
+    }
+
+    // Return the better of the two outputs
+    const useRefined = refinedScore.overallScore >= initialScore.overallScore;
+    return {
+      ...(useRefined ? refinedResult : result),
+      judgeScore:    useRefined ? refinedScore.overallScore : initialScore.overallScore,
+      wasRefined:    true,
+      critiqueLogId,
+    };
+  } catch (refineErr) {
+    opts.log.warn(
+      { refineErr, agentRole: opts.agentRole },
+      "runJudgedAgent: refinement pass failed — returning original output",
+    );
+    return {
+      ...result,
+      judgeScore: initialScore.overallScore,
+      wasRefined: false,
+    };
   }
 }

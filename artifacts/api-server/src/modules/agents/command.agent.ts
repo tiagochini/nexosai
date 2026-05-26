@@ -17,6 +17,7 @@ import { runTrafficIntelligenceAgent, type TrafficIntelligenceOutput } from "./t
 import { runExecutionGovernor, type ExecutionPlan } from "./execution-governor.agent.js";
 import { runBusinessIntelligenceAgent, type BusinessIntelligenceOutput } from "./business-intelligence.agent.js";
 import { runMemoryCompression } from "./memory-compression.agent.js";
+import { buildCrossCampaignIntelligence } from "./cross-campaign-intelligence.service.js";
 import { runUXSimplificationEngine } from "./ux-simplification.agent.js";
 import {
   initializeCampaignMemory,
@@ -406,6 +407,25 @@ Retorne o JSON de avaliação.`,
   const isSkippedByGovernor = (agentId: string): boolean =>
     executionPlan?.skippedAgents?.includes(agentId) ?? false;
 
+  // ── 0c. Cross-Campaign Intelligence ────────────────────────────────────────
+  // Extracts patterns from past campaigns of this workspace and vertical learnings.
+  // Runs non-blocking — result is prepended to memoryContext when it's built.
+  // This is what makes each new campaign smarter than the last.
+  let crossCampaignContext = "";
+  try {
+    crossCampaignContext = await buildCrossCampaignIntelligence(
+      workspaceId,
+      campaignId,
+      intakeData,
+      log,
+    );
+    if (crossCampaignContext) {
+      log.info({ campaignId }, "Cross-campaign intelligence loaded — historical patterns active");
+    }
+  } catch (crossErr) {
+    log.warn({ crossErr, campaignId }, "Cross-campaign intelligence unavailable (non-fatal)");
+  }
+
   // ── 1. Profile Builder Agent (all campaign types — runs first) ─────────────
   // Builds deep product, avatar, segmentation and market intelligence.
   // Its output feeds every downstream agent as enriched context.
@@ -495,9 +515,14 @@ Retorne o JSON de avaliação.`,
         strategicBrief,
         log,
       );
-      memoryContext = assembleCampaignContext(campaignMemory);
+      // Prepend cross-campaign intelligence so every agent has historical context
+      // from past campaigns BEFORE the current campaign's assembled context.
+      const baseContext = assembleCampaignContext(campaignMemory);
+      memoryContext = crossCampaignContext
+        ? crossCampaignContext + "\n" + baseContext
+        : baseContext;
       agentsRun.push("campaign_memory");
-      log.info({ campaignId, memoryVersion: campaignMemory.version }, "Campaign memory initialized");
+      log.info({ campaignId, memoryVersion: campaignMemory.version, hasCrossContext: !!crossCampaignContext }, "Campaign memory initialized");
     } catch (memErr) {
       log.warn({ memErr, campaignId }, "Campaign memory init failed — agents will run without memory context");
     }
