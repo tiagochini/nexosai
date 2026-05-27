@@ -29,7 +29,8 @@ export interface CritiqueResult {
 
 function buildTemporalBlock(): string {
   const now = new Date();
-  const isoDate = now.toISOString().split("T")[0]!;
+  // BRT-correct ISO date — toISOString() returns UTC which is 1 day ahead during 21h-00h BRT
+  const isoDate = now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
   const dateStr = now.toLocaleDateString("pt-BR", {
     weekday: "long",
     year: "numeric",

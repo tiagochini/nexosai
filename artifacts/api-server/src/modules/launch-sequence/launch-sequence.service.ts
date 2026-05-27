@@ -618,7 +618,8 @@ export async function getLaunchCalendar(workspaceId: string, sequenceId: string)
     if (activatedAt) {
       const d = new Date(activatedAt);
       d.setDate(d.getDate() + dayIndex);
-      date = d.toISOString().slice(0, 10);
+      // Use BRT timezone for calendar dates — toISOString() is UTC and drifts 1 day between 21h-00h BRT
+      date = d.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
     }
 
     days.push({

@@ -225,11 +225,18 @@ function buildTemporalContextBlock(): string {
     day: "numeric",
     timeZone: "America/Sao_Paulo",
   });
-  const isoDate = now.toISOString().split("T")[0]; // YYYY-MM-DD
+  // BRT-correct ISO date (en-CA gives YYYY-MM-DD format)
+  // Using UTC date causes a 1-day error between 21h–00h BRT (UTC-3)
+  const isoDate = now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+  const timeBRT = now.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  });
   return `## CONTEXTO TEMPORAL OBRIGATÓRIO
 
-**Data de hoje:** ${dateStr} (${isoDate})
-**Fuso horário de referência:** America/Sao_Paulo (BRT/BRST)
+**Data de hoje:** ${dateStr} (${isoDate}) — ${timeBRT} BRT
+**Fuso horário de referência:** America/Sao_Paulo (BRT = UTC-3)
 
 > REGRA CRÍTICA: Todas as datas, cronogramas, timelines e planos de lançamento que você gerar DEVEM ser iguais ou posteriores a ${isoDate}. NUNCA sugira datas passadas. Se precisar de uma data de início, use a data de hoje como Dia 1.
 
