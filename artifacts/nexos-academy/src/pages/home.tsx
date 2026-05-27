@@ -378,15 +378,32 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
           <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-[hsl(250_90%_65%/0.6)] mb-4">— Edição Completa —</div>
           <h2 className="text-2xl font-extrabold text-white mb-2">Metodologia NexOS — Tudo incluso.</h2>
           <p className="text-sm text-[hsl(220_10%_55%)] mb-6">Um investimento único. Acesso vitalício. O mapa completo de lançamento digital.</p>
+          {/* Professor IA highlight */}
+          <div className="rounded-xl border border-[hsl(250_90%_65%/0.35)] bg-[hsl(250_90%_65%/0.06)] px-6 py-5 mb-6 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[hsl(250_90%_65%)] to-[hsl(280_80%_60%)] flex items-center justify-center text-white text-lg shrink-0 shadow-lg">
+              🎓
+            </div>
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-[hsl(250_90%_65%/0.7)] mb-1">Incluso no seu acesso</div>
+              <div className="font-extrabold text-white text-base mb-1">
+                Professor IA — sempre pronto pra te atender
+              </div>
+              <p className="text-sm text-[hsl(220_10%_58%)] leading-relaxed">
+                A qualquer momento que tiver dúvida, o Professor responde, ensina e explica — com exemplos práticos do seu contexto, no seu ritmo, quantas vezes quiser.
+                Não precisa esperar aula ao vivo nem suporte com prazo de resposta.
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
             {[
               "12 módulos com conteúdo denso e aplicado",
               `${totalLessons}+ aulas com exercício prático por aula`,
+              "Professor IA disponível 24h — responde qualquer dúvida",
               "Glossário completo com 80+ termos técnicos",
               "Frameworks de Schwartz, Kahneman, Cialdini e mais",
               "Módulo exclusivo de Psicologia Avançada de Vendas",
               "Cases documentados com números reais",
-              "Módulo de Meta Ads completo (fundamentos + avançado)",
               "Acesso vitalício com atualizações incluídas",
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-sm text-[hsl(220_10%_65%)]">
