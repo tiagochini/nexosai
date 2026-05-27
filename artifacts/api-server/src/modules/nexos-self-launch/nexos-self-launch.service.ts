@@ -54,7 +54,7 @@ export const NEXOS_FRAMEWORK = {
     gancho: "A única coisa que separava você de um lançamento de 6 dígitos não era o método — era o time de execução",
     mecanismo: "34 agentes de IA especializados que executam cada etapa do seu lançamento enquanto você decide — do briefing ao roteiro, do copy ao WhatsApp, do VSL ao fechamento em tempo real",
     ponteTransformacao: "De 'sei o método mas não consigo executar' para 'preenchi o briefing, os agentes criaram tudo e meu carrinho abriu com lista aquecida'",
-    posicionamento: "NexOS não é um curso. Não é mais um framework. É o time de execução que o Érico tem — disponível para qualquer pessoa, a qualquer hora, sem mensalidade.",
+    posicionamento: "NexOS não é um curso. Não é mais um framework. É o time de execução que os maiores lançadores do Brasil têm — disponível para qualquer pessoa, a qualquer hora, sem mensalidade.",
     contraposicao: "Enquanto você comprava conhecimento, o que faltava era execução. NexOS é a primeira ferramenta que executa o lançamento junto com você.",
   },
 
@@ -76,6 +76,7 @@ export const NEXOS_FRAMEWORK = {
     "6. NexOS tem 34 agentes especializados — cada um treinado para uma função específica",
     "7. Você pode ver funcionando ao vivo — sem promessa, sem slide",
     "8. R$3.990 uma única vez é menos que um mês de um bom copywriter",
+
   ],
 
   estrategiaFechamento: {
@@ -159,7 +160,7 @@ LINGUAGEM LITERAL DO AVATAR (use estas frases ou variações próximas):
 
 A EPIFANIA CENTRAL (este é o argumento de vendas mais importante — nunca desvie dele):
 A única coisa que separava esse avatar de um lançamento de 6 dígitos NÃO ERA O MÉTODO.
-Era o time de execução. O Érico Rocha, o João Pedro Motta, os grandes lançadores — todos têm um time de 20+ especialistas executando cada detalhe. Copy, vídeo, sequências, atendimento, analytics.
+Era o time de execução. Os maiores lançadores do Brasil — todos têm um time de 20+ especialistas executando cada detalhe. Copy, vídeo, sequências, atendimento, analytics.
 O avatar comprou cursos de método. O que faltava era alguém executando junto.
 NexOS É ESSE TIME. 34 agentes de IA especializados — cada um treinado para uma função. Enquanto você decide, a IA executa.
 
