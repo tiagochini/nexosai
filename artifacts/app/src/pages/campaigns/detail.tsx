@@ -1910,84 +1910,135 @@ export default function CampaignDetail() {
         />
       )}
 
-      {/* ── Missing Integrations Modal (hard block) ── */}
+      {/* ── Missing / Partial Integrations Guide Modal ── */}
       {missingIntegrations && !connectingEntry && (() => {
-        const PROVIDER_NAME_MAP: Record<string, CatalogEntry | undefined> = Object.fromEntries(
-          INTEGRATION_CATALOG.map(e => [e.label.toLowerCase(), e])
-        );
-        const SHORT_NAMES: Record<string, string> = {
-          "whatsapp business": "whatsapp_business",
-          "telegram": "telegram",
-          "rd station": "rd_station",
-          "activecampaign": "activecampaign",
-          "resend": "resend",
-          "instagram": "instagram",
-          "tiktok": "tiktok",
-          "facebook/meta ads": "meta_ads",
+        const SETUP_GUIDE: Record<string, { title: string; steps: string[]; url: string; urlLabel: string }> = {
+          "WhatsApp Business": {
+            title: "WhatsApp Business API",
+            steps: [
+              "Acesse business.whatsapp.com e crie uma conta Meta Business",
+              "Vá em Ferramentas → WhatsApp → Adicionar número de telefone",
+              "Siga o assistente para verificar o número (SMS ou ligação)",
+              "Em Configurações do App → Copie o Token de Acesso Permanente + Phone Number ID",
+              "Cole as credenciais em Configurações → Integrações → WhatsApp Business",
+            ],
+            url: "https://business.whatsapp.com/start",
+            urlLabel: "Abrir Meta Business",
+          },
+          "Telegram": {
+            title: "Bot do Telegram",
+            steps: [
+              "Abra o Telegram e pesquise @BotFather",
+              "Envie o comando /newbot",
+              "Escolha um nome e username para o bot (deve terminar em 'bot')",
+              "Copie o token gerado (formato: 123456:ABC-DEF...)",
+              "Cole o token em Configurações → Integrações → Telegram",
+            ],
+            url: "https://t.me/BotFather",
+            urlLabel: "Abrir BotFather",
+          },
+          "RD Station": {
+            title: "RD Station Marketing",
+            steps: [
+              "Acesse app.rdstation.com e crie sua conta (gratuito)",
+              "Vá em Configurações → Integrações → API",
+              "Gere um novo token de API",
+              "Copie o token gerado",
+              "Cole em Configurações → Integrações → RD Station",
+            ],
+            url: "https://app.rdstation.com",
+            urlLabel: "Abrir RD Station",
+          },
+          "ActiveCampaign": {
+            title: "ActiveCampaign",
+            steps: [
+              "Acesse activecampaign.com e crie sua conta",
+              "Clique no menu do usuário → Minha Conta → Developer",
+              "Copie a URL da API e a Chave de API",
+              "Cole ambas em Configurações → Integrações → ActiveCampaign",
+            ],
+            url: "https://www.activecampaign.com",
+            urlLabel: "Abrir ActiveCampaign",
+          },
         };
-        const findEntry = (name: string): CatalogEntry | undefined => {
+
+        const findGuide = (name: string) => {
           const lower = name.toLowerCase();
-          const byLabel = PROVIDER_NAME_MAP[lower];
-          if (byLabel) return byLabel;
-          const providerId = SHORT_NAMES[lower];
-          if (providerId) return INTEGRATION_CATALOG.find(e => e.provider === providerId);
-          return INTEGRATION_CATALOG.find(e => e.label.toLowerCase().includes(lower) || lower.includes(e.label.toLowerCase().split(" ")[0] ?? ""));
+          return Object.entries(SETUP_GUIDE).find(([k]) => k.toLowerCase().includes(lower) || lower.includes(k.toLowerCase()))?.[1];
         };
+
         return (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="border border-destructive/50 bg-card w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
-              <div className="border-b border-destructive/20 px-5 py-4 flex items-start justify-between gap-3 shrink-0">
-                <div className="flex items-center gap-3">
-                  <XCircle className="h-5 w-5 text-destructive shrink-0" />
-                  <div>
-                    <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-destructive">Canais Obrigatórios Ausentes</h3>
-                    <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Conecte ao menos um canal de mensagens e um de e-mail para lançar.</p>
-                  </div>
+          <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="border border-primary/30 bg-card w-full max-w-xl shadow-2xl max-h-[92vh] flex flex-col">
+              {/* Header */}
+              <div className="border-b border-border/40 px-6 py-5 flex items-start justify-between gap-3 shrink-0">
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary/70 mb-1">Pré-lançamento obrigatório</div>
+                  <h3 className="font-mono font-bold text-base uppercase tracking-tight text-foreground">Conectar canais de disparo</h3>
+                  <p className="text-xs font-mono text-muted-foreground/60 mt-1 leading-relaxed">
+                    Sem pelo menos um canal de mensagens e um de e-mail, a IA não consegue disparar a sequência de lançamento. Siga o guia abaixo para conectar.
+                  </p>
                 </div>
-                <button onClick={() => setMissingIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                <button onClick={() => setMissingIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0 mt-1">
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="overflow-y-auto flex-1 p-5 space-y-5">
+
+              {/* Step-by-step guides */}
+              <div className="overflow-y-auto flex-1 p-6 space-y-6">
                 {missingIntegrations.map(m => (
                   <div key={m.category}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="font-mono text-[10px] font-bold uppercase tracking-[0.25em] text-destructive/80">{m.category}</div>
-                      <div className="flex-1 h-px bg-destructive/20" />
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-1 h-5 bg-primary/60" />
+                      <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground/80">{m.category}</div>
+                      <div className="flex-1 h-px bg-border/20" />
                     </div>
                     {m.reason && (
-                      <p className="font-mono text-[11px] text-muted-foreground/50 mb-3 px-1">{m.reason}</p>
+                      <p className="font-mono text-[11px] text-muted-foreground/50 mb-4 px-1">{m.reason}</p>
                     )}
-                    <div className="space-y-2">
-                      {m.providers.map(providerName => {
-                        const entry = findEntry(providerName);
-                        if (!entry) return (
-                          <div key={providerName} className="border border-border/30 bg-muted/10 px-4 py-3 flex items-center justify-between">
-                            <span className="font-mono text-xs text-foreground/70">{providerName}</span>
-                            <Link href="/integracoes">
-                              <Button size="sm" variant="outline" className="font-mono uppercase tracking-widest rounded-none h-7 px-3 text-[11px] border-border/50">
-                                <Link2 className="h-3 w-3 mr-1" />Conectar
-                              </Button>
-                            </Link>
-                          </div>
-                        );
-                        const Icon = entry.icon;
+
+                    {/* Platform options for this category */}
+                    <div className="space-y-4">
+                      {m.providers.map((providerName, pi) => {
+                        const guide = findGuide(providerName);
                         return (
-                          <div key={entry.provider} className="border border-border/40 bg-card/60 px-4 py-3 flex items-center gap-3">
-                            <div className={`w-7 h-7 border rounded-sm flex items-center justify-center shrink-0 ${entry.color} border-current/30 bg-current/5`}>
-                              <Icon className="h-3.5 w-3.5" />
+                          <div key={providerName} className="border border-border/30 bg-card/40">
+                            <div className="px-4 py-3 border-b border-border/20 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {m.providers.length > 1 && (
+                                  <span className="font-mono text-[10px] text-primary/60 uppercase tracking-widest border border-primary/30 bg-primary/5 px-1.5 py-0.5">
+                                    Opção {pi + 1}
+                                  </span>
+                                )}
+                                <span className="font-mono text-xs font-bold text-foreground">{guide?.title ?? providerName}</span>
+                              </div>
+                              {guide && (
+                                <a
+                                  href={guide.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono text-[10px] uppercase tracking-widest text-primary hover:underline flex items-center gap-1"
+                                >
+                                  {guide.urlLabel} ↗
+                                </a>
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-mono text-xs font-bold text-foreground leading-tight">{entry.label}</div>
-                              <p className="font-mono text-[10px] text-muted-foreground/55 mt-0.5 leading-relaxed truncate">{entry.description}</p>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => setConnectingEntry(entry)}
-                              className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-7 px-3 text-[11px] btn-weapon-primary shrink-0"
-                            >
-                              <Link2 className="h-3 w-3" />Conectar
-                            </Button>
+                            {guide ? (
+                              <ol className="p-4 space-y-2">
+                                {guide.steps.map((step, i) => (
+                                  <li key={i} className="flex items-start gap-3">
+                                    <span className="font-mono text-[10px] text-primary/60 bg-primary/10 border border-primary/20 w-5 h-5 flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
+                                      {i + 1}
+                                    </span>
+                                    <span className="font-mono text-[12px] text-muted-foreground/80 leading-relaxed">{step}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            ) : (
+                              <p className="p-4 font-mono text-[11px] text-muted-foreground/60">
+                                Acesse Configurações → Integrações para conectar este canal.
+                              </p>
+                            )}
                           </div>
                         );
                       })}
@@ -1995,8 +2046,163 @@ export default function CampaignDetail() {
                   </div>
                 ))}
               </div>
-              <div className="border-t border-border/50 px-5 py-3 shrink-0">
-                <Button variant="outline" onClick={() => setMissingIntegrations(null)} className="w-full font-mono uppercase tracking-widest rounded-none border-border/50 h-9 text-[11px]">
+
+              {/* Footer CTA */}
+              <div className="border-t border-border/40 px-6 py-4 shrink-0 flex gap-3">
+                <Link href="/integracoes" className="flex-1">
+                  <Button
+                    onClick={() => setMissingIntegrations(null)}
+                    className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 text-[11px]"
+                  >
+                    <Link2 className="h-4 w-4" />Ir para Integrações
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  onClick={() => setMissingIntegrations(null)}
+                  className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-5 text-[11px]"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Partial Integrations Guide Modal (canais incompletos) ── */}
+      {partialIntegrations && (() => {
+        const SETUP_GUIDE: Record<string, { title: string; steps: string[]; url: string; urlLabel: string }> = {
+          "WhatsApp Business": {
+            title: "WhatsApp Business API",
+            steps: [
+              "Acesse business.whatsapp.com → Meta Business Suite",
+              "Adicione e verifique um número de telefone dedicado",
+              "Copie o Token de Acesso Permanente + Phone Number ID",
+              "Cole em Configurações → Integrações → WhatsApp Business",
+            ],
+            url: "https://business.whatsapp.com/start",
+            urlLabel: "Abrir Meta Business",
+          },
+          "Telegram": {
+            title: "Bot do Telegram",
+            steps: [
+              "Abra o Telegram → pesquise @BotFather",
+              "Envie /newbot → escolha nome e username",
+              "Copie o token gerado pelo BotFather",
+              "Cole em Configurações → Integrações → Telegram",
+            ],
+            url: "https://t.me/BotFather",
+            urlLabel: "Abrir BotFather",
+          },
+          "RD Station": {
+            title: "RD Station Marketing",
+            steps: [
+              "Acesse app.rdstation.com → Configurações → API",
+              "Gere e copie o token de integração",
+              "Cole em Configurações → Integrações → RD Station",
+            ],
+            url: "https://app.rdstation.com",
+            urlLabel: "Abrir RD Station",
+          },
+          "ActiveCampaign": {
+            title: "ActiveCampaign",
+            steps: [
+              "Acesse sua conta → Configurações → Developer",
+              "Copie a API URL e a Chave de API",
+              "Cole em Configurações → Integrações → ActiveCampaign",
+            ],
+            url: "https://www.activecampaign.com",
+            urlLabel: "Abrir ActiveCampaign",
+          },
+        };
+        const findGuide = (name: string) =>
+          Object.entries(SETUP_GUIDE).find(([k]) => k.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(k.toLowerCase()))?.[1];
+
+        return (
+          <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="border border-yellow-400/30 bg-card w-full max-w-xl shadow-2xl max-h-[92vh] flex flex-col">
+              <div className="border-b border-yellow-400/20 px-6 py-5 flex items-start justify-between gap-3 shrink-0">
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/70 mb-1">Cobertura incompleta</div>
+                  <h3 className="font-mono font-bold text-base uppercase tracking-tight text-foreground">Canais parcialmente conectados</h3>
+                  <p className="text-xs font-mono text-muted-foreground/60 mt-1 leading-relaxed">
+                    Alguns canais ainda não estão conectados. A IA pode lançar, mas disparos para esses canais não serão enviados. Conecte antes para máxima cobertura.
+                  </p>
+                </div>
+                <button onClick={() => setPartialIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0 mt-1">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 p-6 space-y-6">
+                {partialIntegrations.map(m => (
+                  <div key={m.category}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-1 h-5 bg-yellow-400/60" />
+                      <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground/80">{m.category}</div>
+                      <div className="flex-1 h-px bg-border/20" />
+                    </div>
+                    {m.reason && <p className="font-mono text-[11px] text-muted-foreground/50 mb-4 px-1">{m.reason}</p>}
+                    <div className="space-y-4">
+                      {m.providers.map((providerName, pi) => {
+                        const guide = findGuide(providerName);
+                        return (
+                          <div key={providerName} className="border border-border/30 bg-card/40">
+                            <div className="px-4 py-3 border-b border-border/20 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {m.providers.length > 1 && (
+                                  <span className="font-mono text-[10px] text-yellow-400/60 uppercase tracking-widest border border-yellow-400/30 bg-yellow-400/5 px-1.5 py-0.5">
+                                    Opção {pi + 1}
+                                  </span>
+                                )}
+                                <span className="font-mono text-xs font-bold text-foreground">{guide?.title ?? providerName}</span>
+                              </div>
+                              {guide && (
+                                <a href={guide.url} target="_blank" rel="noopener noreferrer"
+                                  className="font-mono text-[10px] uppercase tracking-widest text-yellow-400 hover:underline flex items-center gap-1">
+                                  {guide.urlLabel} ↗
+                                </a>
+                              )}
+                            </div>
+                            {guide ? (
+                              <ol className="p-4 space-y-2">
+                                {guide.steps.map((step, i) => (
+                                  <li key={i} className="flex items-start gap-3">
+                                    <span className="font-mono text-[10px] text-yellow-400/60 bg-yellow-400/10 border border-yellow-400/20 w-5 h-5 flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
+                                      {i + 1}
+                                    </span>
+                                    <span className="font-mono text-[12px] text-muted-foreground/80 leading-relaxed">{step}</span>
+                                  </li>
+                                ))}
+                              </ol>
+                            ) : (
+                              <p className="p-4 font-mono text-[11px] text-muted-foreground/60">
+                                Acesse Configurações → Integrações para conectar este canal.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-border/40 px-6 py-4 shrink-0 flex gap-3">
+                <Link href="/integracoes" className="flex-1">
+                  <Button
+                    onClick={() => setPartialIntegrations(null)}
+                    className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 text-[11px]"
+                  >
+                    <Link2 className="h-4 w-4" />Conectar Canais
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  onClick={() => setPartialIntegrations(null)}
+                  className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-5 text-[11px]"
+                >
                   Fechar
                 </Button>
               </div>

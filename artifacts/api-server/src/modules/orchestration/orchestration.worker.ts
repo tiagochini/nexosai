@@ -148,6 +148,17 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
       { piecesGenerated: result.piecesGenerated, agentsRun: result.agentsRun.length },
       "Content phase completed",
     );
+
+    // Transition to awaiting_approval so user can review content pieces before launch.
+    await transitionCampaign(campaignId, workspaceId, "awaiting_approval", "content generation complete — awaiting approval", log);
+
+    emitCampaignEvent({
+      campaignId,
+      type: "phase_changed",
+      message: `${result.piecesGenerated} peças geradas — aguardando sua aprovação para lançar`,
+      data: { status: "awaiting_approval", piecesGenerated: result.piecesGenerated },
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
     log.error({ err }, "Content phase failed");
     emitCampaignEvent({

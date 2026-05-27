@@ -100,7 +100,7 @@ function buildEmailHtml(step: number, firstName: string): string {
         <ul style="color:#a0aec0;line-height:2;padding-left:20px;margin:0 0 16px">
           <li>10 módulos completos — do zero ao lançamento</li>
           <li>34 capítulos com passo a passo aplicável</li>
-          <li>118 aulas em vídeo</li>
+          <li>128 aulas em texto denso com exercício prático por aula</li>
           <li>Templates prontos de copy, sequências e automações</li>
           <li>Acesso vitalício com atualizações</li>
         </ul>
