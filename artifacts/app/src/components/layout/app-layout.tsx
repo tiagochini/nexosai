@@ -90,7 +90,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: tr.nav.ai_team,
       items: [
-        { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "39" },
+        { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "57" },
       ],
     },
     {
