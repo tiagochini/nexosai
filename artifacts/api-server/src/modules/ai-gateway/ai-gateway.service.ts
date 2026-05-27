@@ -449,19 +449,23 @@ export async function callVisionChat(
   const costUsd = calculateCostUsd("anthropic", effectiveModel, response.usage.input_tokens, response.usage.output_tokens);
   const creditsCharged = calculateCreditsFromCost(costUsd, env.CREDIT_MARGIN_MULTIPLIER);
 
-  await db.insert(aiProviderLogsTable).values({
-    workspaceId,
-    campaignId: null,
-    agentType: "vision_chat" as AgentRole,
-    provider: "anthropic",
-    model: effectiveModel,
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
-    totalTokens: response.usage.input_tokens + response.usage.output_tokens,
-    costUsd: costUsd.toString(),
-    creditsCharged,
-    latencyMs,
-  });
+  try {
+    await db.insert(aiProviderLogsTable).values({
+      workspaceId,
+      campaignId: null,
+      agentType: "vision_chat" as AgentRole,
+      provider: "anthropic",
+      model: effectiveModel,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+      costUsd: costUsd.toString(),
+      creditsCharged,
+      latencyMs,
+    });
+  } catch (logErr) {
+    log.warn({ err: logErr, workspaceId }, "ai_provider_logs insert failed (non-fatal) — workspace may have been deleted");
+  }
 
   log.info({ provider: "anthropic", model: effectiveModel, costUsd, latencyMs, images: imageDataUrls.length }, "Vision completion");
 
@@ -530,19 +534,23 @@ export async function completeWithAgent(
     env.CREDIT_MARGIN_MULTIPLIER,
   );
 
-  await db.insert(aiProviderLogsTable).values({
-    workspaceId,
-    campaignId,
-    agentType: agentRole,
-    provider: provider as any,
-    model,
-    inputTokens: result.inputTokens,
-    outputTokens: result.outputTokens,
-    totalTokens: result.inputTokens + result.outputTokens,
-    costUsd: costUsd.toString(),
-    creditsCharged,
-    latencyMs,
-  });
+  try {
+    await db.insert(aiProviderLogsTable).values({
+      workspaceId,
+      campaignId,
+      agentType: agentRole,
+      provider: provider as any,
+      model,
+      inputTokens: result.inputTokens,
+      outputTokens: result.outputTokens,
+      totalTokens: result.inputTokens + result.outputTokens,
+      costUsd: costUsd.toString(),
+      creditsCharged,
+      latencyMs,
+    });
+  } catch (logErr) {
+    log.warn({ err: logErr, workspaceId, campaignId, agentRole }, "ai_provider_logs insert failed (non-fatal) — workspace may have been deleted");
+  }
 
   log.info(
     { agentRole, provider, model, costUsd, creditsCharged, latencyMs },

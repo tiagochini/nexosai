@@ -24,7 +24,7 @@ import { startSocialScheduler, stopSocialScheduler } from "./modules/social/soci
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { db, campaignAgentsTable, campaignsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, lt } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
 
@@ -120,9 +120,15 @@ Promise.all([
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (generating reset) failed")),
 
+  // RC-FIX: Only reset campaigns stuck in "analyzing" for > 30 min.
+  // Campaigns that JUST transitioned (e.g. fresh finalize before a restart) must NOT be reset,
+  // or the user loses their work silently. 30 min is enough time for any real strategy run.
   db.update(campaignsTable)
     .set({ status: "intake", updatedAt: new Date() })
-    .where(eq(campaignsTable.status, "analyzing"))
+    .where(and(
+      eq(campaignsTable.status, "analyzing"),
+      lt(campaignsTable.updatedAt, new Date(Date.now() - 30 * 60 * 1000)),
+    ))
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
         logger.warn({ count: result.rowCount }, "Boot cleanup: reset analyzing campaigns to intake");
