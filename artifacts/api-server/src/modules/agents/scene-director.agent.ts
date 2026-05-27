@@ -4,6 +4,17 @@ import { deductCredits } from "../credits/credits.service.js";
 import type { Logger } from "pino";
 import type { VideoScene, VideoConfig } from "@workspace/db";
 
+export interface CampaignArc {
+  emotionalHook?: string;
+  uniqueMechanism?: string;
+  transformationBridge?: string;
+  positioning?: string;
+  mentalTriggers?: string[];
+  avatarFears?: string[];
+  avatarAspirations?: string[];
+  track?: string;
+}
+
 export interface StoryboardInput {
   productName: string;
   productDescription: string;
@@ -13,6 +24,7 @@ export interface StoryboardInput {
   config: Partial<VideoConfig>;
   campaignId?: string | null;
   workspaceId: string;
+  campaignArc?: CampaignArc;
 }
 
 const SCENE_TYPES = ["hook", "problem", "solution", "proof", "cta", "bridge", "transition"] as const;
@@ -138,8 +150,23 @@ ${input.config.palette?.length ? `Paleta de cores preferida: ${input.config.pale
 
 ROTEIRO COMPLETO:
 ${input.script}
+${input.campaignArc ? `
+═══════════════════════════════════════════
+ARCO ESTRATÉGICO DA CAMPANHA — USE PARA CALIBRAR CADA CENA
+═══════════════════════════════════════════
+${input.campaignArc.emotionalHook ? `GANCHO EMOCIONAL CENTRAL: ${input.campaignArc.emotionalHook}\n→ Este é o fio emocional que atravessa todas as cenas. A câmera deve reforçá-lo visualmente.` : ""}
+${input.campaignArc.uniqueMechanism ? `MECANISMO ÚNICO: ${input.campaignArc.uniqueMechanism}\n→ Quando este mecanismo for revelado no roteiro, use o plano mais impactante — baixo ângulo, luz dramática, corte no silêncio.` : ""}
+${input.campaignArc.transformationBridge ? `PONTE DE TRANSFORMAÇÃO (antes → depois): ${input.campaignArc.transformationBridge}\n→ As primeiras cenas devem estar VISIVELMENTE no "antes" (cores frias, ângulo alto, espaço apertado). As últimas cenas no "depois" (cores quentes, ângulo baixo, espaço aberto).` : ""}
+${input.campaignArc.positioning ? `POSICIONAMENTO: ${input.campaignArc.positioning}\n→ O estilo visual deve comunicar este posicionamento sem palavras.` : ""}
+${input.campaignArc.mentalTriggers?.length ? `GATILHOS MENTAIS ATIVOS: ${input.campaignArc.mentalTriggers.join(", ")}\n→ Cada gatilho tem uma linguagem visual. Urgência = vermelho + corte rápido. Autoridade = ângulo baixo + iluminação lateral. Prova social = rostos reais + close em detalhes.` : ""}
+${input.campaignArc.avatarFears?.length ? `MEDOS PROFUNDOS DO AVATAR: ${input.campaignArc.avatarFears.join(" / ")}\n→ As cenas de problema devem MOSTRAR (não contar) o custo destes medos se materializando.` : ""}
+${input.campaignArc.avatarAspirations?.length ? `ASPIRAÇÕES DO AVATAR: ${input.campaignArc.avatarAspirations.join(" / ")}\n→ As cenas de solução e CTA devem MOSTRAR estas aspirações já realizadas — não prometidas.` : ""}
+${input.campaignArc.track === "six_digits" ? "ESCALA: Primeiro grande lançamento — cenas devem ter energia de possibilidade e urgência de novo começo." : input.campaignArc.track === "eight_digits" ? "ESCALA: Lançamento de 8 dígitos — autoridade visual, movimento consolidado, prova social em escala." : input.campaignArc.track === "ten_digits" ? "ESCALA: 10 dígitos — visualmente grandioso, legado, missão maior que o produto." : ""}
+═══════════════════════════════════════════
+REGRA FINAL: O storyboard é a tradução visual do arco acima. Cada cena deve avançar a emoção dominante.
+═══════════════════════════════════════════` : ""}
 
-Crie o storyboard cena a cena. Cada cena deve ter exatamente entre 4 e 8 segundos.`;
+Crie o storyboard cena a cena. Cada cena deve ter exatamente entre 4 e 8 segundos. Cada cena deve mudar o estado emocional do espectador.`;
 
   const result = await completeWithAgent(
     "scene_director",

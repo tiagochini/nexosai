@@ -121,20 +121,125 @@ export async function generateScript(
     let productName = project.title;
     let productDescription = "";
     let targetAudience = "Empreendedores digitais brasileiros";
+    let campaignBrief = ""; // rich context block — injected into CYRUS
 
     if (project.campaignId) {
       const [campaign] = await db
-        .select({ intakeData: campaignsTable.intakeData })
+        .select({
+          intakeData: campaignsTable.intakeData,
+          strategyData: campaignsTable.strategyData,
+          audienceData: campaignsTable.audienceData,
+          offerData: campaignsTable.offerData,
+          track: campaignsTable.track,
+          revenueTarget: campaignsTable.revenueTarget,
+        })
         .from(campaignsTable)
         .where(eq(campaignsTable.id, project.campaignId))
         .limit(1);
-      if (campaign?.intakeData) {
-        const intake = campaign.intakeData as Record<string, unknown>;
+
+      if (campaign) {
+        const intake = (campaign.intakeData as Record<string, unknown>) ?? {};
+        const strategy = (campaign.strategyData as Record<string, unknown>) ?? {};
+        const audience = (campaign.audienceData as Record<string, unknown>) ?? {};
+        const offer = (campaign.offerData as Record<string, unknown>) ?? {};
+
         productName = String(intake["product.name"] ?? intake["productName"] ?? project.title);
         productDescription = String(intake["product.description"] ?? intake["product.category"] ?? "");
-        targetAudience = String(
-          intake["audience.description"] ?? intake["audience.primary"] ?? targetAudience,
-        );
+        targetAudience = String(intake["audience.description"] ?? intake["audience.primary"] ?? targetAudience);
+
+        // ── Build the Campaign Arc Brief ──────────────────────────────────────
+        // This is the "arco ventral" — every element CYRUS must respect and amplify.
+        const lines: string[] = [];
+
+        lines.push("═══════════════════════════════════════════");
+        lines.push("BRIEFING ESTRATÉGICO DA CAMPANHA (LEIA ANTES DE ESCREVER)");
+        lines.push("O roteiro é filho direto desta estratégia. Todo elemento abaixo deve estar presente.");
+        lines.push("═══════════════════════════════════════════");
+
+        // Track / revenue scale
+        const trackLabels: Record<string, string> = {
+          six_digits: "6 dígitos (R$100k–R$999k em 7 dias) — urgência de primeiro lançamento, transformação de vida",
+          eight_digits: "8 dígitos (R$10M–R$99M em 7 dias) — autoridade consolidada, escala de movimento",
+          ten_digits: "10 dígitos (R$100M+ em 7 dias) — legado, impacto de geração, missão maior",
+          perpetual: "Perpétuo — urgência baseada em resultado, não em data; foco em convicção profunda",
+          evergreen: "Evergreen — prova acumulada, autoridade estabelecida, conversa mais madura",
+        };
+        lines.push(`\nTRACK DE LANÇAMENTO: ${trackLabels[campaign.track] ?? campaign.track}`);
+        if (campaign.revenueTarget) lines.push(`META DE RECEITA: ${campaign.revenueTarget}`);
+
+        // Core positioning from strategy agent
+        if (strategy["positioning"]) lines.push(`\nPOSICIONAMENTO CENTRAL: ${strategy["positioning"]}`);
+        if (strategy["emotionalHook"]) lines.push(`GANCHO EMOCIONAL PRINCIPAL: ${strategy["emotionalHook"]}`);
+        if (strategy["uniqueMechanism"] || (strategy["uniqueMechanism"] as any)?.name) {
+          const mech = typeof strategy["uniqueMechanism"] === "object"
+            ? (strategy["uniqueMechanism"] as any)?.name ?? JSON.stringify(strategy["uniqueMechanism"])
+            : strategy["uniqueMechanism"];
+          lines.push(`MECANISMO ÚNICO (o "como" diferente de tudo que existia): ${mech}`);
+        }
+        if (strategy["transformationBridge"]) lines.push(`PONTE DE TRANSFORMAÇÃO (antes → depois): ${strategy["transformationBridge"]}`);
+        if (strategy["bigIdea"] || strategy["campaignBigIdea"]) lines.push(`BIG IDEA DA CAMPANHA: ${strategy["bigIdea"] ?? strategy["campaignBigIdea"]}`);
+
+        // Mental triggers explicitly selected for this campaign
+        const triggers = (strategy["mentalTriggers"] ?? strategy["triggers"] ?? audience["triggers"]) as string[] | undefined;
+        if (triggers?.length) {
+          lines.push(`\nGATILHOS MENTAIS DESTA CAMPANHA (use TODOS, na ordem certa):`);
+          triggers.forEach((t: string) => lines.push(`  • ${t}`));
+        }
+
+        // Avatar primary — the most important person CYRUS is writing for
+        const avatar = (audience["primaryAvatar"] ?? audience["avatar"]) as Record<string, unknown> | undefined;
+        if (avatar) {
+          lines.push(`\nAVATAR PRIMÁRIO — QUEM CYRUS ESTÁ FALANDO:`);
+          if (avatar["name"]) lines.push(`  Nome/perfil: ${avatar["name"]}`);
+          if (avatar["currentSituation"]) lines.push(`  Situação atual: ${avatar["currentSituation"]}`);
+          if (avatar["emotionalTrigger"]) lines.push(`  EMOÇÃO DOMINANTE que governa as decisões: ${avatar["emotionalTrigger"]}`);
+          if (avatar["dominantEnemy"]) lines.push(`  INIMIGO que culpa pelo estado atual: ${avatar["dominantEnemy"]}`);
+          if ((avatar["fears"] as string[])?.length) {
+            lines.push(`  Medos (especialmente o que nunca admite): ${(avatar["fears"] as string[]).slice(0, 3).join(" / ")}`);
+          }
+          if ((avatar["aspirations"] as string[])?.length) {
+            lines.push(`  Aspirações profundas: ${(avatar["aspirations"] as string[]).slice(0, 3).join(" / ")}`);
+          }
+          if (avatar["identityDesired"]) lines.push(`  Identidade que quer se tornar: ${avatar["identityDesired"]}`);
+          if (avatar["dominantNeed"]) lines.push(`  Necessidade dominante de compra: ${avatar["dominantNeed"]}`);
+        }
+
+        // Micro-convictions — the belief chain the script must install
+        const microConvictions = (audience["microConvictions"] ?? avatar?.["microConvictions"]) as string[] | undefined;
+        if (microConvictions?.length) {
+          lines.push(`\nCADEIA DE MICRO-CONVICÇÕES (crenças que o roteiro deve instalar em ordem):`);
+          microConvictions.slice(0, 6).forEach((c: string, i: number) => lines.push(`  ${i + 1}. ${c}`));
+        }
+
+        // Literal avatar language — words/phrases the script should use verbatim
+        const avatarLanguage = (audience["avatarLanguage"] ?? audience["literalPhrases"]) as string[] | undefined;
+        if (avatarLanguage?.length) {
+          lines.push(`\nLINGUAGEM LITERAL DO AVATAR (use estas frases EXATAS — não parafraseie):`);
+          avatarLanguage.slice(0, 6).forEach((p: string) => lines.push(`  "${p}"`));
+        }
+
+        // Offer structure
+        if (offer["productName"] || offer["mainOffer"]) {
+          lines.push(`\nESTRUTURA DA OFERTA:`);
+          if (offer["productName"] ?? offer["mainOffer"]) lines.push(`  Produto: ${offer["productName"] ?? offer["mainOffer"]}`);
+          if (offer["price"] ?? offer["pricePoint"]) lines.push(`  Preço: ${offer["price"] ?? offer["pricePoint"]}`);
+          if (offer["guarantee"]) lines.push(`  Garantia: ${offer["guarantee"]}`);
+          const bonuses = offer["bonuses"] as string[] | undefined;
+          if (bonuses?.length) lines.push(`  Bônus: ${bonuses.slice(0, 3).join(", ")}`);
+        }
+
+        // Intake fallback fields
+        if (intake["product.transformation"]) lines.push(`\nTRANSFORMAÇÃO PROMETIDA: ${intake["product.transformation"]}`);
+        if (intake["product.results"]) lines.push(`RESULTADOS COMPROVADOS: ${intake["product.results"]}`);
+        if (intake["audience.pain"]) lines.push(`DOR PRINCIPAL DO PÚBLICO: ${intake["audience.pain"]}`);
+
+        lines.push(`\n═══════════════════════════════════════════`);
+        lines.push(`REGRA ABSOLUTA: O roteiro deve ser a expressão máxima desta estratégia.`);
+        lines.push(`Não invente elementos novos — amplifica o que foi estrategicamente definido acima.`);
+        lines.push(`O mecanismo único DEVE ser o coração do roteiro. O gancho emocional DEVE ser o gancho do vídeo.`);
+        lines.push(`═══════════════════════════════════════════`);
+
+        campaignBrief = lines.join("\n");
       }
     }
 
@@ -233,15 +338,22 @@ ESTRUTURA DE ENTREGA:
 Escreva roteiro completo como texto corrido. Cada seção claramente marcada. Linguagem que ressoa emocionalmente, não apenas informa.`;
 
 
+    const userContent = [
+      campaignBrief ? campaignBrief : null,
+      `PRODUTO: ${productName}`,
+      productDescription ? `DESCRIÇÃO: ${productDescription}` : null,
+      `PÚBLICO-ALVO: ${targetAudience}`,
+      `FORMATO: ${format.replace(/_/g, " ").toUpperCase()}`,
+      "",
+      campaignBrief
+        ? "O roteiro DEVE ser a expressão cinematográfica e persuasiva do briefing acima. Não é um roteiro genérico — é a voz desta campanha específica. Crie o roteiro completo agora."
+        : "Crie o roteiro completo. Use todo o seu conhecimento de storytelling, arco emocional e persuasão para criar um roteiro que converte.",
+    ].filter(Boolean).join("\n");
+
     const result = await completeWithAgent(
       "vsl_script",
       SCRIPT_SYSTEM,
-      [
-        {
-          role: "user",
-          content: `Produto: ${productName}\n${productDescription ? `Descrição: ${productDescription}\n` : ""}Público-alvo: ${targetAudience}\nFormato: ${format}\n\nCrie o roteiro completo.`,
-        },
-      ],
+      [{ role: "user", content: userContent }],
       workspaceId,
       reqLog,
       project.campaignId ?? undefined,
@@ -315,18 +427,51 @@ export async function generateStoryboard(
     let productName = project.title;
     let productDescription = "";
     let targetAudience = "Empreendedores digitais brasileiros";
+    let emotionalHook = "";
+    let uniqueMechanism = "";
+    let transformationBridge = "";
+    let positioning = "";
+    let avatarFears: string[] = [];
+    let avatarAspirations: string[] = [];
+    let mentalTriggers: string[] = [];
+    let campaignTrack = "six_digits";
 
     if (project.campaignId) {
       const [campaign] = await db
-        .select({ intakeData: campaignsTable.intakeData })
+        .select({
+          intakeData: campaignsTable.intakeData,
+          strategyData: campaignsTable.strategyData,
+          audienceData: campaignsTable.audienceData,
+          track: campaignsTable.track,
+        })
         .from(campaignsTable)
         .where(eq(campaignsTable.id, project.campaignId))
         .limit(1);
-      if (campaign?.intakeData) {
-        const intake = campaign.intakeData as Record<string, unknown>;
+
+      if (campaign) {
+        const intake = (campaign.intakeData as Record<string, unknown>) ?? {};
+        const strategy = (campaign.strategyData as Record<string, unknown>) ?? {};
+        const audience = (campaign.audienceData as Record<string, unknown>) ?? {};
+        const avatar = (audience["primaryAvatar"] ?? audience["avatar"]) as Record<string, unknown> | undefined;
+
         productName = String(intake["product.name"] ?? intake["productName"] ?? project.title);
         productDescription = String(intake["product.description"] ?? "");
         targetAudience = String(intake["audience.description"] ?? targetAudience);
+
+        emotionalHook = String(strategy["emotionalHook"] ?? "");
+        positioning = String(strategy["positioning"] ?? "");
+        const mech = strategy["uniqueMechanism"];
+        uniqueMechanism = typeof mech === "object" ? String((mech as any)?.name ?? "") : String(mech ?? "");
+        transformationBridge = String(strategy["transformationBridge"] ?? "");
+        campaignTrack = campaign.track;
+
+        const trig = (strategy["mentalTriggers"] ?? strategy["triggers"] ?? audience["triggers"]) as string[] | undefined;
+        if (trig?.length) mentalTriggers = trig;
+
+        if (avatar) {
+          avatarFears = ((avatar["fears"] as string[]) ?? []).slice(0, 3);
+          avatarAspirations = ((avatar["aspirations"] as string[]) ?? []).slice(0, 3);
+        }
       }
     }
 
@@ -341,6 +486,17 @@ export async function generateStoryboard(
         config,
         campaignId: project.campaignId,
         workspaceId,
+        // ── Campaign arc context injected into ATLAS ──
+        campaignArc: {
+          emotionalHook,
+          uniqueMechanism,
+          transformationBridge,
+          positioning,
+          mentalTriggers,
+          avatarFears,
+          avatarAspirations,
+          track: campaignTrack,
+        },
       },
       reqLog,
     );
