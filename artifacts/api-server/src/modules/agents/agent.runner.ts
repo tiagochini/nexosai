@@ -11,6 +11,7 @@ import {
   type CampaignAgent,
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole, type AIMessage } from "../ai-gateway/ai-gateway.service.js";
+import { routedComplete } from "../ai-gateway/llm-router.js";
 import {
   emitAgentStarted,
   emitAgentThinking,
@@ -52,6 +53,13 @@ export interface RunAgentOptions {
    * resistance, dominant emotion, voice fragment, and copy directives for this phase only.
    */
   phaseContext?: string;
+  /**
+   * Pipeline mode: when true, drops NEXOS_COGNITIVE_FOUNDATIONS (27KB) from the
+   * enriched system prompt to reduce heap usage across sequential pipeline steps.
+   * DOMINO CORE and PLF SUPREMACY remain intact — only the 16-thinkers layer is omitted.
+   * Use for all agents inside orchestrateCampaign(). Never use for interactive/chat agents.
+   */
+  pipelineMode?: boolean;
 }
 
 export interface RunAgentResult {
@@ -266,6 +274,38 @@ function buildInputSummary(messages: AIMessage[]): string {
   return text.slice(0, 300).replace(/\s+/g, " ").trim();
 }
 
+// ── Global pipeline mode flag ─────────────────────────────────────────────────
+// Set to true by command.agent.ts during orchestrateCampaign execution.
+// Affects ALL runAgent() calls in this process during the active pipeline window,
+// including profile_builder, strategy, offer, and all downstream agents.
+let _globalPipelineMode = false;
+
+/** Enable or disable pipeline mode globally for all in-flight agent calls. */
+export function setPipelineMode(active: boolean): void {
+  _globalPipelineMode = active;
+}
+
+// ── Cached static system prompt layers ───────────────────────────────────────
+// Computed ONCE at module load. All concurrent agent calls share these string
+// references instead of reallocating ~130KB on every runAgent() invocation.
+// This alone eliminates the primary source of heap pressure in sequential pipelines.
+const _STATIC_PROMPT_LAYERS =
+  DOMINO_PLF_SUPREMACY +
+  DOMINO_CORE_PREAMBLE +
+  DOMINO_APPLIED_FRAMEWORKS +
+  NEXOS_COGNITIVE_FOUNDATIONS +
+  NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL +
+  NEXOS_MASTER_EVOLUTION_PROMPT;
+
+// Pipeline-mode variant: drops NEXOS_COGNITIVE_FOUNDATIONS (27KB) per call.
+// Saves ~270KB across a 10-agent pipeline. DOMINO + PLF remain fully intact.
+const _PIPELINE_PROMPT_LAYERS =
+  DOMINO_PLF_SUPREMACY +
+  DOMINO_CORE_PREAMBLE +
+  DOMINO_APPLIED_FRAMEWORKS +
+  NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL +
+  NEXOS_MASTER_EVOLUTION_PROMPT;
+
 export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const {
     campaignId,
@@ -299,14 +339,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // 10. DOMINO Self-Critic (mandatory pre-output review checklist)
   const profileBlock = opts.profileContext ?? "";
   const phaseBlock = opts.phaseContext ?? "";
+  // Use cached static layers (pre-computed at module load — avoids 130KB realloc per call).
+  // Pipeline mode drops COGNITIVE_FOUNDATIONS (27KB) to reduce heap across 10+ sequential calls.
+  const staticLayers = (opts.pipelineMode || _globalPipelineMode) ? _PIPELINE_PROMPT_LAYERS : _STATIC_PROMPT_LAYERS;
   const enrichedSystemPrompt =
     buildTemporalContextBlock() +
-    DOMINO_PLF_SUPREMACY +
-    DOMINO_CORE_PREAMBLE +
-    DOMINO_APPLIED_FRAMEWORKS +
-    NEXOS_COGNITIVE_FOUNDATIONS +
-    NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL +
-    NEXOS_MASTER_EVOLUTION_PROMPT +
+    staticLayers +
     memoryBlock +
     profileBlock +
     phaseBlock +
@@ -463,7 +501,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   }
 
   try {
-    const result = await completeWithAgent(
+    const result = await routedComplete(
       agentRole,
       enrichedSystemPrompt,
       messages,

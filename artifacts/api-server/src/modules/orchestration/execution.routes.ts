@@ -24,6 +24,13 @@ import { env } from "../../lib/env.js";
 const router = Router();
 router.use(requireAuth);
 
+// ── Server startup guard ──────────────────────────────────────────────────────
+// Tracks when this module was loaded (proxy for server start time).
+// Heavy jobs (execute/content) are blocked for the first 15s after restart
+// to avoid 502s from the Replit proxy before the server is fully warmed up.
+const MODULE_LOADED_AT = Date.now();
+const SERVER_CONTENT_GRACE_MS = 15_000;
+
 // ── Pre-flight credit check ───────────────────────────────────────────────────
 // Returns the credits needed for a phase; throws 402 if balance insufficient.
 async function checkCreditsForPhase(
@@ -148,6 +155,23 @@ router.post("/:campaignId/execute/strategy", async (req, res): Promise<void> => 
 // POST /campaigns/:campaignId/execute/content
 router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
+
+  // Startup guard: reject heavy content jobs during server warm-up window.
+  // Prevents the Replit proxy 502 that occurs when content is triggered immediately
+  // after a server restart (proxy routes to new process before it's ready).
+  const uptimeMs = Date.now() - MODULE_LOADED_AT;
+  if (uptimeMs < SERVER_CONTENT_GRACE_MS) {
+    const retryAfterMs = SERVER_CONTENT_GRACE_MS - uptimeMs;
+    res
+      .status(503)
+      .set("Retry-After", String(Math.ceil(retryAfterMs / 1000)))
+      .json({
+        error: "Servidor inicializando — aguarde alguns segundos e tente novamente",
+        code: "SERVER_STARTING",
+        retryAfterMs,
+      });
+    return;
+  }
 
   try {
     await checkCreditsForPhase(req.auth.workspaceId, campaignId, "content");

@@ -494,6 +494,19 @@ export function buildLocaleInstruction(locale: string | null | undefined): strin
   return `\n\nLANGUAGE INSTRUCTION: You MUST respond exclusively in ${lang}. Every word of your output — analysis, copy, labels, JSON values, messages, recommendations — must be written in ${lang}. Do not mix languages.`;
 }
 
+function getDefaultModelForProvider(
+  provider: "anthropic" | "openai" | "gemini",
+): string {
+  switch (provider) {
+    case "anthropic":
+      return hasAnthropicIntegration() ? ANTHROPIC_INTEGRATION_MODEL : ANTHROPIC_NATIVE_MODEL;
+    case "openai":
+      return hasOpenAIIntegration() ? OPENAI_INTEGRATION_MODEL : OPENAI_NATIVE_MODEL;
+    case "gemini":
+      return GEMINI_FLASH_NATIVE;
+  }
+}
+
 export async function completeWithAgent(
   agentRole: AgentRole,
   systemPrompt: string,
@@ -502,8 +515,13 @@ export async function completeWithAgent(
   log: Logger,
   campaignId?: string,
   locale?: string,
+  providerOverride?: "anthropic" | "openai" | "gemini",
 ): Promise<AICompletionResult> {
-  const { provider, model } = AGENT_PROVIDER_MAP[agentRole];
+  const agentConfig = AGENT_PROVIDER_MAP[agentRole];
+  const provider = providerOverride ?? agentConfig.provider;
+  const model = providerOverride
+    ? getDefaultModelForProvider(providerOverride)
+    : agentConfig.model;
   const effectiveSystem = systemPrompt + buildLocaleInstruction(locale);
   const startTime = Date.now();
   const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);

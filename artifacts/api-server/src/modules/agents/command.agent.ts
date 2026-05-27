@@ -31,10 +31,145 @@ import { runStrategicDoctrineEngine, type DoctrineOutput } from "./strategic-doc
 import { checkDoctrineAsync } from "../campaign-brain/doctrine-gate.service.js";
 import { runSelfCritique } from "../campaign-brain/self-critique.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
+import { setPipelineMode } from "./agent.runner.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { validateIntakeCompleteness, type CampaignType, type CampaignTrack } from "../intake/intake.service.js";
 import { getCampaignCreditEstimate } from "@workspace/db";
 import type { Logger } from "pino";
+
+// ── Pipeline Checkpoint System ────────────────────────────────────────────────
+// Stored in campaign.brainData.pipelineCheckpoint (namespaced — no migration needed).
+// Enables restart-safe execution: if the server dies mid-pipeline, on next dispatch
+// the completed steps are skipped and execution resumes from the last saved point.
+
+interface PipelineCheckpoint {
+  version: 1;
+  lockedAt?: string;
+  lastProgressAt?: string;
+  startedAt: string;
+  completedSteps: string[];
+  failedSteps: { step: string; error: string; at: string }[];
+  summaries: {
+    command?: { readinessScore: number; campaignComplexity: string };
+    execution_governor?: { executionMode: string; skippedAgents: string[] };
+    profile_builder?: { profileScore: number };
+    strategic_core?: { consistencyScore: number; riskScore: number };
+    strategic_doctrine?: { consciousnessStage: string };
+    strategy?: { launchModel?: string };
+    offer?: { offerName?: string };
+    launch_manager?: { totalDays?: number };
+    financial_projector?: { done: true };
+  };
+}
+
+/** How long a lock is considered active without progress (= max single LLM call time). */
+const PIPELINE_LOCK_GRACE_MS = 3 * 60 * 1000; // 3 min
+
+/** Truncate memoryContext to this size to keep heap usage bounded. */
+const MAX_MEMORY_CONTEXT_CHARS = 8_000;
+
+async function loadCheckpoint(campaignId: string): Promise<PipelineCheckpoint | null> {
+  const [row] = await db
+    .select({ brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+  const brain = (row?.brainData ?? {}) as Record<string, unknown>;
+  return (brain["pipelineCheckpoint"] as PipelineCheckpoint | null) ?? null;
+}
+
+async function saveCheckpoint(
+  campaignId: string,
+  step: string,
+  summary: Record<string, unknown>,
+  cp: PipelineCheckpoint,
+  log: Logger,
+): Promise<PipelineCheckpoint> {
+  const updated: PipelineCheckpoint = {
+    ...cp,
+    lastProgressAt: new Date().toISOString(),
+    completedSteps: [...new Set([...cp.completedSteps, step])],
+    summaries: { ...cp.summaries, [step]: summary },
+  };
+  const [row] = await db
+    .select({ brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+  const existing = (row?.brainData ?? {}) as Record<string, unknown>;
+  await db
+    .update(campaignsTable)
+    .set({ brainData: { ...existing, pipelineCheckpoint: updated } as any })
+    .where(eq(campaignsTable.id, campaignId));
+  log.info(
+    { campaignId, step, completedSteps: updated.completedSteps.length },
+    "[PIPELINE_STEP_CHECKPOINT]",
+  );
+  return updated;
+}
+
+function isStepDone(cp: PipelineCheckpoint | null, step: string): boolean {
+  return cp?.completedSteps.includes(step) ?? false;
+}
+
+function isLockActive(cp: PipelineCheckpoint | null): boolean {
+  if (!cp?.lockedAt || !cp.lastProgressAt) return false;
+  return Date.now() - new Date(cp.lastProgressAt).getTime() < PIPELINE_LOCK_GRACE_MS;
+}
+
+async function acquireExecutionLock(
+  campaignId: string,
+  cp: PipelineCheckpoint | null,
+  log: Logger,
+): Promise<PipelineCheckpoint> {
+  const now = new Date().toISOString();
+  const updated: PipelineCheckpoint = cp
+    ? { ...cp, lockedAt: now, lastProgressAt: now }
+    : {
+        version: 1,
+        lockedAt: now,
+        lastProgressAt: now,
+        startedAt: now,
+        completedSteps: [],
+        failedSteps: [],
+        summaries: {},
+      };
+  const [row] = await db
+    .select({ brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+  const existing = (row?.brainData ?? {}) as Record<string, unknown>;
+  await db
+    .update(campaignsTable)
+    .set({ brainData: { ...existing, pipelineCheckpoint: updated } as any })
+    .where(eq(campaignsTable.id, campaignId));
+  const isRecovery = (cp?.completedSteps.length ?? 0) > 0;
+  log.info(
+    { campaignId, isRecovery, completedSteps: updated.completedSteps },
+    isRecovery ? "[PIPELINE_RECOVERED] Resuming from checkpoint" : "[PIPELINE_LOCK_ACQUIRED]",
+  );
+  return updated;
+}
+
+async function releaseExecutionLock(campaignId: string): Promise<void> {
+  const [row] = await db
+    .select({ brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+  if (!row) return;
+  const existing = (row.brainData ?? {}) as Record<string, unknown>;
+  const cp = existing["pipelineCheckpoint"] as PipelineCheckpoint | undefined;
+  if (!cp) return;
+  const released = { ...cp, lockedAt: undefined, lastProgressAt: undefined };
+  await db
+    .update(campaignsTable)
+    .set({ brainData: { ...existing, pipelineCheckpoint: released } as any })
+    .where(eq(campaignsTable.id, campaignId));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface OrchestrationResult {
   campaignId: string;
@@ -268,6 +403,27 @@ export async function orchestrateCampaign(
     intakeData,
   );
 
+  // ── Checkpoint: resume-safe execution + duplicate-run lock ──────────────────
+  // Load any existing checkpoint (previous incomplete run), check for active lock,
+  // then acquire the lock before running any agent.
+  let cp = await loadCheckpoint(campaignId);
+  if (isLockActive(cp)) {
+    log.warn(
+      { campaignId, lastProgressAt: cp?.lastProgressAt },
+      "[PIPELINE_LOCK] Duplicate dispatch blocked — another run is still active",
+    );
+    throw new ValidationError(
+      "Pipeline já está executando para esta campanha — aguarde ou tente novamente em alguns minutos",
+    );
+  }
+  cp = await acquireExecutionLock(campaignId, cp, log);
+
+  // Enable pipeline mode: drops NEXOS_COGNITIVE_FOUNDATIONS (27KB) from every
+  // runAgent() call during this execution window. Released in the finally block.
+  setPipelineMode(true);
+
+  try {
+
   emitCampaignEvent({
     campaignId,
     type: "phase_changed",
@@ -322,6 +478,7 @@ Retorne o JSON de avaliação.`,
     ],
     log,
     requiresApproval: false,
+    pipelineMode: true,
     thinkingMessages: [
       "O Comandante está avaliando a operação — tipo, modelo e arquétipo da campanha...",
       typeConfig.thinkingMessage,
@@ -339,6 +496,12 @@ Retorne o JSON de avaliação.`,
     estimatedCredits: 200,
     commandNotes: "",
   });
+
+  // Checkpoint: command step completed
+  cp = await saveCheckpoint(campaignId, "command", {
+    readinessScore: commandPlan.readinessScore ?? 70,
+    campaignComplexity: commandPlan.campaignComplexity ?? "standard",
+  }, cp, log);
 
   if (commandPlan.readinessVerdict === "blocked") {
     await transitionCampaign(campaignId, workspaceId, "intake", "command agent blocked — intake incomplete, returning to intake", log);
@@ -456,6 +619,7 @@ Retorne o JSON de avaliação.`,
     );
     profile = result;
     agentsRun.push("profile_builder");
+    cp = await saveCheckpoint(campaignId, "profile_builder", { profileScore: result.profileScore ?? 70 }, cp, log);
 
     // Save to audienceData (avatar + segments) and targetingData (market + positioning)
     await db
@@ -530,6 +694,11 @@ Retorne o JSON de avaliação.`,
       memoryContext = crossCampaignContext
         ? crossCampaignContext + "\n" + baseContext
         : baseContext;
+      // Truncate memoryContext to keep heap usage bounded across 10+ sequential agents
+      if (memoryContext.length > MAX_MEMORY_CONTEXT_CHARS) {
+        log.warn({ campaignId, originalLength: memoryContext.length }, "[PIPELINE_MEMORY_TRUNCATE] memoryContext truncated for heap safety");
+        memoryContext = memoryContext.slice(0, MAX_MEMORY_CONTEXT_CHARS) + "\n[...contexto de memória truncado por limite de heap]";
+      }
       agentsRun.push("campaign_memory");
       log.info({ campaignId, memoryVersion: campaignMemory.version, hasCrossContext: !!crossCampaignContext }, "Campaign memory initialized");
     } catch (memErr) {
@@ -618,6 +787,7 @@ Retorne o JSON de avaliação.`,
     );
     strategy = result as unknown as Record<string, unknown>;
     agentsRun.push("strategy");
+    cp = await saveCheckpoint(campaignId, "strategy", { launchModel: (result as any).launchModel }, cp, log);
     checkpointsPending.push("strategy_approval");
 
     await transitionCampaign(campaignId, workspaceId, "strategy_ready", "strategy agent completed", log, {
@@ -656,6 +826,7 @@ Retorne o JSON de avaliação.`,
       const result = await runOfferAgent(campaignId, workspaceId, intakeData, log, memoryContext);
       offerAnalysis = result as unknown as Record<string, unknown>;
       agentsRun.push("offer");
+      cp = await saveCheckpoint(campaignId, "offer", { offerName: (result as any).offerName }, cp, log);
       // Log offer output summary to memory + Doctrine Gate + Self-Critique (all fire-and-forget)
       setImmediate(() => {
         if (campaignMemory) {
@@ -693,6 +864,7 @@ Retorne o JSON de avaliação.`,
         );
         launchPlan = result as unknown as Record<string, unknown>;
         agentsRun.push("launch_manager");
+        cp = await saveCheckpoint(campaignId, "launch_manager", { totalDays: (result as any).totalDays }, cp, log);
         checkpointsPending.push("launch_plan_approval");
 
         await db
@@ -755,6 +927,7 @@ Retorne o JSON de avaliação.`,
       );
       financialProjection = result as unknown as Record<string, unknown>;
       agentsRun.push("financial_projector");
+      cp = await saveCheckpoint(campaignId, "financial_projector", { done: true }, cp, log);
       checkpointsPending.push("budget_approval");
 
       await db
@@ -1029,6 +1202,13 @@ Retorne o JSON de avaliação.`,
     checkpointsPending,
     status: finalStatus,
   };
+
+  } finally {
+    // Always release pipeline mode and execution lock on exit
+    // — including early returns (blocked verdict) and thrown errors.
+    setPipelineMode(false);
+    void releaseExecutionLock(campaignId).catch(() => {});
+  }
 }
 
 function emitAgentError(

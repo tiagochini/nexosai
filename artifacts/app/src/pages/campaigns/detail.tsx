@@ -1572,6 +1572,13 @@ export default function CampaignDetail() {
           message: "Fase iniciada — agentes sendo ativados em instantes...",
           timestamp: new Date().toISOString(),
         }]);
+        // Optimistically mark as active so polling kicks in before first refetch
+        queryClient.setQueryData(getGetCampaignQueryKey(campaignId), (old: unknown) => {
+          if (!old || typeof old !== "object") return old;
+          const o = old as { campaign?: Record<string, unknown> };
+          if (!o.campaign) return old;
+          return { ...o, campaign: { ...o.campaign, status: "analyzing" } };
+        });
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
       onError: (err: unknown) => {
@@ -1592,6 +1599,8 @@ export default function CampaignDetail() {
           setMissingIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[]; reason?: string }) => m));
         } else if (code === "PARTIAL_INTEGRATIONS") {
           setPartialIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[]; reason?: string }) => m));
+        } else if (msg?.includes("Pipeline já está executando")) {
+          toast.info("O pipeline já está em execução. Aguarde a conclusão ou verifique a aba Agentes.", { duration: 8000 });
         } else {
           toast.error(msg ?? "Falha ao iniciar fase.", { duration: 6000 });
         }
@@ -1737,7 +1746,7 @@ export default function CampaignDetail() {
 
   const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string } | null => {
     switch (campaign.status) {
-      case "analyzing": return { phase: "strategy" as CampaignExecuteInputPhase, label: "Iniciar Análise Estratégica", description: "Briefing completo. A IA vai montar sua estratégia de lançamento agora." };
+      case "analyzing": return { label: "Analisando...", description: "Agentes de estratégia em execução. Aguarde a conclusão da análise.", phase: undefined };
       case "strategy_ready": return { label: "Revisar Estratégia", description: "Estratégia pronta. Revise e aprove cada seção no board antes de gerar o conteúdo.", phase: undefined };
       case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A IA gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
