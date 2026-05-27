@@ -298,6 +298,7 @@ export default function AppRoutes() {
       <Route path="/abertura" component={AberturaPage} />
       <Route path="/conversao" component={ConversaoPage} />
       <Route path="/comprar" component={CheckoutPage} />
+      <Route path="/checkout" component={CheckoutPage} />
 
       <Route component={NotFound} />
     </Switch>

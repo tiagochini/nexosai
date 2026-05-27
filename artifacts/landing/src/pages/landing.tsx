@@ -737,6 +737,7 @@ function OfertaSection() {
       ],
       cta: "Solicitar Acesso Solo",
       ctaVariant: "outline" as const,
+      ctaHref: "/checkout?plan=solo",
     },
     {
       label: "Agency",
@@ -760,6 +761,7 @@ function OfertaSection() {
       ],
       cta: "Solicitar Acesso Agency",
       ctaVariant: "default" as const,
+      ctaHref: "/checkout?plan=agency",
     },
   ];
   return (
@@ -808,7 +810,7 @@ function OfertaSection() {
                     </div>
                   ))}
                 </div>
-                <a href="/login">
+                <a href={track.ctaHref}>
                   <Button
                     className={`rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full ${track.destaque ? "btn-weapon-primary" : ""}`}
                     variant={track.ctaVariant === "outline" ? "outline" : "default"}

@@ -1,61 +1,133 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/lib/auth";
 import nexosLogo from "/nexos-logo.png";
 import {
   CheckCircle2, ArrowRight, Shield, Zap,
   CreditCard, Lock, User, Loader2, Check,
-  Infinity, Star, ChevronDown,
+  Infinity, Star, Copy, QrCode, AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// ── Plan config ───────────────────────────────────────────────────────────────
+const PLANS = {
+  solo: {
+    id: "solo",
+    label: "Solo",
+    price: 3990,
+    fmtPrice: "R$3.990",
+    credits: 900,
+    campaigns: 3,
+    desc: "Produtor solo ou equipe pequena",
+  },
+  agency: {
+    id: "agency",
+    label: "Agency",
+    price: 9990,
+    fmtPrice: "R$9.990",
+    credits: 2000,
+    campaigns: 10,
+    desc: "Agências e gestores com múltiplos clientes",
+  },
+} as const;
+
+type PlanId = keyof typeof PLANS;
+
 // ── Credit packs ──────────────────────────────────────────────────────────────
 const CREDIT_PACKS = [
-  {
-    id: "boost",
-    credits: 500,
-    price: "R$85",
-    priceNum: 85,
-    label: "Boost",
-    perCredit: "R$0,17/crédito",
-    tag: null,
-    highlight: false,
-  },
-  {
-    id: "starter",
-    credits: 1500,
-    price: "R$239",
-    priceNum: 239,
-    label: "Starter",
-    perCredit: "R$0,16/crédito",
-    tag: null,
-    highlight: false,
-  },
-  {
-    id: "pro",
-    credits: 3500,
-    price: "R$529",
-    priceNum: 529,
-    label: "Pro",
-    perCredit: "R$0,15/crédito",
-    tag: "Melhor valor",
-    highlight: true,
-  },
-  {
-    id: "elite",
-    credits: 7000,
-    price: "R$979",
-    priceNum: 979,
-    label: "Elite",
-    perCredit: "R$0,14/crédito",
-    tag: "Máxima escala",
-    highlight: false,
-  },
+  { id: "boost",   credits: 500,  priceNum: 85,  label: "Boost",   perCredit: "R$0,17/cr", tag: undefined },
+  { id: "starter", credits: 1500, priceNum: 239, label: "Starter", perCredit: "R$0,16/cr", tag: undefined },
+  { id: "pro",     credits: 3500, priceNum: 529, label: "Pro",     perCredit: "R$0,15/cr", tag: "Melhor valor" as string | undefined },
+  { id: "elite",   credits: 7000, priceNum: 979, label: "Elite",   perCredit: "R$0,14/cr", tag: undefined },
 ] as const;
-
 type PackId = typeof CREDIT_PACKS[number]["id"];
+
+function fmtBRL(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
+}
+
+// ── PIX payment screen ────────────────────────────────────────────────────────
+function PixScreen({
+  qrCode, copiaECola, expiresAt, planLabel, amount,
+}: {
+  qrCode: string;
+  copiaECola: string;
+  expiresAt: string;
+  planLabel: string;
+  amount: number;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(copiaECola).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  const expiry = expiresAt ? new Date(expiresAt).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+  }) : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="border border-primary/30 bg-primary/5 p-5 space-y-1">
+        <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">PIX gerado com sucesso</div>
+        <div className="font-mono text-xs text-muted-foreground">
+          NexOS AI — Plano {planLabel} · {fmtBRL(amount)}
+        </div>
+        {expiry && (
+          <div className="font-mono text-[11px] text-muted-foreground/60">Válido até {expiry}</div>
+        )}
+      </div>
+
+      {/* QR Code */}
+      <div className="flex flex-col items-center gap-4">
+        <div className="border border-border/40 p-4 bg-white">
+          <img
+            src={`data:image/png;base64,${qrCode}`}
+            alt="QR Code PIX"
+            className="w-44 h-44 block"
+          />
+        </div>
+        <p className="font-mono text-[11px] text-muted-foreground text-center">
+          Escaneie com o app do seu banco para pagar
+        </p>
+      </div>
+
+      {/* Copia e cola */}
+      <div className="space-y-2">
+        <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-1.5">
+          <QrCode className="h-3 w-3" /> PIX Copia e Cola
+        </div>
+        <div className="border border-border/30 bg-background/50 p-3 flex items-center gap-3">
+          <span className="font-mono text-[11px] text-muted-foreground/70 break-all flex-1 select-all">
+            {copiaECola.slice(0, 60)}...
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="shrink-0 rounded-none font-mono text-[11px] h-8 gap-1.5"
+          >
+            <Copy className="h-3 w-3" />
+            {copied ? "Copiado!" : "Copiar"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="border border-primary/20 bg-primary/5 px-4 py-3 flex items-start gap-2">
+        <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+        <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">
+          Sua conta já está ativa. Você pode acessar a plataforma agora —
+          seus créditos serão liberados após a confirmação do pagamento.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ── Credit pack picker ────────────────────────────────────────────────────────
 function CreditPackPicker({ selected, onSelect }: { selected: PackId | null; onSelect: (id: PackId | null) => void }) {
@@ -64,75 +136,66 @@ function CreditPackPicker({ selected, onSelect }: { selected: PackId | null; onS
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-3.5 w-3.5 text-primary" />
-          <span className="font-mono text-xs uppercase tracking-widest text-foreground font-bold">
-            Recarga de créditos inicial
-          </span>
+          <span className="font-mono text-xs uppercase tracking-widest text-foreground font-bold">Recarga de créditos (opcional)</span>
         </div>
-        <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Opcional</span>
       </div>
-      <div className="border border-primary/10 bg-primary/5 px-4 py-3 flex items-start gap-2.5">
-        <Infinity className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-        <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">
-          Créditos nunca expiram. Sem mensalidade obrigatória — você recarrega quando quiser, no valor que preferir.
-        </p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {CREDIT_PACKS.map(pack => {
-          const isSelected = selected === pack.id;
+          const active = selected === pack.id;
           return (
             <button
               key={pack.id}
               type="button"
-              onClick={() => onSelect(isSelected ? null : pack.id)}
-              className={`relative text-left border p-4 transition-all duration-150 group ${
-                isSelected
-                  ? "border-primary/60 bg-primary/8 shadow-[0_0_20px_hsl(var(--primary)/0.10)]"
-                  : "border-border/40 bg-card/20 hover:border-border/70"
+              onClick={() => onSelect(active ? null : pack.id)}
+              className={`relative border p-3 text-left transition-all ${
+                active
+                  ? "border-primary bg-primary/10"
+                  : "border-border/30 bg-background/30 hover:border-primary/40"
               }`}
             >
               {pack.tag && (
-                <div className="absolute -top-2.5 left-3 bg-primary px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-primary-foreground font-bold">
+                <div className="absolute -top-px right-2 bg-primary px-1.5 py-px font-mono text-[9px] uppercase tracking-widest text-primary-foreground">
                   {pack.tag}
                 </div>
               )}
-              {isSelected && (
-                <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center">
-                  <Check className="h-2.5 w-2.5 text-primary" />
+              {active && (
+                <div className="absolute top-2 right-2 w-3.5 h-3.5 bg-primary flex items-center justify-center">
+                  <Check className="h-2 w-2 text-primary-foreground" />
                 </div>
               )}
-              <div className="font-mono font-black text-lg text-foreground mb-0.5">{pack.price}</div>
-              <div className="font-mono text-xs text-primary font-bold mb-1">{pack.credits.toLocaleString("pt-BR")} créditos</div>
-              <div className="font-mono text-[11px] text-muted-foreground/60">{pack.perCredit}</div>
+              <div className="font-mono font-black text-base text-foreground">{fmtBRL(pack.priceNum)}</div>
+              <div className="font-mono text-[11px] text-primary font-bold">{pack.credits.toLocaleString("pt-BR")} créditos</div>
+              <div className="font-mono text-[10px] text-muted-foreground/60">{pack.perCredit}</div>
             </button>
           );
         })}
       </div>
-      {selected === null && (
-        <p className="font-mono text-[11px] text-muted-foreground/40 text-center">
-          Sem recarga agora — você compra créditos quando precisar
-        </p>
-      )}
     </div>
   );
 }
 
 // ── Checkout form ─────────────────────────────────────────────────────────────
 function CheckoutForm({
+  initialPlan,
   onSuccess,
+  onPix,
 }: {
-  onSuccess: (accessToken: string, isNew: boolean) => void;
+  initialPlan: PlanId;
+  onSuccess: (accessToken: string, refreshToken: string, isNew: boolean) => void;
+  onPix: (data: { qrCode: string; copiaECola: string; expiresAt: string; planLabel: string; amount: number }) => void;
 }) {
+  const [plan] = useState<PlanId>(initialPlan);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [cpf, setCpf] = useState("");
   const [pack, setPack] = useState<PackId | null>("pro");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedPack = CREDIT_PACKS.find(p => p.id === pack);
-  const total = 3990 + (selectedPack?.priceNum ?? 0);
-  const fmtBRL = (v: number) =>
-    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
+  const planConfig = PLANS[plan];
+  const total = planConfig.price + (selectedPack?.priceNum ?? 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,13 +204,15 @@ function CheckoutForm({
     if (password.length < 6) { setError("A senha deve ter ao menos 6 caracteres."); return; }
     setLoading(true);
     try {
-      const res = await fetch("/api/checkout/simulate", {
+      const res = await fetch("/api/checkout/initiate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
           password,
+          cpfCnpj: cpf.trim() || undefined,
+          plan,
           creditPackId: pack ?? "none",
           creditPackCredits: selectedPack?.credits ?? 0,
         }),
@@ -157,14 +222,28 @@ function CheckoutForm({
         accessToken?: string;
         refreshToken?: string;
         isNewUser?: boolean;
+        startingCredits?: number;
+        plan?: string;
+        planAmount?: number;
+        pix?: { qrCode: string; copiaECola: string; expiresAt: string } | null;
         error?: string;
       };
       if (!res.ok || !data.success) {
         setError(data.error ?? "Erro ao processar. Tente novamente.");
         return;
       }
-      if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
-      onSuccess(data.accessToken!, data.isNewUser ?? true);
+      // Log in user immediately
+      onSuccess(data.accessToken!, data.refreshToken ?? "", data.isNewUser ?? true);
+      // Show PIX if available
+      if (data.pix?.qrCode) {
+        onPix({
+          qrCode: data.pix.qrCode,
+          copiaECola: data.pix.copiaECola,
+          expiresAt: data.pix.expiresAt,
+          planLabel: planConfig.label,
+          amount: data.planAmount ?? planConfig.price,
+        });
+      }
     } catch {
       setError("Erro de conexão. Verifique sua internet e tente novamente.");
     } finally {
@@ -174,28 +253,28 @@ function CheckoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-7">
-      {/* Product summary */}
+      {/* Plan summary */}
       <div className="border border-primary/30 bg-primary/5 p-5 space-y-3">
         <div className="flex items-center justify-between">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-0.5">
-              NexOS AI — Acesso Completo
+              NexOS AI — Plano {planConfig.label}
             </div>
             <div className="font-mono text-xs text-muted-foreground">
-              57 agentes IA · 3 campanhas · Sequências automáticas
+              {planConfig.campaigns} campanhas · {planConfig.credits} créditos incluídos
             </div>
           </div>
           <div className="text-right">
-            <div className="font-mono font-black text-2xl text-foreground">{fmtBRL(3990)}</div>
+            <div className="font-mono font-black text-2xl text-foreground">{planConfig.fmtPrice}</div>
             <div className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">pagamento único</div>
           </div>
         </div>
-        <div className="border-t border-primary/20 pt-3 flex items-center gap-2 flex-wrap">
+        <div className="border-t border-primary/20 pt-3 flex flex-wrap gap-x-4 gap-y-1">
           {[
             "57 agentes IA",
-            "Aprovação antes de qualquer execução",
+            "Acesso vitalício",
             "WhatsApp + Email automáticos",
-            "Health score em tempo real",
+            "Dashboard em tempo real",
           ].map(f => (
             <div key={f} className="flex items-center gap-1.5">
               <Check className="h-3 w-3 text-primary shrink-0" />
@@ -208,16 +287,16 @@ function CheckoutForm({
       {/* Credit pack */}
       <CreditPackPicker selected={pack} onSelect={setPack} />
 
-      {/* Divider + total */}
+      {/* Total */}
       <div className="border-t border-border/30 pt-4">
         <div className="flex items-center justify-between mb-1">
-          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Acesso à plataforma</span>
-          <span className="font-mono text-sm font-bold text-foreground">{fmtBRL(3990)}</span>
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Plano {planConfig.label}</span>
+          <span className="font-mono text-sm font-bold text-foreground">{fmtBRL(planConfig.price)}</span>
         </div>
         {selectedPack && (
           <div className="flex items-center justify-between mb-1">
             <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-              Créditos {selectedPack.label} ({selectedPack.credits.toLocaleString("pt-BR")} créditos)
+              Pack {selectedPack.label} ({selectedPack.credits.toLocaleString("pt-BR")} créditos)
             </span>
             <span className="font-mono text-sm font-bold text-foreground">{fmtBRL(selectedPack.priceNum)}</span>
           </div>
@@ -249,42 +328,42 @@ function CheckoutForm({
           <Input id="co-pass" type="password" required value={password} onChange={e => setPassword(e.target.value)}
             placeholder="Mínimo 6 caracteres" className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-12 font-sans" />
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="co-cpf" className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+            CPF / CNPJ <span className="text-muted-foreground/40">(opcional — para nota fiscal)</span>
+          </Label>
+          <Input id="co-cpf" value={cpf} onChange={e => setCpf(e.target.value)}
+            placeholder="000.000.000-00" className="rounded-none bg-background/50 border-border/50 focus-visible:ring-primary h-12 font-sans" />
+        </div>
       </div>
 
-      {/* Test payment */}
-      <div className="border border-yellow-500/20 bg-yellow-500/5 p-4 space-y-3">
+      {/* Payment method: PIX */}
+      <div className="border border-border/30 bg-card/20 p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <CreditCard className="h-3.5 w-3.5 text-yellow-400" />
-          <span className="font-mono text-[11px] uppercase tracking-widest text-yellow-400 font-bold">Modo Teste · Pagamento Simulado</span>
+          <QrCode className="h-3.5 w-3.5 text-primary" />
+          <span className="font-mono text-[11px] uppercase tracking-widest text-foreground font-bold">Pagamento via PIX</span>
         </div>
-        <p className="font-mono text-[11px] text-yellow-400/70 leading-relaxed">
-          Qualquer número de cartão é aceito. Nenhuma cobrança real será feita.
+        <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+          O QR Code será gerado após confirmar. Aprovação instantânea. Disponível 24h.
         </p>
-        <div className="grid grid-cols-1 gap-2">
-          <Input defaultValue="4111 1111 1111 1111" readOnly
-            className="rounded-none bg-background/30 border-border/30 font-mono text-sm h-10 text-muted-foreground cursor-default text-xs" />
-          <div className="grid grid-cols-2 gap-2">
-            <Input defaultValue="12/28" readOnly
-              className="rounded-none bg-background/30 border-border/30 font-mono text-sm h-10 text-muted-foreground cursor-default text-xs" />
-            <Input defaultValue="123" readOnly
-              className="rounded-none bg-background/30 border-border/30 font-mono text-sm h-10 text-muted-foreground cursor-default text-xs" />
-          </div>
-        </div>
       </div>
 
       {error && (
-        <div className="border border-destructive/40 bg-destructive/5 px-4 py-3 font-mono text-xs text-destructive">{error}</div>
+        <div className="border border-destructive/40 bg-destructive/5 px-4 py-3 flex items-center gap-2 font-mono text-xs text-destructive">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {error}
+        </div>
       )}
 
       <Button type="submit" disabled={loading} className="w-full h-14 rounded-none btn-weapon-primary font-mono uppercase tracking-widest font-black text-sm gap-3">
         {loading ? (
-          <><Loader2 className="h-4 w-4 animate-spin" /> Processando...</>
+          <><Loader2 className="h-4 w-4 animate-spin" /> Gerando PIX...</>
         ) : (
-          <><Shield className="h-4 w-4" /> Confirmar e criar minha conta <ArrowRight className="h-4 w-4" /></>
+          <><Shield className="h-4 w-4" /> Confirmar e gerar PIX <ArrowRight className="h-4 w-4" /></>
         )}
       </Button>
       <p className="text-center font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 flex items-center justify-center gap-2">
-        <Lock className="h-3 w-3" /> Modo teste · Acesso imediato · Sem cobrança real
+        <Lock className="h-3 w-3" /> Conta criada na hora · Acesso imediato
       </p>
     </form>
   );
@@ -318,19 +397,41 @@ function SuccessScreen({ isNew }: { isNew: boolean }) {
 export default function CheckoutPage() {
   const [done, setDone] = useState(false);
   const [isNew, setIsNew] = useState(true);
+  const [pixData, setPixData] = useState<{
+    qrCode: string; copiaECola: string; expiresAt: string; planLabel: string; amount: number;
+  } | null>(null);
   const { setToken } = useAuth();
   const [, navigate] = useLocation();
+  const search = useSearch();
 
-  const handleSuccess = (accessToken: string, newUser: boolean, refreshToken?: string) => {
+  // Read plan from URL ?plan=solo or ?plan=agency
+  const planParam = new URLSearchParams(search).get("plan");
+  const initialPlan: PlanId = planParam === "agency" ? "agency" : "solo";
+
+  const handleSuccess = (accessToken: string, refreshToken: string, newUser: boolean) => {
     if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
     setIsNew(newUser);
     setDone(true);
     localStorage.setItem("accessToken", accessToken);
     setToken(accessToken);
+    // Navigate after a short delay (or immediately if PIX screen takes over)
     setTimeout(() => {
       navigate(newUser ? "/welcome" : "/dashboard");
-    }, 2200);
+    }, pixData ? 8000 : 2200);
   };
+
+  const handlePix = (data: typeof pixData) => {
+    setPixData(data);
+  };
+
+  // Auto-navigate once done + PIX screen shown
+  useEffect(() => {
+    if (done && !pixData) {
+      const t = setTimeout(() => navigate(isNew ? "/welcome" : "/dashboard"), 2200);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [done, pixData, isNew, navigate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground auth-bg-gradient">
@@ -356,17 +457,27 @@ export default function CheckoutPage() {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
 
-          {/* Left: form */}
+          {/* Left: form or PIX */}
           <div className="lg:col-span-3">
             <div className="border border-border/30 bg-card/30 backdrop-blur-sm p-8 relative">
               <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-primary/40" />
               <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary/40" />
               <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary/40" />
               <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary/40" />
-              {done
-                ? <SuccessScreen isNew={isNew} />
-                : <CheckoutForm onSuccess={handleSuccess} />
-              }
+              {done && !pixData ? (
+                <SuccessScreen isNew={isNew} />
+              ) : done && pixData ? (
+                <div className="space-y-8">
+                  <SuccessScreen isNew={isNew} />
+                  <PixScreen {...pixData} />
+                </div>
+              ) : (
+                <CheckoutForm
+                  initialPlan={initialPlan}
+                  onSuccess={handleSuccess}
+                  onPix={handlePix}
+                />
+              )}
             </div>
           </div>
 
@@ -382,13 +493,12 @@ export default function CheckoutPage() {
                   "57 agentes de IA especializados",
                   "Diagnóstico completo do produto e mercado",
                   "Estratégia de lançamento gerada por Claude",
-                  "Copy de WhatsApp e Email por segmento de lead",
-                  "Segmentação hot/warm/cold automática em tempo real",
+                  "Copy de WhatsApp e Email por segmento",
+                  "Segmentação hot/warm/cold automática",
                   "Abertura e fechamento de carrinho automáticos",
                   "Dashboard de performance com health score",
                   "Aprovação antes de qualquer execução",
                   "Calendário de lançamento dia a dia",
-                  "3 campanhas ativas simultâneas",
                 ].map((feat, i) => (
                   <li key={i} className="flex items-start gap-2.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
@@ -406,9 +516,9 @@ export default function CheckoutPage() {
               </div>
               <div className="space-y-2">
                 {[
-                  { label: "Créditos nunca expiram", desc: "Os créditos que você compra ficam na sua conta para sempre" },
-                  { label: "Sem mensalidade obrigatória", desc: "Você recarrega quando consumir — sem cobrança automática" },
-                  { label: "Recarga a qualquer momento", desc: "R$150 · 1.500 créditos ou R$240 · 3.000 créditos" },
+                  { label: "Créditos nunca expiram", desc: "Os créditos ficam na conta para sempre" },
+                  { label: "Sem mensalidade obrigatória", desc: "Você recarrega quando consumir" },
+                  { label: "Recarga a qualquer momento", desc: "Packs de 500 a 7.000 créditos" },
                 ].map(item => (
                   <div key={item.label}>
                     <div className="font-mono text-[11px] uppercase tracking-widest text-foreground font-bold">{item.label}</div>
@@ -425,18 +535,18 @@ export default function CheckoutPage() {
                 <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">Acesso imediato</span>
               </div>
               <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                Sua conta é criada na hora. Você entra direto no dashboard — sem esperar email de confirmação.
+                Sua conta é criada na hora. Você entra direto no dashboard assim que confirmar.
               </p>
             </div>
 
-            {/* Test notice */}
-            <div className="border border-yellow-500/20 bg-yellow-500/5 p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <ChevronDown className="h-3 w-3 text-yellow-400" />
-                <p className="font-mono text-[11px] uppercase tracking-widest text-yellow-400 font-bold">Fase de testes</p>
+            {/* Security */}
+            <div className="border border-border/30 bg-card/20 p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">Pagamento seguro</span>
               </div>
-              <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
-                Plataforma em testes privados. Qualquer dado de pagamento é aceito. Nenhuma cobrança real é processada.
+              <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                PIX processado via Asaas. Aprovação instantânea, disponível 24h.
               </p>
             </div>
           </div>

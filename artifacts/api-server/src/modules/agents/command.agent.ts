@@ -281,13 +281,19 @@ export async function orchestrateCampaign(
     await transitionCampaign(campaignId, workspaceId, "analyzing", "command agent activated — orchestration started", log);
   }
 
-  await db.insert(auditLogsTable).values({
-    workspaceId,
-    campaignId,
-    action: "campaign.orchestration.started",
-    actor: "system",
-    data: { type, track, intakeComplete: valid, missingRequired },
-  });
+  try {
+    await db.insert(auditLogsTable).values({
+      workspaceId,
+      campaignId,
+      action: "campaign.orchestration.started",
+      actor: "system",
+      data: { type, track, intakeComplete: valid, missingRequired },
+    });
+  } catch (auditErr: unknown) {
+    const code = (auditErr as { cause?: { code?: string } })?.cause?.code;
+    if (code !== "23503") throw auditErr;
+    log.warn({ workspaceId, campaignId }, "audit_log FK violation — workspace deleted during agent run (ignored)");
+  }
 
   // Command agent assesses readiness and provides special instructions
   const commandResult = await runAgent({
@@ -891,22 +897,28 @@ Retorne o JSON de avaliação.`,
     log,
   );
 
-  await db.insert(auditLogsTable).values({
-    workspaceId,
-    campaignId,
-    action: "campaign.orchestration.completed",
-    actor: "system",
-    data: {
-      type,
-      agentsRun,
-      checkpointsPending,
-      finalStatus,
-      executionMode: executionPlan?.executionMode ?? "standard",
-      skippedAgents: executionPlan?.skippedAgents ?? [],
-      biSustainabilityScore: biOutput?.sustainabilityScore,
-      biVerdict: biOutput?.sustainabilityVerdict,
-    },
-  });
+  try {
+    await db.insert(auditLogsTable).values({
+      workspaceId,
+      campaignId,
+      action: "campaign.orchestration.completed",
+      actor: "system",
+      data: {
+        type,
+        agentsRun,
+        checkpointsPending,
+        finalStatus,
+        executionMode: executionPlan?.executionMode ?? "standard",
+        skippedAgents: executionPlan?.skippedAgents ?? [],
+        biSustainabilityScore: biOutput?.sustainabilityScore,
+        biVerdict: biOutput?.sustainabilityVerdict,
+      },
+    });
+  } catch (auditErr: unknown) {
+    const code = (auditErr as { cause?: { code?: string } })?.cause?.code;
+    if (code !== "23503") throw auditErr;
+    log.warn({ workspaceId, campaignId }, "audit_log FK violation — workspace deleted during agent run (ignored)");
+  }
 
   emitCampaignEvent({
     campaignId,
