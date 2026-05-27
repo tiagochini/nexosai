@@ -207,8 +207,8 @@ export async function runSocialMediaAgent(
 **Avatar:** ${profile.primaryAvatar.name} | Onde está: ${avatarPlatforms.join(", ")}
 **Conteúdo que consomem:** ${profile.primaryAvatar.contentTheyConsume.join(", ")}
 **Linguagem:** ${profile.primaryAvatar.languageStyle}
-**Big Idea:** ${profile.positioning.campaignBigIdea}
-**Pilares de conteúdo da estratégia:** ${strategy.campaignArchitecture.contentPillars.join(", ")}
+**Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Pilares de conteúdo da estratégia:** ${(strategy.campaignArchitecture?.contentPillars ?? []).join(", ")}
 **Avatar B2B:** ${hasB2BAvatar ? "Sim — incluir LinkedIn como plataforma relevante" : "Não — LinkedIn secundário"}`
     : `**Pilares de conteúdo:** ${strategy.campaignArchitecture.contentPillars.join(", ")}`;
 

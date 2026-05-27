@@ -321,8 +321,8 @@ ${JSON.stringify(strategy.offerPositioning, null, 2)}
 **Avatar primário:**
 ${profile ? `${profile.primaryAvatar.name} — ${profile.primaryAvatar.deepestDesire}` : strategy.audienceSegmentation.primaryAvatar}
 
-**Mecanismo único:** ${profile?.positioning.uniqueMechanism ?? ""}
-**Big Idea:** ${profile?.positioning.campaignBigIdea ?? strategy.campaignArchitecture.coreNarrative}
+**Mecanismo único:** ${profile?.positioning?.uniqueMechanism ?? ""}
+**Big Idea:** ${profile?.positioning?.campaignBigIdea ?? strategy.campaignArchitecture?.coreNarrative ?? ""}
 
 **REQUISITOS:**
 - Diagnostique o estágio de consciência do avatar antes de começar (Ryan Deiss)

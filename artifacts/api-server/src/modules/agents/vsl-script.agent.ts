@@ -360,10 +360,10 @@ export async function runVSLScriptAgent(
 **O que os faz confiar:** ${profile.primaryAvatar.whatMakesThemTrust.join("; ")}
 **Tom de linguagem:** ${profile.primaryAvatar.languageStyle}
 **Nível de sofisticação:** ${profile.primaryAvatar.sophisticationLevel}
-**Mecanismo único:** ${profile.positioning.uniqueMechanism}
-**Big Idea:** ${profile.positioning.campaignBigIdea}
-**Gancho emocional:** ${profile.positioning.emotionalHook}
-**Argumento lógico:** ${profile.positioning.logicalArgument}`
+**Mecanismo único:** ${profile.positioning?.uniqueMechanism ?? ""}
+**Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Gancho emocional:** ${profile.positioning?.emotionalHook ?? ""}
+**Argumento lógico:** ${profile.positioning?.logicalArgument ?? ""}`
     : `
 **Narrativa central:** ${strategy.campaignArchitecture.coreNarrative}
 **Gancho:** ${strategy.campaignArchitecture.emotionalHook}`;
