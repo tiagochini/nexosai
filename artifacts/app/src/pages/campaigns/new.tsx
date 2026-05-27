@@ -23,6 +23,7 @@ interface GoalOption {
   type: CampaignInputType;
   track: CampaignInputTrack;
   nameSuggestion: string;
+  accentLine: string;
 }
 
 const GOAL_OPTIONS: GoalOption[] = [
@@ -40,6 +41,7 @@ const GOAL_OPTIONS: GoalOption[] = [
     type: "launch" as CampaignInputType,
     track: "six_digits" as CampaignInputTrack,
     nameSuggestion: "Meu Lançamento",
+    accentLine: "bg-primary",
   },
   {
     id: "perpetual",
@@ -55,6 +57,7 @@ const GOAL_OPTIONS: GoalOption[] = [
     type: "perpetual_launch" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
     nameSuggestion: "Funil Perpétuo",
+    accentLine: "bg-emerald-400",
   },
   {
     id: "flash",
@@ -70,6 +73,7 @@ const GOAL_OPTIONS: GoalOption[] = [
     type: "flash_sale" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
     nameSuggestion: "Flash Sale",
+    accentLine: "bg-yellow-400",
   },
   {
     id: "audience",
@@ -85,6 +89,7 @@ const GOAL_OPTIONS: GoalOption[] = [
     type: "audience_growth" as CampaignInputType,
     track: "not_applicable" as CampaignInputTrack,
     nameSuggestion: "Crescimento de Audiência",
+    accentLine: "bg-cyan-400",
   },
 ];
 
@@ -123,77 +128,92 @@ export default function NewCampaign() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto">
 
       {/* Header */}
-      <div className="border-b border-border/50 pb-5">
+      <div className="mb-10">
         <Link href="/campaigns">
-          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-4 -ml-2 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest mb-6 -ml-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3 w-3 mr-2" />Voltar
           </Button>
         </Link>
+
         {step === 1 ? (
-          <>
-            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">
-              Qual é o seu objetivo?
-            </h1>
-            <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mt-1">
-              Escolha o que melhor descreve o que você quer conquistar agora
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
+              Nova Campanha · Passo 1 de 2
             </p>
-          </>
+            <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground leading-tight">
+              Qual é o seu<br />
+              <span className="text-primary">objetivo agora?</span>
+            </h1>
+            <p className="text-sm text-muted-foreground font-mono mt-3 max-w-lg">
+              Escolha o cenário que melhor descreve o que você quer conquistar. A IA adapta toda a estratégia a partir daqui.
+            </p>
+          </div>
         ) : (
-          <>
-            <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">
-              Como vai chamar este lançamento?
-            </h1>
-            <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mt-1">
-              Pode ser qualquer nome — você muda depois se quiser
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
+              Nova Campanha · Passo 2 de 2
             </p>
-          </>
+            <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground">
+              Como vai chamar<br />
+              <span className="text-primary">este lançamento?</span>
+            </h1>
+            <p className="text-sm text-muted-foreground font-mono mt-3">
+              Qualquer nome serve — você pode mudar depois.
+            </p>
+          </div>
         )}
       </div>
 
       {/* Step 1: Goal selection */}
       {step === 1 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {GOAL_OPTIONS.map((goal) => {
             const Icon = goal.icon;
             return (
               <button
                 key={goal.id}
                 onClick={() => handleSelectGoal(goal)}
-                className="text-left border border-border/50 bg-card/40 p-5 hover:border-primary/50 hover:bg-primary/5 transition-all group relative overflow-hidden cursor-pointer"
+                className="text-left border border-border/40 bg-card/30 hover:border-primary/50 hover:bg-primary/5 transition-all duration-200 group relative overflow-hidden cursor-pointer flex flex-col"
               >
-                <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* top accent line */}
+                <div className={`h-0.5 w-full ${goal.accentLine} opacity-40 group-hover:opacity-100 transition-opacity`} />
 
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-9 h-9 border border-border/40 bg-card/60 flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:bg-primary/10 transition-all">
-                    <Icon className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+                <div className="p-7 flex flex-col flex-1">
+                  {/* Icon + Badge row */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className={`w-10 h-10 flex items-center justify-center border ${goal.badgeBorderColor} ${goal.badgeBgColor} transition-all`}>
+                      <Icon className={`h-5 w-5 ${goal.badgeTextColor}`} />
+                    </div>
+                    <span className={`font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 border ${goal.badgeTextColor} ${goal.badgeBorderColor} ${goal.badgeBgColor}`}>
+                      {goal.badge}
+                    </span>
                   </div>
-                  <span className={`font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border ${goal.badgeTextColor} ${goal.badgeBorderColor} ${goal.badgeBgColor}`}>
-                    {goal.badge}
-                  </span>
-                </div>
 
-                <h3 className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors leading-tight mb-2">
-                  {goal.title}
-                </h3>
-                <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed mb-3">
-                  {goal.desc}
-                </p>
+                  {/* Title */}
+                  <h3 className="font-mono font-bold text-base text-foreground group-hover:text-primary transition-colors leading-snug mb-3">
+                    {goal.title}
+                  </h3>
 
-                <div className="font-mono text-[10px] text-muted-foreground/40 mb-3 italic">
-                  {goal.ideal}
-                </div>
+                  {/* Description */}
+                  <p className="font-mono text-[12px] text-muted-foreground/60 leading-relaxed mb-4 flex-1">
+                    {goal.desc}
+                  </p>
 
-                <div className="flex items-center justify-between pt-2.5 border-t border-border/30">
-                  <span className={`font-mono text-[11px] font-bold ${goal.badgeTextColor} uppercase tracking-widest`}>
-                    {goal.targetLabel}
-                  </span>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                  {/* Ideal for */}
+                  <p className="font-mono text-[10px] text-muted-foreground/40 italic mb-5">
+                    {goal.ideal}
+                  </p>
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-4 border-t border-border/20">
+                    <span className={`font-mono text-[11px] font-bold ${goal.badgeTextColor} uppercase tracking-widest`}>
+                      {goal.targetLabel}
+                    </span>
+                    <ChevronRight className={`h-4 w-4 ${goal.badgeTextColor} opacity-0 group-hover:opacity-100 transition-all translate-x-0 group-hover:translate-x-1 duration-200`} />
+                  </div>
                 </div>
               </button>
             );
@@ -203,66 +223,64 @@ export default function NewCampaign() {
 
       {/* Step 2: Name + submit */}
       {step === 2 && selectedGoal && (
-        <div className="space-y-5">
+        <div className="space-y-6">
 
           {/* Selected goal recap */}
-          <div className={`flex items-center gap-3 border p-3 ${selectedGoal.badgeBorderColor} ${selectedGoal.badgeBgColor}`}>
-            <CheckCircle2 className={`h-4 w-4 shrink-0 ${selectedGoal.badgeTextColor}`} />
+          <div className={`flex items-center gap-4 border p-4 ${selectedGoal.badgeBorderColor} ${selectedGoal.badgeBgColor}`}>
+            <CheckCircle2 className={`h-5 w-5 shrink-0 ${selectedGoal.badgeTextColor}`} />
             <div className="flex-1 min-w-0">
-              <div className="font-mono text-xs font-bold text-foreground leading-snug">{selectedGoal.title}</div>
-              <div className={`font-mono text-[11px] uppercase tracking-widest mt-0.5 ${selectedGoal.badgeTextColor}`}>{selectedGoal.targetLabel}</div>
+              <div className="font-mono text-sm font-bold text-foreground leading-snug">{selectedGoal.title}</div>
+              <div className={`font-mono text-[11px] uppercase tracking-widest mt-1 ${selectedGoal.badgeTextColor}`}>{selectedGoal.targetLabel}</div>
             </div>
             <button
               onClick={() => setStep(1)}
-              className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 px-2 py-1 border border-border/30 hover:border-border/60"
+              className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 px-3 py-1.5 border border-border/30 hover:border-border/60"
             >
               Alterar
             </button>
           </div>
 
           {/* Name form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="border border-primary/20 bg-card/40 p-6 relative card-weapon space-y-4">
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/40 pointer-events-none" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary/40 pointer-events-none" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary/40 pointer-events-none" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/40 pointer-events-none" />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="border border-primary/20 bg-card/40 p-8 relative">
+              <div className="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-primary/40 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-5 h-5 border-t-2 border-r-2 border-primary/40 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-5 h-5 border-b-2 border-l-2 border-primary/40 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-primary/40 pointer-events-none" />
 
-              <div className="space-y-2 relative z-10">
-                <label className="font-mono text-xs uppercase tracking-widest text-primary flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                  Nome do Lançamento
-                </label>
-                <Input
-                  required
-                  autoFocus
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="font-mono bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary h-12 text-base rounded-none px-4"
-                  placeholder="Ex: Curso de Marketing Digital"
-                />
-                <p className="font-mono text-xs text-muted-foreground/40">
-                  Só para você se organizar internamente. A IA vai entender tudo durante o briefing.
-                </p>
-              </div>
+              <label className="font-mono text-[11px] uppercase tracking-widest text-primary flex items-center gap-2 mb-3">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                Nome do Lançamento
+              </label>
+              <Input
+                required
+                autoFocus
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="font-mono bg-background/60 border-border/50 focus-visible:ring-primary focus-visible:border-primary h-13 text-base rounded-none px-4 mb-3"
+                placeholder="Ex: Curso de Marketing Digital"
+              />
+              <p className="font-mono text-[11px] text-muted-foreground/40">
+                Só para você se organizar internamente. A IA vai entender tudo durante o briefing.
+              </p>
             </div>
 
-            {/* What happens next — mini preview */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* What happens next */}
+            <div className="grid grid-cols-3 gap-4">
               {[
                 { num: "01", title: "Briefing rápido", desc: "~3 min de conversa com a IA sobre seu produto" },
                 { num: "02", title: "Plano completo", desc: "Estratégia, cronograma e canais definidos pela IA" },
                 { num: "03", title: "Conteúdo + Execução", desc: "Você aprova e a campanha vai ao ar" },
               ].map(s => (
-                <div key={s.num} className="flex flex-col gap-1.5 p-3 border border-border/30 bg-card/20">
+                <div key={s.num} className="flex flex-col gap-2 p-5 border border-border/20 bg-card/20">
                   <span className="font-mono text-[10px] text-primary/50 tracking-widest">{s.num}</span>
                   <div className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground/80 leading-tight">{s.title}</div>
-                  <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">{s.desc}</p>
+                  <p className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed">{s.desc}</p>
                 </div>
               ))}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <Button
                 type="button"
                 variant="outline"

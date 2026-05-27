@@ -471,118 +471,149 @@ const PROVIDER_COLOR: Record<string, string> = {
 
 export default function AgentsHub() {
   const newCount = AGENTS.filter(a => a.isNew).length;
+  const categoryCounts = AGENTS.reduce((acc, a) => {
+    acc[a.category] = (acc[a.category] ?? 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto">
 
       {/* Header */}
-      <div className="border-b border-border/50 pb-5">
-        <div className="flex items-center gap-2 mb-1">
-          <Bot className="h-4 w-4 text-primary" />
-          <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Hub de Agentes IA
+      <div className="mb-10">
+        <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
+          Time de IA · Framework ReAct
+        </p>
+        <div className="flex items-end gap-4 mb-3">
+          <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground leading-tight">
+            Hub de <span className="text-primary">Agentes IA</span>
           </h1>
           {newCount > 0 && (
-            <Badge className="rounded-none font-mono text-[10px] bg-primary/15 text-primary border border-primary/30 px-2">
+            <Badge className="rounded-none font-mono text-[10px] bg-primary/15 text-primary border border-primary/30 px-2 mb-1">
               +{newCount} novos
             </Badge>
           )}
         </div>
-        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mt-1">
-          {AGENTS.length} agentes especializados · Framework ReAct (Reason + Act) · Claude · GPT-4o · Gemini
+        <p className="text-sm text-muted-foreground font-mono max-w-xl">
+          {AGENTS.length} agentes especializados operam em ciclo contínuo — da estratégia à execução, com raciocínio auditável em cada etapa.
         </p>
       </div>
 
-      {/* ReAct badge */}
-      <div className="border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
-        <Brain className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+      {/* ReAct info bar */}
+      <div className="border border-primary/20 bg-primary/5 px-6 py-4 flex items-start gap-4 mb-10">
+        <Brain className="h-5 w-5 text-primary mt-0.5 shrink-0" />
         <div>
-          <div className="font-mono text-xs font-bold text-primary uppercase tracking-widest">Framework ReAct Ativo</div>
-          <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
-            Cada agente opera no ciclo OBSERVE → REASON → ACT → OUTPUT. Além de gerar conteúdo, os agentes emitem diretivas de ação acionáveis (pausar criativos, escalar budget, disparar sequências, alertar humano) com confiança, urgência e parâmetros.
+          <div className="font-mono text-xs font-bold text-primary uppercase tracking-widest mb-1">
+            OBSERVE → REASON → ACT → OUTPUT
+          </div>
+          <div className="font-mono text-[12px] text-muted-foreground leading-relaxed">
+            Além de gerar conteúdo, os agentes emitem diretivas acionáveis — pausar criativos, escalar budget, disparar sequências, alertar humano — com nível de confiança e urgência definidos.
           </div>
         </div>
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
-        {Object.entries(
-          AGENTS.reduce((acc, a) => { acc[a.category] = (acc[a.category] ?? 0) + 1; return acc; }, {} as Record<string, number>)
-        ).map(([cat, n]) => (
-          <div key={cat} className="border border-border/30 bg-card/30 p-2.5 text-center">
-            <div className="font-mono text-xs font-bold text-primary">{n}</div>
-            <div className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest mt-0.5 truncate">{cat}</div>
+      <div className="grid grid-cols-4 md:grid-cols-7 gap-3 mb-14">
+        {Object.entries(categoryCounts).map(([cat, n]) => (
+          <div key={cat} className="border border-border/30 bg-card/20 py-4 px-3 text-center">
+            <div className="font-mono text-xl font-bold text-primary mb-1">{n}</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest leading-tight">{cat}</div>
           </div>
         ))}
       </div>
 
-      {/* Grid */}
-      {CATEGORIES.filter(c => c !== "Todos").map(category => {
-        const agents = AGENTS.filter(a => a.category === category);
-        return (
-          <div key={category}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 font-bold">{category}</div>
-              <div className="flex-1 h-px bg-border/30" />
-              <div className="font-mono text-[11px] text-muted-foreground/40">{agents.length} agentes</div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {agents.map(agent => {
-                const Icon = agent.icon;
-                return (
-                  <Link key={agent.role} href={`/agents/${agent.role}`} className="block">
-                    <div
-                      className={`border bg-card/40 p-4 cursor-pointer transition-all group relative overflow-hidden h-full flex flex-col ${agent.accent}`}
-                    >
-                      <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-current/20 pointer-events-none" />
-                      {agent.isNew && (
-                        <div className="absolute top-2 right-2">
-                          <span className="font-mono text-[9px] uppercase tracking-widest bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5">NOVO</span>
-                        </div>
-                      )}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="p-1.5 border border-border/30 bg-muted/20">
-                            <Icon className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-mono font-bold text-sm text-foreground leading-tight group-hover:text-primary transition-colors">
-                              {agent.name}
+      {/* Category sections */}
+      <div className="space-y-14">
+        {CATEGORIES.filter(c => c !== "Todos").map(category => {
+          const agents = AGENTS.filter(a => a.category === category);
+          return (
+            <div key={category}>
+              {/* Category header */}
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-1 h-6 bg-primary/60" />
+                <div className="font-mono text-sm uppercase tracking-widest text-foreground/80 font-bold">{category}</div>
+                <div className="flex-1 h-px bg-border/20" />
+                <div className="font-mono text-[11px] text-muted-foreground/40 tabular-nums">
+                  {agents.length} {agents.length === 1 ? "agente" : "agentes"}
+                </div>
+              </div>
+
+              {/* Agents grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {agents.map(agent => {
+                  const Icon = agent.icon;
+                  return (
+                    <Link key={agent.role} href={`/agents/${agent.role}`} className="block group">
+                      <div className={`border bg-card/30 cursor-pointer transition-all duration-200 relative overflow-hidden h-full flex flex-col hover:border-primary/50 hover:bg-primary/5 ${agent.accent}`}>
+
+                        {/* Top accent stripe */}
+                        <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                        <div className="p-6 flex flex-col flex-1">
+                          {/* Header row */}
+                          <div className="flex items-start justify-between mb-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 border border-border/30 bg-muted/20 flex items-center justify-center group-hover:border-primary/30 group-hover:bg-primary/10 transition-all">
+                                <Icon className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <div className="font-mono font-bold text-sm text-foreground leading-tight group-hover:text-primary transition-colors">
+                                  {agent.name}
+                                </div>
+                                <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">{agent.tagline}</div>
+                              </div>
                             </div>
-                            <div className="font-mono text-[11px] text-muted-foreground/60">{agent.tagline}</div>
+                            <div className="flex flex-col items-end gap-1.5 shrink-0 ml-2">
+                              {agent.isNew && (
+                                <span className="font-mono text-[9px] uppercase tracking-widest bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5">NOVO</span>
+                              )}
+                              {!agent.isNew && (
+                                <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 ${PROVIDER_COLOR[agent.provider]}`}>
+                                  {agent.provider}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <p className="font-mono text-[12px] text-muted-foreground/60 leading-relaxed mb-4 line-clamp-2 flex-1">
+                            {agent.description}
+                          </p>
+
+                          {/* Specialties */}
+                          <div className="flex flex-wrap gap-1.5 mb-5">
+                            {agent.specialties.slice(0, 3).map(s => (
+                              <span key={s} className="font-mono text-[10px] uppercase tracking-widest border border-border/25 bg-muted/10 px-2 py-0.5 text-muted-foreground/50">
+                                {s}
+                              </span>
+                            ))}
+                            {agent.specialties.length > 3 && (
+                              <span className="font-mono text-[10px] text-muted-foreground/30 px-1 py-0.5">
+                                +{agent.specialties.length - 3}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* CTA */}
+                          <div className="flex items-center justify-between pt-4 border-t border-border/20">
+                            <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary transition-colors">
+                              Conversar
+                            </span>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
                           </div>
                         </div>
-                        {!agent.isNew && (
-                          <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 shrink-0 ${PROVIDER_COLOR[agent.provider]}`}>
-                            {agent.provider}
-                          </Badge>
-                        )}
                       </div>
-
-                      <p className="font-mono text-[11px] text-muted-foreground leading-relaxed mb-3 line-clamp-2 flex-1">
-                        {agent.description}
-                      </p>
-
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {agent.specialties.map(s => (
-                          <span key={s} className="font-mono text-[10px] uppercase tracking-widest border border-border/30 bg-muted/10 px-1.5 py-0.5 text-muted-foreground/60">
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="w-full rounded-none font-mono uppercase text-[11px] tracking-widest border border-border/50 group-hover:border-primary/60 group-hover:text-primary text-muted-foreground transition-colors h-8 flex items-center justify-center gap-2 bg-card/20 group-hover:bg-primary/5">
-                        Conversar com Agente
-                        <ChevronRight className="h-3 w-3" />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* Bottom spacer */}
+      <div className="h-12" />
     </div>
   );
 }
