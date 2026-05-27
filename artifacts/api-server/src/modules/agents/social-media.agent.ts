@@ -210,7 +210,7 @@ export async function runSocialMediaAgent(
 **Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}
 **Pilares de conteúdo da estratégia:** ${(strategy.campaignArchitecture?.contentPillars ?? []).join(", ")}
 **Avatar B2B:** ${hasB2BAvatar ? "Sim — incluir LinkedIn como plataforma relevante" : "Não — LinkedIn secundário"}`
-    : `**Pilares de conteúdo:** ${strategy.campaignArchitecture.contentPillars.join(", ")}`;
+    : `**Pilares de conteúdo:** ${(strategy.campaignArchitecture?.contentPillars ?? []).join(", ")}`;
 
   const totalDays =
     (launchPlan as any)?.totalDays ??
@@ -249,8 +249,8 @@ ${JSON.stringify(
 )}
 \`\`\`
 
-**Narrativa central da campanha:** ${strategy.campaignArchitecture.coreNarrative}
-**Gancho emocional:** ${strategy.campaignArchitecture.emotionalHook}
+**Narrativa central da campanha:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}
+**Gancho emocional:** ${strategy.campaignArchitecture?.emotionalHook ?? ""}
 
 **REQUISITOS OBRIGATÓRIOS:**
 - Cada entrada do calendário DEVE incluir múltiplas plataformas — MÍNIMO Instagram + Facebook + TikTok em cada dia
@@ -282,7 +282,7 @@ Retorne APENAS o JSON do calendário multi-plataforma completo.`,
   return parseAgentJSON<SocialMediaOutput>(result.content, {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     totalDays,
-    contentPillars: strategy.campaignArchitecture.contentPillars,
+    contentPillars: strategy.campaignArchitecture?.contentPillars ?? [],
     platformStrategy: [],
     calendar: [],
     highlightPosts: [],

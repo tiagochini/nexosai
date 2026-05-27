@@ -365,8 +365,8 @@ export async function runVSLScriptAgent(
 **Gancho emocional:** ${profile.positioning?.emotionalHook ?? ""}
 **Argumento lógico:** ${profile.positioning?.logicalArgument ?? ""}`
     : `
-**Narrativa central:** ${strategy.campaignArchitecture.coreNarrative}
-**Gancho:** ${strategy.campaignArchitecture.emotionalHook}`;
+**Narrativa central:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}
+**Gancho:** ${strategy.campaignArchitecture?.emotionalHook ?? ""}`;
 
   const userMessage = `Escreva o roteiro VSL completo para esta campanha.
 
@@ -376,8 +376,8 @@ export async function runVSLScriptAgent(
 **Canal de vendas:** ${String(intakeData["campaign.salesChannel"] ?? "vsl")}
 ${avatarContext}
 
-**USP:** ${profile?.product.usp ?? strategy.offerPositioning.uniqueValueProposition}
-**Objeções a superar:** ${profile?.primaryAvatar.typicalObjections.join("; ") ?? strategy.audienceSegmentation.objections.join("; ")}
+**USP:** ${profile?.product?.usp ?? strategy.offerPositioning?.uniqueValueProposition ?? ""}
+**Objeções a superar:** ${profile?.primaryAvatar?.typicalObjections?.join("; ") ?? strategy.audienceSegmentation?.objections?.join("; ") ?? ""}
 
 **PROCESSO OBRIGATÓRIO:**
 1. Declare o tipo de lead (Schwartz) antes de escrever qualquer seção
