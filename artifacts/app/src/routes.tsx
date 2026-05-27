@@ -273,6 +273,9 @@ export default function AppRoutes() {
       </Route>
 
       {/* Account */}
+      <Route path="/configuracoes">
+        {() => <Redirect to="/settings" />}
+      </Route>
       <Route path="/settings">
         {() => <ProtectedRoute><SettingsPage /></ProtectedRoute>}
       </Route>
