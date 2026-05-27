@@ -196,7 +196,7 @@ const SCRIPT_SECTIONS = [
   {
     tempo: "1:30 – 3:00",
     titulo: "O que o NexOS AI executa por você",
-    texto: "44 agentes de IA trabalhando 24 horas por dia no seu lançamento. Estratégia completa em 47 minutos. 23 emails e 18 mensagens WhatsApp gerados, agendados e disparados. Carrinho abre e fecha no horário. Sem você tocar em nada.",
+    texto: "57 agentes de IA trabalhando 24 horas por dia no seu lançamento. Estratégia completa em 47 minutos. 23 emails e 18 mensagens WhatsApp gerados, agendados e disparados. Carrinho abre e fecha no horário. Sem você tocar em nada.",
   },
   {
     tempo: "3:00 – 5:00",

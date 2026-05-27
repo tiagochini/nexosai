@@ -192,7 +192,7 @@ function CustoSection() {
               <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-4">NexOS AI — tudo isso</div>
               <div className="font-mono font-black text-5xl text-primary mb-3">R$3.990</div>
               <div className="font-mono text-xs text-muted-foreground leading-relaxed mb-6">
-                Pagamento único. 44 agentes especializados disponíveis 24h — estratégia, copy, anúncios, automação, criativos visuais, análise e aprovação.
+                Pagamento único. 57 agentes especializados disponíveis 24h — estratégia, copy, anúncios, automação, criativos visuais, análise e aprovação.
               </div>
               <Link href="/comprar">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 w-full">
@@ -272,7 +272,7 @@ function SolucaoSection() {
             <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">aprovasse?</span>
           </h2>
           <p className="text-xl text-muted-foreground leading-relaxed mb-12 max-w-2xl mx-auto">
-            O NexOS AI é uma plataforma com 44 agentes especializados — cada um treinado para uma parte da operação de vendas.
+            O NexOS AI é uma plataforma com 57 agentes especializados — cada um treinado para uma parte da operação de vendas.
             Você conversa. A IA executa. <strong className="text-foreground">Nada vai ao ar sem a sua aprovação.</strong>
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
@@ -295,7 +295,7 @@ function SolucaoSection() {
           </div>
           <Link href="/comprar">
             <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-14 px-10 gap-3">
-              Quero os 44 agentes trabalhando <ArrowRight className="h-4 w-4" />
+              Quero os 57 agentes trabalhando <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
         </div>
@@ -568,7 +568,7 @@ function OfertaSection() {
                 </div>
                 <ul className="space-y-2">
                   {[
-                    "44 agentes de IA especializados em vendas",
+                    "57 agentes de IA especializados em vendas",
                     "Diagnóstico completo de produto e mercado",
                     "Estratégia de 7 dias de vendas em volume",
                     "Copy WhatsApp + Email por segmento de lead",

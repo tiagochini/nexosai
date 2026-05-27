@@ -103,7 +103,7 @@ function HeroSection() {
             É a <strong className="text-foreground">fragmentação da execução</strong> que está comendo sua margem.
           </p>
           <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed mb-8 sm:mb-12 max-w-2xl">
-            NexOS AI é o sistema nervoso do seu lançamento — <strong className="text-foreground">34 agentes de IA em orquestração paralela</strong>, do briefing ao carrinho fechado, integrado diretamente ao algoritmo da Meta e ao TikTok Ads.
+            NexOS AI é o sistema nervoso do seu lançamento — <strong className="text-foreground">57 agentes de IA em orquestração paralela</strong>, do briefing ao carrinho fechado, integrado diretamente ao algoritmo da Meta e ao TikTok Ads.
           </p>
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
@@ -268,7 +268,7 @@ function DreamStateSection() {
           <div className={`border border-primary/20 bg-primary/5 px-6 py-5 flex items-start gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
             <Cpu className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              Não é um chatbot. Não é um prompt genérico. São <strong className="text-foreground">34 agentes de IA especializados</strong>, cada um treinado com as doutrinas dos maiores profissionais de marketing do mundo, trocando contexto entre si em tempo real — e agindo sobre seus dados reais de performance.
+              Não é um chatbot. Não é um prompt genérico. São <strong className="text-foreground">57 agentes de IA especializados</strong>, cada um treinado com as doutrinas dos maiores profissionais de marketing do mundo, trocando contexto entre si em tempo real — e agindo sobre seus dados reais de performance.
             </p>
           </div>
 
@@ -332,7 +332,7 @@ function CustoRealSection() {
               </p>
               <div className="border-l-2 border-primary/50 pl-4 mb-6">
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  34 agentes de IA trabalhando em paralelo no seu lançamento — estratégia, copy, anúncios, email, WhatsApp, atendimento de vendas, análise de performance e otimização em tempo real.<br /><br />
+                  57 agentes de IA trabalhando em paralelo no seu lançamento — estratégia, copy, anúncios, email, WhatsApp, atendimento de vendas, análise de performance e otimização em tempo real.<br /><br />
                   <strong className="text-foreground">Tudo integrado. Tudo orquestrado. Um sistema único.</strong><br /><br />
                   Ticket único de acesso. Você usa o sistema de gerenciamento completo — os agentes de IA são opcionais e podem ser ativados por crédito quando quiser, sem mensalidade.
                 </p>
@@ -397,7 +397,7 @@ function MecanismoSection() {
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— O Sistema —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            34 agentes.<br /><span className="text-primary">Um sistema nervoso.</span>
+            57 agentes.<br /><span className="text-primary">Um sistema nervoso.</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
             Não é uma ferramenta de copy. Não é um chatbot de estratégia. É a orquestração completa do lançamento — cada agente especialista em uma função, todos trocando contexto entre si em tempo real.
@@ -729,7 +729,7 @@ function OfertaSection() {
         "900 créditos incluídos — cobre 2 lançamentos completos",
         "Até 3 campanhas simultâneas",
         "Trilha de 6 dígitos (R$100k–R$999k em 7 dias)",
-        "34 agentes especializados",
+        "57 agentes especializados",
         "Integração Meta + Google + TikTok",
         "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
         "Dashboard de performance em tempo real",
@@ -913,7 +913,7 @@ function DoisCaminhosSection() {
                   A IA executa<br /><span className="text-primary">o lançamento por você</span>
                 </div>
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS AI faz o trabalho pesado — 29 agentes, do briefing ao carrinho fechado.
+                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS AI faz o trabalho pesado — 57 agentes, do briefing ao carrinho fechado.
                 </p>
               </div>
               <div className="space-y-2.5">
@@ -976,7 +976,7 @@ function LiveSorteioSection() {
   const { ref, inView } = useInView(0.2);
   const etapas = [
     { num: "01", label: "Briefing ao vivo", desc: "Intake conversacional em tempo real com a audiência respondendo junto" },
-    { num: "02", label: "Estratégia gerada", desc: "29 agentes constroem posicionamento, big idea, copy, anúncios e sequências" },
+    { num: "02", label: "Estratégia gerada", desc: "57 agentes constroem posicionamento, big idea, copy, anúncios e sequências" },
     { num: "03", label: "Campanha pronta", desc: "Criativos finalizados, sequências configuradas, pixel calibrado — a ponto de disparo" },
     { num: "04", label: "Disparo nas mãos do sortudo", desc: "O lançamento está pronto. Ativar o disparo depende do sorteado adquirir o acesso — a campanha já foi construída por nós, ao vivo" },
   ];
@@ -1001,7 +1001,7 @@ function LiveSorteioSection() {
             <span className="text-foreground/70">construído na frente de todos.</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Vou sortear um participante e, ao vivo, construir o lançamento completo dele — do briefing aos criativos finalizados, passando pela estratégia, copy, sequências de disparo e configuração de pixel. Em tempo real, com os 29 agentes trabalhando. A audiência inteira acompanha o processo.
+            Vou sortear um participante e, ao vivo, construir o lançamento completo dele — do briefing aos criativos finalizados, passando pela estratégia, copy, sequências de disparo e configuração de pixel. Em tempo real, com os 57 agentes trabalhando. A audiência inteira acompanha o processo.
           </p>
 
           {/* Etapas */}
@@ -1078,7 +1078,7 @@ function FechamentoSection() {
             <span className="text-primary">operação que você paga.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            Não é sobre ter uma nova ferramenta. É sobre parar de ser o sistema nervoso da sua própria campanha — e deixar que 29 agentes especializados façam o trabalho pesado enquanto você foca no que só você pode fazer.
+            Não é sobre ter uma nova ferramenta. É sobre parar de ser o sistema nervoso da sua própria campanha — e deixar que 57 agentes especializados façam o trabalho pesado enquanto você foca no que só você pode fazer.
           </p>
 
           {/* Garantia — posicionada como prova de confiança */}

@@ -149,7 +149,7 @@ export default function FreeGuide({ onNavigate }: FreeGuideProps) {
       <section className="rounded-2xl border border-[hsl(250_90%_65%/0.3)] bg-gradient-to-br from-[hsl(222_25%_7%)] to-[hsl(250_30%_8%)] p-8 text-center space-y-4">
         <h2 className="text-xl font-bold text-white">Quer o método completo?</h2>
         <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          Este guia cobre os erros a evitar. A Metodologia NexOS cobre o caminho completo — do zero ao lançamento estruturado, com 10 módulos, 34 capítulos e 118 aulas incluindo copy, tráfego, automação e IA.
+          Este guia cobre os erros a evitar. A Metodologia NexOS cobre o caminho completo — do zero ao lançamento estruturado, com 12 módulos, 45 capítulos e 128+ aulas incluindo copy, tráfego, automação e IA.
         </p>
         <button
           onClick={() => onNavigate("products")}

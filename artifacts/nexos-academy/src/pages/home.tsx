@@ -142,7 +142,7 @@ function Dashboard({ onNavigate, progress, brand: brandProp }: Omit<HomeProps, "
               <span style={{ color: "hsl(250 90% 70%)" }}>A plataforma executa por você.</span>
             </h3>
             <p className="text-sm text-[hsl(220_10%_52%)] leading-relaxed max-w-md">
-              A Academia te dá o mapa. A <strong className="text-[hsl(220_10%_72%)]">NexOS AI</strong> faz o lançamento acontecer — 29 agentes de IA, do briefing à venda.
+              A Academia te dá o mapa. A <strong className="text-[hsl(220_10%_72%)]">NexOS AI</strong> faz o lançamento acontecer — 57 agentes de IA, do briefing à venda.
             </p>
           </div>
           <div className="flex flex-col gap-2 shrink-0">
@@ -168,7 +168,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
     { n: "03", titulo: "Modelos de Lançamento & Monetização", desc: "Semente, Perpétuo, Interno, Externo, Afiliado. Escada de valor, upsell, downsell e recorrência — com a matemática de LTV por modelo.", badge: "Monetização", cor: "from-emerald-600 to-teal-700" },
     { n: "04", titulo: "Plataformas, Ferramentas & Produção", desc: "TikTok, Instagram, Facebook, YouTube — como cada algoritmo distribui e o que produzir para cada um. Setup operacional completo.", badge: "Canais", cor: "from-rose-600 to-pink-700" },
     { n: "05", titulo: "Meta Ads: Fundamentos & Avançado", desc: "Estrutura de campanha para lançamentos. Públicos, criativos, CAPI, otimização, mensuração. O que os gestores de tráfego cobram R$8k/mês para fazer.", badge: "Tráfego", cor: "from-orange-600 to-amber-700" },
-    { n: "06", titulo: "NexOS AI — A Plataforma que Executa", desc: "Como o sistema de 29 agentes transforma cada framework desta Academia em execução automatizada — do briefing ao carrinho fechado.", badge: "Automação", cor: "from-cyan-600 to-blue-700" },
+    { n: "06", titulo: "NexOS AI — A Plataforma que Executa", desc: "Como o sistema de 57 agentes transforma cada framework desta Academia em execução automatizada — do briefing ao carrinho fechado.", badge: "Automação", cor: "from-cyan-600 to-blue-700" },
     { n: "07", titulo: "Domínio Total dos Algoritmos", desc: "TikTok, Instagram, YouTube, Facebook, Google. Seis sistemas de distribuição desmontados: o que cada um mede, recompensa e penaliza.", badge: "Algoritmos", cor: "from-indigo-600 to-violet-700" },
     { n: "08", titulo: "Operações, Automação & Calendário", desc: "Webhooks, Make/Zapier, sequências de automação, calendário operacional de 30 dias, distribuição de budget por fase.", badge: "Operações", cor: "from-slate-600 to-gray-700" },
     { n: "09", titulo: "Copywriting & Persuasão Avançada", desc: "Gatilhos aplicados, estruturas de copy para landing, VSL, email e WhatsApp. Storytelling de vendas. Provas sociais documentadas.", badge: "Copy", cor: "from-pink-600 to-rose-700" },
@@ -232,7 +232,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
           </h1>
 
           <p className="text-lg md:text-xl text-[hsl(220_10%_65%)] leading-relaxed mb-4 max-w-2xl">
-            A única Academia que ensina o método que os <strong className="text-white">29 agentes de IA do NexOS AI</strong> usam para orquestrar lançamentos completos — com os frameworks reais de Schwartz, Cialdini, Kahneman, Bencivenga e Jay Abraham operacionalizados como regras de decisão.
+            A única Academia que ensina o método que os <strong className="text-white">57 agentes de IA do NexOS AI</strong> usam para orquestrar lançamentos completos — com os frameworks reais de Schwartz, Cialdini, Kahneman, Bencivenga e Jay Abraham operacionalizados como regras de decisão.
           </p>
           <p className="text-sm text-[hsl(220_10%_45%)] mb-10 max-w-xl">
             Não é teoria de livro. É o mapa exato que transforma conhecimento em execução — e execução em resultado mensurável.
@@ -434,7 +434,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
                 A plataforma que <span style={{ color: "hsl(250 90% 70%)" }}>executa o método por você.</span>
               </h3>
               <p className="text-sm text-[hsl(220_10%_52%)] leading-relaxed">
-                A NexOS AI tem 29 agentes de IA que aplicam cada framework desta Academia automaticamente — geração de copy, anúncios, email, WhatsApp, e otimização em tempo real.
+                A NexOS AI tem 57 agentes de IA que aplicam cada framework desta Academia automaticamente — geração de copy, anúncios, email, WhatsApp, e otimização em tempo real.
               </p>
             </div>
             <div className="shrink-0">

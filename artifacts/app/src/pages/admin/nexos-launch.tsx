@@ -115,7 +115,7 @@ const MICRO_CONVICCOES = [
   { num: "03", texto: "Quem executa bem tem time especializado — copy, estratégia, vídeo, sequências" },
   { num: "04", texto: "Contratar esse time custa R$30k+/mês — fora do alcance de quem está começando" },
   { num: "05", texto: "Uma IA treinada para cada função do time de lançamento resolve isso" },
-  { num: "06", texto: "NexOS tem 34 agentes especializados — cada um treinado para uma função" },
+  { num: "06", texto: "NexOS tem 57 agentes especializados — cada um treinado para uma função" },
   { num: "07", texto: "Você pode ver funcionando ao vivo — sem promessa, sem slide" },
   { num: "08", texto: "R$3.990 uma única vez é menos que um mês de um bom copywriter" },
 ];
@@ -256,7 +256,7 @@ export default function NexosLaunchRoom() {
                   <p className="text-xs text-green-400 font-mono mb-3">AVATAR DEPOIS</p>
                   <ul className="space-y-2">
                     {[
-                      "34 agentes executando cada etapa do lançamento",
+                      "57 agentes executando cada etapa do lançamento",
                       "Briefing preenchido — estratégia, copy, vídeo gerados",
                       "Sequência rodando, leads aquecendo, atendimento 24h",
                       "\"Finalmente executei — e os números são reais\"",

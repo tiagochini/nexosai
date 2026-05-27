@@ -355,7 +355,7 @@ export default function MiniGuide({ onNavigate }: MiniGuideProps) {
           O próximo passo é simples: abra o checklist do Dia 1 agora e complete as 5 tarefas. Não amanhã. Hoje.
         </p>
         <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          Se você quiser ir além dos R$10k e entender como estruturar lançamentos de R$100k, R$500k e além — com estratégia, copy, automação e IA trabalhando por você — a Metodologia NexOS cobre isso em 10 módulos completos.
+          Se você quiser ir além dos R$10k e entender como estruturar lançamentos de R$100k, R$500k e além — com estratégia, copy, automação e IA trabalhando por você — a Metodologia NexOS cobre isso em 12 módulos completos.
         </p>
         <button
           onClick={() => onNavigate("products")}

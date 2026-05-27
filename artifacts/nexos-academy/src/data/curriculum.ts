@@ -5633,7 +5633,7 @@ PROBLEMA ADICIONAL:
   + Qualidade inconsistente entre especialistas
   + Perda de contexto entre entregáveis
 
-NEXOS RESOLVE: 44 agentes orquestrados, execução 24/7,
+NEXOS RESOLVE: 57 agentes orquestrados, execução 24/7,
   contexto compartilhado entre todos os agentes do lançamento.
 </div>
 
@@ -5785,7 +5785,7 @@ ETAPA 5 — OTIMIZAÇÃO (Gemini Agente Analytics):
             keyPoints: ["6 categorias de agentes especializados", "Claude para estratégia, GPT-4o para copy, Gemini para analytics", "Como os agentes colaboram entre si", "O trail de auditoria de cada decisão de IA"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
-<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS não é uma ferramenta de IA genérica — é uma arquitetura de 44 agentes especializados, cada um usando o modelo de linguagem mais adequado para sua tarefa específica. Esta aula entrega o mapa completo dos 44 agentes por categoria, como eles colaboram entre si, e o trail de auditoria que torna cada decisão de IA rastreável.</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS não é uma ferramenta de IA genérica — é uma arquitetura de 57 agentes especializados, cada um usando o modelo de linguagem mais adequado para sua tarefa específica. Esta aula entrega o mapa completo dos 57 agentes por categoria, como eles colaboram entre si, e o trail de auditoria que torna cada decisão de IA rastreável.</p>
 </div>
 
 <h2 style="color:#a78bfa">🤖 Os 44 Agentes: O Time que Trabalha Enquanto Você Dorme</h2>
@@ -6006,7 +6006,7 @@ REGRA: créditos nunca vencem dentro do mês de competência.
   <li>3 campanhas simultâneas</li>
   <li>1.500 créditos de IA por mês</li>
   <li>Acesso ao track de 6 dígitos (R$100k-R$999k)</li>
-  <li>Todos os 44 agentes de IA</li>
+  <li>Todos os 57 agentes de IA</li>
   <li>Automação de sequências email + WhatsApp</li>
   <li>Painel de métricas e relatório semanal</li>
   <li>Suporte por email em 24h</li>
@@ -12471,7 +12471,7 @@ A Opção C faz a B parecer razoável pelo mesmo preço.
 
 <p><strong>A solução de Schwartz:</strong> lead de Mecanismo — você apresenta o mecanismo em primeiro lugar, sem prometer resultado. O prospect curioso sobre o mecanismo descobre o resultado por dedução própria. É mais poderoso porque o prospect faz a conexão sozinho.</p>
 
-<p><strong>Headline que funciona no Nível 3:</strong> "O sistema nervoso do seu lançamento: 29 agentes de IA em orquestração paralela" — nenhuma promessa de resultado. O mecanismo cria curiosidade e o resultado é implícito.</p>
+<p><strong>Headline que funciona no Nível 3:</strong> "O sistema nervoso do seu lançamento: 57 agentes de IA em orquestração paralela" — nenhuma promessa de resultado. O mecanismo cria curiosidade e o resultado é implícito.</p>
 
 <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
 <div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ O MERCADO BRASILEIRO DE INFOPRODUTOS EM 2024-2025</div>
