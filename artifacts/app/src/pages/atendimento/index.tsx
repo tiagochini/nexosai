@@ -213,6 +213,7 @@ export default function AtendimentoPage() {
         setShowNew(false);
         setNewName(""); setNewHandle(""); setNewNotes("");
         loadConversation(data.conversation.id);
+        loadAll();
       }
     } catch { /* ignore */ } finally {
       setCreating(false);

@@ -93,6 +93,9 @@ export default function VslsPage() {
     },
     onSuccess: (d) => {
       toast.success("VSL criada! Gerando roteiro com IA...");
+      queryClient.setQueryData(["/api/vsls"], (old: { vsls: VslItem[] } | undefined) => ({
+        vsls: [d.vsl, ...(old?.vsls ?? [])],
+      }));
       queryClient.invalidateQueries({ queryKey: ["/api/vsls"] });
       setCreating(false);
       setForm({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "", campaignId: "" });

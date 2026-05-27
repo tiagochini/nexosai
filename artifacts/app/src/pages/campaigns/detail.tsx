@@ -1264,7 +1264,7 @@ export default function CampaignDetail() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos">("comando");
-  const { isArquiteto, isFundador } = useMode();
+  const { isArquiteto, isFundador, setMode } = useMode();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
@@ -1877,7 +1877,7 @@ export default function CampaignDetail() {
           <span className="font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest">
             Quer ver todos os dados técnicos?{" "}
             <button
-              onClick={() => setLocation("/settings?tab=preferences")}
+              onClick={() => setMode("arquiteto")}
               className="text-primary/50 hover:text-primary underline underline-offset-2 transition-colors"
             >
               Mude para modo Arquiteto

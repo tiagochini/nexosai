@@ -468,7 +468,8 @@ function CostReference() {
 type TabId = "extrato" | "agentes" | "referencia";
 
 export default function CreditsPage() {
-  const { plan, planSlug, workspaceId } = useAuth();
+  const { plan, planSlug, workspace } = useAuth();
+  const workspaceId = workspace?.id;
   const [activeTab, setActiveTab] = useState<TabId>("agentes");
 
   const { data: balanceData, isLoading: loadingBalance } = useGetCreditsBalance({
