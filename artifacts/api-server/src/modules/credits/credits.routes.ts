@@ -3,6 +3,7 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import {
   getBalance,
   getTransactionHistory,
+  getAgentUsageHistory,
   checkCredits,
   type CreditAction,
 } from "./credits.service.js";
@@ -49,6 +50,12 @@ router.get("/check/:action", async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+router.get("/usage", async (req, res): Promise<void> => {
+  const limit = Math.min(Number(req.query["limit"]) || 100, 200);
+  const usage = await getAgentUsageHistory(req.auth.workspaceId, limit);
+  res.json(usage);
 });
 
 router.get("/costs", (_req, res): void => {
