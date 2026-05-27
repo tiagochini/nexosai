@@ -717,7 +717,7 @@ function AgentRunLog({ agents }: { agents: AgentRun[] }) {
               <StatusDot status={agent.status} />
               <div className="flex-1 min-w-0">
                 <div className="font-mono text-[11px] font-bold uppercase tracking-wide truncate">
-                  {AGENT_ROLE_LABEL[agent.agentRole] ?? agent.agentRole}
+                  {AGENT_ROLE_LABEL[(agent as unknown as Record<string,string>)["agentType"] ?? agent.agentRole] ?? (agent as unknown as Record<string,string>)["agentType"] ?? agent.agentRole}
                 </div>
                 <div className="text-[10px] font-mono text-muted-foreground/40">
                   {new Date(agent.startedAt).toLocaleTimeString("pt-BR")}
@@ -1573,11 +1573,14 @@ export default function CampaignDetail() {
           timestamp: new Date().toISOString(),
         }]);
         // Optimistically mark as active so polling kicks in before first refetch
+        // Also reset updatedAt + brainData.pipelineCheckpoint.lockedAt so stale detection
+        // doesn't immediately re-show the "Reiniciar" button before the lock is acquired
         queryClient.setQueryData(getGetCampaignQueryKey(campaignId), (old: unknown) => {
           if (!old || typeof old !== "object") return old;
           const o = old as { campaign?: Record<string, unknown> };
           if (!o.campaign) return old;
-          return { ...o, campaign: { ...o.campaign, status: "analyzing" } };
+          const now = new Date().toISOString();
+          return { ...o, campaign: { ...o.campaign, status: "analyzing", updatedAt: now, brainData: { pipelineCheckpoint: { lockedAt: now, lastProgressAt: now } } } };
         });
         queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
       },
@@ -1746,7 +1749,20 @@ export default function CampaignDetail() {
 
   const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string } | null => {
     switch (campaign.status) {
-      case "analyzing": return { label: "Analisando...", description: "Agentes de estratégia em execução. Aguarde a conclusão da análise.", phase: undefined };
+      case "analyzing": {
+        const brainRaw = (campaignRaw["brainData"] ?? {}) as Record<string, unknown>;
+        const cp = brainRaw["pipelineCheckpoint"] as { lockedAt?: string; lastProgressAt?: string } | undefined;
+        const updatedAt = campaignRaw["updatedAt"] as string | undefined;
+        // Use lastProgressAt from checkpoint if available (more precise than updatedAt)
+        // Threshold is 3.5 min, just above the backend lock grace period of 3 min
+        const STALE_THRESHOLD_MS = 3.5 * 60 * 1000;
+        const checkTime = cp?.lastProgressAt ?? updatedAt;
+        const isStale = !cp?.lockedAt || (checkTime && Date.now() - new Date(checkTime).getTime() > STALE_THRESHOLD_MS);
+        if (isStale) {
+          return { phase: "strategy", label: "Reiniciar Análise Estratégica", description: "O pipeline parou inesperadamente. Clique para reiniciar os agentes de estratégia." };
+        }
+        return { label: "Analisando...", description: "Agentes de estratégia em execução. Aguarde a conclusão da análise.", phase: undefined };
+      }
       case "strategy_ready": return { label: "Revisar Estratégia", description: "Estratégia pronta. Revise e aprove cada seção no board antes de gerar o conteúdo.", phase: undefined };
       case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A IA gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
@@ -1769,7 +1785,10 @@ export default function CampaignDetail() {
       live:             { emoji: "🔥", headline: "Campanha AO VIVO!", desc: "Carrinho aberto. Seus leads estão recebendo os emails e mensagens agora." },
       completed:        { emoji: "✅", headline: "Lançamento concluído", desc: "Missão encerrada. Veja os resultados e comece o próximo lançamento." },
     };
-    const statusInfo = FUNDADOR_STATUS[campaign.status] ?? { emoji: "⚙️", headline: STATUS_LABEL[campaign.status] ?? campaign.status, desc: "Processando..." };
+    const isStaleAnalyzing = campaign.status === "analyzing" && nextAction?.phase === "strategy";
+    const statusInfo = isStaleAnalyzing
+      ? { emoji: "⚠️", headline: "Pipeline parou — reinicie a análise", desc: "Os agentes de estratégia pararam inesperadamente. Clique no botão abaixo para retomar a análise." }
+      : (FUNDADOR_STATUS[campaign.status] ?? { emoji: "⚙️", headline: STATUS_LABEL[campaign.status] ?? campaign.status, desc: "Processando..." });
 
     const PHASE_MAP = [
       { statuses: ["analyzing"],                     label: "Estratégia" },
@@ -1870,7 +1889,7 @@ export default function CampaignDetail() {
                 <div key={a.id} className="px-4 py-2.5 flex items-center gap-3">
                   <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.status === "completed" ? "bg-success" : a.status === "running" ? "bg-primary animate-pulse" : "bg-border/50"}`} />
                   <span className="font-mono text-[11px] text-foreground/70 flex-1 truncate">
-                    {AGENT_ROLE_LABEL[a.agentRole] ?? a.agentRole}
+                    {AGENT_ROLE_LABEL[(a as unknown as Record<string,string>)["agentType"] ?? a.agentRole] ?? (a as unknown as Record<string,string>)["agentType"] ?? a.agentRole}
                   </span>
                   <span className={`font-mono text-[10px] uppercase tracking-widest shrink-0 ${a.status === "completed" ? "text-success/60" : a.status === "running" ? "text-primary" : "text-muted-foreground/30"}`}>
                     {a.status === "completed" ? "Concluído" : a.status === "running" ? "Ativo" : "Aguardando"}
