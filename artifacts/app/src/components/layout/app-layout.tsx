@@ -321,6 +321,13 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                 </Link>
               </DropdownMenuItem>
             )}
+            {isAdmin && (
+              <DropdownMenuItem asChild className="cursor-pointer focus:bg-red-400/10 focus:text-red-400 rounded-none font-mono text-xs uppercase tracking-widest">
+                <Link href="/admin/nexos-launch" onClick={onNav}>
+                  <Rocket className="h-3.5 w-3.5 mr-2" />Sala de Lançamento
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator className="bg-border/30" />
             {/* Locale picker */}
             <div className="px-2 py-1.5">
