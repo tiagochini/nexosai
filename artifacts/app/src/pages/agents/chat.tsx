@@ -1170,12 +1170,16 @@ export default function AgentChat() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             title="Anexar arquivo, foto, vídeo ou documento"
-            className={`h-8 w-8 flex items-center justify-center border transition-all shrink-0
+            className={`h-8 px-2.5 flex items-center gap-1.5 border transition-all shrink-0
               ${pendingAttachments.length > 0
                 ? "border-primary/50 bg-primary/10 text-primary"
                 : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-4 w-4 shrink-0" />
+            <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">Arquivo</span>
+            {pendingAttachments.length > 0 && (
+              <span className="text-[9px] font-bold text-primary bg-primary/20 px-1">{pendingAttachments.length}</span>
+            )}
           </button>
 
           {isMobile && (
@@ -1199,12 +1203,15 @@ export default function AgentChat() {
             type="button"
             onClick={toggleVoice}
             title={isListening ? "Parar gravação de voz" : "Gravar mensagem por voz"}
-            className={`h-8 w-8 flex items-center justify-center border transition-all shrink-0
+            className={`h-8 px-2.5 flex items-center gap-1.5 border transition-all shrink-0
               ${isListening
                 ? "border-destructive bg-destructive/20 text-destructive"
                 : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}
           >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {isListening ? <MicOff className="h-4 w-4 shrink-0" /> : <Mic className="h-4 w-4 shrink-0" />}
+            <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">
+              {isListening ? "Parar" : "Voz"}
+            </span>
           </button>
 
           <div className="flex-1" />
@@ -1234,6 +1241,11 @@ export default function AgentChat() {
                 </>}
           </Button>
         </div>
+
+        {/* Input capability hint */}
+        <p className="font-mono text-[9px] text-muted-foreground/30 px-3 pb-2 text-right leading-relaxed">
+          Texto · Voz · MP3/MP4 (Whisper) · Screenshot · PDF/Código{isMobile ? "" : " · Ctrl+Enter = enviar"}
+        </p>
       </div>
     </div>
   );

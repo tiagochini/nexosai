@@ -754,9 +754,25 @@ function VideoEditor() {
             </div>
 
             {clips.length === 0 ? (
-              <div className="text-center py-16 border-2 border-dashed border-border rounded-xl">
+              <div className="text-center py-10 border-2 border-dashed border-border rounded-xl px-6">
                 <Scissors className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-sm text-muted-foreground">Nenhum clipe ainda. Clique em "+ Clipe" para adicionar.</p>
+                <p className="text-sm font-semibold text-foreground mb-1">Nenhum clipe ainda</p>
+                <p className="text-sm text-muted-foreground mb-4">Clique em "+ Clipe" para definir um trecho do vídeo</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left max-w-lg mx-auto">
+                  {[
+                    { step: "1", text: "Clique em + Clipe", sub: "Escolha o arquivo de origem" },
+                    { step: "2", text: "Defina Início e Fim", sub: "Use mm:ss — ex: 01:30 a 02:45" },
+                    { step: "3", text: "Pré-visualize e ordene", sub: "Arraste ↑↓ para reordenar" },
+                  ].map(({ step, text, sub }) => (
+                    <div key={step} className="flex items-start gap-2.5 bg-muted/30 rounded-lg p-3">
+                      <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">{step}</span>
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">{text}</p>
+                        <p className="text-[11px] text-muted-foreground">{sub}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
