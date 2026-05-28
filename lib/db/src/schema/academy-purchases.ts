@@ -22,6 +22,7 @@ export const academyLeadsTable = pgTable("academy_leads", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }),
+  phone: varchar("phone", { length: 30 }),
   source: varchar("source", { length: 100 }).default("free-guide").notNull(),
   ipAddress: varchar("ip_address", { length: 45 }),
   userAgent: text("user_agent"),

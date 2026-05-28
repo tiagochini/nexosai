@@ -132,6 +132,7 @@ const VALUE_CONTENT = {
 function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -147,6 +148,7 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim().toLowerCase(),
+          phone: whatsapp.trim() || undefined,
           source: "lead_magnet_guia_audiencia",
         }),
       });
@@ -223,6 +225,21 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="email@exemplo.com"
+                className="w-full px-4 py-3 rounded-xl border text-white placeholder-[hsl(220_10%_30%)] text-sm focus:outline-none transition-all"
+                style={{ background: "hsl(222 25% 5%)", borderColor: "hsl(220 20% 14%)" }}
+                onFocus={e => (e.target.style.borderColor = "hsl(250 90% 60% / 0.6)")}
+                onBlur={e => (e.target.style.borderColor = "hsl(220 20% 14%)")}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[hsl(220_10%_50%)] uppercase tracking-widest mb-1.5">
+                WhatsApp <span className="normal-case text-[hsl(220_10%_35%)] font-normal">(opcional)</span>
+              </label>
+              <input
+                type="tel"
+                value={whatsapp}
+                onChange={e => setWhatsapp(e.target.value)}
+                placeholder="(11) 99999-9999"
                 className="w-full px-4 py-3 rounded-xl border text-white placeholder-[hsl(220_10%_30%)] text-sm focus:outline-none transition-all"
                 style={{ background: "hsl(222 25% 5%)", borderColor: "hsl(220 20% 14%)" }}
                 onFocus={e => (e.target.style.borderColor = "hsl(250 90% 60% / 0.6)")}

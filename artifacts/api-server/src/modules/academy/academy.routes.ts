@@ -263,6 +263,7 @@ router.get("/leads", async (req, res): Promise<void> => {
 const leadSchema = z.object({
   email: z.email(),
   name: z.string().max(255).optional(),
+  phone: z.string().max(30).optional(),
   source: z.string().max(100).optional(),
   utmSource: z.string().max(100).optional(),
   utmMedium: z.string().max(100).optional(),
@@ -285,6 +286,7 @@ router.post("/leads", async (req, res): Promise<void> => {
   const inserted = await db.insert(academyLeadsTable).values({
     email: parsed.email.toLowerCase(),
     name: parsed.name ?? null,
+    phone: parsed.phone ?? null,
     source: parsed.source ?? "free-guide",
     ipAddress: ip,
     userAgent: (req.headers["user-agent"] as string | undefined) ?? null,

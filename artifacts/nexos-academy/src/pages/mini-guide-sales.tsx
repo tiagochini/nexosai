@@ -50,6 +50,7 @@ const CHAPTERS = [
 export default function MiniGuideSales({ onNavigate }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -66,7 +67,8 @@ export default function MiniGuideSales({ onNavigate }: Props) {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim().toLowerCase(),
-          cpfCnpj: cpf.replace(/\D/g, ""),
+          phone: whatsapp.trim() || undefined,
+          cpfCnpj: cpf.replace(/\D/g, "") || undefined,
           productId: "mini-guide",
         }),
       });
@@ -302,7 +304,16 @@ export default function MiniGuideSales({ onNavigate }: Props) {
                 />
               </div>
               <div>
-                <label className="text-xs text-[hsl(220_10%_55%)] mb-1.5 block">CPF (opcional)</label>
+                <label className="text-xs text-[hsl(220_10%_55%)] mb-1.5 block">WhatsApp</label>
+                <input
+                  type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)}
+                  placeholder="(11) 99999-9999"
+                  className="w-full px-4 py-3 rounded-xl border text-white text-sm placeholder:text-[hsl(220_10%_30%)] focus:outline-none"
+                  style={{ background: "hsl(222 25% 5%)", borderColor: "hsl(220 20% 14%)" }}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-[hsl(220_10%_55%)] mb-1.5 block">CPF <span className="text-[hsl(220_10%_35%)]">(opcional)</span></label>
                 <input
                   type="text" value={cpf} onChange={e => setCpf(e.target.value)}
                   placeholder="000.000.000-00"
