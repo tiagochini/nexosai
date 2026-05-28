@@ -91,19 +91,19 @@ function HeroSection() {
 
           {/* Headline — mechanism lead, não promessa de resultado */}
           <h1 className="text-[2rem] sm:text-6xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
-            Seu lançamento<br />está perdendo<br />
+            Seu próximo lançamento<br />já deveria estar<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              dinheiro na operação.
+              se executando sozinho.
             </span>
           </h1>
 
           {/* Subheadline — framing de mecanismo, não de resultado */}
           <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-4 sm:mb-6 max-w-2xl">
             Não é falta de estratégia. Não é falta de tráfego.<br className="hidden sm:block" />
-            É a <strong className="text-foreground">fragmentação da execução</strong> que está comendo sua margem.
+            É que <strong className="text-foreground">nenhuma ferramenta foi construída para executar o lançamento completo como um sistema único</strong> — até agora.
           </p>
           <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed mb-8 sm:mb-12 max-w-2xl">
-            NexOS AI é o sistema nervoso do seu lançamento — <strong className="text-foreground">57 agentes de IA em orquestração paralela</strong>, do briefing ao carrinho fechado, integrado diretamente ao algoritmo da Meta e ao TikTok Ads.
+            NexOS AI é o sistema operacional do seu lançamento — <strong className="text-foreground">planejamento, execução, sequências, conteúdo e otimização, tudo automatizado</strong>, do briefing ao carrinho fechado. E enquanto um lançamento termina, o próximo já está sendo construído.
           </p>
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
@@ -268,7 +268,7 @@ function DreamStateSection() {
           <div className={`border border-primary/20 bg-primary/5 px-6 py-5 flex items-start gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
             <Cpu className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              Não é um chatbot. Não é um prompt genérico. São <strong className="text-foreground">57 agentes de IA especializados</strong>, cada um treinado com as doutrinas dos maiores profissionais de marketing do mundo, trocando contexto entre si em tempo real — e agindo sobre seus dados reais de performance.
+              Não é um chatbot. Não é um prompt genérico. São <strong className="text-foreground">agentes de IA especializados em cada fase do lançamento</strong>, cada um calibrado com as doutrinas dos maiores profissionais de marketing do mundo, trocando contexto entre si em tempo real — e agindo sobre seus dados reais de performance. E enquanto o lançamento atual executa, o sistema já começa a construir o próximo.
             </p>
           </div>
 
@@ -332,9 +332,9 @@ function CustoRealSection() {
               </p>
               <div className="border-l-2 border-primary/50 pl-4 mb-6">
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  57 agentes de IA trabalhando em paralelo no seu lançamento — estratégia, copy, anúncios, email, WhatsApp, atendimento de vendas, análise de performance e otimização em tempo real.<br /><br />
+                  Agentes de IA especializados executando cada fase do seu lançamento — estratégia, copy, anúncios, email, WhatsApp, atendimento de vendas, análise de performance e otimização em tempo real.<br /><br />
                   <strong className="text-foreground">Tudo integrado. Tudo orquestrado. Um sistema único.</strong><br /><br />
-                  Ticket único de acesso. Você usa o sistema de gerenciamento completo — os agentes de IA são opcionais e podem ser ativados por crédito quando quiser, sem mensalidade.
+                  E entre um lançamento e outro, o NexOS já está planejando e construindo o próximo — sem parar, sem depender de equipe.
                 </p>
               </div>
               <a href="#oferta">
