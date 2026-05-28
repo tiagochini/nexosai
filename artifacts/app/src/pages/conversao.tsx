@@ -15,9 +15,8 @@ const CONFIG = {
   precoCheioSufixo:    " acesso único",
   horasFundador:       24,
   cartUrl:             "/comprar",
-  // URL do vídeo de IA — substituir pelo link real antes do lançamento
-  // Suporta: MP4 direto, YouTube embed, Vimeo embed
-  videoUrl:            null as string | null,
+  // URL do vídeo de apresentação. Suporta: MP4 direto, YouTube embed, Vimeo embed, path interno (ex: /video-nexos/)
+  videoUrl:            "/video-nexos/" as string | null,
 };
 
 // ─── Countdown (mesmo sistema da /abertura) ───────────────────────────────────
@@ -110,15 +109,16 @@ function VideoPlayer({ url }: { url: string | null }) {
     );
   }
 
-  // Embed YouTube/Vimeo
-  if (url.includes("youtube") || url.includes("youtu.be") || url.includes("vimeo")) {
+  // Embed: YouTube, Vimeo ou path interno (começa com /)
+  if (url.includes("youtube") || url.includes("youtu.be") || url.includes("vimeo") || url.startsWith("/")) {
     return (
-      <div className="relative w-full aspect-video border border-primary/20">
+      <div className="relative w-full aspect-video border border-primary/20 overflow-hidden bg-black">
         <iframe
           src={url}
           className="absolute inset-0 w-full h-full"
           allow="autoplay; fullscreen"
           allowFullScreen
+          style={{ border: "none" }}
         />
       </div>
     );

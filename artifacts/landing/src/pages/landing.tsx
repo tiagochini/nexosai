@@ -819,7 +819,7 @@ function OfertaSection() {
         "900 créditos incluídos — cobre 2 lançamentos completos",
         "Até 3 campanhas simultâneas",
         "Trilha de 6 dígitos (R$100k–R$999k em 7 dias)",
-        "57 agentes especializados",
+        "34 agentes especializados",
         "Integração Meta + Google + TikTok",
         "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
         "Dashboard de performance em tempo real",
@@ -1005,7 +1005,7 @@ function DoisCaminhosSection() {
                   A IA executa<br /><span className="text-primary">o lançamento por você</span>
                 </div>
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS AI faz o trabalho pesado — 57 agentes, do briefing ao carrinho fechado.
+                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS AI faz o trabalho pesado — 34 agentes, do briefing ao carrinho fechado.
                 </p>
               </div>
               <div className="space-y-2.5">
@@ -1068,7 +1068,7 @@ function LiveSorteioSection() {
   const { ref, inView } = useInView(0.2);
   const etapas = [
     { num: "01", label: "Briefing ao vivo", desc: "Intake conversacional em tempo real com a audiência respondendo junto" },
-    { num: "02", label: "Estratégia gerada", desc: "57 agentes constroem posicionamento, big idea, copy, anúncios e sequências" },
+    { num: "02", label: "Estratégia gerada", desc: "34 agentes constroem posicionamento, big idea, copy, anúncios e sequências" },
     { num: "03", label: "Campanha pronta", desc: "Criativos finalizados, sequências configuradas, pixel calibrado — a ponto de disparo" },
     { num: "04", label: "Disparo nas mãos do sortudo", desc: "O lançamento está pronto. Ativar o disparo depende do sorteado adquirir o acesso — a campanha já foi construída por nós, ao vivo" },
   ];
@@ -1093,7 +1093,7 @@ function LiveSorteioSection() {
             <span className="text-foreground/70">construído na frente de todos.</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Vou sortear um participante e, ao vivo, construir o lançamento completo dele — do briefing aos criativos finalizados, passando pela estratégia, copy, sequências de disparo e configuração de pixel. Em tempo real, com os 57 agentes trabalhando. A audiência inteira acompanha o processo.
+            Vou sortear um participante e, ao vivo, construir o lançamento completo dele — do briefing aos criativos finalizados, passando pela estratégia, copy, sequências de disparo e configuração de pixel. Em tempo real, com os 34 agentes trabalhando. A audiência inteira acompanha o processo.
           </p>
 
           {/* Etapas */}
@@ -1170,7 +1170,7 @@ function FechamentoSection() {
             <span className="text-primary">operação que você paga.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            Não é sobre ter uma nova ferramenta. É sobre parar de ser o sistema nervoso da sua própria campanha — e deixar que 57 agentes especializados façam o trabalho pesado enquanto você foca no que só você pode fazer.
+            Não é sobre ter uma nova ferramenta. É sobre parar de ser o sistema nervoso da sua própria campanha — e deixar que 34 agentes especializados façam o trabalho pesado enquanto você foca no que só você pode fazer.
           </p>
 
           {/* Garantia — posicionada como prova de confiança */}
@@ -1244,7 +1244,7 @@ function AutoridadeSection() {
               {[
                 { num: "R$2.3B+", label: "em campanhas digitais analisadas para calibrar os agentes" },
                 { num: "1.200+", label: "lançamentos documentados como base de treinamento do sistema" },
-                { num: "57", label: "agentes especializados, cada um treinado com as doutrinas dos maiores profissionais do mundo" },
+                { num: "34", label: "agentes especializados, cada um treinado com as doutrinas dos maiores profissionais do mundo" },
                 { num: "3 idiomas", label: "PT-BR nativo, EN-US e ES-LA — sem tradução automática, sem perda de nuance" },
               ].map((item, i) => (
                 <div
@@ -1273,66 +1273,77 @@ function AutoridadeSection() {
   );
 }
 
-// ─── Section TESTEMUNHOS — Resultados reais na plataforma ────────────────────
+// ─── Section TESTEMUNHOS — Metodologia comprovada por quem a criou ───────────
 function TestemunhosSection() {
   const { ref, inView } = useInView(0.15);
-  const testemunhos = [
+  const cases = [
     {
-      resultado: "R$287k",
-      prazo: "em 9 dias de carrinho",
-      nome: "Marcos A.",
-      nicho: "Infoprodutor — Desenvolvimento Pessoal",
-      depo: "Fiz meu melhor lançamento usando os agentes de copy e sequência. O que antes levava três semanas — VSL, anúncios, emails, WhatsApp — ficou pronto em dois dias. ROAS de 4.1x.",
+      nome: "Nathalia Arcuri",
+      papel: "Me Poupe · Canal de finanças · São Paulo, Brasil",
+      metrica: "10M+",
+      metricaLabel: "inscritos com avatar imutável desde 2015",
+      estrategia: "Avatar ultra-específico inalterado",
+      descricao: "Construiu um dos maiores canais de educação financeira do Brasil com um único avatar desde o início: 'brasileiros que querem organizar as finanças sem jargão de economista.' Recusou expandir o escopo quando o canal cresceu. O nicho não limitou o crescimento — foi o motor. A estratégia de avatar específico que o NexOS define no intake.",
+      fonte: "youtube.com/@mepoupe — inscritos verificáveis · Infomoney, 2019 · Jovem Pan Money, 2020",
+      cor: "border-l-emerald-400/60",
+    },
+    {
+      nome: "Erico Rocha",
+      papel: "Ignição Digital · Fórmula de Lançamento · Brasil",
+      metrica: "Pioneer BR",
+      metricaLabel: "sequência de lançamento estruturada no mercado digital brasileiro, desde 2012",
+      estrategia: "Sequência de lançamento em fases",
+      descricao: "Introduziu no Brasil a metodologia de lançamento estruturado em fases: pré-lançamento com conteúdo educativo em dias específicos, abertura de carrinho com copy por nível de consciência, fechamento com urgência real e justificada. Antes, lançamentos eram evento único. Com a sequência, a conversão tornou-se previsível por fase — o mesmo modelo que o NexOS constrói e executa.",
+      fonte: "ignacaodigital.com.br · Podcast Ignição Digital (verificável) · Fórmula de Lançamento (curso)",
       cor: "border-l-primary/60",
     },
     {
-      resultado: "5 lançamentos",
-      prazo: "simultâneos com equipe de 3",
-      nome: "Agência Vértice",
-      nicho: "Agência digital — São Paulo",
-      depo: "Antes precisávamos de 8 pessoas por lançamento. Com o NexOS, rodamos três em paralelo com um time de três. White-label completo — cada cliente vê nossa marca, não a do sistema.",
-      cor: "border-l-blue-400/60",
-    },
-    {
-      resultado: "R$41k → R$312k",
-      prazo: "em 14 meses de uso",
-      nome: "Fernanda C.",
-      nicho: "Produtora solo — Nutrição Esportiva",
-      depo: "Nunca dependi menos de agência. Copy, sequências, análise de performance — o sistema entrega tudo que eu antes pagava R$8k/mês para ter. E o resultado é consistentemente melhor.",
-      cor: "border-l-emerald-400/60",
+      nome: "Jeff Walker",
+      papel: "Product Launch Formula (PLF) · Estados Unidos",
+      metrica: "PLF",
+      metricaLabel: "metodologia base das sequências de lançamento do NexOS — documentada em 'Launch' (2014)",
+      estrategia: "Email em sequência com pre-launch content",
+      descricao: "Criou a PLF ao descobrir que disparar uma sequência de emails educativos antes da oferta gerava conversões dramaticamente superiores a qualquer envio único de venda. Documentou o sistema em 'Launch' (Hay House Business, 2014), hoje replicado por milhares de negócios digitais. A arquitetura de sequências do NexOS é construída sobre essa base.",
+      fonte: "'Launch' — Jeff Walker, Hay House Business, 2014 · launchclub.com (verificável)",
+      cor: "border-l-amber-400/60",
     },
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/10">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Resultados na Plataforma —</div>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-10">
-            O sistema<br /><span className="text-primary">em produção.</span>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Metodologia Comprovada —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-3">
+            A estratégia que o NexOS executa.<br /><span className="text-primary">Comprovada por quem a criou.</span>
           </h2>
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Não construímos no escuro. O sistema foi arquitetado sobre metodologias verificadas, casos documentados e décadas de dados de lançamento real.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {testemunhos.map((t, i) => (
+            {cases.map((t, i) => (
               <div
                 key={i}
                 className={`border border-border/30 bg-card/20 flex flex-col transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
                 style={{ transitionDelay: `${150 + i * 130}ms` }}
               >
                 <div className={`border-l-2 ${t.cor} p-5 pb-4`}>
-                  <div className="font-mono font-black text-2xl text-foreground leading-none">{t.resultado}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">{t.prazo}</div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-primary/50 mb-1.5">{t.estrategia}</div>
+                  <div className="font-mono font-black text-2xl text-foreground leading-none">{t.metrica}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1 leading-snug">{t.metricaLabel}</div>
                 </div>
                 <div className="px-5 py-4 flex-1">
-                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed italic mb-4">"{t.depo}"</p>
-                  <div className="border-t border-border/20 pt-3">
-                    <div className="font-mono text-xs font-black text-foreground">{t.nome}</div>
-                    <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mt-0.5">{t.nicho}</div>
-                  </div>
+                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{t.descricao}</p>
+                </div>
+                <div className="border-t border-border/20 px-5 py-4">
+                  <div className="font-mono text-xs font-black text-foreground">{t.nome}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mt-0.5">{t.papel}</div>
+                  <div className="font-mono text-[9px] text-muted-foreground/25 mt-2 leading-relaxed">{t.fonte}</div>
                 </div>
               </div>
             ))}
           </div>
-          <p className={`font-mono text-[11px] text-muted-foreground/25 text-center uppercase tracking-widest transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
-            Resultados individuais documentados. Performance varia por mercado, execução e investimento em tráfego.
+          <p className={`font-mono text-[10px] text-muted-foreground/20 text-center leading-relaxed max-w-3xl mx-auto transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
+            * Nathalia Arcuri, Erico Rocha e Jeff Walker não usam nem endossam o NexOS AI. Os casos acima documentam os resultados das estratégias e metodologias que o sistema executa automaticamente. Fontes verificáveis listadas em cada caso.
           </p>
         </div>
       </div>
