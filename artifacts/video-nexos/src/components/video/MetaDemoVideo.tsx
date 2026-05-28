@@ -57,7 +57,7 @@ const STEPS = [
     id: "end",
     duration: 7000,
     title: "Obrigado pela análise",
-    subtitle: "Privacy Policy: https://nexos.ai/privacy",
+    subtitle: "Privacy Policy: https://agencianexos.vip/privacy",
     bg: "from-zinc-900 to-black",
     accent: "#7c3aed",
   },

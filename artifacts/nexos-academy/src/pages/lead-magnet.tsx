@@ -316,7 +316,7 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
               Os 7 Erros que Travam o Crescimento da Sua Audiência
             </h1>
             <p className="text-sm text-[hsl(220_10%_60%)] mt-1">
-              {leadName ? `Preparado para ${leadName} · ` : ""}NexOS Academy · nexos.ai
+              {leadName ? `Preparado para ${leadName} · ` : ""}NexOS Academy · agencianexos.vip
             </p>
           </div>
           <button

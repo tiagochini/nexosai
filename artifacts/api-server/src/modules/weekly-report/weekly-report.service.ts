@@ -83,7 +83,7 @@ function buildEmailHtml(data: {
     </div>
 
     <div style="text-align:center;margin-bottom:32px;">
-      <a href="https://nexos.ai/revenue"
+      <a href="https://agencianexos.vip/app/revenue"
          style="display:inline-block;background:#6366f1;color:#fff;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;padding:12px 32px;text-decoration:none;font-weight:700;">
         VER DASHBOARD COMPLETO →
       </a>

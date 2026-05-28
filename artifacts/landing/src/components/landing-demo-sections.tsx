@@ -174,7 +174,7 @@ export function LiveDemoSection() {
                 <div className="w-3 h-3 rounded-full bg-success/40" />
               </div>
               <div className="flex-1 bg-background/40 border border-border/30 rounded-none px-3 py-1 font-mono text-[10px] text-muted-foreground/40 text-center">
-                app.nexos.ai/campaigns/demo-lancamento
+                agencianexos.vip/app/campaigns/demo-lancamento
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />

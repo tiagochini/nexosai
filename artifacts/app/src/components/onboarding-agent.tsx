@@ -51,7 +51,7 @@ const FLOWS: OnboardingFlow[] = [
       {
         id: "privacy_policy",
         title: "Publique uma Privacy Policy acessível",
-        detail: "O Meta exige uma URL pública. Pode ser uma página simples em nexos.ai/privacy ou usar iubenda.com (grátis e profissional). Inclua: quais dados coleta, como usa tokens de redes sociais, e como o usuário pode revogar acesso.",
+        detail: "O Meta exige uma URL pública. Use agencianexos.vip/privacy (já está configurada) ou iubenda.com (grátis e profissional). Inclua: quais dados coleta, como usa tokens de redes sociais, e como o usuário pode revogar acesso.",
         url: "https://www.iubenda.com/en/privacy-and-cookie-policy-generator",
         important: "Sem Privacy Policy o App Review é rejeitado automaticamente.",
       },

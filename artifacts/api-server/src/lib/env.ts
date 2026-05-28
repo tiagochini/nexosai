@@ -19,7 +19,7 @@ export const env = {
   AI_INTEGRATIONS_GEMINI_API_KEY: process.env["AI_INTEGRATIONS_GEMINI_API_KEY"] ?? "",
   RESEND_API_KEY: process.env["RESEND_API_KEY"] ?? "",
   RESEND_FROM_EMAIL: process.env["RESEND_FROM_EMAIL"] ?? "onboarding@resend.dev",
-  NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "nexos.ai",
+  NEXOS_BASE_DOMAIN: process.env["NEXOS_BASE_DOMAIN"] ?? "agencianexos.vip",
   CREDIT_MARGIN_MULTIPLIER: parseFloat(process.env["CREDIT_MARGIN_MULTIPLIER"] ?? "1.5"),
   APP_URL: process.env["APP_URL"] ?? `https://${process.env["REPLIT_DEV_DOMAIN"] ?? "localhost"}`,
   META_APP_ID: process.env["META_APP_ID"] ?? "",

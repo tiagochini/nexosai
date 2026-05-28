@@ -427,7 +427,7 @@ function AcademyApp() {
           <div className="flex items-center gap-4">
             <span>PT-BR</span>
             <span>·</span>
-            <span>Suporte: suporte@nexos.ai</span>
+            <span>Suporte: suporte@agencianexos.vip</span>
             <span>·</span>
             <button
               className="hover:text-[hsl(250_90%_75%)] transition-colors"

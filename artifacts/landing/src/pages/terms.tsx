@@ -145,7 +145,7 @@ export default function TermsOfService() {
           </p>
           <ul className="mt-2 text-gray-300 space-y-1">
             <li>E-mail: <a href="mailto:legal@nexos.ai" className="text-blue-400 hover:underline">legal@nexos.ai</a></li>
-            <li>Site: <a href="https://nexos.ai" className="text-blue-400 hover:underline">nexos.ai</a></li>
+            <li>Site: <a href="https://agencianexos.vip" className="text-blue-400 hover:underline">agencianexos.vip</a></li>
           </ul>
         </section>
       </div>
