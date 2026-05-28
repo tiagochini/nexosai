@@ -6,8 +6,12 @@ import { markPaymentPaid } from "../billing/billing.service.js";
 import { UnauthorizedError } from "../../lib/errors.js";
 import { db, inviteCodesTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { env } from "../../lib/env.js";
 
 const ADMIN_EMAILS = new Set([
+  "admin@nexos.ai",
+  "founder@nexos.ai",
   "admin@agencianexos.vip",
   "founder@agencianexos.vip",
 ]);
@@ -160,6 +164,33 @@ router.get("/audit-logs/:id", requireAuth, async (req, res): Promise<void> => {
   const log = await getAgentExecutionLogById(req.params["id"] as string);
   if (!log) { res.status(404).json({ error: "Log não encontrado" }); return; }
   res.json({ log });
+});
+
+// ─── Temporary: One-time password reset (protected by SESSION_SECRET) ─────────
+// POST /api/admin/reset-pw  body: { secret, email, newPassword }
+router.post("/reset-pw", async (req, res): Promise<void> => {
+  const { secret, email, newPassword } = req.body as {
+    secret?: string; email?: string; newPassword?: string;
+  };
+  if (!secret || secret !== env.SESSION_SECRET) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  if (!email || !newPassword || newPassword.length < 8) {
+    res.status(400).json({ error: "email and newPassword (min 8 chars) required" });
+    return;
+  }
+  const hash = await bcrypt.hash(newPassword, 12);
+  const [updated] = await db
+    .update(usersTable)
+    .set({ passwordHash: hash })
+    .where(eq(usersTable.email, email))
+    .returning({ id: usersTable.id, email: usersTable.email });
+  if (!updated) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json({ ok: true, email: updated.email });
 });
 
 export default router;
