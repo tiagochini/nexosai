@@ -1,10 +1,10 @@
 import React, { useState } from "react";
+import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { ArrowRight, CheckCircle2, Download, BookOpen, Lock, Users, ChevronDown, ChevronUp, Zap, Star, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import nexosLogo from "/nexos-logo.png";
 
 // ─── Configuração — atualize aqui ────────────────────────────────────────────
-const WA_LINK     = "https://wa.me/message/NBJH4EXPAV2EN1"; // WhatsApp Business
 const GRUPO_LINK  = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
 const PDF_URL     = "#download"; // ← substitua pela URL real do PDF
 const MINIGUIA_LINK = "/comprar?produto=miniguia";
@@ -121,6 +121,7 @@ function CapituloCard({ cap, idx }: { cap: typeof capitulos[0]; idx: number }) {
 }
 
 export default function GuiaPage() {
+  const [captureOpen, setCaptureOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Nav */}
@@ -131,11 +132,9 @@ export default function GuiaPage() {
             <span className="font-mono font-black text-sm tracking-[0.12em] uppercase">NexOS <span className="text-primary">AI</span></span>
           </a>
           <div className="flex items-center gap-2">
-            <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] tracking-widest font-bold h-8 px-3 gap-1.5">
-                <Users className="h-3.5 w-3.5" /> Entrar no Grupo
-              </Button>
-            </a>
+            <Button size="sm" onClick={() => setCaptureOpen(true)} className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] tracking-widest font-bold h-8 px-3 gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Quero o Guia
+            </Button>
           </div>
         </div>
       </nav>
@@ -273,11 +272,9 @@ export default function GuiaPage() {
           <p className="font-mono text-sm text-muted-foreground max-w-md mx-auto mb-6">
             Bastidores de lançamentos reais, estratégias novas toda semana, e acesso antecipado à plataforma quando o lançamento oficial abrir.
           </p>
-          <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer">
-            <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-13 px-10 gap-2 text-sm">
-              <Users className="h-5 w-5" /> Entrar no Grupo Agora
-            </Button>
-          </a>
+          <Button onClick={() => setCaptureOpen(true)} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-13 px-10 gap-2 text-sm">
+            <Users className="h-5 w-5" /> Quero o Guia + Entrar no Grupo
+          </Button>
         </div>
 
         {/* Footer */}
@@ -291,6 +288,12 @@ export default function GuiaPage() {
         </div>
 
       </div>
+      <LeadCaptureModal
+        open={captureOpen}
+        onClose={() => setCaptureOpen(false)}
+        title="Receba o guia no WhatsApp"
+        subtitle="Informe seu número e o link do guia chega direto no chat."
+      />
     </div>
   );
 }

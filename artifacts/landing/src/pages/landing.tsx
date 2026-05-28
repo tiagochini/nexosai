@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import LeadCaptureModal from "@/components/LeadCaptureModal";
 import { Button } from "@/components/ui/button";
 import nexosLogo from "/nexos-logo.png";
 import {
@@ -10,10 +11,13 @@ import {
   GraduationCap, LayoutDashboard, Gift, Radio, Trophy,
 } from "lucide-react";
 
-// ─── Configuração de links — atualize estes valores ───────────────────────────
-const WA_LINK    = "https://wa.me/message/NBJH4EXPAV2EN1"; // WhatsApp Business
-const GRUPO_LINK = "https://chat.whatsapp.com/SEU_GRUPO_AQUI"; // ← link do grupo (para uso interno)
-const GUIA_URL   = "/guia"; // ← página do guia online
+// ─── Configuração de links ─────────────────────────────────────────────────────
+const GRUPO_LINK = "https://chat.whatsapp.com/SEU_GRUPO_AQUI"; // ← link do grupo
+const GUIA_URL   = "/guia";
+
+// Modal de captura de leads — callback inicializado pelo LandingPage
+let _openCapture: () => void = () => {};
+function openCapture() { _openCapture(); }
 
 // ─── Scroll-snap section wrapper ──────────────────────────────────────────────
 function useInView(threshold = 0.3) {
@@ -60,12 +64,10 @@ function Nav({ scrolled }: { scrolled: boolean }) {
               Entrar
             </Button>
           </a>
-          <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] sm:text-xs tracking-widest font-bold h-8 sm:h-9 px-3 sm:px-5">
-              <span className="hidden sm:inline">Guia Grátis</span>
-              <span className="sm:hidden">Guia</span>
-            </Button>
-          </a>
+          <Button size="sm" onClick={openCapture} className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] sm:text-xs tracking-widest font-bold h-8 sm:h-9 px-3 sm:px-5">
+            <span className="hidden sm:inline">Guia Grátis</span>
+            <span className="sm:hidden">Guia</span>
+          </Button>
         </div>
       </div>
     </nav>
@@ -114,11 +116,9 @@ function HeroSection() {
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs sm:text-base h-12 sm:h-16 px-6 sm:px-10 gap-2 sm:gap-3 w-full sm:w-auto">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5" /> Quero o Guia Gratuito
-                </Button>
-              </a>
+              <Button onClick={openCapture} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs sm:text-base h-12 sm:h-16 px-6 sm:px-10 gap-2 sm:gap-3 w-full sm:w-auto">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" /> Quero o Guia Gratuito
+              </Button>
               <a href={GUIA_URL} className="w-full sm:w-auto">
                 <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-xs sm:text-base h-12 sm:h-16 px-5 sm:px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
                   Ver o Guia Online <ArrowRight className="h-4 w-4" />
@@ -903,11 +903,9 @@ function OfertaSection() {
 
           {/* CTAs grupo + PDF */}
           <div className={`flex flex-col sm:flex-row gap-4 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} style={{ transitionDelay: "350ms" }}>
-            <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="flex-1">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-14 gap-3 text-sm w-full">
-                <Users className="h-5 w-5" /> Quero o Guia Gratuito
-              </Button>
-            </a>
+            <Button onClick={openCapture} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-14 gap-3 text-sm flex-1">
+              <Users className="h-5 w-5" /> Quero o Guia Gratuito
+            </Button>
             <a href={GUIA_URL} className="flex-1">
               <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold h-14 gap-2 text-sm border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full">
                 Ver o Guia Online <ArrowRight className="h-4 w-4" />
@@ -1004,11 +1002,9 @@ function DoisCaminhosSection() {
                   </div>
                 ))}
               </div>
-              <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer" className="mt-auto">
-                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-12 gap-2 w-full">
-                  <Users className="h-3.5 w-3.5" /> Entrar no Grupo <ArrowRight className="h-4 w-4" />
-                </Button>
-              </a>
+              <Button onClick={openCapture} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-12 gap-2 w-full mt-auto">
+                <Users className="h-3.5 w-3.5" /> Quero o Guia Gratuito <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
             <div className={`bg-card/10 p-8 flex flex-col gap-6 transition-all duration-600 delay-200 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"}`}>
               <div>
@@ -1109,11 +1105,9 @@ function LiveSorteioSection() {
 
           {/* Gift CTA */}
           <div className={`mt-6 flex flex-col sm:flex-row items-center gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "750ms" }}>
-            <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-14 gap-3 text-xs px-8 w-full sm:w-auto">
-                <Users className="h-4 w-4" /> Quero o Guia + Entrar no Grupo
-              </Button>
-            </a>
+            <Button onClick={openCapture} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-14 gap-3 text-xs px-8 w-full sm:w-auto">
+              <Users className="h-4 w-4" /> Quero o Guia + Entrar no Grupo
+            </Button>
             <p className="font-mono text-[11px] text-muted-foreground/40 text-center sm:text-left">
               A participação na live é gratuita. O sorteio acontece durante a transmissão.
             </p>
@@ -1173,11 +1167,9 @@ function FechamentoSection() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-16 px-10 gap-3 w-full sm:w-auto">
-                <Users className="h-5 w-5" /> Entrar no Grupo Exclusivo
-              </Button>
-            </a>
+            <Button onClick={openCapture} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-16 px-10 gap-3 w-full sm:w-auto">
+              <Users className="h-5 w-5" /> Quero o Guia Gratuito
+            </Button>
             <a href={GUIA_URL} className="w-full sm:w-auto">
               <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-sm h-16 px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
                 Ver o Guia Online <ArrowRight className="h-4 w-4" />
@@ -1382,17 +1374,14 @@ function UrgenciaSection() {
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground/40">{vagasPreenchidas} de 47 vagas preenchidas</div>
               </div>
-              <a
-                href={WA_LINK}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`block transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+              <div
+                className={`transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
                 style={{ transitionDelay: "220ms" }}
               >
-                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full">
-                  <Users className="h-4 w-4" /> Entrar no Grupo Agora
+                <Button onClick={openCapture} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full">
+                  <Users className="h-4 w-4" /> Quero o Guia Gratuito
                 </Button>
-              </a>
+              </div>
               <a
                 href={GUIA_URL}
                 className={`block transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
@@ -1433,7 +1422,14 @@ function Footer() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Wire up module-level openCapture to this instance
+  useEffect(() => {
+    _openCapture = () => setCaptureOpen(true);
+    return () => { _openCapture = () => {}; };
+  }, []);
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -1480,6 +1476,12 @@ export default function LandingPage() {
       <LiveSorteioSection />
       <FechamentoSection />
       <Footer />
+      <LeadCaptureModal
+        open={captureOpen}
+        onClose={() => setCaptureOpen(false)}
+        title="Receba o guia no seu WhatsApp"
+        subtitle="Informe seu número e o link chega direto no chat. Sem spam."
+      />
     </div>
   );
 }
