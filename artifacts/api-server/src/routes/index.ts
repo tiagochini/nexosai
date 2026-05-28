@@ -47,6 +47,7 @@ import liveLauncherRouter from "../modules/live-launcher/live-launcher.routes.js
 import campaignGroupsRouter from "../modules/campaigns/groups.routes.js";
 import videoProductionRouter from "../modules/video-production/video-production.routes.js";
 import nexosSelfLaunchRouter from "../modules/nexos-self-launch/nexos-self-launch.routes.js";
+import referralsRouter from "../modules/referrals/referrals.routes.js";
 
 const router: IRouter = Router();
 
@@ -98,5 +99,6 @@ router.use("/live-launcher", liveLauncherRouter);
 router.use("/", videoProductionRouter);
 router.use("/", metaDeletionRouter);
 router.use("/nexos-launch", nexosSelfLaunchRouter);
+router.use("/referrals", referralsRouter);
 
 export default router;

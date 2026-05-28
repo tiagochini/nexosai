@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, usersTable, workspacesTable, plansTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import {
@@ -8,7 +8,15 @@ import {
   ConflictError,
   NotFoundError,
 } from "../../lib/errors.js";
+import { grantCredits } from "../credits/credits.service.js";
 import type { Logger } from "pino";
+
+function generateReferralCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+const REFERRAL_BONUS_CREDITS = 50;
 
 export interface TokenPayload {
   userId: string;
@@ -28,6 +36,7 @@ export interface RegisterInput {
   name: string;
   phone?: string;
   locale?: "pt-BR" | "en-US" | "en-AU" | "es-LA";
+  referralCode?: string;
 }
 
 export interface LoginInput {
@@ -85,6 +94,7 @@ export async function registerUser(
     .returning();
 
   const slug = `${input.name.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`;
+  const myReferralCode = generateReferralCode();
 
   const [workspace] = await db
     .insert(workspacesTable)
@@ -94,10 +104,49 @@ export async function registerUser(
       name: `${input.name}'s Workspace`,
       slug,
       creditsBalance: soloPlan[0].creditsMonthly,
+      settings: {
+        referralCode: myReferralCode,
+        referralCount: 0,
+        ...(input.referralCode ? { referredBy: input.referralCode } : {}),
+      },
     })
     .returning();
 
   log.info({ userId: user.id, workspaceId: workspace.id }, "User registered");
+
+  // Grant bonus credits to referrer (non-blocking)
+  if (input.referralCode) {
+    setImmediate(async () => {
+      try {
+        const [referrer] = await db
+          .select({ id: workspacesTable.id, settings: workspacesTable.settings })
+          .from(workspacesTable)
+          .where(sql`${workspacesTable.settings}->>'referralCode' = ${input.referralCode}`)
+          .limit(1);
+
+        if (referrer) {
+          const prevSettings = (referrer.settings as Record<string, unknown>) ?? {};
+          const prevCount = typeof prevSettings.referralCount === "number" ? prevSettings.referralCount : 0;
+          await db
+            .update(workspacesTable)
+            .set({ settings: { ...prevSettings, referralCount: prevCount + 1 } })
+            .where(eq(workspacesTable.id, referrer.id));
+
+          await grantCredits(
+            referrer.id,
+            REFERRAL_BONUS_CREDITS,
+            "referral_bonus",
+            log,
+            `Bônus de indicação: ${input.name} se cadastrou com seu código`,
+          );
+
+          log.info({ referrerId: referrer.id, newUserId: user.id }, "Referral bonus granted");
+        }
+      } catch (err) {
+        log.warn({ err }, "Failed to process referral bonus — non-blocking");
+      }
+    });
+  }
 
   const payload: TokenPayload = {
     userId: user.id,

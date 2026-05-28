@@ -15,6 +15,7 @@ const registerSchema = z.object({
   phone: z.string().optional(),
   locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).default("pt-BR"),
   inviteCode: z.string().optional(),
+  referralCode: z.string().optional(),
 });
 
 const loginSchema = z.object({

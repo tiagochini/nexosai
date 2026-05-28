@@ -80,7 +80,7 @@ export async function deductCredits(
 export async function grantCredits(
   workspaceId: string,
   amount: number,
-  action: "monthly_reset" | "purchase" | "admin_grant",
+  action: "monthly_reset" | "purchase" | "admin_grant" | "referral_bonus",
   log: Logger,
   description?: string,
 ): Promise<CreditTransaction> {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, XCircle, Gift } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -32,10 +32,18 @@ export default function Register() {
   const [showPassword, setShowPassword]   = useState(false);
   const [showConfirm, setShowConfirm]     = useState(false);
   const [plan, setPlan]                   = useState("solo");
+  const [referralCode, setReferralCode]   = useState("");
   const [, setLocation]                   = useLocation();
   const { setToken }                      = useAuth();
   const tr = useAppI18n();
   const t = tr.register;
+
+  // Read ?ref=CODE from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) setReferralCode(ref.toUpperCase().trim());
+  }, []);
 
   // Derived validation
   const emailMatch    = confirmEmail.length > 0 ? email === confirmEmail : null;
@@ -75,6 +83,7 @@ export default function Register() {
         password,
         planSlug: plan,
         ...(phone.trim() ? { phone: phone.trim() } : {}),
+        ...(referralCode ? { referralCode } : {}),
       },
     });
   };
@@ -263,6 +272,16 @@ export default function Register() {
                 msg={passMatch === true ? t.match_ok : t.match_err}
               />
             </div>
+
+            {/* Código de indicação (visível apenas quando preenchido via URL) */}
+            {referralCode && (
+              <div className="border border-success/30 bg-success/5 px-3 py-2 flex items-center gap-2">
+                <Gift className="h-3.5 w-3.5 text-success shrink-0" />
+                <span className="font-mono text-xs text-success uppercase tracking-widest">
+                  Indicado por: <strong>{referralCode}</strong> — você ganhou prioridade na fila!
+                </span>
+              </div>
+            )}
 
             {/* Plano */}
             <div className="space-y-2">

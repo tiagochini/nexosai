@@ -23,6 +23,7 @@ import {
   BarChart3, Calendar, Loader2, Star, Mail, ChevronDown, ChevronUp,
   FileText, Layers, Eye, BarChart2, Link2, Wifi, WifiOff,
   MessageSquare, Instagram, Facebook, Phone, Music2,
+  Share2, Copy, Gift,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -303,6 +304,99 @@ const CRITICAL_INTEGRATIONS = [
   { provider: "facebook",          label: "Facebook",  icon: Facebook,      color: "text-blue-400"   },
   { provider: "rd_station",        label: "RD Station",icon: Mail,          color: "text-orange-400" },
 ];
+
+// ─── Referral Widget ──────────────────────────────────────────────────────────
+
+interface ReferralStats {
+  referralCode: string | null;
+  referralCount: number;
+  totalCreditsEarned: number;
+  currentTier: { label: string; reward: string | null };
+  nextTier: { min: number; label: string } | null;
+  bonusPerReferral: number;
+}
+
+function ReferralWidget() {
+  const [copied, setCopied] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/referrals/stats"],
+    queryFn: async () => {
+      const res = await customFetch<Response>("/api/referrals/stats");
+      if (!res.ok) return null;
+      return res.json() as Promise<ReferralStats>;
+    },
+    staleTime: 60_000,
+  });
+
+  if (isLoading || !data?.referralCode) return null;
+
+  const shareUrl = `${window.location.origin}/cadastro?ref=${data.referralCode}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const nextIn = data.nextTier ? data.nextTier.min - data.referralCount : 0;
+
+  return (
+    <div className="border border-primary/20 bg-card/30 p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+      {/* Left — icon + label */}
+      <div className="flex items-center gap-3 shrink-0">
+        <div className="w-9 h-9 border border-primary/30 bg-primary/10 flex items-center justify-center text-primary">
+          <Gift className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Indicações</p>
+          <p className="font-mono text-base font-bold text-foreground leading-tight">
+            {data.referralCode}
+          </p>
+        </div>
+      </div>
+
+      <div className="w-px h-8 bg-border/40 shrink-0 hidden sm:block" />
+
+      {/* Stats */}
+      <div className="flex items-center gap-6 flex-1 flex-wrap">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Indicados</p>
+          <p className="font-mono text-lg font-bold text-primary">{data.referralCount}</p>
+        </div>
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Créditos ganhos</p>
+          <p className="font-mono text-lg font-bold text-success">{data.totalCreditsEarned} cr</p>
+        </div>
+        <div className="flex-1">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+            {data.currentTier.label}
+            {data.nextTier && <span className="text-muted-foreground/50"> · {nextIn} para {data.nextTier.label}</span>}
+          </p>
+          <div className="h-1 bg-border/30 w-full max-w-[160px]">
+            {data.nextTier && (
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${Math.min(100, ((data.nextTier.min - nextIn) / data.nextTier.min) * 100)}%` }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Copy link */}
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleCopy}
+        className="rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 border-primary/30 text-primary hover:bg-primary/10 gap-1.5 shrink-0"
+      >
+        {copied ? <CheckCircle2 className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        {copied ? "Copiado!" : "Copiar link"}
+      </Button>
+    </div>
+  );
+}
 
 function SalesTeamPanel() {
   const { data, isLoading } = useQuery({
@@ -994,6 +1088,9 @@ export default function Dashboard() {
 
       {/* ── Integration Health / Full Auto Status ── */}
       <IntegrationHealthPanel />
+
+      {/* ── Referral Widget ── */}
+      <ReferralWidget />
 
       {/* ── Time de Vendas Panel ── */}
       <SalesTeamPanel />

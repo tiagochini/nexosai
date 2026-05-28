@@ -28,6 +28,7 @@ export const creditActionEnum = pgEnum("credit_action", [
   "monthly_reset",
   "purchase",
   "admin_grant",
+  "referral_bonus",
 ]);
 
 export const creditTransactionTypeEnum = pgEnum("credit_transaction_type", [
