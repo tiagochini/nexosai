@@ -36,6 +36,12 @@ uri = "file://attached_assets/catalog-nexos-academy.png"
 type = "image"
 title = "catalog-nexos-academy"
 
+[[generated]]
+id = "5w5loRcbrJ6Jv0LIqqQwX"
+uri = "file://attached_assets/catalog-guia-audiencia.png"
+type = "image"
+title = "catalog-guia-audiencia"
+
 [[outputs]]
 id = "Am3AKOGMz4EZf6QdTqhBd"
 uri = "file://artifacts/app/public/nexos_ai_logo_1024x1024.png"
@@ -65,3 +71,9 @@ id = "AgQUV2dt20OLEnHkNyWUs"
 uri = "file://attached_assets/catalog-nexos-academy.png"
 type = "image"
 title = "Catálogo 3 — NexOS Academy (Bônus)"
+
+[[outputs]]
+id = "Ce_HTJsHapP3lDNqRIJIk"
+uri = "file://attached_assets/catalog-guia-audiencia.png"
+type = "image"
+title = "Catálogo — Guia Gratuito (Os 7 Erros da Sua Audiência)"
