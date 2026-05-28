@@ -13,6 +13,8 @@ import {
   type Provider, type CatalogEntry, type WorkspaceIntegration,
 } from "@/components/integration-connect-modal";
 import { OnboardingAgent } from "@/components/onboarding-agent";
+import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
+import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 
 export default function IntegracoesPage() {
   const queryClient = useQueryClient();
@@ -114,6 +116,19 @@ export default function IntegracoesPage() {
           Conecte seus canais para ativar o modo Full Auto — disparos automáticos durante o lançamento.
         </p>
       </div>
+
+      <FeatureOnboarding
+        featureKey={FEATURE_KEYS.INTEGRATIONS}
+        title="INTEGRAÇÕES & FULL AUTO"
+        description="Conecte seus canais para que a NexOS opere de forma autônoma. Sem integrações = operação manual durante o lançamento."
+        variant="banner"
+        steps={[
+          "WhatsApp Business ou Telegram — sequências automáticas e respostas IA",
+          "RD Station ou ActiveCampaign — e-mails segmentados por temperatura",
+          "Meta Ads / Google Ads — ROAS e métricas em tempo real",
+          "Hotmart / Kiwify — captura automática de vendas e conversão de leads",
+        ]}
+      />
 
       {/* Onboarding Agent */}
       <OnboardingAgent

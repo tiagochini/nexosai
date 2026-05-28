@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Workflow, Calendar, Activity, Eye, BarChart, AlertTriangle } from "lucide-react";
+import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
+import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 
 export default function SequencesList() {
   const { data, isLoading } = useListSequences({
@@ -43,13 +45,29 @@ export default function SequencesList() {
           </h1>
           <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-widest">Canais de disparo e automação programada</p>
         </div>
-        <Link href="/sequences/new">
-          <Button className="font-mono uppercase tracking-widest font-bold rounded-none gap-2 btn-weapon-primary h-10 px-5 text-xs w-full sm:w-auto">
-            <Plus className="h-3.5 w-3.5" />
-            Nova Sequência
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <FeatureOnboardingTrigger featureKey={FEATURE_KEYS.SEQUENCES} />
+          <Link href="/sequences/new">
+            <Button className="font-mono uppercase tracking-widest font-bold rounded-none gap-2 btn-weapon-primary h-10 px-5 text-xs w-full sm:w-auto">
+              <Plus className="h-3.5 w-3.5" />
+              Nova Sequência
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      <FeatureOnboarding
+        featureKey={FEATURE_KEYS.SEQUENCES}
+        title="MATRIZ DE SEQUÊNCIAS"
+        description="Automações de disparo que rodam sozinhas durante o lançamento — WhatsApp, e-mail, segmentação por temperatura de lead (hot/warm/cold)."
+        variant="banner"
+        steps={[
+          "Crie uma sequência e vincule à campanha ativa",
+          "Configure os canais: WhatsApp Business e/ou e-mail (RD Station, ActiveCampaign)",
+          "Ative — a IA despacha no horário certo para cada segmento automaticamente",
+          "Acompanhe taxas de abertura, cliques e sugestões adaptativas em tempo real",
+        ]}
+      />
 
       <div className="border border-border/50 bg-card/40 backdrop-blur-sm relative">
         <div className="absolute left-0 inset-y-0 w-[2px] bg-gradient-to-b from-primary/50 to-transparent"></div>

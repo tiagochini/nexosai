@@ -15,6 +15,8 @@ import {
   Search, Sparkles, CheckCircle2, FileVideo, FileAudio, Camera,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
+import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
+import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 
 // ── Agent catalog (must match backend) ───────────────────────────────────────
 interface AgentInfo {
@@ -863,6 +865,21 @@ export default function AgentChat() {
           </div>
         )}
       </div>
+
+      {/* ── Capabilities onboarding ─────────────────────────────────────────── */}
+      <FeatureOnboarding
+        featureKey={FEATURE_KEYS.AGENT_CHAT}
+        title="CHAT COM AGENTES IA"
+        description="Não precisa digitar tudo — você pode falar, enviar áudios, vídeos, prints ou documentos. O agente processa qualquer formato."
+        variant="banner"
+        steps={[
+          "Texto: escreva normalmente ou use o modo Brainstorm / Estratégia / Revisão",
+          "Voz: clique no microfone — o sistema transcreve em tempo real",
+          "Áudio/Vídeo (MP3, MP4): arraste ou clique no clipe — o Whisper transcreve automaticamente",
+          "Screenshot ou imagem: o agente analisa o visual e responde com base no que vê",
+          "Documento ou código: cole ou faça upload de .txt, .json, .ts, .py e o agente lê tudo",
+        ]}
+      />
 
       {/* ── Chat area ──────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto border border-border/50 bg-card/10 p-4 space-y-5 min-h-0">

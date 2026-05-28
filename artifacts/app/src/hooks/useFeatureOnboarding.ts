@@ -60,6 +60,7 @@ export function useFeatureOnboarding(featureKey: string) {
 
 /** Lista centralizada de chaves de feature para evitar typos */
 export const FEATURE_KEYS = {
+  AGENT_CHAT:      "agent_chat",
   BRIEFING:        "briefing_chat",
   WAR_ROOM:        "war_room",
   PLAN_REVIEW:     "plan_review",

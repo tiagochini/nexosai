@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
+import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 import {
   DollarSign, TrendingUp, Plus, Link2, Loader2, CheckCircle2,
   Globe, Zap, Download, BarChart3, Calendar,
@@ -184,6 +186,19 @@ export default function RevenuePage() {
           Exportar CSV
         </Button>
       </div>
+
+      <FeatureOnboarding
+        featureKey={FEATURE_KEYS.REVENUE}
+        title="RECEITA & VENDAS"
+        description="Visão consolidada de todas as vendas em tempo real — Hotmart, Kiwify, Eduzz e Stripe. Cada venda capturada automaticamente via webhook."
+        variant="banner"
+        steps={[
+          "Conecte sua plataforma de pagamento em Integrações",
+          "Cada venda é capturada via webhook e aparece aqui em segundos",
+          "Analise a evolução por período (7d / 30d / 90d) e exporte para CSV",
+          "O score de saúde e relatório semanal são gerados automaticamente toda segunda-feira",
+        ]}
+      />
 
       {/* Tabs */}
       <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 w-full overflow-x-auto scrollbar-none">

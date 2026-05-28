@@ -4,6 +4,8 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
+import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 import {
   MessageSquare, Plus, Bot, Zap, ChevronRight, Users, TrendingUp,
   CheckCircle2, Phone, Send, RefreshCw, AlertTriangle, ArrowLeft,
@@ -261,6 +263,21 @@ export default function AtendimentoPage() {
               <Plus className="h-3 w-3" /> Nova Conversa
             </Button>
           </div>
+        </div>
+
+        <div className="mt-3">
+          <FeatureOnboarding
+            featureKey={FEATURE_KEYS.ATENDIMENTO}
+            title="TIME DE VENDAS IA"
+            description="Cada lead na conversa certa, com o agente certo. A IA sugere a resposta ideal de acordo com o estágio do funil."
+            variant="inline"
+            steps={[
+              "Crie uma conversa por lead e classifique o estágio (Aquecimento, Desejo, Fechamento…)",
+              "Clique em 'Sugestão IA' — o agente especialista gera a resposta ideal",
+              "Mova o lead pelo funil conforme avança na conversa",
+              "Monitore a taxa de conversão por estágio no painel de KPIs",
+            ]}
+          />
         </div>
 
         {/* KPI strip */}

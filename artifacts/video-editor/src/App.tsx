@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Upload, Film, Scissors, Type, Download, Trash2, Plus, Play,
-  ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertCircle, X, Clock
+  ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertCircle, X, Clock,
+  Sparkles, Mic, Image as ImageIcon, FileText, Info,
 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -376,12 +377,52 @@ function SubtitleRow({
   );
 }
 
+// First-visit onboarding banner for the video editor
+function VideoEditorOnboarding() {
+  const [visible, setVisible] = useState(() => {
+    try { return !localStorage.getItem("nexos_video_editor_seen"); } catch { return true; }
+  });
+  if (!visible) return null;
+  return (
+    <div className="border border-primary/20 bg-primary/5 rounded-xl p-4 relative">
+      <button
+        onClick={() => { setVisible(false); try { localStorage.setItem("nexos_video_editor_seen", "1"); } catch {} }}
+        className="absolute top-3 right-3 text-muted-foreground/40 hover:text-muted-foreground"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+      <div className="flex items-start gap-3 pr-6">
+        <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+        <div>
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-1">O que você pode fazer aqui</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 mt-2">
+            {[
+              { icon: Film, text: "Importe vários vídeos (MP4, MOV, WebM, MKV)" },
+              { icon: Scissors, text: "Defina clipes com pontos de corte precisos por mm:ss" },
+              { icon: Play, text: "Pré-visualize cada clipe antes de cortar" },
+              { icon: Sparkles, text: "Gere legendas com IA (Whisper) em 1 clique" },
+              { icon: Type, text: "Adicione ou edite legendas manualmente com timing" },
+              { icon: Download, text: "Exporte o vídeo final em MP4 ou WebM" },
+            ].map(({ icon: Icon, text }, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Icon className="w-3 h-3 text-primary/60 shrink-0" />
+                <span className="text-xs text-muted-foreground">{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VideoEditor() {
   const [step, setStep] = useState<Step>("upload");
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [clips, setClips] = useState<Clip[]>([]);
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [outputFormat, setOutputFormat] = useState<"mp4" | "webm">("mp4");
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<{
@@ -523,6 +564,71 @@ function VideoEditor() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [jobId]);
 
+  const generateSubtitlesWithAI = useCallback(async () => {
+    const firstFile = files[0];
+    if (!firstFile) return;
+    setAiGenerating(true);
+    try {
+      const vid = document.createElement("video");
+      vid.src = firstFile.localUrl;
+      vid.preload = "metadata";
+      await new Promise(r => { vid.onloadedmetadata = r; vid.onerror = r; });
+      const stream = (vid as HTMLVideoElement & { captureStream?: () => MediaStream }).captureStream?.();
+      let audioBlob: Blob | null = null;
+      if (stream) {
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          const audioStream = new MediaStream(audioTracks);
+          const mr = new MediaRecorder(audioStream);
+          const chunks: Blob[] = [];
+          mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+          await new Promise<void>(res => {
+            mr.onstop = () => res();
+            mr.start();
+            void vid.play();
+            setTimeout(() => { mr.stop(); vid.pause(); }, Math.min((vid.duration || 60) * 1000, 90_000));
+          });
+          audioBlob = new Blob(chunks, { type: "audio/webm" });
+        }
+      }
+      if (!audioBlob || audioBlob.size < 1000) {
+        // Fallback: send video file blob directly
+        const response = await fetch(firstFile.localUrl);
+        audioBlob = await response.blob();
+      }
+      const reader = new FileReader();
+      const audioBase64: string = await new Promise(r => {
+        reader.onload = e => r(e.target?.result as string);
+        reader.readAsDataURL(audioBlob!);
+      });
+      const token = localStorage.getItem("nexos_access_token");
+      const res = await fetch(`${API_BASE}/agents/transcribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ audioBase64, mimeType: "audio/webm" }),
+      });
+      if (!res.ok) throw new Error("Transcrição falhou");
+      const data = await res.json() as { text: string };
+      const text = data.text?.trim();
+      if (!text) throw new Error("Sem texto retornado");
+      // Split into ~5-second chunks
+      const words = text.split(" ");
+      const chunkSize = Math.max(6, Math.ceil(words.length / Math.max(1, Math.floor(firstFile.duration / 5))));
+      const newSubs: Subtitle[] = [];
+      for (let i = 0; i < words.length; i += chunkSize) {
+        const chunk = words.slice(i, i + chunkSize).join(" ");
+        const start = Math.floor((i / words.length) * firstFile.duration);
+        const end = Math.min(start + 5, firstFile.duration);
+        newSubs.push({ id: crypto.randomUUID(), text: chunk, startTime: start, endTime: end });
+      }
+      setSubtitles(newSubs);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao gerar legendas com IA");
+    } finally {
+      setAiGenerating(false);
+    }
+  }, [files]);
+
   const totalDuration = clips.reduce((acc, c) => acc + Math.max(0, c.endTime - c.startTime), 0);
 
   return (
@@ -535,7 +641,7 @@ function VideoEditor() {
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground tracking-tight">NexOS Video Editor</h1>
-              <p className="text-xs text-muted-foreground">Montagem de vídeo com FFmpeg</p>
+              <p className="text-xs text-muted-foreground">Corte, legendas e exportação profissional</p>
             </div>
           </div>
           {files.length > 0 && (
@@ -589,6 +695,7 @@ function VideoEditor() {
 
         {step === "upload" && (
           <div className="space-y-6">
+            <VideoEditorOnboarding />
             <UploadZone onFilesUploaded={handleFilesUploaded} />
             {files.length > 0 && (
               <div className="space-y-3">
@@ -687,20 +794,35 @@ function VideoEditor() {
 
         {step === "subtitles" && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-foreground">Legendas</h2>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  Opcional. Adicione legendas com tempo relativo ao vídeo final concatenado.
+                  Opcional. Adicione manualmente ou gere automaticamente com IA (Whisper).
                 </p>
               </div>
-              <button
-                onClick={addSubtitle}
-                className="flex items-center gap-2 py-2 px-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Legenda</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {files.length > 0 && (
+                  <button
+                    onClick={() => void generateSubtitlesWithAI()}
+                    disabled={aiGenerating}
+                    className="flex items-center gap-1.5 py-2 px-3 border border-primary/40 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
+                    title="Transcreve o áudio do vídeo via Whisper e gera legendas automáticas"
+                  >
+                    {aiGenerating
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Sparkles className="w-4 h-4" />}
+                    <span>{aiGenerating ? "Gerando…" : "Gerar com IA"}</span>
+                  </button>
+                )}
+                <button
+                  onClick={addSubtitle}
+                  className="flex items-center gap-2 py-2 px-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Manual</span>
+                </button>
+              </div>
             </div>
 
             {subtitles.length === 0 ? (

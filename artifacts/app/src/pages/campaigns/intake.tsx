@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile.tsx";
+import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
+import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 import {
   useGetIntake,
   useSaveIntake,
@@ -654,6 +656,19 @@ export default function CampaignIntake() {
           </div>
         </div>
       </div>
+
+      <FeatureOnboarding
+        featureKey={FEATURE_KEYS.BRIEFING}
+        title="BRIEFING ESTRATÉGICO"
+        description="Converse com a IA em linguagem natural — ela extrai os dados do seu produto, público e metas, e propõe o modelo de lançamento ideal."
+        variant="banner"
+        steps={[
+          "Fale sobre seu produto como se estivesse contando para um amigo — sem jargão",
+          "Use voz (microfone), envie um áudio MP3 ou um vídeo de apresentação — o sistema transcreve automaticamente",
+          "A IA propõe o modelo ideal (PLF, Semente, Perpétuo…) com base nas suas respostas",
+          "Quando completude ≥ 80%, o plano completo é gerado em segundos",
+        ]}
+      />
 
       {/* ── View toggle ── */}
       <div className="flex flex-wrap items-center gap-2">
