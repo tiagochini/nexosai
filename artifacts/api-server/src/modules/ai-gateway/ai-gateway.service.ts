@@ -86,14 +86,14 @@ export type AgentRole =
 // Integration path (no native key): use Replit-provisioned models
 // Native key path: keep provider-original names for backward compat
 
-const ANTHROPIC_NATIVE_MODEL = "claude-3-5-sonnet-20241022";
+const ANTHROPIC_NATIVE_MODEL = "claude-opus-4-5";
 const ANTHROPIC_INTEGRATION_MODEL = "claude-sonnet-4-6";
 
-const OPENAI_NATIVE_MODEL = "gpt-4o";
+const OPENAI_NATIVE_MODEL = "gpt-4.1";
 const OPENAI_INTEGRATION_MODEL = "gpt-5.4";
 
-const GEMINI_NATIVE_MODEL = "gemini-1.5-pro";
-const GEMINI_FLASH_NATIVE = "gemini-1.5-flash";
+const GEMINI_NATIVE_MODEL = "gemini-2.5-pro";
+const GEMINI_FLASH_NATIVE = "gemini-2.5-flash";
 
 const AGENT_PROVIDER_MAP: Record<
   AgentRole,
