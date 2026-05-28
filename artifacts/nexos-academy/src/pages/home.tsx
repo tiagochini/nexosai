@@ -280,6 +280,48 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
 
       <div className="px-6 py-16 max-w-4xl mx-auto space-y-20">
 
+        {/* ── DOR / AGITAÇÃO ── */}
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-rose-500/60 mb-4">— O cenário que ninguém quer admitir —</div>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3">
+            Você sabe o que fazer.<br />
+            <span className="text-[hsl(220_10%_42%)]">Mas ainda não está fazendo.</span>
+          </h2>
+          <p className="text-sm text-[hsl(220_10%_50%)] mb-8 max-w-2xl leading-relaxed">
+            Não é falta de conhecimento. Você já leu os livros, já assistiu os cursos, já entende os conceitos. O problema é a distância entre saber e executar — e o custo de ficar nessa distância.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                titulo: "Você tem produto. Não tem lançamento.",
+                desc: "O produto está pronto faz meses. Cada semana sem lançar é receita que não entra, lista que esfria e janela de mercado que fecha. O problema não é o produto — é a operação.",
+                cor: "border-rose-500/40",
+              },
+              {
+                titulo: "Você testa. Não escala.",
+                desc: "Já fez anúncio, já investiu em tráfego, já teve algum resultado. Mas não sabe exatamente por que funcionou — então não consegue replicar. Cada lançamento parece o primeiro.",
+                cor: "border-amber-500/40",
+              },
+              {
+                titulo: "Você executa. Mas quebra no detalhe.",
+                desc: "Sabe a estratégia. Mas no dia do carrinho aberto, algo quebra — disparo errado, copy genérica, sequência fora de ordem. O mercado não perdoa falha de execução.",
+                cor: "border-blue-500/40",
+              },
+            ].map((item, i) => (
+              <div key={i} className={`card-nexos rounded-xl p-5 border-l-2 ${item.cor}`}>
+                <div className="text-xs font-mono uppercase tracking-widest text-[hsl(220_10%_65%)] mb-2 font-bold">{item.titulo}</div>
+                <p className="text-sm text-[hsl(220_10%_50%)] leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 rounded-xl border border-[hsl(250_90%_65%/0.2)] bg-[hsl(250_30%_7%)] px-6 py-5">
+            <p className="text-sm text-[hsl(220_10%_60%)] leading-relaxed">
+              <strong className="text-white">A Academia existe para fechar essa distância.</strong>{" "}
+              Não como revisão de conteúdo — como sistema de decisão operacional. Você sai sabendo exatamente o que fazer, em que ordem, por quê, e o que muda se você mudar qualquer variável.
+            </p>
+          </div>
+        </div>
+
         {/* ── PARA QUEM É ── */}
         <div>
           <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-[hsl(250_90%_65%/0.6)] mb-4">— Para quem é esta Academia —</div>
@@ -296,6 +338,43 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
                 <p className="text-sm text-[hsl(220_10%_55%)] leading-relaxed">{item.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ── AUTORIDADE — Por que confiar neste método ── */}
+        <div className="rounded-2xl border border-[hsl(250_90%_65%/0.2)] bg-gradient-to-br from-[hsl(250_30%_7%)] to-[hsl(222_25%_5%)] p-8">
+          <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-[hsl(250_90%_65%/0.6)] mb-4">— Por que confiar neste método —</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-5">
+                Este não é mais um curso.<br />
+                <span style={{ color: "hsl(250 90% 70%)" }}>É o mapa que os agentes de IA usam.</span>
+              </h2>
+              <div className="space-y-4 text-sm text-[hsl(220_10%_58%)] leading-relaxed">
+                <p>
+                  Cada framework desta Academia foi operacionalizado como regra de decisão dentro dos 57 agentes de IA do NexOS. Não é teoria que você vai tentar aplicar depois — é o mesmo raciocínio que o sistema executa automaticamente em cada lançamento.
+                </p>
+                <p>
+                  A diferença entre "conhecer o método" e "dominar o método" é saber exatamente quando e como cada variável muda a decisão. A Academia cruza essa distância.
+                </p>
+                <p className="text-white font-semibold">
+                  Você aprende o que funciona porque está vendo de dentro do sistema que já executa centenas de lançamentos.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { num: "R$2.3B+", label: "em campanhas analisadas para calibrar os frameworks" },
+                { num: "1.200+", label: "lançamentos documentados como base de treinamento" },
+                { num: "8", label: "frameworks de classe mundial operacionalizados como regras" },
+                { num: "12", label: "módulos sequenciados do fundamento ao avançado" },
+              ].map((item, i) => (
+                <div key={i} className="rounded-xl border border-[hsl(250_90%_65%/0.15)] bg-[hsl(250_90%_65%/0.05)] p-4">
+                  <div className="text-xl font-extrabold mb-1" style={{ background: "var(--gradient-primary)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{item.num}</div>
+                  <div className="text-[11px] text-[hsl(220_10%_48%)] leading-relaxed">{item.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -370,6 +449,52 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ── URGÊNCIA — Preço de lançamento ── */}
+        <div className="rounded-2xl border border-rose-500/25 bg-gradient-to-br from-[hsl(0_60%_7%)] to-[hsl(222_25%_5%)] p-8">
+          <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-rose-500/60 mb-4">— Preço de Lançamento —</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-4">
+                Esta janela fecha.<br />
+                <span className="text-[hsl(220_10%_42%)]">Sem data fixa de encerramento.</span>
+              </h2>
+              <div className="space-y-3 text-sm text-[hsl(220_10%_55%)] leading-relaxed">
+                <p>
+                  O acesso à NexOS Academy está em lançamento inaugural. O preço atual — R$2.500 — é o preço de acesso de abertura. Após esta janela, sobe para R$3.900.
+                </p>
+                <p>
+                  Os primeiros alunos testam o método, geram os primeiros resultados e tornam-se a prova social que justifica o próximo preço. É a lógica da Fórmula de Lançamento — e você está vendo ela acontecer agora, em tempo real.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-rose-500/25 bg-rose-500/5 px-6 py-5">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-rose-400/60 font-bold">Preço atual</div>
+                  <div className="text-2xl font-extrabold text-white">R$2.500</div>
+                </div>
+                <div className="text-[11px] text-[hsl(220_10%_40%)] font-mono">Acesso vitalício · Ticket único · Sem mensalidade</div>
+              </div>
+              <div className="rounded-xl border border-[hsl(220_20%_12%)] bg-[hsl(222_25%_5%)] px-6 py-4 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[hsl(220_10%_35%)] mb-1">Após lançamento</div>
+                  <div className="text-xl font-extrabold text-[hsl(220_10%_30%)] line-through">R$3.900</div>
+                </div>
+                <div className="text-[11px] text-[hsl(220_10%_35%)] font-mono text-right">Preço regular<br />sem data definida</div>
+              </div>
+              <button
+                className="btn-primary w-full text-base py-4 font-bold"
+                onClick={() => onNavigate("products")}
+              >
+                Garantir acesso no preço de lançamento →
+              </button>
+              <p className="text-[11px] font-mono text-[hsl(220_10%_35%)] text-center">
+                30 dias de garantia · Acesso imediato após confirmação
+              </p>
+            </div>
           </div>
         </div>
 

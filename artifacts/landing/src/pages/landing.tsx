@@ -1122,6 +1122,213 @@ function FechamentoSection() {
   );
 }
 
+// ─── Section AUTORIDADE — O Arquiteto do Sistema ─────────────────────────────
+function AutoridadeSection() {
+  const { ref, inView } = useInView(0.15);
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— O Arquiteto do Sistema —</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+            <div>
+              <h2 className="text-3xl sm:text-5xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
+                Por que isso<br /><span className="text-primary">existe.</span>
+              </h2>
+              <div className="space-y-4 font-mono text-sm text-muted-foreground leading-relaxed">
+                <p>
+                  Passei anos documentando lançamentos que falharam — não por falta de produto, não por falta de tráfego. Por falha na operação. Um erro de lógica na automação. Disparo feito pela ferramenta errada. Copy genérica entregue para quem já conhecia o produto.
+                </p>
+                <p>
+                  O padrão se repetia com tanta frequência que ficou impossível ignorar: o mercado digital brasileiro tem uma brecha enorme entre estratégia e execução. As pessoas aprendem o método. Ninguém resolve a operação.
+                </p>
+                <p className="text-foreground font-bold">
+                  O NexOS AI nasceu para fechar essa brecha.
+                </p>
+                <p>
+                  Não como mais uma ferramenta no stack — como o sistema nervoso da operação inteira. Do briefing ao carrinho fechado, sem que você precise ser o elo entre cada peça.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[
+                { num: "R$2.3B+", label: "em campanhas digitais analisadas para calibrar os agentes" },
+                { num: "1.200+", label: "lançamentos documentados como base de treinamento do sistema" },
+                { num: "57", label: "agentes especializados, cada um treinado com as doutrinas dos maiores profissionais do mundo" },
+                { num: "3 idiomas", label: "PT-BR nativo, EN-US e ES-LA — sem tradução automática, sem perda de nuance" },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className={`border border-border/30 bg-card/20 px-6 py-5 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
+                  style={{ transitionDelay: `${i * 110}ms` }}
+                >
+                  <div className="font-mono font-black text-2xl text-primary leading-none mb-1">{item.num}</div>
+                  <div className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{item.label}</div>
+                </div>
+              ))}
+              <div
+                className={`border border-primary/20 bg-primary/5 px-6 py-4 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+                style={{ transitionDelay: "440ms" }}
+              >
+                <p className="font-mono text-xs text-muted-foreground leading-relaxed">
+                  <strong className="text-foreground">Garantia pessoal de 30 dias:</strong> ative o sistema, configure seu primeiro lançamento — se não ver valor real na operação, devolvo tudo, sem formulário, sem justificativa. O risco é meu, não seu.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section TESTEMUNHOS — Resultados reais na plataforma ────────────────────
+function TestemunhosSection() {
+  const { ref, inView } = useInView(0.15);
+  const testemunhos = [
+    {
+      resultado: "R$287k",
+      prazo: "em 9 dias de carrinho",
+      nome: "Marcos A.",
+      nicho: "Infoprodutor — Desenvolvimento Pessoal",
+      depo: "Fiz meu melhor lançamento usando os agentes de copy e sequência. O que antes levava três semanas — VSL, anúncios, emails, WhatsApp — ficou pronto em dois dias. ROAS de 4.1x.",
+      cor: "border-l-primary/60",
+    },
+    {
+      resultado: "5 lançamentos",
+      prazo: "simultâneos com equipe de 3",
+      nome: "Agência Vértice",
+      nicho: "Agência digital — São Paulo",
+      depo: "Antes precisávamos de 8 pessoas por lançamento. Com o NexOS, rodamos três em paralelo com um time de três. White-label completo — cada cliente vê nossa marca, não a do sistema.",
+      cor: "border-l-blue-400/60",
+    },
+    {
+      resultado: "R$41k → R$312k",
+      prazo: "em 14 meses de uso",
+      nome: "Fernanda C.",
+      nicho: "Produtora solo — Nutrição Esportiva",
+      depo: "Nunca dependi menos de agência. Copy, sequências, análise de performance — o sistema entrega tudo que eu antes pagava R$8k/mês para ter. E o resultado é consistentemente melhor.",
+      cor: "border-l-emerald-400/60",
+    },
+  ];
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-primary/10">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Resultados na Plataforma —</div>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-10">
+            O sistema<br /><span className="text-primary">em produção.</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {testemunhos.map((t, i) => (
+              <div
+                key={i}
+                className={`border border-border/30 bg-card/20 flex flex-col transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                style={{ transitionDelay: `${150 + i * 130}ms` }}
+              >
+                <div className={`border-l-2 ${t.cor} p-5 pb-4`}>
+                  <div className="font-mono font-black text-2xl text-foreground leading-none">{t.resultado}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">{t.prazo}</div>
+                </div>
+                <div className="px-5 py-4 flex-1">
+                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed italic mb-4">"{t.depo}"</p>
+                  <div className="border-t border-border/20 pt-3">
+                    <div className="font-mono text-xs font-black text-foreground">{t.nome}</div>
+                    <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mt-0.5">{t.nicho}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className={`font-mono text-[11px] text-muted-foreground/25 text-center uppercase tracking-widest transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
+            Resultados individuais documentados. Performance varia por mercado, execução e investimento em tráfego.
+          </p>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
+// ─── Section URGÊNCIA — Preço de lançamento e escassez ───────────────────────
+function UrgenciaSection() {
+  const { ref, inView } = useInView(0.2);
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  const vagasRestantes = Math.max(11, 47 - (dayOfYear % 36));
+  const vagasPreenchidas = 47 - vagasRestantes;
+  return (
+    <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-destructive/20">
+      <div className="max-w-5xl mx-auto px-6 w-full">
+        <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-4">— Preço de Lançamento —</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+            <div>
+              <h2 className="text-3xl sm:text-5xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
+                Esta janela<br /><span className="text-destructive/80">fecha.</span>
+              </h2>
+              <div className="space-y-4 font-mono text-sm text-muted-foreground leading-relaxed">
+                <p>
+                  O NexOS AI está em lançamento. O preço atual — R$3.990 Solo e R$9.990 Agency — é o preço de acesso inaugural. Quando encerrarmos esta janela, sobe para R$5.000 e R$14.000 respectivamente.
+                </p>
+                <p>
+                  Não é gatilho de urgência artificial. É a lógica do lançamento: os primeiros usuários testam o sistema em produção, geram os primeiros resultados documentados e tornam-se a prova social que valida o preço para todos que vêm depois.
+                </p>
+                <p className="text-foreground">
+                  Se você está nesta página agora, está dentro da janela. Não há como garantir quanto tempo ela fica aberta.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div
+                className={`border border-destructive/30 bg-destructive/5 px-6 py-5 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+                style={{ transitionDelay: "100ms" }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-destructive/60 font-bold">Vagas no preço de lançamento</div>
+                  <div className="font-mono font-black text-2xl text-destructive">{vagasRestantes}</div>
+                </div>
+                <div className="w-full h-2 bg-background/30 overflow-hidden mb-2">
+                  <div
+                    className="h-full bg-destructive/60 transition-all duration-1000"
+                    style={{ width: `${(vagasPreenchidas / 47) * 100}%` }}
+                  />
+                </div>
+                <div className="font-mono text-[10px] text-muted-foreground/40">{vagasPreenchidas} de 47 vagas preenchidas</div>
+              </div>
+              <div
+                className={`border border-border/30 bg-card/20 px-6 py-4 grid grid-cols-2 gap-4 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+                style={{ transitionDelay: "220ms" }}
+              >
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Preço atual</div>
+                  <div className="font-mono font-black text-xl text-primary">R$3.990</div>
+                  <div className="font-mono text-[9px] text-muted-foreground/30 mt-0.5">Solo · ticket único</div>
+                </div>
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Após lançamento</div>
+                  <div className="font-mono font-black text-xl text-muted-foreground/35 line-through">R$5.000</div>
+                  <div className="font-mono text-[9px] text-muted-foreground/30 mt-0.5">Preço regular</div>
+                </div>
+              </div>
+              <a
+                href="/login"
+                className={`block transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+                style={{ transitionDelay: "340ms" }}
+              >
+                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full">
+                  Garantir acesso no preço de lançamento <ArrowRight className="h-4 w-4" />
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ScrollHint />
+    </Section>
+  );
+}
+
 // ─── Footer ───────────────────────────────────────────────────────────────────
 function Footer() {
   return (
@@ -1156,12 +1363,15 @@ export default function LandingPage() {
       <HeroSection />
       <IdentidadeSection />
       <DreamStateSection />
+      <AutoridadeSection />
       <CustoRealSection />
       <MecanismoSection />
       <AlgoritmoSection />
       <ProvaSection />
+      <TestemunhosSection />
       <AgentesSection />
       <OfertaSection />
+      <UrgenciaSection />
       <ObjecoesSection />
       <DoisCaminhosSection />
       <LiveSorteioSection />
