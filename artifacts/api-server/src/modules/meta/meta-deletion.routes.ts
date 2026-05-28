@@ -36,7 +36,7 @@ router.post("/meta/data-deletion", (req, res) => {
 });
 
 router.get("/meta/data-deletion", (_req, res) => {
-  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Data Deletion — NexOS AI</title></head><body style="font-family:sans-serif;max-width:600px;margin:60px auto;padding:0 20px;background:#000;color:#fff"><h1>Data Deletion</h1><p>To request deletion of your NexOS AI data, email <a href="mailto:privacy@nexos.ai" style="color:#60a5fa">privacy@nexos.ai</a> with subject "Exclusão de Dados".</p><p>You can also revoke access at <a href="https://www.facebook.com/settings?tab=applications" style="color:#60a5fa">facebook.com/settings → Apps</a>.</p></body></html>`);
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Data Deletion — NexOS AI</title></head><body style="font-family:sans-serif;max-width:600px;margin:60px auto;padding:0 20px;background:#000;color:#fff"><h1>Data Deletion</h1><p>To request deletion of your NexOS AI data, email <a href="mailto:privacy@agencianexos.vip" style="color:#60a5fa">privacy@agencianexos.vip</a> with subject "Exclusão de Dados".</p><p>You can also revoke access at <a href="https://www.facebook.com/settings?tab=applications" style="color:#60a5fa">facebook.com/settings → Apps</a>.</p></body></html>`);
 });
 
 export default router;

@@ -19,11 +19,11 @@ interface ChatMsg { role: "user" | "assistant"; content: string }
 // Preencha os links reais dos grupos antes de ativar a campanha:
 const GROUP_LINKS: Record<Segment, { whatsapp: string | null; telegram: string | null }> = {
   individual: {
-    whatsapp: null, // ex: "https://chat.whatsapp.com/XXXXXXXXX"
-    telegram:  null, // ex: "https://t.me/+XXXXXXXXX"
+    whatsapp: "https://wa.me/message/NBJH4EXPAV2EN1",
+    telegram:  null,
   },
   agency: {
-    whatsapp: null,
+    whatsapp: "https://wa.me/message/NBJH4EXPAV2EN1",
     telegram:  null,
   },
 };
@@ -531,7 +531,7 @@ export default function PreparacaoPage() {
           Fique atento ao WhatsApp cadastrado — todas as comunicações chegam por lá
         </div>
         <p className="font-mono text-[11px] text-muted-foreground/20 uppercase tracking-widest">
-          NexOS AI · contato@nexos.ai
+          NexOS AI · contato@agencianexos.vip
         </p>
       </div>
     </div>

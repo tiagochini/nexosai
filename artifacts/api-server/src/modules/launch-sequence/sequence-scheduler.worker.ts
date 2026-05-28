@@ -121,7 +121,7 @@ export async function processScheduledItems(): Promise<void> {
             listId: String(cfg["emailListId"]),
             subject: buildEmailSubject(item),
             fromName: String(cfg["emailFromName"] ?? sequence.name),
-            fromEmail: String(cfg["emailFromEmail"] ?? "contato@nexos.ai"),
+            fromEmail: String(cfg["emailFromEmail"] ?? "contato@agencianexos.vip"),
             htmlContent: emailBody,
           });
           await sendEmailDispatch(sequence.workspaceId, emailDispatch.id);

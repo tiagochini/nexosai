@@ -941,7 +941,7 @@ export default function BillingPage() {
         <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">
           Pagamentos processados via <strong className="text-foreground/80">Asaas</strong>.
           Confirmação automática via webhook. Dúvidas:{" "}
-          <a href="mailto:suporte@nexos.ai" className="text-primary hover:underline">suporte@nexos.ai</a>
+          <a href="mailto:suporte@agencianexos.vip" className="text-primary hover:underline">suporte@agencianexos.vip</a>
         </p>
       </div>
 

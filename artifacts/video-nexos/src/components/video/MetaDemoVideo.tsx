@@ -499,7 +499,7 @@ export default function MetaDemoVideo() {
                   <div>✓ Conformidade com LGPD e Política da Plataforma Meta</div>
                 </div>
                 <div className="font-mono text-xs text-white/30 mt-4">
-                  nexos.ai/privacy · privacy@nexos.ai
+                  nexos.ai/privacy · privacy@agencianexos.vip
                 </div>
               </div>
             )}

@@ -177,7 +177,7 @@ export async function sendAccessEmail(opts: {
       <div style="text-align:center;margin-bottom:24px">
         <a href="${opts.portalUrl}" style="display:inline-block;background:linear-gradient(135deg,#6d4aff,#a78bfa);color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">Acessar o Portal →</a>
       </div>
-      <p style="color:#6b7280;font-size:12px;text-align:center">Guarde este código. Você precisará dele para acessar o portal em outros dispositivos.<br/>Suporte: suporte@nexos.ai</p>
+      <p style="color:#6b7280;font-size:12px;text-align:center">Guarde este código. Você precisará dele para acessar o portal em outros dispositivos.<br/>Suporte: suporte@agencianexos.vip</p>
     </div>
   `;
 

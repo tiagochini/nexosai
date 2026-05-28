@@ -60,7 +60,7 @@ export default function DataDeletion() {
             </p>
             <div className="border border-white/10 bg-white/5 p-4 space-y-2">
               <p><span className="text-white/40">E-mail:</span>{" "}
-                <a href="mailto:privacy@nexos.ai" className="text-blue-400 hover:underline">privacy@nexos.ai</a>
+                <a href="mailto:privacy@agencianexos.vip" className="text-blue-400 hover:underline">privacy@agencianexos.vip</a>
               </p>
               <p><span className="text-white/40">Assunto:</span> <strong className="text-white">Exclusão de Dados</strong></p>
               <p><span className="text-white/40">Inclua:</span> o e-mail cadastrado na sua conta NexOS AI</p>

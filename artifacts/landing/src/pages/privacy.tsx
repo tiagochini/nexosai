@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
   const lastUpdated = "15 de maio de 2026";
-  const contactEmail = "privacy@nexos.ai";
+  const contactEmail = "privacy@agencianexos.vip";
   const companyName = "NexOS AI";
   const appUrl = "https://app.nexos.ai";
 
@@ -220,7 +220,7 @@ export default function PrivacyPolicy() {
             </ol>
             <p className="mb-3">
               Para solicitar exclusão diretamente ao NexOS AI, envie um e-mail para{" "}
-              <a href="mailto:privacy@nexos.ai" className="text-blue-400 hover:underline">privacy@nexos.ai</a>{" "}
+              <a href="mailto:privacy@agencianexos.vip" className="text-blue-400 hover:underline">privacy@agencianexos.vip</a>{" "}
               com o assunto <strong className="text-white">"Exclusão de Dados"</strong>. Processamos todas as
               solicitações em até 30 dias úteis conforme a LGPD.
             </p>

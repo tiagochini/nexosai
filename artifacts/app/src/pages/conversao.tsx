@@ -508,7 +508,7 @@ export default function ConversaoPage() {
       {/* ── Footer ── */}
       <div className="border-t border-border/30 bg-muted/5 py-5 px-6 text-center mb-16">
         <p className="font-mono text-[10px] text-muted-foreground/30 uppercase tracking-widest">
-          NexOS AI · Plataforma de Lançamento com IA · contato@nexos.ai
+          NexOS AI · Plataforma de Lançamento com IA · contato@agencianexos.vip
         </p>
       </div>
 

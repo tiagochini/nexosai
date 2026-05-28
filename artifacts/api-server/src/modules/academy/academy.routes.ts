@@ -871,7 +871,7 @@ router.post("/admin/gift-codes", async (req, res): Promise<void> => {
 
   const rows = Array.from({ length: Math.min(count, 50) }, () => ({
     accessToken: makeToken(),
-    customerEmail: "brinde@nexos.ai",
+    customerEmail: "brinde@agencianexos.vip",
     customerName: "Convidado",
     productId,
     status: "confirmed" as const,

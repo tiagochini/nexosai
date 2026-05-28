@@ -32,7 +32,7 @@ interface ApiResponse<T = unknown> {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const BASE_URL = process.env["API_URL"] ?? "http://localhost:80/api";
-const ADMIN_EMAIL = process.env["TEST_ADMIN_EMAIL"] ?? "admin@nexos.ai";
+const ADMIN_EMAIL = process.env["TEST_ADMIN_EMAIL"] ?? "admin@agencianexos.vip";
 const ADMIN_PASSWORD = process.env["TEST_ADMIN_PASSWORD"] ?? "admin123";
 
 let authToken: string | null = null;
@@ -114,7 +114,7 @@ async function main() {
   // Uses TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD env vars (optional).
   // If no credentials are set or the user doesn't exist → SKIP (not a failure).
   await runStep(2, "Admin login (JWT)", async () => {
-    if (!ADMIN_EMAIL || !ADMIN_PASSWORD || ADMIN_EMAIL === "admin@nexos.ai" && ADMIN_PASSWORD === "admin123") {
+    if (!ADMIN_EMAIL || !ADMIN_PASSWORD || ADMIN_EMAIL === "admin@agencianexos.vip" && ADMIN_PASSWORD === "admin123") {
       // Check if the admin user actually exists before trying
       const testRes = await apiCall<{ token?: string; accessToken?: string }>(
         "POST", "/auth/login",

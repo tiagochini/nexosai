@@ -326,7 +326,7 @@ function EmailMockup({ lead }: { lead: LeadData }) {
           <span className="text-[10px] text-gray-500">{lead.firstName.toLowerCase()}@gmail.com</span>
         </div>
         <div className="font-bold text-[12px] text-gray-900">Por que o {lead.productName} pode mudar tudo para você</div>
-        <div className="text-[9px] text-gray-400 mt-0.5">De: {lead.firstName} Creator &lt;contato@nexos.ai&gt;</div>
+        <div className="text-[9px] text-gray-400 mt-0.5">De: {lead.firstName} Creator &lt;contato@agencianexos.vip&gt;</div>
       </div>
       {/* Email body */}
       <div className="px-4 py-3">

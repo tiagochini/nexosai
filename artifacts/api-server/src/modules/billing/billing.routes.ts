@@ -139,7 +139,7 @@ router.get("/bank-transfer", requireAuth, async (_req, res): Promise<void> => {
     accountType: process.env["BANK_ACCOUNT_TYPE"] ?? null,
     cnpj: process.env["COMPANY_CNPJ"] ?? null,
     companyName: process.env["COMPANY_NAME"] ?? "NexOS AI",
-    instructions: "Envie o comprovante para suporte@nexos.ai após a transferência.",
+    instructions: "Envie o comprovante para suporte@agencianexos.vip após a transferência.",
   };
   res.json({ bankTransfer: info });
 });

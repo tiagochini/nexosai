@@ -255,7 +255,7 @@ async function buildAsaasPayment(
         result.expiresAt = new Date(pix.expiresAt);
       } catch (err) {
         if (err instanceof AppError && err.code === "ASAAS_NOT_CONFIGURED") {
-          result.pixData = { instructions: "Entre em contato: suporte@nexos.ai" };
+          result.pixData = { instructions: "Entre em contato: suporte@agencianexos.vip" };
           result.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
         } else { throw err; }
       }
@@ -278,7 +278,7 @@ async function buildAsaasPayment(
         if (err instanceof AppError && err.code === "ASAAS_NOT_CONFIGURED") {
           result.boletoData = {
             dueDate: opts.dueDate,
-            instructions: "Entre em contato para obter o boleto: suporte@nexos.ai",
+            instructions: "Entre em contato para obter o boleto: suporte@agencianexos.vip",
           };
           result.expiresAt = new Date(opts.dueDate + "T23:59:59.000Z");
         } else { throw err; }

@@ -269,7 +269,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
       const r = await fetch(`/api/academy/purchases?secret=${OWNER_SECRET}&limit=500`);
       const j = await r.json();
       const all: GiftCode[] = j.purchases ?? [];
-      setGiftCodes(all.filter((p: GiftCode) => p.amountCents === 0 || p.customerEmail === "brinde@nexos.ai" || (j.purchases as GiftCode[]).filter((x: GiftCode) => x.accessToken === p.accessToken && x.amountCents === 0).length > 0));
+      setGiftCodes(all.filter((p: GiftCode) => p.amountCents === 0 || p.customerEmail === "brinde@agencianexos.vip" || (j.purchases as GiftCode[]).filter((x: GiftCode) => x.accessToken === p.accessToken && x.amountCents === 0).length > 0));
     } catch {
       // ignore
     } finally {
@@ -1542,8 +1542,8 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
             <div>
               <h2 className="text-lg font-bold text-white">🎟️ Códigos de Acesso</h2>
               <p className="text-sm text-[hsl(220_10%_45%)]">
-                {giftCodes.filter(c => c.customerEmail !== "brinde@nexos.ai").length} em uso ·{" "}
-                {giftCodes.filter(c => c.customerEmail === "brinde@nexos.ai").length} disponíveis
+                {giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").length} em uso ·{" "}
+                {giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").length} disponíveis
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -1577,13 +1577,13 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
           ) : (
             <div className="space-y-4">
               {/* Em uso */}
-              {giftCodes.filter(c => c.customerEmail !== "brinde@nexos.ai").length > 0 && (
+              {giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").length > 0 && (
                 <div>
                   <h3 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-2">
-                    ✅ Em Uso ({giftCodes.filter(c => c.customerEmail !== "brinde@nexos.ai").length})
+                    ✅ Em Uso ({giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").length})
                   </h3>
                   <div className="space-y-1.5">
-                    {giftCodes.filter(c => c.customerEmail !== "brinde@nexos.ai").map(code => (
+                    {giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").map(code => (
                       <div key={code.id} className="card px-4 py-3 flex items-center justify-between gap-4">
                         <div className="flex items-center gap-3 min-w-0">
                           <span className="font-mono text-base font-bold text-white tracking-widest shrink-0">{code.accessToken}</span>
@@ -1605,13 +1605,13 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
               )}
 
               {/* Disponíveis */}
-              {giftCodes.filter(c => c.customerEmail === "brinde@nexos.ai").length > 0 && (
+              {giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").length > 0 && (
                 <div>
                   <h3 className="text-xs font-bold text-[hsl(220_10%_40%)] uppercase tracking-widest mb-2">
-                    ⚪ Disponíveis ({giftCodes.filter(c => c.customerEmail === "brinde@nexos.ai").length})
+                    ⚪ Disponíveis ({giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").length})
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {giftCodes.filter(c => c.customerEmail === "brinde@nexos.ai").map(code => (
+                    {giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").map(code => (
                       <div key={code.id} className="card px-4 py-3 flex items-center justify-between gap-3">
                         <span className="font-mono text-base font-bold text-[hsl(250_90%_75%)] tracking-widest">{code.accessToken}</span>
                         <button
