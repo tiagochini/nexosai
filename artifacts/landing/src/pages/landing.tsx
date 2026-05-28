@@ -100,7 +100,7 @@ function HeroSection() {
           <h1 className="text-[1.9rem] sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
             E se os maiores<br />especialistas em<br />lançamento estivessem<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              todos trabalhando{" "}<br className="hidden sm:block" />para o seu?
+              todos trabalhando{" "}<br className="hidden sm:block" />pra você?
             </span>
           </h1>
 
