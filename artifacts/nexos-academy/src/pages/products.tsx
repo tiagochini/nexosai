@@ -284,6 +284,12 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
                         <span className="text-xs text-[hsl(168_100%_50%)] ml-2">44% off</span>
                       </div>
                     )}
+                    {"originalPrice" in product && product.originalPrice && (
+                      <div className="mb-2">
+                        <span className="text-xs text-[hsl(220_10%_40%)] line-through">R${(product.originalPrice as number).toLocaleString("pt-BR")}</span>
+                        <span className="text-xs text-[hsl(168_100%_50%)] ml-2">{Math.round((1 - product.price / (product.originalPrice as number)) * 100)}% off</span>
+                      </div>
+                    )}
                     <div
                       className="text-4xl font-extrabold mb-1"
                       style={{ background: product.type === "premium" ? "var(--gradient-gold)" : "var(--gradient-primary)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
@@ -293,7 +299,7 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
                     {product.type === "premium" ? (
                       <p className="text-xs text-[hsl(220_10%_45%)] mb-4">ou até 12x de R${(product.price / 12).toFixed(2).replace(".", ",")}</p>
                     ) : (
-                      <p className="text-xs text-[hsl(220_10%_45%)] mb-4">pagamento único</p>
+                      <p className="text-xs text-[hsl(220_10%_45%)] mb-4">pagamento único · acesso imediato</p>
                     )}
 
                     {hasAccess && product.type === "premium" ? (

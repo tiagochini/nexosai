@@ -422,27 +422,67 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
           </div>
         </section>
 
-        <section className="no-print rounded-2xl p-8 text-center space-y-4"
-          style={{ background: "linear-gradient(135deg, hsl(222 25% 7%), hsl(250 30% 8%))", border: "1px solid hsl(250 90% 65% / 0.3)" }}>
-          <h2 className="text-xl font-bold text-white">Quer o método completo de lançamento?</h2>
-          <p className="text-[hsl(220_10%_65%)] leading-relaxed text-sm max-w-md mx-auto">
-            Este guia cobre o crescimento de audiência. A Metodologia NexOS cobre o passo seguinte — como transformar essa audiência em um lançamento estruturado, com copy, tráfego, automação e IA trabalhando enquanto você dorme.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => onNavigate("products")}
-              className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl text-white font-bold hover:opacity-90 transition-opacity text-sm"
-              style={{ background: "linear-gradient(135deg, hsl(250 90% 60%), hsl(270 80% 55%))" }}
-            >
-              Ver Metodologia NexOS Completa →
-            </button>
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:bg-[hsl(220_20%_12%)]"
-              style={{ border: "1px solid hsl(220 20% 15%)", color: "hsl(220 10% 55%)" }}
-            >
-              ↓ Salvar como PDF
-            </button>
+        <section className="no-print rounded-2xl overflow-hidden"
+          style={{ border: "1px solid hsl(168 100% 42% / 0.35)", boxShadow: "0 0 40px hsl(168 100% 42% / 0.06)" }}>
+          <div className="px-8 pt-6 pb-2 text-center"
+            style={{ background: "linear-gradient(135deg, hsl(168 100% 10% / 0.5), hsl(250 30% 8%))" }}>
+            <span className="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3"
+              style={{ background: "hsl(168 100% 42% / 0.15)", color: "hsl(168 100% 60%)", border: "1px solid hsl(168 100% 42% / 0.3)" }}>
+              🔥 Próximo Passo Natural
+            </span>
+            <h2 className="text-2xl font-extrabold text-white leading-tight mb-2">
+              Mapa dos Primeiros R$10K em Vendas Online
+            </h2>
+            <p className="text-[hsl(220_10%_60%)] text-sm max-w-lg mx-auto mb-4">
+              Você acabou de ver os 7 erros. Agora veja o caminho completo: 10 capítulos operacionais com scripts de copy prontos, checklist de 7 dias e a estratégia para chegar aos primeiros 5 dígitos — mesmo sem produto, sem seguidores, sem equipe.
+            </p>
+          </div>
+
+          <div className="px-8 py-5" style={{ background: "hsl(222 25% 6%)" }}>
+            <div className="grid sm:grid-cols-2 gap-3 mb-5">
+              {[
+                "10 capítulos práticos — sem teoria vaga",
+                "Scripts de copy prontos para usar agora",
+                "Checklist de 7 dias: 1 cliente em 7 dias",
+                "Estratégia 'Sem Seguidores' para quem está no zero",
+                "Matador de objeções com respostas exatas",
+                "Produto Escada: de R$97 até R$10K no mesmo funil",
+              ].map((f, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-[hsl(220_10%_70%)]">
+                  <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs shrink-0"
+                    style={{ background: "hsl(168 100% 42% / 0.15)", color: "hsl(168 100% 55%)" }}>✓</span>
+                  {f}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="text-center sm:text-left">
+                <span className="text-xs text-[hsl(220_10%_40%)] line-through">R$299</span>
+                <span className="text-xs text-[hsl(168_100%_50%)] ml-2">67% off</span>
+                <div className="text-3xl font-extrabold" style={{ background: "linear-gradient(135deg, hsl(168 100% 50%), hsl(168 100% 40%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  R$97
+                </div>
+                <p className="text-xs text-[hsl(220_10%_40%)]">pagamento único · acesso imediato</p>
+              </div>
+              <button
+                onClick={() => onNavigate("products")}
+                className="flex-1 sm:flex-none py-3 px-8 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, hsl(168 100% 38%), hsl(168 100% 30%))" }}
+              >
+                Quero o Mapa Completo — R$97 →
+              </button>
+              <button
+                onClick={handlePrint}
+                className="text-xs text-[hsl(220_10%_40%)] hover:text-[hsl(220_10%_60%)] transition-colors"
+              >
+                ↓ Salvar PDF
+              </button>
+            </div>
+
+            <p className="text-xs text-center text-[hsl(220_10%_35%)] mt-3">
+              🔒 Garantia de 30 dias · Acesso imediato após o pagamento
+            </p>
           </div>
         </section>
       </div>
