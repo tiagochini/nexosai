@@ -42,6 +42,12 @@ uri = "file://attached_assets/catalog-guia-audiencia.png"
 type = "image"
 title = "catalog-guia-audiencia"
 
+[[generated]]
+id = "UEG428wQBq48jxIplOHMS"
+uri = "file://attached_assets/catalog-mapa-10k.png"
+type = "image"
+title = "catalog-mapa-10k"
+
 [[outputs]]
 id = "Am3AKOGMz4EZf6QdTqhBd"
 uri = "file://artifacts/app/public/nexos_ai_logo_1024x1024.png"
@@ -77,3 +83,9 @@ id = "Ce_HTJsHapP3lDNqRIJIk"
 uri = "file://attached_assets/catalog-guia-audiencia.png"
 type = "image"
 title = "Catálogo — Guia Gratuito (Os 7 Erros da Sua Audiência)"
+
+[[outputs]]
+id = "bPMYPmjDXHfRRICy3T1Qi"
+uri = "file://attached_assets/catalog-mapa-10k.png"
+type = "image"
+title = "Catálogo — Mapa dos Primeiros R$10K (R$97)"
