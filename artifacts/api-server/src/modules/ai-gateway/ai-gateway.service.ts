@@ -230,7 +230,7 @@ function hasOpenAIIntegration(): boolean {
   return !!(env.AI_INTEGRATIONS_OPENAI_BASE_URL && env.AI_INTEGRATIONS_OPENAI_API_KEY);
 }
 
-function getAnthropic(): Anthropic {
+export function getAnthropic(): Anthropic {
   if (!anthropicClient) {
     if (env.ANTHROPIC_API_KEY) {
       anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
@@ -246,7 +246,7 @@ function getAnthropic(): Anthropic {
   return anthropicClient;
 }
 
-function getOpenAI(): OpenAI {
+export function getOpenAI(): OpenAI {
   if (!openaiClient) {
     if (env.OPENAI_API_KEY) {
       openaiClient = new OpenAI({ apiKey: env.OPENAI_API_KEY });

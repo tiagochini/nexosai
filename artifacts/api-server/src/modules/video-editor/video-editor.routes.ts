@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
 import { logger } from "../../lib/logger.js";
+import { getAnthropic, getOpenAI } from "../ai-gateway/ai-gateway.service.js";
 
 const router = Router();
 
@@ -24,10 +25,14 @@ interface JobStatus {
   createdAt: Date;
 }
 
+interface TranscriptSegment { text: string; start: number; end: number; }
+interface TranscriptResult { text: string; segments: TranscriptSegment[]; }
+
 const jobs = new Map<string, JobStatus>();
 const uploadedFiles = new Map<string, { filePath: string; originalName: string; duration: number; size: number }>();
+const transcriptCache = new Map<string, TranscriptResult>();
 
-// Cleanup jobs older than 2 hours
+// Cleanup jobs and transcripts older than 2 hours
 setInterval(() => {
   const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000);
   for (const [id, job] of jobs) {
@@ -67,6 +72,69 @@ function probeVideo(filePath: string): Promise<{ duration: number; width: number
   });
 }
 
+function extractAudioMp3(inputPath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .noVideo()
+      .audioCodec("libmp3lame")
+      .audioBitrate("64k")
+      .audioFrequency(16000)
+      .audioChannels(1)
+      .output(outputPath)
+      .on("end", () => resolve())
+      .on("error", (err: Error) => reject(err))
+      .run();
+  });
+}
+
+async function transcribeFile(fileId: string): Promise<TranscriptResult> {
+  const cached = transcriptCache.get(fileId);
+  if (cached) return cached;
+
+  const fileInfo = uploadedFiles.get(fileId);
+  if (!fileInfo) throw new Error(`Arquivo não encontrado: ${fileId}`);
+
+  const audioPath = path.join(UPLOAD_DIR, `audio_${fileId}.mp3`);
+  await extractAudioMp3(fileInfo.filePath, audioPath);
+
+  try {
+    const client = getOpenAI();
+    const { toFile } = await import("openai");
+    const buffer = fs.readFileSync(audioPath);
+    const file = await toFile(buffer, "audio.mp3", { type: "audio/mpeg" });
+
+    const response = await client.audio.transcriptions.create({
+      file,
+      model: "whisper-1",
+      language: "pt",
+      response_format: "verbose_json",
+      timestamp_granularities: ["segment"],
+    });
+
+    const data = response as unknown as {
+      text: string;
+      segments: Array<{ text: string; start: number; end: number }>;
+    };
+
+    const result: TranscriptResult = {
+      text: data.text ?? "",
+      segments: (data.segments ?? []).map(s => ({
+        text: s.text.trim(),
+        start: Math.round(s.start * 100) / 100,
+        end: Math.round(s.end * 100) / 100,
+      })),
+    };
+
+    transcriptCache.set(fileId, result);
+    logger.info({ fileId, segments: result.segments.length }, "Whisper transcription with timestamps complete");
+    return result;
+  } finally {
+    try { fs.unlinkSync(audioPath); } catch {}
+  }
+}
+
+// ─── Upload ───────────────────────────────────────────────────────────────────
+
 router.post("/upload", upload.single("video"), async (req, res): Promise<void> => {
   if (!req.file) {
     res.status(400).json({ error: "Nenhum arquivo enviado." });
@@ -95,18 +163,172 @@ router.post("/upload", upload.single("video"), async (req, res): Promise<void> =
   }
 });
 
-interface ClipSpec {
-  fileId: string;
-  startTime: number;
-  endTime: number;
-  label?: string;
-}
+// ─── Transcribe a single file with segment timestamps ─────────────────────────
 
-interface SubtitleSpec {
-  text: string;
-  startTime: number;
-  endTime: number;
-}
+router.post("/transcribe/:fileId", async (req, res): Promise<void> => {
+  const { fileId } = req.params;
+  const fileInfo = uploadedFiles.get(fileId);
+  if (!fileInfo) {
+    res.status(404).json({ error: "Arquivo não encontrado." });
+    return;
+  }
+
+  try {
+    const result = await transcribeFile(fileId);
+    res.json({ fileId, originalName: fileInfo.originalName, ...result });
+  } catch (err) {
+    logger.error({ err, fileId }, "Transcription failed");
+    res.status(500).json({ error: "Falha na transcrição. Verifique se o arquivo de vídeo tem áudio." });
+  }
+});
+
+// ─── Smart Edit — AI maps script sections to best takes ──────────────────────
+
+router.post("/smart-edit", async (req, res): Promise<void> => {
+  const { fileIds, script } = req.body as { fileIds: string[]; script: string };
+
+  if (!Array.isArray(fileIds) || fileIds.length === 0) {
+    res.status(400).json({ error: "fileIds é obrigatório e não pode ser vazio." });
+    return;
+  }
+  if (!script?.trim() || script.trim().length < 20) {
+    res.status(400).json({ error: "Roteiro muito curto. Cole o roteiro completo do CPL." });
+    return;
+  }
+
+  // Transcribe all files (uses cache when available)
+  const transcripts: Array<{
+    fileId: string;
+    fileName: string;
+    duration: number;
+    text: string;
+    segments: TranscriptSegment[];
+  }> = [];
+
+  for (const fileId of fileIds) {
+    const fileInfo = uploadedFiles.get(fileId);
+    if (!fileInfo) continue;
+    try {
+      const result = await transcribeFile(fileId);
+      transcripts.push({
+        fileId,
+        fileName: fileInfo.originalName,
+        duration: fileInfo.duration,
+        ...result,
+      });
+    } catch (err) {
+      logger.warn({ err, fileId }, "Smart-edit: transcription skipped for file");
+    }
+  }
+
+  if (transcripts.length === 0) {
+    res.status(400).json({ error: "Nenhum take pôde ser transcrito. Verifique se os vídeos possuem áudio." });
+    return;
+  }
+
+  // Build takes context for Claude
+  const takesText = transcripts.map((t, i) => {
+    const letter = String.fromCharCode(65 + i);
+    const segText = t.segments.length > 0
+      ? t.segments.map(s => `[${s.start.toFixed(1)}s-${s.end.toFixed(1)}s] "${s.text}"`).join("\n")
+      : `[transcription] "${t.text.slice(0, 2000)}"`;
+    return `TAKE ${letter} (fileId: "${t.fileId}", duração: ${t.duration}s, arquivo: "${t.fileName}"):\n${segText}`;
+  }).join("\n\n---\n\n");
+
+  const systemPrompt = `Você é um editor de vídeo profissional especialista em lançamentos digitais no Brasil.
+
+Receberá o roteiro de um CPL/VSL e as transcrições com timestamps de múltiplos takes filmados.
+
+Sua missão: construir a melhor edição possível, mapeando cada seção do roteiro ao trecho do take mais adequado.
+
+CRITÉRIOS DE SCORE:
+- 90-100: texto quase idêntico ao roteiro, entrega fluente, frase completa
+- 70-89: mesmo conteúdo com palavras ligeiramente diferentes, entrega natural
+- 55-69: tema correto mas diverge consideravelmente do texto do roteiro
+- < 55: não usar — descarte
+
+REGRAS OBRIGATÓRIAS:
+1. Inclua apenas clips com score >= 55
+2. Adicione 0.3s de buffer no início e 0.5s depois de cada segmento
+3. Nunca ultrapasse 0 ou a duração máxima do arquivo
+4. Ordene os clips na mesma sequência do roteiro
+5. Em empate de score, prefira o take com entrega mais natural e objetiva
+6. Se um parágrafo não tiver correspondência adequada em nenhum take, pule-o
+7. Label máximo de 6 palavras em PT-BR descrevendo o conteúdo do clip
+8. Você pode usar múltiplos segmentos do mesmo take para cobrir parágrafos longos
+
+Retorne SOMENTE JSON válido, sem markdown nem explicação adicional:
+{
+  "clips": [
+    {
+      "fileId": "id-exato-do-arquivo",
+      "startTime": 0.0,
+      "endTime": 8.5,
+      "label": "Abertura e gancho principal",
+      "scriptSection": "primeiras 8 palavras desta seção do roteiro",
+      "score": 92
+    }
+  ],
+  "summary": "X clips • ~Y min • Z takes utilizados",
+  "coverage": 85
+}`;
+
+  const userMessage = `ROTEIRO COMPLETO:\n---\n${script.trim()}\n---\n\nTAKES DISPONÍVEIS:\n\n${takesText}`;
+
+  try {
+    const client = getAnthropic();
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    });
+
+    const content = message.content[0];
+    if (!content || content.type !== "text") {
+      throw new Error("Resposta inválida da IA.");
+    }
+
+    // Extract JSON from response (handles markdown code blocks)
+    let jsonText = content.text;
+    const codeBlock = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlock) jsonText = codeBlock[1]!;
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) jsonText = jsonMatch[0];
+
+    const result = JSON.parse(jsonText) as {
+      clips: Array<{
+        fileId: string;
+        startTime: number;
+        endTime: number;
+        label: string;
+        scriptSection: string;
+        score: number;
+      }>;
+      summary: string;
+      coverage: number;
+    };
+
+    // Validate and clamp timestamps
+    for (const clip of result.clips) {
+      const info = uploadedFiles.get(clip.fileId);
+      const maxDuration = info?.duration ?? 99999;
+      clip.startTime = Math.max(0, Number(clip.startTime) || 0);
+      clip.endTime = Math.min(maxDuration, Number(clip.endTime) || 0);
+      if (clip.endTime <= clip.startTime) clip.endTime = clip.startTime + 1;
+    }
+
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Smart edit AI mapping failed");
+    res.status(500).json({ error: "Falha no mapeamento por IA. Tente novamente." });
+  }
+});
+
+// ─── Process (concat + subtitles + encode) ───────────────────────────────────
+
+interface ClipSpec { fileId: string; startTime: number; endTime: number; label?: string; }
+interface SubtitleSpec { text: string; startTime: number; endTime: number; }
 
 router.post("/process", async (req, res): Promise<void> => {
   const { clips, subtitles = [], outputFormat = "mp4" } = req.body as {
@@ -149,7 +371,7 @@ async function processJob(
 
   try {
     for (let i = 0; i < clips.length; i++) {
-      const clip = clips[i];
+      const clip = clips[i]!;
       const fileInfo = uploadedFiles.get(clip.fileId)!;
       const clipPath = path.join(UPLOAD_DIR, `clip_${jobId}_${i}.mp4`);
       tmpClips.push(clipPath);
@@ -253,6 +475,8 @@ async function processJob(
   }
 }
 
+// ─── Job status ───────────────────────────────────────────────────────────────
+
 router.get("/jobs/:jobId", (req, res): void => {
   const job = jobs.get(req.params.jobId);
   if (!job) {
@@ -267,6 +491,8 @@ router.get("/jobs/:jobId", (req, res): void => {
     error: job.error,
   });
 });
+
+// ─── File download / streaming ────────────────────────────────────────────────
 
 router.get("/files/:fileId", (req, res): void => {
   const file = uploadedFiles.get(req.params.fileId);
@@ -286,7 +512,7 @@ router.get("/files/:fileId", (req, res): void => {
   const range = req.headers.range;
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
+    const start = parseInt(parts[0]!, 10);
     const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
     const chunkSize = end - start + 1;
     res.setHeader("Content-Range", `bytes ${start}-${end}/${stat.size}`);
@@ -305,6 +531,7 @@ router.delete("/files/:fileId", (req, res): void => {
   if (file) {
     try { fs.unlinkSync(file.filePath); } catch {}
     uploadedFiles.delete(req.params.fileId);
+    transcriptCache.delete(req.params.fileId);
   }
   res.json({ ok: true });
 });
