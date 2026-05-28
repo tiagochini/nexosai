@@ -31,7 +31,7 @@ export function Scene4() {
             className="font-black text-white leading-none text-center"
             style={{ fontSize: 'clamp(3rem, 8vw, 9rem)' }}
           >
-            29
+            34
           </h2>
           <span
             className="text-primary font-black uppercase tracking-widest text-center"
@@ -43,7 +43,7 @@ export function Scene4() {
             className="text-text-muted text-center mt-4 max-w-lg"
             style={{ fontSize: 'clamp(0.9rem, 1.8vw, 2rem)' }}
           >
-            Trabalhando 24/7 para construir cada detalhe do seu lançamento — estratégia, copy, sequências e análise.
+            Estratégia, copy, sequências, tráfego, analytics e vendas — cada agente treinado nas doutrinas dos maiores profissionais do mundo.
           </p>
         </motion.div>
 
