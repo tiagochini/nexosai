@@ -1458,7 +1458,24 @@ export default function LandingPage() {
     if (!el) return;
     const onScroll = () => setScrolled(el.scrollTop > 40);
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+
+    const onAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest("a[href^='#']") as HTMLAnchorElement | null;
+      if (!anchor) return;
+      const id = anchor.getAttribute("href")?.slice(1);
+      if (!id) return;
+      const section = el.querySelector(`#${id}`) as HTMLElement | null;
+      if (!section) return;
+      e.preventDefault();
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    el.addEventListener("click", onAnchorClick);
+
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("click", onAnchorClick);
+    };
   }, []);
 
   return (
