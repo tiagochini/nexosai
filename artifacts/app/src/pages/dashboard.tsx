@@ -331,7 +331,7 @@ function ReferralWidget() {
 
   if (isLoading || !data?.referralCode) return null;
 
-  const shareUrl = `${window.location.origin}/cadastro?ref=${data.referralCode}`;
+  const shareUrl = `https://agencianexos.vip/mapa?ref=${data.referralCode}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl);
