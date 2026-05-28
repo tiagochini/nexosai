@@ -83,27 +83,28 @@ function HeroSection() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 w-full pb-28 sm:pb-20">
         <div className={`transition-all duration-1000 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
 
-          {/* Identity badge — o avatar se reconhece imediatamente */}
-          <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 sm:px-4 py-2 mb-6 sm:mb-10 font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary">
+          {/* Hook imaginativo — ativa o sonho antes de apresentar o produto */}
+          <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 sm:px-4 py-2 mb-6 sm:mb-8 font-mono text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-primary">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
-            Para quem já tem produto · já fez anúncio · já investiu em tráfego
+            O time que todo produtor digital sonha em ter
           </div>
 
-          {/* Headline — execução automática total */}
-          <h1 className="text-[2rem] sm:text-6xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
-            Você na estratégia.<br />
+          {/* Headline — o dream team */}
+          <h1 className="text-[1.9rem] sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
+            E se os maiores<br />especialistas em<br />lançamento estivessem<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              A NEXOS na execução.
+              todos trabalhando<br className="hidden sm:block" />para o seu?
             </span>
           </h1>
 
-          {/* Subheadline — CEO das campanhas */}
+          {/* Copy aspiracional — o sonho em palavras */}
           <p className="text-base sm:text-xl text-muted-foreground leading-relaxed mb-4 sm:mb-6 max-w-2xl">
-            O problema nunca foi a estratégia.<br className="hidden sm:block" />
-            Foi que <strong className="text-foreground">executar um lançamento profissional exige uma agência inteira operando em perfeita sincronia</strong> — e você estava tentando fazer tudo isso sozinho.
+            Copy. Branding. Comportamento de mercado. Estrutura de funil. Desejo. Escassez. A dor principal do avatar.<br className="hidden sm:block" />
+            <strong className="text-foreground">Os melhores especialistas em cada área do lançamento — todos ao seu serviço, ao mesmo tempo, no mesmo sistema.</strong>
           </p>
           <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed mb-8 sm:mb-12 max-w-2xl">
-            A NEXOS AI é o sistema operacional do seu lançamento. Você toma as decisões. O sistema posta nos horários certos, alimenta o pixel, fala com cada segmento de lead, gera os criativos, dispara as sequências — <strong className="text-foreground">tudo automatizado, do briefing ao carrinho fechado.</strong> E quando um lançamento termina, o próximo já está sendo construído.
+            Isso é a NEXOS AI. Você não precisa publicar nada por conta própria. Não precisa contratar ninguém. Não precisa coordenar equipe.{" "}
+            <strong className="text-foreground">A NEXOS faz absolutamente tudo — da estratégia ao lançamento automatizado — para você vender 6 dígitos em 7 dias</strong> ou aplicar qualquer técnica que desejar.
           </p>
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
@@ -153,52 +154,57 @@ function HeroSection() {
 // ─── Section 2: IDENTIDADE — Avatar se reconhece na situação ─────────────────
 function IdentidadeSection() {
   const { ref, inView } = useInView(0.2);
-  const dores = [
-    {
-      situacao: "Você vende online — lançamento, perpétuo ou live de vendas",
-      realidade: "Seja um lançamento clássico em 7 dias, um funil evergreen rodando o ano todo ou uma live de vendas semanal — a operação exige as mesmas peças: copy, tráfego, sequência, criativos, pixel, análise. E tudo isso ao mesmo tempo.",
-    },
-    {
-      situacao: "Você já tem produto e audiência — o gargalo é a execução",
-      realidade: "Você sabe vender. O problema é que cada campanha exige um time: gestor de tráfego, copywriter, editor de vídeo, social media, analista. Ou você delega e perde controle — ou faz tudo e perde velocidade.",
-    },
-    {
-      situacao: "Você investe em tráfego pago",
-      realidade: "Você já sabe o que é hook rate, frequência, ROAS, lookalike. Mas o algoritmo da Meta funciona melhor quando há consistência de conteúdo, dados e oferta — e manter isso manualmente é exaustivo.",
-    },
-    {
-      situacao: "Você paga R$8k–R$20k/mês em ferramentas e equipe",
-      realidade: "Copy.ai, Jasper, Canva Pro, RD Station, ActiveCampaign, gestor de anúncios, designer, copywriter, gestor de tráfego. Cada ferramenta separada. Nenhuma conversa com a outra. Você é o sistema nervoso — e isso drena.",
-    },
+  const especialistas = [
+    { area: "Copywriter de Lançamento", faz: "Escreve cada peça de copy calibrada para o estágio de consciência do lead: anúncio, email, WhatsApp, VSL, landing, carrinho", semNexos: "R$4k–R$8k por lançamento" },
+    { area: "Gestor de Tráfego", faz: "Cria campanhas segmentadas por audiência, monitora pixel, rotaciona criativos e escala o que converte — 7 dias por semana", semNexos: "R$3k–R$8k/mês" },
+    { area: "Especialista em Funil e Automação", faz: "Monta a sequência completa de email e WhatsApp por segmento — quente, morno, frio — com lógica de estado e disparo automático", semNexos: "R$3k–R$5k por lançamento" },
+    { area: "Estrategista de Lançamento", faz: "Define posicionamento, mecanismo único, big idea, trilha de receita e todas as fases do pré ao pós-lançamento", semNexos: "R$5k–R$15k por lançamento" },
+    { area: "Social Media e Criação de Conteúdo", faz: "Produz e posta conteúdo diário nos horários certos, mantém consistência de marca e alimenta o algoritmo durante todo o período", semNexos: "R$2k–R$4k/mês" },
+    { area: "Analista de Performance", faz: "Acompanha métricas em tempo real, detecta gargalos e entrega plano de ação priorizado por impacto — sem esperar o fim do lançamento", semNexos: "R$3k–R$6k/mês" },
   ];
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 delay-100 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-8">— Reconhecimento —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-6">— O time que você precisaria contratar —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4 sm:mb-6">
-            Se isso soa<br />familiar,<br />
-            <span className="text-destructive/80">continue lendo.</span>
+            Para executar um<br />lançamento profissional<br />
+            <span className="text-destructive/80">você precisa disso tudo.</span>
           </h2>
-          <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Não é falta de habilidade. Não é falta de dedicação. É que você está usando ferramentas de 2018 para executar campanhas de 2025 — e <strong className="text-foreground">o mercado evoluiu mais rápido que as ferramentas disponíveis.</strong>
+          <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
+            Não é falta de estratégia. Não é falta de produto. <strong className="text-foreground">É que lançar em alto nível exige um time inteiro de especialistas operando em sincronia</strong> — e a maioria dos produtores tenta fazer tudo isso sozinho, ou paga fortunas por parte disso.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {dores.map((item, i) => (
+
+          <div className="space-y-2 mb-6">
+            {especialistas.map((item, i) => (
               <div
                 key={i}
-                className={`border border-border/30 bg-card/20 p-7 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
-                style={{ transitionDelay: `${200 + i * 120}ms` }}
+                className={`grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 sm:gap-6 border border-border/30 bg-card/20 px-5 py-4 items-start transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                style={{ transitionDelay: `${150 + i * 100}ms` }}
               >
-                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-3 border-l-2 border-primary/40 pl-3">{item.situacao}</div>
-                <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{item.realidade}</p>
+                <div>
+                  <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-1">{item.area}</div>
+                  <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">{item.faz}</p>
+                </div>
+                <div className="font-mono text-xs text-destructive/60 font-black whitespace-nowrap shrink-0 pt-0.5">{item.semNexos}</div>
               </div>
             ))}
           </div>
-          <div className={`mt-6 border border-destructive/20 bg-destructive/5 px-6 py-4 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} style={{ transitionDelay: "640ms" }}>
+
+          <div className={`border border-destructive/30 bg-destructive/5 px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} style={{ transitionDelay: "760ms" }}>
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              O problema não é você. É que <strong className="text-foreground">nenhuma ferramenta do mercado foi construída para orquestrar o lançamento completo como um sistema único.</strong>{" "}
-              <span className="text-destructive/70 font-bold">Até agora.</span>
+              Custo total para ter esse time num lançamento de 30 dias:
+            </p>
+            <div className="flex items-baseline gap-3 shrink-0">
+              <span className="font-mono font-black text-2xl text-destructive">R$21.000+</span>
+              <span className="font-mono text-xs text-muted-foreground/50">por mês</span>
+            </div>
+          </div>
+
+          <div className={`mt-4 border border-primary/20 bg-primary/5 px-6 py-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "900ms" }}>
+            <p className="font-mono text-sm text-muted-foreground leading-relaxed">
+              A NEXOS AI tem cada um desses especialistas — em formato de agente de IA, calibrado com as melhores metodologias do mercado brasileiro, todos trabalhando em paralelo no seu lançamento.{" "}
+              <strong className="text-foreground">Você não precisa de nenhum deles. Você só precisa da NEXOS.</strong>
             </p>
           </div>
         </div>
@@ -208,46 +214,52 @@ function IdentidadeSection() {
   );
 }
 
-// ─── Section 2.5: EXECUÇÃO TOTAL — O que a NEXOS faz por você todo dia ────────
+// ─── Section 2.5: O DREAM TEAM em ação ───────────────────────────────────────
 function DreamStateSection() {
   const { ref, inView } = useInView(0.15);
 
-  const tarefasDiarias = [
+  const agentes = [
     {
-      hora: "06:00",
-      acao: "Publica o primeiro post do dia nas redes sociais",
-      detalhe: "Conteúdo gerado, aprovado e agendado — posta automaticamente no horário de maior engajamento do seu público",
+      nome: "Arquiteto de Lançamento",
+      especialidade: "Estratégia & Posicionamento",
+      faz: "Analisa seu produto, avatar e mercado. Define o mecanismo único, a big idea e a trilha de receita (6, 8 ou 10 dígitos). Nenhuma campanha começa sem uma estratégia aprovada.",
       cor: "text-primary",
+      bordaCor: "border-primary/30",
     },
     {
-      hora: "08:30",
-      acao: "Analisa o pixel e ajusta a segmentação de anúncios",
-      detalhe: "Compara hook rate, CTR e CPL das últimas 24h com benchmarks do mercado. Detecta queda de performance antes que vire prejuízo.",
+      nome: "Copywriter Master",
+      especialidade: "Copy & Persuasão",
+      faz: "Escreve cada peça calibrada pela dor principal, desejo profundo e estágio de consciência do lead. Email de aquecimento, script de VSL, copy de anúncio, mensagem de carrinho — tudo com estrutura de funil.",
       cor: "text-blue-400",
+      bordaCor: "border-blue-400/30",
     },
     {
-      hora: "10:00",
-      acao: "Dispara sequência personalizada para cada segmento de lead",
-      detalhe: "Leads quentes recebem copy de urgência. Leads mornos recebem prova social. Leads frios recebem aquecimento. Tudo automático, por email e WhatsApp.",
+      nome: "Especialista em Desejo e Escassez",
+      especialidade: "Gatilhos Mentais & Fechamento",
+      faz: "Injeta os gatilhos certos no momento certo — autoridade, antecipação, escassez real, urgência com lógica. Não spam. Cada mensagem tem uma função específica na jornada do lead.",
       cor: "text-violet-400",
+      bordaCor: "border-violet-400/30",
     },
     {
-      hora: "14:00",
-      acao: "Responde perguntas no WhatsApp com IA de vendas",
-      detalhe: "Classifica intenção de compra, responde objeções e encaminha leads qualificados para o closer — ou fecha sozinho quando a intenção é alta.",
+      nome: "Gestor de Tráfego e Pixel",
+      especialidade: "Mídia Paga & Algoritmo",
+      faz: "Cria segmentações por estágio de consciência, monitora hook rate e ROAS, rotaciona criativos quando detecta fadiga. Dispara eventos CAPI server-side — o pixel recebe sinal limpo mesmo com iOS 14+ e ad blockers.",
       cor: "text-emerald-400",
+      bordaCor: "border-emerald-400/30",
     },
     {
-      hora: "17:00",
-      acao: "Gera novas variações de criativo para substituir os que cansaram",
-      detalhe: "Detecta fadiga criativa (CTR caiu 30% do pico), cria 5 novos hooks e apresenta para aprovação antes de subir.",
+      nome: "Social Media e Conteúdo",
+      especialidade: "Redes Sociais & Consistência",
+      faz: "Gera e posta conteúdo diário nos horários de maior engajamento do seu público. Você não publica nada. Não agenda nada. A NEXOS mantém a consistência de marca durante todo o período de lançamento.",
       cor: "text-amber-400",
+      bordaCor: "border-amber-400/30",
     },
     {
-      hora: "23:00",
-      acao: "Compila o relatório do dia e ajusta a estratégia de amanhã",
-      detalhe: "Consolida métricas, calcula health score da campanha e programa as ações de otimização para o dia seguinte — sem que você precise abrir nenhum dashboard.",
+      nome: "Time de Vendas IA",
+      especialidade: "WhatsApp & Atendimento",
+      faz: "Classifica intenção de compra, responde objeções e conduz o lead ao fechamento — no WhatsApp, em tempo real. Quando a intenção é muito alta ou a objeção é complexa, escala para humano. O carrinho não fica sem resposta.",
       cor: "text-rose-400",
+      bordaCor: "border-rose-400/30",
     },
   ];
 
@@ -256,35 +268,35 @@ function DreamStateSection() {
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
 
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">— O que a NEXOS faz enquanto você vive —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">— O dream team no seu lançamento —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            A parte mais difícil<br />do lançamento<br />
-            <span className="text-primary">não é a estratégia.</span>
+            Você não precisa<br />publicar nada.<br />
+            <span className="text-primary">A NEXOS faz tudo.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            É a execução. É postar todo dia. É olhar o pixel às 7 da manhã. É escrever o email de urgência do carrinho às 23h. É responder 400 mensagens de WhatsApp enquanto o anúncio queima verba. <strong className="text-foreground">Isso é o que derruba a maioria dos lançamentos — não falta de estratégia.</strong> E é exatamente isso que a NEXOS faz por você.
+            Não é um chatbot que responde perguntas. São especialistas autônomos — cada um treinado com as melhores metodologias do mercado brasileiro — todos trabalhando em paralelo no seu lançamento, sem que você precise coordenar nada.
           </p>
 
-          <div className="space-y-3 mb-10">
-            {tarefasDiarias.map((item, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+            {agentes.map((item, i) => (
               <div
                 key={i}
-                className={`grid grid-cols-[64px_1fr] sm:grid-cols-[80px_1fr] gap-4 border border-border/30 bg-card/20 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}
+                className={`border ${item.bordaCor} bg-card/20 p-5 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
                 style={{ transitionDelay: `${150 + i * 100}ms` }}
               >
-                <div className={`font-mono font-black text-sm ${item.cor} leading-none pt-0.5`}>{item.hora}</div>
-                <div>
-                  <div className="font-mono text-xs uppercase tracking-widest text-foreground font-bold mb-1">{item.acao}</div>
-                  <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">{item.detalhe}</p>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className={`font-mono text-xs uppercase tracking-widest font-black ${item.cor}`}>{item.nome}</div>
+                  <span className={`font-mono text-[9px] border ${item.bordaCor} ${item.cor} px-2 py-0.5 uppercase tracking-widest shrink-0 opacity-70`}>{item.especialidade}</span>
                 </div>
+                <p className="font-mono text-[11px] text-muted-foreground/65 leading-relaxed">{item.faz}</p>
               </div>
             ))}
           </div>
 
-          <div className={`border border-primary/20 bg-primary/5 px-6 py-5 flex items-start gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "800ms" }}>
-            <Cpu className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+          <div className={`border border-primary/20 bg-primary/5 px-6 py-5 flex items-start gap-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "750ms" }}>
+            <Zap className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              Isso não é um chatbot respondendo perguntas. É um time operando em paralelo — <strong className="text-foreground">cada agente especializado em uma função</strong>, todos compartilhando o mesmo contexto do seu produto, do seu avatar e do seu histórico de performance, agindo sobre dados reais em tempo real.
+              Todos eles compartilham o mesmo contexto: seu produto, seu avatar, seu posicionamento, seu histórico de performance. <strong className="text-foreground">Nenhum precisa de briefing. Nenhum precisa de reunião. Você aprova — eles executam.</strong>
             </p>
           </div>
 
