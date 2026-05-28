@@ -56,6 +56,7 @@ const itemPatchSchema = z.object({
   scheduledAt: z.string().optional(),
   contentPieceId: z.string().uuid().optional(),
   copyHints: z.string().optional(),
+  deliveryChannels: z.array(z.string()).optional(),
 });
 
 const activateSchema = z.object({

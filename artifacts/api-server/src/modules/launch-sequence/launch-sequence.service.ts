@@ -382,6 +382,7 @@ export async function updateSequenceItem(
     scheduledAt?: string;
     contentPieceId?: string;
     copyHints?: string;
+    deliveryChannels?: string[];
   },
 ) {
   const [existing] = await db
@@ -411,6 +412,7 @@ export async function updateSequenceItem(
       ...(patch.scheduledAt !== undefined && { scheduledAt: new Date(patch.scheduledAt) }),
       ...(patch.contentPieceId !== undefined && { contentPieceId: patch.contentPieceId }),
       ...(patch.copyHints !== undefined && { copyHints: patch.copyHints }),
+      ...(patch.deliveryChannels !== undefined && { deliveryChannels: patch.deliveryChannels }),
     })
     .where(eq(launchSequenceItemsTable.id, itemId))
     .returning();
