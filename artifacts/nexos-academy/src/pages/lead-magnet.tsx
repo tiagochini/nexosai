@@ -3,10 +3,8 @@ import { useState } from "react";
 const CAPTURE_KEY = "nexos-lead-captured";
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/../../api";
 
-// ── Grupo VIP — substitua pela URL quando criar o grupo ──────────────────────
-// Ex: "https://chat.whatsapp.com/XXXXXXXXXXXXXXXXXXXXX"
-//     "https://t.me/+XXXXXXXXXXXXXXXXXXXX"
-const WHATSAPP_GROUP_URL = "";
+// ── Grupo VIP ─────────────────────────────────────────────────────────────────
+const WHATSAPP_GROUP_URL = "https://wa.me/message/NBJH4EXPAV2EN1";
 
 interface Props {
   onNavigate: (page: string, params?: Record<string, string>) => void;

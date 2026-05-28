@@ -369,7 +369,7 @@ function WhatsAppMockup({ lead }: { lead: LeadData }) {
         </div>
         <div className="flex justify-end">
           <div className="bg-[#005c4b] text-white text-[11px] rounded-lg rounded-tr-none px-3 py-2 max-w-[80%]">
-            <span className="text-blue-300 underline">nexos.ai/garantir/{lead.productName.split(" ")[0]?.toLowerCase()}</span>
+            <span className="text-blue-300 underline">agencianexos.vip/garantir/{lead.productName.split(" ")[0]?.toLowerCase()}</span>
             <div className="text-[9px] text-white/50 text-right mt-0.5">23:58 ✓✓</div>
           </div>
         </div>
