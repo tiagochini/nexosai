@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import nexosLogo from "/nexos-logo.png";
 
 // ─── Configuração — atualize aqui ────────────────────────────────────────────
-const WA_LINK     = "https://wa.me/55XXXXXXXXXX?text=Quero%20o%20guia%20gratuito%20do%20NexOS%20AI";
+const WA_LINK     = "https://wa.me/message/NBJH4EXPAV2EN1"; // WhatsApp Business
 const GRUPO_LINK  = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
 const PDF_URL     = "#download"; // ← substitua pela URL real do PDF
 const MINIGUIA_LINK = "/comprar?produto=miniguia";

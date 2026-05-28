@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 // ─── Configuração de links — atualize estes valores ───────────────────────────
-const WA_LINK    = "https://wa.me/55XXXXXXXXXX?text=Quero%20o%20guia%20gratuito%20do%20NexOS%20AI"; // ← número WhatsApp Business
+const WA_LINK    = "https://wa.me/message/NBJH4EXPAV2EN1"; // WhatsApp Business
 const GRUPO_LINK = "https://chat.whatsapp.com/SEU_GRUPO_AQUI"; // ← link do grupo (para uso interno)
 const GUIA_URL   = "/guia"; // ← página do guia online
 
