@@ -1035,15 +1035,19 @@ export async function saveIntakeData(
 
   if (!campaign) throw new NotFoundError("Campaign");
 
-  if (campaign.status !== "intake") {
+  const EDITABLE_STATUSES = ["intake", "analyzing", "strategy_ready"];
+  if (!EDITABLE_STATUSES.includes(campaign.status ?? "")) {
     throw new ValidationError(
       `Cannot update intake when campaign status is '${campaign.status}'`,
     );
   }
 
+  // If editing after strategy was generated, reset back to intake so strategy is regenerated
+  const resetStatus = campaign.status !== "intake" ? "intake" : undefined;
+
   const [updated] = await db
     .update(campaignsTable)
-    .set({ intakeData })
+    .set({ intakeData, ...(resetStatus ? { status: resetStatus, updatedAt: new Date() } : {}) })
     .where(eq(campaignsTable.id, campaignId))
     .returning();
 
