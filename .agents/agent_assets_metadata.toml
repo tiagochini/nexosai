@@ -70,22 +70,22 @@ title = "Catálogo 1 — PDF Grátis (Mapa dos Primeiros R$10K)"
 id = "gAZ7hU0w3mRi3L1egJfLZ"
 uri = "file://attached_assets/catalog-nexos-ai.png"
 type = "image"
-title = "Catálogo 2 — NexOS AI (Produto Principal)"
+title = "3. NexOS AI — Sistema de Lançamento"
 
 [[outputs]]
 id = "AgQUV2dt20OLEnHkNyWUs"
 uri = "file://attached_assets/catalog-nexos-academy.png"
 type = "image"
-title = "Catálogo 3 — NexOS Academy (Bônus)"
+title = "4. NexOS Academy — Método de Lançamento"
 
 [[outputs]]
 id = "Ce_HTJsHapP3lDNqRIJIk"
 uri = "file://attached_assets/catalog-guia-audiencia.png"
 type = "image"
-title = "Catálogo — Guia Gratuito (Os 7 Erros da Sua Audiência)"
+title = "1. Guia Gratuito — Os 7 Erros da Sua Audiência"
 
 [[outputs]]
 id = "bPMYPmjDXHfRRICy3T1Qi"
 uri = "file://attached_assets/catalog-mapa-10k.png"
 type = "image"
-title = "Catálogo — Mapa dos Primeiros R$10K (R$97)"
+title = "2. Mapa dos Primeiros R$10K"
