@@ -112,9 +112,12 @@ export async function processScheduledItems(): Promise<void> {
       if (channels.includes("email") && cfg["emailListId"]) {
         try {
           const emailBody = buildEmailHtml(item, sequence);
+          // Map "resend" to "custom_smtp" for DB enum compatibility (Resend auto-used as fallback)
+          const rawProvider = (cfg["emailProvider"] as string) ?? "activecampaign";
+          const dbProvider = rawProvider === "resend" ? "custom_smtp" : rawProvider;
           const emailDispatch = await createEmailDispatch(sequence.workspaceId, {
             campaignId: undefined,
-            provider: (cfg["emailProvider"] as "rd_station" | "activecampaign") ?? "activecampaign",
+            provider: dbProvider as "rd_station" | "activecampaign" | "custom_smtp",
             listId: String(cfg["emailListId"]),
             subject: buildEmailSubject(item),
             fromName: String(cfg["emailFromName"] ?? sequence.name),

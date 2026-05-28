@@ -60,7 +60,7 @@ const itemPatchSchema = z.object({
 
 const activateSchema = z.object({
   emailListId: z.string().optional(),
-  emailProvider: z.enum(["rd_station", "activecampaign"]).optional(),
+  emailProvider: z.enum(["rd_station", "activecampaign", "resend"]).optional(),
   emailFromName: z.string().optional(),
   emailFromEmail: z.string().email().optional(),
   phoneNumbers: z.array(z.string()).optional(),

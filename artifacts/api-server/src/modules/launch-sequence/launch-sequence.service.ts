@@ -32,7 +32,7 @@ export interface CreateSequenceInput {
 
 export interface ActivateSequenceInput {
   emailListId?: string;
-  emailProvider?: "rd_station" | "activecampaign";
+  emailProvider?: "rd_station" | "activecampaign" | "resend";
   emailFromName?: string;
   emailFromEmail?: string;
   phoneNumbers?: string[];

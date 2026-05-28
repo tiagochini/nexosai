@@ -25,7 +25,7 @@ import {
 const router = Router();
 
 const ACADEMY_PRODUCTS: Record<string, { name: string; amountBrl: number }> = {
-  "mini-guide": { name: "Mini-Guia: Primeiros R$10k Online", amountBrl: 10 },
+  "mini-guide": { name: "Mapa dos Primeiros R$10K em Vendas Online", amountBrl: 97 },
   "complete-bundle": { name: "Metodologia NexOS — Edição Completa", amountBrl: 2500 },
 };
 
@@ -298,6 +298,8 @@ router.post("/leads", async (req, res): Promise<void> => {
   // Auto-enroll in perpetual sales funnel + send welcome email immediately
   if (inserted.length > 0 && inserted[0]) {
     const leadId = inserted[0].id;
+    const capturedEmail = parsed.email.toLowerCase();
+    const capturedName = parsed.name ?? "";
     setImmediate(async () => {
       try {
         await enrollLeadInFunnel(leadId);
@@ -305,6 +307,28 @@ router.post("/leads", async (req, res): Promise<void> => {
         await sendWelcomeEmailNow(leadId);
       } catch (err) {
         logger.error({ err, leadId }, "academy: failed to enroll/email lead");
+      }
+
+      // Also enroll in the NexOS AI perpetual launch sequence (fire-and-forget)
+      const NEXOS_SEQUENCE_ID = "f3756cb9-a767-47b5-97a2-386c080b0354";
+      try {
+        const baseUrl = env.APP_URL ?? "http://localhost:80";
+        await fetch(`${baseUrl}/api/lead-capture/${NEXOS_SEQUENCE_ID}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: capturedEmail,
+            name: capturedName,
+            source: parsed.source ?? "free-guide",
+            utmSource: parsed.utmSource ?? "academy",
+            utmMedium: parsed.utmMedium ?? "lead-magnet",
+            utmCampaign: parsed.utmCampaign ?? "mapa-10k",
+            consentText: "Aceito receber comunicações da NexOS AI",
+          }),
+        });
+        logger.info({ email: capturedEmail, sequenceId: NEXOS_SEQUENCE_ID }, "academy: lead enrolled in NexOS AI sequence");
+      } catch (err) {
+        logger.warn({ err }, "academy: failed to enroll lead in NexOS AI sequence (non-critical)");
       }
     });
   }

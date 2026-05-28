@@ -8,13 +8,14 @@ import ProgressPage from "@/pages/progress-page";
 import Glossary from "@/pages/glossary";
 import Owner, { isOwnerMode, loadBrand, type BrandConfig } from "@/pages/owner";
 import MiniGuide from "@/pages/mini-guide";
+import MiniGuideSales from "@/pages/mini-guide-sales";
 import FreeGuide from "@/pages/free-guide";
 import LeadMagnet from "@/pages/lead-magnet";
 import { useAntiPiracy, clearSession } from "@/hooks/useAntiPiracy";
 
 const queryClient = new QueryClient();
 
-type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner" | "mini-guide" | "free-guide" | "lead-magnet";
+type Page = "home" | "modules" | "module" | "lesson" | "products" | "progress" | "glossary" | "owner" | "mini-guide" | "mini-guide-sales" | "free-guide" | "lead-magnet";
 
 interface NavState {
   page: Page;
@@ -63,6 +64,7 @@ function getInitialPage(): NavState {
     if (window.location.hash === "#guia") return { page: "lead-magnet", params: {} };
     if (window.location.hash === "#guia-gratuito") return { page: "free-guide", params: {} };
     if (window.location.hash === "#mini-guide") return { page: "mini-guide", params: {} };
+    if (window.location.hash === "#venda" || window.location.hash === "#mapa-10k") return { page: "mini-guide-sales", params: {} };
     if (window.location.hash === "#products") return { page: "products", params: {} };
     const search = new URLSearchParams(window.location.search);
     if (search.get("payment") === "success") return { page: "products", params: { paymentSuccess: "1" } };
@@ -102,6 +104,7 @@ function AcademyApp() {
       if (hash === "#owner") setNav({ page: "owner", params: {} });
       else if (hash === "#guia-gratuito") setNav({ page: "free-guide", params: {} });
       else if (hash === "#mini-guide") setNav({ page: "mini-guide", params: {} });
+      else if (hash === "#venda" || hash === "#mapa-10k") setNav({ page: "mini-guide-sales", params: {} });
       else if (hash === "#products") setNav({ page: "products", params: {} });
       setMobileMenuOpen(false);
     }
@@ -209,6 +212,8 @@ function AcademyApp() {
         return <Owner onNavigate={navigate} onOwnerChange={handleOwnerChange} isOwner={ownerMode} />;
       case "mini-guide":
         return <MiniGuide onNavigate={navigate} />;
+      case "mini-guide-sales":
+        return <MiniGuideSales onNavigate={navigate} />;
       case "free-guide":
         return <FreeGuide onNavigate={navigate} />;
       case "lead-magnet":
