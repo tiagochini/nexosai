@@ -44,7 +44,7 @@ import ConversaoPage from "@/pages/conversao";
 import CheckoutPage from "@/pages/checkout";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
-import Landing from "@/pages/landing";
+
 import IntegracoesPage from "@/pages/integracoes/index";
 import PipelinePage from "@/pages/pipeline/index";
 import ProdutosPage from "@/pages/produtos/index";
@@ -72,7 +72,8 @@ function VideoEditorProtected() {
 function HomeRoute() {
   const { token } = useAuth();
   if (token) return <AppLayout><Dashboard /></AppLayout>;
-  return <Landing />;
+  window.location.replace("/landing/");
+  return null;
 }
 
 function OnboardingRoute() {
