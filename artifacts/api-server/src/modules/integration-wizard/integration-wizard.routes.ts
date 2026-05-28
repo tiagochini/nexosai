@@ -189,7 +189,7 @@ router.post("/chat", async (req, res): Promise<void> => {
   }
 
   try {
-    const client = getAnthropic();
+    const { client } = getAnthropic();
 
     // Build conversation messages
     const messages: Array<{

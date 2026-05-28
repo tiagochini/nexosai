@@ -98,7 +98,7 @@ async function transcribeFile(fileId: string): Promise<TranscriptResult> {
   await extractAudioMp3(fileInfo.filePath, audioPath);
 
   try {
-    const client = getOpenAI();
+    const { client } = getOpenAI();
     const { toFile } = await import("openai");
     const buffer = fs.readFileSync(audioPath);
     const file = await toFile(buffer, "audio.mp3", { type: "audio/mpeg" });
@@ -276,7 +276,7 @@ Retorne SOMENTE JSON válido, sem markdown nem explicação adicional:
   const userMessage = `ROTEIRO COMPLETO:\n---\n${script.trim()}\n---\n\nTAKES DISPONÍVEIS:\n\n${takesText}`;
 
   try {
-    const client = getAnthropic();
+    const { client } = getAnthropic();
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 4096,

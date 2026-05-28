@@ -44,26 +44,39 @@ export const insertAiProviderLogSchema = createInsertSchema(
 export type InsertAiProviderLog = z.infer<typeof insertAiProviderLogSchema>;
 export type AiProviderLog = typeof aiProviderLogsTable.$inferSelect;
 
-export const AI_PROVIDER_COSTS = {
+export const AI_PROVIDER_COSTS: Record<
+  string,
+  Record<string, { inputPerMillion: number; outputPerMillion: number }>
+> = {
   anthropic: {
-    "claude-3-5-sonnet-20241022": {
-      inputPerMillion: 3.0,
-      outputPerMillion: 15.0,
-    },
-    "claude-3-haiku-20240307": {
-      inputPerMillion: 0.25,
-      outputPerMillion: 1.25,
-    },
+    // Legacy models
+    "claude-3-5-sonnet-20241022": { inputPerMillion: 3.0,   outputPerMillion: 15.0  },
+    "claude-3-haiku-20240307":    { inputPerMillion: 0.25,  outputPerMillion: 1.25  },
+    // Claude 4 — integration proxy model (Replit AI proxy)
+    "claude-sonnet-4-6":          { inputPerMillion: 3.0,   outputPerMillion: 15.0  },
+    // Claude 4 Opus — native key (highest reasoning)
+    "claude-opus-4-5":            { inputPerMillion: 15.0,  outputPerMillion: 75.0  },
+    // Catch-all for any future claude-* models not yet listed
+    "claude-3-5-haiku-20241022":  { inputPerMillion: 0.8,   outputPerMillion: 4.0   },
   },
   openai: {
-    "gpt-4o": { inputPerMillion: 2.5, outputPerMillion: 10.0 },
-    "gpt-4o-mini": { inputPerMillion: 0.15, outputPerMillion: 0.6 },
+    "gpt-4o":       { inputPerMillion: 2.5,   outputPerMillion: 10.0 },
+    "gpt-4o-mini":  { inputPerMillion: 0.15,  outputPerMillion: 0.6  },
+    // GPT-5 family
+    "gpt-5.4":      { inputPerMillion: 10.0,  outputPerMillion: 40.0 },
+    "gpt-5":        { inputPerMillion: 10.0,  outputPerMillion: 40.0 },
+    // Integration proxy model
+    "gpt-5.4-mini": { inputPerMillion: 1.5,   outputPerMillion: 6.0  },
   },
   gemini: {
-    "gemini-1.5-pro": { inputPerMillion: 1.25, outputPerMillion: 5.0 },
-    "gemini-1.5-flash": { inputPerMillion: 0.075, outputPerMillion: 0.3 },
+    "gemini-1.5-pro":          { inputPerMillion: 1.25,  outputPerMillion: 5.0  },
+    "gemini-1.5-flash":        { inputPerMillion: 0.075, outputPerMillion: 0.3  },
+    "gemini-2.5-flash":        { inputPerMillion: 0.15,  outputPerMillion: 0.6  },
+    "gemini-2.5-flash-preview":{ inputPerMillion: 0.15,  outputPerMillion: 0.6  },
+    "gemini-2.5-pro":          { inputPerMillion: 1.25,  outputPerMillion: 10.0 },
+    "gemini-3-flash-preview":  { inputPerMillion: 0.15,  outputPerMillion: 0.6  },
   },
-} as const;
+};
 
 export const CREDITS_PER_USD = 100;
 

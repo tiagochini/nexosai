@@ -182,7 +182,7 @@ export async function transcribeAudio(
   mimeType = "audio/webm",
   log: Logger,
 ): Promise<string> {
-  const client = getOpenAI();
+  const { client: openaiAudioClient } = getOpenAI();
   const base64Data = audioBase64.includes(",") ? audioBase64.split(",")[1]! : audioBase64;
   const buffer = Buffer.from(base64Data, "base64");
   const ext = mimeType.includes("mp4") ? "mp4"
@@ -195,7 +195,7 @@ export async function transcribeAudio(
   const { toFile } = await import("openai");
   const file = await toFile(buffer, `audio.${ext}`, { type: mimeType });
 
-  const transcription = await client.audio.transcriptions.create({
+  const transcription = await openaiAudioClient.audio.transcriptions.create({
     file,
     model: "whisper-1",
     language: "pt",
@@ -220,6 +220,10 @@ let anthropicClient: Anthropic | null = null;
 let openaiClient: OpenAI | null = null;
 let geminiClient: GoogleGenerativeAI | null = null;
 
+// Track whether each client was initialized with a native key (true) or integration proxy (false)
+let anthropicClientIsNative = false;
+let openaiClientIsNative = false;
+
 // ─── Integration helpers ──────────────────────────────────────────────────────
 
 function hasAnthropicIntegration(): boolean {
@@ -230,36 +234,42 @@ function hasOpenAIIntegration(): boolean {
   return !!(env.AI_INTEGRATIONS_OPENAI_BASE_URL && env.AI_INTEGRATIONS_OPENAI_API_KEY);
 }
 
-export function getAnthropic(): Anthropic {
+export function getAnthropic(): { client: Anthropic; isNative: boolean } {
   if (!anthropicClient) {
     if (env.ANTHROPIC_API_KEY) {
       anthropicClient = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+      anthropicClientIsNative = true;
     } else if (hasAnthropicIntegration()) {
       anthropicClient = new Anthropic({
         apiKey: env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
         baseURL: env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
       });
+      anthropicClientIsNative = false;
     } else {
       anthropicClient = new Anthropic({ apiKey: "missing" });
+      anthropicClientIsNative = false;
     }
   }
-  return anthropicClient;
+  return { client: anthropicClient, isNative: anthropicClientIsNative };
 }
 
-export function getOpenAI(): OpenAI {
+export function getOpenAI(): { client: OpenAI; isNative: boolean } {
   if (!openaiClient) {
     if (env.OPENAI_API_KEY) {
       openaiClient = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+      openaiClientIsNative = true;
     } else if (hasOpenAIIntegration()) {
       openaiClient = new OpenAI({
         apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
         baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
       });
+      openaiClientIsNative = false;
     } else {
       openaiClient = new OpenAI({ apiKey: "missing" });
+      openaiClientIsNative = false;
     }
   }
-  return openaiClient;
+  return { client: openaiClient, isNative: openaiClientIsNative };
 }
 
 function getGemini(): GoogleGenerativeAI {
@@ -284,9 +294,9 @@ async function callAnthropic(
   messages: AIMessage[],
   maxTokens = 8192,
   signal?: AbortSignal,
-): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
-  const client = getAnthropic();
-  const effectiveModel = env.ANTHROPIC_API_KEY ? model : ANTHROPIC_INTEGRATION_MODEL;
+): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel: string }> {
+  const { client, isNative } = getAnthropic();
+  const effectiveModel = isNative ? model : ANTHROPIC_INTEGRATION_MODEL;
   const response = await client.messages.create(
     {
       model: effectiveModel,
@@ -304,6 +314,7 @@ async function callAnthropic(
     content,
     inputTokens: response.usage.input_tokens,
     outputTokens: response.usage.output_tokens,
+    effectiveModel,
   };
 }
 
@@ -312,7 +323,7 @@ async function callOpenAI(
   systemPrompt: string,
   messages: AIMessage[],
   signal?: AbortSignal,
-): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
+): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
 
   if (!env.OPENAI_API_KEY && !hasOpenAIIntegration()) {
@@ -321,7 +332,7 @@ async function callOpenAI(
     }
   }
 
-  const client = getOpenAI();
+  const { client } = getOpenAI();
   const effectiveModel = usingIntegration ? OPENAI_INTEGRATION_MODEL : model;
 
   const isGpt5 = effectiveModel.startsWith("gpt-5") || effectiveModel.startsWith("o4") || effectiveModel.startsWith("o3");
@@ -345,6 +356,7 @@ async function callOpenAI(
     content: response.choices[0]?.message?.content ?? "",
     inputTokens: response.usage?.prompt_tokens ?? 0,
     outputTokens: response.usage?.completion_tokens ?? 0,
+    effectiveModel,
   };
 }
 
@@ -353,7 +365,7 @@ async function callGemini(
   systemPrompt: string,
   messages: AIMessage[],
   signal?: AbortSignal,
-): Promise<{ content: string; inputTokens: number; outputTokens: number }> {
+): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
 
   if (!hasGeminiAccess) {
@@ -382,6 +394,7 @@ async function callGemini(
       content: response.text(),
       inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
       outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
+      effectiveModel,
     };
   } catch (geminiErr) {
     // Gemini unavailable or quota exceeded — fall back to Anthropic integration
@@ -406,8 +419,8 @@ export async function callVisionChat(
   workspaceId: string,
   log: Logger,
 ): Promise<AICompletionResult> {
-  const client = getAnthropic();
-  const effectiveModel = env.ANTHROPIC_API_KEY ? ANTHROPIC_NATIVE_MODEL : ANTHROPIC_INTEGRATION_MODEL;
+  const { client, isNative } = getAnthropic();
+  const effectiveModel = isNative ? ANTHROPIC_NATIVE_MODEL : ANTHROPIC_INTEGRATION_MODEL;
   const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);
   const startTime = Date.now();
 
@@ -526,7 +539,7 @@ export async function completeWithAgent(
   const startTime = Date.now();
   const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);
 
-  let result: { content: string; inputTokens: number; outputTokens: number };
+  let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string };
 
   switch (provider) {
     case "anthropic":
@@ -540,10 +553,13 @@ export async function completeWithAgent(
       break;
   }
 
+  // Use the actual model that was called (may differ from requested model when using integration proxy)
+  const actualModel = result.effectiveModel ?? model;
+
   const latencyMs = Date.now() - startTime;
   const costUsd = calculateCostUsd(
     provider,
-    model,
+    actualModel,
     result.inputTokens,
     result.outputTokens,
   );
@@ -558,7 +574,7 @@ export async function completeWithAgent(
       campaignId,
       agentType: agentRole,
       provider: provider as any,
-      model,
+      model: actualModel,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
       totalTokens: result.inputTokens + result.outputTokens,
@@ -571,14 +587,14 @@ export async function completeWithAgent(
   }
 
   log.info(
-    { agentRole, provider, model, costUsd, creditsCharged, latencyMs },
+    { agentRole, provider, model: actualModel, requestedModel: model, costUsd, creditsCharged, latencyMs },
     "AI completion",
   );
 
   return {
     content: result.content,
     provider,
-    model,
+    model: actualModel,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
     costUsd,
