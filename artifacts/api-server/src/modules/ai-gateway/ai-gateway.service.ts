@@ -92,7 +92,7 @@ const ANTHROPIC_INTEGRATION_MODEL = "claude-sonnet-4-6";
 const OPENAI_NATIVE_MODEL = "gpt-5.4";
 const OPENAI_INTEGRATION_MODEL = "gpt-5.4";
 
-const GEMINI_NATIVE_MODEL = "gemini-2.5-pro";
+const GEMINI_NATIVE_MODEL = "gemini-2.5-flash";
 const GEMINI_FLASH_NATIVE = "gemini-2.5-flash";
 
 const AGENT_PROVIDER_MAP: Record<
