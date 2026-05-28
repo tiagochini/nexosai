@@ -12890,6 +12890,987 @@ D+30: Lançou → PROBLEMA: "Quero escalar mas não sei o que otimizar"<br>
         ],
       },
     ],
+  },
+  {
+    id: "bonus-infraestrutura",
+    number: 0,
+    title: "🎁 BÔNUS: Infraestrutura Completa de Lançamento",
+    description: "Módulo adicional exclusivo. Tudo que você precisa configurar antes de lançar: domínio, email profissional, WhatsApp Business, redes sociais e todas as integrações de ads — do zero ao automático.",
+    badge: "Bônus Exclusivo",
+    chapters: [
+      {
+        id: "bonus-dominio-email",
+        number: 1,
+        title: "Domínio Profissional + Email Autenticado",
+        subtitle: "Como sair do @gmail para o @seudominio sem cair no spam",
+        icon: "🌐",
+        color: "from-violet-600 to-purple-600",
+        duration: "40 min",
+        summary: "Configure seu domínio profissional, autentique seu email com SPF/DKIM/DMARC e garanta que cada mensagem chegue na caixa de entrada — não no spam.",
+        lessons: [
+          {
+            id: "bonus-dominio-1",
+            title: "Por Que Domínio Próprio é Obrigatório",
+            duration: "8 min",
+            type: "text",
+            keyPoints: [
+              "Email @gmail perde até 60% de abertura vs domínio próprio",
+              "Provedores de email filtram remetentes sem autenticação",
+              "Domínio próprio = credibilidade + proteção de marca"
+            ],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Por Que Isso Importa</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Você pode ter o melhor produto, a melhor copy, o melhor funil — mas se seus emails caem no spam, nada disso importa. Esta aula mostra o que acontece nos bastidores quando você envia um email e por que a infraestrutura decide se a mensagem chega ou não.</p>
+</div>
+
+<h2 style="color:#a78bfa">🌐 A Realidade dos Emails de Lançamento</h2>
+
+<p>Quando você envia um email de <strong>lancamento@seudominio.com</strong>, ele passa por uma série de verificações automáticas antes de chegar na caixa de entrada do lead. Cada verificação decide se o email vai para a caixa de entrada, para o spam, ou é rejeitado completamente.</p>
+
+<p>Emails enviados de domínios sem autenticação (ou pior, de Gmail genérico) falham nessas verificações e são automaticamente filtrados. Isso significa que seu lead <em>nunca vai ver</em> a mensagem — e você vai achar que o funil não funciona quando na verdade o problema é infraestrutura.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">As 3 Camadas de Autenticação de Email</h3>
+
+<p><strong>SPF (Sender Policy Framework):</strong> Um registro no DNS do seu domínio que diz quais servidores têm permissão para enviar emails em seu nome. Sem SPF, qualquer servidor pode forjar emails do seu domínio — e os provedores sabem disso, então filtram tudo.</p>
+
+<p><strong>DKIM (DomainKeys Identified Mail):</strong> Uma assinatura criptográfica adicionada a cada email. O servidor destinatário verifica a assinatura contra a chave pública no seu DNS. Se a assinatura bate, o email é legítimo. Se não bate, spam.</p>
+
+<p><strong>DMARC (Domain-based Message Authentication):</strong> A política que define o que fazer quando SPF ou DKIM falham. Com DMARC configurado, você protege sua marca de ser usada em phishing e aumenta drasticamente a entregabilidade.</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
+<div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ JORNADA DO EMAIL ATÉ A CAIXA DE ENTRADA</div>
+Você clica "Enviar"
+    ↓
+Servidor de envio (Resend / SendGrid / etc)
+    ↓
+Verificação SPF: "Esse servidor está autorizado?" → Sim/Não
+    ↓ Sim
+Verificação DKIM: "A assinatura é válida?" → Sim/Não
+    ↓ Sim
+Verificação DMARC: "A política permite?" → Sim/Não
+    ↓ Sim
+Score de reputação do domínio
+    ↓ Alto
+✅ CAIXA DE ENTRADA
+    ↓ Qualquer falha acima
+⚠️ SPAM ou REJEIÇÃO TOTAL
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Por Que Gmail Genérico Destrói Lançamentos</h3>
+
+<table>
+  <thead>
+    <tr><th>Critério</th><th>@gmail.com</th><th>@seudominio.com</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Credibilidade percebida</td><td>❌ Baixíssima</td><td>✅ Profissional</td></tr>
+    <tr><td>Taxa de abertura média</td><td>~18%</td><td>~35-45%</td></tr>
+    <tr><td>Filtro de spam</td><td>Alto risco</td><td>Baixo risco (com auth)</td></tr>
+    <tr><td>Limite de envio</td><td>500/dia</td><td>Ilimitado (Resend: 3k/mês grátis)</td></tr>
+    <tr><td>Rastreamento de cliques</td><td>❌ Não</td><td>✅ Sim</td></tr>
+    <tr><td>Automação de sequências</td><td>❌ Manual</td><td>✅ 100% automático</td></tr>
+  </tbody>
+</table>
+
+<div style="background:#1c0a0a;border-left:3px solid #ef4444;padding:14px 18px;border-radius:0 8px 8px 0;margin:24px 0">
+<p style="color:#f87171;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">❌ O Erro que Destrói Funis</p>
+<p style="color:#fecaca;font-size:14px;margin:0 0 8px">Disparar sequências de lançamento pelo Gmail pessoal. Resultado: leads marcam como spam, Gmail suspende a conta por volume anormal, toda a sequência para. Isso acontece exatamente no pico do lançamento — quando você mais precisa dos emails funcionando.</p>
+</div>`
+          },
+          {
+            id: "bonus-dominio-2",
+            title: "Comprando Seu Domínio: Passo a Passo",
+            duration: "12 min",
+            type: "text",
+            keyPoints: [
+              "Onde comprar: Cloudflare Registrar (mais barato), Namecheap, GoDaddy",
+              "Como escolher o nome certo para o seu negócio",
+              "Configurando DNS básico do zero"
+            ],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Domínio é o endereço permanente do seu negócio digital. Esta aula ensina a escolher, comprar e configurar o domínio certo — sem pagar caro, sem complicação técnica.</p>
+</div>
+
+<h2 style="color:#a78bfa">🛒 Onde Comprar Seu Domínio</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Opção 1 — Cloudflare Registrar (Recomendado)</h3>
+<p>O Cloudflare vende domínios pelo preço de custo — sem margem. Um .com sai por volta de US$10/ano, enquanto em outros registradores custa US$15-25. Além disso, você já vai usar o Cloudflare para DNS, então faz sentido ter tudo no mesmo lugar.</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">PASSO A PASSO — CLOUDFLARE REGISTRAR</p>
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2">
+<li>Acesse <strong>cloudflare.com</strong> → crie conta gratuita</li>
+<li>Menu esquerdo → <strong>Domain Registration → Register Domains</strong></li>
+<li>Digite o nome desejado → veja disponibilidade e preço</li>
+<li>Selecione o domínio → adicione ao carrinho → pague (cartão internacional)</li>
+<li>DNS do Cloudflare é configurado automaticamente</li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Como Escolher o Nome do Domínio</h3>
+
+<table>
+  <thead>
+    <tr><th>Critério</th><th>✅ Bom</th><th>❌ Evite</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Extensão</td><td>.com (universal) ou .com.br</td><td>.net, .info, .biz</td></tr>
+    <tr><td>Tamanho</td><td>Até 15 caracteres</td><td>Mais de 20 caracteres</td></tr>
+    <tr><td>Caracteres</td><td>Só letras e números</td><td>Hífens, underscores</td></tr>
+    <tr><td>Memória</td><td>Fácil de falar em voz alta</td><td>Precisa soletrar</td></tr>
+    <tr><td>Marca</td><td>Nome do produto/marca</td><td>Keywords genéricas</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Configurando o Cloudflare DNS (Após Comprar o Domínio)</h3>
+
+<p>Se comprou em outro registrador (Namecheap, GoDaddy), transfira o DNS para o Cloudflare gratuitamente:</p>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2">
+<li>No Cloudflare → <strong>Add a Site</strong> → digita seu domínio</li>
+<li>Escolhe plano <strong>Free</strong> → Next</li>
+<li>Cloudflare escaneia seus registros DNS atuais → Review → Continue</li>
+<li>Copia os 2 nameservers do Cloudflare (ex: <code>aria.ns.cloudflare.com</code>)</li>
+<li>No seu registrador → configurações DNS → substitui pelos nameservers do Cloudflare</li>
+<li>Aguarda 5-30 minutos → Cloudflare confirma quando ativo</li>
+</ol>
+</div>`
+          },
+          {
+            id: "bonus-dominio-3",
+            title: "Configurando Email Profissional com Resend",
+            duration: "20 min",
+            type: "exercise",
+            keyPoints: [
+              "Criar conta gratuita no Resend (3.000 emails/mês grátis)",
+              "Verificar domínio com auto-configure no Cloudflare",
+              "Configurar lancamento@seudominio.com como remetente oficial"
+            ],
+            exercise: "Ao final desta aula, você terá seu email profissional enviando de @seudominio.com com SPF, DKIM e DMARC configurados automaticamente. Teste mandando um email para você mesmo — ele deve chegar na caixa de entrada, não no spam.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">O Que Você Vai Configurar</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Resend é o serviço de envio de email mais moderno do mercado. Plano gratuito: 3.000 emails/mês + 100/dia. Para um lançamento, isso cobre sequências completas de até 3.000 leads. Plano pago (US$20/mês) cobre 50.000 emails.</p>
+</div>
+
+<h2 style="color:#a78bfa">📧 Resend: Configuração Completa em 5 Minutos</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Etapa 1 — Criar Conta no Resend</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Acesse <strong>resend.com/signup</strong></li>
+<li>Crie conta com qualquer email (Gmail funciona para o cadastro)</li>
+<li>Confirme o email de verificação que vai chegar</li>
+<li>Você estará no dashboard do Resend</li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Etapa 2 — Adicionar Seu Domínio</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Menu esquerdo → <strong>Domains → Add Domain</strong></li>
+<li>Digite seu domínio (ex: <code>seudominio.com</code>)</li>
+<li>Region → selecione <strong>São Paulo (sa-east-1)</strong> para menor latência no Brasil</li>
+<li>Clique em <strong>Add domain</strong></li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Etapa 3 — Verificar DNS com Auto Configure (Cloudflare)</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Na tela de DNS Records → clique <strong>Auto configure</strong></li>
+<li>O Resend vai pedir autorização para acessar seu Cloudflare</li>
+<li>Faça login no Cloudflare quando solicitado</li>
+<li>Revise os registros (MX, TXT DKIM, TXT SPF) → clique <strong>Authorize</strong></li>
+<li>Aguarde 2-5 minutos → domínio ficará como <strong>Verified ✅</strong></li>
+</ol>
+</div>
+
+<div style="background:#0a1f0a;border-left:3px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#86efac;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">✅ Resultado Esperado</p>
+<p style="color:#dcfce7;font-size:13px;margin:0">No painel do Resend, você verá: <strong>Domain added → DNS verified → Domain verified</strong>. Isso significa que seus emails enviados de qualquer endereço @seudominio.com vão chegar na caixa de entrada, não no spam.</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Etapa 4 — Gerar API Key e Conectar à Plataforma</h3>
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Menu esquerdo → <strong>API Keys → Create API Key</strong></li>
+<li>Nome: <code>Producao</code> → Permissão: <strong>Full Access</strong></li>
+<li>Copie a chave gerada (começa com <code>re_</code>)</li>
+<li>Cole a chave nas configurações da sua plataforma de email/automação</li>
+<li>Configure o remetente padrão como <code>lancamento@seudominio.com</code></li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Endereços de Email Recomendados por Função</h3>
+
+<table>
+  <thead>
+    <tr><th>Endereço</th><th>Uso</th><th>Exemplo de assunto</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>lancamento@</code></td><td>Sequência de lançamento</td><td>"O carrinho abre em 3 horas"</td></tr>
+    <tr><td><code>guia@</code></td><td>Entrega de lead magnets</td><td>"Seu guia gratuito chegou"</td></tr>
+    <tr><td><code>resultados@</code></td><td>Relatórios e métricas</td><td>"Seu resultado semanal"</td></tr>
+    <tr><td><code>noreply@</code></td><td>Confirmações automáticas</td><td>"Confirme seu cadastro"</td></tr>
+  </tbody>
+</table>`
+          }
+        ]
+      },
+      {
+        id: "bonus-whatsapp",
+        number: 2,
+        title: "WhatsApp Business: Configuração Profissional",
+        subtitle: "De número pessoal para canal de vendas automatizado",
+        icon: "💬",
+        color: "from-green-600 to-emerald-600",
+        duration: "35 min",
+        summary: "Configure o WhatsApp Business corretamente, crie seu catálogo de produtos, ative mensagens automáticas e conecte ao sistema de disparo para sequências de lançamento.",
+        lessons: [
+          {
+            id: "bonus-whatsapp-1",
+            title: "WhatsApp Business vs Pessoal: O Que Muda",
+            duration: "10 min",
+            type: "text",
+            keyPoints: [
+              "Perfil comercial com horário, catálogo e descrição",
+              "Mensagens automáticas de boas-vindas e ausência",
+              "Etiquetas para organizar leads por estágio do funil"
+            ],
+            content: `<h2 style="color:#a78bfa">💬 WhatsApp Business: A Diferença Real</h2>
+
+<p>O WhatsApp Business não é apenas "WhatsApp com uma foto de empresa". É uma plataforma completa de comunicação comercial com funcionalidades que o WhatsApp pessoal não tem — e que fazem diferença direta nas conversões de lançamento.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Recursos Exclusivos do WhatsApp Business</h3>
+
+<table>
+  <thead>
+    <tr><th>Recurso</th><th>WhatsApp Pessoal</th><th>WhatsApp Business</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Perfil comercial</td><td>❌</td><td>✅ Endereço, horário, site, email</td></tr>
+    <tr><td>Catálogo de produtos</td><td>❌</td><td>✅ Até 500 itens com foto, preço, link</td></tr>
+    <tr><td>Mensagem de boas-vindas</td><td>❌</td><td>✅ Enviada automaticamente</td></tr>
+    <tr><td>Mensagem de ausência</td><td>❌</td><td>✅ Fora do horário comercial</td></tr>
+    <tr><td>Respostas rápidas</td><td>❌</td><td>✅ Atalhos / (barra) para templates</td></tr>
+    <tr><td>Etiquetas de leads</td><td>❌</td><td>✅ Organizar por funil</td></tr>
+    <tr><td>Estatísticas</td><td>❌</td><td>✅ Enviadas, entregues, lidas</td></tr>
+    <tr><td>API Business</td><td>❌</td><td>✅ Integração com automações</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Configurando o Perfil Comercial</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Baixe o <strong>WhatsApp Business</strong> (app separado do pessoal)</li>
+<li>Cadastre com um número dedicado ao negócio (não use o pessoal)</li>
+<li>Configurações → <strong>Configurações da empresa</strong></li>
+<li>Preencha: Nome da empresa, Categoria, Descrição, Endereço, Horário, Email, Site</li>
+<li>Foto do perfil: logo da sua marca (mínimo 500×500px)</li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Etiquetas para Organizar o Funil</h3>
+<p>Use etiquetas coloridas para organizar seus leads por estágio:</p>
+<ul>
+<li>🔵 <strong>Novo Lead</strong> — entrou pela primeira vez</li>
+<li>🟡 <strong>Quente</strong> — abriu emails, viu os conteúdos</li>
+<li>🟠 <strong>Carrinho</strong> — clicou no link de venda</li>
+<li>🟢 <strong>Cliente</strong> — comprou</li>
+<li>🔴 <strong>Sem Interesse</strong> — pediu para sair</li>
+</ul>`
+          },
+          {
+            id: "bonus-whatsapp-2",
+            title: "Catálogo de Produtos e Mensagens Automáticas",
+            duration: "15 min",
+            type: "exercise",
+            keyPoints: [
+              "Criar catálogo com imagens profissionais e links de ação",
+              "Mensagem de boas-vindas que já captura intenção",
+              "Respostas rápidas para objeções mais comuns"
+            ],
+            exercise: "Configure sua mensagem de boas-vindas para que qualquer pessoa que te adicionar receba automaticamente uma mensagem apresentando seu produto principal e um link para o conteúdo gratuito mais importante que você tem.",
+            content: `<h2 style="color:#a78bfa">📦 Catálogo de Produtos</h2>
+
+<p>O catálogo do WhatsApp Business funciona como uma vitrine. Quando um lead pede informações, você pode compartilhar um produto do catálogo em vez de digitar tudo manualmente. Cada item tem: foto, nome, preço (opcional), descrição, link externo.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Como Criar o Catálogo</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>WhatsApp Business → Configurações → <strong>Catálogo</strong></li>
+<li><strong>Adicionar item</strong> → sobe a foto (mínimo 640×640px, fundo limpo)</li>
+<li>Nome do item, descrição persuasiva, link (sua página de vendas ou lead magnet)</li>
+<li>Preço: opcional — se não quiser mostrar, deixe em branco</li>
+<li>Repita para cada produto ou recurso gratuito que oferece</li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Mensagem de Boas-Vindas que Converte</h3>
+
+<p>A mensagem de boas-vindas é enviada automaticamente para quem te manda a primeira mensagem. É a primeira impressão — e ela precisa fazer uma coisa: direcionar o lead para a próxima etapa do funil.</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">TEMPLATE DE BOAS-VINDAS</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0;line-height:1.8">Olá! 👋 Que bom ter você aqui.<br><br>Sou [Nome], e ajudo [público] a [resultado principal].<br><br>Para te mandar exatamente o que você precisa, me conta: você está buscando [opção A] ou [opção B]?<br><br>Enquanto isso, aqui está o meu conteúdo mais acessado: [link do lead magnet]</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Respostas Rápidas para Objeções</h3>
+
+<p>Configure atalhos com <strong>/</strong> para as respostas mais frequentes:</p>
+
+<table>
+  <thead>
+    <tr><th>Atalho</th><th>Quando Usar</th><th>Conteúdo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>/preco</code></td><td>Pergunta de preço</td><td>Explicação do investimento + link da página</td></tr>
+    <tr><td><code>/garantia</code></td><td>Pergunta de garantia</td><td>Política de reembolso completa</td></tr>
+    <tr><td><code>/funciona</code></td><td>Ceticismo</td><td>Case de resultado + prova social</td></tr>
+    <tr><td><code>/link</code></td><td>Pede o link</td><td>Link direto para compra</td></tr>
+    <tr><td><code>/grupo</code></td><td>Quer participar</td><td>Link do grupo de lançamento</td></tr>
+  </tbody>
+</table>`
+          },
+          {
+            id: "bonus-whatsapp-3",
+            title: "WhatsApp Business API: Automação Completa",
+            duration: "10 min",
+            type: "text",
+            keyPoints: [
+              "Diferença entre WhatsApp Business App e API",
+              "Como conectar a API ao seu sistema de automação",
+              "Limites de mensagens e boas práticas anti-banimento"
+            ],
+            content: `<h2 style="color:#a78bfa">🤖 WhatsApp Business API</h2>
+
+<p>O WhatsApp Business App (no celular) funciona bem para gerenciar conversas manualmente. Mas para automação de lançamento — disparos automáticos para centenas de leads em momentos específicos — você precisa da <strong>API do WhatsApp Business</strong>.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">A Diferença que Importa</h3>
+
+<table>
+  <thead>
+    <tr><th>Recurso</th><th>App (celular)</th><th>API (automação)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Disparo em massa</td><td>❌ Manual</td><td>✅ Automático</td></tr>
+    <tr><td>Sequência de mensagens</td><td>❌</td><td>✅ Programadas</td></tr>
+    <tr><td>Integração com sistemas</td><td>❌</td><td>✅ Via webhook</td></tr>
+    <tr><td>Múltiplos atendentes</td><td>❌</td><td>✅</td></tr>
+    <tr><td>Relatórios detalhados</td><td>Básico</td><td>✅ Completo</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Como Acessar a API</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Acesse <strong>business.facebook.com</strong> → crie conta Business</li>
+<li>Menu → <strong>WhatsApp → Começar</strong></li>
+<li>Adicione um número de telefone dedicado ao WhatsApp Business</li>
+<li>Verifique o número via código SMS</li>
+<li>Acesse o <strong>Meta for Developers</strong> → crie um App do tipo Business</li>
+<li>Adicione o produto <strong>WhatsApp</strong> ao seu App</li>
+<li>Copie o <strong>Access Token</strong> e o <strong>Phone Number ID</strong></li>
+<li>Cole essas credenciais na sua plataforma de automação</li>
+</ol>
+</div>
+
+<div style="background:#1c1a0a;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#fbbf24;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">⚠️ Boas Práticas Anti-Banimento</p>
+<ul style="color:#fef3c7;font-size:13px;margin:0;padding-left:16px;line-height:1.9">
+<li>Nunca dispare para quem não pediu para receber mensagens</li>
+<li>Sempre inclua opção de sair ("Digite SAIR para não receber mais")</li>
+<li>Limite de 1.000 mensagens/dia no início — suba gradualmente</li>
+<li>Mensagens com muito texto corrido têm mais risco — use bullet points</li>
+<li>Mantenha taxa de denúncia abaixo de 0.5%</li>
+</ul>
+</div>`
+          }
+        ]
+      },
+      {
+        id: "bonus-meta-ads",
+        number: 3,
+        title: "Meta Ads: Configuração Completa",
+        subtitle: "Facebook Ads + Instagram Ads do zero ao primeiro anúncio",
+        icon: "📘",
+        color: "from-blue-600 to-blue-700",
+        duration: "50 min",
+        summary: "Configure sua conta de anúncios no Meta, instale o Pixel, crie públicos personalizados e lance suas primeiras campanhas de captação e conversão para o lançamento.",
+        lessons: [
+          {
+            id: "bonus-meta-1",
+            title: "Estrutura da Conta Meta Ads",
+            duration: "15 min",
+            type: "text",
+            keyPoints: [
+              "Conta Business → Conta de Anúncios → Páginas → Pixels",
+              "Como evitar bloqueios: verificação de identidade e método de pagamento",
+              "Hierarquia: Campanha → Conjunto → Anúncio"
+            ],
+            content: `<h2 style="color:#a78bfa">📘 Meta Ads: A Estrutura que Você Precisa Entender</h2>
+
+<p>Antes de criar qualquer anúncio, você precisa ter a estrutura de conta certa. Conta errada = bloqueios, desperdício de budget, resultados inconsistentes. A estrutura correta protege sua conta e maximiza sua capacidade de escalar.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">A Hierarquia do Meta for Business</h3>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.9">
+<div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ HIERARQUIA DE CONTA</div>
+Meta Business Suite (business.facebook.com)
+  └── Conta de Anúncios (onde você paga e cria campanhas)
+  └── Página do Facebook (obrigatória para anunciar)
+  └── Conta do Instagram (conectada à Página)
+  └── Pixel do Meta (rastreia conversões no seu site)
+  └── Catálogo de Produtos (opcional — para e-commerce)
+       └── Campanhas
+             └── Conjuntos de Anúncios (público + orçamento + placement)
+                   └── Anúncios (criativos: imagem, vídeo, copy)
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Configuração Inicial — Passo a Passo</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Acesse <strong>business.facebook.com</strong> → crie sua conta Business</li>
+<li>Adicione sua <strong>Página do Facebook</strong> (crie uma se não tiver)</li>
+<li>Vá em <strong>Configurações → Contas de Anúncios → Adicionar</strong></li>
+<li>Crie uma nova conta de anúncios → defina moeda em BRL, fuso horário Brasília</li>
+<li>Adicione método de pagamento: cartão de crédito internacional</li>
+<li>Configure limite de gasto diário para não ter surpresas</li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Como Evitar Bloqueios de Conta</h3>
+
+<div style="background:#1c1a0a;border-left:3px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0">
+<ul style="color:#fef3c7;font-size:13px;margin:0;padding-left:16px;line-height:2">
+<li><strong>Verifique sua identidade</strong> logo no início (Configurações → Segurança)</li>
+<li><strong>Use cartão no seu nome</strong> — cartões de terceiros geram suspeita</li>
+<li><strong>Não crie múltiplas contas</strong> com o mesmo cartão ou dispositivo</li>
+<li><strong>Anúncios de lançamento digital</strong>: evite palavras como "renda extra", "ganhe dinheiro" no texto — aciona filtros automaticamente</li>
+<li><strong>Comece com orçamentos baixos</strong> (R$30-50/dia) e suba gradualmente</li>
+</ul>
+</div>`
+          },
+          {
+            id: "bonus-meta-2",
+            title: "Pixel do Meta: Instalação e Eventos",
+            duration: "20 min",
+            type: "exercise",
+            keyPoints: [
+              "Instalar o Pixel no seu site ou landing page",
+              "Configurar eventos: ViewContent, Lead, Purchase",
+              "Verificar se está funcionando com o Meta Pixel Helper"
+            ],
+            exercise: "Instale o Pixel do Meta na sua página de captura e verifique que o evento Lead está disparando quando alguém preenche o formulário. Use o Meta Pixel Helper (extensão do Chrome) para confirmar.",
+            content: `<h2 style="color:#a78bfa">🎯 Pixel do Meta: O Cérebro das Suas Campanhas</h2>
+
+<p>O Pixel é um código JavaScript que você instala no seu site. Ele rastreia o comportamento dos visitantes e envia essas informações para o Meta — permitindo otimização automática de campanhas, criação de públicos personalizados e mensuração real do ROI.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Como Criar e Instalar o Pixel</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Business Suite → <strong>Gerenciador de Eventos → Conectar Fontes de Dados</strong></li>
+<li>Selecione <strong>Web → Pixel do Meta</strong> → dê um nome → Criar Pixel</li>
+<li>Escolha <strong>Adicionar código manualmente</strong></li>
+<li>Copie o código do Pixel (começa com <code>&lt;!-- Meta Pixel Code --&gt;</code>)</li>
+<li>Cole no <code>&lt;head&gt;</code> de todas as páginas do seu site</li>
+<li>Instale a extensão <strong>Meta Pixel Helper</strong> no Chrome para verificar</li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Eventos Essenciais para Lançamento</h3>
+
+<table>
+  <thead>
+    <tr><th>Evento</th><th>Quando Dispara</th><th>Para Que Serve</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>PageView</code></td><td>Qualquer visita</td><td>Público de remarketing geral</td></tr>
+    <tr><td><code>ViewContent</code></td><td>Visita à página de vendas</td><td>Público quente de remarketing</td></tr>
+    <tr><td><code>Lead</code></td><td>Cadastro no formulário</td><td>Otimização para captação</td></tr>
+    <tr><td><code>InitiateCheckout</code></td><td>Clica no botão de compra</td><td>Público de abandono</td></tr>
+    <tr><td><code>Purchase</code></td><td>Compra concluída</td><td>Otimização de vendas + lookalike</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Públicos Essenciais para Lançamento</h3>
+
+<p>Com o Pixel instalado, você pode criar:</p>
+
+<ul>
+<li><strong>Visitantes do site (últimos 30 dias)</strong> — base de remarketing</li>
+<li><strong>Leads capturados</strong> — quem já se cadastrou mas não comprou</li>
+<li><strong>Lookalike de compradores (1-3%)</strong> — pessoas parecidas com quem já comprou</li>
+<li><strong>Lookalike de leads (1%)</strong> — pessoas parecidas com quem se cadastrou</li>
+</ul>`
+          },
+          {
+            id: "bonus-meta-3",
+            title: "Primeira Campanha de Captação",
+            duration: "15 min",
+            type: "exercise",
+            keyPoints: [
+              "Objetivo: Leads — para capturar contatos ao menor custo",
+              "Segmentação: público frio com interesses + Lookalike",
+              "Criativo: imagem simples + copy de curiosidade"
+            ],
+            exercise: "Crie sua primeira campanha de captação no Meta Ads com orçamento de R$30/dia e um anúncio usando a fórmula: Gancho + Dor + Solução + CTA. Publique e acompanhe o CPL nas primeiras 24h.",
+            content: `<h2 style="color:#a78bfa">🚀 Primeira Campanha: Configuração Completa</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Estrutura da Campanha de Captação</h3>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.9">
+CAMPANHA: "Captação — [Nome do Lead Magnet]"
+  Objetivo: Leads
+  Orçamento: R$30-50/dia (nível da campanha — CBO)
+    └── CONJUNTO 1: "Público Frio — Interesses"
+          Orçamento: automático
+          Público: 25-55 anos, Brasil, [interesses do nicho]
+          Placements: Automático
+          └── ANÚNCIO A: Imagem + copy 1
+          └── ANÚNCIO B: Vídeo + copy 2
+    └── CONJUNTO 2: "Lookalike 1% — Leads"
+          Público: Lookalike do seu pixel (evento Lead)
+          └── ANÚNCIO A: (mesmo criativo)
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Copy de Anúncio: A Fórmula que Converte</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">TEMPLATE DE COPY — LEAD MAGNET</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0;line-height:1.9"><strong>[GANCHO]</strong> Por que 90% dos lançamentos ficam abaixo de R$50k — e o que os outros 10% fazem diferente.<br><br><strong>[DOR]</strong> Você investe semanas preparando, gasta em tráfego, e na abertura do carrinho as vendas ficam muito abaixo do esperado. Não é falta de esforço.<br><br><strong>[SOLUÇÃO]</strong> Criei um guia gratuito com os 7 erros que sabotam lançamentos — com o que fazer em cada um.<br><br><strong>[CTA]</strong> Clica em "Saiba Mais" e recebe o guia agora.</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Benchmarks de CPL por Nicho</h3>
+
+<table>
+  <thead>
+    <tr><th>Nicho</th><th>CPL Bom</th><th>CPL Excelente</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Negócios / Marketing</td><td>R$8-15</td><td>Abaixo de R$8</td></tr>
+    <tr><td>Saúde / Emagrecimento</td><td>R$5-12</td><td>Abaixo de R$5</td></tr>
+    <tr><td>Finanças / Investimentos</td><td>R$15-30</td><td>Abaixo de R$15</td></tr>
+    <tr><td>Educação / Cursos</td><td>R$6-18</td><td>Abaixo de R$6</td></tr>
+    <tr><td>Estilo de Vida</td><td>R$4-10</td><td>Abaixo de R$4</td></tr>
+  </tbody>
+</table>`
+          }
+        ]
+      },
+      {
+        id: "bonus-tiktok-google-ads",
+        number: 4,
+        title: "TikTok Ads, Google Ads e Outras Plataformas",
+        subtitle: "Expansão para além do Meta: onde mais colocar seu budget",
+        icon: "🎯",
+        color: "from-pink-600 to-rose-600",
+        duration: "45 min",
+        summary: "Configure TikTok Ads Business, Google Ads e entenda quando e como usar cada plataforma para maximizar alcance e reduzir CPL no lançamento.",
+        lessons: [
+          {
+            id: "bonus-tiktok-1",
+            title: "TikTok Ads: A Plataforma que Cresce Mais Rápido",
+            duration: "20 min",
+            type: "text",
+            keyPoints: [
+              "CPM médio 40-60% mais barato que o Meta em 2024-2025",
+              "Configuração: TikTok Business Center → Conta de Anúncios",
+              "TikTok Pixel: instalação e eventos de conversão"
+            ],
+            content: `<h2 style="color:#a78bfa">🎵 TikTok Ads: Por Que Você Precisa Estar Aqui</h2>
+
+<p>O TikTok ultrapassou o Instagram em tempo de sessão no Brasil em 2024. O CPM médio ainda é 40-60% mais barato que o Meta, os públicos são menos saturados e o algoritmo de distribuição orgânica ainda amplia o alcance pago de forma que o Instagram parou de fazer há anos.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Comparativo TikTok vs Meta Ads</h3>
+
+<table>
+  <thead>
+    <tr><th>Métrica</th><th>Meta Ads</th><th>TikTok Ads</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CPM médio (Brasil)</td><td>R$18-35</td><td>R$8-18</td></tr>
+    <tr><td>Formato principal</td><td>Imagem + vídeo</td><td>Vídeo vertical (obrigatório)</td></tr>
+    <tr><td>Público 18-34 anos</td><td>Saturado</td><td>Alta disponibilidade</td></tr>
+    <tr><td>Curva de aprendizado</td><td>Alta</td><td>Média</td></tr>
+    <tr><td>Orçamento mínimo</td><td>R$6/dia</td><td>R$50/dia (conjunto)</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Configuração do TikTok Business</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Acesse <strong>business.tiktok.com</strong> → crie conta Business</li>
+<li>Menu → <strong>TikTok Ads Manager → Criar Conta</strong></li>
+<li>Preencha dados da empresa, país (Brasil), moeda (BRL)</li>
+<li>Adicione método de pagamento (cartão internacional)</li>
+<li>Vá em <strong>Ativos → Pixel</strong> → <strong>Criar Pixel</strong></li>
+<li>Copie o código do Pixel → cole no &lt;head&gt; do seu site</li>
+<li>Configure eventos: <code>ViewContent</code>, <code>SubmitForm</code> (Lead), <code>CompletePayment</code> (Purchase)</li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">O Formato que Funciona no TikTok</h3>
+
+<p>No TikTok, o anúncio precisa parecer conteúdo orgânico — não anúncio. Vídeos com cara de produção corporativa têm CTR muito abaixo da média. O que funciona:</p>
+
+<ul>
+<li>Vídeo vertical (9:16), gravado no celular, iluminação natural</li>
+<li>Hook nos primeiros 2 segundos — texto na tela + fala simultânea</li>
+<li>Duração: 15-45 segundos (sweet spot para completar o vídeo)</li>
+<li>CTA verbal + texto na tela nos últimos 3 segundos</li>
+<li>Sem logo grande, sem fundo branco corporativo</li>
+</ul>`
+          },
+          {
+            id: "bonus-google-ads",
+            title: "Google Ads: Capturando Quem Já Está Procurando",
+            duration: "15 min",
+            type: "text",
+            keyPoints: [
+              "Search Ads: captura intenção de compra ativa",
+              "YouTube Ads: remarketing e awareness de topo de funil",
+              "Quando usar Google vs Meta em lançamentos"
+            ],
+            content: `<h2 style="color:#a78bfa">🔍 Google Ads: A Intenção de Compra Ativa</h2>
+
+<p>Meta e TikTok interrompem pessoas que não estavam procurando por você. Google captura pessoas que <em>já estão procurando</em> pelo que você vende. São estratégias complementares — não concorrentes.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Quando Usar Google Ads em Lançamentos</h3>
+
+<table>
+  <thead>
+    <tr><th>Tipo de Campanha</th><th>Quando Usar</th><th>Orçamento</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Search — palavras-chave do produto</td><td>Sempre que tiver orçamento</td><td>R$50-200/dia</td></tr>
+    <tr><td>YouTube — in-stream (antes do vídeo)</td><td>Fase de aquecimento do lançamento</td><td>R$50-100/dia</td></tr>
+    <tr><td>Display — remarketing</td><td>Recuperar visitantes do site</td><td>R$20-50/dia</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Configuração Google Ads</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<ol style="color:#e2e8f0;font-size:13px;margin:0;padding-left:16px;line-height:2.2">
+<li>Acesse <strong>ads.google.com</strong> → crie conta com Gmail da empresa</li>
+<li>Na criação, pule a campanha automática (clique em "Modo especialista")</li>
+<li>Configure dados de cobrança: cartão, moeda BRL</li>
+<li>Instale o <strong>Tag do Google</strong> no seu site (Ferramentas → Conversões)</li>
+<li>Configure conversão principal: "Lead" ou "Compra" via URL de confirmação</li>
+<li>Para Search: pesquise palavras-chave no <strong>Planejador de Palavras-chave</strong></li>
+</ol>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Outras Plataformas: Quando Adicionar</h3>
+
+<table>
+  <thead>
+    <tr><th>Plataforma</th><th>Melhor Para</th><th>Adicionar Quando</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>LinkedIn Ads</td><td>B2B, público corporativo</td><td>Produto para empresas / profissionais</td></tr>
+    <tr><td>Twitter/X Ads</td><td>Notícias, tech, finanças</td><td>Nicho específico com audiência no X</td></tr>
+    <tr><td>Pinterest Ads</td><td>Lifestyle, decoração, moda</td><td>Produto visual, público feminino 25-45</td></tr>
+    <tr><td>Kwai Ads</td><td>Interior do Brasil</td><td>Público C/D de cidades menores</td></tr>
+    <tr><td>YouTube orgânico</td><td>Conteúdo longo, autoridade</td><td>Sempre — tráfego perpétuo</td></tr>
+  </tbody>
+</table>`
+          },
+          {
+            id: "bonus-linkedin-outros",
+            title: "LinkedIn, X, Pinterest e Plataformas de Nicho",
+            duration: "10 min",
+            type: "text",
+            keyPoints: [
+              "LinkedIn: CPL alto mas qualidade máxima para B2B",
+              "X (Twitter): comunidade + produto de nicho técnico",
+              "Regra 80/20: domine 1-2 plataformas antes de expandir"
+            ],
+            content: `<h2 style="color:#a78bfa">🌐 Expansão de Plataformas: A Regra que Salva Budget</h2>
+
+<p>A maioria dos lançadores comete o mesmo erro: tentam estar em todas as plataformas ao mesmo tempo, distribuem o budget fino demais e não têm dados suficientes em nenhuma para otimizar. A regra correta é outra.</p>
+
+<div style="background:#0a1f0a;border-left:3px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#86efac;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">✅ A Regra 80/20 de Plataformas</p>
+<p style="color:#dcfce7;font-size:13px;margin:0">Domine completamente 1 plataforma (Meta Ads) antes de adicionar a segunda (TikTok ou Google). Adicione a terceira só depois de ter CPL estável nas duas primeiras. Expansão prematura fragmenta dados e impede o algoritmo de otimizar.</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">LinkedIn Ads</h3>
+<p>CPM mais alto do mercado (US$30-80), mas qualidade de lead incomparável para B2B. Únicas situações onde vale: produto acima de R$5.000 para decisores corporativos, consultoria B2B, SaaS para empresas.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">X (Twitter) Ads</h3>
+<p>Melhor para produtos de nicho técnico (tecnologia, finanças, crypto, política). Comunidade muito engajada em nichos específicos — e praticamente inexplorada por lançadores brasileiros. CPM baixo, qualidade variável.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Sequência Recomendada para Lançadores</h3>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.9">
+FASE 1 (Primeiro lançamento):
+  → Meta Ads (Facebook + Instagram) — único foco
+
+FASE 2 (Segundo lançamento):
+  → Meta Ads (principal) + TikTok Ads (testes)
+
+FASE 3 (Terceiro lançamento em diante):
+  → Meta + TikTok + Google Search (intent)
+  → YouTube Ads (awareness + remarketing)
+
+FASE 4 (Escala — R$1M+):
+  → Todas as anteriores + LinkedIn (se B2B)
+  → Native Ads (Taboola/Outbrain) para escala massiva
+</div>`
+          }
+        ]
+      },
+      {
+        id: "bonus-redes-sociais",
+        number: 5,
+        title: "Conectando Todas as Redes Sociais",
+        subtitle: "Instagram, Facebook, YouTube, LinkedIn, TikTok — organicamente integrados",
+        icon: "🔗",
+        color: "from-orange-500 to-amber-500",
+        duration: "30 min",
+        summary: "Configure todas as suas redes sociais de forma integrada: perfis profissionais, bios otimizadas, links de captura, e como agendar conteúdo em todas as plataformas de um único lugar.",
+        lessons: [
+          {
+            id: "bonus-social-1",
+            title: "Perfis Otimizados para Lançamento",
+            duration: "15 min",
+            type: "exercise",
+            keyPoints: [
+              "Bio como minipage de vendas: gancho + resultado + CTA",
+              "Link na bio: ferramenta de links múltiplos",
+              "Consistência visual entre plataformas"
+            ],
+            exercise: "Reescreva sua bio do Instagram usando a fórmula: [Para quem] que quer [resultado] → [o que você oferece] → [prova social ou número] → [CTA com link]. Aplique o mesmo padrão em todas as suas redes.",
+            content: `<h2 style="color:#a78bfa">🔗 Perfis que Convertem: A Bio como Minipage</h2>
+
+<p>Sua bio é o primeiro contato de qualquer visitante. Você tem 150 caracteres no Instagram, 220 no LinkedIn e 160 no X para fazer uma pessoa decidir se vai seguir, clicar ou ignorar. A maioria desperdiça esse espaço com descrições genéricas que não convertem ninguém.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">A Fórmula de Bio que Converte</h3>
+
+<div style="background:#1a1a2e;border-left:3px solid #6d4aff;padding:14px 18px;border-radius:0 8px 8px 0;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">ESTRUTURA</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0;line-height:2">
+<strong>Linha 1:</strong> Para quem é + resultado principal<br>
+<strong>Linha 2:</strong> Como você entrega / o que te diferencia<br>
+<strong>Linha 3:</strong> Prova social (número, credencial, resultado)<br>
+<strong>Linha 4:</strong> CTA + emoji de seta para o link
+</p>
+</div>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EXEMPLO REAL</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0;line-height:2">
+🚀 Ajudo infoprodutores a lançar acima de R$100k<br>
+Método de 7 dias com IA + automação<br>
++127 lançamentos | R$2M+ gerados para alunos<br>
+👇 Guia gratuito: como seu próximo lançamento
+</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Link na Bio: Ferramenta de Links Múltiplos</h3>
+
+<p>Use uma ferramenta de links múltiplos para transformar o único link da bio em um hub de conversão:</p>
+
+<table>
+  <thead>
+    <tr><th>Ferramenta</th><th>Plano Grátis</th><th>Melhor Para</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Linktree</td><td>✅ Ilimitado</td><td>Começo simples</td></tr>
+    <tr><td>Bio.link</td><td>✅ Completo</td><td>Design personalizado</td></tr>
+    <tr><td>Stan Store</td><td>✅ Com loja</td><td>Vender produtos direto</td></tr>
+    <tr><td>Página própria</td><td>✅ (se souber criar)</td><td>Controle total + SEO</td></tr>
+  </tbody>
+</table>`
+          },
+          {
+            id: "bonus-social-2",
+            title: "Agendamento e Automação de Conteúdo",
+            duration: "15 min",
+            type: "text",
+            keyPoints: [
+              "Meta Business Suite: agenda Instagram + Facebook de graça",
+              "Buffer e Later: multi-plataforma incluindo TikTok e LinkedIn",
+              "Calendário de conteúdo de lançamento: 30 dias de posts pré-prontos"
+            ],
+            content: `<h2 style="color:#a78bfa">📅 Agendamento: Publique Uma Vez, Esqueça</h2>
+
+<p>Durante um lançamento, você não pode depender de lembrar de postar. O conteúdo precisa sair nos horários certos, nas plataformas certas, automaticamente — enquanto você cuida das vendas e do suporte.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Ferramentas de Agendamento</h3>
+
+<table>
+  <thead>
+    <tr><th>Ferramenta</th><th>Plataformas</th><th>Preço</th><th>Melhor Para</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Meta Business Suite</td><td>Instagram + Facebook</td><td>Gratuito</td><td>Quem só usa Meta</td></tr>
+    <tr><td>Buffer</td><td>Instagram, Facebook, TikTok, LinkedIn, X</td><td>Free (3 canais)</td><td>Multi-plataforma básico</td></tr>
+    <tr><td>Later</td><td>Instagram, TikTok, Pinterest, LinkedIn</td><td>Free (14 dias)</td><td>Planejamento visual</td></tr>
+    <tr><td>Metricool</td><td>Todas + YouTube</td><td>Free (limitado)</td><td>Analytics incluído</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Calendário de Conteúdo: 30 Dias de Lançamento</h3>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.9">
+SEMANA 1 (Autoridade):
+  → 3 posts de resultado/caso de uso
+  → 2 posts educativos sobre o problema principal
+  → 1 story de bastidores
+
+SEMANA 2 (Aquecimento):
+  → Anúncio do lead magnet gratuito
+  → 3 posts de conteúdo do problema
+  → Lives de perguntas e respostas
+  → Stories com contagem regressiva
+
+SEMANA 3 (Abertura):
+  → Abertura do carrinho
+  → 2 posts de prova social por dia
+  → Stories com contador de vagas
+  → Email + WhatsApp de urgência
+
+SEMANA 4 (Fechamento):
+  → Posts de último dia
+  → Bônus de última hora
+  → Fechamento do carrinho às 23h59
+</div>
+
+<div style="background:#0a1f0a;border-left:3px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0">
+<p style="color:#86efac;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">✅ Regra de Ouro</p>
+<p style="color:#dcfce7;font-size:13px;margin:0">Agende 100% do conteúdo orgânico com pelo menos 48h de antecedência antes do lançamento começar. Sem exceções. Qualquer post feito "no improviso" durante o lançamento rouba tempo de vendas — que é onde você precisa estar focado.</p>
+</div>`
+          }
+        ]
+      },
+      {
+        id: "bonus-checklist-final",
+        number: 6,
+        title: "Checklist Completo: Do Zero ao Lançamento Automatizado",
+        subtitle: "Tudo que precisa estar configurado antes de apertar o botão",
+        icon: "✅",
+        color: "from-cyan-600 to-teal-600",
+        duration: "20 min",
+        summary: "O checklist definitivo de infraestrutura: 47 itens organizados por categoria. Se tudo estiver marcado, seu lançamento está pronto para rodar no automático.",
+        lessons: [
+          {
+            id: "bonus-checklist-1",
+            title: "O Checklist de 47 Itens",
+            duration: "20 min",
+            type: "exercise",
+            keyPoints: [
+              "Domínio e DNS: 5 itens",
+              "Email e WhatsApp: 12 itens",
+              "Tráfego pago: 15 itens",
+              "Redes sociais e conteúdo: 10 itens",
+              "Automação e integrações: 5 itens"
+            ],
+            exercise: "Percorra o checklist completo e marque cada item. Qualquer item desmarcado é um buraco no seu lançamento. Resolva tudo antes de ativar a campanha de captação.",
+            content: `<h2 style="color:#a78bfa">✅ Checklist de Infraestrutura Completo</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">🌐 Domínio e DNS</h3>
+<ul style="line-height:2.2">
+<li>☐ Domínio próprio registrado (.com ou .com.br)</li>
+<li>☐ DNS configurado no Cloudflare</li>
+<li>☐ Site/landing page publicada no domínio</li>
+<li>☐ HTTPS ativo (certificado SSL — gratuito no Cloudflare)</li>
+<li>☐ Redirecionamento www → sem www (ou vice-versa)</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">📧 Email Profissional</h3>
+<ul style="line-height:2.2">
+<li>☐ Conta Resend criada e domínio verificado</li>
+<li>☐ SPF configurado e validado</li>
+<li>☐ DKIM configurado e validado</li>
+<li>☐ DMARC configurado</li>
+<li>☐ Email lancamento@seudominio.com como remetente padrão</li>
+<li>☐ Email de boas-vindas automático configurado</li>
+<li>☐ Sequência de lançamento (7-14 emails) criada</li>
+<li>☐ Teste de entregabilidade: email chega na caixa de entrada</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">💬 WhatsApp Business</h3>
+<ul style="line-height:2.2">
+<li>☐ WhatsApp Business App instalado</li>
+<li>☐ Perfil comercial completo (foto, nome, categoria, horário)</li>
+<li>☐ Catálogo com pelo menos 1 produto/lead magnet</li>
+<li>☐ Mensagem de boas-vindas configurada</li>
+<li>☐ Mensagem de ausência configurada</li>
+<li>☐ Respostas rápidas para as 5 objeções principais</li>
+<li>☐ Etiquetas de funil criadas (lead, quente, cliente)</li>
+<li>☐ Link direto para WhatsApp (wa.me/55NÚMERO)</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">📘 Meta Ads (Facebook + Instagram)</h3>
+<ul style="line-height:2.2">
+<li>☐ Meta Business Suite criado</li>
+<li>☐ Página do Facebook criada e completa</li>
+<li>☐ Conta do Instagram Business conectada</li>
+<li>☐ Conta de Anúncios criada (moeda BRL)</li>
+<li>☐ Método de pagamento adicionado</li>
+<li>☐ Identidade verificada</li>
+<li>☐ Pixel instalado no site</li>
+<li>☐ Evento Lead configurado e testado</li>
+<li>☐ Público de remarketing (visitantes 30 dias) criado</li>
+<li>☐ Lookalike 1% de leads criado</li>
+<li>☐ Campanha de captação ativa</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">🎵 TikTok Ads</h3>
+<ul style="line-height:2.2">
+<li>☐ TikTok Business Center criado</li>
+<li>☐ Conta de Anúncios configurada</li>
+<li>☐ TikTok Pixel instalado</li>
+<li>☐ Evento SubmitForm (Lead) configurado</li>
+<li>☐ Primeiro criativo em vídeo vertical gravado</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">🔍 Google Ads</h3>
+<ul style="line-height:2.2">
+<li>☐ Conta Google Ads criada</li>
+<li>☐ Tag do Google instalada no site</li>
+<li>☐ Conversão de Lead configurada</li>
+<li>☐ Campanha Search para palavras-chave do produto</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">🔗 Redes Sociais Orgânicas</h3>
+<ul style="line-height:2.2">
+<li>☐ Bio do Instagram otimizada com a fórmula</li>
+<li>☐ Bio do TikTok otimizada</li>
+<li>☐ Link na bio configurado (Linktree ou similar)</li>
+<li>☐ 30 posts agendados antes do lançamento</li>
+<li>☐ Calendário de conteúdo do lançamento completo</li>
+<li>☐ Ferramenta de agendamento configurada</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:20px">⚡ Automação e Integrações</h3>
+<ul style="line-height:2.2">
+<li>☐ Formulário de captura conectado ao sistema de email</li>
+<li>☐ Sequência de WhatsApp configurada no sistema</li>
+<li>☐ Webhook de compra configurado (Hotmart/Kiwify)</li>
+<li>☐ Notificações de venda ativas (WhatsApp/email)</li>
+<li>☐ Teste completo: cadastro → email boas-vindas → sequência automática</li>
+</ul>
+
+<div style="background:#0a1f0a;border-left:3px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:24px 0">
+<p style="color:#86efac;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 6px">✅ Quando Você Está Pronto</p>
+<p style="color:#dcfce7;font-size:13px;margin:0">Todos os 47 itens marcados = infraestrutura completa. Você pode capturar leads, enviar sequências automáticas por email e WhatsApp, veicular anúncios em Meta + TikTok + Google, e medir cada resultado em tempo real. Agora é só apertar o botão.</p>
+</div>`
+          }
+        ]
+      }
+    ]
   }
 ];
 
