@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
+import { env } from "../../lib/env.js";
 import {
   getWhatsAppStatus,
   createWhatsAppDispatch,
@@ -57,7 +58,15 @@ router.post("/dispatches/:id/send", requireAuth, async (req, res): Promise<void>
 });
 
 router.get("/webhook", (req, res): void => {
-  res.send((req.query as Record<string, string>)["hub.challenge"] ?? "ok");
+  const q = req.query as Record<string, string>;
+  const mode = q["hub.mode"];
+  const token = q["hub.verify_token"];
+  const challenge = q["hub.challenge"];
+  if (mode === "subscribe" && token === env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
+    res.send(challenge ?? "ok");
+    return;
+  }
+  res.status(403).send("Forbidden");
 });
 
 router.post("/webhook", async (req, res): Promise<void> => {
