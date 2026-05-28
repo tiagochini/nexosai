@@ -3,6 +3,11 @@ import { useState } from "react";
 const CAPTURE_KEY = "nexos-lead-captured";
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/../../api";
 
+// ── Grupo VIP — substitua pela URL quando criar o grupo ──────────────────────
+// Ex: "https://chat.whatsapp.com/XXXXXXXXXXXXXXXXXXXXX"
+//     "https://t.me/+XXXXXXXXXXXXXXXXXXXX"
+const WHATSAPP_GROUP_URL = "";
+
 interface Props {
   onNavigate: (page: string, params?: Record<string, string>) => void;
 }
@@ -321,6 +326,37 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
           >
             ↓ Baixar PDF
           </button>
+        </div>
+
+        {/* ── Botão do Grupo VIP ───────────────────────────────────────────── */}
+        <div className="no-print rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-4"
+          style={{ background: "linear-gradient(135deg, hsl(142 70% 8%), hsl(142 60% 6%))", border: "1px solid hsl(142 70% 40% / 0.3)" }}>
+          <div className="flex-1 text-center sm:text-left">
+            <p className="text-xs font-bold uppercase tracking-widest mb-1"
+              style={{ color: "hsl(142 70% 55%)" }}>💬 Grupo VIP — NexOS Academy</p>
+            <p className="text-white font-semibold text-sm">
+              Entre no grupo exclusivo com conteúdo diário, dúvidas e acesso antecipado.
+            </p>
+          </div>
+          {WHATSAPP_GROUP_URL ? (
+            <a
+              href={WHATSAPP_GROUP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 px-6 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, hsl(142 70% 38%), hsl(142 60% 28%))" }}
+            >
+              Quero entrar no grupo →
+            </a>
+          ) : (
+            <span
+              className="shrink-0 px-6 py-3 rounded-xl text-sm font-bold cursor-not-allowed"
+              style={{ background: "hsl(220 20% 10%)", color: "hsl(220 10% 35%)", border: "1px solid hsl(220 20% 14%)" }}
+              title="Em breve"
+            >
+              Em breve...
+            </span>
+          )}
         </div>
 
         <section className="card p-6 space-y-3">
