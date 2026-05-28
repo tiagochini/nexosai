@@ -154,10 +154,10 @@ export async function sendAccessEmail(opts: {
   productName: string;
   portalUrl: string;
 }): Promise<void> {
-  const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
   const useResend = !!env.RESEND_API_KEY;
+  const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
 
-  if (!useGmail && !useResend) {
+  if (!useResend && !useGmail) {
     logger.info({ email: opts.email, token: opts.token }, "academy: access token generated (no email provider configured — log only)");
     return;
   }
@@ -183,16 +183,7 @@ export async function sendAccessEmail(opts: {
 
   const subject = `Seu acesso à NexOS Academy — Código: ${opts.token}`;
 
-  // Try Gmail first
-  if (useGmail) {
-    const sent = await sendViaGmail({ to: opts.email, subject, html });
-    if (sent) {
-      logger.info({ email: opts.email, via: "gmail" }, "academy: access email sent via Gmail");
-      return;
-    }
-  }
-
-  // Fallback to Resend
+  // Try Resend first (professional sender from @agencianexos.vip)
   if (useResend) {
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",

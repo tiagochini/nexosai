@@ -189,14 +189,14 @@ async function sendFunnelEmail(opts: {
   const firstName = (opts.name ?? "").split(" ")[0] || "";
   const html = buildEmailHtml(opts.step, firstName);
 
-  // Try Gmail first (if configured), then Resend, then log-only
-  const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
+  // Try Resend first (if configured), then Gmail fallback, then log-only
   const useResend = !!env.RESEND_API_KEY;
+  const useGmail = !!(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
 
-  if (!useGmail && !useResend) {
+  if (!useResend && !useGmail) {
     logger.info(
       { email: opts.email, step: opts.step, subject: stepMeta.subject },
-      "academy-funnel: [NO EMAIL PROVIDER] would send email — configure GMAIL_USER+GMAIL_APP_PASSWORD or RESEND_API_KEY"
+      "academy-funnel: [NO EMAIL PROVIDER] would send email — configure RESEND_API_KEY or GMAIL_USER+GMAIL_APP_PASSWORD"
     );
     await db.update(academyFunnelEmailsTable)
       .set({ status: "sent", sentAt: new Date(), resendId: "dev-no-provider" })
@@ -207,18 +207,7 @@ async function sendFunnelEmail(opts: {
   try {
     let sent = false;
 
-    if (useGmail) {
-      sent = await sendViaGmailFunnel({ to: opts.email, subject: stepMeta.subject, html });
-      if (sent) {
-        await db.update(academyFunnelEmailsTable)
-          .set({ status: "sent", sentAt: new Date(), resendId: "gmail" })
-          .where(eq(academyFunnelEmailsTable.id, opts.funnelEmailId));
-        logger.info({ email: opts.email, step: opts.step, via: "gmail" }, "academy-funnel: email sent via Gmail");
-        return;
-      }
-    }
-
-    if (useResend && !sent) {
+    if (useResend) {
       const resp = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
