@@ -4,7 +4,7 @@ export default function PrivacyPolicy() {
   const lastUpdated = "15 de maio de 2026";
   const contactEmail = "privacy@agencianexos.vip";
   const companyName = "NexOS AI";
-  const appUrl = "https://app.nexos.ai";
+  const appUrl = "https://app.agencianexos.vip";
 
   useEffect(() => {
     document.title = "NexOS AI Privacy Policy";

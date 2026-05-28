@@ -10,8 +10,6 @@ import { eq, desc } from "drizzle-orm";
 const ADMIN_EMAILS = new Set([
   "admin@agencianexos.vip",
   "founder@agencianexos.vip",
-  "admin@nexos.ai",
-  "founder@nexos.ai",
 ]);
 
 const router = Router();

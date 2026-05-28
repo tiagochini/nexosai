@@ -229,7 +229,7 @@ export default function AuditLogsPage() {
     refetchInterval: 30000,
   });
 
-  const isAdmin = ["admin@agencianexos.vip", "founder@agencianexos.vip", "admin@nexos.ai", "founder@nexos.ai"].includes(user?.email ?? "");
+  const isAdmin = ["admin@agencianexos.vip", "founder@agencianexos.vip"].includes(user?.email ?? "");
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
