@@ -10,6 +10,10 @@ import {
   GraduationCap, LayoutDashboard, Gift, Radio, Trophy,
 } from "lucide-react";
 
+// ─── Configuração de links — atualize estes dois valores ───────────────────────
+const GRUPO_LINK = "https://chat.whatsapp.com/SEU_GRUPO_AQUI"; // ← cole o link do grupo aqui
+const PDF_LINK   = "https://agencianexos.vip/nexos-guia.pdf";  // ← cole o link do PDF aqui
+
 // ─── Scroll-snap section wrapper ──────────────────────────────────────────────
 function useInView(threshold = 0.3) {
   const ref = useRef<HTMLElement>(null);
@@ -55,10 +59,10 @@ function Nav({ scrolled }: { scrolled: boolean }) {
               Entrar
             </Button>
           </a>
-          <a href="#oferta">
+          <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer">
             <Button size="sm" className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] sm:text-xs tracking-widest font-bold h-8 sm:h-9 px-3 sm:px-5">
-              <span className="hidden sm:inline">Garantir Acesso</span>
-              <span className="sm:hidden">Acessar</span>
+              <span className="hidden sm:inline">Entrar no Grupo</span>
+              <span className="sm:hidden">Grupo</span>
             </Button>
           </a>
         </div>
@@ -109,20 +113,20 @@ function HeroSection() {
 
           <div className="flex flex-col gap-4 items-start w-full sm:w-auto">
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <a href="#oferta" className="w-full sm:w-auto">
+              <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs sm:text-base h-12 sm:h-16 px-6 sm:px-10 gap-2 sm:gap-3 w-full sm:w-auto">
-                  <Zap className="h-4 w-4 sm:h-5 sm:w-5" /> Quero o Sistema Completo
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5" /> Entrar no Grupo Exclusivo
                 </Button>
               </a>
-              <a href="#mecanismo" className="w-full sm:w-auto">
+              <a href={PDF_LINK} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
                 <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-xs sm:text-base h-12 sm:h-16 px-5 sm:px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
-                  Ver como funciona <ArrowRight className="h-4 w-4" />
+                  Baixar o Guia Gratuito <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
             <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground/40">
               <Lock className="h-3.5 w-3.5" />
-              Acesso imediato · 30 dias de garantia · ticket único sem mensalidade
+              Grupo privado · guia gratuito · sem compromisso
             </div>
           </div>
         </div>
@@ -855,18 +859,15 @@ function OfertaSection() {
     },
   ];
   return (
-    <Section id="oferta" ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
+    <Section id="grupo" ref={ref as React.Ref<HTMLElement>} className="auth-bg-gradient border-t border-border/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Modelo de Acesso —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Acesso Antecipado —</div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-4">
-            Ticket único.<br /><span className="text-primary">Sem mensalidade.</span>
+            Faça parte antes<br /><span className="text-primary">do lançamento oficial.</span>
           </h2>
-          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-4">
-            O acesso ao NexOS AI é um investimento único que cobre sua operação completa. Os créditos inclusos cobrem dois lançamentos inteiros — com saldo para iniciar o planejamento do terceiro.
-          </p>
-          <p className="font-mono text-xs text-muted-foreground/60 leading-relaxed max-w-2xl mb-10">
-            Se quiser acionar mais agentes de IA ao longo do tempo, créditos adicionais estão disponíveis em packs ou avulsos — sem contrato, sem obrigação. Se preferir gerenciar suas campanhas manualmente, o sistema funciona sem acionar nenhum agente.
+          <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
+            Duas formas de entrar agora — seja no grupo privado onde compartilhamos bastidores, estratégias e novidades em primeira mão, ou baixe o guia gratuito com o framework completo de lançamento que a plataforma executa.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -886,11 +887,6 @@ function OfertaSection() {
                   <div className="font-mono font-black text-2xl text-foreground leading-snug mt-2">
                     {track.label}
                   </div>
-                  <div className="font-mono text-3xl font-black text-primary mt-2 leading-none">{track.preco}</div>
-                  <div className="font-mono text-[10px] text-muted-foreground/50 mt-1">
-                    <span className="line-through text-muted-foreground/30">{track.precoRegular}</span>
-                    {" "}&nbsp;·&nbsp; Ticket único · Sem mensalidade
-                  </div>
                 </div>
                 <div className="space-y-2.5 flex-1">
                   {track.items.map(item => (
@@ -900,34 +896,22 @@ function OfertaSection() {
                     </div>
                   ))}
                 </div>
-                <a href={track.ctaHref}>
-                  <Button
-                    className={`rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full ${track.destaque ? "btn-weapon-primary" : ""}`}
-                    variant={track.ctaVariant === "outline" ? "outline" : "default"}
-                  >
-                    {track.cta} <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </a>
               </div>
             ))}
           </div>
 
-          {/* Value anchor — equipe vs sistema */}
-          <div className={`border border-border/30 bg-card/20 px-6 py-5 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "450ms" }}>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="font-mono font-black text-2xl text-destructive/80">R$21k+/mês</div>
-                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Custo de equipe equivalente</div>
-              </div>
-              <div>
-                <div className="font-mono font-black text-2xl text-foreground">vs.</div>
-                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">você investe uma vez</div>
-              </div>
-              <div>
-                <div className="font-mono font-black text-2xl text-primary">NexOS AI</div>
-                <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-1">Ticket único · Sem recorrência obrigatória</div>
-              </div>
-            </div>
+          {/* CTAs grupo + PDF */}
+          <div className={`flex flex-col sm:flex-row gap-4 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`} style={{ transitionDelay: "350ms" }}>
+            <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer" className="flex-1">
+              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-14 gap-3 text-sm w-full">
+                <Users className="h-5 w-5" /> Entrar no Grupo Exclusivo
+              </Button>
+            </a>
+            <a href={PDF_LINK} target="_blank" rel="noopener noreferrer" className="flex-1">
+              <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold h-14 gap-2 text-sm border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full">
+                Baixar o Guia Gratuito <ArrowRight className="h-4 w-4" />
+              </Button>
+            </a>
           </div>
         </div>
       </div>
@@ -1019,9 +1003,9 @@ function DoisCaminhosSection() {
                   </div>
                 ))}
               </div>
-              <a href="#oferta" className="mt-auto">
+              <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer" className="mt-auto">
                 <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-xs h-12 gap-2 w-full">
-                  Quero a plataforma <ArrowRight className="h-4 w-4" />
+                  <Users className="h-3.5 w-3.5" /> Entrar no Grupo <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
@@ -1188,14 +1172,14 @@ function FechamentoSection() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            <a href="/login" className="w-full sm:w-auto">
+            <a href={GRUPO_LINK} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
               <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black text-sm h-16 px-10 gap-3 w-full sm:w-auto">
-                <Zap className="h-5 w-5" /> Garantir meu acesso agora
+                <Users className="h-5 w-5" /> Entrar no Grupo Exclusivo
               </Button>
             </a>
-            <a href="#oferta" className="w-full sm:w-auto">
+            <a href={PDF_LINK} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
               <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold text-sm h-16 px-8 gap-2 border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto">
-                Como funciona o acesso <ArrowRight className="h-4 w-4" />
+                Baixar o Guia Gratuito <ArrowRight className="h-4 w-4" />
               </Button>
             </a>
           </div>
@@ -1362,63 +1346,61 @@ function UrgenciaSection() {
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background/95 border-t border-destructive/20">
       <div className="max-w-5xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-destructive/60 mb-4">— Preço de Lançamento —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Esquenta · Acesso Antecipado —</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
             <div>
               <h2 className="text-3xl sm:text-5xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-                Esta janela<br /><span className="text-destructive/80">fecha.</span>
+                Vagas de acesso<br /><span className="text-primary">antecipado abertas.</span>
               </h2>
               <div className="space-y-4 font-mono text-sm text-muted-foreground leading-relaxed">
                 <p>
-                  O NexOS AI está em lançamento. O preço atual — R$3.990 Solo e R$9.990 Agency — é o preço de acesso inaugural. Quando encerrarmos esta janela, sobe para R$5.000 e R$14.000 respectivamente.
+                  O NexOS AI está em fase de esquenta. Antes do lançamento oficial, estamos formando o grupo dos primeiros produtores que vão operar a plataforma e documentar resultados reais.
                 </p>
                 <p>
-                  Não é gatilho de urgência artificial. É a lógica do lançamento: os primeiros usuários testam o sistema em produção, geram os primeiros resultados documentados e tornam-se a prova social que valida o preço para todos que vêm depois.
+                  Quem entra agora no grupo recebe bastidores, estratégias antecipadas e condições que não estarão disponíveis depois. O guia gratuito já entrega o framework completo — o mesmo que a plataforma vai executar por você.
                 </p>
                 <p className="text-foreground">
-                  Se você está nesta página agora, está dentro da janela. Não há como garantir quanto tempo ela fica aberta.
+                  Se você está nesta página agora, ainda dá tempo. Entre no grupo e baixe o guia antes que fechemos as vagas de acesso antecipado.
                 </p>
               </div>
             </div>
             <div className="space-y-3">
               <div
-                className={`border border-destructive/30 bg-destructive/5 px-6 py-5 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+                className={`border border-primary/30 bg-primary/5 px-6 py-5 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
                 style={{ transitionDelay: "100ms" }}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-destructive/60 font-bold">Vagas no preço de lançamento</div>
-                  <div className="font-mono font-black text-2xl text-destructive">{vagasRestantes}</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-primary/60 font-bold">Vagas no grupo de acesso antecipado</div>
+                  <div className="font-mono font-black text-2xl text-primary">{vagasRestantes}</div>
                 </div>
                 <div className="w-full h-2 bg-background/30 overflow-hidden mb-2">
                   <div
-                    className="h-full bg-destructive/60 transition-all duration-1000"
+                    className="h-full bg-primary/60 transition-all duration-1000"
                     style={{ width: `${(vagasPreenchidas / 47) * 100}%` }}
                   />
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground/40">{vagasPreenchidas} de 47 vagas preenchidas</div>
               </div>
-              <div
-                className={`border border-border/30 bg-card/20 px-6 py-4 grid grid-cols-2 gap-4 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+              <a
+                href={GRUPO_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`block transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
                 style={{ transitionDelay: "220ms" }}
               >
-                <div>
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Preço atual</div>
-                  <div className="font-mono font-black text-xl text-primary">R$3.990</div>
-                  <div className="font-mono text-[9px] text-muted-foreground/30 mt-0.5">Solo · ticket único</div>
-                </div>
-                <div>
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Após lançamento</div>
-                  <div className="font-mono font-black text-xl text-muted-foreground/35 line-through">R$5.000</div>
-                  <div className="font-mono text-[9px] text-muted-foreground/30 mt-0.5">Preço regular</div>
-                </div>
-              </div>
+                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full">
+                  <Users className="h-4 w-4" /> Entrar no Grupo Agora
+                </Button>
+              </a>
               <a
-                href="/login"
+                href={PDF_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
                 className={`block transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
                 style={{ transitionDelay: "340ms" }}
               >
-                <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs w-full">
-                  Garantir acesso no preço de lançamento <ArrowRight className="h-4 w-4" />
+                <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest font-bold h-12 gap-2 text-xs border-primary/30 text-primary/80 hover:text-primary w-full">
+                  Baixar o Guia Gratuito <ArrowRight className="h-4 w-4" />
                 </Button>
               </a>
             </div>
