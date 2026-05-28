@@ -9,3 +9,4 @@
 - [Cognitive Foundations Layer](cognitive-foundations-layer.md) — 16 thinkers (5 pillars) in sistema nervoso format; dogma "profundidade interna; simplicidade externa"; injected via agent.runner.ts between DOMINO_APPLIED_FRAMEWORKS and NEXOS_MASTER_EVOLUTION_PROMPT
 - [Pipeline OOM & Checkpoint System](pipeline-oom-and-checkpoint.md) — static prompt layer caching, checkpoint/resume in command.agent.ts, LLM router, execute/content grace period, UI analyzing-button fix
 - [Agent Clarification Feedback Loop](agent-clarification-system.md) — agents output __clarifications[] in JSON; runner parses non-blocking; DB table agent_clarification_requests; frontend AgentClarificationPanel in detail.tsx; buildClarificationContextBlock() injects answers into next run
+- [BullMQ Reliability Fixes](bullmq-reliability.md) — three silent failure modes in BullMQ dev environments; fix pattern in orchestration.service.ts enqueueOrExecute().

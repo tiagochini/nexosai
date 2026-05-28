@@ -1,4 +1,5 @@
 import { Queue, Worker, QueueEvents } from "bullmq";
+import Redis from "ioredis";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 
@@ -12,6 +13,38 @@ const connection = {
     return Math.min(times * 1000, 5000);
   },
 };
+
+// Cache result for 10s to avoid hammering Redis on every enqueue
+let _redisAvailableCache: { ok: boolean; at: number } | null = null;
+
+export async function isRedisAvailable(): Promise<boolean> {
+  const now = Date.now();
+  if (_redisAvailableCache && now - _redisAvailableCache.at < 10_000) {
+    return _redisAvailableCache.ok;
+  }
+  if (!env.REDIS_URL) {
+    _redisAvailableCache = { ok: false, at: now };
+    return false;
+  }
+  try {
+    const probe = new Redis(env.REDIS_URL, {
+      connectTimeout: 2000,
+      maxRetriesPerRequest: 1,
+      enableReadyCheck: true,
+      lazyConnect: false,
+    });
+    await Promise.race([
+      probe.ping(),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 2000)),
+    ]);
+    await probe.quit().catch(() => undefined);
+    _redisAvailableCache = { ok: true, at: now };
+    return true;
+  } catch {
+    _redisAvailableCache = { ok: false, at: now };
+    return false;
+  }
+}
 
 export const QUEUE_NAMES = {
   CAMPAIGN_ORCHESTRATION: "campaign-orchestration",

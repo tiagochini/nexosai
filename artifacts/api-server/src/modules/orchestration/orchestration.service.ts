@@ -11,7 +11,7 @@ import {
   CONTENT_PHASE_ENTRY_STATUSES,
   LAUNCH_PHASE_ENTRY_STATUSES,
 } from "../campaigns/campaigns.service.js";
-import { getQueue, QUEUE_NAMES, type CampaignOrchestrationJob } from "../queue/queue.service.js";
+import { getQueue, QUEUE_NAMES, isRedisAvailable, type CampaignOrchestrationJob } from "../queue/queue.service.js";
 import { executeDirectly } from "./orchestration.worker.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
@@ -168,8 +168,71 @@ async function enqueueOrExecute(
   job: CampaignOrchestrationJob,
   log: Logger,
 ): Promise<{ queued: boolean; jobId?: string }> {
+  // Check Redis availability FIRST — BullMQ's lazyConnect silently buffers jobs
+  // even when Redis is down, so we cannot rely on queue.add() throwing.
+  const redisOk = await isRedisAvailable();
+  if (!redisOk) {
+    log.warn({ action: job.action }, "Redis unavailable — executing directly");
+    setImmediate(() => {
+      executeDirectly(job, logger).catch((execErr) =>
+        logger.error({ execErr, action: job.action }, "Direct execution failed"),
+      );
+    });
+    return { queued: false };
+  }
+
   try {
     const queue = getQueue(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION);
+    const dedupJobId = `${job.campaignId}-${job.action}`;
+
+    // RC-DEDUP FIX: If a prior job with this jobId is in failed/completed state,
+    // BullMQ's dedup silently returns the existing job without creating a new one
+    // and the worker will never re-process it.
+    //
+    // RC-WORKER FIX: If the BullMQ worker's blocking connection is not consuming
+    // (BRPOP silently broken in some Redis configurations), a stale failed job is
+    // a strong signal that the worker is unhealthy. In that case, execute directly.
+    const existingJob = await queue.getJob(dedupJobId);
+    if (existingJob) {
+      const state = await existingJob.getState();
+      if (state === "failed") {
+        // Prior job failed AND worker didn't pick it up → execute directly, don't re-queue
+        log.warn({ dedupJobId, state, action: job.action }, "Stale failed job detected — worker unhealthy, falling back to direct execution");
+        await existingJob.remove().catch(() => undefined);
+        setImmediate(() => {
+          executeDirectly(job, logger).catch((execErr) =>
+            logger.error({ execErr, action: job.action }, "Direct execution (stale-job fallback) failed"),
+          );
+        });
+        return { queued: false };
+      } else if (state === "completed") {
+        // Completed jobs should have been cleaned up by removeOnComplete — remove and re-queue
+        log.warn({ dedupJobId, state, action: job.action }, "Stale completed dedup job — removing before re-enqueue");
+        await existingJob.remove().catch(() => undefined);
+      } else if (state === "active") {
+        // Job is actively being processed — honour the dedup, do not double-execute
+        log.info({ dedupJobId, state, action: job.action }, "Dedup: job already active — skipping");
+        return { queued: true, jobId: dedupJobId };
+      } else if (state === "waiting" || state === "delayed") {
+        // Job is waiting/delayed. If it has been waiting more than 30s the worker is
+        // not consuming (zombie BullMQ blocking connection) — execute directly instead.
+        const ageMs = Date.now() - (existingJob.timestamp ?? 0);
+        if (ageMs > 30_000) {
+          log.warn({ dedupJobId, state, ageMs, action: job.action }, "Zombie waiting job detected (worker not consuming) — executing directly");
+          await existingJob.remove().catch(() => undefined);
+          setImmediate(() => {
+            executeDirectly(job, logger).catch((execErr) =>
+              logger.error({ execErr, action: job.action }, "Direct execution (zombie-job fallback) failed"),
+            );
+          });
+          return { queued: false };
+        }
+        // Job was just added — honour the dedup
+        log.info({ dedupJobId, state, ageMs, action: job.action }, "Dedup: job recently queued — skipping");
+        return { queued: true, jobId: dedupJobId };
+      }
+    }
+
     // RC-004 FIX: Use jobId for BullMQ deduplication. BullMQ ignores duplicate
     // add() calls with an existing jobId that is still waiting/active. This
     // prevents double-click race conditions where two requests arrive before the
@@ -185,7 +248,7 @@ async function enqueueOrExecute(
       `campaign-${job.campaignId}-${job.action}`,
       job,
       {
-        jobId: `${job.campaignId}-${job.action}`,
+        jobId: dedupJobId,
         attempts: 1,
         removeOnComplete: { age: 3600 },
         removeOnFail: { age: 86400 },
@@ -194,8 +257,8 @@ async function enqueueOrExecute(
     log.info({ jobId: bullJob.id, action: job.action }, "Orchestration job enqueued");
     return { queued: true, jobId: bullJob.id ?? undefined };
   } catch (err) {
-    // Redis unavailable — execute directly (non-blocking via setImmediate)
-    log.warn({ action: job.action }, "Redis unavailable — executing directly");
+    // Fallback for unexpected queue errors
+    log.warn({ action: job.action }, "Queue error — executing directly");
     setImmediate(() => {
       executeDirectly(job, logger).catch((execErr) =>
         logger.error({ execErr, action: job.action }, "Direct execution failed"),
