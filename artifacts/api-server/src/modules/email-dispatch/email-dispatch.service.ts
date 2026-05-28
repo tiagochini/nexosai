@@ -360,7 +360,7 @@ export async function sendEmailDispatch(workspaceId: string, dispatchId: string)
     } else if (dispatch.provider === "activecampaign") {
       const { apiKey, accountUrl } = await getActiveCampaignCredentials(workspaceId);
       result = await sendViaActiveCampaign(apiKey, accountUrl, payload);
-    } else if (dispatch.provider === "resend" || (env.RESEND_API_KEY && ["mailchimp", "sendgrid", "brevo", "custom_smtp"].includes(dispatch.provider))) {
+    } else if ((dispatch.provider as string) === "resend" || (env.RESEND_API_KEY && ["mailchimp", "sendgrid", "brevo", "custom_smtp"].includes(dispatch.provider))) {
       // Native Resend provider OR fallback when RESEND_API_KEY is configured
       result = await sendViaResend(dispatch.fromName, dispatch.fromEmail, payload);
     } else {

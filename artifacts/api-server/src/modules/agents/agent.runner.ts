@@ -21,7 +21,7 @@ import {
 } from "../realtime/realtime.service.js";
 import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
-import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY, DOMINO_APPLIED_FRAMEWORKS } from "./domino-core.js";
+import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY, DOMINO_APPLIED_FRAMEWORKS, NEXOS_AI_IDENTITY } from "./domino-core.js";
 import { NEXOS_COGNITIVE_FOUNDATIONS } from "./cognitive-foundations.js";
 import { NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL } from "./constraint-reasoning.js";
 import { EMOTIONAL_COPY_VOICE_DOCTRINE } from "./emotional-copy-voice.js";
@@ -291,6 +291,7 @@ export function setPipelineMode(active: boolean): void {
 // references instead of reallocating ~130KB on every runAgent() invocation.
 // This alone eliminates the primary source of heap pressure in sequential pipelines.
 const _STATIC_PROMPT_LAYERS =
+  NEXOS_AI_IDENTITY +          // 0. Identidade central NEXOS — o que somos e nosso diferencial
   DOMINO_PLF_SUPREMACY +
   DOMINO_CORE_PREAMBLE +
   DOMINO_APPLIED_FRAMEWORKS +
@@ -302,6 +303,7 @@ const _STATIC_PROMPT_LAYERS =
 // Pipeline-mode variant: drops NEXOS_COGNITIVE_FOUNDATIONS (27KB) per call.
 // Saves ~270KB across a 10-agent pipeline. DOMINO + PLF remain fully intact.
 const _PIPELINE_PROMPT_LAYERS =
+  NEXOS_AI_IDENTITY +          // 0. Identidade central NEXOS — o que somos e nosso diferencial
   DOMINO_PLF_SUPREMACY +
   DOMINO_CORE_PREAMBLE +
   DOMINO_APPLIED_FRAMEWORKS +
