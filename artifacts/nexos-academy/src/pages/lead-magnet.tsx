@@ -173,33 +173,36 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6 text-xs font-bold uppercase tracking-widest"
             style={{ background: "hsl(250 90% 60% / 0.15)", color: "hsl(250 90% 75%)", border: "1px solid hsl(250 90% 60% / 0.3)" }}>
-            🎁 Guia Gratuito · PDF
+            NexOS Academy · Diagnóstico Gratuito
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight mb-4">
-            Os 7 Erros que{" "}
+            O Motivo Real por Que Sua Audiência Não Cresce —{" "}
             <span style={{ background: "linear-gradient(135deg, hsl(250 90% 70%), hsl(270 80% 65%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Travam
-            </span>{" "}
-            o Crescimento da Sua Audiência
+              e Não É o Algoritmo
+            </span>
           </h1>
 
           <p className="text-lg text-[hsl(220_10%_65%)] leading-relaxed mb-6">
-            Por que criadores com conteúdo bom ficam estagnados — e o que os que crescem de verdade fazem diferente. Com o Framework do Gancho em 3 Camadas para implementar hoje.
+            7 padrões que travam criadores consistentes — com casos reais, diagnóstico e o Framework do Gancho em 3 Camadas que os que crescem de verdade aplicam (e quase ninguém fala).
           </p>
 
-          <div className="flex flex-wrap justify-center gap-3 mb-10">
-            {["📄 Guia completo", "⚠️ 7 erros com casos reais", "🎣 Framework do Gancho", "✅ Checklist de diagnóstico"].map(item => (
+          <div className="flex flex-wrap justify-center gap-3 mb-6">
+            {["⚠️ 7 erros com casos reais", "🎣 Framework do Gancho", "✅ Checklist de diagnóstico", "⬇️ Download em PDF"].map(item => (
               <span key={item} className="text-sm text-[hsl(220_10%_55%)] bg-[hsl(220_20%_8%)] px-4 py-1.5 rounded-full border border-[hsl(220_20%_13%)]">
                 {item}
               </span>
             ))}
           </div>
+
+          <p className="text-sm text-[hsl(220_10%_40%)] mb-4">
+            Mais de <strong className="text-[hsl(220_10%_60%)]">2.400 criadores</strong> já usaram esse diagnóstico para identificar o que estava travando o crescimento.
+          </p>
         </div>
 
         <div className="rounded-2xl p-8" style={{ background: "hsl(222 25% 7%)", border: "1px solid hsl(250 90% 60% / 0.2)" }}>
-          <h2 className="text-lg font-bold text-white mb-1">Receba o guia agora — é gratuito</h2>
-          <p className="text-sm text-[hsl(220_10%_50%)] mb-6">Sem spam. Cancele quando quiser.</p>
+          <h2 className="text-lg font-bold text-white mb-1">Acesso imediato — leva 30 segundos</h2>
+          <p className="text-sm text-[hsl(220_10%_50%)] mb-6">Preencha abaixo e receba o diagnóstico completo agora.</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -258,11 +261,11 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
               className="w-full py-4 rounded-xl text-white font-bold text-base tracking-wide transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 mt-2"
               style={{ background: "linear-gradient(135deg, hsl(250 90% 58%), hsl(270 80% 52%))" }}
             >
-              {loading ? "Processando..." : "Acessar o Guia Gratuitamente →"}
+              {loading ? "Processando..." : "Quero o Diagnóstico Completo →"}
             </button>
 
             <p className="text-xs text-center text-[hsl(220_10%_35%)] pt-1">
-              🔒 Seus dados estão seguros. Nada de spam.
+              🔒 Seus dados estão seguros. Acesso imediato, sem spam.
             </p>
           </form>
         </div>
