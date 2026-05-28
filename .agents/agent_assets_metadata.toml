@@ -18,6 +18,24 @@ uri = "file://artifacts/video-nexos/public/images/diagnostic_grid.png"
 type = "image"
 title = "diagnostic_grid"
 
+[[generated]]
+id = "KfZ2YZSnxRL1KM3h8VKvk"
+uri = "file://attached_assets/catalog-mapa-gratis.png"
+type = "image"
+title = "catalog-mapa-gratis"
+
+[[generated]]
+id = "sOyEji7dgyP2XcrLFld4D"
+uri = "file://attached_assets/catalog-nexos-ai.png"
+type = "image"
+title = "catalog-nexos-ai"
+
+[[generated]]
+id = "dBHOmBguVox5n7M9o-7cZ"
+uri = "file://attached_assets/catalog-nexos-academy.png"
+type = "image"
+title = "catalog-nexos-academy"
+
 [[outputs]]
 id = "Am3AKOGMz4EZf6QdTqhBd"
 uri = "file://artifacts/app/public/nexos_ai_logo_1024x1024.png"
@@ -29,3 +47,21 @@ id = "8ocnlupuZgEt6LFPfXcxR"
 uri = "file://scripts/nexos-audit-report.pdf"
 type = "pdf"
 title = "NEXOS AI — Relatório de Auditoria Estrutural"
+
+[[outputs]]
+id = "uRqu7MAw-Z7fPXBfuwle0"
+uri = "file://attached_assets/catalog-mapa-gratis.png"
+type = "image"
+title = "Catálogo 1 — PDF Grátis (Mapa dos Primeiros R$10K)"
+
+[[outputs]]
+id = "gAZ7hU0w3mRi3L1egJfLZ"
+uri = "file://attached_assets/catalog-nexos-ai.png"
+type = "image"
+title = "Catálogo 2 — NexOS AI (Produto Principal)"
+
+[[outputs]]
+id = "AgQUV2dt20OLEnHkNyWUs"
+uri = "file://attached_assets/catalog-nexos-academy.png"
+type = "image"
+title = "Catálogo 3 — NexOS Academy (Bônus)"
