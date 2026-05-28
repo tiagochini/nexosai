@@ -12,71 +12,122 @@ type Stage = "capture" | "guide";
 const ERRORS = [
   {
     n: "01",
-    titulo: "Criar o produto antes de validar a demanda",
-    descricao: "A maioria passa meses gravando aulas, montando área de membros e contratando designer — antes de saber se alguém vai comprar. Quando finalmente lançam, descobrem que o mercado não queria aquilo do jeito que entregaram.",
-    exemplo: "Mariana gravou 40 aulas de culinária funcional ao longo de 4 meses. Lançou e vendeu 3 unidades. O problema? Ninguém tinha pedido um curso gravado — as pessoas da sua audiência queriam acompanhamento ao vivo. Ela descobriu isso só depois de gastar R$3.200 em produção.",
-    correcao: "Lance primeiro, crie depois. Abra pré-venda ou lançamento semente com promessa de entrega. Se vender, você tem tudo para criar com foco. Se não vender, você descobriu sem gastar meses.",
+    titulo: "Postar para todo mundo — e não falar com ninguém",
+    descricao: "Tem um conteúdo que agrada a todos e converte zero. Quando você tenta falar com 'quem quer crescer online', você não fala com ninguém de verdade. O algoritmo não é o seu problema — é a falta de um avatar tão específico que, ao ler seu post, a pessoa pensa: 'como ele sabe exatamente o que eu estou vivendo?'",
+    aprofundamento: "A especificidade é contra-intuitiva. Parece que restringir o público vai diminuir o alcance. Na prática, é o oposto: quanto mais específico for o problema que você resolve, mais as pessoas certas te compartilham para outras pessoas certas. Um post para 'empreendedores' performa mediano. Um post para 'nutricionistas que querem sair do atendimento individual' viraliza dentro do nicho — e esse nicho te compra.",
+    exemplo: "Felipe criava conteúdo de 'saúde e bem-estar' há 11 meses. 1.200 seguidores, engajamento morto. Quando mudou o posicionamento para 'homens acima dos 40 que querem emagrecer sem abrir mão de churrasco e cerveja no fim de semana', foi de 1.200 para 8.400 seguidores em 4 meses — e vendeu R$34k no primeiro lançamento para aquela audiência específica.",
+    correcao: "Escreva a frase: 'Meu conteúdo é para [cargo/situação específica] que quer [resultado concreto] sem [sacrifício que detestam].' Se você travar na frase, seu posicionamento ainda não está pronto. Se a frase sair fácil, você tem o filtro para todo conteúdo que vai criar a partir de agora.",
     cor: "#f87171",
+    icone: "🎯",
   },
   {
     n: "02",
-    titulo: "Preço baseado em quanto você acha que vale",
-    descricao: "Iniciantes tendem a precificar pelo que acham que merecem ou pelo que dariam — não pelo valor percebido pelo cliente. O resultado é preço baixo demais (que desvaloriza e dificulta lucro) ou alto demais sem estrutura de persuasão.",
-    exemplo: "Carlos cobrou R$49 pelo seu curso de finanças pessoais porque 'estava começando e não queria assustar'. Vendeu 11 cópias = R$539. Com R$197, com o mesmo esforço de divulgação, teria vendido 8 = R$1.576. Preço mais alto, menos vendas, mais dinheiro.",
-    correcao: "Pesquise o que concorrentes diretos cobram. O preço certo não é o mais barato — é o que a sua audiência específica está disposta a pagar dado o resultado prometido. Para maioria dos primeiros produtos: entre R$97 e R$497.",
+    titulo: "Ensinar demais, conectar de menos",
+    descricao: "O criador que só educa cria audiência de leitores. O criador que educa e se revela cria audiência de seguidores fiéis. Existe uma diferença brutal entre as duas: a primeira te lê enquanto você é útil. A segunda te segue enquanto você existe.",
+    aprofundamento: "Conteúdo puramente educativo tem prazo de validade. Quando alguém aprende o que você ensina, não precisa mais de você. Mas quando você mostra o seu processo — seus erros, suas dúvidas, o que estava errado antes de acertar — você cria algo que nenhuma IA ou concorrente consegue copiar: a sua história. É isso que as pessoas compram quando compram de você. Não o conhecimento. A versão de você que acredita que elas conseguem.",
+    exemplo: "Camila ensinava design para iniciantes com posts de 'dicas e tutoriais'. Platôu em 3.200 seguidores. Publicou um carrossel intitulado 'Os 3 projetos que me envergonham hoje — e o que cada um me ensinou'. Foi compartilhado 847 vezes. Ganhou 1.100 seguidores naquela semana. O conteúdo educativo não mudou. O que mudou foi a humanidade por trás.",
+    correcao: "A proporção que funciona: 60% ensino prático, 30% história pessoal e processo, 10% bastidores e vulnerabilidade calculada. 'Vulnerabilidade calculada' não é expor tudo — é escolher uma dificuldade real que seu avatar também vive, mostrar como você passou por ela, e extrair o aprendizado. Conecta sem overshare.",
     cor: "#fbbf24",
+    icone: "🪞",
   },
   {
     n: "03",
-    titulo: "Lançar para audiência fria sem aquecimento",
-    descricao: "Você cria um post anunciando a oferta para seguidores que mal te conhecem, sem aquecimento prévio, sem construção de autoridade, sem conteúdo gratuito de valor. A conversão é quase zero.",
-    exemplo: "Pedro lançou seu produto direto no feed sem preparação. Tinha 800 seguidores, nenhum conteúdo educativo, sem histórias pessoais. Resultado: 0 vendas. Ficou convencido de que 'o mercado estava saturado'.",
-    correcao: "Aqueça por pelo menos 7 dias antes de lançar. Entregue valor gratuito, mostre seu processo, colete dúvidas via Stories, responda tudo. Só então apresente a oferta — para uma audiência que já te conhece e confia.",
+    titulo: "Consistência de volume sem consistência de qualidade",
+    descricao: "Ninguém te disse que postar todo dia é uma armadilha. O algoritmo recompensa frequência, mas a audiência recompensa impacto. Você pode postar 30 vezes por mês e encolher — ou postar 8 vezes e crescer 40%. A diferença não está na quantidade. Está em quantas vezes por mês você publicou algo que fez a pessoa parar o scroll e pensar.",
+    aprofundamento: "Existe um fenômeno chamado 'fadiga de criador'. Quando você se compromete com volume antes de dominar a essência de cada peça, começa a produzir por obrigação — e sua audiência sente. Um post feito com pressa transmite pressa. Um post feito com intenção transmite intenção. O criador que publica 10 posts impactantes fatura mais do que o que publica 30 posts medianos — e tem mais energia para o negócio.",
+    exemplo: "Renata postava stories todos os dias às 8h, 12h e 19h. Tinha uma planilha de frequência. Crescia 80 seguidores por mês. Quando parou a planilha e passou a publicar apenas quando tinha algo real para dizer — uma descoberta, um aprendizado, um caso de aluno —, foi para 400 seguidores por mês. Menos posts, mais crescimento.",
+    correcao: "Crie um banco de 'momentos de insight' — observe sua semana e anote quando algo te surpreendeu, quando um cliente disse algo revelador, quando você errou e entendeu o porquê. Esses momentos reais valem mais do que qualquer calendário editorial. Sua obrigação não é postar. É não deixar os momentos de impacto passarem sem registrar.",
     cor: "#a78bfa",
+    icone: "⚡",
   },
   {
     n: "04",
-    titulo: "Copy genérico que não fala com ninguém",
-    descricao: "A maioria escreve como se quisesse agradar a todos — e acaba não tocando ninguém. Copy genérico não converte porque a pessoa lê e pensa 'não é bem isso que eu preciso'.",
-    exemplo: "Amanda escreveu: 'Aprenda marketing digital do jeito certo. Para todos que querem crescer online.' Versus o que deveria ter escrito: 'Para mães CLT com menos de 2h por dia que querem uma renda extra de R$2k/mês sem depender de redes sociais.'",
-    correcao: "Seja específico até doer. Quanto mais nicho o copy, mais a pessoa certa vai se sentir chamada. Genérico = invisível. Específico = magnético. Escreva para uma pessoa, não para todo mundo.",
+    titulo: "O gancho que não para o scroll — os 3 primeiros segundos que decidem tudo",
+    descricao: "Você pode ter o melhor conteúdo do mundo no segundo 0:30 de um vídeo. Se os primeiros 3 segundos não prenderem, ninguém vai chegar lá. O algoritmo mede o tempo de retenção desde o primeiro frame. Queda imediata = distribuição zero. O seu conteúdo não está sendo ignorado porque é ruim. Está sendo ignorado porque começa errado.",
+    aprofundamento: "Existe uma anatomia do gancho que converte: (1) Uma afirmação que incomoda ou intriga. (2) Uma pergunta que o avatar faz para si mesmo toda semana. (3) Uma promessa de revelação de algo que 'poucos sabem'. Ganchos fracos começam com 'Hoje vou falar sobre...', 'Olá pessoal...', 'Dica número 1...'. Ganchos fortes começam com o problema, a dor, a contradição ou a revelação — sem apresentação, sem introdução, sem setup.",
+    exemplo: "Daniel começava todos os vídeos com 'Olá galera, hoje trago mais um conteúdo sobre...' Média de retenção: 22%. Reformulou o início de tudo: começava direto na frase mais forte do conteúdo — a virada, o dado surpreendente, a afirmação controversa. Retenção média foi para 61%. O mesmo conteúdo. Apenas os 8 primeiros segundos mudaram.",
+    correcao: "Antes de publicar qualquer conteúdo, escreva os primeiros 15 segundos como se você estivesse respondendo a pergunta: 'O que eu diria se só tivesse 3 segundos para convencer essa pessoa a não sair?' Se a resposta não é o que você começa, inverta. Comece pelo mais forte. Sempre.",
     cor: "#34d399",
+    icone: "🎣",
   },
   {
     n: "05",
-    titulo: "Desistir após o primeiro lançamento fraco",
-    descricao: "A maioria lança uma vez, não vende como esperava, e conclui que o negócio não funciona. O primeiro lançamento raramente é o melhor. É o aprendizado mais caro — e mais valioso.",
-    exemplo: "Rodrigo lançou, fez 4 vendas quando esperava 20. Ficou dois meses sem lançar nada, desanimado. Quando voltou (por insistência de uma amiga), fez o segundo lançamento com os aprendizados do primeiro e teve 19 vendas.",
-    correcao: "O segundo lançamento é sempre melhor que o primeiro. O terceiro, melhor que o segundo. Lance, colete dados, melhore uma coisa, relance. A constância bate a perfeição toda vez.",
+    titulo: "Ignorar quem já te segue — e só pensar em crescer",
+    descricao: "Você trata seus seguidores atuais como plateia e fica em busca de novos espectadores. Mas as pessoas que já te seguem são os seus melhores vendedores, depoentes e distribuidores — e a maioria dos criadores as ignora completamente depois do follow.",
+    aprofundamento: "Existe uma matemática simples que poucos calculam: se 3% dos seus 5.000 seguidores te recomendam ativamente para uma pessoa cada, você ganha 150 novos seguidores por mês sem criar nada novo. Mas para 3% recomendar você, precisam ter tido uma experiência de conexão real — não só consumido conteúdo. Isso acontece quando você responde DMs, quando menciona comentaristas pelo nome em novos conteúdos, quando cria para quem já está lá, não só para atrair quem ainda não chegou.",
+    exemplo: "Tatiana tinha 2.800 seguidores e focava 100% em criação de conteúdo para alcançar novos. Um mês ela decidiu fazer o oposto: passou 2 semanas respondendo todos os DMs antigos, repostou histórias de 3 seguidoras que tinham resultados, criou um post agradecendo o engajamento de quem mais interagia. Resultado: 430 novos seguidores em 15 dias — vindos de indicação orgânica. Sem anúncio, sem colaboração.",
+    correcao: "Reserve 20 minutos por dia para 'modo comunidade': responda comentários como se fossem conversas, não notificações. Mencione seguidores que compartilharam resultados. Faça enquetes reais com perguntas que você quer saber — não perguntas decorativas. A audiência que se sente vista cresce em silêncio e compra em voz alta.",
     cor: "#c084fc",
+    icone: "🤝",
   },
   {
     n: "06",
-    titulo: "Ignorar o pós-venda completamente",
-    descricao: "Após a venda, 70% dos empreendedores digitais iniciantes somem. O cliente recebe o produto e fica à deriva. Resultado: sem recompra, sem indicação, sem depoimento.",
-    exemplo: "Juliana vendeu 15 vagas de um workshop. Entregou o conteúdo. Nunca mais entrou em contato. Três meses depois, zero indicações, zero recompras. Quando ela perguntou a umas delas, a resposta foi: 'Achei que tinha sido só uma venda e pronto.'",
-    correcao: "Crie um onboarding básico: mensagem de boas-vindas, acompanhamento em D+7 e D+30, pedido de depoimento em D+14. O cliente que se sentiu cuidado indica naturalmente — e a indicação não custa nada.",
+    titulo: "Construir audiência em terreno alugado — sem capturar nada",
+    descricao: "Você tem 4.000 seguidores no Instagram. Sabe quantos emails ou contatos de WhatsApp você tem dessas 4.000 pessoas? Se a resposta for 'poucos' ou 'nenhum', você está construindo um negócio em cima de um servidor que você não controla, com regras que mudam sem aviso, e alcance que cai toda semana.",
+    aprofundamento: "A conta de como o algoritmo funciona é simples e brutal: posts orgânicos no Instagram chegam a 3–8% dos seus seguidores. Isso significa que você tem 4.000 seguidores e fala de verdade com 120–320 pessoas por post. Um email disparado para uma lista de 1.000 é aberto por 200–350 pessoas. Taxa de abertura vs. alcance orgânico: a lista ganha na maioria dos cenários — e a lista nunca te suspende.",
+    exemplo: "Marcos construiu 11.000 seguidores em 14 meses de trabalho consistente. Quando foi lançar, percebeu que tinha 312 emails. A campanha de email chegou a 312 pessoas. O alcance do lançamento foi limitado pelos seguidores que o algoritmo decidiu mostrar. Se tivesse construído lista desde o primeiro dia, teria 2.000–3.000 emails e controle real do lançamento.",
+    correcao: "Crie uma isca digital simples — um checklist, um mini-guia, um template — e coloque o link na bio com uma frase de valor claro. Toda semana, mencione nos stories que a isca existe. Com isso, você transforma seguidores em contatos que são seus — independente de qualquer plataforma.",
     cor: "#fb923c",
+    icone: "🔒",
   },
   {
     n: "07",
-    titulo: "Não construir lista — depender 100% das redes",
-    descricao: "Quem depende só do Instagram ou TikTok está construindo em terreno alugado. Mudança de algoritmo, suspensão de conta, queda de alcance — qualquer um desses eventos pode zerar anos de trabalho em dias.",
-    exemplo: "Thiago tinha 18 mil seguidores e faturava R$6k/mês em vendas diretas pelo Instagram. Em um fim de semana, sua conta foi suspensa por erro de sistema. Ficou 3 semanas sem conta e perdeu R$15k em receita que não aconteceu.",
-    correcao: "Desde o primeiro dia: construa uma lista de email ou WhatsApp. Ofereça algo gratuito em troca do contato. Com 500 emails quentes, você fatura com ou sem Instagram. A lista é o único ativo que é 100% seu.",
+    titulo: "Medir as métricas que não pagam boleto",
+    descricao: "Você comemora quando um post bomba em likes e fica frustrado quando não. Mas likes não pagam boleto. Salvamentos e compartilhamentos indicam valor real. Cliques no link indicam intenção. Leads capturados indicam futuro comprador. A métrica que você acompanha determina o tipo de conteúdo que você cria — e o tipo de audiência que você constrói.",
+    aprofundamento: "Existe uma hierarquia de métricas que separa criadores que constroem audiência para crescer dos que constroem audiência para vender: Curtidas (vaidade) → Comentários (engajamento) → Salvamentos (valor percebido) → Compartilhamentos (confiança) → Cliques (intenção) → Leads (futura receita). O criador que otimiza para likes cria conteúdo de entretenimento. O que otimiza para salvamentos e leads cria conteúdo de valor que converte.",
+    exemplo: "Letícia tinha posts com 800 likes e zero vendas. Quando analisou o que levava pessoas a salvar o conteúdo, percebeu que eram os posts práticos — listas, processos, frameworks. Reposicionou 70% do conteúdo para esse formato. Likes caíram para 300–400 por post. Salvamentos foram para 3x mais. Em 60 dias, sua lista cresceu 680 contatos e ela fez R$18k no primeiro lançamento para essa lista.",
+    correcao: "Toda semana, abra as métricas e responda: quais posts tiveram mais salvamentos? Quais geraram mais cliques no link? Quais vieram acompanhados de DM espontânea? Esse é o seu mapa do que criar mais. O resto é dado decorativo.",
     cor: "#f87171",
+    icone: "📊",
   },
 ];
 
 const CHECKLIST_ITEMS = [
-  "Eu validei que pessoas reais querem isso — não só que eu acho que querem",
-  "Meu preço foi definido com base no valor percebido, não no que 'parece razoável'",
-  "Aqueci minha audiência por pelo menos 7 dias antes de apresentar a oferta",
-  "Meu copy é específico o suficiente para excluir quem não é meu cliente ideal",
-  "Tenho comprometimento de lançar ao menos 3 vezes antes de desistir do produto",
-  "Tenho um processo básico de pós-venda (boas-vindas, acompanhamento, pedido de depoimento)",
-  "Estou coletando emails ou contatos de WhatsApp desde o início, não só seguidores",
+  "Meu posicionamento é específico o suficiente para excluir quem não é meu cliente ideal",
+  "Meu conteúdo tem pelo menos 30% de história pessoal e processo — não só ensino",
+  "Cada publicação começa pelos 3 segundos mais fortes — não por apresentação",
+  "Tenho um ritual semanal de responder DMs e comentários como conversa real",
+  "Tenho uma isca digital ativa e coleto emails ou contatos além de seguidores",
+  "Acompanho salvamentos e cliques — não só likes e visualizações",
+  "Sei exatamente para quem falo: o cargo, a dor, o resultado e o sacrifício que querem evitar",
 ];
+
+const VALUE_CONTENT = {
+  titulo: "O Framework do Gancho em 3 Camadas",
+  subtitulo: "Como escrever os primeiros 15 segundos de qualquer conteúdo para que o algoritmo — e a pessoa — não consigam parar",
+  intro: "Você pode ter o melhor conteúdo do mundo. Se os primeiros 3 segundos não prenderem, o algoritmo entende que ninguém quer assistir — e para de distribuir. Aqui está o framework que os maiores criadores usam, com ou sem consciência:",
+  camadas: [
+    {
+      numero: "Camada 1",
+      nome: "O Padrão de Interrupção",
+      desc: "Comece com algo que quebre a expectativa. Uma afirmação que contraria o que a pessoa acredita, um dado que surpreende, uma pergunta que ela faz para si mesma toda semana mas nunca viu ninguém responder diretamente.",
+      exemplos_fracos: ["'Hoje vou falar sobre crescimento no Instagram...'", "'Dica número 1 para aumentar sua audiência...'", "'Olá pessoal, tudo bem? Hoje trago...'"],
+      exemplos_fortes: ["'Você está crescendo errado — e o algoritmo está te mostrando isso.'", "'3.200 seguidores. Zero vendas. Aqui está o que eu não entendia.'", "'O criador que posta todo dia e não cresce está cometendo esse erro específico.'"],
+      cor: "#f87171",
+    },
+    {
+      numero: "Camada 2",
+      nome: "A Promessa de Revelação",
+      desc: "Depois do padrão de interrupção, você tem 5 segundos para entregar a promessa do que vai ser revelado. Não o que você vai ensinar — o que a pessoa vai conseguir entender, fazer ou evitar depois de consumir o conteúdo.",
+      exemplos_fracos: ["'Nesse vídeo vou explicar como funciona o algoritmo.'", "'Vou compartilhar algumas dicas que aprendi.'"],
+      exemplos_fortes: ["'Em 90 segundos você vai entender por que seu alcance caiu — e a correção não exige nenhum novo conteúdo.'", "'Vou te mostrar o padrão exato dos posts que geram salvamentos — com 3 exemplos que você pode copiar hoje.'"],
+      cor: "#34d399",
+    },
+    {
+      numero: "Camada 3",
+      nome: "O Prêmio da Continuidade",
+      desc: "Logo no início — não no final — sinalize que tem algo ainda mais valioso chegando. Isso retém quem está decidindo se vai continuar. É o que os roteiristas de séries chamam de 'próximo episódio' inserido no começo, não no fim.",
+      exemplos_fracos: ["'Fica até o final que tem uma dica especial.'", "'Não sai que tem um bônus.'"],
+      exemplos_fortes: ["'E no final vou mostrar o formato exato que uso nos posts que mais convertem — que não é o que a maioria acha que é.'", "'Antes de terminar, vou te dar o template que uso antes de publicar qualquer coisa — simples, mas elimina o principal erro.'"],
+      cor: "#a78bfa",
+    },
+  ],
+  template: {
+    titulo: "Template de Gancho Pronto para Usar",
+    estrutura: "[AFIRMAÇÃO QUE CONTRARIA UMA CRENÇA COMUM] + [PROMESSA ESPECÍFICA DO QUE VÃO APRENDER] + [SINALIZAÇÃO DO QUE VEM NO FINAL]",
+    exemplo_completo: "\"A maioria das pessoas está construindo audiência para crescer — e por isso não vende. [pausa] Nesse conteúdo eu vou te mostrar a diferença entre audiência de alcance e audiência de compra — e como virar essa chave sem trocar o que você já cria. [pausa] E no final, o teste de 3 perguntas que eu faço antes de publicar qualquer coisa para saber se vai converter ou só viralizar.\"",
+  },
+};
 
 function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
   const [name, setName] = useState("");
@@ -96,7 +147,7 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim().toLowerCase(),
-          source: "lead_magnet_guia_gratuito",
+          source: "lead_magnet_guia_audiencia",
         }),
       });
       localStorage.setItem(CAPTURE_KEY, JSON.stringify({ name: name.trim(), email: email.trim() }));
@@ -123,17 +174,17 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white leading-tight mb-4">
             Os 7 Erros que{" "}
             <span style={{ background: "linear-gradient(135deg, hsl(250 90% 70%), hsl(270 80% 65%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Destroem
+              Travam
             </span>{" "}
-            Lançamentos Digitais
+            o Crescimento da Sua Audiência
           </h1>
 
-          <p className="text-lg text-[hsl(220_10%_65%)] leading-relaxed mb-8">
-            E como evitar cada um antes do seu próximo lançamento — com casos reais e o checklist de autodiagnóstico.
+          <p className="text-lg text-[hsl(220_10%_65%)] leading-relaxed mb-6">
+            Por que criadores com conteúdo bom ficam estagnados — e o que os que crescem de verdade fazem diferente. Com o Framework do Gancho em 3 Camadas para implementar hoje.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4 mb-10">
-            {["📄 12 páginas", "⚠️ 7 erros com casos reais", "✅ Checklist de autodiagnóstico"].map(item => (
+          <div className="flex flex-wrap justify-center gap-3 mb-10">
+            {["📄 Guia completo", "⚠️ 7 erros com casos reais", "🎣 Framework do Gancho", "✅ Checklist de diagnóstico"].map(item => (
               <span key={item} className="text-sm text-[hsl(220_10%_55%)] bg-[hsl(220_20%_8%)] px-4 py-1.5 rounded-full border border-[hsl(220_20%_13%)]">
                 {item}
               </span>
@@ -156,12 +207,8 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Como você se chama?"
-                className="w-full px-4 py-3 rounded-xl border text-white placeholder-[hsl(220_10%_30%)] text-sm focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  background: "hsl(222 25% 5%)",
-                  borderColor: "hsl(220 20% 14%)",
-                  outline: "none",
-                }}
+                className="w-full px-4 py-3 rounded-xl border text-white placeholder-[hsl(220_10%_30%)] text-sm focus:outline-none transition-all"
+                style={{ background: "hsl(222 25% 5%)", borderColor: "hsl(220 20% 14%)" }}
                 onFocus={e => (e.target.style.borderColor = "hsl(250 90% 60% / 0.6)")}
                 onBlur={e => (e.target.style.borderColor = "hsl(220 20% 14%)")}
               />
@@ -177,18 +224,13 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
                 onChange={e => setEmail(e.target.value)}
                 placeholder="email@exemplo.com"
                 className="w-full px-4 py-3 rounded-xl border text-white placeholder-[hsl(220_10%_30%)] text-sm focus:outline-none transition-all"
-                style={{
-                  background: "hsl(222 25% 5%)",
-                  borderColor: "hsl(220 20% 14%)",
-                }}
+                style={{ background: "hsl(222 25% 5%)", borderColor: "hsl(220 20% 14%)" }}
                 onFocus={e => (e.target.style.borderColor = "hsl(250 90% 60% / 0.6)")}
                 onBlur={e => (e.target.style.borderColor = "hsl(220 20% 14%)")}
               />
             </div>
 
-            {errorMsg && (
-              <p className="text-sm text-red-400 text-center">{errorMsg}</p>
-            )}
+            {errorMsg && <p className="text-sm text-red-400 text-center">{errorMsg}</p>}
 
             <button
               type="submit"
@@ -238,7 +280,7 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
       `}</style>
 
       <div id="pdf-guide" className="max-w-3xl mx-auto space-y-8 pb-16">
-        {/* PDF Header bar */}
+
         <div className="pdf-header rounded-2xl p-6 flex items-center justify-between gap-4"
           style={{ background: "linear-gradient(135deg, hsl(250 40% 15%), hsl(250 30% 10%))", border: "1px solid hsl(250 90% 60% / 0.3)" }}>
           <div>
@@ -249,7 +291,7 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
               </span>
             </div>
             <h1 className="text-2xl font-extrabold text-white leading-snug">
-              Os 7 Erros do Primeiro Lançamento
+              Os 7 Erros que Travam o Crescimento da Sua Audiência
             </h1>
             <p className="text-sm text-[hsl(220_10%_60%)] mt-1">
               {leadName ? `Preparado para ${leadName} · ` : ""}NexOS Academy · nexos.ai
@@ -264,30 +306,44 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
           </button>
         </div>
 
-        {/* Intro */}
         <section className="card p-6 space-y-3">
-          <h2 className="text-lg font-bold text-white">Por que 9 em cada 10 primeiros lançamentos falham?</h2>
+          <h2 className="text-lg font-bold text-white">Por que criadores com conteúdo bom ficam estagnados?</h2>
           <p className="text-[hsl(220_10%_65%)] leading-relaxed text-sm">
-            Não é falta de esforço. Não é falta de produto bom. É porque quem está começando comete os mesmos erros — sempre os mesmos, na mesma ordem — sem saber que existe um padrão claro que separa quem vende de quem fica frustrado.
+            Não é o algoritmo. Não é o nicho saturado. Não é falta de consistência. É porque existe um conjunto de erros específicos que criam o teto do crescimento — e a maioria dos criadores comete todos eles ao mesmo tempo, sem saber que são esses os freios.
           </p>
           <p className="text-[hsl(220_10%_65%)] leading-relaxed text-sm">
-            Este guia documenta os 7 erros que mais se repetem, com exemplos reais de como eles acontecem e o que fazer diferente. Leia do começo ao fim antes do seu próximo lançamento.
+            Cada erro neste guia vem acompanhado de como ele acontece na prática, um caso real com números e contexto, e a correção exata — não uma dica genérica, mas o que fazer diferente na próxima publicação.
           </p>
+          <div className="rounded-xl p-4 text-sm mt-2" style={{ background: "hsl(250 90% 60% / 0.08)", border: "1px solid hsl(250 90% 60% / 0.2)" }}>
+            <p className="text-[hsl(250 90% 80%)] font-semibold text-xs uppercase tracking-wider mb-1">📌 Nota antes de começar</p>
+            <p className="text-[hsl(220_10%_65%)] leading-relaxed">
+              Ao final deste guia, você vai encontrar o <strong className="text-white">Framework do Gancho em 3 Camadas</strong> — o método para escrever os primeiros 15 segundos de qualquer conteúdo que prende o algoritmo e a pessoa ao mesmo tempo. Com template pronto para usar.
+            </p>
+          </div>
         </section>
 
-        {/* Os 7 erros */}
         <section className="space-y-5">
           {ERRORS.map(erro => (
             <div key={erro.n} className="card p-6 space-y-3">
               <div className="flex items-start gap-3">
-                <span className="text-2xl font-extrabold shrink-0" style={{ color: erro.cor }}>#{erro.n}</span>
-                <h3 className="text-white font-bold text-base leading-tight">{erro.titulo}</h3>
+                <span className="text-2xl font-extrabold shrink-0" style={{ color: erro.cor }}>{erro.icone}</span>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: erro.cor }}>Erro #{erro.n}</span>
+                  <h3 className="text-white font-bold text-base leading-tight mt-0.5">{erro.titulo}</h3>
+                </div>
               </div>
               <p className="text-[hsl(220_10%_65%)] leading-relaxed text-sm">{erro.descricao}</p>
+
+              <div className="rounded-xl p-4 text-sm" style={{ background: "hsl(250 90% 60% / 0.05)", border: "1px solid hsl(250 90% 60% / 0.15)" }}>
+                <p className="font-semibold text-xs uppercase tracking-wider mb-1.5" style={{ color: "hsl(250 90% 75%)" }}>↗ Por que isso acontece</p>
+                <p className="text-[hsl(220_10%_65%)] leading-relaxed">{erro.aprofundamento}</p>
+              </div>
+
               <div className="pdf-error-card rounded-xl p-4 text-sm" style={{ background: "hsl(0 90% 65% / 0.05)", border: "1px solid hsl(0 90% 65% / 0.15)" }}>
                 <p className="font-semibold text-xs uppercase tracking-wider mb-1.5" style={{ color: "hsl(0 90% 70%)" }}>📍 Caso real</p>
                 <p className="text-[hsl(220_10%_65%)] leading-relaxed italic">{erro.exemplo}</p>
               </div>
+
               <div className="pdf-fix-card rounded-xl p-4 text-sm" style={{ background: "hsl(168 100% 42% / 0.05)", border: "1px solid hsl(168 100% 42% / 0.2)" }}>
                 <p className="font-semibold text-xs uppercase tracking-wider mb-1.5" style={{ color: "hsl(168 100% 55%)" }}>✓ O que fazer</p>
                 <p className="text-[hsl(220_10%_65%)] leading-relaxed">{erro.correcao}</p>
@@ -296,10 +352,9 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
           ))}
         </section>
 
-        {/* Checklist */}
         <section className="card p-6 space-y-4">
-          <h2 className="text-lg font-bold text-white">Checklist de Autodiagnóstico</h2>
-          <p className="text-[hsl(220_10%_65%)] text-sm">Antes do seu próximo lançamento, responda cada item honestamente:</p>
+          <h2 className="text-lg font-bold text-white">Checklist de Diagnóstico</h2>
+          <p className="text-[hsl(220_10%_65%)] text-sm">Responda honestamente sobre sua estratégia de conteúdo atual:</p>
           <div className="space-y-3">
             {CHECKLIST_ITEMS.map((item, i) => (
               <label key={i} className="flex items-start gap-3 cursor-pointer group">
@@ -309,18 +364,69 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
             ))}
           </div>
           <div className="pt-3 border-t border-[hsl(220_20%_12%)] text-xs text-[hsl(220_10%_40%)] space-y-0.5">
-            <p>Se marcou menos de 5: há ajustes urgentes antes de lançar.</p>
-            <p>Se marcou 5–6: seu lançamento tem boas chances com pequenos ajustes.</p>
-            <p>Se marcou 7: você está pronto — foque na execução.</p>
+            <p>Se marcou menos de 4: os erros estão ativos e travando seu crescimento agora.</p>
+            <p>Se marcou 4–5: você tem base — os ajustes são pontuais e de alto impacto.</p>
+            <p>Se marcou 6–7: você está pronto para escalar — foque no volume com qualidade.</p>
           </div>
         </section>
 
-        {/* CTA */}
+        <section className="card p-6 space-y-5">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "hsl(250 90% 75%)" }}>🎣 Conteúdo de valor incluído</span>
+            <h2 className="text-xl font-bold text-white mt-1">{VALUE_CONTENT.titulo}</h2>
+            <p className="text-[hsl(220_10%_55%)] text-sm mt-1">{VALUE_CONTENT.subtitulo}</p>
+          </div>
+
+          <p className="text-[hsl(220_10%_65%)] leading-relaxed text-sm">{VALUE_CONTENT.intro}</p>
+
+          <div className="space-y-4">
+            {VALUE_CONTENT.camadas.map(camada => (
+              <div key={camada.numero} className="rounded-xl p-5 space-y-3" style={{ background: "hsl(222 25% 6%)", border: `1px solid ${camada.cor}30` }}>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: camada.cor }}>{camada.numero}</span>
+                  <h3 className="text-white font-bold text-sm mt-0.5">{camada.nome}</h3>
+                </div>
+                <p className="text-[hsl(220_10%_65%)] text-sm leading-relaxed">{camada.desc}</p>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="rounded-lg p-3" style={{ background: "hsl(0 90% 65% / 0.05)", border: "1px solid hsl(0 90% 65% / 0.15)" }}>
+                    <p className="text-xs font-bold uppercase tracking-wider text-red-400 mb-2">✗ Fraco</p>
+                    <div className="space-y-1">
+                      {camada.exemplos_fracos.map((ex, i) => (
+                        <p key={i} className="text-xs text-[hsl(220_10%_50%)] italic">{ex}</p>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-lg p-3" style={{ background: "hsl(168 100% 42% / 0.05)", border: "1px solid hsl(168 100% 42% / 0.2)" }}>
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">✓ Forte</p>
+                    <div className="space-y-1">
+                      {camada.exemplos_fortes.map((ex, i) => (
+                        <p key={i} className="text-xs text-[hsl(220_10%_65%)] italic">{ex}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-xl p-5 space-y-3" style={{ background: "linear-gradient(135deg, hsl(250 40% 8%), hsl(270 30% 7%))", border: "1px solid hsl(250 90% 60% / 0.3)" }}>
+            <h3 className="text-white font-bold text-sm">{VALUE_CONTENT.template.titulo}</h3>
+            <div className="rounded-lg p-3" style={{ background: "hsl(250 90% 60% / 0.1)", border: "1px solid hsl(250 90% 60% / 0.2)" }}>
+              <p className="text-xs font-mono text-[hsl(250 90% 80%)] font-bold">{VALUE_CONTENT.template.estrutura}</p>
+            </div>
+            <div className="rounded-lg p-4" style={{ background: "hsl(222 25% 5%)", border: "1px solid hsl(220 20% 12%)" }}>
+              <p className="text-xs font-bold uppercase tracking-wider text-[hsl(220_10%_40%)] mb-2">Exemplo completo</p>
+              <p className="text-sm text-[hsl(220_10%_70%)] leading-relaxed italic">{VALUE_CONTENT.template.exemplo_completo}</p>
+            </div>
+          </div>
+        </section>
+
         <section className="no-print rounded-2xl p-8 text-center space-y-4"
           style={{ background: "linear-gradient(135deg, hsl(222 25% 7%), hsl(250 30% 8%))", border: "1px solid hsl(250 90% 65% / 0.3)" }}>
-          <h2 className="text-xl font-bold text-white">Quer o método completo?</h2>
+          <h2 className="text-xl font-bold text-white">Quer o método completo de lançamento?</h2>
           <p className="text-[hsl(220_10%_65%)] leading-relaxed text-sm max-w-md mx-auto">
-            Este guia cobre os erros a evitar. A Metodologia NexOS cobre o caminho completo — do zero ao lançamento estruturado, com módulos de copy, tráfego, automação e IA.
+            Este guia cobre o crescimento de audiência. A Metodologia NexOS cobre o passo seguinte — como transformar essa audiência em um lançamento estruturado, com copy, tráfego, automação e IA trabalhando enquanto você dorme.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -358,9 +464,6 @@ export default function LeadMagnet({ onNavigate }: Props) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  if (stage === "capture") {
-    return <CaptureStage onCapture={handleCapture} />;
-  }
-
+  if (stage === "capture") return <CaptureStage onCapture={handleCapture} />;
   return <GuideStage onNavigate={onNavigate} leadName={leadName} />;
 }
