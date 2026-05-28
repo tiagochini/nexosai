@@ -12910,17 +12910,21 @@ export const PRODUCTS = [
   },
   {
     id: "mini-guide",
-    name: "Mini-Guia: Primeiros R$10k Online",
-    price: 10,
+    name: "Mapa dos Primeiros R$10K em Vendas Online",
+    price: 97,
+    originalPrice: 299,
     type: "starter" as const,
-    description: "O caminho mais rápido para sua primeira renda digital. 47 páginas direto ao ponto.",
+    description: "O guia operacional para quem quer sair do zero e chegar aos primeiros 5 dígitos em vendas online — sem produto pronto, sem seguidores, sem equipe.",
     features: [
-      "47 páginas de conteúdo denso",
-      "Checklist de lançamento em 7 dias",
-      "Planilha de projeção de receita",
-      "3 estudos de caso reais"
+      "10 capítulos práticos e densos — sem teoria vaga",
+      "Scripts de copy prontos para copiar e usar",
+      "Checklist de 7 dias: um cliente pagante em 7 dias",
+      "Estratégia 'Sem Seguidores' para quem está no zero",
+      "Matador de objeções com respostas exatas para cada situação",
+      "Produto Escada: como ir de R$97 até R$10K no mesmo funil",
+      "Acesso imediato + atualizações gratuitas vitalícias"
     ],
-    badge: "Apostila"
+    badge: "🔥 Mais Vendido"
   },
   {
     id: "complete-bundle",
