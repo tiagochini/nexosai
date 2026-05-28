@@ -89,7 +89,7 @@ export type AgentRole =
 const ANTHROPIC_NATIVE_MODEL = "claude-opus-4-5";
 const ANTHROPIC_INTEGRATION_MODEL = "claude-sonnet-4-6";
 
-const OPENAI_NATIVE_MODEL = "gpt-4.1";
+const OPENAI_NATIVE_MODEL = "gpt-5.4";
 const OPENAI_INTEGRATION_MODEL = "gpt-5.4";
 
 const GEMINI_NATIVE_MODEL = "gemini-2.5-pro";
