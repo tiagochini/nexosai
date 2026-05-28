@@ -49,6 +49,7 @@ import videoProductionRouter from "../modules/video-production/video-production.
 import nexosSelfLaunchRouter from "../modules/nexos-self-launch/nexos-self-launch.routes.js";
 import referralsRouter from "../modules/referrals/referrals.routes.js";
 import clarificationRouter from "../modules/agents/clarification.routes.js";
+import integrationWizardRouter from "../modules/integration-wizard/integration-wizard.routes.js";
 
 const router: IRouter = Router();
 
@@ -102,5 +103,6 @@ router.use("/", metaDeletionRouter);
 router.use("/nexos-launch", nexosSelfLaunchRouter);
 router.use("/referrals", referralsRouter);
 router.use("/campaigns", clarificationRouter);
+router.use("/integration-wizard", integrationWizardRouter);
 
 export default router;

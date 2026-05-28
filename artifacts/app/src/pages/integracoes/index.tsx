@@ -15,6 +15,7 @@ import {
 import { OnboardingAgent } from "@/components/onboarding-agent";
 import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
 import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
+import { IntegrationWizard } from "@/components/integration-wizard";
 
 export default function IntegracoesPage() {
   const queryClient = useQueryClient();
@@ -284,6 +285,9 @@ export default function IntegracoesPage() {
           })}
         </div>
       )}
+
+      {/* Integration Wizard */}
+      <IntegrationWizard />
 
       {/* Connect modal */}
       {connectModal && (

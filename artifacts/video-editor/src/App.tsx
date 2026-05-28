@@ -397,6 +397,7 @@ function VideoEditor() {
 
   // Smart Edit state
   const [smartScript, setSmartScript] = useState("");
+  const [videoType, setVideoType] = useState<"cpl1" | "cpl2" | "cpl3" | "vsl">("cpl1");
   const [smartTranscriptStatus, setSmartTranscriptStatus] = useState<Record<string, TranscriptStatus>>({});
   const [smartMapping, setSmartMapping] = useState<SmartMappingResult | null>(null);
   const [smartMappingLoading, setSmartMappingLoading] = useState(false);
@@ -517,7 +518,7 @@ function VideoEditor() {
       const res = await fetch(`${API_BASE}/video-editor/smart-edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileIds: files.map(f => f.fileId), script: smartScript }),
+        body: JSON.stringify({ fileIds: files.map(f => f.fileId), script: smartScript, videoType }),
       });
       if (!res.ok) {
         const err = await res.json() as { error: string };
@@ -808,22 +809,95 @@ function VideoEditor() {
               ))}
             </div>
 
+            {/* Video type selector */}
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground">Tipo de vídeo</p>
+              <div className="grid grid-cols-4 gap-2">
+                {([
+                  { key: "cpl1", label: "CPL 1", sub: "Oportunidade", color: "from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-400" },
+                  { key: "cpl2", label: "CPL 2", sub: "Transformação", color: "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400" },
+                  { key: "cpl3", label: "CPL 3", sub: "Prova / Oferta", color: "from-orange-500/20 to-orange-600/10 border-orange-500/30 text-orange-400" },
+                  { key: "vsl", label: "VSL", sub: "Carta de Vendas", color: "from-primary/20 to-primary/10 border-primary/30 text-primary" },
+                ] as const).map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setVideoType(opt.key)}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 py-3 px-2 rounded-xl border bg-gradient-to-b text-center transition-all",
+                      videoType === opt.key
+                        ? opt.color + " ring-1 ring-offset-1 ring-offset-background ring-current"
+                        : "border-border bg-muted/30 text-muted-foreground hover:border-border/80"
+                    )}
+                  >
+                    <span className={cn("text-sm font-bold", videoType === opt.key ? "" : "text-foreground/70")}>{opt.label}</span>
+                    <span className="text-[10px] font-medium leading-tight">{opt.sub}</span>
+                  </button>
+                ))}
+              </div>
+              {/* Structure hint */}
+              {videoType && (
+                <div className="bg-card border border-card-border rounded-xl p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-foreground uppercase tracking-widest">
+                    Estrutura — {videoType === "cpl1" ? "CPL 1" : videoType === "cpl2" ? "CPL 2" : videoType === "cpl3" ? "CPL 3" : "VSL"}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                    {(videoType === "cpl1" ? [
+                      ["1. Gancho", "Problema urgente / o que está em jogo"],
+                      ["2. Conteúdo", "Story + prova do método (detalhe real)"],
+                      ["3. Teaser", '"Semana que vem vou mostrar como…"'],
+                      ["4. CTA", "Curtir · comentar · salvar · compartilhar"],
+                    ] : videoType === "cpl2" ? [
+                      ["1. Recall", "Retoma CPL 1 — reforça a oportunidade"],
+                      ["2. Transformação", "Prova social · resultado real de aluno"],
+                      ["3. Antecipação", '"No dia X abrimos o carrinho"'],
+                      ["4. CTA", "Salvar o vídeo · entrar na lista VIP"],
+                    ] : videoType === "cpl3" ? [
+                      ["1. Gancho urgência", "Contagem regressiva / escassez real"],
+                      ["2. Detalha produto", "Módulos · método · resultado esperado"],
+                      ["3. Quebra objeção", "Responde as 3 maiores dúvidas"],
+                      ["4. CTA forte", "Link na bio · lista de espera · compra"],
+                    ] : [
+                      ["1. Promessa", "Headline: resultado específico + prazo"],
+                      ["2. Prova", "Depoimentos · prints · dados reais"],
+                      ["3. Método", "Como funciona passo a passo"],
+                      ["4. Oferta", "O que está incluso + bônus + preço"],
+                      ["5. Escassez", "Vagas limitadas / prazo real"],
+                      ["6. CTA", "Botão de compra · garantia · urgência"],
+                    ]).map(([title, desc]) => (
+                      <div key={title} className="flex gap-2">
+                        <span className="text-[10px] font-bold text-primary/70 shrink-0 pt-0.5 min-w-[80px]">{title}</span>
+                        <span className="text-[10px] text-muted-foreground leading-relaxed">{desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Script input */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                Roteiro do CPL
+                Roteiro do {videoType === "vsl" ? "VSL" : videoType.toUpperCase()}
                 <span className="text-xs text-muted-foreground font-normal">— cole o texto completo que você vai falar</span>
               </label>
               <textarea
                 value={smartScript}
                 onChange={e => setSmartScript(e.target.value)}
-                placeholder="Ex: Olá, tudo bem? Hoje eu quero te mostrar o método que eu usei para fazer meu primeiro lançamento de 6 dígitos em 7 dias..."
-                rows={8}
+                placeholder={videoType === "vsl"
+                  ? "Ex: Você está aqui porque quer transformar seu produto digital num negócio de 7 ou 8 dígitos. Hoje eu vou te mostrar exatamente como o método NexOS funciona e por que ele é diferente de tudo que você já viu..."
+                  : videoType === "cpl1"
+                    ? "Ex: Você sabia que 90% dos lançamentos falham por causa de um único erro? Hoje eu vou te mostrar o que separa quem chega a 6 dígitos em 7 dias de quem não sai do lugar..."
+                    : videoType === "cpl2"
+                      ? "Ex: Semana passada eu mostrei o problema. Agora vou te provar que a solução existe — e vou usar o caso do João que fez R$180k no primeiro lançamento usando exatamente esse método..."
+                      : "Ex: Faltam 48 horas. O carrinho fecha na sexta-feira às 23h59 e não vai reabrir. Hoje eu quero te mostrar o que está incluso no programa e por que isso é diferente de tudo que você já viu..."}
+                rows={9}
                 className="w-full bg-muted border border-input rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none font-mono leading-relaxed"
               />
               <p className="text-xs text-muted-foreground">
                 {smartScript.trim().split(/\s+/).filter(Boolean).length} palavras
                 {smartScript.trim().length > 0 && ` · ~${Math.ceil(smartScript.trim().split(/\s+/).length / 130)} min estimado`}
+                {videoType === "vsl" && smartScript.trim().length > 0 && " · VSL ideal: 15–45 min"}
+                {videoType !== "vsl" && smartScript.trim().length > 0 && " · CPL ideal: 5–12 min"}
               </p>
             </div>
 
