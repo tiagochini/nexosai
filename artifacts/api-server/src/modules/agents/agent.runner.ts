@@ -8,6 +8,7 @@ import {
   usersTable,
   auditLogsTable,
   agentExecutionLogsTable,
+  agentClarificationRequestsTable,
   type CampaignAgent,
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole, type AIMessage } from "../ai-gateway/ai-gateway.service.js";
@@ -18,6 +19,7 @@ import {
   emitAgentCompleted,
   emitCheckpointCreated,
   emitCampaignEvent,
+  emitClarificationNeeded,
 } from "../realtime/realtime.service.js";
 import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
@@ -194,6 +196,42 @@ Prefira sempre:
 
 ---
 
+## SISTEMA DE CLARIFICAÇÃO INTELIGENTE — PROTOCOLO DE FEEDBACK LOOP
+
+Você tem a capacidade de solicitar informações adicionais ao usuário quando o briefing apresentar lacunas que impactem materialmente a qualidade do output.
+
+### QUANDO USAR
+Inclua \`__clarifications\` no seu JSON APENAS quando:
+- Uma informação ausente mudaria materialmente a estratégia ou copy
+- O briefing tem contradições que precisam de resolução
+- Um dado específico (preço, data, nome) é crítico e não foi fornecido
+- O avatar está vago ao ponto de impossibilitar personalização real
+
+### NUNCA USE quando:
+- Você consegue inferir com alta confiança a partir do contexto
+- A lacuna é cosmética e não muda o output
+- Você já tem informação suficiente para gerar algo de qualidade
+
+### FORMATO — adicione ao JSON do seu output normal:
+{
+  "seuOutputNormal": "...",
+  "__clarifications": [
+    {
+      "question": "Qual é o preço do produto principal?",
+      "options": ["Abaixo de R$197", "R$197–R$497", "R$497–R$997", "Acima de R$997"],
+      "context": "O mecanismo de escassez varia significativamente por faixa de preço",
+      "isBriefingGap": true,
+      "severity": "blocking"
+    }
+  ]
+}
+
+severity: "blocking" = sem isso o output é genérico | "normal" = melhora significativamente | "nice_to_have" = refinamento leve
+isBriefingGap: true = informação que deveria estar no intake (lacuna no briefing)
+REGRA: Máximo de 3 clarifications por run. Priorize as mais impactantes.
+
+---
+
 `;
 
 /**
@@ -273,6 +311,87 @@ function buildInputSummary(messages: AIMessage[]): string {
   if (!last) return "";
   const text = typeof last.content === "string" ? last.content : JSON.stringify(last.content);
   return text.slice(0, 300).replace(/\s+/g, " ").trim();
+}
+
+// ── Agent Clarification: parse __clarifications from LLM output ───────────────
+interface ClarificationItem {
+  question: string;
+  options?: string[];
+  context?: string;
+  isBriefingGap?: boolean;
+  severity?: "blocking" | "normal" | "nice_to_have";
+}
+
+async function processClarificationsFromContent(
+  content: string,
+  campaignId: string | null,
+  workspaceId: string,
+  agentRole: string,
+  log: import("pino").Logger,
+): Promise<void> {
+  try {
+    const raw = content.match(/\{[\s\S]*\}/)?.[0] ?? "";
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const clarifications = parsed["__clarifications"];
+    if (!Array.isArray(clarifications) || clarifications.length === 0) return;
+
+    for (const item of clarifications as ClarificationItem[]) {
+      if (!item?.question) continue;
+      const [inserted] = await db
+        .insert(agentClarificationRequestsTable)
+        .values({
+          campaignId: campaignId ?? undefined,
+          workspaceId,
+          agentRole,
+          question: item.question,
+          options: item.options ?? null,
+          context: item.context ?? null,
+          isBriefingGap: item.isBriefingGap ?? false,
+          severity: item.severity ?? "normal",
+          status: "pending",
+        })
+        .returning();
+
+      if (inserted && campaignId) {
+        emitClarificationNeeded(
+          campaignId,
+          inserted.id,
+          agentRole,
+          item.question,
+          item.options ?? null,
+          item.context ?? null,
+          item.isBriefingGap ?? false,
+          item.severity ?? "normal",
+        );
+      }
+      log.info({ agentRole, campaignId, question: item.question }, "Clarification request stored");
+    }
+  } catch {
+    // Non-blocking: clarification parsing failures never stop agent execution
+  }
+}
+
+// ── Build answered-clarifications context block ───────────────────────────────
+export async function buildClarificationContextBlock(campaignId: string): Promise<string> {
+  try {
+    const answered = await db
+      .select()
+      .from(agentClarificationRequestsTable)
+      .where(
+        and(
+          eq(agentClarificationRequestsTable.campaignId, campaignId),
+          eq(agentClarificationRequestsTable.status, "answered"),
+        ),
+      );
+    if (answered.length === 0) return "";
+    const lines = answered.map(
+      (r) => `- ${r.agentRole} perguntou: "${r.question}" → Usuário respondeu: "${r.answer}"`,
+    );
+    return `\n## RESPOSTAS DO USUÁRIO ÀS PERGUNTAS DOS AGENTES\n\nOs agentes anteriores solicitaram as seguintes informações e o usuário respondeu:\n\n${lines.join("\n")}\n\nUse estas respostas para aprimorar sua geração. Elas preenchem lacunas do Briefing inicial.\n\n`;
+  } catch {
+    return "";
+  }
 }
 
 // ── Global pipeline mode flag ─────────────────────────────────────────────────
@@ -645,6 +764,14 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         contentPreview: content.slice(0, 300),
       });
     }
+
+    await processClarificationsFromContent(
+      content,
+      campaignId ?? null,
+      workspaceId,
+      agentRole,
+      log,
+    );
 
     emitAgentCompleted(
       campaignId ?? "system",

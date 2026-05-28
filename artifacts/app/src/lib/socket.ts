@@ -12,7 +12,9 @@ export interface CampaignEvent {
     | "asset_generated"
     | "phase_changed"
     | "execution_update"
-    | "campaign_completed";
+    | "campaign_completed"
+    | "clarification_needed"
+    | "clarification_answered";
   agentType?: string;
   message?: string;
   data?: Record<string, unknown>;

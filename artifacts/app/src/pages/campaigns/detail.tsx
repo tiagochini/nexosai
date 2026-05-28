@@ -39,6 +39,7 @@ import {
 } from "@/components/integration-connect-modal";
 import { CreativeIntentPanel } from "@/components/CreativeIntentPanel";
 import { DecisionTracePanel } from "@/components/DecisionTracePanel";
+import { AgentClarificationPanel } from "@/components/AgentClarificationPanel";
 import { CampaignMindMap } from "@/components/CampaignMindMap";
 import { GroupsTab } from "@/components/GroupsTab";
 import { useMode } from "@/lib/mode";
@@ -2707,6 +2708,11 @@ export default function CampaignDetail() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* ─ Agent Clarification Panel — shown whenever agents need user input ─ */}
+          {(isActive || liveEvents.length > 0) && (
+            <AgentClarificationPanel campaignId={campaignId} events={liveEvents} />
           )}
 
           {/* ─ Empty strategy warning — strategy_ready but no data (bulk-created or agent failed) ─ */}

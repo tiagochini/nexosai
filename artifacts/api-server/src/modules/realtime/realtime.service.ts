@@ -16,7 +16,9 @@ export interface CampaignEvent {
     | "asset_generated"
     | "phase_changed"
     | "execution_update"
-    | "campaign_completed";
+    | "campaign_completed"
+    | "clarification_needed"
+    | "clarification_answered";
   agentType?: string;
   message?: string;
   data?: Record<string, unknown>;
@@ -132,6 +134,26 @@ export function emitCheckpointCreated(
     type: "checkpoint_created",
     message: `Approval required: ${checkpointType}`,
     data: { checkpointType, ...data },
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export function emitClarificationNeeded(
+  campaignId: string,
+  requestId: string,
+  agentRole: string,
+  question: string,
+  options: string[] | null,
+  context: string | null,
+  isBriefingGap: boolean,
+  severity: string,
+): void {
+  emitCampaignEvent({
+    campaignId,
+    type: "clarification_needed",
+    agentType: agentRole,
+    message: question,
+    data: { requestId, options, context, isBriefingGap, severity },
     timestamp: new Date().toISOString(),
   });
 }
