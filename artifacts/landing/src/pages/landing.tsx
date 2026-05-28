@@ -203,7 +203,7 @@ function IdentidadeSection() {
 
           <div className={`mt-4 border border-primary/20 bg-primary/5 px-6 py-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "900ms" }}>
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              A NEXOS AI tem cada um desses especialistas — em formato de agente de IA, calibrado com as melhores metodologias do mercado brasileiro, todos trabalhando em paralelo no seu lançamento.{" "}
+              A NEXOS AI tem cada um desses especialistas — em formato de agente de IA, calibrado com as melhores metodologias do mundo, todos trabalhando em paralelo no seu lançamento.{" "}
               <strong className="text-foreground">Você não precisa de nenhum deles. Você só precisa da NEXOS.</strong>
             </p>
           </div>
@@ -274,7 +274,7 @@ function DreamStateSection() {
             <span className="text-primary">A NEXOS faz tudo.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Não é um chatbot que responde perguntas. São especialistas autônomos — cada um treinado com as melhores metodologias do mercado brasileiro — todos trabalhando em paralelo no seu lançamento, sem que você precise coordenar nada.
+            Não é um chatbot que responde perguntas. São especialistas autônomos — cada um treinado com as melhores metodologias do mundo — todos trabalhando em paralelo no seu lançamento, sem que você precise coordenar nada.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
@@ -477,7 +477,7 @@ function MecanismoSection() {
       num: "05",
       tag: "Métricas + Otimização",
       title: "Otimização em Tempo Real",
-      desc: "O agente de Otimização monitora hook rate, CPL, ROAS e taxa de conversão por etapa do funil. Compara com benchmarks validados do mercado brasileiro. Identifica o gargalo real (não o mais óbvio) e gera um plano de ação priorizado por impacto nas próximas 48h.",
+      desc: "O agente de Otimização monitora hook rate, CPL, ROAS e taxa de conversão por etapa do funil. Compara com benchmarks validados do mercado global. Identifica o gargalo real (não o mais óbvio) e gera um plano de ação priorizado por impacto nas próximas 48h.",
       icon: BarChart3,
     },
   ];
