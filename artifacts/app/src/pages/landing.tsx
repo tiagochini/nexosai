@@ -80,7 +80,7 @@ function HeroSection() {
         <div className={`transition-all duration-1000 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
           <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-4 py-2 mb-10 font-mono text-xs uppercase tracking-[0.3em] text-primary">
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-            Fase de testes privada · Acesso disponível
+            Lançamento Oficial · Acesso Imediato
           </div>
           <h1 className="text-6xl md:text-8xl font-mono font-black uppercase tracking-tighter leading-none mb-8 max-w-4xl">
             Você está<br />
@@ -592,7 +592,7 @@ function OfertaSection() {
               </Link>
               <div className="flex items-center justify-center gap-2 mt-3 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40">
                 <Shield className="h-3 w-3" />
-                Testes privados · Acesso imediato · Sem cobrança real
+                Pagamento seguro · Acesso imediato · Garantia de 7 dias
               </div>
             </div>
 
