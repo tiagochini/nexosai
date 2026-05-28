@@ -7,365 +7,496 @@ interface MiniGuideProps {
 export default function MiniGuide({ onNavigate }: MiniGuideProps) {
   return (
     <Watermark>
-    <div className="max-w-3xl mx-auto space-y-10 pb-16">
-
-      {/* Header */}
-      <div className="rounded-2xl border border-[hsl(250_90%_65%/0.3)] bg-gradient-to-br from-[hsl(222_25%_7%)] to-[hsl(250_30%_8%)] p-8">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-[hsl(250_90%_65%/0.2)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.3)]">📘 Mini-Guia Exclusivo</span>
-        </div>
-        <h1 className="text-3xl font-extrabold text-white mb-3">Primeiros R$10k Online</h1>
-        <p className="text-[hsl(220_10%_65%)] text-lg leading-relaxed mb-4">
-          O caminho mais rápido para sua primeira renda digital — sem enrolação, sem teoria vaga.
-          47 páginas direto ao ponto.
-        </p>
-        <div className="flex flex-wrap gap-3 text-sm text-[hsl(220_10%_60%)]">
-          <span>📄 47 páginas</span>
-          <span>·</span>
-          <span>✅ Checklist de 7 dias</span>
-          <span>·</span>
-          <span>📊 Planilha de projeção</span>
-          <span>·</span>
-          <span>🎯 3 estudos de caso reais</span>
-        </div>
-      </div>
-
-      {/* Intro */}
-      <section className="card p-6 space-y-4">
-        <h2 className="text-xl font-bold text-white">Por que a maioria não chega ao primeiro R$10k?</h2>
-        <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          Não é falta de produto. Não é falta de seguidores. Não é falta de talento.
-        </p>
-        <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          É falta de sequência. As pessoas tentam fazer tudo ao mesmo tempo — produto, audiência, tráfego, copy, automação — e acabam não fazendo nada direito. O resultado: seis meses de esforço, zero em vendas, e a sensação de que "isso não é para mim".
-        </p>
-        <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          Este guia existe para mudar isso. Você vai sair daqui com uma sequência exata de 7 dias para gerar sua primeira receita digital — mesmo sem produto pronto, sem lista de email, sem equipe.
-        </p>
-        <div className="rounded-xl border border-[hsl(250_90%_65%/0.3)] bg-[hsl(250_90%_65%/0.08)] p-4 text-[hsl(250_90%_75%)] text-sm font-semibold">
-          ⚡ A promessa: seguindo este método, você vai ter ao menos um cliente pagante em 7 dias — ou saberá exatamente por quê não teve e como corrigir.
-        </div>
-      </section>
-
-      {/* Capítulo 1 */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-full bg-[hsl(250_90%_65%)] text-white text-sm font-bold flex items-center justify-center">1</span>
-          <h2 className="text-xl font-bold text-white">O Modelo Mental Certo</h2>
-        </div>
-        <div className="card p-6 space-y-4">
-          <h3 className="text-base font-bold text-[hsl(250_90%_75%)]">Você não precisa de produto para começar a vender</h3>
-          <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-            O maior erro de quem está começando é gastar três meses criando um curso antes de ter uma venda. Isso se chama lançamento semente — e é o oposto do que você deve fazer.
-          </p>
-          <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-            O modelo certo é: <strong className="text-white">vender primeiro, criar depois</strong>. Você apresenta a transformação, coleta pagamentos, e então entrega. Se ninguém comprar, você não perdeu meses criando algo que o mercado não quer.
-          </p>
-          <div className="rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_14%)] p-4 space-y-3 text-sm">
-            <p className="text-[hsl(220_10%_50%)] uppercase tracking-wider font-semibold text-xs">Exemplo real</p>
-            <p className="text-[hsl(220_10%_70%)] leading-relaxed">
-              João, personal trainer, criou um post no Instagram explicando que ia abrir 5 vagas para acompanhamento online por 30 dias a R$297. Ele recebeu 11 pedidos em 48h. Faturou R$1.485 antes de criar qualquer conteúdo. Só depois montou o método.
+      <div className="max-w-4xl mx-auto space-y-12 pb-24 px-4">
+        {/* Header Profissional */}
+        <div className="rounded-3xl border border-[hsl(250_90%_65%/0.3)] bg-gradient-to-br from-[hsl(222_25%_7%)] to-[hsl(250_30%_8%)] p-10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[hsl(250_90%_65%/0.1)] blur-3xl -mr-20 -mt-20 rounded-full"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-[hsl(250_90%_65%/0.2)] text-[hsl(250_90%_75%)] border border-[hsl(250_90%_65%/0.3)]">
+                Manual de Guerra NexOS
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
+              O Mapa para os Primeiros <span className="text-[hsl(250_90%_65%)]">R$ 10.000</span> em Vendas Online
+            </h1>
+            <p className="text-[hsl(220_10%_70%)] text-xl leading-relaxed mb-8 max-w-2xl">
+              Você não precisa de um exército. Você precisa de uma sequência. Este guia não é teoria — é o plano operacional para quem quer sair do zero e chegar aos 5 dígitos no Brasil real.
             </p>
+            <div className="flex flex-wrap gap-6 text-sm text-[hsl(220_10%_55%)] font-medium">
+              <div className="flex items-center gap-2">
+                <span className="text-[hsl(250_90%_65%)]">⚡</span> 10 Capítulos Práticos
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[hsl(250_90%_65%)]">⚡</span> Scripts de Copy Prontos
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[hsl(250_90%_65%)]">⚡</span> Estratégia "Sem Seguidores"
+              </div>
+            </div>
           </div>
-          <h3 className="text-base font-bold text-[hsl(250_90%_75%)] pt-2">A equação básica do digital</h3>
-          <div className="rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_14%)] p-4 text-center">
-            <p className="text-white font-bold text-lg">Audiência Aquecida × Oferta Certa × Momento Certo = Venda</p>
-            <p className="text-[hsl(220_10%_50%)] text-sm mt-2">Faltando qualquer um dos três, não acontece.</p>
-          </div>
-          <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-            Nos próximos 7 dias você vai construir esses três elementos em paralelo — de forma enxuta, sem desperdício.
-          </p>
         </div>
-      </section>
 
-      {/* Capítulo 2 */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-full bg-[hsl(250_90%_65%)] text-white text-sm font-bold flex items-center justify-center">2</span>
-          <h2 className="text-xl font-bold text-white">Escolha seu Tema em 30 Minutos</h2>
-        </div>
-        <div className="card p-6 space-y-4">
-          <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-            Você já sabe fazer algo que outra pessoa pagaria para aprender. O problema não é falta de conhecimento — é não saber como empacotar.
-          </p>
-          <h3 className="text-base font-bold text-[hsl(250_90%_75%)]">O filtro dos 3 critérios</h3>
-          <div className="space-y-3">
-            {[
-              { n: "1", title: "Você domina", desc: "Não precisa ser PhD. Precisa saber mais do que 80% das pessoas sobre o assunto. Alguém que nunca treinou e quer emagrecer 10kg vai pagar para aprender com alguém que emagreceu 20kg — não precisa de nutricionista." },
-              { n: "2", title: "O mercado quer", desc: "As pessoas estão buscando isso? Teste simples: pesquise no Google, TikTok e Instagram. Se aparecerem criadores com mais de 10k seguidores falando sobre o tema, existe mercado." },
-              { n: "3", title: "Tem transação óbvia", desc: "Existe um resultado claro e mensurável que a pessoa vai alcançar? 'Emagrecer 5kg em 30 dias' vende. 'Ter mais saúde' não vende — é vago demais." },
-            ].map(item => (
-              <div key={item.n} className="flex gap-4 rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_14%)] p-4">
-                <span className="w-7 h-7 rounded-full border-2 border-[hsl(250_90%_65%)] text-[hsl(250_90%_75%)] text-sm font-bold flex items-center justify-center shrink-0">{item.n}</span>
-                <div>
-                  <p className="text-white font-semibold mb-1">{item.title}</p>
-                  <p className="text-[hsl(220_10%_60%)] text-sm leading-relaxed">{item.desc}</p>
+        {/* Capítulo 1: O Bloqueio Mental */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center shadow-[0_0_20px_hsl(250_90%_65%/0.3)]">
+              01
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">O Fim das Desculpas</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">Professor Allan: "Onde o amador trava e o profissional fatura"</p>
+            </div>
+          </div>
+          <div className="card-nexos p-8 space-y-6 border-l-4 border-l-[hsl(250_90%_65%)]">
+            <p className="text-lg text-white font-medium leading-relaxed italic">
+              "Você não está vendendo porque está tentando ser perfeito. E a perfeição é o disfarce covarde da procrastinação."
+            </p>
+            <p className="text-[hsl(220_10%_65%)] leading-relaxed">
+              Existem 3 bloqueios que matam iniciantes antes do Dia 1:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl bg-[hsl(222_25%_5%)] border border-[hsl(220_20%_15%)]">
+                <p className="text-[hsl(250_90%_75%)] font-bold mb-1">1. "Não tenho autoridade"</p>
+                <p className="text-xs text-[hsl(220_10%_50%)]">A autoridade não é dada, é tomada. Se você resolve um problema, você é o perito para quem tem aquele problema.</p>
+              </div>
+              <div className="p-4 rounded-xl bg-[hsl(222_25%_5%)] border border-[hsl(220_20%_15%)]">
+                <p className="text-[hsl(250_90%_75%)] font-bold mb-1">2. "O produto não está pronto"</p>
+                <p className="text-xs text-[hsl(220_10%_50%)]">Vender produto pronto é coisa de amador. Profissional vende a promessa e cria com o dinheiro do cliente no bolso.</p>
+              </div>
+              <div className="p-4 rounded-xl bg-[hsl(222_25%_5%)] border border-[hsl(220_20%_15%)]">
+                <p className="text-[hsl(250_90%_75%)] font-bold mb-1">3. "Não tenho seguidores"</p>
+                <p className="text-xs text-[hsl(220_10%_50%)]">Seguidor é métrica de ego. Dinheiro no bolso vem de atenção direcionada. 10 pessoas certas valem mais que 10.000 curiosos.</p>
+              </div>
+            </div>
+            <div className="bg-[hsl(250_90%_65%/0.05)] border border-[hsl(250_90%_65%/0.2)] p-4 rounded-xl">
+              <p className="text-sm font-bold text-white mb-2">🔥 Exercício Imediato:</p>
+              <p className="text-sm text-[hsl(220_10%_65%)]">
+                Escreva em uma folha: "Eu não preciso de permissão para vender. Eu só preciso de um problema para resolver." Cole no seu monitor.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Capítulo 2: Validação Flash */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center">02</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Validação Flash (Em 2 horas)</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">Como saber se seu tema põe dinheiro no bolso antes de gastar um centavo</p>
+            </div>
+          </div>
+          <div className="card-nexos p-8 space-y-6">
+            <p className="text-[hsl(220_10%_65%)] leading-relaxed">
+              Não pergunte se as pessoas comprariam. <strong className="text-white text-lg underline decoration-[hsl(250_90%_65%)]">Dê a elas a chance de comprar.</strong> A única pesquisa de mercado real é o comprovante de Pix.
+            </p>
+            
+            <div className="space-y-4">
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-[hsl(168_100%_42%)] text-[hsl(222_25%_7%)] text-xs flex items-center justify-center font-black">!</span>
+                O Protocolo de 2 Horas:
+              </h3>
+              <ol className="space-y-3 text-[hsl(220_10%_65%)] text-sm">
+                <li className="flex gap-3"><span className="text-[hsl(250_90%_75%)] font-bold">01.</span> Pesquise no TikTok/Insta: "Como [seu tema]". Se tiver vídeos com +50k views, o mercado existe.</li>
+                <li className="flex gap-3"><span className="text-[hsl(250_90%_75%)] font-bold">02.</span> Leia os comentários. Procure por: "Eu tenho dificuldade em...", "Como eu faço pra...".</li>
+                <li className="flex gap-3"><span className="text-[hsl(250_90%_75%)] font-bold">03.</span> Crie uma oferta de "Acompanhamento Único" ou "Mentoria Experimental" para resolver EXATAMENTE o que eles comentaram.</li>
+              </ol>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-[hsl(222_25%_4%)] border border-[hsl(250_90%_65%/0.2)]">
+              <p className="text-xs font-black text-[hsl(250_90%_65%)] uppercase tracking-[0.2em] mb-4">Exemplo Real - O Caso da Marmita</p>
+              <p className="text-sm text-[hsl(220_10%_60%)] leading-relaxed">
+                Aline sabia cozinhar saudável. Em vez de curso de culinária, ela viu que as pessoas reclamavam de "falta de tempo para organizar a semana".
+                <br /><br />
+                <strong className="text-white">Ação:</strong> Ela mandou 5 mensagens no WhatsApp para amigas ocupadas: "Vou fazer um grupo de 3 dias ensinando a organizar 15 marmitas em 2h por R$47. Topa?". 
+                <br /><br />
+                <strong className="text-[hsl(168_100%_42%)]">Resultado:</strong> 4 pagaram em 15 minutos. <strong className="text-white">Validação concluída com R$188 no bolso.</strong>
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Capítulo 3: Audiência Rápida (Sem Seguidores) */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center shadow-[0_0_20px_hsl(250_90%_65%/0.3)]">03</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Audiência Rápida: 100 Leads em 7 Dias</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">O método da "Infiltração Estratégica" para quem tem 0 seguidores</p>
+            </div>
+          </div>
+          <div className="card-nexos p-8 space-y-6">
+            <p className="text-[hsl(220_10%_65%)] leading-relaxed font-medium text-lg">
+              Pare de tentar ser um "influenciador". Seja um <span className="text-white">solucionador de problemas</span> onde o problema já está acontecendo.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-xl bg-[hsl(222_25%_6%)] border border-[hsl(220_20%_12%)] space-y-3">
+                <h4 className="text-[hsl(250_90%_75%)] font-bold text-sm uppercase">1. Grupos de WhatsApp/FB</h4>
+                <p className="text-xs text-[hsl(220_10%_50%)] leading-relaxed">
+                  Entre em 10 grupos do seu nicho. Não poste link. RESPONDA dúvidas com áudios de 30s. No final diga: "Tenho um PDF que explica isso com detalhes, quer que eu te mande no privado?".
+                </p>
+              </div>
+              <div className="p-5 rounded-xl bg-[hsl(222_25%_6%)] border border-[hsl(220_20%_12%)] space-y-3">
+                <h4 className="text-[hsl(250_90%_75%)] font-bold text-sm uppercase">2. A Técnica do Comentário Top</h4>
+                <p className="text-xs text-[hsl(220_10%_50%)] leading-relaxed">
+                  Vá em posts de grandes players do seu nicho. Responda os comentários de quem está com dúvida. Seja tão útil que a pessoa vai clicar no seu perfil. Tenha um link de WhatsApp na Bio.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[hsl(250_90%_65%/0.08)] border-2 border-dashed border-[hsl(250_90%_65%/0.3)] p-6 rounded-2xl">
+              <p className="text-[hsl(250_90%_75%)] font-black text-xs uppercase mb-3">Script de Infiltração (DM)</p>
+              <div className="font-mono text-sm text-white/90 bg-black/40 p-4 rounded-lg leading-relaxed">
+                "Oi [Nome]! Vi sua dúvida lá no grupo do [Nicho] sobre [Problema].<br/><br/>
+                Eu passei exatamente por isso mês passado e resolvi usando [Uma pequena dica].<br/><br/>
+                Eu montei um checklist rápido com os 3 passos pra resolver isso de vez. Quer que eu te mande o link aqui?"
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Capítulo 4: O Checklist de Guerra (7 Dias) */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center">04</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">O Checklist de Guerra: 7 Dias para o Pix</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">A sequência exata. Sem desvios. Sem invenções.</p>
+            </div>
+          </div>
+          <div className="card-nexos p-8 space-y-8">
+            <div className="space-y-6">
+              {[
+                { 
+                  dia: "Dia 1", 
+                  task: "A Isca Magnética", 
+                  desc: "Crie um PDF de 1 página ou vídeo de 5 min resolvendo 1 dor pequena. Chame 10 pessoas no privado e entregue.",
+                  copy: "Script: 'Fiz um material sobre X. Como vc se interessa por Y, achei que ia curtir. Posso mandar?'"
+                },
+                { 
+                  dia: "Dia 2", 
+                  task: "O Feedback de Ouro", 
+                  desc: "Pergunte para quem recebeu a isca: 'O que você achou mais difícil de aplicar disso?'. Isso vai ser seu curso.",
+                  copy: "Não venda nada hoje. Só ouça as objeções."
+                },
+                { 
+                  dia: "Dia 3", 
+                  task: "O Post de Antecipação", 
+                  desc: "Poste/Mande: 'Muita gente perguntou como aplicar o que mostrei ontem. Vou abrir 5 vagas para ajudar pessoalmente nisso.'",
+                  copy: "Isso cria o efeito de escassez antes de falar preço."
+                },
+                { 
+                  dia: "Dia 4", 
+                  task: "A Oferta Irresistível", 
+                  desc: "Abra o carrinho. O preço deve ser 'Ridículo para não comprar'. Ex: R$97 ou R$197.",
+                  copy: "Script no stories/WhatsApp: 'Pra quem quer [Resultado] em [Tempo] sem [Dor]. Link abaixo.'"
+                },
+                { 
+                  dia: "Dia 5", 
+                  task: "O Quebra-Objeções", 
+                  desc: "Poste/Mande: 'Recebi algumas dúvidas: Funciona para iniciantes? Tem garantia?'. Responda todas.",
+                  copy: "Se ninguém comprou ainda, chame 1 por 1 e pergunte o que travou."
+                },
+                { 
+                  dia: "Dia 6", 
+                  task: "A Urgência Real", 
+                  desc: "Mostre que as vagas estão acabando. Poste o print (mesmo que seja só 1 venda).",
+                  copy: "Script: 'Restam apenas 2 vagas com esse preço promocional. Encerro hoje.'"
+                },
+                { 
+                  dia: "Dia 7", 
+                  task: "Fechamento e Entrega", 
+                  desc: "Carrinho fecha às 23:59. Amanhã você começa a entregar via Zoom/WhatsApp.",
+                  copy: "Última chamada: 'Faltam 3 horas. É agora ou nunca.'"
+                }
+              ].map((d, i) => (
+                <div key={i} className="relative pl-10 border-l border-[hsl(250_90%_65%/0.3)] pb-8 last:pb-0">
+                  <div className="absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-[hsl(250_90%_65%)] shadow-[0_0_10px_hsl(250_90%_65%/0.5)]"></div>
+                  <span className="text-[10px] font-black text-[hsl(250_90%_65%)] uppercase tracking-widest">{d.dia}</span>
+                  <h4 className="text-white font-bold text-lg mb-1">{d.task}</h4>
+                  <p className="text-sm text-[hsl(220_10%_60%)] mb-3">{d.desc}</p>
+                  <div className="p-3 rounded-lg bg-[hsl(222_25%_4%)] border border-[hsl(220_20%_15%)] text-xs text-[hsl(168_100%_42%)] font-mono italic">
+                    {d.copy}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-5 rounded-xl bg-[hsl(0_90%_65%/0.1)] border border-[hsl(0_90%_65%/0.3)]">
+              <h4 className="text-[hsl(0_90%_75%)] font-bold text-sm flex items-center gap-2 mb-2">
+                🛑 E se o Dia 5 não gerar vendas?
+              </h4>
+              <p className="text-xs text-[hsl(220_10%_65%)] leading-relaxed">
+                Allan diz: "Não mude o produto. Mude a abordagem. Sua oferta está fraca ou você está falando com as pessoas erradas. Volte para o privado de cada lead e pergunte: 'O que impediria você de ter esse resultado hoje?'. A resposta deles é o seu novo copy para o Dia 6."
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Capítulo 5: O Produto Escada (O caminho para os R$10k) */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center">05</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">O Produto Escada: De R$1k a R$10k</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">Como escalar sem precisar de 1 milhão de clientes</p>
+            </div>
+          </div>
+          <div className="card-nexos p-8 space-y-6">
+            <p className="text-[hsl(220_10%_65%)] leading-relaxed">
+              O maior erro é tentar vender um produto de R$10k para quem nunca te deu R$1. A escada resolve isso.
+            </p>
+            
+            <div className="overflow-x-auto rounded-xl border border-[hsl(220_20%_14%)]">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[hsl(222_25%_6%)]">
+                    <th className="px-4 py-3 text-left text-xs uppercase font-black text-[hsl(220_10%_45%)]">Nível</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase font-black text-[hsl(220_10%_45%)]">Produto</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase font-black text-[hsl(220_10%_45%)]">Preço</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase font-black text-[hsl(220_10%_45%)]">Vendas p/ R$10k</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[hsl(220_20%_10%)]">
+                  <tr>
+                    <td className="px-4 py-4 text-[hsl(250_90%_75%)] font-bold">A Atração</td>
+                    <td className="px-4 py-4 text-white">Workshop/Mini-curso</td>
+                    <td className="px-4 py-4 text-white">R$ 97</td>
+                    <td className="px-4 py-4 text-[hsl(220_10%_50%)]">103 vendas (DIFÍCIL)</td>
+                  </tr>
+                  <tr className="bg-[hsl(250_90%_65%/0.04)]">
+                    <td className="px-4 py-4 text-[hsl(250_90%_75%)] font-bold">O Método</td>
+                    <td className="px-4 py-4 text-white font-bold">Curso Completo / Mentoria em Grupo</td>
+                    <td className="px-4 py-4 text-[hsl(168_100%_42%)] font-black">R$ 497</td>
+                    <td className="px-4 py-4 text-white font-bold">20 vendas (IDEAL)</td>
+                  </tr>
+                  <tr>
+                    <td className="px-4 py-4 text-[hsl(250_90%_75%)] font-bold">A Elite</td>
+                    <td className="px-4 py-4 text-white">Mentoria Individual / Consultoria</td>
+                    <td className="px-4 py-4 text-white font-bold">R$ 2.000+</td>
+                    <td className="px-4 py-4 text-white font-bold">5 vendas (LUCRATIVO)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="p-5 rounded-xl bg-[hsl(250_90%_65%/0.05)] border border-[hsl(250_90%_65%/0.2)]">
+              <p className="text-sm font-bold text-white mb-2">💡 A Matemática dos R$ 10k:</p>
+              <p className="text-xs text-[hsl(220_10%_65%)] leading-relaxed italic">
+                "Não tente vender para 100 pessoas. Venda um curso de R$497 para 15 pessoas e ofereça um upgrade de mentoria individual por +R$1.500 para 2 dessas pessoas. <strong className="text-white">Total: R$ 10.455.</strong> Mais simples do que parece, se você tiver o produto escada."
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Capítulo 6: Scripts de Copy (Ouro Puro) */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center">06</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Scripts de Copy (Ouro Puro)</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">Copie, cole, adapte e venda.</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            
+            <div className="card-nexos overflow-hidden">
+              <div className="bg-[hsl(250_90%_65%)] px-6 py-2">
+                <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">O Post de Oferta Direta</span>
+              </div>
+              <div className="p-6 font-mono text-sm leading-relaxed text-white/90 bg-[hsl(222_25%_4%)]">
+                "Cansado de [Dor Principal]?<br/><br/>
+                Eu vejo muita gente tentando [O que não funciona] e acabando com [Resultado Ruim].<br/><br/>
+                Eu criei um método simples pra você chegar em [Resultado Desejado] em apenas [Tempo], sem precisar de [O que eles odeiam].<br/><br/>
+                Vou abrir apenas 5 vagas para o [Nome do seu Produto] hoje.<br/><br/>
+                👇 Comente 'QUERO' abaixo e eu te mando os detalhes no privado."
+              </div>
+            </div>
+
+            <div className="card-nexos overflow-hidden">
+              <div className="bg-[hsl(168_100%_42%)] px-6 py-2">
+                <span className="text-[10px] font-black text-[hsl(222_25%_7%)] uppercase tracking-[0.2em]">O Stories de Urgência</span>
+              </div>
+              <div className="p-6 font-mono text-sm leading-relaxed text-white/90 bg-[hsl(222_25%_4%)]">
+                "[Foto de um comprovante de Pix borrado ou de um aluno]<br/><br/>
+                Mais uma pessoa garantiu a vaga agora! 🔥<br/><br/>
+                Agora restam oficialmente apenas 2 vagas com o bônus de [Algum Bônus].<br/><br/>
+                Depois que essas 2 saírem, o preço volta para R$ [Preço Cheio].<br/><br/>
+                Toca no link da Bio agora ou responde 'VAGA' aqui."
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* Capítulo 7: Matador de Objeções */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center">07</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">O Matador de Objeções</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">As 5 barreiras que impedem o Pix e como destruí-las</p>
+            </div>
+          </div>
+          <div className="card-nexos p-8 space-y-6">
+            <div className="space-y-4">
+              {[
+                { o: "Tá caro", r: "Caro comparado a quê? Se esse método te fizer economizar R$ 2.000 em 1 mês, ele está de graça. Você não está pagando um curso, está comprando seu tempo de volta." },
+                { o: "Não tenho tempo", r: "Exatamente por isso você precisa disso. O método foi feito para quem tem apenas 30 min por dia. Se você não tem 30 min para mudar sua vida, o tempo é seu maior problema." },
+                { o: "Será que funciona pra mim?", r: "O método foi testado por [Exemplo de perfil]. Se você fizer o passo a passo, o resultado é matemático. E se não funcionar, você tem 7 dias de garantia total." },
+                { o: "Vou pensar", r: "Pensar não traz resultado. Decidir sim. Enquanto você pensa, outros estão ocupando as vagas e faturando o que você poderia estar faturando." },
+                { o: "Não sei se é o momento", r: "Nunca vai ser o momento perfeito. O momento perfeito é construído pela sua decisão de começar hoje." }
+              ].map((item, i) => (
+                <div key={i} className="group p-4 rounded-xl bg-[hsl(222_25%_5%)] border border-[hsl(220_20%_15%)] hover:border-[hsl(250_90%_65%/0.4)] transition-all">
+                  <p className="text-[hsl(220_10%_45%)] text-xs font-black uppercase mb-1">Se ele disser: "{item.o}"</p>
+                  <p className="text-white text-sm font-medium leading-relaxed">Você diz: <span className="text-[hsl(250_90%_75%)] italic">"{item.r}"</span></p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Capítulo 8: Venda pelo WhatsApp (Sem Rede Social) */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center shadow-[0_0_20px_hsl(250_90%_65%/0.3)]">08</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Estratégia WhatsApp Direct</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">O método "Invisível" para vender sem aparecer no Instagram</p>
+            </div>
+          </div>
+          <div className="card-nexos p-8 space-y-6 border-r-4 border-r-[hsl(168_100%_42%)]">
+            <p className="text-[hsl(220_10%_65%)] leading-relaxed">
+              O WhatsApp é a maior ferramenta de vendas do mundo. Se você tem 50 contatos, você tem 50 chances de fazer R$ 1k hoje.
+            </p>
+            
+            <div className="bg-[hsl(168_100%_42%/0.05)] p-6 rounded-2xl space-y-4">
+              <h4 className="text-[hsl(168_100%_42%)] font-black text-xs uppercase">A Técnica do Status de 3 Passos:</h4>
+              <div className="space-y-3">
+                <div className="flex gap-4">
+                  <span className="shrink-0 w-6 h-6 rounded bg-[hsl(168_100%_42%)] text-[hsl(222_25%_7%)] text-[10px] font-black flex items-center justify-center">01</span>
+                  <p className="text-xs text-white/80"><strong className="text-white">Status 1:</strong> Uma pergunta sobre a dor. "Alguém aqui também sofre para [Problema]?"</p>
+                </div>
+                <div className="flex gap-4">
+                  <span className="shrink-0 w-6 h-6 rounded bg-[hsl(168_100%_42%)] text-[hsl(222_25%_7%)] text-[10px] font-black flex items-center justify-center">02</span>
+                  <p className="text-xs text-white/80"><strong className="text-white">Status 2:</strong> A solução. "Eu descobri um jeito de resolver isso em 10 min. Olha o resultado: [Foto/Print]"</p>
+                </div>
+                <div className="flex gap-4">
+                  <span className="shrink-0 w-6 h-6 rounded bg-[hsl(168_100%_42%)] text-[hsl(222_25%_7%)] text-[10px] font-black flex items-center justify-center">03</span>
+                  <p className="text-xs text-white/80"><strong className="text-white">Status 3:</strong> O CTA. "Vou ensinar 3 pessoas a fazerem o mesmo hoje. Me chama aqui agora."</p>
                 </div>
               </div>
-            ))}
-          </div>
-          <h3 className="text-base font-bold text-[hsl(250_90%_75%)] pt-2">Exercício — 30 minutos agora</h3>
-          <div className="rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_14%)] p-4 space-y-2 text-sm text-[hsl(220_10%_65%)]">
-            <p>Responda no papel:</p>
-            <p>1. Liste 5 coisas que você sabe fazer melhor que a maioria das pessoas ao seu redor.</p>
-            <p>2. Para cada uma, anote se existe gente buscando sobre isso nas redes (sim/não).</p>
-            <p>3. Para cada uma, complete: "Após aprender comigo, o cliente vai conseguir _____ em _____ dias."</p>
-            <p className="text-[hsl(250_90%_75%)] font-semibold pt-1">O item que passar nos 3 critérios é o seu tema. Escolha e siga em frente — não existe tema perfeito, existe execução.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Capítulo 3 — Checklist 7 dias */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-full bg-[hsl(250_90%_65%)] text-white text-sm font-bold flex items-center justify-center">3</span>
-          <h2 className="text-xl font-bold text-white">Checklist: Os 7 Dias do Primeiro Lançamento</h2>
-        </div>
-        <div className="card p-6 space-y-6">
-          <p className="text-[hsl(220_10%_65%)]">Execute nessa ordem. Não pule dias. Não adapte antes de fazer uma vez do jeito certo.</p>
-          {[
-            {
-              dia: "Dia 1",
-              titulo: "Defina a oferta",
-              cor: "hsl(250_90%_65%)",
-              itens: [
-                "Escolha o tema (filtro dos 3 critérios)",
-                "Defina o resultado prometido (claro e mensurável)",
-                "Defina o formato: consultoria 1:1, grupo, minicurso gravado",
-                "Defina o preço: entre R$97 e R$497 para o primeiro lançamento",
-                "Crie o título da oferta: [Número] + [Verbo] + [Resultado] + [Prazo]",
-              ],
-              exemplo: "Exemplo: '5 clientes em 30 dias sem gastar com tráfego pago'"
-            },
-            {
-              dia: "Dia 2",
-              titulo: "Monte a prova social",
-              cor: "hsl(168_100%_42%)",
-              itens: [
-                "Identifique 3 pessoas que já se beneficiaram do seu conhecimento (de graça ou não)",
-                "Peça um depoimento em texto ou áudio de 30 segundos",
-                "Se não tiver nenhum: ofereça 1 vaga gratuita em troca de depoimento",
-                "Tire uma foto ou print de cada resultado obtido",
-              ],
-              exemplo: "Depoimento mínimo: 'Antes eu tinha X problema. Aprendi com [você] e agora Y. Recomendo.'"
-            },
-            {
-              dia: "Dia 3",
-              titulo: "Crie a página de captura",
-              cor: "hsl(45_100%_60%)",
-              itens: [
-                "Use um desses: Linktree, Stan.Store, Notion público ou Google Forms",
-                "Escreva o título, 3-5 benefícios e o CTA ('Quero participar')",
-                "Adicione os depoimentos coletados ontem",
-                "Adicione escassez real: 'Apenas 5 vagas'",
-                "Inclua o preço e o método de pagamento (Pix ou link do Mercado Pago)",
-              ],
-              exemplo: "Não precisa ser perfeita. Perfeita não converte mais que boa o suficiente."
-            },
-            {
-              dia: "Dia 4",
-              titulo: "Aquecimento da audiência",
-              cor: "hsl(280_90%_70%)",
-              itens: [
-                "Poste um conteúdo gratuito de alto valor sobre o tema (não mencione a venda ainda)",
-                "Stories com pergunta: 'Qual é sua maior dificuldade com [tema]?'",
-                "Responda cada resposta individualmente com insights valiosos",
-                "Liste os perfis que engajaram — eles são seus leads mais quentes",
-              ],
-              exemplo: "Dica: Conteúdo de valor + pergunta = você descobre objeções antes de fazer o lançamento."
-            },
-            {
-              dia: "Dia 5",
-              titulo: "Apresente a oferta",
-              cor: "hsl(15_100%_65%)",
-              itens: [
-                "Post no feed: problema → agitação → solução → CTA",
-                "Stories em sequência: antes/depois → depoimento → 'link na bio'",
-                "Mensagem direta para quem engajou no dia 4: 'Vi que você tem interesse em [tema]...'",
-                "Abra o link de pagamento e coloque no perfil",
-              ],
-              exemplo: "Script do DM: 'Oi [nome], vi que você curtiu meu post sobre [tema]. Montei algo específico para quem quer [resultado]. Posso te mandar os detalhes?'"
-            },
-            {
-              dia: "Dia 6",
-              titulo: "Urgência e follow-up",
-              cor: "hsl(0_90%_65%)",
-              itens: [
-                "Stories com contagem regressiva: '24h para fechar'",
-                "Post com depoimento (se já tiver algum comprador, use o feedback deles)",
-                "Responda objeções publicamente nos comentários",
-                "DM para quem visualizou a página mas não comprou (se usar ferramenta que mostra isso)",
-              ],
-              exemplo: "Urgência funciona quando é real. Não ameace fechar e não fechar — isso destrói a credibilidade."
-            },
-            {
-              dia: "Dia 7",
-              titulo: "Fechamento e entrega",
-              cor: "hsl(168_100%_42%)",
-              itens: [
-                "Post de fechamento: 'Últimas vagas — encerro hoje às 23h59'",
-                "Stories de encerramento com CTA final",
-                "Confirme todos os pagamentos e envie boas-vindas para os compradores",
-                "Inicie a entrega (mesmo que seja uma call de 60 minutos)",
-                "Peça depoimento em 48h após a primeira entrega",
-              ],
-              exemplo: "Objetivo do Dia 7: zero remorso. Entregue além do prometido — esse comprador vai ser sua próxima prova social."
-            },
-          ].map(d => (
-            <div key={d.dia} className="rounded-xl bg-[hsl(220_20%_8%)] border border-[hsl(220_20%_14%)] p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: `${d.cor}25`, color: d.cor, border: `1px solid ${d.cor}40` }}>{d.dia}</span>
-                <h3 className="text-white font-bold">{d.titulo}</h3>
-              </div>
-              <ul className="space-y-1.5">
-                {d.itens.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-[hsl(220_10%_65%)]">
-                    <span className="text-[hsl(250_90%_70%)] mt-0.5 shrink-0">☐</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-[hsl(220_10%_45%)] italic border-t border-[hsl(220_20%_12%)] pt-2">{d.exemplo}</p>
             </div>
-          ))}
-        </div>
-      </section>
 
-      {/* Capítulo 4 — Planilha de projeção */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-full bg-[hsl(250_90%_65%)] text-white text-sm font-bold flex items-center justify-center">4</span>
-          <h2 className="text-xl font-bold text-white">Planilha de Projeção de Receita</h2>
-        </div>
-        <div className="card p-6 space-y-4">
-          <p className="text-[hsl(220_10%_65%)]">Use esta tabela para calcular sua meta antes de começar. O objetivo é ter clareza sobre quantas vendas você precisa — não chegar no final sem saber o que deu errado.</p>
-          <div className="overflow-x-auto rounded-xl border border-[hsl(220_20%_14%)]">
+            <div className="p-4 rounded-xl bg-[hsl(222_25%_4%)] border border-[hsl(220_20%_15%)]">
+              <p className="text-xs text-[hsl(220_10%_50%)] italic">
+                Allan: "Isso funciona porque no WhatsApp a barreira é menor. É uma conversa, não um anúncio. Seja pessoal, não um robô."
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Capítulo 9: Tabela de Erros Fatais */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-600 text-white text-xl font-black flex items-center justify-center shadow-[0_0_20px_hsl(0_90%_65%/0.3)]">09</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Tabela de Erros Fatais</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">O que NÃO fazer se você quer chegar aos R$ 10k</p>
+            </div>
+          </div>
+          <div className="card-nexos overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[hsl(220_20%_14%)] bg-[hsl(220_20%_8%)]">
-                  <th className="text-left px-4 py-3 text-[hsl(220_10%_45%)] font-semibold uppercase text-xs tracking-wider">Preço</th>
-                  <th className="text-left px-4 py-3 text-[hsl(220_10%_45%)] font-semibold uppercase text-xs tracking-wider">Vendas p/ R$5k</th>
-                  <th className="text-left px-4 py-3 text-[hsl(220_10%_45%)] font-semibold uppercase text-xs tracking-wider">Vendas p/ R$10k</th>
-                  <th className="text-left px-4 py-3 text-[hsl(220_10%_45%)] font-semibold uppercase text-xs tracking-wider">Leads necessários*</th>
+                <tr className="bg-rose-950/20 border-b border-rose-900/30">
+                  <th className="px-4 py-4 text-left text-xs uppercase font-black text-rose-400">Ação Amadora</th>
+                  <th className="px-4 py-4 text-left text-xs uppercase font-black text-emerald-400">Ação NexOS</th>
                 </tr>
               </thead>
-              <tbody>
-                {[
-                  { preco: "R$97", v5k: 52, v10k: 103, leads: "300–500" },
-                  { preco: "R$197", v5k: 26, v10k: 51, leads: "150–250" },
-                  { preco: "R$297", v5k: 17, v10k: 34, leads: "100–170" },
-                  { preco: "R$497", v5k: 11, v10k: 21, leads: "60–100" },
-                  { preco: "R$997", v5k: 6, v10k: 11, leads: "30–55" },
-                ].map((row, i) => (
-                  <tr key={row.preco} className={`border-b border-[hsl(220_20%_12%)] ${i === 2 ? "bg-[hsl(250_90%_65%/0.06)]" : ""}`}>
-                    <td className="px-4 py-3 text-white font-bold">{row.preco}</td>
-                    <td className="px-4 py-3 text-[hsl(220_10%_65%)]">{row.v5k}</td>
-                    <td className="px-4 py-3 text-[hsl(168_100%_42%)] font-semibold">{row.v10k}</td>
-                    <td className="px-4 py-3 text-[hsl(220_10%_55%)]">{row.leads}</td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-[hsl(220_20%_10%)]">
+                <tr>
+                  <td className="px-4 py-5 text-rose-200/60">Gastar R$ 2k em tráfego sem validar a oferta</td>
+                  <td className="px-4 py-5 text-emerald-200">Validar no 1:1 e WhatsApp antes de gastar R$ 1</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-5 text-rose-200/60">Esperar o site ficar 'perfeito' para lançar</td>
+                  <td className="px-4 py-5 text-emerald-200">Usar um link de pagamento e um PDF direto</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-5 text-rose-200/60">Falar das 'ferramentas' do seu curso</td>
+                  <td className="px-4 py-5 text-emerald-200">Falar da TRANSFORMAÇÃO e do RESULTADO</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-5 text-rose-200/60">Ignorar quem não comprou</td>
+                  <td className="px-4 py-5 text-emerald-200">Pedir feedback para entender onde você errou no copy</td>
+                </tr>
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-[hsl(220_10%_40%)]">* Estimativa para taxa de conversão de 2–3%, que é o mínimo esperado em oferta bem construída para audiência aquecida. Linha destacada = preço mais indicado para primeiros lançamentos.</p>
-          <div className="rounded-xl border border-[hsl(250_90%_65%/0.3)] bg-[hsl(250_90%_65%/0.06)] p-4 text-sm text-[hsl(250_90%_75%)]">
-            <strong>Insight importante:</strong> Para chegar a R$10k com um produto de R$297, você precisa de ~34 vendas — o que exige uma audiência de ~1.700 pessoas aquecidas (ou anúncios bem direcionados para uma lista de ~500 leads quentes). Se você está começando do zero, comece com R$497–R$997 e menos vagas.
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Capítulo 5 — 3 Estudos de caso */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-full bg-[hsl(250_90%_65%)] text-white text-sm font-bold flex items-center justify-center">5</span>
-          <h2 className="text-xl font-bold text-white">3 Estudos de Caso Reais</h2>
-        </div>
-        <div className="space-y-4">
-          {[
-            {
-              nome: "Caso 1 — Personal Trainer sem audiência",
-              tag: "Do zero",
-              cor: "hsl(168_100%_42%)",
-              contexto: "Rafael, 29 anos. Personal trainer em academia. 380 seguidores no Instagram. Nunca tinha vendido nada online.",
-              problema: "Queria criar um app de treinos, levaria 3 meses e R$8.000 para desenvolver.",
-              solucao: "Em vez disso: criou uma oferta de acompanhamento online por 60 dias a R$397. Postou um conteúdo sobre os 3 erros mais comuns em treinos caseiros. Abriu 10 vagas.",
-              resultado: "9 vendas em 5 dias = R$3.573. Com esse capital, gravou um módulo por semana durante o período de acompanhamento. No segundo lançamento, 60 dias depois: 23 vendas.",
-              aprendizado: "Vender antes de criar eliminou o risco. O produto foi desenvolvido com feedback dos primeiros clientes, tornando-se muito mais preciso.",
-            },
-            {
-              nome: "Caso 2 — Nutricionista com audiência",
-              tag: "Com base",
-              cor: "hsl(250_90%_65%)",
-              contexto: "Camila, 34 anos. Nutricionista clínica. 2.400 seguidores no Instagram. Já tinha perfil ativo mas nunca tinha monetizado.",
-              problema: "Achava que precisava de um curso completo, um site profissional e uma identidade visual para lançar. Ficou 4 meses na fase de 'preparação'.",
-              solucao: "Parou de preparar e lançou: um grupo no WhatsApp de 28 dias com cardápios semanais e acompanhamento a R$197/pessoa. Usou a bio do Instagram e três Stories.",
-              resultado: "18 vendas no primeiro lançamento = R$3.546. No segundo (60 dias depois), com depoimentos: 41 vendas = R$8.077.",
-              aprendizado: "A audiência já existia. O problema era a barreira mental de 'não estar pronta'. O produto mais simples possível testou o mercado — e o mercado respondeu.",
-            },
-            {
-              nome: "Caso 3 — Contabilista sem rede social",
-              tag: "Sem seguidores",
-              cor: "hsl(45_100%_60%)",
-              contexto: "Paulo, 41 anos. Contabilista com 22 anos de experiência. Nenhuma rede social. Lista de WhatsApp de 180 contatos (clientes e conhecidos).",
-              problema: "Não queria aparecer. Não sabia nada de Instagram. Achava que marketing digital não era para o seu perfil.",
-              solucao: "Criou um workshop online de 3h sobre 'Como declarar imposto de renda para MEI sem erros' a R$127. Divulgou apenas pelo WhatsApp pessoal e indicou para colegas divulgarem também.",
-              resultado: "34 inscrições = R$4.318. Apresentou para uma turma ao vivo. Gravou e vendeu como gravação por mais 2 meses: mais 51 vendas = R$6.477 adicionais.",
-              aprendizado: "Não precisa de rede social para começar. A lista quente de WhatsApp é o ativo mais subestimado do mercado. Workshop ao vivo vira produto perpétuo com uma gravação.",
-            },
-          ].map(caso => (
-            <div key={caso.nome} className="card p-6 space-y-4">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <h3 className="text-white font-bold text-base">{caso.nome}</h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0" style={{ background: `${caso.cor}20`, color: caso.cor, border: `1px solid ${caso.cor}40` }}>{caso.tag}</span>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="rounded-lg bg-[hsl(220_20%_8%)] p-3">
-                  <p className="text-[hsl(220_10%_45%)] text-xs uppercase tracking-wider font-semibold mb-1">Contexto</p>
-                  <p className="text-[hsl(220_10%_65%)]">{caso.contexto}</p>
-                </div>
-                <div className="rounded-lg bg-[hsl(0_90%_65%/0.06)] border border-[hsl(0_90%_65%/0.2)] p-3">
-                  <p className="text-[hsl(0_90%_70%)] text-xs uppercase tracking-wider font-semibold mb-1">⚠ Erro inicial</p>
-                  <p className="text-[hsl(220_10%_65%)]">{caso.problema}</p>
-                </div>
-                <div className="rounded-lg bg-[hsl(220_20%_8%)] p-3">
-                  <p className="text-[hsl(250_90%_70%)] text-xs uppercase tracking-wider font-semibold mb-1">→ O que fez</p>
-                  <p className="text-[hsl(220_10%_65%)]">{caso.solucao}</p>
-                </div>
-                <div className="rounded-lg bg-[hsl(168_100%_42%/0.06)] border border-[hsl(168_100%_42%/0.25)] p-3">
-                  <p className="text-[hsl(168_100%_42%)] text-xs uppercase tracking-wider font-semibold mb-1">✓ Resultado</p>
-                  <p className="text-white font-semibold">{caso.resultado}</p>
-                </div>
-                <div className="rounded-lg bg-[hsl(220_20%_8%)] p-3">
-                  <p className="text-[hsl(220_10%_45%)] text-xs uppercase tracking-wider font-semibold mb-1">Aprendizado</p>
-                  <p className="text-[hsl(220_10%_60%)] italic">{caso.aprendizado}</p>
-                </div>
-              </div>
+        {/* Capítulo 10: Estudos de Caso (Versão Erros) */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[hsl(250_90%_65%)] text-white text-xl font-black flex items-center justify-center">10</div>
+            <div>
+              <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Estudos de Caso: O Erro que Salvou tudo</h2>
+              <p className="text-[hsl(220_10%_50%)] text-sm font-medium">Histórias reais de quem quase quebrou e virou o jogo</p>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="card-nexos p-6 space-y-4 border-t-2 border-t-[hsl(250_90%_65%)]">
+              <h4 className="text-white font-bold">O Caso do Mentor que Não Vendia</h4>
+              <p className="text-xs text-[hsl(220_10%_55%)] leading-relaxed">
+                Marcos tentou lançar uma mentoria de R$ 2.000 direto para desconhecidos. <strong className="text-rose-400">Erro:</strong> Falta de escada de valor.
+                <br /><br />
+                <strong className="text-emerald-400">A virada:</strong> Criou um workshop de R$ 97 sobre "Os 3 Pilares". Vendeu 30 vagas (R$ 2.910). No final do workshop, ofereceu a mentoria de R$ 2k para quem queria ajuda pessoal. 6 pessoas compraram. 
+                <br /><br />
+                <strong className="text-white">Resultado Final: R$ 14.910 em 10 dias.</strong>
+              </p>
+            </div>
+            <div className="card-nexos p-6 space-y-4 border-t-2 border-t-[hsl(168_100%_42%)]">
+              <h4 className="text-white font-bold">O Caso da "Loja" que virou Curso</h4>
+              <p className="text-xs text-[hsl(220_10%_55%)] leading-relaxed">
+                Júlia vendia planners físicos. Margem pequena, logística infernal. <strong className="text-rose-400">Erro:</strong> Escalar produto físico sem capital.
+                <br /><br />
+                <strong className="text-emerald-400">A virada:</strong> Parou de vender o planner e começou a vender o MÉTODO de organização de rotina por R$ 197. Custo zero de entrega.
+                <br /><br />
+                <strong className="text-white">Resultado: 52 vendas no primeiro mês = R$ 10.244 limpos no bolso.</strong>
+              </p>
+            </div>
+          </div>
+        </section>
 
-      {/* Conclusão */}
-      <section className="card p-6 space-y-4">
-        <h2 className="text-xl font-bold text-white">O que fazer agora</h2>
-        <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          Você chegou até aqui. Isso já te coloca à frente de 90% das pessoas que baixam materiais e nunca chegam na última página.
-        </p>
-        <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          O próximo passo é simples: abra o checklist do Dia 1 agora e complete as 5 tarefas. Não amanhã. Hoje.
-        </p>
-        <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-          Se você quiser ir além dos R$10k e entender como estruturar lançamentos de R$100k, R$500k e além — com estratégia, copy, automação e IA trabalhando por você — a Metodologia NexOS cobre isso em 12 módulos completos.
-        </p>
-        <button
-          onClick={() => onNavigate("products")}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-[hsl(250_90%_60%)] to-[hsl(270_80%_55%)] text-white font-bold hover:opacity-90 transition-opacity"
-        >
-          Conhecer a Metodologia NexOS Completa →
-        </button>
-      </section>
+        {/* Próxima Missão */}
+        <section className="rounded-3xl border border-[hsl(250_90%_65%/0.4)] bg-gradient-to-br from-[hsl(250_30%_10%)] to-[hsl(222_25%_7%)] p-12 text-center space-y-8 shadow-[0_20px_50px_hsl(250_90%_65%/0.1)]">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[hsl(250_90%_65%/0.1)] border border-[hsl(250_90%_65%/0.3)] text-3xl mb-4">
+            🚀
+          </div>
+          <div className="max-w-2xl mx-auto space-y-4">
+            <h2 className="text-3xl font-black text-white uppercase tracking-tight">Sua Próxima Missão</h2>
+            <p className="text-[hsl(220_10%_65%)] text-lg leading-relaxed">
+              Você tem o mapa. Você tem os scripts. Você tem a sequência. 
+              <br />
+              <strong className="text-white">Agora, você tem um escolha:</strong> Continuar tentando sozinho ou usar a inteligência que orquestrou este guia para lançar para você.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={() => onNavigate("products")}
+              className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-[hsl(250_90%_65%)] text-white font-black text-sm uppercase tracking-widest hover:scale-105 transition-all shadow-[0_10px_20px_hsl(250_90%_65%/0.3)]"
+            >
+              Ativar Metodologia NexOS Completa
+            </button>
+            <p className="text-[hsl(220_10%_45%)] text-xs font-mono">
+              O fim da amadorismo. O início dos resultados.
+            </p>
+          </div>
+        </section>
 
-    </div>
+      </div>
     </Watermark>
   );
 }
