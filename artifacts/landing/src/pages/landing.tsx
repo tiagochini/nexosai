@@ -29,8 +29,8 @@ const Section = React.forwardRef<HTMLElement, { children: React.ReactNode; class
     <section
       ref={ref as React.Ref<HTMLElement>}
       id={id}
-      style={{ scrollSnapAlign: "start", minHeight: "100vh" }}
-      className={`relative flex flex-col justify-center overflow-hidden ${className}`}
+      className={`relative flex flex-col justify-center overflow-x-hidden snap-start py-20 sm:py-0 ${className}`}
+      style={{ minHeight: "100vh" }}
     >
       {children}
     </section>
@@ -93,7 +93,7 @@ function HeroSection() {
           <h1 className="text-[1.9rem] sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6 sm:mb-8 max-w-5xl">
             E se os maiores<br />especialistas em<br />lançamento estivessem<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              todos trabalhando<br className="hidden sm:block" />para o seu?
+              todos trabalhando{" "}<br className="hidden sm:block" />para o seu?
             </span>
           </h1>
 
@@ -341,7 +341,7 @@ function CeoSection() {
             {decisoes.map((item, i) => (
               <div
                 key={i}
-                className={`grid grid-cols-2 gap-4 border border-border/25 bg-card/15 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                className={`grid grid-cols-1 sm:grid-cols-2 gap-3 border border-border/25 bg-card/15 px-4 py-3 sm:px-5 sm:py-4 transition-all duration-500 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
                 style={{ transitionDelay: `${100 + i * 90}ms` }}
               >
                 <div className="flex items-start gap-2">
@@ -1452,14 +1452,17 @@ function Footer() {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const el = containerRef.current;
+    if (!el) return;
+    const onScroll = () => setScrolled(el.scrollTop > 40);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
   return (
-    <div style={{ scrollSnapType: "y mandatory", overflowY: "scroll", height: "100vh" }} className="bg-background text-foreground">
+    <div ref={containerRef} className="bg-background text-foreground h-screen overflow-y-scroll overflow-x-hidden snap-y snap-proximity sm:snap-mandatory">
       <Nav scrolled={scrolled} />
       <HeroSection />
       <IdentidadeSection />
