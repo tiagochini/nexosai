@@ -1773,7 +1773,7 @@ export default function CampaignDetail() {
         }
         return { label: "Analisando...", description: "Agentes de estratégia em execução. Aguarde a conclusão da análise.", phase: undefined };
       }
-      case "strategy_ready": return { label: "Revisar Estratégia", description: "Estratégia pronta. Revise e aprove cada seção no board antes de gerar o conteúdo.", phase: undefined };
+      case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia validada pelos agentes. Clique para gerar as 16+ peças de conteúdo do lançamento." };
       case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A agente gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
       case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
@@ -1873,19 +1873,6 @@ export default function CampaignDetail() {
                   >
                     {executeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Rocket className="h-4 w-4" />}
                     {executeMutation.isPending ? "Processando..." : nextAction.label}
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                ) : campaign.status === "strategy_ready" ? (
-                  <Button
-                    className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
-                    onClick={() => {
-                      setActiveTab("agentes");
-                      // Scroll to top so the strategy board is visible
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                  >
-                    <Eye className="h-4 w-4" />
-                    Revisar Estratégia
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 ) : (
