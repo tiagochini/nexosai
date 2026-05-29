@@ -10,7 +10,7 @@ import {
   markPaymentPaid,
   processAsaasWebhook,
 } from "./billing.service.js";
-import { db, inviteCodesTable, workspacesTable, plansTable } from "@workspace/db";
+import { db, inviteCodesTable, workspacesTable, plansTable, subscriptionPaymentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const router = Router();
@@ -144,6 +144,33 @@ router.get("/bank-transfer", requireAuth, async (_req, res): Promise<void> => {
     instructions: "Envie o comprovante para suporte@agencianexos.vip após a transferência.",
   };
   res.json({ bankTransfer: info });
+});
+
+// ─── Platform access check (logged-in user) ───────────────────────────────────
+router.get("/access", requireAuth, async (req, res): Promise<void> => {
+  const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
+  if (ADMIN_EMAILS.has(req.auth.email)) {
+    res.json({ hasAccess: true, reason: "admin" });
+    return;
+  }
+
+  // Paid access
+  const [paidPayment] = await db
+    .select({ id: subscriptionPaymentsTable.id })
+    .from(subscriptionPaymentsTable)
+    .where(eq(subscriptionPaymentsTable.workspaceId, req.auth.workspaceId))
+    .limit(1);
+  if (paidPayment) { res.json({ hasAccess: true, reason: "paid" }); return; }
+
+  // Invite code used at registration
+  const [invite] = await db
+    .select({ id: inviteCodesTable.id })
+    .from(inviteCodesTable)
+    .where(eq(inviteCodesTable.usedByWorkspaceId, req.auth.workspaceId))
+    .limit(1);
+  if (invite) { res.json({ hasAccess: true, reason: "invite_code" }); return; }
+
+  res.json({ hasAccess: false, reason: "none" });
 });
 
 // ─── Redeem invite code (logged-in user) ──────────────────────────────────────

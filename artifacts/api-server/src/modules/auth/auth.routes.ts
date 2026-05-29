@@ -34,6 +34,17 @@ router.post("/register", async (req, res): Promise<void> => {
     return;
   }
 
+  // ── Platform access gate ───────────────────────────────────────────────────
+  // When PLATFORM_OPEN is not "true", only users with a valid invite code can register.
+  const platformOpen = process.env["PLATFORM_OPEN"] === "true";
+  if (!platformOpen && !parsed.data.inviteCode) {
+    res.status(423).json({
+      code: "PLATFORM_CLOSED",
+      error: "A plataforma está em modo exclusivo. Você precisa de um código de convite para se cadastrar.",
+    });
+    return;
+  }
+
   try {
     const tokens = await registerUser(parsed.data, req.log);
 

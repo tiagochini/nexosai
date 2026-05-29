@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useRegister } from "@workspace/api-client-react";
+import { useMutation } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { useAppI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Eye, EyeOff, CheckCircle2, XCircle, Gift } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, XCircle, Gift, Lock, Users, MessageCircle, RefreshCw } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -33,16 +35,24 @@ export default function Register() {
   const [showConfirm, setShowConfirm]     = useState(false);
   const [plan, setPlan]                   = useState("solo");
   const [referralCode, setReferralCode]   = useState("");
+  const [inviteCode, setInviteCode]       = useState("");
+  const [platformClosed, setPlatformClosed] = useState(false);
+  const [showWaitlist, setShowWaitlist]   = useState(false);
+  const [waitlistName, setWaitlistName]   = useState("");
+  const [waitlistWa, setWaitlistWa]       = useState("");
+  const [waitlistSent, setWaitlistSent]   = useState(false);
   const [, setLocation]                   = useLocation();
   const { setToken }                      = useAuth();
   const tr = useAppI18n();
   const t = tr.register;
 
-  // Read ?ref=CODE from URL on mount
+  // Read ?ref=CODE and ?invite=CODE from URL on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
     if (ref) setReferralCode(ref.toUpperCase().trim());
+    const inv = params.get("invite") || params.get("code");
+    if (inv) setInviteCode(inv.toUpperCase().trim());
   }, []);
 
   // Derived validation
@@ -59,6 +69,20 @@ export default function Register() {
     passMatch === true &&
     (phone.length === 0 || phoneMatch === true);
 
+  const waitlistMutation = useMutation({
+    mutationFn: () =>
+      customFetch<{ joined: boolean; message: string }>("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: waitlistName, whatsapp: waitlistWa, source: "register_page" }),
+      }),
+    onSuccess: (data) => {
+      setWaitlistSent(true);
+      toast.success(data.message ?? "Você entrou na lista!");
+    },
+    onError: (err: Error) => toast.error(err.message ?? "Erro ao entrar na lista."),
+  });
+
   const registerMutation = useRegister({
     mutation: {
       onSuccess: (data) => {
@@ -67,7 +91,12 @@ export default function Register() {
         toast.success(t.success);
         setLocation("/welcome");
       },
-      onError: () => {
+      onError: (err: Error & { code?: string; body?: { code?: string } }) => {
+        const code = err?.body?.code ?? (err as unknown as { code?: string })?.code;
+        if (code === "PLATFORM_CLOSED") {
+          setPlatformClosed(true);
+          return;
+        }
         toast.error(t.error);
       },
     },
@@ -84,12 +113,83 @@ export default function Register() {
         planSlug: plan,
         ...(phone.trim() ? { phone: phone.trim() } : {}),
         ...(referralCode ? { referralCode } : {}),
+        ...(inviteCode ? { inviteCode } : {}),
       },
     });
   };
 
   const inputClass =
     "font-mono bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary focus-visible:shadow-[0_0_10px_hsl(var(--primary)/0.3)] rounded-none transition-all";
+
+  // ── Platform Closed wall ──────────────────────────────────────────────────
+  if (platformClosed) {
+    return (
+      <div className="min-h-screen auth-bg-gradient flex flex-col items-center justify-center p-4 py-8">
+        <div className="w-full max-w-md relative z-10 animate-in fade-in blur-in duration-700 space-y-6">
+          <div className="flex flex-col items-center space-y-3">
+            <img src={nexosLogo} alt="NexOS" className="h-20 w-20 object-contain" style={{ filter: "drop-shadow(0 0 20px hsl(var(--primary)/0.6))" }} />
+            <div className="inline-flex items-center gap-2 border border-primary/30 bg-primary/5 px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-primary">
+              <Lock className="h-3 w-3" /> Acesso Exclusivo
+            </div>
+            <h1 className="font-mono text-xl font-bold uppercase tracking-tighter text-foreground text-center">Somente para Convidados</h1>
+            <p className="font-mono text-xs text-muted-foreground/60 text-center max-w-xs">A plataforma está em período de acesso exclusivo para primeiros compradores. Insira seu código ou entre na lista de espera.</p>
+          </div>
+          <div className="border border-primary/20 bg-card/30 p-5 space-y-4">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-primary/70 text-center">Já tem um código? Insira aqui para criar sua conta</div>
+            <div className="flex gap-2">
+              <Input
+                value={inviteCode}
+                onChange={e => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="NEXOS-XXXX-XXXX"
+                className="font-mono bg-background/50 border-border/50 focus-visible:ring-primary rounded-none transition-all uppercase tracking-widest flex-1"
+              />
+              <Button
+                onClick={() => setPlatformClosed(false)}
+                disabled={!inviteCode.trim()}
+                className="rounded-none font-mono uppercase tracking-widest font-bold btn-weapon-primary px-4"
+              >
+                Criar Conta →
+              </Button>
+            </div>
+          </div>
+          <div className="border border-border/40 bg-card/20 p-5 space-y-4">
+            {!showWaitlist ? (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setShowWaitlist(true)} className="flex flex-col items-center gap-2 border border-border/40 bg-card/20 hover:bg-card/40 p-4 transition-colors text-center">
+                  <Users className="h-4 w-4 text-muted-foreground/60" />
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Lista de Espera</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/40">Avise-me quando abrir</div>
+                </button>
+                <a href="https://chat.whatsapp.com/H49MCBiw2x92E8YoQMIRXH" target="_blank" rel="noreferrer" className="flex flex-col items-center gap-2 border border-border/40 bg-card/20 hover:bg-card/40 p-4 transition-colors text-center">
+                  <MessageCircle className="h-4 w-4 text-muted-foreground/60" />
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Grupo VIP</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/40">Acesso antecipado</div>
+                </a>
+              </div>
+            ) : waitlistSent ? (
+              <div className="text-center py-4 space-y-2">
+                <CheckCircle2 className="h-6 w-6 text-success mx-auto" />
+                <p className="font-mono text-sm text-success font-bold uppercase tracking-widest">Você está na lista!</p>
+                <p className="font-mono text-xs text-muted-foreground/60">Te avisamos pelo WhatsApp quando o acesso abrir.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Input value={waitlistName} onChange={e => setWaitlistName(e.target.value)} placeholder="Seu nome" className="font-mono bg-background/50 border-border/50 focus-visible:ring-primary rounded-none" />
+                <Input value={waitlistWa} onChange={e => setWaitlistWa(e.target.value)} placeholder="WhatsApp (11999999999)" type="tel" className="font-mono bg-background/50 border-border/50 focus-visible:ring-primary rounded-none" />
+                <Button onClick={() => { if (waitlistName.trim() && waitlistWa.trim()) waitlistMutation.mutate(); }} disabled={!waitlistName.trim() || !waitlistWa.trim() || waitlistMutation.isPending} className="w-full rounded-none font-mono uppercase tracking-widest font-bold">
+                  {waitlistMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Entrar na Lista →"}
+                </Button>
+                <button onClick={() => setShowWaitlist(false)} className="w-full text-center font-mono text-[11px] text-muted-foreground/40 hover:text-muted-foreground">← Voltar</button>
+              </div>
+            )}
+          </div>
+          <div className="text-center">
+            <Link href="/login"><span className="font-mono text-xs text-primary/60 hover:text-primary uppercase tracking-widest">← Já tenho conta</span></Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen auth-bg-gradient flex flex-col items-center justify-center p-4 py-8">
@@ -271,6 +371,22 @@ export default function Register() {
                 ok={passMatch}
                 msg={passMatch === true ? t.match_ok : t.match_err}
               />
+            </div>
+
+            {/* Código de convite (acesso à plataforma) */}
+            <div className="space-y-2">
+              <Label htmlFor="inviteCode" className="font-mono text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                <Lock className="h-3 w-3" /> Código de Convite
+              </Label>
+              <Input
+                id="inviteCode"
+                type="text"
+                value={inviteCode}
+                onChange={e => setInviteCode(e.target.value.toUpperCase())}
+                placeholder="NEXOS-XXXX-XXXX (se você tem um)"
+                className={`${inputClass} uppercase tracking-widest`}
+              />
+              <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">Obrigatório enquanto a plataforma está em modo exclusivo</p>
             </div>
 
             {/* Código de indicação (visível apenas quando preenchido via URL) */}

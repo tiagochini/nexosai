@@ -1,6 +1,9 @@
 import { Switch, Route, Redirect } from "wouter";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/lib/auth";
+import { AccessWall } from "@/components/access-wall";
 import { hasSeenWelcome } from "@/pages/welcome/index";
 import Welcome from "@/pages/welcome/index";
 import WarRoom from "@/pages/war-room/index";
@@ -58,8 +61,32 @@ import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
+  const { token, isAdmin } = useAuth();
+  const queryClient = useQueryClient();
   if (!token) return <Redirect to="/login" />;
+
+  // Admins always bypass the access wall
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { data: accessData, isLoading: accessLoading } = useQuery<{ hasAccess: boolean; reason: string }>({
+    queryKey: ["/api/billing/access"],
+    queryFn: () => customFetch<{ hasAccess: boolean; reason: string }>("/api/billing/access"),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    enabled: !!token && !isAdmin,
+  });
+
+  if (isAdmin) return <AppLayout>{children}</AppLayout>;
+  if (accessLoading && !accessData) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (accessData && !accessData.hasAccess) {
+    return <AccessWall onAccessGranted={() => {
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/access"] });
+    }} />;
+  }
+
   return <AppLayout>{children}</AppLayout>;
 }
 
