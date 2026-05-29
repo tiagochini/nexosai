@@ -11,13 +11,20 @@ interface ProductsProps {
 const API_BASE = "/api/academy";
 
 export default function Products({ onNavigate, hasAccess, onAccessGranted, paymentSuccess }: ProductsProps) {
-  // Checkout modal state
+  // Checkout modal state (kept for token verification only)
   const [checkoutProduct, setCheckoutProduct] = useState<string | null>(null);
   const [checkoutName, setCheckoutName] = useState("");
   const [checkoutEmail, setCheckoutEmail] = useState("");
   const [checkoutCpf, setCheckoutCpf] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+
+  // Lead capture for paid products
+  const [leadProduct, setLeadProduct] = useState<string | null>(null);
+  const [leadName, setLeadName] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadLoading, setLeadLoading] = useState(false);
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
 
   // Token verification state
   const [token, setToken] = useState("");
@@ -95,6 +102,32 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
       setTokenError("Sem conexão. Verifique sua internet.");
     } finally {
       setVerifying(false);
+    }
+  }
+
+  async function handleLeadCapture(e: React.FormEvent) {
+    e.preventDefault();
+    if (!leadProduct || !leadEmail.trim()) return;
+    setLeadLoading(true);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      await fetch("/api/academy/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: leadName.trim() || undefined,
+          email: leadEmail.trim(),
+          source: `${leadProduct}-interest`,
+          utmSource: params.get("utm_source") ?? undefined,
+          utmMedium: params.get("utm_medium") ?? undefined,
+          utmCampaign: params.get("utm_campaign") ?? undefined,
+        }),
+      });
+    } catch {
+      // best-effort
+    } finally {
+      setLeadLoading(false);
+      setLeadSubmitted(true);
     }
   }
 
@@ -303,69 +336,43 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
                   </ul>
                 </div>
 
-                <div className="md:w-64 shrink-0">
-                  <div className="card-nexos rounded-xl p-5 text-center">
-                    {product.type === "premium" && (
-                      <div className="mb-2">
-                        <span className="text-xs text-[hsl(220_10%_40%)] line-through">R$4.500</span>
-                        <span className="text-xs text-[hsl(168_100%_50%)] ml-2">44% off</span>
-                      </div>
-                    )}
-                    {"originalPrice" in product && product.originalPrice && (
-                      <div className="mb-2">
-                        <span className="text-xs text-[hsl(220_10%_40%)] line-through">R${(product.originalPrice as number).toLocaleString("pt-BR")}</span>
-                        <span className="text-xs text-[hsl(168_100%_50%)] ml-2">{Math.round((1 - product.price / (product.originalPrice as number)) * 100)}% off</span>
-                      </div>
-                    )}
-                    <div
-                      className="text-4xl font-extrabold mb-1"
-                      style={{ background: product.type === "premium" ? "var(--gradient-gold)" : "var(--gradient-primary)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-                    >
-                      R${product.price.toLocaleString("pt-BR")}
-                    </div>
-                    {product.type === "premium" ? (
-                      <p className="text-xs text-[hsl(220_10%_45%)] mb-4">ou até 12x de R${(product.price / 12).toFixed(2).replace(".", ",")}</p>
-                    ) : (
-                      <p className="text-xs text-[hsl(220_10%_45%)] mb-4">pagamento único · acesso imediato</p>
-                    )}
-
-                    {hasAccess ? (
-                      product.type === "premium" ? (
-                        <button
-                          className="btn-primary w-full font-bold"
-                          style={{ background: "var(--gradient-gold)" }}
-                          onClick={() => onNavigate("modules")}
-                        >
-                          ✓ Acessar o Curso →
-                        </button>
-                      ) : (
-                        <button
-                          className="btn-primary w-full font-bold"
-                          onClick={() => onNavigate("mini-guide")}
-                        >
-                          ✓ Acessar Mini-Guia →
-                        </button>
-                      )
+                <div className="md:w-52 shrink-0 flex flex-col gap-3">
+                  {hasAccess ? (
+                    product.type === "premium" ? (
+                      <button
+                        className="btn-primary w-full py-3 font-bold"
+                        style={{ background: "var(--gradient-gold)" }}
+                        onClick={() => onNavigate("modules")}
+                      >
+                        ✓ Acessar o Curso →
+                      </button>
                     ) : (
                       <button
-                        className="btn-primary w-full"
-                        onClick={() => {
-                          setCheckoutProduct(product.id);
-                          setCheckoutName("");
-                          setCheckoutEmail("");
-                          setCheckoutCpf("");
-                          setCheckoutError("");
-                        }}
-                        style={product.type === "premium" ? { background: "var(--gradient-gold)" } : {}}
+                        className="btn-primary w-full py-3 font-bold"
+                        onClick={() => onNavigate("mini-guide")}
                       >
-                        Comprar — R${product.price.toLocaleString("pt-BR")}
+                        ✓ Acessar Mini-Guia →
                       </button>
-                    )}
-
-                    {product.type === "premium" && (
-                      <p className="text-xs text-[hsl(220_10%_40%)] mt-3">🔒 Garantia 30 dias · Acesso imediato</p>
-                    )}
-                  </div>
+                    )
+                  ) : (
+                    <>
+                      <button
+                        className="btn-primary w-full py-3 font-bold"
+                        style={product.type === "premium" ? { background: "var(--gradient-gold)" } : {}}
+                        onClick={() => {
+                          setLeadProduct(product.id);
+                          setLeadName("");
+                          setLeadEmail("");
+                          setLeadSubmitted(false);
+                        }}
+                      >
+                        Quero Saber Mais →
+                      </button>
+                      <p className="text-[10px] text-center" style={{ color: "hsl(220 10% 38%)" }}>
+                        Receba informações por e-mail
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -391,7 +398,101 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
         </div>
       </div>
 
-      {/* Checkout modal */}
+      {/* Lead capture modal for paid products */}
+      {leadProduct && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}
+          onClick={e => e.target === e.currentTarget && setLeadProduct(null)}
+        >
+          <div className="card-nexos rounded-2xl p-8 w-full max-w-md space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white">Quero saber mais</h3>
+                <p className="text-xs mt-0.5" style={{ color: "hsl(220 10% 50%)" }}>
+                  {PRODUCTS.find(p => p.id === leadProduct)?.name}
+                </p>
+              </div>
+              <button
+                className="text-xl transition-colors"
+                style={{ color: "hsl(220 10% 40%)" }}
+                onClick={() => setLeadProduct(null)}
+              >✕</button>
+            </div>
+
+            {leadSubmitted ? (
+              <div className="text-center space-y-4 py-4">
+                <div className="text-5xl">✅</div>
+                <p className="text-white font-bold text-lg">Perfeito! Te avisamos em breve.</p>
+                <p className="text-sm" style={{ color: "hsl(220 10% 55%)" }}>
+                  Enviamos informações detalhadas para o seu e-mail. Fique de olho na caixa de entrada.
+                </p>
+                <button
+                  className="btn-primary w-full mt-2"
+                  onClick={() => setLeadProduct(null)}
+                >
+                  Fechar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleLeadCapture} className="space-y-4">
+                <div
+                  className="rounded-xl p-4 text-sm"
+                  style={{ background: "hsl(250 30% 8%)", border: "1px solid hsl(250 90% 65% / 0.15)" }}
+                >
+                  <p style={{ color: "hsl(250 90% 75%)" }} className="font-semibold mb-1">
+                    Deixe seus dados e te enviamos tudo
+                  </p>
+                  <p style={{ color: "hsl(220 10% 50%)" }} className="text-xs">
+                    Detalhes do conteúdo, condições especiais e como funciona o acesso.
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs mb-1.5 block" style={{ color: "hsl(220 10% 55%)" }}>Seu nome</label>
+                  <input
+                    type="text"
+                    value={leadName}
+                    onChange={e => setLeadName(e.target.value)}
+                    placeholder="Como posso te chamar?"
+                    className="w-full px-3 py-2.5 rounded-lg text-white text-sm placeholder:text-[hsl(220_10%_30%)] focus:outline-none"
+                    style={{ background: "hsl(222 25% 10%)", border: "1px solid hsl(220 20% 12%)" }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs mb-1.5 block" style={{ color: "hsl(220 10% 55%)" }}>Seu melhor e-mail *</label>
+                  <input
+                    type="email"
+                    required
+                    value={leadEmail}
+                    onChange={e => setLeadEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    className="w-full px-3 py-2.5 rounded-lg text-white text-sm placeholder:text-[hsl(220_10%_30%)] focus:outline-none"
+                    style={{ background: "hsl(222 25% 10%)", border: "1px solid hsl(220 20% 12%)" }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={leadLoading}
+                  className="btn-primary w-full py-3 font-bold"
+                  style={PRODUCTS.find(p => p.id === leadProduct)?.type === "premium" ? { background: "var(--gradient-gold)" } : {}}
+                >
+                  {leadLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      Enviando...
+                    </span>
+                  ) : "Quero as Informações →"}
+                </button>
+                <p className="text-[10px] text-center" style={{ color: "hsl(220 10% 35%)" }}>
+                  Sem spam. Você pode cancelar a qualquer momento.
+                </p>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Checkout modal (token-based access) */}
       {checkoutProduct && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"

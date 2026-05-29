@@ -48,8 +48,9 @@ function hasStoredAccess(): boolean {
 
 const ALL_NAV_ITEMS = [
   { id: "home", label: "Início", icon: "🏠" },
-  { id: "modules", label: "Módulos", icon: "📦" },
-  { id: "glossary", label: "Glossário", icon: "📖" },
+  { id: "modules", label: "Curso Completo", icon: "📦" },
+  { id: "mini-guide", label: "Mini-Guia 10K", icon: "📖" },
+  { id: "glossary", label: "Glossário", icon: "📚" },
   { id: "products", label: "Produtos", icon: "🛒" },
   { id: "progress", label: "Progresso", icon: "📊" },
 ];
