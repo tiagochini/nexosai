@@ -124,7 +124,7 @@ export default function IntegracoesPage() {
         description="Conecte seus canais para que a NexOS opere de forma autônoma. Sem integrações = operação manual durante o lançamento."
         variant="banner"
         steps={[
-          "WhatsApp Business ou Telegram — sequências automáticas e respostas IA",
+          "WhatsApp Business ou Telegram — sequências automáticas e respostas dos agentes",
           "RD Station ou ActiveCampaign — e-mails segmentados por temperatura",
           "Meta Ads / Google Ads — ROAS e métricas em tempo real",
           "Hotmart / Kiwify — captura automática de vendas e conversão de leads",

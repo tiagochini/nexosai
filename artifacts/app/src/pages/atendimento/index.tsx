@@ -268,12 +268,12 @@ export default function AtendimentoPage() {
         <div className="mt-3">
           <FeatureOnboarding
             featureKey={FEATURE_KEYS.ATENDIMENTO}
-            title="TIME DE VENDAS IA"
+            title="TIME DE VENDAS"
             description="Cada lead na conversa certa, com o agente certo. A agente sugere a resposta ideal de acordo com o estágio do funil."
             variant="inline"
             steps={[
               "Crie uma conversa por lead e classifique o estágio (Aquecimento, Desejo, Fechamento…)",
-              "Clique em 'Sugestão IA' — o agente especialista gera a resposta ideal",
+              "Clique em 'Sugestão do agente' — o especialista gera a resposta ideal",
               "Mova o lead pelo funil conforme avança na conversa",
               "Monitore a taxa de conversão por estágio no painel de KPIs",
             ]}

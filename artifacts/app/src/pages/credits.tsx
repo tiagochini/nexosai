@@ -47,12 +47,12 @@ interface AgentUsageSummary {
 }
 
 const ACTION_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  strategy_generation:    { label: "Estratégia IA",       icon: Bot,          color: "text-primary" },
-  intake_conversation:    { label: "Intake IA",           icon: MessageSquare, color: "text-blue-400" },
+  strategy_generation:    { label: "Estratégia",          icon: Bot,          color: "text-primary" },
+  intake_conversation:    { label: "Briefing",            icon: MessageSquare, color: "text-blue-400" },
   intake_finalize:        { label: "Finalizar Intake",    icon: FileText,      color: "text-cyan-400" },
   content_generation:     { label: "Geração de Conteúdo", icon: FileText,      color: "text-purple-400" },
   compliance_check:       { label: "Compliance",          icon: Shield,        color: "text-yellow-400" },
-  analytics_report:       { label: "Relatório IA",        icon: BarChart3,     color: "text-green-400" },
+  analytics_report:       { label: "Relatório",           icon: BarChart3,     color: "text-green-400" },
   vsl_generation:         { label: "VSL Gerado",          icon: Video,         color: "text-pink-400" },
   email_sequence_item:    { label: "Item de Sequência",   icon: Mail,          color: "text-orange-400" },
   whatsapp_sequence_item: { label: "WhatsApp Seq.",       icon: MessageSquare, color: "text-success" },

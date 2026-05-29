@@ -81,13 +81,13 @@ const AGENT_ROLE_LABEL: Record<string, string> = {
   media_buyer:           "Media Buyer",
   affiliate_campaign:    "Especialista em Afiliados",
   analytics:             "Analista de Performance",
-  optimization:          "Otimizador IA",
+  optimization:          "Otimizador",
   video:                 "Estrategista de Vídeo",
   video_strategy:        "Estrategista de Vídeo",
   creator_growth:        "Creator Growth",
   compliance:            "Compliance Officer",
   profile_builder:       "Profile Builder",
-  intake:                "Intake IA",
+  intake:                "Briefing",
   ad_copy:               "Copy de Anúncios",
   cpl_script:            "Script CPL",
   vsl_script:            "Roteiro VSL",
@@ -687,7 +687,7 @@ export default function Dashboard() {
   if (isFundador) {
     const firstName = user?.name?.split(" ")[0] ?? "você";
     const MISSION_PHASES = [
-      { id: "intake",    label: "Briefing",    desc: "IA conversa com você", icon: "01" },
+      { id: "intake",    label: "Briefing",    desc: "Agente conversa com você", icon: "01" },
       { id: "strategy",  label: "Estratégia",  desc: "Plano gerado",         icon: "02" },
       { id: "content",   label: "Conteúdo",    desc: "Copy pronto",          icon: "03" },
       { id: "executing", label: "Execução",    desc: "Disparo automático",   icon: "04" },

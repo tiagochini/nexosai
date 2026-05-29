@@ -869,7 +869,7 @@ export default function AgentChat() {
       {/* ── Capabilities onboarding ─────────────────────────────────────────── */}
       <FeatureOnboarding
         featureKey={FEATURE_KEYS.AGENT_CHAT}
-        title="CHAT COM AGENTES IA"
+        title="CHAT COM AGENTES"
         description="Não precisa digitar tudo — você pode falar, enviar áudios, vídeos, prints ou documentos. O agente processa qualquer formato."
         variant="banner"
         steps={[

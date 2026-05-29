@@ -119,9 +119,9 @@ function ConfigPanel({ onClose }: { onClose: () => void }) {
   const TOGGLES: Array<{ key: keyof ModerationConfig; label: string; desc: string; danger?: boolean }> = [
     { key: "autoDeleteHostile", label: "Auto-deletar comentários hostis", desc: "Detecta e remove automaticamente ataques, xingamentos e discurso de ódio", danger: true },
     { key: "autoHideSpam", label: "Auto-ocultar spam", desc: "Esconde propagandas não solicitadas, bots e links suspeitos" },
-    { key: "autoReplyQuestions", label: "Auto-responder perguntas", desc: "IA responde dúvidas sobre o produto em seu nome, 24h/dia" },
-    { key: "autoReplyObjections", label: "Auto-responder objeções", desc: "IA responde 'isso funciona mesmo?', 'é caro demais' com argumentos personalizados" },
-    { key: "autoReplyCompliments", label: "Auto-responder elogios", desc: "IA agradece comentários positivos de forma humanizada" },
+    { key: "autoReplyQuestions", label: "Auto-responder perguntas", desc: "Agente responde dúvidas sobre o produto em seu nome, 24h/dia" },
+    { key: "autoReplyObjections", label: "Auto-responder objeções", desc: "Agente responde 'isso funciona mesmo?', 'é caro demais' com argumentos personalizados" },
+    { key: "autoReplyCompliments", label: "Auto-responder elogios", desc: "Agente agradece comentários positivos de forma humanizada" },
   ];
 
   return (

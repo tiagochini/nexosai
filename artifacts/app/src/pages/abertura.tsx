@@ -154,7 +154,7 @@ function TransformacaoSection() {
     "Carrinho abre e fecha no horário exato. Sem você tocar em nada.",
     "Base segmentada em tempo real: hot, warm, cold — cada grupo recebe copy diferente.",
     "Dashboard ao vivo mostra faturamento entrando. Você acompanha.",
-    "IA responde objeções no WhatsApp enquanto você dorme.",
+    "Agente responde objeções no WhatsApp enquanto você dorme.",
   ];
 
   return (

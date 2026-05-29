@@ -223,7 +223,7 @@ function ProvaSection() {
     "Segmentação comportamental em tempo real: hot, warm, cold — cada grupo recebe copy diferente",
     "Carrinho abre e fecha automaticamente no horário — sem você precisar lembrar ou fazer nada",
     "Dashboard ao vivo com health score e alertas quando uma métrica indica risco de conversão",
-    "IA responde objeções no WhatsApp enquanto você faz outra coisa",
+    "Agente responde objeções no WhatsApp enquanto você faz outra coisa",
   ];
 
   return (

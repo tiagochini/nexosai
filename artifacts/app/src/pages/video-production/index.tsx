@@ -191,7 +191,7 @@ function CreateProjectForm({ onCreated }: { onCreated: (p: VideoProject) => void
           >
             <Film className="h-5 w-5 mb-1 text-primary" />
             <div className="font-mono text-xs font-bold">Não — Vídeo com B-roll</div>
-            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">IA gera cenas cinematográficas</div>
+            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Agente gera cenas cinematográficas</div>
           </button>
           <button
             onClick={() => { setHasUserFace(true); setVoiceStyle("avatar"); }}

@@ -438,7 +438,7 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
             }}
           >
             <span className="text-base">🎓</span>
-            <span className="flex-1 text-left">Professor IA</span>
+            <span className="flex-1 text-left">Professor Allan</span>
             {tutorHistory.length > 0 && (
               <span className="w-4 h-4 rounded-full bg-[hsl(250_90%_60%)] text-white text-[9px] flex items-center justify-center font-bold">
                 {Math.min(tutorHistory.filter(m => m.role === "assistant").length, 9)}

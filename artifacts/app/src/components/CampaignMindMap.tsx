@@ -68,7 +68,7 @@ const AGENT_LABEL: Record<string, string> = {
   copywriter: "Copywriter", creative_director: "Diretor Criativo",
   landing_page: "Landing Page", targeting: "Targeting Expert",
   media_buyer: "Media Buyer", analytics: "Analista de Performance",
-  optimization: "Otimizador IA", compliance: "Compliance Officer",
+  optimization: "Otimizador", compliance: "Compliance Officer",
   profile_builder: "Profile Builder", ad_copy: "Copy de Anúncios",
   cpl_script: "Script CPL", vsl_script: "Roteiro VSL",
   webinar_script: "Roteiro Webinar", live_script: "Roteiro Live",
@@ -81,7 +81,7 @@ const AGENT_LABEL: Record<string, string> = {
   perpetual_launch_manager: "Lançamento Perpétuo",
   continuous_sales_manager: "Gestor de Vendas Contínuas",
   whatsapp_response: "Auto-Resposta WhatsApp",
-  intake: "Intake IA", item_copy: "Copy de Item",
+  intake: "Briefing", item_copy: "Copy de Item",
 };
 
 const AGENT_ICON: Record<string, React.ElementType> = {

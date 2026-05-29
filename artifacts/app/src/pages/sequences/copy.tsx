@@ -87,7 +87,7 @@ export default function SequenceCopyStudio() {
               Retornar à Sequência
             </Button>
           </Link>
-          <h1 className="text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">Estúdio de Copy IA</h1>
+          <h1 className="text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">Estúdio de Copy</h1>
           <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-widest">Geração contextual baseada em segmento e fase</p>
         </div>
         <div className="flex items-center gap-3 border border-border/50 p-2 bg-card/40 backdrop-blur-sm mt-4 md:mt-0 relative overflow-hidden">

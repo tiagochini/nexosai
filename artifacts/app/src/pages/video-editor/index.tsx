@@ -688,7 +688,7 @@ export default function VideoEditorPage() {
     ].map(s => ({ start: Math.round(s.start * 10) / 10, end: Math.round(s.end * 10) / 10, reason: s.reason }));
     setHighlightSuggestions(suggestions);
     setAnalyzingHighlights(false);
-    toast.success("IA identificou 3 trechos de destaque");
+    toast.success("Agente identificou 3 trechos de destaque");
   };
 
   const applyHighlight = (h: { start: number; end: number }) => {
@@ -1436,7 +1436,7 @@ export default function VideoEditorPage() {
                 {/* AI Highlights */}
                 <div className="border border-border/40 bg-card/20 p-3 space-y-2">
                   <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />IA · Highlights
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />Agente · Highlights
                   </p>
                   <Button variant="outline" size="sm" onClick={analyzeHighlights}
                     disabled={!activeClip || analyzingHighlights}

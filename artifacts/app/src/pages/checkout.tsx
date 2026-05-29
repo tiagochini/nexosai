@@ -271,7 +271,7 @@ function CheckoutForm({
         </div>
         <div className="border-t border-primary/20 pt-3 flex flex-wrap gap-x-4 gap-y-1">
           {[
-            "57 agentes IA",
+            "57 agentes",
             "Acesso vitalício",
             "WhatsApp + Email automáticos",
             "Dashboard em tempo real",
