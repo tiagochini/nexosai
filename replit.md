@@ -168,7 +168,7 @@ Launch tracks by revenue target:
 - `runProfileBuilderAgent(campaignId, workspaceId, intakeData, campaignType, log)` — 5 required args
 - `runAgent(opts)` requires `messages: AIMessage[]` (not `userMessage`) + `campaignId?` (optional) + `workspaceId`
 - `runAgent` `campaignId` is `string | null | undefined` — pass `null` for sequence-level agents (no `campaign_agents` row inserted, no UUID FK violation)
-- Replit AI integrations: Anthropic uses `claude-sonnet-4-6`, OpenAI uses `gpt-5.4` (requires `max_completion_tokens` NOT `max_tokens`), Gemini uses `gemini-3-flash-preview`. All 3 are provisioned via `AI_INTEGRATIONS_*` env vars. When native keys are present they take precedence. `callOpenAI()` auto-detects gpt-5.x models and switches the token param.
+- Replit AI integrations: Anthropic uses `claude-sonnet-4-6`, OpenAI uses `gpt-5.5` (requires `max_completion_tokens` NOT `max_tokens`), Gemini uses `gemini-3-flash-preview`. All 3 are provisioned via `AI_INTEGRATIONS_*` env vars. When native keys are present they take precedence. `callOpenAI()` auto-detects gpt-5.x models and switches the token param.
 - `parseAgentJSON` handles truncated LLM responses: tries code block extraction (with or without closing ```), then raw `{...}` extraction, then `repairTruncatedJson` (auto-closes unclosed braces/brackets). Always safe to call.
 - LLM responses at 4096 max_tokens are often truncated mid-JSON for large outputs. Keep prompts compact and limit items in sequence builder to ≤20 to stay within token budget.
 - Sequence contacts route: `POST /launch-sequences/:id/contacts` (NOT `/contacts/bulk`)
