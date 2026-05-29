@@ -58,14 +58,20 @@ const PUBLIC_NAV_ITEMS = ALL_NAV_ITEMS.filter(n => ["home", "products"].includes
 
 const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress", "glossary", "mini-guide"];
 
+function getHashPage(): string {
+  const hash = window.location.hash;
+  return hash.split("?")[0]; // strip any query-string embedded in the hash
+}
+
 function getInitialPage(): NavState {
   if (typeof window !== "undefined") {
-    if (window.location.hash === "#owner") return { page: "owner", params: {} };
-    if (window.location.hash === "#guia") return { page: "lead-magnet", params: {} };
-    if (window.location.hash === "#guia-gratuito") return { page: "free-guide", params: {} };
-    if (window.location.hash === "#mini-guide") return { page: "mini-guide", params: {} };
-    if (window.location.hash === "#venda" || window.location.hash === "#mapa-10k") return { page: "mini-guide-sales", params: {} };
-    if (window.location.hash === "#products") return { page: "products", params: {} };
+    const hashPage = getHashPage();
+    if (hashPage === "#owner") return { page: "owner", params: {} };
+    if (hashPage === "#guia") return { page: "lead-magnet", params: {} };
+    if (hashPage === "#guia-gratuito") return { page: "free-guide", params: {} };
+    if (hashPage === "#mini-guide") return { page: "mini-guide", params: {} };
+    if (hashPage === "#venda" || hashPage === "#mapa-10k") return { page: "mini-guide-sales", params: {} };
+    if (hashPage === "#products") return { page: "products", params: {} };
     const search = new URLSearchParams(window.location.search);
     if (search.get("payment") === "success") return { page: "products", params: { paymentSuccess: "1" } };
   }
@@ -78,8 +84,13 @@ function AcademyApp() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [ownerMode, setOwnerMode] = useState<boolean>(() => {
     if (isOwnerMode()) return true;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("owner") === "NX-FOUNDER-2026") {
+    // Check both ?owner= in search AND embedded in hash (e.g. #mini-guide?owner=TOKEN)
+    const hashSearch = window.location.hash.includes("?")
+      ? new URLSearchParams(window.location.hash.split("?")[1])
+      : null;
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get("owner") ?? hashSearch?.get("owner");
+    if (token === "NX-FOUNDER-2026") {
       sessionStorage.setItem("nexos-owner-mode", "true");
       return true;
     }
@@ -219,7 +230,7 @@ function AcademyApp() {
       case "owner":
         return <Owner onNavigate={navigate} onOwnerChange={handleOwnerChange} isOwner={ownerMode} />;
       case "mini-guide":
-        return <MiniGuide onNavigate={navigate} />;
+        return <MiniGuide onNavigate={navigate} studentName={studentName || (ownerMode ? "Fundador NexOS" : undefined)} studentEmail={studentEmail || (ownerMode ? "founder@nexos.ai" : undefined)} />;
       case "mini-guide-sales":
         return <MiniGuideSales onNavigate={navigate} />;
       case "free-guide":

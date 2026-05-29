@@ -1,13 +1,54 @@
+import { useState } from "react";
 import Watermark from "@/components/Watermark";
+import { generateMiniGuidePDF } from "@/lib/generate-mini-guide-pdf";
 
 interface MiniGuideProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
+  studentName?: string;
+  studentEmail?: string;
 }
 
-export default function MiniGuide({ onNavigate }: MiniGuideProps) {
+export default function MiniGuide({ onNavigate, studentName, studentEmail }: MiniGuideProps) {
+  const [generating, setGenerating] = useState(false);
+
+  async function handleDownload() {
+    setGenerating(true);
+    try {
+      await generateMiniGuidePDF(
+        studentName || "Leitor NexOS",
+        studentEmail || "leitor@nexosacademy.com"
+      );
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <Watermark>
       <div className="max-w-4xl mx-auto space-y-12 pb-24 px-4">
+        {/* Barra de download fixa no topo */}
+        <div className="sticky top-0 z-40 -mx-4 px-4 py-3 flex items-center justify-between gap-4"
+          style={{ background: "hsl(222 25% 4% / 0.97)", borderBottom: "1px solid hsl(250 90% 65% / 0.2)", backdropFilter: "blur(8px)" }}>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-black uppercase tracking-widest px-3 py-1 rounded-full"
+              style={{ background: "hsl(250 90% 65% / 0.15)", color: "hsl(250 90% 75%)", border: "1px solid hsl(250 90% 65% / 0.3)" }}>
+              Manual de Guerra NexOS
+            </span>
+            {studentName && (
+              <span className="text-xs text-[hsl(220_10%_40%)] hidden sm:block">
+                Licenciado para {studentName}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={handleDownload}
+            disabled={generating}
+            className="shrink-0 flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+            style={{ background: "linear-gradient(135deg, hsl(250 90% 58%), hsl(270 80% 52%))" }}
+          >
+            {generating ? "⏳ Gerando PDF..." : "↓ Baixar PDF"}
+          </button>
+        </div>
         {/* Header Profissional */}
         <div className="rounded-3xl border border-[hsl(250_90%_65%/0.3)] bg-gradient-to-br from-[hsl(222_25%_7%)] to-[hsl(250_30%_8%)] p-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-[hsl(250_90%_65%/0.1)] blur-3xl -mr-20 -mt-20 rounded-full"></div>
