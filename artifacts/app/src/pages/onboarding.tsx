@@ -749,7 +749,7 @@ export default function Onboarding() {
       <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4">
         <div className="w-full max-w-3xl animate-in fade-in duration-700">
           {/* Header */}
-          <div className="text-center mb-10">
+          <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
@@ -760,7 +760,7 @@ export default function Onboarding() {
               Bem-vindo ao NexOS AI
             </h1>
             <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">
-              Qual é a sua situação hoje?
+              A IA monta toda a estratégia a partir do seu briefing
             </p>
           </div>
 
@@ -774,7 +774,7 @@ export default function Onboarding() {
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">Simulação detectada</div>
                   <p className="font-mono text-xs text-foreground leading-relaxed">
-                    Você simulou o lançamento de <strong>{simulatorBanner.productName}</strong> antes de criar sua conta. Selecione "Tenho um produto" e a IA vai usar esses dados para configurar tudo automaticamente.
+                    Você simulou o lançamento de <strong>{simulatorBanner.productName}</strong> antes de criar sua conta. A IA vai usar esses dados automaticamente no briefing.
                   </p>
                 </div>
                 <button onClick={() => { localStorage.removeItem("nexos_simulator_data"); setSimulatorBanner(null); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0">✕</button>
@@ -782,50 +782,75 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* Path cards */}
-          <div className="grid grid-cols-1 gap-4">
-            {PATHS.map((p) => {
-              const Icon = p.icon;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => handlePathSelect(p.id)}
-                  disabled={starting}
-                  className={`text-left w-full border border-border/50 bg-card/40 backdrop-blur-sm p-5 md:p-6 transition-all duration-200 relative overflow-hidden group ${p.glow} disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {/* Corner accents */}
-                  <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/30 group-hover:border-primary transition-colors" />
-                  <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/30 group-hover:border-primary transition-colors" />
-
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-sm border border-border/50 bg-muted/20 flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:bg-primary/10 transition-all">
-                      {starting && path === p.id
-                        ? <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                        : <Icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="font-mono font-bold text-base text-foreground group-hover:text-primary transition-colors">
-                          {p.title}
-                        </h3>
-                        <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 ${p.badgeColor}`}>
-                          {p.badge}
-                        </Badge>
-                      </div>
-                      <p className="text-[11px] font-mono text-primary/70 uppercase tracking-widest mb-2">{p.subtitle}</p>
-                      <p className="text-xs text-muted-foreground font-mono leading-relaxed">{p.desc}</p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0 mt-3" />
-                  </div>
-                </button>
-              );
-            })}
+          {/* ── PRIMARY CTA — direct start ───────────────────────────────── */}
+          <div className="mb-8 relative">
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary" />
+            <div className="border border-primary/40 bg-primary/5 p-6 md:p-8 text-center">
+              <p className="font-mono text-xs uppercase tracking-widest text-primary/70 mb-2">Recomendado</p>
+              <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tighter text-foreground mb-2">
+                Iniciar briefing agora
+              </h2>
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-6 leading-relaxed">
+                Responda as perguntas do time de IA — ela descobre o melhor caminho para você
+              </p>
+              <button
+                onClick={() => handlePathSelect("has_product")}
+                disabled={starting}
+                className="w-full md:w-auto inline-flex items-center justify-center gap-3 rounded-none font-mono uppercase tracking-widest font-black btn-weapon-primary h-14 px-12 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {starting && path === "has_product"
+                  ? <Loader2 className="h-5 w-5 animate-spin" />
+                  : <Rocket className="h-5 w-5" />
+                }
+                Começar briefing
+              </button>
+            </div>
           </div>
 
-          <p className="text-center text-xs font-mono text-muted-foreground/50 uppercase tracking-widest mt-8">
-            Você pode mudar de caminho a qualquer momento
-          </p>
+          {/* ── SECONDARY — specific paths ──────────────────────────────── */}
+          <div className="mb-4">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 text-center mb-4">
+              Ou escolha um cenário específico
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              {PATHS.map((p) => {
+                const Icon = p.icon;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => handlePathSelect(p.id)}
+                    disabled={starting}
+                    className={`text-left w-full border border-border/30 bg-card/20 backdrop-blur-sm p-4 md:p-5 transition-all duration-200 relative overflow-hidden group ${p.glow} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary/20 group-hover:border-primary transition-colors" />
+                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary/20 group-hover:border-primary transition-colors" />
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-sm border border-border/40 bg-muted/10 flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:bg-primary/10 transition-all">
+                        {starting && path === p.id
+                          ? <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                          : <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                            {p.title}
+                          </span>
+                          <Badge variant="outline" className={`rounded-none font-mono text-[10px] uppercase tracking-widest px-1.5 py-0 ${p.badgeColor}`}>
+                            {p.badge}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 line-clamp-1">{p.subtitle}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     );
