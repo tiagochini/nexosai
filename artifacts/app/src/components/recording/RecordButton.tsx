@@ -190,7 +190,7 @@ function PreflightDialog({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="w-full max-w-lg border border-border bg-background shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/60">
@@ -450,6 +450,9 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
   const timerRef          = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingRef      = useRef<RecordingMeta | null>(null);
   const pendingConfigRef  = useRef<SetupConfig | null>(null);
+  const canvasRafRef      = useRef<number | null>(null);
+  const canvasScreenRef   = useRef<HTMLVideoElement | null>(null);
+  const canvasCamRef      = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => { recordingRef.current = recording; }, [recording]);
 
@@ -499,6 +502,9 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       micStreamRef.current?.getTracks().forEach(t => t.stop());
       camStreamRef.current?.getTracks().forEach(t => t.stop());
       audioCtxRef.current?.close().catch(() => {});
+      if (canvasRafRef.current !== null) cancelAnimationFrame(canvasRafRef.current);
+      canvasScreenRef.current?.pause();
+      canvasCamRef.current?.pause();
     };
   }, [stopTimer]);
 
@@ -511,6 +517,19 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
   // ── Open setup dialog ─────────────────────────────────────────────────────
   const openSetup = () => {
+    // Reset any lingering session state from a previous recording
+    setUiState("idle");
+    setRecording(null);
+    recordingRef.current = null;
+    setElapsed(0);
+    setVideoBlob(null);
+    setUploadDone(false);
+    setEventCount(0);
+    setLastEvent(null);
+    setHasMic(false);
+    setHasSystem(false);
+    setHasCamera(false);
+    setCamStream(null);
     setConfig({
       sessionName: "",
       audioMode: "both",
@@ -593,6 +612,52 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       }
     }
 
+    // 3.5 Canvas compositing — bakes camera PiP directly into the video stream
+    // This guarantees the camera appears in the recording regardless of what
+    // the user shared (tab, window, or full screen).
+    let combinedVideoTrack: MediaStreamTrack | undefined = displayStream.getVideoTracks()[0];
+    if (cfg.enableCamera && cameraStream) {
+      const rawVideoTrack = displayStream.getVideoTracks()[0];
+      const settings = rawVideoTrack?.getSettings() ?? {};
+      const W = (settings.width as number | undefined) ?? 1920;
+      const H = (settings.height as number | undefined) ?? 1080;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx2d = canvas.getContext("2d")!;
+
+      const screenVid = document.createElement("video");
+      screenVid.srcObject = new MediaStream(rawVideoTrack ? [rawVideoTrack] : []);
+      screenVid.muted = true;
+      canvasScreenRef.current = screenVid;
+      await screenVid.play().catch(() => {});
+
+      const camVid = document.createElement("video");
+      camVid.srcObject = cameraStream;
+      camVid.muted = true;
+      canvasCamRef.current = camVid;
+      await camVid.play().catch(() => {});
+
+      // PiP in bottom-right corner: 25% wide, 4:3 ratio, 24px margin
+      const PW = Math.round(W * 0.25);
+      const PH = Math.round(PW * 0.75);
+      const PX = W - PW - 24;
+      const PY = H - PH - 24;
+
+      const paint = () => {
+        ctx2d.drawImage(screenVid, 0, 0, W, H);
+        ctx2d.drawImage(camVid, PX, PY, PW, PH);
+        ctx2d.strokeStyle = "rgba(99,102,241,0.85)";
+        ctx2d.lineWidth = 4;
+        ctx2d.strokeRect(PX, PY, PW, PH);
+        canvasRafRef.current = requestAnimationFrame(paint);
+      };
+      paint();
+
+      combinedVideoTrack = canvas.captureStream(60).getVideoTracks()[0];
+    }
+
     // 4. Audio mixing (if any audio)
     const audioStreams: MediaStream[] = [];
     if (cfg.audioMode !== "none") {
@@ -600,12 +665,11 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       if (needMic && micStream) audioStreams.push(micStream);
     }
 
-    let combinedVideoTrack = displayStream.getVideoTracks()[0];
     let mixedAudioTrack: MediaStreamTrack | null = null;
 
     if (audioStreams.length > 0) {
-      const { mixed, ctx } = mixAudioStreams(audioStreams);
-      audioCtxRef.current = ctx;
+      const { mixed, ctx: audioCtx } = mixAudioStreams(audioStreams);
+      audioCtxRef.current = audioCtx;
       mixedAudioTrack = mixed.getAudioTracks()[0] ?? null;
     }
 
@@ -744,6 +808,9 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
     displayStreamRef.current?.getTracks().forEach(t => t.stop());
     micStreamRef.current?.getTracks().forEach(t => t.stop());
     audioCtxRef.current?.close().catch(() => {});
+    if (canvasRafRef.current !== null) { cancelAnimationFrame(canvasRafRef.current); canvasRafRef.current = null; }
+    canvasScreenRef.current?.pause(); canvasScreenRef.current = null;
+    canvasCamRef.current?.pause(); canvasCamRef.current = null;
 
     try {
       const data = await customFetch<{ recording: RecordingMeta }>(`/api/recordings/${recId}/stop`, {
