@@ -178,7 +178,7 @@ export default function MapaPage() {
                 <div className="border border-primary/20 bg-primary/5 px-5 py-4 mb-6 text-left">
                   <p className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">Bônus de indicação</p>
                   <p className="text-sm text-foreground/80">
-                    Compartilhe com amigos usando o link que você recebeu — cada amigo que baixar rende créditos da equipe especializada para o indicador.
+                    Compartilhe com amigos usando o link que você recebeu — cada amigo que baixar rende créditos do agente para o indicador.
                   </p>
                 </div>
               )}

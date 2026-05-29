@@ -284,7 +284,7 @@ export function calculateReadinessScore(
     B: "Boa preparação. Pequenos ajustes aumentariam a precisão da execução.",
     C: "Preparação mínima para execução. Complete os itens faltantes para melhores resultados.",
     D: "Preparação insuficiente. Riscos elevados de execução genérica e resultados abaixo do potencial.",
-    F: "Intake incompleto. A IA não tem dados suficientes para personalizar a campanha.",
+    F: "Intake incompleto. O agente não tem dados suficientes para personalizar a campanha.",
   };
 
   return {

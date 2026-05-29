@@ -154,7 +154,7 @@ function ConfigPanel({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 block mb-1">Contexto do produto (para a equipe especializada)</label>
+          <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 block mb-1">Contexto do produto (para a agente)</label>
           <textarea
             className="w-full bg-transparent border border-border/40 font-mono text-xs text-foreground px-3 py-2 focus:outline-none focus:border-primary/50 resize-none h-16"
             value={config.productContext}
@@ -340,7 +340,7 @@ export default function SocialModerationPage() {
             <Shield className="h-4 w-4 text-primary" />
             <div>
               <h1 className="font-mono font-black text-sm uppercase tracking-widest text-foreground">Moderação de Comentários</h1>
-              <p className="font-mono text-[11px] text-muted-foreground/50">Bot equipe especializada responde, oculta e deleta automaticamente</p>
+              <p className="font-mono text-[11px] text-muted-foreground/50">Bot agente responde, oculta e deleta automaticamente</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

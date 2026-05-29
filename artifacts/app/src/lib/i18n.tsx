@@ -7,7 +7,7 @@ export const APP_TRANSLATIONS = {
   "pt-BR": {
     nav: {
       main: "Sistemas Principais",
-      specialist_team: "Time da equipe especializada",
+      agent_team: "Time do agente",
       tools: "Ferramentas",
       growth: "Crescimento",
       automations: "Automações",
@@ -31,8 +31,8 @@ export const APP_TRANSLATIONS = {
       affiliates: "Afiliados",
       products: "Produtos",
       integrations: "Integrações",
-      credits: "Créditos da equipe especializada",
-      memory: "Memória da equipe especializada",
+      credits: "Créditos do agente",
+      memory: "Memória do agente",
       billing: "Plano & Fatura",
       settings: "Configurações",
       admin: "Admin SaaS",
@@ -50,8 +50,8 @@ export const APP_TRANSLATIONS = {
     },
     user: {
       settings: "Configurações",
-      credits: "Créditos da equipe especializada",
-      ai_language: "Idioma da equipe especializada",
+      credits: "Créditos do agente",
+      ai_language: "Idioma do agente",
       logout: "Sair da Plataforma",
       default_name: "Usuário",
     },
@@ -105,7 +105,7 @@ export const APP_TRANSLATIONS = {
   "en-US": {
     nav: {
       main: "Core Systems",
-      specialist_team: "Equipe Especializada",
+      agent_team: "Agente Especializado",
       tools: "Tools",
       growth: "Growth",
       automations: "Automations",
@@ -203,7 +203,7 @@ export const APP_TRANSLATIONS = {
   "en-AU": {
     nav: {
       main: "Core Systems",
-      specialist_team: "Equipe Especializada",
+      agent_team: "Agente Especializado",
       tools: "Tools",
       growth: "Growth",
       automations: "Automations",
@@ -301,7 +301,7 @@ export const APP_TRANSLATIONS = {
   "es-LA": {
     nav: {
       main: "Sistemas Principales",
-      specialist_team: "Equipo da equipe especializada",
+      agent_team: "Equipo do agente",
       tools: "Herramientas",
       growth: "Crecimiento",
       automations: "Automatizaciones",
@@ -325,8 +325,8 @@ export const APP_TRANSLATIONS = {
       affiliates: "Afiliados",
       products: "Productos",
       integrations: "Integraciones",
-      credits: "Créditos da equipe especializada",
-      memory: "Memoria da equipe especializada",
+      credits: "Créditos do agente",
+      memory: "Memoria do agente",
       billing: "Plan y Facturación",
       settings: "Configuración",
       admin: "Admin SaaS",
@@ -344,8 +344,8 @@ export const APP_TRANSLATIONS = {
     },
     user: {
       settings: "Configuración",
-      credits: "Créditos da equipe especializada",
-      ai_language: "Idioma da equipe especializada",
+      credits: "Créditos do agente",
+      ai_language: "Idioma do agente",
       logout: "Cerrar Sesión",
       default_name: "Usuario",
     },

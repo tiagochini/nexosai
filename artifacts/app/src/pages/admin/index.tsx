@@ -405,7 +405,7 @@ export default function AdminPage() {
                   <div className="font-mono text-[11px] text-muted-foreground/50 mt-1">{fin?.packSalesCount ?? 0} packs vendidos</div>
                 </div>
                 <div className="border border-cyan-400/20 bg-cyan-400/5 p-5">
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/60 mb-2">Custo da equipe especializada</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/60 mb-2">Custo do agente</div>
                   <div className="font-mono text-3xl font-black text-cyan-400">
                     {fmtBRL(fin?.totalAiCostBrl ?? 0)}
                   </div>

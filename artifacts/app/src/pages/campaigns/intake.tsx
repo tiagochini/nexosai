@@ -148,7 +148,7 @@ function TypeProposalCard({
       <div className="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-primary/50" />
 
       <div className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-3">
-        Modelo Recomendado pela equipe especializada
+        Modelo Recomendado pelo agente
       </div>
 
       <div className="flex items-start gap-3 mb-3">
@@ -570,7 +570,7 @@ export default function CampaignIntake() {
       toast.error(
         err instanceof ApiError && err.status === 401
           ? "Sessão expirada. Tente enviar novamente — o token foi renovado automaticamente."
-          : "Erro de comunicação com nossa equipe. Sua mensagem foi preservada. Tente novamente.",
+          : "Erro de comunicação com o agente. Sua mensagem foi preservada. Tente novamente.",
         { duration: 6000 },
       );
     } finally {
@@ -610,7 +610,7 @@ export default function CampaignIntake() {
         <Skeleton className="h-8 w-64 bg-muted/20" />
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
-          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Inicializando Briefing equipe especializada...</p>
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Inicializando Briefing agente...</p>
         </div>
       </div>
     );
@@ -636,7 +636,7 @@ export default function CampaignIntake() {
               </h1>
             </div>
             <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest">
-              A equipe especializada entende seu produto, define o modelo ideal e extrai os dados automaticamente
+              A agente entende seu produto, define o modelo ideal e extrai os dados automaticamente
             </p>
           </div>
           <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
@@ -660,12 +660,12 @@ export default function CampaignIntake() {
       <FeatureOnboarding
         featureKey={FEATURE_KEYS.BRIEFING}
         title="BRIEFING ESTRATÉGICO"
-        description="Converse com nossa equipe em linguagem natural — ela extrai os dados do seu produto, público e metas, e propõe o modelo de lançamento ideal."
+        description="Converse com o agente em linguagem natural — ela extrai os dados do seu produto, público e metas, e propõe o modelo de lançamento ideal."
         variant="banner"
         steps={[
           "Fale sobre seu produto como se estivesse contando para um amigo — sem jargão",
           "Use voz (microfone), envie um áudio MP3 ou um vídeo de apresentação — o sistema transcreve automaticamente",
-          "A equipe especializada propõe o modelo ideal (PLF, Semente, Perpétuo…) com base nas suas respostas",
+          "A agente propõe o modelo ideal (PLF, Semente, Perpétuo…) com base nas suas respostas",
           "Quando completude ≥ 80%, o plano completo é gerado em segundos",
         ]}
       />
@@ -674,7 +674,7 @@ export default function CampaignIntake() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1 border border-border/50 bg-card/40 p-1 rounded-sm">
           {[
-            { id: "chat" as const, label: "Chat com nossa equipe", icon: MessageSquare },
+            { id: "chat" as const, label: "Chat com agente", icon: MessageSquare },
             { id: "form" as const, label: "Formulário", icon: LayoutList },
           ].map((v) => (
             <button key={v.id} onClick={() => setView(v.id)}
@@ -780,7 +780,7 @@ export default function CampaignIntake() {
                   Como funciona o briefing
                 </div>
                 <span className="text-xs font-mono text-muted-foreground/70 leading-relaxed">
-                  A equipe vai fazer perguntas simples sobre seu produto, seu público e seus objetivos.
+                  O agente vai fazer perguntas simples sobre seu produto, seu público e seus objetivos.
                   Responda com suas palavras — não precisa ser técnico. Em ~3 minutos, ela monta tudo.
                 </span>
               </div>
@@ -884,7 +884,7 @@ export default function CampaignIntake() {
                       Briefing 100% Completo
                     </div>
                     <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
-                      A equipe especializada coletou tudo que precisa para montar o Master Plan de Lançamento
+                      A agente coletou tudo que precisa para montar o Master Plan de Lançamento
                     </p>
                   </div>
                   <div className="shrink-0 font-mono text-2xl font-black text-success/20 hidden sm:block">
@@ -971,7 +971,7 @@ export default function CampaignIntake() {
               {isTranscribing && (
                 <div className="flex items-center gap-2 px-2 py-1 border border-violet-500/40 bg-violet-500/10">
                   <Loader2 className="w-3 h-3 text-violet-400 animate-spin shrink-0" />
-                  <span className="font-mono text-[11px] text-violet-400 uppercase tracking-widest">Whisper AI transcrevendo… aguarde</span>
+                  <span className="font-mono text-[11px] text-violet-400 uppercase tracking-widest">Transcrevendo… aguarde</span>
                 </div>
               )}
 
@@ -995,7 +995,7 @@ export default function CampaignIntake() {
                     void handleSend();
                   }
                 }}
-                placeholder="Digite sua resposta aqui... ou use o microfone para falar (a equipe entende tudo)"
+                placeholder="Digite sua resposta aqui... ou use o microfone para falar (o agente entende tudo)"
                 disabled={sending || confirmingType}
                 rows={isMobile ? 5 : 7}
                 className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[100px]"
@@ -1065,7 +1065,7 @@ export default function CampaignIntake() {
               </div>
 
               <p className="text-[10px] font-mono text-muted-foreground/40 text-right">
-                Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF · áudio/vídeo transcrito por Whisper AI
+                Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF, áudio e vídeo
               </p>
             </div>
           ))}
@@ -1131,7 +1131,7 @@ export default function CampaignIntake() {
                   Nenhuma pergunta encontrada para este tipo de campanha.
                 </p>
                 <p className="font-mono text-[11px] text-muted-foreground/50">
-                  Use o chat para preencher o briefing com ajuda da equipe especializada.
+                  Use o chat para preencher o briefing com ajuda do agente.
                 </p>
                 <Button variant="outline" size="sm" onClick={() => setView("chat")}
                   className="font-mono uppercase tracking-widest rounded-none border-border/50 text-xs mt-1">

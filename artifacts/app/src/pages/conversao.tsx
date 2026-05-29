@@ -102,7 +102,7 @@ function VideoPlayer({ url }: { url: string | null }) {
         <div className="absolute top-4 left-4">
           <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/30 bg-primary/5 px-2 py-1">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            equipe especializada narrada · 8 minutos
+            agente narrada · 8 minutos
           </div>
         </div>
       </div>
@@ -185,7 +185,7 @@ function VideoPlayer({ url }: { url: string | null }) {
   );
 }
 
-// ─── Script do vídeo — roteiro do narrador equipe especializada ─────────────────────────────────
+// ─── Script do vídeo — roteiro do narrador agente ─────────────────────────────────
 // (exibido como legenda/transcript abaixo do vídeo para quem não pode assistir)
 const SCRIPT_SECTIONS = [
   {
@@ -201,7 +201,7 @@ const SCRIPT_SECTIONS = [
   {
     tempo: "3:00 – 5:00",
     titulo: "Como funciona na prática",
-    texto: "Você responde 7 perguntas sobre seu produto e público. A equipe monta tudo — do cronograma ao último email de escassez. Você aprova. Ela executa. Em 72 horas seu próximo lançamento está rodando.",
+    texto: "Você responde 7 perguntas sobre seu produto e público. O agente monta tudo — do cronograma ao último email de escassez. Você aprova. Ela executa. Em 72 horas seu próximo lançamento está rodando.",
   },
   {
     tempo: "5:00 – 6:30",
@@ -430,7 +430,7 @@ export default function ConversaoPage() {
 
               {showTranscript && (
                 <div className="border border-border/30 bg-card/20 p-5 space-y-5">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Roteiro — narração da equipe especializada</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Roteiro — narração do agente</div>
                   {SCRIPT_SECTIONS.map((sec, i) => (
                     <div key={i} className="border-l-2 border-primary/20 pl-4">
                       <div className="flex items-center gap-2 mb-1">
@@ -508,7 +508,7 @@ export default function ConversaoPage() {
       {/* ── Footer ── */}
       <div className="border-t border-border/30 bg-muted/5 py-5 px-6 text-center mb-16">
         <p className="font-mono text-[10px] text-muted-foreground/30 uppercase tracking-widest">
-          NexOS · Plataforma de Lançamento com nossa equipe · contato@agencianexos.vip
+          NexOS · Plataforma de Lançamento com o agente · contato@agencianexos.vip
         </p>
       </div>
 

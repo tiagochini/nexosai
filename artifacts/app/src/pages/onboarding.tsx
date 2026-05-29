@@ -139,7 +139,7 @@ const INTEGRATION_CATALOG: IntegrationItem[] = [
     description: "Checkout e gestão de produtos digitais com conversão automática de leads.",
     benefit: {
       has_product:        "Compras no Kiwify trigam automações de pós-venda no NexOS instantaneamente",
-      building_product:   "Checkout rápido para o seu produto novo com upsell configurado pela equipe especializada",
+      building_product:   "Checkout rápido para o seu produto novo com upsell configurado pelo agente",
       affiliate_nexos:    "Monitoramento de vendas de afiliados com atualização de segmentos em tempo real",
       has_audience:       "Carrinho de alta conversão para o micro-lançamento com pós-venda automatizado",
     },
@@ -170,7 +170,7 @@ const INTEGRATION_CATALOG: IntegrationItem[] = [
     benefit: {
       has_product:        "Vídeos de lançamento postados automaticamente no TikTok nos horários de maior alcance",
       building_product:   "Conteúdo de validação do produto publicado no TikTok para atrair primeiros compradores",
-      affiliate_nexos:    "Vídeos de afiliado gerados pela equipe especializada e postados no TikTok com links de rastreamento",
+      affiliate_nexos:    "Vídeos de afiliado gerados pelo agente e postados no TikTok com links de rastreamento",
       has_audience:       "Reels de pré-lançamento disparados automaticamente para engajar sua audiência no TikTok",
     },
     category: "social",
@@ -194,7 +194,7 @@ const PATHS = [
     icon: Package,
     title: "Tenho um produto",
     subtitle: "Pronto ou em andamento",
-    desc: "Curso, mentoria, serviço, software ou produto físico. Vamos montar sua estratégia de lançamento com nossa equipe.",
+    desc: "Curso, mentoria, serviço, software ou produto físico. Vamos montar sua estratégia de lançamento com o agente.",
     badge: "Mais comum",
     badgeColor: "text-primary border-primary/40 bg-primary/10",
     glow: "hover:border-primary/60 hover:shadow-[0_0_30px_hsl(var(--primary)/0.15)]",
@@ -204,7 +204,7 @@ const PATHS = [
     icon: Sparkles,
     title: "Tenho expertise mas não tenho produto",
     subtitle: "Vamos criar juntos",
-    desc: "Nossa equipe analisa suas habilidades e o mercado para propor 3 ideias de produto viáveis — você escolhe e construímos juntos.",
+    desc: "Nosso agente analisa suas habilidades e o mercado para propor 3 ideias de produto viáveis — você escolhe e construímos juntos.",
     badge: "IA + Você",
     badgeColor: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
     glow: "hover:border-cyan-400/60 hover:shadow-[0_0_30px_hsl(175_100%_60%/0.12)]",
@@ -224,7 +224,7 @@ const PATHS = [
     icon: Users,
     title: "Tenho audiência, quero monetizar",
     subtitle: "Creator economy · micro-lançamento · membros",
-    desc: "Você já tem seguidores, canal ou comunidade. A equipe descobre o modelo certo — micro-lançamento, área de membros ou produto derivado — e executa tudo.",
+    desc: "Você já tem seguidores, canal ou comunidade. O agente descobre o modelo certo — micro-lançamento, área de membros ou produto derivado — e executa tudo.",
     badge: "Creator",
     badgeColor: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
     glow: "hover:border-emerald-400/60 hover:shadow-[0_0_30px_hsl(160_84%_39%/0.12)]",
@@ -513,7 +513,7 @@ export default function Onboarding() {
       // Revert the optimistic user message and restore the typed text
       setMessages(messages);
       setInputValue(userMsg);
-      toast.error("Erro de comunicação com nossa equipe. Sua mensagem foi preservada. Tente novamente.", { duration: 6000 });
+      toast.error("Erro de comunicação com o agente. Sua mensagem foi preservada. Tente novamente.", { duration: 6000 });
     } finally {
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -662,7 +662,7 @@ export default function Onboarding() {
         icon: Rocket,
         title: "Micro-lançamento por conteúdo",
         subtitle: "0 a 7 dias do zero ao faturamento",
-        desc: "Crie um produto de entrada (R$97–R$497) baseado no conteúdo que você já publica. A equipe monta a oferta, escreve o copy e conduz o lançamento pelo seu canal.",
+        desc: "Crie um produto de entrada (R$97–R$497) baseado no conteúdo que você já publica. O agente monta a oferta, escreve o copy e conduz o lançamento pelo seu canal.",
         badge: "Mais rápido",
       },
       {
@@ -678,7 +678,7 @@ export default function Onboarding() {
         icon: BarChart2,
         title: "Produto derivado da audiência",
         subtitle: "Lançamento PLF completo",
-        desc: "Sua audiência já é sua lista quente. A equipe analisa o público, cria o produto ideal, monta a sequência de lançamento completa e executa automaticamente.",
+        desc: "Sua audiência já é sua lista quente. O agente analisa o público, cria o produto ideal, monta a sequência de lançamento completa e executa automaticamente.",
         badge: "Lançamento completo",
       },
     ];
@@ -700,7 +700,7 @@ export default function Onboarding() {
               Como quer monetizar sua audiência?
             </h1>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Escolha o modelo — a equipe executa tudo a partir daqui
+              Escolha o modelo — o agente executa tudo a partir daqui
             </p>
           </div>
 
@@ -760,7 +760,7 @@ export default function Onboarding() {
               Bem-vindo ao NexOS
             </h1>
             <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">
-              A equipe monta toda a estratégia a partir do seu briefing
+              O agente monta toda a estratégia a partir do seu briefing
             </p>
           </div>
 
@@ -774,7 +774,7 @@ export default function Onboarding() {
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">Simulação detectada</div>
                   <p className="font-mono text-xs text-foreground leading-relaxed">
-                    Você simulou o lançamento de <strong>{simulatorBanner.productName}</strong> antes de criar sua conta. A equipe vai usar esses dados automaticamente no briefing.
+                    Você simulou o lançamento de <strong>{simulatorBanner.productName}</strong> antes de criar sua conta. O agente vai usar esses dados automaticamente no briefing.
                   </p>
                 </div>
                 <button onClick={() => { localStorage.removeItem("nexos_simulator_data"); setSimulatorBanner(null); }} className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0">✕</button>
@@ -792,7 +792,7 @@ export default function Onboarding() {
                 Iniciar briefing agora
               </h2>
               <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-6 leading-relaxed">
-                Responda as perguntas do time da equipe especializada — ela descobre o melhor caminho para você
+                Responda as perguntas do time do agente — ela descobre o melhor caminho para você
               </p>
               <button
                 onClick={() => handlePathSelect("has_product")}
@@ -1303,7 +1303,7 @@ export default function Onboarding() {
         <div className="text-center">
           <div className="inline-flex items-center gap-2 border border-success/40 bg-success/10 px-3 py-1.5 mb-4">
             <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-            <span className="font-mono text-xs uppercase tracking-widest text-success">Plano Gerado pela equipe especializada</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-success">Plano Gerado pelo agente</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-mono font-bold uppercase tracking-tighter text-foreground mb-2">
             Seu Lançamento em 7 Dias
@@ -1348,7 +1348,7 @@ export default function Onboarding() {
             <div className="flex items-center gap-2">
               <Bot className="h-3.5 w-3.5 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                Sistema de 29 Agentes equipe especializada
+                Sistema de 29 Agentes agente
               </span>
             </div>
             <div className="flex items-center gap-3">

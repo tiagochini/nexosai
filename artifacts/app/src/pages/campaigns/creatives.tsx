@@ -568,7 +568,7 @@ export default function CreativesPage() {
                 {autoGenPending.length} conceito{autoGenPending.length !== 1 ? "s" : ""} gerado{autoGenPending.length !== 1 ? "s" : ""} automaticamente do briefing de mídia
               </p>
               <p className="font-mono text-xs text-muted-foreground mt-1">
-                O briefing de mídia aprovado gerou esses conceitos automaticamente. Revise cada um e aprove para a equipe gerar a imagem com DALL-E 3.
+                O briefing de mídia aprovado gerou esses conceitos automaticamente. Revise cada um e aprove para o agente gerar a imagem com DALL-E 3.
               </p>
             </div>
             <div className="font-mono text-[10px] text-primary/60 uppercase tracking-widest shrink-0 pt-0.5">
@@ -588,7 +588,7 @@ export default function CreativesPage() {
           <Sparkles className="h-10 w-10 text-primary/20 mx-auto mb-4" />
           <div className="font-mono font-black uppercase tracking-tight text-lg text-foreground/60 mb-2">Nenhum criativo ainda</div>
           <p className="font-mono text-sm text-muted-foreground/50 max-w-sm mx-auto mb-6">
-            Clique em "Gerar Criativo" para a equipe criar o conceito visual completo — headline, paleta de cores, composição e prompt para geração de imagem.
+            Clique em "Gerar Criativo" para o agente criar o conceito visual completo — headline, paleta de cores, composição e prompt para geração de imagem.
           </p>
           <GenerateForm campaignId={campaignId!} onGenerated={() => { refetch(); setAutoRefresh(true); }} />
         </div>

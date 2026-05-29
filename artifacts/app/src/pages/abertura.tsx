@@ -208,7 +208,7 @@ function CustoInacaoSection() {
     {
       rotulo: "1 lançamento manual por mês",
       custo: "40h do seu tempo × 12 meses = 480h/ano",
-      detalhe: "Se o seu tempo vale R$200/h → R$96.000 desperdiçados executando o que a equipe especializada faria por você",
+      detalhe: "Se o seu tempo vale R$200/h → R$96.000 desperdiçados executando o que a agente faria por você",
       icon: Clock,
     },
     {
@@ -220,7 +220,7 @@ function CustoInacaoSection() {
     {
       rotulo: "Copy feita sem otimização",
       custo: "1–3% de conversão quando poderia ser 4–8%",
-      detalhe: "Em R$10k de tráfego: a diferença entre copy manual e copy otimizada pela equipe especializada é R$300–R$500 em vendas",
+      detalhe: "Em R$10k de tráfego: a diferença entre copy manual e copy otimizada pelo agente é R$300–R$500 em vendas",
       icon: BarChart2,
     },
     {
@@ -278,7 +278,7 @@ function AnchorSection() {
         <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">A COMPARAÇÃO QUE MUDA TUDO</div>
         <h2 className="text-4xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-4">
           Pagar R$10.000 para<br />aprender a lançar você mesmo.<br />
-          <span className="text-primary">Ou ter a equipe especializada lançando por você.</span>
+          <span className="text-primary">Ou ter a agente lançando por você.</span>
         </h2>
         <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
           O curso de lançamento mais famoso do Brasil custa R$10.000 e te dá acesso por 1 ano. Você assiste às aulas, aprende cada etapa, e então <strong className="text-foreground">executa tudo sozinho</strong> — estratégia, copy, segmentação, disparos, carrinho. Semanas de trabalho por lançamento.
@@ -323,7 +323,7 @@ function AnchorSection() {
             Em todas as alternativas acima, você ainda é o executor.
           </p>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-            Você aprende, coordena, gerencia — ou paga alguém para fazer e ainda precisa gerenciar esse alguém. No NexOS, a equipe executa. Você aprova. Essa diferença vale muito mais do que a diferença de preço entre qualquer uma das opções acima e o preço de Fundador de hoje.
+            Você aprende, coordena, gerencia — ou paga alguém para fazer e ainda precisa gerenciar esse alguém. No NexOS, o agente executa. Você aprova. Essa diferença vale muito mais do que a diferença de preço entre qualquer uma das opções acima e o preço de Fundador de hoje.
           </p>
         </div>
       </div>
@@ -342,7 +342,7 @@ function ComunidadeSection() {
     {
       icon: Users,
       titulo: "Grupo privado dos Fundadores",
-      desc: "Canal direto com o time de produto. Nenhum usuário comum tem acesso. Você reporta, sugere e influencia o roadmap antes de todo mundo. Suas campanhas moldam o que a equipe especializada aprende.",
+      desc: "Canal direto com o time de produto. Nenhum usuário comum tem acesso. Você reporta, sugere e influencia o roadmap antes de todo mundo. Suas campanhas moldam o que a agente aprende.",
     },
     {
       icon: Zap,
@@ -408,7 +408,7 @@ function OfertaSection({ expired }: { expired: boolean }) {
           <p className="font-mono text-base text-foreground leading-relaxed">
             <strong>Você não chegou até aqui por acaso.</strong> Você entrou na lista, acompanhou o aquecimento, tirou dúvidas — porque já decidiu que precisa disso. A única decisão que sobrou é:{" "}
             <strong className="text-primary">fazer hoje com o preço de Fundador</strong> — ou depois, sem esse preço, sem o grupo, sem o onboarding individual.{" "}
-            A equipe vai lançar seu produto de qualquer jeito. A questão é o quanto você vai pagar por isso.
+            O agente vai lançar seu produto de qualquer jeito. A questão é o quanto você vai pagar por isso.
           </p>
         </div>
 
@@ -590,7 +590,7 @@ export default function AberturaPage() {
 
       <div className="border-t border-border/30 bg-muted/5 py-5 px-6 text-center mb-16">
         <p className="font-mono text-[10px] text-muted-foreground/30 uppercase tracking-widest">
-          NexOS · Plataforma de Lançamento com nossa equipe · contato@agencianexos.vip
+          NexOS · Plataforma de Lançamento com o agente · contato@agencianexos.vip
         </p>
       </div>
 

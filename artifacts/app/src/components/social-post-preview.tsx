@@ -126,7 +126,7 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
           )}
           <div className="text-white/50 text-[10px] uppercase tracking-widest mb-2">Visual</div>
           <div className="text-white/80 text-[11px] leading-relaxed text-center px-2 font-medium">
-            {piece.visualDirection?.slice(0, 80) ?? "Arte gerada pela equipe especializada com identidade visual da campanha"}
+            {piece.visualDirection?.slice(0, 80) ?? "Arte gerada pelo agente com identidade visual da campanha"}
           </div>
         </div>
         {isReel && (

@@ -685,7 +685,7 @@ export function SimulatorSection() {
               <div className="border border-primary/20 bg-primary/5 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
                   <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground mb-1">
-                    A equipe especializada já sabe como atingir esses números.
+                    A agente já sabe como atingir esses números.
                   </div>
                   <div className="font-mono text-[11px] text-muted-foreground/60">
                     Cada plataforma, cada segmento, cada horário de disparo — automatizado.

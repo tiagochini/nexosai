@@ -31,7 +31,7 @@ const GOAL_OPTIONS: GoalOption[] = [
     id: "launch",
     icon: Rocket,
     title: "Quero faturar alto num lançamento de carrinho aberto",
-    desc: "A equipe monta a estratégia completa para R$100k+ em 7 dias. Mesmo sem copywriter, sem agência e mesmo que você nunca tenha lançado antes.",
+    desc: "O agente monta a estratégia completa para R$100k+ em 7 dias. Mesmo sem copywriter, sem agência e mesmo que você nunca tenha lançado antes.",
     badge: "6 Dígitos",
     badgeTextColor: "text-primary",
     badgeBorderColor: "border-primary/40",
@@ -104,7 +104,7 @@ export default function NewCampaign() {
   const createMutation = useCreateCampaign({
     mutation: {
       onSuccess: (data) => {
-        toast.success("Perfeito! A equipe especializada está pronta para o seu briefing.");
+        toast.success("Perfeito! A agente está pronta para o seu briefing.");
         setLocation(`/campaigns/${data.campaign.id}/intake`);
       },
       onError: () => toast.error("Erro ao criar. Tente novamente."),
@@ -155,7 +155,7 @@ export default function NewCampaign() {
               <span className="text-primary">próxima campanha</span>
             </h1>
             <p className="text-sm text-muted-foreground font-mono mt-3 max-w-lg">
-              A equipe faz as perguntas certas e monta tudo por você. Não precisa escolher nada agora.
+              O agente faz as perguntas certas e monta tudo por você. Não precisa escolher nada agora.
             </p>
           </div>
         ) : (
@@ -193,7 +193,7 @@ export default function NewCampaign() {
                     Iniciar briefing agora
                   </h3>
                   <p className="font-mono text-[12px] text-muted-foreground/60 mt-1">
-                    A equipe descobre o melhor cenário para você durante a conversa — sem escolhas manuais.
+                    O agente descobre o melhor cenário para você durante a conversa — sem escolhas manuais.
                   </p>
                 </div>
               </div>
@@ -293,8 +293,8 @@ export default function NewCampaign() {
             <div className="flex items-center gap-4 border p-4 border-primary/30 bg-primary/5">
               <Brain className="h-5 w-5 shrink-0 text-primary" />
               <div className="flex-1 min-w-0">
-                <div className="font-mono text-sm font-bold text-foreground leading-snug">Briefing guiado pela equipe especializada</div>
-                <div className="font-mono text-[11px] uppercase tracking-widest mt-1 text-primary/70">A equipe define o cenário durante a conversa</div>
+                <div className="font-mono text-sm font-bold text-foreground leading-snug">Briefing guiado pelo agente</div>
+                <div className="font-mono text-[11px] uppercase tracking-widest mt-1 text-primary/70">O agente define o cenário durante a conversa</div>
               </div>
               <button
                 onClick={() => setStep(1)}
@@ -326,15 +326,15 @@ export default function NewCampaign() {
                 placeholder="Ex: Curso de Marketing Digital"
               />
               <p className="font-mono text-[11px] text-muted-foreground/40">
-                Só para você se organizar internamente. A equipe vai entender tudo durante o briefing.
+                Só para você se organizar internamente. O agente vai entender tudo durante o briefing.
               </p>
             </div>
 
             {/* What happens next */}
             <div className="grid grid-cols-3 gap-4">
               {[
-                { num: "01", title: "Briefing rápido", desc: "~3 min de conversa com nossa equipe sobre seu produto" },
-                { num: "02", title: "Plano completo", desc: "Estratégia, cronograma e canais definidos pela equipe especializada" },
+                { num: "01", title: "Briefing rápido", desc: "~3 min de conversa com o agente sobre seu produto" },
+                { num: "02", title: "Plano completo", desc: "Estratégia, cronograma e canais definidos pelo agente" },
                 { num: "03", title: "Conteúdo + Execução", desc: "Você aprova e a campanha vai ao ar" },
               ].map(s => (
                 <div key={s.num} className="flex flex-col gap-2 p-5 border border-border/20 bg-card/20">
@@ -361,7 +361,7 @@ export default function NewCampaign() {
               >
                 {createMutation.isPending
                   ? <span className="animate-pulse font-mono">Iniciando...</span>
-                  : <><Brain className="h-4 w-4" />Iniciar Briefing com nossa equipe<ChevronRight className="h-4 w-4" /></>
+                  : <><Brain className="h-4 w-4" />Iniciar Briefing com o agente<ChevronRight className="h-4 w-4" /></>
                 }
               </Button>
             </div>

@@ -389,7 +389,7 @@ function AgentPlanPanel({
 
           {!hasPlan && approvedCps.length === 0 && (
             <div className="py-6 text-center font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
-              Nenhum output registrado ainda. Execute uma fase da equipe especializada para ver os resultados aqui.
+              Nenhum output registrado ainda. Execute uma fase do agente para ver os resultados aqui.
             </div>
           )}
 
@@ -826,7 +826,7 @@ function StrategyApprovalBoard({
           <div>
             <div className="font-mono text-xs font-bold uppercase tracking-widest text-success">Análise Estratégica Completa</div>
             <div className="text-[11px] font-mono text-muted-foreground/60 mt-0.5">
-              Revise e aprove cada seção. Quando tudo ok, a equipe gera o conteúdo completo.
+              Revise e aprove cada seção. Quando tudo ok, o agente gera o conteúdo completo.
             </div>
           </div>
         </div>
@@ -841,7 +841,7 @@ function StrategyApprovalBoard({
         <div className="border border-primary/25 bg-primary/3 overflow-hidden">
           <div className="px-4 py-3 border-b border-primary/20">
             <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold flex items-center gap-2">
-              <Activity className="h-3 w-3" />Inteligência Estratégica — Análise Real da equipe especializada
+              <Activity className="h-3 w-3" />Inteligência Estratégica — Análise Real do agente
             </div>
             <div className="text-[11px] font-mono text-muted-foreground/50 mt-0.5">Diagnóstico executivo gerado pelos agentes. Informativo — não requer aprovação.</div>
           </div>
@@ -1015,7 +1015,7 @@ function StrategyApprovalBoard({
                     <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60 mb-1">CPL Est.</div>
                     <div className="font-mono text-sm font-bold text-foreground/80">
                       R$ {cplEst.toFixed(0)}
-                      {avgCPL > 0 && <span className="font-mono text-[8px] text-muted-foreground/40 block">pela equipe</span>}
+                      {avgCPL > 0 && <span className="font-mono text-[8px] text-muted-foreground/40 block">pelo agente</span>}
                     </div>
                   </div>
                 )}
@@ -1236,8 +1236,8 @@ function StrategyApprovalBoard({
               </div>
               <div className="text-xs font-mono text-muted-foreground/60">
                 {hasNotes
-                  ? "Suas instruções foram salvas. A equipe vai incorporar todos os ajustes ao gerar copy, criativos, e-mails e sequências."
-                  : "A equipe vai gerar todo o conteúdo agora: copy, criativos, e-mails e sequências completas."}
+                  ? "Suas instruções foram salvas. O agente vai incorporar todos os ajustes ao gerar copy, criativos, e-mails e sequências."
+                  : "O agente vai gerar todo o conteúdo agora: copy, criativos, e-mails e sequências completas."}
               </div>
             </div>
             <Button
@@ -1284,7 +1284,7 @@ export default function CampaignDetail() {
       });
     },
     onSuccess: () => {
-      toast.success("Reorientação iniciada! A equipe especializada está reconstruindo a estratégia do zero.", { duration: 5000 });
+      toast.success("Reorientação iniciada! A agente está reconstruindo a estratégia do zero.", { duration: 5000 });
       setReorientOpen(false);
       setReorientDirective("");
       setActiveTab("agentes");
@@ -1565,7 +1565,7 @@ export default function CampaignDetail() {
   const executeMutation = useExecuteCampaign({
     mutation: {
       onSuccess: () => {
-        toast.success("Fase iniciada. A equipe especializada está em execução.");
+        toast.success("Fase iniciada. A agente está em execução.");
         setActiveTab("agentes");
         setLiveEvents(prev => [...prev, {
           campaignId,
@@ -1596,7 +1596,7 @@ export default function CampaignDetail() {
         if (code === "INSUFFICIENT_CREDITS" && errData?.data) {
           const { shortage = 0, balance = 0, required = 0 } = errData.data;
           toast.error(`Créditos insuficientes — faltam ${shortage} cr (saldo: ${balance}, necessário: ${required})`, {
-            description: "Acesse Créditos da equipe especializada para comprar mais.",
+            description: "Acesse Créditos do agente para comprar mais.",
             duration: 8000,
           });
         } else if (code === "MISSING_INTEGRATIONS") {
@@ -1669,7 +1669,7 @@ export default function CampaignDetail() {
         const body = await res.json() as { error?: string };
         throw new Error(body.error ?? "Erro ao lançar");
       }
-      toast.success("Lançamento iniciado. A equipe especializada está em execução.");
+      toast.success("Lançamento iniciado. A agente está em execução.");
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao lançar campanha.");
@@ -1730,10 +1730,10 @@ export default function CampaignDetail() {
         </div>
         <div className="text-center space-y-1">
           <p className="font-mono text-sm text-foreground font-bold uppercase tracking-widest">
-            Abrindo o briefing com nossa equipe...
+            Abrindo o briefing com o agente...
           </p>
           <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
-            Em alguns segundos a equipe vai iniciar a conversa
+            Em alguns segundos o agente vai iniciar a conversa
           </p>
         </div>
       </div>
@@ -1765,7 +1765,7 @@ export default function CampaignDetail() {
         return { label: "Analisando...", description: "Agentes de estratégia em execução. Aguarde a conclusão da análise.", phase: undefined };
       }
       case "strategy_ready": return { label: "Revisar Estratégia", description: "Estratégia pronta. Revise e aprove cada seção no board antes de gerar o conteúdo.", phase: undefined };
-      case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A equipe especializada gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
+      case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A agente gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
       case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
       case "live": return { href: `/campaigns/${campaignId}/content`, label: "Regenerar Conteúdo", description: "Campanha ao vivo. Gere novo conteúdo ou revise o que foi aprovado.", phase: undefined };
@@ -2005,7 +2005,7 @@ export default function CampaignDetail() {
                   <div className="font-mono text-[10px] uppercase tracking-widest text-primary/70 mb-1">Pré-lançamento obrigatório</div>
                   <h3 className="font-mono font-bold text-base uppercase tracking-tight text-foreground">Conectar canais de disparo</h3>
                   <p className="text-xs font-mono text-muted-foreground/60 mt-1 leading-relaxed">
-                    Sem pelo menos um canal de mensagens e um de e-mail, a equipe especializada não consegue disparar a sequência de lançamento. Siga o guia abaixo para conectar.
+                    Sem pelo menos um canal de mensagens e um de e-mail, a agente não consegue disparar a sequência de lançamento. Siga o guia abaixo para conectar.
                   </p>
                 </div>
                 <button onClick={() => setMissingIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0 mt-1">
@@ -2156,7 +2156,7 @@ export default function CampaignDetail() {
                   <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/70 mb-1">Cobertura incompleta</div>
                   <h3 className="font-mono font-bold text-base uppercase tracking-tight text-foreground">Canais parcialmente conectados</h3>
                   <p className="text-xs font-mono text-muted-foreground/60 mt-1 leading-relaxed">
-                    Alguns canais ainda não estão conectados. A equipe especializada pode lançar, mas disparos para esses canais não serão enviados. Conecte antes para máxima cobertura.
+                    Alguns canais ainda não estão conectados. A agente pode lançar, mas disparos para esses canais não serão enviados. Conecte antes para máxima cobertura.
                   </p>
                 </div>
                 <button onClick={() => setPartialIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0 mt-1">
@@ -2251,7 +2251,7 @@ export default function CampaignDetail() {
                 </div>
                 <div>
                   <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-orange-400">Reorientar Estratégia</h3>
-                  <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5">A equipe vai apagar tudo e reconstruir do zero com sua nova direção.</p>
+                  <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5">O agente vai apagar tudo e reconstruir do zero com sua nova direção.</p>
                 </div>
               </div>
               <button onClick={() => { setReorientOpen(false); setReorientDirective(""); }} className="text-muted-foreground hover:text-foreground shrink-0">
@@ -2262,7 +2262,7 @@ export default function CampaignDetail() {
               <div className="border border-orange-500/20 bg-orange-500/5 px-4 py-3 space-y-1">
                 <div className="font-mono text-[10px] uppercase tracking-widest text-orange-400/70 font-bold">O que vai acontecer</div>
                 <ul className="space-y-1">
-                  {["Estratégia atual será descartada", "Todos os conteúdos gerados serão removidos", "A equipe especializada relerá seu briefing + nova direção", "Estratégia e copy serão reconstruídos do zero"].map(item => (
+                  {["Estratégia atual será descartada", "Todos os conteúdos gerados serão removidos", "A agente relerá seu briefing + nova direção", "Estratégia e copy serão reconstruídos do zero"].map(item => (
                     <li key={item} className="flex items-start gap-2 font-mono text-[11px] text-muted-foreground/70">
                       <span className="text-orange-400/60 shrink-0 mt-0.5">·</span>{item}
                     </li>
@@ -2341,7 +2341,7 @@ export default function CampaignDetail() {
             </div>
             <div className="p-5 space-y-3">
               <p className="text-xs font-mono text-muted-foreground/70 border border-yellow-400/20 bg-yellow-400/5 px-4 py-3">
-                <span className="text-yellow-400 font-bold">Atenção:</span> Sem todos os canais conectados, a equipe especializada operará com alcance reduzido. Canais ausentes não receberão disparo automático.
+                <span className="text-yellow-400 font-bold">Atenção:</span> Sem todos os canais conectados, a agente operará com alcance reduzido. Canais ausentes não receberão disparo automático.
               </p>
               {partialIntegrations.map(m => (
                 <div key={m.category} className="border border-border/40 bg-muted/10 px-4 py-3 flex items-start gap-3">
@@ -2544,7 +2544,7 @@ export default function CampaignDetail() {
                 <div className="flex items-center gap-2">
                   <Eye className="h-4 w-4 text-yellow-400" />
                   <span className="font-mono text-xs uppercase tracking-widest text-yellow-400 font-bold">
-                    Prévia dos Criativos Gerados pela equipe especializada
+                    Prévia dos Criativos Gerados pelo agente
                   </span>
                 </div>
                 <Link href={`/campaigns/${campaignId}/content`}>
@@ -2727,8 +2727,8 @@ export default function CampaignDetail() {
               </div>
               <p className="text-xs text-muted-foreground font-mono mb-4 leading-relaxed">
                 {Object.keys(intakeD).length === 0
-                  ? "Esta campanha não tem briefing completo. Complete o intake antes de gerar a estratégia da equipe especializada."
-                  : "A equipe especializada ainda não gerou a estratégia para esta campanha. Clique em Gerar Estratégia para que os agentes elaborem a proposta completa, ou pule direto para a geração de conteúdo."}
+                  ? "Esta campanha não tem briefing completo. Complete o intake antes de gerar a estratégia do agente."
+                  : "A agente ainda não gerou a estratégia para esta campanha. Clique em Gerar Estratégia para que os agentes elaborem a proposta completa, ou pule direto para a geração de conteúdo."}
               </p>
               <div className="flex flex-wrap gap-3">
                 {Object.keys(intakeD).length === 0 ? (

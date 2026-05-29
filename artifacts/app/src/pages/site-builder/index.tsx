@@ -1,8 +1,8 @@
 /**
- * Construtor de Sites equipe especializada — prompt-flow.
+ * Construtor de Sites agente — prompt-flow.
  *
  * O usuário descreve o que quer, faz upload da logo/marca,
- * e a equipe gera a estrutura HTML/CSS da landing page.
+ * e o agente gera a estrutura HTML/CSS da landing page.
  *
  * Feature gate: pode ser habilitado/desabilitado por plano ou toggle de admin.
  * Toggle armazenado em localStorage para facilitar demo.
@@ -80,7 +80,7 @@ export default function SiteBuilderPage() {
     setGenerating(true);
     setSite(null);
 
-    // Build the team prompt
+    // Build the agent prompt
     const systemPrompt = `Você é um especialista em landing pages de alta conversão para o mercado digital brasileiro.
 Gere uma landing page completa e profissional em HTML puro (sem frameworks externos, apenas CSS inline e HTML5 semântico).
 O site deve ser responsivo, com design premium, preto/branco/dourado, e converter bem para venda de produtos digitais.
@@ -171,10 +171,10 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
         </div>
         <div>
           <h1 className="font-mono font-black text-2xl uppercase tracking-wide text-foreground mb-2">
-            Construtor de Sites equipe especializada
+            Construtor de Sites agente
           </h1>
           <p className="font-mono text-sm text-muted-foreground max-w-md leading-relaxed">
-            Esta funcionalidade está desabilitada. Descreva o que quer e a equipe gera sua landing page completa.
+            Esta funcionalidade está desabilitada. Descreva o que quer e o agente gera sua landing page completa.
           </p>
         </div>
         {isAdmin && (
@@ -288,7 +288,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
               <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
 
               <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
-                A equipe analisará sua logo para definir paleta de cores e identidade visual do site.
+                O agente analisará sua logo para definir paleta de cores e identidade visual do site.
               </p>
             </div>
 
@@ -322,7 +322,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
           </div>
           <div>
             <p className="font-mono text-sm font-bold text-foreground uppercase tracking-wide">
-              equipe especializada gerando sua landing page…
+              agente gerando sua landing page…
             </p>
             <p className="font-mono text-xs text-muted-foreground mt-1">
               Analisando prompt · Definindo estrutura · Escrevendo copy · Gerando HTML

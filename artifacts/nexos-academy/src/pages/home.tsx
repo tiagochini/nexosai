@@ -201,7 +201,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
       prazo: "Primeiro lançamento solo",
       nome: "André L.",
       cargo: "Infoprodutor — Produtividade",
-      depo: "Nunca tinha lançado. Achei que precisava de equipe, de agência, de orçamento alto. A Academia me mostrou que o problema era operacional — e que a equipe especializada resolve a operação quando você tem o método.",
+      depo: "Nunca tinha lançado. Achei que precisava de equipe, de agência, de orçamento alto. A Academia me mostrou que o problema era operacional — e que a agente resolve a operação quando você tem o método.",
     },
     {
       resultado: "CPL de R$27 → R$11",
@@ -331,7 +331,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
               { titulo: "Você tem produto mas ainda não lançou", desc: "Sabe que tem valor, mas a complexidade do lançamento trava a execução. Quer o mapa completo antes de investir em tráfego." },
               { titulo: "Você já lançou mas quer escalar com método", desc: "Seu lançamento funcionou, mas foi baseado em feeling. Quer entender por que funcionou — e como replicar com consistência." },
               { titulo: "Você é gestor de tráfego e quer ir além do anúncio", desc: "Já domina Meta Ads, mas quer entender estratégia de lançamento, psicologia de compra e como o anúncio se encaixa no funil completo." },
-              { titulo: "Você quer usar equipe especializada mas primeiro quer o método", desc: "Entende que a automação só funciona quando você sabe o que está automatizando. Quer o método antes de ativar os especialistas." },
+              { titulo: "Você quer usar agente mas primeiro quer o método", desc: "Entende que a automação só funciona quando você sabe o que está automatizando. Quer o método antes de ativar os especialistas." },
             ].map((item, i) => (
               <div key={i} className="card-nexos rounded-xl p-5">
                 <div className="text-[hsl(250_90%_75%)] text-xs font-mono uppercase tracking-widest mb-2 border-l-2 border-[hsl(250_90%_65%/0.4)] pl-3">{item.titulo}</div>
@@ -503,7 +503,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
           <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-[hsl(250_90%_65%/0.6)] mb-4">— Edição Completa —</div>
           <h2 className="text-2xl font-extrabold text-white mb-2">Metodologia NexOS — Tudo incluso.</h2>
           <p className="text-sm text-[hsl(220_10%_55%)] mb-6">Um investimento único. Acesso vitalício. O mapa completo de lançamento digital.</p>
-          {/* Professor equipe especializada highlight */}
+          {/* Professor agente highlight */}
           <div className="rounded-xl border border-[hsl(250_90%_65%/0.35)] bg-[hsl(250_90%_65%/0.06)] px-6 py-5 mb-6 flex items-start gap-4">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[hsl(250_90%_65%)] to-[hsl(280_80%_60%)] flex items-center justify-center text-white text-lg shrink-0 shadow-lg">
               🎓
@@ -511,7 +511,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
             <div>
               <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-[hsl(250_90%_65%/0.7)] mb-1">Incluso no seu acesso</div>
               <div className="font-extrabold text-white text-base mb-1">
-                Professor equipe especializada — sempre pronto pra te atender
+                Professor agente — sempre pronto pra te atender
               </div>
               <p className="text-sm text-[hsl(220_10%_58%)] leading-relaxed">
                 A qualquer momento que tiver dúvida, o Professor responde, ensina e explica — com exemplos práticos do seu contexto, no seu ritmo, quantas vezes quiser.
@@ -524,7 +524,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
             {[
               "12 módulos com conteúdo denso e aplicado",
               `${totalLessons}+ aulas com exercício prático por aula`,
-              "Professor equipe especializada disponível 24h — responde qualquer dúvida",
+              "Professor agente disponível 24h — responde qualquer dúvida",
               "Glossário completo com 80+ termos técnicos",
               "Frameworks de Schwartz, Kahneman, Cialdini e mais",
               "Módulo exclusivo de Psicologia Avançada de Vendas",

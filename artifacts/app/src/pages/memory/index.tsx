@@ -121,7 +121,7 @@ export default function MemoryPage() {
         <div className="flex items-center gap-2 mb-1">
           <Brain className="h-4 w-4 text-primary" />
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Memória da equipe especializada
+            Memória do agente
           </h1>
         </div>
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">

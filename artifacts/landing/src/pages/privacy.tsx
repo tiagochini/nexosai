@@ -66,7 +66,7 @@ export default function PrivacyPolicy() {
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">2.3 Dados de campanha e conteúdo</p>
-                <p>Textos, copies, estratégias e dados de briefing que você insere para geração de conteúdo com nossa equipe. Esses dados são usados para operar a plataforma e melhorá-la.</p>
+                <p>Textos, copies, estratégias e dados de briefing que você insere para geração de conteúdo com o agente. Esses dados são usados para operar a plataforma e melhorá-la.</p>
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">2.4 Dados de leads e sequências</p>
@@ -91,11 +91,11 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">3. Como Usamos os Dados</h2>
             <ul className="ml-4 space-y-2 list-disc">
               <li>Operar a plataforma e executar campanhas, sequências e publicações automáticas em seu nome</li>
-              <li>Fornecer inteligência da equipe especializada para estratégia, copywriting e otimização de lançamentos</li>
+              <li>Fornecer inteligência do agente para estratégia, copywriting e otimização de lançamentos</li>
               <li>Enviar notificações e relatórios semanais sobre o desempenho das suas campanhas</li>
               <li>Processar pagamentos e gerenciar assinaturas</li>
               <li>Garantir a segurança da plataforma e prevenir abusos</li>
-              <li>Melhorar os algoritmos e modelos da equipe especializada da plataforma (dados anonimizados)</li>
+              <li>Melhorar os algoritmos e modelos do agente da plataforma (dados anonimizados)</li>
             </ul>
             <p className="mt-3">
               Não vendemos seus dados. Não usamos seus tokens de plataformas sociais para nenhuma finalidade além das ações explicitamente autorizadas por você.
@@ -138,7 +138,7 @@ export default function PrivacyPolicy() {
 
           {/* 5. Third-party AI */}
           <section>
-            <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">5. Provedores da equipe especializada de Terceiros</h2>
+            <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">5. Provedores do agente de Terceiros</h2>
             <p>
               A plataforma usa modelos de linguagem de terceiros para gerar conteúdo e estratégias:
               Anthropic (Claude), OpenAI (GPT), e Google (Gemini).

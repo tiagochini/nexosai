@@ -30,7 +30,7 @@ const STATIC_PAGES: SearchResult[] = [
   { id: "social",     type: "page", label: "Social Media",    sub: "Redes sociais",              href: "/social",    icon: Share2 },
   { id: "revenue",    type: "page", label: "Receita",         sub: "Tracking de faturamento",    href: "/revenue",   icon: DollarSign },
   { id: "compliance", type: "page", label: "Compliance",      sub: "Verificação regulatória",    href: "/compliance",icon: Shield },
-  { id: "credits",    type: "page", label: "Créditos da equipe especializada",  sub: "Saldo e histórico",          href: "/credits",   icon: CreditCard },
+  { id: "credits",    type: "page", label: "Créditos do agente",  sub: "Saldo e histórico",          href: "/credits",   icon: CreditCard },
   { id: "settings",   type: "page", label: "Configurações",   sub: "Perfil, workspace, segurança", href: "/settings", icon: Settings },
 ];
 

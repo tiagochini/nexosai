@@ -603,7 +603,7 @@ export default function BillingPage() {
         "Track de 6 dígitos",
         "16 especialistas especializados",
         "Sequência PLF automatizada",
-        "Landing page gerada pela equipe especializada",
+        "Landing page gerada pelo agente",
       ],
     },
     {

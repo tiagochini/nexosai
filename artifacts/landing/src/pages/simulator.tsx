@@ -297,7 +297,7 @@ function FacebookMockup({ lead }: { lead: LeadData }) {
       </div>
       <div className="w-full h-28 flex items-center justify-center"
            style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)" }}>
-        <div className="text-white/40 text-[9px] uppercase tracking-wider">Arte Gerada pela equipe especializada</div>
+        <div className="text-white/40 text-[9px] uppercase tracking-wider">Arte Gerada pelo agente</div>
       </div>
       <div className="flex justify-between items-center px-3 py-1.5 border-b border-gray-100">
         <div className="flex items-center gap-0.5 text-[10px] text-gray-500"><span>👍❤️😮</span><span className="ml-1">{fmtNum(Math.round(3200 * 0.04))}</span></div>
@@ -917,7 +917,7 @@ function SummaryStep({ lead }: { lead: LeadData }) {
             "Segmentação inteligente por temperatura de audiência (quente / morno / frio)",
             "Agendamento automático nos horários de maior engajamento",
             "WhatsApp + Email disparados automaticamente no momento exato",
-            "Análise de performance em tempo real e otimização contínua pela equipe especializada",
+            "Análise de performance em tempo real e otimização contínua pelo agente",
             "Sequências de recuperação de carrinho abandonado",
           ].map(item => (
             <div key={item} className="flex items-start gap-2">

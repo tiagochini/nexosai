@@ -50,7 +50,7 @@ interface Checkpoint {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
-  draft: "Rascunho", intake: "Briefing com nossa equipe", analyzing: "Analisando",
+  draft: "Rascunho", intake: "Briefing com o agente", analyzing: "Analisando",
   strategy_ready: "Estratégia Pronta", generating: "Gerando Conteúdo",
   awaiting_approval: "Aguardando Aprovação", approved: "Aprovado",
   executing: "Em Execução", live: "Ao Vivo", completed: "Concluído",
@@ -522,7 +522,7 @@ function nextAction(campaigns: { id: string; title: string; status: string }[]) 
     return {
       icon: Rocket, color: "text-primary", bg: "border-primary/20 bg-primary/5",
       title: "Inicie sua primeira missão de lançamento",
-      sub: "A equipe monta toda a estratégia, cria o conteúdo e executa automaticamente",
+      sub: "O agente monta toda a estratégia, cria o conteúdo e executa automaticamente",
       href: "/campaigns/new", cta: "Criar Campanha",
     };
   }
@@ -538,13 +538,13 @@ function nextAction(campaigns: { id: string; title: string; status: string }[]) 
   if (live) return {
     icon: Play, color: "text-success", bg: "border-success/20 bg-success/5",
     title: `Campanha ao vivo: "${live.title}"`,
-    sub: "Acompanhe métricas em tempo real e aplique ajustes da equipe especializada",
+    sub: "Acompanhe métricas em tempo real e aplique ajustes do agente",
     href: `/campaigns/${live.id}`, cta: "Ver Métricas",
   };
   if (approval) return {
     icon: CheckCircle2, color: "text-yellow-400", bg: "border-yellow-400/20 bg-yellow-400/5",
     title: `Conteúdo aguarda sua aprovação: "${approval.title}"`,
-    sub: "A equipe especializada gerou o conteúdo completo. Revise e aprove para lançar.",
+    sub: "A agente gerou o conteúdo completo. Revise e aprove para lançar.",
     href: `/campaigns/${approval.id}`, cta: "Revisar Agora",
   };
   if (approved) return {
@@ -565,13 +565,13 @@ function nextAction(campaigns: { id: string; title: string; status: string }[]) 
   if (ready) return {
     icon: Target, color: "text-cyan-400", bg: "border-cyan-400/20 bg-cyan-400/5",
     title: `Estratégia pronta para "${ready.title}"`,
-    sub: "Estratégia criada. Inicie a geração de conteúdo com nossa equipe.",
+    sub: "Estratégia criada. Inicie a geração de conteúdo com o agente.",
     href: `/campaigns/${ready.id}`, cta: "Gerar Conteúdo",
   };
   if (intake) return {
     icon: Bot, color: "text-blue-400", bg: "border-blue-400/20 bg-blue-400/5",
     title: `Continue o briefing: "${intake.title}"`,
-    sub: "A equipe especializada está aguardando suas respostas para montar a estratégia de lançamento.",
+    sub: "A agente está aguardando suas respostas para montar a estratégia de lançamento.",
     href: `/campaigns/${intake.id}/intake`, cta: "Continuar Briefing",
   };
   return {
@@ -779,7 +779,7 @@ export default function Dashboard() {
               O time está pronto para você.
             </h2>
             <p className="font-mono text-sm text-muted-foreground/60 mb-5 leading-relaxed">
-              Três minutos de conversa com nossa equipe e você tem estratégia, copy e cronograma prontos.
+              Três minutos de conversa com o agente e você tem estratégia, copy e cronograma prontos.
             </p>
             <Link href="/onboarding">
               <Button className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 px-8 text-sm">
@@ -794,7 +794,7 @@ export default function Dashboard() {
         {/* KPI strip simplificado */}
         <div className="grid grid-cols-2 gap-3">
           <div className="border border-border/30 bg-card/20 px-4 py-3">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Créditos da equipe especializada</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Créditos do agente</div>
             <div className={`font-mono font-bold text-xl ${creditsLow ? "text-yellow-400" : "text-foreground"}`}>
               {creditsBalance.toLocaleString("pt-BR")}
             </div>
@@ -899,7 +899,7 @@ export default function Dashboard() {
               Sua próxima receita começa com uma conversa de 3 minutos.
             </h2>
             <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed mb-5 max-w-2xl">
-              Conta para a equipe especializada o que você quer vender. Em menos de uma hora, você tem estratégia, copy completo, sequência de WhatsApp, emails e cronograma prontos para aprovar.{" "}
+              Conta para a agente o que você quer vender. Em menos de uma hora, você tem estratégia, copy completo, sequência de WhatsApp, emails e cronograma prontos para aprovar.{" "}
               <strong className="text-foreground">Sem copywriter. Sem agência. Sem esperar.</strong>
             </p>
 
@@ -937,7 +937,7 @@ export default function Dashboard() {
               <Link href="/agents">
                 <Button variant="outline" className="rounded-none font-mono uppercase tracking-widest h-11 px-5 text-xs border-border/50 hover:border-primary/50 hover:text-primary gap-2">
                   <Bot className="h-3.5 w-3.5" />
-                  Conversar com os Agentes equipe especializada
+                  Conversar com os Agentes agente
                 </Button>
               </Link>
             </div>
@@ -945,9 +945,9 @@ export default function Dashboard() {
             {/* Steps mini-preview */}
             <div className="mt-6 pt-5 border-t border-border/30 grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { step: "01", label: "Briefing (≈3 min)", desc: "A equipe especializada conversa com você sobre produto, público e meta. Sem formulário chato." },
+                { step: "01", label: "Briefing (≈3 min)", desc: "A agente conversa com você sobre produto, público e meta. Sem formulário chato." },
                 { step: "02", label: "Plano completo gerado", desc: "Estratégia, copy, cronograma de emails e WhatsApp — tudo pronto para você aprovar." },
-                { step: "03", label: "Execução automática", desc: "Você aprova. A equipe especializada dispara, segmenta, abre carrinho e fecha. Você acompanha o faturamento." },
+                { step: "03", label: "Execução automática", desc: "Você aprova. A agente dispara, segmenta, abre carrinho e fecha. Você acompanha o faturamento." },
               ].map(item => (
                 <div key={item.step} className="flex gap-3">
                   <span className="font-mono text-[11px] text-primary/40 tracking-widest shrink-0 mt-0.5 font-bold">{item.step}</span>
@@ -1022,7 +1022,7 @@ export default function Dashboard() {
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
-          label="Créditos da equipe especializada"
+          label="Créditos do agente"
           value={creditsBalance.toLocaleString("pt-BR")}
           sub={`${creditsPct}% de ${totalCredits.toLocaleString("pt-BR")} cr incluídos`}
           icon={CreditCard}
@@ -1110,7 +1110,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">
-              Próxima Ação Recomendada pela equipe especializada
+              Próxima Ação Recomendada pelo agente
             </div>
             <div className={`font-mono font-bold text-sm leading-snug ${action.color}`}>{action.title}</div>
             <div className="font-mono text-xs text-muted-foreground/60 mt-0.5 leading-snug line-clamp-2 sm:line-clamp-1">{action.sub}</div>

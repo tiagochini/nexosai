@@ -80,7 +80,7 @@ const SEGMENT_CONFIG = {
       {
         fase: "Fase 1",
         label: "Você está aqui — Aquecimento",
-        desc: "Fique no grupo. Conteúdo exclusivo sobre como agências estão usando equipe especializada para executar múltiplos lançamentos simultâneos. Jeff está disponível para responder tudo sobre a operação, planos e ROI esperado.",
+        desc: "Fique no grupo. Conteúdo exclusivo sobre como agências estão usando agente para executar múltiplos lançamentos simultâneos. Jeff está disponível para responder tudo sobre a operação, planos e ROI esperado.",
         ativo: true,
       },
       {

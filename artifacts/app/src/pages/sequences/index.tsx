@@ -64,7 +64,7 @@ export default function SequencesList() {
         steps={[
           "Crie uma sequência e vincule à campanha ativa",
           "Configure os canais: WhatsApp Business e/ou e-mail (RD Station, ActiveCampaign)",
-          "Ative — a equipe especializada despacha no horário certo para cada segmento automaticamente",
+          "Ative — a agente despacha no horário certo para cada segmento automaticamente",
           "Acompanhe taxas de abertura, cliques e sugestões adaptativas em tempo real",
         ]}
       />

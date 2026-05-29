@@ -381,7 +381,7 @@ function CustoRealSection() {
     { nome: "Gestor de tráfego (CLT ou PJ)", nota: "R$3.500–R$8.000/mês", preco: "R$8k/mês" },
     { nome: "Copywriter especialista em lançamento", nota: "R$3.000–R$6.000/mês", preco: "R$5k/mês" },
     { nome: "Designer + editor de vídeo", nota: "R$2.000–R$4.000/mês", preco: "R$3k/mês" },
-    { nome: "Stack de ferramentas (RD + AC + equipe especializada)", nota: "Ferramentas fragmentadas", preco: "R$2k/mês" },
+    { nome: "Stack de ferramentas (RD + AC + agente)", nota: "Ferramentas fragmentadas", preco: "R$2k/mês" },
     { nome: "Gerente de projeto", nota: "Coordenação da equipe", preco: "R$3k/mês" },
   ];
   return (
@@ -937,7 +937,7 @@ function ObjecoesSection() {
     },
     {
       q: '"Preciso usar os especialistas ou posso gerenciar manualmente?"',
-      a: "Os dois. O sistema funciona completamente sem acionar nenhum agente — você gerencia campanhas, sequências, métricas e integrações pelo painel. Os especialistas são uma camada opcional: quando quiser gerar copy, estratégia ou análise com nossa equipe, você usa créditos. Sem pressão, sem mensalidade, sem lock-in.",
+      a: "Os dois. O sistema funciona completamente sem acionar nenhum agente — você gerencia campanhas, sequências, métricas e integrações pelo painel. Os especialistas são uma camada opcional: quando quiser gerar copy, estratégia ou análise com o agente, você usa créditos. Sem pressão, sem mensalidade, sem lock-in.",
     },
   ];
   return (
@@ -985,7 +985,7 @@ function DoisCaminhosSection() {
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary/60 mb-3">→ Caminho A</div>
                 <div className="font-mono font-black text-2xl uppercase tracking-tight text-foreground leading-tight mb-3">
-                  A equipe executa<br /><span className="text-primary">o lançamento por você</span>
+                  O agente executa<br /><span className="text-primary">o lançamento por você</span>
                 </div>
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
                   Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS faz o trabalho pesado — 34 agentes, do briefing ao carrinho fechado.

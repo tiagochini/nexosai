@@ -80,7 +80,7 @@ export default function DataDeletion() {
               <li>Tokens de acesso às plataformas (Meta, Google, TikTok, LinkedIn)</li>
               <li>Histórico de campanhas e conteúdo gerado</li>
               <li>Dados de leads e sequências de lançamento</li>
-              <li>Logs de uso da equipe especializada e créditos</li>
+              <li>Logs de uso do agente e créditos</li>
               <li>Dados de pagamento (referência de transação apenas; dados de cartão nunca são armazenados)</li>
             </ul>
           </section>

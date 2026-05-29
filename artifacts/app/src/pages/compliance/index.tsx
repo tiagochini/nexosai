@@ -164,7 +164,7 @@ export default function CompliancePage() {
           </div>
           <Button onClick={() => runCheckMutation.mutate()} disabled={!checkForm.contentTitle || !checkForm.contentText || runCheckMutation.isPending}
             className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-11 px-5">
-            {runCheckMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Analisando com nossa equipe...</> : <><Zap className="h-4 w-4" />Verificar Compliance</>}
+            {runCheckMutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" />Analisando com o agente...</> : <><Zap className="h-4 w-4" />Verificar Compliance</>}
           </Button>
         </div>
       )}

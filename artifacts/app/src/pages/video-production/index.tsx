@@ -307,7 +307,7 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Roteiro gerado pela equipe especializada — edite se necessário</div>
+        <div className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Roteiro gerado pelo agente — edite se necessário</div>
         <Button variant="ghost" size="sm" onClick={regenerate} disabled={loading} className="font-mono text-xs">
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Regenerar
         </Button>
@@ -459,7 +459,7 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
         <div className="flex flex-col items-center justify-center h-32 gap-3 border border-primary/20 rounded-lg bg-primary/5">
           <RefreshCw className="h-7 w-7 text-primary animate-spin" />
           <p className="font-mono text-sm text-muted-foreground">
-            {isHd ? "Gerando clipes HD finais pela equipe..." : "Gerando clipes de preview pela equipe..."}
+            {isHd ? "Gerando clipes HD finais pelo agente..." : "Gerando clipes de preview pelo agente..."}
           </p>
           <Button variant="outline" size="sm" onClick={poll} disabled={loading} className="font-mono text-xs">
             Verificar Status
@@ -744,7 +744,7 @@ export default function VideoProductionPage() {
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
                   <div className="font-mono text-sm font-bold mb-2">Passo 1 — Gerar Roteiro</div>
                   <div className="font-mono text-xs text-muted-foreground mb-4">
-                    O Roteirista equipe vai escrever o roteiro completo do seu {selected.format.replace(/_/g," ")} baseado no perfil da campanha.
+                    O Roteiristo agente vai escrever o roteiro completo do seu {selected.format.replace(/_/g," ")} baseado no perfil da campanha.
                     Você poderá editar antes de aprovar.
                   </div>
                   <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
@@ -799,7 +799,7 @@ export default function VideoProductionPage() {
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
                   <div className="font-mono text-sm font-bold mb-2">Passo 5 — Gerar Preview</div>
                   <div className="font-mono text-xs text-muted-foreground mb-4">
-                    A equipe vai gerar clipes de preview (720p) para cada cena do storyboard.
+                    O agente vai gerar clipes de preview (720p) para cada cena do storyboard.
                     Você aprova cena a cena antes do vídeo HD final.
                   </div>
                   <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
@@ -837,7 +837,7 @@ export default function VideoProductionPage() {
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
                   <div className="font-mono text-sm font-bold mb-2">Passo 7 — Gerar Vídeo Final HD</div>
                   <div className="font-mono text-xs text-muted-foreground mb-4">
-                    Preview aprovado. A equipe vai regenerar todos os clipes em 1080p HD para entrega final.
+                    Preview aprovado. O agente vai regenerar todos os clipes em 1080p HD para entrega final.
                   </div>
                   <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
                     <span className="flex items-center gap-1">

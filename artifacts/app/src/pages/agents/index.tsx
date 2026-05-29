@@ -482,7 +482,7 @@ export default function AgentsHub() {
       {/* Header */}
       <div className="mb-10">
         <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
-          Time da equipe especializada · Framework ReAct
+          Time do agente · Framework ReAct
         </p>
         <div className="flex items-end gap-4 mb-3">
           <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground leading-tight">

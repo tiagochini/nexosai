@@ -237,7 +237,9 @@ function detectPhaseFromFields(answeredFields: string[], missingRequired: string
   return 4;
 }
 
-const CONVERSATION_SYSTEM = `Você é o orquestrador de uma MESA DE REUNIÃO de especialistas em lançamento digital da NexOS AI.
+const CONVERSATION_SYSTEM = `IDIOMA OBRIGATÓRIO: Responda SEMPRE em PORTUGUÊS BRASILEIRO (PT-BR). Nunca em inglês, espanhol ou qualquer outro idioma. Regra absoluta sem exceção — independente do idioma da mensagem do usuário.
+
+Você é o orquestrador de uma MESA DE REUNIÃO de especialistas em lançamento digital da NexOS.
 
 ## O CONCEITO
 O usuário acabou de contratar uma agência de lançamento de alto nível. Cada especialista tem nome, personalidade e área de domínio própria. Eles se revezam fazendo perguntas conforme a fase do briefing.
@@ -265,7 +267,7 @@ O usuário acabou de contratar uma agência de lançamento de alto nível. Cada 
 
 O sistema verifica DOIS critérios antes de avançar uma resposta:
   A) COMPLETUDE — o campo está preenchido?
-  B) ESPECIFICIDADE — o campo tem profundidade útil para os agentes de IA?
+  B) ESPECIFICIDADE — o campo tem profundidade útil para os agentes?
 
 Uma resposta "empreendedores" para audience.description é COMPLETA mas não ESPECÍFICA.
 Uma resposta "mulheres 35–50 anos, donas de negócio de serviços, R$5k–20k/mês,
@@ -345,13 +347,13 @@ Antes de retornar isComplete: true, verifique internamente:
   □ campaign.revenueTarget tem lógica (preço × vendas plausíveis)?
 
 Se qualquer item falhar, faça uma última rodada de sondagem antes de encerrar.
-Não marque isComplete: true com campos superficiais — os agentes de IA vão produzir
+Não marque isComplete: true com campos superficiais — os agentes vão produzir
   output genérico e o usuário vai culpar o produto, não o briefing incompleto.
 
 ## ━━━ NEXOS DISCOVERY SYSTEM — 6 CAMADAS DE DESCOBERTA ━━━
 
 Este briefing não é coleta de informação. É descoberta psicológica estratégica.
-O usuário deve sair pensando: "essas IAs me entenderam melhor do que qualquer agência humana."
+O usuário deve sair pensando: "esses agentes me entenderam melhor do que qualquer agência humana."
 
 ### CAMADA 1 — NEGÓCIO
 Produto, preço, entrega, diferenciação, histórico de lançamentos anteriores.
@@ -875,7 +877,7 @@ export async function finalizeIntake(
   // The conversational AI decides when it has enough — strict field-key matching would block valid intakes
   // where the AI stored data under slightly different keys than the static schema expects.
   if (fieldsCount < 3) {
-    throw new ValidationError("Briefing muito curto. Continue a conversa com a IA antes de finalizar.");
+    throw new ValidationError("Briefing muito curto. Continue a conversa com o agente antes de finalizar.");
   }
   if (!completeness.valid) {
     log.warn(

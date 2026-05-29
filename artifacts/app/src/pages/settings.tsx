@@ -203,7 +203,7 @@ function ProfileTab() {
           </div>
           <p className="font-mono text-[11px] text-muted-foreground/50 mt-2 uppercase tracking-widest">
             <Globe className="inline h-3 w-3 mr-1 opacity-60" />
-            Define o idioma das cópias e relatórios gerados pela equipe especializada
+            Define o idioma das cópias e relatórios gerados pelo agente
           </p>
         </FieldRow>
       </SectionCard>
@@ -314,7 +314,7 @@ function WorkspaceTab() {
           </div>
         </FieldRow>
 
-        <FieldRow label="Créditos da equipe especializada" sublabel="Uso do mês atual">
+        <FieldRow label="Créditos do agente" sublabel="Uso do mês atual">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="font-mono text-2xl font-bold text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]">
@@ -575,7 +575,7 @@ const INTEGRATION_CATALOG: {
   {
     provider: "whatsapp_business",
     label: "WhatsApp Business",
-    description: "Disparo automatizado de mensagens e auto-resposta com nossa equipe",
+    description: "Disparo automatizado de mensagens e auto-resposta com o agente",
     category: "Mensagens",
     color: "text-green-400",
     fields: [

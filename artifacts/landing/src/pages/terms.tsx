@@ -88,7 +88,7 @@ export default function TermsOfService() {
           <h2 className="text-xl font-semibold mb-3">6. Créditos e Pagamentos</h2>
           <p className="text-gray-300 leading-relaxed mb-3">
             O Serviço opera com um sistema de créditos. Os créditos são consumidos conforme o
-            uso de funcionalidades da equipe especializada. Créditos não utilizados ao final do ciclo de
+            uso de funcionalidades do agente. Créditos não utilizados ao final do ciclo de
             assinatura mensal não são transferidos para o período seguinte, exceto quando
             expressamente indicado.
           </p>
@@ -103,8 +103,8 @@ export default function TermsOfService() {
           <h2 className="text-xl font-semibold mb-3">7. Propriedade Intelectual</h2>
           <p className="text-gray-300 leading-relaxed">
             O Serviço e seu conteúdo original, recursos e funcionalidades são e permanecerão
-            propriedade exclusiva do NexOS. O conteúdo gerado pela equipe especializada em nome do usuário
-            pertence ao usuário, sujeito às limitações dos modelos da equipe especializada utilizados. Você
+            propriedade exclusiva do NexOS. O conteúdo gerado pelo agente em nome do usuário
+            pertence ao usuário, sujeito às limitações dos modelos do agente utilizados. Você
             concede ao NexOS uma licença limitada para processar seu conteúdo exclusivamente
             para fins de prestação do Serviço.
           </p>

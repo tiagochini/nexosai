@@ -177,7 +177,7 @@ export function IntegrationWizard() {
               Assistente de Integração
             </p>
             <p className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-0.5">
-              equipe especializada com visão · Guia passo a passo · Cole prints de qualquer tela
+              agente com visão · Guia passo a passo · Cole prints de qualquer tela
             </p>
           </div>
           <div className="flex items-center gap-1 ml-2">

@@ -51,7 +51,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
       });
-      toast.success("Idioma da equipe especializada atualizado.");
+      toast.success("Idioma do agente atualizado.");
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
       toast.error("Erro ao salvar idioma.");
@@ -88,7 +88,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       ],
     },
     {
-      label: tr.nav.specialist_team,
+      label: tr.nav.agent_team,
       items: [
         { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "57" },
       ],

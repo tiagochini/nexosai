@@ -54,7 +54,7 @@ const DEPARTMENTS: Department[] = [
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
-  intake:            "Briefing com nossa equipe",
+  intake:            "Briefing com o agente",
   analyzing:         "Time Estratégico Trabalhando",
   strategy_ready:    "Estratégia Pronta para Revisão",
   generating:        "Criando Copies e Criativos",
@@ -94,14 +94,14 @@ function getNextStepLabel(status: string): string {
 
 function getHappening(status: string): string {
   switch (status) {
-    case "intake":            return "Seu briefing está sendo coletado. A equipe especializada está conhecendo seu negócio.";
+    case "intake":            return "Seu briefing está sendo coletado. A agente está conhecendo seu negócio.";
     case "analyzing":         return "O time de estratégia está analisando seu mercado, público e oferta.";
     case "strategy_ready":    return "A estratégia está pronta. Revise e aprove para avançar para criação.";
     case "generating":        return "Os especialistas estão criando copies, emails, WhatsApp e roteiros.";
     case "awaiting_approval": return "O conteúdo está pronto para você revisar e aprovar antes do lançamento.";
     case "approved":          return "Tudo aprovado. Configurando integrações e agendamentos automáticos.";
     case "executing":         return "O lançamento está sendo executado. Acompanhe os primeiros resultados.";
-    case "live":              return "Sua campanha está ao vivo. A equipe especializada monitora e otimiza em tempo real.";
+    case "live":              return "Sua campanha está ao vivo. A agente monitora e otimiza em tempo real.";
     case "paused":            return "Campanha pausada. Retome quando estiver pronto.";
     case "completed":         return "Lançamento concluído. Veja o relatório completo de resultados.";
     default:                  return "Processando...";

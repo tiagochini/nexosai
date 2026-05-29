@@ -795,7 +795,7 @@ export default function AgentChat() {
     const isTimeout = lastError?.name === "AbortError" || lastError?.name === "TimeoutError";
     toast.error(
       isTimeout
-        ? "A equipe especializada demorou demais. Sua mensagem foi preservada — tente novamente."
+        ? "A agente demorou demais. Sua mensagem foi preservada — tente novamente."
         : (lastError?.message ?? "Erro de comunicação. Sua mensagem foi preservada."),
       { duration: 7000 },
     );

@@ -174,7 +174,7 @@ export default function SequenceAnalytics() {
           <div className="p-5 border-b border-border/50 bg-primary/5 flex items-center justify-between relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
             <h2 className="font-mono font-bold uppercase tracking-widest text-xs text-primary flex items-center gap-2 relative z-10">
-              <TrendingUp className="h-4 w-4" /> equipe especializada: Diretrizes Adaptativas
+              <TrendingUp className="h-4 w-4" /> agente: Diretrizes Adaptativas
             </h2>
           </div>
           <div className="p-6">
