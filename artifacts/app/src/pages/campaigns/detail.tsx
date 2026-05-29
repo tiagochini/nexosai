@@ -1340,15 +1340,24 @@ export default function CampaignDetail() {
   });
   const autoLaunchFired = useRef(false);
 
+  // Optimistically start polling — staleTime:0 forces a real request every 5s
+  // instead of serving cached data, catching the analyzing→strategy_ready transition.
+  const [localIsActive, setLocalIsActive] = useState(true);
   const { data, isLoading } = useGetCampaign(campaignId, {
     query: {
       enabled: !!campaignId,
       queryKey: getGetCampaignQueryKey(campaignId),
+      refetchInterval: localIsActive ? 5000 : false,
+      staleTime: 0,
     },
   });
 
   const campaign = data?.campaign;
   const isActive = ACTIVE_STATUSES.includes(campaign?.status ?? "");
+
+  useEffect(() => {
+    setLocalIsActive(ACTIVE_STATUSES.includes(campaign?.status ?? ""));
+  }, [campaign?.status]);
   const refetchInterval = isActive ? 5000 : false;
 
   // Auto-redirect draft/intake to the intake wizard

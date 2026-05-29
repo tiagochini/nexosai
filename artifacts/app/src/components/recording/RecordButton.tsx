@@ -312,13 +312,22 @@ function PreflightDialog({
           </p>
 
           {/* CTA */}
-          <Button
-            onClick={onStart}
-            className="w-full h-12 rounded-none font-mono text-sm uppercase tracking-widest font-bold btn-weapon-primary"
-          >
-            <Circle className="h-4 w-4 mr-2 fill-current animate-pulse" />
-            Iniciar Gravação →
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={onClose}
+              variant="outline"
+              className="flex-1 h-12 rounded-none font-mono text-sm uppercase tracking-widest border-border/50 text-muted-foreground hover:text-foreground"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={onStart}
+              className="flex-[2] h-12 rounded-none font-mono text-sm uppercase tracking-widest font-bold btn-weapon-primary"
+            >
+              <Circle className="h-4 w-4 mr-2 fill-current animate-pulse" />
+              Iniciar →
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -431,6 +440,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
   const [firingEvent, setFiringEvent]       = useState(false);
   const [syncLoading, setSyncLoading]       = useState(true);
   const [camStream, setCamStream]           = useState<MediaStream | null>(null);
+  const [camPaused, setCamPaused]           = useState(false);
 
   // Setup config
   const [config, setConfig] = useState<SetupConfig>({
@@ -453,8 +463,10 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
   const canvasRafRef      = useRef<number | null>(null);
   const canvasScreenRef   = useRef<HTMLVideoElement | null>(null);
   const canvasCamRef      = useRef<HTMLVideoElement | null>(null);
+  const camPausedRef      = useRef(false);
 
   useEffect(() => { recordingRef.current = recording; }, [recording]);
+  useEffect(() => { camPausedRef.current = camPaused; }, [camPaused]);
 
   // ── Timer ──────────────────────────────────────────────────────────────────
   const startTimer = useCallback((rec: RecordingMeta) => {
@@ -530,6 +542,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
     setHasSystem(false);
     setHasCamera(false);
     setCamStream(null);
+    setCamPaused(false);
     setConfig({
       sessionName: "",
       audioMode: "both",
@@ -647,10 +660,18 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
       const paint = () => {
         ctx2d.drawImage(screenVid, 0, 0, W, H);
-        ctx2d.drawImage(camVid, PX, PY, PW, PH);
-        ctx2d.strokeStyle = "rgba(99,102,241,0.85)";
-        ctx2d.lineWidth = 4;
-        ctx2d.strokeRect(PX, PY, PW, PH);
+        if (!camPausedRef.current) {
+          ctx2d.drawImage(camVid, PX, PY, PW, PH);
+          ctx2d.strokeStyle = "rgba(99,102,241,0.85)";
+          ctx2d.lineWidth = 4;
+          ctx2d.strokeRect(PX, PY, PW, PH);
+        } else {
+          ctx2d.fillStyle = "rgba(0,0,0,0.85)";
+          ctx2d.fillRect(PX, PY, PW, PH);
+          ctx2d.strokeStyle = "rgba(99,102,241,0.35)";
+          ctx2d.lineWidth = 2;
+          ctx2d.strokeRect(PX, PY, PW, PH);
+        }
         canvasRafRef.current = requestAnimationFrame(paint);
       };
       paint();
@@ -935,6 +956,18 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           <button onClick={pauseCapture} className="flex items-center gap-1.5 px-3 py-2.5 hover:bg-white/10 transition-colors">
             <Pause className="h-3.5 w-3.5" /><span className="hidden sm:inline">Pausar</span>
           </button>
+          {camStream && (
+            <>
+              <div className="w-px h-8 bg-white/20" />
+              <button
+                onClick={() => setCamPaused(p => !p)}
+                title={camPaused ? "Reativar câmera" : "Pausar câmera"}
+                className={`flex items-center gap-1.5 px-3 py-2.5 hover:bg-white/10 transition-colors ${camPaused ? "opacity-40" : ""}`}
+              >
+                <Camera className={`h-3.5 w-3.5 ${camPaused ? "opacity-50" : ""}`} />
+              </button>
+            </>
+          )}
           <div className="w-px h-8 bg-white/20" />
           <button onClick={() => void stopCapture()} className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/40 transition-colors">
             <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Parar</span>
@@ -954,6 +987,18 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           <button onClick={resumeCapture} className="flex items-center gap-1.5 px-3 py-2.5 hover:bg-black/10 transition-colors font-bold">
             <Play className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Retomar</span>
           </button>
+          {camStream && (
+            <>
+              <div className="w-px h-8 bg-black/20" />
+              <button
+                onClick={() => setCamPaused(p => !p)}
+                title={camPaused ? "Reativar câmera" : "Pausar câmera"}
+                className={`flex items-center gap-1.5 px-3 py-2.5 hover:bg-black/10 transition-colors ${camPaused ? "opacity-40" : ""}`}
+              >
+                <Camera className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
           <div className="w-px h-8 bg-black/20" />
           <button onClick={() => void stopCapture()} className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/30 transition-colors">
             <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Parar</span>
