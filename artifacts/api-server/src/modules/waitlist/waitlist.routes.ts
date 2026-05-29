@@ -6,6 +6,49 @@ import { env } from "../../lib/env.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../../lib/logger.js";
 
+async function sendWaitlistConfirmationEmail(opts: {
+  toEmail: string;
+  name: string;
+}): Promise<void> {
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const from = `NexOS AI <${env.RESEND_FROM_EMAIL}>`;
+  const firstName = opts.name.split(" ")[0] ?? opts.name;
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:monospace;color:#e2e8f0;">
+<div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+  <div style="border:1px solid #00f0ff33;padding:32px;">
+    <div style="border-bottom:1px solid #00f0ff33;padding-bottom:16px;margin-bottom:24px;">
+      <span style="font-size:11px;letter-spacing:0.3em;color:#00f0ff;text-transform:uppercase;">NexOS AI — Solicitação Recebida</span>
+    </div>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 16px;">Olá, <strong>${firstName}</strong>!</p>
+    <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 16px;">
+      Sua solicitação de acesso à <strong style="color:#e2e8f0;">plataforma NexOS AI</strong> foi recebida com sucesso.
+    </p>
+    <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 24px;">
+      Nossa equipe analisará seu perfil e, quando liberado, você receberá seu <strong style="color:#00f0ff;">código de acesso exclusivo</strong> pelo WhatsApp.
+    </p>
+    <div style="border:1px solid #00f0ff22;background:#00f0ff08;padding:16px;margin-bottom:24px;">
+      <p style="font-size:13px;color:#94a3b8;margin:0;">⏳ Prazo de análise: até <strong style="color:#e2e8f0;">72 horas úteis</strong>. Aguarde nosso contato no WhatsApp informado.</p>
+    </div>
+    <div style="border-top:1px solid #ffffff0d;padding-top:16px;margin-top:8px;">
+      <span style="font-size:11px;color:#475569;letter-spacing:0.1em;">lancamento@agencianexos.vip · agencianexos.vip</span>
+    </div>
+  </div>
+</div>
+</body></html>`;
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: [opts.toEmail], subject: "✅ Solicitação de acesso NexOS AI recebida", html }),
+    });
+  } catch (err) {
+    logger.warn({ err }, "Waitlist confirmation email failed — non-blocking");
+  }
+}
+
 const router = Router();
 
 const waitlistSchema = z.object({
@@ -49,6 +92,15 @@ router.post("/", async (req, res): Promise<void> => {
     segment,
     source: source ?? null,
   });
+
+  // Fire-and-forget confirmation email (non-blocking, only if email provided)
+  if (email) {
+    setImmediate(() => {
+      sendWaitlistConfirmationEmail({ toEmail: email, name }).catch((err) =>
+        logger.warn({ err }, "Waitlist confirmation email error"),
+      );
+    });
+  }
 
   res.status(201).json({
     joined: true,

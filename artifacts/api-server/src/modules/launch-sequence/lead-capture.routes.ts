@@ -4,6 +4,52 @@ import { eq, and } from "drizzle-orm";
 import { db, launchSequencesTable, sequenceContactsTable, auditLogsTable } from "@workspace/db";
 import { logger } from "../../lib/logger.js";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
+import { env } from "../../lib/env.js";
+
+async function sendLeadConfirmationEmail(opts: {
+  toEmail: string;
+  toName: string | null;
+  sequenceName: string;
+  referralUrl: string;
+}): Promise<void> {
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const from = `NexOS AI <${env.RESEND_FROM_EMAIL}>`;
+  const firstName = opts.toName?.split(" ")[0] ?? "Olá";
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:monospace;color:#e2e8f0;">
+<div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+  <div style="border:1px solid #00f0ff33;padding:32px;">
+    <div style="border-bottom:1px solid #00f0ff33;padding-bottom:16px;margin-bottom:24px;">
+      <span style="font-size:11px;letter-spacing:0.3em;color:#00f0ff;text-transform:uppercase;">NexOS AI — Confirmação de Cadastro</span>
+    </div>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 16px;">Olá, <strong>${firstName}</strong>!</p>
+    <p style="font-size:14px;line-height:1.6;color:#94a3b8;margin:0 0 24px;">
+      Você foi registrado com sucesso em <strong style="color:#e2e8f0;">${opts.sequenceName}</strong>.
+      A equipe NexOS AI entrará em contato com próximas novidades.
+    </p>
+    ${opts.referralUrl ? `<div style="border:1px solid #00f0ff22;background:#00f0ff08;padding:16px;margin-bottom:24px;">
+      <p style="font-size:11px;color:#00f0ff;text-transform:uppercase;letter-spacing:0.2em;margin:0 0 8px;">Seu link de indicação exclusivo</p>
+      <p style="font-size:13px;color:#94a3b8;margin:0 0 4px;">Compartilhe e ganhe prioridade na fila de acesso:</p>
+      <a href="${opts.referralUrl}" style="color:#00f0ff;font-size:12px;word-break:break-all;">${opts.referralUrl}</a>
+    </div>` : ""}
+    <div style="border-top:1px solid #ffffff0d;padding-top:16px;margin-top:8px;">
+      <span style="font-size:11px;color:#475569;letter-spacing:0.1em;">lancamento@agencianexos.vip · agencianexos.vip</span>
+    </div>
+  </div>
+</div>
+</body></html>`;
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to: [opts.toEmail], subject: `✅ Cadastro confirmado — ${opts.sequenceName}`, html }),
+    });
+  } catch (err) {
+    logger.warn({ err }, "Lead confirmation email failed — non-blocking");
+  }
+}
 
 const router = Router();
 
@@ -147,6 +193,7 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
     .select({
       id: launchSequencesTable.id,
       workspaceId: launchSequencesTable.workspaceId,
+      name: launchSequencesTable.name,
       status: launchSequencesTable.status,
       leadCaptureEnabled: launchSequencesTable.leadCaptureEnabled,
     })
@@ -283,12 +330,26 @@ router.post("/:sequenceId", async (req, res): Promise<void> => {
 
   logger.info({ sequenceId, contactId: contact.id, utmSource, referredBy: refCode }, "Lead captured via public form");
 
+  const referralUrl = `${req.protocol}://${req.get("host")}/lead-capture/${sequenceId}?ref=${referralCode}`;
+
+  // Fire-and-forget confirmation email (non-blocking)
+  if (body.email) {
+    setImmediate(() => {
+      sendLeadConfirmationEmail({
+        toEmail: body.email!,
+        toName: body.name ?? null,
+        sequenceName: sequence.name,
+        referralUrl,
+      }).catch((err) => logger.warn({ err }, "Lead confirmation email error"));
+    });
+  }
+
   res.status(201).json({
     captured: true,
     duplicate: false,
     contactId: contact.id,
     referralCode,
-    referralUrl: `${req.protocol}://${req.get("host")}/lead-capture/${sequenceId}?ref=${referralCode}`,
+    referralUrl,
     message: "Lead registrado com sucesso",
   });
 });
