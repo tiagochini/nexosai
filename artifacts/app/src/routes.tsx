@@ -330,6 +330,18 @@ export default function AppRoutes() {
       <Route path="/comprar" component={CheckoutPage} />
       <Route path="/checkout" component={CheckoutPage} />
 
+      {/* Public landing page redirects — users may link directly to agencianexos.vip/mapa etc. */}
+      <Route path="/mapa">{() => { window.location.replace("/landing/mapa"); return null; }}</Route>
+      <Route path="/guia">{() => { window.location.replace("/landing/guia"); return null; }}</Route>
+      <Route path="/simulador">{() => { window.location.replace("/landing/simulador"); return null; }}</Route>
+      <Route path="/hub">{() => { window.location.replace("/landing/hub"); return null; }}</Route>
+      <Route path="/fundador">{() => { window.location.replace("/landing/fundador"); return null; }}</Route>
+      <Route path="/privacy">{() => { window.location.replace("/landing/privacy"); return null; }}</Route>
+      <Route path="/privacy-policy">{() => { window.location.replace("/landing/privacy-policy"); return null; }}</Route>
+      <Route path="/terms">{() => { window.location.replace("/landing/terms"); return null; }}</Route>
+      <Route path="/terms-of-service">{() => { window.location.replace("/landing/terms-of-service"); return null; }}</Route>
+      <Route path="/data-deletion">{() => { window.location.replace("/landing/data-deletion"); return null; }}</Route>
+
       <Route component={NotFound} />
     </Switch>
   );

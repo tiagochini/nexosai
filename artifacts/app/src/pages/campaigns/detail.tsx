@@ -1875,8 +1875,21 @@ export default function CampaignDetail() {
                     {executeMutation.isPending ? "Processando..." : nextAction.label}
                     <ChevronRight className="h-4 w-4" />
                   </Button>
+                ) : campaign.status === "strategy_ready" ? (
+                  <Button
+                    className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
+                    onClick={() => {
+                      setActiveTab("agentes");
+                      // Scroll to top so the strategy board is visible
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Revisar Estratégia
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 ) : (
-                  <Button disabled className="flex-1 rounded-none font-mono uppercase tracking-widest h-12 text-sm">
+                  <Button disabled className="flex-1 rounded-none font-mono uppercase tracking-widest h-12 text-sm opacity-50">
                     {nextAction.label}
                   </Button>
                 )}
