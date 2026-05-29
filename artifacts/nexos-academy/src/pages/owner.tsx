@@ -277,13 +277,16 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
     }
   }, []);
 
-  const generateMoreGiftCodes = async (count: number) => {
+  const [giftGeneratingProduct, setGiftGeneratingProduct] = useState<string | null>(null);
+
+  const generateMoreGiftCodes = async (count: number, productId: "complete-bundle" | "mini-guide" = "complete-bundle") => {
+    setGiftGeneratingProduct(productId);
     setGiftGenerating(true);
     try {
       const r = await fetch("/api/academy/admin/gift-codes", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-secret": OWNER_SECRET },
-        body: JSON.stringify({ count, productId: "complete-bundle" }),
+        body: JSON.stringify({ count, productId }),
       });
       if (!r.ok) throw new Error("Erro ao gerar");
       await fetchGiftCodes();
@@ -291,6 +294,7 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
       // ignore
     } finally {
       setGiftGenerating(false);
+      setGiftGeneratingProduct(null);
     }
   };
 
@@ -1537,95 +1541,155 @@ export default function Owner({ onNavigate, onOwnerChange, isOwner }: OwnerProps
 
       {/* TAB: CÓDIGOS DE ACESSO */}
       {tab === "codigos" && (
-        <div className="space-y-5">
+        <div className="space-y-8">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h2 className="text-lg font-bold text-white">🎟️ Códigos de Acesso</h2>
-              <p className="text-sm text-[hsl(220_10%_45%)]">
-                {giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").length} em uso ·{" "}
-                {giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").length} disponíveis
-              </p>
+              <p className="text-sm text-[hsl(220_10%_45%)]">Gere e envie códigos para liberar acesso sem pagamento</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => generateMoreGiftCodes(5)}
-                disabled={giftGenerating}
-                className="btn-primary text-sm px-4 py-2"
-              >
-                {giftGenerating ? "Gerando..." : "+ 5 Códigos"}
-              </button>
-              <button
-                onClick={() => generateMoreGiftCodes(10)}
-                disabled={giftGenerating}
-                className="btn-outline text-sm px-4 py-2"
-              >
-                {giftGenerating ? "..." : "+ 10 Códigos"}
-              </button>
-              <button onClick={fetchGiftCodes} className="btn-outline text-sm px-3 py-2">↻</button>
-            </div>
+            <button onClick={fetchGiftCodes} className="btn-outline text-sm px-3 py-2">↻ Atualizar</button>
           </div>
 
           {giftLoading ? (
             <div className="card p-8 text-center text-[hsl(220_10%_45%)]">Carregando...</div>
-          ) : giftCodes.length === 0 ? (
-            <div className="card p-8 text-center">
-              <p className="text-[hsl(220_10%_45%)]">Nenhum código gerado ainda.</p>
-              <button onClick={() => generateMoreGiftCodes(10)} className="btn-primary text-sm px-4 py-2 mt-3">
-                Gerar 10 Códigos
-              </button>
-            </div>
           ) : (
-            <div className="space-y-4">
-              {/* Em uso */}
-              {giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").length > 0 && (
-                <div>
-                  <h3 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-2">
-                    ✅ Em Uso ({giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").length})
-                  </h3>
-                  <div className="space-y-1.5">
-                    {giftCodes.filter(c => c.customerEmail !== "brinde@agencianexos.vip").map(code => (
-                      <div key={code.id} className="card px-4 py-3 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="font-mono text-base font-bold text-white tracking-widest shrink-0">{code.accessToken}</span>
-                          <div className="min-w-0">
-                            <p className="text-sm text-white truncate">{code.customerName}</p>
-                            <p className="text-xs text-[hsl(220_10%_40%)] truncate">{code.customerEmail}</p>
-                          </div>
+            <>
+              {/* ── BLOCO: Mini-Guia R$97 ── */}
+              {(() => {
+                const available = giftCodes.filter(c => c.productId === "mini-guide" && c.customerEmail === "brinde@agencianexos.vip");
+                const inUse     = giftCodes.filter(c => c.productId === "mini-guide" && c.customerEmail !== "brinde@agencianexos.vip");
+                const isGen     = giftGeneratingProduct === "mini-guide";
+                return (
+                  <div className="rounded-xl border border-[hsl(220_15%_18%)] p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-widest text-[hsl(250_90%_70%)] bg-[hsl(250_90%_70%/0.1)] px-2 py-0.5 rounded">Mini-Guia · R$97</span>
                         </div>
-                        <button
-                          onClick={() => copyCode(code.accessToken)}
-                          className="btn-outline text-xs px-3 py-1 shrink-0"
-                        >
-                          {giftCopied === code.accessToken ? "✓ Copiado" : "Copiar"}
+                        <p className="text-sm font-semibold text-white mt-1">Mapa dos Primeiros R$10K</p>
+                        <p className="text-xs text-[hsl(220_10%_45%)] mt-0.5">{inUse.length} em uso · {available.length} disponíveis</p>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button onClick={() => generateMoreGiftCodes(5, "mini-guide")} disabled={giftGenerating} className="btn-outline text-sm px-3 py-1.5">
+                          {isGen ? "Gerando..." : "+ 5 Códigos"}
+                        </button>
+                        <button onClick={() => generateMoreGiftCodes(10, "mini-guide")} disabled={giftGenerating} className="btn-outline text-sm px-3 py-1.5">
+                          {isGen ? "..." : "+ 10"}
                         </button>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
 
-              {/* Disponíveis */}
-              {giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").length > 0 && (
-                <div>
-                  <h3 className="text-xs font-bold text-[hsl(220_10%_40%)] uppercase tracking-widest mb-2">
-                    ⚪ Disponíveis ({giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").length})
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {giftCodes.filter(c => c.customerEmail === "brinde@agencianexos.vip").map(code => (
-                      <div key={code.id} className="card px-4 py-3 flex items-center justify-between gap-3">
-                        <span className="font-mono text-base font-bold text-[hsl(250_90%_75%)] tracking-widest">{code.accessToken}</span>
-                        <button
-                          onClick={() => copyCode(code.accessToken)}
-                          className="btn-outline text-xs px-3 py-1 shrink-0"
-                        >
-                          {giftCopied === code.accessToken ? "✓" : "Copiar"}
+                    {available.length === 0 && inUse.length === 0 ? (
+                      <p className="text-xs text-[hsl(220_10%_40%)] italic">Nenhum código gerado. Clique em "+ 5 Códigos" para criar.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {inUse.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-green-400 uppercase tracking-widest mb-1.5">✅ Em uso ({inUse.length})</p>
+                            <div className="space-y-1">
+                              {inUse.map(code => (
+                                <div key={code.id} className="flex items-center justify-between gap-3 bg-[hsl(220_15%_10%)] rounded-lg px-3 py-2">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <span className="font-mono text-sm font-bold text-white tracking-wider">{code.accessToken}</span>
+                                    <span className="text-xs text-[hsl(220_10%_40%)] truncate">{code.customerName || code.customerEmail}</span>
+                                  </div>
+                                  <button onClick={() => copyCode(code.accessToken)} className="btn-outline text-xs px-2 py-1 shrink-0">
+                                    {giftCopied === code.accessToken ? "✓" : "Copiar"}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {available.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-[hsl(220_10%_40%)] uppercase tracking-widest mb-1.5">⚪ Disponíveis ({available.length})</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {available.map(code => (
+                                <div key={code.id} className="flex items-center justify-between gap-3 bg-[hsl(220_15%_10%)] rounded-lg px-3 py-2">
+                                  <span className="font-mono text-sm font-bold text-[hsl(250_90%_75%)] tracking-wider">{code.accessToken}</span>
+                                  <button onClick={() => copyCode(code.accessToken)} className="btn-outline text-xs px-2 py-1 shrink-0">
+                                    {giftCopied === code.accessToken ? "✓" : "Copiar"}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ── BLOCO: Academy Completo R$2.500 ── */}
+              {(() => {
+                const available = giftCodes.filter(c => c.productId === "complete-bundle" && c.customerEmail === "brinde@agencianexos.vip");
+                const inUse     = giftCodes.filter(c => c.productId === "complete-bundle" && c.customerEmail !== "brinde@agencianexos.vip");
+                const isGen     = giftGeneratingProduct === "complete-bundle";
+                return (
+                  <div className="rounded-xl border border-[hsl(220_15%_18%)] p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-widest text-[hsl(168_100%_42%)] bg-[hsl(168_100%_42%/0.1)] px-2 py-0.5 rounded">Academy · R$2.500</span>
+                        </div>
+                        <p className="text-sm font-semibold text-white mt-1">Metodologia NexOS — Edição Completa</p>
+                        <p className="text-xs text-[hsl(220_10%_45%)] mt-0.5">{inUse.length} em uso · {available.length} disponíveis</p>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <button onClick={() => generateMoreGiftCodes(5, "complete-bundle")} disabled={giftGenerating} className="btn-primary text-sm px-3 py-1.5">
+                          {isGen ? "Gerando..." : "+ 5 Códigos"}
+                        </button>
+                        <button onClick={() => generateMoreGiftCodes(10, "complete-bundle")} disabled={giftGenerating} className="btn-outline text-sm px-3 py-1.5">
+                          {isGen ? "..." : "+ 10"}
                         </button>
                       </div>
-                    ))}
+                    </div>
+
+                    {available.length === 0 && inUse.length === 0 ? (
+                      <p className="text-xs text-[hsl(220_10%_40%)] italic">Nenhum código gerado. Clique em "+ 5 Códigos" para criar.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {inUse.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-green-400 uppercase tracking-widest mb-1.5">✅ Em uso ({inUse.length})</p>
+                            <div className="space-y-1">
+                              {inUse.map(code => (
+                                <div key={code.id} className="flex items-center justify-between gap-3 bg-[hsl(220_15%_10%)] rounded-lg px-3 py-2">
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <span className="font-mono text-sm font-bold text-white tracking-wider">{code.accessToken}</span>
+                                    <span className="text-xs text-[hsl(220_10%_40%)] truncate">{code.customerName || code.customerEmail}</span>
+                                  </div>
+                                  <button onClick={() => copyCode(code.accessToken)} className="btn-outline text-xs px-2 py-1 shrink-0">
+                                    {giftCopied === code.accessToken ? "✓" : "Copiar"}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {available.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold text-[hsl(220_10%_40%)] uppercase tracking-widest mb-1.5">⚪ Disponíveis ({available.length})</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {available.map(code => (
+                                <div key={code.id} className="flex items-center justify-between gap-3 bg-[hsl(220_15%_10%)] rounded-lg px-3 py-2">
+                                  <span className="font-mono text-sm font-bold text-[hsl(250_90%_75%)] tracking-wider">{code.accessToken}</span>
+                                  <button onClick={() => copyCode(code.accessToken)} className="btn-outline text-xs px-2 py-1 shrink-0">
+                                    {giftCopied === code.accessToken ? "✓" : "Copiar"}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
+                );
+              })()}
+            </>
           )}
         </div>
       )}

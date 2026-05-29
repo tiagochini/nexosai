@@ -102,10 +102,19 @@ export async function transitionCampaign(
     .catch((err) => log.warn({ err, campaignId }, "PIPELINE_KERNEL: failed to write audit log"));
 }
 
+// Founder/admin accounts have unlimited campaigns — no plan cap applied.
+const FOUNDER_EMAILS = new Set([
+  "founder@nexos.ai",
+  "founder@agencianexos.vip",
+  "admin@nexos.ai",
+  "admin@agencianexos.vip",
+]);
+
 export async function createCampaign(
   workspaceId: string,
   data: Partial<InsertCampaign> & { title: string },
   log: Logger,
+  ownerEmail?: string,
 ): Promise<Campaign> {
   const [ws] = await db
     .select({ planId: workspacesTable.planId, activeCampaigns: workspacesTable.activeCampaigns })
@@ -115,16 +124,20 @@ export async function createCampaign(
 
   if (!ws) throw new NotFoundError("Workspace");
 
-  const [plan] = await db
-    .select({ maxCampaigns: plansTable.maxCampaigns })
-    .from(plansTable)
-    .where(eq(plansTable.id, ws.planId))
-    .limit(1);
+  const isFounder = ownerEmail ? FOUNDER_EMAILS.has(ownerEmail) : false;
 
-  if (plan && ws.activeCampaigns >= plan.maxCampaigns) {
-    throw new ForbiddenError(
-      `Campaign limit reached (${plan.maxCampaigns}). Upgrade your plan or complete existing campaigns.`,
-    );
+  if (!isFounder) {
+    const [plan] = await db
+      .select({ maxCampaigns: plansTable.maxCampaigns })
+      .from(plansTable)
+      .where(eq(plansTable.id, ws.planId))
+      .limit(1);
+
+    if (plan && ws.activeCampaigns >= plan.maxCampaigns) {
+      throw new ForbiddenError(
+        `Campaign limit reached (${plan.maxCampaigns}). Upgrade your plan or complete existing campaigns.`,
+      );
+    }
   }
 
   const [campaign] = await db

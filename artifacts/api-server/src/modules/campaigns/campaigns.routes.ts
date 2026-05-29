@@ -77,7 +77,7 @@ router.post("/", async (req, res): Promise<void> => {
   }
 
   try {
-    const campaign = await createCampaign(req.auth.workspaceId, parsed.data, req.log);
+    const campaign = await createCampaign(req.auth.workspaceId, parsed.data, req.log, req.auth.email);
     res.status(201).json({ campaign });
   } catch (err) {
     if (err instanceof AppError) {

@@ -168,6 +168,14 @@ router.patch("/me", requireAuth, async (req, res): Promise<void> => {
   res.json({ ok: true });
 });
 
+// Founder/admin accounts always receive Agency-level plan data regardless of DB plan.
+const FOUNDER_EMAILS_ME = new Set([
+  "founder@nexos.ai",
+  "founder@agencianexos.vip",
+  "admin@nexos.ai",
+  "admin@agencianexos.vip",
+]);
+
 router.get("/me", requireAuth, async (req, res): Promise<void> => {
   const [user] = await db
     .select({
@@ -203,11 +211,13 @@ router.get("/me", requireAuth, async (req, res): Promise<void> => {
     .where(eq(workspacesTable.id, req.auth.workspaceId))
     .limit(1);
 
+  // Founders always see Agency plan — fetch it by slug so all frontend plan gates pass.
+  const isFounder = FOUNDER_EMAILS_ME.has(user.email);
   const plan = workspace
     ? await db
         .select()
         .from(plansTable)
-        .where(eq(plansTable.id, workspace.planId))
+        .where(isFounder ? eq(plansTable.slug, "agency") : eq(plansTable.id, workspace.planId))
         .limit(1)
     : [];
 
