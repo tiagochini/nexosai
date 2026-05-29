@@ -170,15 +170,42 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
 
       {/* Already has access banner */}
       {hasAccess && (
-        <div className="rounded-xl border border-[hsl(168_100%_42%/0.2)] bg-[hsl(168_100%_42%/0.06)] p-5 flex items-center gap-4">
-          <span className="text-2xl">✅</span>
-          <div className="flex-1">
-            <p className="text-sm font-bold text-white">Você já tem acesso ao portal</p>
-            <p className="text-xs text-[hsl(220_10%_50%)] mt-0.5">Todos os módulos, capítulos e aulas estão disponíveis para você.</p>
+        <div
+          className="rounded-2xl p-6 space-y-4"
+          style={{
+            background: "linear-gradient(135deg, hsl(168 100% 42% / 0.08), hsl(250 90% 60% / 0.08))",
+            border: "1px solid hsl(168 100% 42% / 0.25)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0"
+              style={{ background: "hsl(168 100% 42% / 0.15)", border: "1px solid hsl(168 100% 42% / 0.3)" }}
+            >
+              ✓
+            </div>
+            <div>
+              <p className="font-bold text-white">Acesso Completo Ativado</p>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(220 10% 50%)" }}>
+                Todos os produtos do ecossistema NexOS estão disponíveis para você.
+              </p>
+            </div>
           </div>
-          <button className="btn-primary text-sm" onClick={() => onNavigate("modules")}>
-            Acessar Módulos →
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              className="btn-primary py-3 font-bold text-sm"
+              style={{ background: "linear-gradient(135deg, hsl(250 90% 55%), hsl(270 80% 50%))" }}
+              onClick={() => onNavigate("modules")}
+            >
+              📚 Acessar Curso Completo →
+            </button>
+            <button
+              className="btn-primary py-3 font-bold text-sm"
+              onClick={() => onNavigate("mini-guide")}
+            >
+              📖 Acessar Mini-Guia R$97 →
+            </button>
+          </div>
         </div>
       )}
 
@@ -302,10 +329,23 @@ export default function Products({ onNavigate, hasAccess, onAccessGranted, payme
                       <p className="text-xs text-[hsl(220_10%_45%)] mb-4">pagamento único · acesso imediato</p>
                     )}
 
-                    {hasAccess && product.type === "premium" ? (
-                      <button className="btn-primary w-full" onClick={() => onNavigate("modules")}>
-                        Acessar o Curso →
-                      </button>
+                    {hasAccess ? (
+                      product.type === "premium" ? (
+                        <button
+                          className="btn-primary w-full font-bold"
+                          style={{ background: "var(--gradient-gold)" }}
+                          onClick={() => onNavigate("modules")}
+                        >
+                          ✓ Acessar o Curso →
+                        </button>
+                      ) : (
+                        <button
+                          className="btn-primary w-full font-bold"
+                          onClick={() => onNavigate("mini-guide")}
+                        >
+                          ✓ Acessar Mini-Guia →
+                        </button>
+                      )
                     ) : (
                       <button
                         className="btn-primary w-full"

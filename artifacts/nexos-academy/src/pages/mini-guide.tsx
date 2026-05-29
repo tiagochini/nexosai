@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Watermark from "@/components/Watermark";
 import { generateMiniGuidePDF } from "@/lib/generate-mini-guide-pdf";
+import AntiPiracyModal from "@/components/AntiPiracyModal";
 
 interface MiniGuideProps {
   onNavigate: (page: string, params?: Record<string, string>) => void;
@@ -10,14 +11,20 @@ interface MiniGuideProps {
 
 export default function MiniGuide({ onNavigate, studentName, studentEmail }: MiniGuideProps) {
   const [generating, setGenerating] = useState(false);
+  const [showAntiPiracyModal, setShowAntiPiracyModal] = useState(false);
 
-  async function handleDownload() {
+  const resolvedName = studentName || "Leitor NexOS";
+  const resolvedEmail = studentEmail || "leitor@nexosacademy.com";
+
+  function handleDownloadClick() {
+    setShowAntiPiracyModal(true);
+  }
+
+  async function handleConfirmDownload() {
+    setShowAntiPiracyModal(false);
     setGenerating(true);
     try {
-      await generateMiniGuidePDF(
-        studentName || "Leitor NexOS",
-        studentEmail || "leitor@nexosacademy.com"
-      );
+      await generateMiniGuidePDF(resolvedName, resolvedEmail);
     } finally {
       setGenerating(false);
     }
@@ -41,7 +48,7 @@ export default function MiniGuide({ onNavigate, studentName, studentEmail }: Min
             )}
           </div>
           <button
-            onClick={handleDownload}
+            onClick={handleDownloadClick}
             disabled={generating}
             className="shrink-0 flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
             style={{ background: "linear-gradient(135deg, hsl(250 90% 58%), hsl(270 80% 52%))" }}
@@ -538,6 +545,16 @@ export default function MiniGuide({ onNavigate, studentName, studentEmail }: Min
         </section>
 
       </div>
+
+      {showAntiPiracyModal && (
+        <AntiPiracyModal
+          studentName={resolvedName}
+          studentEmail={resolvedEmail}
+          documentTitle="Mapa dos Primeiros R$10.000 em Vendas Online"
+          onConfirm={handleConfirmDownload}
+          onCancel={() => setShowAntiPiracyModal(false)}
+        />
+      )}
     </Watermark>
   );
 }

@@ -4,6 +4,8 @@ import { GLOSSARY } from "@/data/glossary";
 import { getBibliographyForLesson, DIFFICULTY_LABEL, DIFFICULTY_COLOR } from "@/data/bibliography";
 import { useAntiPiracy } from "@/hooks/useAntiPiracy";
 import PiracyWatermark from "@/components/PiracyWatermark";
+import AntiPiracyModal from "@/components/AntiPiracyModal";
+import { generateLessonPDF } from "@/lib/generate-lesson-pdf";
 
 interface LessonProps {
   chapterId: string;
@@ -115,6 +117,9 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
   const [tutorError, setTutorError] = useState<string | null>(null);
   const tutorEndRef = useRef<HTMLDivElement>(null);
   const tutorInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // PDF download state
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   useEffect(() => {
     if (chapter && !activeLesson) setActiveLesson(chapter.lessons[0]);
@@ -961,6 +966,19 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
               {lessonDone && !isQuizLesson && (
                 <span className="badge-success badge-primary text-sm">✓ Concluído</span>
               )}
+              {!isQuizLesson && (
+                <button
+                  className="text-sm px-4 py-2 rounded-lg font-semibold transition-all hover:opacity-90"
+                  style={{
+                    background: "hsl(250 90% 60% / 0.12)",
+                    border: "1px solid hsl(250 90% 60% / 0.25)",
+                    color: "hsl(250 90% 80%)",
+                  }}
+                  onClick={() => setShowPdfModal(true)}
+                >
+                  ↓ Baixar PDF desta Aula
+                </button>
+              )}
               {quizPassed && (
                 <span className="badge-success badge-primary text-sm">✓ Aprovado {quizScore}%</span>
               )}
@@ -998,6 +1016,28 @@ export default function Lesson({ chapterId, lessonId, onNavigate, progress, onCo
           </div>
         </div>
       </main>
+
+      {showPdfModal && (
+        <AntiPiracyModal
+          studentName={studentName || "Aluno NexOS"}
+          studentEmail={studentEmail || "aluno@nexosacademy.com"}
+          documentTitle={activeLesson.title}
+          onConfirm={() => {
+            setShowPdfModal(false);
+            const moduleObj = CURRICULUM.find(m => m.chapters.some(c => c.id === chapterId));
+            generateLessonPDF({
+              moduleTitle: moduleObj?.title ?? "Módulo",
+              chapterTitle: chapter.title,
+              lessonTitle: activeLesson.title,
+              lessonContent: activeLesson.content ?? "",
+              studentName: studentName || "Aluno NexOS",
+              studentEmail: studentEmail || "aluno@nexosacademy.com",
+              lessonNumber: chapter.lessons.findIndex(l => l.id === activeLesson.id) + 1,
+            });
+          }}
+          onCancel={() => setShowPdfModal(false)}
+        />
+      )}
     </div>
   );
 }
