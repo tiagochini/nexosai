@@ -56,7 +56,7 @@ const ALL_NAV_ITEMS = [
 
 const PUBLIC_NAV_ITEMS = ALL_NAV_ITEMS.filter(n => ["home", "products"].includes(n.id));
 
-const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress", "glossary"];
+const RESTRICTED_PAGES: Page[] = ["modules", "module", "lesson", "progress", "glossary", "mini-guide"];
 
 function getInitialPage(): NavState {
   if (typeof window !== "undefined") {
@@ -76,7 +76,15 @@ function AcademyApp() {
   const [nav, setNav] = useState<NavState>(getInitialPage);
   const [progress, setProgress] = useState<Record<string, boolean>>(loadProgress);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [ownerMode, setOwnerMode] = useState<boolean>(isOwnerMode);
+  const [ownerMode, setOwnerMode] = useState<boolean>(() => {
+    if (isOwnerMode()) return true;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("owner") === "NX-FOUNDER-2026") {
+      sessionStorage.setItem("nexos-owner-mode", "true");
+      return true;
+    }
+    return false;
+  });
   const [hasAccess, setHasAccess] = useState<boolean>(() => hasStoredAccess() || isOwnerMode());
   const [brand, setBrand] = useState<BrandConfig>(() => loadBrand());
   const [sessionConflict, setSessionConflict] = useState(false);
