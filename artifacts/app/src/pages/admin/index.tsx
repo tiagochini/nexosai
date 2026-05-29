@@ -13,7 +13,7 @@ import {
   DollarSign, BarChart3, Bot, Target, TrendingDown, Clock,
   RefreshCw, CheckCircle2, ArrowUpRight, Percent,
   QrCode, FileText, CheckCheck, Filter, Wallet, Shield,
-  X, Phone, Mail, Calendar, Tag, Layers, ChevronRight,
+  X, Phone, Mail, Calendar, Tag, Layers, ChevronRight, Copy, Trash2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -362,7 +362,7 @@ const PAYMENT_STATUS: Record<string, { label: string; cls: string }> = {
 export default function AdminPage() {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites">("pagamentos");
+  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes">("pagamentos");
   const [payFilter, setPayFilter] = useState<"all" | "pending" | "paid">("pending");
   const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
 
@@ -408,6 +408,52 @@ export default function AdminPage() {
       return data.codes;
     },
   });
+
+  interface WaitlistEntry {
+    id: string; name: string; whatsapp: string; email: string | null;
+    segment: string; source: string | null; notified: boolean;
+    confirmedAt: string | null; createdAt: string;
+  }
+
+  const { data: waitlistData, isLoading: loadingWaitlist, refetch: refetchWaitlist } = useQuery({
+    queryKey: ["/api/admin/waitlist"],
+    enabled: isAdmin && tab === "solicitacoes",
+    queryFn: async () => {
+      const data = await customFetch<{ entries: WaitlistEntry[]; total: number }>("/api/admin/waitlist");
+      return data;
+    },
+  });
+
+  const [approveCodeResult, setApproveCodeResult] = useState<Record<string, string>>({});
+  const [approveLoading, setApproveLoading] = useState<string | null>(null);
+
+  const approveWaitlistEntry = async (id: string, planSlug: string) => {
+    setApproveLoading(id);
+    try {
+      const data = await customFetch<{ code: string }>(`/api/admin/waitlist/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planSlug }),
+      });
+      setApproveCodeResult(prev => ({ ...prev, [id]: data.code }));
+      toast.success(`Código gerado: ${data.code}`);
+      void refetchWaitlist();
+    } catch {
+      toast.error("Erro ao aprovar solicitação");
+    } finally {
+      setApproveLoading(null);
+    }
+  };
+
+  const deleteWaitlistEntry = async (id: string) => {
+    try {
+      await customFetch(`/api/admin/waitlist/${id}`, { method: "DELETE" });
+      toast.success("Solicitação removida");
+      void refetchWaitlist();
+    } catch {
+      toast.error("Erro ao remover");
+    }
+  };
 
   const generateInvitesMutation = useMutation({
     mutationFn: async ({ count, planSlug }: { count: number; planSlug: string }) => {
@@ -497,6 +543,7 @@ export default function AdminPage() {
     { id: "upsell" as const,      label: "Oportunidades" },
     { id: "users" as const,       label: "Usuários" },
     { id: "convites" as const,    label: "🎟️ Convites" },
+    { id: "solicitacoes" as const, label: "📋 Solicitações" },
   ];
 
   return (
@@ -1156,6 +1203,109 @@ export default function AdminPage() {
               {grantPlanMutation.isPending ? "Liberando..." : `Liberar Acesso ${grantPlan.toUpperCase()} →`}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* ─── TAB: SOLICITAÇÕES ─────────────────────────────────────────────────── */}
+      {tab === "solicitacoes" && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">📋 Solicitações de Acesso</h2>
+              <p className="font-mono text-xs text-muted-foreground/60 mt-1">
+                {waitlistData?.total ?? 0} total ·{" "}
+                {(waitlistData?.entries ?? []).filter(e => !e.notified).length} pendentes
+              </p>
+            </div>
+            <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2" onClick={() => void refetchWaitlist()}>
+              <RefreshCw className="h-3 w-3" /> Atualizar
+            </Button>
+          </div>
+
+          <div className="border border-primary/10 bg-primary/5 px-4 py-3 font-mono text-[11px] text-primary/70 uppercase tracking-widest">
+            💡 Para liberar acesso: gere um código para o plano desejado e envie pelo WhatsApp. O usuário usa o código na tela de cadastro.
+          </div>
+
+          {loadingWaitlist ? (
+            <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-none" />)}</div>
+          ) : !waitlistData?.entries || waitlistData.entries.length === 0 ? (
+            <div className="border border-border/30 bg-card/20 p-12 text-center">
+              <p className="font-mono text-sm text-muted-foreground/50">Nenhuma solicitação no momento.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {waitlistData.entries.map(entry => (
+                <div key={entry.id} className={`border p-4 space-y-3 ${entry.notified ? "border-success/20 bg-success/5" : "border-border/40 bg-card/20"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm font-bold text-foreground">{entry.name}</span>
+                        <span className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 border ${entry.notified ? "text-success border-success/30 bg-success/10" : "text-yellow-400 border-yellow-400/30 bg-yellow-400/10"}`}>
+                          {entry.notified ? "Aprovado" : "Pendente"}
+                        </span>
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 border border-border/30 px-1.5 py-0.5">
+                          {entry.segment}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-mono text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3 w-3" /> {entry.whatsapp}
+                        </span>
+                        {entry.email && (
+                          <span className="font-mono text-xs text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" /> {entry.email}
+                          </span>
+                        )}
+                        <span className="font-mono text-[10px] text-muted-foreground/40 flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> {fmtDate(entry.createdAt)}
+                        </span>
+                      </div>
+                      {approveCodeResult[entry.id] && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="font-mono text-sm font-black text-primary tracking-widest border border-primary/30 bg-primary/10 px-3 py-1">
+                            {approveCodeResult[entry.id]}
+                          </span>
+                          <Button size="sm" variant="outline" className="rounded-none font-mono text-[11px] uppercase tracking-widest h-7 px-2 btn-weapon-outline gap-1"
+                            onClick={async () => { try { await navigator.clipboard.writeText(approveCodeResult[entry.id]!); toast.success("Copiado!"); } catch { /* ignore */ } }}>
+                            <Copy className="h-3 w-3" /> Copiar
+                          </Button>
+                          <a href={`https://wa.me/55${entry.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${entry.name}! Seu código de acesso NexOS: *${approveCodeResult[entry.id]}* — acesse: https://agencianexos.vip/app/register`)}`}
+                            target="_blank" rel="noreferrer">
+                            <Button size="sm" className="rounded-none font-mono text-[11px] uppercase tracking-widest h-7 px-2 bg-green-600 hover:bg-green-700 text-white">
+                              WhatsApp →
+                            </Button>
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!entry.notified && (
+                        <>
+                          <Button size="sm" variant="outline"
+                            className="rounded-none font-mono text-[11px] uppercase tracking-widest h-8 px-3 border-primary/30 text-primary hover:bg-primary/10"
+                            onClick={() => void approveWaitlistEntry(entry.id, "solo")}
+                            disabled={approveLoading === entry.id}>
+                            {approveLoading === entry.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Solo →"}
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            className="rounded-none font-mono text-[11px] uppercase tracking-widest h-8 px-3 border-success/30 text-success hover:bg-success/10"
+                            onClick={() => void approveWaitlistEntry(entry.id, "agency")}
+                            disabled={approveLoading === entry.id}>
+                            {approveLoading === entry.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : "Agency →"}
+                          </Button>
+                        </>
+                      )}
+                      <Button size="sm" variant="outline"
+                        className="rounded-none font-mono text-[11px] h-8 px-2 border-destructive/30 text-destructive hover:bg-destructive/10"
+                        onClick={() => void deleteWaitlistEntry(entry.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

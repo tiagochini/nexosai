@@ -27,6 +27,13 @@ const refreshSchema = z.object({
   refreshToken: z.string(),
 });
 
+// GET /api/auth/platform-status — public, tells the frontend if cart is open
+router.get("/platform-status", (_req, res): void => {
+  const platformOpen = process.env["PLATFORM_OPEN"] === "true";
+  const cartOpen = process.env["CART_OPEN"] === "true";
+  res.json({ platformOpen, cartOpen });
+});
+
 router.post("/register", async (req, res): Promise<void> => {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {

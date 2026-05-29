@@ -51,6 +51,9 @@ export const env = {
   // DRY_RUN_MODE: skips real AI calls, real payments, real ad publishing.
   // All agent executions are simulated and logged with is_dry_run=true.
   DRY_RUN_MODE: process.env["DRY_RUN_MODE"] === "true",
+  // CART_OPEN: when "true", the register gate shows purchase options for public products.
+  // Set to "false" during pre-launch (carrinho fechado) — only invite codes / waitlist work.
+  CART_OPEN: process.env["CART_OPEN"] === "true",
   // ── Video generation providers ─────────────────────────────────────────────
   // Runway ML — text/image → video (Gen-3 Alpha). https://dev.runwayml.com
   RUNWAY_API_KEY: process.env["RUNWAY_API_KEY"] ?? "",

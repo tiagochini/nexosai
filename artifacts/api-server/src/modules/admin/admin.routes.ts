@@ -7,6 +7,7 @@ import { UnauthorizedError, NotFoundError } from "../../lib/errors.js";
 import {
   db, inviteCodesTable, usersTable, workspacesTable, plansTable,
   subscriptionPaymentsTable, campaignsTable, creditTransactionsTable,
+  waitlistTable,
 } from "@workspace/db";
 import { eq, desc, count, sql } from "drizzle-orm";
 
@@ -295,6 +296,53 @@ router.get("/audit-logs/:id", requireAuth, async (req, res): Promise<void> => {
   const log = await getAgentExecutionLogById(req.params["id"] as string);
   if (!log) { res.status(404).json({ error: "Log não encontrado" }); return; }
   res.json({ log });
+});
+
+// ─── Waitlist / Access Requests ───────────────────────────────────────────────
+
+// GET /api/admin/waitlist — list all waitlist entries
+router.get("/waitlist", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const rows = await db
+    .select()
+    .from(waitlistTable)
+    .orderBy(desc(waitlistTable.createdAt));
+  res.json({ entries: rows, total: rows.length });
+});
+
+// POST /api/admin/waitlist/:id/approve — generate invite code + mark as notified
+router.post("/waitlist/:id/approve", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const id = req.params["id"] as string;
+  const { planSlug = "solo" } = req.body as { planSlug?: string };
+
+  const [entry] = await db
+    .select()
+    .from(waitlistTable)
+    .where(eq(waitlistTable.id, id))
+    .limit(1);
+  if (!entry) { res.status(404).json({ error: "Solicitação não encontrada" }); return; }
+
+  const code = generateInviteCode();
+  const [invite] = await db
+    .insert(inviteCodesTable)
+    .values({ code, planSlug, label: `waitlist:${entry.whatsapp}` })
+    .returning();
+
+  await db
+    .update(waitlistTable)
+    .set({ notified: true, confirmedAt: new Date() })
+    .where(eq(waitlistTable.id, id));
+
+  res.status(201).json({ code: invite!.code, planSlug, entry });
+});
+
+// DELETE /api/admin/waitlist/:id — remove / reject entry
+router.delete("/waitlist/:id", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const id = req.params["id"] as string;
+  await db.delete(waitlistTable).where(eq(waitlistTable.id, id));
+  res.json({ ok: true });
 });
 
 export default router;
