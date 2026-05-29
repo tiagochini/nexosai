@@ -4,8 +4,11 @@ import { getAdminOverview, getAdminFinancials, getAdminPayments } from "./admin.
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
 import { UnauthorizedError, NotFoundError } from "../../lib/errors.js";
-import { db, inviteCodesTable, usersTable, workspacesTable, plansTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import {
+  db, inviteCodesTable, usersTable, workspacesTable, plansTable,
+  subscriptionPaymentsTable, campaignsTable, creditTransactionsTable,
+} from "@workspace/db";
+import { eq, desc, count, sql } from "drizzle-orm";
 
 const ADMIN_EMAILS = new Set([
   "admin@nexos.ai",
@@ -154,6 +157,108 @@ router.post("/workspaces/:workspaceId/grant-plan", requireAuth, async (req, res)
 
   req.log.info({ workspaceId, planSlug, grantedBy: req.auth.email, note: note ?? null }, "admin grant-plan");
   res.json({ ok: true, planName: plan.name, creditsGranted: plan.creditsMonthly });
+});
+
+// ─── User detail / profile ────────────────────────────────────────────────────
+router.get("/users/:userId", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const { userId } = req.params as { userId: string };
+
+  const [user] = await db
+    .select({
+      userId: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      phone: usersTable.phone,
+      createdAt: usersTable.createdAt,
+      workspaceId: workspacesTable.id,
+      workspaceName: workspacesTable.name,
+      workspaceStatus: workspacesTable.status,
+      planId: workspacesTable.planId,
+      planName: plansTable.name,
+      planSlug: plansTable.slug,
+      creditsBalance: workspacesTable.creditsBalance,
+      activeCampaigns: workspacesTable.activeCampaigns,
+    })
+    .from(usersTable)
+    .innerJoin(workspacesTable, eq(workspacesTable.ownerId, usersTable.id))
+    .leftJoin(plansTable, eq(plansTable.id, workspacesTable.planId))
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  if (!user) throw new NotFoundError("Usuário não encontrado");
+
+  // Invite code used at registration (lead source)
+  const [invite] = await db
+    .select({ code: inviteCodesTable.code, planSlug: inviteCodesTable.planSlug, usedAt: inviteCodesTable.usedAt })
+    .from(inviteCodesTable)
+    .where(eq(inviteCodesTable.usedByUserId, userId))
+    .limit(1);
+
+  // Payments
+  const payments = await db
+    .select({
+      id: subscriptionPaymentsTable.id,
+      amountCents: subscriptionPaymentsTable.amountCents,
+      currency: subscriptionPaymentsTable.currency,
+      method: subscriptionPaymentsTable.method,
+      status: subscriptionPaymentsTable.status,
+      description: subscriptionPaymentsTable.description,
+      createdAt: subscriptionPaymentsTable.createdAt,
+      paidAt: subscriptionPaymentsTable.paidAt,
+    })
+    .from(subscriptionPaymentsTable)
+    .where(eq(subscriptionPaymentsTable.workspaceId, user.workspaceId))
+    .orderBy(desc(subscriptionPaymentsTable.createdAt))
+    .limit(20);
+
+  // Campaigns
+  const campaigns = await db
+    .select({
+      id: campaignsTable.id,
+      name: campaignsTable.title,
+      type: campaignsTable.type,
+      status: campaignsTable.status,
+      track: campaignsTable.track,
+      createdAt: campaignsTable.createdAt,
+    })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.workspaceId, user.workspaceId))
+    .orderBy(desc(campaignsTable.createdAt))
+    .limit(20);
+
+  // Credit usage stats
+  const [creditStats] = await db
+    .select({
+      totalDebited: sql<number>`COALESCE(SUM(CASE WHEN ${creditTransactionsTable.type}='debit' THEN ${creditTransactionsTable.amount} ELSE 0 END),0)`.mapWith(Number),
+      totalCredited: sql<number>`COALESCE(SUM(CASE WHEN ${creditTransactionsTable.type}='credit' THEN ${creditTransactionsTable.amount} ELSE 0 END),0)`.mapWith(Number),
+      txCount: count(),
+    })
+    .from(creditTransactionsTable)
+    .where(eq(creditTransactionsTable.workspaceId, user.workspaceId));
+
+  // Recent credit transactions
+  const recentCredits = await db
+    .select({
+      id: creditTransactionsTable.id,
+      type: creditTransactionsTable.type,
+      amount: creditTransactionsTable.amount,
+      action: creditTransactionsTable.action,
+      createdAt: creditTransactionsTable.createdAt,
+    })
+    .from(creditTransactionsTable)
+    .where(eq(creditTransactionsTable.workspaceId, user.workspaceId))
+    .orderBy(desc(creditTransactionsTable.createdAt))
+    .limit(10);
+
+  res.json({
+    user,
+    leadSource: invite ?? null,
+    payments,
+    campaigns,
+    creditStats: creditStats ?? { totalDebited: 0, totalCredited: 0, txCount: 0 },
+    recentCredits,
+  });
 });
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────

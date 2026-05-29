@@ -13,6 +13,7 @@ import {
   DollarSign, BarChart3, Bot, Target, TrendingDown, Clock,
   RefreshCw, CheckCircle2, ArrowUpRight, Percent,
   QrCode, FileText, CheckCheck, Filter, Wallet, Shield,
+  X, Phone, Mail, Calendar, Tag, Layers, ChevronRight,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,6 +72,21 @@ interface AdminFinancials {
   recentPayments: { id: string; email: string; planName: string; amountCents: number; paidAt: string | null; createdAt: string }[];
 }
 
+// ── User Profile types ────────────────────────────────────────────────────────
+interface UserProfile {
+  user: {
+    userId: string; name: string; email: string; phone: string | null;
+    createdAt: string; workspaceId: string; workspaceName: string;
+    workspaceStatus: string; planName: string | null; planSlug: string | null;
+    creditsBalance: number; activeCampaigns: number;
+  };
+  leadSource: { code: string; planSlug: string; usedAt: string | null } | null;
+  payments: { id: string; amountCents: number; currency: string; method: string; status: string; description: string | null; createdAt: string; paidAt: string | null }[];
+  campaigns: { id: string; name: string; type: string; status: string; track: string | null; createdAt: string }[];
+  creditStats: { totalDebited: number; totalCredited: number; txCount: number };
+  recentCredits: { id: string; type: string; amount: number; action: string; createdAt: string }[];
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SAAS_META: Record<SaasStatus, { label: string; color: string; icon: React.ElementType; desc: string }> = {
@@ -104,6 +120,223 @@ function MetricCard({
       </div>
       <div className={`font-mono font-bold text-2xl ${color}`}>{value}</div>
       {sub && <div className="font-mono text-[11px] text-muted-foreground/50 mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+// ─── User Profile Drawer ──────────────────────────────────────────────────────
+function UserProfileDrawer({ userId, onClose, onGrant }: { userId: string; onClose: () => void; onGrant: (workspaceId: string, userName: string, planSlug: string) => void }) {
+  const [tab, setTab] = useState<"perfil" | "campanhas" | "pagamentos" | "creditos">("perfil");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/admin/users", userId],
+    queryFn: () => customFetch<UserProfile>(`/api/admin/users/${userId}`),
+    enabled: !!userId,
+  });
+
+  const p = data;
+  const CAMPAIGN_STATUS_COLOR: Record<string, string> = {
+    draft: "text-muted-foreground", analyzing: "text-blue-400", strategy_ready: "text-cyan-400",
+    generating: "text-yellow-400", awaiting_approval: "text-orange-400", approved: "text-primary",
+    executing: "text-success", live: "text-success", completed: "text-muted-foreground/50", cancelled: "text-destructive/60",
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="ml-auto w-full max-w-xl h-full bg-[#0a0a0f] border-l border-border/50 flex flex-col overflow-hidden shadow-2xl"
+        style={{ animation: "slideInRight 0.2s ease" }}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 border-b border-border/40 shrink-0">
+          <div className="flex-1 min-w-0">
+            {isLoading ? (
+              <div className="space-y-2"><Skeleton className="h-6 w-48 bg-muted/20" /><Skeleton className="h-4 w-64 bg-muted/20" /></div>
+            ) : p ? (
+              <>
+                <div className="font-mono text-lg font-bold text-foreground truncate">{p.user.name}</div>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 border ${p.user.planSlug === "agency" ? "text-success border-success/30 bg-success/10" : "text-primary border-primary/30 bg-primary/10"}`}>
+                    {p.user.planSlug ?? "—"}
+                  </span>
+                  <span className="font-mono text-[11px] text-muted-foreground/50">{p.user.workspaceName}</span>
+                </div>
+              </>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2 ml-4 shrink-0">
+            {p && (
+              <button
+                onClick={() => onGrant(p.user.workspaceId, p.user.name, p.user.planSlug ?? "solo")}
+                className="font-mono text-[11px] uppercase tracking-widest border border-primary/30 bg-primary/5 hover:bg-primary/15 text-primary px-3 py-1.5 transition-colors"
+              >
+                🎟 Liberar Acesso
+              </button>
+            )}
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-border/40 shrink-0">
+          {(["perfil", "campanhas", "pagamentos", "creditos"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 font-mono text-[11px] uppercase tracking-widest py-3 transition-colors border-b-2 ${tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+              {t === "perfil" ? "Perfil" : t === "campanhas" ? "Campanhas" : t === "pagamentos" ? "Pagamentos" : "Créditos"}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {isLoading ? (
+            <div className="space-y-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-12 bg-muted/20" />)}</div>
+          ) : !p ? (
+            <p className="font-mono text-sm text-muted-foreground/50 text-center py-10">Erro ao carregar.</p>
+          ) : tab === "perfil" ? (
+            <>
+              {/* Contact */}
+              <div className="border border-border/40 bg-card/20 p-4 space-y-3">
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-3">Contato</div>
+                {[
+                  { icon: Mail, label: "Email", value: p.user.email },
+                  { icon: Phone, label: "Telefone", value: p.user.phone ?? "Não informado" },
+                  { icon: Calendar, label: "Cadastro", value: fmtDate(p.user.createdAt) },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center gap-3">
+                    <row.icon className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                    <span className="font-mono text-[11px] text-muted-foreground/50 w-20 shrink-0">{row.label}</span>
+                    <span className="font-mono text-sm text-foreground truncate">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Lead source */}
+              <div className="border border-border/40 bg-card/20 p-4">
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-3">🔗 Origem do Lead</div>
+                {p.leadSource ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <Tag className="h-3.5 w-3.5 text-primary/60 shrink-0" />
+                      <span className="font-mono text-[11px] text-muted-foreground/50 w-20 shrink-0">Código</span>
+                      <span className="font-mono text-sm text-primary font-bold">{p.leadSource.code}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Layers className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                      <span className="font-mono text-[11px] text-muted-foreground/50 w-20 shrink-0">Plano</span>
+                      <span className="font-mono text-sm text-foreground uppercase">{p.leadSource.planSlug}</span>
+                    </div>
+                    {p.leadSource.usedAt && (
+                      <div className="flex items-center gap-3">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                        <span className="font-mono text-[11px] text-muted-foreground/50 w-20 shrink-0">Usado em</span>
+                        <span className="font-mono text-sm text-foreground">{fmtDate(p.leadSource.usedAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="font-mono text-xs text-muted-foreground/40">Cadastro orgânico — sem código de convite</p>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Créditos", value: (p.user.creditsBalance ?? 0).toLocaleString("pt-BR"), color: p.user.creditsBalance < 150 ? "text-yellow-400" : "text-foreground" },
+                  { label: "Campanhas", value: String(p.campaigns.length), color: "text-foreground" },
+                  { label: "Pagamentos", value: String(p.payments.filter(x => x.status === "paid").length), color: "text-success" },
+                ].map(s => (
+                  <div key={s.label} className="border border-border/40 bg-card/20 p-3 text-center">
+                    <div className={`font-mono text-xl font-bold ${s.color}`}>{s.value}</div>
+                    <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mt-0.5">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : tab === "campanhas" ? (
+            p.campaigns.length === 0 ? (
+              <div className="py-12 text-center">
+                <Target className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="font-mono text-xs text-muted-foreground/40">Nenhuma campanha ainda.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {p.campaigns.map(c => (
+                  <div key={c.id} className="border border-border/40 bg-card/20 p-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-mono text-sm font-bold text-foreground truncate">{c.name}</div>
+                        <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5 flex items-center gap-2">
+                          <span className="uppercase">{c.type}</span>
+                          {c.track && <><span className="text-muted-foreground/30">·</span><span>{c.track}</span></>}
+                          <span className="text-muted-foreground/30">·</span>
+                          <span>{fmtDate(c.createdAt)}</span>
+                        </div>
+                      </div>
+                      <span className={`font-mono text-[11px] uppercase shrink-0 ${CAMPAIGN_STATUS_COLOR[c.status] ?? "text-muted-foreground"}`}>{c.status}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : tab === "pagamentos" ? (
+            p.payments.length === 0 ? (
+              <div className="py-12 text-center">
+                <CreditCard className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="font-mono text-xs text-muted-foreground/40">Nenhum pagamento registrado.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {p.payments.map(pay => (
+                  <div key={pay.id} className="border border-border/40 bg-card/20 p-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm font-bold text-foreground">{fmtBRL(pay.amountCents)}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">
+                        {pay.method.toUpperCase()} · {fmtDate(pay.createdAt)}
+                        {pay.description && <> · {pay.description}</>}
+                      </div>
+                    </div>
+                    <span className={`font-mono text-[11px] uppercase tracking-widest shrink-0 px-2 py-0.5 border ${pay.status === "paid" ? "text-success border-success/30 bg-success/10" : pay.status === "pending" ? "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" : "text-muted-foreground border-border/30"}`}>
+                      {pay.status === "paid" ? "Pago" : pay.status === "pending" ? "Pendente" : pay.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            /* credits tab */
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="border border-border/40 bg-card/20 p-4 text-center">
+                  <div className="font-mono text-xl font-bold text-primary">{p.creditStats.totalCredited.toLocaleString("pt-BR")}</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mt-0.5">Total Recebido</div>
+                </div>
+                <div className="border border-border/40 bg-card/20 p-4 text-center">
+                  <div className="font-mono text-xl font-bold text-orange-400">{p.creditStats.totalDebited.toLocaleString("pt-BR")}</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mt-0.5">Total Consumido</div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-2">Últimas Transações</div>
+                {p.recentCredits.length === 0 ? (
+                  <p className="font-mono text-xs text-muted-foreground/40 text-center py-6">Sem movimentações.</p>
+                ) : p.recentCredits.map(tx => (
+                  <div key={tx.id} className="flex items-center justify-between border border-border/30 bg-card/10 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="font-mono text-xs text-foreground/80 truncate">{tx.action}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground/40">{fmtDate(tx.createdAt)}</div>
+                    </div>
+                    <span className={`font-mono text-sm font-bold shrink-0 ml-3 ${tx.type === "credit" ? "text-success" : "text-orange-400"}`}>
+                      {tx.type === "credit" ? "+" : "−"}{tx.amount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -203,6 +436,7 @@ export default function AdminPage() {
   });
 
   const [grantTarget, setGrantTarget] = useState<{ workspaceId: string; userName: string; currentPlan: string } | null>(null);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
   const [grantPlan, setGrantPlan] = useState<"solo" | "agency">("solo");
   const [grantNote, setGrantNote] = useState("");
 
@@ -818,7 +1052,7 @@ export default function AdminPage() {
                   return (
                     <div key={u.workspaceId} className="grid grid-cols-[1fr_auto] md:grid-cols-[1fr_90px_70px_80px_80px_120px] items-center px-5 py-3.5 gap-4 hover:bg-muted/5 transition-colors group">
                       <div className="min-w-0">
-                        <div className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate">{u.userName}</div>
+                        <button onClick={() => setProfileUserId(u.userId)} className="font-mono text-sm font-bold text-foreground group-hover:text-primary transition-colors truncate text-left hover:underline underline-offset-2">{u.userName}</button>
                         <div className="text-xs text-muted-foreground font-mono truncate flex items-center gap-2">
                           <span>{u.email}</span>
                           {u.workspaceName && (<><span className="text-muted-foreground/30">·</span><span className="text-muted-foreground/50">{u.workspaceName}</span></>)}
@@ -856,6 +1090,19 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── User profile drawer ── */}
+      {profileUserId && (
+        <UserProfileDrawer
+          userId={profileUserId}
+          onClose={() => setProfileUserId(null)}
+          onGrant={(workspaceId, userName, planSlug) => {
+            setProfileUserId(null);
+            setGrantTarget({ workspaceId, userName, currentPlan: planSlug });
+            setGrantPlan("solo");
+          }}
+        />
       )}
 
       {/* ── Grant plan modal ── */}
