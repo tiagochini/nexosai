@@ -19,11 +19,11 @@ interface ChatMsg { role: "user" | "assistant"; content: string }
 // Preencha os links reais dos grupos antes de ativar a campanha:
 const GROUP_LINKS: Record<Segment, { whatsapp: string | null; telegram: string | null }> = {
   individual: {
-    whatsapp: "https://wa.me/message/NBJH4EXPAV2EN1",
+    whatsapp: "https://chat.whatsapp.com/H49MCBiw2x92E8YoQMIRXH",
     telegram:  null,
   },
   agency: {
-    whatsapp: "https://wa.me/message/NBJH4EXPAV2EN1",
+    whatsapp: "https://chat.whatsapp.com/H49MCBiw2x92E8YoQMIRXH",
     telegram:  null,
   },
 };
