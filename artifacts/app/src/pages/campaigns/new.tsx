@@ -98,6 +98,8 @@ export default function NewCampaign() {
   const [step, setStep]           = useState<1 | 2>(1);
   const [selectedGoal, setSelectedGoal] = useState<GoalOption | null>(null);
   const [title, setTitle]         = useState("");
+  // null = user chose "skip" (AI will discover track)
+  const [directMode, setDirectMode] = useState(false);
 
   const createMutation = useCreateCampaign({
     mutation: {
@@ -111,20 +113,25 @@ export default function NewCampaign() {
 
   const handleSelectGoal = (goal: GoalOption) => {
     setSelectedGoal(goal);
+    setDirectMode(false);
     if (!title.trim()) setTitle(goal.nameSuggestion);
+    setStep(2);
+  };
+
+  const handleDirectStart = () => {
+    setDirectMode(true);
+    setSelectedGoal(null);
+    if (!title.trim()) setTitle("Meu Lançamento");
     setStep(2);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedGoal || !title.trim()) return;
-    createMutation.mutate({
-      data: {
-        title: title.trim(),
-        type:  selectedGoal.type,
-        track: selectedGoal.track,
-      },
-    });
+    if (!title.trim()) return;
+    // When in direct mode, use launch/six_digits as defaults — intake AI will refine
+    const type  = selectedGoal?.type  ?? ("launch" as CampaignInputType);
+    const track = selectedGoal?.track ?? ("six_digits" as CampaignInputTrack);
+    createMutation.mutate({ data: { title: title.trim(), type, track } });
   };
 
   return (
@@ -141,20 +148,20 @@ export default function NewCampaign() {
         {step === 1 ? (
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
-              Nova Campanha · Passo 1 de 2
+              Nova Campanha
             </p>
             <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground leading-tight">
-              Qual é o seu<br />
-              <span className="text-primary">objetivo agora?</span>
+              Vamos criar sua<br />
+              <span className="text-primary">próxima campanha</span>
             </h1>
             <p className="text-sm text-muted-foreground font-mono mt-3 max-w-lg">
-              Escolha o cenário que melhor descreve o que você quer conquistar. A IA adapta toda a estratégia a partir daqui.
+              A IA faz as perguntas certas e monta tudo por você. Não precisa escolher nada agora.
             </p>
           </div>
         ) : (
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
-              Nova Campanha · Passo 2 de 2
+              Nova Campanha · Último passo
             </p>
             <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground">
               Como vai chamar<br />
@@ -167,7 +174,49 @@ export default function NewCampaign() {
         )}
       </div>
 
-      {/* Step 1: Goal selection */}
+      {/* Step 1: Direct start CTA */}
+      {step === 1 && (
+        <div className="mb-8">
+          <button
+            onClick={handleDirectStart}
+            className="w-full text-left border border-primary/60 bg-primary/5 hover:bg-primary/10 hover:border-primary transition-all duration-200 group relative overflow-hidden cursor-pointer"
+          >
+            <div className="h-0.5 w-full bg-primary opacity-60 group-hover:opacity-100 transition-opacity" />
+            <div className="p-7 flex items-center justify-between gap-6">
+              <div className="flex items-center gap-5 min-w-0">
+                <div className="w-12 h-12 flex items-center justify-center border border-primary/40 bg-primary/10 shrink-0">
+                  <Brain className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-1">Recomendado</p>
+                  <h3 className="font-mono font-bold text-lg text-foreground group-hover:text-primary transition-colors leading-tight">
+                    Iniciar briefing agora
+                  </h3>
+                  <p className="font-mono text-[12px] text-muted-foreground/60 mt-1">
+                    A IA descobre o melhor cenário para você durante a conversa — sem escolhas manuais.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 px-3 py-1 hidden sm:block">
+                  ~3 min
+                </span>
+                <ChevronRight className="h-5 w-5 text-primary opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200" />
+              </div>
+            </div>
+          </button>
+
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-border/30" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
+              Ou escolha um cenário específico
+            </span>
+            <div className="flex-1 h-px bg-border/30" />
+          </div>
+        </div>
+      )}
+
+      {/* Step 1: Goal selection cards */}
       {step === 1 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {GOAL_OPTIONS.map((goal) => {
@@ -222,23 +271,39 @@ export default function NewCampaign() {
       )}
 
       {/* Step 2: Name + submit */}
-      {step === 2 && selectedGoal && (
+      {step === 2 && (
         <div className="space-y-6">
 
-          {/* Selected goal recap */}
-          <div className={`flex items-center gap-4 border p-4 ${selectedGoal.badgeBorderColor} ${selectedGoal.badgeBgColor}`}>
-            <CheckCircle2 className={`h-5 w-5 shrink-0 ${selectedGoal.badgeTextColor}`} />
-            <div className="flex-1 min-w-0">
-              <div className="font-mono text-sm font-bold text-foreground leading-snug">{selectedGoal.title}</div>
-              <div className={`font-mono text-[11px] uppercase tracking-widest mt-1 ${selectedGoal.badgeTextColor}`}>{selectedGoal.targetLabel}</div>
+          {/* Recap: selected goal OR direct mode */}
+          {selectedGoal ? (
+            <div className={`flex items-center gap-4 border p-4 ${selectedGoal.badgeBorderColor} ${selectedGoal.badgeBgColor}`}>
+              <CheckCircle2 className={`h-5 w-5 shrink-0 ${selectedGoal.badgeTextColor}`} />
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-sm font-bold text-foreground leading-snug">{selectedGoal.title}</div>
+                <div className={`font-mono text-[11px] uppercase tracking-widest mt-1 ${selectedGoal.badgeTextColor}`}>{selectedGoal.targetLabel}</div>
+              </div>
+              <button
+                onClick={() => setStep(1)}
+                className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 px-3 py-1.5 border border-border/30 hover:border-border/60"
+              >
+                Alterar
+              </button>
             </div>
-            <button
-              onClick={() => setStep(1)}
-              className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 px-3 py-1.5 border border-border/30 hover:border-border/60"
-            >
-              Alterar
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-4 border p-4 border-primary/30 bg-primary/5">
+              <Brain className="h-5 w-5 shrink-0 text-primary" />
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-sm font-bold text-foreground leading-snug">Briefing guiado por IA</div>
+                <div className="font-mono text-[11px] uppercase tracking-widest mt-1 text-primary/70">A IA define o cenário durante a conversa</div>
+              </div>
+              <button
+                onClick={() => setStep(1)}
+                className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 px-3 py-1.5 border border-border/30 hover:border-border/60"
+              >
+                Alterar
+              </button>
+            </div>
+          )}
 
           {/* Name form */}
           <form onSubmit={handleSubmit} className="space-y-6">
