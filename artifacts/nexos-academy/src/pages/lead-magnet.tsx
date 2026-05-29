@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { generateProtectedPDF } from "@/lib/generate-pdf";
 
 const CAPTURE_KEY = "nexos-lead-captured";
 const API_BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") + "/../../api";
@@ -132,7 +133,7 @@ const VALUE_CONTENT = {
   },
 };
 
-function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
+function CaptureStage({ onCapture }: { onCapture: (name: string, email: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -156,7 +157,7 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
         }),
       });
       localStorage.setItem(CAPTURE_KEY, JSON.stringify({ name: name.trim(), email: email.trim() }));
-      onCapture(name.trim());
+      onCapture(name.trim(), email.trim().toLowerCase());
     } catch {
       setErrorMsg("Erro ao processar. Tente novamente.");
     } finally {
@@ -280,9 +281,16 @@ function CaptureStage({ onCapture }: { onCapture: (name: string) => void }) {
   );
 }
 
-function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, params?: Record<string, string>) => void; leadName: string }) {
-  function handlePrint() {
-    window.print();
+function GuideStage({ onNavigate, leadName, leadEmail }: { onNavigate: (page: string, params?: Record<string, string>) => void; leadName: string; leadEmail: string }) {
+  const [generating, setGenerating] = useState(false);
+
+  async function handleDownloadPDF() {
+    setGenerating(true);
+    try {
+      await generateProtectedPDF(leadName || "Usuário", leadEmail || "usuario@nexosacademy.com");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   return (
@@ -321,11 +329,12 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
             </p>
           </div>
           <button
-            onClick={handlePrint}
-            className="no-print shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white transition-all hover:opacity-90"
+            onClick={handleDownloadPDF}
+            disabled={generating}
+            className="no-print shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white transition-all hover:opacity-90 disabled:opacity-60"
             style={{ background: "hsl(250 90% 58%)", border: "1px solid hsl(250 90% 70% / 0.4)" }}
           >
-            ↓ Baixar PDF
+            {generating ? "⏳ Gerando..." : "↓ Baixar PDF"}
           </button>
         </div>
 
@@ -555,10 +564,11 @@ function GuideStage({ onNavigate, leadName }: { onNavigate: (page: string, param
                 Quero o Mapa Completo — R$97 →
               </button>
               <button
-                onClick={handlePrint}
-                className="text-xs text-[hsl(220_10%_40%)] hover:text-[hsl(220_10%_60%)] transition-colors"
+                onClick={handleDownloadPDF}
+                disabled={generating}
+                className="text-xs text-[hsl(220_10%_40%)] hover:text-[hsl(220_10%_60%)] transition-colors disabled:opacity-50"
               >
-                ↓ Salvar PDF
+                {generating ? "⏳ Gerando..." : "↓ Salvar PDF"}
               </button>
             </div>
 
@@ -579,13 +589,15 @@ export default function LeadMagnet({ onNavigate }: Props) {
 
   const [stage, setStage] = useState<Stage>(existing ? "guide" : "capture");
   const [leadName, setLeadName] = useState<string>(existing?.name ?? "");
+  const [leadEmail, setLeadEmail] = useState<string>(existing?.email ?? "");
 
-  function handleCapture(name: string) {
+  function handleCapture(name: string, email: string) {
     setLeadName(name);
+    setLeadEmail(email);
     setStage("guide");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   if (stage === "capture") return <CaptureStage onCapture={handleCapture} />;
-  return <GuideStage onNavigate={onNavigate} leadName={leadName} />;
+  return <GuideStage onNavigate={onNavigate} leadName={leadName} leadEmail={leadEmail} />;
 }
