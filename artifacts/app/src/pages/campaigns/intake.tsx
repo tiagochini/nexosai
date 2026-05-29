@@ -28,10 +28,19 @@ import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
 import { BudgetSimulator } from "@/components/budget-simulator";
 
+interface ChatFile {
+  name: string;
+  url: string;
+  isImage: boolean;
+  mimeType?: string;
+  size?: number;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   agentId?: string;
+  files?: ChatFile[];
 }
 
 interface ConversationResult {
@@ -99,21 +108,56 @@ function ChatBubble({ msg, showAgentLabel }: { msg: ChatMessage; showAgentLabel?
   return (
     <div className={`flex gap-2 md:gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       {!isUser && <AgentAvatar agentId={msg.agentId} size="sm" />}
-      <div className={`flex flex-col gap-1 max-w-[88%] ${isUser ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col gap-1.5 max-w-[88%] ${isUser ? "items-end" : "items-start"}`}>
         {!isUser && agent && showAgentLabel && (
           <div className="flex items-center gap-2 px-1">
             <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${agent.color}`}>{agent.name}</span>
             <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-wider">{agent.role}</span>
           </div>
         )}
-        <div className={`px-3 md:px-4 py-2.5 md:py-3 rounded-sm text-xs md:text-sm font-mono leading-relaxed whitespace-pre-wrap
-          ${isUser
-            ? "bg-primary/20 border border-primary/30 text-foreground ml-auto"
-            : "bg-card/80 border border-border/50 text-foreground"
-          }`}
-        >
-          {msg.content}
-        </div>
+
+        {/* File attachments — clickable cards/thumbnails */}
+        {msg.files && msg.files.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {msg.files.map((f, fi) => f.isImage ? (
+              <a key={fi} href={f.url} target="_blank" rel="noreferrer"
+                className="block relative rounded-lg overflow-hidden border border-border/50 hover:opacity-90 transition-opacity"
+                title={f.name}>
+                <img src={f.url} alt={f.name} className="h-28 w-28 object-cover" />
+                <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 text-[9px] font-mono truncate text-white/70"
+                  style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.6))" }}>
+                  {f.name}
+                </div>
+              </a>
+            ) : (
+              <a key={fi} href={f.url} target="_blank" rel="noreferrer"
+                className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/40 transition-colors px-3 py-2 max-w-[200px]"
+                title={`Abrir ${f.name}`}>
+                <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: f.mimeType === "application/pdf" ? "hsl(0 50% 12%)" : "hsl(220 30% 14%)" }}>
+                  <File className={`h-4 w-4 ${f.mimeType === "application/pdf" ? "text-red-400" : "text-blue-400"}`} />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[11px] font-medium text-foreground truncate leading-tight">{f.name}</span>
+                  <span className="text-[10px] text-muted-foreground mt-0.5">
+                    {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toFixed(1)} MB` : `${Math.round(f.size / 1_000)} KB`) : "Abrir ↗"}
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {msg.content && (
+          <div className={`px-3 md:px-4 py-2.5 md:py-3 rounded-sm text-xs md:text-sm font-mono leading-relaxed whitespace-pre-wrap
+            ${isUser
+              ? "bg-primary/20 border border-primary/30 text-foreground ml-auto"
+              : "bg-card/80 border border-border/50 text-foreground"
+            }`}
+          >
+            {msg.content}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -521,19 +565,22 @@ export default function CampaignIntake() {
     const filesSnapshot = pendingFiles;
     setPendingFiles([]);
 
-    // Build display message (includes file names so user sees them)
-    const fileNote = filesSnapshot.length > 0
-      ? `\n[Arquivos: ${filesSnapshot.map(f => f.name).join(", ")}]` : "";
-    const displayMsg = userMsg + fileNote;
+    // Build display message (text only — files rendered separately as cards)
+    const displayMsg = userMsg || "";
 
     // Build AI message (includes readable file contents)
     const fileContext = filesSnapshot.filter(f => f.content)
       .map(f => `\n\n--- Arquivo: ${f.name} ---\n${f.content}`).join("");
     const aiMsg = (userMsg || "(Veja os arquivos abaixo)") + fileContext;
 
+    // Store file metadata with message so they remain clickable in history
+    const msgFiles: ChatFile[] = filesSnapshot.map(f => ({
+      name: f.name, url: f.url, isImage: f.isImage, mimeType: f.mimeType, size: f.size,
+    }));
+
     // Do NOT clear input before the request succeeds. If the token is expired
     // or the network fails, the user's text must be preserved for retry.
-    const newMessages: ChatMessage[] = [...messages, { role: "user", content: displayMsg }];
+    const newMessages: ChatMessage[] = [...messages, { role: "user", content: displayMsg, files: msgFiles.length > 0 ? msgFiles : undefined }];
     setMessages(newMessages);
     setSending(true);
     setPendingProposal(null);
@@ -954,13 +1001,15 @@ export default function CampaignIntake() {
                   {pendingFiles.map((f, i) => (
                     <div key={i} className="relative group">
                       {f.isImage ? (
-                        /* Image thumbnail */
+                        /* Image thumbnail — click to open full size */
                         <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border/60 bg-muted/20 shrink-0">
-                          <img
-                            src={f.url}
-                            alt={f.name}
-                            className="w-full h-full object-cover"
-                          />
+                          <a href={f.url} target="_blank" rel="noreferrer" title={f.name}>
+                            <img
+                              src={f.url}
+                              alt={f.name}
+                              className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                            />
+                          </a>
                           <button
                             onClick={() => removeFile(i)}
                             className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -969,22 +1018,24 @@ export default function CampaignIntake() {
                           </button>
                         </div>
                       ) : (
-                        /* Document / audio card */
-                        <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 pr-2 max-w-[200px]">
-                          <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-                            style={{ background: f.isAudioVideo ? "hsl(260 60% 20%)" : "hsl(220 30% 14%)" }}>
-                            {f.isAudioVideo
-                              ? <FileAudio className="h-4 w-4 text-violet-400" />
-                              : f.mimeType === "application/pdf"
-                              ? <File className="h-4 w-4 text-red-400" />
-                              : <File className="h-4 w-4 text-blue-400" />}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[11px] font-medium text-foreground truncate leading-tight">{f.name}</span>
-                            <span className="text-[10px] text-muted-foreground mt-0.5">
-                              {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toFixed(1)} MB` : `${Math.round(f.size / 1_000)} KB`) : ""}
-                            </span>
-                          </div>
+                        /* Document / audio card — clickable to open, X to remove */
+                        <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/30 transition-colors px-3 py-2 pr-2 max-w-[200px]">
+                          <a href={f.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 flex-1 min-w-0" title={`Abrir ${f.name}`}>
+                            <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                              style={{ background: f.isAudioVideo ? "hsl(260 60% 20%)" : f.mimeType === "application/pdf" ? "hsl(0 50% 12%)" : "hsl(220 30% 14%)" }}>
+                              {f.isAudioVideo
+                                ? <FileAudio className="h-4 w-4 text-violet-400" />
+                                : f.mimeType === "application/pdf"
+                                ? <File className="h-4 w-4 text-red-400" />
+                                : <File className="h-4 w-4 text-blue-400" />}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[11px] font-medium text-foreground truncate leading-tight">{f.name}</span>
+                              <span className="text-[10px] text-muted-foreground mt-0.5">
+                                {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toFixed(1)} MB` : `${Math.round(f.size / 1_000)} KB`) : "Abrir ↗"}
+                              </span>
+                            </div>
+                          </a>
                           <button
                             onClick={() => removeFile(i)}
                             className="ml-1 text-muted-foreground hover:text-destructive shrink-0 transition-colors"

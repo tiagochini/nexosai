@@ -959,20 +959,19 @@ export default function AgentChat() {
                       const isPdf = /pdf/i.test(att.type ?? att.name);
                       const isDoc = /\.(ppt|pptx|doc|docx|xls|xlsx)$/i.test(att.name);
                       return (
-                        <div key={`doc-${ai}`} className="flex items-center gap-2 border border-border/50 bg-muted/20 px-2.5 py-2">
-                          <div className={`w-7 h-8 border flex items-center justify-center shrink-0 font-mono text-[8px] font-bold
-                            ${isPdf ? "border-red-400/40 text-red-400 bg-red-400/10" : isDoc ? "border-blue-400/40 text-blue-400 bg-blue-400/10" : "border-border/50 text-muted-foreground bg-muted/20"}`}>
-                            {ext}
+                        <a key={`doc-${ai}`} href={att.url} target="_blank" rel="noreferrer"
+                          title={`Abrir ${att.name}`}
+                          className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 hover:bg-muted/40 transition-colors px-3 py-2">
+                          <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-mono text-[9px] font-bold"
+                            style={{ background: isPdf ? "hsl(0 50% 12%)" : isDoc ? "hsl(220 50% 12%)" : "hsl(220 30% 14%)" }}>
+                            <span className={isPdf ? "text-red-400" : isDoc ? "text-blue-400" : "text-muted-foreground"}>{ext}</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="font-mono text-[11px] text-foreground/80 truncate">{att.name}</div>
-                            <div className="font-mono text-[10px] text-muted-foreground/40">{formatBytes(att.size)}</div>
+                            <div className="text-[11px] font-medium text-foreground truncate leading-tight">{att.name}</div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">{formatBytes(att.size)}</div>
                           </div>
-                          <a href={att.url} download={att.name} title="Baixar"
-                            className="h-7 w-7 border border-border/40 bg-muted/10 hover:bg-muted/30 flex items-center justify-center transition-all text-muted-foreground hover:text-foreground shrink-0">
-                            <Download className="h-3 w-3" />
-                          </a>
-                        </div>
+                          <Download className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                        </a>
                       );
                     })}
                   </div>
