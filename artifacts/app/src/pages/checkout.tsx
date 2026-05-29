@@ -76,7 +76,7 @@ function PixScreen({
       <div className="border border-primary/30 bg-primary/5 p-5 space-y-1">
         <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold">PIX gerado com sucesso</div>
         <div className="font-mono text-xs text-muted-foreground">
-          NexOS AI — Plano {planLabel} · {fmtBRL(amount)}
+          NexOS — Plano {planLabel} · {fmtBRL(amount)}
         </div>
         {expiry && (
           <div className="font-mono text-[11px] text-muted-foreground/60">Válido até {expiry}</div>
@@ -258,7 +258,7 @@ function CheckoutForm({
         <div className="flex items-center justify-between">
           <div>
             <div className="font-mono text-[11px] uppercase tracking-widest text-primary font-bold mb-0.5">
-              NexOS AI — Plano {planConfig.label}
+              NexOS — Plano {planConfig.label}
             </div>
             <div className="font-mono text-xs text-muted-foreground">
               {planConfig.campaigns} campanhas · {planConfig.credits} créditos incluídos
@@ -439,11 +439,11 @@ export default function CheckoutPage() {
       <nav className="border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={nexosLogo} alt="NexOS AI" className="h-14 w-14 object-contain"
+            <img src={nexosLogo} alt="NexOS" className="h-14 w-14 object-contain"
               style={{ filter: "drop-shadow(0 0 12px hsl(var(--primary)/0.6))" }} />
             <div className="hidden sm:block">
               <div className="font-mono font-black text-xl tracking-[0.15em] uppercase leading-tight">
-                NexOS <span className="text-primary">AI</span>
+                NexOS
               </div>
               <div className="font-mono text-[11px] uppercase tracking-[0.3em] text-primary/70">Checkout</div>
             </div>
@@ -490,7 +490,7 @@ export default function CheckoutPage() {
               </div>
               <ul className="space-y-2.5">
                 {[
-                  "57 agentes de IA especializados",
+                  "57 especialistas especializados",
                   "Diagnóstico completo do produto e mercado",
                   "Estratégia de lançamento gerada por Claude",
                   "Copy de WhatsApp e Email por segmento",

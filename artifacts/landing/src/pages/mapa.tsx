@@ -67,10 +67,10 @@ export default function MapaPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Nav */}
       <nav className="border-b border-border/30 bg-background/90 backdrop-blur-xl px-4 py-3 flex items-center gap-3">
-        <img src={nexosLogo} alt="NexOS AI" className="h-9 w-9 object-contain"
+        <img src={nexosLogo} alt="NexOS" className="h-9 w-9 object-contain"
           style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.6))" }} />
         <div className="font-mono font-black text-base tracking-[0.15em] uppercase">
-          NexOS <span className="text-primary">AI</span>
+          NexOS
         </div>
       </nav>
 
@@ -171,14 +171,14 @@ export default function MapaPage() {
               </h2>
               <p className="text-muted-foreground text-sm leading-relaxed mb-8 max-w-sm mx-auto">
                 Verifique sua caixa de entrada nos próximos minutos.
-                Enquanto isso — veja como a NexOS AI executa o método completo por você.
+                Enquanto isso — veja como a NexOS executa o método completo por você.
               </p>
 
               {refCode && (
                 <div className="border border-primary/20 bg-primary/5 px-5 py-4 mb-6 text-left">
                   <p className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">Bônus de indicação</p>
                   <p className="text-sm text-foreground/80">
-                    Compartilhe com amigos usando o link que você recebeu — cada amigo que baixar rende créditos de IA para o indicador.
+                    Compartilhe com amigos usando o link que você recebeu — cada amigo que baixar rende créditos da equipe especializada para o indicador.
                   </p>
                 </div>
               )}
@@ -201,7 +201,7 @@ export default function MapaPage() {
       {/* Footer */}
       <div className="border-t border-border/20 px-4 py-4 text-center">
         <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
-          © 2026 NexOS AI · agencianexos.vip · Todos os direitos reservados
+          © 2026 NexOS · agencianexos.vip · Todos os direitos reservados
         </p>
       </div>
     </div>

@@ -427,7 +427,7 @@ const AGENTS: AgentDef[] = [
     isNew: true,
   },
   {
-    role: "sales_consultant", name: "Alex", tagline: "Consultor NexOS AI",
+    role: "sales_consultant", name: "Alex", tagline: "Consultor NexOS",
     description: "Especialista técnico e comercial completo: conhece cada funcionalidade, plano, caso de uso e integração. Responde dúvidas com precisão e transforma informação em confiança.",
     category: "Vendas", provider: "Claude", icon: Bot,
     accent: "border-cyan-500/40 hover:border-cyan-500",
@@ -482,11 +482,11 @@ export default function AgentsHub() {
       {/* Header */}
       <div className="mb-10">
         <p className="font-mono text-[11px] uppercase tracking-widest text-primary/70 mb-2">
-          Time de IA · Framework ReAct
+          Time da equipe especializada · Framework ReAct
         </p>
         <div className="flex items-end gap-4 mb-3">
           <h1 className="text-3xl md:text-4xl font-mono uppercase tracking-tighter font-bold text-foreground leading-tight">
-            Hub de <span className="text-primary">Agentes IA</span>
+            Hub de <span className="text-primary">Especialistas</span>
           </h1>
           {newCount > 0 && (
             <Badge className="rounded-none font-mono text-[10px] bg-primary/15 text-primary border border-primary/30 px-2 mb-1">

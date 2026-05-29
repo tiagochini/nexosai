@@ -92,7 +92,7 @@ export default function VslsPage() {
       return res.json() as Promise<{ vsl: VslItem }>;
     },
     onSuccess: (d) => {
-      toast.success("VSL criada! Gerando roteiro com IA...");
+      toast.success("VSL criada! Gerando roteiro com nossa equipe...");
       queryClient.setQueryData(["/api/vsls"], (old: { vsls: VslItem[] } | undefined) => ({
         vsls: [d.vsl, ...(old?.vsls ?? [])],
       }));
@@ -110,7 +110,7 @@ export default function VslsPage() {
       if (!res.ok) throw new Error("Erro ao gerar roteiro");
     },
     onSuccess: () => {
-      toast.success("Roteiro gerado com IA!");
+      toast.success("Roteiro gerado com nossa equipe!");
       queryClient.invalidateQueries({ queryKey: ["/api/vsls"] });
     },
     onError: () => toast.error("Erro ao gerar roteiro"),
@@ -140,7 +140,7 @@ export default function VslsPage() {
           {selectedVsl.status === "draft" && (
             <Button size="sm" onClick={() => generateMutation.mutate(selectedVsl.id)} disabled={generateMutation.isPending}
               className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs">
-              {generateMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando...</> : <><Zap className="h-3.5 w-3.5" />Gerar com IA</>}
+              {generateMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Gerando...</> : <><Zap className="h-3.5 w-3.5" />Gerar com nossa equipe</>}
             </Button>
           )}
           {selectedVsl.status === "awaiting_approval" && (
@@ -154,7 +154,7 @@ export default function VslsPage() {
           {(selectedVsl.sections ?? []).length === 0 ? (
             <div className="py-12 text-center">
               <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Clique em "Gerar com IA" para criar o roteiro completo</p>
+              <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Clique em "Gerar com nossa equipe" para criar o roteiro completo</p>
             </div>
           ) : (
             (selectedVsl.sections ?? []).sort((a,b) => a.orderIndex - b.orderIndex).map(section => (
@@ -184,7 +184,7 @@ export default function VslsPage() {
             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">VSL Studio</h1>
           </div>
-          <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Roteiros de video de vendas gerados por IA · VSL, Webinar, Masterclass</p>
+          <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Roteiros de video de vendas gerados pela equipe especializada · VSL, Webinar, Masterclass</p>
           {fromCampaign && (
             <p className="text-xs font-mono text-primary mt-1.5 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -249,7 +249,7 @@ export default function VslsPage() {
         <div className="py-16 text-center">
           <Video className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Nenhuma VSL criada ainda</p>
-          <p className="font-mono text-xs text-muted-foreground/50">Crie sua primeira VSL e deixe a IA gerar o roteiro completo</p>
+          <p className="font-mono text-xs text-muted-foreground/50">Crie sua primeira VSL e deixe a equipe gerar o roteiro completo</p>
         </div>
       ) : (
         <div className="space-y-3">

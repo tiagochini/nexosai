@@ -102,7 +102,7 @@ function VideoPlayer({ url }: { url: string | null }) {
         <div className="absolute top-4 left-4">
           <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-primary border border-primary/30 bg-primary/5 px-2 py-1">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            IA narrada · 8 minutos
+            equipe especializada narrada · 8 minutos
           </div>
         </div>
       </div>
@@ -185,7 +185,7 @@ function VideoPlayer({ url }: { url: string | null }) {
   );
 }
 
-// ─── Script do vídeo — roteiro do narrador IA ─────────────────────────────────
+// ─── Script do vídeo — roteiro do narrador equipe especializada ─────────────────────────────────
 // (exibido como legenda/transcript abaixo do vídeo para quem não pode assistir)
 const SCRIPT_SECTIONS = [
   {
@@ -195,13 +195,13 @@ const SCRIPT_SECTIONS = [
   },
   {
     tempo: "1:30 – 3:00",
-    titulo: "O que o NexOS AI executa por você",
-    texto: "57 agentes de IA trabalhando 24 horas por dia no seu lançamento. Estratégia completa em 47 minutos. 23 emails e 18 mensagens WhatsApp gerados, agendados e disparados. Carrinho abre e fecha no horário. Sem você tocar em nada.",
+    titulo: "O que o NexOS executa por você",
+    texto: "57 especialistas trabalhando 24 horas por dia no seu lançamento. Estratégia completa em 47 minutos. 23 emails e 18 mensagens WhatsApp gerados, agendados e disparados. Carrinho abre e fecha no horário. Sem você tocar em nada.",
   },
   {
     tempo: "3:00 – 5:00",
     titulo: "Como funciona na prática",
-    texto: "Você responde 7 perguntas sobre seu produto e público. A IA monta tudo — do cronograma ao último email de escassez. Você aprova. Ela executa. Em 72 horas seu próximo lançamento está rodando.",
+    texto: "Você responde 7 perguntas sobre seu produto e público. A equipe monta tudo — do cronograma ao último email de escassez. Você aprova. Ela executa. Em 72 horas seu próximo lançamento está rodando.",
   },
   {
     tempo: "5:00 – 6:30",
@@ -228,7 +228,7 @@ function ProvaSection() {
 
   return (
     <div className="border border-primary/20 bg-primary/5 p-7">
-      <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">O que o NexOS AI executa por você</div>
+      <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">O que o NexOS executa por você</div>
       <ul className="space-y-2.5">
         {provas.map((item, i) => (
           <li key={i} className="flex items-start gap-2.5">
@@ -364,9 +364,9 @@ export default function ConversaoPage() {
       <nav className="fixed top-0 inset-x-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.7))" }} />
+            <img src={nexosLogo} alt="NexOS" className="h-10 w-10 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.7))" }} />
             <div className="hidden sm:block">
-              <div className="font-mono font-black text-base tracking-[0.15em] uppercase leading-none">NexOS <span className="text-primary">AI</span></div>
+              <div className="font-mono font-black text-base tracking-[0.15em] uppercase leading-none">NexOS</div>
               <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-primary/60 leading-none">Apresentação do produto</div>
             </div>
           </div>
@@ -405,7 +405,7 @@ export default function ConversaoPage() {
             </span>
           </h1>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-xl mb-10">
-            8 minutos. É o tempo que leva para você entender exatamente o que o NexOS AI executa por você — e por que quem vê isso acha o preço barato de qualquer jeito.
+            8 minutos. É o tempo que leva para você entender exatamente o que o NexOS executa por você — e por que quem vê isso acha o preço barato de qualquer jeito.
           </p>
         </div>
       </section>
@@ -430,7 +430,7 @@ export default function ConversaoPage() {
 
               {showTranscript && (
                 <div className="border border-border/30 bg-card/20 p-5 space-y-5">
-                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Roteiro — narração da IA</div>
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Roteiro — narração da equipe especializada</div>
                   {SCRIPT_SECTIONS.map((sec, i) => (
                     <div key={i} className="border-l-2 border-primary/20 pl-4">
                       <div className="flex items-center gap-2 mb-1">
@@ -508,7 +508,7 @@ export default function ConversaoPage() {
       {/* ── Footer ── */}
       <div className="border-t border-border/30 bg-muted/5 py-5 px-6 text-center mb-16">
         <p className="font-mono text-[10px] text-muted-foreground/30 uppercase tracking-widest">
-          NexOS AI · Plataforma de Lançamento com IA · contato@agencianexos.vip
+          NexOS · Plataforma de Lançamento com nossa equipe · contato@agencianexos.vip
         </p>
       </div>
 

@@ -4605,11 +4605,11 @@ D0:           Link do carrinho + live de lançamento dentro do grupo
             title: "Stack de Ferramentas: Do Zero ao Profissional",
             duration: "20 min",
             type: "text",
-            keyPoints: ["Stack completo por nível: Nível 1 (grátis), Nível 2 (R$100-500/mês), Nível 3 (escala) — com função de cada ferramenta", "As 5 ferramentas de IA que cortam 60% do tempo de produção de conteúdo", "A regra do stack mínimo viável: por que a maioria começa com ferramentas demais"],
+            keyPoints: ["Stack completo por nível: Nível 1 (grátis), Nível 2 (R$100-500/mês), Nível 3 (escala) — com função de cada ferramenta", "As 5 ferramentas da equipe especializada que cortam 60% do tempo de produção de conteúdo", "A regra do stack mínimo viável: por que a maioria começa com ferramentas demais"],
             exercise: "Faça o inventário do seu stack atual: liste todas as ferramentas que você paga hoje. Para cada uma, responda: uso isso pelo menos 3x por semana? Se não, cancele ou downgrade. A meta é ter no máximo 7 ferramentas pagas — uma por função. Foco, não acumulação.",
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
-<p style="color:#e2e8f0;font-size:13px;margin:0">A maioria dos iniciantes compra ferramentas antes de saber o que fazer com elas. Esta aula organiza o stack por estágio (gratuito → pago → escala), entrega as 5 ferramentas de IA que cortam 60% do tempo de produção, e aplica a regra do MVS: stack mínimo viável para seu momento atual.</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">A maioria dos iniciantes compra ferramentas antes de saber o que fazer com elas. Esta aula organiza o stack por estágio (gratuito → pago → escala), entrega as 5 ferramentas da equipe especializada que cortam 60% do tempo de produção, e aplica a regra do MVS: stack mínimo viável para seu momento atual.</p>
 </div>
 
 <h2 style="color:#a78bfa">🛠 Stack de Ferramentas: Do Zero ao Profissional</h2>
@@ -4635,7 +4635,7 @@ NÍVEL 1 — GRATUITO (até R$30k faturamento):
 NÍVEL 2 — PAGO (R$100-500/mês, R$30k-100k faturamento):
   Email automação: RD Station | ActiveCampaign
   Agendamento:     Buffer | Metricool Pro
-  IA produção:     ChatGPT Plus | Claude Pro
+  equipe especializada produção:     ChatGPT Plus | Claude Pro
   Landing pages:   Klickpages | Leadlovers
 
 NÍVEL 3 — ESCALA (R$500+/mês, R$100k+ faturamento):
@@ -4644,7 +4644,7 @@ NÍVEL 3 — ESCALA (R$500+/mês, R$100k+ faturamento):
   Automação: Zapier Pro | n8n self-hosted
 </div>
 
-<h3 style="color:#e2e8f0;margin-top:24px">C) As 5 Ferramentas de IA Que Cortam 60% do Tempo</h3>
+<h3 style="color:#e2e8f0;margin-top:24px">C) As 5 Ferramentas da equipe especializada Que Cortam 60% do Tempo</h3>
 
 <h2>O Stack de Ferramentas do Produtor Digital Profissional</h2>
 <p>A maioria dos iniciantes erra na ordem: compra ferramentas antes de saber o que fazer com elas. Este guia organiza o stack por estágio — começando pelo essencial gratuito e progredindo para ferramentas pagas conforme o negócio cresce. A regra de ouro: uma ferramenta por função. Redundância é custo.</p>
@@ -4677,7 +4677,7 @@ NÍVEL 3 — ESCALA (R$500+/mês, R$100k+ faturamento):
   <li><strong>Deadline Funnel:</strong> deadlines individuais reais para funis perpétuos</li>
 </ul>
 
-<h3>Ferramentas de IA que Mudaram o Jogo</h3>
+<h3>Ferramentas da equipe especializada que Mudaram o Jogo</h3>
 <ul>
   <li><strong>ChatGPT / Claude:</strong> geração de copy, roteiros, títulos, emails, estratégia de conteúdo</li>
   <li><strong>Midjourney / DALL-E:</strong> criação de imagens para thumbnails e criativos</li>
@@ -5577,9 +5577,9 @@ RELATÓRIO SEMANAL (5 métricas que importam):
   {
     id: "nexos-ferramenta",
     number: 6,
-    title: "NexOS AI — A Ferramenta Definitiva",
+    title: "NexOS — A Ferramenta Definitiva",
     description: "Você aprendeu a metodologia. Agora conheça a plataforma que executa tudo isso com inteligência artificial — do briefing ao carrinho aberto, de forma automática e auditável.",
-    badge: "NexOS AI",
+    badge: "NexOS",
     chapters: [
       {
         id: "nexos-apresentacao",
@@ -5665,7 +5665,7 @@ NEXOS RESOLVE: 57 agentes orquestrados, execução 24/7,
 <p>Cada especialista trabalha em silos. As decisões de otimização chegam tarde. O lançamento acaba antes das melhorias serem implementadas.</p>
 
 <h3>A Solução: Orquestração por Inteligência Artificial</h3>
-<p>O NexOS AI foi construído para resolver exatamente este problema. É uma plataforma de orquestração de lançamentos onde múltiplos agentes de inteligência artificial trabalham em conjunto — cada um especializado em um domínio, todos sincronizados em tempo real.</p>
+<p>O NexOS foi construído para resolver exatamente este problema. É uma plataforma de orquestração de lançamentos onde múltiplos agentes de inteligência artificial trabalham em conjunto — cada um especializado em um domínio, todos sincronizados em tempo real.</p>
 
 <p>Não é uma ferramenta que sugere copy. Não é um dashborad de métricas. É um sistema completo que pensa, cria, analisa, alerta e otimiza — enquanto você aprova as decisões estratégicas.</p>`
           },
@@ -5674,17 +5674,17 @@ NEXOS RESOLVE: 57 agentes orquestrados, execução 24/7,
             title: "Como o NexOS Funciona: Do Briefing ao Carrinho",
             duration: "25 min",
             type: "text",
-            keyPoints: ["O intake conversacional com IA", "Geração automática de estratégia completa", "Produção de conteúdo multi-plataforma", "O monitor de lançamento em tempo real"],
+            keyPoints: ["O intake conversacional com nossa equipe", "Geração automática de estratégia completa", "Produção de conteúdo multi-plataforma", "O monitor de lançamento em tempo real"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
-<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS transforma a intenção do produtor em execução completa de lançamento através de um fluxo de 5 etapas orquestradas por IA. Esta aula mostra o caminho completo: do intake conversacional até o monitor de lançamento ao vivo — com cada fase gerando o input da próxima automaticamente.</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS transforma a intenção do produtor em execução completa de lançamento através de um fluxo de 5 etapas orquestradas pela equipe especializada. Esta aula mostra o caminho completo: do intake conversacional até o monitor de lançamento ao vivo — com cada fase gerando o input da próxima automaticamente.</p>
 </div>
 
 <h2 style="color:#a78bfa">⚙️ Como o NexOS Funciona: Do Briefing ao Carrinho</h2>
 
 <h3 style="color:#e2e8f0;margin-top:20px">A) A Filosofia: Intenção → Execução Orquestrada</h3>
 
-<p>A maioria das ferramentas de IA para marketing entrega fragmentos: gera um email aqui, um copy de anúncio ali, uma estratégia desconectada do conteúdo. O problema não é a qualidade de cada fragmento — é que fragmentos desconectados exigem que o produtor faça a integração manualmente. O NexOS foi projetado para eliminar esse trabalho de integração: cada fase do fluxo gera automaticamente o contexto que alimenta a próxima.</p>
+<p>A maioria das ferramentas da equipe especializada para marketing entrega fragmentos: gera um email aqui, um copy de anúncio ali, uma estratégia desconectada do conteúdo. O problema não é a qualidade de cada fragmento — é que fragmentos desconectados exigem que o produtor faça a integração manualmente. O NexOS foi projetado para eliminar esse trabalho de integração: cada fase do fluxo gera automaticamente o contexto que alimenta a próxima.</p>
 
 <p>O princípio de design central: <strong>o NexOS nunca começa do zero</strong>. Quando o Agente de Estratégia produz o plano de lançamento, esse plano se torna o briefing de contexto para todos os agentes de copy e conteúdo. Quando o copywriter produz os emails, eles são estruturados já mapeados ao calendário gerado pela estratégia. Quando os anúncios são criados, o targeting sugerido já reflete o avatar definido no intake. O sistema pensa como um time — não como ferramentas isoladas.</p>
 
@@ -5693,7 +5693,7 @@ NEXOS RESOLVE: 57 agentes orquestrados, execução 24/7,
 <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
 <div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ FLUXO NEXOS — 5 ETAPAS</div>
 ETAPA 1 — INTAKE (Agente Conversacional):
-  Série de perguntas estruturadas via chat de IA.
+  Série de perguntas estruturadas via chat da equipe especializada.
   Captura: produto, avatar, diferencial, meta de receita, prazo, recursos disponíveis.
   Output: Intake Document — contexto mestre de todo o lançamento.
 
@@ -5759,7 +5759,7 @@ ETAPA 5 — OTIMIZAÇÃO (Gemini Agente Analytics):
   <li>Taxa de abertura e clique de cada email</li>
   <li>Engajamento por segmento (hot/warm/cold)</li>
   <li>Alertas automáticos quando métricas caem abaixo do threshold</li>
-  <li>Sugestões de otimização geradas por IA quando detecta queda</li>
+  <li>Sugestões de otimização geradas pela equipe especializada quando detecta queda</li>
 </ul>
 
 <h3>Etapa 6: Pós-Lançamento e Memória</h3>
@@ -5779,20 +5779,20 @@ ETAPA 5 — OTIMIZAÇÃO (Gemini Agente Analytics):
         lessons: [
           {
             id: "nexos-agentes",
-            title: "Os 44 Agentes de IA: Especialistas Disponíveis 24/7",
+            title: "Os 44 Especialistas: Especialistas Disponíveis 24/7",
             duration: "25 min",
             type: "text",
-            keyPoints: ["6 categorias de agentes especializados", "Claude para estratégia, GPT-4o para copy, Gemini para analytics", "Como os agentes colaboram entre si", "O trail de auditoria de cada decisão de IA"],
+            keyPoints: ["6 categorias de agentes especializados", "Claude para estratégia, GPT-4o para copy, Gemini para analytics", "Como os agentes colaboram entre si", "O trail de auditoria de cada decisão da equipe especializada"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
-<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS não é uma ferramenta de IA genérica — é uma arquitetura de 57 agentes especializados, cada um usando o modelo de linguagem mais adequado para sua tarefa específica. Esta aula entrega o mapa completo dos 57 agentes por categoria, como eles colaboram entre si, e o trail de auditoria que torna cada decisão de IA rastreável.</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS não é uma ferramenta da equipe especializada genérica — é uma arquitetura de 57 agentes especializados, cada um usando o modelo de linguagem mais adequado para sua tarefa específica. Esta aula entrega o mapa completo dos 57 agentes por categoria, como eles colaboram entre si, e o trail de auditoria que torna cada decisão da equipe especializada rastreável.</p>
 </div>
 
 <h2 style="color:#a78bfa">🤖 Os 44 Agentes: O Time que Trabalha Enquanto Você Dorme</h2>
 
 <h3 style="color:#e2e8f0;margin-top:20px">A) A Arquitetura: Por Que Múltiplos Agentes Especializados</h3>
 
-<p>Um único modelo de IA genérico não é o design correto para executar lançamentos complexos. Claude é superior para raciocínio estratégico e análise de contexto profundo. GPT-4o é superior para geração de copy criativo e conteúdo com tons específicos. Gemini é superior para analytics, otimização numérica e síntese de dados. Usar apenas um modelo é desperdiçar a especialização — como ter uma equipe onde todos fazem tudo.</p>
+<p>Um único modelo da equipe especializada genérico não é o design correto para executar lançamentos complexos. Claude é superior para raciocínio estratégico e análise de contexto profundo. GPT-4o é superior para geração de copy criativo e conteúdo com tons específicos. Gemini é superior para analytics, otimização numérica e síntese de dados. Usar apenas um modelo é desperdiçar a especialização — como ter uma equipe onde todos fazem tudo.</p>
 
 <p>A arquitetura do NexOS atribui cada tarefa ao modelo mais adequado: Claude executa Estratégia, Compliance e Orquestração. GPT-4o executa Copy, Criativos e Conteúdo. Gemini executa Analytics, Otimização e Video Intelligence. Quando os agentes colaboram em um lançamento, cada entregável foi produzido pelo especialista certo — com contexto compartilhado entre todos através do sistema de memória do NexOS.</p>
 
@@ -5823,10 +5823,10 @@ AUTOMAÇÃO (Multi):        Orchestrator, Sequence Builder, Webhook
 <h3 style="color:#e2e8f0;margin-top:24px">C) O Trail de Auditoria e Como Conversar Diretamente com Cada Agente</h3>
 
 <h2>44 Agentes Especializados: O Time que Trabalha Enquanto Você Dorme</h2>
-<p>O NexOS é construído sobre uma arquitetura de múltiplos agentes de IA — cada um especializado em um domínio, usando o modelo de linguagem mais adequado para aquela tarefa.</p>
+<p>O NexOS é construído sobre uma arquitetura de múltiplos especialistas — cada um especializado em um domínio, usando o modelo de linguagem mais adequado para aquela tarefa.</p>
 
 <h3>Por que Múltiplos Modelos?</h3>
-<p>Nenhum modelo de IA é o melhor em tudo. O NexOS usa cada modelo onde ele brilha:</p>
+<p>Nenhum modelo da equipe especializada é o melhor em tudo. O NexOS usa cada modelo onde ele brilha:</p>
 <ul>
   <li><strong>Claude (Anthropic):</strong> raciocínio estratégico, análise de mercado, compliance, decisões complexas com múltiplas variáveis</li>
   <li><strong>GPT-4o (OpenAI):</strong> criatividade, copy persuasivo, roteiros, nuances linguísticas do PT-BR</li>
@@ -5847,9 +5847,9 @@ AUTOMAÇÃO (Multi):        Orchestrator, Sequence Builder, Webhook
 
 <p><strong>Automação (6 agentes):</strong> Dispatcher de Email, Respondedor de WhatsApp, Scheduler de Conteúdo, Monitor de Sequência, Integrador de Plataformas, Agente de Pós-Venda</p>
 
-<h3>Auditoria Total: Toda Decisão de IA é Rastreável</h3>
+<h3>Auditoria Total: Toda Decisão da equipe especializada é Rastreável</h3>
 <p>Cada ação dos agentes — cada email gerado, cada análise produzida, cada alerta disparado — fica registrada no log de auditoria com timestamp, modelo usado, tokens consumidos e resultado.</p>
-<p>Você sempre sabe o que a IA fez, por que fez e quanto custou. Não há caixa preta.</p>`
+<p>Você sempre sabe o que a equipe especializada fez, por que fez e quanto custou. Não há caixa preta.</p>`
           },
           {
             id: "nexos-recursos",
@@ -5866,7 +5866,7 @@ AUTOMAÇÃO (Multi):        Orchestrator, Sequence Builder, Webhook
 
 <h3 style="color:#e2e8f0;margin-top:20px">A) Por Que Funcionalidades Únicas Definem Categoria</h3>
 
-<p>Ferramentas de marketing genéricas são commodities: copy, email, anúncio — qualquer plataforma de IA faz. A diferença que cria valor defensável é funcionalidade que só faz sentido dentro de um sistema orquestrado de lançamento. As 5 funcionalidades abaixo não existem de forma integrada em nenhuma outra ferramenta — porque exigem que todos os dados do lançamento estejam no mesmo sistema para funcionar.</p>
+<p>Ferramentas de marketing genéricas são commodities: copy, email, anúncio — qualquer plataforma da equipe especializada faz. A diferença que cria valor defensável é funcionalidade que só faz sentido dentro de um sistema orquestrado de lançamento. As 5 funcionalidades abaixo não existem de forma integrada em nenhuma outra ferramenta — porque exigem que todos os dados do lançamento estejam no mesmo sistema para funcionar.</p>
 
 <h3 style="color:#e2e8f0;margin-top:24px">B) As 5 Funcionalidades Exclusivas</h3>
 
@@ -5933,7 +5933,7 @@ AUTOMAÇÃO (Multi):        Orchestrator, Sequence Builder, Webhook
 </ul>
 
 <h3>6. Relatório Semanal Automático</h3>
-<p>Todo domingo às 20h, o NexOS envia automaticamente um relatório de performance para o email do proprietário da workspace: receita da semana, vendas, saúde da lista, score de engajamento das sequências, créditos de IA usados e insights gerados pela análise de coorte.</p>
+<p>Todo domingo às 20h, o NexOS envia automaticamente um relatório de performance para o email do proprietário da workspace: receita da semana, vendas, saúde da lista, score de engajamento das sequências, créditos da equipe especializada usados e insights gerados pela análise de coorte.</p>
 
 <h3>7. Rastreamento Server-Side (Meta CAPI + TikTok Events)</h3>
 <p>Toda captura de lead e compra rastreada pelo NexOS é automaticamente enviada para Meta CAPI e TikTok Events API via servidor — independente de bloqueadores de anúncio, iOS 14 e cookies de terceiros. Taxa de rastreamento de 90-95% vs. 50-60% do pixel de navegador isolado.</p>`
@@ -5943,29 +5943,29 @@ AUTOMAÇÃO (Multi):        Orchestrator, Sequence Builder, Webhook
             title: "Acesso, Créditos e Como Começar",
             duration: "15 min",
             type: "text",
-            keyPoints: ["Solo vs. Agency: qual se encaixa no seu momento", "Como funcionam os créditos de IA — e quando você não precisa deles", "O sistema funciona sem agentes: gerenciamento manual é uma opção real", "Primeiros passos: de zero a primeiro lançamento", "Suporte e comunidade"],
+            keyPoints: ["Solo vs. Agency: qual se encaixa no seu momento", "Como funcionam os créditos da equipe especializada — e quando você não precisa deles", "O sistema funciona sem agentes: gerenciamento manual é uma opção real", "Primeiros passos: de zero a primeiro lançamento", "Suporte e comunidade"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
-<p style="color:#e2e8f0;font-size:13px;margin:0">Esta é a aula final do portal. Aqui você recebe o mapa claro de como o acesso ao NexOS funciona, como o sistema de créditos de IA é calculado, quando você precisa deles (e quando não precisa), e os 3 primeiros passos para ir de zero ao primeiro lançamento.</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Esta é a aula final do portal. Aqui você recebe o mapa claro de como o acesso ao NexOS funciona, como o sistema de créditos da equipe especializada é calculado, quando você precisa deles (e quando não precisa), e os 3 primeiros passos para ir de zero ao primeiro lançamento.</p>
 </div>
 
-<h2 style="color:#a78bfa">🚀 Como Funciona o Acesso ao NexOS AI</h2>
+<h2 style="color:#a78bfa">🚀 Como Funciona o Acesso ao NexOS</h2>
 
 <h3 style="color:#e2e8f0;margin-top:20px">A) O Modelo: Ticket Único, Sem Mensalidade Obrigatória</h3>
 
-<p>O NexOS AI funciona com um modelo de <strong>ticket único de acesso</strong> — não uma assinatura mensal. Você adquire o acesso uma vez e o sistema permanece seu. Os créditos de IA inclusos no acesso cobrem dois lançamentos completos, com saldo suficiente para iniciar o planejamento do terceiro.</p>
+<p>O NexOS funciona com um modelo de <strong>ticket único de acesso</strong> — não uma assinatura mensal. Você adquire o acesso uma vez e o sistema permanece seu. Os créditos da equipe especializada inclusos no acesso cobrem dois lançamentos completos, com saldo suficiente para iniciar o planejamento do terceiro.</p>
 
-<p>A distinção importante: <strong>os créditos de IA são opcionais, não obrigatórios.</strong> O sistema de gerenciamento de campanhas — criação de lançamentos, sequências de email e WhatsApp, dashboard de métricas, integração com plataformas de tráfego, calendário operacional — funciona completamente sem acionar nenhum agente de IA. Se você já domina copywriting e estratégia, pode usar o NexOS como sistema operacional de gerenciamento e acionar os agentes apenas quando quiser agilidade ou sugestões de IA.</p>
+<p>A distinção importante: <strong>os créditos da equipe especializada são opcionais, não obrigatórios.</strong> O sistema de gerenciamento de campanhas — criação de lançamentos, sequências de email e WhatsApp, dashboard de métricas, integração com plataformas de tráfego, calendário operacional — funciona completamente sem acionar nenhum especialista. Se você já domina copywriting e estratégia, pode usar o NexOS como sistema operacional de gerenciamento e acionar os agentes apenas quando quiser agilidade ou sugestões da equipe especializada.</p>
 
 <p>O plano <strong>Solo</strong> é o ponto de entrada: 3 campanhas simultâneas, acesso à trilha de 6 dígitos (R$100k–R$999k em 7 dias), e créditos que cobrem a operação completa de dois lançamentos. Para quem está construindo o primeiro produto escalável ou profissionalizando um negócio que já vende organicamente.</p>
 
 <p>O plano <strong>Agency</strong> é para agências e produtores com múltiplos produtos: 10 campanhas simultâneas, acesso a todas as trilhas (6, 8 e 10 dígitos), white-label para atender clientes com a sua marca, e créditos com cobertura ampliada. É o plano para quem gerencia lançamentos de terceiros ou tem portfólio de produtos simultâneos.</p>
 
-<h3 style="color:#e2e8f0;margin-top:24px">B) Como Funcionam os Créditos de IA</h3>
+<h3 style="color:#e2e8f0;margin-top:24px">B) Como Funcionam os Créditos da equipe especializada</h3>
 
 <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
 <div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ SISTEMA DE CRÉDITOS — CUSTO POR AÇÃO</div>
-Créditos refletem o custo real de processamento de IA × 1.5x (margem de operação).
+Créditos refletem o custo real de processamento da equipe especializada × 1.5x (margem de operação).
 Os valores abaixo são aproximações — o custo real depende do tamanho do contexto.
 
 Estratégia de Lançamento completa:     ~80-120 créditos
@@ -6004,9 +6004,9 @@ REGRA: créditos nunca vencem dentro do mês de competência.
 <p>Para produtores independentes e pequenas operações:</p>
 <ul>
   <li>3 campanhas simultâneas</li>
-  <li>1.500 créditos de IA por mês</li>
+  <li>1.500 créditos da equipe especializada por mês</li>
   <li>Acesso ao track de 6 dígitos (R$100k-R$999k)</li>
-  <li>Todos os 57 agentes de IA</li>
+  <li>Todos os 57 especialistas</li>
   <li>Automação de sequências email + WhatsApp</li>
   <li>Painel de métricas e relatório semanal</li>
   <li>Suporte por email em 24h</li>
@@ -6016,7 +6016,7 @@ REGRA: créditos nunca vencem dentro do mês de competência.
 <p>Para agências, lançadores profissionais e operações de escala:</p>
 <ul>
   <li>10 campanhas simultâneas</li>
-  <li>5.000 créditos de IA por mês</li>
+  <li>5.000 créditos da equipe especializada por mês</li>
   <li>Todos os tracks (6, 8 e 10 dígitos)</li>
   <li>White-label — sua marca na plataforma</li>
   <li>Gestão de clientes (sub-workspaces)</li>
@@ -6025,7 +6025,7 @@ REGRA: créditos nunca vencem dentro do mês de competência.
 </ul>
 
 <h3>Como Funcionam os Créditos</h3>
-<p>Créditos de IA representam o custo de processamento dos modelos de linguagem. Cada ação consome créditos proporcionais ao seu custo real:</p>
+<p>Créditos da equipe especializada representam o custo de processamento dos modelos de linguagem. Cada ação consome créditos proporcionais ao seu custo real:</p>
 <ul>
   <li>Geração de estratégia completa: ~80 créditos</li>
   <li>Email completo gerado: ~5 créditos</li>
@@ -11552,7 +11552,7 @@ Plano VIP: R$2.997 (tudo + 3 sessões individuais + revisão de copy)
             title: "Entrega e Experiência do Cliente: O que Acontece Depois da Venda Decide Tudo",
             duration: "25 min",
             type: "text",
-            keyPoints: ["Os primeiros 7 dias definem a retenção de longo prazo", "O onboarding que transforma comprador em fã", "Comunidade como produto: o diferencial que nenhuma IA substitui", "Medindo satisfação: NPS, entrevistas e sinais de churn", "Expandindo o produto com feedback: a versão 2.0 que o mercado pediu"],
+            keyPoints: ["Os primeiros 7 dias definem a retenção de longo prazo", "O onboarding que transforma comprador em fã", "Comunidade como produto: o diferencial que nenhuma equipe especializada substitui", "Medindo satisfação: NPS, entrevistas e sinais de churn", "Expandindo o produto com feedback: a versão 2.0 que o mercado pediu"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0">Todo o trabalho de marketing serve para trazer a pessoa à porta. O que acontece depois da porta determina se ela fica, indica e compra novamente. Esta aula entrega a arquitetura do pós-venda: os primeiros 7 dias que definem o LTV, o sistema de onboarding que transforma comprador em fã, e a régua de relacionamento que converte clientes em afiliados orgânicos.</p>
@@ -12471,7 +12471,7 @@ A Opção C faz a B parecer razoável pelo mesmo preço.
 
 <p><strong>A solução de Schwartz:</strong> lead de Mecanismo — você apresenta o mecanismo em primeiro lugar, sem prometer resultado. O prospect curioso sobre o mecanismo descobre o resultado por dedução própria. É mais poderoso porque o prospect faz a conexão sozinho.</p>
 
-<p><strong>Headline que funciona no Nível 3:</strong> "O sistema nervoso do seu lançamento: 57 agentes de IA em orquestração paralela" — nenhuma promessa de resultado. O mecanismo cria curiosidade e o resultado é implícito.</p>
+<p><strong>Headline que funciona no Nível 3:</strong> "O sistema nervoso do seu lançamento: 57 especialistas em orquestração paralela" — nenhuma promessa de resultado. O mecanismo cria curiosidade e o resultado é implícito.</p>
 
 <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:12px;color:#94a3b8;line-height:1.7">
 <div style="color:#6d4aff;font-weight:700;margin-bottom:8px">▸ O MERCADO BRASILEIRO DE INFOPRODUTOS EM 2024-2025</div>
@@ -13671,7 +13671,7 @@ FASE 4 (Escala — R$1M+):
 <p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EXEMPLO REAL</p>
 <p style="color:#e2e8f0;font-size:13px;margin:0;line-height:2">
 🚀 Ajudo infoprodutores a lançar acima de R$100k<br>
-Método de 7 dias com IA + automação<br>
+Método de 7 dias com nossa equipe + automação<br>
 +127 lançamentos | R$2M+ gerados para alunos<br>
 👇 Guia gratuito: como seu próximo lançamento
 </p>

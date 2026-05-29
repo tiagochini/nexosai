@@ -192,10 +192,10 @@ export default function CampaignsList() {
                 <h2 className="font-mono font-black text-xl md:text-2xl uppercase tracking-tight text-foreground leading-tight">
                   Nenhum lançamento ainda.
                   <br />
-                  <span className="text-primary">A IA está esperando por você.</span>
+                  <span className="text-primary">A equipe especializada está esperando por você.</span>
                 </h2>
                 <p className="font-mono text-sm text-muted-foreground/70 leading-relaxed max-w-md">
-                  Em menos de 3 minutos de briefing, a IA monta o plano completo do seu lançamento — estratégia, copy, cronograma e execução automatizada.
+                  Em menos de 3 minutos de briefing, a equipe monta o plano completo do seu lançamento — estratégia, copy, cronograma e execução automatizada.
                 </p>
                 <Link href="/campaigns/new">
                   <Button className="rounded-none font-mono uppercase tracking-widest font-bold gap-2 btn-weapon-primary h-11 px-7 mt-2 text-sm">
@@ -211,7 +211,7 @@ export default function CampaignsList() {
                 <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40 mb-3">O que acontece agora:</p>
                 {[
                   { num: "01", text: "Você escolhe seu objetivo" },
-                  { num: "02", text: "A IA faz um briefing rápido" },
+                  { num: "02", text: "A equipe faz um briefing rápido" },
                   { num: "03", text: "Plano estratégico gerado" },
                   { num: "04", text: "Conteúdo pronto para aprovar" },
                   { num: "05", text: "Campanha vai ao ar" },

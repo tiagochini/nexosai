@@ -1,8 +1,8 @@
 /**
- * Construtor de Sites IA — prompt-flow.
+ * Construtor de Sites equipe especializada — prompt-flow.
  *
  * O usuário descreve o que quer, faz upload da logo/marca,
- * e a IA gera a estrutura HTML/CSS da landing page.
+ * e a equipe gera a estrutura HTML/CSS da landing page.
  *
  * Feature gate: pode ser habilitado/desabilitado por plano ou toggle de admin.
  * Toggle armazenado em localStorage para facilitar demo.
@@ -80,7 +80,7 @@ export default function SiteBuilderPage() {
     setGenerating(true);
     setSite(null);
 
-    // Build the AI prompt
+    // Build the team prompt
     const systemPrompt = `Você é um especialista em landing pages de alta conversão para o mercado digital brasileiro.
 Gere uma landing page completa e profissional em HTML puro (sem frameworks externos, apenas CSS inline e HTML5 semântico).
 O site deve ser responsivo, com design premium, preto/branco/dourado, e converter bem para venda de produtos digitais.
@@ -124,7 +124,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
         parsed = {
           html: res.response,
           title: "Landing Page Gerada",
-          description: "Página gerada pelo NexOS AI",
+          description: "Página gerada pelo NexOS",
           sections: ["Hero", "Benefícios", "CTA"],
           seoTips: ["Adicione palavras-chave no title", "Otimize imagens", "Use HTTPS"],
         };
@@ -134,7 +134,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
       if (logoPreview && parsed.html) {
         parsed.html = parsed.html.replace(
           /<body[^>]*>/i,
-          `$&\n<!-- Logo injetada pelo NexOS AI -->\n<script>
+          `$&\n<!-- Logo injetada pelo NexOS -->\n<script>
   document.addEventListener('DOMContentLoaded', function() {
     var imgs = document.querySelectorAll('img[alt*="logo"], img[alt*="Logo"], #logo, .logo img');
     imgs.forEach(function(img) { img.src = "${logoPreview}"; });
@@ -171,10 +171,10 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
         </div>
         <div>
           <h1 className="font-mono font-black text-2xl uppercase tracking-wide text-foreground mb-2">
-            Construtor de Sites IA
+            Construtor de Sites equipe especializada
           </h1>
           <p className="font-mono text-sm text-muted-foreground max-w-md leading-relaxed">
-            Esta funcionalidade está desabilitada. Descreva o que quer e a IA gera sua landing page completa.
+            Esta funcionalidade está desabilitada. Descreva o que quer e a equipe gera sua landing page completa.
           </p>
         </div>
         {isAdmin && (
@@ -202,7 +202,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
             <Globe className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="font-mono font-black text-2xl uppercase tracking-wide">Construtor de Sites IA</h1>
+            <h1 className="font-mono font-black text-2xl uppercase tracking-wide">Construtor de Sites</h1>
             <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
               Prompt → Logo → Análise → Site Gerado
             </p>
@@ -288,7 +288,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
               <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
 
               <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
-                A IA analisará sua logo para definir paleta de cores e identidade visual do site.
+                A equipe analisará sua logo para definir paleta de cores e identidade visual do site.
               </p>
             </div>
 
@@ -322,7 +322,7 @@ Responda APENAS com JSON no seguinte formato (sem markdown, sem código block):
           </div>
           <div>
             <p className="font-mono text-sm font-bold text-foreground uppercase tracking-wide">
-              IA gerando sua landing page…
+              equipe especializada gerando sua landing page…
             </p>
             <p className="font-mono text-xs text-muted-foreground mt-1">
               Analisando prompt · Definindo estrutura · Escrevendo copy · Gerando HTML

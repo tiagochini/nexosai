@@ -51,7 +51,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
       });
-      toast.success("Idioma da IA atualizado.");
+      toast.success("Idioma da equipe especializada atualizado.");
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
       toast.error("Erro ao salvar idioma.");
@@ -88,7 +88,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       ],
     },
     {
-      label: tr.nav.ai_team,
+      label: tr.nav.specialist_team,
       items: [
         { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "57" },
       ],
@@ -97,7 +97,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       label: "Criação",
       items: [
         { name: tr.sidebar.vsl,           href: "/vsls",             icon: Video        },
-        { name: "Produção de Vídeo IA",   href: "/video-production", icon: Clapperboard },
+        { name: "Produção de Vídeo",   href: "/video-production", icon: Clapperboard },
         { name: tr.sidebar.video,         href: "/video-editor",     icon: Film         },
       ],
     },
@@ -158,7 +158,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             </div>
             <div>
               <div className="font-mono font-black text-2xl uppercase tracking-[0.12em] text-foreground leading-tight">NexOS</div>
-              <div className="font-mono text-sm uppercase tracking-[0.3em] text-primary leading-tight">AI Platform</div>
+              <div className="font-mono text-sm uppercase tracking-[0.3em] text-primary leading-tight">Plataforma NexOS</div>
               <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/50 leading-tight mt-1">Operações Inteligentes</div>
             </div>
           </div>
@@ -291,7 +291,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
               <div className="flex-1 min-w-0 text-left">
                 <div className="font-mono text-xs text-foreground font-semibold truncate">{user?.name ?? tr.user.default_name}</div>
                 <div className="font-mono text-[11px] text-muted-foreground/50 uppercase tracking-widest truncate">
-                  {plan?.name ?? "NexOS AI"}
+                  {plan?.name ?? "NexOS"}
                   {isAdmin && " · Owner"}
                 </div>
               </div>
@@ -391,7 +391,7 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
               className="h-8 w-8 object-contain transition-all duration-300"
               style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.65))" }}
             />
-            <div className="font-mono font-black text-sm uppercase tracking-widest leading-none whitespace-nowrap">NEXOS <span className="text-primary">AI</span></div>
+            <div className="font-mono font-black text-sm uppercase tracking-widest leading-none whitespace-nowrap">NEXOS</div>
           </div>
         </Link>
         <div className="hidden md:block text-[11px] font-mono uppercase tracking-widest text-muted-foreground/40">

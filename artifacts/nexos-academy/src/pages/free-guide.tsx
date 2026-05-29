@@ -19,7 +19,7 @@ const ERRORS = [
     n: "02",
     titulo: "Ensinar demais, conectar de menos",
     descricao: "O criador que só educa cria audiência de leitores. O criador que educa e se revela cria audiência de seguidores fiéis. A diferença é brutal: a primeira te lê enquanto você é útil. A segunda te segue enquanto você existe.",
-    aprofundamento: "Conteúdo puramente educativo tem prazo de validade. Quando alguém aprende o que você ensina, não precisa mais de você. Mas quando você mostra seu processo — seus erros, suas dúvidas, o que estava errado antes de acertar — você cria algo que nenhuma IA ou concorrente consegue copiar: a sua história. É isso que as pessoas compram quando compram de você. Não o conhecimento. A versão de você que acredita que elas conseguem.",
+    aprofundamento: "Conteúdo puramente educativo tem prazo de validade. Quando alguém aprende o que você ensina, não precisa mais de você. Mas quando você mostra seu processo — seus erros, suas dúvidas, o que estava errado antes de acertar — você cria algo que nenhuma equipe especializada ou concorrente consegue copiar: a sua história. É isso que as pessoas compram quando compram de você. Não o conhecimento. A versão de você que acredita que elas conseguem.",
     exemplo: "Camila ensinava design para iniciantes com posts de dicas e tutoriais. Platôu em 3.200 seguidores. Publicou um carrossel 'Os 3 projetos que me envergonham hoje — e o que cada um me ensinou'. Foi compartilhado 847 vezes. Ganhou 1.100 seguidores naquela semana. O conteúdo educativo não mudou. O que mudou foi a humanidade por trás.",
     correcao: "A proporção que funciona: 60% ensino prático, 30% história pessoal e processo, 10% bastidores e vulnerabilidade calculada. 'Vulnerabilidade calculada' não é expor tudo — é escolher uma dificuldade real que seu avatar também vive, mostrar como você passou por ela, e extrair o aprendizado.",
     cor: "hsl(45_100%_60%)",
@@ -258,7 +258,7 @@ export default function FreeGuide({ onNavigate }: FreeGuideProps) {
         <section className="rounded-2xl border border-[hsl(250_90%_65%/0.3)] bg-gradient-to-br from-[hsl(222_25%_7%)] to-[hsl(250_30%_8%)] p-8 text-center space-y-4">
           <h2 className="text-xl font-bold text-white">Quer o método completo de lançamento?</h2>
           <p className="text-[hsl(220_10%_65%)] leading-relaxed">
-            Este guia cobre o crescimento de audiência. A Metodologia NexOS cobre o passo seguinte — como transformar essa audiência em um lançamento estruturado, com 12 módulos, 45 capítulos e automação por IA.
+            Este guia cobre o crescimento de audiência. A Metodologia NexOS cobre o passo seguinte — como transformar essa audiência em um lançamento estruturado, com 12 módulos, 45 capítulos e automação pela equipe especializada.
           </p>
           <button
             onClick={() => onNavigate("products")}

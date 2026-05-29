@@ -261,7 +261,7 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
           <div className="font-mono font-bold text-2xl text-foreground">${parseFloat(data.totalCostUsd).toFixed(2)}</div>
         </div>
         <div className="px-5 py-4">
-          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Chamadas de IA</div>
+          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Chamadas da equipe especializada</div>
           <div className="font-mono font-bold text-2xl text-foreground">{data.entries.length}</div>
         </div>
       </div>
@@ -438,7 +438,7 @@ function CostReference() {
       <div className="px-5 py-3 border-b border-border/40 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-3.5 w-3.5 text-primary" />
-          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Custo por Ação de IA</span>
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Custo por Ação da equipe especializada</span>
         </div>
         <span className="font-mono text-[11px] text-muted-foreground/50">1 cr ≈ R$0,17</span>
       </div>
@@ -505,7 +505,7 @@ export default function CreditsPage() {
       <div className="border-b border-border/50 pb-5 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold text-foreground">
-            Créditos de IA
+            Créditos da equipe especializada
           </h1>
           <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mt-1">
             Saldo · Extrato detalhado · Custo por Agente
@@ -567,7 +567,7 @@ export default function CreditsPage() {
           ))}
         </div>
 
-        {/* Tab: Extrato por Agente (detalhado por chamada de IA) */}
+        {/* Tab: Extrato por Agente (detalhado por chamada da equipe especializada) */}
         {activeTab === "agentes" && (
           <AgentUsageTab workspaceId={workspaceId ?? ""} />
         )}

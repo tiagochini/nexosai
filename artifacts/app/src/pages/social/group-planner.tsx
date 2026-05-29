@@ -244,7 +244,7 @@ function MessageCard({
             disabled={generating}
             className={`rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-current/30 hover:bg-current/10 ${phaseDef.color}`}>
             {generating ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
-            {generating ? "Gerando..." : message?.content ? "Regenerar" : "Gerar com IA"}
+            {generating ? "Gerando..." : message?.content ? "Regenerar" : "Gerar com nossa equipe"}
           </Button>
 
           {message?.content && (
@@ -311,7 +311,7 @@ export default function GroupPlannerPage() {
       updatePhaseMessage(phaseIdx, msgId, content);
       toast.success("Mensagem gerada com sucesso!");
     },
-    onError: () => toast.error("Erro ao gerar mensagem. Verifique seus créditos de IA."),
+    onError: () => toast.error("Erro ao gerar mensagem. Verifique seus créditos da equipe especializada."),
     onSettled: () => setGeneratingKey(null),
   });
 

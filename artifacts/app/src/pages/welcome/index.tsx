@@ -63,7 +63,7 @@ export default function Welcome() {
     >
       {/* ── Top bar ── */}
       <div className="border-b border-border/30 px-6 py-4 flex items-center justify-between">
-        <img src={nexosLogo} alt="NexOS AI" className="h-7 opacity-90" />
+        <img src={nexosLogo} alt="NexOS" className="h-7 opacity-90" />
         <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/40">
           Bem-vindo à operação
         </span>
@@ -96,7 +96,7 @@ export default function Welcome() {
             A partir de agora, você não está mais tentando fazer tudo sozinho.
           </p>
           <p className="font-mono text-sm md:text-base text-muted-foreground/70 leading-relaxed text-center mt-4">
-            A NEXOS AI foi criada para colocar uma equipe inteira de especialistas
+            A NEXOS foi criada para colocar uma equipe inteira de especialistas
             trabalhando pelo seu negócio: estratégia, copy, criativos, funis,
             automações, tráfego, campanhas e análise.
           </p>

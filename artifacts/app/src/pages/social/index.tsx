@@ -346,7 +346,7 @@ function PlatformCard({ p, posts, onGenerate, generating }: {
           className={`w-full rounded-none font-mono uppercase text-xs tracking-widest h-9 gap-2 btn-weapon-outline border-current/30 ${p.color.split(" ")[0]}`}
           variant="outline">
           {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          {generating ? "Gerando..." : "Gerar Conteúdo com IA"}
+          {generating ? "Gerando..." : "Gerar Conteúdo com nossa equipe"}
         </Button>
       </div>
     </div>
@@ -548,7 +548,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
               <div className="border border-border/30 bg-card/30 py-12 text-center">
                 <Calendar className="h-7 w-7 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-1">Nenhum post gerado ainda</p>
-                <p className="font-mono text-xs text-muted-foreground/40">Clique em "Gerar Conteúdo com IA" em qualquer plataforma acima</p>
+                <p className="font-mono text-xs text-muted-foreground/40">Clique em "Gerar Conteúdo com nossa equipe" em qualquer plataforma acima</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -580,7 +580,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
               <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Como funciona</div>
               <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed">
                 Crie grupos de WhatsApp ou Telegram para aquecer seus leads antes da abertura do carrinho.
-                O sistema gera as mensagens de cada fase com IA e você dispara quando quiser.
+                O sistema gera as mensagens de cada fase com nossa equipe e você dispara quando quiser.
                 No encerramento, o grupo é fechado com agradecimento e entrega do link de acesso.
               </p>
             </div>
@@ -670,7 +670,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
               <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed">
                 Templates prontos para os cenários mais comuns de suporte durante o lançamento.
                 Personalize com o nome do lead, copie e envie pelo WhatsApp, Instagram DM ou Telegram.
-                Use IA para personalizar ainda mais cada mensagem.
+                Use equipe especializada para personalizar ainda mais cada mensagem.
               </p>
             </div>
           </div>
@@ -702,7 +702,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
                       <Link href="/agents/copywriter">
                         <Button size="sm" variant="outline"
                           className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 border-purple-400/30 text-purple-400 hover:bg-purple-400/10">
-                          <Bot className="h-2.5 w-2.5" />Personalizar IA
+                          <Bot className="h-2.5 w-2.5" />Personalizar equipe especializada
                         </Button>
                       </Link>
                     </div>
@@ -720,7 +720,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
                 <div className="font-mono text-xs font-bold text-muted-foreground/70 uppercase tracking-widest">Dica Profissional</div>
                 <p className="font-mono text-xs text-muted-foreground/50 leading-relaxed">
                   Configure mensagens de boas-vindas automáticas no WhatsApp Business para quem entra em contato durante o lançamento.
-                  Use a integração WhatsApp Business nas configurações para automatizar respostas com IA.
+                  Use a integração WhatsApp Business nas configurações para automatizar respostas com nossa equipe.
                 </p>
               </div>
             </div>

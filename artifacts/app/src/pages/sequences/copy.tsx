@@ -93,7 +93,7 @@ export default function SequenceCopyStudio() {
         <div className="flex items-center gap-3 border border-border/50 p-2 bg-card/40 backdrop-blur-sm mt-4 md:mt-0 relative overflow-hidden">
           <div className="absolute inset-0 bg-primary/5"></div>
           <Activity className="h-4 w-4 text-primary relative z-10 animate-pulse-slow drop-shadow-[0_0_5px_hsl(var(--primary))]" />
-          <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold relative z-10">Uplink IA Pronto</span>
+          <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold relative z-10">Uplink equipe especializada Pronto</span>
         </div>
       </div>
 

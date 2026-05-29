@@ -601,9 +601,9 @@ export default function BillingPage() {
         "900 créditos incluídos (~2 lançamentos completos)",
         "Até 3 campanhas simultâneas",
         "Track de 6 dígitos",
-        "16 agentes de IA especializados",
+        "16 especialistas especializados",
         "Sequência PLF automatizada",
-        "Landing page gerada por IA",
+        "Landing page gerada pela equipe especializada",
       ],
     },
     {
@@ -659,7 +659,7 @@ export default function BillingPage() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <h2 className="font-mono font-bold text-xl uppercase tracking-tight text-foreground">
-                  NexOS AI — {status?.planName ?? currentPlan?.name ?? "Solo"}
+                  NexOS — {status?.planName ?? currentPlan?.name ?? "Solo"}
                 </h2>
                 {status?.status && (
                   <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 ${STATUS_BADGE[status.status]?.className ?? "text-primary border-primary/40"}`}>
@@ -700,7 +700,7 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { step: "01", title: "Acesso Único", desc: "Pague uma vez. Acesse para sempre. Sem mensalidade.", icon: Lock, color: "text-primary" },
-          { step: "02", title: "2 Lançamentos Incluídos", desc: "900 créditos no plano Solo cobrem 2 lançamentos completos com todos os agentes de IA.", icon: Zap, color: "text-cyan-400" },
+          { step: "02", title: "2 Lançamentos Incluídos", desc: "900 créditos no plano Solo cobrem 2 lançamentos completos com todos os especialistas.", icon: Zap, color: "text-cyan-400" },
           { step: "03", title: "Packs sob Demanda", desc: "A partir do 3º lançamento, recarregue créditos no momento que quiser, sem compromisso.", icon: RefreshCw, color: "text-success" },
         ].map(item => {
           const Icon = item.icon;

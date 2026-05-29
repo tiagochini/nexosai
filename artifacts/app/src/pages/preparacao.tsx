@@ -33,19 +33,19 @@ const SEGMENT_CONFIG = {
     badge: "Lançador Solo",
     groupName: "Grupo dos Fundadores",
     headline: "Você está dentro!",
-    sub: "A sua vaga na lista está confirmada. Agora começa a fase mais importante — o aquecimento. Fique no grupo, tire todas as dúvidas com o Jeff, entenda cada detalhe do NexOS AI. No dia combinado, o carrinho abre por 24 horas e fecha para sempre neste preço.",
+    sub: "A sua vaga na lista está confirmada. Agora começa a fase mais importante — o aquecimento. Fique no grupo, tire todas as dúvidas com o Jeff, entenda cada detalhe do NexOS. No dia combinado, o carrinho abre por 24 horas e fecha para sempre neste preço.",
     aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas antes do carrinho abrir.\n\nVocê acabou de garantir sua vaga na lista — isso já coloca você na frente de quem vai tentar entrar no dia da abertura sem ter acompanhado o aquecimento.\n\nAntes de qualquer coisa: você já tentou fazer um lançamento antes, ou ainda está esperando o momento certo para começar?",
     phases: [
       {
         fase: "Fase 1",
         label: "Você está aqui — Aquecimento",
-        desc: "Fique no grupo. Assista aos conteúdos exclusivos que vão sair por aqui. Tire cada dúvida com o Jeff. Entenda o que o NexOS AI faz na prática — não só o que ele é, mas o que ele executa por você. Quanto mais você entender antes do carrinho abrir, mais rápida será a sua decisão.",
+        desc: "Fique no grupo. Assista aos conteúdos exclusivos que vão sair por aqui. Tire cada dúvida com o Jeff. Entenda o que o NexOS faz na prática — não só o que ele é, mas o que ele executa por você. Quanto mais você entender antes do carrinho abrir, mais rápida será a sua decisão.",
         ativo: true,
       },
       {
         fase: "Fase 2",
         label: "Demonstração ao vivo",
-        desc: "Antes do carrinho abrir, você vai ver o NexOS AI funcionando em tempo real — estratégia sendo gerada, copy sendo escrita, sequência sendo montada. Não é promessa. É execução ao vivo.",
+        desc: "Antes do carrinho abrir, você vai ver o NexOS funcionando em tempo real — estratégia sendo gerada, copy sendo escrita, sequência sendo montada. Não é promessa. É execução ao vivo.",
         ativo: false,
       },
       {
@@ -74,19 +74,19 @@ const SEGMENT_CONFIG = {
     badge: "Agência / Gestor",
     groupName: "Grupo das Agências",
     headline: "Você está dentro!",
-    sub: "Sua vaga está confirmada. Durante o aquecimento, você vai entender como o NexOS AI escala lançamentos de múltiplos clientes sem aumentar equipe. Fique no grupo, tire dúvidas com o Jeff. No dia combinado, o carrinho abre por 24 horas.",
+    sub: "Sua vaga está confirmada. Durante o aquecimento, você vai entender como o NexOS escala lançamentos de múltiplos clientes sem aumentar equipe. Fique no grupo, tire dúvidas com o Jeff. No dia combinado, o carrinho abre por 24 horas.",
     aiGreeting: "Sou Jeff, estou aqui para responder suas dúvidas antes do carrinho abrir.\n\nVocê acabou de confirmar sua vaga na lista de agências — isso já mostra que você está pensando diferente de quem ainda lança no manual.\n\nMe conta: há quanto tempo você sonha em escalar os lançamentos dos seus clientes sem precisar contratar mais ninguém?",
     phases: [
       {
         fase: "Fase 1",
         label: "Você está aqui — Aquecimento",
-        desc: "Fique no grupo. Conteúdo exclusivo sobre como agências estão usando IA para executar múltiplos lançamentos simultâneos. Jeff está disponível para responder tudo sobre a operação, planos e ROI esperado.",
+        desc: "Fique no grupo. Conteúdo exclusivo sobre como agências estão usando equipe especializada para executar múltiplos lançamentos simultâneos. Jeff está disponível para responder tudo sobre a operação, planos e ROI esperado.",
         ativo: true,
       },
       {
         fase: "Fase 2",
         label: "Demonstração para agências",
-        desc: "Você vai ver na prática como o NexOS AI gerencia múltiplas campanhas ao mesmo tempo — painel multi-cliente, segmentação por produto e disparos coordenados.",
+        desc: "Você vai ver na prática como o NexOS gerencia múltiplas campanhas ao mesmo tempo — painel multi-cliente, segmentação por produto e disparos coordenados.",
         ativo: false,
       },
       {
@@ -385,7 +385,7 @@ function InstrucoesCard({ segment }: { segment: Segment }) {
     {
       icon: Bot,
       titulo: "Tire todas as suas dúvidas com o Jeff",
-      desc: "Antes de decidir qualquer coisa, entenda o que o NexOS AI faz na prática. O Jeff está aqui agora — pergunte sobre funcionalidades, planos, casos de uso, o que precisar.",
+      desc: "Antes de decidir qualquer coisa, entenda o que o NexOS faz na prática. O Jeff está aqui agora — pergunte sobre funcionalidades, planos, casos de uso, o que precisar.",
     },
     {
       icon: Clock,
@@ -455,9 +455,9 @@ export default function PreparacaoPage() {
       <nav className="fixed top-0 inset-x-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={nexosLogo} alt="NexOS AI" className="h-14 w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.65))" }} />
+            <img src={nexosLogo} alt="NexOS" className="h-14 w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.65))" }} />
             <div className="hidden sm:block">
-              <div className="font-mono font-black text-xl tracking-[0.15em] uppercase leading-tight">NexOS <span className="text-primary">AI</span></div>
+              <div className="font-mono font-black text-xl tracking-[0.15em] uppercase leading-tight">NexOS</div>
               <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/70 leading-tight">Plataforma de Lançamento</div>
             </div>
           </div>
@@ -531,7 +531,7 @@ export default function PreparacaoPage() {
           Fique atento ao WhatsApp cadastrado — todas as comunicações chegam por lá
         </div>
         <p className="font-mono text-[11px] text-muted-foreground/20 uppercase tracking-widest">
-          NexOS AI · contato@agencianexos.vip
+          NexOS · contato@agencianexos.vip
         </p>
       </div>
     </div>

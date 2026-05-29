@@ -104,7 +104,7 @@ export default function AffiliatePage() {
       return res.json() as Promise<{ affiliate: AffiliateProfile }>;
     },
     onSuccess: () => {
-      toast.success("Bem-vindo ao programa de afiliados NexOS AI!");
+      toast.success("Bem-vindo ao programa de afiliados NexOS!");
       void refetch();
     },
     onError: () => {
@@ -150,7 +150,7 @@ export default function AffiliatePage() {
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">Programa de Afiliados</h1>
           </div>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-            Lance o NexOS AI para o seu público e ganhe comissões por cada indicação
+            Lance o NexOS para o seu público e ganhe comissões por cada indicação
           </p>
         </div>
 
@@ -187,7 +187,7 @@ export default function AffiliatePage() {
             className="w-full rounded-none font-mono uppercase tracking-widest font-bold h-12 text-sm gap-2 bg-yellow-400 hover:bg-yellow-300 text-black border-0"
           >
             <Star className="h-4 w-4" />
-            {joining ? "Processando..." : "Quero Ser Afiliado NexOS AI"}
+            {joining ? "Processando..." : "Quero Ser Afiliado NexOS"}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
@@ -205,12 +205,12 @@ export default function AffiliatePage() {
           <StepCard
             num={2}
             title="Promova para sua audiência"
-            desc="Use os materiais de marketing prontos (posts, stories, emails, VSL) para apresentar o NexOS AI para produtores digitais na sua rede."
+            desc="Use os materiais de marketing prontos (posts, stories, emails, VSL) para apresentar o NexOS para produtores digitais na sua rede."
           />
           <StepCard
             num={3}
             title="Receba por cada assinante ativo"
-            desc={`A cada novo usuário que assinar o NexOS AI pelo seu link, você recebe R$ ${COMMISSION_BRL.toLocaleString("pt-BR")} de comissão enquanto ele permanecer ativo.`}
+            desc={`A cada novo usuário que assinar o NexOS pelo seu link, você recebe R$ ${COMMISSION_BRL.toLocaleString("pt-BR")} de comissão enquanto ele permanecer ativo.`}
           />
           <StepCard
             num={4}
@@ -257,7 +257,7 @@ export default function AffiliatePage() {
               </Badge>
             </div>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-              Programa NexOS AI · R$ {COMMISSION_BRL.toLocaleString("pt-BR")}/conversão
+              Programa NexOS · R$ {COMMISSION_BRL.toLocaleString("pt-BR")}/conversão
             </p>
           </div>
         </div>

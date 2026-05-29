@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 export default function TermsOfService() {
   useEffect(() => {
-    document.title = "NexOS AI Terms of Service";
+    document.title = "NexOS Terms of Service";
   }, []);
 
   return (
@@ -11,23 +11,23 @@ export default function TermsOfService() {
       <div className="border-b border-white/10 bg-black/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <a href="/" className="font-mono text-sm font-bold tracking-widest text-white hover:text-white/70 transition-colors">
-            ← NEXOS AI
+            ← NEXOS
           </a>
-          <span className="font-mono text-xs text-white/30 uppercase tracking-widest">NexOS AI Terms of Service</span>
+          <span className="font-mono text-xs text-white/30 uppercase tracking-widest">NexOS Terms of Service</span>
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-16">
         <div className="mb-12">
           <div className="font-mono text-xs uppercase tracking-widest text-white/30 mb-3">Termos de Uso</div>
-          <h1 className="font-mono text-3xl font-bold text-white mb-2">NexOS AI Terms of Service</h1>
+          <h1 className="font-mono text-3xl font-bold text-white mb-2">NexOS Terms of Service</h1>
           <p className="font-mono text-sm text-white/40">Última atualização: 15 de maio de 2026</p>
         </div>
 
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3">1. Aceitação dos Termos</h2>
           <p className="text-gray-300 leading-relaxed">
-            Ao acessar ou usar a plataforma NexOS AI ("Serviço"), você concorda em ficar
+            Ao acessar ou usar a plataforma NexOS ("Serviço"), você concorda em ficar
             vinculado a estes Termos de Uso. Se você não concordar com qualquer parte dos
             termos, não poderá acessar o Serviço.
           </p>
@@ -36,10 +36,10 @@ export default function TermsOfService() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3">2. Descrição do Serviço</h2>
           <p className="text-gray-300 leading-relaxed">
-            O NexOS AI é uma plataforma SaaS de automação de campanhas digitais com inteligência
+            O NexOS é uma plataforma SaaS de automação de campanhas digitais com inteligência
             artificial. O Serviço permite que usuários criem, gerenciem e publiquem campanhas de
             marketing em plataformas como Instagram, Facebook, WhatsApp e outras redes sociais,
-            com auxílio de agentes de IA.
+            com auxílio de especialistas.
           </p>
         </section>
 
@@ -51,8 +51,8 @@ export default function TermsOfService() {
             todas as atividades realizadas em sua conta.
           </p>
           <p className="text-gray-300 leading-relaxed">
-            Você concorda em notificar imediatamente o NexOS AI sobre qualquer uso não autorizado
-            de sua conta. O NexOS AI não será responsável por perdas decorrentes do uso não
+            Você concorda em notificar imediatamente o NexOS sobre qualquer uso não autorizado
+            de sua conta. O NexOS não será responsável por perdas decorrentes do uso não
             autorizado de sua conta.
           </p>
         </section>
@@ -62,12 +62,12 @@ export default function TermsOfService() {
           <p className="text-gray-300 leading-relaxed mb-3">
             O Serviço integra-se com plataformas de terceiros, incluindo Meta (Facebook e
             Instagram), Google, TikTok e LinkedIn. Ao conectar essas integrações, você autoriza
-            o NexOS AI a acessar e usar os dados dessas plataformas conforme suas respectivas
+            o NexOS a acessar e usar os dados dessas plataformas conforme suas respectivas
             políticas de uso.
           </p>
           <p className="text-gray-300 leading-relaxed">
-            Você pode revogar o acesso do NexOS AI a qualquer integração a qualquer momento,
-            tanto pelas configurações do NexOS AI quanto diretamente nas plataformas de terceiros.
+            Você pode revogar o acesso do NexOS a qualquer integração a qualquer momento,
+            tanto pelas configurações do NexOS quanto diretamente nas plataformas de terceiros.
           </p>
         </section>
 
@@ -88,12 +88,12 @@ export default function TermsOfService() {
           <h2 className="text-xl font-semibold mb-3">6. Créditos e Pagamentos</h2>
           <p className="text-gray-300 leading-relaxed mb-3">
             O Serviço opera com um sistema de créditos. Os créditos são consumidos conforme o
-            uso de funcionalidades de IA. Créditos não utilizados ao final do ciclo de
+            uso de funcionalidades da equipe especializada. Créditos não utilizados ao final do ciclo de
             assinatura mensal não são transferidos para o período seguinte, exceto quando
             expressamente indicado.
           </p>
           <p className="text-gray-300 leading-relaxed">
-            Pagamentos são processados por meio de gateways de pagamento de terceiros. O NexOS AI
+            Pagamentos são processados por meio de gateways de pagamento de terceiros. O NexOS
             não armazena dados de cartão de crédito. Reembolsos são avaliados caso a caso
             conforme nossa política de reembolso.
           </p>
@@ -103,9 +103,9 @@ export default function TermsOfService() {
           <h2 className="text-xl font-semibold mb-3">7. Propriedade Intelectual</h2>
           <p className="text-gray-300 leading-relaxed">
             O Serviço e seu conteúdo original, recursos e funcionalidades são e permanecerão
-            propriedade exclusiva do NexOS AI. O conteúdo gerado por IA em nome do usuário
-            pertence ao usuário, sujeito às limitações dos modelos de IA utilizados. Você
-            concede ao NexOS AI uma licença limitada para processar seu conteúdo exclusivamente
+            propriedade exclusiva do NexOS. O conteúdo gerado pela equipe especializada em nome do usuário
+            pertence ao usuário, sujeito às limitações dos modelos da equipe especializada utilizados. Você
+            concede ao NexOS uma licença limitada para processar seu conteúdo exclusivamente
             para fins de prestação do Serviço.
           </p>
         </section>
@@ -113,9 +113,9 @@ export default function TermsOfService() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3">8. Limitação de Responsabilidade</h2>
           <p className="text-gray-300 leading-relaxed">
-            O NexOS AI não se responsabiliza por resultados de negócios, receitas ou metas de
+            O NexOS não se responsabiliza por resultados de negócios, receitas ou metas de
             conversão não atingidas. O Serviço é fornecido "como está". Em nenhuma circunstância
-            a responsabilidade total do NexOS AI excederá o valor pago pelo usuário nos 3 meses
+            a responsabilidade total do NexOS excederá o valor pago pelo usuário nos 3 meses
             anteriores ao evento que deu origem à reclamação.
           </p>
         </section>
@@ -123,7 +123,7 @@ export default function TermsOfService() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3">9. Rescisão</h2>
           <p className="text-gray-300 leading-relaxed">
-            O NexOS AI pode encerrar ou suspender sua conta imediatamente, sem aviso prévio,
+            O NexOS pode encerrar ou suspender sua conta imediatamente, sem aviso prévio,
             por violação destes Termos. Após a rescisão, seu direito de usar o Serviço cessa
             imediatamente. Você pode solicitar a exclusão de seus dados conforme nossa
             Política de Privacidade.

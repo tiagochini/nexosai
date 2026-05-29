@@ -24,7 +24,7 @@ const TIMELINE = [
   { period: "Brasil", label: "Concurso Público & Empreendedorismo", desc: "Aprovado em concurso público no estado do Rio de Janeiro. Redireciona trajetória para inovação tecnológica e empreendedorismo, movido pela convicção de que grandes transformações surgem de novos sistemas." },
   { period: "Mundo", label: "+10 Países · Perspectiva Global", desc: "Espanha, Inglaterra, Itália, Alemanha, EUA, Argentina, Paraguai, Bolívia e Uruguai. Percepção ampliada sobre cultura, tecnologia, economia e comportamento de mercado." },
   { period: "Austrália", label: "Global Talent Visa", desc: "Aceito na Austrália pelo programa Global Talent com base no reconhecimento como coach de BJJ de alta performance. Residência permanente consolidada, cidadania australiana em processo." },
-  { period: "Hoje", label: "IA · Automação · NexOS AI", desc: "Lidera o desenvolvimento da NexOS AI e outros projetos em inteligência artificial, arbitragem inteligente, protocolos de segurança digital e sistemas autônomos de crescimento." },
+  { period: "Hoje", label: "Automação · NexOS", desc: "Lidera o desenvolvimento da NexOS e outros projetos em inteligência artificial, arbitragem inteligente, protocolos de segurança digital e sistemas autônomos de crescimento." },
 ];
 
 function useInView(threshold = 0.2) {
@@ -67,7 +67,7 @@ export default function FounderPage() {
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 hover:opacity-70 transition-opacity">
             <img src={nexosLogo} alt="NexOS" className="h-7 w-7 object-contain" />
-            <span className="text-sm font-bold tracking-widest text-white">NEXOS AI</span>
+            <span className="text-sm font-bold tracking-widest text-white">NEXOS</span>
           </a>
           <span className="text-xs text-white/30 uppercase tracking-widest">Fundador</span>
         </div>
@@ -206,7 +206,7 @@ export default function FounderPage() {
         </div>
       </section>
 
-      {/* NexOS AI project highlight */}
+      {/* NexOS project highlight */}
       <section className="max-w-5xl mx-auto px-6 py-16">
         <div className="border border-white/10 p-8 md:p-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 opacity-5 rounded-full"
@@ -214,7 +214,7 @@ export default function FounderPage() {
 
           <div className="relative">
             <div className="text-xs uppercase tracking-[0.3em] text-white/25 mb-4">Projeto Principal</div>
-            <h2 className="text-2xl font-bold text-white mb-4 uppercase tracking-widest">NexOS AI</h2>
+            <h2 className="text-2xl font-bold text-white mb-4 uppercase tracking-widest">NexOS</h2>
             <p className="text-sm text-white/50 leading-relaxed max-w-2xl mb-8">
               Uma arquitetura avançada de inteligência artificial voltada à automação completa de operações digitais de marketing, vendas, retenção e aquisição. Múltiplos agentes especializados capazes de executar campanhas, analisar métricas, adaptar estratégias e operar ecossistemas de crescimento digital de forma contínua e autônoma.
             </p>
@@ -229,7 +229,7 @@ export default function FounderPage() {
       <div className="border-t border-white/5 max-w-5xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <a href="/" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
           <img src={nexosLogo} alt="NexOS" className="h-5 w-5 object-contain opacity-50" />
-          <span className="text-xs text-white/25 uppercase tracking-widest">NexOS AI</span>
+          <span className="text-xs text-white/25 uppercase tracking-widest">NexOS</span>
         </a>
         <span className="text-[10px] text-white/15 uppercase tracking-widest">Criado e desenvolvido por Bruce Allan</span>
       </div>

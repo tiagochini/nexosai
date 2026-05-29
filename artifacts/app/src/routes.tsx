@@ -253,7 +253,7 @@ export default function AppRoutes() {
         {() => <VideoEditorProtected />}
       </Route>
 
-      {/* Construtor de Sites IA */}
+      {/* Construtor de Sites equipe especializada */}
       <Route path="/site-builder">
         {() => <ProtectedRoute><SiteBuilderPage /></ProtectedRoute>}
       </Route>
@@ -263,7 +263,7 @@ export default function AppRoutes() {
         {() => <ProtectedRoute><AtendimentoPage /></ProtectedRoute>}
       </Route>
 
-      {/* Produção de Vídeo IA */}
+      {/* Produção de Vídeo equipe especializada */}
       <Route path="/video-production">
         {() => <ProtectedRoute><VideoProductionPage /></ProtectedRoute>}
       </Route>
@@ -295,7 +295,7 @@ export default function AppRoutes() {
       </Route>
 
       {/* Comprar — página pública de checkout de produto */}
-      {/* Página pública de captura de leads com chat IA */}
+      {/* Página pública de captura de leads com chat equipe especializada */}
       <Route path="/c/:sequenceId" component={LeadCapturePage} />
       <Route path="/comprar/:productId" component={ComprarPage} />
       <Route path="/preparacao" component={PreparacaoPage} />

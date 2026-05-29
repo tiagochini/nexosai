@@ -251,7 +251,7 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
 
           <div className="space-y-3">
             <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-white/20">
-              Autorização Operacional · NexOS AI
+              Autorização Operacional · NexOS
             </div>
             <h1 className="font-mono font-black text-3xl md:text-4xl uppercase tracking-tighter text-white leading-none">
               {campaignTitle}

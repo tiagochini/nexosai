@@ -4,7 +4,7 @@ export default function DataDeletion() {
       <div className="border-b border-white/10 bg-black/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <a href="/" className="font-mono text-sm font-bold tracking-widest text-white hover:text-white/70 transition-colors">
-            ← NEXOS AI
+            ← NEXOS
           </a>
           <span className="font-mono text-xs text-white/30 uppercase tracking-widest">Data Deletion</span>
         </div>
@@ -24,7 +24,7 @@ export default function DataDeletion() {
               Revogar acesso via Meta / Facebook
             </h2>
             <p className="mb-4">
-              Se você conectou sua conta do Facebook ou Instagram ao NexOS AI e deseja remover
+              Se você conectou sua conta do Facebook ou Instagram ao NexOS e deseja remover
               o acesso e excluir os dados associados, siga os passos abaixo:
             </p>
             <ol className="list-decimal list-inside space-y-3 ml-4">
@@ -39,12 +39,12 @@ export default function DataDeletion() {
                   facebook.com/settings → Aplicativos e Sites
                 </a>
               </li>
-              <li>Localize <strong className="text-white">NexOS AI</strong> na lista de apps conectados</li>
+              <li>Localize <strong className="text-white">NexOS</strong> na lista de apps conectados</li>
               <li>Clique em <strong className="text-white">Remover</strong></li>
               <li>Confirme a remoção na caixa de diálogo</li>
             </ol>
             <p className="mt-4">
-              Após a remoção, o NexOS AI perde imediatamente o acesso à sua conta Meta.
+              Após a remoção, o NexOS perde imediatamente o acesso à sua conta Meta.
               Os tokens de acesso são invalidados e nenhum dado adicional é coletado.
             </p>
           </section>
@@ -54,7 +54,7 @@ export default function DataDeletion() {
               Solicitar exclusão completa de dados
             </h2>
             <p className="mb-4">
-              Para solicitar a exclusão de todos os dados pessoais armazenados pelo NexOS AI
+              Para solicitar a exclusão de todos os dados pessoais armazenados pelo NexOS
               — incluindo conta, histórico de campanhas e dados de integrações — envie um
               e-mail para:
             </p>
@@ -63,7 +63,7 @@ export default function DataDeletion() {
                 <a href="mailto:privacy@agencianexos.vip" className="text-blue-400 hover:underline">privacy@agencianexos.vip</a>
               </p>
               <p><span className="text-white/40">Assunto:</span> <strong className="text-white">Exclusão de Dados</strong></p>
-              <p><span className="text-white/40">Inclua:</span> o e-mail cadastrado na sua conta NexOS AI</p>
+              <p><span className="text-white/40">Inclua:</span> o e-mail cadastrado na sua conta NexOS</p>
             </div>
             <p className="mt-4">
               Processamos todas as solicitações em até <strong className="text-white">30 dias úteis</strong> conforme
@@ -80,7 +80,7 @@ export default function DataDeletion() {
               <li>Tokens de acesso às plataformas (Meta, Google, TikTok, LinkedIn)</li>
               <li>Histórico de campanhas e conteúdo gerado</li>
               <li>Dados de leads e sequências de lançamento</li>
-              <li>Logs de uso de IA e créditos</li>
+              <li>Logs de uso da equipe especializada e créditos</li>
               <li>Dados de pagamento (referência de transação apenas; dados de cartão nunca são armazenados)</li>
             </ul>
           </section>
@@ -88,7 +88,7 @@ export default function DataDeletion() {
         </div>
 
         <div className="mt-16 pt-8 border-t border-white/10 text-center">
-          <p className="text-xs text-white/20">© 2026 NexOS AI — Todos os direitos reservados</p>
+          <p className="text-xs text-white/20">© 2026 NexOS — Todos os direitos reservados</p>
           <div className="mt-3 space-x-4">
             <a href="/privacy" className="text-xs text-white/30 hover:text-white/60 transition-colors">Política de Privacidade</a>
             <a href="/terms" className="text-xs text-white/30 hover:text-white/60 transition-colors">Termos de Uso</a>

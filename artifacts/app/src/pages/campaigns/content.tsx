@@ -302,7 +302,7 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
         {/* Visual direction */}
         {piece.visualDirection && (
           <div className="mb-2 px-2 py-1 border border-purple-400/30 bg-purple-400/5">
-            <span className="font-mono text-[10px] text-purple-400 uppercase tracking-widest">Visual IA: </span>
+            <span className="font-mono text-[10px] text-purple-400 uppercase tracking-widest">Visual equipe especializada: </span>
             <span className="font-mono text-[11px] text-foreground/70">{piece.visualDirection}</span>
           </div>
         )}
@@ -349,7 +349,7 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
               <Edit3 className="h-3 w-3" />Editar
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onAiRewrite(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10">
-              <Sparkles className="h-3 w-3" />IA Reescrever
+              <Sparkles className="h-3 w-3" />Reescrever
             </Button>
           </div>
         )}
@@ -459,7 +459,7 @@ function GenerateMoreModal({
             className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8 gap-1.5 btn-weapon-primary"
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Gerar {count} Peça{count !== 1 ? "s" : ""} com IA
+            Gerar {count} Peça{count !== 1 ? "s" : ""} com nossa equipe
           </Button>
         </div>
       </div>
@@ -488,7 +488,7 @@ function RejectModal({
         <div className="p-5 border-b border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <XCircle className="h-4 w-4 text-destructive" />
-            <span className="font-mono text-sm uppercase tracking-widest font-bold">Rejeitar e Corrigir com IA</span>
+            <span className="font-mono text-sm uppercase tracking-widest font-bold">Rejeitar e Corrigir com nossa equipe</span>
           </div>
           <p className="font-mono text-xs text-muted-foreground truncate">{piece.title}</p>
         </div>
@@ -527,7 +527,7 @@ function RejectModal({
             className="rounded-none font-mono uppercase text-[11px] tracking-widest h-8 gap-1.5 bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
           >
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Rejeitar e Corrigir com IA
+            Rejeitar e Corrigir com nossa equipe
           </Button>
         </div>
       </div>
@@ -1204,7 +1204,7 @@ function LandingPagePreview({
       <div className="border border-border/50 bg-card/40 p-4 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Página de Vendas Gerada pela IA</p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Página de Vendas Gerada pela equipe especializada</p>
             <h2 className="font-mono font-bold text-base uppercase tracking-wide">{data.pageTitle ?? "Página de Vendas"}</h2>
             <p className="font-mono text-xs text-muted-foreground/60 mt-0.5">{data.metaDescription}</p>
           </div>
@@ -1517,7 +1517,7 @@ function SocialLaunchGate({
             Conectar Plataformas Antes de Lançar
           </div>
           <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
-            A NexOS AI vai postar automaticamente em seu nome. Conecte cada rede social com sua conta para liberar o lançamento.
+            A NexOS vai postar automaticamente em seu nome. Conecte cada rede social com sua conta para liberar o lançamento.
           </p>
         </div>
       </div>
@@ -1750,7 +1750,7 @@ export default function ContentApproval() {
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       toast.success("Agente reescreveu com base no seu feedback. Revise e aprove.");
     } catch {
-      toast.error("Erro ao processar rejeição e reescrita com IA.");
+      toast.error("Erro ao processar rejeição e reescrita com nossa equipe.");
       setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
     } finally {
       setRewritingPiece(null);
@@ -1768,9 +1768,9 @@ export default function ContentApproval() {
       });
       setLocalPieces(null);
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-      toast.success("IA reescreveu. Revise e aprove.");
+      toast.success("Equipe reescreveu. Revise e aprove.");
     } catch {
-      toast.error("Erro ao reescrever com IA");
+      toast.error("Erro ao reescrever com nossa equipe");
     } finally {
       setRewritingPiece(null);
     }
@@ -1898,7 +1898,7 @@ export default function ContentApproval() {
             Conteúdo ainda não gerado
           </p>
           <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
-            Execute a fase de geração de conteúdo na campanha para que os agentes de IA criem as peças de copy e visual.
+            Execute a fase de geração de conteúdo na campanha para que os especialistas criem as peças de copy e visual.
           </p>
           <Link href={`/campaigns/${campaignId}`}>
             <Button className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs">
@@ -2202,7 +2202,7 @@ export default function ContentApproval() {
                               <Edit3 className="h-2.5 w-2.5" />Editar
                             </button>
                             <button onClick={() => void handleAiRewrite(piece.id)} disabled={loadingPiece === piece.id} className="font-mono text-[11px] uppercase tracking-widest border border-primary/30 text-primary hover:bg-primary/10 px-2 h-6 flex items-center gap-1 transition-colors">
-                              <Sparkles className="h-2.5 w-2.5" />IA Reescrever
+                              <Sparkles className="h-2.5 w-2.5" />Reescrever
                             </button>
                           </div>
                         </div>

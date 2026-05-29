@@ -248,7 +248,7 @@ export default function AtendimentoPage() {
                 Time de Vendas
               </h1>
               <Badge className="rounded-none font-mono text-[10px] bg-primary/15 text-primary border border-primary/30">
-                IA
+                equipe especializada
               </Badge>
             </div>
             <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
@@ -269,7 +269,7 @@ export default function AtendimentoPage() {
           <FeatureOnboarding
             featureKey={FEATURE_KEYS.ATENDIMENTO}
             title="TIME DE VENDAS IA"
-            description="Cada lead na conversa certa, com o agente certo. A IA sugere a resposta ideal de acordo com o estágio do funil."
+            description="Cada lead na conversa certa, com o agente certo. A equipe especializada sugere a resposta ideal de acordo com o estágio do funil."
             variant="inline"
             steps={[
               "Crie uma conversa por lead e classifique o estágio (Aquecimento, Desejo, Fechamento…)",
@@ -375,7 +375,7 @@ export default function AtendimentoPage() {
                 <MessageSquare className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
                 <p className="font-mono text-sm font-bold text-foreground mb-1">Selecione uma conversa</p>
                 <p className="font-mono text-xs text-muted-foreground/50 mb-4">
-                  O agente de IA vai gerar a mensagem ideal para cada etapa do funil.
+                  O especialista vai gerar a mensagem ideal para cada etapa do funil.
                 </p>
                 <Button onClick={() => setShowNew(true)} className="rounded-none font-mono text-xs gap-1.5">
                   <Plus className="h-3 w-3" /> Nova Conversa
@@ -441,7 +441,7 @@ export default function AtendimentoPage() {
                   <div className="border border-dashed border-border/30 p-6 text-center">
                     <Bot className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
                     <p className="font-mono text-xs text-muted-foreground/50 mb-3">
-                      Nenhuma mensagem ainda. Use o botão "Sugerir" para a IA gerar a abordagem ideal para a etapa de <strong>{STAGE_LABEL[selectedConv.funnelStage]}</strong>.
+                      Nenhuma mensagem ainda. Use o botão "Sugerir" para a equipe gerar a abordagem ideal para a etapa de <strong>{STAGE_LABEL[selectedConv.funnelStage]}</strong>.
                     </p>
                     <Button size="sm" onClick={getSuggestion} disabled={suggesting} className="rounded-none font-mono text-xs gap-1.5 h-7">
                       <Sparkles className="h-3 w-3" />
@@ -480,7 +480,7 @@ export default function AtendimentoPage() {
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-primary" />
                       <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">
-                        Sugestão da IA · {AGENT_NAME[selectedConv.assignedAgent]}
+                        Sugestão da equipe especializada · {AGENT_NAME[selectedConv.assignedAgent]}
                       </span>
                     </div>
                     <button onClick={() => setSuggestion(null)} className="text-muted-foreground/50 hover:text-foreground">

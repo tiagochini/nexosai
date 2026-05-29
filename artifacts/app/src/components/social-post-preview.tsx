@@ -124,9 +124,9 @@ function InstagramPost({ piece }: { piece: PreviewPiece }) {
               <Video className="h-4 w-4 text-white" />
             </div>
           )}
-          <div className="text-white/50 text-[10px] uppercase tracking-widest mb-2">Visual IA</div>
+          <div className="text-white/50 text-[10px] uppercase tracking-widest mb-2">Visual</div>
           <div className="text-white/80 text-[11px] leading-relaxed text-center px-2 font-medium">
-            {piece.visualDirection?.slice(0, 80) ?? "Arte gerada pela IA com identidade visual da campanha"}
+            {piece.visualDirection?.slice(0, 80) ?? "Arte gerada pela equipe especializada com identidade visual da campanha"}
           </div>
         </div>
         {isReel && (
@@ -261,7 +261,7 @@ function FacebookPost({ piece }: { piece: PreviewPiece }) {
       <div className="w-full h-36 relative overflow-hidden"
            style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)" }}>
         <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center">
-          <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1">Criativo IA</div>
+          <div className="text-white/40 text-[9px] uppercase tracking-wider mb-1">Criativo</div>
           <div className="text-white/70 text-[10px] text-center px-4 leading-relaxed">
             {piece.visualDirection?.slice(0, 60) ?? "Arte gerada com identidade visual da campanha"}
           </div>

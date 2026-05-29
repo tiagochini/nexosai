@@ -99,7 +99,7 @@ export default function Register() {
           <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full w-32 h-32 m-auto" />
           <img
             src={nexosLogo}
-            alt="NexOS AI"
+            alt="NexOS"
             className="h-32 w-32 object-contain mb-2 relative z-10"
             style={{ imageRendering: "crisp-edges", filter: "drop-shadow(0 0 20px hsl(var(--primary)/0.6))" }}
           />

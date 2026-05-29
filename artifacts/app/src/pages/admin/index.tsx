@@ -253,7 +253,7 @@ export default function AdminPage() {
           <div className="flex items-center gap-3 mb-1">
             <ShieldCheck className="h-5 w-5 text-yellow-400" />
             <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-bold">
-              Command Center · NexOS AI
+              Command Center · NexOS
             </h1>
             <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/30 text-yellow-400 bg-yellow-400/10">
               Owner
@@ -405,7 +405,7 @@ export default function AdminPage() {
                   <div className="font-mono text-[11px] text-muted-foreground/50 mt-1">{fin?.packSalesCount ?? 0} packs vendidos</div>
                 </div>
                 <div className="border border-cyan-400/20 bg-cyan-400/5 p-5">
-                  <div className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/60 mb-2">Custo de IA</div>
+                  <div className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/60 mb-2">Custo da equipe especializada</div>
                   <div className="font-mono text-3xl font-black text-cyan-400">
                     {fmtBRL(fin?.totalAiCostBrl ?? 0)}
                   </div>
@@ -525,7 +525,7 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <div className="flex justify-end">
-                      <a href={`mailto:${u.email}?subject=Seus créditos NexOS AI estão acabando&body=Oi! Notei que você está com apenas ${u.balance} créditos. Posso ajudar com uma recarga?`}>
+                      <a href={`mailto:${u.email}?subject=Seus créditos NexOS estão acabando&body=Oi! Notei que você está com apenas ${u.balance} créditos. Posso ajudar com uma recarga?`}>
                         <Button size="sm" variant="outline" className="rounded-none font-mono uppercase text-[10px] tracking-widest btn-weapon-outline h-7 gap-1">
                           <ArrowUpRight className="h-2.5 w-2.5" />Contatar
                         </Button>
@@ -835,7 +835,7 @@ export default function AdminPage() {
         <div className="space-y-5">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">🎟️ Códigos de Convite — NexOS AI</h2>
+              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">🎟️ Códigos de Convite — NexOS</h2>
               <p className="font-mono text-xs text-muted-foreground/60 mt-1">
                 {(inviteCodes ?? []).filter(c => !c.used).length} disponíveis ·{" "}
                 {(inviteCodes ?? []).filter(c => c.used).length} utilizados
@@ -867,7 +867,7 @@ export default function AdminPage() {
           </div>
 
           <p className="font-mono text-[11px] text-muted-foreground/50 border border-border/30 bg-card/30 px-4 py-3">
-            💡 Para usar: na tela de cadastro do NexOS AI, o convidado digita o código de convite e ganha acesso ao plano correspondente sem pagar.
+            💡 Para usar: na tela de cadastro do NexOS, o convidado digita o código de convite e ganha acesso ao plano correspondente sem pagar.
           </p>
 
           {loadingInvites ? (

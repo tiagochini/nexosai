@@ -711,10 +711,10 @@ export default function VideoEditorPage() {
     const lines: CaptionLine[] = [
       "Bem-vindo à Metodologia NexOS",
       "A forma mais inteligente de fazer lançamentos",
-      "Nossos agentes de IA trabalham 24h por você",
+      "Nossos especialistas trabalham 24h por você",
       "Do briefing ao lançamento em minutos",
       "Estratégia, conteúdo e automação integrados",
-      "Isso é o NexOS AI em ação",
+      "Isso é o NexOS em ação",
     ].slice(0, Math.ceil(d / segLen)).map((text, i) => ({
       start: activeClip.inPoint + i * segLen,
       end: activeClip.inPoint + (i + 1) * segLen,
@@ -922,7 +922,7 @@ export default function VideoEditorPage() {
               <div>
                 <h1 className="font-mono font-black text-lg uppercase tracking-wide leading-none">Editor de Vídeo</h1>
                 <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-                  NexOS AI · Multi-clip · Narração ao Vivo
+                  NexOS · Multi-clip · Narração ao Vivo
                 </p>
               </div>
             </div>

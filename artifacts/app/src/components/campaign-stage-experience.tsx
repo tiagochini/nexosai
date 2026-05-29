@@ -42,7 +42,7 @@ export function AnalyzingDisplay() {
   const [phase, setPhase] = useState(0);
 
   const PHASE_LABELS = [
-    "Conectando ao NEXOS AI CORE...",
+    "Conectando ao NEXOS CORE...",
     "Lendo seu briefing e contexto de mercado...",
     "Preparando diagnóstico estratégico para revisão...",
     "Construindo plano de ação — pronto em breve para sua avaliação...",
@@ -297,7 +297,7 @@ export function GeneratingDisplay() {
           </div>
           <div>
             <div className="font-mono text-sm font-bold text-primary uppercase tracking-widest">
-              COPYWRITER IA — CRIANDO{"."[dot > 0 ? 0 : -1]}{"."[dot > 1 ? 0 : -1]}{"."[dot > 2 ? 0 : -1]}
+              COPYWRITER equipe especializada — CRIANDO{"."[dot > 0 ? 0 : -1]}{"."[dot > 1 ? 0 : -1]}{"."[dot > 2 ? 0 : -1]}
               {"...".slice(0, dot)}
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5 transition-all duration-500">
@@ -408,7 +408,7 @@ export function ContentReadyCinemaPrompt({
               {totalPieces > 0 ? `${totalPieces} Peças` : "Conteúdo"} Aguardam Sua Aprovação
             </div>
             <div className="font-mono text-[11px] text-muted-foreground/65 mt-1.5">
-              A IA gerou copy, criativos e roteiros para todos os canais. Você comanda a aprovação.
+              A equipe especializada gerou copy, criativos e roteiros para todos os canais. Você comanda a aprovação.
             </div>
             <div className="flex items-center gap-3 mt-2.5 flex-wrap">
               {PLATFORMS.map(p => (

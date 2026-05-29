@@ -465,7 +465,7 @@ export default function ComprarPage() {
       <nav className="border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="font-mono font-black text-lg tracking-[0.15em] uppercase">
-            NexOS <span className="text-primary">AI</span>
+            NexOS
           </div>
           <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">
             <Lock className="h-3 w-3" /> Compra segura

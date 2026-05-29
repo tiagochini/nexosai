@@ -75,11 +75,11 @@ export default function SequenceDetail() {
   const generatePlanMutation = useGenerateSequencePlan({
     mutation: {
       onSuccess: () => {
-        toast.success("Plano de IA gerado com sucesso. Custou 30 créditos.");
+        toast.success("Plano da equipe especializada gerado com sucesso. Custou 30 créditos.");
         queryClient.invalidateQueries({ queryKey: getGetSequenceQueryKey(sequenceId) });
       },
       onError: () => {
-        toast.error("Erro ao gerar plano via IA.");
+        toast.error("Erro ao gerar plano pela equipe.");
       }
     }
   });
@@ -161,7 +161,7 @@ export default function SequenceDetail() {
               <AlertDialogTrigger asChild>
                 <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 px-5">
                   <Cpu className="h-4 w-4" />
-                  Gerar Plano IA (-30 Cr)
+                  Gerar Plano equipe especializada (-30 Cr)
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="border border-primary/30 bg-card/90 backdrop-blur-xl rounded-none shadow-[0_0_50px_hsl(var(--primary)/0.15)]">
@@ -173,7 +173,7 @@ export default function SequenceDetail() {
                     Autorização Necessária
                   </AlertDialogTitle>
                   <AlertDialogDescription className="font-mono text-sm mt-6 text-foreground/80 leading-relaxed">
-                    A geração de um plano tático completo através de IA deduzirá <strong className="text-primary">30 créditos</strong> do seu saldo. 
+                    A geração de um plano tático completo através da equipe especializada deduzirá <strong className="text-primary">30 créditos</strong> do seu saldo. 
                     <br/><br/>
                     A operação levará aproximadamente 45 segundos. Confirma a autorização de gastos?
                   </AlertDialogDescription>
@@ -242,7 +242,7 @@ export default function SequenceDetail() {
           </div>
           <p className="font-mono text-sm uppercase tracking-widest text-foreground font-bold mb-2">Matriz de itens vazia</p>
           <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground max-w-md leading-relaxed">
-            A estrutura desta sequência não contém disparos programados. Utilize o botão superior para gerar o plano de ataque completo via IA tática.
+            A estrutura desta sequência não contém disparos programados. Utilize o botão superior para gerar o plano de ataque completo pela equipe tática.
           </p>
         </div>
       ) : (

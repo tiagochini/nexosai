@@ -119,9 +119,9 @@ function InvestmentBlock({
 
   const breakdown = [
     { phase: "Estratégia", description: "Command + Profile + Strategy + Offer + Manager + Financeiro", credits: 45 },
-    { phase: "Conteúdo", description: "16 agentes de IA (copy, landing, ads, compliance, scripts)", credits: 150 },
+    { phase: "Conteúdo", description: "16 especialistas (copy, landing, ads, compliance, scripts)", credits: 150 },
     { phase: "Sequência", description: "Builder + 15 itens personalizados por segmento", credits: 37 },
-    { phase: "Monitoramento", description: "WhatsApp AI responses + ciclos de otimização", credits: est.typical - 232 },
+    { phase: "Monitoramento", description: "WhatsApp respostas automáticas + ciclos de otimização", credits: est.typical - 232 },
   ];
 
   return (
@@ -321,7 +321,7 @@ export function CampaignBrief({
       {/* ── Doc header ── */}
       <div className="border border-primary/30 bg-primary/5 p-5">
         <div className="font-mono text-[10px] uppercase tracking-widest text-primary/70 mb-1">
-          Proposta de Campanha · NexOS AI · Confidencial
+          Proposta de Campanha · NexOS · Confidencial
         </div>
         <h2 className="font-mono text-lg font-bold text-foreground uppercase tracking-tight">
           {launchTitle || campaign.title}
@@ -343,7 +343,7 @@ export function CampaignBrief({
       )}
 
       {/* ── 2. Investment ── */}
-      <Section icon={DollarSign} title="Investimento em IA" badge="Créditos + BRL" color="cyan">
+      <Section icon={DollarSign} title="Investimento" badge="Créditos + BRL" color="cyan">
         <InvestmentBlock campaignType={campaign.type ?? "launch"} creditEstimate={creditEstimate ?? null} />
       </Section>
 
@@ -721,7 +721,7 @@ export function CampaignBrief({
           <div>
             <div className="font-mono text-xs uppercase tracking-widest text-primary mb-1">Próximo passo</div>
             <p className="font-mono text-sm text-foreground">
-              Estratégia aprovada? Inicie a geração de conteúdo com os 16 agentes de IA.
+              Estratégia aprovada? Inicie a geração de conteúdo com os 16 especialistas.
             </p>
             <p className="font-mono text-[11px] text-muted-foreground mt-1">
               Custo estimado: ~150 créditos ({creditsToReal(150)}) para a fase de conteúdo

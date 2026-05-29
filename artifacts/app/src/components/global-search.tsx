@@ -25,17 +25,17 @@ const STATIC_PAGES: SearchResult[] = [
   { id: "dash",       type: "page", label: "Dashboard",      sub: "Painel de controle",         href: "/",          icon: LayoutDashboard },
   { id: "campaigns",  type: "page", label: "Campanhas",       sub: "Todas as missões",           href: "/campaigns", icon: Rocket },
   { id: "sequences",  type: "page", label: "Sequências",      sub: "Automação email + WhatsApp", href: "/sequences", icon: Workflow },
-  { id: "agents",     type: "page", label: "Agentes IA",      sub: "Time de 16 especialistas",   href: "/agents",    icon: Bot },
+  { id: "agents",     type: "page", label: "Especialistas",      sub: "Time de 16 especialistas",   href: "/agents",    icon: Bot },
   { id: "vsls",       type: "page", label: "VSL Studio",      sub: "Scripts e vídeos",           href: "/vsls",      icon: Video },
   { id: "social",     type: "page", label: "Social Media",    sub: "Redes sociais",              href: "/social",    icon: Share2 },
   { id: "revenue",    type: "page", label: "Receita",         sub: "Tracking de faturamento",    href: "/revenue",   icon: DollarSign },
   { id: "compliance", type: "page", label: "Compliance",      sub: "Verificação regulatória",    href: "/compliance",icon: Shield },
-  { id: "credits",    type: "page", label: "Créditos de IA",  sub: "Saldo e histórico",          href: "/credits",   icon: CreditCard },
+  { id: "credits",    type: "page", label: "Créditos da equipe especializada",  sub: "Saldo e histórico",          href: "/credits",   icon: CreditCard },
   { id: "settings",   type: "page", label: "Configurações",   sub: "Perfil, workspace, segurança", href: "/settings", icon: Settings },
 ];
 
 const AGENTS: SearchResult[] = [
-  { id: "command",          type: "agent", label: "Comandante IA",       sub: "Claude · Estratégia",   href: "/agents/command",          icon: Cpu, color: "text-primary" },
+  { id: "command",          type: "agent", label: "Comandante",       sub: "Claude · Estratégia",   href: "/agents/command",          icon: Cpu, color: "text-primary" },
   { id: "strategy",         type: "agent", label: "Estrategista",        sub: "Claude · Lançamento",   href: "/agents/strategy",         icon: Cpu, color: "text-primary" },
   { id: "copywriter",       type: "agent", label: "Copywriter",          sub: "GPT-4o · Copy",         href: "/agents/copywriter",       icon: Cpu, color: "text-purple-400" },
   { id: "compliance",       type: "agent", label: "Compliance Officer",  sub: "Claude · Regulatório",  href: "/agents/compliance",       icon: Cpu, color: "text-yellow-400" },

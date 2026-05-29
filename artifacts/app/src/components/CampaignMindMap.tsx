@@ -63,7 +63,7 @@ interface MindMapProps {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const AGENT_LABEL: Record<string, string> = {
-  command: "Comandante IA", strategy: "Estrategista", launch_manager: "Gerente de Lançamento",
+  command: "Comandante", strategy: "Estrategista", launch_manager: "Gerente de Lançamento",
   offer: "Especialista em Oferta", product_builder: "Product Builder",
   copywriter: "Copywriter", creative_director: "Diretor Criativo",
   landing_page: "Landing Page", targeting: "Targeting Expert",
@@ -75,7 +75,7 @@ const AGENT_LABEL: Record<string, string> = {
   stories_sequence: "Sequência Stories", media_brief: "Brief de Mídia",
   financial_projector: "Projetor Financeiro",
   launch_sequence_builder: "Builder de Sequências",
-  social_media: "Social Media IA", creator_growth: "Creator Growth",
+  social_media: "Social Media", creator_growth: "Creator Growth",
   video: "Estrategista de Vídeo", video_strategy: "Estrategista de Vídeo",
   affiliate_campaign: "Especialista em Afiliados",
   perpetual_launch_manager: "Lançamento Perpétuo",

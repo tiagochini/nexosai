@@ -312,7 +312,7 @@ export default function AgencyProfilesPage() {
             Perfis de Clientes
           </h1>
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mt-0.5">
-            Memória de marca por cliente — a IA usa esse contexto nas campanhas
+            Memória de marca por cliente — a equipe especializada usa esse contexto nas campanhas
           </p>
         </div>
         <Button
@@ -330,7 +330,7 @@ export default function AgencyProfilesPage() {
         <Lightbulb className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <p className="font-mono text-xs text-muted-foreground leading-relaxed">
           Cada perfil armazena o contexto de um cliente: produto, público, tom de voz e transformação. 
-          Ao criar uma campanha, selecione o perfil do cliente e todos os agentes IA vão operar com esse contexto automaticamente.
+          Ao criar uma campanha, selecione o perfil do cliente e todos os agentes equipe especializada vão operar com esse contexto automaticamente.
         </p>
       </div>
 

@@ -56,7 +56,7 @@ function useInView(threshold = 0.2) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const AGENT_SEQUENCE = [
-  { role: "command",         label: "Comandante IA",        status: "running",   msg: "Analisando estrutura do lançamento. Detectando tipo: PLF — Fórmula de Lançamento.", delay: 0 },
+  { role: "command",         label: "Comandante",        status: "running",   msg: "Analisando estrutura do lançamento. Detectando tipo: PLF — Fórmula de Lançamento.", delay: 0 },
   { role: "strategy",        label: "Estrategista",         status: "running",   msg: "Mapeando mercado. Ticket R$1.997. Audiência: empreendedores 28–45. Track: 6 dígitos.", delay: 1800 },
   { role: "strategy",        label: "Estrategista",         status: "done",      msg: "Plano de 7 dias gerado. 4 fases: pré-lançamento, abertura, carrinho, escassez.", delay: 4200 },
   { role: "offer",           label: "Especialista em Oferta", status: "running", msg: "Analisando posicionamento de preço vs concorrência. Calculando percepção de valor.", delay: 5500 },
@@ -159,7 +159,7 @@ export function LiveDemoSection() {
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">rodando por você.</span>
             </h2>
             <div className="font-mono text-xs text-muted-foreground/50 max-w-xs leading-relaxed">
-              Interface real do NexOS AI. Ao criar sua campanha, você vê exatamente isso — cada agente trabalhando em tempo real.
+              Interface real do NexOS. Ao criar sua campanha, você vê exatamente isso — cada agente trabalhando em tempo real.
             </div>
           </div>
 
@@ -685,7 +685,7 @@ export function SimulatorSection() {
               <div className="border border-primary/20 bg-primary/5 p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
                   <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground mb-1">
-                    A IA já sabe como atingir esses números.
+                    A equipe especializada já sabe como atingir esses números.
                   </div>
                   <div className="font-mono text-[11px] text-muted-foreground/60">
                     Cada plataforma, cada segmento, cada horário de disparo — automatizado.

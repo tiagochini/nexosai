@@ -142,7 +142,7 @@ function Dashboard({ onNavigate, progress, brand: brandProp }: Omit<HomeProps, "
               <span style={{ color: "hsl(250 90% 70%)" }}>A plataforma executa por você.</span>
             </h3>
             <p className="text-sm text-[hsl(220_10%_52%)] leading-relaxed max-w-md">
-              A Academia te dá o mapa. A <strong className="text-[hsl(220_10%_72%)]">NexOS AI</strong> faz o lançamento acontecer — 57 agentes de IA, do briefing à venda.
+              A Academia te dá o mapa. A <strong className="text-[hsl(220_10%_72%)]">NexOS</strong> faz o lançamento acontecer — 57 especialistas, do briefing à venda.
             </p>
           </div>
           <div className="flex flex-col gap-2 shrink-0">
@@ -168,7 +168,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
     { n: "03", titulo: "Modelos de Lançamento & Monetização", desc: "Semente, Perpétuo, Interno, Externo, Afiliado. Escada de valor, upsell, downsell e recorrência — com a matemática de LTV por modelo.", badge: "Monetização", cor: "from-emerald-600 to-teal-700" },
     { n: "04", titulo: "Plataformas, Ferramentas & Produção", desc: "TikTok, Instagram, Facebook, YouTube — como cada algoritmo distribui e o que produzir para cada um. Setup operacional completo.", badge: "Canais", cor: "from-rose-600 to-pink-700" },
     { n: "05", titulo: "Meta Ads: Fundamentos & Avançado", desc: "Estrutura de campanha para lançamentos. Públicos, criativos, CAPI, otimização, mensuração. O que os gestores de tráfego cobram R$8k/mês para fazer.", badge: "Tráfego", cor: "from-orange-600 to-amber-700" },
-    { n: "06", titulo: "NexOS AI — A Plataforma que Executa", desc: "Como o sistema de 57 agentes transforma cada framework desta Academia em execução automatizada — do briefing ao carrinho fechado.", badge: "Automação", cor: "from-cyan-600 to-blue-700" },
+    { n: "06", titulo: "NexOS — A Plataforma que Executa", desc: "Como o sistema de 57 agentes transforma cada framework desta Academia em execução automatizada — do briefing ao carrinho fechado.", badge: "Automação", cor: "from-cyan-600 to-blue-700" },
     { n: "07", titulo: "Domínio Total dos Algoritmos", desc: "TikTok, Instagram, YouTube, Facebook, Google. Seis sistemas de distribuição desmontados: o que cada um mede, recompensa e penaliza.", badge: "Algoritmos", cor: "from-indigo-600 to-violet-700" },
     { n: "08", titulo: "Operações, Automação & Calendário", desc: "Webhooks, Make/Zapier, sequências de automação, calendário operacional de 30 dias, distribuição de budget por fase.", badge: "Operações", cor: "from-slate-600 to-gray-700" },
     { n: "09", titulo: "Copywriting & Persuasão Avançada", desc: "Gatilhos aplicados, estruturas de copy para landing, VSL, email e WhatsApp. Storytelling de vendas. Provas sociais documentadas.", badge: "Copy", cor: "from-pink-600 to-rose-700" },
@@ -201,7 +201,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
       prazo: "Primeiro lançamento solo",
       nome: "André L.",
       cargo: "Infoprodutor — Produtividade",
-      depo: "Nunca tinha lançado. Achei que precisava de equipe, de agência, de orçamento alto. A Academia me mostrou que o problema era operacional — e que a IA resolve a operação quando você tem o método.",
+      depo: "Nunca tinha lançado. Achei que precisava de equipe, de agência, de orçamento alto. A Academia me mostrou que o problema era operacional — e que a equipe especializada resolve a operação quando você tem o método.",
     },
     {
       resultado: "CPL de R$27 → R$11",
@@ -232,7 +232,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
           </h1>
 
           <p className="text-lg md:text-xl text-[hsl(220_10%_65%)] leading-relaxed mb-4 max-w-2xl">
-            A única Academia que ensina o método que os <strong className="text-white">57 agentes de IA do NexOS AI</strong> usam para orquestrar lançamentos completos — com os frameworks reais de Schwartz, Cialdini, Kahneman, Bencivenga e Jay Abraham operacionalizados como regras de decisão.
+            A única Academia que ensina o método que os <strong className="text-white">57 especialistas do NexOS</strong> usam para orquestrar lançamentos completos — com os frameworks reais de Schwartz, Cialdini, Kahneman, Bencivenga e Jay Abraham operacionalizados como regras de decisão.
           </p>
           <p className="text-sm text-[hsl(220_10%_45%)] mb-10 max-w-xl">
             Não é teoria de livro. É o mapa exato que transforma conhecimento em execução — e execução em resultado mensurável.
@@ -331,7 +331,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
               { titulo: "Você tem produto mas ainda não lançou", desc: "Sabe que tem valor, mas a complexidade do lançamento trava a execução. Quer o mapa completo antes de investir em tráfego." },
               { titulo: "Você já lançou mas quer escalar com método", desc: "Seu lançamento funcionou, mas foi baseado em feeling. Quer entender por que funcionou — e como replicar com consistência." },
               { titulo: "Você é gestor de tráfego e quer ir além do anúncio", desc: "Já domina Meta Ads, mas quer entender estratégia de lançamento, psicologia de compra e como o anúncio se encaixa no funil completo." },
-              { titulo: "Você quer usar IA mas primeiro quer o método", desc: "Entende que a automação só funciona quando você sabe o que está automatizando. Quer o método antes de ativar os agentes de IA." },
+              { titulo: "Você quer usar equipe especializada mas primeiro quer o método", desc: "Entende que a automação só funciona quando você sabe o que está automatizando. Quer o método antes de ativar os especialistas." },
             ].map((item, i) => (
               <div key={i} className="card-nexos rounded-xl p-5">
                 <div className="text-[hsl(250_90%_75%)] text-xs font-mono uppercase tracking-widest mb-2 border-l-2 border-[hsl(250_90%_65%/0.4)] pl-3">{item.titulo}</div>
@@ -348,11 +348,11 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
             <div>
               <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-5">
                 Este não é mais um curso.<br />
-                <span style={{ color: "hsl(250 90% 70%)" }}>É o mapa que os agentes de IA usam.</span>
+                <span style={{ color: "hsl(250 90% 70%)" }}>É o mapa que os especialistas usam.</span>
               </h2>
               <div className="space-y-4 text-sm text-[hsl(220_10%_58%)] leading-relaxed">
                 <p>
-                  Cada framework desta Academia foi operacionalizado como regra de decisão dentro dos 57 agentes de IA do NexOS. Não é teoria que você vai tentar aplicar depois — é o mesmo raciocínio que o sistema executa automaticamente em cada lançamento.
+                  Cada framework desta Academia foi operacionalizado como regra de decisão dentro dos 57 especialistas do NexOS. Não é teoria que você vai tentar aplicar depois — é o mesmo raciocínio que o sistema executa automaticamente em cada lançamento.
                 </p>
                 <p>
                   A diferença entre "conhecer o método" e "dominar o método" é saber exatamente quando e como cada variável muda a decisão. A Academia cruza essa distância.
@@ -383,7 +383,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
           <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-[hsl(250_90%_65%/0.6)] mb-4">— Currículo Completo —</div>
           <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3">12 módulos. Do básico ao avançado.</h2>
           <p className="text-sm text-[hsl(220_10%_55%)] mb-8 max-w-xl">
-            Cada módulo foi construído com o mesmo framework dos agentes de IA — não como revisão de conteúdo, mas como sistema de decisão operacional.
+            Cada módulo foi construído com o mesmo framework dos especialistas — não como revisão de conteúdo, mas como sistema de decisão operacional.
           </p>
           <div className="space-y-3">
             {modulos.map((m, i) => (
@@ -503,7 +503,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
           <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-[hsl(250_90%_65%/0.6)] mb-4">— Edição Completa —</div>
           <h2 className="text-2xl font-extrabold text-white mb-2">Metodologia NexOS — Tudo incluso.</h2>
           <p className="text-sm text-[hsl(220_10%_55%)] mb-6">Um investimento único. Acesso vitalício. O mapa completo de lançamento digital.</p>
-          {/* Professor IA highlight */}
+          {/* Professor equipe especializada highlight */}
           <div className="rounded-xl border border-[hsl(250_90%_65%/0.35)] bg-[hsl(250_90%_65%/0.06)] px-6 py-5 mb-6 flex items-start gap-4">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[hsl(250_90%_65%)] to-[hsl(280_80%_60%)] flex items-center justify-center text-white text-lg shrink-0 shadow-lg">
               🎓
@@ -511,7 +511,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
             <div>
               <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-[hsl(250_90%_65%/0.7)] mb-1">Incluso no seu acesso</div>
               <div className="font-extrabold text-white text-base mb-1">
-                Professor IA — sempre pronto pra te atender
+                Professor equipe especializada — sempre pronto pra te atender
               </div>
               <p className="text-sm text-[hsl(220_10%_58%)] leading-relaxed">
                 A qualquer momento que tiver dúvida, o Professor responde, ensina e explica — com exemplos práticos do seu contexto, no seu ritmo, quantas vezes quiser.
@@ -524,7 +524,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
             {[
               "12 módulos com conteúdo denso e aplicado",
               `${totalLessons}+ aulas com exercício prático por aula`,
-              "Professor IA disponível 24h — responde qualquer dúvida",
+              "Professor equipe especializada disponível 24h — responde qualquer dúvida",
               "Glossário completo com 80+ termos técnicos",
               "Frameworks de Schwartz, Kahneman, Cialdini e mais",
               "Módulo exclusivo de Psicologia Avançada de Vendas",
@@ -559,7 +559,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
                 A plataforma que <span style={{ color: "hsl(250 90% 70%)" }}>executa o método por você.</span>
               </h3>
               <p className="text-sm text-[hsl(220_10%_52%)] leading-relaxed">
-                A NexOS AI tem 57 agentes de IA que aplicam cada framework desta Academia automaticamente — geração de copy, anúncios, email, WhatsApp, e otimização em tempo real.
+                A NexOS tem 57 especialistas que aplicam cada framework desta Academia automaticamente — geração de copy, anúncios, email, WhatsApp, e otimização em tempo real.
               </p>
             </div>
             <div className="shrink-0">

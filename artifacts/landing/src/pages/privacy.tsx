@@ -3,11 +3,11 @@ import { useEffect } from "react";
 export default function PrivacyPolicy() {
   const lastUpdated = "15 de maio de 2026";
   const contactEmail = "privacy@agencianexos.vip";
-  const companyName = "NexOS AI";
+  const companyName = "NexOS";
   const appUrl = "https://app.agencianexos.vip";
 
   useEffect(() => {
-    document.title = "NexOS AI Privacy Policy";
+    document.title = "NexOS Privacy Policy";
   }, []);
 
   return (
@@ -16,9 +16,9 @@ export default function PrivacyPolicy() {
       <div className="border-b border-white/10 bg-black/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <a href="/" className="font-mono text-sm font-bold tracking-widest text-white hover:text-white/70 transition-colors">
-            ← NEXOS AI
+            ← NEXOS
           </a>
-          <span className="font-mono text-xs text-white/30 uppercase tracking-widest">NexOS AI Privacy Policy</span>
+          <span className="font-mono text-xs text-white/30 uppercase tracking-widest">NexOS Privacy Policy</span>
         </div>
       </div>
 
@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
         {/* Title */}
         <div className="mb-12">
           <div className="font-mono text-xs uppercase tracking-widest text-white/30 mb-3">Política de Privacidade</div>
-          <h1 className="font-mono text-3xl font-bold text-white mb-2">NexOS AI Privacy Policy</h1>
+          <h1 className="font-mono text-3xl font-bold text-white mb-2">NexOS Privacy Policy</h1>
           <p className="font-mono text-sm text-white/40">Última atualização: {lastUpdated}</p>
         </div>
 
@@ -66,7 +66,7 @@ export default function PrivacyPolicy() {
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">2.3 Dados de campanha e conteúdo</p>
-                <p>Textos, copies, estratégias e dados de briefing que você insere para geração de conteúdo com IA. Esses dados são usados para operar a plataforma e melhorá-la.</p>
+                <p>Textos, copies, estratégias e dados de briefing que você insere para geração de conteúdo com nossa equipe. Esses dados são usados para operar a plataforma e melhorá-la.</p>
               </div>
               <div>
                 <p className="text-white font-semibold mb-1">2.4 Dados de leads e sequências</p>
@@ -91,11 +91,11 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">3. Como Usamos os Dados</h2>
             <ul className="ml-4 space-y-2 list-disc">
               <li>Operar a plataforma e executar campanhas, sequências e publicações automáticas em seu nome</li>
-              <li>Fornecer inteligência de IA para estratégia, copywriting e otimização de lançamentos</li>
+              <li>Fornecer inteligência da equipe especializada para estratégia, copywriting e otimização de lançamentos</li>
               <li>Enviar notificações e relatórios semanais sobre o desempenho das suas campanhas</li>
               <li>Processar pagamentos e gerenciar assinaturas</li>
               <li>Garantir a segurança da plataforma e prevenir abusos</li>
-              <li>Melhorar os algoritmos e modelos de IA da plataforma (dados anonimizados)</li>
+              <li>Melhorar os algoritmos e modelos da equipe especializada da plataforma (dados anonimizados)</li>
             </ul>
             <p className="mt-3">
               Não vendemos seus dados. Não usamos seus tokens de plataformas sociais para nenhuma finalidade além das ações explicitamente autorizadas por você.
@@ -138,7 +138,7 @@ export default function PrivacyPolicy() {
 
           {/* 5. Third-party AI */}
           <section>
-            <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">5. Provedores de IA de Terceiros</h2>
+            <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">5. Provedores da equipe especializada de Terceiros</h2>
             <p>
               A plataforma usa modelos de linguagem de terceiros para gerar conteúdo e estratégias:
               Anthropic (Claude), OpenAI (GPT), e Google (Gemini).
@@ -206,20 +206,20 @@ export default function PrivacyPolicy() {
           <section id="data-deletion">
             <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">11. Exclusão de Dados</h2>
             <p className="mb-3">
-              Você pode solicitar a exclusão completa dos seus dados pessoais armazenados pelo NexOS AI a qualquer momento.
+              Você pode solicitar a exclusão completa dos seus dados pessoais armazenados pelo NexOS a qualquer momento.
               Isso inclui dados de conta, histórico de campanhas, integrações conectadas e qualquer dado vinculado
               a plataformas de terceiros como Meta (Facebook e Instagram).
             </p>
             <p className="mb-3">
-              Para revogar o acesso do NexOS AI à sua conta Meta e solicitar exclusão dos dados coletados via Facebook Login:
+              Para revogar o acesso do NexOS à sua conta Meta e solicitar exclusão dos dados coletados via Facebook Login:
             </p>
             <ol className="list-decimal list-inside space-y-2 ml-4 mb-3">
               <li>Acesse <a href="https://www.facebook.com/settings?tab=applications" className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">facebook.com/settings → Aplicativos e Sites</a></li>
-              <li>Localize <strong className="text-white">NexOS AI</strong> na lista</li>
+              <li>Localize <strong className="text-white">NexOS</strong> na lista</li>
               <li>Clique em <strong className="text-white">Remover</strong></li>
             </ol>
             <p className="mb-3">
-              Para solicitar exclusão diretamente ao NexOS AI, envie um e-mail para{" "}
+              Para solicitar exclusão diretamente ao NexOS, envie um e-mail para{" "}
               <a href="mailto:privacy@agencianexos.vip" className="text-blue-400 hover:underline">privacy@agencianexos.vip</a>{" "}
               com o assunto <strong className="text-white">"Exclusão de Dados"</strong>. Processamos todas as
               solicitações em até 30 dias úteis conforme a LGPD.
@@ -232,7 +232,7 @@ export default function PrivacyPolicy() {
               Para dúvidas, solicitações ou exercício dos seus direitos:
             </p>
             <div className="mt-3 border border-white/10 p-4 bg-white/5 space-y-1">
-              <p><span className="text-white/40">Empresa:</span> NexOS AI</p>
+              <p><span className="text-white/40">Empresa:</span> NexOS</p>
               <p><span className="text-white/40">E-mail:</span> <a href={`mailto:${contactEmail}`} className="text-blue-400 hover:underline">{contactEmail}</a></p>
               <p><span className="text-white/40">Website:</span> <a href={appUrl} className="text-blue-400 hover:underline">{appUrl}</a></p>
             </div>
@@ -242,7 +242,7 @@ export default function PrivacyPolicy() {
 
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-white/10 text-center">
-          <p className="font-mono text-xs text-white/20">© 2026 NexOS AI — Todos os direitos reservados</p>
+          <p className="font-mono text-xs text-white/20">© 2026 NexOS — Todos os direitos reservados</p>
           <a href="/" className="mt-3 inline-block font-mono text-xs text-white/30 hover:text-white/60 transition-colors">← Voltar ao site</a>
         </div>
       </div>

@@ -128,8 +128,8 @@ export default function GuiaPage() {
       <nav className="sticky top-0 z-50 border-b border-border/30 bg-background/95 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-3">
           <a href="/landing/" className="flex items-center gap-2 shrink-0">
-            <img src={nexosLogo} alt="NexOS AI" className="h-8 w-8 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.6))" }} />
-            <span className="font-mono font-black text-sm tracking-[0.12em] uppercase">NexOS <span className="text-primary">AI</span></span>
+            <img src={nexosLogo} alt="NexOS" className="h-8 w-8 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.6))" }} />
+            <span className="font-mono font-black text-sm tracking-[0.12em] uppercase">NexOS</span>
           </a>
           <div className="flex items-center gap-2">
             <Button size="sm" onClick={() => setCaptureOpen(true)} className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] tracking-widest font-bold h-8 px-3 gap-1.5">
@@ -143,15 +143,15 @@ export default function GuiaPage() {
 
         {/* Hero */}
         <div className="mb-12 sm:mb-16">
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Guia Gratuito · NexOS AI —</div>
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— Guia Gratuito · NexOS —</div>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
             O framework que<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              34 agentes de IA<br />vão executar<br />por você.
+              34 especialistas<br />vão executar<br />por você.
             </span>
           </h1>
           <p className="font-mono text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            Este é o mesmo framework que a plataforma NexOS AI executa autonomamente. Antes de qualquer ferramenta, você precisa entender os 6 estágios que separam um lançamento de R$50k de um de R$500k.
+            Este é o mesmo framework que a plataforma NexOS executa autonomamente. Antes de qualquer ferramenta, você precisa entender os 6 estágios que separam um lançamento de R$50k de um de R$500k.
           </p>
 
           {/* CTAs */}
@@ -279,7 +279,7 @@ export default function GuiaPage() {
 
         {/* Footer */}
         <div className="mt-12 pt-8 border-t border-border/20 flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-[10px] text-muted-foreground/30">
-          <span>© 2026 NexOS AI — Todos os direitos reservados</span>
+          <span>© 2026 NexOS — Todos os direitos reservados</span>
           <div className="flex items-center gap-4">
             <a href="/privacy" className="hover:text-muted-foreground/60 transition-colors">Privacidade</a>
             <a href="/terms" className="hover:text-muted-foreground/60 transition-colors">Termos</a>

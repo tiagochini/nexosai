@@ -735,7 +735,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     id: "opus-clip",
     term: "Opus Clip",
     category: "Automação & Ferramentas",
-    definition: "Ferramenta de IA que analisa vídeos longos e seleciona automaticamente os trechos de maior impacto para criar Shorts, Reels e TikToks. Reduz de horas para minutos o trabalho de repurposing de conteúdo longo. Adiciona captions automáticos, destaca palavras-chave e formata para o formato vertical 9:16.",
+    definition: "Ferramenta da equipe especializada que analisa vídeos longos e seleciona automaticamente os trechos de maior impacto para criar Shorts, Reels e TikToks. Reduz de horas para minutos o trabalho de repurposing de conteúdo longo. Adiciona captions automáticos, destaca palavras-chave e formata para o formato vertical 9:16.",
     related: ["Repurposing", "Shorts", "Reels", "TikTok"],
   },
   {
@@ -773,7 +773,7 @@ export const GLOSSARY: GlossaryTerm[] = [
     term: "Proposta Única de Valor (PUV / UVP)",
     category: "Negócio & Estratégia",
     definition: "Declaração clara do que diferencia seu produto ou serviço, qual problema resolve e para quem. Uma boa PUV responde em uma frase: 'Para [quem], que [problema/desejo], nosso [produto] é [categoria] que [diferencial único] — diferente de [concorrentes] porque [prova]'.",
-    example: "'Para produtores digitais que querem escalar de 6 para 7 dígitos sem contratar equipe, o NexOS é a única plataforma que executa um lançamento completo com IA — do briefing ao carrinho aberto — em 7 dias'.",
+    example: "'Para produtores digitais que querem escalar de 6 para 7 dígitos sem contratar equipe, o NexOS é a única plataforma que executa um lançamento completo com nossa equipe — do briefing ao carrinho aberto — em 7 dias'.",
     related: ["Posicionamento", "Mecanismo Único", "Copywriting"],
   },
   {

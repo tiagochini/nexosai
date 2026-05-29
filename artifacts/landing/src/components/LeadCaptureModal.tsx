@@ -141,7 +141,7 @@ export default function LeadCaptureModal({ open, onClose, title, subtitle }: Pro
         <div className="flex items-start justify-between px-6 pt-6 pb-0">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary/60 mb-2">
-              — Guia Gratuito · NexOS AI —
+              — Guia Gratuito · NexOS —
             </div>
             <h2 className="font-mono font-black text-xl uppercase tracking-tight text-foreground leading-snug">
               {title ?? "Receba o guia\nno seu WhatsApp"}

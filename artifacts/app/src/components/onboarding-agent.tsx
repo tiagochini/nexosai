@@ -165,7 +165,7 @@ const FLOWS: OnboardingFlow[] = [
       {
         id: "create_app",
         title: "Crie um novo app",
-        detail: "No Developer Portal → 'Manage Apps' → 'Create App'. Preencha: nome (NexOS AI), categoria (Content/Marketing), website (URL do app). Salve.",
+        detail: "No Developer Portal → 'Manage Apps' → 'Create App'. Preencha: nome (NexOS), categoria (Content/Marketing), website (URL do app). Salve.",
       },
       {
         id: "request_scopes",
@@ -198,7 +198,7 @@ const FLOWS: OnboardingFlow[] = [
       {
         id: "google_cloud",
         title: "Crie um projeto no Google Cloud Console",
-        detail: "Acesse console.cloud.google.com → 'Novo Projeto' → nomeie como 'NexOS AI'. Ative a 'Google Ads API' em APIs & Services → Library.",
+        detail: "Acesse console.cloud.google.com → 'Novo Projeto' → nomeie como 'NexOS'. Ative a 'Google Ads API' em APIs & Services → Library.",
         url: "https://console.cloud.google.com",
       },
       {
@@ -238,7 +238,7 @@ const FLOWS: OnboardingFlow[] = [
       {
         id: "developer_app",
         title: "Crie um app no LinkedIn Developer Portal",
-        detail: "Acesse developer.linkedin.com/apps → Create App. Nome: NexOS AI. Vincule à sua Página do LinkedIn.",
+        detail: "Acesse developer.linkedin.com/apps → Create App. Nome: NexOS. Vincule à sua Página do LinkedIn.",
         url: "https://developer.linkedin.com/apps",
       },
       {
@@ -282,7 +282,7 @@ const FLOWS: OnboardingFlow[] = [
       {
         id: "developer_app",
         title: "Adicione WhatsApp ao seu app Meta",
-        detail: "Em developers.facebook.com → seu app NexOS AI → Adicionar produto → WhatsApp. Siga as instruções de configuração.",
+        detail: "Em developers.facebook.com → seu app NexOS → Adicionar produto → WhatsApp. Siga as instruções de configuração.",
         url: "https://developers.facebook.com/apps/992748096543542",
       },
       {

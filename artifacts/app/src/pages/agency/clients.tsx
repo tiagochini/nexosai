@@ -424,7 +424,7 @@ export default function AgencyClientsPage() {
             {filterStatus === "all" ? "Nenhum cliente ainda" : `Nenhum cliente ${STATUS_LABEL[filterStatus] ?? filterStatus}`}
           </p>
           <p className="font-mono text-xs text-muted-foreground/40 mb-4">
-            Convide clientes para gerenciar suas campanhas com a NexOS AI
+            Convide clientes para gerenciar suas campanhas com a NexOS
           </p>
           <Button onClick={() => setShowInvite(true)}
             className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">

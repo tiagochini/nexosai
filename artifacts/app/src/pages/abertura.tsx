@@ -169,7 +169,7 @@ function TransformacaoSection() {
           <div className="border border-destructive/20 bg-destructive/5 p-7">
             <div className="flex items-center gap-2 mb-5">
               <X className="h-4 w-4 text-destructive/60" />
-              <div className="font-mono text-xs uppercase tracking-widest text-destructive/70 font-bold">Hoje, sem o NexOS AI</div>
+              <div className="font-mono text-xs uppercase tracking-widest text-destructive/70 font-bold">Hoje, sem o NexOS</div>
             </div>
             <ul className="space-y-3">
               {antes.map((item, i) => (
@@ -185,7 +185,7 @@ function TransformacaoSection() {
           <div className="border border-primary/30 bg-primary/5 p-7">
             <div className="flex items-center gap-2 mb-5">
               <CheckCircle2 className="h-4 w-4 text-primary" />
-              <div className="font-mono text-xs uppercase tracking-widest text-primary font-bold">Com o NexOS AI</div>
+              <div className="font-mono text-xs uppercase tracking-widest text-primary font-bold">Com o NexOS</div>
             </div>
             <ul className="space-y-3">
               {depois.map((item, i) => (
@@ -208,7 +208,7 @@ function CustoInacaoSection() {
     {
       rotulo: "1 lançamento manual por mês",
       custo: "40h do seu tempo × 12 meses = 480h/ano",
-      detalhe: "Se o seu tempo vale R$200/h → R$96.000 desperdiçados executando o que a IA faria por você",
+      detalhe: "Se o seu tempo vale R$200/h → R$96.000 desperdiçados executando o que a equipe especializada faria por você",
       icon: Clock,
     },
     {
@@ -220,7 +220,7 @@ function CustoInacaoSection() {
     {
       rotulo: "Copy feita sem otimização",
       custo: "1–3% de conversão quando poderia ser 4–8%",
-      detalhe: "Em R$10k de tráfego: a diferença entre copy manual e copy otimizada por IA é R$300–R$500 em vendas",
+      detalhe: "Em R$10k de tráfego: a diferença entre copy manual e copy otimizada pela equipe especializada é R$300–R$500 em vendas",
       icon: BarChart2,
     },
     {
@@ -261,7 +261,7 @@ function CustoInacaoSection() {
         <div className="border border-primary/20 bg-primary/5 px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <Zap className="h-5 w-5 text-primary shrink-0" />
           <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">O custo invisível da inação supera o investimento no NexOS AI todo mês.</strong>{" "}
+            <strong className="text-foreground">O custo invisível da inação supera o investimento no NexOS todo mês.</strong>{" "}
             A diferença é que um aparece na sua conta bancária e o outro não. Você só percebe quando olha pro ano inteiro e vê que fez metade do que planejou.
           </p>
         </div>
@@ -278,7 +278,7 @@ function AnchorSection() {
         <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">A COMPARAÇÃO QUE MUDA TUDO</div>
         <h2 className="text-4xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-none mb-4">
           Pagar R$10.000 para<br />aprender a lançar você mesmo.<br />
-          <span className="text-primary">Ou ter a IA lançando por você.</span>
+          <span className="text-primary">Ou ter a equipe especializada lançando por você.</span>
         </h2>
         <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
           O curso de lançamento mais famoso do Brasil custa R$10.000 e te dá acesso por 1 ano. Você assiste às aulas, aprende cada etapa, e então <strong className="text-foreground">executa tudo sozinho</strong> — estratégia, copy, segmentação, disparos, carrinho. Semanas de trabalho por lançamento.
@@ -323,7 +323,7 @@ function AnchorSection() {
             Em todas as alternativas acima, você ainda é o executor.
           </p>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-            Você aprende, coordena, gerencia — ou paga alguém para fazer e ainda precisa gerenciar esse alguém. No NexOS AI, a IA executa. Você aprova. Essa diferença vale muito mais do que a diferença de preço entre qualquer uma das opções acima e o preço de Fundador de hoje.
+            Você aprende, coordena, gerencia — ou paga alguém para fazer e ainda precisa gerenciar esse alguém. No NexOS, a equipe executa. Você aprova. Essa diferença vale muito mais do que a diferença de preço entre qualquer uma das opções acima e o preço de Fundador de hoje.
           </p>
         </div>
       </div>
@@ -342,7 +342,7 @@ function ComunidadeSection() {
     {
       icon: Users,
       titulo: "Grupo privado dos Fundadores",
-      desc: "Canal direto com o time de produto. Nenhum usuário comum tem acesso. Você reporta, sugere e influencia o roadmap antes de todo mundo. Suas campanhas moldam o que a IA aprende.",
+      desc: "Canal direto com o time de produto. Nenhum usuário comum tem acesso. Você reporta, sugere e influencia o roadmap antes de todo mundo. Suas campanhas moldam o que a equipe especializada aprende.",
     },
     {
       icon: Zap,
@@ -365,7 +365,7 @@ function ComunidadeSection() {
           <span className="text-primary">É o que o preço traz junto.</span>
         </h2>
         <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-          Fundadores não são clientes comuns com desconto. São as pessoas que constroem o NexOS AI junto com a gente. Esse status não tem segunda chance — quando esse carrinho fechar, a próxima turma entra no preço cheio, sem grupo privado, sem onboarding individual, sem influência no roadmap.
+          Fundadores não são clientes comuns com desconto. São as pessoas que constroem o NexOS junto com a gente. Esse status não tem segunda chance — quando esse carrinho fechar, a próxima turma entra no preço cheio, sem grupo privado, sem onboarding individual, sem influência no roadmap.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {beneficios.map(({ icon: Icon, titulo, desc }, i) => (
@@ -389,7 +389,7 @@ function ComunidadeSection() {
 function OfertaSection({ expired }: { expired: boolean }) {
   const { precoCheio, precoCheioSufixo, precoFundador, precoFundadorSufixo, cartUrl } = CART_CONFIG;
   const includes = [
-    "57 agentes de IA executando 24h no seu lançamento",
+    "57 especialistas executando 24h no seu lançamento",
     "Estratégia completa gerada em 47 minutos",
     "23 emails + 18 mensagens WhatsApp por campanha",
     "Segmentação comportamental atualizada em tempo real",
@@ -408,7 +408,7 @@ function OfertaSection({ expired }: { expired: boolean }) {
           <p className="font-mono text-base text-foreground leading-relaxed">
             <strong>Você não chegou até aqui por acaso.</strong> Você entrou na lista, acompanhou o aquecimento, tirou dúvidas — porque já decidiu que precisa disso. A única decisão que sobrou é:{" "}
             <strong className="text-primary">fazer hoje com o preço de Fundador</strong> — ou depois, sem esse preço, sem o grupo, sem o onboarding individual.{" "}
-            A IA vai lançar seu produto de qualquer jeito. A questão é o quanto você vai pagar por isso.
+            A equipe vai lançar seu produto de qualquer jeito. A questão é o quanto você vai pagar por isso.
           </p>
         </div>
 
@@ -559,9 +559,9 @@ export default function AberturaPage() {
       <nav className="fixed top-0 inset-x-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.7))" }} />
+            <img src={nexosLogo} alt="NexOS" className="h-10 w-10 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.7))" }} />
             <div className="hidden sm:block">
-              <div className="font-mono font-black text-base tracking-[0.15em] uppercase leading-none">NexOS <span className="text-primary">AI</span></div>
+              <div className="font-mono font-black text-base tracking-[0.15em] uppercase leading-none">NexOS</div>
               <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-primary/60 leading-none">Abertura do Carrinho</div>
             </div>
           </div>
@@ -590,7 +590,7 @@ export default function AberturaPage() {
 
       <div className="border-t border-border/30 bg-muted/5 py-5 px-6 text-center mb-16">
         <p className="font-mono text-[10px] text-muted-foreground/30 uppercase tracking-widest">
-          NexOS AI · Plataforma de Lançamento com IA · contato@agencianexos.vip
+          NexOS · Plataforma de Lançamento com nossa equipe · contato@agencianexos.vip
         </p>
       </div>
 

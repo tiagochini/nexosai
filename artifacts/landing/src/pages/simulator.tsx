@@ -226,7 +226,7 @@ function InstagramPostMockup({ lead, day }: { lead: LeadData; day: DayConfig }) 
       <div className="w-full aspect-square flex items-center justify-center p-4 text-center"
            style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }}>
         <div>
-          <div className="text-white/30 text-[9px] uppercase tracking-widest mb-2">Criativo IA</div>
+          <div className="text-white/30 text-[9px] uppercase tracking-widest mb-2">Criativo</div>
           <div className="text-white font-bold text-sm leading-tight">{title}</div>
         </div>
       </div>
@@ -297,7 +297,7 @@ function FacebookMockup({ lead }: { lead: LeadData }) {
       </div>
       <div className="w-full h-28 flex items-center justify-center"
            style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)" }}>
-        <div className="text-white/40 text-[9px] uppercase tracking-wider">Arte Gerada pela IA</div>
+        <div className="text-white/40 text-[9px] uppercase tracking-wider">Arte Gerada pela equipe especializada</div>
       </div>
       <div className="flex justify-between items-center px-3 py-1.5 border-b border-gray-100">
         <div className="flex items-center gap-0.5 text-[10px] text-gray-500"><span>👍❤️😮</span><span className="ml-1">{fmtNum(Math.round(3200 * 0.04))}</span></div>
@@ -388,14 +388,14 @@ function WhatsAppMockup({ lead }: { lead: LeadData }) {
 // ── AI Briefing Animation ──────────────────────────────────────────────────────
 
 const BRIEFING_STEPS = [
-  { label: "Comandante IA",   msg: "Lendo briefing do produto...",                            delay: 0    },
+  { label: "Comandante",   msg: "Lendo briefing do produto...",                            delay: 0    },
   { label: "Estrategista",    msg: "Analisando mercado e posicionamento ideal...",            delay: 600  },
   { label: "Data Analyst",    msg: "Calculando potencial de audiência e receita...",          delay: 1200 },
-  { label: "Copywriter IA",   msg: "Gerando copy personalizado para 7 dias...",               delay: 1800 },
-  { label: "Social Media IA", msg: "Criando calendário: TikTok · Instagram · Facebook...",   delay: 2400 },
+  { label: "Copywriter",   msg: "Gerando copy personalizado para 7 dias...",               delay: 1800 },
+  { label: "Social Media", msg: "Criando calendário: TikTok · Instagram · Facebook...",   delay: 2400 },
   { label: "Launch Manager",  msg: "Estruturando abertura e fechamento do carrinho...",       delay: 3000 },
   { label: "WhatsApp Agent",  msg: "Preparando sequências de aquecimento VIP...",             delay: 3600 },
-  { label: "Compliance IA",   msg: "Validando estratégia e autorizando execução...",          delay: 4200 },
+  { label: "Especialista em Compliance",   msg: "Validando estratégia e autorizando execução...",          delay: 4200 },
 ];
 
 function BriefingStep({ lead, onDone }: { lead: LeadData; onDone: () => void }) {
@@ -414,7 +414,7 @@ function BriefingStep({ lead, onDone }: { lead: LeadData; onDone: () => void }) 
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-md space-y-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <img src={nexosLogo} alt="NEXOS AI" className="h-12 w-12 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
+          <img src={nexosLogo} alt="NEXOS" className="h-12 w-12 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
           <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-primary">Analisando briefing</div>
           <div className="font-mono text-xl font-black uppercase tracking-tighter text-foreground">{lead.productName}</div>
           <div className="font-mono text-[11px] text-muted-foreground/50">{PRODUCT_LABELS[lead.productType]}</div>
@@ -465,7 +465,7 @@ const PLAN_LINES = [
   { icon: "📅", label: "DURAÇÃO",               value: "7 dias de campanha" },
   { icon: "📱", label: "REDES SOCIAIS",          value: "TikTok · Instagram · Facebook" },
   { icon: "🔁", label: "PUBLICAÇÕES",            value: "2 por dia em cada plataforma — 42 no total" },
-  { icon: "⏰", label: "HORÁRIO DINÂMICO",       value: "IA otimiza envio pelo engajamento em tempo real" },
+  { icon: "⏰", label: "HORÁRIO DINÂMICO",       value: "sistema otimiza envio pelo engajamento em tempo real" },
   { icon: "📊", label: "ANÁLISE DE ENTREGÁVEIS", value: "Poder de conversão calculado por peça gerada" },
   { icon: "🎯", label: "SEGMENTAÇÃO",            value: "Audiência quente · morna · fria com copy distinto" },
 ];
@@ -481,7 +481,7 @@ function ConfirmStep({ lead, onAuthorize }: { lead: LeadData; onAuthorize: () =>
         <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
           <img src={nexosLogo} alt="" className="h-8 w-8 object-contain" style={{ filter: "drop-shadow(0 0 10px hsl(var(--primary)/0.7))" }} />
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-primary">NEXOS AI · Comandante</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-primary">NEXOS · Comandante</div>
             <div className="font-mono text-[11px] text-muted-foreground/60">Briefing processado com sucesso</div>
           </div>
           <div className="ml-auto border border-success/40 bg-success/10 px-2 py-0.5">
@@ -490,7 +490,7 @@ function ConfirmStep({ lead, onAuthorize }: { lead: LeadData; onAuthorize: () =>
         </div>
         <div className="border border-primary/20 bg-primary/5 px-4 py-3 animate-in fade-in duration-500">
           <p className="font-mono text-xs text-foreground/80 leading-relaxed">
-            Analisei o <strong className="text-foreground">{lead.productName}</strong> e estruturei a campanha completa. Aqui está o que a NEXOS AI vai executar automaticamente. Confirme para iniciar.
+            Analisei o <strong className="text-foreground">{lead.productName}</strong> e estruturei a campanha completa. Aqui está o que a NEXOS vai executar automaticamente. Confirme para iniciar.
           </p>
         </div>
         <div className="border border-border/40 bg-card/30 divide-y divide-border/30">
@@ -506,7 +506,7 @@ function ConfirmStep({ lead, onAuthorize }: { lead: LeadData; onAuthorize: () =>
         </div>
         <div className={`border border-yellow-400/30 bg-yellow-400/5 px-4 py-3 transition-all duration-500 ${allRevealed ? "opacity-100" : "opacity-0"}`}>
           <p className="font-mono text-[11px] text-yellow-300/80 leading-relaxed">
-            Ao autorizar, a NEXOS AI iniciará a execução automática. Conteúdo será gerado e agendado nas plataformas conectadas conforme o calendário.
+            Ao autorizar, a NEXOS iniciará a execução automática. Conteúdo será gerado e agendado nas plataformas conectadas conforme o calendário.
           </p>
         </div>
         <div className={`transition-all duration-500 ${allRevealed ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
@@ -691,7 +691,7 @@ function DayRevealStep({ lead, onFinish }: { lead: LeadData; onFinish: () => voi
                 <span className="font-mono text-[10px] uppercase tracking-widest text-orange-400 font-bold">Oferta degradada · só para não-compradores</span>
               </div>
               <p className="font-mono text-[11px] text-muted-foreground/75 leading-relaxed">
-                A NEXOS AI segmenta automaticamente quem viu mas não comprou e relança o produto com um pacote menor — preço reduzido, sem os bônus do lançamento original.
+                A NEXOS segmenta automaticamente quem viu mas não comprou e relança o produto com um pacote menor — preço reduzido, sem os bônus do lançamento original.
               </p>
               <div className="space-y-1.5">
                 <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-2">O que foi removido nesta oferta:</div>
@@ -917,7 +917,7 @@ function SummaryStep({ lead }: { lead: LeadData }) {
             "Segmentação inteligente por temperatura de audiência (quente / morno / frio)",
             "Agendamento automático nos horários de maior engajamento",
             "WhatsApp + Email disparados automaticamente no momento exato",
-            "Análise de performance em tempo real e otimização contínua por IA",
+            "Análise de performance em tempo real e otimização contínua pela equipe especializada",
             "Sequências de recuperação de carrinho abandonado",
           ].map(item => (
             <div key={item} className="flex items-start gap-2">
@@ -925,7 +925,7 @@ function SummaryStep({ lead }: { lead: LeadData }) {
               <span className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">{item}</span>
             </div>
           ))}
-          <p className="font-mono text-[11px] text-primary font-bold">Tudo isso acontece dentro da NexOS AI, automaticamente.</p>
+          <p className="font-mono text-[11px] text-primary font-bold">Tudo isso acontece dentro da NexOS, automaticamente.</p>
         </div>
 
         {/* ── CTA block — cart-aware ── */}
@@ -1070,7 +1070,7 @@ function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
       {/* Nav */}
       <div className="border-b border-border/40 px-6 h-16 flex items-center gap-3">
         <img src={nexosLogo} alt="NexOS" className="h-8 w-8 object-contain" style={{ filter: "drop-shadow(0 0 8px hsl(var(--primary)/0.6))" }} />
-        <div className="font-mono font-black text-base tracking-[0.15em] uppercase">NexOS <span className="text-primary">AI</span></div>
+        <div className="font-mono font-black text-base tracking-[0.15em] uppercase">NexOS</div>
         <div className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Simulador de Lançamento</div>
       </div>
 
@@ -1085,10 +1085,10 @@ function LeadFormStep({ onSubmit }: { onSubmit: (data: LeadData) => void }) {
             <h1 className="text-3xl font-mono font-black uppercase tracking-tighter leading-tight">
               Veja como ficaria<br />
               seu lançamento<br />
-              <span className="text-primary">com NEXOS AI</span>
+              <span className="text-primary">com NEXOS</span>
             </h1>
             <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
-              Sem orçamento. Sem promessas. Só as <strong className="text-foreground">entregas reais</strong> que a NEXOS AI geraria para o seu produto.
+              Sem orçamento. Sem promessas. Só as <strong className="text-foreground">entregas reais</strong> que a NEXOS geraria para o seu produto.
             </p>
           </div>
 

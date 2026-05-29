@@ -52,9 +52,9 @@ function Nav({ scrolled }: { scrolled: boolean }) {
     <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-border/40 bg-background/90 backdrop-blur-xl" : "bg-transparent"}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-          <img src={nexosLogo} alt="NexOS AI" className="h-10 w-10 sm:h-14 sm:w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
+          <img src={nexosLogo} alt="NexOS" className="h-10 w-10 sm:h-14 sm:w-14 object-contain" style={{ filter: "drop-shadow(0 0 14px hsl(var(--primary)/0.7))" }} />
           <div className="hidden sm:block">
-            <div className="font-mono font-black text-xl tracking-[0.15em] uppercase">NexOS <span className="text-primary">AI</span></div>
+            <div className="font-mono font-black text-xl tracking-[0.15em] uppercase">NexOS</div>
             <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">Sistema de Lançamento Autônomo</div>
           </div>
         </div>
@@ -110,7 +110,7 @@ function HeroSection() {
             <strong className="text-foreground">Os melhores especialistas em cada área do lançamento — todos ao seu serviço, ao mesmo tempo, no mesmo sistema.</strong>
           </p>
           <p className="text-sm sm:text-base text-muted-foreground/70 leading-relaxed mb-8 sm:mb-12 max-w-2xl">
-            Isso é a NEXOS AI. Você não precisa publicar nada por conta própria. Não precisa contratar ninguém. Não precisa coordenar equipe.{" "}
+            Isso é a NEXOS. Você não precisa publicar nada por conta própria. Não precisa contratar ninguém. Não precisa coordenar equipe.{" "}
             <strong className="text-foreground">A NEXOS faz absolutamente tudo — da estratégia ao lançamento automatizado — para você vender 6 dígitos em 7 dias</strong> ou aplicar qualquer técnica que desejar.
           </p>
 
@@ -137,7 +137,7 @@ function HeroSection() {
       <div className="absolute bottom-0 sm:bottom-10 left-0 right-0 border-t border-border/15 bg-background/60 backdrop-blur-md py-2.5 sm:py-3">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-1">
           {[
-            { n: "34",      label: "Agentes IA", hide: false },
+            { n: "34",      label: "Especialistas", hide: false },
             { n: "R$41k",   label: "Menor lançamento", hide: false },
             { n: "R$134k",  label: "Maior lançamento", hide: false },
             { n: "847+",    label: "Produtores", hide: false },
@@ -208,7 +208,7 @@ function IdentidadeSection() {
 
           <div className={`mt-4 border border-primary/20 bg-primary/5 px-6 py-4 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "900ms" }}>
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              A NEXOS AI tem cada um desses especialistas — em formato de agente de IA, calibrado com as melhores metodologias do mundo, todos trabalhando em paralelo no seu lançamento.{" "}
+              A NEXOS tem cada um desses especialistas — em formato de especialista, calibrado com as melhores metodologias do mundo, todos trabalhando em paralelo no seu lançamento.{" "}
               <strong className="text-foreground">Você não precisa de nenhum deles. Você só precisa da NEXOS.</strong>
             </p>
           </div>
@@ -260,7 +260,7 @@ function DreamStateSection() {
       bordaCor: "border-amber-400/30",
     },
     {
-      nome: "Time de Vendas IA",
+      nome: "Time de Vendas",
       especialidade: "WhatsApp & Atendimento",
       faz: "Classifica intenção de compra, responde objeções e conduz o lead ao fechamento — no WhatsApp, em tempo real. Quando a intenção é muito alta ou a objeção é complexa, escala para humano. O carrinho não fica sem resposta.",
       cor: "text-rose-400",
@@ -334,7 +334,7 @@ function CeoSection() {
             <span className="text-primary">A NEXOS é a agência.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Grandes empresas não operam sem equipe. Elas têm uma agência que executa. A NEXOS AI é essa agência — integrada, autônoma, sem salários, sem turnover, sem briefing que se perde no email.
+            Grandes empresas não operam sem equipe. Elas têm uma agência que executa. A NEXOS é essa agência — integrada, autônoma, sem salários, sem turnover, sem briefing que se perde no email.
           </p>
 
           <div className="mb-3 grid grid-cols-2 gap-4 px-1">
@@ -363,7 +363,7 @@ function CeoSection() {
 
           <div className={`mt-8 border border-primary/30 bg-primary/5 px-6 py-5 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "700ms" }}>
             <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">Isso é o que uma agência faz por R$15.000–R$21.000 por mês.</strong> A diferença é que a NEXOS AI não precisa de briefing de 40 páginas, não some no meio do lançamento e não muda de ideia na semana que o carrinho abre. E entre um lançamento e outro, ela não descansa — está construindo o próximo.
+              <strong className="text-foreground">Isso é o que uma agência faz por R$15.000–R$21.000 por mês.</strong> A diferença é que a NEXOS não precisa de briefing de 40 páginas, não some no meio do lançamento e não muda de ideia na semana que o carrinho abre. E entre um lançamento e outro, ela não descansa — está construindo o próximo.
             </p>
           </div>
 
@@ -381,7 +381,7 @@ function CustoRealSection() {
     { nome: "Gestor de tráfego (CLT ou PJ)", nota: "R$3.500–R$8.000/mês", preco: "R$8k/mês" },
     { nome: "Copywriter especialista em lançamento", nota: "R$3.000–R$6.000/mês", preco: "R$5k/mês" },
     { nome: "Designer + editor de vídeo", nota: "R$2.000–R$4.000/mês", preco: "R$3k/mês" },
-    { nome: "Stack de ferramentas (RD + AC + IA)", nota: "Ferramentas fragmentadas", preco: "R$2k/mês" },
+    { nome: "Stack de ferramentas (RD + AC + equipe especializada)", nota: "Ferramentas fragmentadas", preco: "R$2k/mês" },
     { nome: "Gerente de projeto", nota: "Coordenação da equipe", preco: "R$3k/mês" },
   ];
   return (
@@ -412,7 +412,7 @@ function CustoRealSection() {
                 className={`flex items-center justify-between border border-destructive/40 bg-destructive/5 px-5 py-4 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"}`}
                 style={{ transitionDelay: "500ms" }}
               >
-                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-black">Total mensal sem NexOS AI</div>
+                <div className="font-mono text-xs uppercase tracking-widest text-foreground font-black">Total mensal sem NexOS</div>
                 <div className="font-mono font-black text-base text-destructive text-right ml-4 shrink-0">R$21k+/mês</div>
               </div>
             </div>
@@ -421,13 +421,13 @@ function CustoRealSection() {
               className={`border border-primary/30 bg-primary/5 p-8 flex flex-col justify-center transition-all duration-700 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
               style={{ transitionDelay: "200ms" }}
             >
-              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">Com NexOS AI</div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-5">Com NexOS</div>
               <p className="font-mono font-black text-2xl text-foreground leading-snug mb-6">
                 Mesma capacidade.<br /><span className="text-primary">Uma fração do custo.</span>
               </p>
               <div className="border-l-2 border-primary/50 pl-4 mb-6">
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  Agentes de IA especializados executando cada fase do seu lançamento — estratégia, copy, anúncios, email, WhatsApp, atendimento de vendas, análise de performance e otimização em tempo real.<br /><br />
+                  Especialistas especializados executando cada fase do seu lançamento — estratégia, copy, anúncios, email, WhatsApp, atendimento de vendas, análise de performance e otimização em tempo real.<br /><br />
                   <strong className="text-foreground">Tudo integrado. Tudo orquestrado. Um sistema único.</strong><br /><br />
                   E entre um lançamento e outro, o NexOS já está planejando e construindo o próximo — sem parar, sem depender de equipe.
                 </p>
@@ -576,7 +576,7 @@ function AlgoritmoSection() {
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary mb-6">— Para o Gestor de Tráfego —</div>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6">
             <h2 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05]">
-              NexOS AI potencializa<br />
+              NexOS potencializa<br />
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">o algoritmo.</span>
             </h2>
             <div className="font-mono text-xs text-muted-foreground/60 max-w-xs leading-relaxed shrink-0">
@@ -731,7 +731,7 @@ function AgentesSection() {
     {
       categoria: "Estratégia",
       cor: "text-primary",
-      agentes: ["Comandante IA", "Arquiteto de Lançamento", "Coordenador de Fases", "Arquiteto de Ofertas", "Product Builder", "Compliance", "Gestor Perpétuo"],
+      agentes: ["Comandante", "Arquiteto de Lançamento", "Coordenador de Fases", "Arquiteto de Ofertas", "Product Builder", "Compliance", "Gestor Perpétuo"],
     },
     {
       categoria: "Copy & Conteúdo",
@@ -761,7 +761,7 @@ function AgentesSection() {
     {
       categoria: "Time de Vendas",
       cor: "text-cyan-400",
-      agentes: ["Especialista em Aquecimento", "Especialista em Desejo", "Especialista em Fechamento", "Quebrador de Objeções", "Consultor NexOS AI"],
+      agentes: ["Especialista em Aquecimento", "Especialista em Desejo", "Especialista em Fechamento", "Quebrador de Objeções", "Consultor NexOS"],
     },
   ];
   return (
@@ -925,19 +925,19 @@ function ObjecoesSection() {
   const objecoes = [
     {
       q: '"Já tenho gestor de tráfego. Não preciso disso."',
-      a: "Seu gestor vai agradecer. O NexOS AI não substitui o gestor — entrega os insumos que o algoritmo precisa: copy segmentado por estágio de consciência, eventos CAPI limpos, retargeting por comportamento e rotação de criativo antes da fadiga. O gestor continua na estratégia. A máquina cuida da produção.",
+      a: "Seu gestor vai agradecer. O NexOS não substitui o gestor — entrega os insumos que o algoritmo precisa: copy segmentado por estágio de consciência, eventos CAPI limpos, retargeting por comportamento e rotação de criativo antes da fadiga. O gestor continua na estratégia. A máquina cuida da produção.",
     },
     {
       q: '"Já uso várias ferramentas. Por que juntar em uma?"',
-      a: "A fragmentação é o problema, não a solução. Quando o copy do anúncio não conversa com a landing page, que não conversa com a sequência de email, que não é calibrada para o segmento de retargeting — você tem uma orquestra sem maestro. O NexOS AI é o sistema nervoso que conecta tudo.",
+      a: "A fragmentação é o problema, não a solução. Quando o copy do anúncio não conversa com a landing page, que não conversa com a sequência de email, que não é calibrada para o segmento de retargeting — você tem uma orquestra sem maestro. O NexOS é o sistema nervoso que conecta tudo.",
     },
     {
       q: '"E se o conteúdo gerado for genérico como chatGPT?"',
       a: "É a diferença entre um sistema e um chat. Cada agente tem acesso ao contexto completo do avatar, do posicionamento e do histórico de performance. O copywriter não recebe uma instrução vaga — recebe o perfil completo do avatar, o mecanismo único e o estágio de sofisticação do mercado. O output é calibrado, não genérico.",
     },
     {
-      q: '"Preciso usar os agentes de IA ou posso gerenciar manualmente?"',
-      a: "Os dois. O sistema funciona completamente sem acionar nenhum agente — você gerencia campanhas, sequências, métricas e integrações pelo painel. Os agentes de IA são uma camada opcional: quando quiser gerar copy, estratégia ou análise com IA, você usa créditos. Sem pressão, sem mensalidade, sem lock-in.",
+      q: '"Preciso usar os especialistas ou posso gerenciar manualmente?"',
+      a: "Os dois. O sistema funciona completamente sem acionar nenhum agente — você gerencia campanhas, sequências, métricas e integrações pelo painel. Os especialistas são uma camada opcional: quando quiser gerar copy, estratégia ou análise com nossa equipe, você usa créditos. Sem pressão, sem mensalidade, sem lock-in.",
     },
   ];
   return (
@@ -985,10 +985,10 @@ function DoisCaminhosSection() {
               <div>
                 <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary/60 mb-3">→ Caminho A</div>
                 <div className="font-mono font-black text-2xl uppercase tracking-tight text-foreground leading-tight mb-3">
-                  A IA executa<br /><span className="text-primary">o lançamento por você</span>
+                  A equipe executa<br /><span className="text-primary">o lançamento por você</span>
                 </div>
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS AI faz o trabalho pesado — 34 agentes, do briefing ao carrinho fechado.
+                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS faz o trabalho pesado — 34 agentes, do briefing ao carrinho fechado.
                 </p>
               </div>
               <div className="space-y-2.5">
@@ -1145,7 +1145,7 @@ function FechamentoSection() {
 
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">— Decisão Final —</div>
           <h2 className="text-3xl sm:text-5xl md:text-7xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-            Cada mês sem<br />NexOS AI é<br />
+            Cada mês sem<br />NexOS é<br />
             <span className="text-primary">operação que você paga.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
@@ -1159,7 +1159,7 @@ function FechamentoSection() {
               <div>
                 <div className="font-mono text-xs font-black uppercase tracking-widest text-foreground mb-2">Garantia de 30 dias — sem burocracia</div>
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  Ofereço 30 dias de garantia porque tenho confiança absoluta no sistema. Se você ativar o NexOS AI, configurar seu primeiro lançamento e não ver valor real na operação — me manda um email e devolvemos tudo, sem formulários, sem perguntas. O risco é meu, não seu.
+                  Ofereço 30 dias de garantia porque tenho confiança absoluta no sistema. Se você ativar o NexOS, configurar seu primeiro lançamento e não ver valor real na operação — me manda um email e devolvemos tudo, sem formulários, sem perguntas. O risco é meu, não seu.
                 </p>
               </div>
             </div>
@@ -1210,7 +1210,7 @@ function AutoridadeSection() {
                   O padrão se repetia com tanta frequência que ficou impossível ignorar: o mercado digital brasileiro tem uma brecha enorme entre estratégia e execução. As pessoas aprendem o método. Ninguém resolve a operação.
                 </p>
                 <p className="text-foreground font-bold">
-                  O NexOS AI nasceu para fechar essa brecha.
+                  O NexOS nasceu para fechar essa brecha.
                 </p>
                 <p>
                   Não como mais uma ferramenta no stack — como o sistema nervoso da operação inteira. Do briefing ao carrinho fechado, sem que você precise ser o elo entre cada peça.
@@ -1320,7 +1320,7 @@ function TestemunhosSection() {
             ))}
           </div>
           <p className={`font-mono text-[10px] text-muted-foreground/20 text-center leading-relaxed max-w-3xl mx-auto transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "580ms" }}>
-            * Nathalia Arcuri, Erico Rocha e Jeff Walker não usam nem endossam o NexOS AI. Os casos acima documentam os resultados das estratégias e metodologias que o sistema executa automaticamente. Fontes verificáveis listadas em cada caso.
+            * Nathalia Arcuri, Erico Rocha e Jeff Walker não usam nem endossam o NexOS. Os casos acima documentam os resultados das estratégias e metodologias que o sistema executa automaticamente. Fontes verificáveis listadas em cada caso.
           </p>
         </div>
       </div>
@@ -1347,7 +1347,7 @@ function UrgenciaSection() {
               </h2>
               <div className="space-y-4 font-mono text-sm text-muted-foreground leading-relaxed">
                 <p>
-                  O NexOS AI está em fase de esquenta. Antes do lançamento oficial, estamos formando o grupo dos primeiros produtores que vão operar a plataforma e documentar resultados reais.
+                  O NexOS está em fase de esquenta. Antes do lançamento oficial, estamos formando o grupo dos primeiros produtores que vão operar a plataforma e documentar resultados reais.
                 </p>
                 <p>
                   Quem entra agora no grupo recebe bastidores, estratégias antecipadas e condições que não estarão disponíveis depois. O guia gratuito já entrega o framework completo — o mesmo que a plataforma vai executar por você.
@@ -1406,8 +1406,8 @@ function Footer() {
     <footer className="border-t border-border/20 py-10 bg-background">
       <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <img src={nexosLogo} alt="NexOS AI" className="h-8 w-8 object-contain opacity-60" />
-          <div className="font-mono text-xs text-muted-foreground/40 uppercase tracking-[0.2em]">NexOS AI © 2026</div>
+          <img src={nexosLogo} alt="NexOS" className="h-8 w-8 object-contain opacity-60" />
+          <div className="font-mono text-xs text-muted-foreground/40 uppercase tracking-[0.2em]">NexOS © 2026</div>
         </div>
         <div className="flex items-center gap-6 font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">
           <a href="/landing/privacidade" className="hover:text-muted-foreground transition-colors">Privacidade</a>
