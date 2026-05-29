@@ -10,6 +10,8 @@ import {
   markPaymentPaid,
   processAsaasWebhook,
 } from "./billing.service.js";
+import { db, inviteCodesTable, workspacesTable, plansTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -142,6 +144,43 @@ router.get("/bank-transfer", requireAuth, async (_req, res): Promise<void> => {
     instructions: "Envie o comprovante para suporte@agencianexos.vip após a transferência.",
   };
   res.json({ bankTransfer: info });
+});
+
+// ─── Redeem invite code (logged-in user) ──────────────────────────────────────
+router.post("/redeem-code", requireAuth, async (req, res): Promise<void> => {
+  const { code } = req.body as { code?: string };
+  if (!code) { res.status(400).json({ error: "Informe o código." }); return; }
+
+  const normalized = code.toUpperCase().trim();
+  const [invite] = await db.select().from(inviteCodesTable).where(eq(inviteCodesTable.code, normalized)).limit(1);
+
+  if (!invite) { res.status(404).json({ error: "Código não encontrado. Verifique e tente novamente." }); return; }
+  if (invite.used) { res.status(409).json({ error: "Este código já foi utilizado." }); return; }
+
+  const [plan] = await db.select().from(plansTable).where(eq(plansTable.slug, invite.planSlug as "solo" | "agency")).limit(1);
+  if (!plan) { res.status(500).json({ error: "Plano associado ao código não encontrado." }); return; }
+
+  const [workspace] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
+  if (!workspace) { res.status(404).json({ error: "Workspace não encontrado." }); return; }
+
+  await db.update(workspacesTable)
+    .set({
+      planId: plan.id,
+      creditsBalance: Math.max(workspace.creditsBalance ?? 0, plan.creditsMonthly),
+    })
+    .where(eq(workspacesTable.id, req.auth.workspaceId));
+
+  await db.update(inviteCodesTable)
+    .set({
+      used: true,
+      usedByEmail: req.auth.email,
+      usedByUserId: req.auth.userId,
+      usedByWorkspaceId: req.auth.workspaceId,
+      usedAt: new Date(),
+    })
+    .where(eq(inviteCodesTable.code, normalized));
+
+  res.json({ ok: true, planName: plan.name, planSlug: plan.slug, creditsGranted: plan.creditsMonthly });
 });
 
 export default router;

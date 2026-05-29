@@ -202,6 +202,27 @@ export default function AdminPage() {
     onError: (err: Error) => toast.error(err.message ?? "Erro ao remover código"),
   });
 
+  const [grantTarget, setGrantTarget] = useState<{ workspaceId: string; userName: string; currentPlan: string } | null>(null);
+  const [grantPlan, setGrantPlan] = useState<"solo" | "agency">("solo");
+  const [grantNote, setGrantNote] = useState("");
+
+  const grantPlanMutation = useMutation({
+    mutationFn: async ({ workspaceId, planSlug, note }: { workspaceId: string; planSlug: string; note: string }) => {
+      return customFetch<{ ok: boolean; planName: string }>(`/api/admin/workspaces/${workspaceId}/grant-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planSlug, note }),
+      });
+    },
+    onSuccess: (data) => {
+      toast.success(`Acesso ${data.planName} liberado com sucesso!`);
+      setGrantTarget(null);
+      setGrantNote("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/overview"] });
+    },
+    onError: (err: Error) => toast.error(err.message ?? "Erro ao liberar acesso"),
+  });
+
   const confirmMutation = useMutation({
     mutationFn: async (paymentId: string) => {
       const data = await customFetch<{ message: string }>(`/api/admin/payments/${paymentId}/confirm`, {
@@ -814,18 +835,79 @@ export default function AdminPage() {
                         </span>
                       </div>
                       <div className="hidden md:block text-right font-mono text-sm text-muted-foreground/50">{days}d</div>
-                      <div className="flex justify-end items-center">
+                      <div className="flex justify-end items-center gap-2">
                         {meta && (
                           <Badge variant="outline" className={`rounded-none font-mono text-[11px] uppercase tracking-widest px-2 py-0.5 ${meta.color}`}>
                             <Icon className="h-2.5 w-2.5 mr-1 shrink-0" />{meta.label}
                           </Badge>
                         )}
+                        <button
+                          onClick={() => { setGrantTarget({ workspaceId: u.workspaceId, userName: u.userName, currentPlan: u.planSlug }); setGrantPlan("solo"); }}
+                          className="font-mono text-[10px] uppercase tracking-widest border border-primary/30 bg-primary/5 hover:bg-primary/15 text-primary px-2 py-1 transition-colors shrink-0"
+                          title="Liberar acesso ao plano sem pagamento"
+                        >
+                          🎟 Liberar
+                        </button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Grant plan modal ── */}
+      {grantTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={e => e.target === e.currentTarget && setGrantTarget(null)}>
+          <div className="card-nexos rounded-xl p-7 w-full max-w-md space-y-5 border border-primary/30">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-mono text-base font-bold uppercase tracking-widest text-foreground">🎟 Liberar Acesso</h3>
+                <p className="font-mono text-xs text-muted-foreground mt-1">{grantTarget.userName}</p>
+              </div>
+              <button onClick={() => setGrantTarget(null)} className="text-muted-foreground hover:text-foreground text-lg">✕</button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 block mb-2">Plano</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["solo", "agency"] as const).map(p => (
+                    <button key={p} onClick={() => setGrantPlan(p)}
+                      className={`border py-2.5 font-mono text-xs uppercase tracking-widest transition-all ${grantPlan === p ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-primary/30"}`}>
+                      {p === "solo" ? "Solo — Individual" : "Agency"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60 block mb-1.5">Motivo (opcional)</label>
+                <input
+                  type="text"
+                  value={grantNote}
+                  onChange={e => setGrantNote(e.target.value)}
+                  placeholder="Ex: código promocional, parceria, teste..."
+                  className="w-full px-3 py-2 bg-card/60 border border-border/50 font-mono text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50"
+                />
+              </div>
+            </div>
+
+            <div className="border border-yellow-400/20 bg-yellow-400/5 px-4 py-3">
+              <p className="font-mono text-[11px] text-yellow-400/80">
+                ⚡ Isso vai atualizar o plano de <strong>{grantTarget.currentPlan.toUpperCase()}</strong> → <strong>{grantPlan.toUpperCase()}</strong> e adicionar os créditos do plano.
+              </p>
+            </div>
+
+            <Button
+              onClick={() => grantPlanMutation.mutate({ workspaceId: grantTarget.workspaceId, planSlug: grantPlan, note: grantNote })}
+              disabled={grantPlanMutation.isPending}
+              className="w-full font-mono uppercase tracking-widest rounded-none btn-weapon-primary"
+            >
+              {grantPlanMutation.isPending ? "Liberando..." : `Liberar Acesso ${grantPlan.toUpperCase()} →`}
+            </Button>
           </div>
         </div>
       )}

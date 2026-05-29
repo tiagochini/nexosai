@@ -506,6 +506,88 @@ function CheckoutSelector({ label, amount, amountCents, onMethod, loading, onCan
   );
 }
 
+// ── Promo Code Section ────────────────────────────────────────────────────────
+
+function PromoCodeSection() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [success, setSuccess] = useState<{ planName: string; creditsGranted: number } | null>(null);
+
+  const redeemMutation = useMutation({
+    mutationFn: async (c: string) =>
+      customFetch<{ ok: boolean; planName: string; planSlug: string; creditsGranted: number }>("/api/billing/redeem-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: c }),
+      }),
+    onSuccess: (data) => {
+      setSuccess({ planName: data.planName, creditsGranted: data.creditsGranted });
+      setCode("");
+      queryClient.invalidateQueries({ queryKey: ["/api/billing/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/credits/balance"] });
+    },
+    onError: (err: Error) => toast.error(err.message ?? "Código inválido ou já utilizado."),
+  });
+
+  return (
+    <div className="border border-border/40 bg-card/20">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-3 font-mono text-[12px] uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-primary">🎟</span> Tenho um Código Promocional
+        </span>
+        <ChevronRight className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-90" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="px-5 pb-5 space-y-4">
+          {success ? (
+            <div className="border border-success/30 bg-success/5 p-5 text-center space-y-2">
+              <CheckCheck className="h-7 w-7 text-success mx-auto" />
+              <div className="font-mono text-sm font-bold text-success uppercase tracking-widest">Código Aplicado!</div>
+              <p className="font-mono text-xs text-muted-foreground">
+                Plano <strong className="text-foreground">{success.planName}</strong> ativado · {success.creditsGranted.toLocaleString("pt-BR")} créditos adicionados
+              </p>
+              <button
+                onClick={() => { setSuccess(null); setOpen(false); }}
+                className="font-mono text-[11px] text-primary underline underline-offset-2 mt-1"
+              >
+                Fechar
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">
+                Recebeu um código de acesso da NexOS? Digite abaixo para ativar seu plano imediatamente.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={code}
+                  onChange={e => setCode(e.target.value.toUpperCase())}
+                  onKeyDown={e => e.key === "Enter" && code.trim() && redeemMutation.mutate(code.trim())}
+                  placeholder="NEXOS-XXXX-XXXX"
+                  className="flex-1 px-3 py-2.5 bg-card/60 border border-border/50 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/50 uppercase tracking-widest"
+                />
+                <Button
+                  onClick={() => redeemMutation.mutate(code.trim())}
+                  disabled={!code.trim() || redeemMutation.isPending}
+                  className="font-mono uppercase tracking-widest rounded-none btn-weapon-primary px-5 shrink-0"
+                >
+                  {redeemMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : "Resgatar"}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function BillingPage() {
@@ -695,6 +777,9 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+
+      {/* ── Promo Code Redemption ── */}
+      <PromoCodeSection />
 
       {/* ── How it works ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

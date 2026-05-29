@@ -3,8 +3,8 @@ import { requireAuth } from "../auth/auth.middleware.js";
 import { getAdminOverview, getAdminFinancials, getAdminPayments } from "./admin.service.js";
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
-import { UnauthorizedError } from "../../lib/errors.js";
-import { db, inviteCodesTable, usersTable } from "@workspace/db";
+import { UnauthorizedError, NotFoundError } from "../../lib/errors.js";
+import { db, inviteCodesTable, usersTable, workspacesTable, plansTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 const ADMIN_EMAILS = new Set([
@@ -126,6 +126,34 @@ router.delete("/invite-codes/:id", requireAuth, async (req, res): Promise<void> 
   if (code.used) { res.status(409).json({ error: "Código já utilizado — não pode ser deletado" }); return; }
   await db.delete(inviteCodesTable).where(eq(inviteCodesTable.id, id));
   res.json({ ok: true });
+});
+
+// ─── Grant plan access to existing workspace ──────────────────────────────────
+router.post("/workspaces/:workspaceId/grant-plan", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const { workspaceId } = req.params as { workspaceId: string };
+  const { planSlug, note } = req.body as { planSlug?: string; note?: string };
+
+  if (!planSlug || !["solo", "agency"].includes(planSlug)) {
+    res.status(400).json({ error: "planSlug deve ser 'solo' ou 'agency'" });
+    return;
+  }
+
+  const [workspace] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  if (!workspace) throw new NotFoundError("Workspace não encontrado");
+
+  const [plan] = await db.select().from(plansTable).where(eq(plansTable.slug, planSlug as "solo" | "agency")).limit(1);
+  if (!plan) throw new NotFoundError("Plano não encontrado");
+
+  await db.update(workspacesTable)
+    .set({
+      planId: plan.id,
+      creditsBalance: Math.max(workspace.creditsBalance ?? 0, plan.creditsMonthly),
+    })
+    .where(eq(workspacesTable.id, workspaceId));
+
+  req.log.info({ workspaceId, planSlug, grantedBy: req.auth.email, note: note ?? null }, "admin grant-plan");
+  res.json({ ok: true, planName: plan.name, creditsGranted: plan.creditsMonthly });
 });
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
