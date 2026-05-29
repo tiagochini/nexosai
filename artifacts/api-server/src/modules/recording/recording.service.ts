@@ -4,10 +4,16 @@ import type { RecordingEvent } from "@workspace/db";
 import { ZipArchive } from "archiver";
 import type { Response, Request } from "express";
 import { createWriteStream, createReadStream } from "node:fs";
-import { mkdir, stat } from "node:fs/promises";
+import { mkdir, stat, unlink } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import { logger } from "../../lib/logger.js";
+import {
+  uploadRecordingToGCS,
+  getGCSRecordingSize,
+  createGCSReadStream,
+  isGCSKey,
+} from "../../lib/gcs-recordings.js";
 
 function nowIso() { return new Date().toISOString(); }
 function eventId() { return crypto.randomUUID(); }
@@ -175,7 +181,7 @@ export async function stopRecording(recordingId: string, workspaceId: string) {
   return updated!;
 }
 
-// ─── Upload video (stream directly to disk) ───────────────────────────────────
+// ─── Upload video (stream to disk → upload to GCS → remove local temp) ────────
 
 export async function uploadVideo(recordingId: string, workspaceId: string, req: Request) {
   const [rec] = await db
@@ -192,21 +198,36 @@ export async function uploadVideo(recordingId: string, workspaceId: string, req:
   await pipeline(req, ws);
 
   const fileStat = await stat(filepath);
+  logger.info({ recordingId, size: fileStat.size }, "Recording video saved locally, uploading to GCS");
 
+  // Save local path first so the video is immediately serveable
   await db
     .update(launchRecordingsTable)
-    .set({
-      videoPath: filepath,
-      videoSize: fileStat.size,
-      videoUploadedAt: new Date(),
-    })
+    .set({ videoPath: filepath, videoSize: fileStat.size, videoUploadedAt: new Date() })
     .where(eq(launchRecordingsTable.id, recordingId));
 
-  logger.info({ recordingId, size: fileStat.size }, "Recording video uploaded");
+  // Fire-and-forget GCS upload — swaps videoPath to GCS key on success
+  setImmediate(async () => {
+    try {
+      const gcsKey = await uploadRecordingToGCS(filepath, recordingId);
+      await db
+        .update(launchRecordingsTable)
+        .set({ videoPath: gcsKey })
+        .where(eq(launchRecordingsTable.id, recordingId));
+      // Remove local temp file after successful GCS upload
+      await unlink(filepath).catch(() => undefined);
+      logger.info({ recordingId, gcsKey }, "Recording uploaded to GCS and local temp removed");
+    } catch (err) {
+      logger.error({ err, recordingId }, "GCS upload failed — keeping local file as fallback");
+    }
+  });
+
   return { path: filepath, size: fileStat.size };
 }
 
 // ─── Serve video (with Range header support for seeking) ──────────────────────
+// Serves from GCS when videoPath is a GCS key (recordings/…); falls back to
+// local disk for files that haven't finished uploading yet.
 
 export async function serveVideo(recordingId: string, workspaceId: string, res: Response) {
   const [rec] = await db
@@ -218,22 +239,45 @@ export async function serveVideo(recordingId: string, workspaceId: string, res: 
   if (!rec) { res.status(404).json({ error: "Gravação não encontrada" }); return; }
   if (!rec.videoPath) { res.status(404).json({ error: "Vídeo ainda não foi enviado para o servidor" }); return; }
 
+  const rangeHeader = (res.req as Request).headers.range;
+  res.setHeader("Content-Type", "video/webm");
+  res.setHeader("Accept-Ranges", "bytes");
+
+  // ── GCS path ──────────────────────────────────────────────────────────────
+  if (isGCSKey(rec.videoPath)) {
+    try {
+      const total = await getGCSRecordingSize(rec.videoPath);
+      if (rangeHeader) {
+        const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
+        const start = parseInt(startStr ?? "0", 10);
+        const end = endStr ? parseInt(endStr, 10) : total - 1;
+        const chunkSize = end - start + 1;
+        res.status(206);
+        res.setHeader("Content-Range", `bytes ${start}-${end}/${total}`);
+        res.setHeader("Content-Length", chunkSize);
+        createGCSReadStream(rec.videoPath, { start, end }).pipe(res);
+      } else {
+        res.setHeader("Content-Length", total);
+        createGCSReadStream(rec.videoPath).pipe(res);
+      }
+    } catch (err) {
+      logger.error({ err, recordingId }, "Failed to serve recording from GCS");
+      res.status(502).json({ error: "Erro ao buscar vídeo no storage" });
+    }
+    return;
+  }
+
+  // ── Local disk path (upload in-progress or GCS upload failed) ─────────────
   let fileStat: Awaited<ReturnType<typeof stat>>;
   try { fileStat = await stat(rec.videoPath); }
   catch { res.status(404).json({ error: "Arquivo de vídeo não encontrado no servidor" }); return; }
 
   const total = fileStat.size;
-  const rangeHeader = (res.req as Request).headers.range;
-
-  res.setHeader("Content-Type", "video/webm");
-  res.setHeader("Accept-Ranges", "bytes");
-
   if (rangeHeader) {
     const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
     const start = parseInt(startStr ?? "0", 10);
     const end = endStr ? parseInt(endStr, 10) : total - 1;
     const chunkSize = end - start + 1;
-
     res.status(206);
     res.setHeader("Content-Range", `bytes ${start}-${end}/${total}`);
     res.setHeader("Content-Length", chunkSize);
