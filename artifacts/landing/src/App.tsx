@@ -9,6 +9,7 @@ import PrivacyPolicy from "@/pages/privacy";
 import TermsOfService from "@/pages/terms";
 import DataDeletion from "@/pages/data-deletion";
 import FounderPage from "@/pages/founder";
+import HubPage from "@/pages/hub";
 import NotFound from "@/pages/not-found";
 import { LangProvider } from "@/lib/i18n";
 
@@ -18,6 +19,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/hub" component={HubPage} />
+      <Route path="/produtos" component={HubPage} />
       <Route path="/guia" component={GuiaPage} />
       <Route path="/mapa" component={MapaPage} />
       <Route path="/simulador" component={SimulatorPage} />
