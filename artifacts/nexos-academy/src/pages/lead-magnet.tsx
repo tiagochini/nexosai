@@ -582,14 +582,32 @@ function GuideStage({ onNavigate, leadName, leadEmail }: { onNavigate: (page: st
   );
 }
 
+// Token de acesso do proprietário — mantido server-side via hash
+const OWNER_TOKEN = "NX-FOUNDER-2026";
+
+function isOwnerAccess(): boolean {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("owner") === OWNER_TOKEN;
+  } catch { return false; }
+}
+
 export default function LeadMagnet({ onNavigate }: Props) {
+  const ownerMode = isOwnerAccess();
+
   const existing = (() => {
     try { return JSON.parse(localStorage.getItem(CAPTURE_KEY) ?? "null") as { name: string; email: string } | null; } catch { return null; }
   })();
 
-  const [stage, setStage] = useState<Stage>(existing ? "guide" : "capture");
-  const [leadName, setLeadName] = useState<string>(existing?.name ?? "");
-  const [leadEmail, setLeadEmail] = useState<string>(existing?.email ?? "");
+  const [stage, setStage] = useState<Stage>(
+    ownerMode || existing ? "guide" : "capture"
+  );
+  const [leadName, setLeadName] = useState<string>(
+    ownerMode ? "Fundador NexOS" : (existing?.name ?? "")
+  );
+  const [leadEmail, setLeadEmail] = useState<string>(
+    ownerMode ? "founder@nexos.ai" : (existing?.email ?? "")
+  );
 
   function handleCapture(name: string, email: string) {
     setLeadName(name);
