@@ -1077,25 +1077,28 @@ export default function AgentChat() {
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 border border-border/50 bg-muted/20 pl-2 pr-1 py-1.5 max-w-[180px]">
-                      {att.isTranscribing
-                        ? <Loader2 className="h-3.5 w-3.5 text-green-400 animate-spin shrink-0" />
-                        : att.isAudio
-                          ? <FileAudio className="h-3.5 w-3.5 text-green-400/70 shrink-0" />
-                          : fileIcon(att)
-                      }
+                    <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 pr-2 max-w-[210px]">
+                      <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center"
+                        style={{ background: att.isAudio ? "hsl(145 50% 12%)" : "hsl(220 30% 14%)" }}>
+                        {att.isTranscribing
+                          ? <Loader2 className="h-4 w-4 text-green-400 animate-spin" />
+                          : att.isAudio
+                            ? <FileAudio className="h-4 w-4 text-green-400" />
+                            : fileIcon(att)
+                        }
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-mono text-[11px] text-muted-foreground truncate">{att.name}</div>
-                        <div className="font-mono text-[10px] text-muted-foreground/40">
+                        <div className="text-[11px] font-medium text-foreground truncate leading-tight">{att.name}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5">
                           {att.isTranscribing ? (
-                            <span className="text-green-400/70 animate-pulse">Transcrevendo…</span>
+                            <span className="text-green-400 animate-pulse">Transcrevendo…</span>
                           ) : att.transcription ? (
-                            <span className="text-green-400/70">✓ Transcrito</span>
+                            <span className="text-green-400">✓ Transcrito</span>
                           ) : formatBytes(att.size)}
                         </div>
                       </div>
-                      <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive transition-colors p-0.5 shrink-0">
-                        <X className="h-3 w-3" />
+                      <button onClick={() => removeAttachment(i)} className="text-muted-foreground hover:text-destructive transition-colors shrink-0">
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   )}

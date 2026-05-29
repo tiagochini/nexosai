@@ -241,7 +241,7 @@ export default function CampaignIntake() {
 
   const [isListening, setIsListening]           = useState(false);
   const [isTranscribing, setIsTranscribing]     = useState(false);
-  const [pendingFiles, setPendingFiles]         = useState<Array<{ name: string; content?: string; url: string; isImage: boolean; isAudioVideo?: boolean }>>([]);
+  const [pendingFiles, setPendingFiles]         = useState<Array<{ name: string; content?: string; url: string; isImage: boolean; isAudioVideo?: boolean; size?: number; mimeType?: string }>>([]);
   const aiTriggered = useRef(false);
   const chatEndRef  = useRef<HTMLDivElement>(null);
   const inputRef    = useRef<HTMLTextAreaElement>(null);
@@ -449,7 +449,7 @@ export default function CampaignIntake() {
           r.readAsText(f);
         });
       }
-      return { name: f.name, content, url: URL.createObjectURL(f), isImage: f.type.startsWith("image/") };
+      return { name: f.name, content, url: URL.createObjectURL(f), isImage: f.type.startsWith("image/"), size: f.size, mimeType: f.type };
     }));
     setPendingFiles(prev => [...prev, ...added]);
     e.target.value = "";
@@ -948,20 +948,51 @@ export default function CampaignIntake() {
                 accept="audio/*,video/*,.mp3,.mp4,.wav,.ogg,.m4a,.webm,.mov,.avi,.mkv"
                 onChange={e => { void handleAudioVideoSelect(e); }} />
 
-              {/* Pending files preview */}
+              {/* Pending files preview — familiar card style (like WhatsApp / iMessage) */}
               {pendingFiles.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pb-2 border-b border-border/30">
+                <div className="flex flex-wrap gap-2 pb-2.5 border-b border-border/30">
                   {pendingFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-1.5 border border-border/50 bg-muted/20 px-2 py-1">
-                      {f.isImage
-                        ? <ImageIcon className="h-3 w-3 text-primary/70 shrink-0" />
-                        : f.isAudioVideo
-                        ? <FileAudio className="h-3 w-3 text-violet-400 shrink-0" />
-                        : <File className="h-3 w-3 text-muted-foreground shrink-0" />}
-                      <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[120px]">{f.name}</span>
-                      <button onClick={() => removeFile(i)} className="text-muted-foreground hover:text-destructive ml-1">
-                        <X className="h-2.5 w-2.5" />
-                      </button>
+                    <div key={i} className="relative group">
+                      {f.isImage ? (
+                        /* Image thumbnail */
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border/60 bg-muted/20 shrink-0">
+                          <img
+                            src={f.url}
+                            alt={f.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            onClick={() => removeFile(i)}
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        /* Document / audio card */
+                        <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2 pr-2 max-w-[200px]">
+                          <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                            style={{ background: f.isAudioVideo ? "hsl(260 60% 20%)" : "hsl(220 30% 14%)" }}>
+                            {f.isAudioVideo
+                              ? <FileAudio className="h-4 w-4 text-violet-400" />
+                              : f.mimeType === "application/pdf"
+                              ? <File className="h-4 w-4 text-red-400" />
+                              : <File className="h-4 w-4 text-blue-400" />}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[11px] font-medium text-foreground truncate leading-tight">{f.name}</span>
+                            <span className="text-[10px] text-muted-foreground mt-0.5">
+                              {f.size ? (f.size >= 1_000_000 ? `${(f.size / 1_000_000).toFixed(1)} MB` : `${Math.round(f.size / 1_000)} KB`) : ""}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => removeFile(i)}
+                            className="ml-1 text-muted-foreground hover:text-destructive shrink-0 transition-colors"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
