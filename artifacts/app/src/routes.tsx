@@ -63,10 +63,8 @@ import NotFound from "@/pages/not-found";
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  if (!token) return <Redirect to="/login" />;
 
-  // Admins always bypass the access wall
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // All hooks must be called unconditionally — no early returns before this
   const { data: accessData, isLoading: accessLoading } = useQuery<{ hasAccess: boolean; reason: string }>({
     queryKey: ["/api/billing/access"],
     queryFn: () => customFetch<{ hasAccess: boolean; reason: string }>("/api/billing/access"),
@@ -75,6 +73,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     enabled: !!token && !isAdmin,
   });
 
+  if (!token) return <Redirect to="/login" />;
   if (isAdmin) return <AppLayout>{children}</AppLayout>;
   if (accessLoading && !accessData) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
