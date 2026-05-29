@@ -8,6 +8,7 @@ import {
   Cpu, Mic, Play, BarChart2, RefreshCw, Hash, Flame, AlertTriangle,
   Crosshair, Clock, BarChart, Scissors, Search, FlaskConical,
   Award, Camera, Repeat2, Sparkles, Filter, BookOpen, LineChart,
+  Network, Activity, Sliders,
 } from "lucide-react";
 
 interface AgentDef {
@@ -16,7 +17,7 @@ interface AgentDef {
   tagline: string;
   description: string;
   category: string;
-  provider: "Claude" | "GPT-4o" | "Gemini";
+  provider: "Claude" | "GPT-5.5" | "Gemini";
   specialties: string[];
   icon: React.ElementType;
   accent: string;
@@ -88,49 +89,49 @@ const AGENTS: AgentDef[] = [
   {
     role: "copywriter", name: "Gary", tagline: "Mestre das Palavras",
     description: "Escreve copy de venda que converte. Domina AIDA, PAS, storytelling emocional, emails, páginas e scripts.",
-    category: "Conteúdo", provider: "GPT-4o", icon: Pen,
+    category: "Conteúdo", provider: "GPT-5.5", icon: Pen,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["VSL Copy", "Email", "Anúncios", "Headline"],
   },
   {
     role: "creative_director", name: "David", tagline: "Arquiteto Visual",
     description: "Define identidade visual, branding e direção criativa completa. Paleta de cores, tipografia, fotografia e componentes.",
-    category: "Conteúdo", provider: "GPT-4o", icon: Eye,
+    category: "Conteúdo", provider: "GPT-5.5", icon: Eye,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["Branding", "Visual", "Tipografia", "Paleta"],
   },
   {
     role: "landing_page", name: "Russell", tagline: "Especialista em Conversão",
     description: "Cria páginas de captura e vendas que convertem. Estrutura VSL page, copy acima do fold, CTAs e redução de atrito.",
-    category: "Conteúdo", provider: "GPT-4o", icon: Globe,
+    category: "Conteúdo", provider: "GPT-5.5", icon: Globe,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["VSL Page", "Squeeze Page", "Copy", "UX"],
   },
   {
     role: "ad_copy", name: "Carlton", tagline: "Criativo de Performance",
     description: "Cria copies de anúncios que param o scroll. Especialista em headlines de impacto, ganchos e CTAs para Meta Ads e Google Ads.",
-    category: "Conteúdo", provider: "GPT-4o", icon: Megaphone,
+    category: "Conteúdo", provider: "GPT-5.5", icon: Megaphone,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["Meta Ads", "Google Ads", "Hook", "CTA"],
   },
   {
     role: "social_media", name: "Garry", tagline: "Calendário de Conteúdo",
     description: "Cria calendários completos de conteúdo para Instagram, TikTok, YouTube e Facebook. Captions, hashtags e estratégia de engajamento.",
-    category: "Conteúdo", provider: "GPT-4o", icon: Hash,
+    category: "Conteúdo", provider: "GPT-5.5", icon: Hash,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["Instagram", "TikTok", "YouTube", "Calendário"],
   },
   {
     role: "stories_sequence", name: "Donald", tagline: "Narrativa em Frames",
     description: "Cria roteiros completos de stories para lançamento — sequência narrativa com ganchos, revelações e chamadas para ação.",
-    category: "Conteúdo", provider: "GPT-4o", icon: Layers,
+    category: "Conteúdo", provider: "GPT-5.5", icon: Layers,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["Stories", "Narrativa", "Instagram", "Sequência"],
   },
   {
     role: "hook_factory", name: "Jonah", tagline: "Fábrica de Ganchos",
     description: "Gera 20+ hooks calibrados por plataforma, avatar e tipo (curiosidade, identidade, controvérsia, resultado, método). Os primeiros 3 segundos que param o scroll.",
-    category: "Conteúdo", provider: "GPT-4o", icon: Flame,
+    category: "Conteúdo", provider: "GPT-5.5", icon: Flame,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["TikTok", "Reels", "CTR", "Pattern Interrupt"],
     isNew: true,
@@ -154,7 +155,7 @@ const AGENTS: AgentDef[] = [
   {
     role: "content_calendar", name: "Joseph", tagline: "Jornada de 30 Dias",
     description: "Cria calendários narrativos de lançamento: cada post tem papel específico na mudança de estado do lead. Captions completas, conceitos visuais e calendário de produção.",
-    category: "Conteúdo", provider: "GPT-4o", icon: BookOpen,
+    category: "Conteúdo", provider: "GPT-5.5", icon: BookOpen,
     accent: "border-cyan-500/40 hover:border-cyan-500",
     specialties: ["30 Dias", "Orgânico", "Narrativa", "Produção"],
     isNew: true,
@@ -180,35 +181,35 @@ const AGENTS: AgentDef[] = [
   {
     role: "targeting", name: "Perry", tagline: "Caçador de Públicos",
     description: "Encontra os públicos certos nas plataformas certas. Cria arquiteturas de segmentação precisas: interesses, comportamentos e lookalikes.",
-    category: "Audiência", provider: "GPT-4o", icon: Target,
+    category: "Audiência", provider: "GPT-5.5", icon: Target,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["Meta Ads", "Lookalike", "Interesses", "Comportamento"],
   },
   {
     role: "media_buyer", name: "Nicholas", tagline: "Maximizador de ROAS",
     description: "Maximiza ROAS em Meta Ads, Google Ads, TikTok e YouTube. Estrutura de campanha, criativos e otimização de budget.",
-    category: "Audiência", provider: "GPT-4o", icon: BarChart2,
+    category: "Audiência", provider: "GPT-5.5", icon: BarChart2,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["ROAS", "Budget", "Criativos", "Escala"],
   },
   {
     role: "affiliate_campaign", name: "Stuart", tagline: "Multiplicador de Alcance",
     description: "Estrutura programas de afiliados para explosão de alcance. Comissionamento, materiais de apoio e reativação.",
-    category: "Audiência", provider: "GPT-4o", icon: Users,
+    category: "Audiência", provider: "GPT-5.5", icon: Users,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["Comissão", "Materiais", "Reativação", "Escala"],
   },
   {
     role: "media_brief", name: "Andrew", tagline: "Guia para o Time de Tráfego",
     description: "Gera briefs completos para o time de tráfego pago: objetivos, públicos, criativos, budgets e KPIs esperados por fase.",
-    category: "Audiência", provider: "GPT-4o", icon: FileText,
+    category: "Audiência", provider: "GPT-5.5", icon: FileText,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["Brief", "Criativos", "Budget", "KPIs"],
   },
   {
     role: "ad_critic", name: "Luke", tagline: "Juiz dos Criativos",
     description: "Avalia criativos antes de investir budget. Nota por dimensão (hook, clareza, CTA, fit, política), veredicto claro e reescrita do hook quando necessário.",
-    category: "Audiência", provider: "GPT-4o", icon: Filter,
+    category: "Audiência", provider: "GPT-5.5", icon: Filter,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["Hook Score", "Política", "CTR", "Veredicto"],
     isNew: true,
@@ -224,7 +225,7 @@ const AGENTS: AgentDef[] = [
   {
     role: "organic_traffic", name: "Marcus", tagline: "Especialista de Tráfego Orgânico",
     description: "Opera 24h preparando audiências, crescendo seguidores e construindo o ativo que tráfego pago não compra: confiança real. Domina algoritmos de Instagram, TikTok, YouTube e Facebook simultaneamente.",
-    category: "Audiência", provider: "GPT-4o", icon: TrendingUp,
+    category: "Audiência", provider: "GPT-5.5", icon: TrendingUp,
     accent: "border-yellow-500/40 hover:border-yellow-500",
     specialties: ["Algoritmo", "Seguidores", "Engajamento", "Pré-aquecimento"],
     isNew: true,
@@ -234,28 +235,28 @@ const AGENTS: AgentDef[] = [
   {
     role: "vsl_script", name: "Jon", tagline: "Script de Alta Conversão",
     description: "Escreve roteiros completos de VSL (Video Sales Letter) com estrutura AIDA, provas sociais e fechamento irresistível.",
-    category: "Vídeo", provider: "GPT-4o", icon: Video,
+    category: "Vídeo", provider: "GPT-5.5", icon: Video,
     accent: "border-purple-500/40 hover:border-purple-500",
     specialties: ["VSL", "AIDA", "Storytelling", "Fechamento"],
   },
   {
     role: "cpl_script", name: "Conrado", tagline: "Conteúdo de Pré-Lançamento",
     description: "Roteiros para vídeos CPL (Conteúdo de Pré-Lançamento) com educação, autoridade e antecipação progressiva.",
-    category: "Vídeo", provider: "GPT-4o", icon: Play,
+    category: "Vídeo", provider: "GPT-5.5", icon: Play,
     accent: "border-purple-500/40 hover:border-purple-500",
     specialties: ["CPL", "Pré-Lançamento", "Educação", "Antecipação"],
   },
   {
     role: "webinar_script", name: "Jason", tagline: "Apresentação de Vendas",
     description: "Roteiros completos para webinários de venda — estrutura de apresentação, slides, transição para oferta e Q&A estratégico.",
-    category: "Vídeo", provider: "GPT-4o", icon: Mic,
+    category: "Vídeo", provider: "GPT-5.5", icon: Mic,
     accent: "border-purple-500/40 hover:border-purple-500",
     specialties: ["Webinar", "Slides", "Pitch", "Q&A"],
   },
   {
     role: "live_script", name: "Grant", tagline: "Venda ao Vivo",
     description: "Roteiros para lives de lançamento — abertura de impacto, entrega de valor, quebra de objeções e fechamento ao vivo.",
-    category: "Vídeo", provider: "GPT-4o", icon: Radio,
+    category: "Vídeo", provider: "GPT-5.5", icon: Radio,
     accent: "border-purple-500/40 hover:border-purple-500",
     specialties: ["Live", "Abertura", "Objeções", "Fechamento"],
   },
@@ -276,9 +277,24 @@ const AGENTS: AgentDef[] = [
   {
     role: "video_hook", name: "Alex", tagline: "Primeiros 3 Segundos",
     description: "Gera 15+ hooks de vídeo calibrados por plataforma — frame zero, gancho verbal, texto na tela e conceito de filmagem. Pensa como o algoritmo e como o avatar.",
-    category: "Vídeo", provider: "GPT-4o", icon: Camera,
+    category: "Vídeo", provider: "GPT-5.5", icon: Camera,
     accent: "border-purple-500/40 hover:border-purple-500",
     specialties: ["Frame Zero", "Stop Rate", "TikTok", "Reels"],
+    isNew: true,
+  },
+  {
+    role: "video", name: "Rovi", tagline: "Estrategista de Vídeo",
+    description: "Arquiteta a estratégia geral de vídeo do lançamento — formato, plataforma, sequência de publicação, briefing de produção e distribuição multiplataforma.",
+    category: "Vídeo", provider: "Gemini", icon: Activity,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["Estratégia", "Formato", "Distribuição", "Briefing"],
+  },
+  {
+    role: "scene_director", name: "Scena", tagline: "Diretor de Cena",
+    description: "Transforma roteiros em storyboards detalhados — enquadramentos, ângulos, expressões, figurino, cenário e instrução de câmera para cada cena do vídeo de vendas.",
+    category: "Vídeo", provider: "Gemini", icon: Scissors,
+    accent: "border-purple-500/40 hover:border-purple-500",
+    specialties: ["Storyboard", "Enquadramento", "VSL", "Direção"],
     isNew: true,
   },
 
@@ -335,6 +351,30 @@ const AGENTS: AgentDef[] = [
     specialties: ["Velocidade", "Reputação", "Declarações", "Recuperação"],
     isNew: true,
   },
+  {
+    role: "business_intelligence", name: "Warren", tagline: "Inteligência de Negócios",
+    description: "Cruza dados de vendas, comportamento de leads e métricas de engajamento para identificar padrões que impactam a receita — e sugere os próximos movimentos táticos.",
+    category: "Analytics", provider: "Gemini", icon: Network,
+    accent: "border-green-500/40 hover:border-green-500",
+    specialties: ["Business Intelligence", "Padrões", "Dados", "Receita"],
+    isNew: true,
+  },
+  {
+    role: "memory_compression", name: "Memex", tagline: "Síntese de Contexto",
+    description: "Comprime histórico de campanhas, conversas e aprendizados em blocos de memória reutilizáveis — permitindo que os agentes carreguem contexto entre sessões sem perder profundidade.",
+    category: "Analytics", provider: "Gemini", icon: Cpu,
+    accent: "border-green-500/40 hover:border-green-500",
+    specialties: ["Memória", "Contexto", "Compressão", "Cross-sessão"],
+    isNew: true,
+  },
+  {
+    role: "ux_simplification", name: "Simon", tagline: "Simplificador de UX",
+    description: "Audita fluxos de onboarding, páginas de vendas e checkouts — identifica pontos de fricção invisíveis e propõe versões simplificadas que aumentam conversão sem perder persuasão.",
+    category: "Analytics", provider: "Claude", icon: Sliders,
+    accent: "border-green-500/40 hover:border-green-500",
+    specialties: ["UX", "Checkout", "Onboarding", "Fricção"],
+    isNew: true,
+  },
 
   // ── AUTOMAÇÃO & MONETIZAÇÃO ───────────────────────────────────────────────
   {
@@ -364,6 +404,22 @@ const AGENTS: AgentDef[] = [
     category: "Automação", provider: "Claude", icon: Sparkles,
     accent: "border-orange-500/40 hover:border-orange-500",
     specialties: ["Order Bump", "OTO", "Downsell", "LTV"],
+    isNew: true,
+  },
+  {
+    role: "execution_governor", name: "Governor", tagline: "Governança de Execução",
+    description: "Monitora o estado geral da operação de lançamento, detecta agentes em conflito ou resultados inconsistentes e emite alertas de intervenção antes que erros se propaguem pela pipeline.",
+    category: "Automação", provider: "Claude", icon: Shield,
+    accent: "border-orange-500/40 hover:border-orange-500",
+    specialties: ["Governança", "Conflito", "Alertas", "Pipeline"],
+    isNew: true,
+  },
+  {
+    role: "domino", name: "Dom", tagline: "Sistema de Persuasão DOMINO",
+    description: "Aplica a metodologia DOMINO em toda a campanha — assegura coerência filosófica entre os agentes, injeta os 12 gatilhos mentais calibrados e alinha cada peça ao arco de transformação do avatar.",
+    category: "Automação", provider: "Claude", icon: Zap,
+    accent: "border-orange-500/40 hover:border-orange-500",
+    specialties: ["DOMINO", "Gatilhos", "Coerência", "Persuasão"],
     isNew: true,
   },
 
@@ -465,6 +521,7 @@ const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo",
 
 const PROVIDER_COLOR: Record<string, string> = {
   "Claude":  "text-orange-400 border-orange-400/30 bg-orange-400/8",
+  "GPT-5.5": "text-cyan-400 border-cyan-400/30 bg-cyan-400/8",
   "GPT-4o":  "text-cyan-400 border-cyan-400/30 bg-cyan-400/8",
   "Gemini":  "text-green-400 border-green-400/30 bg-green-400/8",
 };

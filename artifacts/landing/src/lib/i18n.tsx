@@ -79,7 +79,7 @@ export const TRANSLATIONS = {
       total: "R$31.000 a R$83.000",
       box_label: "O NexOS substitui tudo isso",
       box_p: "Estratégia. Copy. Segmentação.\nWhatsApp. Email. Carrinho.\n",
-      box_p_accent: "57 agentes. 6 modelos. 24 horas por dia.",
+      box_p_accent: "63 agentes. 6 modelos. 24 horas por dia.",
       box_body_1: "O NexOS não vai custar R$31.000 por mês.",
       box_body_2: "Não vai custar R$83.000 por mês.",
       box_body_3: "Nem de longe.",
