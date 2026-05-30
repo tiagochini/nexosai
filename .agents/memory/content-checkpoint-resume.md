@@ -35,7 +35,22 @@ Each agent block: `if (!skipAgent("piece_type", "agent_name")) try { ... } catch
 `resumeGeneratingCampaigns()` in `orchestration.service.ts` queries `status="generating"` campaigns and calls `enqueueOrExecute({ action:"generate_content" })` for each.
 The guard in `triggerContentPhase` is bypassed because by the time `.then()` fires, all running agents are already marked `failed`.
 
+## BullMQ Root Cause (confirmed in production logs)
+The actual production failure was **not** a server restart — it was a BullMQ stall:
+```
+UnrecoverableError: job stalled more than allowable limit
+```
+With `lockDuration: 30_000` (30s), the lock-renewal heartbeat fires every 15s. If Node.js event-loop is busy processing a slow LLM response (30-90s), the renewal is delayed → BullMQ marks job stalled → with `maxStalledCount: 0` it becomes `UnrecoverableError` → job dies silently, no frontend notification, campaign stuck in "generating" forever.
+
+**Fix:** `lockDuration: 300_000` (5 min) + `stalledInterval: 300_000`. Renewal now fires every 150s — well within the gap between sequential LLM calls. `maxStalledCount: 0` kept to prevent double charges.
+
+## Other fixes applied in same session
+- **Double transition bug**: `orchestration.worker.ts processGenerateContent` was calling `transitionCampaign("awaiting_approval")` AFTER `generateCampaignContent` which already does it internally. This caused a state machine error → `throw err` → `failed` handler reset to `strategy_ready` silently. Fixed by removing the duplicate call from the worker.
+- **`attempts: 3` removed**: changed to `attempts: 1` in `enqueueCampaignOrchestration` — silent retries would double-charge credits.
+- **`failed` handler simplified**: `generate_content` action no longer resets campaign in the `failed` handler (the catch block inside `processGenerateContent` already does it). Only `run_strategy` is handled there now.
+
 ## Gotchas
 - `ne(contentPiecesTable.status, "cancelled")` fails typecheck — "cancelled" is not in the enum. Load all pieces for campaign without status filter.
 - `Set<string>` required for `done` — plain `Set` infers the enum type and rejects `string` param in `skipAgent`.
 - Don't add "generating" to `STRATEGY_PHASE_ENTRY_STATUSES` — only content phase needs resume; strategy agents are fast enough to restart from scratch.
+- `lockDuration` controls lock RENEWAL frequency (heartbeat = lockDuration/2), NOT total job time limit. Jobs can run indefinitely as long as the process is alive and renewing. Setting it too low kills long-running jobs silently via stall.

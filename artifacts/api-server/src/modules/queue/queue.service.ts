@@ -105,11 +105,14 @@ export async function enqueueCampaignOrchestration(
   opts?: { delay?: number; priority?: number },
 ): Promise<void> {
   const queue = getQueue(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION);
+  // attempts: 1 for generate_content — each agent call charges AI credits.
+  // Silent retries would double/triple-charge the user on LLM errors.
+  // All other actions (run_strategy, execute, monitor) also use attempts:1 to
+  // avoid surprise credit charges. User retries explicitly via UI.
   await queue.add(`campaign-${job.campaignId}-${job.action}`, job, {
     delay: opts?.delay,
     priority: opts?.priority,
-    attempts: 3,
-    backoff: { type: "exponential", delay: 2000 },
+    attempts: 1,
   });
 }
 

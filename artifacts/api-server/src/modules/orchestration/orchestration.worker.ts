@@ -128,6 +128,11 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
   try {
     const result = await generateCampaignContent(campaignId, workspaceId, log);
 
+    // NOTE: generateCampaignContent already handles status transition internally
+    // (generating → awaiting_approval or generating → strategy_ready if all failed).
+    // DO NOT call transitionCampaign here — it would cause a double-transition error
+    // that silently resets the campaign back to strategy_ready via the failed handler.
+
     emitCampaignEvent({
       campaignId,
       type: "execution_update",
@@ -145,22 +150,29 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
     });
 
     log.info(
-      { piecesGenerated: result.piecesGenerated, agentsRun: result.agentsRun.length },
+      { piecesGenerated: result.piecesGenerated, agentsRun: result.agentsRun.length, finalStatus: result.status },
       "Content phase completed",
     );
-
-    // Transition to awaiting_approval so user can review content pieces before launch.
-    await transitionCampaign(campaignId, workspaceId, "awaiting_approval", "content generation complete — awaiting approval", log);
-
-    emitCampaignEvent({
-      campaignId,
-      type: "phase_changed",
-      message: `${result.piecesGenerated} peças geradas — aguardando sua aprovação para lançar`,
-      data: { status: "awaiting_approval", piecesGenerated: result.piecesGenerated },
-      timestamp: new Date().toISOString(),
-    });
   } catch (err) {
-    log.error({ err }, "Content phase failed");
+    log.error({ err }, "Content phase failed — notifying frontend and resetting campaign");
+    // Explicitly reset campaign to strategy_ready so user can retry via UI.
+    // This catches true crashes (out-of-memory, uncaught throw, etc.) —
+    // normal agent failures are handled inside generateCampaignContent and
+    // never reach this catch block.
+    try {
+      await db
+        .update(campaignsTable)
+        .set({ status: "strategy_ready", updatedAt: new Date() })
+        .where(
+          and(
+            eq(campaignsTable.id, campaignId),
+            eq(campaignsTable.workspaceId, workspaceId),
+            eq(campaignsTable.status, "generating"),
+          ),
+        );
+    } catch (resetErr) {
+      log.error({ resetErr, campaignId }, "Failed to reset campaign after content generation crash");
+    }
     emitCampaignEvent({
       campaignId,
       type: "agent_failed",
@@ -316,26 +328,31 @@ export function initOrchestrationWorker(): Worker | null {
         connection: redisConnection,
         concurrency: 3,
         limiter: { max: 10, duration: 60_000 },
-        // maxStalledCount: 0 — prevents automatic retry of stalled jobs.
-        // Campaign jobs charge AI credits on every agent call; automatic retry would
-        // silently double-charge. The `failed` event handler below handles the reset
-        // (campaign → recoverable status) so the user can manually retry via UI.
-        // With stalledInterval=30s + lockDuration=30s, orphaned jobs are detected
-        // and fail within ~60s after a server restart — fast enough for the user.
+        // ROOT CAUSE FIX (production stall): lockDuration must be large enough that
+        // the worker's lock-renewal heartbeat (fired every lockDuration/2) never
+        // races with a slow LLM call. Content generation runs up to 16 sequential
+        // LLM calls; each can take 30-90s under load. With lockDuration=30s the
+        // renewal fires every 15s — if Node.js event-loop is busy processing an LLM
+        // response, the renewal is delayed and BullMQ marks the job as stalled.
+        //
+        // With maxStalledCount=0 a single stall becomes UnrecoverableError and the
+        // job dies silently (no frontend notification, campaign stuck in "generating").
+        // This was the exact production failure observed in logs:
+        //   UnrecoverableError: job stalled more than allowable limit
+        //
+        // Fix: lockDuration=300s (5 min) → renewal every 150s → 16 agents × 90s max
+        // = 1440s worst case, which is well within Node.js's ability to renew every
+        // 150s between LLM calls (each call awaits before the next starts).
+        //
+        // stalledInterval raised to match: stall detection fires every 300s.
+        // Orphan dwell time after restart ≈ 600s (acceptable — checkpoint resume
+        // handles the actual re-enqueue and users see the job pick back up).
+        //
+        // maxStalledCount: 0 kept — prevents double credit charges on true stalls.
+        // The failed handler + checkpoint resume cover the recovery path.
         maxStalledCount: 0,
-        // RC-011 FIX: Reduced from 600_000 to 30_000 for fast orphan detection.
-        // Redis is now Pay-As-You-Go (no request budget) so the cost concern that
-        // motivated the 10-min interval no longer applies. 30s means orphaned jobs
-        // (server restart killed the worker mid-run) are detected and recycled quickly
-        // rather than blocking dedup for 10 minutes.
-        stalledInterval: 30_000,
-        // lockDuration: 30_000 (default) — controls lock RENEWAL frequency, NOT
-        // job execution time limit. Jobs can run for hours because the worker
-        // auto-extends the lock every lockDuration/2 = 15s as long as the process
-        // is alive. A smaller lockDuration means faster orphan detection after crash:
-        // orphaned job's lock expires in 30s → stall detected within the next 30s
-        // stalledInterval check → total max orphan dwell time ≈ 60s (was 600s).
-        lockDuration: 30_000,
+        stalledInterval: 300_000,
+        lockDuration: 300_000,
       },
     );
 
@@ -346,45 +363,34 @@ export function initOrchestrationWorker(): Worker | null {
     worker.on("failed", async (job, err) => {
       logger.error({ jobId: job?.id, action: job?.data.action, err }, "Orchestration job failed");
 
-      // RC-011 FIX: Reset campaign status when a job fails permanently so the
-      // user can retry via the UI. Without this, campaigns stay in "generating"
-      // or "analyzing" indefinitely after a runtime failure (boot cleanup only
-      // runs at startup — it won't rescue campaigns that fail mid-session).
+      // generate_content: the catch block inside processGenerateContent already:
+      //   1. Resets campaign to strategy_ready
+      //   2. Emits agent_failed to the frontend
+      // So we do NOT reset again here — that would be a no-op at best, and at
+      // worst could race with a legitimate transition (e.g. awaiting_approval).
       //
-      // The pre-flight PIPELINE_KERNEL check inside each processor already
-      // prevents double-credit-charges: if the campaign was already advanced
-      // (e.g. boot cleanup reset it to strategy_ready), the new job will
-      // skip gracefully without re-running agents.
+      // run_strategy: processRunStrategy re-throws without resetting, so we
+      // handle it here.
       if (!job) return;
       const { campaignId, workspaceId, action } = job.data;
 
-      const resetStatus =
-        action === "generate_content" ? "strategy_ready" :
-        action === "run_strategy" ? "intake" :
-        null;
-
-      if (resetStatus) {
-        // Only reset from the "active processing" state for this action.
-        // Using eq() avoids the enum-type mismatch that inArray() hits with Drizzle.
-        const fromStatus =
-          resetStatus === "strategy_ready" ? "generating" :
-          "analyzing" as const;
+      if (action === "run_strategy") {
         try {
           const result = await db
             .update(campaignsTable)
-            .set({ status: resetStatus as typeof fromStatus, updatedAt: new Date() })
+            .set({ status: "intake", updatedAt: new Date() })
             .where(
               and(
                 eq(campaignsTable.id, campaignId),
                 eq(campaignsTable.workspaceId, workspaceId),
-                eq(campaignsTable.status, fromStatus),
+                eq(campaignsTable.status, "analyzing"),
               ),
             );
           if (result.rowCount && result.rowCount > 0) {
-            logger.warn({ campaignId, action, resetStatus }, "RC-011: Campaign reset after job failure — user can retry");
+            logger.warn({ campaignId, action }, "Campaign reset to intake after strategy job failure — user can retry");
           }
         } catch (resetErr) {
-          logger.error({ resetErr, campaignId, action }, "RC-011: Failed to reset campaign status after job failure");
+          logger.error({ resetErr, campaignId, action }, "Failed to reset campaign status after strategy job failure");
         }
       }
     });
