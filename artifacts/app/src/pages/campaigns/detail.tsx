@@ -1554,6 +1554,13 @@ export default function CampaignDetail() {
     if (liveRef.current) liveRef.current.scrollTop = liveRef.current.scrollHeight;
   }, [liveEvents]);
 
+  // Clear stale events when campaign is no longer active (e.g. reset after deploy/boot cleanup)
+  useEffect(() => {
+    if (!isActive) {
+      setLiveEvents([]);
+    }
+  }, [isActive]);
+
   // Polling fallback: if active but socket hasn't delivered events, show a message after 12s
   useEffect(() => {
     if (!isActive || liveEvents.length > 1) return;
