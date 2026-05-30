@@ -76,6 +76,10 @@ export default function LeadCaptureModal({ open, onClose, title, subtitle }: Pro
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!name.trim()) {
+      setErrorMsg("Informe seu nome para continuar.");
+      return;
+    }
     if (!phone.trim()) {
       setErrorMsg("Informe seu WhatsApp para receber o guia.");
       return;
@@ -88,7 +92,7 @@ export default function LeadCaptureModal({ open, onClose, title, subtitle }: Pro
 
     const payload: Record<string, string> = {
       phone: formatPhone(phone),
-      ...(name.trim() ? { name: name.trim() } : {}),
+      name: name.trim(),
       utmSource: utms.utm_source ?? "landing",
       utmMedium: utms.utm_medium ?? "organico",
       utmCampaign: utms.utm_campaign ?? "guia_gratuito",
@@ -162,10 +166,10 @@ export default function LeadCaptureModal({ open, onClose, title, subtitle }: Pro
           {/* FORM STATE */}
           {(step === "form" || step === "error") && (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Name (optional) */}
+              {/* Name (required) */}
               <div className="space-y-1.5">
                 <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
-                  Nome (opcional)
+                  Nome <span className="text-primary/60">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
@@ -174,6 +178,7 @@ export default function LeadCaptureModal({ open, onClose, title, subtitle }: Pro
                     value={name}
                     onChange={e => setName(e.target.value)}
                     placeholder="Seu nome"
+                    required
                     className="w-full bg-background border border-border/40 rounded-none pl-9 pr-4 h-11 font-mono text-sm text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60 transition-colors"
                   />
                 </div>
