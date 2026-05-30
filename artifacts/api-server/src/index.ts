@@ -18,7 +18,7 @@ if (process.env["NODE_ENV"] !== "production") {
   };
 }
 import { initRealtime } from "./modules/realtime/realtime.service.js";
-import { getQueue, closeAllQueues, QUEUE_NAMES } from "./modules/queue/queue.service.js";
+import { getQueue, closeAllQueues, drainQueueAtBoot, QUEUE_NAMES } from "./modules/queue/queue.service.js";
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
@@ -83,19 +83,29 @@ initSequenceScheduler();
 startFunnelScheduler();
 
 // ── Boot cleanup: recover orphaned campaigns before accepting any requests ────
-// RC-007 FIX: All three cleanup operations are awaited via Promise.all() before
-// httpServer.listen() is called. Previously these ran as fire-and-forget
-// (.then() chains) and the server could begin accepting connections before the
-// DB was in a consistent state, leaving stale "analyzing"/"generating" campaigns
-// visible to the first incoming requests.
+// RC-007 FIX: All cleanup operations are awaited via Promise.all() before
+// httpServer.listen() is called, ensuring a consistent state on boot.
+//
+// RC-011 FINAL FIX: BullMQ queue drain added as step 0.
+// After a server restart, any BullMQ jobs that were "active" or "waiting" are
+// orphaned — their worker process was killed. Previously only the DB was cleaned
+// (campaigns reset to recoverable statuses) but the Redis queue still held stale
+// "active" jobs. On the next user action, the dedup check would see them as
+// "already running" and silently skip the new execution — leaving the user stuck
+// with a campaign that appeared to be working but was doing nothing.
 //
 // Cleanup order:
+//   0. Drain orphaned BullMQ jobs (active/waiting/delayed/failed → removed)
 //   1. Mark all "running" agents as failed (orphaned from crashed process)
 //   2. Reset campaigns stuck in "generating" → "strategy_ready" (content interrupted)
 //   3. Reset campaigns stuck in "analyzing"  → "intake"          (strategy interrupted)
 //
 // All are idempotent — safe to run on every boot even if no cleanup is needed.
+// Queue drain runs first (non-blocking, non-fatal if Redis is unavailable).
 Promise.all([
+  drainQueueAtBoot(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION),
+  drainQueueAtBoot(QUEUE_NAMES.AGENT_EXECUTION),
+  drainQueueAtBoot(QUEUE_NAMES.CONTENT_GENERATION),
   db.update(campaignAgentsTable)
     .set({
       status: "failed",

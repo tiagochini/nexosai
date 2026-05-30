@@ -133,3 +133,33 @@ export async function closeAllQueues(): Promise<void> {
   );
   queues.clear();
 }
+
+// ── Boot: drain orphaned jobs from a queue ────────────────────────────────────
+// Called once at startup BEFORE the worker initializes, ensuring the BullMQ
+// queue is in sync with the DB cleanup (which resets campaign statuses).
+// Any "active", "waiting", or "delayed" jobs at boot time are orphaned — their
+// worker process was killed by the server restart. Removing them prevents the
+// dedup check from blocking new user-triggered executions.
+export async function drainQueueAtBoot(name: QueueName): Promise<void> {
+  if (!connection.url) return; // Redis not configured — nothing to drain
+  try {
+    const queue = getQueue(name);
+    // clean(grace=0, limit=1000, type) removes all jobs of that type instantly
+    const [active, waiting, delayed, failed] = await Promise.all([
+      queue.clean(0, 1000, "active"),
+      queue.clean(0, 1000, "wait"),
+      queue.clean(0, 1000, "delayed"),
+      queue.clean(0, 1000, "failed"),
+    ]);
+    const total = active.length + waiting.length + delayed.length + failed.length;
+    if (total > 0) {
+      logger.warn(
+        { queue: name, active: active.length, waiting: waiting.length, delayed: delayed.length, failed: failed.length },
+        "Boot cleanup: drained orphaned BullMQ jobs — queue is now clean",
+      );
+    }
+  } catch (err) {
+    // Non-fatal — if Redis is unavailable, jobs will be handled by direct-execution fallback
+    logger.warn({ err, queue: name }, "Boot cleanup: could not drain queue (Redis may be unavailable)");
+  }
+}

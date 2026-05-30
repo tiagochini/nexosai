@@ -1,30 +1,46 @@
 ---
 name: BullMQ Reliability Fixes
-description: Three silent failure modes in BullMQ + ioredis that prevent job processing; fix pattern in enqueueOrExecute().
+description: Silent failure modes in BullMQ + orphaned job cleanup at boot; essential for clean restart behavior after deploys.
 ---
 
-## Three silent failure modes
+## Root cause of post-deploy "stuck campaign" UX
+
+After a server restart (deploy), BullMQ jobs that were "active" at the time remain in Redis
+with no live worker to extend their lock. The DB boot cleanup resets campaign statuses, but
+without draining Redis the dedup check sees them as "already running" and silently skips new
+executions — leaving the user stuck with a campaign doing nothing, no error, no feedback.
+
+**Fix (RC-011 FINAL):** Call `drainQueueAtBoot(queueName)` for all queues in `index.ts`
+INSIDE the boot `Promise.all()`, BEFORE `httpServer.listen()`. This removes all active/waiting/
+delayed/failed jobs at startup, ensuring Redis and the DB are in sync on every boot.
+
+**How to apply:** `index.ts` already calls it for `CAMPAIGN_ORCHESTRATION`, `AGENT_EXECUTION`,
+`CONTENT_GENERATION`. Any new queue that feeds user-facing pipelines must be added here too.
+
+## Three additional silent failure modes (enqueueOrExecute)
 
 ### 1. lazyConnect swallows Redis-unavailable errors
-`lazyConnect: true` makes `queue.add()` succeed (buffers the command) even when Redis is unreachable. The catch block that triggers `executeDirectly()` never fires.
-
-**Fix:** Call `isRedisAvailable()` (in queue.service.ts) BEFORE attempting `queue.add()`. It does a real ping with a 2s timeout on a separate ioredis probe client, caches the result for 10s.
+`lazyConnect: true` makes `queue.add()` succeed even when Redis is unreachable. The catch
+block that triggers `executeDirectly()` never fires.
+**Fix:** Call `isRedisAvailable()` BEFORE `queue.add()` — real ping with 2s timeout, cached 10s.
 
 ### 2. Dedup jobId returns stale failed job
-When `queue.add()` is called with a `jobId` that already exists in `failed` state, BullMQ silently returns the stale job reference instead of creating a new one. The worker never reprocesses a failed job. The caller sees "Orchestration job enqueued" in logs — everything looks fine, nothing runs.
-
-**Fix:** Before `queue.add()`, call `queue.getJob(dedupJobId)`. If state is `"failed"`, remove it and execute directly (don't re-queue — a failed job indicates the worker is unhealthy for that jobId).
+`queue.add()` with an existing `failed` jobId silently returns the stale reference. Worker
+never reprocesses. Logs say "enqueued" — nothing runs.
+**Fix:** `queue.getJob(dedupJobId)` before add; if state=`failed`, remove + execute directly.
 
 ### 3. Worker blocking connection (BRPOP) silently broken
-The BullMQ Worker's blocking Redis connection can be non-functional even when standard connections work (ping succeeds, queue.add() works). Jobs sit in `"waiting"` state indefinitely. Symptom: "Orchestration worker initialized" in logs but NO "Processing orchestration job" ever appears after jobs are added.
+Jobs sit in `"waiting"` indefinitely. Symptom: "worker initialized" in logs, no "Processing job" ever.
+**Fix:** If job remains `waiting` >30s on next execute call → treat as zombie, remove + direct exec.
 
-**Fix:** After removing a stale failed job and adding a fresh one — if the new job remains in `"waiting"` state for >30s on the next execute call, treat it as a zombie: remove and execute directly via `executeDirectly()`.
+## BullMQ worker settings (correct values)
 
-## How to apply
-All three fixes live in `enqueueOrExecute()` in `orchestration.service.ts`. The order is:
-1. `isRedisAvailable()` → if false, go direct
-2. `queue.getJob(dedupJobId)` → if `failed`, go direct; if `waiting` with age >30s, go direct; if `active`, skip (dedup); if `completed`, remove then re-queue
-3. `queue.add(...)` → normal BullMQ path
+- `lockDuration: 30_000` — lock renewal frequency (NOT execution time limit). Worker renews every 15s.
+  Jobs run for hours safely. Smaller = faster orphan detection after crash (~60s total).
+- `stalledInterval: 30_000` — how often BullMQ checks for expired locks. 30s means orphaned
+  jobs detected within 60s of crash (lockDuration + stalledInterval).
+- `maxStalledCount: 0` — no automatic retry. AI jobs charge credits; silent retry = double charge.
+  `failed` handler in worker resets campaign status so user can manually retry from UI.
 
-## Why
-BullMQ is well-suited for production Redis environments. In Replit dev (and some restricted Redis providers), the blocking BLPOP/BRPOP connection used by BullMQ Workers is silently broken while standard Redis commands work fine. Direct execution via `setImmediate(() => executeDirectly(...))` is the reliable fallback — it uses no Redis at all.
+**Why:** lockDuration does NOT cap execution time. It caps how long a dead worker's lock persists.
+As long as the process is alive, the worker extends automatically — agents can run indefinitely.
