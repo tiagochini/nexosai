@@ -322,6 +322,11 @@ export function initOrchestrationWorker(): Worker | null {
         // re-run automatically because they charge AI credits on every agent call.
         // Boot cleanup + manual UI retry is the correct recovery path.
         maxStalledCount: 0,
+        // REDIS-LIMIT FIX: default stalledInterval is 30s, firing evalsha every
+        // 30s per worker and burning ~2880 Redis requests/day on background checks
+        // alone. Increase to 10 minutes — stalled detection is only a safety net
+        // (direct-execution fallback already handles Redis-down scenarios).
+        stalledInterval: 600_000,
       },
     );
 
@@ -334,14 +339,17 @@ export function initOrchestrationWorker(): Worker | null {
     });
 
     worker.on("error", (err) => {
-      // Redis connection errors during dev — expected when Redis is not running
+      // Suppress known non-fatal Redis errors — these are handled by the
+      // enqueueOrExecute fallback and do not require error logging.
       const code = (err as NodeJS.ErrnoException).code;
       const msg = err.message ?? "";
       if (
         code === "ECONNREFUSED" ||
         msg.includes("ECONNREFUSED") ||
         msg.includes("Connection is closed") ||
-        msg.includes("maxRetriesPerRequest")
+        msg.includes("maxRetriesPerRequest") ||
+        msg.includes("max requests limit exceeded") ||
+        msg.includes("ETIMEDOUT")
       ) return;
       logger.error({ err }, "Orchestration worker error");
     });

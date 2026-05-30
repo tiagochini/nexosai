@@ -33,14 +33,26 @@ export async function isRedisAvailable(): Promise<boolean> {
       enableReadyCheck: true,
       lazyConnect: false,
     });
-    await Promise.race([
+    const reply = await Promise.race([
       probe.ping(),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 2000)),
     ]);
     await probe.quit().catch(() => undefined);
+    // Treat unexpected PING responses (e.g. Upstash rate-limit message) as unavailable
+    if (typeof reply === "string" && reply !== "PONG") {
+      logger.warn({ reply }, "Redis PING returned non-PONG — treating as unavailable");
+      _redisAvailableCache = { ok: false, at: now };
+      return false;
+    }
     _redisAvailableCache = { ok: true, at: now };
     return true;
-  } catch {
+  } catch (err) {
+    // Detect Upstash / Redis rate-limit errors — treat as unavailable so jobs
+    // fall back to direct in-process execution instead of queuing.
+    const msg = (err instanceof Error ? err.message : String(err)) ?? "";
+    if (msg.includes("max requests limit") || msg.includes("WRONGPASS") || msg.includes("NOAUTH")) {
+      logger.warn({ msg }, "Redis unavailable due to auth/rate-limit error");
+    }
     _redisAvailableCache = { ok: false, at: now };
     return false;
   }
