@@ -124,6 +124,7 @@ export async function generateVsl(
 
     const fallbackStrategy: StrategyOutput = {
       executiveSummary: "",
+      bigDomino: "",
       marketDiagnosis: {
         marketMaturity: "growing",
         competitiveLandscape: "",
@@ -157,6 +158,7 @@ export async function generateVsl(
         primaryKPI: "",
         conversionRateTarget: 0,
         revenueTarget: 0,
+        launchWindow: "",
         criticalAssumptions: [],
       },
       risks: { level: "low", mainRisks: [], mitigations: [] },

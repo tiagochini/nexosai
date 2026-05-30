@@ -7,6 +7,7 @@ import { COGNITIVE_IDENTITY_STRATEGY } from "./cognitive-identity-system.js";
 
 export interface StrategyOutput {
   executiveSummary: string;
+  bigDomino: string;
   marketDiagnosis: {
     marketMaturity: "emerging" | "growing" | "mature" | "saturated";
     competitiveLandscape: string;
@@ -41,6 +42,7 @@ export interface StrategyOutput {
     primaryKPI: string;
     conversionRateTarget: number;
     revenueTarget: number;
+    launchWindow: string;
     criticalAssumptions: string[];
   };
   risks: {
@@ -223,6 +225,7 @@ Defina o Pré-Pré-Lançamento desta campanha: que conteúdo planta a semente se
 \`\`\`json
 {
   "executiveSummary": "string — diagnóstico executivo em 3-5 frases diretas",
+  "bigDomino": "string — a UMA crença que, se implantada no avatar, colapsa todas as objeções de uma vez. Específica para este produto e avatar.",
   "marketDiagnosis": {
     "marketMaturity": "emerging|growing|mature|saturated",
     "competitiveLandscape": "string",
@@ -257,6 +260,7 @@ Defina o Pré-Pré-Lançamento desta campanha: que conteúdo planta a semente se
     "primaryKPI": "string",
     "conversionRateTarget": 0.00,
     "revenueTarget": 0,
+    "launchWindow": "string — ex: '7 dias · Abertura 14/06' ou 'Perpétuo'",
     "criticalAssumptions": ["string"]
   },
   "risks": {
@@ -400,7 +404,8 @@ ${intakeJson}
 
 **PASSO 1 — BIG DOMINO:**
 Qual é a UMA crença que, se implantada no avatar, colapsa todas as objeções de uma vez?
-→ Essa crença deve aparecer no executiveSummary, no coreNarrative e no triggerMap.dominantTriggerJustification.
+→ Escreva essa crença no campo "bigDomino" (campo de topo nível, obrigatório).
+→ Ela deve também reaparecer no executiveSummary, no coreNarrative e no triggerMap.dominantTriggerJustification.
 
 **PASSO 2 — MECANISMO ÚNICO:**
 O que explica mecanicamente por que este produto produz o resultado que promete — de forma diferente de qualquer alternativa existente?
@@ -441,6 +446,7 @@ Retorne APENAS o JSON da estratégia, nada mais.`,
 
   return parseAgentJSON<StrategyOutput>(result.content, {
     executiveSummary: result.content,
+    bigDomino: "",
     marketDiagnosis: {
       marketMaturity: "growing",
       competitiveLandscape: "",
@@ -474,6 +480,7 @@ Retorne APENAS o JSON da estratégia, nada mais.`,
       primaryKPI: "Receita total",
       conversionRateTarget: 0.01,
       revenueTarget: 0,
+      launchWindow: "",
       criticalAssumptions: [],
     },
     risks: {
