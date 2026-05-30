@@ -50,6 +50,7 @@ import nexosSelfLaunchRouter from "../modules/nexos-self-launch/nexos-self-launc
 import referralsRouter from "../modules/referrals/referrals.routes.js";
 import clarificationRouter from "../modules/agents/clarification.routes.js";
 import integrationWizardRouter from "../modules/integration-wizard/integration-wizard.routes.js";
+import fingerprintRouter from "../modules/fingerprint/fingerprint.routes.js";
 
 const router: IRouter = Router();
 
@@ -104,5 +105,6 @@ router.use("/nexos-launch", nexosSelfLaunchRouter);
 router.use("/referrals", referralsRouter);
 router.use("/campaigns", clarificationRouter);
 router.use("/integration-wizard", integrationWizardRouter);
+router.use("/fingerprints", fingerprintRouter);
 
 export default router;

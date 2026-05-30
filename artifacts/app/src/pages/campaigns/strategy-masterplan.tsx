@@ -11,6 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { generateMasterplanPDF, type PdfUserIdentity } from "@/lib/masterplan-pdf";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 
 // ─── Types & utils ────────────────────────────────────────────────────────────
 
@@ -986,10 +987,10 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                 size="sm"
                 disabled={downloading}
                 className="flex-1 rounded-none font-mono text-[9px] uppercase tracking-widest h-8 gap-1.5 bg-primary hover:bg-primary/90"
-                onClick={() => {
+                onClick={async () => {
                   setDownloading(true);
                   try {
-                    generateMasterplanPDF(
+                    const { fingerprint } = generateMasterplanPDF(
                       {
                         campaignId: campaignId ?? "unknown",
                         campaignTitle: campaignTitle ?? str(strategyD["productName"] as unknown) ?? "Masterplan Estratégico",
@@ -1007,6 +1008,20 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
                       },
                       userIdentity
                     );
+                    // Register fingerprint in backend for forensic lookup
+                    void customFetch("/api/fingerprints", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        fingerprint,
+                        campaignId: campaignId ?? "unknown",
+                        campaignTitle: campaignTitle ?? "",
+                        track: track ?? "",
+                        userName: userIdentity.name,
+                        userEmail: userIdentity.email,
+                        workspaceName: userIdentity.workspaceName,
+                      }),
+                    }).catch(() => { /* non-blocking */ });
                   } finally {
                     setDownloading(false);
                     setShowConsent(false);

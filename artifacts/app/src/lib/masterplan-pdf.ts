@@ -51,6 +51,57 @@ function generateFingerprint(userId: string, campaignId: string): string {
   return `NXS-${hex.slice(0, 4)}-${hex.slice(4, 8)}`;
 }
 
+// ─── Steganography ────────────────────────────────────────────────────────────
+// Encode 32 fingerprint bits into inter-word spacing deviations (±0.14mm).
+// Imperceptible to the human eye; recoverable by PDF forensic tools.
+
+interface StegaCursor { i: number }
+
+function fingerprintToBits(fp: string): number[] {
+  const hex = fp.replace(/NXS-|-/g, ""); // 8 hex chars → 32 bits
+  const bits: number[] = [];
+  for (const c of hex) {
+    const n = parseInt(c, 16);
+    for (let b = 3; b >= 0; b--) bits.push((n >> b) & 1);
+  }
+  return bits;
+}
+
+function stegaText(
+  doc: Doc, text: string, x: number, y: number, maxW: number,
+  bits: number[], cursor: StegaCursor, fontSize = 8.5
+): number {
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(fontSize);
+  setColor(doc, 40, 40, 40);
+
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return y + 4;
+
+  const lineH = fontSize * 0.38;
+  const baseSpace = doc.getTextWidth(" ");
+  const DELTA = 0.14; // mm deviation — imperceptible but forensically recoverable
+
+  let curX = x;
+  let curY = y;
+
+  for (let wi = 0; wi < words.length; wi++) {
+    const word = words[wi]!;
+    const ww = doc.getTextWidth(word);
+    if (curX > x && curX + ww > x + maxW) {
+      curX = x;
+      curY += lineH;
+    }
+    doc.text(word, curX, curY);
+    if (wi < words.length - 1) {
+      const bit = bits[cursor.i % bits.length];
+      cursor.i++;
+      curX += ww + baseSpace + (bit ? DELTA : -DELTA);
+    }
+  }
+  return curY + lineH + 1.5;
+}
+
 function formatDateBR(d: Date): string {
   return d.toLocaleString("pt-BR", {
     day: "2-digit", month: "2-digit", year: "numeric",
@@ -218,9 +269,11 @@ function renderSection(doc: Doc, n: string, title: string, y: number): number {
 export function generateMasterplanPDF(
   data: MasterplanPdfData,
   user: PdfUserIdentity
-): void {
+): { fingerprint: string } {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const fingerprint = generateFingerprint(user.userId, data.campaignId);
+  const bits = fingerprintToBits(fingerprint);
+  const stegaCursor: StegaCursor = { i: 0 };
   const now = formatDateBR(new Date());
 
   // ── PAGE 1: COVER ──────────────────────────────────────────────────────────
@@ -452,7 +505,8 @@ export function generateMasterplanPDF(
     doc.setFontSize(7.5);
     setColor(doc, 100, 70, 160);
     doc.text("1.1 — Análise de Viabilidade e PMF", ML, y); y += 4;
-    y = bodyText(doc, data.executiveSummary, y);
+    // Steganographic encoding: fingerprint bits embedded in inter-word spacing
+    y = stegaText(doc, data.executiveSummary, ML, y, CW, bits, stegaCursor);
     y += 6;
   }
 
@@ -911,4 +965,5 @@ export function generateMasterplanPDF(
 
   const safeName = data.campaignTitle.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 30);
   doc.save(`nexos-masterplan-${safeName}-${fingerprint}.pdf`);
+  return { fingerprint };
 }

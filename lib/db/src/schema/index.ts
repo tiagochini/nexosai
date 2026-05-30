@@ -42,3 +42,4 @@ export * from "./sales-conversations";
 export * from "./campaign-groups";
 export * from "./video-projects";
 export * from "./agent-clarifications";
+export * from "./fingerprints";

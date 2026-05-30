@@ -362,7 +362,10 @@ const PAYMENT_STATUS: Record<string, { label: string; cls: string }> = {
 export default function AdminPage() {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes">("pagamentos");
+  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes" | "rastreamento">("pagamentos");
+  const [fpSearch, setFpSearch] = useState("");
+  const [fpResult, setFpResult] = useState<null | { found: boolean; record?: { fingerprint: string; userName: string; userEmail: string; userId: string; workspaceName: string; workspaceId: string; campaignId: string; campaignTitle: string | null; track: string | null; generatedAt: string; ipAddress: string | null; userAgent: string | null } }>(null);
+  const [fpLoading, setFpLoading] = useState(false);
   const [payFilter, setPayFilter] = useState<"all" | "pending" | "paid">("pending");
   const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
 
@@ -537,13 +540,14 @@ export default function AdminPage() {
   const ov  = overview;
 
   const TABS = [
-    { id: "pagamentos" as const,  label: "Pagamentos" },
-    { id: "overview" as const,    label: "Visão Geral" },
-    { id: "financials" as const,  label: "Financeiro" },
-    { id: "upsell" as const,      label: "Oportunidades" },
-    { id: "users" as const,       label: "Usuários" },
-    { id: "convites" as const,    label: "🎟️ Convites" },
+    { id: "pagamentos" as const,   label: "Pagamentos" },
+    { id: "overview" as const,     label: "Visão Geral" },
+    { id: "financials" as const,   label: "Financeiro" },
+    { id: "upsell" as const,       label: "Oportunidades" },
+    { id: "users" as const,        label: "Usuários" },
+    { id: "convites" as const,     label: "🎟️ Convites" },
     { id: "solicitacoes" as const, label: "📋 Solicitações" },
+    { id: "rastreamento" as const, label: "🔍 Rastreamento" },
   ];
 
   return (
@@ -1438,6 +1442,153 @@ export default function AdminPage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ─── TAB: RASTREAMENTO ─────────────────────────────────────────────── */}
+      {tab === "rastreamento" && (
+        <div className="space-y-5">
+          <div>
+            <h2 className="font-mono text-lg uppercase tracking-widest font-bold">🔍 Rastreamento de PDFs</h2>
+            <p className="font-mono text-xs text-muted-foreground/60 mt-1">
+              Cole o fingerprint encontrado em um PDF vazado para identificar o titular da cópia
+            </p>
+          </div>
+
+          <div className="border border-primary/20 bg-primary/[0.03] p-5 space-y-3">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-primary/60">
+              Fingerprint do Documento
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={fpSearch}
+                onChange={e => setFpSearch(e.target.value.toUpperCase().trim())}
+                placeholder="NXS-XXXX-XXXX"
+                className="flex-1 bg-background border border-border/50 px-3 py-2 font-mono text-sm tracking-widest focus:outline-none focus:border-primary/50"
+                onKeyDown={e => {
+                  if (e.key === "Enter" && fpSearch) {
+                    setFpLoading(true); setFpResult(null);
+                    customFetch<{ record: NonNullable<typeof fpResult>["record"] }>(`/api/fingerprints/${encodeURIComponent(fpSearch)}`)
+                      .then(data => setFpResult({ found: true, record: data.record }))
+                      .catch(() => setFpResult({ found: false }))
+                      .finally(() => setFpLoading(false));
+                  }
+                }}
+              />
+              <Button size="sm" disabled={fpLoading || !fpSearch}
+                className="rounded-none font-mono text-[11px] uppercase tracking-widest h-10 px-4 gap-1.5 bg-primary hover:bg-primary/90"
+                onClick={() => {
+                  setFpLoading(true); setFpResult(null);
+                  customFetch<{ record: NonNullable<typeof fpResult>["record"] }>(`/api/fingerprints/${encodeURIComponent(fpSearch)}`)
+                    .then(data => setFpResult({ found: true, record: data.record }))
+                    .catch(() => setFpResult({ found: false }))
+                    .finally(() => setFpLoading(false));
+                }}>
+                {fpLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <><Target className="h-3.5 w-3.5" />Rastrear</>}
+              </Button>
+            </div>
+            <p className="font-mono text-[10px] text-muted-foreground/40">
+              O fingerprint está no rodapé e capa de cada PDF. Formato: NXS-XXXX-XXXX
+            </p>
+          </div>
+
+          {fpResult && (
+            <div className={`border p-5 space-y-4 ${fpResult.found ? "border-success/30 bg-success/5" : "border-destructive/30 bg-destructive/5"}`}>
+              {!fpResult.found ? (
+                <div className="flex items-center gap-3">
+                  <X className="h-5 w-5 text-destructive" />
+                  <div>
+                    <div className="font-mono text-sm font-bold text-destructive">Fingerprint não encontrado</div>
+                    <div className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">
+                      Código não registrado. PDF pode ter sido gerado antes do sistema de rastreamento.
+                    </div>
+                  </div>
+                </div>
+              ) : fpResult.record ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <span className="font-mono text-sm font-bold text-success uppercase tracking-widest">Titular Identificado</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {([
+                      ["Fingerprint",   fpResult.record.fingerprint],
+                      ["Nome",          fpResult.record.userName],
+                      ["Email",         fpResult.record.userEmail],
+                      ["ID de Conta",   fpResult.record.userId],
+                      ["Workspace",     fpResult.record.workspaceName],
+                      ["Campanha",      fpResult.record.campaignTitle ?? fpResult.record.campaignId],
+                      ["Track",         fpResult.record.track ?? "—"],
+                      ["Gerado em",     new Date(fpResult.record.generatedAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })],
+                      ["IP do Download", fpResult.record.ipAddress ?? "—"],
+                    ] as [string, string][]).map(([label, value]) => (
+                      <div key={label} className="border border-border/30 bg-background/50 px-4 py-3">
+                        <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-1">{label}</div>
+                        <div className="font-mono text-sm text-foreground font-bold break-all">{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {fpResult.record.userAgent && (
+                    <div className="border border-border/20 bg-muted/10 px-4 py-2">
+                      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1">User Agent</div>
+                      <div className="font-mono text-[11px] text-muted-foreground/60 break-all">{fpResult.record.userAgent}</div>
+                    </div>
+                  )}
+                  <Button size="sm" variant="outline"
+                    className="rounded-none font-mono text-[11px] uppercase tracking-widest h-7 px-3 gap-1 btn-weapon-outline"
+                    onClick={() => { if (fpResult.record) setProfileUserId(fpResult.record.userId); }}>
+                    <Users className="h-3 w-3" />Ver Perfil Completo
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          )}
+
+          <FingerprintDownloadsList />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FingerprintDownloadsList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["/api/fingerprints"],
+    queryFn: () => customFetch<{ records: { id: string; fingerprint: string; userName: string; userEmail: string; campaignTitle: string | null; generatedAt: string; ipAddress: string | null }[] }>("/api/fingerprints"),
+    staleTime: 30_000,
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 pb-1 border-b border-border/30">
+        Downloads Registrados — {data?.records?.length ?? 0} total
+      </div>
+      {isLoading ? (
+        <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-none" />)}</div>
+      ) : !data?.records?.length ? (
+        <div className="border border-border/20 bg-card/10 p-8 text-center font-mono text-xs text-muted-foreground/40">
+          Nenhum download registrado ainda
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {data.records.map(r => (
+            <div key={r.id} className="border border-border/25 bg-card/20 px-4 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-bold">{r.userName}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground/60">{r.userEmail}</span>
+                </div>
+                <div className="font-mono text-[10px] text-muted-foreground/40">
+                  {r.campaignTitle ?? "—"} · {new Date(r.generatedAt).toLocaleString("pt-BR")}
+                  {r.ipAddress ? ` · ${r.ipAddress}` : ""}
+                </div>
+              </div>
+              <div className="shrink-0 font-mono text-xs font-bold text-primary/70 tracking-widest border border-primary/20 bg-primary/5 px-2 py-0.5">
+                {r.fingerprint}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
