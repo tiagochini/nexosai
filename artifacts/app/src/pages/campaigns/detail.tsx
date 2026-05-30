@@ -243,29 +243,59 @@ function PlanBlock({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
+function camelToLabel(key: string): string {
+  return key
+    .replace(/_/g, " ")
+    .replace(/([A-Z])/g, " $1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isEmptyValue(v: unknown): boolean {
+  if (v === null || v === undefined || v === "") return true;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === "object") return Object.keys(v as object).length === 0;
+  return false;
+}
+
 function PlanText({ value }: { value: unknown }) {
   if (!value) return null;
-  if (typeof value === "string") return <p className="font-mono text-xs text-foreground/80 leading-relaxed">{value}</p>;
-  if (Array.isArray(value)) return (
-    <ul className="space-y-1">
-      {(value as unknown[]).map((item, i) => (
-        <li key={i} className="font-mono text-xs text-foreground/80 flex items-start gap-2 leading-relaxed">
-          <span className="text-primary/50 shrink-0 mt-0.5">·</span>
-          <span>{typeof item === "string" ? item : typeof item === "object" && item !== null ? Object.values(item as Record<string, unknown>).filter(v => typeof v === "string").join(" — ") : String(item)}</span>
-        </li>
-      ))}
-    </ul>
-  );
+  if (typeof value === "string") {
+    if (value.trim() === "") return null;
+    return <p className="font-mono text-xs text-foreground/80 leading-relaxed">{value}</p>;
+  }
+  if (Array.isArray(value)) {
+    const items = (value as unknown[]).filter(item => !isEmptyValue(item));
+    if (items.length === 0) return null;
+    return (
+      <ul className="space-y-1">
+        {items.map((item, i) => (
+          <li key={i} className="font-mono text-xs text-foreground/80 flex items-start gap-2 leading-relaxed">
+            <span className="text-primary/50 shrink-0 mt-0.5">·</span>
+            <span>{typeof item === "string" ? item : typeof item === "object" && item !== null ? Object.values(item as Record<string, unknown>).filter(v => typeof v === "string").join(" — ") : String(item)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
   if (typeof value === "object" && value !== null) {
     const obj = value as Record<string, unknown>;
-    const entries = Object.entries(obj).filter(([, v]) => v !== null && v !== undefined && v !== "");
+    const entries = Object.entries(obj).filter(([, v]) => !isEmptyValue(v));
     if (entries.length === 0) return null;
     return (
       <div className="space-y-1.5">
         {entries.map(([k, v]) => (
           <div key={k}>
-            <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider">{k.replace(/_/g, " ")}: </span>
-            <span className="font-mono text-xs text-foreground/80">{typeof v === "string" ? v : Array.isArray(v) ? (v as unknown[]).join(", ") : JSON.stringify(v)}</span>
+            <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-wider">{camelToLabel(k)}: </span>
+            <span className="font-mono text-xs text-foreground/80">
+              {typeof v === "string"
+                ? v
+                : Array.isArray(v)
+                  ? (v as unknown[]).filter(x => !isEmptyValue(x)).join(", ")
+                  : typeof v === "number" || typeof v === "boolean"
+                    ? String(v)
+                    : JSON.stringify(v)}
+            </span>
           </div>
         ))}
       </div>
@@ -1895,14 +1925,19 @@ export default function CampaignDetail() {
 
         {/* Revisão de Estratégia — obrigatório revisar antes de gerar conteúdo */}
         {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (() => {
+          // parseStrategyInsights extracts the full strategy when the LLM response was
+          // stored inside executiveSummary as a JSON string (parseAgentJSON fallback path)
           const ins = parseStrategyInsights(strategyD);
           const bigDomino = (ins["bigDomino"] as string | undefined) ?? (strategyD["bigDomino"] as string | undefined) ?? "";
-          const positioning = strategyD["offerPositioning"];
-          const audience = strategyD["audienceSegmentation"];
-          const triggerMap = (strategyD["triggerMap"] as Record<string, string> | undefined) ?? {};
+          // Prefer ins (parsed from executiveSummary JSON) over strategyD direct fields
+          // because parseAgentJSON fallback puts the whole JSON into executiveSummary
+          const positioning = (ins["offerPositioning"] as Record<string,unknown> | undefined) ?? strategyD["offerPositioning"];
+          const audience = (ins["audienceSegmentation"] as Record<string,unknown> | undefined) ?? strategyD["audienceSegmentation"];
+          const triggerMap = (ins["triggerMap"] as Record<string, string> | undefined) ?? (strategyD["triggerMap"] as Record<string, string> | undefined) ?? {};
           const triggers = [...new Set(Object.values(triggerMap))].slice(0, 4);
-          const metrics = strategyD["successMetrics"];
-          const architecture = strategyD["campaignArchitecture"];
+          const metrics = (ins["successMetrics"] as Record<string,unknown> | undefined) ?? strategyD["successMetrics"];
+          const architecture = (ins["campaignArchitecture"] as Record<string,unknown> | undefined) ?? strategyD["campaignArchitecture"];
+          const executiveSummary = typeof ins["executiveSummary"] === "string" ? ins["executiveSummary"] : typeof strategyD["executiveSummary"] === "string" && !strategyD["executiveSummary"]?.toString().startsWith("{") ? strategyD["executiveSummary"] as string : "";
 
           return (
             <div className="border border-cyan-400/25 bg-cyan-400/5 overflow-hidden">
@@ -1915,6 +1950,13 @@ export default function CampaignDetail() {
               </div>
 
               <div className="p-4 space-y-5">
+                {executiveSummary && (
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Resumo Executivo</div>
+                    <PlanText value={executiveSummary} />
+                  </div>
+                )}
+
                 {bigDomino && (
                   <div>
                     <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Domino Principal</div>
