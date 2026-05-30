@@ -190,10 +190,10 @@ function PreflightDialog({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-lg border border-border bg-background shadow-2xl">
+    <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full sm:max-w-lg border border-border bg-background shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90dvh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/60">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/60 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-2.5 h-2.5 rounded-full bg-destructive animate-pulse" />
             <span className="font-mono text-sm uppercase tracking-widest font-bold">Configurar Gravação</span>
@@ -203,7 +203,7 @@ function PreflightDialog({
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
           {/* Session name */}
           <div>
             <label className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 block mb-2">
@@ -310,24 +310,24 @@ function PreflightDialog({
             O browser pedirá para selecionar o que compartilhar (aba ou tela inteira).
             O vídeo é enviado ao servidor automaticamente e baixado para seu device ao parar.
           </p>
+        </div>
 
-          {/* CTA */}
-          <div className="flex gap-2">
-            <Button
-              onClick={onClose}
-              variant="outline"
-              className="flex-1 h-12 rounded-none font-mono text-sm uppercase tracking-widest border-border/50 text-muted-foreground hover:text-foreground"
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={onStart}
-              className="flex-[2] h-12 rounded-none font-mono text-sm uppercase tracking-widest font-bold btn-weapon-primary"
-            >
-              <Circle className="h-4 w-4 mr-2 fill-current animate-pulse" />
-              Iniciar →
-            </Button>
-          </div>
+        {/* CTA — sticky at dialog bottom, outside scroll area */}
+        <div className="flex gap-2 p-5 pt-4 border-t border-border/30 bg-background shrink-0">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1 h-12 rounded-none font-mono text-sm uppercase tracking-widest border-border/50 text-muted-foreground hover:text-foreground"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={onStart}
+            className="flex-[2] h-12 rounded-none font-mono text-sm uppercase tracking-widest font-bold btn-weapon-primary"
+          >
+            <Circle className="h-4 w-4 mr-2 fill-current animate-pulse" />
+            Iniciar →
+          </Button>
         </div>
       </div>
     </div>
@@ -1008,9 +1008,9 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
       {/* ── Panel (details/events + stopped actions) ────────────────────── */}
       {open && (
-        <div className="fixed bottom-20 right-6 z-50 w-96 max-w-[calc(100vw-3rem)] border border-border bg-background shadow-2xl">
+        <div className="fixed bottom-16 right-0 left-0 sm:left-auto sm:right-6 sm:w-96 sm:max-w-[calc(100vw-3rem)] z-50 border border-border bg-background shadow-2xl flex flex-col max-h-[70dvh] sm:max-h-[80dvh]">
           {/* Panel header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/60">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/60 shrink-0">
             <div className="flex items-center gap-2">
               <Radio className={`h-4 w-4 ${hasActive ? "text-destructive" : "text-primary"}`} />
               <span className="font-mono text-xs uppercase tracking-widest font-bold">Gravação de Lançamento</span>
@@ -1028,7 +1028,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
             </div>
           </div>
 
-          <div className="p-4 space-y-4">
+          <div className="p-4 space-y-4 overflow-y-auto flex-1">
             {syncLoading && (
               <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
