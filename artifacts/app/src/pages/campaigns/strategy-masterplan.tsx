@@ -1,8 +1,24 @@
 import {
   Target, Users, Zap, BarChart3, Brain, ShieldAlert,
-  TrendingUp, MessageSquare, Lightbulb, AlertTriangle,
-  CheckCircle2, Star, ArrowRight, Flame,
+  TrendingUp, MessageSquare, Lightbulb,
+  Star, Flame,
 } from "lucide-react";
+
+export type StrategyObj = Record<string, unknown>;
+
+export function parseStrategyInsights(strategyD: StrategyObj): StrategyObj {
+  const raw = strategyD["executiveSummary"];
+  if (typeof raw !== "string") return {};
+  const stripped = raw.replace(/^```json\s*/m, "").replace(/^```\s*/m, "").replace(/```\s*$/m, "").trim();
+  try {
+    const parsed = JSON.parse(stripped);
+    return typeof parsed === "object" && parsed !== null ? parsed as StrategyObj : {};
+  } catch {
+    const match = stripped.match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    try { return JSON.parse(match[0]) as StrategyObj; } catch { return {}; }
+  }
+}
 
 type Obj = Record<string, unknown>;
 

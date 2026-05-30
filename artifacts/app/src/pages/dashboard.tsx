@@ -9,7 +9,9 @@ import {
   getListSequencesQueryKey,
 } from "@workspace/api-client-react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { StrategyMasterplan, parseStrategyInsights } from "./campaigns/strategy-masterplan";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useMode } from "@/lib/mode";
 import { IdentityMemoryCard } from "@/components/IdentityMemoryCard";
@@ -629,6 +631,42 @@ export default function Dashboard() {
     !["completed", "draft"].includes(c.status)
   ) ?? campaigns[0];
 
+  // Strategy-ready campaign — fetch full data with strategyData for masterplan
+  const readyCampaign = campaigns.find(c => c.status === "strategy_ready");
+  const { data: readyCampaignFull } = useQuery({
+    queryKey: [`/api/campaigns/${readyCampaign?.id}`],
+    enabled: !!readyCampaign?.id,
+    queryFn: async () => {
+      const res = await customFetch<Response>(`/api/campaigns/${readyCampaign!.id}`);
+      if (!res.ok) return null;
+      const d = await res.json() as { campaign: Record<string, unknown> };
+      return d.campaign;
+    },
+  });
+
+  const queryClient = useQueryClient();
+  const approveMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "content" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string };
+        throw new Error(err.message ?? "Erro ao aprovar estratégia");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Estratégia aprovada! Gerando conteúdo...");
+      void queryClient.invalidateQueries({ queryKey: [getListCampaignsQueryKey()] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const [masterplanExpanded, setMasterplanExpanded] = useState(true);
+
   const { data: agentsData } = useQuery({
     queryKey: [`/api/campaigns/${activeCampaign?.id}/agents`],
     enabled: !!activeCampaign?.id,
@@ -1097,6 +1135,66 @@ export default function Dashboard() {
 
       {/* ── Execution Flowchart ── */}
       {campaigns.length > 0 && <ExecutionFlowchart campaigns={campaigns} />}
+
+      {/* ── Strategy Masterplan Panel — aparece quando campanha está strategy_ready ── */}
+      {readyCampaign && (() => {
+        const strategyD = (readyCampaignFull?.["strategyData"] ?? {}) as Record<string, unknown>;
+        const ins = parseStrategyInsights(strategyD);
+        const hasData = Object.keys(strategyD).length > 0;
+        return (
+          <div className="border border-cyan-400/30 bg-cyan-400/[0.03] overflow-hidden">
+            {/* Header clicável para expandir/recolher */}
+            <button
+              onClick={() => setMasterplanExpanded(e => !e)}
+              className="w-full px-4 py-3 border-b border-cyan-400/20 flex items-center gap-2 hover:bg-cyan-400/5 transition-colors"
+            >
+              <div className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 animate-pulse" style={{ boxShadow: "0 0 8px hsl(180 100% 60%)" }} />
+              <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold flex-1 text-left">
+                ⚡ Masterplan Pronto — Aprovação Necessária
+              </span>
+              <span className="font-mono text-[10px] text-cyan-400/60 uppercase tracking-widest">{readyCampaign.title}</span>
+              <span className="font-mono text-[10px] text-cyan-400/40 ml-2">{masterplanExpanded ? "▲" : "▼"}</span>
+            </button>
+
+            {masterplanExpanded && (
+              <>
+                {!readyCampaignFull ? (
+                  <div className="p-6 text-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-cyan-400/50 mx-auto mb-2" />
+                    <p className="font-mono text-[11px] text-muted-foreground/40 uppercase tracking-widest">Carregando masterplan...</p>
+                  </div>
+                ) : !hasData ? (
+                  <div className="p-4 text-center">
+                    <p className="font-mono text-xs text-muted-foreground/40">Dados do plano não disponíveis.</p>
+                  </div>
+                ) : (
+                  <div className="p-4">
+                    <StrategyMasterplan strategyD={strategyD} ins={ins} />
+                  </div>
+                )}
+
+                {/* Botões de ação */}
+                <div className="px-4 pb-4 pt-2 border-t border-cyan-400/15 flex flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={() => approveMutation.mutate(readyCampaign.id)}
+                    disabled={approveMutation.isPending || !hasData}
+                    className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-11 text-sm"
+                  >
+                    {approveMutation.isPending
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Gerando conteúdo...</>
+                      : <><CheckCircle2 className="h-4 w-4" /> Aprovar e Gerar Conteúdo</>}
+                  </Button>
+                  <Link href={`/campaigns/${readyCampaign.id}`} className="shrink-0">
+                    <Button variant="outline" className="w-full sm:w-auto rounded-none font-mono uppercase tracking-widest text-[11px] h-11 gap-1.5 btn-weapon-outline">
+                      Abrir Campanha <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Identity Memory — Modo Arquiteto only ── */}
       {isArquiteto && <IdentityMemoryCard />}

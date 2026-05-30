@@ -22,7 +22,7 @@ import {
   RefreshCw, Rocket, Brain, Video, CheckCheck,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
-import { StrategyMasterplan } from "./strategy-masterplan";
+import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import {
   AnalyzingDisplay,
   StrategyReadyBanner,
@@ -459,21 +459,6 @@ interface PlatformBrief {
   caption?: string;
   cta?: string;
   actions: string[];
-}
-
-// ── Extract nested strategy JSON from executiveSummary (AI wraps it in code blocks) ──
-function parseStrategyInsights(strategyD: Record<string, unknown>): Record<string, unknown> {
-  const raw = strategyD["executiveSummary"];
-  if (typeof raw !== "string") return {};
-  const stripped = raw.replace(/^```json\s*/m, "").replace(/^```\s*/m, "").replace(/```\s*$/m, "").trim();
-  try {
-    const parsed = JSON.parse(stripped);
-    return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : {};
-  } catch {
-    const match = stripped.match(/\{[\s\S]*\}/);
-    if (!match) return {};
-    try { return JSON.parse(match[0]) as Record<string, unknown>; } catch { return {}; }
-  }
 }
 
 function buildPlatformBriefs(
