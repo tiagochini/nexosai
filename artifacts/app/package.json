@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "jspdf": "^4.2.1",
     "socket.io-client": "^4.8.3"
   }
 }
