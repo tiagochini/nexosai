@@ -210,9 +210,26 @@ async function enqueueOrExecute(
         log.warn({ dedupJobId, state, action: job.action }, "Stale completed dedup job — removing before re-enqueue");
         await existingJob.remove().catch(() => undefined);
       } else if (state === "active") {
-        // Job is actively being processed — honour the dedup, do not double-execute
-        log.info({ dedupJobId, state, action: job.action }, "Dedup: job already active — skipping");
-        return { queued: true, jobId: dedupJobId };
+        // RC-011 FIX: Add age check for "active" jobs. After a server restart, BullMQ
+        // jobs that were in-flight remain "active" in Redis with no worker to extend
+        // the lock. Previously we honoured the dedup blindly — this blocked new
+        // executions for up to stalledInterval (was 10 min) with no recovery path.
+        //
+        // A job that has been "active" longer than the lock duration (5 min) without
+        // completing is definitively orphaned: the worker heartbeat extends every
+        // lockDuration/2 = 150s, so any live job would have renewed by now.
+        // Force-remove and fall through to re-queue.
+        const ageMs = Date.now() - (existingJob.timestamp ?? 0);
+        const ORPHAN_THRESHOLD_MS = 5 * 60_000; // 5 min = lockDuration
+        if (ageMs > ORPHAN_THRESHOLD_MS) {
+          log.warn({ dedupJobId, state, ageMs, action: job.action }, "RC-011: Orphaned active job detected (server restart) — removing and re-queueing");
+          await existingJob.remove().catch(() => undefined);
+          // Fall through to add new job below
+        } else {
+          // Job is actively being processed — honour the dedup, do not double-execute
+          log.info({ dedupJobId, state, ageMs, action: job.action }, "Dedup: job already active — skipping");
+          return { queued: true, jobId: dedupJobId };
+        }
       } else if (state === "waiting" || state === "delayed") {
         // Job is waiting/delayed. If it has been waiting more than 30s the worker is
         // not consuming (zombie BullMQ blocking connection) — execute directly instead.

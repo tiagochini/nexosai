@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
 import {
   transitionCampaign,
@@ -316,17 +316,22 @@ export function initOrchestrationWorker(): Worker | null {
         connection: redisConnection,
         concurrency: 3,
         limiter: { max: 10, duration: 60_000 },
-        // RC-008/010 FIX: maxStalledCount: 0 prevents BullMQ from automatically
-        // re-queuing stalled jobs (process crashed mid-execution) back into the
-        // active queue for another worker attempt. Campaign jobs are not safe to
-        // re-run automatically because they charge AI credits on every agent call.
-        // Boot cleanup + manual UI retry is the correct recovery path.
-        maxStalledCount: 0,
-        // REDIS-LIMIT FIX: default stalledInterval is 30s, firing evalsha every
-        // 30s per worker and burning ~2880 Redis requests/day on background checks
-        // alone. Increase to 10 minutes — stalled detection is only a safety net
-        // (direct-execution fallback already handles Redis-down scenarios).
-        stalledInterval: 600_000,
+        // RC-011 FIX: maxStalledCount: 0 was causing UnrecoverableError on first
+        // stall with no retries. Changed to 1 — the pre-flight status check inside
+        // each processor (PIPELINE_KERNEL) prevents double credit charges by skipping
+        // if the campaign is no longer in the expected entry state.
+        maxStalledCount: 1,
+        // RC-011 FIX: Reduced from 600_000 to 30_000 for fast orphan detection.
+        // Redis is now Pay-As-You-Go (no request budget) so the cost concern that
+        // motivated the 10-min interval no longer applies. 30s means orphaned jobs
+        // (server restart killed the worker mid-run) are detected and recycled quickly
+        // rather than blocking dedup for 10 minutes.
+        stalledInterval: 30_000,
+        // RC-011 FIX: lockDuration 300_000 (5 min) — AI content generation takes
+        // up to 3 min. The worker auto-extends every lockDuration/2 (150s) so a
+        // legitimately running job will never be falsely stalled. Only truly orphaned
+        // jobs (no heartbeat after server restart) will stall within 30s.
+        lockDuration: 300_000,
       },
     );
 
@@ -334,8 +339,50 @@ export function initOrchestrationWorker(): Worker | null {
       logger.info({ jobId: job.id, action: job.data.action }, "Orchestration job completed");
     });
 
-    worker.on("failed", (job, err) => {
+    worker.on("failed", async (job, err) => {
       logger.error({ jobId: job?.id, action: job?.data.action, err }, "Orchestration job failed");
+
+      // RC-011 FIX: Reset campaign status when a job fails permanently so the
+      // user can retry via the UI. Without this, campaigns stay in "generating"
+      // or "analyzing" indefinitely after a runtime failure (boot cleanup only
+      // runs at startup — it won't rescue campaigns that fail mid-session).
+      //
+      // The pre-flight PIPELINE_KERNEL check inside each processor already
+      // prevents double-credit-charges: if the campaign was already advanced
+      // (e.g. boot cleanup reset it to strategy_ready), the new job will
+      // skip gracefully without re-running agents.
+      if (!job) return;
+      const { campaignId, workspaceId, action } = job.data;
+
+      const resetStatus =
+        action === "generate_content" ? "strategy_ready" :
+        action === "run_strategy" ? "intake" :
+        null;
+
+      if (resetStatus) {
+        // Only reset from the "active processing" state for this action.
+        // Using eq() avoids the enum-type mismatch that inArray() hits with Drizzle.
+        const fromStatus =
+          resetStatus === "strategy_ready" ? "generating" :
+          "analyzing" as const;
+        try {
+          const result = await db
+            .update(campaignsTable)
+            .set({ status: resetStatus as typeof fromStatus, updatedAt: new Date() })
+            .where(
+              and(
+                eq(campaignsTable.id, campaignId),
+                eq(campaignsTable.workspaceId, workspaceId),
+                eq(campaignsTable.status, fromStatus),
+              ),
+            );
+          if (result.rowCount && result.rowCount > 0) {
+            logger.warn({ campaignId, action, resetStatus }, "RC-011: Campaign reset after job failure — user can retry");
+          }
+        } catch (resetErr) {
+          logger.error({ resetErr, campaignId, action }, "RC-011: Failed to reset campaign status after job failure");
+        }
+      }
     });
 
     worker.on("error", (err) => {
