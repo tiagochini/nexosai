@@ -42,6 +42,7 @@ import { DecisionTracePanel } from "@/components/DecisionTracePanel";
 import { AgentClarificationPanel } from "@/components/AgentClarificationPanel";
 import { CampaignMindMap } from "@/components/CampaignMindMap";
 import { GroupsTab } from "@/components/GroupsTab";
+import { AgentLiveFeed } from "@/components/AgentLiveFeed";
 import { useMode } from "@/lib/mode";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1885,29 +1886,13 @@ export default function CampaignDetail() {
           </div>
         </div>
 
-        {/* Agentes recentes — versão simplificada */}
-        {(agentsData?.agents ?? []).length > 0 && (
-          <div className="border border-border/30 bg-card/20">
-            <div className="px-4 py-3 border-b border-border/20 flex items-center gap-2">
-              <Bot className="h-3.5 w-3.5 text-primary" />
-              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                Agentes Trabalhando Agora
-              </span>
-            </div>
-            <div className="divide-y divide-border/20">
-              {(agentsData?.agents ?? []).slice(0, 5).map((a) => (
-                <div key={a.id} className="px-4 py-2.5 flex items-center gap-3">
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.status === "completed" ? "bg-success" : a.status === "running" ? "bg-primary animate-pulse" : "bg-border/50"}`} />
-                  <span className="font-mono text-[11px] text-foreground/70 flex-1 truncate">
-                    {AGENT_ROLE_LABEL[(a as unknown as Record<string,string>)["agentType"] ?? a.agentRole] ?? (a as unknown as Record<string,string>)["agentType"] ?? a.agentRole}
-                  </span>
-                  <span className={`font-mono text-[10px] uppercase tracking-widest shrink-0 ${a.status === "completed" ? "text-success/60" : a.status === "running" ? "text-primary" : "text-muted-foreground/30"}`}>
-                    {a.status === "completed" ? "Concluído" : a.status === "running" ? "Ativo" : "Aguardando"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Agentes — live feed com ícones e pensamentos expansíveis */}
+        {(isActive || liveEvents.length > 0 || (agentsData?.agents ?? []).length > 0) && (
+          <AgentLiveFeed
+            events={liveEvents}
+            dbAgents={agentsData?.agents ?? []}
+            compact
+          />
         )}
 
         {/* Ver visão completa */}
@@ -2648,75 +2633,22 @@ export default function CampaignDetail() {
           {/* ─ Analyzing: cinematic agent activation ─ */}
           {campaign.status === "analyzing" && <AnalyzingDisplay />}
 
-          {/* ─ Generating: live content generation progress ─ */}
-          {campaign.status === "generating" && liveEvents.length === 0 && <GeneratingDisplay />}
+          {/* ─ Generating: live agent feed ─ */}
+          {campaign.status === "generating" && liveEvents.length === 0 && (agentsData?.agents ?? []).length === 0 && <GeneratingDisplay />}
+
+          {/* ─ Live agent feed — shown whenever agents are active or events streaming ─ */}
+          {(isActive || liveEvents.length > 0 || (agentsData?.agents ?? []).length > 0) &&
+           !["analyzing", "executing", "live"].includes(campaign.status) &&
+           !(campaign.status === "generating" && liveEvents.length === 0 && (agentsData?.agents ?? []).length === 0) && (
+            <AgentLiveFeed
+              events={liveEvents}
+              dbAgents={agentsData?.agents ?? []}
+            />
+          )}
 
           {/* ─ Executing / Live: mission ticker ─ */}
           {(campaign.status === "executing" || campaign.status === "live") && (
             <ExecutingLiveDisplay events={liveEvents} />
-          )}
-
-          {/* ─ Live feed (Socket.io) — for other active statuses or when events exist ─ */}
-          {(isActive || liveEvents.length > 0) &&
-           !["analyzing", "executing", "live"].includes(campaign.status) &&
-           !(campaign.status === "generating" && liveEvents.length === 0) && (
-            <div className="border border-primary/30 bg-primary/5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-pulse" />
-              <div className="px-4 py-2.5 border-b border-primary/20 flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" style={{ boxShadow: "0 0 6px hsl(var(--primary))" }} />
-                <span className="font-mono text-xs uppercase tracking-widest text-primary font-bold">Live Production Display</span>
-                <span className="font-mono text-[11px] text-muted-foreground/50 ml-auto">Socket.io · Tempo Real</span>
-              </div>
-              <div ref={liveRef} className="h-48 overflow-y-auto p-4 space-y-1.5 font-mono text-[11px]">
-                {liveEvents.length === 0 ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-muted-foreground/50 text-xs">
-                      <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                      <span>Agentes sendo inicializados... processando em background</span>
-                    </div>
-                    {[55, 72, 45].map((w, i) => (
-                      <div key={i} className="flex items-center gap-2 opacity-30">
-                        <span className="text-primary/40 shrink-0 w-3">·</span>
-                        <div className="h-2 bg-primary/15 animate-pulse rounded-sm" style={{ width: `${w}%` }} />
-                      </div>
-                    ))}
-                    <p className="text-[10px] font-mono text-muted-foreground/30 mt-2 pt-2 border-t border-border/20">
-                      O processamento acontece em background. O status atualiza automaticamente quando concluído.
-                    </p>
-                  </div>
-                ) : (
-                  liveEvents.map((ev, i) => {
-                    const color =
-                      ev.type === "agent_started"      ? "text-primary" :
-                      ev.type === "agent_thinking"     ? "text-cyan-400/80" :
-                      ev.type === "agent_completed"    ? "text-success" :
-                      ev.type === "agent_failed"       ? "text-destructive" :
-                      ev.type === "checkpoint_created" ? "text-yellow-400" :
-                      "text-muted-foreground/60";
-                    const prefix =
-                      ev.type === "agent_started"      ? "▶" :
-                      ev.type === "agent_thinking"     ? "·" :
-                      ev.type === "agent_completed"    ? "✓" :
-                      ev.type === "agent_failed"       ? "✗" :
-                      ev.type === "checkpoint_created" ? "!" : "·";
-                    return (
-                      <div key={i} className={`flex items-start gap-2 ${color}`}>
-                        <span className="shrink-0 w-3">{prefix}</span>
-                        <span className="text-muted-foreground/40 shrink-0 text-[11px] mt-0.5">
-                          {new Date(ev.timestamp).toLocaleTimeString("pt-BR")}
-                        </span>
-                        {ev.agentType && (
-                          <span className="shrink-0 uppercase tracking-wider text-[11px] font-bold opacity-80">
-                            [{AGENT_ROLE_LABEL[ev.agentType] ?? ev.agentType}]
-                          </span>
-                        )}
-                        <span className="leading-relaxed opacity-90">{ev.message}</span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
           )}
 
           {/* ─ Agent Clarification Panel — shown whenever agents need user input ─ */}
