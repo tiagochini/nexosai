@@ -12,7 +12,7 @@ import {
   Users, Loader2, Send, ArrowRight, Eye,
   BarChart3, Music2, ChevronRight, TrendingUp,
   Zap, Target, Activity, PlayCircle, Link2, Shield,
-  RefreshCw, Rocket,
+  RefreshCw, Rocket, AlertTriangle,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -580,7 +580,7 @@ interface ApiContentPiece {
   platform?: string;
   launchPhase?: string;
   mentalTrigger?: string;
-  content: string;
+  content: unknown;
   status: string;
   createdAt: string;
 }
@@ -604,7 +604,12 @@ const TYPE_TO_PLATFORM: Record<string, Platform> = {
   media_brief: "ads",
   compliance_report: "landing",
   targeting_plan: "ads",
+  targeting_config: "ads",
   audience_profile: "email",
+  content_calendar: "instagram",
+  vsl_script: "tiktok",
+  webinar_script: "facebook",
+  media_buying_plan: "ads",
 };
 
 const TYPE_TO_PIECE_TYPE: Record<string, PieceType> = {
@@ -626,7 +631,12 @@ const TYPE_TO_PIECE_TYPE: Record<string, PieceType> = {
   media_brief: "ad",
   compliance_report: "copy",
   targeting_plan: "ad",
+  targeting_config: "ad",
   audience_profile: "email",
+  content_calendar: "post",
+  vsl_script: "native_video",
+  webinar_script: "post",
+  media_buying_plan: "ad",
 };
 
 const PHASE_TO_DAY: Record<string, number> = {
@@ -650,7 +660,13 @@ const AGGREGATED_TYPE_LABELS: Record<string, string> = {
   media_brief: "Brief de Mídia",
   compliance_report: "Compliance",
   targeting_plan: "Plano de Tráfego",
+  targeting_config: "Audiências e Tráfego",
   audience_profile: "Perfil de Audiência",
+  content_calendar: "Calendário Social",
+  ad_copy: "Copy de Anúncios",
+  vsl_script: "Roteiro VSL",
+  webinar_script: "Roteiro Webinar",
+  media_buying_plan: "Plano de Media Buying",
 };
 
 function extractBodyText(content: unknown, type?: string): string {
@@ -1068,6 +1084,199 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
         title: "⚖ Relatório de Compliance",
         body: extractBodyText(piece.content as unknown, rawType),
       }));
+
+    // ── content_calendar (social media posts) ────────────────────────────────
+    } else if (rawType === "content_calendar") {
+      const calendar = c["calendar"] as Array<Record<string, unknown>> | undefined;
+      if (calendar?.length) {
+        calendar.forEach((post, i) => {
+          const platforms = (post["platforms"] as string[] | undefined) ?? ["instagram"];
+          const firstPlatform = platforms[0] ?? "instagram";
+          const mappedPlatform: Platform = (TYPE_TO_PLATFORM[firstPlatform] ?? "instagram") as Platform;
+          result.push(child(`post:${i}`, {
+            platform: mappedPlatform,
+            type: (post["postType"] as PieceType) ?? "post",
+            dayIndex: typeof post["day"] === "number" ? (post["day"] as number) : i,
+            title: `📱 Dia ${typeof post["day"] === "number" ? (post["day"] as number) + 1 : i + 1} — ${post["phaseName"] as string ?? post["phase"] as string ?? platforms.join("/")}`,
+            body: [
+              post["caption"] ? (post["caption"] as string) : post["copyText"] ? (post["copyText"] as string) : "",
+              post["hashtags"] && Array.isArray(post["hashtags"]) ? `\n${(post["hashtags"] as string[]).join(" ")}` : "",
+              post["visualDirection"] ? `\nVisual: ${post["visualDirection"] as string}` : "",
+              post["tiktokHook"] ? `\nHook TikTok: ${post["tiktokHook"] as string}` : "",
+            ].filter(Boolean).join(""),
+            callToAction: post["engagementTactic"] as string | undefined,
+            visualDirection: post["visualDirection"] as string | undefined,
+            tiktokHook: post["tiktokHook"] as string | undefined,
+          }));
+        });
+      } else {
+        result.push(child("fallback", {
+          title: "📅 Calendário de Social Media",
+          body: extractBodyText(piece.content as unknown, rawType),
+        }));
+      }
+
+    // ── ad_copy (meta/google/tiktok ads per segment) ─────────────────────────
+    } else if (rawType === "ad_copy") {
+      const segments = c["segments"] as Array<Record<string, unknown>> | undefined;
+      let adIdx = 0;
+      if (segments?.length) {
+        segments.forEach((seg) => {
+          const metaAds = (seg["meta"] as Array<Record<string, unknown>> | undefined) ?? [];
+          const tiktokAds = (seg["tiktok"] as Array<Record<string, unknown>> | undefined) ?? [];
+          const googleAds = (seg["google"] as Array<Record<string, unknown>> | undefined) ?? [];
+          const allAds: Array<{ ad: Record<string, unknown>; pl: Platform }> = [
+            ...metaAds.map(a => ({ ad: a, pl: "ads" as Platform })),
+            ...tiktokAds.map(a => ({ ad: a, pl: "tiktok" as Platform })),
+            ...googleAds.map(a => ({ ad: a, pl: "ads" as Platform })),
+          ];
+          allAds.forEach(({ ad, pl }) => {
+            const headline = (ad["headline"] as string | undefined) ?? (
+              Array.isArray(ad["headlines"]) ? (ad["headlines"] as string[])[0] : undefined
+            );
+            result.push(child(`ad:${adIdx}`, {
+              platform: pl, type: "ad", dayIndex: 0,
+              title: `🎯 Anúncio — ${seg["segmentName"] as string ?? `Segmento ${adIdx + 1}`}${headline ? `: ${headline.slice(0, 40)}` : ""}`,
+              body: [
+                ad["primaryText"] ? (ad["primaryText"] as string) : ad["script"] ? (ad["script"] as string).slice(0, 400) : "",
+                headline ? `\nHeadline: ${headline}` : "",
+                ad["description"] ? `\nDescrição: ${ad["description"] as string}` : "",
+                ad["cta"] ? `\nCTA: ${ad["cta"] as string}` : "",
+                ad["hook"] ? `\nHook: ${ad["hook"] as string}` : "",
+              ].filter(Boolean).join(""),
+              callToAction: ad["cta"] as string | undefined,
+              tiktokHook: ad["hook"] as string | undefined,
+              visualDirection: ad["visualDirection"] as string | undefined,
+            }));
+            adIdx++;
+          });
+        });
+      }
+      if (adIdx === 0) {
+        result.push(child("fallback", {
+          title: "🎯 Copy de Anúncios",
+          body: extractBodyText(piece.content as unknown, rawType),
+        }));
+      }
+
+    // ── vsl_script ───────────────────────────────────────────────────────────
+    } else if (rawType === "vsl_script") {
+      const hook = c["hook"] as Record<string, unknown> | undefined;
+      if (hook?.["openingLine"] || hook?.["bigPromise"]) {
+        result.push(child("hook", {
+          platform: "tiktok", type: "native_video", dayIndex: 5,
+          title: `🎬 VSL — Abertura: ${(c["title"] as string | undefined) ?? "Roteiro VSL"}`,
+          body: [
+            hook["openingLine"] ? `Linha de Abertura:\n${hook["openingLine"] as string}` : "",
+            hook["bigPromise"] ? `\nGrande Promessa:\n${hook["bigPromise"] as string}` : "",
+            hook["problemStatement"] ? `\nProblema:\n${hook["problemStatement"] as string}` : "",
+          ].filter(Boolean).join(""),
+        }));
+      }
+      const sections = c["sections"] as Array<Record<string, unknown>> | undefined;
+      sections?.forEach((section, i) => {
+        result.push(child(`vsl_section:${i}`, {
+          platform: "tiktok", type: "native_video", dayIndex: 5,
+          title: `🎬 VSL — ${section["name"] as string ?? `Seção ${i + 1}`}${section["duration"] ? ` (${section["duration"] as string})` : ""}`,
+          body: section["script"] ? (section["script"] as string).slice(0, 600) : "",
+          visualDirection: section["voiceoverNotes"] as string | undefined,
+        }));
+      });
+      if (!hook?.["openingLine"] && !sections?.length) {
+        result.push(child("fallback", {
+          title: `🎬 ${(c["title"] as string | undefined) ?? "Roteiro VSL"}`,
+          body: extractBodyText(piece.content as unknown, rawType),
+        }));
+      }
+
+    // ── webinar_script ───────────────────────────────────────────────────────
+    } else if (rawType === "webinar_script") {
+      const opening = c["opening"] as Record<string, unknown> | undefined;
+      if (opening?.["welcomeScript"]) {
+        result.push(child("opening", {
+          platform: "facebook", type: "post", dayIndex: 5,
+          title: `📺 Webinar — Abertura: ${(c["title"] as string | undefined) ?? ""}`,
+          body: (opening["welcomeScript"] as string).slice(0, 500),
+        }));
+      }
+      const sections = c["sections"] as Array<Record<string, unknown>> | undefined;
+      sections?.forEach((section, i) => {
+        result.push(child(`webinar_section:${i}`, {
+          platform: "facebook", type: "post", dayIndex: 5,
+          title: `📺 Webinar — ${section["name"] as string ?? `Bloco ${i + 1}`}${section["duration"] ? ` (${section["duration"] as string})` : ""}`,
+          body: section["script"] ? (section["script"] as string).slice(0, 600) : "",
+        }));
+      });
+      if (!opening?.["welcomeScript"] && !sections?.length) {
+        result.push(child("fallback", {
+          title: `📺 ${(c["title"] as string | undefined) ?? "Roteiro Webinar"}`,
+          body: extractBodyText(piece.content as unknown, rawType),
+        }));
+      }
+
+    // ── targeting_config / targeting_plan ────────────────────────────────────
+    } else if (rawType === "targeting_config" || rawType === "targeting_plan") {
+      const metaAudiences = (c["metaAudiences"] as Array<Record<string, unknown>> | undefined) ?? [];
+      const googleAudiences = (c["googleAudiences"] as Array<Record<string, unknown>> | undefined) ?? [];
+      const tiktokAudiences = (c["tiktokAudiences"] as Array<Record<string, unknown>> | undefined) ?? [];
+      const allAudiences = [...metaAudiences, ...googleAudiences, ...tiktokAudiences];
+      let audienceIdx = 0;
+      allAudiences.forEach((audience) => {
+        result.push(child(`audience:${audienceIdx}`, {
+          platform: "ads", type: "ad", dayIndex: 0,
+          title: `🎯 Audiência: ${audience["name"] as string ?? `Audiência ${audienceIdx + 1}`}`,
+          body: [
+            audience["interests"] ? `Interesses: ${JSON.stringify(audience["interests"])}` : "",
+            audience["behaviors"] ? `Comportamentos: ${JSON.stringify(audience["behaviors"])}` : "",
+            audience["keywords"] ? `Keywords: ${JSON.stringify(audience["keywords"])}` : "",
+            audience["estimatedSize"] ? `Tamanho estimado: ${audience["estimatedSize"] as string}` : "",
+            audience["rationale"] ? `Justificativa: ${audience["rationale"] as string}` : "",
+          ].filter(Boolean).join("\n"),
+        }));
+        audienceIdx++;
+      });
+      if (audienceIdx === 0) {
+        result.push(child("fallback", {
+          title: "🎯 Audiências e Configuração de Tráfego",
+          body: extractBodyText(piece.content as unknown, rawType),
+        }));
+      }
+
+    // ── media_buying_plan ────────────────────────────────────────────────────
+    } else if (rawType === "media_buying_plan") {
+      const budgetByPlatform = c["budgetByPlatform"] as Array<Record<string, unknown>> | undefined;
+      let planIdx = 0;
+      if (budgetByPlatform?.length) {
+        budgetByPlatform.forEach((platform) => {
+          result.push(child(`budget:${planIdx}`, {
+            platform: "ads", type: "ad", dayIndex: 0,
+            title: `💰 Media Buying — ${platform["platform"] as string ?? `Plataforma ${planIdx + 1}`}`,
+            body: [
+              platform["allocation"] ? `Budget: R$${platform["allocation"] as number}` : "",
+              platform["percentage"] ? `Alocação: ${platform["percentage"] as number}%` : "",
+              platform["rationale"] ? `Justificativa: ${platform["rationale"] as string}` : "",
+            ].filter(Boolean).join("\n"),
+          }));
+          planIdx++;
+        });
+      }
+      const scalingRules = c["scalingRules"] as Array<Record<string, unknown>> | undefined;
+      if (scalingRules?.length && planIdx === 0) {
+        result.push(child("scaling", {
+          platform: "ads", type: "ad", dayIndex: 0,
+          title: `💰 Regras de Escala e Kill Criteria`,
+          body: scalingRules.map((r, i) =>
+            `Regra ${i + 1}: ${r["trigger"] as string ?? ""} → ${r["action"] as string ?? ""}`
+          ).join("\n"),
+        }));
+        planIdx++;
+      }
+      if (planIdx === 0) {
+        result.push(child("fallback", {
+          title: "💰 Plano de Media Buying",
+          body: extractBodyText(piece.content as unknown, rawType),
+        }));
+      }
 
     // ── extraPieces — from generate-extra endpoint ────────────────────────────
     } else if (Array.isArray(c["extraPieces"]) && (c["extraPieces"] as unknown[]).length > 0) {
@@ -1640,18 +1849,34 @@ export default function ContentApproval() {
     enabled: !!campaignId,
   });
 
-  const { data: apiContentData, isLoading: isContentLoading } = useQuery({
+  const [contentFetchError, setContentFetchError] = useState<string | null>(null);
+
+  const { data: apiContentData, isLoading: isContentLoading, refetch: refetchContent } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}/content`],
     queryFn: async () => {
       try {
-        return await customFetch<{ pieces: ApiContentPiece[] }>(`/api/campaigns/${campaignId}/content`);
-      } catch {
+        setContentFetchError(null);
+        const result = await customFetch<{ pieces: ApiContentPiece[]; total?: number }>(`/api/campaigns/${campaignId}/content`);
+        return result;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Erro ao carregar conteúdo";
+        console.error("[content] fetch failed:", msg, err);
+        setContentFetchError(msg);
         return null;
       }
     },
     enabled: !!campaignId,
     staleTime: 0,
     gcTime: 0,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const campaignStatus = campaignData?.campaign?.status;
+      if (
+        campaignStatus === "awaiting_approval" &&
+        (!data?.pieces?.length)
+      ) return 4000;
+      return false;
+    },
   });
 
   // Transition campaign from awaiting_approval → approved when user approves all content
@@ -1875,6 +2100,7 @@ export default function ContentApproval() {
   }
 
   if (pieces.length === 0) {
+    const isAwaitingApproval = campaign?.status === "awaiting_approval" || campaign?.status === "generating";
     return (
       <div className="max-w-5xl mx-auto space-y-5">
         <div className="border-b border-border/50 pb-5">
@@ -1892,20 +2118,59 @@ export default function ContentApproval() {
             {campaign?.title ?? "Campanha"}
           </p>
         </div>
-        <div className="py-16 text-center border border-dashed border-border/30">
-          <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
-            Conteúdo ainda não gerado
-          </p>
-          <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
-            Execute a fase de geração de conteúdo na campanha para que os especialistas criem as peças de copy e visual.
-          </p>
-          <Link href={`/campaigns/${campaignId}`}>
-            <Button className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs">
-              <ChevronLeft className="h-3.5 w-3.5" />Voltar à Campanha
+
+        {contentFetchError ? (
+          <div className="py-16 text-center border border-dashed border-destructive/30">
+            <AlertTriangle className="h-8 w-8 text-destructive/50 mx-auto mb-3" />
+            <p className="font-mono text-xs text-destructive uppercase tracking-widest mb-2">
+              Erro ao carregar conteúdo
+            </p>
+            <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
+              {contentFetchError}
+            </p>
+            <Button
+              onClick={() => void refetchContent()}
+              className="rounded-none font-mono uppercase tracking-widest gap-1.5 h-9 text-xs"
+              variant="outline"
+            >
+              Tentar Novamente
             </Button>
-          </Link>
-        </div>
+          </div>
+        ) : isAwaitingApproval ? (
+          <div className="py-16 text-center border border-dashed border-primary/20">
+            <div className="relative mx-auto mb-4 w-8 h-8">
+              <Activity className="h-8 w-8 text-primary/40 mx-auto animate-pulse" />
+            </div>
+            <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
+              Carregando peças de conteúdo…
+            </p>
+            <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
+              Os agentes concluíram. Sincronizando peças de conteúdo com o servidor.
+            </p>
+            <Button
+              onClick={() => void refetchContent()}
+              variant="outline"
+              className="rounded-none font-mono uppercase tracking-widest gap-1.5 h-9 text-xs"
+            >
+              Atualizar Agora
+            </Button>
+          </div>
+        ) : (
+          <div className="py-16 text-center border border-dashed border-border/30">
+            <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">
+              Conteúdo ainda não gerado
+            </p>
+            <p className="font-mono text-[11px] text-muted-foreground/50 max-w-sm mx-auto mb-4">
+              Execute a fase de geração de conteúdo na campanha para que os especialistas criem as peças de copy e visual.
+            </p>
+            <Link href={`/campaigns/${campaignId}`}>
+              <Button className="rounded-none font-mono uppercase tracking-widest gap-1.5 btn-weapon-primary h-9 text-xs">
+                <ChevronLeft className="h-3.5 w-3.5" />Voltar à Campanha
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
     );
   }
