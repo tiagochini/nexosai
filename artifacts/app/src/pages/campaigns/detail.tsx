@@ -1976,7 +1976,7 @@ export default function CampaignDetail() {
   const TABS = [
     { id: "comando" as const, label: "Comando", icon: Zap },
     { id: "agentes" as const, label: "Agentes", icon: Bot },
-    { id: "estrategia" as const, label: "Proposta", icon: BookOpen },
+    { id: "estrategia" as const, label: "Masterplan", icon: BookOpen },
     { id: "conteudo" as const, label: "Conteúdo", icon: Layers },
     { id: "metricas" as const, label: "Métricas", icon: BarChart3 },
     { id: "grupos" as const, label: "Grupos", icon: Users },
@@ -2868,37 +2868,69 @@ export default function CampaignDetail() {
         </div>
       )}
 
-      {/* ══════════════ PROPOSTA / ESTRATÉGIA TAB ══════════════ */}
+      {/* ══════════════ MASTERPLAN TAB ══════════════ */}
       {activeTab === "estrategia" && (
         <div className="space-y-4">
-          <CampaignBrief
-            campaign={campaign as Parameters<typeof CampaignBrief>[0]["campaign"]}
-            showApproveButton={campaign.status === "strategy_ready"}
-            approveLoading={executeMutation.isPending}
-            onApprove={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
-          />
-          {/* VSL quick-create — visible when strategy exists */}
+
+          {/* Botão de aprovação — só aparece quando strategy_ready */}
+          {campaign.status === "strategy_ready" && (
+            <div className="border border-cyan-400/30 bg-cyan-400/[0.04] p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" style={{ boxShadow: "0 0 6px hsl(180 100% 60%)" }} />
+                <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold">
+                  Masterplan pronto — Revise e aprove para gerar o conteúdo
+                </span>
+              </div>
+              <Button
+                onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
+                disabled={executeMutation.isPending}
+                className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-5"
+              >
+                {executeMutation.isPending
+                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
+                  : <><CheckCheck className="h-3.5 w-3.5" /> Aprovar e Gerar Conteúdo</>}
+              </Button>
+            </div>
+          )}
+
+          {/* Masterplan completo */}
+          {Object.keys(strategyD).length > 0 ? (
+            <StrategyMasterplan
+              strategyD={strategyD}
+              ins={parseStrategyInsights(strategyD)}
+            />
+          ) : (
+            <div className="py-16 text-center border border-border/20">
+              <BookOpen className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+              <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest mb-1">
+                Masterplan ainda não disponível
+              </p>
+              <p className="font-mono text-[11px] text-muted-foreground/30">
+                O Estrategista precisa finalizar a análise da campanha.
+              </p>
+            </div>
+          )}
+
+          {/* VSL quick-create */}
           {["strategy_ready", "approved", "generating", "awaiting_approval", "executing", "live", "completed"].includes(campaign.status) && (
-            <div className="border border-border/30 bg-card/20 p-5 flex items-center justify-between gap-4 flex-wrap">
+            <div className="border border-border/30 bg-card/20 p-4 flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-sm border border-primary/30 bg-primary/5 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 border border-primary/30 bg-primary/5 flex items-center justify-center shrink-0">
                   <Video className="h-4 w-4 text-primary" />
                 </div>
                 <div>
                   <p className="font-mono text-xs font-bold uppercase tracking-widest text-foreground">VSL — Roteiro de Vídeo de Vendas</p>
                   <p className="font-mono text-xs text-muted-foreground mt-0.5">
-                    Gere automaticamente o roteiro completo do VSL com base na estratégia aprovada desta campanha.
+                    Gere o roteiro completo com base neste masterplan.
                   </p>
                 </div>
               </div>
               <Button
-                size="sm"
-                variant="outline"
+                size="sm" variant="outline"
                 className="rounded-none font-mono text-xs uppercase tracking-widest h-8 px-4 border-primary/30 text-primary hover:bg-primary/10 shrink-0"
                 onClick={() => setLocation(`/vsls?campaignId=${campaignId}&from=campaign`)}
               >
-                <Video className="h-3 w-3 mr-1.5" />
-                Criar VSL
+                <Video className="h-3 w-3 mr-1.5" />Criar VSL
               </Button>
             </div>
           )}
