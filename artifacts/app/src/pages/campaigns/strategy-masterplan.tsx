@@ -3,10 +3,14 @@ import {
   Target, Users, Zap, BarChart3, Brain, ShieldAlert,
   TrendingUp, MessageSquare, Lightbulb, Flame, Star,
   ChevronDown, Check, AlertTriangle, Pencil, X, Save,
-  Award, Crosshair, Lock,
+  Award, Crosshair, Lock, Download, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import { generateMasterplanPDF, type PdfUserIdentity } from "@/lib/masterplan-pdf";
 
 // ─── Types & utils ────────────────────────────────────────────────────────────
 
@@ -374,11 +378,15 @@ function BigDominoCard({
 interface StrategyMasterplanProps {
   strategyD: Obj;
   ins: Obj;
+  userIdentity?: PdfUserIdentity;
+  campaignId?: string;
+  campaignTitle?: string;
+  track?: string;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) {
+export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, campaignTitle, track }: StrategyMasterplanProps) {
   const hasIns = Object.keys(ins).length > 0;
   const src = hasIns ? ins : strategyD;
 
@@ -386,6 +394,8 @@ export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) 
   const [editingModule, setEditingModule] = useState<string | null>(null);
   const [editValues, setEditValues]       = useState<Record<string, string>>({});
   const [savedEdits, setSavedEdits]       = useState<Record<string, string>>({});
+  const [showConsent, setShowConsent]     = useState(false);
+  const [downloading, setDownloading]     = useState(false);
 
   const setStatus = (id: string, next: ModuleStatus) =>
     setStatuses(prev => ({ ...prev, [id]: prev[id] === next ? "pending" : next }));
@@ -454,11 +464,23 @@ export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) 
               10 módulos · Elaborado pelo Time NexOS AI · Revise e aprove cada seção
             </p>
           </div>
-          <div className="text-right shrink-0">
-            <div className="font-mono text-xl font-black text-foreground leading-none">
-              {approvedCount}<span className="text-muted-foreground/25 text-sm font-normal">/{TOTAL_MODULES}</span>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="text-right">
+              <div className="font-mono text-xl font-black text-foreground leading-none">
+                {approvedCount}<span className="text-muted-foreground/25 text-sm font-normal">/{TOTAL_MODULES}</span>
+              </div>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mt-0.5">aprovados</div>
             </div>
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mt-0.5">aprovados</div>
+            {userIdentity && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-none font-mono text-[9px] uppercase tracking-widest h-7 px-3 gap-1.5 border-primary/25 text-primary/70 hover:border-primary/50 hover:text-primary transition-all"
+                onClick={() => setShowConsent(true)}
+              >
+                <Download className="h-3 w-3" />Baixar PDF
+              </Button>
+            )}
           </div>
         </div>
 
@@ -906,6 +928,98 @@ export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) 
             </div>
           </div>
         </div>
+      )}
+
+      {/* ═══ CONSENT + DOWNLOAD MODAL ════════════════════════════════════════ */}
+      {userIdentity && (
+        <Dialog open={showConsent} onOpenChange={setShowConsent}>
+          <DialogContent className="rounded-none border-primary/25 bg-background max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2 mb-1">
+                <ShieldCheck className="h-4 w-4 text-primary/70" />
+                <DialogTitle className="font-mono text-sm uppercase tracking-widest font-black text-foreground">
+                  Aviso de Identificação Digital
+                </DialogTitle>
+              </div>
+              <DialogDescription asChild>
+                <div className="space-y-4 pt-1">
+                  <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+                    Ao baixar este Masterplan, seu documento será gerado com <strong className="text-foreground/80">marca d&apos;água digital</strong> contendo seus dados de identificação em todas as páginas:
+                  </p>
+
+                  <div className="border border-primary/20 bg-primary/[0.04] p-3 space-y-1.5">
+                    <div className="flex gap-2">
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Nome</span>
+                      <span className="font-mono text-[11px] text-foreground/80">{userIdentity.name}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Email</span>
+                      <span className="font-mono text-[11px] text-foreground/80">{userIdentity.email}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Conta ID</span>
+                      <span className="font-mono text-[11px] text-foreground/80 truncate">{userIdentity.userId}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 w-20 shrink-0">Workspace</span>
+                      <span className="font-mono text-[11px] text-foreground/80">{userIdentity.workspaceName}</span>
+                    </div>
+                  </div>
+
+                  <p className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">
+                    Este documento é de uso exclusivo e intransferível. Qualquer compartilhamento não autorizado é rastreável por fingerprint único gerado neste download. Ao clicar em <strong className="text-foreground/70">Confirmar e Baixar</strong>, você declara ciência e aceita os Termos de Uso do NexOS AI.
+                  </p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex gap-2 mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1 rounded-none font-mono text-[9px] uppercase tracking-widest h-8 border border-white/10"
+                onClick={() => setShowConsent(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                disabled={downloading}
+                className="flex-1 rounded-none font-mono text-[9px] uppercase tracking-widest h-8 gap-1.5 bg-primary hover:bg-primary/90"
+                onClick={() => {
+                  setDownloading(true);
+                  try {
+                    generateMasterplanPDF(
+                      {
+                        campaignId: campaignId ?? "unknown",
+                        campaignTitle: campaignTitle ?? str(strategyD["productName"] as unknown) ?? "Masterplan Estratégico",
+                        track,
+                        executiveSummary,
+                        bigDomino,
+                        positioning,
+                        market,
+                        audience,
+                        architecture,
+                        metrics,
+                        risks,
+                        triggerMap,
+                        strategistNotes,
+                      },
+                      userIdentity
+                    );
+                  } finally {
+                    setDownloading(false);
+                    setShowConsent(false);
+                  }
+                }}
+              >
+                {downloading
+                  ? <span className="animate-pulse">Gerando PDF…</span>
+                  : <><Download className="h-3 w-3" />Confirmar e Baixar</>}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

@@ -45,6 +45,7 @@ import { CampaignMindMap } from "@/components/CampaignMindMap";
 import { GroupsTab } from "@/components/GroupsTab";
 import { AgentLiveFeed } from "@/components/AgentLiveFeed";
 import { useMode } from "@/lib/mode";
+import { useAuth } from "@/lib/auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -1283,6 +1284,7 @@ export default function CampaignDetail() {
   const searchString = useSearch();
   const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos">("comando");
   const { isArquiteto, isFundador, setMode } = useMode();
+  const { user, workspace } = useAuth();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
@@ -1925,7 +1927,20 @@ export default function CampaignDetail() {
 
               {/* Masterplan completo */}
               <div className="p-4">
-                <StrategyMasterplan strategyD={strategyD} ins={ins} />
+                <StrategyMasterplan
+                  strategyD={strategyD}
+                  ins={ins}
+                  campaignId={campaignId}
+                  campaignTitle={String(intakeD["product.name"] ?? campaign.title ?? "")}
+                  track={String(intakeD["launch.track"] ?? "")}
+                  userIdentity={user ? {
+                    name: user.name ?? "",
+                    email: user.email ?? "",
+                    userId: user.id,
+                    workspaceName: workspace?.name ?? "",
+                    workspaceId: workspace?.id ?? "",
+                  } : undefined}
+                />
               </div>
 
               {/* Botão de aprovação */}
@@ -2898,6 +2913,16 @@ export default function CampaignDetail() {
             <StrategyMasterplan
               strategyD={strategyD}
               ins={parseStrategyInsights(strategyD)}
+              campaignId={campaignId}
+              campaignTitle={String(intakeD["product.name"] ?? campaign.title ?? "")}
+              track={String(intakeD["launch.track"] ?? "")}
+              userIdentity={user ? {
+                name: user.name ?? "",
+                email: user.email ?? "",
+                userId: user.id,
+                workspaceName: workspace?.name ?? "",
+                workspaceId: workspace?.id ?? "",
+              } : undefined}
             />
           ) : (
             <div className="py-16 text-center border border-border/20">
