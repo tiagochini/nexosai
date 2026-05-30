@@ -81,6 +81,7 @@ export const STRATEGY_PHASE_ENTRY_STATUSES = [
 
 export const CONTENT_PHASE_ENTRY_STATUSES = [
   "strategy_ready",
+  "generating", // CHECKPOINT: allows resume after server restart (campaign stays generating, re-enqueued at boot)
   "awaiting_approval",
   "approved",
   "live",

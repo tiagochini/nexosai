@@ -20,6 +20,7 @@ if (process.env["NODE_ENV"] !== "production") {
 import { initRealtime } from "./modules/realtime/realtime.service.js";
 import { getQueue, closeAllQueues, drainQueueAtBoot, QUEUE_NAMES } from "./modules/queue/queue.service.js";
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
+import { resumeGeneratingCampaigns } from "./modules/orchestration/orchestration.service.js";
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
@@ -120,15 +121,9 @@ Promise.all([
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (agents) failed")),
 
-  db.update(campaignsTable)
-    .set({ status: "strategy_ready", updatedAt: new Date() })
-    .where(eq(campaignsTable.status, "generating"))
-    .then((result) => {
-      if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: reset generating campaigns to strategy_ready");
-      }
-    })
-    .catch((err) => logger.error({ err }, "Boot cleanup (generating reset) failed")),
+  // NOTE: "generating" campaigns are NOT reset here — they will be re-enqueued
+  // below (after agents are marked failed) so content generation resumes from
+  // the last checkpoint saved in contentPiecesTable.
 
   // RC-FIX: Only reset campaigns stuck in "analyzing" for > 30 min.
   // Campaigns that JUST transitioned (e.g. fresh finalize before a restart) must NOT be reset,
@@ -145,7 +140,11 @@ Promise.all([
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (analyzing reset) failed")),
-]).then(() => {
+]).then(async () => {
+  // Re-enqueue generating campaigns AFTER agents are marked failed + queue drained.
+  // They will resume from the checkpoint in contentPiecesTable (skipping completed agents).
+  await resumeGeneratingCampaigns();
+
   httpServer.listen(port, (err?: Error) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

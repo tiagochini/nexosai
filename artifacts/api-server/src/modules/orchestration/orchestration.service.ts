@@ -518,3 +518,33 @@ export async function triggerNextPhase(
           : "Campaign may be in progress."),
   );
 }
+
+// ── Boot: resume generating campaigns after server restart ────────────────────
+// Called from index.ts AFTER the DB boot cleanup (agents marked failed, queue
+// drained). Finds all campaigns stuck in "generating" and re-enqueues them so
+// they resume from the last checkpoint saved in contentPiecesTable.
+// Bypasses the triggerContentPhase guards (running-agent check) since at boot
+// all agents have already been set to "failed".
+export async function resumeGeneratingCampaigns(): Promise<void> {
+  try {
+    const generating = await db
+      .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
+      .from(campaignsTable)
+      .where(eq(campaignsTable.status, "generating"));
+
+    if (generating.length === 0) return;
+
+    logger.warn({ count: generating.length }, "Boot cleanup: re-enqueueing generating campaigns for checkpoint resume");
+
+    for (const campaign of generating) {
+      await enqueueOrExecute(
+        { campaignId: campaign.id, workspaceId: campaign.workspaceId, action: "generate_content" },
+        logger,
+      ).catch((err) => {
+        logger.error({ err, campaignId: campaign.id }, "Boot cleanup: failed to re-enqueue generating campaign");
+      });
+    }
+  } catch (err) {
+    logger.error({ err }, "Boot cleanup: resumeGeneratingCampaigns failed");
+  }
+}

@@ -132,7 +132,44 @@ export async function generateCampaignContent(
   const isCreatorCampaign = ["audience_growth", "creator_monetization"].includes(campaignType);
   const isVideoFocused = isCreatorCampaign || salesChannel === "youtube";
 
-  await transitionCampaign(campaignId, workspaceId, "generating", "content generation phase started", log);
+  // ── CHECKPOINT SYSTEM ──────────────────────────────────────────────────────
+  // Load existing content pieces for this campaign. After a server restart,
+  // the job is re-enqueued and the processor resumes from where it left off:
+  // agents whose output is already saved in contentPiecesTable are skipped
+  // automatically — no LLM call, no credits charged, no duplicate piece.
+  //
+  // skipAgent(): returns true (skip) if the piece already exists, false (run) otherwise.
+  // Emits "agent_completed" on skip so the live feed stays accurate.
+  const existingPieces = await db
+    .select({ type: contentPiecesTable.type })
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.campaignId, campaignId));
+  const done = new Set<string>(existingPieces.map((p) => p.type));
+  const isResume = campaign.status === "generating";
+
+  if (done.size > 0) {
+    log.info({ campaignId, done: [...done], isResume }, "CHECKPOINT: resuming content generation — skipping already completed agents");
+  }
+
+  const skipAgent = (pieceType: string, agentName: string): boolean => {
+    if (!done.has(pieceType)) return false;
+    agentsRun.push(agentName);
+    piecesGenerated++;
+    log.info({ campaignId, agentName, pieceType }, "CHECKPOINT: agent already completed — skipping LLM call");
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_completed",
+      agentType: agentName,
+      message: `${agentName} — ✓ retomado do checkpoint (saída já salva)`,
+      timestamp: new Date().toISOString(),
+    });
+    return true;
+  };
+
+  // Only transition to "generating" on a fresh run — skip if already there (resume after restart)
+  if (!isResume) {
+    await transitionCampaign(campaignId, workspaceId, "generating", "content generation phase started", log);
+  }
 
   emitCampaignEvent({
     campaignId,
@@ -177,7 +214,7 @@ export async function generateCampaignContent(
   let capturedAdContent: Record<string, unknown> | undefined;
 
   // ── 1. Creative Director (all campaigns — sets visual identity first) ─────────
-  try {
+  if (!skipAgent("creative_direction", "creative_director")) try {
     emitCampaignEvent({
       campaignId,
       type: "agent_started",
@@ -229,7 +266,7 @@ export async function generateCampaignContent(
   }
 
   // ── 2. Copywriter Agent ──────────────────────────────────────────────────────
-  try {
+  if (!skipAgent("email_sequence", "copywriter")) try {
     emitCampaignEvent({
       campaignId,
       type: "agent_started",
@@ -288,7 +325,7 @@ export async function generateCampaignContent(
   const hasLandingPage = !["challenge_funnel"].includes(campaignType);
 
   if (hasLandingPage) {
-    try {
+    if (!skipAgent("landing_page_structure", "landing_page")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -342,7 +379,7 @@ export async function generateCampaignContent(
   }
 
   // ── 4. Social Media Agent ────────────────────────────────────────────────────
-  try {
+  if (!skipAgent("content_calendar", "social_media")) try {
     emitCampaignEvent({
       campaignId,
       type: "agent_started",
@@ -396,7 +433,7 @@ export async function generateCampaignContent(
   }
 
   // ── 5. Ad Copy Agent ─────────────────────────────────────────────────────────
-  try {
+  if (!skipAgent("ad_copy", "ad_copy")) try {
     emitCampaignEvent({
       campaignId,
       type: "agent_started",
@@ -452,7 +489,7 @@ export async function generateCampaignContent(
 
   // ── 6. Targeting Agent (campaigns with traffic budget) ───────────────────────
   if (hasTrafficBudget) {
-    try {
+    if (!skipAgent("targeting_config", "targeting")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -506,7 +543,7 @@ export async function generateCampaignContent(
 
   // ── 7. Media Buyer Agent (campaigns with traffic budget) ─────────────────────
   if (hasTrafficBudget) {
-    try {
+    if (!skipAgent("media_buying_plan", "media_buyer")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -564,7 +601,7 @@ export async function generateCampaignContent(
   const hasVSL = ["launch", "perpetual_launch", "continuous_sales", "live_sale"].includes(campaignType);
 
   if (hasVSL) {
-    try {
+    if (!skipAgent("vsl_script", "vsl_script")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -621,7 +658,7 @@ export async function generateCampaignContent(
   const hasCPL = ["launch", "perpetual_launch", "live_sale", "flash_sale"].includes(campaignType);
 
   if (hasCPL) {
-    try {
+    if (!skipAgent("cpl_script", "cpl_script")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -681,7 +718,7 @@ export async function generateCampaignContent(
     || salesChannel === "webinar";
 
   if (hasWebinar) {
-    try {
+    if (!skipAgent("webinar_script", "webinar_script")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -739,7 +776,7 @@ export async function generateCampaignContent(
   const hasLive = ["launch", "live_sale", "flash_sale", "perpetual_launch"].includes(campaignType);
 
   if (hasLive) {
-    try {
+    if (!skipAgent("live_script", "live_script")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -795,7 +832,7 @@ export async function generateCampaignContent(
   }
 
   // ── 12. Stories Sequence Agent (all campaign types) ──────────────────────────
-  try {
+  if (!skipAgent("stories_sequence", "stories_sequence")) try {
     emitCampaignEvent({
       campaignId,
       type: "agent_started",
@@ -851,7 +888,7 @@ export async function generateCampaignContent(
 
   // ── 13. Video Strategy Agent (creator/video campaigns) ───────────────────────
   if (isVideoFocused) {
-    try {
+    if (!skipAgent("video_strategy", "video_strategy")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -905,7 +942,7 @@ export async function generateCampaignContent(
 
   // ── 14. Creator Growth Agent (creator campaigns) ─────────────────────────────
   if (isCreatorCampaign) {
-    try {
+    if (!skipAgent("creator_growth_plan", "creator_growth")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
@@ -958,7 +995,7 @@ export async function generateCampaignContent(
   }
 
   // ── 15. Media Brief Agent ────────────────────────────────────────────────────
-  try {
+  if (!skipAgent("media_brief", "media_brief")) try {
     emitCampaignEvent({
       campaignId,
       type: "agent_started",
@@ -1031,7 +1068,7 @@ export async function generateCampaignContent(
   }
 
   // ── 16. Compliance Agent (LAST — reviews all copy generated above) ────────────
-  try {
+  if (!skipAgent("compliance_report", "compliance")) try {
     emitCampaignEvent({
       campaignId,
       type: "agent_started",
