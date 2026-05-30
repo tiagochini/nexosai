@@ -213,21 +213,34 @@ async function enqueueOrExecute(
         // RC-011 FIX: Add age check for "active" jobs. After a server restart, BullMQ
         // jobs that were in-flight remain "active" in Redis with no worker to extend
         // the lock. Previously we honoured the dedup blindly — this blocked new
-        // executions for up to stalledInterval (was 10 min) with no recovery path.
+        // executions indefinitely with no recovery path.
         //
-        // A job that has been "active" longer than the lock duration (5 min) without
-        // completing is definitively orphaned: the worker heartbeat extends every
-        // lockDuration/2 = 150s, so any live job would have renewed by now.
-        // Force-remove and fall through to re-queue.
+        // With lockDuration=30s the worker renews every 15s. An orphaned job (no
+        // live worker) loses its lock in 30s; the stalledInterval check (30s) detects
+        // it within the following 30s → max orphan dwell = 60s. Any job that is still
+        // "active" after 90s without being detected stalled is a genuine long-runner
+        // with a live worker — honour the dedup.
+        //
+        // NOTE: lockDuration does NOT limit execution time. It only controls renewal
+        // frequency. Jobs can run for hours; only truly orphaned jobs stall.
         const ageMs = Date.now() - (existingJob.timestamp ?? 0);
-        const ORPHAN_THRESHOLD_MS = 5 * 60_000; // 5 min = lockDuration
+        // 30 min threshold — this is a LAST RESORT safety net only.
+        // Normal orphan recovery happens via the stall mechanism (lockDuration=30s →
+        // lock expires in 30s after crash → stalledInterval=30s detects it within 30s
+        // → maxStalledCount=0 → fails → failed handler resets campaign → user retries).
+        // Total orphan recovery time ≈ 60s. The 30-min threshold here only activates
+        // if for some reason the stall mechanism didn't clear the job, preventing
+        // a user from being permanently blocked. It will NOT kill legitimate jobs
+        // because real running jobs have an active worker renewing the lock and will
+        // NEVER stall — they're safe for hours.
+        const ORPHAN_THRESHOLD_MS = 30 * 60_000; // 30 min — absolute last resort
         if (ageMs > ORPHAN_THRESHOLD_MS) {
-          log.warn({ dedupJobId, state, ageMs, action: job.action }, "RC-011: Orphaned active job detected (server restart) — removing and re-queueing");
+          log.warn({ dedupJobId, state, ageMs, action: job.action }, "RC-011: Zombie active job (30+ min, stall missed) — removing and re-queueing");
           await existingJob.remove().catch(() => undefined);
           // Fall through to add new job below
         } else {
           // Job is actively being processed — honour the dedup, do not double-execute
-          log.info({ dedupJobId, state, ageMs, action: job.action }, "Dedup: job already active — skipping");
+          log.info({ dedupJobId, state, ageMs, action: job.action }, "Dedup: job recently queued or actively running — skipping");
           return { queued: true, jobId: dedupJobId };
         }
       } else if (state === "waiting" || state === "delayed") {

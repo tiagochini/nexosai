@@ -316,22 +316,26 @@ export function initOrchestrationWorker(): Worker | null {
         connection: redisConnection,
         concurrency: 3,
         limiter: { max: 10, duration: 60_000 },
-        // RC-011 FIX: maxStalledCount: 0 was causing UnrecoverableError on first
-        // stall with no retries. Changed to 1 — the pre-flight status check inside
-        // each processor (PIPELINE_KERNEL) prevents double credit charges by skipping
-        // if the campaign is no longer in the expected entry state.
-        maxStalledCount: 1,
+        // maxStalledCount: 0 — prevents automatic retry of stalled jobs.
+        // Campaign jobs charge AI credits on every agent call; automatic retry would
+        // silently double-charge. The `failed` event handler below handles the reset
+        // (campaign → recoverable status) so the user can manually retry via UI.
+        // With stalledInterval=30s + lockDuration=30s, orphaned jobs are detected
+        // and fail within ~60s after a server restart — fast enough for the user.
+        maxStalledCount: 0,
         // RC-011 FIX: Reduced from 600_000 to 30_000 for fast orphan detection.
         // Redis is now Pay-As-You-Go (no request budget) so the cost concern that
         // motivated the 10-min interval no longer applies. 30s means orphaned jobs
         // (server restart killed the worker mid-run) are detected and recycled quickly
         // rather than blocking dedup for 10 minutes.
         stalledInterval: 30_000,
-        // RC-011 FIX: lockDuration 300_000 (5 min) — AI content generation takes
-        // up to 3 min. The worker auto-extends every lockDuration/2 (150s) so a
-        // legitimately running job will never be falsely stalled. Only truly orphaned
-        // jobs (no heartbeat after server restart) will stall within 30s.
-        lockDuration: 300_000,
+        // lockDuration: 30_000 (default) — controls lock RENEWAL frequency, NOT
+        // job execution time limit. Jobs can run for hours because the worker
+        // auto-extends the lock every lockDuration/2 = 15s as long as the process
+        // is alive. A smaller lockDuration means faster orphan detection after crash:
+        // orphaned job's lock expires in 30s → stall detected within the next 30s
+        // stalledInterval check → total max orphan dwell time ≈ 60s (was 600s).
+        lockDuration: 30_000,
       },
     );
 
