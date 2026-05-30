@@ -6,10 +6,9 @@ import {
   Award, Crosshair, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
-// ─── Types & utils ───────────────────────────────────────────────────────────
+// ─── Types & utils ────────────────────────────────────────────────────────────
 
 export type StrategyObj = Record<string, unknown>;
 type Obj = Record<string, unknown>;
@@ -47,89 +46,142 @@ function obj(v: unknown): Obj {
   return {};
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+// ─── Document primitives ──────────────────────────────────────────────────────
 
-function Pill({ children, color = "default" }: {
-  children: React.ReactNode;
-  color?: "cyan" | "green" | "red" | "amber" | "default";
-}) {
-  const colors = {
-    cyan:    "border-cyan-400/30 bg-cyan-400/8 text-cyan-400",
-    green:   "border-emerald-500/30 bg-emerald-500/8 text-emerald-400",
-    red:     "border-red-500/30 bg-red-500/8 text-red-400",
-    amber:   "border-amber-500/30 bg-amber-500/8 text-amber-400",
-    default: "border-white/10 bg-white/5 text-foreground/60",
-  };
+function SectionLabel({ n, children }: { n?: string; children: React.ReactNode }) {
   return (
-    <span className={`inline-flex items-center font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 border ${colors[color]}`}>
+    <div className="flex items-center gap-2 mb-2.5">
+      {n && (
+        <span className="font-mono text-[9px] text-primary/40 tracking-widest shrink-0">{n}</span>
+      )}
+      <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{children}</span>
+      <div className="flex-1 h-px bg-white/5" />
+    </div>
+  );
+}
+
+function QuoteBlock({ children, color = "primary" }: { children: React.ReactNode; color?: "primary" | "cyan" | "violet" | "amber" }) {
+  const border = { primary: "border-l-primary/50", cyan: "border-l-cyan-400/50", violet: "border-l-violet-400/50", amber: "border-l-amber-400/50" }[color];
+  const text   = { primary: "text-foreground/90", cyan: "text-foreground/90", violet: "text-foreground/90", amber: "text-foreground/90" }[color];
+  return (
+    <div className={`border-l-2 ${border} pl-4 py-1 bg-white/[0.015]`}>
+      <p className={`font-mono text-sm font-bold ${text} leading-snug`}>{children}</p>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">{label}</div>
+      <div className="font-mono text-xs text-foreground/75 leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+function NumberedList({ items, color = "default" }: {
+  items: string[];
+  color?: "default" | "cyan" | "green" | "red" | "amber";
+}) {
+  if (!items.length) return null;
+  const accent = {
+    default: "text-primary/40",
+    cyan:    "text-cyan-400/60",
+    green:   "text-emerald-400/60",
+    red:     "text-red-400/60",
+    amber:   "text-amber-400/60",
+  }[color];
+  return (
+    <ol className="space-y-2">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-3">
+          <span className={`font-mono text-[10px] font-bold ${accent} shrink-0 w-5 leading-none mt-[2px] tabular-nums`}>
+            {String(i + 1).padStart(2, "0")}
+          </span>
+          <span className="font-mono text-xs text-foreground/75 leading-relaxed">{item}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function BulletList({ items, color = "default" }: {
+  items: string[];
+  color?: "default" | "cyan" | "green" | "red" | "amber";
+}) {
+  if (!items.length) return null;
+  const dot = { default: "text-primary/40", cyan: "text-cyan-400", green: "text-emerald-400", red: "text-red-400/80", amber: "text-amber-400" }[color];
+  return (
+    <ul className="space-y-1.5">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-2.5">
+          <span className={`${dot} shrink-0 leading-none mt-[3px] text-[8px]`}>◆</span>
+          <span className="font-mono text-xs text-foreground/75 leading-relaxed">{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Tag({ children, color = "default" }: { children: React.ReactNode; color?: "default" | "cyan" | "green" | "red" | "amber" | "violet" }) {
+  const cls = {
+    default: "border-white/10 text-muted-foreground/50",
+    cyan:    "border-cyan-400/25 text-cyan-400/80",
+    green:   "border-emerald-500/25 text-emerald-400/80",
+    red:     "border-red-500/25 text-red-400/80",
+    amber:   "border-amber-500/25 text-amber-400/80",
+    violet:  "border-violet-400/25 text-violet-400/80",
+  }[color];
+  return (
+    <span className={`inline-flex items-center font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border bg-white/[0.02] ${cls}`}>
       {children}
     </span>
   );
 }
 
-function DataRow({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function KpiBox({ label, value, accent }: { label: string; value: string; accent?: string }) {
   if (!value) return null;
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">{label}</span>
-      <span className={`font-mono text-xs leading-relaxed ${accent ?? "text-foreground/80"}`}>{value}</span>
+    <div className="border border-white/8 bg-white/[0.02] p-3">
+      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mb-1">{label}</div>
+      <div className={`font-mono text-sm font-bold ${accent ?? "text-foreground/90"}`}>{value}</div>
     </div>
   );
 }
 
-function BulletItems({ label, items, color = "default" }: {
-  label: string; items: string[];
-  color?: "cyan" | "green" | "red" | "amber" | "default";
-}) {
-  if (!items.length) return null;
-  const dotColors = { cyan: "text-cyan-400", green: "text-emerald-400", red: "text-red-400", amber: "text-amber-400", default: "text-primary/50" };
-  return (
-    <div>
-      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-2">{label}</div>
-      <ul className="space-y-1.5">
-        {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span className={`${dotColors[color]} shrink-0 leading-none mt-[3px] text-[10px]`}>▸</span>
-            <span className="font-mono text-xs text-foreground/75 leading-relaxed">{item}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
-function SequenceTimeline({ items }: { items: string[] }) {
-  if (!items.length) return null;
+function RiskTable({ risks, mitigations }: { risks: string[]; mitigations: string[] }) {
+  const max = Math.max(risks.length, mitigations.length);
+  if (!max) return null;
   return (
-    <div>
-      <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-3">Sequência Dia a Dia</div>
-      <div className="relative pl-6">
-        <div className="absolute left-2 top-0 bottom-0 w-px bg-gradient-to-b from-primary/30 via-primary/20 to-transparent" />
-        {items.map((t, i) => (
-          <div key={i} className="relative mb-3 last:mb-0">
-            <div className="absolute -left-[18px] top-1 w-3 h-3 rounded-full border border-primary/40 bg-card flex items-center justify-center">
-              <div className="w-1 h-1 rounded-full bg-primary/60" />
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="font-mono text-[10px] text-primary/50 shrink-0 w-6">D{i + 1}</span>
-              <span className="font-mono text-xs text-foreground/75 leading-relaxed">{t}</span>
-            </div>
+    <div className="divide-y divide-white/5">
+      {Array.from({ length: max }).map((_, i) => (
+        <div key={i} className="grid grid-cols-2 gap-4 py-2.5 first:pt-0 last:pb-0">
+          <div className="flex items-start gap-2">
+            <span className="text-red-400/50 text-[8px] shrink-0 leading-none mt-[3px]">◆</span>
+            <span className="font-mono text-xs text-foreground/70 leading-relaxed">{risks[i] ?? ""}</span>
           </div>
-        ))}
-      </div>
+          <div className="flex items-start gap-2">
+            <span className="text-emerald-400/50 text-[8px] shrink-0 leading-none mt-[3px]">◆</span>
+            <span className="font-mono text-xs text-foreground/70 leading-relaxed">{mitigations[i] ?? ""}</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-function KpiGrid({ items }: { items: { label: string; value: string; accent?: string }[] }) {
-  const filtered = items.filter(x => x.value);
-  if (!filtered.length) return null;
+function PhaseTimeline({ items }: { items: string[] }) {
+  if (!items.length) return null;
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {filtered.map((item, i) => (
-        <div key={i} className="border border-white/8 bg-white/[0.02] p-3">
-          <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1">{item.label}</div>
-          <div className={`font-mono text-sm font-bold ${item.accent ?? "text-foreground/90"}`}>{item.value}</div>
+    <div className="relative pl-8">
+      <div className="absolute left-[14px] top-2 bottom-2 w-px bg-gradient-to-b from-primary/30 via-primary/15 to-transparent" />
+      {items.map((t, i) => (
+        <div key={i} className="relative mb-3 last:mb-0">
+          <div className="absolute -left-[22px] top-0.5 w-5 h-5 border border-primary/25 bg-card flex items-center justify-center">
+            <span className="font-mono text-[8px] text-primary/50 font-bold">{i + 1}</span>
+          </div>
+          <span className="font-mono text-xs text-foreground/75 leading-relaxed">{t}</span>
         </div>
       ))}
     </div>
@@ -154,120 +206,83 @@ interface ModuleProps {
 }
 
 const ACCENT_STYLES = {
-  cyan:   { border: "border-l-cyan-400/50",   badge: "border-cyan-400/30 text-cyan-400 bg-cyan-400/5",   icon: "text-cyan-400",   glow: "0 0 12px hsl(180 100% 60% / 0.1)" },
-  green:  { border: "border-l-emerald-500/50", badge: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5", icon: "text-emerald-400", glow: "0 0 12px hsl(150 80% 50% / 0.08)" },
-  amber:  { border: "border-l-amber-500/50",  badge: "border-amber-500/30 text-amber-400 bg-amber-500/5",  icon: "text-amber-400",  glow: "0 0 12px hsl(40 100% 55% / 0.08)" },
-  red:    { border: "border-l-red-500/50",    badge: "border-red-500/30 text-red-400 bg-red-500/5",       icon: "text-red-400",    glow: "0 0 12px hsl(0 80% 50% / 0.08)" },
-  purple: { border: "border-l-violet-400/50", badge: "border-violet-400/30 text-violet-400 bg-violet-400/5", icon: "text-violet-400", glow: "0 0 12px hsl(270 80% 60% / 0.08)" },
+  cyan:   { border: "border-l-cyan-400/40",   badge: "border-cyan-400/25 text-cyan-400/80 bg-cyan-400/[0.04]",   icon: "text-cyan-400/70" },
+  green:  { border: "border-l-emerald-500/40", badge: "border-emerald-500/25 text-emerald-400/80 bg-emerald-500/[0.04]", icon: "text-emerald-400/70" },
+  amber:  { border: "border-l-amber-500/40",  badge: "border-amber-500/25 text-amber-400/80 bg-amber-500/[0.04]",  icon: "text-amber-400/70" },
+  red:    { border: "border-l-red-500/40",    badge: "border-red-500/25 text-red-400/80 bg-red-500/[0.04]",       icon: "text-red-400/70" },
+  purple: { border: "border-l-violet-400/40", badge: "border-violet-400/25 text-violet-400/80 bg-violet-400/[0.04]", icon: "text-violet-400/70" },
 };
 
 function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, children, onApprove, onReject, onFlag, isEmpty }: ModuleProps) {
   const [expanded, setExpanded] = useState(false);
   const accent = ACCENT_STYLES[accentColor];
 
-  const statusBadge: Record<ModuleStatus, { label: string; cls: string }> = {
-    pending:  { label: "Aguardando revisão", cls: "border-white/15 text-muted-foreground/50 bg-transparent" },
-    approved: { label: "✓ Aprovado",         cls: "border-emerald-500/40 text-emerald-400 bg-emerald-500/8" },
-    flagged:  { label: "⚠ Sinalizado",       cls: "border-amber-500/40 text-amber-400 bg-amber-500/8" },
-    rejected: { label: "✕ Rejeitado",        cls: "border-red-500/40 text-red-400 bg-red-500/8" },
-  };
-
   const borderColor = status === "approved"
-    ? "border-l-emerald-500/70"
+    ? "border-l-emerald-500/60"
     : status === "rejected"
-    ? "border-l-red-500/70"
+    ? "border-l-red-500/60"
     : status === "flagged"
-    ? "border-l-amber-500/70"
+    ? "border-l-amber-500/60"
     : accent.border;
 
   if (isEmpty) return null;
 
   return (
-    <div
-      className={`border border-white/8 border-l-2 ${borderColor} bg-card/30 transition-all duration-200`}
-      style={expanded ? { boxShadow: accent.glow } : undefined}
-    >
-      {/* ── Module header ── */}
+    <div className={`border border-white/7 border-l-2 ${borderColor} bg-card/20 transition-all duration-200`}>
       <button
-        className="w-full text-left p-4 flex items-center gap-3 group"
+        className="w-full text-left px-4 py-3.5 flex items-center gap-3 group"
         onClick={() => setExpanded(v => !v)}
       >
-        {/* Number badge */}
         <div className={`shrink-0 w-7 h-7 border flex items-center justify-center ${accent.badge}`}>
-          <span className="font-mono text-[10px] font-bold leading-none">
-            {String(index).padStart(2, "0")}
-          </span>
+          <span className="font-mono text-[9px] font-bold">{String(index).padStart(2, "0")}</span>
         </div>
-
-        {/* Icon */}
-        <Icon className={`h-4 w-4 shrink-0 ${accent.icon}`} />
-
-        {/* Title block */}
+        <Icon className={`h-3.5 w-3.5 shrink-0 ${accent.icon}`} />
         <div className="flex-1 min-w-0">
-          <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground group-hover:text-white transition-colors">
+          <div className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground/85 group-hover:text-foreground transition-colors">
             {title}
           </div>
-          <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5 truncate">
-            {subtitle}
-          </div>
+          <div className="font-mono text-[9px] text-muted-foreground/40 mt-0.5 truncate">{subtitle}</div>
         </div>
-
-        {/* Status + chevron */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`hidden sm:inline-flex font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border ${statusBadge[status].cls}`}>
-            {statusBadge[status].label}
-          </span>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground/40 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
+          {status === "approved" && (
+            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-emerald-500/35 text-emerald-400/80 bg-emerald-500/[0.06]">✓ Aprovado</span>
+          )}
+          {status === "rejected" && (
+            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-red-500/35 text-red-400/80 bg-red-500/[0.06]">✕ Rejeitado</span>
+          )}
+          {status === "flagged" && (
+            <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-amber-500/35 text-amber-400/80 bg-amber-500/[0.06]">⚠ Sinalizado</span>
+          )}
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/30 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`} />
         </div>
       </button>
 
-      {/* ── Module body ── */}
       {expanded && (
         <div className="border-t border-white/5">
-          <div className="p-4 space-y-4">
+          <div className="px-5 py-4 space-y-5">
             {children}
           </div>
-
-          {/* Action bar */}
-          <div className="px-4 pb-4 flex items-center gap-2 flex-wrap">
-            <Button
-              size="sm"
-              variant="outline"
-              className={`rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 transition-all ${
-                status === "approved"
-                  ? "border-emerald-500/50 text-emerald-400 bg-emerald-500/10"
-                  : "border-white/10 text-muted-foreground hover:border-emerald-500/40 hover:text-emerald-400"
+          <div className="px-5 pb-4 flex items-center gap-2">
+            <Button size="sm" variant="outline"
+              className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 transition-all ${
+                status === "approved" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/8" : "border-white/8 text-muted-foreground/50 hover:border-emerald-500/35 hover:text-emerald-400"
               }`}
-              onClick={() => onApprove(id)}
-            >
-              <Check className="h-3 w-3" />
-              {status === "approved" ? "Aprovado" : "Aprovar módulo"}
+              onClick={() => onApprove(id)}>
+              <Check className="h-2.5 w-2.5" />{status === "approved" ? "Aprovado" : "Aprovar"}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className={`rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 transition-all ${
-                status === "rejected"
-                  ? "border-red-500/50 text-red-400 bg-red-500/10"
-                  : "border-white/10 text-muted-foreground hover:border-red-500/40 hover:text-red-400"
+            <Button size="sm" variant="outline"
+              className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 transition-all ${
+                status === "rejected" ? "border-red-500/40 text-red-400 bg-red-500/8" : "border-white/8 text-muted-foreground/50 hover:border-red-500/35 hover:text-red-400"
               }`}
-              onClick={() => onReject(id)}
-            >
-              <X className="h-3 w-3" />
-              {status === "rejected" ? "Rejeitado" : "Rejeitar"}
+              onClick={() => onReject(id)}>
+              <X className="h-2.5 w-2.5" />{status === "rejected" ? "Rejeitado" : "Rejeitar"}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className={`rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 transition-all ${
-                status === "flagged"
-                  ? "border-amber-500/50 text-amber-400 bg-amber-500/10"
-                  : "border-white/10 text-muted-foreground hover:border-amber-500/40 hover:text-amber-400"
+            <Button size="sm" variant="outline"
+              className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 transition-all ${
+                status === "flagged" ? "border-amber-500/40 text-amber-400 bg-amber-500/8" : "border-white/8 text-muted-foreground/50 hover:border-amber-500/35 hover:text-amber-400"
               }`}
-              onClick={() => onFlag(id)}
-            >
-              <AlertTriangle className="h-3 w-3" />
-              {status === "flagged" ? "Sinalizado" : "Sinalizar"}
+              onClick={() => onFlag(id)}>
+              <AlertTriangle className="h-2.5 w-2.5" />{status === "flagged" ? "Sinalizado" : "Sinalizar"}
             </Button>
           </div>
         </div>
@@ -276,118 +291,78 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
   );
 }
 
-// ─── Big Domino special card ─────────────────────────────────────────────────
+// ─── Big Domino card (M02) ────────────────────────────────────────────────────
 
 function BigDominoCard({
-  value,
-  status,
-  onApprove,
-  onReject,
-  onFlag,
-  editing,
-  editValue,
-  onEdit,
-  onSave,
-  onCancelEdit,
-  onChangeEdit,
+  value, status, onApprove, onReject, onFlag,
+  editing, editValue, onEdit, onSave, onCancelEdit, onChangeEdit,
 }: {
-  value: string;
-  status: ModuleStatus;
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
-  onFlag: (id: string) => void;
-  editing: boolean;
-  editValue: string;
-  onEdit: () => void;
-  onSave: () => void;
-  onCancelEdit: () => void;
-  onChangeEdit: (v: string) => void;
+  value: string; status: ModuleStatus;
+  onApprove: (id: string) => void; onReject: (id: string) => void; onFlag: (id: string) => void;
+  editing: boolean; editValue: string;
+  onEdit: () => void; onSave: () => void; onCancelEdit: () => void; onChangeEdit: (v: string) => void;
 }) {
-  const borderClass = status === "approved"
-    ? "border-emerald-500/50"
-    : status === "rejected"
-    ? "border-red-500/50"
-    : status === "flagged"
-    ? "border-amber-500/50"
-    : "border-primary/30";
-
+  const border = status === "approved" ? "border-emerald-500/50" : status === "rejected" ? "border-red-500/50" : status === "flagged" ? "border-amber-500/50" : "border-primary/25";
   return (
-    <div className={`relative border-2 ${borderClass} bg-gradient-to-br from-primary/[0.06] to-transparent p-5 transition-all`}
-      style={{ boxShadow: "0 0 40px hsl(var(--primary) / 0.08), inset 0 0 40px hsl(var(--primary) / 0.03)" }}
+    <div className={`relative border-2 ${border} bg-gradient-to-br from-primary/[0.05] to-transparent transition-all`}
+      style={{ boxShadow: "0 0 40px hsl(var(--primary) / 0.06), inset 0 0 40px hsl(var(--primary) / 0.02)" }}
     >
-      {/* Corner marks */}
-      <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-primary/50 -translate-x-px -translate-y-px" />
-      <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-primary/50 translate-x-px -translate-y-px" />
-      <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-primary/50 -translate-x-px translate-y-px" />
-      <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-primary/50 translate-x-px translate-y-px" />
+      <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t-2 border-l-2 border-primary/40 -translate-x-px -translate-y-px" />
+      <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t-2 border-r-2 border-primary/40 translate-x-px -translate-y-px" />
+      <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b-2 border-l-2 border-primary/40 -translate-x-px translate-y-px" />
+      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b-2 border-r-2 border-primary/40 translate-x-px translate-y-px" />
 
-      <div className="flex items-center gap-2 mb-4">
-        <Zap className="h-4 w-4 text-primary" />
-        <span className="font-mono text-[10px] uppercase tracking-widest text-primary/70 font-bold">
-          Big Domino — A Crença Central
-        </span>
-        <div className="ml-auto">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 border border-white/8 px-2 py-0.5">
-            02 / 10
-          </span>
-        </div>
+      <div className="px-5 pt-4 pb-2 flex items-center gap-2">
+        <Zap className="h-3.5 w-3.5 text-primary/60" />
+        <span className="font-mono text-[9px] uppercase tracking-widest text-primary/55 font-bold">02 — Big Domino · A Crença Central</span>
+        <div className="flex-1 h-px bg-primary/10" />
+        <span className="font-mono text-[9px] text-muted-foreground/20 tracking-widest">02 / 10</span>
       </div>
 
-      {editing ? (
-        <div className="space-y-2">
-          <Textarea
-            value={editValue}
-            onChange={e => onChangeEdit(e.target.value)}
-            className="font-mono text-sm bg-transparent border-primary/20 resize-none min-h-[80px]"
-          />
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="rounded-none font-mono text-[10px] h-7 px-3 gap-1.5 border-primary/30 text-primary" onClick={onSave}>
-              <Save className="h-3 w-3" /> Salvar
-            </Button>
-            <Button size="sm" variant="ghost" className="rounded-none font-mono text-[10px] h-7 px-3" onClick={onCancelEdit}>
-              Cancelar
-            </Button>
-          </div>
+      <div className="px-5 pb-2">
+        <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30 mb-3">
+          A UMA crença que, implantada no avatar, colapsa todas as objeções de uma só vez
         </div>
-      ) : (
-        <>
-          <p className="font-mono text-base sm:text-lg font-black text-foreground leading-snug tracking-tight italic mb-2">
-            "{value}"
-          </p>
-          <p className="font-mono text-[10px] text-muted-foreground/40 leading-relaxed mb-4">
-            Implantando esta crença, todas as objeções colapsam automaticamente — sem precisar refutar uma por uma.
-          </p>
-        </>
-      )}
+        {editing ? (
+          <div className="space-y-2">
+            <Textarea value={editValue} onChange={e => onChangeEdit(e.target.value)}
+              className="font-mono text-sm bg-transparent border-primary/15 resize-none min-h-[80px]" />
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="rounded-none font-mono text-[9px] h-6 px-3 gap-1.5 border-primary/25 text-primary" onClick={onSave}>
+                <Save className="h-2.5 w-2.5" />Salvar
+              </Button>
+              <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={onCancelEdit}>Cancelar</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="group">
+            <blockquote className="border-l-2 border-primary/50 pl-4 py-1">
+              <p className="font-mono text-base font-black text-foreground leading-snug tracking-tight">&ldquo;{value}&rdquo;</p>
+            </blockquote>
+            <Button size="sm" variant="ghost"
+              className="mt-2 rounded-none font-mono text-[9px] h-6 px-2 gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={onEdit}><Pencil className="h-2.5 w-2.5" />Editar</Button>
+          </div>
+        )}
+      </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="px-5 pb-4 flex items-center gap-2 flex-wrap">
         <Button size="sm" variant="outline"
-          className={`rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 ${
-            status === "approved" ? "border-emerald-500/50 text-emerald-400 bg-emerald-500/10" : "border-white/10 text-muted-foreground hover:border-emerald-500/40 hover:text-emerald-400"
-          }`}
-          onClick={() => onApprove("bigDomino")}>
-          <Check className="h-3 w-3" />{status === "approved" ? "Aprovado" : "Aprovar"}
+          className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 ${status === "approved" ? "border-emerald-500/40 text-emerald-400 bg-emerald-500/8" : "border-white/8 text-muted-foreground/50 hover:border-emerald-500/35 hover:text-emerald-400"}`}
+          onClick={() => onApprove("bigDomino")}><Check className="h-2.5 w-2.5" />{status === "approved" ? "Aprovado" : "Aprovar"}
         </Button>
         <Button size="sm" variant="outline"
-          className={`rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 ${
-            status === "rejected" ? "border-red-500/50 text-red-400 bg-red-500/10" : "border-white/10 text-muted-foreground hover:border-red-500/40 hover:text-red-400"
-          }`}
-          onClick={() => onReject("bigDomino")}>
-          <X className="h-3 w-3" />{status === "rejected" ? "Rejeitado" : "Rejeitar"}
+          className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 ${status === "rejected" ? "border-red-500/40 text-red-400 bg-red-500/8" : "border-white/8 text-muted-foreground/50 hover:border-red-500/35 hover:text-red-400"}`}
+          onClick={() => onReject("bigDomino")}><X className="h-2.5 w-2.5" />{status === "rejected" ? "Rejeitado" : "Rejeitar"}
         </Button>
         <Button size="sm" variant="outline"
-          className={`rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 ${
-            status === "flagged" ? "border-amber-500/50 text-amber-400 bg-amber-500/10" : "border-white/10 text-muted-foreground hover:border-amber-500/40 hover:text-amber-400"
-          }`}
-          onClick={() => onFlag("bigDomino")}>
-          <AlertTriangle className="h-3 w-3" />{status === "flagged" ? "Sinalizado" : "Sinalizar"}
+          className={`rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 ${status === "flagged" ? "border-amber-500/40 text-amber-400 bg-amber-500/8" : "border-white/8 text-muted-foreground/50 hover:border-amber-500/35 hover:text-amber-400"}`}
+          onClick={() => onFlag("bigDomino")}><AlertTriangle className="h-2.5 w-2.5" />{status === "flagged" ? "Sinalizado" : "Sinalizar"}
         </Button>
         {!editing && (
           <Button size="sm" variant="ghost"
-            className="rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 text-muted-foreground hover:text-foreground"
-            onClick={onEdit}>
-            <Pencil className="h-3 w-3" />Editar
-          </Button>
+            className="rounded-none font-mono text-[9px] uppercase tracking-widest h-6 px-3 gap-1.5 text-muted-foreground/35 hover:text-foreground/60 ml-auto"
+            onClick={onEdit}><Pencil className="h-2.5 w-2.5" />Editar</Button>
         )}
       </div>
     </div>
@@ -409,52 +384,50 @@ export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) 
 
   const [statuses, setStatuses] = useState<Record<string, ModuleStatus>>({});
   const [editingModule, setEditingModule] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<Record<string, string>>({});
-  const [savedEdits, setSavedEdits] = useState<Record<string, string>>({});
+  const [editValues, setEditValues]       = useState<Record<string, string>>({});
+  const [savedEdits, setSavedEdits]       = useState<Record<string, string>>({});
 
   const setStatus = (id: string, next: ModuleStatus) =>
     setStatuses(prev => ({ ...prev, [id]: prev[id] === next ? "pending" : next }));
-
   const getStatus = (id: string): ModuleStatus => statuses[id] ?? "pending";
 
   // ── Data extraction ──
   const executiveSummary = savedEdits["executiveSummary"] ?? (str(src["executiveSummary"]) || str(strategyD["executiveSummary"]));
-  const bigDomino        = savedEdits["bigDomino"] ?? (str(src["bigDomino"]) || str(strategyD["bigDomino"]));
-  const strategistNotes  = savedEdits["strategistNotes"] ?? (str(src["strategistNotes"]) || str(strategyD["strategistNotes"]));
+  const bigDomino        = savedEdits["bigDomino"]        ?? (str(src["bigDomino"])        || str(strategyD["bigDomino"]));
+  const strategistNotes  = savedEdits["strategistNotes"]  ?? (str(src["strategistNotes"])  || str(strategyD["strategistNotes"]));
 
-  const market       = obj(src["marketDiagnosis"] ?? strategyD["marketDiagnosis"]);
-  const positioning  = obj(src["offerPositioning"] ?? strategyD["offerPositioning"]);
+  const market       = obj(src["marketDiagnosis"]      ?? strategyD["marketDiagnosis"]);
+  const positioning  = obj(src["offerPositioning"]     ?? strategyD["offerPositioning"]);
   const audience     = obj(src["audienceSegmentation"] ?? strategyD["audienceSegmentation"]);
   const architecture = obj(src["campaignArchitecture"] ?? strategyD["campaignArchitecture"]);
-  const metrics      = obj(src["successMetrics"] ?? strategyD["successMetrics"]);
-  const risks        = obj(src["risks"] ?? strategyD["risks"]);
-  const triggerMap   = obj(src["triggerMap"] ?? strategyD["triggerMap"]);
+  const metrics      = obj(src["successMetrics"]       ?? strategyD["successMetrics"]);
+  const risks        = obj(src["risks"]                ?? strategyD["risks"]);
+  const triggerMap   = obj(src["triggerMap"]           ?? strategyD["triggerMap"]);
 
-  const revenueTarget    = num(metrics["revenueTarget"]);
-  const conversionRate   = num(metrics["conversionRateTarget"]);
-  const triggerSequence  = arr(triggerMap["triggerStackSequence"]);
-  const dominantTrigger  = str(triggerMap["dominantTrigger"]);
-  const dominantJustif   = str(triggerMap["dominantTriggerJustification"]);
-  const socialProof      = str(triggerMap["socialProofBlueprint"]);
-  const antiReq          = arr(triggerMap["antiRequisiteAngles"]);
-  const transformBridge  = str(triggerMap["transformationBridge"]);
+  const revenueTarget   = num(metrics["revenueTarget"]);
+  const conversionRate  = num(metrics["conversionRateTarget"]);
+  const triggerSequence = arr(triggerMap["triggerStackSequence"]);
+  const dominantTrigger = str(triggerMap["dominantTrigger"]);
+  const dominantJustif  = str(triggerMap["dominantTriggerJustification"]);
+  const socialProof     = str(triggerMap["socialProofBlueprint"]);
+  const antiReq         = arr(triggerMap["antiRequisiteAngles"]);
+  const transformBridge = str(triggerMap["transformationBridge"]);
 
   const hasContent = !!(executiveSummary || bigDomino || Object.keys(positioning).length || Object.keys(audience).length);
 
-  // ── Progress calculation ──
-  const TOTAL_MODULES = 10;
+  const TOTAL_MODULES  = 10;
   const approvedCount  = Object.values(statuses).filter(s => s === "approved").length;
   const rejectedCount  = Object.values(statuses).filter(s => s === "rejected").length;
   const flaggedCount   = Object.values(statuses).filter(s => s === "flagged").length;
-  const progress = Math.round((approvedCount / TOTAL_MODULES) * 100);
+  const progress       = Math.round((approvedCount / TOTAL_MODULES) * 100);
 
   if (!hasContent) {
     return (
       <div className="py-20 text-center">
-        <div className="w-12 h-12 border border-white/10 flex items-center justify-center mx-auto mb-4">
-          <Brain className="h-6 w-6 text-muted-foreground/20" />
+        <div className="w-10 h-10 border border-white/8 flex items-center justify-center mx-auto mb-4">
+          <Brain className="h-5 w-5 text-muted-foreground/20" />
         </div>
-        <p className="font-mono text-xs text-muted-foreground/30 uppercase tracking-widest">
+        <p className="font-mono text-[10px] text-muted-foreground/25 uppercase tracking-widest">
           O Estrategista está finalizando o masterplan…
         </p>
       </div>
@@ -462,117 +435,96 @@ export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) 
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          HEADER — Proposta Estratégica
-      ══════════════════════════════════════════════════════════════════════ */}
-      <div className="border border-white/8 bg-gradient-to-r from-primary/[0.06] to-transparent p-5">
+      {/* ═══ HEADER ══════════════════════════════════════════════════════════ */}
+      <div className="border border-white/7 bg-gradient-to-r from-primary/[0.05] to-transparent px-5 py-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Award className="h-4 w-4 text-primary/70" />
-              <span className="font-mono text-[9px] uppercase tracking-widest text-primary/60 font-bold">
+              <Award className="h-3.5 w-3.5 text-primary/50" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-primary/50 font-bold">
                 NexOS AI — Proposta Estratégica
               </span>
             </div>
-            <h2 className="font-mono text-base font-black uppercase tracking-widest text-foreground">
+            <h2 className="font-mono text-sm font-black uppercase tracking-widest text-foreground">
               Masterplan de Lançamento
             </h2>
-            <p className="font-mono text-[11px] text-muted-foreground/50 mt-1">
-              10 módulos estratégicos · Elaborado pelo Time NexOS AI · Revise, edite e aprove cada seção
+            <p className="font-mono text-[10px] text-muted-foreground/40 mt-1">
+              10 módulos · Elaborado pelo Time NexOS AI · Revise e aprove cada seção
             </p>
           </div>
-
-          {/* Progress block */}
           <div className="text-right shrink-0">
-            <div className="font-mono text-2xl font-black text-foreground leading-none">{approvedCount}<span className="text-muted-foreground/30 text-base font-normal">/{TOTAL_MODULES}</span></div>
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mt-0.5">Módulos aprovados</div>
-            {rejectedCount > 0 && (
-              <div className="font-mono text-[9px] text-red-400/70 mt-0.5">{rejectedCount} rejeitado{rejectedCount > 1 ? "s" : ""}</div>
-            )}
-            {flaggedCount > 0 && (
-              <div className="font-mono text-[9px] text-amber-400/70 mt-0.5">{flaggedCount} sinalizado{flaggedCount > 1 ? "s" : ""}</div>
-            )}
+            <div className="font-mono text-xl font-black text-foreground leading-none">
+              {approvedCount}<span className="text-muted-foreground/25 text-sm font-normal">/{TOTAL_MODULES}</span>
+            </div>
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35 mt-0.5">aprovados</div>
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="mt-4">
-          <div className="flex justify-between mb-1.5">
-            <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">Progresso de revisão</span>
-            <span className="font-mono text-[9px] text-muted-foreground/50">{progress}%</span>
+          <div className="flex justify-between mb-1">
+            <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest">Progresso de revisão</span>
+            <span className="font-mono text-[9px] text-muted-foreground/40">{progress}%</span>
           </div>
-          <div className="h-1 bg-white/5 w-full">
-            <div
-              className="h-full bg-gradient-to-r from-primary/70 to-primary transition-all duration-500"
-              style={{ width: `${progress}%` }}
-            />
+          <div className="h-px bg-white/5 w-full">
+            <div className="h-full bg-gradient-to-r from-primary/60 to-primary transition-all duration-500" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
-        {/* Status chips */}
-        <div className="flex flex-wrap gap-2 mt-3">
+        <div className="flex flex-wrap gap-1.5 mt-3">
           {approvedCount === TOTAL_MODULES ? (
-            <Pill color="green"><Check className="h-2.5 w-2.5 mr-1" />Masterplan 100% aprovado</Pill>
+            <Tag color="green"><Check className="h-2.5 w-2.5 mr-1" />Masterplan 100% aprovado</Tag>
           ) : (
             <>
-              <Pill color="default"><Lock className="h-2.5 w-2.5 mr-1" />{TOTAL_MODULES - approvedCount - flaggedCount - rejectedCount} módulos pendentes</Pill>
-              {rejectedCount > 0 && <Pill color="red"><X className="h-2.5 w-2.5 mr-1" />{rejectedCount} rejeitado{rejectedCount > 1 ? "s" : ""}</Pill>}
-              {flaggedCount  > 0 && <Pill color="amber"><AlertTriangle className="h-2.5 w-2.5 mr-1" />{flaggedCount} sinalizado{flaggedCount > 1 ? "s" : ""}</Pill>}
+              <Tag color="default"><Lock className="h-2.5 w-2.5 mr-1" />{TOTAL_MODULES - approvedCount - flaggedCount - rejectedCount} pendentes</Tag>
+              {rejectedCount > 0 && <Tag color="red"><X className="h-2.5 w-2.5 mr-1" />{rejectedCount} rejeitado{rejectedCount > 1 ? "s" : ""}</Tag>}
+              {flaggedCount  > 0 && <Tag color="amber"><AlertTriangle className="h-2.5 w-2.5 mr-1" />{flaggedCount} sinalizado{flaggedCount > 1 ? "s" : ""}</Tag>}
             </>
           )}
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M01 — DIAGNÓSTICO EXECUTIVO
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══ M01 — DIAGNÓSTICO EXECUTIVO ═════════════════════════════════════ */}
       {executiveSummary && (
-        <Module index={1} id="executiveSummary" icon={Brain} title="Diagnóstico Executivo"
-          subtitle="Análise profunda do contexto, oportunidade e viabilidade de lançamento"
+        <Module index={1} id="executiveSummary" icon={Brain}
+          title="Diagnóstico Executivo" subtitle="Contexto, oportunidade e viabilidade de lançamento"
           status={getStatus("executiveSummary")} accentColor="cyan"
           onApprove={id => setStatus(id, "approved")}
           onReject={id => setStatus(id, "rejected")}
           onFlag={id => setStatus(id, "flagged")}
         >
-          <div className="relative">
-            {editingModule === "executiveSummary" ? (
-              <div className="space-y-2">
-                <Textarea
-                  value={editValues["executiveSummary"] ?? executiveSummary}
-                  onChange={e => setEditValues(prev => ({ ...prev, executiveSummary: e.target.value }))}
-                  className="font-mono text-xs bg-transparent border-white/10 resize-none min-h-[120px]"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="rounded-none font-mono text-[10px] h-7 px-3 gap-1.5 border-primary/30 text-primary"
-                    onClick={() => { setSavedEdits(p => ({ ...p, executiveSummary: editValues["executiveSummary"] ?? executiveSummary })); setEditingModule(null); }}>
-                    <Save className="h-3 w-3" />Salvar
-                  </Button>
-                  <Button size="sm" variant="ghost" className="rounded-none font-mono text-[10px] h-7 px-3" onClick={() => setEditingModule(null)}>Cancelar</Button>
-                </div>
-              </div>
-            ) : (
-              <div className="group">
-                <p className="font-mono text-xs text-foreground/80 leading-relaxed">{executiveSummary}</p>
-                <Button size="sm" variant="ghost"
-                  className="mt-2 rounded-none font-mono text-[10px] h-6 px-2 gap-1 text-muted-foreground/40 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => { setEditValues(p => ({ ...p, executiveSummary })); setEditingModule("executiveSummary"); }}>
-                  <Pencil className="h-2.5 w-2.5" />Editar
+          {editingModule === "executiveSummary" ? (
+            <div className="space-y-2">
+              <Textarea value={editValues["executiveSummary"] ?? executiveSummary}
+                onChange={e => setEditValues(p => ({ ...p, executiveSummary: e.target.value }))}
+                className="font-mono text-xs bg-transparent border-white/10 resize-none min-h-[120px]" />
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="rounded-none font-mono text-[9px] h-6 px-3 gap-1.5 border-primary/25 text-primary"
+                  onClick={() => { setSavedEdits(p => ({ ...p, executiveSummary: editValues["executiveSummary"] ?? executiveSummary })); setEditingModule(null); }}>
+                  <Save className="h-2.5 w-2.5" />Salvar
                 </Button>
+                <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={() => setEditingModule(null)}>Cancelar</Button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="group">
+              <SectionLabel n="1.1">Análise de Viabilidade e PMF</SectionLabel>
+              <p className="font-mono text-xs text-foreground/75 leading-relaxed">{executiveSummary}</p>
+              <Button size="sm" variant="ghost"
+                className="mt-2 rounded-none font-mono text-[9px] h-6 px-2 gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => { setEditValues(p => ({ ...p, executiveSummary })); setEditingModule("executiveSummary"); }}>
+                <Pencil className="h-2.5 w-2.5" />Editar
+              </Button>
+            </div>
+          )}
         </Module>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M02 — BIG DOMINO (special card, always visible if exists)
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══ M02 — BIG DOMINO ════════════════════════════════════════════════ */}
       {bigDomino && (
         <BigDominoCard
-          value={bigDomino}
-          status={getStatus("bigDomino")}
+          value={bigDomino} status={getStatus("bigDomino")}
           onApprove={id => setStatus(id, "approved")}
           onReject={id => setStatus(id, "rejected")}
           onFlag={id => setStatus(id, "flagged")}
@@ -585,265 +537,356 @@ export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) 
         />
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M03 — POSICIONAMENTO DA OFERTA
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Module index={3} id="positioning" icon={Target} title="Posicionamento da Oferta"
-        subtitle="Proposta única de valor, mecanismo diferenciador e justificativa de preço"
+      {/* ═══ M03 — POSICIONAMENTO DA OFERTA ══════════════════════════════════ */}
+      <Module index={3} id="positioning" icon={Target}
+        title="Posicionamento da Oferta" subtitle="Proposta única de valor, mecanismo diferenciador e justificativa de preço"
         status={getStatus("positioning")} accentColor="purple"
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={Object.keys(positioning).length === 0}
       >
-        <div className="space-y-4">
-          {str(positioning["uniqueValueProposition"]) && (
-            <div className="border-l-2 border-violet-400/40 pl-4 py-1">
-              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Proposta Única de Valor</div>
-              <p className="font-mono text-sm font-bold text-foreground/95 leading-snug">
-                {str(positioning["uniqueValueProposition"])}
-              </p>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <DataRow label="Mecanismo Único" value={str(positioning["primaryDifferentiator"])} />
-            <DataRow label="Posicionamento" value={str(positioning["positioning"])} />
-            <DataRow label="Justificativa de Preço" value={str(positioning["priceJustification"])} />
+        {str(positioning["uniqueValueProposition"]) && (
+          <div>
+            <SectionLabel n="3.1">Proposta Única de Valor</SectionLabel>
+            <QuoteBlock color="violet">{str(positioning["uniqueValueProposition"])}</QuoteBlock>
           </div>
-          <BulletItems label="Vantagens Competitivas" items={arr(positioning["competitiveAdvantages"])} color="green" />
-        </div>
+        )}
+        {str(positioning["primaryDifferentiator"]) && (
+          <div>
+            <SectionLabel n="3.2">Mecanismo Único</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(positioning["primaryDifferentiator"])}</p>
+          </div>
+        )}
+        {(str(positioning["positioning"]) || str(positioning["priceJustification"])) && (
+          <div>
+            <SectionLabel n="3.3">Contexto e Preço</SectionLabel>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {str(positioning["positioning"])       && <Field label="Posicionamento">{str(positioning["positioning"])}</Field>}
+              {str(positioning["priceJustification"])&& <Field label="Justificativa de Preço">{str(positioning["priceJustification"])}</Field>}
+            </div>
+          </div>
+        )}
+        {arr(positioning["competitiveAdvantages"]).length > 0 && (
+          <div>
+            <SectionLabel n="3.4">Vantagens Competitivas</SectionLabel>
+            <NumberedList items={arr(positioning["competitiveAdvantages"])} color="green" />
+          </div>
+        )}
       </Module>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M04 — DIAGNÓSTICO DE MERCADO
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Module index={4} id="market" icon={TrendingUp} title="Diagnóstico de Mercado"
-        subtitle="Maturidade, cenário competitivo, oportunidades e ameaças identificadas"
+      {/* ═══ M04 — DIAGNÓSTICO DE MERCADO ════════════════════════════════════ */}
+      <Module index={4} id="market" icon={TrendingUp}
+        title="Diagnóstico de Mercado" subtitle="Maturidade, cenário competitivo, oportunidades e ameaças"
         status={getStatus("market")} accentColor="amber"
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={Object.keys(market).length === 0}
       >
-        <div className="space-y-4">
-          {str(market["marketMaturity"]) && (
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">Maturidade do Mercado</span>
-              <Pill color="amber">{str(market["marketMaturity"])}</Pill>
-            </div>
-          )}
-          <DataRow label="Cenário Competitivo" value={str(market["competitiveLandscape"])} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <BulletItems label="Oportunidades" items={arr(market["opportunities"])} color="green" />
-            <BulletItems label="Ameaças" items={arr(market["threats"])} color="red" />
+        {str(market["marketMaturity"]) && (
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">Maturidade do Mercado</span>
+            <Tag color="amber">{str(market["marketMaturity"])}</Tag>
           </div>
-          <BulletItems label="Barreiras de Entrada" items={arr(market["entryBarriers"])} color="amber" />
-        </div>
+        )}
+        {str(market["competitiveLandscape"]) && (
+          <div>
+            <SectionLabel n="4.1">Cenário Competitivo</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(market["competitiveLandscape"])}</p>
+          </div>
+        )}
+        {(arr(market["opportunities"]).length > 0 || arr(market["threats"]).length > 0 || arr(market["entryBarriers"]).length > 0) && (
+          <div>
+            <SectionLabel n="4.2">Oportunidades · Ameaças · Barreiras</SectionLabel>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+              {arr(market["opportunities"]).length > 0 && (
+                <div className="border border-white/8 bg-white/[0.015] p-3">
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/60 mb-2">Oportunidades</div>
+                  <BulletList items={arr(market["opportunities"])} color="cyan" />
+                </div>
+              )}
+              {arr(market["threats"]).length > 0 && (
+                <div className="border border-white/8 bg-white/[0.015] p-3">
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/60 mb-2">Ameaças</div>
+                  <BulletList items={arr(market["threats"])} color="red" />
+                </div>
+              )}
+              {arr(market["entryBarriers"]).length > 0 && (
+                <div className="border border-white/8 bg-white/[0.015] p-3">
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-amber-400/60 mb-2">Barreiras de Entrada</div>
+                  <BulletList items={arr(market["entryBarriers"])} color="amber" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </Module>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M05 — ARQUÉTIPO DE AUDIÊNCIA
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Module index={5} id="audience" icon={Users} title="Arquétipo de Audiência"
-        subtitle="Avatar principal, perfil psicográfico, objeções reais e gatilhos de compra"
+      {/* ═══ M05 — ARQUÉTIPO DE AUDIÊNCIA ════════════════════════════════════ */}
+      <Module index={5} id="audience" icon={Users}
+        title="Arquétipo de Audiência" subtitle="Avatar principal, perfil psicográfico, objeções e gatilhos de compra"
         status={getStatus("audience")} accentColor="cyan"
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={Object.keys(audience).length === 0}
       >
-        <div className="space-y-4">
-          {str(audience["primaryAvatar"]) && (
-            <div className="border border-white/8 bg-white/[0.02] p-4">
+        {str(audience["primaryAvatar"]) && (
+          <div>
+            <SectionLabel n="5.1">Avatar Principal</SectionLabel>
+            <div className="border border-white/8 bg-white/[0.015] p-4">
               <div className="flex items-center gap-1.5 mb-2">
-                <Star className="h-3 w-3 text-cyan-400/70" />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/60">Avatar Principal</span>
+                <Star className="h-2.5 w-2.5 text-cyan-400/50" />
+                <span className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/50">Perfil Central</span>
               </div>
-              <p className="font-mono text-xs text-foreground/80 leading-relaxed">{str(audience["primaryAvatar"])}</p>
+              <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(audience["primaryAvatar"])}</p>
             </div>
-          )}
-          <DataRow label="Perfil Psicográfico" value={str(audience["psychographicProfile"])} />
-          <DataRow label="Estratégia de Sofisticação" value={str(audience["sophisticationStrategy"])} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <BulletItems label="Gatilhos de Compra" items={arr(audience["buyingTriggers"])} color="amber" />
-            <BulletItems label="Objeções Reais" items={arr(audience["objections"])} color="red" />
           </div>
-          <BulletItems label="Avatares Secundários" items={arr(audience["secondaryAvatars"])} />
-        </div>
+        )}
+        {str(audience["psychographicProfile"]) && (
+          <div>
+            <SectionLabel n="5.2">Perfil Psicográfico</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(audience["psychographicProfile"])}</p>
+          </div>
+        )}
+        {str(audience["sophisticationStrategy"]) && (
+          <div>
+            <SectionLabel n="5.3">Estratégia de Sofisticação</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(audience["sophisticationStrategy"])}</p>
+          </div>
+        )}
+        {(arr(audience["buyingTriggers"]).length > 0 || arr(audience["objections"]).length > 0) && (
+          <div>
+            <SectionLabel n="5.4">Gatilhos e Objeções</SectionLabel>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {arr(audience["buyingTriggers"]).length > 0 && (
+                <div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-amber-400/50 mb-2">Gatilhos de Compra</div>
+                  <NumberedList items={arr(audience["buyingTriggers"])} color="amber" />
+                </div>
+              )}
+              {arr(audience["objections"]).length > 0 && (
+                <div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/50 mb-2">Objeções Reais</div>
+                  <NumberedList items={arr(audience["objections"])} color="red" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {arr(audience["secondaryAvatars"]).length > 0 && (
+          <div>
+            <SectionLabel n="5.5">Avatares Secundários</SectionLabel>
+            <BulletList items={arr(audience["secondaryAvatars"])} />
+          </div>
+        )}
       </Module>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M06 — ARQUITETURA DA CAMPANHA
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Module index={6} id="architecture" icon={Lightbulb} title="Arquitetura da Campanha"
-        subtitle="Narrativa central, gancho emocional, mensagens-chave e pilares de conteúdo"
+      {/* ═══ M06 — ARQUITETURA DA CAMPANHA ═══════════════════════════════════ */}
+      <Module index={6} id="architecture" icon={Lightbulb}
+        title="Arquitetura da Campanha" subtitle="Narrativa central, gancho emocional, mensagens-chave e pilares de conteúdo"
         status={getStatus("architecture")} accentColor="purple"
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={Object.keys(architecture).length === 0}
       >
-        <div className="space-y-4">
-          {str(architecture["coreNarrative"]) && (
-            <div className="border-l-2 border-violet-400/40 pl-4 py-1">
-              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Narrativa Central</div>
-              <p className="font-mono text-sm font-bold text-foreground/95 leading-snug">{str(architecture["coreNarrative"])}</p>
-            </div>
-          )}
-          <DataRow label="Gancho Emocional" value={str(architecture["emotionalHook"])} />
-          <DataRow label="Estratégia de CTA" value={str(architecture["callToActionStrategy"])} />
-          <BulletItems label="Mensagens-Chave" items={arr(architecture["keyMessages"])} color="green" />
-          <BulletItems label="Pilares de Conteúdo" items={arr(architecture["contentPillars"])} />
-        </div>
+        {str(architecture["coreNarrative"]) && (
+          <div>
+            <SectionLabel n="6.1">Narrativa Central</SectionLabel>
+            <QuoteBlock color="violet">{str(architecture["coreNarrative"])}</QuoteBlock>
+          </div>
+        )}
+        {str(architecture["emotionalHook"]) && (
+          <div>
+            <SectionLabel n="6.2">Gancho Emocional</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(architecture["emotionalHook"])}</p>
+          </div>
+        )}
+        {arr(architecture["keyMessages"]).length > 0 && (
+          <div>
+            <SectionLabel n="6.3">Mensagens-Chave</SectionLabel>
+            <NumberedList items={arr(architecture["keyMessages"])} color="green" />
+          </div>
+        )}
+        {arr(architecture["contentPillars"]).length > 0 && (
+          <div>
+            <SectionLabel n="6.4">Pilares de Conteúdo</SectionLabel>
+            <BulletList items={arr(architecture["contentPillars"])} />
+          </div>
+        )}
+        {str(architecture["platformDistributionStrategy"]) && (
+          <div>
+            <SectionLabel n="6.5">Distribuição por Plataforma</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(architecture["platformDistributionStrategy"])}</p>
+          </div>
+        )}
+        {str(architecture["callToActionStrategy"]) && (
+          <div>
+            <SectionLabel n="6.6">Estratégia de CTA</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{str(architecture["callToActionStrategy"])}</p>
+          </div>
+        )}
       </Module>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M07 — ENGENHARIA DE GATILHOS
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Module index={7} id="triggers" icon={Flame} title="Engenharia de Gatilhos"
-        subtitle="Gatilho dominante, sequência dia a dia, ponte de transformação e ângulos anti-requisito"
+      {/* ═══ M07 — ENGENHARIA DE GATILHOS ════════════════════════════════════ */}
+      <Module index={7} id="triggers" icon={Flame}
+        title="Engenharia de Gatilhos" subtitle="Gatilho dominante, sequência de ativação, ponte de transformação"
         status={getStatus("triggers")} accentColor="red"
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={!dominantTrigger && triggerSequence.length === 0 && !transformBridge}
       >
-        <div className="space-y-4">
-          {dominantTrigger && (
-            <div className="border border-white/8 bg-white/[0.02] p-4">
-              <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-2">Gatilho Dominante</div>
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Pill color="red">{dominantTrigger}</Pill>
-              </div>
-              {dominantJustif && <p className="font-mono text-[11px] text-muted-foreground/55 leading-relaxed">{dominantJustif}</p>}
+        {dominantTrigger && (
+          <div>
+            <SectionLabel n="7.1">Gatilho Dominante</SectionLabel>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              <Tag color="red">{dominantTrigger}</Tag>
             </div>
-          )}
-          <SequenceTimeline items={triggerSequence} />
-          <DataRow label="Ponte de Transformação" value={transformBridge} />
-          <BulletItems label="Ângulos Anti-Requisito" items={antiReq} color="amber" />
-          {socialProof && <DataRow label="Blueprint de Prova Social" value={socialProof} />}
-        </div>
+            {dominantJustif && <p className="font-mono text-xs text-foreground/65 leading-relaxed mt-2">{dominantJustif}</p>}
+          </div>
+        )}
+        {triggerSequence.length > 0 && (
+          <div>
+            <SectionLabel n="7.2">Sequência de Ativação Dia a Dia</SectionLabel>
+            <PhaseTimeline items={triggerSequence} />
+          </div>
+        )}
+        {transformBridge && (
+          <div>
+            <SectionLabel n="7.3">Ponte de Transformação</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{transformBridge}</p>
+          </div>
+        )}
+        {antiReq.length > 0 && (
+          <div>
+            <SectionLabel n="7.4">Ângulos Anti-Requisito</SectionLabel>
+            <NumberedList items={antiReq} color="amber" />
+          </div>
+        )}
+        {socialProof && (
+          <div>
+            <SectionLabel n="7.5">Blueprint de Prova Social</SectionLabel>
+            <p className="font-mono text-xs text-foreground/75 leading-relaxed">{socialProof}</p>
+          </div>
+        )}
       </Module>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M08 — MÉTRICAS DE PERFORMANCE
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Module index={8} id="metrics" icon={BarChart3} title="Métricas de Performance"
-        subtitle="KPI principal, metas de receita, taxa de conversão e premissas críticas"
+      {/* ═══ M08 — MÉTRICAS DE PERFORMANCE ══════════════════════════════════ */}
+      <Module index={8} id="metrics" icon={BarChart3}
+        title="Métricas de Performance" subtitle="KPI principal, meta de receita, taxa de conversão e premissas críticas"
         status={getStatus("metrics")} accentColor="green"
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={Object.keys(metrics).length === 0}
       >
-        <div className="space-y-4">
-          <KpiGrid items={[
-            { label: "KPI Principal",       value: str(metrics["primaryKPI"]) },
-            { label: "Meta de Receita",     value: revenueTarget ? `R$ ${revenueTarget.toLocaleString("pt-BR")}` : "", accent: "text-emerald-400 font-bold" },
-            { label: "Taxa de Conv. Alvo",  value: conversionRate ? `${(conversionRate * 100).toFixed(1)}%` : "" },
-            { label: "Horizonte",           value: str(metrics["launchWindow"]) },
-          ]} />
-          <BulletItems label="Premissas Críticas" items={arr(metrics["criticalAssumptions"])} color="amber" />
+        <div>
+          <SectionLabel n="8.1">Unit Economics</SectionLabel>
+          <div className="grid grid-cols-2 gap-1.5">
+            <KpiBox label="KPI Principal" value={str(metrics["primaryKPI"])} />
+            <KpiBox label="Meta de Receita" value={revenueTarget ? `R$ ${revenueTarget.toLocaleString("pt-BR")}` : ""} accent="text-emerald-400 font-bold" />
+            <KpiBox label="Taxa de Conversão Alvo" value={conversionRate ? `${(conversionRate * 100).toFixed(1)}%` : ""} />
+            <KpiBox label="Horizonte de Lançamento" value={str(metrics["launchWindow"])} />
+          </div>
         </div>
+        {arr(metrics["criticalAssumptions"]).length > 0 && (
+          <div>
+            <SectionLabel n="8.2">Premissas Críticas</SectionLabel>
+            <NumberedList items={arr(metrics["criticalAssumptions"])} color="amber" />
+          </div>
+        )}
       </Module>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M09 — ANÁLISE DE RISCOS
-      ══════════════════════════════════════════════════════════════════════ */}
-      <Module index={9} id="risks" icon={ShieldAlert} title="Análise de Riscos"
-        subtitle="Nível de risco, principais ameaças e estratégias de mitigação"
+      {/* ═══ M09 — ANÁLISE DE RISCOS ══════════════════════════════════════════ */}
+      <Module index={9} id="risks" icon={ShieldAlert}
+        title="Análise de Riscos" subtitle="Nível de risco, ameaças principais e estratégias de mitigação"
         status={getStatus("risks")} accentColor="red"
         onApprove={id => setStatus(id, "approved")}
         onReject={id => setStatus(id, "rejected")}
         onFlag={id => setStatus(id, "flagged")}
         isEmpty={Object.keys(risks).length === 0}
       >
-        <div className="space-y-4">
-          {str(risks["level"]) && (
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">Nível Geral</span>
-              {(() => {
-                const level = str(risks["level"]);
-                const cfg = level === "low" ? { label: "Risco Baixo", color: "green" as const } :
-                            level === "high" ? { label: "Risco Alto", color: "red" as const } :
-                            { label: "Risco Médio", color: "amber" as const };
-                return <Pill color={cfg.color}>{cfg.label}</Pill>;
-              })()}
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <BulletItems label="Principais Riscos" items={arr(risks["mainRisks"])} color="red" />
-            <BulletItems label="Mitigações" items={arr(risks["mitigations"])} color="green" />
+        {str(risks["level"]) && (
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/35">Nível Geral</span>
+            {(() => {
+              const level = str(risks["level"]);
+              return level === "low"  ? <Tag color="green">Risco Baixo</Tag>  :
+                     level === "high" ? <Tag color="red">Risco Alto</Tag>    :
+                                        <Tag color="amber">Risco Médio</Tag>;
+            })()}
           </div>
-        </div>
+        )}
+        {(arr(risks["mainRisks"]).length > 0 || arr(risks["mitigations"]).length > 0) && (
+          <div>
+            <div className="grid grid-cols-2 gap-1 mb-2">
+              <div className="font-mono text-[9px] uppercase tracking-widest text-red-400/50">Riscos</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest text-emerald-400/50">Mitigações</div>
+            </div>
+            <RiskTable risks={arr(risks["mainRisks"])} mitigations={arr(risks["mitigations"])} />
+          </div>
+        )}
       </Module>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          M10 — NOTA DO ESTRATEGISTA
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══ M10 — NOTA DO ESTRATEGISTA ══════════════════════════════════════ */}
       {strategistNotes && (
-        <Module index={10} id="strategistNotes" icon={MessageSquare} title="Nota do Estrategista"
-          subtitle="Observações finais, recomendações e instruções de execução"
+        <Module index={10} id="strategistNotes" icon={MessageSquare}
+          title="Nota do Estrategista" subtitle="Observações finais, recomendações e instruções de execução"
           status={getStatus("strategistNotes")} accentColor="amber"
           onApprove={id => setStatus(id, "approved")}
           onReject={id => setStatus(id, "rejected")}
           onFlag={id => setStatus(id, "flagged")}
         >
-          <div className="group">
-            {editingModule === "strategistNotes" ? (
-              <div className="space-y-2">
-                <Textarea
-                  value={editValues["strategistNotes"] ?? strategistNotes}
-                  onChange={e => setEditValues(p => ({ ...p, strategistNotes: e.target.value }))}
-                  className="font-mono text-xs bg-transparent border-white/10 resize-none min-h-[100px]"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="rounded-none font-mono text-[10px] h-7 px-3 gap-1.5 border-primary/30 text-primary"
-                    onClick={() => { setSavedEdits(p => ({ ...p, strategistNotes: editValues["strategistNotes"] ?? strategistNotes })); setEditingModule(null); }}>
-                    <Save className="h-3 w-3" />Salvar
-                  </Button>
-                  <Button size="sm" variant="ghost" className="rounded-none font-mono text-[10px] h-7 px-3" onClick={() => setEditingModule(null)}>Cancelar</Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="font-mono text-xs text-foreground/75 leading-relaxed italic">{strategistNotes}</p>
-                <Button size="sm" variant="ghost"
-                  className="mt-2 rounded-none font-mono text-[10px] h-6 px-2 gap-1 text-muted-foreground/40 hover:text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => { setEditValues(p => ({ ...p, strategistNotes })); setEditingModule("strategistNotes"); }}>
-                  <Pencil className="h-2.5 w-2.5" />Editar
+          {editingModule === "strategistNotes" ? (
+            <div className="space-y-2">
+              <Textarea value={editValues["strategistNotes"] ?? strategistNotes}
+                onChange={e => setEditValues(p => ({ ...p, strategistNotes: e.target.value }))}
+                className="font-mono text-xs bg-transparent border-white/10 resize-none min-h-[100px]" />
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="rounded-none font-mono text-[9px] h-6 px-3 gap-1.5 border-primary/25 text-primary"
+                  onClick={() => { setSavedEdits(p => ({ ...p, strategistNotes: editValues["strategistNotes"] ?? strategistNotes })); setEditingModule(null); }}>
+                  <Save className="h-2.5 w-2.5" />Salvar
                 </Button>
-              </>
-            )}
-          </div>
+                <Button size="sm" variant="ghost" className="rounded-none font-mono text-[9px] h-6 px-3" onClick={() => setEditingModule(null)}>Cancelar</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="group">
+              <SectionLabel n="10.1">Diretrizes de Execução</SectionLabel>
+              <p className="font-mono text-xs text-foreground/70 leading-relaxed">{strategistNotes}</p>
+              <Button size="sm" variant="ghost"
+                className="mt-2 rounded-none font-mono text-[9px] h-6 px-2 gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => { setEditValues(p => ({ ...p, strategistNotes })); setEditingModule("strategistNotes"); }}>
+                <Pencil className="h-2.5 w-2.5" />Editar
+              </Button>
+            </div>
+          )}
         </Module>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          FOOTER CTA — Aprovação total
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ═══ FOOTER ══════════════════════════════════════════════════════════ */}
       {(approvedCount > 0 || rejectedCount > 0) && (
-        <div className={`border p-4 transition-all ${
-          approvedCount === TOTAL_MODULES
-            ? "border-emerald-500/30 bg-emerald-500/[0.04]"
-            : rejectedCount > 0
-            ? "border-red-500/15 bg-white/[0.01]"
-            : "border-white/8 bg-white/[0.02]"
+        <div className={`border px-4 py-3 transition-all ${
+          approvedCount === TOTAL_MODULES ? "border-emerald-500/25 bg-emerald-500/[0.03]" :
+          rejectedCount > 0 ? "border-red-500/12 bg-white/[0.005]" : "border-white/7 bg-white/[0.01]"
         }`}>
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               {approvedCount === TOTAL_MODULES ? (
                 <>
-                  <div className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 6px #34d399" }} />
-                  <span className="font-mono text-[11px] font-bold text-emerald-400 uppercase tracking-widest">
-                    Masterplan aprovado — {approvedCount}/{TOTAL_MODULES} módulos
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 5px #34d399" }} />
+                  <span className="font-mono text-[10px] font-bold text-emerald-400/90 uppercase tracking-widest">
+                    Masterplan aprovado — {approvedCount}/{TOTAL_MODULES}
                   </span>
                 </>
               ) : (
                 <>
-                  <Crosshair className="h-3.5 w-3.5 text-muted-foreground/40" />
-                  <span className="font-mono text-[11px] text-muted-foreground/60 uppercase tracking-widest">
-                    {approvedCount}/{TOTAL_MODULES} módulos aprovados
+                  <Crosshair className="h-3 w-3 text-muted-foreground/30" />
+                  <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
+                    {approvedCount}/{TOTAL_MODULES} aprovados
                     {rejectedCount > 0 ? ` · ${rejectedCount} rejeitado${rejectedCount > 1 ? "s" : ""}` : ""}
                     {flaggedCount  > 0 ? ` · ${flaggedCount} sinalizado${flaggedCount > 1 ? "s" : ""}` : ""}
                   </span>
@@ -852,13 +895,11 @@ export function StrategyMasterplan({ strategyD, ins }: StrategyMasterplanProps) 
             </div>
             <div className="flex items-center gap-1">
               {[...Array(TOTAL_MODULES)].map((_, i) => {
-                const moduleIds = ["executiveSummary", "bigDomino", "positioning", "market", "audience", "architecture", "triggers", "metrics", "risks", "strategistNotes"];
-                const s = getStatus(moduleIds[i]);
+                const ids = ["executiveSummary","bigDomino","positioning","market","audience","architecture","triggers","metrics","risks","strategistNotes"];
+                const s = getStatus(ids[i]);
                 return (
-                  <div key={i} className={`w-4 h-1 transition-all ${
-                    s === "approved"  ? "bg-emerald-500" :
-                    s === "rejected"  ? "bg-red-500" :
-                    s === "flagged"   ? "bg-amber-500" : "bg-white/10"
+                  <div key={i} className={`w-5 h-0.5 transition-all ${
+                    s === "approved" ? "bg-emerald-500" : s === "rejected" ? "bg-red-500" : s === "flagged" ? "bg-amber-500" : "bg-white/10"
                   }`} />
                 );
               })}
