@@ -1886,8 +1886,8 @@ export default function CampaignDetail() {
           </div>
         </div>
 
-        {/* Agentes — live feed com ícones e pensamentos expansíveis */}
-        {(isActive || liveEvents.length > 0 || (agentsData?.agents ?? []).length > 0) && (
+        {/* Agentes — live feed com ícones e pensamentos expansíveis (só quando há atividade real) */}
+        {(isActive || liveEvents.length > 0) && (
           <AgentLiveFeed
             events={liveEvents}
             dbAgents={agentsData?.agents ?? []}
@@ -2633,13 +2633,13 @@ export default function CampaignDetail() {
           {/* ─ Analyzing: cinematic agent activation ─ */}
           {campaign.status === "analyzing" && <AnalyzingDisplay />}
 
-          {/* ─ Generating: live agent feed ─ */}
-          {campaign.status === "generating" && liveEvents.length === 0 && (agentsData?.agents ?? []).length === 0 && <GeneratingDisplay />}
+          {/* ─ Generating: static placeholder until events arrive ─ */}
+          {campaign.status === "generating" && liveEvents.length === 0 && <GeneratingDisplay />}
 
-          {/* ─ Live agent feed — shown whenever agents are active or events streaming ─ */}
-          {(isActive || liveEvents.length > 0 || (agentsData?.agents ?? []).length > 0) &&
+          {/* ─ Live agent feed — only when agents are actually running ─ */}
+          {(isActive || liveEvents.length > 0) &&
            !["analyzing", "executing", "live"].includes(campaign.status) &&
-           !(campaign.status === "generating" && liveEvents.length === 0 && (agentsData?.agents ?? []).length === 0) && (
+           !(campaign.status === "generating" && liveEvents.length === 0) && (
             <AgentLiveFeed
               events={liveEvents}
               dbAgents={agentsData?.agents ?? []}
