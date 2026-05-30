@@ -19,7 +19,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
-  RefreshCw, Rocket, Brain, Video,
+  RefreshCw, Rocket, Brain, Video, CheckCheck,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
 import {
@@ -1892,6 +1892,97 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {/* Revisão de Estratégia — obrigatório revisar antes de gerar conteúdo */}
+        {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (() => {
+          const ins = parseStrategyInsights(strategyD);
+          const bigDomino = (ins["bigDomino"] as string | undefined) ?? (strategyD["bigDomino"] as string | undefined) ?? "";
+          const positioning = strategyD["offerPositioning"];
+          const audience = strategyD["audienceSegmentation"];
+          const triggerMap = (strategyD["triggerMap"] as Record<string, string> | undefined) ?? {};
+          const triggers = [...new Set(Object.values(triggerMap))].slice(0, 4);
+          const metrics = strategyD["successMetrics"];
+          const architecture = strategyD["campaignArchitecture"];
+
+          return (
+            <div className="border border-cyan-400/25 bg-cyan-400/5 overflow-hidden">
+              <div className="px-4 py-3 border-b border-cyan-400/25 flex items-center gap-2">
+                <BookOpen className="h-3.5 w-3.5 text-cyan-400" />
+                <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold flex-1">
+                  Plano Estratégico — Revise antes de aprovar
+                </span>
+                <span className="font-mono text-[9px] text-cyan-400/50 uppercase tracking-widest">AGUARDANDO APROVAÇÃO</span>
+              </div>
+
+              <div className="p-4 space-y-5">
+                {bigDomino && (
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Domino Principal</div>
+                    <p className="font-mono text-sm text-foreground/85 leading-relaxed italic">"{bigDomino}"</p>
+                  </div>
+                )}
+
+                {Boolean(positioning) && (
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Posicionamento da Oferta</div>
+                    <PlanText value={positioning as string | Record<string, unknown>} />
+                  </div>
+                )}
+
+                {Boolean(audience) && (
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Segmentação de Audiência</div>
+                    <PlanText value={audience as string | Record<string, unknown>} />
+                  </div>
+                )}
+
+                {triggers.length > 0 && (
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Gatilhos Mentais</div>
+                    <div className="flex flex-wrap gap-2">
+                      {triggers.map((t) => (
+                        <span key={t} className="font-mono text-[10px] uppercase tracking-wide px-2 py-1 border border-primary/20 bg-primary/5 text-primary/70">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {Boolean(architecture) && (
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Arquitetura da Campanha</div>
+                    <PlanText value={architecture as string | Record<string, unknown>} />
+                  </div>
+                )}
+
+                {Boolean(metrics) && (
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 mb-1.5">Métricas de Sucesso</div>
+                    <PlanText value={metrics as string | Record<string, unknown>} />
+                  </div>
+                )}
+              </div>
+
+              {/* Botão de aprovação no final da revisão */}
+              <div className="px-4 pb-4 pt-1 border-t border-cyan-400/15 mt-1">
+                <p className="font-mono text-[10px] text-muted-foreground/40 mb-3 text-center">
+                  Revise o plano acima e aprove para gerar o conteúdo das plataformas
+                </p>
+                {nextAction?.phase ? (
+                  <Button
+                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: nextAction.phase! } })}
+                    disabled={executeMutation.isPending}
+                    className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm"
+                  >
+                    {executeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}
+                    {executeMutation.isPending ? "Gerando conteúdo..." : "✓ Aprovar Estratégia e Gerar Conteúdo"}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Agentes — live feed com ícones e pensamentos expansíveis (só quando há atividade real) */}
         {(isActive || liveEvents.length > 0) && (
