@@ -10,6 +10,7 @@ import {
 } from "@workspace/db";
 import { deductCredits } from "../credits/credits.service.js";
 import { runSceneDirectorAgent } from "../agents/scene-director.agent.js";
+import { runFilmingBriefAgent } from "../agents/filming-brief.agent.js";
 import {
   generateVideoClip,
   generateAvatarVideo,
@@ -829,6 +830,47 @@ export async function pollClipJobs(workspaceId: string, projectId: string): Prom
 
 export async function getVideoProject(workspaceId: string, projectId: string): Promise<VideoProject> {
   return getProject(workspaceId, projectId);
+}
+
+// ─── Filming Brief (ATLAS on-set direction) ──────────────────────────────────
+
+export async function generateFilmingBrief(
+  workspaceId: string,
+  projectId: string,
+  log: Logger,
+): Promise<VideoProject> {
+  const project = await getProject(workspaceId, projectId);
+
+  if (!project.script) {
+    throw new AppError(400, "Gere o roteiro primeiro antes de pedir a direção de filmagem.", "SCRIPT_REQUIRED");
+  }
+
+  const brief = await runFilmingBriefAgent(
+    {
+      projectTitle: project.title,
+      format: project.format,
+      script: project.script,
+      storyboard: (project.storyboard as any[]) ?? [],
+      config: project.config as any,
+      workspaceId,
+      campaignId: project.campaignId ?? null,
+    },
+    log,
+  );
+
+  const updatedConfig = {
+    ...(project.config as object),
+    filmingBrief: brief,
+    filmingBriefGeneratedAt: new Date().toISOString(),
+  };
+
+  const [updated] = await db
+    .update(videoProjectsTable)
+    .set({ config: updatedConfig as any })
+    .where(and(eq(videoProjectsTable.id, projectId), eq(videoProjectsTable.workspaceId, workspaceId)))
+    .returning();
+
+  return updated!;
 }
 
 // ─── Provider status ─────────────────────────────────────────────────────────

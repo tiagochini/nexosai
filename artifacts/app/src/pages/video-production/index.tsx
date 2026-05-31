@@ -7,7 +7,8 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import {
   Video, Play, CheckCircle2, Clock, AlertCircle, Sparkles,
   ChevronRight, User, Mic, Film, Wand2, Eye, Download,
-  RefreshCw, Plus, Settings, Info
+  RefreshCw, Plus, Settings, Info, Clapperboard, Shirt, Lightbulb,
+  ChevronDown, ChevronUp, Camera
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -40,6 +41,32 @@ interface Scene {
   notes?: string;
 }
 
+interface SceneTake {
+  numero: number;
+  energia: string;
+  postura: string;
+  instrucao: string;
+  variacao?: string | null;
+}
+
+interface SceneDirection {
+  sceneId: string;
+  titulo: string;
+  sceneType: string;
+  voiceoverText: string;
+  entregaEmocional: string;
+  takes: SceneTake[];
+  dica: string;
+}
+
+interface FilmingBrief {
+  vestuario: { cor: string; estilo: string; evitar: string; rationale: string };
+  cenario: { tipo: string; elementos: string[]; iluminacao: string; fundo: string; rationale: string };
+  linguagem: { tom: string; velocidade: string; pausas: string; gestos: string; olhar: string };
+  scenes: SceneDirection[];
+  mensagemFinal: string;
+}
+
 interface VideoProject {
   id: string;
   title: string;
@@ -55,6 +82,8 @@ interface VideoProject {
     tone: string;
     totalCreditsUsed: number;
     storyboardMeta?: { totalDurationSeconds: number; phaseSummary: string; directorNotes: string };
+    filmingBrief?: FilmingBrief;
+    filmingBriefGeneratedAt?: string;
   };
   script?: string;
   storyboard: Scene[];
@@ -553,6 +582,8 @@ export default function VideoProductionPage() {
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [briefLoading, setBriefLoading] = useState(false);
+  const [expandedScene, setExpandedScene] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderStatus | null>(null);
 
   // Auto-select project from URL param (e.g. coming from CreativeStudioBlock)
@@ -632,6 +663,96 @@ export default function VideoProductionPage() {
       setSelected(res.project);
       setProjects(ps => ps.map(p => p.id === res.project.id ? res.project : p));
     } finally { setActionLoading(false); }
+  }
+
+  async function requestFilmingBrief() {
+    if (!selected) return;
+    setBriefLoading(true);
+    try {
+      const res = await customFetch<{ project: VideoProject }>(`/api/video-projects/${selected.id}/filming-brief`, { method: "POST", body: "{}" });
+      setSelected(res.project);
+      setProjects(ps => ps.map(p => p.id === res.project.id ? res.project : p));
+    } finally { setBriefLoading(false); }
+  }
+
+  function downloadFilmingBrief() {
+    if (!selected?.config.filmingBrief) return;
+    const brief = selected.config.filmingBrief;
+    const timestamp = new Date().toLocaleString("pt-BR");
+    const fingerprint = `${selected.id.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+
+    const lines: string[] = [
+      "═══════════════════════════════════════════════════════════",
+      "  DIREÇÃO DE FILMAGEM — ATLAS / NexOS AI",
+      "═══════════════════════════════════════════════════════════",
+      `  Projeto: ${selected.title}`,
+      `  Formato: ${selected.format.replace(/_/g, " ").toUpperCase()}`,
+      `  Gerado em: ${timestamp}`,
+      `  ID de verificação: ${fingerprint}`,
+      "  ⚠ DOCUMENTO CONFIDENCIAL — uso exclusivo do destinatário",
+      "═══════════════════════════════════════════════════════════",
+      "",
+      "▌ VESTUÁRIO",
+      `  Cor: ${brief.vestuario.cor}`,
+      `  Estilo: ${brief.vestuario.estilo}`,
+      `  Evitar: ${brief.vestuario.evitar}`,
+      `  Por quê: ${brief.vestuario.rationale}`,
+      "",
+      "▌ CENÁRIO",
+      `  Tipo: ${brief.cenario.tipo}`,
+      `  Fundo: ${brief.cenario.fundo}`,
+      `  Iluminação: ${brief.cenario.iluminacao}`,
+      `  Elementos: ${brief.cenario.elementos.join(" / ")}`,
+      `  Por quê: ${brief.cenario.rationale}`,
+      "",
+      "▌ LINGUAGEM CORPORAL E VOZ",
+      `  Tom: ${brief.linguagem.tom}`,
+      `  Velocidade: ${brief.linguagem.velocidade}`,
+      `  Pausas: ${brief.linguagem.pausas}`,
+      `  Gestos: ${brief.linguagem.gestos}`,
+      `  Olhar: ${brief.linguagem.olhar}`,
+      "",
+      "═══════════════════════════════════════════════════════════",
+      "  DIREÇÃO CENA A CENA",
+      "═══════════════════════════════════════════════════════════",
+    ];
+
+    for (const scene of brief.scenes) {
+      lines.push("");
+      lines.push(`▌ ${scene.titulo.toUpperCase()} [${scene.sceneType.toUpperCase()}]`);
+      lines.push(`  Entrega emocional: ${scene.entregaEmocional}`);
+      if (scene.voiceoverText) {
+        lines.push(`  Texto: "${scene.voiceoverText.slice(0, 120)}${scene.voiceoverText.length > 120 ? "..." : ""}"`);
+      }
+      lines.push("");
+      for (const take of scene.takes) {
+        lines.push(`  ◆ TAKE ${take.numero} — ${take.energia}`);
+        lines.push(`    Postura: ${take.postura}`);
+        lines.push(`    Instrução: ${take.instrucao}`);
+        if (take.variacao) lines.push(`    Variação: ${take.variacao}`);
+        lines.push("");
+      }
+      lines.push(`  💡 Dica do ATLAS: ${scene.dica}`);
+    }
+
+    lines.push("");
+    lines.push("═══════════════════════════════════════════════════════════");
+    lines.push("  MENSAGEM DO DIRETOR");
+    lines.push("═══════════════════════════════════════════════════════════");
+    lines.push(`  ${brief.mensagemFinal}`);
+    lines.push("");
+    lines.push("═══════════════════════════════════════════════════════════");
+    lines.push(`  NexOS AI · ${fingerprint} · ${timestamp}`);
+    lines.push("═══════════════════════════════════════════════════════════");
+
+    const content = lines.join("\n");
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `atlas-direcao-${selected.title.toLowerCase().replace(/\s+/g, "-").slice(0, 30)}-${fingerprint}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleCreated(project: VideoProject) {
@@ -819,6 +940,221 @@ export default function VideoProductionPage() {
                 <div className="border border-border/40 rounded-xl p-5 bg-background/40">
                   <div className="font-mono text-sm font-bold mb-4">Storyboard — Cenas</div>
                   <StoryboardPanel project={selected} onAction={refreshSelected} />
+                </div>
+              )}
+
+              {/* ─── ATLAS — Direção de Filmagem Pontual ─────────────────── */}
+              {selected.script && (
+                <div className="border border-primary/30 rounded-xl bg-primary/5">
+                  {/* Header */}
+                  <div className="flex items-start justify-between p-5 border-b border-primary/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                        <Clapperboard className="h-4.5 w-4.5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-mono font-bold text-sm flex items-center gap-2">
+                          ATLAS — Direção de Filmagem
+                          <Badge variant="outline" className="font-mono text-[9px] text-primary border-primary/40">Diretor de Cena</Badge>
+                        </div>
+                        <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                          {selected.config.filmingBrief
+                            ? `Gerado em ${new Date(selected.config.filmingBriefGeneratedAt!).toLocaleDateString("pt-BR")} · ${selected.config.filmingBrief.scenes.length} cenas · take por take`
+                            : "ATLAS lê o roteiro e gera direção pontual — vestuário, cenário e takes específicos para este vídeo"
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {selected.config.filmingBrief && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={downloadFilmingBrief}
+                          className="font-mono text-xs border-primary/30 text-primary hover:bg-primary/10"
+                        >
+                          <Download className="h-3.5 w-3.5 mr-1.5" />
+                          Baixar Briefing
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={requestFilmingBrief}
+                        disabled={briefLoading}
+                        className="font-mono text-xs"
+                        variant={selected.config.filmingBrief ? "outline" : "default"}
+                      >
+                        {briefLoading
+                          ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />Gerando...</>
+                          : selected.config.filmingBrief
+                          ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5" />Regerar</>
+                          : <><Camera className="h-3.5 w-3.5 mr-1.5" />Pedir Direção do ATLAS</>
+                        }
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Credit note when no brief yet */}
+                  {!selected.config.filmingBrief && !briefLoading && (
+                    <div className="px-5 py-4 flex items-start gap-4">
+                      <div className="flex-1 grid grid-cols-3 gap-3">
+                        {[
+                          { icon: <Shirt className="h-4 w-4 text-primary" />, label: "Vestuário pontual", desc: "Cor e estilo específicos para este roteiro e tom" },
+                          { icon: <Lightbulb className="h-4 w-4 text-primary" />, label: "Cenário e luz", desc: "Setup do set que reforça a mensagem deste vídeo" },
+                          { icon: <Camera className="h-4 w-4 text-primary" />, label: "Takes cena a cena", desc: "2–3 takes por cena com instrução de energia e postura" },
+                        ].map(item => (
+                          <div key={item.label} className="border border-border/30 rounded-lg p-3 bg-background/30">
+                            {item.icon}
+                            <div className="font-mono text-xs font-bold mt-2 mb-1">{item.label}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground">{item.desc}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="font-mono text-[10px] text-muted-foreground whitespace-nowrap">
+                        12 créditos
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Brief content when generated */}
+                  {selected.config.filmingBrief && (
+                    <div className="p-5 space-y-5">
+                      {/* Setup row: vestuário + cenário + linguagem */}
+                      <div className="grid grid-cols-3 gap-4">
+                        {/* Vestuário */}
+                        <div className="border border-border/30 rounded-lg p-4 bg-background/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Shirt className="h-3.5 w-3.5 text-primary" />
+                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Vestuário</div>
+                          </div>
+                          <div className="space-y-2 font-mono text-[11px]">
+                            <div><span className="text-muted-foreground">Cor:</span> {selected.config.filmingBrief.vestuario.cor}</div>
+                            <div><span className="text-muted-foreground">Estilo:</span> {selected.config.filmingBrief.vestuario.estilo}</div>
+                            <div className="text-orange-400/80">✕ Evitar: {selected.config.filmingBrief.vestuario.evitar}</div>
+                            <div className="text-muted-foreground/60 text-[10px] mt-2 pt-2 border-t border-border/20">{selected.config.filmingBrief.vestuario.rationale}</div>
+                          </div>
+                        </div>
+
+                        {/* Cenário */}
+                        <div className="border border-border/30 rounded-lg p-4 bg-background/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Lightbulb className="h-3.5 w-3.5 text-primary" />
+                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Cenário & Luz</div>
+                          </div>
+                          <div className="space-y-2 font-mono text-[11px]">
+                            <div><span className="text-muted-foreground">Fundo:</span> {selected.config.filmingBrief.cenario.fundo}</div>
+                            <div><span className="text-muted-foreground">Luz:</span> {selected.config.filmingBrief.cenario.iluminacao}</div>
+                            {selected.config.filmingBrief.cenario.elementos.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {selected.config.filmingBrief.cenario.elementos.map((el, i) => (
+                                  <Badge key={i} variant="outline" className="font-mono text-[9px]">{el}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            <div className="text-muted-foreground/60 text-[10px] mt-2 pt-2 border-t border-border/20">{selected.config.filmingBrief.cenario.rationale}</div>
+                          </div>
+                        </div>
+
+                        {/* Linguagem */}
+                        <div className="border border-border/30 rounded-lg p-4 bg-background/30">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Mic className="h-3.5 w-3.5 text-primary" />
+                            <div className="font-mono text-xs font-bold text-primary uppercase tracking-wide">Linguagem</div>
+                          </div>
+                          <div className="space-y-2 font-mono text-[11px]">
+                            <div><span className="text-muted-foreground">Tom:</span> {selected.config.filmingBrief.linguagem.tom}</div>
+                            <div><span className="text-muted-foreground">Velocidade:</span> {selected.config.filmingBrief.linguagem.velocidade}</div>
+                            <div><span className="text-muted-foreground">Pausas:</span> {selected.config.filmingBrief.linguagem.pausas}</div>
+                            <div><span className="text-muted-foreground">Gestos:</span> {selected.config.filmingBrief.linguagem.gestos}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Scene-by-scene direction */}
+                      <div>
+                        <div className="font-mono text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3 flex items-center gap-2">
+                          <Clapperboard className="h-3.5 w-3.5" />
+                          Direção Cena a Cena — {selected.config.filmingBrief.scenes.length} cenas
+                        </div>
+                        <div className="space-y-2">
+                          {selected.config.filmingBrief.scenes.map((scene, idx) => {
+                            const isOpen = expandedScene === scene.sceneId;
+                            return (
+                              <div
+                                key={scene.sceneId}
+                                className="border border-border/30 rounded-lg bg-background/20 overflow-hidden"
+                              >
+                                <button
+                                  onClick={() => setExpandedScene(isOpen ? null : scene.sceneId)}
+                                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-background/40 transition-colors text-left"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-6 h-6 rounded bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
+                                      <span className="font-mono text-[10px] font-bold text-primary">{String(idx + 1).padStart(2, "0")}</span>
+                                    </div>
+                                    <div>
+                                      <div className="font-mono text-xs font-bold">{scene.titulo}</div>
+                                      <div className="font-mono text-[10px] text-muted-foreground mt-0.5">
+                                        {scene.takes.length} takes · {scene.sceneType}
+                                        {scene.entregaEmocional && ` · ${scene.entregaEmocional.slice(0, 50)}${scene.entregaEmocional.length > 50 ? "..." : ""}`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                                </button>
+
+                                {isOpen && (
+                                  <div className="px-4 pb-4 border-t border-border/20 pt-3 space-y-3">
+                                    {/* Voiceover text */}
+                                    {scene.voiceoverText && (
+                                      <div className="font-mono text-[10px] text-muted-foreground italic bg-background/40 rounded px-3 py-2 border border-border/20">
+                                        "{scene.voiceoverText}"
+                                      </div>
+                                    )}
+
+                                    {/* Takes */}
+                                    <div className="space-y-2">
+                                      {scene.takes.map(take => (
+                                        <div key={take.numero} className="border border-primary/20 rounded-lg p-3 bg-primary/5">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-5 h-5 rounded bg-primary/20 flex items-center justify-center shrink-0">
+                                              <span className="font-mono text-[9px] font-bold text-primary">T{take.numero}</span>
+                                            </div>
+                                            <span className="font-mono text-[10px] font-bold text-primary">{take.energia}</span>
+                                            <span className="font-mono text-[10px] text-muted-foreground">· {take.postura}</span>
+                                          </div>
+                                          <div className="font-mono text-[11px]">{take.instrucao}</div>
+                                          {take.variacao && (
+                                            <div className="font-mono text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
+                                              <span className="text-primary shrink-0">↳</span>
+                                              <span>{take.variacao}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {/* Director tip */}
+                                    <div className="flex items-start gap-2 font-mono text-[10px] text-muted-foreground border border-border/20 rounded px-3 py-2">
+                                      <Lightbulb className="h-3 w-3 text-yellow-400 shrink-0 mt-0.5" />
+                                      <span>{scene.dica}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* ATLAS final message */}
+                      <div className="border border-primary/20 rounded-lg p-4 bg-primary/5 text-center">
+                        <div className="font-mono text-[10px] text-primary/70 mb-2 uppercase tracking-widest">Mensagem do Diretor</div>
+                        <div className="font-mono text-sm text-foreground/90 italic">"{selected.config.filmingBrief.mensagemFinal}"</div>
+                        <div className="font-mono text-[9px] text-muted-foreground/50 mt-3">— ATLAS, Diretor de Cena · NexOS AI</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -14,6 +14,7 @@ import {
   generateFinalClips,
   pollClipJobs,
   getVideoProviderStatus,
+  generateFilmingBrief,
 } from "./video-production.service.js";
 import type { VideoScene } from "@workspace/db";
 
@@ -153,6 +154,16 @@ router.post("/video-projects/:id/approve-preview", async (req, res, next) => {
 router.post("/video-projects/:id/generate-final", async (req, res, next) => {
   try {
     const project = await generateFinalClips(req.auth.workspaceId, req.params["id"]!, req.log);
+    res.json({ project });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── ATLAS Filming Brief — on-set direction for this video ───────────────────
+router.post("/video-projects/:id/filming-brief", async (req, res, next) => {
+  try {
+    const project = await generateFilmingBrief(req.auth.workspaceId, req.params["id"]!, req.log);
     res.json({ project });
   } catch (err) {
     next(err);
