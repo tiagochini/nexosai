@@ -1287,6 +1287,7 @@ export default function CampaignDetail() {
   const { user, workspace } = useAuth();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
   const [partialIntegrations, setPartialIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
+  const [showPartialGuide, setShowPartialGuide] = useState(false);
   const [connectingEntry, setConnectingEntry] = useState<CatalogEntry | null>(null);
   const [bypassLaunchLoading, setBypassLaunchLoading] = useState(false);
   const [reorientOpen, setReorientOpen] = useState(false);
@@ -1758,6 +1759,7 @@ export default function CampaignDetail() {
   const handleBypassLaunch = async () => {
     setBypassLaunchLoading(true);
     setPartialIntegrations(null);
+    setShowPartialGuide(false);
     try {
       const res = await customFetch<Response>(
         `/api/campaigns/${campaignId}/execute/launch?skipIntegrationWarning=true`,
@@ -2373,7 +2375,7 @@ export default function CampaignDetail() {
       })()}
 
       {/* ── Partial Integrations Guide Modal (canais incompletos) ── */}
-      {partialIntegrations && (() => {
+      {partialIntegrations && showPartialGuide && (() => {
         const SETUP_GUIDE: Record<string, { title: string; steps: string[]; url: string; urlLabel: string }> = {
           "WhatsApp Business": {
             title: "WhatsApp Business API",
@@ -2432,7 +2434,7 @@ export default function CampaignDetail() {
                     Alguns canais ainda não estão conectados. A agente pode lançar, mas disparos para esses canais não serão enviados. Conecte antes para máxima cobertura.
                   </p>
                 </div>
-                <button onClick={() => setPartialIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0 mt-1">
+                <button onClick={() => { setShowPartialGuide(false); setPartialIntegrations(null); }} className="text-muted-foreground hover:text-foreground shrink-0 mt-1">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -2494,7 +2496,7 @@ export default function CampaignDetail() {
               <div className="border-t border-border/40 px-6 py-4 shrink-0 flex gap-3">
                 <Link href="/integracoes" className="flex-1">
                   <Button
-                    onClick={() => setPartialIntegrations(null)}
+                    onClick={() => { setShowPartialGuide(false); setPartialIntegrations(null); }}
                     className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 text-[11px]"
                   >
                     <Link2 className="h-4 w-4" />Conectar Canais
@@ -2502,7 +2504,7 @@ export default function CampaignDetail() {
                 </Link>
                 <Button
                   variant="outline"
-                  onClick={() => setPartialIntegrations(null)}
+                  onClick={() => { setShowPartialGuide(false); setPartialIntegrations(null); }}
                   className="font-mono uppercase tracking-widest rounded-none border-border/50 h-10 px-5 text-[11px]"
                 >
                   Fechar
@@ -2597,7 +2599,7 @@ export default function CampaignDetail() {
       )}
 
       {/* ── Partial Integrations Modal (soft confirmation) ── */}
-      {partialIntegrations && (
+      {partialIntegrations && !showPartialGuide && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="border border-yellow-400/40 bg-card w-full max-w-lg shadow-2xl">
             <div className="border-b border-yellow-400/20 px-5 py-4 flex items-start justify-between gap-3">
@@ -2608,7 +2610,7 @@ export default function CampaignDetail() {
                   <p className="text-xs font-mono text-muted-foreground/60 mt-0.5">Você pode lançar agora ou completar as integrações para máxima performance.</p>
                 </div>
               </div>
-              <button onClick={() => setPartialIntegrations(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+              <button onClick={() => { setPartialIntegrations(null); setShowPartialGuide(false); }} className="text-muted-foreground hover:text-foreground shrink-0">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -2623,13 +2625,19 @@ export default function CampaignDetail() {
                     <div className="font-mono text-xs font-bold uppercase tracking-widest text-foreground/80 mb-0.5">{m.category}</div>
                     {m.reason && <p className="text-xs font-mono text-muted-foreground/50 mb-1">{m.reason}</p>}
                     <p className="text-xs font-mono text-muted-foreground/70">Opções: <span className="text-foreground/60">{m.providers.join(" · ")}</span></p>
+                    <button
+                      onClick={() => setShowPartialGuide(true)}
+                      className="mt-1.5 font-mono text-[10px] uppercase tracking-widest text-yellow-400/60 hover:text-yellow-400 underline underline-offset-2"
+                    >
+                      Ver passo a passo de configuração ↗
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
             <div className="border-t border-border/50 px-5 py-4 flex flex-col sm:flex-row gap-3">
               <Link href="/integracoes" className="flex-1">
-                <Button className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10" onClick={() => setPartialIntegrations(null)}>
+                <Button className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10" onClick={() => { setPartialIntegrations(null); setShowPartialGuide(false); }}>
                   <Link2 className="h-4 w-4" />Completar Integrações
                 </Button>
               </Link>

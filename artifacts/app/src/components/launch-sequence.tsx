@@ -192,20 +192,23 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col overflow-y-auto">
       <ScanLines />
 
       {/* Corner brackets — cockpit aesthetic */}
       {["top-4 left-4 border-t border-l", "top-4 right-4 border-t border-r", "bottom-4 left-4 border-b border-l", "bottom-4 right-4 border-b border-r"].map((cls, i) => (
-        <div key={i} className={`absolute w-6 h-6 border-white/15 ${cls}`} />
+        <div key={i} className={`fixed w-6 h-6 border-white/15 ${cls}`} />
       ))}
 
-      {/* Close — always visible except countdown/launched */}
+      {/* Close — always visible except countdown/launched — fixed so it never scrolls away */}
       {stage !== "countdown" && stage !== "launched" && (
-        <button onClick={onClose} className="absolute top-5 right-5 text-white/25 hover:text-white/60 transition-colors z-10">
+        <button onClick={onClose} className="fixed top-5 right-5 text-white/25 hover:text-white/60 transition-colors z-[110]">
           <X className="h-5 w-5" />
         </button>
       )}
+
+      {/* Inner centering wrapper — flex-1 so short stages stay centered */}
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen py-12">
 
       {/* Quick launch confirm mini-modal */}
       {quickLaunchConfirm && (
@@ -240,7 +243,7 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
 
       {/* ── STAGE: ROCKET BUTTON ── */}
       {stage === "rocket" && (
-        <div className="flex flex-col items-center gap-10 px-6 text-center max-w-lg">
+        <div className="flex flex-col items-center gap-10 px-6 text-center max-w-lg w-full">
           {/* Supervisor badge */}
           <div className="flex items-center gap-2 border border-white/10 px-4 py-2">
             <Shield className="h-3 w-3 text-white/30" />
@@ -489,6 +492,8 @@ export function LaunchSequenceOverlay({ campaignId, campaignTitle, connectedProv
           </p>
         </div>
       )}
+
+      </div>{/* end inner centering wrapper */}
     </div>
   );
 }
