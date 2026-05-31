@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Video, Plus, Loader2, CheckCircle2, XCircle, Eye,
-  FileText, Zap, ChevronRight, ArrowLeft, Sparkles, MessageSquare, Send,
+  FileText, Zap, ChevronRight, ArrowLeft, Sparkles, MessageSquare, Send, Clapperboard,
 } from "lucide-react";
 
 interface VslItem {
@@ -42,6 +42,7 @@ export default function VslsPage() {
   const [form, setForm] = useState({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "", campaignId: fromCampaignId ?? "" });
   const [refineOpen, setRefineOpen] = useState(false);
   const [refineText, setRefineText] = useState("");
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
 
   // Auto-load campaign data for pre-fill when coming from campaign detail
@@ -129,6 +130,28 @@ export default function VslsPage() {
     },
     onSuccess: () => { toast.success("VSL aprovada!"); queryClient.invalidateQueries({ queryKey: ["/api/vsls"] }); },
     onError: () => toast.error("Erro ao aprovar VSL"),
+  });
+
+  const createVideoFromVslMutation = useMutation({
+    mutationFn: async (vsl: VslItem) => {
+      const data = await customFetch<{ project: { id: string } }>("/api/video-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Vídeo — ${vsl.title}`,
+          format: vsl.format === "vsl" ? "vsl" : "long_form_video",
+          vslId: vsl.id,
+          campaignId: vsl.campaignId ?? undefined,
+          config: { hasUserFace: false, tone: "inspirational", rhythm: "medium" },
+        }),
+      });
+      return data;
+    },
+    onSuccess: (d) => {
+      toast.success("Projeto de vídeo criado com o roteiro VSL importado!");
+      navigate(`/video-production?projectId=${d.project.id}`);
+    },
+    onError: () => toast.error("Erro ao criar projeto de vídeo"),
   });
 
   const vsls = data?.vsls ?? [];
@@ -304,28 +327,48 @@ export default function VslsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {vsls.map(vsl => (
-            <div key={vsl.id} onClick={() => setSelectedVsl(vsl)}
-              className="border border-border/50 bg-card/40 p-4 cursor-pointer hover:border-primary/40 hover:bg-card/60 transition-all group">
-              <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-                <div className="w-10 h-10 border border-border/50 bg-card/30 flex items-center justify-center shrink-0">
-                  <Video className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase">{vsl.title}</span>
-                    <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${STATUS_COLOR[vsl.status] ?? ""}`}>{vsl.status}</Badge>
-                    <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-border/40 text-muted-foreground">{FORMAT_LABEL[vsl.format] ?? vsl.format}</Badge>
+          {vsls.map(vsl => {
+            const hasScript = (vsl.sections ?? []).length > 0;
+            return (
+              <div key={vsl.id}
+                className="border border-border/50 bg-card/40 hover:border-primary/40 hover:bg-card/60 transition-all group">
+                <div className="p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 cursor-pointer"
+                  onClick={() => setSelectedVsl(vsl)}>
+                  <div className="w-10 h-10 border border-border/50 bg-card/30 flex items-center justify-center shrink-0">
+                    <Video className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest">
-                    {new Date(vsl.createdAt).toLocaleDateString("pt-BR")}
-                    {vsl.sections && ` · ${vsl.sections.length} seções`}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="font-mono font-bold text-sm text-foreground group-hover:text-primary transition-colors uppercase">{vsl.title}</span>
+                      <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 ${STATUS_COLOR[vsl.status] ?? ""}`}>{vsl.status}</Badge>
+                      <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-border/40 text-muted-foreground">{FORMAT_LABEL[vsl.format] ?? vsl.format}</Badge>
+                      {hasScript && <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 border-success/40 text-success">✓ Roteiro pronto</Badge>}
+                    </div>
+                    <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest">
+                      {new Date(vsl.createdAt).toLocaleDateString("pt-BR")}
+                      {vsl.sections && ` · ${vsl.sections.length} seções`}
+                    </div>
                   </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary shrink-0 hidden md:block" />
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary shrink-0 hidden md:block" />
+                {hasScript && (
+                  <div className="border-t border-border/30 px-4 py-2 flex items-center gap-2 bg-card/20">
+                    <span className="text-[10px] font-mono text-muted-foreground/50 flex-1">Roteiro pronto — importe para o produtor de vídeo</span>
+                    <Button
+                      size="sm"
+                      onClick={e => { e.stopPropagation(); createVideoFromVslMutation.mutate(vsl); }}
+                      disabled={createVideoFromVslMutation.isPending}
+                      className="font-mono uppercase tracking-widest rounded-none gap-1.5 h-7 px-3 text-[10px] btn-weapon-primary"
+                    >
+                      {createVideoFromVslMutation.isPending
+                        ? <><Loader2 className="h-3 w-3 animate-spin" />Criando...</>
+                        : <><Clapperboard className="h-3 w-3" />Criar Vídeo</>}
+                    </Button>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

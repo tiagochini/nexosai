@@ -537,6 +537,10 @@ export default function VideoProductionPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [provider, setProvider] = useState<ProviderStatus | null>(null);
 
+  // Auto-select project from URL param (e.g. coming from CreativeStudioBlock)
+  const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const projectIdParam = search?.get("projectId");
+
   useEffect(() => {
     loadProjects();
     loadProviderStatus();
@@ -546,7 +550,13 @@ export default function VideoProductionPage() {
     setLoading(true);
     try {
       const res = await customFetch<{ projects: VideoProject[] }>("/api/video-projects");
-      setProjects(res.projects ?? []);
+      const list = res.projects ?? [];
+      setProjects(list);
+      // Auto-select project passed via URL (e.g. from CreativeStudioBlock)
+      if (projectIdParam) {
+        const match = list.find(p => p.id === projectIdParam);
+        if (match) setSelected(match);
+      }
     } finally { setLoading(false); }
   }
 

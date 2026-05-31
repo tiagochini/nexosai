@@ -46,6 +46,7 @@ import { GroupsTab } from "@/components/GroupsTab";
 import { AgentLiveFeed } from "@/components/AgentLiveFeed";
 import { useMode } from "@/lib/mode";
 import { useAuth } from "@/lib/auth";
+import { CreativeStudioBlock } from "@/components/CreativeStudioBlock";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -2838,6 +2839,14 @@ export default function CampaignDetail() {
             <ContentReadyCinemaPrompt
               campaignId={campaignId}
               totalPieces={previewContentData?.pieces?.length ?? 0}
+            />
+          )}
+
+          {/* ─ Approved: Creative Studio ─ */}
+          {campaign.status === "approved" && (
+            <CreativeStudioBlock
+              campaignId={campaignId}
+              campaignTitle={campaign.title}
             />
           )}
 

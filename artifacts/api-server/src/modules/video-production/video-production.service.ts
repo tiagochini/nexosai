@@ -3,6 +3,7 @@ import {
   db,
   videoProjectsTable,
   campaignsTable,
+  vslsTable,
   type VideoProject,
   type VideoScene,
   type VideoConfig,
@@ -43,6 +44,7 @@ export interface CreateVideoProjectInput {
   title: string;
   format: VideoProject["format"];
   campaignId?: string;
+  vslId?: string;
   config: Partial<VideoConfig>;
 }
 
@@ -57,6 +59,22 @@ export async function createVideoProject(
       .where(and(eq(campaignsTable.id, input.campaignId), eq(campaignsTable.workspaceId, workspaceId)))
       .limit(1);
     if (!campaign) throw new NotFoundError("Campanha");
+  }
+
+  // If a VSL is provided, pull its script to pre-seed the video project
+  let importedScript: string | undefined;
+  if (input.vslId) {
+    const [vsl] = await db
+      .select({ sections: vslsTable.sections, title: vslsTable.title })
+      .from(vslsTable)
+      .where(and(eq(vslsTable.id, input.vslId), eq(vslsTable.workspaceId, workspaceId)))
+      .limit(1);
+    if (vsl && Array.isArray(vsl.sections) && vsl.sections.length > 0) {
+      const secs = vsl.sections as Array<{ title?: string; content?: string }>;
+      importedScript = secs
+        .map(s => [s.title ? `## ${s.title}` : "", s.content ?? ""].filter(Boolean).join("\n"))
+        .join("\n\n");
+    }
   }
 
   const config: VideoConfig = {
@@ -77,7 +95,8 @@ export async function createVideoProject(
       campaignId: input.campaignId ?? undefined,
       title: input.title,
       format: input.format ?? "vsl",
-      status: "intake",
+      status: importedScript ? "script_ready" : "intake",
+      script: importedScript ?? undefined,
       config,
       storyboard: [],
     })
