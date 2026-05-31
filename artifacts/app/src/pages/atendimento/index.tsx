@@ -89,8 +89,9 @@ export default function AtendimentoPage() {
     return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
   }
 
-  async function apiFetch(url: string, opts?: RequestInit): Promise<Response> {
-    return customFetch<Response>(url, opts);
+  async function apiFetch(url: string, opts?: RequestInit) {
+    const data = await customFetch<unknown>(url, opts);
+    return { ok: true as const, json: <T = unknown>() => Promise.resolve(data as T) };
   }
 
   async function loadAll() {

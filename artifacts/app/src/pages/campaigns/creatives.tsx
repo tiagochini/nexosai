@@ -85,12 +85,10 @@ function GenerateForm({ campaignId, onGenerated }: { campaignId: string; onGener
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/creatives/concept`, {
+      return customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/concept`, {
         method: "POST",
         body: JSON.stringify({ platform, format, requestNote: note }),
       });
-      if (!res.ok) throw new Error("Erro ao gerar conceito");
-      return res.json();
     },
     onSuccess: () => {
       toast.success("Conceito gerado! Revise e aprove para gerar a imagem.");
@@ -182,8 +180,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
 
   const approveConcept = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/creatives/${creative.id}/approve-concept`, { method: "POST" });
-      if (!res.ok) throw new Error();
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/approve-concept`, { method: "POST" });
     },
     onSuccess: () => { toast.success("Conceito aprovado! Gerando imagem..."); onRefresh(); },
     onError: () => toast.error("Erro ao aprovar conceito"),
@@ -191,8 +188,7 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
 
   const approvePreview = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/creatives/${creative.id}/approve-preview`, { method: "POST" });
-      if (!res.ok) throw new Error();
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/approve-preview`, { method: "POST" });
     },
     onSuccess: () => { toast.success("Preview aprovado! Gerando versão final HD..."); onRefresh(); },
     onError: () => toast.error("Erro ao aprovar preview"),
@@ -200,11 +196,10 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
 
   const reject = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/creatives/${creative.id}/reject`, {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/reject`, {
         method: "POST",
         body: JSON.stringify({ reason: rejectReason }),
       });
-      if (!res.ok) throw new Error();
     },
     onSuccess: () => { toast.success("Criativo rejeitado"); setShowReject(false); onRefresh(); },
     onError: () => toast.error("Erro ao rejeitar"),
@@ -212,11 +207,10 @@ function CreativeCard({ creative, campaignId, onRefresh }: { creative: Creative;
 
   const regenerate = useMutation({
     mutationFn: async (quality: "standard" | "hd") => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/creatives/${creative.id}/regenerate`, {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/creatives/${creative.id}/regenerate`, {
         method: "POST",
         body: JSON.stringify({ quality }),
       });
-      if (!res.ok) throw new Error();
     },
     onSuccess: () => { toast.success("Regenerando imagem..."); onRefresh(); },
     onError: () => toast.error("Erro ao regenerar"),
@@ -500,9 +494,7 @@ export default function CreativesPage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["creatives", campaignId],
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/creatives`);
-      if (!res.ok) throw new Error();
-      return res.json() as Promise<{ creatives: Creative[] }>;
+      return customFetch<{ creatives: Creative[] }>(`/api/campaigns/${campaignId}/creatives`);
     },
     refetchInterval: autoRefresh ? 4000 : false,
   });

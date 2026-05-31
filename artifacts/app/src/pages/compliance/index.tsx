@@ -44,9 +44,7 @@ export default function CompliancePage() {
   const { data: statsData } = useQuery({
     queryKey: ["/api/compliance/stats"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/compliance/stats");
-      if (!res.ok) return null;
-      return res.json() as Promise<ComplianceStats>;
+      return customFetch<ComplianceStats>("/api/compliance/stats").catch(() => null);
     },
   });
 
@@ -54,24 +52,18 @@ export default function CompliancePage() {
     queryKey: ["/api/compliance/checks"],
     enabled: activeTab === "checks",
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/compliance/checks?limit=20");
-      if (!res.ok) return { checks: [] };
-      return res.json() as Promise<{ checks: ComplianceCheck[] }>;
+      return customFetch<{ checks: ComplianceCheck[] }>("/api/compliance/checks?limit=20")
+        .catch(() => ({ checks: [] as ComplianceCheck[] }));
     },
   });
 
   const runCheckMutation = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>("/api/compliance/check", {
+      return customFetch<{ check: ComplianceCheck }>("/api/compliance/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(checkForm),
       });
-      if (!res.ok) {
-        const e = await res.json() as { error?: string };
-        throw new Error(e.error ?? "Erro ao executar check");
-      }
-      return res.json() as Promise<{ check: ComplianceCheck }>;
     },
     onSuccess: () => {
       toast.success("Verificação de compliance concluída.");

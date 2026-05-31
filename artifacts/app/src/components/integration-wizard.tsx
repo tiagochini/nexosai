@@ -116,7 +116,7 @@ export function IntegrationWizard() {
     setLoading(true);
 
     try {
-      const res = await customFetch<Response>("/api/integration-wizard/chat", {
+      const data = await customFetch<{ reply: string }>("/api/integration-wizard/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -126,9 +126,6 @@ export function IntegrationWizard() {
           history,
         }),
       });
-
-      if (!res.ok) throw new Error("Erro ao consultar o assistente");
-      const data = await res.json() as { reply: string };
 
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),

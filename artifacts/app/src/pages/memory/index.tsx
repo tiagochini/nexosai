@@ -76,9 +76,7 @@ export default function MemoryPage() {
   const { data: statsData, isLoading: loadingStats } = useQuery({
     queryKey: ["/api/memory/stats"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/memory/stats");
-      if (!res.ok) return null;
-      return res.json() as Promise<{ stats: MemoryStats }>;
+      return customFetch<{ stats: MemoryStats }>("/api/memory/stats").catch(() => null);
     },
   });
 
@@ -88,17 +86,14 @@ export default function MemoryPage() {
       const params = new URLSearchParams({ limit: "50" });
       if (filterAgent) params.set("agentRole", filterAgent);
       if (filterType) params.set("type", filterType);
-      const res = await customFetch<Response>(`/api/memory?${params}`);
-      if (!res.ok) return { memories: [] };
-      return res.json() as Promise<{ memories: MemoryEntry[] }>;
+      return customFetch<{ memories: MemoryEntry[] }>(`/api/memory?${params}`)
+        .catch(() => ({ memories: [] as MemoryEntry[] }));
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await customFetch<Response>(`/api/memory/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Falha ao deletar memória");
-      return res.json();
+      return customFetch<unknown>(`/api/memory/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       toast.success("Memória removida do cérebro compartilhado");

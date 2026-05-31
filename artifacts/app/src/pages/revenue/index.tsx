@@ -109,9 +109,7 @@ export default function RevenuePage() {
     queryKey: ["/api/revenue/summary", period],
     queryFn: async () => {
       const days = PERIOD_DAYS[period];
-      const res = await customFetch<Response>(`/api/revenue/summary?days=${days}`);
-      if (!res.ok) return null;
-      return res.json() as Promise<RevenueSummary>;
+      return customFetch<RevenueSummary>(`/api/revenue/summary?days=${days}`).catch(() => null);
     },
   });
 
@@ -120,9 +118,8 @@ export default function RevenuePage() {
     enabled: activeTab === "events",
     queryFn: async () => {
       const days = PERIOD_DAYS[period];
-      const res = await customFetch<Response>(`/api/revenue/events?limit=500&days=${days}`);
-      if (!res.ok) return { events: [] };
-      return res.json() as Promise<{ events: RevenueEvent[] }>;
+      return customFetch<{ events: RevenueEvent[] }>(`/api/revenue/events?limit=500&days=${days}`)
+        .catch(() => ({ events: [] as RevenueEvent[] }));
     },
   });
 
@@ -130,20 +127,18 @@ export default function RevenuePage() {
     queryKey: ["/api/revenue/webhook-configs"],
     enabled: activeTab === "webhooks",
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/revenue/webhook-configs");
-      if (!res.ok) return { configs: [] };
-      return res.json() as Promise<{ configs: WebhookConfig[] }>;
+      return customFetch<{ configs: WebhookConfig[] }>("/api/revenue/webhook-configs")
+        .catch(() => ({ configs: [] as WebhookConfig[] }));
     },
   });
 
   const createWebhookMutation = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>("/api/revenue/webhook-configs", {
+      await customFetch<unknown>("/api/revenue/webhook-configs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ platform: webhookPlatform }),
       });
-      if (!res.ok) throw new Error("Erro");
     },
     onSuccess: () => {
       toast.success("Webhook configurado. Copie a URL e configure na plataforma.");

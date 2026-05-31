@@ -84,10 +84,7 @@ export default function AffiliatePage() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["/api/affiliate/profile"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/affiliate/profile");
-      if (res.status === 404) return null;
-      if (!res.ok) return null;
-      return res.json() as Promise<{ affiliate: AffiliateProfile }>;
+      return customFetch<{ affiliate: AffiliateProfile }>("/api/affiliate/profile").catch(() => null);
     },
   });
 
@@ -96,12 +93,10 @@ export default function AffiliatePage() {
   // Join affiliate program
   const joinMutation = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>("/api/affiliate/join", {
+      return customFetch<{ affiliate: AffiliateProfile }>("/api/affiliate/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) throw new Error("Erro ao entrar no programa");
-      return res.json() as Promise<{ affiliate: AffiliateProfile }>;
     },
     onSuccess: () => {
       toast.success("Bem-vindo ao programa de afiliados NexOS!");

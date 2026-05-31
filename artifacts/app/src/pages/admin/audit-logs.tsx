@@ -211,10 +211,8 @@ export default function AuditLogsPage() {
   const { data: logs, isLoading, refetch } = useQuery<AuditLogRow[]>({
     queryKey: ["audit-logs", params.toString()],
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/admin/audit-logs?${params.toString()}`);
-      if (!res.ok) throw new Error("Failed to load audit logs");
-      const d = await res.json() as { logs: AuditLogRow[] };
-      return d.logs;
+      return customFetch<{ logs: AuditLogRow[] }>(`/api/admin/audit-logs?${params.toString()}`)
+        .then(d => d.logs);
     },
     refetchInterval: 15000,
   });
@@ -222,9 +220,7 @@ export default function AuditLogsPage() {
   const { data: summary } = useQuery<AuditSummary>({
     queryKey: ["audit-logs-summary"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/admin/audit-logs/summary");
-      if (!res.ok) throw new Error("Failed to load summary");
-      return res.json() as Promise<AuditSummary>;
+      return customFetch<AuditSummary>("/api/admin/audit-logs/summary");
     },
     refetchInterval: 30000,
   });

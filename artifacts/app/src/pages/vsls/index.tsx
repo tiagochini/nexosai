@@ -48,11 +48,7 @@ export default function VslsPage() {
   // Auto-load campaign data for pre-fill when coming from campaign detail
   useEffect(() => {
     if (!fromCampaignId) return;
-    customFetch<Response>(`/api/campaigns/${fromCampaignId}`)
-      .then((res) => {
-        if (!res.ok) return;
-        return res.json() as Promise<{ campaign: { title?: string; intakeData?: Record<string, unknown> } }>;
-      })
+    customFetch<{ campaign: { title?: string; intakeData?: Record<string, unknown> } }>(`/api/campaigns/${fromCampaignId}`)
       .then((data) => {
         if (!data?.campaign) return;
         const intake = data.campaign.intakeData ?? {};

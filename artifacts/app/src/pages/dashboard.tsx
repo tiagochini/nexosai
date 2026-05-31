@@ -324,9 +324,7 @@ function ReferralWidget() {
   const { data, isLoading } = useQuery({
     queryKey: ["/api/referrals/stats"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/referrals/stats");
-      if (!res.ok) return null;
-      return res.json() as Promise<ReferralStats>;
+      return customFetch<ReferralStats>("/api/referrals/stats").catch(() => null);
     },
     staleTime: 60_000,
   });
@@ -404,9 +402,7 @@ function SalesTeamPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ["/api/sales-team/analytics"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/sales-team/analytics");
-      if (!res.ok) return null;
-      return res.json() as Promise<{ analytics: { active: number; converted: number; todayConversions: number; conversionRate: number } }>;
+      return customFetch<{ analytics: { active: number; converted: number; todayConversions: number; conversionRate: number } }>("/api/sales-team/analytics").catch(() => null);
     },
     staleTime: 60_000,
   });
@@ -454,9 +450,8 @@ function IntegrationHealthPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations");
-      if (!res.ok) return { integrations: [] as IntegrationStatus[] };
-      return res.json() as Promise<{ integrations: IntegrationStatus[] }>;
+      return customFetch<{ integrations: IntegrationStatus[] }>("/api/workspaces/me/integrations")
+        .catch(() => ({ integrations: [] as IntegrationStatus[] }));
     },
     staleTime: 60_000,
   });
@@ -609,18 +604,14 @@ export default function Dashboard() {
   const { data: revenueData, isLoading: loadingRevenue } = useQuery({
     queryKey: ["/api/revenue/summary"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/revenue/summary");
-      if (!res.ok) return null;
-      return res.json() as Promise<RevenueSummary>;
+      return customFetch<RevenueSummary>("/api/revenue/summary").catch(() => null);
     },
   });
 
   const { data: weeklyRevenueData } = useQuery({
     queryKey: ["/api/revenue/summary", "7d"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/revenue/summary?days=7");
-      if (!res.ok) return null;
-      return res.json() as Promise<WeeklyRevenueSummary>;
+      return customFetch<WeeklyRevenueSummary>("/api/revenue/summary?days=7").catch(() => null);
     },
   });
 
@@ -637,26 +628,20 @@ export default function Dashboard() {
     queryKey: [`/api/campaigns/${readyCampaign?.id}`],
     enabled: !!readyCampaign?.id,
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${readyCampaign!.id}`);
-      if (!res.ok) return null;
-      const d = await res.json() as { campaign: Record<string, unknown> };
-      return d.campaign;
+      return customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${readyCampaign!.id}`)
+        .then(d => d.campaign)
+        .catch(() => null);
     },
   });
 
   const queryClient = useQueryClient();
   const approveMutation = useMutation({
     mutationFn: async (campaignId: string) => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/execute`, {
+      return customFetch<unknown>(`/api/campaigns/${campaignId}/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phase: "content" }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({})) as { message?: string };
-        throw new Error(err.message ?? "Erro ao aprovar estratégia");
-      }
-      return res.json();
     },
     onSuccess: () => {
       toast.success("Estratégia aprovada! Gerando conteúdo...");
@@ -671,9 +656,8 @@ export default function Dashboard() {
     queryKey: [`/api/campaigns/${activeCampaign?.id}/agents`],
     enabled: !!activeCampaign?.id,
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${activeCampaign!.id}/agents`);
-      if (!res.ok) return { agents: [], checkpoints: [] };
-      return res.json() as Promise<{ agents: AgentRun[]; checkpoints: Checkpoint[] }>;
+      return customFetch<{ agents: AgentRun[]; checkpoints: Checkpoint[] }>(`/api/campaigns/${activeCampaign!.id}/agents`)
+        .catch(() => ({ agents: [] as AgentRun[], checkpoints: [] as Checkpoint[] }));
     },
   });
 

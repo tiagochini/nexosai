@@ -4,6 +4,10 @@ import { setAuthTokenGetter, setUnauthorizedHandler } from "@workspace/api-clien
 import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import type { User, Workspace } from "@workspace/api-client-react";
 
+// ── Synchronous module-level init — ensures token is sent even on the very
+// first request before AuthProvider's useEffect has had a chance to run.
+setAuthTokenGetter(() => localStorage.getItem("accessToken"));
+
 interface Plan {
   id: string;
   name: string;

@@ -224,9 +224,8 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
   const { data, isLoading } = useQuery<AgentUsageSummary>({
     queryKey: ["/api/credits/usage"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/credits/usage?limit=200");
-      if (!res.ok) return { entries: [], totalCredits: 0, totalCostUsd: "0", byAgent: [], byCampaign: [] };
-      return res.json();
+      return customFetch<AgentUsageSummary>("/api/credits/usage?limit=200")
+        .catch(() => ({ entries: [], totalCredits: 0, totalCostUsd: "0", byAgent: [], byCampaign: [] } as AgentUsageSummary));
     },
   });
 
@@ -479,9 +478,8 @@ export default function CreditsPage() {
   const { data: historyData, isLoading: loadingHistory } = useQuery({
     queryKey: ["/api/credits/history"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/credits/history?limit=50");
-      if (!res.ok) return { transactions: [] };
-      return res.json() as Promise<{ transactions: Transaction[] }>;
+      return customFetch<{ transactions: Transaction[] }>("/api/credits/history?limit=50")
+        .catch(() => ({ transactions: [] as Transaction[] }));
     },
   });
 

@@ -545,9 +545,8 @@ export function useOnboardingAgent() {
   const { data } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations");
-      if (!res.ok) return { integrations: [] as WorkspaceIntegration[] };
-      return res.json() as Promise<{ integrations: WorkspaceIntegration[] }>;
+      return customFetch<{ integrations: WorkspaceIntegration[] }>("/api/workspaces/me/integrations")
+        .catch(() => ({ integrations: [] as WorkspaceIntegration[] }));
     },
     staleTime: 30_000,
   });

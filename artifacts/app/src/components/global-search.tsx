@@ -97,9 +97,8 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
     queryKey: ["/api/launch-sequences"],
     enabled: open,
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/launch-sequences");
-      if (!res.ok) return { sequences: [] };
-      return res.json() as Promise<{ sequences: { id: string; name: string; model: string; status: string }[] }>;
+      return customFetch<{ sequences: { id: string; name: string; model: string; status: string }[] }>("/api/launch-sequences")
+        .catch(() => ({ sequences: [] as { id: string; name: string; model: string; status: string }[] }));
     },
   });
 

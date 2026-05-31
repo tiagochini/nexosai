@@ -25,9 +25,8 @@ export default function IntegracoesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations");
-      if (!res.ok) return { integrations: [] as WorkspaceIntegration[] };
-      return res.json() as Promise<{ integrations: WorkspaceIntegration[] }>;
+      return customFetch<{ integrations: WorkspaceIntegration[] }>("/api/workspaces/me/integrations")
+        .catch(() => ({ integrations: [] as WorkspaceIntegration[] }));
     },
     staleTime: 30_000,
   });
@@ -35,9 +34,8 @@ export default function IntegracoesPage() {
   const { data: oauthStatus } = useQuery({
     queryKey: ["/api/integrations/oauth/providers"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/integrations/oauth/providers");
-      if (!res.ok) return { providers: {} as Record<string, boolean> };
-      return res.json() as Promise<{ providers: Record<string, boolean> }>;
+      return customFetch<{ providers: Record<string, boolean> }>("/api/integrations/oauth/providers")
+        .catch(() => ({ providers: {} as Record<string, boolean> }));
     },
     staleTime: 300_000,
   });
@@ -62,7 +60,7 @@ export default function IntegracoesPage() {
 
   const connectMutation = useMutation({
     mutationFn: async ({ provider, fields }: { provider: Provider; fields: Record<string, string> }) => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations", {
+      return customFetch<unknown>("/api/workspaces/me/integrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -73,11 +71,6 @@ export default function IntegracoesPage() {
           metadata: fields,
         }),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao conectar");
-      }
-      return res.json();
     },
     onSuccess: () => {
       toast.success("Integração conectada com sucesso.");
@@ -90,8 +83,7 @@ export default function IntegracoesPage() {
   const handleDisconnect = async (integrationId: string) => {
     setDisconnecting(integrationId);
     try {
-      const res = await customFetch<Response>(`/api/workspaces/me/integrations/${integrationId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Falha ao desconectar");
+      await customFetch<unknown>(`/api/workspaces/me/integrations/${integrationId}`, { method: "DELETE" });
       toast.success("Integração removida.");
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
     } catch {

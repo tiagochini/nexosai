@@ -249,19 +249,18 @@ export default function AgencyProfilesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["client-profiles"],
     queryFn: async () => {
-      const r = await customFetch<Response>("/api/client-profiles");
-      return (await r.json()) as { profiles: ClientProfile[] };
+      return customFetch<{ profiles: ClientProfile[] }>("/api/client-profiles")
+        .catch(() => ({ profiles: [] as ClientProfile[] }));
     },
   });
 
   const createMut = useMutation({
     mutationFn: async (form: typeof EMPTY_FORM) => {
-      const r = await customFetch<Response>("/api/client-profiles", {
+      await customFetch<unknown>("/api/client-profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!r.ok) throw new Error("Falha ao criar perfil");
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["client-profiles"] });
@@ -273,12 +272,11 @@ export default function AgencyProfilesPage() {
 
   const updateMut = useMutation({
     mutationFn: async ({ id, form }: { id: string; form: typeof EMPTY_FORM }) => {
-      const r = await customFetch<Response>(`/api/client-profiles/${id}`, {
+      await customFetch<unknown>(`/api/client-profiles/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!r.ok) throw new Error("Falha ao atualizar perfil");
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["client-profiles"] });
@@ -290,8 +288,7 @@ export default function AgencyProfilesPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const r = await customFetch<Response>(`/api/client-profiles/${id}`, { method: "DELETE" });
-      if (!r.ok) throw new Error("Falha ao remover perfil");
+      await customFetch<unknown>(`/api/client-profiles/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["client-profiles"] });

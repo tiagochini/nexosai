@@ -295,7 +295,7 @@ export default function GroupPlannerPage() {
   const generateMutation = useMutation({
     mutationFn: async ({ phaseIdx, msgId, prompt }: { phaseIdx: number; msgId: string; prompt: string }) => {
       setGeneratingKey(`${phaseIdx}-${msgId}`);
-      const res = await customFetch<Response>("/api/agents/direct-chat", {
+      const data = await customFetch<{ response?: string }>("/api/agents/direct-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -303,8 +303,6 @@ export default function GroupPlannerPage() {
           message: `${prompt}\n\nNome do grupo: ${group?.name ?? "Grupo VIP"}\nPlataforma: ${group?.platform === "whatsapp" ? "WhatsApp" : "Telegram"}\n\nResponda APENAS com o texto da mensagem, pronto para copiar e colar. Sem títulos, sem formatação Markdown, apenas o texto puro.`,
         }),
       });
-      if (!res.ok) throw new Error("Erro ao gerar");
-      const data = await res.json() as { response?: string };
       return { phaseIdx, msgId, content: data.response ?? "" };
     },
     onSuccess: ({ phaseIdx, msgId, content }) => {

@@ -1336,7 +1336,7 @@ export default function CampaignDetail() {
 
   const connectIntegrationMutation = useMutation({
     mutationFn: async ({ provider, fields }: { provider: Provider; fields: Record<string, string> }) => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations", {
+      return customFetch<unknown>("/api/workspaces/me/integrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1347,11 +1347,6 @@ export default function CampaignDetail() {
           metadata: fields,
         }),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao conectar");
-      }
-      return res.json();
     },
     onSuccess: () => {
       toast.success("Integração conectada! Tente lançar novamente.");
@@ -1397,9 +1392,8 @@ export default function CampaignDetail() {
     enabled: !!campaignId && activeTab === "agentes",
     refetchInterval: isActive ? 5000 : false,
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/agents`);
-      if (!res.ok) return { agents: [], checkpoints: [] };
-      return res.json() as Promise<{ agents: AgentRun[]; checkpoints: Checkpoint[] }>;
+      return customFetch<{ agents: AgentRun[]; checkpoints: Checkpoint[] }>(`/api/campaigns/${campaignId}/agents`)
+        .catch(() => ({ agents: [] as AgentRun[], checkpoints: [] as Checkpoint[] }));
     },
   });
 
@@ -1410,9 +1404,8 @@ export default function CampaignDetail() {
     refetchInterval: isActive ? 5000 : false,
     staleTime: 0,
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{ pieces: ContentPiece[] }>;
+      return customFetch<{ pieces: ContentPiece[] }>(`/api/campaigns/${campaignId}/content`)
+        .catch(() => null);
     },
   });
 
@@ -1422,9 +1415,8 @@ export default function CampaignDetail() {
     enabled: !!campaignId && campaign?.status === "awaiting_approval",
     staleTime: 0,
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{ pieces: ContentPiece[] }>;
+      return customFetch<{ pieces: ContentPiece[] }>(`/api/campaigns/${campaignId}/content`)
+        .catch(() => null);
     },
   });
 
@@ -1519,9 +1511,8 @@ export default function CampaignDetail() {
     enabled: !!campaignId && activeTab === "metricas",
     refetchInterval: isActive ? 10000 : false,
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/metrics/summary`);
-      if (!res.ok) return null;
-      return res.json() as Promise<MetricsSummary>;
+      return customFetch<MetricsSummary>(`/api/campaigns/${campaignId}/metrics/summary`)
+        .catch(() => null);
     },
   });
 
@@ -1530,9 +1521,8 @@ export default function CampaignDetail() {
     queryKey: [`/api/campaigns/${campaignId}/alerts`],
     enabled: !!campaignId && activeTab === "metricas",
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/alerts`);
-      if (!res.ok) return { alerts: [] };
-      return res.json() as Promise<{ alerts: MetricAlert[] }>;
+      return customFetch<{ alerts: MetricAlert[] }>(`/api/campaigns/${campaignId}/alerts`)
+        .catch(() => ({ alerts: [] as MetricAlert[] }));
     },
   });
 
@@ -1542,9 +1532,8 @@ export default function CampaignDetail() {
     enabled: !!campaignId,
     staleTime: 60_000,
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations");
-      if (!res.ok) return { integrations: [] };
-      return res.json() as Promise<{ integrations: { provider: string; status: string }[] }>;
+      return customFetch<{ integrations: { provider: string; status: string }[] }>("/api/workspaces/me/integrations")
+        .catch(() => ({ integrations: [] as { provider: string; status: string }[] }));
     },
   });
   const connectedProviders = (integrationsData?.integrations ?? [])
@@ -1660,20 +1649,7 @@ export default function CampaignDetail() {
     if (retryPending) return;
     setRetryPending(true);
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/execute/retry`, { method: "POST" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string; code?: string; data?: { lastFailedAgent?: string; lastFailedPieceType?: string; retryCount?: number } };
-        if (body?.code === "REQUIRES_INTERVENTION") {
-          const pieceName = body.data?.lastFailedPieceType ? (PIECE_DISPLAY_NAMES[body.data.lastFailedPieceType] ?? body.data.lastFailedPieceType) : null;
-          toast.error(
-            pieceName ? `Falha repetida em "${pieceName}"` : "Limite de tentativas atingido",
-            { description: "Pule esta peça ou ajuste o briefing antes de tentar novamente.", duration: 10000 },
-          );
-        } else {
-          toast.error(body?.error ?? "Erro ao retomar pipeline.", { duration: 6000 });
-        }
-        return;
-      }
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/execute/retry`, { method: "POST" });
       toast.success("Pipeline retomado — processando...", { description: "Peças já geradas serão preservadas." });
       setActiveTab("agentes");
       queryClient.setQueryData(getGetCampaignQueryKey(campaignId), (old: unknown) => {
@@ -1684,8 +1660,21 @@ export default function CampaignDetail() {
         return { ...o, campaign: { ...o.campaign, updatedAt: now, brainData: { pipelineCheckpoint: { lockedAt: now, lastProgressAt: now } } } };
       });
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
-    } catch {
-      toast.error("Erro ao retomar pipeline.", { duration: 6000 });
+    } catch (retryErr) {
+      if (retryErr instanceof ApiError) {
+        const body = retryErr.data as { error?: string; code?: string; data?: { lastFailedAgent?: string; lastFailedPieceType?: string; retryCount?: number } } | undefined;
+        if (body?.code === "REQUIRES_INTERVENTION") {
+          const pieceName = body.data?.lastFailedPieceType ? (PIECE_DISPLAY_NAMES[body.data.lastFailedPieceType] ?? body.data.lastFailedPieceType) : null;
+          toast.error(
+            pieceName ? `Falha repetida em "${pieceName}"` : "Limite de tentativas atingido",
+            { description: "Pule esta peça ou ajuste o briefing antes de tentar novamente.", duration: 10000 },
+          );
+        } else {
+          toast.error(body?.error ?? "Erro ao retomar pipeline.", { duration: 6000 });
+        }
+      } else {
+        toast.error("Erro ao retomar pipeline.", { duration: 6000 });
+      }
     } finally {
       setRetryPending(false);
     }
@@ -1699,11 +1688,7 @@ export default function CampaignDetail() {
     if (skipPending || !pieceType) return;
     setSkipPending(true);
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/pieces/${pieceType}/skip`, { method: "POST" });
-      if (!res.ok) {
-        toast.error("Erro ao pular peça.", { duration: 4000 });
-        return;
-      }
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/content/pieces/${pieceType}/skip`, { method: "POST" });
       const pieceName = PIECE_DISPLAY_NAMES[pieceType] ?? pieceType;
       toast.success(`"${pieceName}" marcada para pular`, { description: "Ao retomar, o pipeline gerará as demais peças e ignorará esta." });
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
@@ -1741,15 +1726,11 @@ export default function CampaignDetail() {
   const handleContentAction = async (pieceId: string, action: "approve" | "reject") => {
     setContentActionLoading(pieceId);
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${pieceId}/${action}`, {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/content/${pieceId}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: "" }),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro");
-      }
       toast.success(action === "approve" ? "Conteúdo aprovado." : "Conteúdo rejeitado.");
       queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
@@ -1766,14 +1747,10 @@ export default function CampaignDetail() {
     setPartialIntegrations(null);
     setShowPartialGuide(false);
     try {
-      const res = await customFetch<Response>(
+      await customFetch<unknown>(
         `/api/campaigns/${campaignId}/execute/launch?skipIntegrationWarning=true`,
         { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
       );
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao lançar");
-      }
       toast.success("Lançamento iniciado. A agente está em execução.");
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
     } catch (err) {
@@ -1788,12 +1765,11 @@ export default function CampaignDetail() {
   const handleCheckpointApprove = async (checkpointId: string) => {
     setCheckpointLoading(checkpointId);
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/approve`, {
+      await customFetch<unknown>(`/api/campaigns/${campaignId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ checkpointId, approved: true }),
       });
-      if (!res.ok) throw new Error("Erro");
       toast.success("Checkpoint aprovado.");
       queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/agents`] });
       queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });

@@ -174,9 +174,8 @@ export default function LauncherDashboard() {
   const { data: campaignsData, isLoading: campaignsLoading } = useQuery({
     queryKey: ["/api/campaigns"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/campaigns");
-      if (!res.ok) return { campaigns: [] as Campaign[] };
-      return res.json() as Promise<{ campaigns: Campaign[] }>;
+      return customFetch<{ campaigns: Campaign[] }>("/api/campaigns")
+        .catch(() => ({ campaigns: [] as Campaign[] }));
     },
     refetchInterval: 30_000,
   });
@@ -194,8 +193,7 @@ export default function LauncherDashboard() {
   // Live stats for selected campaign
   useEffect(() => {
     if (!selectedCampaign) return;
-    customFetch<Response>(`/api/campaigns/${selectedCampaign.id}/live-stats`)
-      .then(r => r.ok ? r.json() as Promise<Record<string, number>> : {})
+    customFetch<Record<string, number>>(`/api/campaigns/${selectedCampaign.id}/live-stats`)
       .then(d => setLiveStats(d))
       .catch(() => undefined);
   }, [selectedCampaign?.id]);
@@ -205,9 +203,8 @@ export default function LauncherDashboard() {
     queryKey: ["/api/campaigns", selectedCampaign?.id, "metrics"],
     queryFn: async () => {
       if (!selectedCampaign) return null;
-      const res = await customFetch<Response>(`/api/campaigns/${selectedCampaign.id}/metrics`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{ metrics?: { healthScore?: number; revenue?: number; roas?: number; cpl?: number } }>;
+      return customFetch<{ metrics?: { healthScore?: number; revenue?: number; roas?: number; cpl?: number } }>(`/api/campaigns/${selectedCampaign.id}/metrics`)
+        .catch(() => null);
     },
     enabled: !!selectedCampaign,
     refetchInterval: 60_000,
@@ -218,9 +215,8 @@ export default function LauncherDashboard() {
     queryKey: ["/api/launch-sequences", "campaign", selectedCampaign?.id],
     queryFn: async () => {
       if (!selectedCampaign) return null;
-      const res = await customFetch<Response>(`/api/launch-sequences?campaignId=${selectedCampaign.id}`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{ sequences: SequenceSummary[] }>;
+      return customFetch<{ sequences: SequenceSummary[] }>(`/api/launch-sequences?campaignId=${selectedCampaign.id}`)
+        .catch(() => null);
     },
     enabled: !!selectedCampaign,
   });
@@ -230,9 +226,8 @@ export default function LauncherDashboard() {
     queryKey: ["/api/campaigns", selectedCampaign?.id, "content"],
     queryFn: async () => {
       if (!selectedCampaign) return null;
-      const res = await customFetch<Response>(`/api/campaigns/${selectedCampaign.id}/content`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{ pieces: ContentPiece[] }>;
+      return customFetch<{ pieces: ContentPiece[] }>(`/api/campaigns/${selectedCampaign.id}/content`)
+        .catch(() => null);
     },
     enabled: !!selectedCampaign,
   });

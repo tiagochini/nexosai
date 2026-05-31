@@ -249,9 +249,7 @@ export default function AgencyClientsPage() {
   const { data: statsData } = useQuery({
     queryKey: ["/api/agency/stats"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/agency/stats");
-      if (!res.ok) return null;
-      return res.json() as Promise<AgencyStats>;
+      return customFetch<AgencyStats>("/api/agency/stats").catch(() => null);
     },
   });
 
@@ -259,24 +257,18 @@ export default function AgencyClientsPage() {
     queryKey: ["/api/agency/clients", filterStatus],
     queryFn: async () => {
       const qs = filterStatus !== "all" ? `?status=${filterStatus}` : "";
-      const res = await customFetch<Response>(`/api/agency/clients${qs}`);
-      if (!res.ok) return { clients: [] };
-      return res.json() as Promise<{ clients: AgencyClient[] }>;
+      return customFetch<{ clients: AgencyClient[] }>(`/api/agency/clients${qs}`)
+        .catch(() => ({ clients: [] as AgencyClient[] }));
     },
   });
 
   const inviteMutation = useMutation({
     mutationFn: async (data: { clientEmail: string; clientName?: string; notes?: string; permissions: Record<string, boolean> }) => {
-      const res = await customFetch<Response>("/api/agency/clients/invite", {
+      return customFetch<{ client: AgencyClient; inviteUrl: string }>("/api/agency/clients/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao convidar");
-      }
-      return res.json() as Promise<{ client: AgencyClient; inviteUrl: string }>;
     },
     onSuccess: (data) => {
       toast.success(`Convite enviado para ${data.client.clientEmail}`);
@@ -289,13 +281,11 @@ export default function AgencyClientsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, unknown> }) => {
-      const res = await customFetch<Response>(`/api/agency/clients/${id}`, {
+      return customFetch<unknown>(`/api/agency/clients/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
       });
-      if (!res.ok) throw new Error("Erro ao atualizar");
-      return res.json();
     },
     onSuccess: () => {
       toast.success("Cliente atualizado.");
@@ -306,8 +296,7 @@ export default function AgencyClientsPage() {
 
   const revokeMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await customFetch<Response>(`/api/agency/clients/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Erro ao revogar");
+      await customFetch<unknown>(`/api/agency/clients/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       toast.success("Acesso revogado.");

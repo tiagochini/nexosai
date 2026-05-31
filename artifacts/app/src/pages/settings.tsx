@@ -249,9 +249,8 @@ function WorkspaceTab() {
   const { data: plansData } = useQuery({
     queryKey: ["/api/plans"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/plans");
-      if (!res.ok) return { plans: [] };
-      return res.json() as Promise<{ plans: { id: string; name: string; slug: string; priceMonthlyBrl: string; creditsMonthly: number; maxCampaigns: number; whiteLabel: boolean }[] }>;
+      return customFetch<{ plans: { id: string; name: string; slug: string; priceMonthlyBrl: string; creditsMonthly: number; maxCampaigns: number; whiteLabel: boolean }[] }>("/api/plans")
+        .catch(() => ({ plans: [] as { id: string; name: string; slug: string; priceMonthlyBrl: string; creditsMonthly: number; maxCampaigns: number; whiteLabel: boolean }[] }));
     },
   });
 
@@ -261,12 +260,11 @@ function WorkspaceTab() {
     if (!wsName.trim()) return;
     setSaving(true);
     try {
-      const res = await customFetch<Response>("/api/workspaces/me", {
+      await customFetch<unknown>("/api/workspaces/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: wsName.trim() }),
       });
-      if (!res.ok) throw new Error("Falha ao atualizar workspace");
       toast.success("Workspace atualizado.");
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
     } catch {
@@ -425,15 +423,11 @@ function SecurityTab() {
     if (next.length < 8) { toast.error("Senha deve ter ao menos 8 caracteres."); return; }
     setSaving(true);
     try {
-      const res = await customFetch<Response>("/api/auth/change-password", {
+      await customFetch<unknown>("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword: current, newPassword: next }),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Falha ao alterar senha");
-      }
       toast.success("Senha alterada com sucesso.");
       setCurrent(""); setNext(""); setConfirm("");
     } catch (err) {
@@ -827,9 +821,8 @@ function IntegracaoTab() {
   const { data, isLoading } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations");
-      if (!res.ok) return { integrations: [] };
-      return res.json() as Promise<{ integrations: WorkspaceIntegration[] }>;
+      return customFetch<{ integrations: WorkspaceIntegration[] }>("/api/workspaces/me/integrations")
+        .catch(() => ({ integrations: [] as WorkspaceIntegration[] }));
     },
   });
 
@@ -837,16 +830,11 @@ function IntegracaoTab() {
     mutationFn: async ({
       provider, accountId, accountName, webhookUrl, metadata,
     }: { provider: IntegrationProvider; accountId?: string; accountName?: string; webhookUrl?: string; metadata?: Record<string, unknown> }) => {
-      const res = await customFetch<Response>("/api/workspaces/me/integrations", {
+      return customFetch<unknown>("/api/workspaces/me/integrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ provider, accountId, accountName, webhookUrl, metadata }),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao conectar");
-      }
-      return res.json();
     },
     onSuccess: () => {
       toast.success("Integração conectada com sucesso!");

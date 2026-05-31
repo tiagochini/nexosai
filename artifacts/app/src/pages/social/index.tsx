@@ -430,18 +430,16 @@ export default function SocialPage() {
   const { data: accountsData, isLoading: accountsLoading } = useQuery({
     queryKey: ["/api/social/accounts"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/social/accounts");
-      if (!res.ok) return { accounts: [] };
-      return res.json() as Promise<{ accounts: SocialAccount[] }>;
+      return customFetch<{ accounts: SocialAccount[] }>("/api/social/accounts")
+        .catch(() => ({ accounts: [] as SocialAccount[] }));
     },
   });
 
   const { data: postsData, isLoading: postsLoading } = useQuery({
     queryKey: ["/api/social/posts"],
     queryFn: async () => {
-      const res = await customFetch<Response>("/api/social/posts?limit=50");
-      if (!res.ok) return { posts: [] };
-      return res.json() as Promise<{ posts: SocialPost[] }>;
+      return customFetch<{ posts: SocialPost[] }>("/api/social/posts?limit=50")
+        .catch(() => ({ posts: [] as SocialPost[] }));
     },
   });
 
@@ -449,7 +447,7 @@ export default function SocialPage() {
     setGeneratingPlatform(platformId);
     try {
       const platform = PLATFORMS.find(p => p.id === platformId)!;
-      const res = await customFetch<Response>("/api/agents/direct-chat", {
+      await customFetch<{ response?: string }>("/api/agents/direct-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -460,8 +458,6 @@ Para cada etapa, escreva a copy completa pronta para uso.
 Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação e escassez.`,
         }),
       });
-      if (!res.ok) throw new Error("Erro ao gerar conteúdo");
-      const data = await res.json() as { response?: string };
       toast.success(`Conteúdo ${platform.label} gerado! Veja no chat de Agentes.`);
       queryClient.invalidateQueries({ queryKey: ["/api/social/posts"] });
     } catch {
