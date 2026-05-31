@@ -8,7 +8,7 @@
  *   4. Plano financeiro & de mídia revisado e confirmado
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -170,6 +170,10 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [finExpanded, setFinExpanded]         = useState(true);
   const [finConfirmed, setFinConfirmed]       = useState(false);
 
+  // ── Interactive budget slider state ──────────────────────────────────────
+  const [localBudget, setLocalBudget]           = useState<number>(0);
+  const [localRetargetPct, setLocalRetargetPct] = useState<number>(25);
+
   useEffect(() => {
     Promise.all([
       customFetch<{ integrations: Integration[] }>("/api/workspaces/me/integrations").catch(() => ({ integrations: [] })),
@@ -178,10 +182,68 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
     ]).then(([intRes, contRes, finRes]) => {
       setIntegrations(intRes.integrations ?? []);
       setContent(contRes.pieces ?? []);
-      setFinancials(finRes.financials ?? null);
+      const fin = finRes.financials ?? null;
+      setFinancials(fin);
+      setLocalBudget(fin?.paidTrafficBudget ?? 5000);
+      setLocalRetargetPct(fin?.retargetingPct ?? 25);
       setLoading(false);
     });
   }, [campaignId]);
+
+  // ── Proportional scaling from original simulation ─────────────────────────
+  const scaled = useMemo(() => {
+    if (!financials?.simulation || !financials.hasBudget) return null;
+    const origProspecting = financials.prospectingBudget || 1;
+    const newProspecting  = Math.round(localBudget * (1 - localRetargetPct / 100));
+    const newRetargeting  = localBudget - newProspecting;
+    const k               = newProspecting / origProspecting; // scale factor
+
+    const scaleVal = (v: ScenarioValues): ScenarioValues => ({
+      low:  Math.round(v.low  * k),
+      mid:  Math.round(v.mid  * k),
+      high: Math.round(v.high * k),
+    });
+
+    const totalRevenue = scaleVal(financials.simulation.totalRevenue);
+    const totalLeads   = scaleVal(financials.simulation.totalLeads);
+
+    const totalRoas: ScenarioValues = {
+      low:  localBudget > 0 ? Math.round((totalRevenue.low  / localBudget) * 100) / 100 : 0,
+      mid:  localBudget > 0 ? Math.round((totalRevenue.mid  / localBudget) * 100) / 100 : 0,
+      high: localBudget > 0 ? Math.round((totalRevenue.high / localBudget) * 100) / 100 : 0,
+    };
+    const totalRoi: ScenarioValues = {
+      low:  localBudget > 0 ? Math.round(((totalRevenue.low  - localBudget) / localBudget) * 100) : 0,
+      mid:  localBudget > 0 ? Math.round(((totalRevenue.mid  - localBudget) / localBudget) * 100) : 0,
+      high: localBudget > 0 ? Math.round(((totalRevenue.high - localBudget) / localBudget) * 100) : 0,
+    };
+    const organicLeads = scaleVal(financials.organicLeads);
+    const totalLeadsWithOrganic: ScenarioValues = {
+      low:  totalLeads.low  + organicLeads.low,
+      mid:  totalLeads.mid  + organicLeads.mid,
+      high: totalLeads.high + organicLeads.high,
+    };
+    const breakEvenSales = financials.simulation.breakEvenSales;
+
+    const platforms: PlatformSim[] = (financials.simulation.platforms ?? []).map(p => ({
+      ...p,
+      budgetAllocation: Math.round(p.budgetAllocation * k),
+      leads: scaleVal(p.leads),
+    }));
+
+    return {
+      prospecting: newProspecting,
+      retargeting: newRetargeting,
+      totalLeads: totalLeadsWithOrganic,
+      paidLeads: totalLeads,
+      organicLeads,
+      totalRevenue,
+      totalRoas,
+      totalRoi,
+      breakEvenSales,
+      platforms,
+    };
+  }, [financials, localBudget, localRetargetPct]);
 
   // ── Integration checks ──────────────────────────────────────────────────────
   const isConnected   = (providers: string[]) => integrations.some(i => providers.includes(i.provider) && i.status === "connected");
@@ -400,16 +462,101 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
               </div>
             )}
 
-            {/* ── Budget overview ────────────────────────────────────────── */}
-            {financials?.hasBudget && (
+            {/* ── Budget overview + interactive sliders ─────────────────── */}
+            {financials?.hasBudget && scaled && (
               <>
-                {/* KPI strip */}
+                {/* ── Budget slider ───────────────────────────────────────── */}
+                <div className="border border-primary/20 bg-primary/5 px-4 py-4 space-y-4">
+                  <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
+                    Ajuste o orçamento — projeções atualizam em tempo real
+                  </div>
+
+                  {/* Paid traffic budget slider */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">Budget de Tráfego Pago</span>
+                      <span className="font-mono text-sm font-bold text-primary">{R$(localBudget)}</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="range"
+                        min={1000}
+                        max={500000}
+                        step={1000}
+                        value={localBudget}
+                        onChange={e => { setLocalBudget(Number(e.target.value)); setFinConfirmed(false); }}
+                        className="w-full h-1.5 rounded-none appearance-none bg-border/30 cursor-pointer accent-primary"
+                        style={{ accentColor: "hsl(var(--primary))" }}
+                      />
+                      <div className="flex justify-between mt-1">
+                        <span className="font-mono text-[9px] text-muted-foreground/25">R$ 1k</span>
+                        <span className="font-mono text-[9px] text-muted-foreground/25">R$ 500k</span>
+                      </div>
+                    </div>
+                    {/* Quick preset buttons */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {[5000, 10000, 25000, 50000, 100000, 250000].map(v => (
+                        <button
+                          key={v}
+                          onClick={() => { setLocalBudget(v); setFinConfirmed(false); }}
+                          className={`font-mono text-[9px] px-2 py-1 border transition-colors uppercase tracking-widest ${
+                            localBudget === v
+                              ? "border-primary/60 bg-primary/15 text-primary"
+                              : "border-border/30 text-muted-foreground/50 hover:border-primary/30 hover:text-foreground"
+                          }`}
+                        >
+                          {R$(v)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Retargeting % slider */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-widest">% Retargeting</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-cyan-400">{localRetargetPct}% retargeting</span>
+                        <span className="font-mono text-[10px] text-muted-foreground/30">·</span>
+                        <span className="font-mono text-[10px] text-primary/70">{100 - localRetargetPct}% prospecção</span>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min={10}
+                      max={50}
+                      step={5}
+                      value={localRetargetPct}
+                      onChange={e => { setLocalRetargetPct(Number(e.target.value)); setFinConfirmed(false); }}
+                      className="w-full h-1.5 rounded-none appearance-none bg-border/30 cursor-pointer"
+                      style={{ accentColor: "hsl(var(--primary))" }}
+                    />
+                    <div className="flex justify-between">
+                      <span className="font-mono text-[9px] text-muted-foreground/25">10% retarget</span>
+                      <span className="font-mono text-[9px] text-muted-foreground/25">50% retarget</span>
+                    </div>
+                  </div>
+
+                  {/* Split summary */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="border border-primary/20 bg-background/30 px-3 py-2">
+                      <div className="font-mono text-[9px] text-primary/50 uppercase tracking-widest mb-0.5">Prospecção ({100 - localRetargetPct}%)</div>
+                      <div className="font-mono text-sm font-bold text-primary">{R$(scaled.prospecting)}</div>
+                    </div>
+                    <div className="border border-cyan-500/20 bg-background/30 px-3 py-2">
+                      <div className="font-mono text-[9px] text-cyan-400/50 uppercase tracking-widest mb-0.5">Retargeting ({localRetargetPct}%)</div>
+                      <div className="font-mono text-sm font-bold text-cyan-400">{R$(scaled.retargeting)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KPI strip — live values */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
-                    { icon: <DollarSign className="h-3.5 w-3.5" />, label: "Investimento Total", value: R$(financials.totalBudget), sub: "orçamento da campanha" },
-                    { icon: <Target className="h-3.5 w-3.5" />, label: "Tráfego Pago", value: R$(financials.paidTrafficBudget), sub: `${financials.retargetingPct}% retargeting` },
-                    { icon: <Users className="h-3.5 w-3.5" />, label: "Leads Projetados", value: `${financials.totalLeads.mid.toLocaleString("pt-BR")}`, sub: `+${financials.organicLeads.mid} orgânico` },
-                    { icon: <TrendingUp className="h-3.5 w-3.5" />, label: "Receita Projetada", value: R$(financials.simulation?.totalRevenue.mid ?? 0), sub: `ROAS ${financials.simulation?.totalRoas.mid.toFixed(1)}x` },
+                    { icon: <DollarSign className="h-3.5 w-3.5" />, label: "Investimento Total",  value: R$(localBudget),                       sub: "tráfego pago" },
+                    { icon: <Target      className="h-3.5 w-3.5" />, label: "Leads Pagos",         value: scaled.paidLeads.mid.toLocaleString("pt-BR"), sub: `${scaled.paidLeads.low}–${scaled.paidLeads.high} (faixa)` },
+                    { icon: <Users       className="h-3.5 w-3.5" />, label: "Total Leads",         value: scaled.totalLeads.mid.toLocaleString("pt-BR"), sub: `+${scaled.organicLeads.mid} orgânico` },
+                    { icon: <TrendingUp  className="h-3.5 w-3.5" />, label: "Receita Projetada",   value: R$(scaled.totalRevenue.mid),           sub: `ROAS ${scaled.totalRoas.mid.toFixed(1)}x realista` },
                   ].map(kpi => (
                     <div key={kpi.label} className="border border-border/30 bg-background/30 px-3 py-2.5">
                       <div className="flex items-center gap-1.5 text-muted-foreground/40 mb-1">{kpi.icon}<span className="font-mono text-[9px] uppercase tracking-widest">{kpi.label}</span></div>
@@ -419,38 +566,13 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   ))}
                 </div>
 
-                {/* Prospecting / Retargeting split */}
-                <div className="border border-border/30 bg-background/20 px-4 py-3">
-                  <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-2">Distribuição do Orçamento de Mídia</div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="flex-1 h-2 bg-border/20 rounded-none overflow-hidden">
-                      <div className="h-full bg-primary/60" style={{ width: `${100 - financials.retargetingPct}%` }} />
-                    </div>
-                    <div className="font-mono text-[10px] text-primary/80 whitespace-nowrap">{100 - financials.retargetingPct}% Prospecção</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-2 bg-border/20 rounded-none overflow-hidden">
-                      <div className="h-full bg-cyan-500/50" style={{ width: `${financials.retargetingPct}%` }} />
-                    </div>
-                    <div className="font-mono text-[10px] text-cyan-400/80 whitespace-nowrap">{financials.retargetingPct}% Retargeting</div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <div className="font-mono text-[10px] text-muted-foreground/50">
-                      Prospecção: <span className="text-foreground/70">{R$(financials.prospectingBudget)}</span>
-                    </div>
-                    <div className="font-mono text-[10px] text-muted-foreground/50">
-                      Retargeting: <span className="text-foreground/70">{R$(financials.retargetingBudget)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Platform breakdown */}
-                {(financials.simulation?.platforms ?? []).length > 0 && (
+                {/* Platform breakdown — scaled */}
+                {scaled.platforms.length > 0 && (
                   <div className="border border-border/30 bg-background/20">
                     <div className="px-4 py-2 border-b border-border/20 font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest flex items-center gap-2">
-                      <BarChart3 className="h-3 w-3" />Plataformas — Leads & Eficiência
+                      <BarChart3 className="h-3 w-3" />Distribuição por Plataforma
                     </div>
-                    {(financials.simulation?.platforms ?? []).map(p => (
+                    {scaled.platforms.map(p => (
                       <div key={p.platform} className="flex items-center gap-3 px-4 py-2.5 border-b border-border/10 last:border-0 hover:bg-background/20 transition-colors">
                         <span className="text-base shrink-0">{p.icon}</span>
                         <div className="flex-1 min-w-0">
@@ -474,44 +596,36 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                   </div>
                 )}
 
-                {/* Revenue scenarios */}
-                {financials.simulation && (
-                  <div className="border border-border/30 bg-background/20">
-                    <div className="px-4 py-2 border-b border-border/20 font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
-                      Cenários de Retorno (Pessimista / Realista / Otimista)
-                    </div>
-                    <div className="grid grid-cols-3 divide-x divide-border/20">
-                      {[
-                        { key: "low",  label: "Pess.",  color: "text-red-400",    bgBar: "bg-red-500/20" },
-                        { key: "mid",  label: "Real.",  color: "text-yellow-400", bgBar: "bg-yellow-500/30" },
-                        { key: "high", label: "Otim.",  color: "text-green-400",  bgBar: "bg-green-500/20" },
-                      ].map(sc => {
-                        const rev  = financials.simulation!.totalRevenue[sc.key as keyof ScenarioValues];
-                        const roi  = financials.simulation!.totalRoi[sc.key as keyof ScenarioValues];
-                        const roas = financials.simulation!.totalRoas[sc.key as keyof ScenarioValues];
-                        return (
-                          <div key={sc.key} className={`px-3 py-3 ${sc.key === "mid" ? "bg-yellow-500/3" : ""}`}>
-                            <div className={`font-mono text-[9px] uppercase tracking-widest ${sc.color} mb-1`}>{sc.label}</div>
-                            <div className="font-mono text-sm font-bold text-foreground">{R$(rev)}</div>
-                            <div className="font-mono text-[9px] text-muted-foreground/50 mt-1">
-                              ROI {roi > 0 ? "+" : ""}{roi}%
-                            </div>
-                            <div className="font-mono text-[9px] text-muted-foreground/50">
-                              ROAS {roas.toFixed(1)}x
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="px-4 py-2 border-t border-border/10 flex items-center justify-between">
-                      <div className="font-mono text-[9px] text-muted-foreground/30">
-                        Break-even: {financials.simulation.breakEvenSales} venda{financials.simulation.breakEvenSales !== 1 ? "s" : ""}
-                        {financials.revenueTarget ? ` • Meta: ${R$(financials.revenueTarget)}` : ""}
-                      </div>
-                      <div className="font-mono text-[9px] text-muted-foreground/25">Leads orgânicos: +{financials.organicLeads.mid} (estimado)</div>
-                    </div>
+                {/* Revenue scenarios — scaled */}
+                <div className="border border-border/30 bg-background/20">
+                  <div className="px-4 py-2 border-b border-border/20 font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
+                    Cenários de Retorno (Pessimista / Realista / Otimista)
                   </div>
-                )}
+                  <div className="grid grid-cols-3 divide-x divide-border/20">
+                    {(["low", "mid", "high"] as const).map((sc, i) => {
+                      const labels = ["Pess.", "Real.", "Otim."];
+                      const colors = ["text-red-400", "text-yellow-400", "text-green-400"];
+                      const rev    = scaled.totalRevenue[sc];
+                      const roi    = scaled.totalRoi[sc];
+                      const roas   = scaled.totalRoas[sc];
+                      return (
+                        <div key={sc} className={`px-3 py-3 ${sc === "mid" ? "bg-yellow-500/3" : ""}`}>
+                          <div className={`font-mono text-[9px] uppercase tracking-widest ${colors[i]} mb-1`}>{labels[i]}</div>
+                          <div className="font-mono text-sm font-bold text-foreground">{R$(rev)}</div>
+                          <div className="font-mono text-[9px] text-muted-foreground/50 mt-1">ROI {roi > 0 ? "+" : ""}{roi}%</div>
+                          <div className="font-mono text-[9px] text-muted-foreground/50">ROAS {roas.toFixed(1)}x</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="px-4 py-2 border-t border-border/10 flex items-center justify-between">
+                    <div className="font-mono text-[9px] text-muted-foreground/30">
+                      Break-even: {scaled.breakEvenSales} venda{scaled.breakEvenSales !== 1 ? "s" : ""}
+                      {financials.revenueTarget ? ` • Meta: ${R$(financials.revenueTarget)}` : ""}
+                    </div>
+                    <div className="font-mono text-[9px] text-muted-foreground/25">+{scaled.organicLeads.mid} leads orgânicos estimados</div>
+                  </div>
+                </div>
 
                 {/* Benchmark note */}
                 {financials.simulation?.benchmarkNote && (
