@@ -354,24 +354,67 @@ async function callOpenAI(
     ? { max_completion_tokens: 8192 }
     : { max_tokens: 4096 };
 
-  const response = await client.chat.completions.create(
-    {
-      model: effectiveModel,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-      ],
-      ...completionParams,
-    },
-    { signal },
-  );
+  try {
+    const response = await client.chat.completions.create(
+      {
+        model: effectiveModel,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ],
+        ...completionParams,
+      },
+      { signal },
+    );
 
-  return {
-    content: response.choices[0]?.message?.content ?? "",
-    inputTokens: response.usage?.prompt_tokens ?? 0,
-    outputTokens: response.usage?.completion_tokens ?? 0,
-    effectiveModel,
-  };
+    return {
+      content: response.choices[0]?.message?.content ?? "",
+      inputTokens: response.usage?.prompt_tokens ?? 0,
+      outputTokens: response.usage?.completion_tokens ?? 0,
+      effectiveModel,
+    };
+  } catch (err: unknown) {
+    const isQuotaError =
+      err instanceof Error &&
+      ("status" in err
+        ? (err as { status?: number }).status === 429
+        : err.message.includes("429") || err.message.includes("quota"));
+
+    // When native key is quota-exhausted, fall back to integration proxy or Anthropic
+    if (isQuotaError && env.OPENAI_API_KEY) {
+      if (hasOpenAIIntegration()) {
+        const integrationClient = new OpenAI({
+          apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
+          baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        });
+        const intModel = OPENAI_INTEGRATION_MODEL;
+        const intIsGpt5 = intModel.startsWith("gpt-5") || intModel.startsWith("o4") || intModel.startsWith("o3");
+        const intParams = intIsGpt5 ? { max_completion_tokens: 8192 } : { max_tokens: 4096 };
+        const intResponse = await integrationClient.chat.completions.create(
+          {
+            model: intModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...messages.map((m) => ({ role: m.role, content: m.content })),
+            ],
+            ...intParams,
+          },
+          { signal },
+        );
+        return {
+          content: intResponse.choices[0]?.message?.content ?? "",
+          inputTokens: intResponse.usage?.prompt_tokens ?? 0,
+          outputTokens: intResponse.usage?.completion_tokens ?? 0,
+          effectiveModel: intModel,
+        };
+      }
+      // No integration either — fall back to Anthropic
+      if (hasAnthropicIntegration()) {
+        return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
+      }
+    }
+    throw err;
+  }
 }
 
 async function callGemini(

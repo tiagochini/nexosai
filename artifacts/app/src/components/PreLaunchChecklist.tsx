@@ -436,11 +436,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                     {statusMeta.label}
                   </Badge>
                   {!isApproved && (
-                    <Link href={`/campaigns/${campaignId}/content`}>
-                      <Button size="sm" variant="outline" className="font-mono text-[9px] uppercase shrink-0 h-6 px-2 gap-1 border-primary/30 text-primary/70 hover:bg-primary/10" onClick={e => e.stopPropagation()}>
+                    <Button asChild size="sm" variant="outline" className="font-mono text-[9px] uppercase shrink-0 h-6 px-2 gap-1 border-primary/30 text-primary/70 hover:bg-primary/10" onClick={e => e.stopPropagation()}>
+                      <Link href={`/campaigns/${campaignId}/content`}>
                         <Eye className="h-3 w-3" />Revisar
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   )}
                 </div>
               );
@@ -448,11 +448,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             {!allContentApproved && (
               <div className="px-3 py-3 bg-background/10 flex items-center justify-between">
                 <div className="font-mono text-[10px] text-muted-foreground/50">Revise e aprove cada peça na página de conteúdo</div>
-                <Link href={`/campaigns/${campaignId}/content`}>
-                  <Button size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5">
+                <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5">
+                  <Link href={`/campaigns/${campaignId}/content`}>
                     <Eye className="h-3 w-3" />Abrir Conteúdo
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             )}
           </div>
@@ -828,11 +828,11 @@ function GateRow({
             })}
             <div className="mt-3 pt-3 border-t border-border/20 flex items-center justify-between">
               <div className="font-mono text-[10px] text-muted-foreground/40">Após conectar, esta verificação atualiza automaticamente.</div>
-              <Link href="/integracoes">
-                <Button size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5" onClick={e => e.stopPropagation()}>
+              <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5" onClick={e => e.stopPropagation()}>
+                <Link href="/integracoes">
                   <Zap className="h-3 w-3" />Ir para Integrações
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

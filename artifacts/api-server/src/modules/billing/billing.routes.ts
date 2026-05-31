@@ -170,6 +170,15 @@ router.get("/access", requireAuth, async (req, res): Promise<void> => {
     .limit(1);
   if (invite) { res.json({ hasAccess: true, reason: "invite_code" }); return; }
 
+  // Plan assigned — workspace went through a legitimate registration or admin setup
+  // (covers invite-code registrations where the invite row wasn't linked, and admin-created test users)
+  const [ws] = await db
+    .select({ planId: workspacesTable.planId })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  if (ws?.planId) { res.json({ hasAccess: true, reason: "plan_assigned" }); return; }
+
   res.json({ hasAccess: false, reason: "none" });
 });
 

@@ -134,7 +134,7 @@ export default function NexosLaunchRoom() {
         <div className="text-center">
           <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">Acesso restrito ao fundador</p>
-          <Link href="/admin"><Button variant="ghost" className="mt-4">← Voltar</Button></Link>
+          <Button asChild variant="ghost" className="mt-4"><Link href="/admin">← Voltar</Link></Button>
         </div>
       </div>
     );

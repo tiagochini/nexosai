@@ -791,7 +791,7 @@ Retorne o JSON de avaliação.`,
     checkpointsPending.push("strategy_approval");
 
     await transitionCampaign(campaignId, workspaceId, "strategy_ready", "strategy agent completed", log, {
-      strategyData: result as any,
+      strategy: result as any,
     });
 
     // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)

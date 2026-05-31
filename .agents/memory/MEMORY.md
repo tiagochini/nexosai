@@ -17,3 +17,4 @@
 - [Content Page expandApiPieces](content-expand-api-pieces.md) — 6 content types (content_calendar, ad_copy, vsl_script, webinar_script, targeting_config, media_buying_plan) need explicit handlers; ApiContentPiece.content is `unknown` (JSONB object from DB, not string).
 - [Test Script Registration Gate](test-script-invite-code.md) — test scripts must create a temp inviteCodesTable row and pass inviteCode in register body; gate in auth.routes.ts blocks open registration when PLATFORM_OPEN≠"true".
 - [RecordButton Portal Fix](recordbutton-portal.md) — backdrop-blur-sm on header traps fixed-position overlays; all RecordButton overlays must use createPortal(…, document.body) with z-[9000]+.
+- [E2E UI Routing & Test Patterns](e2e-ui-routing.md) — app BASE_PATH="/", all routes at root (/login not /app/login); PreLaunchChecklist Gate 4 requires explicit click; asChild fix for Link/Button nesting.

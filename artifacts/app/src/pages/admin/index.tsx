@@ -531,7 +531,7 @@ export default function AdminPage() {
         <AlertTriangle className="h-10 w-10 text-destructive/50 mx-auto" />
         <h2 className="font-mono text-lg uppercase tracking-widest font-bold text-destructive/70">Acesso Restrito</h2>
         <p className="font-mono text-sm text-muted-foreground/60">Esta área é exclusiva para administradores.</p>
-        <Link href="/"><Button variant="outline" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2"><ArrowLeft className="h-3.5 w-3.5" />Voltar</Button></Link>
+        <Button asChild variant="outline" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2"><Link href="/"><ArrowLeft className="h-3.5 w-3.5" />Voltar</Link></Button>
       </div>
     );
   }
