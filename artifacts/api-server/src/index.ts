@@ -63,6 +63,13 @@ process.on("uncaughtException", (err) => {
 
 const httpServer = http.createServer(app);
 
+// ── Long-running AI requests (strategy / content / agents) can take 5-10 min.
+// Default Node.js HTTP timeout is 5 seconds — way too short. Set to 12 minutes.
+// headersTimeout must be strictly greater than keepAliveTimeout.
+httpServer.timeout = 12 * 60 * 1000;          // 12 min request timeout
+httpServer.keepAliveTimeout = 65 * 1000;       // 65 s keep-alive (> nginx default 60s)
+httpServer.headersTimeout = 66 * 1000;         // must be > keepAliveTimeout
+
 try {
   initRealtime(httpServer);
 } catch (err) {

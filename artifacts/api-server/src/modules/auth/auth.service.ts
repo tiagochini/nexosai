@@ -157,7 +157,7 @@ export async function registerUser(
   return {
     accessToken: signAccess(payload),
     refreshToken: signRefresh({ userId: user.id }),
-    expiresIn: 15 * 60,
+    expiresIn: 8 * 60 * 60,
   };
 }
 
@@ -201,7 +201,7 @@ export async function loginUser(
   return {
     accessToken: signAccess(payload),
     refreshToken: signRefresh({ userId: user.id }),
-    expiresIn: 15 * 60,
+    expiresIn: 8 * 60 * 60,
   };
 }
 
@@ -247,7 +247,7 @@ export async function refreshTokens(
   return {
     accessToken: signAccess(payload),
     refreshToken: signRefresh({ userId: user.id }),
-    expiresIn: 15 * 60,
+    expiresIn: 8 * 60 * 60,
   };
 }
 

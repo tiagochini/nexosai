@@ -50,8 +50,8 @@ export async function globalSilentRefresh(): Promise<boolean> {
   return _globalRefresh ? _globalRefresh() : false;
 }
 
-// ACCESS_TTL = 15 minutes. Refresh proactively 3 minutes before expiry → 12 min interval.
-const REFRESH_INTERVAL_MS = 12 * 60 * 1000;
+// ACCESS_TTL = 8 hours. Refresh proactively 1 hour before expiry → 7 hour interval.
+const REFRESH_INTERVAL_MS = 7 * 60 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(
