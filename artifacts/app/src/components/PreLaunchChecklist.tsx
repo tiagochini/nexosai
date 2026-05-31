@@ -8,7 +8,7 @@
  *   4. Plano financeiro & de mídia revisado e confirmado
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -170,6 +170,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [finExpanded, setFinExpanded]         = useState(true);
   const [finConfirmed, setFinConfirmed]       = useState(false);
 
+  // Gate 3 animated verification (cosmetic multi-step review)
+  // 0 = pending/loading, 1 = counting pieces ✓, 2 = checking compliance ✓, 3 = validating schedule ✓
+  const [verifyPhase, setVerifyPhase]         = useState(0);
+  const verifyStarted                         = useRef(false);
+
   // ── Interactive budget slider state ──────────────────────────────────────
   const [localBudget, setLocalBudget]           = useState<number>(0);
   const [localRetargetPct, setLocalRetargetPct] = useState<number>(25);
@@ -261,11 +266,24 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const allContentApproved = allPieces.length > 0 && pendingPieces.length === 0;
   const noContent         = allPieces.length === 0;
 
+  // ── Gate 3 animated verification — triggers once when allContentApproved ──
+  useEffect(() => {
+    if (loading || !allContentApproved || verifyStarted.current) return;
+    verifyStarted.current = true;
+    setVerifyPhase(0);
+    const t1 = setTimeout(() => setVerifyPhase(1), 700);
+    const t2 = setTimeout(() => setVerifyPhase(2), 1500);
+    const t3 = setTimeout(() => setVerifyPhase(3), 2300);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [loading, allContentApproved]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Financials check ────────────────────────────────────────────────────────
   const finReady = finConfirmed;
 
   // ── Overall gate ────────────────────────────────────────────────────────────
-  const allReady = hasMessaging && hasEmail && allContentApproved && finReady;
+  // Gate 3 verification must complete (animation phase 3) before launch is allowed
+  const contentVerified = allContentApproved && verifyPhase >= 3;
+  const allReady = hasMessaging && hasEmail && contentVerified && finReady;
 
   useEffect(() => {
     if (!loading) onLaunchReady(allReady);
@@ -280,7 +298,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
     );
   }
 
-  const passedGates = (hasMessaging ? 1 : 0) + (hasEmail ? 1 : 0) + (allContentApproved ? 1 : 0) + (finReady ? 1 : 0);
+  const passedGates = (hasMessaging ? 1 : 0) + (hasEmail ? 1 : 0) + (contentVerified ? 1 : 0) + (finReady ? 1 : 0);
   const failedGates = 4 - passedGates;
 
   return (
@@ -332,7 +350,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         onToggleStep={setExpandedStep}
       />
 
-      {/* ── Gate 3: Aprovação de todo o conteúdo ────────────────────────────── */}
+      {/* ── Gate 3: Verificação de Conteúdo ─────────────────────────────────── */}
       <div className="border-t border-border/20">
         <div
           className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-background/20 transition-colors"
@@ -341,22 +359,49 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           <div className="mt-0.5 shrink-0">
             {noContent || !allContentApproved
               ? <XCircle className="h-4 w-4 text-red-400" />
-              : <CheckCircle2 className="h-4 w-4 text-green-400" />}
+              : verifyPhase < 3
+                ? <Loader2 className="h-4 w-4 text-yellow-400 animate-spin" />
+                : <CheckCircle2 className="h-4 w-4 text-green-400" />}
           </div>
-          <div className={`shrink-0 ${allContentApproved ? "text-green-400/60" : "text-red-400/60"}`}>
+          <div className={`shrink-0 ${allContentApproved && verifyPhase >= 3 ? "text-green-400/60" : allContentApproved ? "text-yellow-400/60" : "text-red-400/60"}`}>
             <FileText className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className={`font-mono text-xs font-bold ${allContentApproved ? "text-green-300" : "text-red-300"}`}>
-              Aprovação de Conteúdo do Schedule
+            <div className={`font-mono text-xs font-bold ${allContentApproved && verifyPhase >= 3 ? "text-green-300" : allContentApproved ? "text-yellow-300" : "text-red-300"}`}>
+              {!allContentApproved ? "Aprovação de Conteúdo do Schedule"
+                : verifyPhase === 0 ? "Verificando aprovações..."
+                : verifyPhase === 1 ? "Verificando conformidade CONAR..."
+                : verifyPhase === 2 ? "Validando cronograma de publicação..."
+                : "Conteúdo verificado — schedule completo"}
             </div>
-            <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
-              {noContent
-                ? "Nenhuma peça gerada — gere o conteúdo antes de lançar"
-                : allContentApproved
-                ? `${approvedCount} peça${approvedCount > 1 ? "s" : ""} aprovada${approvedCount > 1 ? "s" : ""} — schedule completo`
-                : `${pendingPieces.length} peça${pendingPieces.length > 1 ? "s" : ""} aguardando revisão e aprovação`}
-            </div>
+            {/* Animated sub-steps when content is approved */}
+            {allContentApproved && verifyPhase > 0 && (
+              <div className="flex flex-col gap-0.5 mt-1.5">
+                <div className={`flex items-center gap-1.5 font-mono text-[9px] transition-opacity duration-300 ${verifyPhase >= 1 ? "opacity-100" : "opacity-30"}`}>
+                  <CheckCircle2 className="h-2.5 w-2.5 text-green-400 shrink-0" />
+                  <span className="text-green-400/80">{approvedCount} peça{approvedCount !== 1 ? "s" : ""} aprovada{approvedCount !== 1 ? "s" : ""}</span>
+                </div>
+                {verifyPhase >= 2 && (
+                  <div className="flex items-center gap-1.5 font-mono text-[9px]">
+                    <CheckCircle2 className="h-2.5 w-2.5 text-green-400 shrink-0" />
+                    <span className="text-green-400/80">Sem violações CONAR/CDC detectadas</span>
+                  </div>
+                )}
+                {verifyPhase >= 3 && (
+                  <div className="flex items-center gap-1.5 font-mono text-[9px]">
+                    <CheckCircle2 className="h-2.5 w-2.5 text-green-400 shrink-0" />
+                    <span className="text-green-400/80">Cronograma de publicação validado</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {!allContentApproved && (
+              <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
+                {noContent
+                  ? "Nenhuma peça gerada — gere o conteúdo antes de lançar"
+                  : `${pendingPieces.length} peça${pendingPieces.length > 1 ? "s" : ""} aguardando revisão e aprovação`}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!allContentApproved && !noContent && (

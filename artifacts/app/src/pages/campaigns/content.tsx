@@ -41,6 +41,7 @@ interface ContentPiece extends PreviewPiece {
   tiktokHook?: string;
   visualDirection?: string;
   hashtags?: string[];
+  rejectionReason?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -296,6 +297,19 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
           <div className="mb-2 px-2 py-1 border border-red-400/30 bg-red-400/5">
             <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest">Hook: </span>
             <span className="font-mono text-[11px] text-foreground/80 italic">"{piece.tiktokHook}"</span>
+          </div>
+        )}
+
+        {/* Rejection reason — shown when piece was rejected (manual or compliance/CONAR) */}
+        {piece.status === "rejected" && piece.rejectionReason && (
+          <div className="mb-2 px-3 py-2 border border-red-500/40 bg-red-500/8">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Shield className="h-3 w-3 text-red-400 shrink-0" />
+              <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest font-bold">
+                {/conar|cdc|plataforma|política|policy/i.test(piece.rejectionReason) ? "Bloqueio Conformidade" : "Motivo da Rejeição"}
+              </span>
+            </div>
+            <span className="font-mono text-[11px] text-red-300/80 leading-relaxed">{piece.rejectionReason}</span>
           </div>
         )}
 
@@ -583,6 +597,7 @@ interface ApiContentPiece {
   content: unknown;
   status: string;
   createdAt: string;
+  rejectionReason?: string | null;
 }
 
 const TYPE_TO_PLATFORM: Record<string, Platform> = {
@@ -874,6 +889,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
       body: "",
       status,
       segment: "all",
+      rejectionReason: piece.rejectionReason ?? undefined,
       ...overrides,
     });
 

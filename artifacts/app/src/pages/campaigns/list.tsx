@@ -302,8 +302,16 @@ export default function CampaignsList() {
                     {/* Arrow */}
                     <div className="shrink-0 hidden md:flex items-center gap-2">
                       <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
-                        {campaign.status === "draft" || campaign.status === "intake" ? "Continuar Intake" :
-                         campaign.status === "awaiting_approval" ? "Aprovar Conteúdo →" : "Ver Missão"}
+                        {(campaign.status === "draft" || campaign.status === "intake") ? "Continuar Briefing →" :
+                         campaign.status === "analyzing" ? "Criando Estratégia..." :
+                         campaign.status === "strategy_ready" ? "Revisar Masterplan →" :
+                         campaign.status === "generating" ? "Produção em Andamento..." :
+                         campaign.status === "awaiting_approval" ? "Aprovar Conteúdo →" :
+                         campaign.status === "approved" ? "Checklist de Lançamento →" :
+                         campaign.status === "executing" ? "Lançamento em Progresso..." :
+                         campaign.status === "live" ? "Ver Resultados →" :
+                         campaign.status === "paused" ? "Retomar Campanha →" :
+                         "Ver Campanha →"}
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                     </div>
