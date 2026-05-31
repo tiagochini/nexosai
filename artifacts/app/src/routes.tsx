@@ -102,6 +102,12 @@ function HomeRoute() {
   return null;
 }
 
+function DashboardRoute() {
+  const { token } = useAuth();
+  if (token) return <AppLayout><Dashboard /></AppLayout>;
+  return <Redirect to="/login" />;
+}
+
 function OnboardingRoute() {
   const { token } = useAuth();
   if (!token) return <Redirect to="/login" />;
@@ -127,6 +133,7 @@ export default function AppRoutes() {
         {() => <ProtectedRoute><WarRoom /></ProtectedRoute>}
       </Route>
       <Route path="/" component={HomeRoute} />
+      <Route path="/dashboard" component={DashboardRoute} />
       <Route path="/campaigns">
         {() => (
           <ProtectedRoute>
