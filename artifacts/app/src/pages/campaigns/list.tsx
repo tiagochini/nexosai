@@ -239,7 +239,7 @@ export default function CampaignsList() {
             const TrackIcon = trackMeta.icon;
 
             return (
-              <Link key={campaign.id} href={`/campaigns/${campaign.id}`}>
+              <Link key={campaign.id} href={campaign.status === "awaiting_approval" ? `/campaigns/${campaign.id}/content` : `/campaigns/${campaign.id}`}>
                 <div className="border border-border/40 bg-card/40 backdrop-blur-sm hover:border-primary/40 hover:bg-card/60 transition-all group cursor-pointer relative overflow-hidden card-weapon">
                   {/* Live glow */}
                   {isLive && (
@@ -303,7 +303,7 @@ export default function CampaignsList() {
                     <div className="shrink-0 hidden md:flex items-center gap-2">
                       <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
                         {campaign.status === "draft" || campaign.status === "intake" ? "Continuar Intake" :
-                         campaign.status === "awaiting_approval" ? "Revisar" : "Ver Missão"}
+                         campaign.status === "awaiting_approval" ? "Aprovar Conteúdo →" : "Ver Missão"}
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                     </div>

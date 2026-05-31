@@ -1947,7 +1947,8 @@ export default function ContentApproval() {
 
   const handleApprove = async (id: string) => {
     // Mark locally first for instant feedback
-    setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "approved" } : p));
+    const updatedPieces = pieces.map(p => p.id === id ? { ...p, status: "approved" as const } : p);
+    setPieces(() => updatedPieces);
     setLoadingPiece(id);
     try {
       const parentId = getParentId(id);
@@ -1957,6 +1958,12 @@ export default function ContentApproval() {
         body: JSON.stringify({ feedback: "" }),
       });
       toast.success("Peça aprovada");
+      // Auto-transition: if this was the last pending piece, move campaign to approved
+      const stillPending = updatedPieces.filter(p => p.status === "pending").length;
+      const nowApproved  = updatedPieces.filter(p => p.status === "approved").length;
+      if (stillPending === 0 && nowApproved > 0 && campaign?.status === "awaiting_approval") {
+        approveCampaignMutation.mutate();
+      }
     } catch {
       // Revert on failure
       setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
