@@ -210,6 +210,22 @@ router.patch("/:id/status", async (req, res): Promise<void> => {
   }
 });
 
+// GET /campaigns/:id/launch-financials — Plano financeiro e de mídia para pré-lançamento
+router.get("/:id/launch-financials", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  try {
+    const { getLaunchFinancials } = await import("./campaigns.service.js");
+    const financials = await getLaunchFinancials(id!, req.auth.workspaceId);
+    res.json({ financials });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
 // GET /campaigns/:id/decision-trace — Arquiteto mode explainability
 router.get("/:id/decision-trace", async (req, res): Promise<void> => {
   const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];

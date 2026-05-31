@@ -16,6 +16,12 @@ import {
   type Campaign,
   type InsertCampaign,
 } from "@workspace/db";
+import {
+  simulateBudget,
+  type CampaignModelType,
+  type ProductCategory,
+  type BudgetSimulation,
+} from "../intake/intake.simulation.js";
 import { NotFoundError, ForbiddenError, ValidationError } from "../../lib/errors.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import type { Logger } from "pino";
@@ -560,5 +566,151 @@ export async function getCampaignLiveStats(
     engagementEventsLast24h,
     activeSequences,
     updatedAt: now.toISOString(),
+  };
+}
+
+// ── Launch Financials ─────────────────────────────────────────────────────────
+
+export interface LaunchFinancials {
+  hasBudget: boolean;
+  totalBudget: number;
+  paidTrafficBudget: number;
+  prospectingBudget: number;
+  retargetingBudget: number;
+  retargetingPct: number;
+  productPrice: number;
+  campaignType: string;
+  productCategory: string;
+  simulation: BudgetSimulation | null;
+  organicLeads: { low: number; mid: number; high: number };
+  totalLeads: { low: number; mid: number; high: number };
+  revenueTarget: number | null;
+}
+
+function extractNum(v: unknown): number | null {
+  if (typeof v === "number" && isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v.replace(/[^0-9.]/g, ""));
+    if (isFinite(n)) return n;
+  }
+  return null;
+}
+
+function extractStr(v: unknown): string | null {
+  if (typeof v === "string" && v.length > 0) return v;
+  return null;
+}
+
+const VALID_CAMPAIGN_TYPES: CampaignModelType[] = [
+  "launch", "perpetual_launch", "flash_sale", "live_sale",
+  "continuous_sales", "authority", "audience_growth", "subscription_growth", "affiliate",
+];
+const VALID_CATEGORIES: ProductCategory[] = [
+  "infoproduct", "mentorship", "software", "service", "ecommerce", "community", "event",
+];
+
+export async function getLaunchFinancials(campaignId: string, workspaceId: string): Promise<LaunchFinancials> {
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!campaign) throw new NotFoundError("Campanha não encontrada");
+
+  const intake = (campaign.intakeData ?? {}) as Record<string, unknown>;
+
+  // Extract revenue target (DB column or intake)
+  const revenueTarget =
+    extractNum(intake["campaign.revenueTarget"] ?? intake["revenueTarget"] ?? intake["revenue_target"]);
+
+  // Extract total budget (DB column → intake → derive from revenue target)
+  const totalBudget =
+    campaign.budgetTotal ??
+    extractNum(
+      intake["campaign.budget.total"] ?? intake["budgetTotal"] ?? intake["budget"],
+    ) ??
+    (revenueTarget ? Math.round(revenueTarget * 0.15) : 0); // 15% of revenue target as default
+
+  // Traffic/paid portion: intake key or 70% of total
+  const paidTrafficBudget =
+    extractNum(intake["campaign.budget.traffic"] ?? intake["budgetTraffic"] ?? intake["trafficBudget"]) ??
+    Math.round(totalBudget * 0.7);
+
+  // Product price
+  const productPrice =
+    extractNum(
+      intake["product.price"] ?? intake["productPrice"] ?? intake["price"] ??
+      intake["ticket"] ?? intake["ticketMedio"],
+    ) ?? 997;
+
+  // Campaign type — map DB type to simulation type
+  const rawType = (campaign.type ?? "launch") as string;
+  const campaignType: CampaignModelType = VALID_CAMPAIGN_TYPES.includes(rawType as CampaignModelType)
+    ? (rawType as CampaignModelType)
+    : "launch";
+
+  // Product category — from intake or default
+  const rawCategory =
+    extractStr(intake["product.category"] ?? intake["productCategory"] ?? intake["category"]);
+  const productCategory: ProductCategory = VALID_CATEGORIES.includes(rawCategory as ProductCategory)
+    ? (rawCategory as ProductCategory)
+    : "infoproduct";
+
+  if (paidTrafficBudget <= 0) {
+    return {
+      hasBudget: false,
+      totalBudget: 0,
+      paidTrafficBudget: 0,
+      prospectingBudget: 0,
+      retargetingBudget: 0,
+      retargetingPct: 25,
+      productPrice,
+      campaignType,
+      productCategory,
+      simulation: null,
+      organicLeads: { low: 0, mid: 0, high: 0 },
+      totalLeads: { low: 0, mid: 0, high: 0 },
+      revenueTarget,
+    };
+  }
+
+  // Standard retargeting split: 25% of paid budget
+  const retargetingPct = 25;
+  const retargetingBudget = Math.round(paidTrafficBudget * 0.25);
+  const prospectingBudget = paidTrafficBudget - retargetingBudget;
+
+  // Run prospecting simulation (75% of paid budget generates new leads)
+  const simulation = simulateBudget(prospectingBudget, productPrice, campaignType, productCategory);
+
+  // Organic leads: 30% bonus for PLF launches, 20% for others
+  const isPlf = ["launch", "perpetual_launch"].includes(campaignType);
+  const organicMultiplier = isPlf ? 0.30 : 0.20;
+  const organicLeads = {
+    low: Math.round(simulation.totalLeads.low * organicMultiplier),
+    mid: Math.round(simulation.totalLeads.mid * organicMultiplier),
+    high: Math.round(simulation.totalLeads.high * organicMultiplier),
+  };
+
+  const totalLeads = {
+    low: simulation.totalLeads.low + organicLeads.low,
+    mid: simulation.totalLeads.mid + organicLeads.mid,
+    high: simulation.totalLeads.high + organicLeads.high,
+  };
+
+  return {
+    hasBudget: true,
+    totalBudget,
+    paidTrafficBudget,
+    prospectingBudget,
+    retargetingBudget,
+    retargetingPct,
+    productPrice,
+    campaignType,
+    productCategory,
+    simulation,
+    organicLeads,
+    totalLeads,
+    revenueTarget,
   };
 }
