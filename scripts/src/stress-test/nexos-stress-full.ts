@@ -27,6 +27,8 @@ import {
   formatBusinessForPrompt,
   type SyntheticBusiness,
 } from "./synthetic-businesses.js";
+import { db, inviteCodesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 // ─── Configuração ──────────────────────────────────────────────────────────────
 
@@ -143,6 +145,27 @@ const DIM = "\x1b[2m";
 
 function clr(s: StepStatus, text: string) { return `${COLOR[s]}${text}${RESET}`; }
 
+// ─── API Readiness Wait ──────────────────────────────────────────────────────
+
+async function waitForApi(maxWaitMs = 30_000): Promise<void> {
+  const interval = 1_000;
+  const deadline = Date.now() + maxWaitMs;
+  let attempt = 0;
+  while (Date.now() < deadline) {
+    attempt++;
+    try {
+      const res = await fetch(`${API}/healthz`, { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        if (attempt > 1) console.log(`  ✓ API pronta após ${attempt}s de espera`);
+        return;
+      }
+    } catch { /* not ready yet */ }
+    if (attempt === 1) console.log(`  ⏳ Aguardando API iniciar (até ${maxWaitMs / 1000}s)…`);
+    await new Promise(r => setTimeout(r, interval));
+  }
+  throw new Error(`API não ficou disponível em ${maxWaitMs / 1000}s — verifique o workflow da API`);
+}
+
 // ─── Estado por empresa ────────────────────────────────────────────────────────
 
 function mkState() {
@@ -215,9 +238,16 @@ async function fase1(biz: SyntheticBusiness, state: State, tag: string): Promise
   const h = await http("GET", "/healthz");
   log(h.ok ? "PASS" : "FAIL", "Health check API", `HTTP ${h.status}`, h.elapsed);
 
+  // Create a temp invite code so registration works even when PLATFORM_OPEN is false
+  const inviteCode = `STR${tag.slice(-6).toUpperCase()}`;
+  try {
+    await db.insert(inviteCodesTable).values({ code: inviteCode, planSlug: "solo", label: `[stress] ${tag}` })
+      .onConflictDoNothing();
+  } catch { /* ignore — code may already exist */ }
+
   // Registro
   const reg = await http("POST", "/auth/register", {
-    body: { name: `${biz.name} Tester`, email, password: pass },
+    body: { name: `${biz.name} Tester`, email, password: pass, inviteCode },
   });
   state.token = (reg.data?.accessToken as string) ?? "";
   log(state.token ? "PASS" : "FAIL", "Registrar usuário", `email=${email} token=${state.token ? "OK" : "FALHOU"}`, reg.elapsed, !state.token);
@@ -1509,6 +1539,8 @@ async function main(): Promise<void> {
   console.log(`  Run ID: ${RUN_ID}`);
   console.log(`\n  REGRA: Fluxo nunca para em erro — continua para próxima etapa sempre.`);
   console.log(`  Todos os break points serão documentados no relatório final.\n`);
+
+  await waitForApi();
 
   const allResults: BusinessResult[] = [];
   const totalStart = Date.now();

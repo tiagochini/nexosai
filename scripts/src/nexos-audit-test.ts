@@ -92,6 +92,27 @@ async function runStep(
   }
 }
 
+// ─── API Readiness Wait ──────────────────────────────────────────────────────
+
+async function waitForApi(maxWaitMs = 30_000): Promise<void> {
+  const interval = 1_000;
+  const deadline = Date.now() + maxWaitMs;
+  let attempt = 0;
+  while (Date.now() < deadline) {
+    attempt++;
+    try {
+      const res = await fetch(`${BASE_URL}/healthz`, { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        if (attempt > 1) log(`     ✓ API pronta após ${attempt}s de espera`);
+        return;
+      }
+    } catch { /* not ready yet */ }
+    if (attempt === 1) log(`  ⏳ Aguardando API iniciar (até ${maxWaitMs / 1000}s)…`);
+    await new Promise(r => setTimeout(r, interval));
+  }
+  throw new Error(`API não ficou disponível em ${maxWaitMs / 1000}s — verifique o workflow da API`);
+}
+
 // ─── Test Steps ───────────────────────────────────────────────────────────────
 
 async function main() {
@@ -102,6 +123,8 @@ async function main() {
   log(`║  DB:   ${(process.env["DATABASE_URL"] ? "connected (from env)" : "using default").padEnd(52)}║`);
   log(`║  Mode: DRY_RUN=${(process.env["DRY_RUN_MODE"] ?? "not set").padEnd(48)}║`);
   log("╚══════════════════════════════════════════════════════════════╝\n");
+
+  await waitForApi();
 
   // ── Step 1: Health check ────────────────────────────────────────────────────
   await runStep(1, "API health check", async () => {

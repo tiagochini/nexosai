@@ -25,6 +25,7 @@ import {
   sequenceContactsTable,
   agentExecutionLogsTable,
   aiProviderLogsTable,
+  inviteCodesTable,
 } from "@workspace/db";
 import { eq, and, lte, desc, count, sum } from "drizzle-orm";
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from "fs";
@@ -95,11 +96,12 @@ interface SimCheckpoint {
 
 // ─── Mutable state ────────────────────────────────────────────────────────────
 
-let accessToken: string | null = null;
-let workspaceId:  string | null = null;
-let userId:       string | null = null;
-let campaignId:   string | null = null;
-let sequenceId:   string | null = null;
+let accessToken:    string | null = null;
+let workspaceId:    string | null = null;
+let userId:         string | null = null;
+let campaignId:     string | null = null;
+let sequenceId:     string | null = null;
+let tempInviteCode: string | null = null;
 
 const results:   StepResult[]   = [];
 const timeline:  TimelineEntry[] = [];
@@ -194,6 +196,27 @@ async function captureAgentTimeline(campaignId: string, phaseName: string) {
       );
     }
   } catch { /* non-blocking */ }
+}
+
+// ─── API Readiness Wait ──────────────────────────────────────────────────────
+
+async function waitForApi(maxWaitMs = 30_000): Promise<void> {
+  const interval = 1_000;
+  const deadline = Date.now() + maxWaitMs;
+  let attempt = 0;
+  while (Date.now() < deadline) {
+    attempt++;
+    try {
+      const res = await fetch(`${BASE_URL}/healthz`, { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        if (attempt > 1) process.stdout.write(`  ✓ API pronta após ${attempt}s de espera\n`);
+        return;
+      }
+    } catch { /* not ready yet */ }
+    if (attempt === 1) process.stdout.write(`  ⏳ Aguardando API iniciar (até ${maxWaitMs / 1000}s)…\n`);
+    await new Promise(r => setTimeout(r, interval));
+  }
+  throw new Error(`API não ficou disponível em ${maxWaitMs / 1000}s — verifique o workflow da API`);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -342,6 +365,8 @@ async function main() {
   log(`║  Mode: ${(RESUME_MODE ? "RESUME" : "FRESH RUN").padEnd(57)}║`);
   log("╚══════════════════════════════════════════════════════════════════╝");
 
+  await waitForApi();
+
   // Load checkpoint if resuming
   const cp = loadCheckpoint();
   if (cp) restoreFromCheckpoint(cp);
@@ -362,9 +387,14 @@ async function main() {
 
   await step(2, "Setup", "Registrar usuário de teste", async () => {
     if (completedSteps.size > 0 && accessToken) return { status: "PASS", message: "Usuário já registrado (checkpoint)" };
+    // Create a temp invite code so registration works even when PLATFORM_OPEN is false
+    const code = `SIM${SIM_TAG.slice(-8).toUpperCase()}`;
+    await db.insert(inviteCodesTable).values({ code, planSlug: "solo", label: `[sim] ${SIM_TAG}` })
+      .onConflictDoNothing();
+    tempInviteCode = code;
     const r = await api<{ accessToken?: string; user?: { id: string } }>(
       "POST", "/auth/register",
-      { name: TEST_NAME, email: TEST_EMAIL, password: TEST_PASSWORD }, false,
+      { name: TEST_NAME, email: TEST_EMAIL, password: TEST_PASSWORD, inviteCode: code }, false,
     );
     if (r.ok && r.body.accessToken) {
       accessToken = r.body.accessToken;
@@ -871,6 +901,7 @@ async function main() {
         removed++;
       }
       if (userId) { await db.delete(usersTable).where(eq(usersTable.id, userId)); removed++; }
+      if (tempInviteCode) { await db.delete(inviteCodesTable).where(eq(inviteCodesTable.code, tempInviteCode)); }
       // Delete checkpoint file on clean run
       if (existsSync(CHECKPOINT_FILE)) unlinkSync(CHECKPOINT_FILE);
       return { status: "PASS", message: `${removed} entidades removidas` };

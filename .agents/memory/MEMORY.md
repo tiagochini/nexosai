@@ -12,3 +12,4 @@
 - [Agent Clarification Feedback Loop](agent-clarification-system.md) — agents output __clarifications[] in JSON; runner parses non-blocking; DB table agent_clarification_requests; frontend AgentClarificationPanel in detail.tsx; buildClarificationContextBlock() injects answers into next run
 - [BullMQ Reliability Fixes](bullmq-reliability.md) — three silent failure modes in BullMQ dev environments; fix pattern in orchestration.service.ts enqueueOrExecute().
 - [Content Page expandApiPieces](content-expand-api-pieces.md) — 6 content types (content_calendar, ad_copy, vsl_script, webinar_script, targeting_config, media_buying_plan) need explicit handlers; ApiContentPiece.content is `unknown` (JSONB object from DB, not string).
+- [Test Script Registration Gate](test-script-invite-code.md) — test scripts must create a temp inviteCodesTable row and pass inviteCode in register body; gate in auth.routes.ts blocks open registration when PLATFORM_OPEN≠"true".
