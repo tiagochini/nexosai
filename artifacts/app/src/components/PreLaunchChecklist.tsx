@@ -3,10 +3,14 @@
  *
  * Aparece no status "approved" antes de liberar o botão "Lançar".
  * Verifica:
- *   1. Integrações obrigatórias (WhatsApp/Telegram + Email)
- *   2. Revisão dos criativos principais (CPL, VSL, sequências)
+ *   1. Canal de mensagens (WhatsApp Business ou Telegram)
+ *   2. Plataforma de email (RD Station ou ActiveCampaign)
+ *   3. TODAS as peças de conteúdo do schedule — cada uma deve ser aprovada pelo usuário
  *
- * Para cada integração ausente, exibe o wizard passo a passo inline.
+ * Nenhuma peça é ignorada. O lançamento só é liberado quando:
+ *   - Pelo menos 1 canal de mensagens conectado
+ *   - Pelo menos 1 plataforma de email conectada
+ *   - 100% das peças de conteúdo aprovadas
  */
 
 import { useState, useEffect } from "react";
@@ -15,9 +19,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import {
-  CheckCircle2, XCircle, AlertTriangle, ChevronDown, ChevronUp,
-  ExternalLink, Loader2, MessageCircle, Mail, FileText, Video,
-  Rocket, ShieldCheck, Zap,
+  CheckCircle2, XCircle, ChevronDown, ChevronUp,
+  ExternalLink, Loader2, MessageCircle, Mail,
+  Rocket, ShieldCheck, Zap, FileText, Eye,
 } from "lucide-react";
 
 // ─── Integration setup wizards ────────────────────────────────────────────────
@@ -74,6 +78,34 @@ const INTEGRATION_WIZARDS = {
   },
 };
 
+// ─── Content piece labels ──────────────────────────────────────────────────────
+
+const PIECE_TYPE_LABELS: Record<string, string> = {
+  vsl_script:         "Script VSL",
+  cpl_script:         "Script CPL",
+  email_sequence:     "Sequência de Email",
+  ad_copy:            "Copy de Anúncio",
+  social_post:        "Post para Redes Sociais",
+  webinar_script:     "Script de Webinar",
+  content_calendar:   "Calendário de Conteúdo",
+  targeting_config:   "Configuração de Segmentação",
+  media_buying_plan:  "Plano de Mídia",
+  whatsapp_message:   "Mensagem WhatsApp",
+  landing_page_copy:  "Copy de Landing Page",
+  sales_letter:       "Carta de Vendas",
+  video_script:       "Script de Vídeo",
+  story_sequence:     "Sequência de Stories",
+  launch_sequence:    "Sequência de Lançamento",
+};
+
+const PIECE_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  approved:  { label: "Aprovado",       color: "text-green-400 border-green-400/30 bg-green-400/8" },
+  pending:   { label: "Aguardando",     color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/8" },
+  rejected:  { label: "Rejeitado",      color: "text-red-400 border-red-400/30 bg-red-400/8" },
+  generated: { label: "Gerado — revisar", color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/8" },
+  draft:     { label: "Rascunho",       color: "text-muted-foreground border-border/30 bg-muted/10" },
+};
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface Integration {
@@ -88,16 +120,7 @@ interface ContentPiece {
   status: string;
   platform?: string;
   title?: string;
-}
-
-interface Gate {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  status: "pass" | "warn" | "fail";
-  detail: string;
-  wizardKey?: keyof typeof INTEGRATION_WIZARDS;
-  link?: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface Props {
@@ -115,6 +138,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [loading, setLoading] = useState(true);
   const [expandedWizard, setExpandedWizard] = useState<string | null>(null);
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
+  const [contentExpanded, setContentExpanded] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -127,92 +151,48 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
     });
   }, [campaignId]);
 
+  // ── Integration checks ──────────────────────────────────────────────────────
   const isConnected = (providers: string[]) =>
     integrations.some(i => providers.includes(i.provider) && i.status === "connected");
 
   const hasMessaging = isConnected(["whatsapp_business", "telegram"]);
-  const hasEmail = isConnected(["rd_station", "activecampaign"]);
+  const hasEmail     = isConnected(["rd_station", "activecampaign"]);
 
-  const whatsappConn = integrations.find(i => i.provider === "whatsapp_business" && i.status === "connected");
-  const telegramConn = integrations.find(i => i.provider === "telegram" && i.status === "connected");
-  const rdConn = integrations.find(i => i.provider === "rd_station" && i.status === "connected");
-  const acConn = integrations.find(i => i.provider === "activecampaign" && i.status === "connected");
+  const whatsappConn  = integrations.find(i => i.provider === "whatsapp_business" && i.status === "connected");
+  const rdConn        = integrations.find(i => i.provider === "rd_station"       && i.status === "connected");
 
-  const missingMessaging = !whatsappConn ? "whatsapp" as const : !telegramConn ? "telegram" as const : null;
-  const missingEmail = !rdConn ? "rd_station" as const : !acConn ? "activecampaign" as const : null;
+  const missingMessaging = !isConnected(["whatsapp_business"]) ? "whatsapp" as const : "telegram" as const;
+  const missingEmail     = !isConnected(["rd_station"]) ? "rd_station" as const : "activecampaign" as const;
 
-  const cplPiece = content.find(p => p.type === "cpl_script" || p.type?.includes("cpl"));
-  const vslPiece = content.find(p => p.type === "vsl_script" || p.type?.includes("vsl"));
-  const emailPieces = content.filter(p => p.type?.includes("email") || p.type?.includes("sequence"));
+  // ── Content approval check — ALL pieces must be approved ───────────────────
+  const allPieces     = content;
+  const approvedCount = allPieces.filter(p => p.status === "approved").length;
+  const pendingPieces = allPieces.filter(p => p.status !== "approved");
+  const allContentApproved = allPieces.length > 0 && pendingPieces.length === 0;
+  const noContentGenerated = allPieces.length === 0;
 
-  const cplApproved = !cplPiece || cplPiece.status === "approved";
-  const vslApproved = !vslPiece || vslPiece.status === "approved";
-  const emailApproved = emailPieces.length === 0 || emailPieces.some(p => p.status === "approved");
-
-  const allReady = hasMessaging && hasEmail && cplApproved && vslApproved;
+  // ── Overall gate ───────────────────────────────────────────────────────────
+  const allReady = hasMessaging && hasEmail && allContentApproved;
 
   useEffect(() => {
     if (!loading) onLaunchReady(allReady);
   }, [loading, allReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const gates: Gate[] = [
-    {
-      id: "messaging",
-      label: "Canal de Mensagens",
-      icon: <MessageCircle className="h-4 w-4" />,
-      status: hasMessaging ? "pass" : "fail",
-      detail: hasMessaging
-        ? `${whatsappConn ? "WhatsApp Business" : "Telegram"} conectado`
-        : "WhatsApp Business ou Telegram obrigatório para disparar mensagens aos leads",
-      wizardKey: hasMessaging ? undefined : missingMessaging ?? undefined,
-    },
-    {
-      id: "email",
-      label: "Plataforma de Email",
-      icon: <Mail className="h-4 w-4" />,
-      status: hasEmail ? "pass" : "fail",
-      detail: hasEmail
-        ? `${rdConn ? "RD Station" : "ActiveCampaign"} conectado`
-        : "RD Station ou ActiveCampaign obrigatório para sequências de email do lançamento",
-      wizardKey: hasEmail ? undefined : missingEmail ?? undefined,
-    },
-    {
-      id: "cpl",
-      label: "Script CPL revisado",
-      icon: <FileText className="h-4 w-4" />,
-      status: !cplPiece ? "warn" : cplApproved ? "pass" : "warn",
-      detail: !cplPiece
-        ? "Script CPL não foi gerado — verifique a geração de conteúdo"
-        : cplApproved
-        ? "Script CPL aprovado"
-        : "Script CPL aguarda sua revisão antes do lançamento",
-      link: !cplApproved ? `/campaigns/${campaignId}/content` : undefined,
-    },
-    {
-      id: "vsl",
-      label: "Script VSL revisado",
-      icon: <Video className="h-4 w-4" />,
-      status: !vslPiece ? "warn" : vslApproved ? "pass" : "warn",
-      detail: !vslPiece
-        ? "Script VSL não foi gerado — verifique a geração de conteúdo"
-        : vslApproved
-        ? "Script VSL aprovado"
-        : "Script VSL aguarda sua revisão antes do lançamento",
-      link: !vslApproved ? `/campaigns/${campaignId}/content` : undefined,
-    },
-  ];
-
-  const passCount = gates.filter(g => g.status === "pass").length;
-  const failCount = gates.filter(g => g.status === "fail").length;
-
   if (loading) {
     return (
-      <div className="border border-border/30 rounded-none p-6 flex items-center justify-center gap-3">
+      <div className="border border-border/30 p-6 flex items-center justify-center gap-3">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
         <span className="font-mono text-sm text-muted-foreground">Verificando pré-requisitos de lançamento...</span>
       </div>
     );
   }
+
+  const totalGates    = 3;
+  const passedGates   =
+    (hasMessaging ? 1 : 0) +
+    (hasEmail ? 1 : 0) +
+    (allContentApproved ? 1 : 0);
+  const failedGates   = totalGates - passedGates;
 
   return (
     <div className="border border-primary/30 bg-card/20">
@@ -222,14 +202,12 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           <ShieldCheck className="h-4 w-4 text-primary" />
           <div>
             <div className="font-mono text-sm font-bold uppercase tracking-widest">
-              Pré-Lançamento — Checklist Obrigatório
+              Controladoria de Lançamento
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
-              {failCount > 0
-                ? `${failCount} item${failCount > 1 ? "s" : ""} obrigatório${failCount > 1 ? "s" : ""} pendente${failCount > 1 ? "s" : ""} — configure antes de lançar`
-                : allReady
-                ? "Tudo pronto — você pode lançar agora"
-                : `${passCount}/${gates.length} itens verificados`}
+              {allReady
+                ? "Todos os itens verificados — lançamento liberado"
+                : `${passedGates}/${totalGates} verificações aprovadas — complete o que falta antes de lançar`}
             </div>
           </div>
         </div>
@@ -238,145 +216,163 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           className={`font-mono text-[10px] uppercase tracking-widest ${
             allReady
               ? "border-green-500/40 text-green-400 bg-green-500/5"
-              : failCount > 0
+              : failedGates > 0
               ? "border-red-500/40 text-red-400 bg-red-500/5"
               : "border-yellow-500/40 text-yellow-400 bg-yellow-500/5"
           }`}
         >
-          {allReady ? "✓ Pronto" : failCount > 0 ? `${failCount} pendente${failCount > 1 ? "s" : ""}` : "Revisão"}
+          {allReady ? "✓ Liberado" : `${failedGates} pendente${failedGates > 1 ? "s" : ""}`}
         </Badge>
       </div>
 
-      {/* Gates */}
-      <div className="divide-y divide-border/20">
-        {gates.map(gate => {
-          const isOpen = expandedWizard === gate.id;
-          const wizard = gate.wizardKey ? INTEGRATION_WIZARDS[gate.wizardKey] : null;
+      {/* ── Gate 1: Mensagens ─────────────────────────────────────────────── */}
+      <GateRow
+        id="messaging"
+        icon={<MessageCircle className="h-4 w-4" />}
+        label="Canal de Mensagens"
+        passed={hasMessaging}
+        passDetail={whatsappConn ? "WhatsApp Business conectado" : "Telegram conectado"}
+        failDetail="WhatsApp Business ou Telegram obrigatório para disparar mensagens aos leads"
+        wizardKey={hasMessaging ? null : missingMessaging}
+        expandedWizard={expandedWizard}
+        expandedStep={expandedStep}
+        onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
+        onToggleStep={setExpandedStep}
+      />
 
-          return (
-            <div key={gate.id}>
-              {/* Gate row */}
-              <div
-                className={`flex items-start gap-3 px-5 py-4 ${wizard ? "cursor-pointer hover:bg-background/30 transition-colors" : ""}`}
-                onClick={() => wizard && setExpandedWizard(isOpen ? null : gate.id)}
-              >
-                {/* Status icon */}
-                <div className="mt-0.5 shrink-0">
-                  {gate.status === "pass" && <CheckCircle2 className="h-4 w-4 text-green-400" />}
-                  {gate.status === "fail" && <XCircle className="h-4 w-4 text-red-400" />}
-                  {gate.status === "warn" && <AlertTriangle className="h-4 w-4 text-yellow-400" />}
-                </div>
+      {/* ── Gate 2: Email ─────────────────────────────────────────────────── */}
+      <GateRow
+        id="email"
+        icon={<Mail className="h-4 w-4" />}
+        label="Plataforma de Email"
+        passed={hasEmail}
+        passDetail={rdConn ? "RD Station conectado" : "ActiveCampaign conectado"}
+        failDetail="RD Station ou ActiveCampaign obrigatório para sequências de email do lançamento"
+        wizardKey={hasEmail ? null : missingEmail}
+        expandedWizard={expandedWizard}
+        expandedStep={expandedStep}
+        onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
+        onToggleStep={setExpandedStep}
+      />
 
-                {/* Icon + label */}
-                <div className={`shrink-0 ${gate.status === "pass" ? "text-green-400/60" : gate.status === "fail" ? "text-red-400/60" : "text-yellow-400/60"}`}>
-                  {gate.icon}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className={`font-mono text-xs font-bold ${gate.status === "pass" ? "text-green-300" : gate.status === "fail" ? "text-red-300" : "text-yellow-300"}`}>
-                    {gate.label}
-                  </div>
-                  <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">{gate.detail}</div>
-                </div>
-
-                {/* Action */}
-                {wizard && (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-mono text-[10px] text-primary/70 uppercase tracking-widest">
-                      {isOpen ? "Fechar guia" : "Ver passo a passo"}
-                    </span>
-                    {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-primary/50" /> : <ChevronDown className="h-3.5 w-3.5 text-primary/50" />}
-                  </div>
-                )}
-                {gate.link && gate.status !== "pass" && (
-                  <Link href={gate.link}>
-                    <Button size="sm" variant="outline" className="font-mono text-[10px] uppercase shrink-0 h-7 px-3 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10">
-                      Revisar
-                    </Button>
-                  </Link>
-                )}
-              </div>
-
-              {/* Inline wizard */}
-              {isOpen && wizard && (
-                <div className="mx-5 mb-4 border border-primary/20 bg-primary/5">
-                  {/* Wizard header */}
-                  <div className="px-4 py-3 border-b border-primary/15 flex items-start gap-3">
-                    <span className="text-xl shrink-0">{wizard.icon}</span>
-                    <div>
-                      <div className="font-mono text-xs font-bold text-primary">{wizard.name}</div>
-                      <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">{wizard.why}</div>
-                    </div>
-                  </div>
-
-                  {/* Steps */}
-                  <div className="p-4 space-y-2">
-                    <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-3">
-                      Siga os passos abaixo para conectar agora:
-                    </div>
-                    {wizard.steps.map((step, idx) => {
-                      const stepOpen = expandedStep === idx;
-                      return (
-                        <div
-                          key={idx}
-                          className="border border-border/30 bg-background/30 cursor-pointer hover:bg-background/50 transition-colors"
-                          onClick={(e) => { e.stopPropagation(); setExpandedStep(stepOpen ? null : idx); }}
-                        >
-                          <div className="flex items-center gap-3 px-3 py-2.5">
-                            <div className="w-5 h-5 rounded bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
-                              <span className="font-mono text-[9px] font-bold text-primary">{idx + 1}</span>
-                            </div>
-                            <div className="font-mono text-[11px] font-medium flex-1">{step.label}</div>
-                            {stepOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />}
-                          </div>
-                          {stepOpen && (
-                            <div className="px-11 pb-3">
-                              <div className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{step.detail}</div>
-                              {("url" in step) && (step as { url?: string }).url && (
-                                <a
-                                  href={(step as { url?: string }).url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 mt-2 font-mono text-[10px] text-primary/70 hover:text-primary transition-colors"
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                  Abrir agora
-                                </a>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    {/* After completing wizard, connect in settings */}
-                    <div className="mt-3 pt-3 border-t border-border/20 flex items-center justify-between">
-                      <div className="font-mono text-[10px] text-muted-foreground/40">
-                        Após conectar, esta verificação atualiza automaticamente.
-                      </div>
-                      <Link href="/integracoes">
-                        <Button
-                          size="sm"
-                          className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5"
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <Zap className="h-3 w-3" />
-                          Ir para Integrações
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )}
+      {/* ── Gate 3: Aprovação de todas as peças de conteúdo ──────────────── */}
+      <div className="border-t border-border/20">
+        <div
+          className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-background/20 transition-colors"
+          onClick={() => setContentExpanded(v => !v)}
+        >
+          {/* Status icon */}
+          <div className="mt-0.5 shrink-0">
+            {noContentGenerated
+              ? <XCircle className="h-4 w-4 text-red-400" />
+              : allContentApproved
+              ? <CheckCircle2 className="h-4 w-4 text-green-400" />
+              : <XCircle className="h-4 w-4 text-red-400" />}
+          </div>
+          <div className={`shrink-0 ${allContentApproved ? "text-green-400/60" : "text-red-400/60"}`}>
+            <FileText className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`font-mono text-xs font-bold ${allContentApproved ? "text-green-300" : "text-red-300"}`}>
+              Aprovação de Conteúdo do Schedule
             </div>
-          );
-        })}
+            <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
+              {noContentGenerated
+                ? "Nenhuma peça de conteúdo gerada ainda — gere o conteúdo antes de lançar"
+                : allContentApproved
+                ? `${approvedCount} peça${approvedCount > 1 ? "s" : ""} aprovada${approvedCount > 1 ? "s" : ""} — schedule completo`
+                : `${pendingPieces.length} peça${pendingPieces.length > 1 ? "s" : ""} aguardando sua revisão e aprovação`}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {!allContentApproved && !noContentGenerated && (
+              <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
+                {approvedCount}/{allPieces.length}
+              </span>
+            )}
+            {contentExpanded
+              ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/30" />
+              : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/30" />}
+          </div>
+        </div>
+
+        {/* Piece list */}
+        {contentExpanded && allPieces.length > 0 && (
+          <div className="mx-5 mb-4 border border-border/30 divide-y divide-border/20">
+            {allPieces.map((piece) => {
+              const isApproved = piece.status === "approved";
+              const typeLabel = PIECE_TYPE_LABELS[piece.type] ?? piece.type;
+              const statusMeta = PIECE_STATUS_LABELS[piece.status] ?? { label: piece.status, color: "text-muted-foreground border-border/30" };
+
+              return (
+                <div key={piece.id} className="flex items-center gap-3 px-3 py-2.5 bg-background/20 hover:bg-background/30 transition-colors">
+                  <div className="shrink-0">
+                    {isApproved
+                      ? <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                      : <XCircle className="h-3.5 w-3.5 text-red-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`font-mono text-[11px] font-medium truncate ${isApproved ? "text-foreground/70" : "text-foreground"}`}>
+                      {piece.title || typeLabel}
+                    </div>
+                    {piece.platform && (
+                      <div className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                        {piece.platform}
+                      </div>
+                    )}
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`rounded-none font-mono text-[9px] px-1.5 py-0 shrink-0 ${statusMeta.color}`}
+                  >
+                    {statusMeta.label}
+                  </Badge>
+                  {!isApproved && (
+                    <Link href={`/campaigns/${campaignId}/content`}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="font-mono text-[9px] uppercase shrink-0 h-6 px-2 gap-1 border-primary/30 text-primary/70 hover:bg-primary/10"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <Eye className="h-3 w-3" />
+                        Revisar
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Footer with CTA */}
+            {!allContentApproved && (
+              <div className="px-3 py-3 bg-background/10 flex items-center justify-between">
+                <div className="font-mono text-[10px] text-muted-foreground/50">
+                  Revise e aprove cada peça na página de conteúdo
+                </div>
+                <Link href={`/campaigns/${campaignId}/content`}>
+                  <Button size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5">
+                    <Eye className="h-3 w-3" />
+                    Abrir Conteúdo
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {contentExpanded && noContentGenerated && (
+          <div className="mx-5 mb-4 border border-border/30 px-4 py-3 bg-background/20 text-center">
+            <div className="font-mono text-[10px] text-muted-foreground/50">
+              Nenhuma peça gerada ainda. Volte à campanha e gere o conteúdo antes de lançar.
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Launch button section */}
-      <div className="px-5 pb-5 pt-3 border-t border-border/20">
+      {/* ── Launch button ──────────────────────────────────────────────────── */}
+      <div className="px-5 pb-5 pt-4 border-t border-border/20">
         {allReady ? (
           <Button
             onClick={onLaunch}
@@ -390,19 +386,145 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           <div className="space-y-2">
             <Button
               disabled
-              className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 h-12 text-sm opacity-40 cursor-not-allowed"
+              className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 h-12 text-sm opacity-30 cursor-not-allowed"
             >
               <Rocket className="h-4 w-4" />
               Lançar Campanha
             </Button>
-            {failCount > 0 && (
-              <div className="text-center font-mono text-[10px] text-red-400/70">
-                Configure as integrações obrigatórias acima para liberar o lançamento
-              </div>
-            )}
+            <div className="text-center font-mono text-[10px] text-muted-foreground/50">
+              {!hasMessaging && "Configure o canal de mensagens • "}
+              {!hasEmail && "Configure a plataforma de email • "}
+              {!allContentApproved && !noContentGenerated && `Aprove ${pendingPieces.length} peça${pendingPieces.length > 1 ? "s" : ""} de conteúdo`}
+              {noContentGenerated && "Gere o conteúdo da campanha"}
+            </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── GateRow sub-component ────────────────────────────────────────────────────
+
+interface GateRowProps {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  passed: boolean;
+  passDetail: string;
+  failDetail: string;
+  wizardKey: keyof typeof INTEGRATION_WIZARDS | null;
+  expandedWizard: string | null;
+  expandedStep: number | null;
+  onToggleWizard: (id: string) => void;
+  onToggleStep: (idx: number | null) => void;
+}
+
+function GateRow({
+  id, icon, label, passed, passDetail, failDetail,
+  wizardKey, expandedWizard, expandedStep, onToggleWizard, onToggleStep,
+}: GateRowProps) {
+  const isOpen  = expandedWizard === id;
+  const wizard  = wizardKey ? INTEGRATION_WIZARDS[wizardKey] : null;
+
+  return (
+    <div className="border-t border-border/20">
+      <div
+        className={`flex items-start gap-3 px-5 py-4 ${wizard ? "cursor-pointer hover:bg-background/20 transition-colors" : ""}`}
+        onClick={() => wizard && onToggleWizard(id)}
+      >
+        {/* Status icon */}
+        <div className="mt-0.5 shrink-0">
+          {passed
+            ? <CheckCircle2 className="h-4 w-4 text-green-400" />
+            : <XCircle className="h-4 w-4 text-red-400" />}
+        </div>
+        <div className={`shrink-0 ${passed ? "text-green-400/60" : "text-red-400/60"}`}>{icon}</div>
+        <div className="flex-1 min-w-0">
+          <div className={`font-mono text-xs font-bold ${passed ? "text-green-300" : "text-red-300"}`}>{label}</div>
+          <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
+            {passed ? passDetail : failDetail}
+          </div>
+        </div>
+        {wizard && (
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-mono text-[10px] text-primary/70 uppercase tracking-widest">
+              {isOpen ? "Fechar guia" : "Ver passo a passo"}
+            </span>
+            {isOpen ? <ChevronUp className="h-3.5 w-3.5 text-primary/50" /> : <ChevronDown className="h-3.5 w-3.5 text-primary/50" />}
+          </div>
+        )}
+      </div>
+
+      {/* Inline wizard */}
+      {isOpen && wizard && (
+        <div className="mx-5 mb-4 border border-primary/20 bg-primary/5">
+          <div className="px-4 py-3 border-b border-primary/15 flex items-start gap-3">
+            <span className="text-xl shrink-0">{wizard.icon}</span>
+            <div>
+              <div className="font-mono text-xs font-bold text-primary">{wizard.name}</div>
+              <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">{wizard.why}</div>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-2">
+            <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-3">
+              Siga os passos abaixo para conectar agora:
+            </div>
+            {wizard.steps.map((step, idx) => {
+              const stepOpen = expandedStep === idx;
+              return (
+                <div
+                  key={idx}
+                  className="border border-border/30 bg-background/30 cursor-pointer hover:bg-background/50 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); onToggleStep(stepOpen ? null : idx); }}
+                >
+                  <div className="flex items-center gap-3 px-3 py-2.5">
+                    <div className="w-5 h-5 rounded bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
+                      <span className="font-mono text-[9px] font-bold text-primary">{idx + 1}</span>
+                    </div>
+                    <div className="font-mono text-[11px] font-medium flex-1">{step.label}</div>
+                    {stepOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />}
+                  </div>
+                  {stepOpen && (
+                    <div className="px-11 pb-3">
+                      <div className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{step.detail}</div>
+                      {("url" in step) && (step as { url?: string }).url && (
+                        <a
+                          href={(step as { url?: string }).url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 mt-2 font-mono text-[10px] text-primary/70 hover:text-primary transition-colors"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Abrir agora
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="mt-3 pt-3 border-t border-border/20 flex items-center justify-between">
+              <div className="font-mono text-[10px] text-muted-foreground/40">
+                Após conectar, esta verificação atualiza automaticamente.
+              </div>
+              <Link href="/integracoes">
+                <Button
+                  size="sm"
+                  className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <Zap className="h-3 w-3" />
+                  Ir para Integrações
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
