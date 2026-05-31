@@ -1361,7 +1361,7 @@ export default function CampaignDetail() {
       toast.error(err.message);
     },
   });
-  const autoLaunchFired = useRef(false);
+  // autoLaunchFired removed — autolaunch bypassed the PreLaunchChecklist and was eliminated
 
   // Optimistically start polling — staleTime:0 forces a real request every 5s
   // instead of serving cached data, catching the analyzing→strategy_ready transition.
@@ -1722,16 +1722,18 @@ export default function CampaignDetail() {
     }
   }, [campaign?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-trigger launch when redirected from content approval with ?autolaunch=1
+  // NOTE: autolaunch=1 was intentionally removed.
+  // After content approval, the campaign goes to `approved` and the
+  // PreLaunchChecklist (4 mandatory gates) must be completed before launch.
+  // No automatic execution is allowed — the user must explicitly click "Lançar"
+  // after passing all gates. Any URL with ?autolaunch is ignored.
   useEffect(() => {
     if (!campaign) return;
     const qs = new URLSearchParams(searchString);
-    if (qs.get("autolaunch") !== "1") return;
-    if (autoLaunchFired.current) return;
-    if (campaign.status !== "approved") return;
-    autoLaunchFired.current = true;
-    window.history.replaceState(null, "", `/campaigns/${campaignId}`);
-    executeMutation.mutate({ campaignId, data: { phase: "launch" as CampaignExecuteInputPhase } });
+    if (qs.get("autolaunch") === "1") {
+      // Clean the URL silently but do NOT fire the launch
+      window.history.replaceState(null, "", `/campaigns/${campaignId}`);
+    }
   }, [campaign?.status, searchString, campaignId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Approve/reject content ─────────────────────────────────────────────────────

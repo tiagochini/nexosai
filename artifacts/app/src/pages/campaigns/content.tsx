@@ -1913,9 +1913,9 @@ export default function ContentApproval() {
       });
     },
     onSuccess: () => {
-      toast.success("Conteúdo aprovado! Iniciando lançamento...");
+      toast.success("Conteúdo aprovado! Complete o checklist de lançamento.");
       queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
-      setLocation(`/campaigns/${campaignId}?autolaunch=1`);
+      setLocation(`/campaigns/${campaignId}`);
     },
     onError: (err: Error) => {
       toast.error(err.message ?? "Erro ao aprovar campanha");
