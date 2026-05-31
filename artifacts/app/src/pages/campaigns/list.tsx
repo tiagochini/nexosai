@@ -268,6 +268,11 @@ export default function CampaignsList() {
                         <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-2 py-0.5 border shrink-0 ${STATUS_COLOR[campaign.status] ?? ""}`}>
                           {STATUS_LABEL[campaign.status] ?? campaign.status}
                         </Badge>
+                        {/teste|test|simulação|stress/i.test(campaign.title ?? "") && (
+                          <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 border-orange-500/30 text-orange-400 bg-orange-500/5 uppercase tracking-widest shrink-0">
+                            [TESTE]
+                          </Badge>
+                        )}
                         {isLive && (
                           <span className="flex items-center gap-1 font-mono text-[11px] text-success uppercase tracking-widest">
                             <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />

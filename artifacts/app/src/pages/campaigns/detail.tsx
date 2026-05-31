@@ -47,6 +47,7 @@ import { AgentLiveFeed } from "@/components/AgentLiveFeed";
 import { useMode } from "@/lib/mode";
 import { useAuth } from "@/lib/auth";
 import { CreativeStudioBlock } from "@/components/CreativeStudioBlock";
+import { PreLaunchChecklist } from "@/components/PreLaunchChecklist";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -1295,6 +1296,7 @@ export default function CampaignDetail() {
   const [rerunStrategyLoading, setRerunStrategyLoading] = useState(false);
   const [reorientDirective, setReorientDirective] = useState("");
   const [showLaunchSequence, setShowLaunchSequence] = useState(false);
+  const [launchReady, setLaunchReady] = useState(false);
 
   const reorientMutation = useMutation({
     mutationFn: async (directive: string) => {
@@ -1980,7 +1982,7 @@ export default function CampaignDetail() {
       strategy_ready:   { emoji: "📋", headline: "Sua estratégia está pronta para revisar", desc: "O Estrategista montou o plano completo. Revise e confirme antes de gerar o conteúdo." },
       generating:       { emoji: "✍️", headline: "Copywriters gerando seu conteúdo", desc: "Agentes criando copy, sequências e scripts personalizados para o seu público. Quase lá." },
       awaiting_approval:{ emoji: "👀", headline: "Seu conteúdo está esperando por você", desc: "Tudo pronto! Revise e aprove o conteúdo gerado antes do lançamento." },
-      approved:         { emoji: "🚀", headline: "Aprovado! Pronto para lançar", desc: "Conteúdo aprovado. Aperte o botão e a campanha entra em execução." },
+      approved:         { emoji: "📋", headline: "Quase lá! Complete o checklist de lançamento", desc: "Verifique integrações obrigatórias e criativos antes de lançar. Tudo está listado abaixo." },
       executing:        { emoji: "⚡", headline: "Campanha em execução", desc: "Os agentes estão disparando sequências e monitorando os resultados em tempo real." },
       live:             { emoji: "🔥", headline: "Campanha AO VIVO!", desc: "Carrinho aberto. Seus leads estão recebendo os emails e mensagens agora." },
       completed:        { emoji: "✅", headline: "Lançamento concluído", desc: "Missão encerrada. Veja os resultados e comece o próximo lançamento." },
@@ -2055,8 +2057,8 @@ export default function CampaignDetail() {
               ))}
             </div>
 
-            {/* Próxima ação */}
-            {nextAction && (
+            {/* Próxima ação — oculto quando approved (PreLaunchChecklist assume o controle) */}
+            {nextAction && campaign.status !== "approved" && (
               <div className="flex flex-col sm:flex-row gap-2">
                 {nextAction.isIntervention ? (
                   <>
@@ -2115,6 +2117,16 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {/* ─── Pré-Lançamento: Checklist Obrigatório (status approved) ─────── */}
+        {campaign.status === "approved" && (
+          <PreLaunchChecklist
+            campaignId={campaignId}
+            onLaunchReady={setLaunchReady}
+            onLaunch={() => executeMutation.mutate({ campaignId, data: { phase: "launch" as CampaignExecuteInputPhase } })}
+            launching={executeMutation.isPending}
+          />
+        )}
 
         {/* Revisão de Estratégia — obrigatório revisar antes de gerar conteúdo */}
         {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (() => {
