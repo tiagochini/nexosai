@@ -56,6 +56,8 @@ import VideoEditorPage from "@/pages/video-editor/index";
 import SiteBuilderPage from "@/pages/site-builder/index";
 import AtendimentoPage from "@/pages/atendimento/index";
 import VideoProductionPage from "@/pages/video-production/index";
+import FilmingGuide from "@/pages/video-production/filming-guide";
+import LaunchRoom from "@/pages/launch-room/index";
 import LauncherDashboard from "@/pages/launcher/index";
 import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
@@ -297,8 +299,19 @@ export default function AppRoutes() {
       </Route>
 
       {/* Produção de Vídeo agente */}
+      <Route path="/video-production/filming-guide">
+        {() => <ProtectedRoute><FilmingGuide /></ProtectedRoute>}
+      </Route>
       <Route path="/video-production">
         {() => <ProtectedRoute><VideoProductionPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Sala de Lançamento */}
+      <Route path="/launch-room/:id">
+        {() => <ProtectedRoute><LaunchRoom /></ProtectedRoute>}
+      </Route>
+      <Route path="/launch-room">
+        {() => <ProtectedRoute><LaunchRoom /></ProtectedRoute>}
       </Route>
 
       {/* Dashboard do Lançador */}

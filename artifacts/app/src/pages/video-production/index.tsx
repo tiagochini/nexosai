@@ -202,6 +202,15 @@ function CreateProjectForm({ onCreated }: { onCreated: (p: VideoProject) => void
             <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Requer HeyGen configurado</div>
           </button>
         </div>
+        {hasUserFace && (
+          <a
+            href="/video-production/filming-guide"
+            className="flex items-center gap-1.5 font-mono text-[10px] text-primary/60 hover:text-primary transition-colors mt-1"
+          >
+            <Info className="h-3 w-3" />
+            Ver guia de filmagem — como aparecer com autoridade na câmera
+          </a>
+        )}
       </div>
       {hasUserFace && (
         <div>

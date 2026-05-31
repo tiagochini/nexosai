@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight, Bot, Rocket, Shield, Zap, Target,
   Users, BarChart2, MessageSquare, CheckCircle2,
+  LayoutDashboard, PlayCircle, Video, Radio,
+  Mail, Link2, TrendingUp, Camera,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 
@@ -25,6 +27,18 @@ export function hasSeenWelcome(): boolean {
 export function markWelcomeSeen() {
   try { localStorage.setItem(WELCOME_SEEN_KEY, "1"); } catch {}
 }
+
+const SITE_MAP = [
+  { icon: LayoutDashboard, label: "Dashboard",       path: "/dashboard",      desc: "Visão geral da operação" },
+  { icon: PlayCircle,      label: "Campanhas",       path: "/campaigns",      desc: "Criar e executar lançamentos" },
+  { icon: Mail,            label: "Sequências",      path: "/sequences",      desc: "Automação de e-mail e WhatsApp" },
+  { icon: Bot,             label: "Agentes IA",      path: "/agents",         desc: "34 especialistas em ação" },
+  { icon: Video,           label: "Vídeos",          path: "/video-production", desc: "CYRUS cria roteiros cinematográficos" },
+  { icon: Camera,          label: "Guia Filmagem",   path: "/video-production/filming-guide", desc: "Apareça na câmera com autoridade" },
+  { icon: Radio,           label: "Sala de Lança.",  path: "/launch-room",    desc: "Controle central do lançamento" },
+  { icon: TrendingUp,      label: "Receita",         path: "/revenue",        desc: "Métricas e resultados" },
+  { icon: Link2,           label: "Integrações",     path: "/integracoes",    desc: "Conectar plataformas" },
+];
 
 const DEPARTMENTS = [
   { icon: Target,       label: "Estratégia",   desc: "Define o plano de ataque" },
@@ -149,6 +163,34 @@ export default function Welcome() {
               <span className="font-mono text-[11px] text-success/80">{line}</span>
             </div>
           ))}
+        </div>
+
+        {/* ── Mapa do site ── */}
+        <div className="w-full mb-8">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 text-center mb-4">
+            O que você pode fazer na plataforma
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {SITE_MAP.map(({ icon: Icon, label, path, desc }) => (
+              <a
+                key={path}
+                href={path}
+                onClick={(e) => { e.preventDefault(); markWelcomeSeen(); setLocation(path); }}
+                className="border border-border/20 bg-card/10 p-3 flex flex-col gap-1 hover:border-primary/30 hover:bg-card/30 transition-all group cursor-pointer"
+              >
+                <Icon className="h-3.5 w-3.5 text-primary/50 group-hover:text-primary/80 transition-colors" />
+                <span className="font-mono text-[11px] font-bold text-foreground/70 group-hover:text-foreground/90 uppercase tracking-wide leading-tight">
+                  {label}
+                </span>
+                <span className="font-mono text-[10px] text-muted-foreground/40 leading-tight">
+                  {desc}
+                </span>
+              </a>
+            ))}
+          </div>
+          <p className="font-mono text-[10px] text-muted-foreground/30 text-center mt-2">
+            Clique em qualquer área para explorar agora
+          </p>
         </div>
 
         {/* ── CTA ── */}

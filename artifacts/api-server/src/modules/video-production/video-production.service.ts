@@ -61,8 +61,10 @@ export async function createVideoProject(
     if (!campaign) throw new NotFoundError("Campanha");
   }
 
-  // If a VSL is provided, pull its script to pre-seed the video project
-  let importedScript: string | undefined;
+  // If a VSL is provided, load its copy as seed material for CYRUS.
+  // CYRUS ALWAYS runs — it transforms raw copy into a cinematic screenplay with drama and arc.
+  // Never skip CYRUS: even with pre-existing VSL copy, status is always "intake".
+  let vslCopySeed: string | undefined;
   if (input.vslId) {
     const [vsl] = await db
       .select({ sections: vslsTable.sections, title: vslsTable.title })
@@ -71,7 +73,7 @@ export async function createVideoProject(
       .limit(1);
     if (vsl && Array.isArray(vsl.sections) && vsl.sections.length > 0) {
       const secs = vsl.sections as Array<{ title?: string; content?: string }>;
-      importedScript = secs
+      vslCopySeed = secs
         .map(s => [s.title ? `## ${s.title}` : "", s.content ?? ""].filter(Boolean).join("\n"))
         .join("\n\n");
     }
@@ -95,8 +97,10 @@ export async function createVideoProject(
       campaignId: input.campaignId ?? undefined,
       title: input.title,
       format: input.format ?? "vsl",
-      status: importedScript ? "script_ready" : "intake",
-      script: importedScript ?? undefined,
+      // Always "intake" — CYRUS must always run to elevate copy into cinematic screenplay
+      status: "intake",
+      // VSL copy stored as raw seed for CYRUS to transform cinematically
+      script: vslCopySeed ?? undefined,
       config,
       storyboard: [],
     })
