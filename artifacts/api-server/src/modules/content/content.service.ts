@@ -7,8 +7,11 @@ import {
   auditLogsTable,
 } from "@workspace/db";
 import { transitionCampaign, CONTENT_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
-import { runAgent, parseAgentJSON } from "../agents/agent.runner.js";
+import { runAgent, parseAgentJSON, setComplianceHint } from "../agents/agent.runner.js";
 import { setFallbackMode } from "../ai-gateway/ai-gateway.service.js";
+import { classifyPipelineError } from "../agents/error-classifier.js";
+import { runEthicsAutocorrect } from "../agents/ethics-autocorrect.agent.js";
+import { runContextRefinement } from "../agents/context-refinement.agent.js";
 import { runCopywriterAgent } from "../agents/copywriter.agent.js";
 import { runSocialMediaAgent } from "../agents/social-media.agent.js";
 import { runAdCopyAgent } from "../agents/ad-copy.agent.js";
@@ -134,6 +137,18 @@ export async function generateCampaignContent(
   const contentRetry = ((brainRaw["contentRetry"] ?? {}) as Record<string, unknown>);
   const currentRetryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
   const skippedPieces = ((contentRetry["skippedPieces"] ?? []) as string[]);
+
+  // ── Compliance hint injection ─────────────────────────────────────────────
+  // If a previous COMPLIANCE_VIOLATION autocorrection stored a rewrite directive
+  // for the last-failed piece type, inject it into agent.runner so the LLM
+  // receives it as a COMPLIANCE OVERRIDE block in the system prompt.
+  const complianceCorrections = ((contentRetry["complianceCorrections"] ?? {}) as Record<string, string>);
+  const lastFailedPieceType = (contentRetry["lastFailedPieceType"] as string | undefined) ?? "";
+  const activeComplianceHint = complianceCorrections[lastFailedPieceType];
+  if (activeComplianceHint) {
+    setComplianceHint(activeComplianceHint);
+    log.info({ campaignId, lastFailedPieceType }, "[ETHICS-AUTOCORRECT] Compliance hint injected for piece type %s", lastFailedPieceType);
+  }
 
   // Trava 2: Fallback model on retry — on 2nd+ attempt, swap heavy models
   // for lighter alternatives to break context-overflow / safety-block loops.
@@ -1229,8 +1244,9 @@ export async function generateCampaignContent(
     timestamp: new Date().toISOString(),
   });
 
-  // ── Trava cleanup: always reset fallback mode after content run ──────────
+  // ── Trava cleanup: always reset fallback mode + compliance hint after content run ──
   setFallbackMode(false);
+  setComplianceHint(null);
 
   // ── Trava 3: Write contentRetry state to brainData ───────────────────────
   // Stores last-failed agent info so the frontend can show exactly WHERE the
@@ -1238,20 +1254,47 @@ export async function generateCampaignContent(
   // requiresIntervention is set when all non-skipped agents failed (allFailed).
   if (errors.length > 0) {
     const lastErr = errors[errors.length - 1];
-    const lastFailedPieceType = AGENT_PIECE_TYPE[lastErr.agent] ?? "";
+    const lastFailedPieceTypeLocal = AGENT_PIECE_TYPE[lastErr.agent] ?? "";
+    const errorType = classifyPipelineError(lastErr.error);
     const newContentRetry: Record<string, unknown> = {
       ...contentRetry,
       lastFailedAgent: lastErr.agent,
-      lastFailedPieceType,
+      lastFailedPieceType: lastFailedPieceTypeLocal,
       lastFailedError: lastErr.error.slice(0, 300),
       lastFailedAt: new Date().toISOString(),
+      lastErrorType: errorType,
       requiresIntervention: allFailed,
+      autocorrectionStatus: allFailed ? "pending" : undefined,
     };
     await db
       .update(campaignsTable)
       .set({ brainData: { ...brainRaw, contentRetry: newContentRetry } as any })
       .where(eq(campaignsTable.id, campaignId))
       .catch(err => log.warn({ err, campaignId }, "[FAILSAFE] Failed to write contentRetry state — non-blocking"));
+
+    // ── Autocorrection dispatch (fire-and-forget) ────────────────────────
+    // When all agents failed (requiresIntervention), route to the appropriate
+    // autocorrector based on the error type. Non-blocking — never delays HTTP.
+    if (allFailed && lastFailedPieceTypeLocal) {
+      const strategyData = ((campaign.brainData as any)?.["strategyData"] ?? {}) as Record<string, unknown>;
+
+      if (errorType === "COMPLIANCE_VIOLATION") {
+        log.info({ campaignId, errorType, lastFailedPieceTypeLocal }, "[AUTOCORRECT] Routing to Ethics Autocorrect Agent");
+        setImmediate(() => {
+          runEthicsAutocorrect(campaignId, workspaceId, lastFailedPieceTypeLocal, lastErr.agent, lastErr.error, strategyData, intakeData, log)
+            .catch(err2 => log.warn({ err: err2, campaignId }, "[AUTOCORRECT] Ethics autocorrect failed — non-blocking"));
+        });
+      } else if (errorType === "INVALID_INPUT_CONTEXT") {
+        log.info({ campaignId, errorType, lastFailedPieceTypeLocal }, "[AUTOCORRECT] Routing to Context Refinement Agent");
+        setImmediate(() => {
+          runContextRefinement(campaignId, workspaceId, lastFailedPieceTypeLocal, lastErr.agent, lastErr.error, intakeData, log)
+            .catch(err2 => log.warn({ err: err2, campaignId }, "[AUTOCORRECT] Context refinement failed — non-blocking"));
+        });
+      } else {
+        // INFRASTRUCTURE_OR_TIMEOUT — fallback model is already active for next retry
+        log.info({ campaignId, errorType }, "[AUTOCORRECT] Infrastructure error — fallback model active, awaiting user retry");
+      }
+    }
   } else if (piecesGenerated > 0) {
     // All agents succeeded — reset retry state
     const clearedRetry: Record<string, unknown> = {

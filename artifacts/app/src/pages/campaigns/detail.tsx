@@ -1853,6 +1853,11 @@ export default function CampaignDetail() {
   const failedAgentRaw = (contentRetryRaw["lastFailedAgent"] as string | undefined) ?? "";
   const failedPieceTypeRaw = (contentRetryRaw["lastFailedPieceType"] as string | undefined) ?? "";
   const retryCountRaw = (contentRetryRaw["retryCount"] as number | undefined) ?? 0;
+  const lastErrorType = (contentRetryRaw["lastErrorType"] as string | undefined) ?? "";
+  const autocorrectionStatus = (contentRetryRaw["autocorrectionStatus"] as string | undefined) ?? "";
+  const isAutocorrecting = autocorrectionStatus === "running";
+  const isWaitingClarification = autocorrectionStatus === "waiting_clarification";
+  const isAutocorrectionDone = autocorrectionStatus === "done";
   const PIECE_DISPLAY_NAMES: Record<string, string> = {
     creative_direction: "Direção Criativa", email_sequence: "Copy & E-mails",
     social_media_calendar: "Redes Sociais", ad_copy: "Anúncios",
@@ -1874,8 +1879,18 @@ export default function CampaignDetail() {
         const STALE_THRESHOLD_MS = 3.5 * 60 * 1000;
         const checkTime = cp?.lastProgressAt ?? updatedAt;
         const isStale = !cp?.lockedAt || (checkTime && Date.now() - new Date(checkTime).getTime() > STALE_THRESHOLD_MS);
+        if (isAutocorrecting) {
+          return { label: "Autocorrigindo...", description: lastErrorType === "COMPLIANCE_VIOLATION" ? `🛡️ Ethics Agent ajustando linguagem de conformidade para "${failedPieceName}"...` : `📋 Entry Analyzer analisando lacunas no briefing para "${failedPieceName}"...`, isRetry: false };
+        }
+        if (isWaitingClarification) {
+          return { isRetry: true, label: "Responder pergunta do agente", description: `📋 O Entry Analyzer precisa de uma informação do briefing para desbloquear "${failedPieceName}". Veja a pergunta na aba Agentes.` };
+        }
+        if (isAutocorrectionDone) {
+          return { isRetry: true, label: "Retomar — corrigido automaticamente", description: `✅ Ethics Agent ajustou a linguagem de "${failedPieceName}" para conformidade. Clique para tentar novamente com a nova diretriz.` };
+        }
         if (requiresIntervention) {
-          return { isIntervention: true, isRetry: false, label: "Intervenção necessária", failedPieceType: failedPieceTypeRaw, description: failedPieceName ? `Falha repetida na criação de "${failedPieceName}". Pule esta peça ou ajuste o briefing para desbloquear.` : "Falha repetida no pipeline de estratégia. Revise o briefing e tente novamente." };
+          const errorLabel = lastErrorType === "COMPLIANCE_VIOLATION" ? " (filtro de compliance)" : lastErrorType === "INVALID_INPUT_CONTEXT" ? " (dados insuficientes)" : "";
+          return { isIntervention: true, isRetry: false, label: "Intervenção necessária", failedPieceType: failedPieceTypeRaw, description: failedPieceName ? `Falha repetida na criação de "${failedPieceName}"${errorLabel}. Pule esta peça ou ajuste o briefing para desbloquear.` : "Falha repetida no pipeline de estratégia. Revise o briefing e tente novamente." };
         }
         if (isStale) {
           return { isRetry: true, label: "Retomar Processamento", description: "O pipeline parou inesperadamente. Clique para desbloquear e retomar os agentes de estratégia — o checkpoint preserva o progresso anterior." };
@@ -1887,14 +1902,35 @@ export default function CampaignDetail() {
         const GEN_STALE_MS = 20 * 60 * 1000;
         const piecesNow = contentData?.pieces?.length ?? 0;
         const genIsStale = !!genUpdatedAt && Date.now() - new Date(genUpdatedAt).getTime() > GEN_STALE_MS;
+        if (isAutocorrecting) {
+          const autocorrectDesc = lastErrorType === "COMPLIANCE_VIOLATION"
+            ? `🛡️ Ethics Agent analisando o bloqueio e reescrevendo "${failedPieceName}" sem violar políticas de anúncios...`
+            : `📋 Entry Analyzer identificando lacuna no briefing para "${failedPieceName}"...`;
+          return { label: "Autocorrigindo automaticamente...", description: autocorrectDesc, isRetry: false };
+        }
+        if (isWaitingClarification) {
+          return {
+            isRetry: true, label: "Responder pergunta do agente",
+            description: `📋 O Entry Analyzer gerou uma pergunta cirúrgica para destravar "${failedPieceName}". Veja e responda na aba Agentes — a pipeline retoma automaticamente.`,
+          };
+        }
+        if (isAutocorrectionDone) {
+          return {
+            isRetry: true, label: "Retomar — corrigido automaticamente",
+            description: `✅ Ethics Agent ajustou "${failedPieceName}" para conformidade com Meta Ads / CONAR.${piecesNow > 0 ? ` ${piecesNow} peças anteriores preservadas.` : ""} Clique para retomar com a nova diretriz.`,
+          };
+        }
         if (requiresIntervention) {
+          const errorLabel = lastErrorType === "COMPLIANCE_VIOLATION" ? " 🛡️ filtro de compliance"
+            : lastErrorType === "INVALID_INPUT_CONTEXT" ? " 📋 dados insuficientes no briefing"
+            : "";
           return {
             isIntervention: true, isRetry: false,
             label: "Intervenção necessária",
             failedPieceType: failedPieceTypeRaw,
             description: failedPieceName
-              ? `Pipeline travado na criação de "${failedPieceName}" (tentativa ${retryCountRaw}/3). ${piecesNow > 0 ? `${piecesNow} peça${piecesNow !== 1 ? "s" : ""} anteriores estão salvas e seguras. ` : ""}Pule esta peça ou ajuste o briefing.`
-              : `Pipeline travado após ${retryCountRaw} tentativas. ${piecesNow > 0 ? `${piecesNow} peças salvas. ` : ""}Revise o briefing ou pule a peça problemática.`,
+              ? `Pipeline travado em "${failedPieceName}" (${retryCountRaw}/3 tentativas${errorLabel}). ${piecesNow > 0 ? `${piecesNow} peça${piecesNow !== 1 ? "s" : ""} anteriores salvas. ` : ""}Pule esta peça ou ajuste o briefing.`
+              : `Pipeline travado após ${retryCountRaw} tentativas${errorLabel}. ${piecesNow > 0 ? `${piecesNow} peças salvas. ` : ""}Revise o briefing ou pule a peça problemática.`,
           };
         }
         if (genIsStale) {
