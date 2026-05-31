@@ -95,6 +95,20 @@ const OPENAI_INTEGRATION_MODEL = "gpt-5.5";
 const GEMINI_NATIVE_MODEL = "gemini-2.5-flash";
 const GEMINI_FLASH_NATIVE = "gemini-2.5-flash";
 
+// ── Retry fallback mode ───────────────────────────────────────────────────────
+// When active, heavy models are swapped for lighter/faster alternatives.
+// Activated by content.service.ts when retryCount >= 2 to prevent infinite loops
+// on deterministic errors (context overflow, safety blocks, etc.).
+let _fallbackMode = false;
+export function setFallbackMode(active: boolean): void { _fallbackMode = active; }
+
+const FALLBACK_MODEL_MAP: Record<string, string> = {
+  "claude-opus-4-5":   "claude-haiku-3-5",
+  "claude-sonnet-4-6": "claude-haiku-3-5",
+  "gpt-5.5":           "gpt-4o-mini",
+  "gpt-5.4":           "gpt-4o-mini",
+};
+
 const AGENT_PROVIDER_MAP: Record<
   AgentRole,
   { provider: "anthropic" | "openai" | "gemini"; model: string }
@@ -532,9 +546,12 @@ export async function completeWithAgent(
 ): Promise<AICompletionResult> {
   const agentConfig = AGENT_PROVIDER_MAP[agentRole];
   const provider = providerOverride ?? agentConfig.provider;
-  const model = providerOverride
+  const baseModel = providerOverride
     ? getDefaultModelForProvider(providerOverride)
     : agentConfig.model;
+  // On retry fallback mode, swap heavy models for lighter/faster alternatives
+  // to break deterministic failure loops (safety blocks, context overflow, etc.)
+  const model = _fallbackMode && FALLBACK_MODEL_MAP[baseModel] ? FALLBACK_MODEL_MAP[baseModel] : baseModel;
   const effectiveSystem = systemPrompt + buildLocaleInstruction(locale);
   const startTime = Date.now();
   const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);

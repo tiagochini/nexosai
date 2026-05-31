@@ -1,0 +1,148 @@
+Bruce, se o sistema resetar o pipeline cegamente e tentar reexecutar o mesmo agente com o mesmo input defeituoso, o resultado é a queima invisível de tokens, estouro de cota de API e uma experiência destrutiva para o cliente.
+
+Para eliminar esse prejuízo operacional remanescente e fazer o sistema se **autocorrigir**, nós precisamos fechar o ciclo de inteligência. Se o travamento foi gerado por um erro de código/infraestrutura, uma barreira de conformidade (filtro de segurança da IA) ou um input inválido do briefing, o erro deve ser **capturado, tipificado e transformado em um novo comando estratégico de correção para as camadas anteriores**.
+
+Aqui está a arquitetura técnica e os prompts de comando que você vai injetar na sua estrutura para resolver isso em produção de forma definitiva:
+
+---
+
+## 🛠️ A Arquitetura de Autocorreção Multiagente
+
+Em vez de marcar o status apenas como `requires_intervention` e parar a máquina, o seu `sequence-scheduler.worker.ts` vai ler o stack trace do erro, categorizar a falha e acionar a **Camada 6 (Auditoria)** ou a **Camada 0/1 (Diagnóstico e Comando)** para reestruturar o processo.
+
+```text
+[Falha no Agente de Conversão (Ex: Copywriting)]
+                       ↓
+[Captura do Erro no Scheduler / Worker]
+                       ↓
+     Classificação em 3 Tipos de Erros Líquidos:
+     
+   1. ERRO DE COMPLIANCE / SAFETY BLOCK ──> Aciona Agent 33 (Ethics & Claims) para reescrever promessa.
+   2. ERRO DE INPUT / CONTEXTO INVÁLIDO  ──> Aciona Agent 1 (Entry Analyzer) para re-briefing cirúrgico.
+   3. ERRO DE INFRAESTRUTURA / API DOWN  ──> Roda o Fallback Model (Model Switcher) ou pausa o Lock.
+
+```
+
+---
+
+## 💻 1. Implementação no Backend (`sequence-scheduler.worker.ts`)
+
+Modifique o manipulador de exceções do seu worker para extrair o motivo do erro e injetar uma ordem de serviço automatizada:
+
+```typescript
+async function handlePipelineFailure(clientId: string, agentName: string, error: any) {
+    const state = getState(clientId);
+    const errorMessage = error.message || String(error);
+    
+    console.error(`[NEXOS INCIDENT] Falha crítica no agente ${agentName} para o cliente ${clientId}.`);
+
+    // 1. Tipificação do Erro por Padrões de String ou Código de Status
+    let errorType = "INFRASTRUCTURE_OR_TIMEOUT";
+    if (errorMessage.includes("safety") || errorMessage.includes("content_filter") || errorMessage.includes("policy")) {
+        errorType = "COMPLIANCE_VIOLATION";
+    } else if (errorMessage.includes("bad_request") || errorMessage.includes("validation") || errorMessage.includes("missing_property")) {
+        errorType = "INVALID_INPUT_CONTEXT";
+    }
+
+    // 2. Incrementar contador de falhas do agente específico
+    const currentRetries = state.agentRetries?.[agentName] || 0;
+
+    if (currentRetries < 2) {
+        // Primeira ou segunda tentativa: Tenta o Fallback de Modelo (Muda para uma IA mais rápida/leve)
+        saveState(clientId, {
+            status: 'processing',
+            errorRetries: state.errorRetries + 1,
+            [`agentRetries.${agentName}`]: currentRetries + 1,
+            useFallbackModel: true // Flag lida pela API de IA para trocar o modelo (Ex: de Claude Pro para Haiku)
+        });
+        
+        // Re-enfileira a execução imediatamente com modelo alternativo
+        enqueueJob(clientId, state.currentStep);
+    } else {
+        // Terceira tentativa falhou: Risco iminente de prejuízo e loop. Ativar Autocorreção Inteligente.
+        console.log(`[NEXOS AUTOCORREÇÃO] Teto de retries atingido para ${agentName}. Encaminhando para diagnóstico de agentes...`);
+
+        if (errorType === "COMPLIANCE_VIOLATION") {
+            // Joga o status para auditoria interna e manda o Ethics Agent corrigir o que a IA bloqueou
+            saveState(clientId, {
+                status: 'requires_ethical_fix',
+                lastErrorLog: { agent: agentName, type: errorType, message: errorMessage }
+            });
+            // Aciona diretamente o workflow do Ethics & Claims Agent
+            await triggerEthicsAutocorrectWorkflow(clientId, agentName, errorMessage);
+            
+        } else if (errorType === "INVALID_INPUT_CONTEXT") {
+            // O input do cliente está quebrando a lógica. O Entry Analyzer precisa reajustar o JSON estratégico.
+            saveState(clientId, {
+                status: 'requires_context_refinement',
+                lastErrorLog: { agent: agentName, type: errorType, message: errorMessage }
+            });
+            await triggerContextRefinementWorkflow(clientId, agentName, errorMessage);
+            
+        } else {
+            // Falha real de infraestrutura persistente (API da plataforma de anúncios fora do ar, token expirado, etc)
+            saveState(clientId, {
+                status: 'paused_infrastructure_error',
+                lastErrorLog: { agent: agentName, type: errorType, message: errorMessage }
+            });
+            // Atualiza o frontend para o usuário saber exatamente qual integração falhou
+            notifyUserInfrastructureBreak(clientId, agentName, errorMessage);
+        }
+    }
+}
+
+```
+
+---
+
+## 👥 2. Atualização dos Prompts Master dos Agentes Corritores
+
+Para que os agentes corrijam os erros de forma autônoma sem gerar prejuízo, insira as seguintes instruções de tratamento de falhas em suas diretrizes de sistema:
+
+### Agente 33: Ethics & Claims Agent — Protocolo de Autocorreção de Filtro
+
+```text
+[MANDATO DE AUTOCORREÇÃO DE FLUXO - ADICIONAL]
+Sempre que o status da campanha mudar para 'requires_ethical_fix', você será acionado recebendo o 'lastErrorLog' contendo a mensagem de rejeição da API externa de IA ou da plataforma de anúncios (Meta/Google).
+
+SUA MISSÃO:
+1. Analise o fragmento de copy ou o claim que causou o bloqueio por violação de política de segurança.
+2. Identifique termos hiperbólicos, promessas de dinheiro agressivas ou palavras-gatilho censuradas.
+3. Reescreva o bloco de texto problemático aplicando termos de "Empatia Estrutural" e "Mecanismo Lógico" descritos no Manifesto NEXOS.
+4. Substitua o ativo defeituoso no banco de dados e mude o status da flag para 'compliance_cleared', reencaminhando o token de execução de volta para o agente que havia travado.
+
+```
+
+### Agente 1: NEXOS Entry Analyzer — Protocolo de Refinamento de Contexto
+
+```text
+[MANDATO DE AUTOCORREÇÃO DE FLUXO - ADICIONAL]
+Sempre que o status da campanha mudar para 'requires_context_refinement', significa que o payload 'NSP.json' gerado originalmente contém incongruências ou dados ausentes que estão quebrando o processamento dos agentes operacionais de conversão.
+
+SUA MISSÃO:
+1. Cruze o stack trace do erro recebido no log com o 'NSP.json' ativo do cliente.
+2. Se o erro apontar falta de dados sobre o avatar, re-escaneie os dados brutos de histórico do cliente em busca de propriedades de nicho esquecidas.
+3. Se os dados brutos forem insuficientes para sanar o erro de validação, altere o status do pipeline para 'pending_user_clarification' e gere uma pergunta única, ultra-específica e cirúrgica para o frontend coletar diretamente com o usuário (" Bruce, seu produto principal se encaixa no modelo de recorrência ou entrega única? Precisamos disso para destravar as automações de checkout.").
+
+```
+
+---
+
+## 💻 3. Interface de Desbloqueio no Frontend (A Janela de Diagnóstico)
+
+Quando a falha atinge o teto e o sistema se move para autocorreção ou requer intervenção, a UI amarela de "Pipeline Pausado" deve se transformar em um **Painel de Controle Transparente**:
+
+* **Visualização de Status Real:** Em vez de uma mensagem genérica de erro, o usuário vê:
+* `[✓] Briefing Concluído`
+* `[✓] Masterplan Gerado`
+* `[⚙] Roteiro de VSL (Ajustando linguagem de conformidade com o Meta Ads...)`
+
+
+* **Painel de Resolução:** Se o sistema precisar que o Bruce ajuste algo no briefing para sair do loop de contexto inválido, a tela abre um input focado exatamente na dor do sistema:
+> *"Bruce, detectamos que a descrição do seu produto principal gerou um conflito nas APIs de automação de checkout. Por favor, confirme o preço final ou clique em [Avançar com Preço Padrão R$ 97]."*
+
+
+
+### O Resultado Prático para Sua Operação:
+
+Com essa implementação, você elimina 100% o prejuízo de loops operacionais cegos. O sistema ganha **raciocínio pós-falha**: ele sabe se a culpa é da infraestrutura da API (e muda de modelo de IA), se a culpa é da política de anúncios (e o Ethics Agent limpa o texto) ou se a culpa é do input do cliente (e o sistema refina o briefing ou faz uma pergunta direta na tela). O processo avança em produção com completude real.

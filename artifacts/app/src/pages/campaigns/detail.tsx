@@ -1658,13 +1658,20 @@ export default function CampaignDetail() {
     try {
       const res = await customFetch<Response>(`/api/campaigns/${campaignId}/execute/retry`, { method: "POST" });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        toast.error(body?.error ?? "Erro ao retomar pipeline.", { duration: 6000 });
+        const body = await res.json().catch(() => ({})) as { error?: string; code?: string; data?: { lastFailedAgent?: string; lastFailedPieceType?: string; retryCount?: number } };
+        if (body?.code === "REQUIRES_INTERVENTION") {
+          const pieceName = body.data?.lastFailedPieceType ? (PIECE_DISPLAY_NAMES[body.data.lastFailedPieceType] ?? body.data.lastFailedPieceType) : null;
+          toast.error(
+            pieceName ? `Falha repetida em "${pieceName}"` : "Limite de tentativas atingido",
+            { description: "Pule esta peça ou ajuste o briefing antes de tentar novamente.", duration: 10000 },
+          );
+        } else {
+          toast.error(body?.error ?? "Erro ao retomar pipeline.", { duration: 6000 });
+        }
         return;
       }
       toast.success("Pipeline retomado — processando...", { description: "Peças já geradas serão preservadas." });
       setActiveTab("agentes");
-      // Optimistically update so stale detection doesn't immediately re-show the retry button
       queryClient.setQueryData(getGetCampaignQueryKey(campaignId), (old: unknown) => {
         if (!old || typeof old !== "object") return old;
         const o = old as { campaign?: Record<string, unknown> };
@@ -1677,6 +1684,29 @@ export default function CampaignDetail() {
       toast.error("Erro ao retomar pipeline.", { duration: 6000 });
     } finally {
       setRetryPending(false);
+    }
+  };
+
+  // ── Skip broken piece ──────────────────────────────────────────────────────
+  // Marks a content piece type as "skipped" in brainData so the next pipeline
+  // run bypasses it. Resets requiresIntervention so user can retry normally.
+  const [skipPending, setSkipPending] = useState(false);
+  const handleSkipPiece = async (pieceType: string) => {
+    if (skipPending || !pieceType) return;
+    setSkipPending(true);
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/pieces/${pieceType}/skip`, { method: "POST" });
+      if (!res.ok) {
+        toast.error("Erro ao pular peça.", { duration: 4000 });
+        return;
+      }
+      const pieceName = PIECE_DISPLAY_NAMES[pieceType] ?? pieceType;
+      toast.success(`"${pieceName}" marcada para pular`, { description: "Ao retomar, o pipeline gerará as demais peças e ignorará esta." });
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+    } catch {
+      toast.error("Erro ao pular peça.", { duration: 4000 });
+    } finally {
+      setSkipPending(false);
     }
   };
 
@@ -1816,17 +1846,37 @@ export default function CampaignDetail() {
   const targetingD = ((campaignRaw["targetingData"] ?? {}) as Record<string, unknown>);
   const timelineD = ((campaignRaw["timelineData"] ?? {}) as Record<string, unknown>);
 
-  const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string; isRetry?: boolean } | null => {
+  // Read contentRetry state from brainData — drives intervention UI
+  const brainDataRaw = (campaignRaw["brainData"] ?? {}) as Record<string, unknown>;
+  const contentRetryRaw = (brainDataRaw["contentRetry"] ?? {}) as Record<string, unknown>;
+  const requiresIntervention = !!(contentRetryRaw["requiresIntervention"]);
+  const failedAgentRaw = (contentRetryRaw["lastFailedAgent"] as string | undefined) ?? "";
+  const failedPieceTypeRaw = (contentRetryRaw["lastFailedPieceType"] as string | undefined) ?? "";
+  const retryCountRaw = (contentRetryRaw["retryCount"] as number | undefined) ?? 0;
+  const PIECE_DISPLAY_NAMES: Record<string, string> = {
+    creative_direction: "Direção Criativa", email_sequence: "Copy & E-mails",
+    social_media_calendar: "Redes Sociais", ad_copy: "Anúncios",
+    vsl_script: "Roteiro de VSL", cpl_script: "Roteiro de CPL",
+    webinar_script: "Roteiro de Webinar", live_script: "Roteiro de Live",
+    stories_sequence: "Sequência de Stories", landing_page: "Página de Vendas",
+    targeting_config: "Segmentação", media_buying_plan: "Plano de Mídia",
+    video_strategy: "Estratégia de Vídeo", creator_growth: "Crescimento de Audiência",
+    compliance: "Compliance", optimization: "Otimização",
+  };
+  const failedPieceName = PIECE_DISPLAY_NAMES[failedPieceTypeRaw] ?? failedPieceTypeRaw;
+
+  const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string; isRetry?: boolean; isIntervention?: boolean; failedPieceType?: string } | null => {
     switch (campaign.status) {
       case "analyzing": {
-        const brainRaw = (campaignRaw["brainData"] ?? {}) as Record<string, unknown>;
-        const cp = brainRaw["pipelineCheckpoint"] as { lockedAt?: string; lastProgressAt?: string } | undefined;
+        const cp = brainDataRaw["pipelineCheckpoint"] as { lockedAt?: string; lastProgressAt?: string } | undefined;
         const updatedAt = campaignRaw["updatedAt"] as string | undefined;
-        // Use lastProgressAt from checkpoint if available (more precise than updatedAt)
         // Threshold is 3.5 min, just above the backend lock grace period of 3 min
         const STALE_THRESHOLD_MS = 3.5 * 60 * 1000;
         const checkTime = cp?.lastProgressAt ?? updatedAt;
         const isStale = !cp?.lockedAt || (checkTime && Date.now() - new Date(checkTime).getTime() > STALE_THRESHOLD_MS);
+        if (requiresIntervention) {
+          return { isIntervention: true, isRetry: false, label: "Intervenção necessária", failedPieceType: failedPieceTypeRaw, description: failedPieceName ? `Falha repetida na criação de "${failedPieceName}". Pule esta peça ou ajuste o briefing para desbloquear.` : "Falha repetida no pipeline de estratégia. Revise o briefing e tente novamente." };
+        }
         if (isStale) {
           return { isRetry: true, label: "Retomar Processamento", description: "O pipeline parou inesperadamente. Clique para desbloquear e retomar os agentes de estratégia — o checkpoint preserva o progresso anterior." };
         }
@@ -1837,6 +1887,16 @@ export default function CampaignDetail() {
         const GEN_STALE_MS = 20 * 60 * 1000;
         const piecesNow = contentData?.pieces?.length ?? 0;
         const genIsStale = !!genUpdatedAt && Date.now() - new Date(genUpdatedAt).getTime() > GEN_STALE_MS;
+        if (requiresIntervention) {
+          return {
+            isIntervention: true, isRetry: false,
+            label: "Intervenção necessária",
+            failedPieceType: failedPieceTypeRaw,
+            description: failedPieceName
+              ? `Pipeline travado na criação de "${failedPieceName}" (tentativa ${retryCountRaw}/3). ${piecesNow > 0 ? `${piecesNow} peça${piecesNow !== 1 ? "s" : ""} anteriores estão salvas e seguras. ` : ""}Pule esta peça ou ajuste o briefing.`
+              : `Pipeline travado após ${retryCountRaw} tentativas. ${piecesNow > 0 ? `${piecesNow} peças salvas. ` : ""}Revise o briefing ou pule a peça problemática.`,
+          };
+        }
         if (genIsStale) {
           return {
             isRetry: true,
@@ -1959,7 +2019,29 @@ export default function CampaignDetail() {
             {/* Próxima ação */}
             {nextAction && (
               <div className="flex flex-col sm:flex-row gap-2">
-                {nextAction.isRetry ? (
+                {nextAction.isIntervention ? (
+                  <>
+                    {nextAction.failedPieceType && (
+                      <Button
+                        onClick={() => handleSkipPiece(nextAction.failedPieceType!)}
+                        disabled={skipPending}
+                        className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 h-12 text-sm border border-orange-400/60 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20"
+                      >
+                        {skipPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+                        {skipPending ? "Pulando..." : "Pular esta peça"}
+                      </Button>
+                    )}
+                    <Button
+                      onClick={handleRetry}
+                      disabled={retryPending}
+                      variant="outline"
+                      className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 h-12 text-sm border-border/40 text-muted-foreground"
+                    >
+                      {retryPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      {retryPending ? "Tentando..." : "Tentar assim mesmo"}
+                    </Button>
+                  </>
+                ) : nextAction.isRetry ? (
                   <Button
                     onClick={handleRetry}
                     disabled={retryPending}
@@ -2633,7 +2715,27 @@ export default function CampaignDetail() {
                   <h3 className="font-mono font-bold text-lg text-foreground uppercase tracking-wide">{nextAction.label}</h3>
                   <p className="text-xs text-muted-foreground font-mono mt-1">{nextAction.description}</p>
                 </div>
-                {nextAction.isRetry ? (
+                {nextAction.isIntervention ? (
+                  <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    {nextAction.failedPieceType && (
+                      <Button
+                        className="font-mono uppercase tracking-widest rounded-none gap-2 h-12 px-5 w-full md:w-auto border border-orange-400/60 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20"
+                        onClick={() => handleSkipPiece(nextAction.failedPieceType!)}
+                        disabled={skipPending}
+                      >
+                        {skipPending ? <><Loader2 className="h-4 w-4 animate-spin" />Pulando...</> : <><AlertTriangle className="h-4 w-4" />Pular esta peça</>}
+                      </Button>
+                    )}
+                    <Button
+                      className="font-mono uppercase tracking-widest rounded-none gap-2 h-12 px-5 w-full md:w-auto border-border/40 text-muted-foreground"
+                      variant="outline"
+                      onClick={handleRetry}
+                      disabled={retryPending}
+                    >
+                      {retryPending ? <><Loader2 className="h-4 w-4 animate-spin" />Tentando...</> : <><RefreshCw className="h-4 w-4" />Tentar assim mesmo</>}
+                    </Button>
+                  </div>
+                ) : nextAction.isRetry ? (
                   <Button
                     className="font-mono uppercase tracking-widest rounded-none gap-2 h-12 px-6 w-full md:w-auto border border-yellow-400/60 bg-yellow-400/10 text-yellow-300 hover:bg-yellow-400/20"
                     onClick={handleRetry}

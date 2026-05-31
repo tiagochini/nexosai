@@ -61,10 +61,10 @@ async function recoverStuckCampaigns(): Promise<void> {
   const log = logger.child({ component: "failsafe-recovery" });
   const now = new Date();
 
-  // Campaigns stuck in "analyzing"
+  // ── Campaigns stuck in "analyzing" ────────────────────────────────────────
   const analyzeThreshold = new Date(now.getTime() - STUCK_ANALYZING_MS);
   const stuckAnalyzing = await db
-    .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
+    .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId, brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
     .where(
       and(
@@ -75,20 +75,36 @@ async function recoverStuckCampaigns(): Promise<void> {
 
   for (const c of stuckAnalyzing) {
     try {
+      const brain = ((c.brainData ?? {}) as Record<string, unknown>);
+      const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
+      const retryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
+
+      // Trava 1: teto de retries — stop auto-cycling when max reached
+      if (retryCount >= 3) {
+        const updated = { ...brain, contentRetry: { ...contentRetry, requiresIntervention: true } };
+        await db.update(campaignsTable).set({ brainData: updated as any }).where(eq(campaignsTable.id, c.id));
+        log.warn({ campaignId: c.id, retryCount }, "[FAILSAFE-AUTO] analyzing max retries — marked requiresIntervention, NOT resetting");
+        continue;
+      }
+
+      const updatedBrain = {
+        ...brain,
+        contentRetry: { ...contentRetry, retryCount: retryCount + 1, lastRetryAt: new Date().toISOString() },
+      };
       await db
         .update(campaignsTable)
-        .set({ status: "intake" as any, updatedAt: new Date() })
+        .set({ status: "intake" as any, updatedAt: new Date(), brainData: updatedBrain as any })
         .where(eq(campaignsTable.id, c.id));
-      log.warn({ campaignId: c.id }, "[FAILSAFE-AUTO] analyzing > 10min → reset to intake");
+      log.warn({ campaignId: c.id, retryCount: retryCount + 1 }, "[FAILSAFE-AUTO] analyzing > 10min → reset to intake");
     } catch (err) {
       log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck analyzing campaign");
     }
   }
 
-  // Campaigns stuck in "generating"
+  // ── Campaigns stuck in "generating" ───────────────────────────────────────
   const genThreshold = new Date(now.getTime() - STUCK_GENERATING_MS);
   const stuckGenerating = await db
-    .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
+    .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId, brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
     .where(
       and(
@@ -99,11 +115,27 @@ async function recoverStuckCampaigns(): Promise<void> {
 
   for (const c of stuckGenerating) {
     try {
+      const brain = ((c.brainData ?? {}) as Record<string, unknown>);
+      const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
+      const retryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
+
+      // Trava 1: teto de retries — stop auto-cycling when max reached
+      if (retryCount >= 3) {
+        const updated = { ...brain, contentRetry: { ...contentRetry, requiresIntervention: true } };
+        await db.update(campaignsTable).set({ brainData: updated as any }).where(eq(campaignsTable.id, c.id));
+        log.warn({ campaignId: c.id, retryCount }, "[FAILSAFE-AUTO] generating max retries — marked requiresIntervention, NOT resetting");
+        continue;
+      }
+
+      const updatedBrain = {
+        ...brain,
+        contentRetry: { ...contentRetry, retryCount: retryCount + 1, lastRetryAt: new Date().toISOString() },
+      };
       await db
         .update(campaignsTable)
-        .set({ status: "strategy_ready" as any, updatedAt: new Date() })
+        .set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: updatedBrain as any })
         .where(eq(campaignsTable.id, c.id));
-      log.warn({ campaignId: c.id }, "[FAILSAFE-AUTO] generating > 30min → reset to strategy_ready");
+      log.warn({ campaignId: c.id, retryCount: retryCount + 1 }, "[FAILSAFE-AUTO] generating > 30min → reset to strategy_ready");
     } catch (err) {
       log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck generating campaign");
     }

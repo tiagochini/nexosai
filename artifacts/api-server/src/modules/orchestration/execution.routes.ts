@@ -197,6 +197,8 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
 // POST /campaigns/:campaignId/execute/retry — failsafe recovery for stuck campaigns
 // Clears the pipeline lock, forces campaign back to a retryable state, and re-enqueues
 // the appropriate job. Safe to call from analyzing or generating status only.
+// Includes retry-count teto: after 3 manual retries, returns REQUIRES_INTERVENTION
+// instead of re-enqueuing — preventing infinite credit-burning loops on deterministic errors.
 router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
   const { workspaceId } = req.auth;
@@ -221,33 +223,53 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
   }
 
   try {
-    // Clear pipeline lock — set lockedAt + lastProgressAt to null so the next run
-    // acquires a fresh lock without hitting the "Pipeline já está executando" guard.
     const brain = ((campaign.brainData ?? {}) as Record<string, unknown>);
     const cp = ((brain["pipelineCheckpoint"] ?? {}) as Record<string, unknown>);
-    const clearedBrain = { ...brain, pipelineCheckpoint: { ...cp, lockedAt: null, lastProgressAt: null } };
+    const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
+    const retryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
+
+    // ── Trava 1: Teto de retries — após 3 tentativas, requer intervenção humana ──
+    // Evita o "Bug Determinístico Loop": peça quebrada (safety block, parser error,
+    // token overflow) nunca mais pode ser re-enfileirada indefinidamente.
+    if (retryCount >= 3) {
+      req.log.warn({ campaignId, retryCount, contentRetry }, "[FAILSAFE] Max retries reached — requires human intervention");
+      res.status(409).json({
+        error: "A campanha falhou 3 vezes seguidas no mesmo ponto. Revise o briefing ou pule a peça problemática antes de tentar novamente.",
+        code: "REQUIRES_INTERVENTION",
+        data: {
+          retryCount,
+          lastFailedAgent: contentRetry["lastFailedAgent"],
+          lastFailedPieceType: contentRetry["lastFailedPieceType"],
+          lastFailedError: contentRetry["lastFailedError"],
+        },
+      });
+      return;
+    }
+
+    // Increment retry counter and clear pipeline lock
+    const updatedContentRetry = { ...contentRetry, retryCount: retryCount + 1, lastRetryAt: new Date().toISOString() };
+    const clearedBrain = {
+      ...brain,
+      pipelineCheckpoint: { ...cp, lockedAt: null, lastProgressAt: null },
+      contentRetry: updatedContentRetry,
+    };
 
     if (campaign.status === "analyzing") {
-      // analyzing → intake: valid transition (same as command agent blocked verdict).
-      // Resets to intake so the RC-010 guard in processRunStrategy accepts the new job.
       await db
         .update(campaignsTable)
         .set({ status: "intake" as any, updatedAt: new Date(), brainData: clearedBrain as any })
         .where(eq(campaignsTable.id, campaignId));
       const result = await triggerStrategyPhase(campaignId, workspaceId, req.log);
-      req.log.info({ campaignId }, "[FAILSAFE] analyzing → intake → strategy re-enqueued");
-      res.status(202).json({ retried: true, phase: "strategy", queued: result.queued });
+      req.log.info({ campaignId, retryCount: retryCount + 1 }, "[FAILSAFE] analyzing → intake → strategy re-enqueued");
+      res.status(202).json({ retried: true, phase: "strategy", queued: result.queued, retryCount: retryCount + 1 });
     } else {
-      // generating → strategy_ready: resets content phase so RC-010 guard accepts the job.
-      // skipAgent() inside generateCampaignContent ensures already-generated pieces are
-      // NOT re-generated — only the failed/missing ones are produced.
       await db
         .update(campaignsTable)
         .set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: clearedBrain as any })
         .where(eq(campaignsTable.id, campaignId));
       const result = await triggerContentPhase(campaignId, workspaceId, req.log);
-      req.log.info({ campaignId }, "[FAILSAFE] generating → strategy_ready → content re-enqueued");
-      res.status(202).json({ retried: true, phase: "content", queued: result.queued });
+      req.log.info({ campaignId, retryCount: retryCount + 1 }, "[FAILSAFE] generating → strategy_ready → content re-enqueued");
+      res.status(202).json({ retried: true, phase: "content", queued: result.queued, retryCount: retryCount + 1 });
     }
   } catch (err) {
     if (err instanceof AppError) {
@@ -256,6 +278,53 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
     }
     throw err;
   }
+});
+
+// POST /campaigns/:campaignId/content/pieces/:pieceType/skip
+// Marks a specific content piece type as "skipped" so the content pipeline will
+// bypass it on the next run. Injects a placeholder piece into contentPiecesTable
+// (status=draft, content._skipped=true) which skipAgent() detects and bypasses.
+// This breaks deterministic error loops: if VSL Agent always fails, skip it and
+// generate the remaining 15 pieces.
+router.post("/:campaignId/content/pieces/:pieceType/skip", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const pieceType = req.params["pieceType"] as string;
+  const { workspaceId } = req.auth;
+
+  const [campaign] = await db
+    .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!campaign) {
+    res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" });
+    return;
+  }
+
+  // Store skipped piece types in brainData (no schema migration needed)
+  const brain = ((campaign.brainData ?? {}) as Record<string, unknown>);
+  const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
+  const skippedPieces = ((contentRetry["skippedPieces"] ?? []) as string[]);
+  if (!skippedPieces.includes(pieceType)) {
+    skippedPieces.push(pieceType);
+  }
+  const updatedBrain = {
+    ...brain,
+    contentRetry: {
+      ...contentRetry,
+      skippedPieces,
+      retryCount: 0, // reset retry counter after manual skip
+      requiresIntervention: false,
+    },
+  };
+  await db
+    .update(campaignsTable)
+    .set({ brainData: updatedBrain as any, updatedAt: new Date() })
+    .where(eq(campaignsTable.id, campaignId));
+
+  req.log.info({ campaignId, pieceType, skippedPieces }, "[FAILSAFE] Content piece skipped by user");
+  res.status(200).json({ skipped: true, pieceType, skippedPieces });
 });
 
 // ── Integration gate for launch ──────────────────────────────────────────────

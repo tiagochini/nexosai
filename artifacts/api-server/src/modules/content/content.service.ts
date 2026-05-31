@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { transitionCampaign, CONTENT_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
 import { runAgent, parseAgentJSON } from "../agents/agent.runner.js";
+import { setFallbackMode } from "../ai-gateway/ai-gateway.service.js";
 import { runCopywriterAgent } from "../agents/copywriter.agent.js";
 import { runSocialMediaAgent } from "../agents/social-media.agent.js";
 import { runAdCopyAgent } from "../agents/ad-copy.agent.js";
@@ -125,6 +126,22 @@ export async function generateCampaignContent(
   let piecesGenerated = 0;
   let mediaBriefsGenerated = 0;
 
+  // ── Trava 1: Retry counter + skipped pieces ───────────────────────────────
+  // Read contentRetry state from brainData (no schema migration needed).
+  // retryCount >= 3 is already blocked at the endpoint layer; here we just
+  // consume the state to activate fallback mode and skip user-flagged pieces.
+  const brainRaw = ((campaign.brainData ?? {}) as Record<string, unknown>);
+  const contentRetry = ((brainRaw["contentRetry"] ?? {}) as Record<string, unknown>);
+  const currentRetryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
+  const skippedPieces = ((contentRetry["skippedPieces"] ?? []) as string[]);
+
+  // Trava 2: Fallback model on retry — on 2nd+ attempt, swap heavy models
+  // for lighter alternatives to break context-overflow / safety-block loops.
+  if (currentRetryCount >= 2) {
+    setFallbackMode(true);
+    log.warn({ campaignId, retryCount: currentRetryCount }, "[FAILSAFE] Retry #%d — activating fallback models (haiku/gpt-4o-mini)", currentRetryCount);
+  }
+
   const campaignType = String(intakeData["campaign.type"] ?? campaign.type ?? "launch");
   const salesChannel = String(intakeData["campaign.salesChannel"] ?? "sales_page");
   const trafficBudget = Number(intakeData["campaign.budget.traffic"] ?? 0);
@@ -145,24 +162,58 @@ export async function generateCampaignContent(
     .from(contentPiecesTable)
     .where(eq(contentPiecesTable.campaignId, campaignId));
   const done = new Set<string>(existingPieces.map((p) => p.type));
+  // Trava 1 (cont.): also skip user-flagged pieces so deterministic failures
+  // don't block the rest of the pipeline on retry.
+  for (const s of skippedPieces) done.add(s);
   const isResume = campaign.status === "generating";
 
   if (done.size > 0) {
-    log.info({ campaignId, done: [...done], isResume }, "CHECKPOINT: resuming content generation — skipping already completed agents");
+    log.info({ campaignId, done: [...done], isResume, skippedPieces }, "CHECKPOINT: resuming content generation — skipping already completed agents");
   }
+
+  // Agent → piece type mapping (used to record lastFailedPieceType in brainData)
+  const AGENT_PIECE_TYPE: Record<string, string> = {
+    creative_director: "creative_direction",
+    copywriter: "email_sequence",
+    social_media: "social_media_calendar",
+    ad_copy: "ad_copy",
+    vsl_script: "vsl_script",
+    cpl_script: "cpl_script",
+    webinar_script: "webinar_script",
+    live_script: "live_script",
+    stories_sequence: "stories_sequence",
+    landing_page: "landing_page",
+    targeting: "targeting_config",
+    media_buyer: "media_buying_plan",
+    video_strategy: "video_strategy",
+    creator_growth: "creator_growth",
+    compliance: "compliance",
+    optimization: "optimization",
+  };
 
   const skipAgent = (pieceType: string, agentName: string): boolean => {
     if (!done.has(pieceType)) return false;
     agentsRun.push(agentName);
     piecesGenerated++;
-    log.info({ campaignId, agentName, pieceType }, "CHECKPOINT: agent already completed — skipping LLM call");
-    emitCampaignEvent({
-      campaignId,
-      type: "agent_completed",
-      agentType: agentName,
-      message: `${agentName} — ✓ retomado do checkpoint (saída já salva)`,
-      timestamp: new Date().toISOString(),
-    });
+    if (skippedPieces.includes(pieceType)) {
+      log.info({ campaignId, agentName, pieceType }, "CHECKPOINT: agent skipped by user request");
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: agentName,
+        message: `${agentName} — ⏭ pulado pelo usuário`,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      log.info({ campaignId, agentName, pieceType }, "CHECKPOINT: agent already completed — skipping LLM call");
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: agentName,
+        message: `${agentName} — ✓ retomado do checkpoint (saída já salva)`,
+        timestamp: new Date().toISOString(),
+      });
+    }
     return true;
   };
 
@@ -1177,6 +1228,46 @@ export async function generateCampaignContent(
     data: { agentsRun, piecesGenerated, mediaBriefsGenerated, errors: errors.length },
     timestamp: new Date().toISOString(),
   });
+
+  // ── Trava cleanup: always reset fallback mode after content run ──────────
+  setFallbackMode(false);
+
+  // ── Trava 3: Write contentRetry state to brainData ───────────────────────
+  // Stores last-failed agent info so the frontend can show exactly WHERE the
+  // pipeline stalled and offer a targeted "skip" action for that specific piece.
+  // requiresIntervention is set when all non-skipped agents failed (allFailed).
+  if (errors.length > 0) {
+    const lastErr = errors[errors.length - 1];
+    const lastFailedPieceType = AGENT_PIECE_TYPE[lastErr.agent] ?? "";
+    const newContentRetry: Record<string, unknown> = {
+      ...contentRetry,
+      lastFailedAgent: lastErr.agent,
+      lastFailedPieceType,
+      lastFailedError: lastErr.error.slice(0, 300),
+      lastFailedAt: new Date().toISOString(),
+      requiresIntervention: allFailed,
+    };
+    await db
+      .update(campaignsTable)
+      .set({ brainData: { ...brainRaw, contentRetry: newContentRetry } as any })
+      .where(eq(campaignsTable.id, campaignId))
+      .catch(err => log.warn({ err, campaignId }, "[FAILSAFE] Failed to write contentRetry state — non-blocking"));
+  } else if (piecesGenerated > 0) {
+    // All agents succeeded — reset retry state
+    const clearedRetry: Record<string, unknown> = {
+      ...contentRetry,
+      retryCount: 0,
+      requiresIntervention: false,
+      lastFailedAgent: undefined,
+      lastFailedPieceType: undefined,
+      lastFailedError: undefined,
+    };
+    await db
+      .update(campaignsTable)
+      .set({ brainData: { ...brainRaw, contentRetry: clearedRetry } as any })
+      .where(eq(campaignsTable.id, campaignId))
+      .catch(err => log.warn({ err, campaignId }, "[FAILSAFE] Failed to clear contentRetry state — non-blocking"));
+  }
 
   // ── Emotional Coherence Check (fire-and-forget) ───────────────────────────
   // Runs after content generation completes. Checks if pieces respect the arc
