@@ -12,7 +12,8 @@ import {
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 import { sendEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
-import { sendWhatsAppDispatch, createWhatsAppDispatch, sendWhatsAppSystemNotification, getWorkspaceOwnerPhone } from "../whatsapp/whatsapp.service.js";
+import { sendWhatsAppDispatch, createWhatsAppDispatch, sendWhatsAppSystemNotification, getWorkspaceOwnerContact } from "../whatsapp/whatsapp.service.js";
+import { sendEmailSystemNotification } from "../email-dispatch/email-dispatch.service.js";
 import { createEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
 import { emitSequenceEvent } from "./sequence-realtime.js";
 import { sendWeeklyReportsToAll } from "../weekly-report/weekly-report.service.js";
@@ -98,23 +99,49 @@ async function maybeNotifyStaleWaitingClarification(): Promise<void> {
         if (sinceNotified < CLARIFICATION_TIMEOUT_MS) continue;
       }
 
-      // Get owner phone
-      const ownerPhone = await getWorkspaceOwnerPhone(c.workspaceId);
-      if (!ownerPhone) {
-        log.info({ campaignId: c.id }, "Clarification watchdog: owner has no phone — skipping WA notification");
-        continue;
-      }
+      // Get owner contact (phone + email)
+      const ownerContact = await getWorkspaceOwnerContact(c.workspaceId);
 
       const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
       const pieceLabel = failedPieceType ?? "conteúdo da campanha";
       const appUrl = env.APP_URL;
-      const campaignPath = `${appUrl}/campaigns/${c.id}`;
+      const campaignUrl = `${appUrl}/campaigns/${c.id}`;
 
-      const message = `🤖 *NexOS AI — Ação necessária*\n\nO sistema pausou a geração de *${pieceLabel}* e precisa de uma informação do seu briefing para continuar.\n\n📋 Responda a pergunta do agente para que a automação retome:\n${campaignPath}\n\nIsso leva menos de 1 minuto.`;
+      let notified = false;
 
-      const sent = await sendWhatsAppSystemNotification(c.workspaceId, ownerPhone, message);
+      // ── Channel 1: WhatsApp (preferred) ────────────────────────────────
+      if (ownerContact.phone) {
+        const waMessage = `🤖 *NexOS AI — Ação necessária*\n\nO sistema pausou a geração de *${pieceLabel}* e precisa de uma informação do seu briefing para continuar.\n\n📋 Responda a pergunta do agente para que a automação retome:\n${campaignUrl}\n\nIsso leva menos de 1 minuto.`;
+        notified = await sendWhatsAppSystemNotification(c.workspaceId, ownerContact.phone, waMessage);
+        if (notified) log.info({ campaignId: c.id }, "Clarification watchdog: WA notification sent to owner");
+      }
 
-      if (sent) {
+      // ── Channel 2: Email fallback (when WA not available) ───────────────
+      if (!notified && ownerContact.email) {
+        const emailHtml = `
+<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0a0a0a;color:#e0e0e0;border:1px solid #222">
+  <p style="font-size:22px;font-weight:bold;color:#fff;margin:0 0 16px">⚡ NexOS AI — Ação necessária</p>
+  <p style="color:#aaa;margin:0 0 20px">O pipeline da sua campanha está aguardando sua resposta para continuar a geração automática de conteúdo.</p>
+  <div style="background:#111;border:1px solid #333;padding:16px;margin:0 0 20px">
+    <p style="margin:0;color:#fff">📋 <strong>Peça bloqueada:</strong> ${pieceLabel}</p>
+    <p style="margin:8px 0 0;color:#aaa;font-size:13px">O Entry Analyzer gerou uma pergunta específica sobre o seu briefing. Responda para que a automação retome instantaneamente.</p>
+  </div>
+  <a href="${campaignUrl}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 24px;text-decoration:none;font-weight:bold;font-size:14px;letter-spacing:1px">RESPONDER AGORA</a>
+  <p style="color:#555;font-size:12px;margin:24px 0 0">NexOS AI • Esta é uma notificação automática de sistema</p>
+</div>`;
+        notified = await sendEmailSystemNotification(
+          ownerContact.email,
+          `⚡ NexOS AI: sua campanha aguarda uma resposta (${pieceLabel})`,
+          emailHtml,
+        );
+        if (notified) log.info({ campaignId: c.id }, "Clarification watchdog: email notification sent to owner");
+      }
+
+      if (!notified) {
+        log.info({ campaignId: c.id }, "Clarification watchdog: no channel available (no phone, no email config) — skipping");
+      }
+
+      if (notified) {
         // Record notification time to avoid spam
         const updatedBrain = {
           ...brain,
@@ -127,8 +154,6 @@ async function maybeNotifyStaleWaitingClarification(): Promise<void> {
           .update(campaignsTable)
           .set({ brainData: updatedBrain as any })
           .where(eq(campaignsTable.id, c.id));
-
-        log.info({ campaignId: c.id, workspaceId: c.workspaceId }, "Clarification watchdog: WA notification sent to owner");
       }
     } catch (err) {
       log.warn({ err, campaignId: c.id }, "Clarification watchdog failed for campaign — non-blocking");

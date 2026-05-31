@@ -539,3 +539,38 @@ export async function handleEmailEngagementWebhook(
   log.info({ sequenceId, itemId, event: engagementEvent }, "Email engagement recorded");
   return { processed: true, event: engagementEvent };
 }
+
+// ─── System Notification Helper ───────────────────────────────────────────────
+// Sends a transactional email to any address using Resend (direct API call).
+// Used for internal pipeline notifications when WhatsApp is unavailable.
+// Returns false silently if RESEND_API_KEY is not configured — never throws.
+export async function sendEmailSystemNotification(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<boolean> {
+  const log = logger.child({ component: "email-system-notification" });
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) {
+    log.info("Email system notification skipped — RESEND_API_KEY not configured");
+    return false;
+  }
+  try {
+    const from = `NexOS AI <${env.RESEND_FROM_EMAIL}>`;
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      log.warn({ status: res.status, body }, "Email system notification failed — Resend API error");
+      return false;
+    }
+    log.info({ to }, "Email system notification sent via Resend");
+    return true;
+  } catch (err) {
+    log.warn({ err, to }, "Email system notification failed — non-blocking");
+    return false;
+  }
+}

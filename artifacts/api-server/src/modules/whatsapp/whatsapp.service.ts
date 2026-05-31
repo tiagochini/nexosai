@@ -538,15 +538,21 @@ export async function sendWhatsAppSystemNotification(
   }
 }
 
-// ─── Owner Phone Lookup ────────────────────────────────────────────────────────
-// Returns the workspace owner's phone number (E.164 preferred), or null if not set.
-export async function getWorkspaceOwnerPhone(workspaceId: string): Promise<string | null> {
+// ─── Owner Contact Lookup ─────────────────────────────────────────────────────
+// Returns the workspace owner's phone + email, or nulls if not set.
+export async function getWorkspaceOwnerContact(workspaceId: string): Promise<{ phone: string | null; email: string | null }> {
   const [row] = await db
-    .select({ phone: usersTable.phone })
+    .select({ phone: usersTable.phone, email: usersTable.email })
     .from(workspacesTable)
     .innerJoin(usersTable, eq(usersTable.id, workspacesTable.ownerId))
     .where(eq(workspacesTable.id, workspaceId))
     .limit(1);
 
-  return row?.phone ?? null;
+  return { phone: row?.phone ?? null, email: row?.email ?? null };
+}
+
+/** @deprecated Use getWorkspaceOwnerContact instead */
+export async function getWorkspaceOwnerPhone(workspaceId: string): Promise<string | null> {
+  const { phone } = await getWorkspaceOwnerContact(workspaceId);
+  return phone;
 }
