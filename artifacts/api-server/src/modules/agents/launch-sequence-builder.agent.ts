@@ -51,25 +51,25 @@ export interface SequenceBuilderInput {
 // ── Phase structure by model ──────────────────────────────────────────────────
 
 const PLF_PHASES = `## ESTRUTURA DE FASES — PLF / Fórmula de Lançamento (D0–D24):
-- pre_capture (D0-D6): Aquecimento silencioso. Plante curiosidade SEM revelar o produto. Construa antecipação. 2-3 posts sociais + 1 email de aquecimento.
-- capture (D7-D13): Abra a lista de espera. Promessa de transformação. Autoridade estabelecida. 1 email de abertura de lista + 2 emails de nutrição + 2 WA broadcasts.
-- plc1 (D14-D15): A Grande Oportunidade — revela o mecanismo único, contraintuitivo. Gatilho: curiosidade + oportunidade. 1 email longo de entrega + 1 WA avisando.
-- plc2 (D16-D17): A Transformação — prova social com história real e números específicos. Gatilho: transformação + prova. 1 email de caso real + 1 WA de reforço.
-- plc3 (D18-D20): A Comunidade — pertencimento, reciprocidade, antecipação máxima. Gatilho: comunidade + urgência crescente. 1 email de bastidores + 1 email de antecipação + 2 WA.
-- cart_open (D21): EVENTO de abertura. Urgência real. Bônus por tempo limitado. 2 emails (manhã + tarde) + 2 WA (manhã + noite) + live/VSL.
-- cart_middle (D22-D23): Suporte, FAQ, depoimentos de alunos comprando. Gatilho: prova social + escassez crescente. 2 emails + 2 WA por segmento.
-- cart_close (D24): ÚLTIMAS HORAS. Medo de perda máximo. Countdown. Sem segunda chance. 3 emails (manhã/tarde/última hora) + 3 WA urgentes.
-- post_purchase: Celebração + onboarding emocional. Gatilho: reciprocidade + comunidade. 1 email de boas-vindas + 1 WA de celebração.
+- pre_capture (D0-D6): Aquecimento silencioso. Plante curiosidade SEM revelar o produto. Construa antecipação.
+- capture (D7-D13): Abra a lista de espera. Promessa de transformação. Autoridade estabelecida.
+- plc1 (D14-D15): A Grande Oportunidade — revela o mecanismo único, contraintuitivo. Gatilho: curiosidade + oportunidade.
+- plc2 (D16-D17): A Transformação — prova social com história real e números específicos.
+- plc3 (D18-D20): A Comunidade — pertencimento, reciprocidade, antecipação máxima.
+- cart_open (D21): EVENTO de abertura. Urgência real. Bônus por tempo limitado.
+- cart_middle (D22-D23): Suporte, FAQ, depoimentos. Escassez crescente.
+- cart_close (D24): ÚLTIMAS HORAS. Medo de perda máximo. Countdown.
+- post_purchase: Celebração + onboarding emocional.
 
-DISTRIBUIÇÃO OBRIGATÓRIA — 22 itens no total:
-D0-D6: 2 itens (social warm-up + email curiosity)
-D7-D13: 4 itens (lista + 2 nutrição + 1 WA)
-D14-D15: 2 itens (CPL1 email + WA)
-D16-D17: 2 itens (CPL2 email + WA)
-D18-D20: 3 itens (CPL3 email + antecipação email + WA)
-D21: 3 itens (cart open email manhã + email tarde + WA)
-D22-D23: 3 itens (FAQ email + prova social email + WA)
-D24: 3 itens (email manhã + email última hora + WA countdown)`;
+DISTRIBUIÇÃO — 14 itens no total:
+D0-D6: 1 (email curiosidade)
+D7-D13: 2 (email abertura lista + WA broadcast)
+D14-D15: 2 (CPL1 email + WA)
+D16-D17: 2 (CPL2 email prova + WA)
+D18-D20: 2 (CPL3 email antecipação + WA)
+D21: 2 (cart open email + WA)
+D22-D23: 1 (email FAQ/prova)
+D24: 2 (email última hora + WA countdown)`;
 
 const SEMENTE_PHASES = `## ESTRUTURA DE FASES — LANÇAMENTO SEMENTE (D0–D14):
 O semente é um lançamento de validação para um grupo fechado de early adopters. Objetivo: validar PMF, gerar primeiros R$10k–R$50k, coletar prova social, refinar oferta antes de escalar.
@@ -205,13 +205,10 @@ Você domina PLF (Jeff Walker), Fórmula de Lançamento (Erico Rocha), e as nuan
 
 O Big Domino da estratégia É O FIO CONDUTOR de cada item. Cada peça deve avançar a implantação dessa crença — não o produto, a crença. O produto é a consequência inevitável de quem acredita no Big Domino.
 
-## REGRAS PARA copyHints PODEROSOS:
-Cada item deve ter copyHints específicos que guiam o copywriter. NÃO use hints genéricos.
+## REGRAS PARA copyHints:
+Cada item deve ter copyHints específicos que guiam o copywriter. Máximo 2 frases por hint. NÃO use hints genéricos.
 ❌ "Email de boas-vindas motivacional"
-✅ "Abra com a dor de quem tem ideias mas não executa. Revele que existe um método para automatizar a execução. Não cite o produto ainda. Termine com cliffhanger: 'Amanhã você vai entender por que 97% dos lançamentos falham antes mesmo de começar.'"
-
-❌ "Mensagem de WhatsApp de urgência"
-✅ "Tom: amigo empolgado que quer compartilhar algo. 'Ei, o carrinho acabou de abrir e já tem [X] pessoas dentro. Você tem até [hora] para garantir o bônus exclusivo de acesso à comunidade VIP. Link: [URL]'. Follow-up 3h depois: angle de escassez crescente."
+✅ "Abra com a dor de não executar. Cliffhanger: 'Amanhã você entende por que 97% falham.'"
 
 ## CANAIS: email whatsapp social_media
 ## GATILHOS: curiosity anticipation authority social_proof urgency scarcity fear_of_loss community reciprocity transformation contrast event
@@ -369,9 +366,10 @@ export async function runLaunchSequenceBuilderAgent(
     systemPrompt: COGNITIVE_IDENTITY_LAUNCH_SEQUENCE_BUILDER + memBlock + SEQUENCE_BUILDER_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     log,
+    skipAllStaticLayers: true,
   });
 
-  return parseAgentJSON<LaunchSequencePlan>(result.content, {
+  const planRaw = parseAgentJSON<Record<string, unknown>>(result.content, {
     summary: `Sequência ${input.model} para ${input.productName}`,
     model: input.model,
     totalDays: input.totalDays,
@@ -380,4 +378,33 @@ export async function runLaunchSequenceBuilderAgent(
     keyMilestones: [],
     strategicNotes: result.content,
   });
+
+  // Normalize common Portuguese/Spanish/alternative key variants from LLM responses
+  const plan: LaunchSequencePlan = {
+    summary: (planRaw.summary ?? planRaw.resumo ?? `Sequência ${input.model}`) as string,
+    model: (planRaw.model ?? planRaw.modelo ?? input.model) as string,
+    totalDays: (planRaw.totalDays ?? planRaw.totalDias ?? input.totalDays) as number,
+    phases: ((planRaw.phases ?? planRaw.fases ?? planRaw.etapas ?? []) as LaunchSequencePlan["phases"]),
+    items: ((planRaw.items ?? planRaw.itens ?? planRaw.sequencia ?? planRaw.messages ?? planRaw.touchpoints ?? planRaw.schedule ?? []) as SequenceItemPlan[]),
+    keyMilestones: ((planRaw.keyMilestones ?? planRaw.milestones ?? planRaw.marcos ?? []) as LaunchSequencePlan["keyMilestones"]),
+    strategicNotes: (planRaw.strategicNotes ?? planRaw.observacoes ?? result.content) as string,
+  };
+
+  if (!plan.items || plan.items.length === 0) {
+    log.error(
+      {
+        workspaceId,
+        model: input.model,
+        rawLength: result.content.length,
+        rawPreview: result.content.slice(0, 600),
+        rawTail: result.content.slice(-300),
+      },
+      "Sequence builder returned 0 items — LLM response likely truncated or malformed",
+    );
+    throw new Error(
+      `Sequence builder gerou 0 itens para modelo "${input.model}". A resposta do LLM pode ter sido truncada. Tente novamente.`,
+    );
+  }
+
+  return plan;
 }

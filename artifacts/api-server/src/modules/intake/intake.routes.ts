@@ -124,6 +124,10 @@ router.post("/:campaignId", async (req, res): Promise<void> => {
     const track = (campaign.track ?? "six_digits") as CampaignTrack;
     const completeness = validateIntakeCompleteness(type, track, parsed.data.intakeData);
     const questions = getIntakeQuestions(type, track);
+    const requiredQuestions = questions.filter((q) => q.required);
+    const totalRequired = requiredQuestions.length;
+    const answeredRequired = totalRequired - completeness.missingRequired.length;
+    const percentage = totalRequired > 0 ? Math.round((answeredRequired / totalRequired) * 100) : 100;
 
     res.json({
       campaign,
@@ -131,8 +135,11 @@ router.post("/:campaignId", async (req, res): Promise<void> => {
         valid: completeness.valid,
         missingRequired: completeness.missingRequired,
         progress: Math.round(
-          (Object.keys(parsed.data.intakeData).length / questions.length) * 100,
+          (Object.keys(parsed.data.intakeData).length / Math.max(questions.length, 1)) * 100,
         ),
+        percentage,
+        answeredRequired,
+        totalRequired,
       },
     });
   } catch (err) {
@@ -169,6 +176,10 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
     const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
     const completeness = validateIntakeCompleteness(type, track, intakeData);
     const questions = getIntakeQuestions(type, track);
+    const requiredQuestions = questions.filter((q) => q.required);
+    const totalRequired = requiredQuestions.length;
+    const answeredRequired = totalRequired - completeness.missingRequired.length;
+    const percentage = totalRequired > 0 ? Math.round((answeredRequired / totalRequired) * 100) : 100;
 
     // Map id → key so the client-generated schema (IntakeQuestion.key) matches
     const questionsForClient = questions.map((q) => ({
@@ -192,8 +203,11 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
         valid: completeness.valid,
         missingRequired: completeness.missingRequired,
         progress: Math.round(
-          (Object.keys(intakeData).length / questions.length) * 100,
+          (Object.keys(intakeData).length / Math.max(questions.length, 1)) * 100,
         ),
+        percentage,
+        answeredRequired,
+        totalRequired,
       },
     });
   } catch (err) {
@@ -371,6 +385,10 @@ router.get("/:campaignId/readiness", async (req, res): Promise<void> => {
   const readiness = calculateReadinessScore(type, track, intakeData);
   const completeness = validateIntakeCompleteness(type, track, intakeData);
   const questions = getIntakeQuestions(type, track);
+  const requiredQuestions = questions.filter((q) => q.required);
+  const totalRequired = requiredQuestions.length;
+  const answeredRequired = totalRequired - completeness.missingRequired.length;
+  const percentage = totalRequired > 0 ? Math.round((answeredRequired / totalRequired) * 100) : 100;
 
   res.json({
     campaignId,
@@ -379,8 +397,11 @@ router.get("/:campaignId/readiness", async (req, res): Promise<void> => {
       valid: completeness.valid,
       missingRequired: completeness.missingRequired,
       progress: Math.round(
-        ((questions.length - completeness.missingRequired.length) / questions.length) * 100
+        ((questions.length - completeness.missingRequired.length) / Math.max(questions.length, 1)) * 100
       ),
+      percentage,
+      answeredRequired,
+      totalRequired,
     },
   });
 });

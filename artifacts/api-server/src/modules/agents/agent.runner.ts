@@ -63,6 +63,13 @@ export interface RunAgentOptions {
    * Use for all agents inside orchestrateCampaign(). Never use for interactive/chat agents.
    */
   pipelineMode?: boolean;
+  /**
+   * Skip all static layers (DOMINO, PLF, Cognitive Foundations, Constraint Reasoning,
+   * Master Evolution Prompt). Reduces system prompt by ~110KB. Use ONLY for mechanical
+   * JSON-output agents (e.g. sequence builder, calendar generator) that don't need
+   * persuasion philosophy — just the agent's own systemPrompt and user message.
+   */
+  skipAllStaticLayers?: boolean;
 }
 
 export interface RunAgentResult {
@@ -465,15 +472,26 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   const phaseBlock = opts.phaseContext ?? "";
   // Use cached static layers (pre-computed at module load — avoids 130KB realloc per call).
   // Pipeline mode drops COGNITIVE_FOUNDATIONS (27KB) to reduce heap across 10+ sequential calls.
-  const staticLayers = (opts.pipelineMode || _globalPipelineMode) ? _PIPELINE_PROMPT_LAYERS : _STATIC_PROMPT_LAYERS;
-  const enrichedSystemPrompt =
-    buildTemporalContextBlock() +
-    staticLayers +
-    memoryBlock +
-    profileBlock +
-    phaseBlock +
-    systemPrompt +
-    DOMINO_SELF_CRITIC;
+  // skipAllStaticLayers drops ALL ~110KB philosophy layers for mechanical JSON-output agents.
+  let enrichedSystemPrompt: string;
+  if (opts.skipAllStaticLayers) {
+    // Mechanical agent: just temporal context + optional memory/profile + agent system prompt.
+    // No DOMINO, no PLF, no cognitive foundations, no constraint reasoning.
+    enrichedSystemPrompt =
+      buildTemporalContextBlock() +
+      memoryBlock +
+      systemPrompt;
+  } else {
+    const staticLayers = (opts.pipelineMode || _globalPipelineMode) ? _PIPELINE_PROMPT_LAYERS : _STATIC_PROMPT_LAYERS;
+    enrichedSystemPrompt =
+      buildTemporalContextBlock() +
+      staticLayers +
+      memoryBlock +
+      profileBlock +
+      phaseBlock +
+      systemPrompt +
+      DOMINO_SELF_CRITIC;
+  }
 
   const [ws] = await db
     .select({
@@ -539,7 +557,16 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       .returning({ id: agentExecutionLogsTable.id });
     execLogId = execLog?.id;
   } catch (logErr) {
-    log.warn({ logErr, agentRole }, "Failed to insert agent execution log start row");
+    log.error(
+      {
+        err: logErr,
+        agentRole,
+        workspaceId,
+        campaignId: isValidCampaignId ? campaignId : null,
+        stack: logErr instanceof Error ? logErr.stack : undefined,
+      },
+      "AUDIT_LOG_INSERT_FAILED: exec_log start row insert threw — investigate DB constraint or schema mismatch",
+    );
   }
 
   log.info({ campaignId, workspaceId, agentRole, isDryRun: env.DRY_RUN_MODE }, `Agent ${agentRole} started`);
@@ -1029,31 +1056,61 @@ export function parseAgentJSON<T = Record<string, unknown>>(
   content: string,
   fallback: T,
 ): T {
-  // Extract JSON from code block (with or without closing ```)
+  // ── Strategy 1: code block extraction (most reliable when LLM wraps JSON in ```) ──
   const codeBlockMatch =
     content.match(/```json\s*([\s\S]*?)```/) ??
     content.match(/```(?:json)?\s*(\{[\s\S]*)/);
 
-  // Or find raw JSON object
-  const rawMatch = content.match(/\{[\s\S]*\}/) ?? content.match(/\{[\s\S]*/);
-
-  const candidate = codeBlockMatch
-    ? (codeBlockMatch[1] ?? "")
-    : (rawMatch?.[0] ?? "");
-
-  if (!candidate.trim()) return fallback;
-
-  // First try: parse as-is (complete JSON)
-  try {
-    return JSON.parse(candidate) as T;
-  } catch { /* continue */ }
-
-  // Second try: repair truncated JSON
-  try {
-    return JSON.parse(repairTruncatedJson(candidate)) as T;
-  } catch {
-    return fallback;
+  if (codeBlockMatch) {
+    const c = (codeBlockMatch[1] ?? "").trim();
+    try { return JSON.parse(c) as T; } catch { /* continue */ }
+    try { return JSON.parse(repairTruncatedJson(c)) as T; } catch { /* continue */ }
   }
+
+  // ── Strategy 2: scan for balanced JSON objects, prefer largest valid one ──
+  // This handles the common case where the LLM adds narrative text before/after JSON.
+  // We look for every `{"` occurrence (strict property start) and find its balanced close.
+  let bestCandidate = "";
+  let searchFrom = 0;
+  while (true) {
+    const start = content.indexOf('{"', searchFrom);
+    if (start === -1) break;
+    searchFrom = start + 1;
+
+    // Walk forward counting braces to find the matching close
+    let depth = 0;
+    let end = -1;
+    for (let i = start; i < content.length; i++) {
+      if (content[i] === "{") depth++;
+      else if (content[i] === "}") {
+        depth--;
+        if (depth === 0) { end = i; break; }
+      }
+    }
+    if (end === -1) break; // unclosed — truncated; stop scanning
+
+    const candidate = content.slice(start, end + 1);
+    if (candidate.length > bestCandidate.length) {
+      try {
+        JSON.parse(candidate); // validate
+        bestCandidate = candidate;
+        // Don't break — keep scanning for a larger valid object
+      } catch { /* not valid JSON at this start position */ }
+    }
+  }
+
+  if (bestCandidate) {
+    try { return JSON.parse(bestCandidate) as T; } catch { /* continue */ }
+  }
+
+  // ── Strategy 3: original greedy `{...}` match (last resort) ──
+  const rawMatch = content.match(/\{[\s\S]*\}/) ?? content.match(/\{[\s\S]*/);
+  const raw = rawMatch?.[0] ?? "";
+
+  if (!raw.trim()) return fallback;
+
+  try { return JSON.parse(raw) as T; } catch { /* continue */ }
+  try { return JSON.parse(repairTruncatedJson(raw)) as T; } catch { return fallback; }
 }
 
 // ── Output-Judged Agent Runner ─────────────────────────────────────────────────
