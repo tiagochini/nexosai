@@ -16,3 +16,4 @@
 - [Simulation Exec Log Artifact](sim-exec-log-artifact.md) — WARN [19] "0 audit logs" in launch sim is expected (simulatePhaseCompletion injects DB rows, real agents get RC-010 skipped); not a production bug.
 - [Content Page expandApiPieces](content-expand-api-pieces.md) — 6 content types (content_calendar, ad_copy, vsl_script, webinar_script, targeting_config, media_buying_plan) need explicit handlers; ApiContentPiece.content is `unknown` (JSONB object from DB, not string).
 - [Test Script Registration Gate](test-script-invite-code.md) — test scripts must create a temp inviteCodesTable row and pass inviteCode in register body; gate in auth.routes.ts blocks open registration when PLATFORM_OPEN≠"true".
+- [RecordButton Portal Fix](recordbutton-portal.md) — backdrop-blur-sm on header traps fixed-position overlays; all RecordButton overlays must use createPortal(…, document.body) with z-[9000]+.

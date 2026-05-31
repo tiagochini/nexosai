@@ -18,6 +18,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
@@ -190,7 +191,7 @@ function PreflightDialog({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9000] flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm">
       <div className="w-full sm:max-w-lg border border-border bg-background shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90dvh]">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-card/60 shrink-0">
@@ -356,7 +357,7 @@ function CountdownOverlay({ onDone }: { onDone: () => void }) {
   const isGo = count === "GO";
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md pointer-events-none">
+    <div className="fixed inset-0 z-[9001] flex items-center justify-center bg-black/85 backdrop-blur-md pointer-events-none">
       <div className="text-center select-none">
         <div
           key={String(count)}
@@ -394,10 +395,14 @@ function CountdownOverlay({ onDone }: { onDone: () => void }) {
   );
 }
 
-// ── Webcam PiP Overlay ─────────────────────────────────────────────────────────
+// ── Webcam PiP Overlay (draggable) ────────────────────────────────────────────
 
 function WebcamPip({ stream }: { stream: MediaStream }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const dragging = useRef(false);
+  const dragOffset = useRef({ ox: 0, oy: 0 });
+
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -405,12 +410,42 @@ function WebcamPip({ stream }: { stream: MediaStream }) {
     }
   }, [stream]);
 
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      setPos({ x: e.clientX - dragOffset.current.ox, y: e.clientY - dragOffset.current.oy });
+    };
+    const onUp = () => { dragging.current = false; };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragOffset.current = { ox: e.clientX - rect.left, oy: e.clientY - rect.top };
+    dragging.current = true;
+    e.preventDefault();
+  };
+
+  const style: React.CSSProperties = pos
+    ? { position: "fixed", left: pos.x, top: pos.y, zIndex: 9000 }
+    : { position: "fixed", bottom: 96, right: 24, zIndex: 9000 };
+
   return (
-    <div className="fixed bottom-24 right-6 z-[60] w-36 h-24 border-2 border-primary/60 shadow-2xl overflow-hidden bg-black">
-      <video ref={videoRef} muted autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
-      <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 py-0.5">
+    <div
+      style={style}
+      className="w-36 h-24 border-2 border-primary/60 shadow-2xl overflow-hidden bg-black cursor-grab active:cursor-grabbing select-none"
+      onMouseDown={onMouseDown}
+      title="Arraste para reposicionar"
+    >
+      <video ref={videoRef} muted autoPlay playsInline className="w-full h-full object-cover scale-x-[-1] pointer-events-none" />
+      <div className="absolute bottom-1 left-1 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 pointer-events-none">
         <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
-        <span className="font-mono text-[9px] uppercase tracking-widest text-white/80">Cam</span>
+        <span className="font-mono text-[9px] uppercase tracking-widest text-white/80">⠿ Cam</span>
       </div>
     </div>
   );
@@ -888,36 +923,41 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
   const hasActive = uiState === "recording" || uiState === "paused";
 
-  // ── Countdown overlay ─────────────────────────────────────────────────────
-  if (uiState === "countdown") {
-    return <CountdownOverlay onDone={handleCountdownDone} />;
-  }
-
-  // ── Pre-flight setup dialog ───────────────────────────────────────────────
-  if (showSetup) {
-    return (
-      <>
-        {camStream && <WebcamPip stream={camStream} />}
-        <PreflightDialog
-          config={config}
-          onConfig={setConfig}
-          onStart={() => beginCountdown(config)}
-          onClose={() => setShowSetup(false)}
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      {/* Webcam PiP during recording */}
-      {hasActive && camStream && <WebcamPip stream={camStream} />}
+      {/* ── Portal overlays ── escape header's backdrop-blur stacking context ── */}
 
-      {/* ── Minimized pill — fixed bottom-right when minimized ─────────── */}
-      {minimized && hasActive && (
+      {/* Countdown */}
+      {uiState === "countdown" && createPortal(
+        <CountdownOverlay onDone={handleCountdownDone} />,
+        document.body,
+      )}
+
+      {/* Pre-flight setup + optional webcam preview */}
+      {showSetup && createPortal(
+        <>
+          {camStream && <WebcamPip stream={camStream} />}
+          <PreflightDialog
+            config={config}
+            onConfig={setConfig}
+            onStart={() => beginCountdown(config)}
+            onClose={() => setShowSetup(false)}
+          />
+        </>,
+        document.body,
+      )}
+
+      {/* Webcam PiP during active recording */}
+      {hasActive && camStream && createPortal(
+        <WebcamPip stream={camStream} />,
+        document.body,
+      )}
+
+      {/* ── Minimized pill ── */}
+      {minimized && hasActive && createPortal(
         <button
           onClick={() => setMinimized(false)}
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-3 py-2 border
+          className={`fixed bottom-6 right-6 z-[9000] flex items-center gap-2 px-3 py-2 border
             text-xs font-mono uppercase tracking-widest shadow-lg transition-all
             ${uiState === "paused"
               ? "border-yellow-400/60 bg-yellow-400/10 text-yellow-400"
@@ -926,11 +966,11 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           <span className={`w-2 h-2 rounded-full ${uiState === "paused" ? "bg-yellow-400" : "bg-destructive animate-pulse"}`} />
           <span>{fmtDuration(elapsed)}</span>
           <Maximize2 className="h-3 w-3 opacity-60" />
-        </button>
+        </button>,
+        document.body,
       )}
 
       {/* ── Inline header button — always visible in TopBar ───────────── */}
-      {/* Idle: open setup dialog / Active: open panel / Stopped: open panel */}
       <button
         onClick={() => {
           if (!hasActive && uiState !== "stopped") {
@@ -947,12 +987,15 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
             ? "border-yellow-400/60 bg-yellow-400/10 text-yellow-400 hover:bg-yellow-400/20"
             : uiState === "stopped"
             ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+            : showSetup
+            ? "border-primary/60 bg-primary/10 text-primary"
             : "border-border/50 bg-card/80 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-card"}`}
       >
         <span className={`w-2 h-2 rounded-full shrink-0 ${
           uiState === "recording" ? "bg-destructive animate-pulse" :
           uiState === "paused" ? "bg-yellow-400" :
           uiState === "stopped" ? "bg-primary" :
+          showSetup ? "bg-primary animate-pulse" :
           "bg-destructive/70"
         }`} />
         {uiState === "recording"
@@ -961,13 +1004,15 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           ? <span className="tabular-nums">⏸ {fmtDuration(elapsed)}</span>
           : uiState === "stopped"
           ? <span>Sessão Salva</span>
+          : showSetup
+          ? <span>Configurando...</span>
           : <span>Gravar</span>
         }
       </button>
 
-      {/* ── Active recording bar ────────────────────────────────────────── */}
-      {uiState === "recording" && (
-        <div className="fixed bottom-6 right-6 z-40 flex items-center shadow-2xl border border-destructive/70
+      {/* ── Active recording bar ── */}
+      {uiState === "recording" && createPortal(
+        <div className="fixed bottom-6 right-6 z-[9000] flex items-center shadow-2xl border border-destructive/70
           bg-destructive/90 text-white font-mono text-xs uppercase tracking-widest">
           <button onClick={() => setOpen(o => !o)} className="flex items-center gap-2 px-3 py-2.5 hover:bg-white/10 transition-colors">
             <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse shrink-0" />
@@ -993,12 +1038,13 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           <button onClick={() => void stopCapture()} className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/40 transition-colors">
             <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Parar</span>
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {/* ── Paused bar ─────────────────────────────────────────────────── */}
-      {uiState === "paused" && (
-        <div className="fixed bottom-6 right-6 z-40 flex items-center shadow-2xl border border-yellow-400/80
+      {/* ── Paused bar ── */}
+      {uiState === "paused" && createPortal(
+        <div className="fixed bottom-6 right-6 z-[9000] flex items-center shadow-2xl border border-yellow-400/80
           bg-yellow-500/90 text-black font-mono text-xs uppercase tracking-widest">
           <button onClick={() => setOpen(o => !o)} className="flex items-center gap-2 px-3 py-2.5 hover:bg-black/10 transition-colors">
             <span className="w-2.5 h-2.5 rounded-full bg-black/60 shrink-0" />
@@ -1024,12 +1070,13 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
           <button onClick={() => void stopCapture()} className="flex items-center gap-1.5 px-3 py-2.5 bg-black/20 hover:bg-black/30 transition-colors">
             <Square className="h-3.5 w-3.5 fill-current" /><span className="hidden sm:inline">Parar</span>
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
 
-      {/* ── Panel (details/events + stopped actions) ────────────────────── */}
-      {open && (
-        <div className="fixed bottom-16 right-0 left-0 sm:left-auto sm:right-6 sm:w-96 sm:max-w-[calc(100vw-3rem)] z-50 border border-border bg-background shadow-2xl flex flex-col max-h-[70dvh] sm:max-h-[80dvh]">
+      {/* ── Panel (details/events + stopped actions) ── */}
+      {open && createPortal(
+        <div className="fixed bottom-16 right-0 left-0 sm:left-auto sm:right-6 sm:w-96 sm:max-w-[calc(100vw-3rem)] z-[9000] border border-border bg-background shadow-2xl flex flex-col max-h-[70dvh] sm:max-h-[80dvh]">
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/60 shrink-0">
             <div className="flex items-center gap-2">
@@ -1184,7 +1231,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }

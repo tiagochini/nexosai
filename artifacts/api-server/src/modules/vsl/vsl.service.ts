@@ -83,11 +83,12 @@ export async function generateVsl(
   workspaceId: string,
   vslId: string,
   log: Logger,
+  instructions?: string,
 ) {
   const vsl = await getVsl(workspaceId, vslId);
 
-  if (!["draft", "rejected"].includes(vsl.status)) {
-    throw new ValidationError("Only draft or rejected VSLs can be regenerated");
+  if (!["draft", "rejected", "generated", "awaiting_approval", "approved"].includes(vsl.status)) {
+    throw new ValidationError("Only draft, rejected or generated VSLs can be regenerated");
   }
 
   await db
@@ -175,6 +176,7 @@ export async function generateVsl(
       strategy,
       profile,
       log,
+      instructions,
     );
 
     await db

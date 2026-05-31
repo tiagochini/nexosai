@@ -52,7 +52,8 @@ router.get("/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.post("/:id/generate", requireAuth, async (req, res): Promise<void> => {
-  const vsl = await generateVsl(req.auth.workspaceId, req.params["id"] as string, req.log);
+  const { instructions } = (req.body ?? {}) as { instructions?: string };
+  const vsl = await generateVsl(req.auth.workspaceId, req.params["id"] as string, req.log, instructions);
   res.json({ vsl });
 });
 

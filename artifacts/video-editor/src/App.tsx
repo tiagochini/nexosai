@@ -397,6 +397,7 @@ function VideoEditor() {
 
   // Smart Edit state
   const [smartScript, setSmartScript] = useState("");
+  const [smartIntent, setSmartIntent] = useState("");
   const [videoType, setVideoType] = useState<"cpl1" | "cpl2" | "cpl3" | "vsl">("cpl1");
   const [smartTranscriptStatus, setSmartTranscriptStatus] = useState<Record<string, TranscriptStatus>>({});
   const [smartMapping, setSmartMapping] = useState<SmartMappingResult | null>(null);
@@ -518,7 +519,7 @@ function VideoEditor() {
       const res = await fetch(`${API_BASE}/video-editor/smart-edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileIds: files.map(f => f.fileId), script: smartScript, videoType }),
+        body: JSON.stringify({ fileIds: files.map(f => f.fileId), script: smartScript, videoType, intent: smartIntent.trim() || undefined }),
       });
       if (!res.ok) {
         const err = await res.json() as { error: string };
@@ -872,6 +873,25 @@ function VideoEditor() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* AI Intent input */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-primary/15 shrink-0">
+                  <Brain className="w-3 h-3 text-primary" />
+                </span>
+                Descreva a intenção do vídeo para a IA
+                <span className="text-xs text-muted-foreground font-normal">— opcional, mas melhora o resultado</span>
+              </label>
+              <textarea
+                value={smartIntent}
+                onChange={e => setSmartIntent(e.target.value)}
+                placeholder="Ex: quero um ritmo dinâmico com cortes nos momentos de hesitação, destaque os momentos de prova social, o vídeo deve parecer energético e urgente para o público que já conhece o produto..."
+                rows={3}
+                className="w-full bg-primary/5 border border-primary/20 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary resize-none leading-relaxed"
+              />
+              <p className="text-xs text-muted-foreground/70">A IA usa esta intenção para decidir quais trechos selecionar, ritmo e sequência de cada cena.</p>
             </div>
 
             {/* Script input */}

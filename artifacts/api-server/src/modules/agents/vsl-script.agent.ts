@@ -346,6 +346,7 @@ export async function runVSLScriptAgent(
   strategy: StrategyOutput,
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
+  instructions?: string,
 ): Promise<VSLOutput> {
   const memCtx = await getMemoryContext(workspaceId, "vsl_script", String(intakeData["product.category"] ?? ""));
   const memBlock = buildMemoryContextBlock(memCtx);
@@ -387,7 +388,7 @@ ${avatarContext}
 5. O stack building deve ter valores percebidos de cada componente somados em voz alta
 6. A garantia deve ser posicionada como prova de confiança, não como política
 7. Mínimo 35 minutos de conteúdo (~4.500 palavras em ritmo natural de fala)
-
+${instructions ? `\n**INSTRUÇÃO ESPECIAL DO USUÁRIO (prioridade máxima):** ${instructions}\nAplique esta instrução em toda a VSL sem exceção.` : ""}
 Retorne APENAS o JSON do roteiro completo.`;
 
   const critique = await runAgentWithCritique({

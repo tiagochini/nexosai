@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Video, Plus, Loader2, CheckCircle2, XCircle, Eye,
-  FileText, Zap, ChevronRight, ArrowLeft,
+  FileText, Zap, ChevronRight, ArrowLeft, Sparkles, MessageSquare, Send,
 } from "lucide-react";
 
 interface VslItem {
@@ -40,6 +40,8 @@ export default function VslsPage() {
   const [creating, setCreating] = useState(fromCampaign || false);
   const [selectedVsl, setSelectedVsl] = useState<VslItem | null>(null);
   const [form, setForm] = useState({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "", campaignId: fromCampaignId ?? "" });
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [refineText, setRefineText] = useState("");
   const queryClient = useQueryClient();
 
   // Auto-load campaign data for pre-fill when coming from campaign detail
@@ -68,28 +70,17 @@ export default function VslsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["/api/vsls"],
-    queryFn: async () => {
-      const res = await customFetch<Response>("/api/vsls");
-      if (!res.ok) return { vsls: [] };
-      return res.json() as Promise<{ vsls: VslItem[] }>;
-    },
+    queryFn: () => customFetch<{ vsls: VslItem[] }>("/api/vsls").catch(() => ({ vsls: [] })),
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>("/api/vsls", {
+      const data = await customFetch<{ vsl: VslItem }>("/api/vsls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          campaignId: form.campaignId || undefined,
-        }),
+        body: JSON.stringify({ ...form, campaignId: form.campaignId || undefined }),
       });
-      if (!res.ok) {
-        const e = await res.json() as { error?: string };
-        throw new Error(e.error ?? "Erro ao criar VSL");
-      }
-      return res.json() as Promise<{ vsl: VslItem }>;
+      return data;
     },
     onSuccess: (d) => {
       toast.success("VSL criada! Gerando roteiro com o agente...");
@@ -106,8 +97,7 @@ export default function VslsPage() {
 
   const generateMutation = useMutation({
     mutationFn: async (vslId: string) => {
-      const res = await customFetch<Response>(`/api/vsls/${vslId}/generate`, { method: "POST" });
-      if (!res.ok) throw new Error("Erro ao gerar roteiro");
+      await customFetch<{ vsl: VslItem }>(`/api/vsls/${vslId}/generate`, { method: "POST" });
     },
     onSuccess: () => {
       toast.success("Roteiro gerado com o agente!");
@@ -116,10 +106,26 @@ export default function VslsPage() {
     onError: () => toast.error("Erro ao gerar roteiro"),
   });
 
+  const refineMutation = useMutation({
+    mutationFn: async ({ vslId, instructions }: { vslId: string; instructions: string }) => {
+      await customFetch<{ vsl: VslItem }>(`/api/vsls/${vslId}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instructions }),
+      });
+    },
+    onSuccess: () => {
+      toast.success("IA refinou o roteiro com suas instruções!");
+      setRefineOpen(false);
+      setRefineText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/vsls"] });
+    },
+    onError: () => toast.error("Erro ao refinar roteiro"),
+  });
+
   const approveMutation = useMutation({
     mutationFn: async (vslId: string) => {
-      const res = await customFetch<Response>(`/api/vsls/${vslId}/approve`, { method: "POST" });
-      if (!res.ok) throw new Error("Erro");
+      await customFetch<{ vsl: VslItem }>(`/api/vsls/${vslId}/approve`, { method: "POST" });
     },
     onSuccess: () => { toast.success("VSL aprovada!"); queryClient.invalidateQueries({ queryKey: ["/api/vsls"] }); },
     onError: () => toast.error("Erro ao aprovar VSL"),
@@ -149,7 +155,52 @@ export default function VslsPage() {
               <CheckCircle2 className="h-3.5 w-3.5" />Aprovar VSL
             </Button>
           )}
+          {(selectedVsl.sections ?? []).length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setRefineOpen(v => !v)}
+              className="font-mono uppercase tracking-widest rounded-none gap-2 h-9 px-4 text-xs border-primary/40 text-primary hover:bg-primary/10">
+              <Sparkles className="h-3.5 w-3.5" />Refinar com IA
+            </Button>
+          )}
         </div>
+
+        {/* AI Refine Panel */}
+        {refineOpen && (
+          <div className="border border-primary/30 bg-primary/5 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <span className="font-mono text-xs font-bold uppercase tracking-widest text-primary">Chat com a IA do VSL</span>
+            </div>
+            <p className="text-xs text-muted-foreground font-mono">Descreva como quer que a IA refine ou reescreva o roteiro. Ex: "torne o gancho mais agressivo", "adicione mais prova social na seção de credibilidade", "reduza para 20 minutos mantendo as 6 objeções".</p>
+            <div className="flex gap-2">
+              <textarea
+                value={refineText}
+                onChange={e => setRefineText(e.target.value)}
+                placeholder="O que você quer que a IA ajuste neste roteiro VSL?"
+                rows={3}
+                className="flex-1 bg-background border border-border/50 rounded-none px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                onKeyDown={e => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && refineText.trim()) {
+                    refineMutation.mutate({ vslId: selectedVsl.id, instructions: refineText.trim() });
+                  }
+                }}
+              />
+            </div>
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-mono text-muted-foreground/50">Ctrl+Enter para enviar · A IA vai regenerar o roteiro completo com suas instruções</p>
+              <Button
+                size="sm"
+                onClick={() => refineMutation.mutate({ vslId: selectedVsl.id, instructions: refineText.trim() })}
+                disabled={!refineText.trim() || refineMutation.isPending}
+                className="font-mono uppercase tracking-widest rounded-none gap-2 h-8 px-4 text-xs btn-weapon-primary"
+              >
+                {refineMutation.isPending
+                  ? <><Loader2 className="h-3 w-3 animate-spin" />Refinando...</>
+                  : <><Send className="h-3 w-3" />Enviar</>}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           {(selectedVsl.sections ?? []).length === 0 ? (
             <div className="py-12 text-center">
