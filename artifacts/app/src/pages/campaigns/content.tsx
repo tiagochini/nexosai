@@ -850,6 +850,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
   const result: ContentPiece[] = [];
 
   for (const piece of pieces) {
+    try {
     const rawType = piece.type?.toLowerCase().replace(/\s+/g, "_") ?? "copy";
     const status: Status = STATUS_MAP[piece.status] ?? "pending";
     const launchKey = piece.launchPhase?.toLowerCase().replace(/\s+/g, "_") ?? "";
@@ -902,8 +903,9 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
         }
       }
       // WhatsApp messages
-      const wa = c["whatsapp"] as Array<Record<string, unknown>> | undefined;
-      wa?.forEach((msg, i) => {
+      const waRaw = c["whatsapp"];
+      const wa = Array.isArray(waRaw) ? (waRaw as Array<Record<string, unknown>>) : [];
+      wa.forEach((msg, i) => {
         result.push(child(`wa:${i}`, {
           platform: "whatsapp", type: "message",
           dayIndex: i < 2 ? 0 : i < 4 ? 5 : 7,
@@ -913,7 +915,8 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
       });
       // Sales page headline card
       const sp = c["salesPage"] as Record<string, unknown> | undefined;
-      const spSections = sp?.["sections"] as Array<Record<string, unknown>> | undefined;
+      const spSectionsRaw = sp?.["sections"];
+      const spSections = Array.isArray(spSectionsRaw) ? (spSectionsRaw as Array<Record<string, unknown>>) : undefined;
       const hero = spSections?.find(s => (s["section"] as string)?.includes("hero")) ?? spSections?.[0];
       if (hero?.["headline"]) {
         result.push(child("sales_page", {
@@ -1301,6 +1304,25 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
         id: piece.id, // use real ID for true unknowns
         body: extractBodyText(piece.content as unknown, rawType),
       }));
+    }
+    } catch (pieceErr) {
+      // If one piece fails to expand, add a simple fallback card so the rest are unaffected
+      console.error("[expandApiPieces] piece failed:", piece.type, pieceErr);
+      try {
+        const rawContent = piece.content;
+        result.push({
+          id: piece.id,
+          platform: "instagram",
+          type: "copy" as const,
+          dayIndex: 0,
+          title: `📄 ${(piece.type ?? "conteúdo").replace(/_/g, " ")}`,
+          body: typeof rawContent === "string"
+            ? rawContent.slice(0, 500)
+            : JSON.stringify(rawContent ?? {}, null, 2).slice(0, 500),
+          status: (STATUS_MAP[piece.status] ?? "pending") as Status,
+          segment: "all" as const,
+        });
+      } catch { /* ignore double-fault */ }
     }
   }
 
