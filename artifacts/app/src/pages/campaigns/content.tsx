@@ -1842,9 +1842,11 @@ export default function ContentApproval() {
   const { data: campaignData, isLoading } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}`],
     queryFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{ campaign: { id: string; title: string; status: string } }>;
+      try {
+        return await customFetch<{ campaign: { id: string; title: string; status: string } }>(`/api/campaigns/${campaignId}`);
+      } catch {
+        return null;
+      }
     },
     enabled: !!campaignId,
   });
@@ -1882,16 +1884,11 @@ export default function ContentApproval() {
   // Transition campaign from awaiting_approval → approved when user approves all content
   const approveCampaignMutation = useMutation({
     mutationFn: async () => {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/status`, {
+      return await customFetch<{ campaign: unknown }>(`/api/campaigns/${campaignId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "approved" }),
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao aprovar campanha");
-      }
-      return res.json();
     },
     onSuccess: () => {
       toast.success("Conteúdo aprovado! Iniciando lançamento...");
@@ -1932,12 +1929,11 @@ export default function ContentApproval() {
     setLoadingPiece(id);
     try {
       const parentId = getParentId(id);
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
+      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: "" }),
       });
-      if (!res.ok) throw new Error("Erro");
       toast.success("Peça aprovada");
     } catch {
       // Revert on failure
@@ -2031,7 +2027,7 @@ export default function ContentApproval() {
     // Deduplicate parent IDs to avoid duplicate API calls
     const parentIds = [...new Set(pendingPieces.map(p => getParentId(p.id)))];
     for (const parentId of parentIds) {
-      await customFetch<Response>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
+      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedback: "" }),
@@ -2047,15 +2043,11 @@ export default function ContentApproval() {
   const handleRegenerateContent = async () => {
     setRegeneratingContent(true);
     try {
-      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/execute/content`, {
+      await customFetch<{ message?: string }>(`/api/campaigns/${campaignId}/execute/content`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: "{}",
       });
-      if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? "Erro ao regenerar conteúdo");
-      }
       toast.success("Agentes ativados. Novo conteúdo sendo gerado — acompanhe o progresso na campanha.");
       await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
       setLocation(`/campaigns/${campaignId}`);

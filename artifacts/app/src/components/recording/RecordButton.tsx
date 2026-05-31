@@ -913,7 +913,7 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       {/* Webcam PiP during recording */}
       {hasActive && camStream && <WebcamPip stream={camStream} />}
 
-      {/* ── Minimized pill ─────────────────────────────────────────────── */}
+      {/* ── Minimized pill — fixed bottom-right when minimized ─────────── */}
       {minimized && hasActive && (
         <button
           onClick={() => setMinimized(false)}
@@ -929,20 +929,41 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
         </button>
       )}
 
-      {/* ── Idle pill ──────────────────────────────────────────────────── */}
-      {!hasActive && uiState !== "stopped" && (
-        <button
-          onClick={openSetup}
-          title="Iniciar Gravação de Lançamento"
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 border
-            border-border/50 bg-card/90 text-muted-foreground hover:text-foreground
-            hover:border-primary/40 hover:bg-card text-xs font-mono uppercase tracking-widest
-            shadow-lg transition-all hover:shadow-primary/10"
-        >
-          <Circle className="h-3.5 w-3.5 text-destructive" />
-          <span>Gravar</span>
-        </button>
-      )}
+      {/* ── Inline header button — always visible in TopBar ───────────── */}
+      {/* Idle: open setup dialog / Active: open panel / Stopped: open panel */}
+      <button
+        onClick={() => {
+          if (!hasActive && uiState !== "stopped") {
+            openSetup();
+          } else {
+            setOpen(o => !o);
+          }
+        }}
+        title={hasActive ? "Painel de Gravação" : uiState === "stopped" ? "Sessão Concluída" : "Iniciar Gravação de Lançamento"}
+        className={`flex items-center gap-2 px-3 h-9 border text-xs font-mono uppercase tracking-widest transition-all
+          ${uiState === "recording"
+            ? "border-destructive/60 bg-destructive/10 text-destructive hover:bg-destructive/20"
+            : uiState === "paused"
+            ? "border-yellow-400/60 bg-yellow-400/10 text-yellow-400 hover:bg-yellow-400/20"
+            : uiState === "stopped"
+            ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+            : "border-border/50 bg-card/80 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-card"}`}
+      >
+        <span className={`w-2 h-2 rounded-full shrink-0 ${
+          uiState === "recording" ? "bg-destructive animate-pulse" :
+          uiState === "paused" ? "bg-yellow-400" :
+          uiState === "stopped" ? "bg-primary" :
+          "bg-destructive/70"
+        }`} />
+        {uiState === "recording"
+          ? <span className="tabular-nums">{fmtDuration(elapsed)}</span>
+          : uiState === "paused"
+          ? <span className="tabular-nums">⏸ {fmtDuration(elapsed)}</span>
+          : uiState === "stopped"
+          ? <span>Sessão Salva</span>
+          : <span>Gravar</span>
+        }
+      </button>
 
       {/* ── Active recording bar ────────────────────────────────────────── */}
       {uiState === "recording" && (
