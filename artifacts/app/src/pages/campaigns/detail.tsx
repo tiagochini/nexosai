@@ -1402,7 +1402,7 @@ export default function CampaignDetail() {
   // ── Content query ──────────────────────────────────────────────────────────────
   const { data: contentData, isLoading: contentLoading } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}/content`],
-    enabled: !!campaignId && (activeTab === "conteudo" || activeTab === "agentes"),
+    enabled: !!campaignId && (activeTab === "conteudo" || activeTab === "agentes" || campaign?.status === "generating"),
     refetchInterval: isActive ? 5000 : false,
     staleTime: 0,
     queryFn: async () => {
@@ -1647,6 +1647,39 @@ export default function CampaignDetail() {
     },
   });
 
+  // ── Failsafe retry ─────────────────────────────────────────────────────────────
+  // Calls POST /execute/retry to clear the pipeline lock, force-reset status, and
+  // re-enqueue the appropriate job. Preserves already-generated content pieces.
+  const [retryPending, setRetryPending] = useState(false);
+
+  const handleRetry = async () => {
+    if (retryPending) return;
+    setRetryPending(true);
+    try {
+      const res = await customFetch<Response>(`/api/campaigns/${campaignId}/execute/retry`, { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        toast.error(body?.error ?? "Erro ao retomar pipeline.", { duration: 6000 });
+        return;
+      }
+      toast.success("Pipeline retomado — processando...", { description: "Peças já geradas serão preservadas." });
+      setActiveTab("agentes");
+      // Optimistically update so stale detection doesn't immediately re-show the retry button
+      queryClient.setQueryData(getGetCampaignQueryKey(campaignId), (old: unknown) => {
+        if (!old || typeof old !== "object") return old;
+        const o = old as { campaign?: Record<string, unknown> };
+        if (!o.campaign) return old;
+        const now = new Date().toISOString();
+        return { ...o, campaign: { ...o.campaign, updatedAt: now, brainData: { pipelineCheckpoint: { lockedAt: now, lastProgressAt: now } } } };
+      });
+      queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+    } catch {
+      toast.error("Erro ao retomar pipeline.", { duration: 6000 });
+    } finally {
+      setRetryPending(false);
+    }
+  };
+
   // Reset execute mutation when campaign is strategy_ready (prevents stuck "isPending" state
   // from a previous attempt that was interrupted e.g. by API server restart)
   useEffect(() => {
@@ -1783,7 +1816,7 @@ export default function CampaignDetail() {
   const targetingD = ((campaignRaw["targetingData"] ?? {}) as Record<string, unknown>);
   const timelineD = ((campaignRaw["timelineData"] ?? {}) as Record<string, unknown>);
 
-  const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string } | null => {
+  const getNextAction = (): { label: string; phase?: CampaignExecuteInputPhase; href?: string; description: string; isRetry?: boolean } | null => {
     switch (campaign.status) {
       case "analyzing": {
         const brainRaw = (campaignRaw["brainData"] ?? {}) as Record<string, unknown>;
@@ -1795,12 +1828,44 @@ export default function CampaignDetail() {
         const checkTime = cp?.lastProgressAt ?? updatedAt;
         const isStale = !cp?.lockedAt || (checkTime && Date.now() - new Date(checkTime).getTime() > STALE_THRESHOLD_MS);
         if (isStale) {
-          return { phase: "strategy", label: "Reiniciar Análise Estratégica", description: "O pipeline parou inesperadamente. Clique para reiniciar os agentes de estratégia." };
+          return { isRetry: true, label: "Retomar Processamento", description: "O pipeline parou inesperadamente. Clique para desbloquear e retomar os agentes de estratégia — o checkpoint preserva o progresso anterior." };
         }
         return { label: "Analisando...", description: "Agentes de estratégia em execução. Aguarde a conclusão da análise.", phase: undefined };
       }
+      case "generating": {
+        const genUpdatedAt = campaignRaw["updatedAt"] as string | undefined;
+        const GEN_STALE_MS = 20 * 60 * 1000;
+        const piecesNow = contentData?.pieces?.length ?? 0;
+        const genIsStale = !!genUpdatedAt && Date.now() - new Date(genUpdatedAt).getTime() > GEN_STALE_MS;
+        if (genIsStale) {
+          return {
+            isRetry: true,
+            label: "Retomar Geração de Conteúdo",
+            description: piecesNow > 0
+              ? `Pipeline pausado — ${piecesNow} peça${piecesNow !== 1 ? "s" : ""} já salva${piecesNow !== 1 ? "s" : ""} e preservada${piecesNow !== 1 ? "s" : ""}. Clique para retomar somente as peças faltantes.`
+              : "Pipeline pausado durante geração de conteúdo. Clique para retomar os agentes de conteúdo.",
+          };
+        }
+        return {
+          label: "Gerando...",
+          description: piecesNow > 0
+            ? `${piecesNow} peça${piecesNow !== 1 ? "s" : ""} gerada${piecesNow !== 1 ? "s" : ""} até agora. Aguarde a conclusão de todas as peças...`
+            : "Agentes criando copy, sequências e scripts personalizados. Aguarde.",
+          phase: undefined,
+        };
+      }
       case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia validada pelos agentes. Clique para gerar as 16+ peças de conteúdo do lançamento." };
-      case "awaiting_approval": return { href: `/campaigns/${campaignId}/content`, label: "Aprovar Conteúdo", description: "A agente gerou o conteúdo completo. Revise e aprove antes do lançamento.", phase: undefined };
+      case "awaiting_approval": {
+        const piecesTotal = (previewContentData?.pieces ?? contentData?.pieces ?? []).length;
+        return {
+          href: `/campaigns/${campaignId}/content`,
+          label: "Aprovar Conteúdo",
+          description: piecesTotal > 0
+            ? `${piecesTotal} peça${piecesTotal !== 1 ? "s" : ""} gerada${piecesTotal !== 1 ? "s" : ""}. Revise e aprove antes do lançamento.`
+            : "Conteúdo gerado. Revise e aprove antes do lançamento.",
+          phase: undefined,
+        };
+      }
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
       case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
       case "live": return { href: `/campaigns/${campaignId}/content`, label: "Regenerar Conteúdo", description: "Campanha ao vivo. Gere novo conteúdo ou revise o que foi aprovado.", phase: undefined };
@@ -1821,10 +1886,20 @@ export default function CampaignDetail() {
       live:             { emoji: "🔥", headline: "Campanha AO VIVO!", desc: "Carrinho aberto. Seus leads estão recebendo os emails e mensagens agora." },
       completed:        { emoji: "✅", headline: "Lançamento concluído", desc: "Missão encerrada. Veja os resultados e comece o próximo lançamento." },
     };
-    const isStaleAnalyzing = campaign.status === "analyzing" && nextAction?.phase === "strategy";
-    const statusInfo = isStaleAnalyzing
-      ? { emoji: "⚠️", headline: "Pipeline parou — reinicie a análise", desc: "Os agentes de estratégia pararam inesperadamente. Clique no botão abaixo para retomar a análise." }
-      : (FUNDADOR_STATUS[campaign.status] ?? { emoji: "⚙️", headline: STATUS_LABEL[campaign.status] ?? campaign.status, desc: "Processando..." });
+    const isStuck = nextAction?.isRetry === true;
+    const piecesCountFundador = contentData?.pieces?.length ?? 0;
+    const baseStatusInfo = FUNDADOR_STATUS[campaign.status] ?? { emoji: "⚙️", headline: STATUS_LABEL[campaign.status] ?? campaign.status, desc: "Processando..." };
+    const statusInfo = isStuck
+      ? {
+          emoji: "⚠️",
+          headline: campaign.status === "generating" ? "Geração pausada — retome" : "Pipeline parou — retome a análise",
+          desc: nextAction!.description,
+        }
+      : campaign.status === "generating" && piecesCountFundador > 0
+      ? { ...baseStatusInfo, desc: `${piecesCountFundador} peça${piecesCountFundador !== 1 ? "s" : ""} gerada${piecesCountFundador !== 1 ? "s" : ""} até agora. Os agentes estão trabalhando nas demais.` }
+      : campaign.status === "awaiting_approval" && piecesCountFundador > 0
+      ? { ...baseStatusInfo, desc: `${piecesCountFundador} peça${piecesCountFundador !== 1 ? "s" : ""} prontas para sua revisão!` }
+      : baseStatusInfo;
 
     const PHASE_MAP = [
       { statuses: ["analyzing"],                     label: "Estratégia" },
@@ -1884,7 +1959,16 @@ export default function CampaignDetail() {
             {/* Próxima ação */}
             {nextAction && (
               <div className="flex flex-col sm:flex-row gap-2">
-                {nextAction.href ? (
+                {nextAction.isRetry ? (
+                  <Button
+                    onClick={handleRetry}
+                    disabled={retryPending}
+                    className="flex-1 rounded-none font-mono uppercase tracking-widest font-black gap-2 h-12 text-sm border border-yellow-400/60 bg-yellow-400/10 text-yellow-300 hover:bg-yellow-400/20"
+                  >
+                    {retryPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    {retryPending ? "Retomando..." : nextAction.label}
+                  </Button>
+                ) : nextAction.href ? (
                   <Link href={nextAction.href} className="flex-1">
                     <Button className="w-full rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-12 text-sm">
                       {nextAction.label}
@@ -2549,7 +2633,15 @@ export default function CampaignDetail() {
                   <h3 className="font-mono font-bold text-lg text-foreground uppercase tracking-wide">{nextAction.label}</h3>
                   <p className="text-xs text-muted-foreground font-mono mt-1">{nextAction.description}</p>
                 </div>
-                {nextAction.phase === "launch" ? (
+                {nextAction.isRetry ? (
+                  <Button
+                    className="font-mono uppercase tracking-widest rounded-none gap-2 h-12 px-6 w-full md:w-auto border border-yellow-400/60 bg-yellow-400/10 text-yellow-300 hover:bg-yellow-400/20"
+                    onClick={handleRetry}
+                    disabled={retryPending}
+                  >
+                    {retryPending ? <><Loader2 className="h-4 w-4 animate-spin" />Retomando...</> : <><RefreshCw className="h-4 w-4" />{nextAction.label}</>}
+                  </Button>
+                ) : nextAction.phase === "launch" ? (
                   <LaunchRocketButton
                     onClick={() => setShowLaunchSequence(true)}
                     loading={executeMutation.isPending}

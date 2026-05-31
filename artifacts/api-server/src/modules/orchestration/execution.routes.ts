@@ -194,6 +194,70 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
   }
 });
 
+// POST /campaigns/:campaignId/execute/retry — failsafe recovery for stuck campaigns
+// Clears the pipeline lock, forces campaign back to a retryable state, and re-enqueues
+// the appropriate job. Safe to call from analyzing or generating status only.
+router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const { workspaceId } = req.auth;
+
+  const [campaign] = await db
+    .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!campaign) {
+    res.status(404).json({ error: "Campanha não encontrada.", code: "NOT_FOUND" });
+    return;
+  }
+
+  if (!["analyzing", "generating"].includes(campaign.status)) {
+    res.status(400).json({
+      error: `Campanha não está em estado de recuperação (status atual: ${campaign.status}).`,
+      code: "NOT_STUCK",
+    });
+    return;
+  }
+
+  try {
+    // Clear pipeline lock — set lockedAt + lastProgressAt to null so the next run
+    // acquires a fresh lock without hitting the "Pipeline já está executando" guard.
+    const brain = ((campaign.brainData ?? {}) as Record<string, unknown>);
+    const cp = ((brain["pipelineCheckpoint"] ?? {}) as Record<string, unknown>);
+    const clearedBrain = { ...brain, pipelineCheckpoint: { ...cp, lockedAt: null, lastProgressAt: null } };
+
+    if (campaign.status === "analyzing") {
+      // analyzing → intake: valid transition (same as command agent blocked verdict).
+      // Resets to intake so the RC-010 guard in processRunStrategy accepts the new job.
+      await db
+        .update(campaignsTable)
+        .set({ status: "intake" as any, updatedAt: new Date(), brainData: clearedBrain as any })
+        .where(eq(campaignsTable.id, campaignId));
+      const result = await triggerStrategyPhase(campaignId, workspaceId, req.log);
+      req.log.info({ campaignId }, "[FAILSAFE] analyzing → intake → strategy re-enqueued");
+      res.status(202).json({ retried: true, phase: "strategy", queued: result.queued });
+    } else {
+      // generating → strategy_ready: resets content phase so RC-010 guard accepts the job.
+      // skipAgent() inside generateCampaignContent ensures already-generated pieces are
+      // NOT re-generated — only the failed/missing ones are produced.
+      await db
+        .update(campaignsTable)
+        .set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: clearedBrain as any })
+        .where(eq(campaignsTable.id, campaignId));
+      const result = await triggerContentPhase(campaignId, workspaceId, req.log);
+      req.log.info({ campaignId }, "[FAILSAFE] generating → strategy_ready → content re-enqueued");
+      res.status(202).json({ retried: true, phase: "content", queued: result.queued });
+    }
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code, data: (err as AppError & { data?: unknown }).data });
+      return;
+    }
+    throw err;
+  }
+});
+
 // ── Integration gate for launch ──────────────────────────────────────────────
 // Blocks campaign launch if NO messaging AND NO email channels are connected.
 type DbIntegrationProvider = "meta_ads" | "instagram" | "tiktok_ads" | "google_ads" | "whatsapp_business" | "telegram" | "stripe" | "hotmart" | "eduzz" | "kiwify" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot" | "crypto_native" | "custom_webhook";

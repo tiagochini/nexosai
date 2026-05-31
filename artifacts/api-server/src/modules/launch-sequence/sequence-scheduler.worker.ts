@@ -7,6 +7,7 @@ import {
   sequenceContactsTable,
   emailDispatchesTable,
   whatsappDispatchesTable,
+  campaignsTable,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
@@ -49,6 +50,66 @@ async function maybeFireWeeklyReport(now: Date): Promise<void> {
   }
 }
 
+// ── Stuck campaign auto-recovery ──────────────────────────────────────────────
+// Runs every scheduler tick (60s). Campaigns stuck in "analyzing" for > 10 min
+// or "generating" for > 30 min are force-reset to a retryable state.
+// The user still needs to trigger execution manually — this just unblocks the UI.
+const STUCK_ANALYZING_MS = 10 * 60 * 1000;
+const STUCK_GENERATING_MS = 30 * 60 * 1000;
+
+async function recoverStuckCampaigns(): Promise<void> {
+  const log = logger.child({ component: "failsafe-recovery" });
+  const now = new Date();
+
+  // Campaigns stuck in "analyzing"
+  const analyzeThreshold = new Date(now.getTime() - STUCK_ANALYZING_MS);
+  const stuckAnalyzing = await db
+    .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
+    .from(campaignsTable)
+    .where(
+      and(
+        eq(campaignsTable.status as any, "analyzing"),
+        lte(campaignsTable.updatedAt as any, analyzeThreshold),
+      ),
+    );
+
+  for (const c of stuckAnalyzing) {
+    try {
+      await db
+        .update(campaignsTable)
+        .set({ status: "intake" as any, updatedAt: new Date() })
+        .where(eq(campaignsTable.id, c.id));
+      log.warn({ campaignId: c.id }, "[FAILSAFE-AUTO] analyzing > 10min → reset to intake");
+    } catch (err) {
+      log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck analyzing campaign");
+    }
+  }
+
+  // Campaigns stuck in "generating"
+  const genThreshold = new Date(now.getTime() - STUCK_GENERATING_MS);
+  const stuckGenerating = await db
+    .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
+    .from(campaignsTable)
+    .where(
+      and(
+        eq(campaignsTable.status as any, "generating"),
+        lte(campaignsTable.updatedAt as any, genThreshold),
+      ),
+    );
+
+  for (const c of stuckGenerating) {
+    try {
+      await db
+        .update(campaignsTable)
+        .set({ status: "strategy_ready" as any, updatedAt: new Date() })
+        .where(eq(campaignsTable.id, c.id));
+      log.warn({ campaignId: c.id }, "[FAILSAFE-AUTO] generating > 30min → reset to strategy_ready");
+    } catch (err) {
+      log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck generating campaign");
+    }
+  }
+}
+
 export async function processScheduledItems(): Promise<void> {
   const log = logger.child({ component: "sequence-scheduler" });
 
@@ -56,6 +117,10 @@ export async function processScheduledItems(): Promise<void> {
 
   await maybeFireWeeklyReport(now).catch((err) =>
     log.warn({ err }, "Weekly report tick failed — non-blocking"),
+  );
+
+  await recoverStuckCampaigns().catch((err) =>
+    log.warn({ err }, "Stuck campaign recovery failed — non-blocking"),
   );
 
   const dueItems = await db
