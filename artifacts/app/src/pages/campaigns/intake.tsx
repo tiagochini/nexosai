@@ -263,6 +263,8 @@ export default function CampaignIntake() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [finalizing, setFinalizing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [answeredRequired, setAnsweredRequired] = useState(0);
+  const [totalRequired, setTotalRequired] = useState(0);
 
   // Pending type proposal from AI
   const [pendingProposal, setPendingProposal] = useState<{
@@ -321,7 +323,10 @@ export default function CampaignIntake() {
     if (!data?.intakeData) return;
     setFormData(data.intakeData as Record<string, string>);
     const comp = data.completeness;
-    setProgress(typeof comp === "number" ? comp : (comp as { progress?: number })?.progress ?? 0);
+    const compObj = typeof comp === "object" && comp !== null ? comp as { progress?: number; answeredRequired?: number; totalRequired?: number } : null;
+    setProgress(typeof comp === "number" ? comp : compObj?.progress ?? 0);
+    if (compObj?.answeredRequired != null) setAnsweredRequired(compObj.answeredRequired);
+    if (compObj?.totalRequired != null) setTotalRequired(compObj.totalRequired);
 
     // Restore saved conversation history from the DB
     const raw = data.intakeData as Record<string, unknown>;
@@ -377,6 +382,9 @@ export default function CampaignIntake() {
         setMessages([{ role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
         if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
         if (result.progress) setProgress(result.progress);
+        const r0 = result as unknown as { answeredRequired?: number; totalRequired?: number };
+        if (r0.answeredRequired != null) setAnsweredRequired(r0.answeredRequired);
+        if (r0.totalRequired != null) setTotalRequired(r0.totalRequired);
         if (result.isComplete) setChatComplete(true);
         if (result.proposedType && result.proposedTrack) {
           setPendingProposal({ type: result.proposedType, track: result.proposedTrack, reason: result.proposedReason });
@@ -423,6 +431,9 @@ export default function CampaignIntake() {
       setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
       if (result.progress != null) setProgress(result.progress);
+      const r1 = result as unknown as { answeredRequired?: number; totalRequired?: number };
+      if (r1.answeredRequired != null) setAnsweredRequired(r1.answeredRequired);
+      if (r1.totalRequired != null) setTotalRequired(r1.totalRequired);
       if (result.isComplete) setChatComplete(true);
     } catch {
       toast.error("Erro ao confirmar modelo. Tente novamente.");
@@ -596,6 +607,9 @@ export default function CampaignIntake() {
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
       if (result.progress != null) setProgress(result.progress);
+      const r2 = result as unknown as { answeredRequired?: number; totalRequired?: number };
+      if (r2.answeredRequired != null) setAnsweredRequired(r2.answeredRequired);
+      if (r2.totalRequired != null) setTotalRequired(r2.totalRequired);
       if (result.isComplete) setChatComplete(true);
 
       if (result.proposedType && result.proposedTrack) {
@@ -692,6 +706,14 @@ export default function CampaignIntake() {
               <span className="font-mono text-xs font-bold text-primary">{progress}%</span>
             </div>
             <Progress value={progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
+            {totalRequired > 0 && (
+              <div className="flex justify-between items-center pt-0.5">
+                <span className="font-mono text-[10px] text-muted-foreground/60">Obrigatórios</span>
+                <span className={`font-mono text-[10px] font-semibold ${answeredRequired >= totalRequired ? "text-success" : "text-muted-foreground"}`}>
+                  {answeredRequired}/{totalRequired}
+                </span>
+              </div>
+            )}
             {scoreData && (
               <div className="flex justify-between items-center pt-1 border-t border-border/30">
                 <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Score</span>

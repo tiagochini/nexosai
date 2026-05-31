@@ -620,6 +620,8 @@ export async function processConversationalTurn(
   nextQuestionId: string | null;
   isComplete: boolean;
   progress: number;
+  answeredRequired: number;
+  totalRequired: number;
   missingRequired: string[];
   intakeData: Record<string, unknown>;
   proposedType: string | null;
@@ -673,6 +675,8 @@ export async function processConversationalTurn(
     ].slice(-40);
     await saveIntakeData(campaignId, workspaceId, { ...currentIntake, _conversationHistory: updatedHistory }, log);
 
+    const requiredQs1 = questions.filter(q => q.required);
+    const totalRequired1 = requiredQs1.length;
     const progress = 100;
     return {
       agentId: "erico",
@@ -681,6 +685,8 @@ export async function processConversationalTurn(
       nextQuestionId: null,
       isComplete: true,
       progress,
+      answeredRequired: totalRequired1,
+      totalRequired: totalRequired1,
       missingRequired: [],
       intakeData: { ...currentIntake, _conversationHistory: updatedHistory },
       proposedType: null,
@@ -703,6 +709,9 @@ export async function processConversationalTurn(
     await saveIntakeData(campaignId, workspaceId, { ...currentIntake, _conversationHistory: updatedHistory }, log);
 
     const newCompleteness2 = validateIntakeCompleteness(type, track, currentIntake);
+    const requiredQs2 = questions.filter(q => q.required);
+    const totalRequired2 = requiredQs2.length;
+    const answeredRequired2 = totalRequired2 - newCompleteness2.missingRequired.length;
     const progress2 = Math.round(
       ((questions.length - newCompleteness2.missingRequired.length) / questions.length) * 100
     );
@@ -713,6 +722,8 @@ export async function processConversationalTurn(
       nextQuestionId: null,
       isComplete: true,
       progress: progress2,
+      answeredRequired: answeredRequired2,
+      totalRequired: totalRequired2,
       missingRequired: newCompleteness2.missingRequired,
       intakeData: { ...currentIntake, _conversationHistory: updatedHistory },
       proposedType: null,
@@ -828,6 +839,9 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
   const newCompleteness = validateIntakeCompleteness(type, track, mergedData);
   isComplete = isComplete || newCompleteness.valid;
 
+  const requiredQsFinal = questions.filter(q => q.required);
+  const totalRequired = requiredQsFinal.length;
+  const answeredRequired = totalRequired - newCompleteness.missingRequired.length;
   const progress = Math.round(
     ((questions.length - newCompleteness.missingRequired.length) / questions.length) * 100
   );
@@ -839,6 +853,8 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
     nextQuestionId,
     isComplete,
     progress,
+    answeredRequired,
+    totalRequired,
     missingRequired: newCompleteness.missingRequired,
     intakeData: mergedData,
     proposedType,

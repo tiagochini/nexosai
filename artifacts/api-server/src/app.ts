@@ -79,8 +79,8 @@ app.use("/api/intake/:id/conversation", aiLimiter);
 app.use("/api/campaigns/:id/orchestrate", aiLimiter);
 
 // ─── Body parsing ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ─── Request logging ──────────────────────────────────────────────────────────
 app.use(
