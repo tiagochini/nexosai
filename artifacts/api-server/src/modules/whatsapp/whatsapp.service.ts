@@ -3,6 +3,8 @@ import {
   db,
   whatsappDispatchesTable,
   workspaceIntegrationsTable,
+  workspacesTable,
+  usersTable,
   contentPiecesTable,
   launchSequenceItemsTable,
   sequenceContactsTable,
@@ -488,4 +490,63 @@ export async function handleWhatsAppWebhook(payload: unknown) {
   }
 
   return { processed };
+}
+
+// ─── System Notification Helper ───────────────────────────────────────────────
+// Sends a plain-text WhatsApp message directly to a workspace owner's phone
+// using the workspace's connected WhatsApp Business integration.
+// Used for internal pipeline notifications (e.g. waiting_clarification watchdog).
+// Returns false silently if no WA integration is connected — never throws.
+export async function sendWhatsAppSystemNotification(
+  workspaceId: string,
+  recipientPhone: string,
+  message: string,
+): Promise<boolean> {
+  const log = logger.child({ component: "wa-system-notification" });
+  try {
+    const [integration] = await db
+      .select({
+        accessToken: workspaceIntegrationsTable.accessToken,
+        accountId: workspaceIntegrationsTable.accountId,
+        status: workspaceIntegrationsTable.status,
+      })
+      .from(workspaceIntegrationsTable)
+      .where(
+        and(
+          eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+          eq(workspaceIntegrationsTable.provider, "whatsapp_business"),
+        ),
+      )
+      .limit(1);
+
+    if (!integration?.accessToken || !integration.accountId || integration.status !== "connected") {
+      log.info({ workspaceId }, "WA system notification skipped — no connected WA integration");
+      return false;
+    }
+
+    const creds: WhatsAppCredentials = {
+      accessToken: integration.accessToken,
+      phoneNumberId: integration.accountId,
+    };
+
+    await sendMetaTextMessage(creds, recipientPhone, message);
+    log.info({ workspaceId, recipientPhone: recipientPhone.slice(0, 6) + "***" }, "WA system notification sent");
+    return true;
+  } catch (err) {
+    log.warn({ err, workspaceId }, "WA system notification failed — non-blocking");
+    return false;
+  }
+}
+
+// ─── Owner Phone Lookup ────────────────────────────────────────────────────────
+// Returns the workspace owner's phone number (E.164 preferred), or null if not set.
+export async function getWorkspaceOwnerPhone(workspaceId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ phone: usersTable.phone })
+    .from(workspacesTable)
+    .innerJoin(usersTable, eq(usersTable.id, workspacesTable.ownerId))
+    .where(eq(workspacesTable.id, workspaceId))
+    .limit(1);
+
+  return row?.phone ?? null;
 }

@@ -12,7 +12,7 @@ import {
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
 import { sendEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
-import { sendWhatsAppDispatch, createWhatsAppDispatch } from "../whatsapp/whatsapp.service.js";
+import { sendWhatsAppDispatch, createWhatsAppDispatch, sendWhatsAppSystemNotification, getWorkspaceOwnerPhone } from "../whatsapp/whatsapp.service.js";
 import { createEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
 import { emitSequenceEvent } from "./sequence-realtime.js";
 import { sendWeeklyReportsToAll } from "../weekly-report/weekly-report.service.js";
@@ -47,6 +47,92 @@ async function maybeFireWeeklyReport(now: Date): Promise<void> {
     lastWeeklyReportDate = todayKey;
     log.info({ date: todayKey }, "Firing weekly reports (Monday 08:00 UTC)");
     await sendWeeklyReportsToAll();
+  }
+}
+
+// ── Clarification timeout watchdog ────────────────────────────────────────────
+// Runs every scheduler tick (60s). If a campaign has been in
+// autocorrectionStatus === "waiting_clarification" for > 2 hours without the
+// user answering, sends a WhatsApp notification to the workspace owner.
+// Tracks clarificationNotifiedAt in brainData to avoid spamming (min 2h gap).
+const CLARIFICATION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+async function maybeNotifyStaleWaitingClarification(): Promise<void> {
+  const log = logger.child({ component: "clarification-watchdog" });
+  const now = new Date();
+  const threshold = new Date(now.getTime() - CLARIFICATION_TIMEOUT_MS);
+
+  // Find all campaigns in generating/analyzing that might have waiting_clarification
+  const candidates = await db
+    .select({
+      id: campaignsTable.id,
+      workspaceId: campaignsTable.workspaceId,
+      brainData: (campaignsTable as any).brainData,
+    })
+    .from(campaignsTable)
+    .where(
+      and(
+        eq(campaignsTable.status as any, "generating"),
+        lte(campaignsTable.updatedAt as any, threshold),
+      ),
+    );
+
+  for (const c of candidates) {
+    try {
+      const brain = ((c.brainData ?? {}) as Record<string, unknown>);
+      const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
+      const autocorrectionStatus = contentRetry["autocorrectionStatus"] as string | undefined;
+
+      if (autocorrectionStatus !== "waiting_clarification") continue;
+
+      const lastFailedAt = contentRetry["lastFailedAt"] as string | undefined;
+      const clarificationNotifiedAt = contentRetry["clarificationNotifiedAt"] as string | undefined;
+
+      // Check if enough time has passed since the clarification was requested
+      const sinceFailure = lastFailedAt ? now.getTime() - new Date(lastFailedAt).getTime() : 0;
+      if (sinceFailure < CLARIFICATION_TIMEOUT_MS) continue;
+
+      // Check cooldown — don't re-notify if we already sent one within the last 2h
+      if (clarificationNotifiedAt) {
+        const sinceNotified = now.getTime() - new Date(clarificationNotifiedAt).getTime();
+        if (sinceNotified < CLARIFICATION_TIMEOUT_MS) continue;
+      }
+
+      // Get owner phone
+      const ownerPhone = await getWorkspaceOwnerPhone(c.workspaceId);
+      if (!ownerPhone) {
+        log.info({ campaignId: c.id }, "Clarification watchdog: owner has no phone — skipping WA notification");
+        continue;
+      }
+
+      const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
+      const pieceLabel = failedPieceType ?? "conteúdo da campanha";
+      const appUrl = env.APP_URL;
+      const campaignPath = `${appUrl}/campaigns/${c.id}`;
+
+      const message = `🤖 *NexOS AI — Ação necessária*\n\nO sistema pausou a geração de *${pieceLabel}* e precisa de uma informação do seu briefing para continuar.\n\n📋 Responda a pergunta do agente para que a automação retome:\n${campaignPath}\n\nIsso leva menos de 1 minuto.`;
+
+      const sent = await sendWhatsAppSystemNotification(c.workspaceId, ownerPhone, message);
+
+      if (sent) {
+        // Record notification time to avoid spam
+        const updatedBrain = {
+          ...brain,
+          contentRetry: {
+            ...contentRetry,
+            clarificationNotifiedAt: now.toISOString(),
+          },
+        };
+        await db
+          .update(campaignsTable)
+          .set({ brainData: updatedBrain as any })
+          .where(eq(campaignsTable.id, c.id));
+
+        log.info({ campaignId: c.id, workspaceId: c.workspaceId }, "Clarification watchdog: WA notification sent to owner");
+      }
+    } catch (err) {
+      log.warn({ err, campaignId: c.id }, "Clarification watchdog failed for campaign — non-blocking");
+    }
   }
 }
 
@@ -153,6 +239,10 @@ export async function processScheduledItems(): Promise<void> {
 
   await recoverStuckCampaigns().catch((err) =>
     log.warn({ err }, "Stuck campaign recovery failed — non-blocking"),
+  );
+
+  await maybeNotifyStaleWaitingClarification().catch((err) =>
+    log.warn({ err }, "Clarification watchdog tick failed — non-blocking"),
   );
 
   const dueItems = await db
