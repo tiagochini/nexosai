@@ -203,13 +203,22 @@ function CreateProjectForm({ onCreated }: { onCreated: (p: VideoProject) => void
           </button>
         </div>
         {hasUserFace && (
-          <a
-            href="/video-production/filming-guide"
-            className="flex items-center gap-1.5 font-mono text-[10px] text-primary/60 hover:text-primary transition-colors mt-1"
-          >
-            <Info className="h-3 w-3" />
-            Ver guia de filmagem — como aparecer com autoridade na câmera
-          </a>
+          <div className="flex flex-col gap-1 mt-1">
+            <a
+              href="/video-production/director-guide"
+              className="flex items-center gap-1.5 font-mono text-[10px] text-primary/70 hover:text-primary transition-colors font-bold"
+            >
+              <Info className="h-3 w-3" />
+              Guia do Diretor — vestuário, cenário, linguagem e roteiro completo
+            </a>
+            <a
+              href="/video-production/filming-guide"
+              className="flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground/50 hover:text-foreground transition-colors"
+            >
+              <Info className="h-3 w-3" />
+              Guia técnico de filmagem — setup de câmera, áudio e iluminação
+            </a>
+          </div>
         )}
       </div>
       {hasUserFace && (

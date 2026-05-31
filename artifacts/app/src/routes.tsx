@@ -57,6 +57,7 @@ import SiteBuilderPage from "@/pages/site-builder/index";
 import AtendimentoPage from "@/pages/atendimento/index";
 import VideoProductionPage from "@/pages/video-production/index";
 import FilmingGuide from "@/pages/video-production/filming-guide";
+import DirectorGuide from "@/pages/video-production/director-guide";
 import LaunchRoom from "@/pages/launch-room/index";
 import LauncherDashboard from "@/pages/launcher/index";
 import LeadCapturePage from "@/pages/c/index";
@@ -301,6 +302,9 @@ export default function AppRoutes() {
       {/* Produção de Vídeo agente */}
       <Route path="/video-production/filming-guide">
         {() => <ProtectedRoute><FilmingGuide /></ProtectedRoute>}
+      </Route>
+      <Route path="/video-production/director-guide">
+        {() => <ProtectedRoute><DirectorGuide /></ProtectedRoute>}
       </Route>
       <Route path="/video-production">
         {() => <ProtectedRoute><VideoProductionPage /></ProtectedRoute>}
