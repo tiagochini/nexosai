@@ -603,13 +603,39 @@ export async function completeWithAgent(
 
   switch (provider) {
     case "anthropic":
-      result = await callAnthropic(model, effectiveSystem, messages, 8192, signal);
+      try {
+        result = await callAnthropic(model, effectiveSystem, messages, 8192, signal);
+      } catch (anthropicErr) {
+        log.warn(
+          { agentRole, model, err: String(anthropicErr) },
+          "[completeWithAgent] Anthropic failed — falling back to OpenAI",
+        );
+        result = await callOpenAI(
+          getDefaultModelForProvider("openai"),
+          effectiveSystem,
+          messages,
+          signal,
+        );
+      }
       break;
     case "openai":
       result = await callOpenAI(model, effectiveSystem, messages, signal);
       break;
     case "gemini":
-      result = await callGemini(model, effectiveSystem, messages, signal);
+      try {
+        result = await callGemini(model, effectiveSystem, messages, signal);
+      } catch (geminiErr) {
+        log.warn(
+          { agentRole, model, err: String(geminiErr) },
+          "[completeWithAgent] Gemini failed — falling back to OpenAI",
+        );
+        result = await callOpenAI(
+          getDefaultModelForProvider("openai"),
+          effectiveSystem,
+          messages,
+          signal,
+        );
+      }
       break;
   }
 
