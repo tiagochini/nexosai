@@ -97,7 +97,7 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
   // re-generate content + re-charge credits. Skip if campaign is no longer in a
   // content-eligible state.
   const [pre] = await db
-    .select({ status: campaignsTable.status })
+    .select({ status: campaignsTable.status, strategyData: campaignsTable.strategyData })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
@@ -114,6 +114,29 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
       { campaignId, status: pre.status },
       "RC-010: Campaign not in content-eligible state — skipping stale retry job (prevents double credit charge)",
     );
+    return;
+  }
+
+  // STRATEGY INTEGRITY GUARD: never generate content from an empty strategy.
+  // If strategyData is null, undefined, or an empty object {} the strategy phase
+  // did not produce usable output — content agents would run blind and produce empty
+  // pieces. Abort here and emit a clear error event so the user sees the problem.
+  const strategyObj = pre.strategyData as Record<string, unknown> | null | undefined;
+  const strategyIsEmpty = !strategyObj || Object.keys(strategyObj).length === 0;
+  if (strategyIsEmpty) {
+    log.error({ campaignId }, "STRATEGY_EMPTY: strategyData is empty — aborting content generation. Strategy phase must succeed before content can run.");
+    emitCampaignEvent({
+      campaignId,
+      type: "execution_update",
+      message: "❌ Estratégia vazia — geração de conteúdo cancelada. Execute a fase de estratégia novamente antes de gerar conteúdo.",
+      data: { phase: "content", progress: 0, error: "STRATEGY_EMPTY" },
+      timestamp: new Date().toISOString(),
+    });
+    // Reset to strategy_ready so the user can trigger strategy again
+    await db
+      .update(campaignsTable)
+      .set({ status: "strategy_ready", updatedAt: new Date() })
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
     return;
   }
 
