@@ -351,8 +351,8 @@ async function callOpenAI(
 
   const isGpt5 = effectiveModel.startsWith("gpt-5") || effectiveModel.startsWith("o4") || effectiveModel.startsWith("o3");
   const completionParams = isGpt5
-    ? { max_completion_tokens: 8192 }
-    : { max_tokens: 4096 };
+    ? { max_completion_tokens: 16384 }
+    : { max_tokens: 8192 };
 
   try {
     const response = await client.chat.completions.create(
@@ -389,7 +389,7 @@ async function callOpenAI(
         });
         const intModel = OPENAI_INTEGRATION_MODEL;
         const intIsGpt5 = intModel.startsWith("gpt-5") || intModel.startsWith("o4") || intModel.startsWith("o3");
-        const intParams = intIsGpt5 ? { max_completion_tokens: 8192 } : { max_tokens: 4096 };
+        const intParams = intIsGpt5 ? { max_completion_tokens: 16384 } : { max_tokens: 8192 };
         const intResponse = await integrationClient.chat.completions.create(
           {
             model: intModel,

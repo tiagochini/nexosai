@@ -807,8 +807,8 @@ Vagas limitadas precisam ser REAIS e a razão precisa ser explicada. Timers que 
 ---
 
 **REQUISITOS DE VOLUME E COMPLETUDE — MÍNIMOS OBRIGATÓRIOS:**
-- Emails de pré-lançamento: mínimo 3 emails COMPLETOS com corpo, assunto real, preview text, PS
-- Emails de carrinho: mínimo 2 abertos + 2 fechamento, com escalada real de urgência
+- Emails de pré-lançamento: mínimo 7 emails COMPLETOS com corpo, assunto real, preview text, PS
+- Emails de carrinho: mínimo 4 abertos + 4 fechamento, com escalada real de urgência
 - WhatsApp: mínimo 5 broadcasts completos + 3 mensagens de grupo
 - Facebook: mínimo 3 posts completos (orgânico), textos narrativos
 - TikTok: mínimo 3 roteiros completos com hook, script falado, overlay texts
