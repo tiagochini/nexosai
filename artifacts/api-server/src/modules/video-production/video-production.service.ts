@@ -17,7 +17,9 @@ import {
   getAvailableVideoProvider,
   getAvailableAvatarProvider,
   pollVideoJob,
+  type WorkspaceVideoKeys,
 } from "./video-generation.service.js";
+import { workspaceIntegrationsTable } from "@workspace/db";
 import { completeWithAgent } from "../ai-gateway/ai-gateway.service.js";
 import { parseAgentJSON } from "../agents/agent.runner.js";
 import { NotFoundError, AppError } from "../../lib/errors.js";
@@ -26,6 +28,25 @@ import { env } from "../../lib/env.js";
 import type { Logger } from "pino";
 
 const log = logger.child({ module: "video-production" });
+
+// ─── Workspace video key lookup ───────────────────────────────────────────────
+async function getWorkspaceVideoKeys(workspaceId: string): Promise<WorkspaceVideoKeys> {
+  const integrations = await db
+    .select()
+    .from(workspaceIntegrationsTable)
+    .where(eq(workspaceIntegrationsTable.workspaceId, workspaceId));
+
+  const find = (provider: string) => integrations.find(
+    i => i.provider === provider && i.status === "connected" && i.accessToken
+  );
+
+  return {
+    heygenApiKey: find("heygen")?.accessToken ?? undefined,
+    runwayApiKey: find("runway_ml")?.accessToken ?? undefined,
+    klingFalApiKey: find("kling_fal")?.accessToken ?? undefined,
+    elevenlabsApiKey: find("elevenlabs")?.accessToken ?? undefined,
+  };
+}
 
 // ─── Validation helpers ──────────────────────────────────────────────────────
 
@@ -591,8 +612,9 @@ export async function generatePreviewClips(
   const scenes = (project.storyboard as VideoScene[]) ?? [];
   if (!scenes.length) throw new AppError(400, "Storyboard vazio — gere e aprove o storyboard primeiro", "NO_STORYBOARD");
 
-  const provider = getAvailableVideoProvider();
-  const avatarProvider = getAvailableAvatarProvider();
+  const wsKeys = await getWorkspaceVideoKeys(workspaceId);
+  const provider = getAvailableVideoProvider(wsKeys);
+  const avatarProvider = getAvailableAvatarProvider(wsKeys);
   const config = project.config as VideoConfig;
 
   await db
@@ -614,7 +636,7 @@ export async function generatePreviewClips(
             avatarId: config.avatarId,
             voiceId: config.voiceId,
             aspectRatio: config.aspectRatio === "1:1" ? "16:9" : (config.aspectRatio as "16:9" | "9:16"),
-          });
+          }, wsKeys);
         } else if (provider) {
           result = await generateVideoClip({
             prompt: scene.videoPrompt,
@@ -622,12 +644,12 @@ export async function generatePreviewClips(
             aspectRatio: config.aspectRatio ?? "16:9",
             resolution: "720p",
             negativePrompt: "text, subtitles, watermark, blurry, pixelated, distorted faces, bad quality",
-          });
+          }, wsKeys);
         } else {
           return {
             ...scene,
             clipStatus: "failed" as const,
-            notes: "Nenhum provedor de vídeo configurado. Configure RUNWAY_API_KEY ou FAL_API_KEY.",
+            notes: "Nenhum provedor de vídeo configurado. Conecte HeyGen, Runway ML ou Kling em Configurações → Integrações.",
           };
         }
 
@@ -723,6 +745,7 @@ export async function generateFinalClips(
     .set({ status: "final_generating", updatedAt: new Date() })
     .where(eq(videoProjectsTable.id, projectId));
 
+  const wsKeysHd = await getWorkspaceVideoKeys(workspaceId);
   const creditCostPerScene = config.hasUserFace ? 80 : 150;
   const totalCost = scenes.length * creditCostPerScene;
   await deductCredits(workspaceId, config.hasUserFace ? "video_avatar" : "video_high_res", reqLog, project.campaignId ?? undefined);
@@ -731,12 +754,12 @@ export async function generateFinalClips(
     scenes.map(async (scene) => {
       try {
         let result;
-        if (scene.hasAvatar && Boolean(env.HEYGEN_API_KEY)) {
+        if (scene.hasAvatar && getAvailableAvatarProvider(wsKeysHd) === "heygen") {
           result = await generateAvatarVideo({
             voiceoverText: scene.voiceoverText,
             avatarId: config.avatarId,
             voiceId: config.voiceId,
-          });
+          }, wsKeysHd);
         } else {
           result = await generateVideoClip({
             prompt: scene.videoPrompt,
@@ -744,7 +767,7 @@ export async function generateFinalClips(
             aspectRatio: config.aspectRatio ?? "16:9",
             resolution: "1080p",
             negativePrompt: "text, subtitles, watermark, blurry, low quality, grain",
-          });
+          }, wsKeysHd);
         }
         return {
           ...scene,

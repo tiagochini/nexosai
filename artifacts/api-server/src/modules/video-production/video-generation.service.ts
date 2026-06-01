@@ -51,21 +51,49 @@ export interface VoiceCloneRequest {
 }
 
 // ─── Provider availability ───────────────────────────────────────────────────
+// Priority: workspace key (user's own account) → global server key (NexOS pool)
 
-export function getAvailableVideoProvider(): string | null {
+export interface WorkspaceVideoKeys {
+  runwayApiKey?: string;
+  heygenApiKey?: string;
+  klingFalApiKey?: string;
+  elevenlabsApiKey?: string;
+}
+
+export function getAvailableVideoProvider(wsKeys?: WorkspaceVideoKeys): string | null {
+  if (wsKeys?.runwayApiKey) return "runway";
+  if (wsKeys?.klingFalApiKey) return "kling";
   if (env.RUNWAY_API_KEY) return "runway";
   if (env.FAL_API_KEY) return "kling";
   return null;
 }
 
-export function getAvailableAvatarProvider(): string | null {
+export function getAvailableAvatarProvider(wsKeys?: WorkspaceVideoKeys): string | null {
+  if (wsKeys?.heygenApiKey) return "heygen";
   if (env.HEYGEN_API_KEY) return "heygen";
   return null;
 }
 
-export function getAvailableVoiceProvider(): string | null {
+export function getAvailableVoiceProvider(wsKeys?: WorkspaceVideoKeys): string | null {
+  if (wsKeys?.elevenlabsApiKey) return "elevenlabs";
   if (env.ELEVENLABS_API_KEY) return "elevenlabs";
   return null;
+}
+
+export function resolveRunwayKey(wsKeys?: WorkspaceVideoKeys): string {
+  return wsKeys?.runwayApiKey || env.RUNWAY_API_KEY;
+}
+
+export function resolveKlingKey(wsKeys?: WorkspaceVideoKeys): string {
+  return wsKeys?.klingFalApiKey || env.FAL_API_KEY;
+}
+
+export function resolveHeyGenKey(wsKeys?: WorkspaceVideoKeys): string {
+  return wsKeys?.heygenApiKey || env.HEYGEN_API_KEY;
+}
+
+export function resolveElevenLabsKey(wsKeys?: WorkspaceVideoKeys): string {
+  return wsKeys?.elevenlabsApiKey || env.ELEVENLABS_API_KEY;
 }
 
 const SETUP_INSTRUCTIONS = {
@@ -76,10 +104,10 @@ const SETUP_INSTRUCTIONS = {
 
 // ─── Runway ML ───────────────────────────────────────────────────────────────
 
-async function generateWithRunway(req: VideoClipRequest): Promise<VideoClipResult> {
+async function generateWithRunway(req: VideoClipRequest, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
   const baseUrl = "https://api.dev.runwayml.com/v1";
   const headers = {
-    Authorization: `Bearer ${env.RUNWAY_API_KEY}`,
+    Authorization: `Bearer ${resolveRunwayKey(wsKeys)}`,
     "X-Runway-Version": env.RUNWAY_API_VERSION,
     "Content-Type": "application/json",
   };
@@ -115,12 +143,12 @@ async function generateWithRunway(req: VideoClipRequest): Promise<VideoClipResul
   }
 }
 
-async function pollRunwayJob(jobId: string): Promise<VideoClipResult> {
+async function pollRunwayJob(jobId: string, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
   const baseUrl = "https://api.dev.runwayml.com/v1";
   try {
     const res = await fetch(`${baseUrl}/tasks/${jobId}`, {
       headers: {
-        Authorization: `Bearer ${env.RUNWAY_API_KEY}`,
+        Authorization: `Bearer ${resolveRunwayKey(wsKeys)}`,
         "X-Runway-Version": env.RUNWAY_API_VERSION,
       },
     });
@@ -140,12 +168,12 @@ async function pollRunwayJob(jobId: string): Promise<VideoClipResult> {
 
 // ─── Kling via fal.ai ────────────────────────────────────────────────────────
 
-async function generateWithKling(req: VideoClipRequest): Promise<VideoClipResult> {
+async function generateWithKling(req: VideoClipRequest, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
   try {
     const res = await fetch("https://queue.fal.run/fal-ai/kling-video/v1.6/standard/text-to-video", {
       method: "POST",
       headers: {
-        Authorization: `Key ${env.FAL_API_KEY}`,
+        Authorization: `Key ${resolveKlingKey(wsKeys)}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -168,10 +196,10 @@ async function generateWithKling(req: VideoClipRequest): Promise<VideoClipResult
   }
 }
 
-async function pollKlingJob(jobId: string): Promise<VideoClipResult> {
+async function pollKlingJob(jobId: string, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
   try {
     const res = await fetch(`https://queue.fal.run/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${jobId}`, {
-      headers: { Authorization: `Key ${env.FAL_API_KEY}` },
+      headers: { Authorization: `Key ${resolveKlingKey(wsKeys)}` },
     });
     if (!res.ok) throw new Error(`Kling poll error ${res.status}`);
     const data = (await res.json()) as { status: string; video?: { url: string }; error?: string };
@@ -189,8 +217,9 @@ async function pollKlingJob(jobId: string): Promise<VideoClipResult> {
 
 // ─── HeyGen Avatar ───────────────────────────────────────────────────────────
 
-export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<VideoClipResult> {
-  if (!env.HEYGEN_API_KEY) {
+export async function generateAvatarVideo(req: AvatarVideoRequest, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
+  const heygenKey = resolveHeyGenKey(wsKeys);
+  if (!heygenKey) {
     return { status: "provider_not_configured", setupInstructions: SETUP_INSTRUCTIONS.avatar };
   }
 
@@ -198,7 +227,7 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
     const res = await fetch("https://api.heygen.com/v2/video/generate", {
       method: "POST",
       headers: {
-        "X-Api-Key": env.HEYGEN_API_KEY,
+        "X-Api-Key": heygenKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -232,10 +261,10 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
   }
 }
 
-export async function pollHeyGenJob(jobId: string): Promise<VideoClipResult> {
+export async function pollHeyGenJob(jobId: string, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
   try {
     const res = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${jobId}`, {
-      headers: { "X-Api-Key": env.HEYGEN_API_KEY },
+      headers: { "X-Api-Key": resolveHeyGenKey(wsKeys) },
     });
     if (!res.ok) throw new Error(`HeyGen poll error ${res.status}`);
     const data = (await res.json()) as { data: { status: string; video_url?: string; error?: string } };
@@ -253,8 +282,9 @@ export async function pollHeyGenJob(jobId: string): Promise<VideoClipResult> {
 
 // ─── ElevenLabs Voice Clone ──────────────────────────────────────────────────
 
-export async function cloneVoice(req: VoiceCloneRequest): Promise<{ voiceId?: string; error?: string }> {
-  if (!env.ELEVENLABS_API_KEY) {
+export async function cloneVoice(req: VoiceCloneRequest, wsKeys?: WorkspaceVideoKeys): Promise<{ voiceId?: string; error?: string }> {
+  const elKey = resolveElevenLabsKey(wsKeys);
+  if (!elKey) {
     return { error: SETUP_INSTRUCTIONS.voice };
   }
 
@@ -265,7 +295,7 @@ export async function cloneVoice(req: VoiceCloneRequest): Promise<{ voiceId?: st
 
     const res = await fetch("https://api.elevenlabs.io/v1/voices/add", {
       method: "POST",
-      headers: { "xi-api-key": env.ELEVENLABS_API_KEY },
+      headers: { "xi-api-key": elKey },
       body: formData,
     });
     if (!res.ok) {
@@ -281,18 +311,18 @@ export async function cloneVoice(req: VoiceCloneRequest): Promise<{ voiceId?: st
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-export async function generateVideoClip(req: VideoClipRequest): Promise<VideoClipResult> {
-  const provider = getAvailableVideoProvider();
+export async function generateVideoClip(req: VideoClipRequest, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
+  const provider = getAvailableVideoProvider(wsKeys);
   if (!provider) {
     return { status: "provider_not_configured", setupInstructions: SETUP_INSTRUCTIONS.video };
   }
-  if (provider === "runway") return generateWithRunway(req);
-  return generateWithKling(req);
+  if (provider === "runway") return generateWithRunway(req, wsKeys);
+  return generateWithKling(req, wsKeys);
 }
 
-export async function pollVideoJob(jobId: string, provider: string): Promise<VideoClipResult> {
-  if (provider === "runway") return pollRunwayJob(jobId);
-  if (provider === "kling") return pollKlingJob(jobId);
-  if (provider === "heygen") return pollHeyGenJob(jobId);
+export async function pollVideoJob(jobId: string, provider: string, wsKeys?: WorkspaceVideoKeys): Promise<VideoClipResult> {
+  if (provider === "runway") return pollRunwayJob(jobId, wsKeys);
+  if (provider === "kling") return pollKlingJob(jobId, wsKeys);
+  if (provider === "heygen") return pollHeyGenJob(jobId, wsKeys);
   return { status: "failed", error: `Unknown provider: ${provider}` };
 }

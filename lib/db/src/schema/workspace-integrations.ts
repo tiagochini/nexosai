@@ -30,6 +30,10 @@ export const integrationProviderEnum = pgEnum("integration_provider", [
   "hubspot",
   "crypto_native",
   "custom_webhook",
+  "heygen",
+  "runway_ml",
+  "kling_fal",
+  "elevenlabs",
 ]);
 
 export const integrationStatusEnum = pgEnum("integration_status", [

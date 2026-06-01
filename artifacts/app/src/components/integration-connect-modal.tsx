@@ -14,7 +14,8 @@ export type Provider =
   | "hotmart" | "kiwify" | "stripe" | "asaas"
   | "meta_ads" | "google_ads" | "tiktok_ads" | "linkedin_ads"
   | "instagram" | "facebook" | "tiktok"
-  | "hubspot";
+  | "hubspot"
+  | "heygen" | "runway_ml" | "kling_fal" | "elevenlabs";
 
 export interface WorkspaceIntegration {
   id: string;
@@ -529,6 +530,110 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
     oauthPlatform: "hubspot",
     oauthLabel: "Entrar com HubSpot",
   },
+
+  // ── Geração de Vídeo IA ──────────────────────────────────────────────────────
+  {
+    provider: "heygen",
+    label: "HeyGen",
+    description: "Avatar IA falando seu roteiro — vídeo com apresentador sem gravar nada",
+    why: "Com HeyGen conectado, o NexOS gera VSLs e CPLs com um avatar digital falando o roteiro gerado pelos agentes. Você não precisa aparecer em câmera.",
+    category: "Geração de Vídeo",
+    color: "text-violet-400",
+    icon: BarChart2,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "API Key do HeyGen", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "password",
+        hint: "Encontrada em HeyGen → Account → API. Gere uma chave de API em app.heygen.com/settings." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta HeyGen" },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no HeyGen (plano Creator ou superior para API)"],
+      steps: [
+        { title: "Crie sua conta no HeyGen", detail: "Acesse heygen.com e crie sua conta. Planos a partir de US$29/mês desbloqueiam a API.", url: "https://www.heygen.com" },
+        { title: "Acesse as configurações de API", detail: "Em HeyGen → Account (canto superior direito) → API → Generate API Key." },
+        { title: "Copie a API Key", detail: "Copie a chave gerada e cole no campo acima. A chave tem 32 caracteres alfanuméricos." },
+        { title: "Escolha seu avatar", detail: "Em HeyGen → Avatars, escolha ou crie seu avatar digital. O NexOS usa o avatar padrão da conta se nenhum for especificado." },
+      ],
+      docsUrl: "https://docs.heygen.com/reference/authentication",
+      docsLabel: "Docs HeyGen API",
+    },
+  },
+  {
+    provider: "runway_ml",
+    label: "Runway ML",
+    description: "Clipes de vídeo cinematográficos gerados por IA — texto → vídeo",
+    why: "Com Runway conectado, o NexOS gera clipes de b-roll e cenas de vídeo para VSL/CPL 100% por IA, sem precisar filmar nada.",
+    category: "Geração de Vídeo",
+    color: "text-emerald-400",
+    icon: BarChart2,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "API Key do Runway", placeholder: "rw_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "password",
+        hint: "Encontrada em Runway → Account → API Keys → Create API Key. Começa com 'rw_'." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta Runway" },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no Runway (plano Standard ou superior para API)"],
+      steps: [
+        { title: "Crie sua conta no Runway", detail: "Acesse runwayml.com. Planos a partir de US$15/mês incluem créditos de geração.", url: "https://runwayml.com" },
+        { title: "Acesse o painel de API", detail: "Em Runway → Account (avatar superior direito) → API Keys → Create new key.", url: "https://dev.runwayml.com" },
+        { title: "Copie a API Key", detail: "Copie a chave que começa com 'rw_' e cole acima. Cada geração consome créditos Runway." },
+      ],
+      docsUrl: "https://dev.runwayml.com/docs",
+      docsLabel: "Docs Runway API",
+    },
+  },
+  {
+    provider: "kling_fal",
+    label: "Kling AI (via fal.ai)",
+    description: "Alternativa ao Runway — geração de vídeo IA de alta qualidade",
+    why: "Kling via fal.ai é uma alternativa mais acessível ao Runway para geração de clipes de vídeo por IA com excelente qualidade.",
+    category: "Geração de Vídeo",
+    color: "text-cyan-400",
+    icon: BarChart2,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "API Key do fal.ai", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxxxxxxxxxx", type: "password",
+        hint: "Encontrada em fal.ai → Account → Keys → Add key. Formato: UUID:secret." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta fal.ai" },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no fal.ai"],
+      steps: [
+        { title: "Crie sua conta no fal.ai", detail: "Acesse fal.ai e crie sua conta. Inclui créditos gratuitos para teste.", url: "https://fal.ai" },
+        { title: "Gere sua API Key", detail: "Em fal.ai → Account → Keys → Add key. Copie a chave no formato UUID:secret.", url: "https://fal.ai/dashboard/keys" },
+        { title: "Cole a chave acima", detail: "Pronto — o NexOS usará Kling v1.6 para geração de clipes de vídeo de até 10 segundos." },
+      ],
+      docsUrl: "https://fal.ai/docs",
+      docsLabel: "Docs fal.ai",
+    },
+  },
+  {
+    provider: "elevenlabs",
+    label: "ElevenLabs",
+    description: "Clonagem de voz — narração em off com a sua voz nos vídeos gerados",
+    why: "Com ElevenLabs conectado, o NexOS pode narrar os vídeos com uma voz clonada da sua (ou qualquer voz escolhida), tornando os vídeos 100% personalizados.",
+    category: "Geração de Vídeo",
+    color: "text-yellow-400",
+    icon: BarChart2,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "API Key do ElevenLabs", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "password",
+        hint: "Encontrada em ElevenLabs → Profile → API Key. Planos pagos têm acesso à clonagem de voz." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta ElevenLabs" },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no ElevenLabs (plano Starter ou superior para clonagem de voz)"],
+      steps: [
+        { title: "Crie sua conta no ElevenLabs", detail: "Acesse elevenlabs.io. O plano Starter (US$5/mês) já inclui clonagem de voz.", url: "https://elevenlabs.io" },
+        { title: "Clone sua voz", detail: "Em ElevenLabs → Voices → Add Voice → Instant Voice Cloning. Faça upload de 1-3 minutos de áudio limpo da sua voz." },
+        { title: "Copie a API Key", detail: "Em ElevenLabs → Profile (canto inferior esquerdo) → API Key. Cole acima." },
+      ],
+      docsUrl: "https://elevenlabs.io/docs/api-reference/authentication",
+      docsLabel: "Docs ElevenLabs API",
+    },
+  },
+
   {
     provider: "linkedin_ads",
     label: "LinkedIn Ads",
@@ -561,7 +666,7 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
   },
 ];
 
-export const INTEGRATION_CATEGORIES = ["Mensagens", "E-mail", "Social Orgânico", "Pagamentos", "Mídia Paga", "CRM"];
+export const INTEGRATION_CATEGORIES = ["Mensagens", "E-mail", "Social Orgânico", "Pagamentos", "Mídia Paga", "CRM", "Geração de Vídeo"];
 
 // ── ConnectModal ───────────────────────────────────────────────────────────────
 export function ConnectModal({
