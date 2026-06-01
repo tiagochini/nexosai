@@ -21,3 +21,5 @@
 - [E2E UI Routing & Test Patterns](e2e-ui-routing.md) — app BASE_PATH="/", all routes at root (/login not /app/login); PreLaunchChecklist Gate 4 requires explicit click; asChild fix for Link/Button nesting.
 - [Video Stream Auth](video-stream-auth.md) — <video src> can't send auth headers; use GET /api/recordings/:id/video-stream?token= (registered BEFORE router.use(requireAuth) in recording.routes.ts). Bearer-only endpoints can't be used as video src.
 - [Agent Count Convention](agent-count-convention.md) — canonical counts: 64 total agents (sidebar badge + i18n + all backend prompts), 35 landing-page core agents (the subset listed on landing.tsx). Benchmark dates: Q1 2026.
+- [completeWithAgent Fallback](completeWithAgent-fallback.md) — completeWithAgent() bypasses LLM router; anthropic/gemini cases need explicit try-catch → OpenAI fallback or Anthropic outage crashes direct-chat.
+- [Integration Gate Placement](integration-gate-placement.md) — gate belongs ONLY at execute/launch (execution.routes.ts); never at content approval or status PATCH.
