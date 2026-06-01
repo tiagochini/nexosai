@@ -1916,7 +1916,6 @@ export default function ContentApproval() {
   const [previewFilter, setPreviewFilter] = useState<Platform | "all">("all");
   const [regeneratingContent, setRegeneratingContent] = useState(false);
   const [regeneratingPieceId, setRegeneratingPieceId] = useState<string | null>(null);
-  const [integrationBlocker, setIntegrationBlocker] = useState<{ missing: { category: string; providers: string[]; reason: string }[] } | null>(null);
 
   const [, setLocation] = useLocation();
 
@@ -1977,13 +1976,6 @@ export default function ContentApproval() {
       setLocation(`/campaigns/${campaignId}`);
     },
     onError: (err: Error) => {
-      if (err instanceof ApiError && err.data) {
-        const d = err.data as { code?: string; data?: { missing?: { category: string; providers: string[]; reason: string }[] } };
-        if (d.code === "MISSING_INTEGRATIONS" && d.data?.missing) {
-          setIntegrationBlocker({ missing: d.data.missing });
-          return;
-        }
-      }
       toast.error(err.message ?? "Erro ao aprovar campanha");
     },
   });
@@ -2325,50 +2317,6 @@ export default function ContentApproval() {
           }}
         />
       )}
-      {/* Integration blocker modal — shown when approve is attempted without required channels */}
-      {integrationBlocker && (
-        <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-card border border-destructive/40 max-w-md w-full space-y-5 p-6">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <div>
-                <p className="font-mono text-sm font-bold text-destructive uppercase tracking-widest mb-1">Canais obrigatórios não conectados</p>
-                <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
-                  Sem esses canais a campanha não tem como ser entregue. Conecte antes de aprovar o conteúdo.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {integrationBlocker.missing.map((m, i) => (
-                <div key={i} className="border border-border/40 bg-muted/10 px-4 py-3 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-destructive rounded-full shrink-0" />
-                    <span className="font-mono text-xs font-bold text-destructive uppercase tracking-widest">{m.category}</span>
-                  </div>
-                  <p className="font-mono text-[11px] text-muted-foreground/60 pl-3.5">{m.reason}</p>
-                  <p className="font-mono text-[11px] text-foreground/50 pl-3.5">{m.providers.join(" · ")}</p>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1 rounded-none font-mono uppercase tracking-widest text-xs h-9 border-border/40"
-                onClick={() => setIntegrationBlocker(null)}
-              >
-                Fechar
-              </Button>
-              <Button
-                className="flex-1 rounded-none font-mono uppercase tracking-widest text-xs h-9 btn-weapon-primary gap-1.5"
-                onClick={() => { setIntegrationBlocker(null); setLocation("/integracoes"); }}
-              >
-                <Link2 className="h-3.5 w-3.5" />Conectar Agora
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {generateMoreTarget && (
         <GenerateMoreModal
           platform={generateMoreTarget}

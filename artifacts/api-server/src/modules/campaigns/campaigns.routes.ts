@@ -14,9 +14,8 @@ import {
 } from "./campaigns.service.js";
 import { triggerStrategyPhase } from "../orchestration/orchestration.service.js";
 import { AppError } from "../../lib/errors.js";
-import { db, workspacesTable, workspaceIntegrationsTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
-import { env } from "../../lib/env.js";
+import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const REORIENT_STRATEGY_COST = 45;
 
@@ -191,51 +190,6 @@ router.patch("/:id/status", async (req, res): Promise<void> => {
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
     return;
-  }
-
-  // INTEGRATION GATE: block awaiting_approval → approved if core channels are missing.
-  // Without WhatsApp/Telegram AND email platform, the launch sequence has no delivery
-  // channels — approving content would be approving a campaign that can never run.
-  if (parsed.data.status === "approved") {
-    const MESSAGING: string[] = ["whatsapp_business", "telegram"];
-    const EMAIL: string[] = ["rd_station", "activecampaign"];
-    const connected = await db
-      .select({ provider: workspaceIntegrationsTable.provider })
-      .from(workspaceIntegrationsTable)
-      .where(
-        and(
-          eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId),
-          eq(workspaceIntegrationsTable.status, "connected"),
-          inArray(workspaceIntegrationsTable.provider, [...MESSAGING, ...EMAIL] as any),
-        ),
-      );
-    const providers = connected.map((r) => r.provider as string);
-    const hasMessaging = MESSAGING.some((p) => providers.includes(p));
-    const hasEmail = EMAIL.some((p) => providers.includes(p)) || !!env.RESEND_API_KEY;
-
-    if (!hasMessaging || !hasEmail) {
-      const missing: { category: string; providers: string[]; reason: string }[] = [];
-      if (!hasMessaging) {
-        missing.push({
-          category: "Mensagens",
-          providers: ["WhatsApp Business", "Telegram"],
-          reason: "Disparo de sequências de mensagens — obrigatório para lançamento",
-        });
-      }
-      if (!hasEmail) {
-        missing.push({
-          category: "E-mail",
-          providers: ["RD Station", "ActiveCampaign", "Resend"],
-          reason: "Sequência de e-mails de lançamento — obrigatório para lançamento",
-        });
-      }
-      res.status(422).json({
-        error: "Conecte WhatsApp/Telegram e uma plataforma de e-mail antes de aprovar o conteúdo. Sem esses canais, a campanha não tem como ser entregue.",
-        code: "MISSING_INTEGRATIONS",
-        data: { missing, connectUrl: "/integracoes" },
-      });
-      return;
-    }
   }
 
   try {
