@@ -779,12 +779,10 @@ export default function VideoProductionPage() {
           </div>
           <div className="flex items-center gap-3">
             {provider && !provider.configured && (
-              <a href="/integracoes">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 transition-colors cursor-pointer">
-                  <AlertCircle className="h-3.5 w-3.5 text-yellow-400" />
-                  <span className="font-mono text-[10px] text-yellow-400">Conectar provedor de vídeo →</span>
-                </div>
-              </a>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+                <AlertCircle className="h-3.5 w-3.5 text-yellow-400" />
+                <span className="font-mono text-[10px] text-yellow-400">Geração de vídeo em breve</span>
+              </div>
             )}
             {provider?.configured && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10">
@@ -873,37 +871,30 @@ export default function VideoProductionPage() {
 
               {/* Provider warning */}
               {provider && !provider.configured && (
-                <div className="border border-yellow-500/40 rounded-xl p-5 bg-yellow-500/5">
+                <div className="border border-primary/20 rounded-xl p-5 bg-primary/5">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5 shrink-0" />
+                    <Sparkles className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="font-mono text-sm font-bold text-yellow-400 mb-1">Nenhum provedor de vídeo conectado</div>
+                      <div className="font-mono text-sm font-bold text-foreground mb-1">Geração de vídeo IA — em breve</div>
                       <div className="font-mono text-xs text-muted-foreground mb-3">
-                        Para gerar clipes de vídeo com IA, conecte <span className="text-foreground font-bold">sua própria chave de API</span> de um dos provedores abaixo — ou aguarde o plano NexOS com créditos de vídeo incluídos.
+                        A NexOS vai oferecer geração de vídeo com IA diretamente pelo painel — sem precisar contratar nenhum provedor externo.
+                        Você usa créditos NexOS e paga conforme consome.
                       </div>
-                      <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="grid grid-cols-3 gap-2 mb-4">
                         {[
-                          { name: "Runway ML", desc: "Geração de clipes cinematográficos", color: "text-green-400 border-green-500/30 bg-green-500/5" },
-                          { name: "Kling via fal.ai", desc: "Alternativa rápida ao Runway", color: "text-blue-400 border-blue-500/30 bg-blue-500/5" },
-                          { name: "HeyGen", desc: "Avatar IA com lip-sync realista", color: "text-violet-400 border-violet-500/30 bg-violet-500/5" },
-                          { name: "ElevenLabs", desc: "Clonagem de voz + narração IA", color: "text-yellow-400 border-yellow-500/30 bg-yellow-500/5" },
+                          { label: "Preview 720p", cost: "50 créditos/cena", icon: "🎬" },
+                          { label: "Avatar com lip-sync", cost: "80 créditos/cena", icon: "👤" },
+                          { label: "Vídeo HD Final", cost: "150 créditos/cena", icon: "✨" },
                         ].map(p => (
-                          <div key={p.name} className={`border rounded-lg px-3 py-2 ${p.color}`}>
-                            <div className={`font-mono text-[11px] font-bold`}>{p.name}</div>
-                            <div className="font-mono text-[10px] text-muted-foreground">{p.desc}</div>
+                          <div key={p.label} className="border border-border/40 rounded-lg px-3 py-2 bg-background/40">
+                            <div className="font-mono text-base mb-1">{p.icon}</div>
+                            <div className="font-mono text-[11px] font-bold text-foreground">{p.label}</div>
+                            <div className="font-mono text-[10px] text-primary">{p.cost}</div>
                           </div>
                         ))}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <a href="/integracoes">
-                          <Button size="sm" className="font-mono text-xs">
-                            <Settings className="h-3.5 w-3.5 mr-1.5" />
-                            Conectar minha API key
-                          </Button>
-                        </a>
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          Roteiro e storyboard funcionam sem provedor — a geração de clipes requer chave conectada.
-                        </span>
+                      <div className="font-mono text-[10px] text-muted-foreground">
+                        Roteiro e storyboard já funcionam. Geração de clipes estará disponível em breve para todos os planos.
                       </div>
                     </div>
                   </div>
@@ -1197,9 +1188,9 @@ export default function VideoProductionPage() {
                     <span>{provider?.videoProvider ?? "Runway ML / Kling"}</span>
                   </div>
                   {!provider?.configured && (
-                    <a href="/integracoes" className="inline-flex items-center gap-1.5 font-mono text-[10px] text-yellow-400 hover:text-yellow-300 mb-3 transition-colors">
-                      <AlertCircle className="h-3 w-3" />Conecte sua API key em Integrações para gerar clipes →
-                    </a>
+                    <div className="font-mono text-[10px] text-primary/70 mb-3 flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3" />Geração de clipes via créditos NexOS — em breve
+                    </div>
                   )}
                   <Button onClick={generatePreview} disabled={actionLoading} className="font-mono">
                     {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}

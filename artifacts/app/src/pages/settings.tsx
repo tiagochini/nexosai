@@ -745,53 +745,9 @@ const INTEGRATION_CATALOG: {
       { key: "accessToken", label: "API Key", placeholder: "re_xxxx...", type: "password" },
     ],
   },
-  {
-    provider: "heygen" as IntegrationProvider,
-    label: "HeyGen",
-    description: "Avatar IA realista com lip-sync — use sua própria chave para custo reduzido",
-    category: "Geração de Vídeo",
-    color: "text-violet-400",
-    fields: [
-      { key: "accessToken", label: "API Key do HeyGen", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "password" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Meu HeyGen" },
-    ],
-  },
-  {
-    provider: "runway_ml" as IntegrationProvider,
-    label: "Runway ML",
-    description: "Geração de clipes de vídeo IA de alta qualidade — sua conta, seu custo",
-    category: "Geração de Vídeo",
-    color: "text-green-400",
-    fields: [
-      { key: "accessToken", label: "API Key do Runway", placeholder: "rw_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "password" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Meu Runway" },
-    ],
-  },
-  {
-    provider: "kling_fal" as IntegrationProvider,
-    label: "Kling via fal.ai",
-    description: "Geração de vídeo Kling v1.6 via fal.ai — alternativa ao Runway",
-    category: "Geração de Vídeo",
-    color: "text-blue-400",
-    fields: [
-      { key: "accessToken", label: "API Key do fal.ai", placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx:xxxxxxxxxxxxxxxx", type: "password" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Meu fal.ai" },
-    ],
-  },
-  {
-    provider: "elevenlabs" as IntegrationProvider,
-    label: "ElevenLabs",
-    description: "Clonagem de voz e narração IA — sua voz, sua conta",
-    category: "Geração de Vídeo",
-    color: "text-yellow-400",
-    fields: [
-      { key: "accessToken", label: "API Key do ElevenLabs", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type: "password" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Meu ElevenLabs" },
-    ],
-  },
 ];
 
-const CATEGORIES = ["Mensagens", "E-mail", "Pagamentos", "Mídia Paga", "Social Orgânico", "CRM", "Geração de Vídeo"];
+const CATEGORIES = ["Mensagens", "E-mail", "Pagamentos", "Mídia Paga", "Social Orgânico", "CRM"];
 
 function ConnectModal({
   info,
