@@ -109,7 +109,7 @@ async function saveCheckpoint(
 }
 
 function isStepDone(cp: PipelineCheckpoint | null, step: string): boolean {
-  return cp?.completedSteps.includes(step) ?? false;
+  return cp?.completedSteps?.includes(step) ?? false;
 }
 
 function isLockActive(cp: PipelineCheckpoint | null): boolean {
@@ -144,7 +144,7 @@ async function acquireExecutionLock(
     .update(campaignsTable)
     .set({ brainData: { ...existing, pipelineCheckpoint: updated } as any })
     .where(eq(campaignsTable.id, campaignId));
-  const isRecovery = (cp?.completedSteps.length ?? 0) > 0;
+  const isRecovery = (cp?.completedSteps?.length ?? 0) > 0;
   log.info(
     { campaignId, isRecovery, completedSteps: updated.completedSteps },
     isRecovery ? "[PIPELINE_RECOVERED] Resuming from checkpoint" : "[PIPELINE_LOCK_ACQUIRED]",

@@ -290,29 +290,29 @@ export async function runStrategicCoreBriefing(
     ? `
 **Inteligência de Perfil (Profile Builder — use como base):**
 
-USP: ${profile.product.usp}
-Mecanismo único: ${profile.positioning.uniqueMechanism}
-Big Idea: ${profile.positioning.campaignBigIdea}
-Elevator Pitch: ${profile.positioning.elevatorPitch}
+USP: ${profile.product?.usp ?? ""}
+Mecanismo único: ${profile.positioning?.uniqueMechanism ?? ""}
+Big Idea: ${profile.positioning?.campaignBigIdea ?? ""}
+Elevator Pitch: ${profile.positioning?.elevatorPitch ?? ""}
 
-Avatar primário — ${profile.primaryAvatar.name}:
-- Desejo mais profundo: ${profile.primaryAvatar.deepestDesire}
-- Nível de consciência: ${profile.primaryAvatar.awarenessLevel}
-- Sofisticação: ${profile.primaryAvatar.sophisticationLevel}
-- Objeções típicas: ${profile.primaryAvatar.typicalObjections.slice(0, 4).join("; ")}
-- O que os faz confiar: ${profile.primaryAvatar.whatMakesThemTrust.slice(0, 3).join("; ")}
-- Keywords que usam: ${profile.primaryAvatar.keywordsTheyUse.slice(0, 5).join(", ")}
+Avatar primário — ${profile.primaryAvatar?.name ?? "Avatar"}:
+- Desejo mais profundo: ${profile.primaryAvatar?.deepestDesire ?? ""}
+- Nível de consciência: ${profile.primaryAvatar?.awarenessLevel ?? ""}
+- Sofisticação: ${profile.primaryAvatar?.sophisticationLevel ?? ""}
+- Objeções típicas: ${(profile.primaryAvatar?.typicalObjections ?? []).slice(0, 4).join("; ")}
+- O que os faz confiar: ${(profile.primaryAvatar?.whatMakesThemTrust ?? []).slice(0, 3).join("; ")}
+- Keywords que usam: ${(profile.primaryAvatar?.keywordsTheyUse ?? []).slice(0, 5).join(", ")}
 
-Mercado — maturidade: ${profile.marketIntelligence.maturity} | concorrência: ${profile.marketIntelligence.competitionLevel}
-Oportunidades: ${profile.marketIntelligence.opportunities.slice(0, 3).join("; ")}
-Red flags: ${profile.marketIntelligence.redFlags.slice(0, 3).join("; ")}
+Mercado — maturidade: ${profile.marketIntelligence?.maturity ?? ""} | concorrência: ${profile.marketIntelligence?.competitionLevel ?? ""}
+Oportunidades: ${(profile.marketIntelligence?.opportunities ?? []).slice(0, 3).join("; ")}
+Red flags: ${(profile.marketIntelligence?.redFlags ?? []).slice(0, 3).join("; ")}
 
 Segmentos:
-${profile.segments.map((s) => `- ${s.name} [${s.priority}]: ${s.messageAngle}`).join("\n")}
+${(profile.segments ?? []).map((s) => `- ${s.name} [${s.priority}]: ${s.messageAngle}`).join("\n")}
 
-Score PMF: ${profile.profileScore}/100
-Avisos de validação: ${profile.validationWarnings.join("; ") || "nenhum"}
-Insights críticos: ${profile.criticalInsights.join("; ")}`
+Score PMF: ${profile.profileScore ?? 0}/100
+Avisos de validação: ${(profile.validationWarnings ?? []).join("; ") || "nenhum"}
+Insights críticos: ${(profile.criticalInsights ?? []).join("; ")}`
     : "(Perfil não disponível — baseie-se nos dados de intake abaixo)";
 
   const result = await runAgent({

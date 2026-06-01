@@ -347,33 +347,33 @@ A estratégia DEVE estar alinhada a este brief em todos os pontos. Não contradi
     ? `
 ## INTELIGÊNCIA DE PERFIL (gerada pelo Profile Builder — use como base)
 
-**Score product-market fit:** ${profile.profileScore}/100
-**Avisos de validação:** ${profile.validationWarnings.join("; ") || "nenhum"}
-**Insights críticos:** ${profile.criticalInsights.join("; ")}
+**Score product-market fit:** ${profile.profileScore ?? 0}/100
+**Avisos de validação:** ${(profile.validationWarnings ?? []).join("; ") || "nenhum"}
+**Insights críticos:** ${(profile.criticalInsights ?? []).join("; ")}
 
-**USP derivada pela IA:** ${profile.product.usp}
-**Mecanismo único:** ${profile.positioning.uniqueMechanism}
-**Big Idea da campanha:** ${profile.positioning.campaignBigIdea}
-**Elevator pitch:** ${profile.positioning.elevatorPitch}
+**USP derivada pela IA:** ${profile.product?.usp ?? ""}
+**Mecanismo único:** ${profile.positioning?.uniqueMechanism ?? ""}
+**Big Idea da campanha:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Elevator pitch:** ${profile.positioning?.elevatorPitch ?? ""}
 
-**Avatar primário — ${profile.primaryAvatar.name}:**
-- Desejo mais profundo: ${profile.primaryAvatar.deepestDesire}
-- Nível de consciência: ${profile.primaryAvatar.awarenessLevel}
-- Sofisticação: ${profile.primaryAvatar.sophisticationLevel}
-- Principais objeções: ${profile.primaryAvatar.typicalObjections.slice(0, 3).join("; ")}
-- O que os faz confiar: ${profile.primaryAvatar.whatMakesThemTrust.slice(0, 2).join("; ")}
-- Palavras-chave que usam: ${profile.primaryAvatar.keywordsTheyUse.slice(0, 5).join(", ")}
+**Avatar primário — ${profile.primaryAvatar?.name ?? "Avatar"}:**
+- Desejo mais profundo: ${profile.primaryAvatar?.deepestDesire ?? ""}
+- Nível de consciência: ${profile.primaryAvatar?.awarenessLevel ?? ""}
+- Sofisticação: ${profile.primaryAvatar?.sophisticationLevel ?? ""}
+- Principais objeções: ${(profile.primaryAvatar?.typicalObjections ?? []).slice(0, 3).join("; ")}
+- O que os faz confiar: ${(profile.primaryAvatar?.whatMakesThemTrust ?? []).slice(0, 2).join("; ")}
+- Palavras-chave que usam: ${(profile.primaryAvatar?.keywordsTheyUse ?? []).slice(0, 5).join(", ")}
 
 **Mercado:**
-- Maturidade: ${profile.marketIntelligence.maturity}
-- Concorrência: ${profile.marketIntelligence.competitionLevel}
-- CPL médio do mercado: R$${profile.marketIntelligence.averageCPL}
-- Taxa de conversão típica: ${(profile.marketIntelligence.typicalConversionRate * 100).toFixed(1)}%
-- Oportunidades: ${profile.marketIntelligence.opportunities.slice(0, 3).join("; ")}
-- Red flags: ${profile.marketIntelligence.redFlags.slice(0, 3).join("; ")}
+- Maturidade: ${profile.marketIntelligence?.maturity ?? ""}
+- Concorrência: ${profile.marketIntelligence?.competitionLevel ?? ""}
+- CPL médio do mercado: R$${profile.marketIntelligence?.averageCPL ?? 0}
+- Taxa de conversão típica: ${((profile.marketIntelligence?.typicalConversionRate ?? 0) * 100).toFixed(1)}%
+- Oportunidades: ${(profile.marketIntelligence?.opportunities ?? []).slice(0, 3).join("; ")}
+- Red flags: ${(profile.marketIntelligence?.redFlags ?? []).slice(0, 3).join("; ")}
 
 **Segmentos identificados:**
-${profile.segments.map((s) => `- ${s.name} [${s.priority}]: ${s.messageAngle} | CPL ~R$${s.estimatedCPL} | Conv ~${(s.estimatedConversionRate * 100).toFixed(1)}%`).join("\n")}
+${(profile.segments ?? []).map((s) => `- ${s.name} [${s.priority}]: ${s.messageAngle} | CPL ~R$${s.estimatedCPL} | Conv ~${((s.estimatedConversionRate ?? 0) * 100).toFixed(1)}%`).join("\n")}
 
 Use este perfil como base para aprofundar a estratégia. Não repita as mesmas informações — aprofunde, conecte e adicione dimensões que o Profile Builder não cobriu.`
     : "";
