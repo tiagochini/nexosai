@@ -76,6 +76,35 @@ function extractProfile(audienceData: unknown): ProfileBuilderOutput | undefined
   return audienceData as ProfileBuilderOutput;
 }
 
+// ── Piece content empty detection ─────────────────────────────────────────────
+// Returns true when a content piece was saved but its payload is effectively empty
+// (LLM returned truncated JSON, empty arrays, or a bare object with no useful data).
+// Used by the auto-repair sweep to identify pieces that need regeneration.
+export function isPieceContentEmpty(content: unknown): boolean {
+  if (!content || typeof content !== "object") return true;
+  const obj = content as Record<string, unknown>;
+  if (Object.keys(obj).length === 0) return true;
+  // If every top-level array in the object is empty, the piece has no real content.
+  // Scalars (strings, numbers) count as content so we only apply this when there
+  // are no non-array/non-object values at the top level.
+  const values = Object.values(obj);
+  const hasScalar = values.some(v => typeof v === "string" || typeof v === "number");
+  if (hasScalar) return false;
+  const arrays = values.filter(v => Array.isArray(v));
+  if (arrays.length > 0 && arrays.every(a => (a as unknown[]).length === 0)) return true;
+  return false;
+}
+
+// Piece types that have a dedicated regeneration agent (must stay in sync with PIECE_TYPE_TO_AGENT).
+const REGENERABLE_PIECE_TYPES: ReadonlySet<string> = new Set([
+  "email_sequence",
+  "landing_page_structure",
+  "vsl_script",
+  "ad_copy",
+  "targeting_config",
+  "media_buying_plan",
+]);
+
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
 export async function generateCampaignContent(
@@ -1215,6 +1244,110 @@ export async function generateCampaignContent(
     errors.push({ agent: "compliance", error: msg });
     log.error({ err, campaignId }, "Compliance agent failed");
     emitAgentError(campaignId, "compliance", err);
+  }
+
+  // ── AUTO-REPAIR SWEEP ────────────────────────────────────────────────────────
+  // Before transitioning to awaiting_approval, detect any content pieces that
+  // were saved with empty arrays (agent ran but LLM returned truncated/invalid JSON).
+  // Auto-regenerate them inline — up to 2 attempts per piece, max 5 pieces total.
+  // This is the last line of defense before the campaign reaches the user.
+  // If retries still produce empty content, log clearly — never silently deliver empties.
+  if (agentsRun.length > 0) {
+    const allPieces = await db
+      .select({ id: contentPiecesTable.id, type: contentPiecesTable.type, content: contentPiecesTable.content })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.campaignId, campaignId));
+
+    const emptyPieces = allPieces.filter(
+      (p) => REGENERABLE_PIECE_TYPES.has(p.type ?? "") && isPieceContentEmpty(p.content),
+    );
+
+    if (emptyPieces.length > 0) {
+      log.warn(
+        { campaignId, count: emptyPieces.length, types: emptyPieces.map(p => p.type) },
+        "[AUTO-REPAIR] %d empty pieces detected after content generation — starting auto-repair sweep",
+        emptyPieces.length,
+      );
+      emitCampaignEvent({
+        campaignId,
+        type: "execution_update",
+        message: `🔄 Auto-reparo: ${emptyPieces.length} peça${emptyPieces.length !== 1 ? "s" : ""} vazia${emptyPieces.length !== 1 ? "s" : ""} detectada${emptyPieces.length !== 1 ? "s" : ""} — regenerando automaticamente...`,
+        data: { phase: "auto_repair", pieces: emptyPieces.map(p => p.type) },
+        timestamp: new Date().toISOString(),
+      });
+
+      const MAX_AUTO_REPAIRS = 5;
+      let repaired = 0;
+      let repairFailed = 0;
+      for (const piece of emptyPieces.slice(0, MAX_AUTO_REPAIRS)) {
+        let success = false;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            emitCampaignEvent({
+              campaignId,
+              type: "agent_started",
+              agentType: PIECE_TYPE_TO_AGENT[piece.type ?? ""] ?? piece.type ?? "unknown",
+              message: `🔄 Auto-reparo (tentativa ${attempt}/2): regenerando ${piece.type}...`,
+              timestamp: new Date().toISOString(),
+            });
+            await regeneratePiece(campaignId, workspaceId, piece.id, log);
+            // Verify the piece is no longer empty
+            const [updated] = await db
+              .select({ content: contentPiecesTable.content })
+              .from(contentPiecesTable)
+              .where(eq(contentPiecesTable.id, piece.id))
+              .limit(1);
+            if (updated && !isPieceContentEmpty(updated.content)) {
+              emitCampaignEvent({
+                campaignId,
+                type: "agent_completed",
+                agentType: PIECE_TYPE_TO_AGENT[piece.type ?? ""] ?? piece.type ?? "unknown",
+                message: `✅ Auto-reparo concluído: ${piece.type} regenerado com sucesso`,
+                timestamp: new Date().toISOString(),
+              });
+              repaired++;
+              success = true;
+              break;
+            }
+            log.warn({ campaignId, pieceId: piece.id, type: piece.type, attempt }, "[AUTO-REPAIR] Attempt %d produced empty content again — retrying", attempt);
+          } catch (err) {
+            log.error({ err, campaignId, pieceId: piece.id, type: piece.type, attempt }, "[AUTO-REPAIR] Attempt %d threw error", attempt);
+            // small delay before retry
+            if (attempt === 1) await new Promise(r => setTimeout(r, 2000));
+          }
+        }
+        if (!success) {
+          repairFailed++;
+          log.error(
+            { campaignId, pieceId: piece.id, type: piece.type },
+            "[AUTO-REPAIR] FAILED after 2 attempts — piece will be visible as empty in review",
+          );
+          emitCampaignEvent({
+            campaignId,
+            type: "agent_failed",
+            agentType: piece.type ?? "unknown",
+            message: `⚠️ Auto-reparo falhou para ${piece.type} após 2 tentativas — peça requer revisão manual`,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
+      log.info(
+        { campaignId, repaired, repairFailed, total: emptyPieces.length },
+        "[AUTO-REPAIR] Sweep complete — %d repaired, %d failed",
+        repaired,
+        repairFailed,
+      );
+      emitCampaignEvent({
+        campaignId,
+        type: "execution_update",
+        message: repairFailed === 0
+          ? `✅ Auto-reparo concluído — ${repaired} peça${repaired !== 1 ? "s" : ""} recuperada${repaired !== 1 ? "s" : ""}`
+          : `⚠️ Auto-reparo parcial — ${repaired} recuperadas, ${repairFailed} requerem atenção`,
+        data: { phase: "auto_repair", repaired, repairFailed },
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 
   // ── Final status ─────────────────────────────────────────────────────────────
