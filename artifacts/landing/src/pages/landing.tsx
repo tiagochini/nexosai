@@ -824,7 +824,7 @@ function OfertaSection() {
         "900 créditos incluídos — cobre 2 lançamentos completos",
         "Até 3 campanhas simultâneas",
         "Trilha de 6 dígitos (R$100k–R$999k em 7 dias)",
-        "34 agentes especializados",
+        "35 agentes especializados",
         "Integração Meta + Google + TikTok",
         "Automação multicanal: Email, WhatsApp, Telegram, Instagram, Facebook, TikTok",
         "Dashboard de performance em tempo real",
@@ -988,7 +988,7 @@ function DoisCaminhosSection() {
                   O agente executa<br /><span className="text-primary">o lançamento por você</span>
                 </div>
                 <p className="font-mono text-sm text-muted-foreground leading-relaxed">
-                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS faz o trabalho pesado — 34 agentes, do briefing ao carrinho fechado.
+                  Você tem produto, já investiu em tráfego e quer velocidade, automação e resultado. O NexOS faz o trabalho pesado — 35 agentes, do briefing ao carrinho fechado.
                 </p>
               </div>
               <div className="space-y-2.5">
@@ -1049,7 +1049,7 @@ function LiveSorteioSection() {
   const { ref, inView } = useInView(0.2);
   const etapas = [
     { num: "01", label: "Briefing ao vivo", desc: "Intake conversacional em tempo real com a audiência respondendo junto" },
-    { num: "02", label: "Estratégia gerada", desc: "34 agentes constroem posicionamento, big idea, copy, anúncios e sequências" },
+    { num: "02", label: "Estratégia gerada", desc: "35 agentes constroem posicionamento, big idea, copy, anúncios e sequências" },
     { num: "03", label: "Campanha pronta", desc: "Criativos finalizados, sequências configuradas, pixel calibrado — a ponto de disparo" },
     { num: "04", label: "Disparo nas mãos do sortudo", desc: "O lançamento está pronto. Ativar o disparo depende do sorteado adquirir o acesso — a campanha já foi construída por nós, ao vivo" },
   ];
@@ -1074,7 +1074,7 @@ function LiveSorteioSection() {
             <span className="text-foreground/70">construído na frente de todos.</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed max-w-2xl mb-10">
-            Vou sortear um participante e, ao vivo, construir o lançamento completo dele — do briefing aos criativos finalizados, passando pela estratégia, copy, sequências de disparo e configuração de pixel. Em tempo real, com os 34 agentes trabalhando. A audiência inteira acompanha o processo.
+            Vou sortear um participante e, ao vivo, construir o lançamento completo dele — do briefing aos criativos finalizados, passando pela estratégia, copy, sequências de disparo e configuração de pixel. Em tempo real, com os 35 agentes trabalhando. A audiência inteira acompanha o processo.
           </p>
 
           {/* Etapas */}
@@ -1149,7 +1149,7 @@ function FechamentoSection() {
             <span className="text-primary">operação que você paga.</span>
           </h2>
           <p className="font-mono text-base text-muted-foreground leading-relaxed max-w-2xl mb-8">
-            Não é sobre ter uma nova ferramenta. É sobre parar de ser o sistema nervoso da sua própria campanha — e deixar que 34 agentes especializados façam o trabalho pesado enquanto você foca no que só você pode fazer.
+            Não é sobre ter uma nova ferramenta. É sobre parar de ser o sistema nervoso da sua própria campanha — e deixar que 35 agentes especializados façam o trabalho pesado enquanto você foca no que só você pode fazer.
           </p>
 
           {/* Garantia — posicionada como prova de confiança */}
@@ -1221,7 +1221,7 @@ function AutoridadeSection() {
               {[
                 { num: "R$2.3B+", label: "em campanhas digitais analisadas para calibrar os agentes" },
                 { num: "1.200+", label: "lançamentos documentados como base de treinamento do sistema" },
-                { num: "34", label: "agentes especializados, cada um treinado com as doutrinas dos maiores profissionais do mundo" },
+                { num: "35", label: "agentes especializados, cada um treinado com as doutrinas dos maiores profissionais do mundo" },
                 { num: "3 idiomas", label: "PT-BR nativo, EN-US e ES-LA — sem tradução automática, sem perda de nuance" },
               ].map((item, i) => (
                 <div

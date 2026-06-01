@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,8 +8,9 @@ import {
   Video, Play, CheckCircle2, Clock, AlertCircle, Sparkles,
   ChevronRight, User, Mic, Film, Wand2, Eye, Download,
   RefreshCw, Plus, Settings, Info, Clapperboard, Shirt, Lightbulb,
-  ChevronDown, ChevronUp, Camera
+  ChevronDown, ChevronUp, Camera, Upload, Scissors,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,15 @@ interface FilmingBrief {
   linguagem: { tom: string; velocidade: string; pausas: string; gestos: string; olhar: string };
   scenes: SceneDirection[];
   mensagemFinal: string;
+}
+
+interface Recording {
+  id: string;
+  name: string;
+  status: string;
+  videoPath?: string;
+  videoSize?: number;
+  createdAt: string;
 }
 
 interface VideoProject {
@@ -586,6 +596,16 @@ export default function VideoProductionPage() {
   const [expandedScene, setExpandedScene] = useState<string | null>(null);
   const [provider, setProvider] = useState<ProviderStatus | null>(null);
 
+  // Hybrid mode — user uploads their own recording
+  const [hybridMode, setHybridMode] = useState<"ai" | "recording">("ai");
+  const [hybridFile, setHybridFile] = useState<File | null>(null);
+  const [hybridUploading, setHybridUploading] = useState(false);
+  const hybridInputRef = useRef<HTMLInputElement>(null);
+
+  // Recordings list (for hybrid mode history panel)
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [recordingsLoaded, setRecordingsLoaded] = useState(false);
+
   // Auto-select project from URL param (e.g. coming from CreativeStudioBlock)
   const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const projectIdParam = search?.get("projectId");
@@ -594,6 +614,13 @@ export default function VideoProductionPage() {
     loadProjects();
     loadProviderStatus();
   }, []);
+
+  useEffect(() => {
+    if (hybridMode === "recording" && selected?.config.hasUserFace) {
+      setRecordings([]);
+      loadRecordings();
+    }
+  }, [hybridMode, selected?.id]);
 
   async function loadProjects() {
     setLoading(true);
@@ -653,6 +680,42 @@ export default function VideoProductionPage() {
       setSelected(res.project);
       setProjects(ps => ps.map(p => p.id === res.project.id ? res.project : p));
     } finally { setActionLoading(false); }
+  }
+
+  async function loadRecordings() {
+    try {
+      const res = await customFetch<{ recordings: Recording[] }>("/api/recordings");
+      setRecordings(res.recordings ?? []);
+    } catch {} finally { setRecordingsLoaded(true); }
+  }
+
+  async function uploadRecordingAndEdit() {
+    if (!selected || !hybridFile) return;
+    setHybridUploading(true);
+    try {
+      // 1 — create recording entry linked to this video project
+      const createRes = await customFetch<{ recording: { id: string } }>("/api/recordings", {
+        method: "POST",
+        body: JSON.stringify({ name: `Gravação — ${selected.title}` }),
+      });
+      const recId = createRes.recording.id;
+
+      // 2 — upload raw video blob (streaming)
+      const uploadRes = await fetch(`/api/recordings/${recId}/upload?mode=hybrid`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": hybridFile.type || "video/webm" },
+        body: hybridFile,
+      });
+      if (!uploadRes.ok) throw new Error("Upload falhou");
+
+      toast.success("Gravação enviada! Abrindo editor de vídeo…");
+      navigate(`/video-editor?recordingId=${recId}&projectId=${selected.id}`);
+    } catch (err) {
+      toast.error("Falha no upload. Tente novamente.");
+    } finally {
+      setHybridUploading(false);
+    }
   }
 
   async function generateFinal() {
@@ -1173,29 +1236,151 @@ export default function VideoProductionPage() {
 
               {/* Generate preview CTA */}
               {statusIs("storyboard_approved") && (
-                <div className="border border-border/40 rounded-xl p-5 bg-background/40">
-                  <div className="font-mono text-sm font-bold mb-2">Passo 5 — Gerar Preview</div>
-                  <div className="font-mono text-xs text-muted-foreground mb-4">
-                    O agente vai gerar clipes de preview (720p) para cada cena do storyboard.
-                    Você aprova cena a cena antes do vídeo HD final.
-                  </div>
-                  <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
-                    <span className="flex items-center gap-1">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      {selected.config.hasUserFace ? "80" : "50"} créditos/cena · {(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} total
-                    </span>
-                    <span>·</span>
-                    <span>{provider?.videoProvider ?? "Runway ML / Kling"}</span>
-                  </div>
-                  {!provider?.configured && (
-                    <div className="font-mono text-[10px] text-primary/70 mb-3 flex items-center gap-1.5">
-                      <Sparkles className="h-3 w-3" />Geração de clipes via créditos NexOS — em breve
+                <div className="border border-border/40 rounded-xl p-5 bg-background/40 space-y-4">
+                  <div className="font-mono text-sm font-bold">Passo 5 — Escolha o Modo de Produção</div>
+
+                  {/* Mode selector — only when hasUserFace=true */}
+                  {selected.config.hasUserFace && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setHybridMode("ai")}
+                        className={`p-4 rounded-lg border text-left transition-all ${hybridMode === "ai" ? "border-primary bg-primary/10" : "border-border/40 hover:border-border/70"}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                          <span className="font-mono text-sm font-bold">100% IA</span>
+                        </div>
+                        <div className="font-mono text-[10px] text-muted-foreground">Avatar gerado por IA. Zero gravação necessária.</div>
+                        <div className="font-mono text-[10px] text-primary mt-1.5">80 cr/cena</div>
+                      </button>
+                      <button
+                        onClick={() => setHybridMode("recording")}
+                        className={`p-4 rounded-lg border text-left transition-all ${hybridMode === "recording" ? "border-primary bg-primary/10" : "border-border/40 hover:border-border/70"}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Camera className="h-4 w-4 text-primary shrink-0" />
+                          <span className="font-mono text-sm font-bold">Híbrido</span>
+                        </div>
+                        <div className="font-mono text-[10px] text-muted-foreground">Você grava, a IA edita. Legendas, trilha e cortes automáticos.</div>
+                        <div className="font-mono text-[10px] text-primary mt-1.5">30 cr/vídeo</div>
+                      </button>
                     </div>
                   )}
-                  <Button onClick={generatePreview} disabled={actionLoading} className="font-mono">
-                    {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                    Gerar Preview dos Clipes
-                  </Button>
+
+                  {/* AI mode */}
+                  {hybridMode === "ai" && (
+                    <div>
+                      <div className="font-mono text-xs text-muted-foreground mb-3">
+                        {selected.config.hasUserFace
+                          ? "O agente vai gerar clipes com avatar digital (720p) para cada cena. Você aprova cena a cena."
+                          : "O agente vai gerar clipes de preview (720p) para cada cena do storyboard. Você aprova cena a cena antes do vídeo HD final."}
+                      </div>
+                      <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-3">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="h-3.5 w-3.5 text-primary" />
+                          {selected.config.hasUserFace ? "80" : "50"} créditos/cena · {(selected.config.hasUserFace ? 80 : 50) * selected.storyboard.length} total
+                        </span>
+                        <span>·</span>
+                        <span>{provider?.videoProvider ?? "Runway ML / Kling"}</span>
+                      </div>
+                      {!provider?.configured && (
+                        <div className="font-mono text-[10px] text-primary/70 mb-3 flex items-center gap-1.5">
+                          <Sparkles className="h-3 w-3" />Geração de clipes via créditos NexOS — em breve
+                        </div>
+                      )}
+                      <Button onClick={generatePreview} disabled={actionLoading} className="font-mono">
+                        {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+                        Gerar Preview dos Clipes
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Hybrid recording mode */}
+                  {hybridMode === "recording" && (
+                    <div className="space-y-4">
+                      <div className="font-mono text-xs text-muted-foreground">
+                        Grave seu vídeo seguindo o roteiro e o guia do diretor. Faça o upload abaixo — a IA vai adicionar legendas,
+                        trilha sonora, títulos e cortes automáticos no editor.
+                      </div>
+
+                      {/* Upload area */}
+                      <div
+                        onClick={() => hybridInputRef.current?.click()}
+                        className="border-2 border-dashed border-border/50 hover:border-primary/50 rounded-xl p-8 text-center cursor-pointer transition-colors group"
+                      >
+                        <input
+                          ref={hybridInputRef}
+                          type="file"
+                          accept="video/*,.webm,.mp4,.mov,.avi"
+                          className="hidden"
+                          onChange={e => setHybridFile(e.target.files?.[0] ?? null)}
+                        />
+                        {hybridFile ? (
+                          <div className="space-y-2">
+                            <CheckCircle2 className="h-8 w-8 text-primary mx-auto" />
+                            <div className="font-mono text-sm font-bold text-primary">{hybridFile.name}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground">
+                              {(hybridFile.size / 1024 / 1024).toFixed(1)} MB · Clique para trocar
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Upload className="h-8 w-8 text-muted-foreground/50 mx-auto group-hover:text-primary transition-colors" />
+                            <div className="font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                              Clique para selecionar seu vídeo
+                            </div>
+                            <div className="font-mono text-[10px] text-muted-foreground/60">MP4, MOV, WebM — até 2GB</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action */}
+                      <div className="flex items-center gap-3">
+                        <Button
+                          onClick={uploadRecordingAndEdit}
+                          disabled={!hybridFile || hybridUploading}
+                          className="font-mono"
+                        >
+                          {hybridUploading
+                            ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Enviando…</>
+                            : <><Scissors className="h-4 w-4 mr-2" />Enviar e Editar com IA</>
+                          }
+                        </Button>
+                        <div className="font-mono text-[10px] text-muted-foreground">30 créditos · Editor de vídeo com IA</div>
+                      </div>
+
+                      {/* Previous recordings list */}
+                      {recordings.length > 0 && (
+                        <div className="border border-border/30 rounded-lg p-4 space-y-2">
+                          <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Gravações anteriores</div>
+                          {recordings.map(rec => (
+                            <div key={rec.id} className="flex items-center justify-between py-1.5 border-b border-border/20 last:border-0">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Video className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <div>
+                                  <div className="font-mono text-xs truncate max-w-[200px]">{rec.name}</div>
+                                  <div className="font-mono text-[10px] text-muted-foreground">
+                                    {new Date(rec.createdAt).toLocaleDateString("pt-BR")}
+                                    {rec.videoSize ? ` · ${(rec.videoSize / 1024 / 1024).toFixed(1)} MB` : ""}
+                                  </div>
+                                </div>
+                              </div>
+                              {rec.videoPath && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="font-mono text-[10px] h-7 shrink-0"
+                                  onClick={() => navigate(`/video-editor?recordingId=${rec.id}&projectId=${selected.id}`)}
+                                >
+                                  Editar
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -465,7 +465,7 @@ export function SimulatorSection() {
               <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">faturar agora?</span>
             </h2>
             <p className="font-mono text-xs text-muted-foreground/50 max-w-xs leading-relaxed">
-              Números reais. Benchmarks Q1 2025: Meta Ads, Google, TikTok, YouTube Brasil. Sem estimativas de agência.
+              Números reais. Benchmarks Q1 2026: Meta Ads, Google, TikTok, YouTube Brasil. Sem estimativas de agência.
             </p>
           </div>
 
@@ -614,7 +614,7 @@ export function SimulatorSection() {
                   {/* Budget allocation bar */}
                   <div className="border border-border/20 bg-card/20 p-4 space-y-3">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40">
-                      Distribuição recomendada — benchmarks reais Q1 2025
+                      Distribuição recomendada — benchmarks reais Q1 2026
                     </div>
                     <div className="flex h-2 overflow-hidden gap-px">
                       {sim.platforms.map(p => (

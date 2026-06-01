@@ -318,7 +318,7 @@ export default function LaunchRoom() {
               </span>
             </div>
             <p className="font-mono text-xs text-foreground/60 mt-1">
-              34 agentes ativos · Monitorando em tempo real
+              64 agentes ativos · Monitorando em tempo real
             </p>
           </div>
 

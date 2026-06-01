@@ -104,6 +104,7 @@ export const CREDIT_COSTS: Record<string, number> = {
   video_high_res: 150,          // per-scene HD final clip (Runway/Kling 1080p)
   video_avatar: 80,             // HeyGen avatar talking-head per scene
   video_voice_clone: 30,        // ElevenLabs voice clone creation (one-time per project)
+  video_hybrid: 30,             // Hybrid mode: user records + AI edits (captions, music, cuts)
 };
 
 // ─── Campaign Credit Estimates ────────────────────────────────────────────────

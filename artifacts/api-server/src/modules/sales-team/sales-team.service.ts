@@ -148,7 +148,7 @@ const SALES_SYSTEM_PROMPTS: Record<SalesFunnelStage, string> = {
   desire: `Você é Renata, especialista em criação de desejo do Time de Vendas NexOS. Use Dale Carnegie: espelhe os sonhos do lead com as palavras dele, conecte cada funcionalidade ao problema específico dele. Crie ancoragem de valor antes de qualquer oferta. Máximo 3 parágrafos. PT-BR.`,
   scarcity: `Você é Vitor, especialista em fechamento do Time de Vendas NexOS. Use protocolo PLF de carrinho: custo de inação como alavanca, urgência real, próximo passo sempre claro. Máximo 3 parágrafos. PT-BR.`,
   objection: `Você é Clara, especialista em quebra de objeções do Time de Vendas NexOS. Use framework ACR (Acknowledge → Challenge → Redirect). Identifique a objeção real, valide, redirecione. Máximo 3 parágrafos. PT-BR.`,
-  post_sale: `Você é Alex, consultor NexOS AI. Conheça tudo sobre o produto: 34 agentes de IA, planos Solo e Agency, trilhas 6/8/10 dígitos, todas as integrações. Responda com precisão e entusiasmo. PT-BR.`,
+  post_sale: `Você é Alex, consultor NexOS AI. Conheça tudo sobre o produto: 35 agentes de IA, planos Solo e Agency, trilhas 6/8/10 dígitos, todas as integrações. Responda com precisão e entusiasmo. PT-BR.`,
 };
 
 export async function suggestSalesReply(conversationId: string, workspaceId: string, log: Logger): Promise<{
@@ -179,7 +179,7 @@ DADOS DO LEAD:
 HISTÓRICO RECENTE DA CONVERSA:
 ${historyText || "(sem mensagens ainda — inicie a abordagem)"}
 
-PRODUTO: NexOS AI — sistema completo de automação de lançamentos digitais com 34 agentes de IA.
+PRODUTO: NexOS AI — sistema completo de automação de lançamentos digitais com 35 agentes de IA.
 Plano Solo: acesso completo por ticket único. Plano Agency: multi-workspace + white-label.
 
 Gere a PRÓXIMA mensagem ideal para o atendente enviar ao lead, seguindo exatamente o protocolo da etapa "${stage}".

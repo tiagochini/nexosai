@@ -1,13 +1,16 @@
-import { LayoutDashboard, Rocket, Bot, Video, Workflow, DollarSign, Settings, CreditCard, Brain, Receipt, Link2, ShoppingBag, MessageSquare, Crosshair, Clapperboard, Film, Share2, Shield, Star, Gauge, Zap } from "lucide-react";
+import { LayoutDashboard, Rocket, Bot, Video, Workflow, DollarSign, Settings, CreditCard, Brain, Receipt, Link2, ShoppingBag, MessageSquare, Crosshair, Clapperboard, Film, Share2, Shield, Star, Gauge, Zap, type LucideIcon } from "lucide-react";
 
-const navGroups = [
+type NavItemData  = { name: string; href: string; icon: LucideIcon; active?: boolean; badge?: string };
+type NavGroupData = { label: string; items: NavItemData[] };
+
+const navGroups: NavGroupData[] = [
   { label: "Core Systems", items: [
     { name: "Dashboard", href: "/", icon: LayoutDashboard, active: true },
     { name: "Cockpit do Lançamento", href: "/launcher", icon: Crosshair },
     { name: "Campanhas", href: "/campaigns", icon: Rocket },
   ]},
   { label: "AI Team", items: [
-    { name: "Agentes IA", href: "/agents", icon: Bot, badge: "57" },
+    { name: "Agentes IA", href: "/agents", icon: Bot, badge: "64" },
   ]},
   { label: "Criação", items: [
     { name: "VSLs", href: "/vsls", icon: Video },

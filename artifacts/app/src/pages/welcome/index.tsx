@@ -50,7 +50,7 @@ const FEATURE_AREAS: FeatureArea[] = [
     color: "text-primary",
     badge: "CORE",
     title: "Campanhas de Lançamento",
-    desire: "Antes você precisava de uma equipe inteira para lançar. Agora são 34 agentes IA trabalhando ao mesmo tempo.",
+    desire: "Antes você precisava de uma equipe inteira para lançar. Agora são 64 agentes IA trabalhando ao mesmo tempo.",
     realized: "Você acabou de ganhar uma equipe completa de especialistas. Por uma fração do custo.",
     action: "Criar minha primeira campanha",
     path: "/campaigns/new",

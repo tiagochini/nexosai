@@ -302,7 +302,7 @@ export function BudgetSimulator({
           <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
             Budget: <span className="text-foreground font-bold">{fmtBRL(sim.budget)}</span>
             &nbsp;·&nbsp; Ticket: <span className="text-foreground font-bold">{fmtBRL(sim.productPrice)}</span>
-            &nbsp;·&nbsp; Dados reais Q1 2025
+            &nbsp;·&nbsp; Dados reais Q1 2026
           </div>
         </div>
         <Button

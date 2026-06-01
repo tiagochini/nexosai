@@ -52,7 +52,7 @@ export const NEXOS_FRAMEWORK = {
 
   epifania: {
     gancho: "A única coisa que separava você de um lançamento de 6 dígitos não era o método — era o time de execução",
-    mecanismo: "57 agentes de IA especializados que executam cada etapa do seu lançamento enquanto você decide — do briefing ao roteiro, do copy ao WhatsApp, do VSL ao fechamento em tempo real",
+    mecanismo: "64 agentes de IA especializados que executam cada etapa do seu lançamento enquanto você decide — do briefing ao roteiro, do copy ao WhatsApp, do VSL ao fechamento em tempo real",
     ponteTransformacao: "De 'sei o método mas não consigo executar' para 'preenchi o briefing, os agentes criaram tudo e meu carrinho abriu com lista aquecida'",
     posicionamento: "NexOS não é um curso. Não é mais um framework. É o time de execução que os maiores lançadores do Brasil têm — disponível para qualquer pessoa, a qualquer hora, sem mensalidade.",
     contraposicao: "Enquanto você comprava conhecimento, o que faltava era execução. NexOS é a primeira ferramenta que executa o lançamento junto com você.",
@@ -73,7 +73,7 @@ export const NEXOS_FRAMEWORK = {
     "3. Quem executa bem tem time especializado — copy, estratégia, vídeo, sequências, atendimento",
     "4. Contratar esse time custa R$30k+/mês — fora do alcance de quem está começando",
     "5. Uma IA treinada para cada função do time de lançamento resolve isso",
-    "6. NexOS tem 57 agentes especializados — cada um treinado para uma função específica",
+    "6. NexOS tem 64 agentes especializados — cada um treinado para uma função específica",
     "7. Você pode ver funcionando ao vivo — sem promessa, sem slide",
     "8. R$3.990 uma única vez é menos que um mês de um bom copywriter",
 
@@ -92,7 +92,7 @@ export const NEXOS_FRAMEWORK = {
       nome: "NexOS AI",
       preco: "R$3.990",
       precoRegular: "R$5.000",
-      includes: ["57 agentes especializados", "3 campanhas simultâneas", "900 créditos (~2 lançamentos)", "Track de 6 dígitos", "NexOS Academy incluso"],
+      includes: ["64 agentes especializados", "3 campanhas simultâneas", "900 créditos (~2 lançamentos)", "Track de 6 dígitos", "NexOS Academy incluso"],
     },
     nexosAgency: {
       nome: "NexOS Agency",
@@ -140,7 +140,7 @@ export interface NexosGeneratedContent {
 
 const NEXOS_CONTEXT = () => `
 PRODUTO QUE VOCÊ ESTÁ VENDENDO: NexOS AI
-- Sistema de execução de lançamentos com 57 agentes de IA especializados
+- Sistema de execução de lançamentos com 64 agentes de IA especializados
 - Ticket: R$3.990 (lançamento) / R$5.000 (regular)
 - Modelo: acesso único vitalício, sem mensalidade
 - Inclui: NexOS Academy (metodologia completa)
@@ -162,7 +162,7 @@ A EPIFANIA CENTRAL (este é o argumento de vendas mais importante — nunca desv
 A única coisa que separava esse avatar de um lançamento de 6 dígitos NÃO ERA O MÉTODO.
 Era o time de execução. Os maiores lançadores do Brasil — todos têm um time de 20+ especialistas executando cada detalhe. Copy, vídeo, sequências, atendimento, analytics.
 O avatar comprou cursos de método. O que faltava era alguém executando junto.
-NexOS É ESSE TIME. 57 agentes de IA especializados — cada um treinado para uma função. Enquanto você decide, a IA executa.
+NexOS É ESSE TIME. 64 agentes de IA especializados — cada um treinado para uma função. Enquanto você decide, a IA executa.
 
 GATILHOS ATIVOS:
 - AUTORIDADE: não é só uma ferramenta — é a expertise de 34 especialistas em um sistema

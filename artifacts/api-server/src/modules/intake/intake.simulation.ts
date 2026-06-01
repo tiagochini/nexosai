@@ -1,6 +1,6 @@
 /**
  * Budget Simulation Engine
- * Real Brazilian digital marketing benchmarks — Q1 2025
+ * Real Brazilian digital marketing benchmarks — Q1 2026
  * Sources: Meta Business, Google Ads BR, TikTok for Business, internal campaign data
  */
 
@@ -297,7 +297,7 @@ export function simulateBudget(
       label: PLATFORM_META[key as keyof typeof PLATFORM_META]?.label ?? key,
     }));
 
-  const benchmarkNote = "Benchmarks baseados em dados reais do mercado digital brasileiro (Q1 2025). Valores variam conforme criativo, copy, sazonalidade e histórico da conta.";
+  const benchmarkNote = "Benchmarks baseados em dados reais do mercado digital brasileiro (Q1 2026). Valores variam conforme criativo, copy, sazonalidade e histórico da conta.";
 
   return {
     budget,

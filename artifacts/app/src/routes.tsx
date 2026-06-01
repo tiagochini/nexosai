@@ -60,6 +60,7 @@ import FilmingGuide from "@/pages/video-production/filming-guide";
 import DirectorGuide from "@/pages/video-production/director-guide";
 import LaunchRoom from "@/pages/launch-room/index";
 import LauncherDashboard from "@/pages/launcher/index";
+import RecordingsPage from "@/pages/recordings/index";
 import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
 
@@ -308,6 +309,11 @@ export default function AppRoutes() {
       </Route>
       <Route path="/video-production">
         {() => <ProtectedRoute><VideoProductionPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Gravações */}
+      <Route path="/recordings">
+        {() => <ProtectedRoute><RecordingsPage /></ProtectedRoute>}
       </Route>
 
       {/* Sala de Lançamento */}

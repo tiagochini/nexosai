@@ -52,7 +52,7 @@ const PRODUCTS = [
     tagBg: "hsl(220 10% 75% / 0.06)",
     title: "NexOS AI — Plataforma de Lançamentos",
     subtitle: "SaaS · Acesso Único Vitalício · Solo e Agency",
-    description: "34 agentes de IA executando seu lançamento end-to-end. Do briefing à campanha ao vivo — sem agência, sem equipe.",
+    description: "35 agentes de IA executando seu lançamento end-to-end. Do briefing à campanha ao vivo — sem agência, sem equipe.",
     cta: "Ver Plataforma →",
     href: `${BASE}/landing/`,
     glow: "hsl(250 90% 65% / 0.04)",

@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db, launchRecordingsTable } from "@workspace/db";
 import type { RecordingEvent } from "@workspace/db";
 import { ZipArchive } from "archiver";
@@ -288,6 +288,22 @@ export async function serveVideo(recordingId: string, workspaceId: string, res: 
   }
 }
 
+// ─── Delete ───────────────────────────────────────────────────────────────────
+
+export async function deleteRecording(recordingId: string, workspaceId: string) {
+  const [rec] = await db
+    .select({ id: launchRecordingsTable.id, videoPath: launchRecordingsTable.videoPath })
+    .from(launchRecordingsTable)
+    .where(and(eq(launchRecordingsTable.id, recordingId), eq(launchRecordingsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!rec) return false;
+  if (rec.videoPath) {
+    try { await unlink(rec.videoPath); } catch {}
+  }
+  await db.delete(launchRecordingsTable).where(eq(launchRecordingsTable.id, recordingId));
+  return true;
+}
+
 // ─── List ─────────────────────────────────────────────────────────────────────
 
 export async function listRecordings(workspaceId: string) {
@@ -304,10 +320,11 @@ export async function listRecordings(workspaceId: string) {
       videoPath: launchRecordingsTable.videoPath,
       videoSize: launchRecordingsTable.videoSize,
       videoUploadedAt: launchRecordingsTable.videoUploadedAt,
+      createdAt: launchRecordingsTable.createdAt,
     })
     .from(launchRecordingsTable)
     .where(eq(launchRecordingsTable.workspaceId, workspaceId))
-    .orderBy(launchRecordingsTable.createdAt);
+    .orderBy(desc(launchRecordingsTable.createdAt));
 }
 
 // ─── Export ZIP ───────────────────────────────────────────────────────────────

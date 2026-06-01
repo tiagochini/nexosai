@@ -312,11 +312,14 @@ export default function VideoEditorPage() {
     if (!recordingId) return;
     void (async () => {
       try {
-        const res = await fetch(`/api/recordings/${recordingId}`, { credentials: "include" });
+        const token = localStorage.getItem("nexos_token") ?? "";
+        const res = await fetch(`/api/recordings/${recordingId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) return;
         const data = await res.json() as { recording?: { id: string; name: string; videoPath?: string } };
         const rec = data.recording;
-        if (rec?.videoPath) addClipFromUrl(`/api/recordings/${rec.id}/video`, rec.name);
+        if (rec?.videoPath) addClipFromUrl(`/api/recordings/${rec.id}/video-stream?token=${encodeURIComponent(token)}`, rec.name);
       } catch { /* silent */ }
     })();
   }, [recordingId]);

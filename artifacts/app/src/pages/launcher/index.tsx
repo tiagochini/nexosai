@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,8 +10,10 @@ import {
   Rocket, TrendingUp, Users, DollarSign, Zap, Bot, CheckCircle2,
   AlertCircle, Clock, ChevronRight, BarChart3, Activity, ShieldCheck,
   Loader2, ArrowRight, Eye, Video, Link2, RefreshCw, AlertTriangle,
-  Target, MessageSquare, Mail, Layers, Star, Play, Calendar,
+  Target, MessageSquare, Mail, Layers, Star, Play, Calendar, Radio,
+  Copy, Wifi,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useCampaignSocket } from "@/lib/socket";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -31,6 +34,16 @@ interface AgentEvent {
   status?: string;
   message?: string;
   timestamp?: number;
+}
+
+interface LiveSession {
+  id: string;
+  title: string;
+  status: "scheduled" | "broadcast_ready" | "live" | "ended" | "error";
+  streamUrl: string | null;
+  streamKey: string | null;
+  scheduledAt: string;
+  firedAt: string | null;
 }
 
 interface SequenceSummary {
@@ -125,6 +138,146 @@ function AgentEventRow({ event }: { event: AgentEvent }) {
           {new Date(event.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
         </span>
       )}
+    </div>
+  );
+}
+
+// ── Live Session Panel ─────────────────────────────────────────────────────────
+
+function LiveSessionPanel({ campaignId }: { campaignId?: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [delay, setDelay] = useState(5);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const { data, refetch } = useQuery({
+    queryKey: ["/api/live-launcher"],
+    queryFn: () => customFetch<{ sessions: LiveSession[] }>("/api/live-launcher").catch(() => ({ sessions: [] as LiveSession[] })),
+    refetchInterval: 15_000,
+  });
+  const sessions = data?.sessions ?? [];
+  const activeSessions = sessions.filter(s => s.status !== "ended" && s.status !== "error");
+
+  const scheduleMutation = useMutation({
+    mutationFn: (body: object) => customFetch<{ session: LiveSession }>("/api/live-launcher/schedule", { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } }),
+    onSuccess: () => {
+      toast.success("Live agendada! Prepare sua plataforma de transmissão.");
+      setTitle(""); setDelay(5); setOpen(false);
+      void qc.invalidateQueries({ queryKey: ["/api/live-launcher"] });
+    },
+    onError: () => toast.error("Erro ao agendar live. Instagram conectado?"),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => customFetch(`/api/live-launcher/${id}`, { method: "DELETE" }),
+    onSuccess: () => { toast.success("Live cancelada."); void refetch(); },
+    onError: () => toast.error("Erro ao cancelar."),
+  });
+
+  const copyKey = useCallback((key: string) => {
+    void navigator.clipboard.writeText(key);
+    setCopiedKey(key);
+    toast.success("Stream key copiada!");
+    setTimeout(() => setCopiedKey(null), 2000);
+  }, []);
+
+  const STATUS_LABEL: Record<LiveSession["status"], string> = {
+    scheduled: "Agendada",
+    broadcast_ready: "Pronta para transmitir",
+    live: "AO VIVO",
+    ended: "Encerrada",
+    error: "Erro",
+  };
+  const STATUS_COLOR: Record<LiveSession["status"], string> = {
+    scheduled: "text-yellow-400 border-yellow-400/30 bg-yellow-400/5",
+    broadcast_ready: "text-blue-400 border-blue-400/30 bg-blue-400/5",
+    live: "text-green-400 border-green-400/30 bg-green-400/5",
+    ended: "text-muted-foreground border-border/30 bg-card/20",
+    error: "text-destructive border-destructive/30 bg-destructive/5",
+  };
+
+  return (
+    <div className="border border-border/50 bg-card/40 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="font-mono text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+          <Radio className="h-3.5 w-3.5 text-red-400" />Live Session
+          {activeSessions.length > 0 && (
+            <span className="h-4 w-4 flex items-center justify-center bg-red-500 text-white font-mono text-[9px] rounded-full">{activeSessions.length}</span>
+          )}
+        </h2>
+        <Button size="sm" variant="ghost" className="h-6 px-2 font-mono text-[10px] uppercase tracking-widest" onClick={() => setOpen(!open)}>
+          {open ? "Fechar" : "Agendar"}
+        </Button>
+      </div>
+
+      {open && (
+        <div className="space-y-2 border-t border-border/30 pt-3">
+          <Input
+            className="h-8 font-mono text-[11px] bg-background/60 border-border/50 rounded-none"
+            placeholder="Título da live..."
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+          />
+          <div className="flex items-center gap-2">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60 whitespace-nowrap">Aguardar</label>
+            <Input
+              type="number" min={0} max={480}
+              className="h-8 font-mono text-[11px] bg-background/60 border-border/50 rounded-none w-20"
+              value={delay}
+              onChange={e => setDelay(Number(e.target.value))}
+            />
+            <span className="font-mono text-[10px] text-muted-foreground/50">min</span>
+          </div>
+          <Button
+            size="sm"
+            className="w-full font-mono uppercase tracking-widest rounded-none h-8 text-[11px] btn-weapon-primary gap-1.5"
+            disabled={!title.trim() || scheduleMutation.isPending}
+            onClick={() => scheduleMutation.mutate({ title: title.trim(), delayMinutes: delay, campaignId })}
+          >
+            {scheduleMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wifi className="h-3 w-3" />}
+            Agendar Live
+          </Button>
+        </div>
+      )}
+
+      {activeSessions.length === 0 && !open && (
+        <p className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">Nenhuma live agendada</p>
+      )}
+
+      <div className="space-y-2">
+        {activeSessions.map(s => (
+          <div key={s.id} className={`border p-2.5 space-y-1.5 ${STATUS_COLOR[s.status]}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-[11px] font-bold truncate">{s.title}</span>
+              <Badge className={`font-mono text-[9px] uppercase tracking-widest rounded-none border ${STATUS_COLOR[s.status]} px-1.5 py-0`}>
+                {STATUS_COLOR[s.status].includes("green") && <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse mr-1 inline-block" />}
+                {STATUS_LABEL[s.status]}
+              </Badge>
+            </div>
+            <p className="font-mono text-[10px] text-muted-foreground/50">
+              {s.firedAt ? `Disparada ${new Date(s.firedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : `Agendada ${new Date(s.scheduledAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}
+            </p>
+            {s.streamKey && (
+              <button
+                onClick={() => copyKey(s.streamKey!)}
+                className="flex items-center gap-1.5 font-mono text-[10px] text-primary/70 hover:text-primary transition-colors"
+              >
+                <Copy className="h-2.5 w-2.5" />
+                {copiedKey === s.streamKey ? "Copiada!" : "Copiar stream key"}
+              </button>
+            )}
+            {s.status === "scheduled" && (
+              <button
+                onClick={() => cancelMutation.mutate(s.id)}
+                className="font-mono text-[10px] text-destructive/60 hover:text-destructive transition-colors"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -580,6 +733,9 @@ export default function LauncherDashboard() {
                   </p>
                 )}
               </div>
+
+              {/* Live Session */}
+              <LiveSessionPanel campaignId={selectedCampaign.id} />
 
               {/* Status Checklist */}
               <div className="border border-border/50 bg-card/40 p-4">

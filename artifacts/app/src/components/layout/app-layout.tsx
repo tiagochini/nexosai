@@ -9,7 +9,8 @@ import {
   LogOut, Rocket, LayoutDashboard, Workflow, CreditCard, Menu, Network,
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
-  Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair,
+  Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair, Camera,
+  GraduationCap, ExternalLink,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -75,7 +76,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
 
   const isAgency = planSlug === "agency" || isAdmin || isExpert;
 
-  type NavItem  = { name: string; href: string; icon: React.ElementType; badge?: string };
+  type NavItem  = { name: string; href: string; icon: React.ElementType; badge?: string; external?: boolean };
   type NavGroup = { label: string; items: NavItem[]; expertOnly?: boolean };
 
   const navGroups: NavGroup[] = [
@@ -90,7 +91,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: tr.nav.agent_team,
       items: [
-        { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "57" },
+        { name: tr.sidebar.agents, href: "/agents", icon: Bot, badge: "64" },
       ],
     },
     {
@@ -99,6 +100,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         { name: tr.sidebar.vsl,           href: "/vsls",             icon: Video        },
         { name: "Produção de Vídeo",   href: "/video-production", icon: Clapperboard },
         { name: tr.sidebar.video,         href: "/video-editor",     icon: Film         },
+        { name: "Gravações",              href: "/recordings",        icon: Camera       },
       ],
     },
     {
@@ -131,6 +133,12 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         { name: tr.sidebar.products,       href: "/produtos",      icon: ShoppingBag },
         { name: "Atendimento",             href: "/atendimento",   icon: MessageSquare },
         { name: tr.sidebar.integrations,   href: "/integracoes",   icon: Link2, badge: "!" },
+      ],
+    },
+    {
+      label: "Academia",
+      items: [
+        { name: "NexOS Academy", href: "/nexos-academy/", icon: GraduationCap, external: true },
       ],
     },
     {
@@ -177,37 +185,48 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const isActive =
-                  item.href === "/"
+                const isActive = item.external
+                  ? false
+                  : item.href === "/"
                     ? location === "/"
                     : location.startsWith(item.href);
-                return (
-                  <Link key={item.href} href={item.href} onClick={onNav}>
-                    <div
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-all cursor-pointer group relative overflow-hidden
-                        ${isActive
-                          ? "bg-primary/15 text-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.08)]"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        }`}
-                    >
-                      {isActive && (
-                        <div className="absolute left-0 inset-y-0 w-[2px] bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
-                      )}
-                      <Icon className={`h-3.5 w-3.5 shrink-0 transition-colors ${isActive ? "text-primary" : "text-muted-foreground/60 group-hover:text-foreground"}`} />
-                      <span className="font-mono text-xs uppercase tracking-widest font-medium flex-1 truncate">
-                        {item.name}
+                const inner = (
+                  <div
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-all cursor-pointer group relative overflow-hidden
+                      ${isActive
+                        ? "bg-primary/15 text-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.08)]"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                      }`}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 inset-y-0 w-[2px] bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
+                    )}
+                    <Icon className={`h-3.5 w-3.5 shrink-0 transition-colors ${isActive ? "text-primary" : "text-muted-foreground/60 group-hover:text-foreground"}`} />
+                    <span className="font-mono text-xs uppercase tracking-widest font-medium flex-1 truncate">
+                      {item.name}
+                    </span>
+                    {item.badge && (
+                      <span className="text-[11px] font-mono bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-sm shrink-0">
+                        {item.badge}
                       </span>
-                      {item.badge && (
-                        <span className="text-[11px] font-mono bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded-sm shrink-0">
-                          {item.badge}
-                        </span>
-                      )}
-                      {item.href === "/admin" && (
-                        <span className="text-[11px] font-mono bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-sm shrink-0">
-                          Owner
-                        </span>
-                      )}
-                    </div>
+                    )}
+                    {item.external && (
+                      <ExternalLink className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0" />
+                    )}
+                    {item.href === "/admin" && (
+                      <span className="text-[11px] font-mono bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-1.5 py-0.5 rounded-sm shrink-0">
+                        Owner
+                      </span>
+                    )}
+                  </div>
+                );
+                return item.external ? (
+                  <a key={item.href} href={item.href} target="_blank" rel="noreferrer" onClick={onNav}>
+                    {inner}
+                  </a>
+                ) : (
+                  <Link key={item.href} href={item.href} onClick={onNav}>
+                    {inner}
                   </Link>
                 );
               })}

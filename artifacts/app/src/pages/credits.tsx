@@ -61,6 +61,15 @@ const ACTION_META: Record<string, { label: string; icon: React.ElementType; colo
   sequence_plan:          { label: "Plano de Sequência",  icon: Bot,           color: "text-purple-400" },
   credit_topup:           { label: "Recarga de Créditos", icon: Zap,           color: "text-success" },
   purchase:               { label: "Pack de Créditos",    icon: Package,       color: "text-success" },
+  video_concept:          { label: "Conceito de Vídeo",   icon: Video,         color: "text-pink-400" },
+  video_script:           { label: "Roteiro de Vídeo",    icon: Video,         color: "text-pink-400" },
+  video_storyboard:       { label: "Storyboard",          icon: Video,         color: "text-pink-400" },
+  video_low_res:          { label: "Clipe Preview",       icon: Video,         color: "text-pink-400" },
+  video_high_res:         { label: "Clipe HD Final",      icon: Video,         color: "text-pink-400" },
+  video_avatar:           { label: "Avatar IA",           icon: Video,         color: "text-pink-400" },
+  video_voice_clone:      { label: "Voz Clonada",         icon: Video,         color: "text-pink-400" },
+  video_hybrid:           { label: "Edição Híbrida IA",   icon: Video,         color: "text-pink-400" },
+  video_filming_brief:    { label: "Guia de Filmagem",    icon: Video,         color: "text-pink-400" },
 };
 
 const AGENT_LABELS: Record<string, string> = {

@@ -4286,7 +4286,7 @@ Você topa?<br/>
         id: "instagram-tiktok",
         number: 10,
         title: "Instagram e TikTok: Orgânico de Alto Impacto",
-        subtitle: "Os algoritmos, formatos e estratégias de crescimento que funcionam em 2025",
+        subtitle: "Os algoritmos, formatos e estratégias de crescimento que funcionam em 2026",
         icon: "📱",
         color: "from-pink-600 to-rose-600",
         duration: "1h 45min",
@@ -5248,7 +5248,7 @@ BENCHMARKS POR NICHO — BRASIL:
 
 <p>A maioria das pessoas perde dinheiro no Meta Ads não porque as campanhas são ruins — mas porque mexem nelas cedo demais. A fase de aprendizado deve ser respeitada. Depois dela, você otimiza com dados — não com intuição.</p>
 
-<h2>Benchmarks Reais por Nicho — Brasil 2025</h2>
+<h2>Benchmarks Reais por Nicho — Brasil 2026</h2>
 
 <table>
   <thead>
@@ -5633,7 +5633,7 @@ PROBLEMA ADICIONAL:
   + Qualidade inconsistente entre especialistas
   + Perda de contexto entre entregáveis
 
-NEXOS RESOLVE: 57 agentes orquestrados, execução 24/7,
+NEXOS RESOLVE: 64 agentes orquestrados, execução 24/7,
   contexto compartilhado entre todos os agentes do lançamento.
 </div>
 
@@ -5785,7 +5785,7 @@ ETAPA 5 — OTIMIZAÇÃO (Gemini Agente Analytics):
             keyPoints: ["6 categorias de agentes especializados", "Claude para estratégia, GPT-4o para copy, Gemini para analytics", "Como os agentes colaboram entre si", "O trail de auditoria de cada decisão do agente"],
             content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
 <p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
-<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS não é uma ferramenta do agente genérica — é uma arquitetura de 57 agentes especializados, cada um usando o modelo de linguagem mais adequado para sua tarefa específica. Esta aula entrega o mapa completo dos 57 agentes por categoria, como eles colaboram entre si, e o trail de auditoria que torna cada decisão do agente rastreável.</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">O NexOS não é uma ferramenta do agente genérica — é uma arquitetura de 64 agentes especializados, cada um usando o modelo de linguagem mais adequado para sua tarefa específica. Esta aula entrega o mapa completo dos 64 agentes por categoria, como eles colaboram entre si, e o trail de auditoria que torna cada decisão do agente rastreável.</p>
 </div>
 
 <h2 style="color:#a78bfa">🤖 Os 44 Agentes: O Time que Trabalha Enquanto Você Dorme</h2>

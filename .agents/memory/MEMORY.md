@@ -18,3 +18,5 @@
 - [Test Script Registration Gate](test-script-invite-code.md) — test scripts must create a temp inviteCodesTable row and pass inviteCode in register body; gate in auth.routes.ts blocks open registration when PLATFORM_OPEN≠"true".
 - [RecordButton Portal Fix](recordbutton-portal.md) — backdrop-blur-sm on header traps fixed-position overlays; all RecordButton overlays must use createPortal(…, document.body) with z-[9000]+.
 - [E2E UI Routing & Test Patterns](e2e-ui-routing.md) — app BASE_PATH="/", all routes at root (/login not /app/login); PreLaunchChecklist Gate 4 requires explicit click; asChild fix for Link/Button nesting.
+- [Video Stream Auth](video-stream-auth.md) — <video src> can't send auth headers; use GET /api/recordings/:id/video-stream?token= (registered BEFORE router.use(requireAuth) in recording.routes.ts). Bearer-only endpoints can't be used as video src.
+- [Agent Count Convention](agent-count-convention.md) — canonical counts: 64 total agents (sidebar badge + i18n + all backend prompts), 35 landing-page core agents (the subset listed on landing.tsx). Benchmark dates: Q1 2026.
