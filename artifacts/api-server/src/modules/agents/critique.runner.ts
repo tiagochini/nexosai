@@ -149,9 +149,12 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
 
 **TAREFA:** Gere o output refinado incorporando todas as melhorias. Mantenha o que funcionou. Corrija especificamente os problemas apontados. Retorne o JSON completo na mesma estrutura do output original.`;
 
+  // Truncate assistant content so Turn 1 JSON doesn't blow the context window on Turn 3
+  const assistantContentForTurn3 = rawOutput.length > 4000 ? rawOutput.slice(0, 4000) + "\n... [truncated for context]" : rawOutput;
+
   const turn3Messages: AIMessage[] = [
     { role: "user", content: userMessage },
-    { role: "assistant", content: rawOutput },
+    { role: "assistant", content: assistantContentForTurn3 },
     { role: "user", content: refineMessage },
   ];
 
@@ -159,7 +162,9 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
   totalCredits += turn3.creditsCharged;
   totalTokens += turn3.inputTokens + turn3.outputTokens;
 
-  const refinedOutput = turn3.content;
+  // If Turn 3 returns empty (context overflow, API hiccup, etc.), fall back to Turn 1 raw output
+  // rather than letting parseAgentJSON fall back to empty defaults
+  const refinedOutput = turn3.content.trim() ? turn3.content : rawOutput;
 
   // Estimate improvement score (heuristic: if refinement has more content, assume improvement)
   const selfScoreAfter = Math.min(100, selfScoreBefore + Math.floor(Math.random() * 12 + 8));

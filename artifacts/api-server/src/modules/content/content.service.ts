@@ -353,6 +353,15 @@ export async function generateCampaignContent(
 
     capturedCopyContent = copyOutput as unknown as Record<string, unknown>;
 
+    // Validate critical fields — empty arrays here mean the LLM output failed to parse
+    const totalEmails =
+      (copyOutput.emailSequence?.preLaunch?.length ?? 0) +
+      (copyOutput.emailSequence?.cartOpen?.length ?? 0) +
+      (copyOutput.emailSequence?.cartClose?.length ?? 0);
+    if (totalEmails === 0) {
+      log.warn({ campaignId }, "Copywriter output has zero emails — LLM response may have been empty or unparseable");
+    }
+
     const [piece] = await db
       .insert(contentPiecesTable)
       .values({
@@ -519,6 +528,10 @@ export async function generateCampaignContent(
 
     capturedAdContent = adOutput as unknown as Record<string, unknown>;
 
+    if ((adOutput.segments?.length ?? 0) === 0) {
+      log.warn({ campaignId }, "Ad copy output has zero segments — LLM response may have been empty or unparseable");
+    }
+
     const [piece] = await db
       .insert(contentPiecesTable)
       .values({
@@ -684,6 +697,10 @@ export async function generateCampaignContent(
         profile,
         log,
       );
+
+      if ((vslOutput.sections?.length ?? 0) === 0) {
+        log.warn({ campaignId }, "VSL script output has zero sections — LLM response may have been empty or unparseable");
+      }
 
       const [piece] = await db
         .insert(contentPiecesTable)
