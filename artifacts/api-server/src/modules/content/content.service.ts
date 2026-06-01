@@ -1646,6 +1646,109 @@ Reescreva essa peça incorporando o feedback acima. Retorne APENAS o JSON com a 
   return updated;
 }
 
+// ── Piece-level regeneration ───────────────────────────────────────────────────
+// Re-runs the original agent for a specific content piece type.
+// Used to recover empty/failed pieces without re-running the full pipeline.
+
+const PIECE_TYPE_TO_AGENT: Record<string, string> = {
+  email_sequence: "copywriter",
+  landing_page_structure: "landing_page",
+  vsl_script: "vsl_script",
+  ad_copy: "ad_copy",
+  targeting_config: "targeting",
+  media_buying_plan: "media_buyer",
+};
+
+export async function regeneratePiece(
+  campaignId: string,
+  workspaceId: string,
+  pieceId: string,
+  log: Logger,
+) {
+  const [campaign] = await db
+    .select()
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const [piece] = await db
+    .select()
+    .from(contentPiecesTable)
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+    .limit(1);
+  if (!piece) throw new NotFoundError("Content piece");
+
+  const agentName = PIECE_TYPE_TO_AGENT[piece.type ?? ""];
+  if (!agentName) {
+    throw new ValidationError(`No regeneration agent configured for piece type "${piece.type}". Use the AI rewrite endpoint instead.`);
+  }
+
+  const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const strategy = ((campaign.strategyData ?? {}) as unknown) as StrategyOutput;
+  const profile = campaign.audienceData ? extractProfile(campaign.audienceData) : undefined;
+  const launchPlan = (campaign.timelineData ?? undefined) as Record<string, unknown> | undefined;
+
+  log.info({ campaignId, pieceId, agentName, pieceType: piece.type }, "Regenerating content piece");
+
+  let newContent: unknown;
+
+  try {
+    switch (agentName) {
+      case "copywriter": {
+        const out = await runCopywriterAgent(campaignId, workspaceId, intakeData, strategy, profile, launchPlan, log);
+        newContent = out;
+        break;
+      }
+      case "landing_page": {
+        const out = await runLandingPageAgent(campaignId, workspaceId, intakeData, strategy, profile, log);
+        newContent = out;
+        break;
+      }
+      case "vsl_script": {
+        const out = await runVSLScriptAgent(campaignId, workspaceId, intakeData, strategy, profile, log);
+        newContent = out;
+        break;
+      }
+      case "ad_copy": {
+        const out = await runAdCopyAgent(campaignId, workspaceId, intakeData, strategy, profile, log);
+        newContent = out;
+        break;
+      }
+      case "targeting": {
+        const out = await runTargetingAgent(campaignId, workspaceId, intakeData, profile, log);
+        newContent = out;
+        break;
+      }
+      case "media_buyer": {
+        const out = await runMediaBuyerAgent(campaignId, workspaceId, intakeData, strategy, profile, launchPlan, log);
+        newContent = out;
+        break;
+      }
+      default:
+        throw new ValidationError(`Unknown agent: ${agentName}`);
+    }
+  } catch (err) {
+    log.error({ err, campaignId, pieceId, agentName }, "Regeneration agent failed");
+    throw err;
+  }
+
+  const [updated] = await db
+    .update(contentPiecesTable)
+    .set({
+      content: newContent as any,
+      status: "pending_approval",
+      approvedAt: null,
+    })
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+    .returning();
+
+  if (!updated) throw new NotFoundError("Content piece");
+
+  log.info({ pieceId, campaignId, agentName }, "Content piece regenerated successfully");
+  return updated;
+}
+
 const PLATFORM_TO_DB_TYPE: Record<string, string> = {
   tiktok: "social_post",
   instagram: "social_post",

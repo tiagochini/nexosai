@@ -131,11 +131,10 @@ ${rawOutput.slice(0, 6000)}
   // ── TURN 3: Refine ────────────────────────────────────────────────────────
   log.info({ campaignId, agentRole, turn: 3, scoreBefore: selfScoreBefore }, "Critique loop — refining output");
 
-  const refineMessage = `Você gerou este output na sua primeira tentativa:
-
-${rawOutput.slice(0, 5000)}
-
-**CRÍTICA IDENTIFICADA:**
+  // Keep refine message compact — do NOT include the full raw output again.
+  // Turn 1 output is already in the assistant role below; re-inserting 5000 chars
+  // doubles context pressure and starves the model of token budget for actual output.
+  const refineMessage = `**CRÍTICA IDENTIFICADA:**
 ${critiqueData.critiqueNarrative ?? ""}
 
 **PROBLEMAS ESPECÍFICOS:**
@@ -162,9 +161,13 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
   totalCredits += turn3.creditsCharged;
   totalTokens += turn3.inputTokens + turn3.outputTokens;
 
-  // If Turn 3 returns empty (context overflow, API hiccup, etc.), fall back to Turn 1 raw output
-  // rather than letting parseAgentJSON fall back to empty defaults
-  const refinedOutput = turn3.content.trim() ? turn3.content : rawOutput;
+  // Anti-regression check: if Turn 3 output is significantly shorter than Turn 1
+  // (model ran out of tokens → produced empty JSON skeleton), fall back to Turn 1.
+  // "Significantly shorter" = less than 40% of Turn 1 length when Turn 1 has real content.
+  const turn3HasContent = turn3.content.trim().length > 0;
+  const turn1HasContent = rawOutput.length > 500;
+  const turn3Regressed = turn1HasContent && turn3.content.length < rawOutput.length * 0.4;
+  const refinedOutput = (turn3HasContent && !turn3Regressed) ? turn3.content : rawOutput;
 
   // Estimate improvement score (heuristic: if refinement has more content, assume improvement)
   const selfScoreAfter = Math.min(100, selfScoreBefore + Math.floor(Math.random() * 12 + 8));

@@ -281,6 +281,7 @@ Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(
     workspaceId,
     agentRole: "targeting",
     systemPrompt: COGNITIVE_IDENTITY_TARGETING + TARGETING_PROMPT,
+    skipAllStaticLayers: true,
     messages: [
       {
         role: "user",

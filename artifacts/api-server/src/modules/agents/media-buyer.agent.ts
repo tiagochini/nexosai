@@ -312,6 +312,7 @@ export async function runMediaBuyerAgent(
     workspaceId,
     agentRole: "media_buyer",
     systemPrompt: COGNITIVE_IDENTITY_MEDIA_BUYER + MEDIA_BUYER_PROMPT,
+    skipAllStaticLayers: true,
     messages: [
       {
         role: "user",

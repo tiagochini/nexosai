@@ -807,18 +807,18 @@ Vagas limitadas precisam ser REAIS e a razão precisa ser explicada. Timers que 
 ---
 
 **REQUISITOS DE VOLUME E COMPLETUDE — MÍNIMOS OBRIGATÓRIOS:**
-- Emails de pré-lançamento: mínimo 7 emails COMPLETOS (não esboços) com corpo, assunto real, preview text, PS
-- Emails de carrinho: mínimo 4 abertos + 4 fechamento, com escalada real de urgência
-- WhatsApp: mínimo 12 broadcasts completos + 6 mensagens de grupo, com follow-up em cada fase
-- Facebook: mínimo 8 posts completos (orgânico + pago), textos longos e narrativos para audiência +30
-- Instagram: mínimo 10 posts/Reels com legenda completa, hook, CTA e hashtags — inclui stories diários
-- TikTok: mínimo 6 roteiros completos com hook, script falado, overlay texts, som sugerido
-- Página de vendas: TODAS as seções com copy real (hero, identificação, problema, agitação, mecanismo, solução, prova, oferta, garantia, faq, fechamento)
-- Remarketing: mínimo 3 versões por segmento (frio/morno/quente)
+- Emails de pré-lançamento: mínimo 3 emails COMPLETOS com corpo, assunto real, preview text, PS
+- Emails de carrinho: mínimo 2 abertos + 2 fechamento, com escalada real de urgência
+- WhatsApp: mínimo 5 broadcasts completos + 3 mensagens de grupo
+- Facebook: mínimo 3 posts completos (orgânico), textos narrativos
+- TikTok: mínimo 3 roteiros completos com hook, script falado, overlay texts
+- Página de vendas: seções principais com copy real (hero, problema, solução, prova, oferta, garantia, faq, fechamento)
+- Remarketing: mínimo 2 versões por segmento (morno/quente)
 - Placeholders de URL: {{LINK_CAPTURA}}, {{LINK_PAGAMENTO}}, {{LINK_REMARKETING}}
-- Tráfego pago: inclua copy para anúncios Meta Ads (headline + primary text + description) — mínimo 4 variações para teste A/B
+- Tráfego pago: copy para anúncios Meta Ads (headline + primary text) — mínimo 2 variações para teste A/B
+- "cartSegmentedCopy": obrigatório para cart_open e cart_close com variações hot/warm/cold
 
-**ATENÇÃO: "mínimo" é o piso, não o teto.** Se a campanha pede mais, entregue mais.
+**ATENÇÃO: produza o JSON completo e válido. Qualidade > quantidade — entregue menos itens mas completos.**
 
 Retorne APENAS o JSON. Todo o copy em português do Brasil. Nenhum placeholder vago — copy real.`;
 

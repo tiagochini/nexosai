@@ -586,6 +586,48 @@ function EditModal({ piece, onClose, onSave }: { piece: ContentPiece; onClose: (
   );
 }
 
+// ── Empty piece detection ─────────────────────────────────────────────────────
+// Returns true when a raw API piece has an empty/failed output from the LLM agent.
+// These pieces have the schema structure but no actual content in their arrays.
+const REGENERABLE_TYPES = new Set([
+  "email_sequence", "landing_page_structure", "vsl_script",
+  "ad_copy", "targeting_config", "media_buying_plan",
+]);
+
+function isEmptyApiPiece(piece: { type: string; content: unknown }): boolean {
+  if (!REGENERABLE_TYPES.has(piece.type)) return false;
+  const c = piece.content as Record<string, unknown> | null | undefined;
+  if (!c || typeof c !== "object") return true;
+  switch (piece.type) {
+    case "email_sequence": {
+      const es = c["emailSequence"] as Record<string, unknown[]> | undefined;
+      const total = (es?.["preLaunch"]?.length ?? 0) + (es?.["cartOpen"]?.length ?? 0) + (es?.["cartClose"]?.length ?? 0);
+      return total === 0;
+    }
+    case "landing_page_structure": {
+      const sections = c["sections"] as unknown[] | undefined;
+      return !sections?.length;
+    }
+    case "vsl_script": {
+      const sections = c["sections"] as unknown[] | undefined;
+      return !sections?.length;
+    }
+    case "ad_copy": {
+      const segments = c["segments"] as unknown[] | undefined;
+      return !segments?.length;
+    }
+    case "targeting_config": {
+      const meta = c["metaAudiences"] as unknown[] | undefined;
+      return !meta?.length;
+    }
+    case "media_buying_plan": {
+      const daily = c["dailyAllocations"] as unknown[] | undefined;
+      return !daily?.length;
+    }
+    default: return false;
+  }
+}
+
 // ── API Content Piece (raw from backend) ──────────────────────────────────────
 
 interface ApiContentPiece {
@@ -1873,6 +1915,7 @@ export default function ContentApproval() {
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
   const [previewFilter, setPreviewFilter] = useState<Platform | "all">("all");
   const [regeneratingContent, setRegeneratingContent] = useState(false);
+  const [regeneratingPieceId, setRegeneratingPieceId] = useState<string | null>(null);
 
   const [, setLocation] = useLocation();
 
@@ -2019,6 +2062,24 @@ export default function ContentApproval() {
       setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
     } finally {
       setRewritingPiece(null);
+    }
+  };
+
+  const handleRegeneratePiece = async (pieceId: string) => {
+    setRegeneratingPieceId(pieceId);
+    try {
+      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${pieceId}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      setLocalPieces(null);
+      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+      toast.success("Agente regenerou a peça. Revise e aprove.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao regenerar a peça");
+    } finally {
+      setRegeneratingPieceId(null);
     }
   };
 
@@ -2215,6 +2276,9 @@ export default function ContentApproval() {
   const rawLandingPiece = apiContentData?.pieces?.find(p => p.type === "landing_page_structure");
   const landingPageData = rawLandingPiece?.content as LandingPageData | undefined;
 
+  // Empty-piece detection — pieces where the LLM agent ran but produced empty arrays
+  const emptyPieces = (apiContentData?.pieces ?? []).filter(p => isEmptyApiPiece(p));
+
   const TABS: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: "flowchart",    label: "Fluxograma",      icon: Activity },
     { id: "preview",      label: "Preview Visual",  icon: Eye },
@@ -2351,6 +2415,50 @@ export default function ContentApproval() {
             </div>
           </div>
         </div>
+
+        {/* Empty-piece alert banner */}
+        {emptyPieces.length > 0 && (
+          <div className="border border-yellow-400/40 bg-yellow-400/5 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-xs font-bold text-yellow-400 uppercase tracking-widest mb-0.5">
+                  {emptyPieces.length} peça{emptyPieces.length !== 1 ? "s" : ""} sem conteúdo
+                </p>
+                <p className="font-mono text-[11px] text-muted-foreground/70">
+                  Os agentes abaixo geraram o output mas o modelo não conseguiu preencher o conteúdo completo (tokens insuficientes). Clique em Regenerar para rodar o agente novamente com as correções aplicadas.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2 pl-7">
+              {emptyPieces.map(ep => (
+                <div key={ep.id} className="flex items-center justify-between gap-3 border border-border/30 bg-card/30 px-3 py-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-1.5 h-1.5 bg-yellow-400/60 rounded-full shrink-0" />
+                    <span className="font-mono text-[11px] text-foreground/80 truncate">
+                      {AGGREGATED_TYPE_LABELS[ep.type] ?? ep.type.replace(/_/g, " ")}
+                    </span>
+                    <Badge variant="outline" className="font-mono text-[9px] uppercase tracking-widest border-yellow-400/30 text-yellow-400/70 px-1.5 py-0 h-4 shrink-0">
+                      vazio
+                    </Badge>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={regeneratingPieceId === ep.id}
+                    onClick={() => void handleRegeneratePiece(ep.id)}
+                    className="rounded-none font-mono uppercase tracking-widest gap-1.5 border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10 h-7 text-[10px] shrink-0"
+                  >
+                    {regeneratingPieceId === ep.id
+                      ? <><Loader2 className="h-3 w-3 animate-spin" />Regenerando...</>
+                      : <><RefreshCw className="h-3 w-3" />Regenerar</>
+                    }
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 w-full overflow-x-auto scrollbar-none">

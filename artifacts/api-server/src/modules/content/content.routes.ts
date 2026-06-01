@@ -9,6 +9,7 @@ import {
   approveContentPiece,
   rejectContentPiece,
   rewriteContentPiece,
+  regeneratePiece,
   generateExtraContent,
   approveMediaBrief,
   rejectMediaBrief,
@@ -154,6 +155,22 @@ router.post("/:campaignId/content/:pieceId/reject", async (req, res): Promise<vo
       reason,
     ).catch(() => undefined);
     res.json({ message: "Content piece rejected", piece });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// POST /campaigns/:campaignId/content/:pieceId/regenerate — re-run the original agent for this piece type
+router.post("/:campaignId/content/:pieceId/regenerate", async (req, res): Promise<void> => {
+  const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
+
+  try {
+    const piece = await regeneratePiece(campaignId, req.auth.workspaceId, pieceId, req.log);
+    res.status(202).json({ message: "Content piece regenerated", piece });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });
