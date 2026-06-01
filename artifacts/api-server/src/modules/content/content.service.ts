@@ -50,6 +50,8 @@ export interface ContentGenerationResult {
   agentsRun: string[];
   errors: { agent: string; error: string }[];
   status: "completed" | "partial" | "failed";
+  /** Per-piece execution record — always present, even when all pieces fail. */
+  pieceResults: LsPieceContentEntry[];
 }
 
 // PIPELINE_KERNEL: CONTENT_PHASE_ENTRY_STATUSES replaces this local array.
@@ -75,6 +77,18 @@ function extractProfile(audienceData: unknown): ProfileBuilderOutput | undefined
   if (!d["primaryAvatar"]) return undefined;
   return audienceData as ProfileBuilderOutput;
 }
+
+// ── Per-piece execution result ────────────────────────────────────────────────
+// Tracks the outcome of each individual agent run within generateCampaignContent.
+// Returned in the ContentGenerationResult so callers know which pieces succeeded,
+// which failed, and why — without needing to infer from separate agentsRun/errors arrays.
+export type LsPieceContentEntry = {
+  pieceType: string;
+  agentKey: string;
+  status: "success" | "failed";
+  pieceId?: string;
+  error?: string;
+};
 
 // ── Piece content empty detection ─────────────────────────────────────────────
 // Returns true when a content piece was saved but its payload is effectively empty
@@ -1473,6 +1487,23 @@ export async function generateCampaignContent(
     });
   }
 
+  // Derive per-piece result entries from the agentsRun / errors arrays already tracked.
+  // No need to touch individual agent blocks — success entries come from agentsRun,
+  // failure entries from errors. Empty-agent-response failures surfaced via auto-repair.
+  const pieceResults: LsPieceContentEntry[] = [
+    ...agentsRun.map((agentKey) => ({
+      pieceType: AGENT_PIECE_TYPE[agentKey] ?? agentKey,
+      agentKey,
+      status: "success" as const,
+    })),
+    ...errors.map((e) => ({
+      pieceType: AGENT_PIECE_TYPE[e.agent] ?? e.agent,
+      agentKey: e.agent,
+      status: "failed" as const,
+      error: e.error,
+    })),
+  ];
+
   return {
     campaignId,
     piecesGenerated,
@@ -1480,6 +1511,7 @@ export async function generateCampaignContent(
     agentsRun,
     errors,
     status: errors.length === 0 ? "completed" : errors.length < agentsRun.length ? "partial" : "failed",
+    pieceResults,
   };
 }
 
@@ -1864,6 +1896,22 @@ export async function regeneratePiece(
   } catch (err) {
     log.error({ err, campaignId, pieceId, agentName }, "Regeneration agent failed");
     throw err;
+  }
+
+  // NULL / EMPTY GUARD — if the agent returned null, undefined, or an empty object
+  // without throwing, refuse to overwrite the DB row with empty content.
+  // This prevents silent data loss where a piece goes from empty→still empty but
+  // gets status "pending_approval" and appears to have been successfully regenerated.
+  if (isPieceContentEmpty(newContent)) {
+    const emptyErr = new ValidationError(
+      `Agent "${agentName}" returned empty content for piece type "${piece.type}" (empty_agent_response). ` +
+      `The piece was NOT updated. Retry or check LLM connectivity.`,
+    );
+    log.error(
+      { campaignId, pieceId, agentName, pieceType: piece.type },
+      "[REGENERATE] empty_agent_response — refusing DB write to preserve existing piece",
+    );
+    throw emptyErr;
   }
 
   const [updated] = await db
