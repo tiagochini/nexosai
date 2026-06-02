@@ -63,6 +63,7 @@ import LauncherDashboard from "@/pages/launcher/index";
 import RecordingsPage from "@/pages/recordings/index";
 import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
+import InstitucionalPage from "@/pages/institucional/index";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, isAdmin } = useAuth();
@@ -102,8 +103,7 @@ function VideoEditorProtected() {
 function HomeRoute() {
   const { token } = useAuth();
   if (token) return <AppLayout><Dashboard /></AppLayout>;
-  window.location.replace("/landing/");
-  return null;
+  return <InstitucionalPage />;
 }
 
 function DashboardRoute() {
