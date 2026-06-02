@@ -154,59 +154,82 @@ const PRODUTOS = [
   {
     id: "nexos-ai",
     icon: <Rocket className="h-8 w-8 text-purple-400" />,
-    badge: "PRODUTO PRINCIPAL",
+    badge: "CARRO-CHEFE",
     badgeColor: "text-purple-300 border-purple-500/40 bg-purple-500/10",
     title: "NexOS AI",
-    subtitle: "Sistema de Lançamento Autônomo",
-    description: "34 agentes de IA trabalhando em paralelo: estratégia, copywriting, tráfego pago, sequência PLF, métricas e muito mais. Do briefing ao carrinho aberto — sem precisar contratar equipe.",
+    subtitle: "Lançamentos 100% Autopilot",
+    description: "O sistema operacional para lançamentos digitais. 34 agentes de IA executam estratégia, copy, criativos, sequência PLF e tráfego pago — do briefing ao carrinho aberto, sem precisar de equipe.",
     features: [
-      "34 agentes especializados",
+      "34 agentes de IA especializados",
       "Sequência PLF completa automatizada",
-      "Estratégia, copy e criativos gerados por IA",
-      "Dashboard em tempo real",
+      "Estratégia, copy e criativos por IA",
+      "Dashboard de métricas em tempo real",
       "Tracks: 6 dígitos → 10 dígitos",
     ],
-    cta: "Acessar NexOS AI",
+    cta: "Quero lançar com IA",
     href: "/landing/",
     highlight: true,
-  },
-  {
-    id: "agency",
-    icon: <Building2 className="h-8 w-8 text-cyan-400" />,
-    badge: "SERVIÇO COMPLETO",
-    badgeColor: "text-cyan-300 border-cyan-500/40 bg-cyan-500/10",
-    title: "NexOS AI Agency",
-    subtitle: "Full Autopilot para Empresas",
-    description: "Serviço completo de IA e marketing digital para empresas que querem resultados sem montar time. Integrações, automações, tráfego pago e lançamentos gerenciados.",
-    features: [
-      "IA integrada aos seus processos",
-      "Automação de marketing end-to-end",
-      "Gestão de tráfego pago com IA",
-      "White-label para agências",
-      "Suporte estratégico dedicado",
-    ],
-    cta: "Falar com a Equipe",
-    href: "#contato",
-    highlight: false,
+    comingSoon: false,
   },
   {
     id: "academy",
     icon: <GraduationCap className="h-8 w-8 text-yellow-400" />,
-    badge: "EDUCAÇÃO",
+    badge: "CURSO COMPLETO",
     badgeColor: "text-yellow-300 border-yellow-500/40 bg-yellow-500/10",
     title: "NexOS Academy",
     subtitle: "Metodologia de Lançamentos",
-    description: "O método por trás da máquina. 12 módulos com tudo sobre lançamentos PLF, tráfego pago, copy de alta conversão, automação e psicologia do consumidor.",
+    description: "O método por trás da máquina. 12 módulos cobrindo lançamentos PLF, tráfego pago, copy de alta conversão, automação e psicologia do consumidor — do zero ao avançado.",
     features: [
-      "12 módulos + 118 aulas",
-      "PLF, Fórmula de Lançamento, Perpétuo",
-      "Tráfego pago: Meta Ads + Google Ads",
+      "12 módulos + 118 aulas completas",
+      "PLF, Semente, Perpétuo e Afiliados",
+      "Meta Ads + Google Ads com IA",
       "Psicologia e neuromarketing",
-      "Glossário com 80+ termos",
+      "Glossário com 80+ termos técnicos",
     ],
     cta: "Acessar Academy",
     href: "/nexos-academy/",
     highlight: false,
+    comingSoon: false,
+  },
+  {
+    id: "autopilot",
+    icon: <Bot className="h-8 w-8 text-cyan-400" />,
+    badge: "NOVO CURSO",
+    badgeColor: "text-cyan-300 border-cyan-500/40 bg-cyan-500/10",
+    title: "Curso AUTOPILOT",
+    subtitle: "Automações & Redes Sociais com IA",
+    description: "Aprenda a criar conexões e automatizar operações completas nas redes sociais, anúncios e campanhas. Fluxos que trabalham por você enquanto você dorme.",
+    features: [
+      "Automação de redes sociais end-to-end",
+      "Criação de agentes de IA customizados",
+      "Gestão automatizada de campanhas",
+      "Integrações: WhatsApp, Instagram, Meta Ads",
+      "Fluxos de nutrição e vendas no piloto automático",
+    ],
+    cta: "Quero ser notificado",
+    href: "#contato",
+    highlight: false,
+    comingSoon: true,
+  },
+  {
+    id: "primeiros10k",
+    icon: <TrendingUp className="h-8 w-8 text-green-400" />,
+    badge: "INICIANTE",
+    badgeColor: "text-green-300 border-green-500/40 bg-green-500/10",
+    title: "Primeiros 10K",
+    subtitle: "Primeiras Vendas Online",
+    description: "O curso completo para quem quer fazer as primeiras vendas na internet. Passo a passo desde a ideia até os primeiros R$10.000 — sem precisar de audiência ou experiência prévia.",
+    features: [
+      "Validação de produto do zero",
+      "Primeiras campanhas de tráfego pago",
+      "Copy que converte para iniciantes",
+      "Funil de vendas simplificado",
+      "Suporte e comunidade exclusiva",
+    ],
+    cta: "Quero ser notificado",
+    href: "#contato",
+    highlight: false,
+    comingSoon: true,
   },
 ];
 
@@ -217,37 +240,44 @@ function ProdutosSection() {
         <FadeIn className="text-center mb-16">
           <div className="font-mono text-[11px] uppercase tracking-[0.3em] text-purple-400 mb-4">Ecossistema</div>
           <h2 className="font-mono font-black text-3xl sm:text-5xl uppercase text-white tracking-tight">
-            Três produtos.<br />Um ecossistema.
+            Quatro produtos.<br />Um ecossistema.
           </h2>
           <p className="text-white/40 mt-4 max-w-xl mx-auto">
             Do aprendizado à execução completa com IA — tudo integrado sob a marca NexOS.
           </p>
         </FadeIn>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {PRODUTOS.map((p, i) => (
-            <FadeIn key={p.id} delay={i * 100}>
-              <div className={`relative border flex flex-col h-full p-8 transition-all duration-300 hover:border-white/20 ${p.highlight ? "border-purple-500/50 bg-gradient-to-b from-purple-900/20 to-transparent" : "border-white/10 bg-white/3"}`}>
+            <FadeIn key={p.id} delay={i * 80}>
+              <div className={`relative border flex flex-col h-full p-7 transition-all duration-300 hover:border-white/20 ${p.highlight ? "border-purple-500/50 bg-gradient-to-b from-purple-900/20 to-transparent" : p.comingSoon ? "border-white/8 bg-white/[0.02] opacity-80" : "border-white/10 bg-white/[0.03]"}`}>
                 {p.highlight && (
                   <div className="absolute -top-px left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
                 )}
-                <div className={`inline-flex items-center gap-1.5 border font-mono text-[9px] uppercase tracking-[0.25em] px-2 py-1 w-fit mb-6 ${p.badgeColor}`}>
-                  {p.badge}
+                <div className="flex items-start justify-between mb-6">
+                  <div className={`inline-flex items-center gap-1.5 border font-mono text-[9px] uppercase tracking-[0.25em] px-2 py-1 ${p.badgeColor}`}>
+                    {p.badge}
+                  </div>
+                  {p.comingSoon && (
+                    <div className="inline-flex items-center gap-1 border border-white/15 bg-white/5 font-mono text-[9px] uppercase tracking-widest px-2 py-1 text-white/40">
+                      Em breve
+                    </div>
+                  )}
                 </div>
-                <div className="mb-4">{p.icon}</div>
+                <div className="mb-3">{p.icon}</div>
                 <h3 className="font-mono font-black text-xl text-white uppercase tracking-wide">{p.title}</h3>
-                <p className="font-mono text-[11px] uppercase tracking-widest text-white/40 mb-4">{p.subtitle}</p>
-                <p className="text-white/60 text-sm leading-relaxed mb-6">{p.description}</p>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-white/40 mb-4">{p.subtitle}</p>
+                <p className="text-white/55 text-sm leading-relaxed mb-6">{p.description}</p>
                 <ul className="space-y-2 mb-8 flex-1">
                   {p.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-white/50">
-                      <CheckCircle2 className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
+                    <li key={f} className="flex items-start gap-2 text-sm text-white/45">
+                      <CheckCircle2 className={`h-4 w-4 shrink-0 mt-0.5 ${p.comingSoon ? "text-white/20" : "text-purple-400"}`} />
                       {f}
                     </li>
                   ))}
                 </ul>
                 <a href={p.href}>
-                  <Button className={`w-full font-mono uppercase text-xs tracking-widest rounded-none h-10 gap-2 ${p.highlight ? "bg-purple-600 hover:bg-purple-500 text-white" : "bg-white/10 hover:bg-white/15 text-white border border-white/20"}`}>
+                  <Button className={`w-full font-mono uppercase text-xs tracking-widest rounded-none h-10 gap-2 ${p.highlight ? "bg-purple-600 hover:bg-purple-500 text-white" : p.comingSoon ? "bg-white/5 hover:bg-white/10 text-white/50 border border-white/10" : "bg-white/10 hover:bg-white/15 text-white border border-white/20"}`}>
                     {p.cta} <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </a>
