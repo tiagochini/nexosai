@@ -103,7 +103,14 @@ export default function Modules({ onNavigate, progress, selectedModule }: Module
                   {module.number}
                 </div>
                 <div>
-                  <h3 className="font-bold text-white">{module.title}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-white">{module.title}</h3>
+                    {module.standalone && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wide">
+                        Vende Separado
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-[hsl(220_10%_50%)]">{module.chapters.length} capítulos · {allLessons.length} aulas</p>
                 </div>
               </div>

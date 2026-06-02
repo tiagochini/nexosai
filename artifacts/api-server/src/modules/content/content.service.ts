@@ -27,6 +27,7 @@ import { runTargetingAgent } from "../agents/targeting.agent.js";
 import { runMediaBuyerAgent } from "../agents/media-buyer.agent.js";
 import { runVideoStrategyAgent } from "../agents/video-strategy.agent.js";
 import { runCreatorGrowthAgent } from "../agents/creator-growth.agent.js";
+import { runOrganicTrafficAgent } from "../agents/organic-traffic.agent.js";
 import { runComplianceAgent } from "../agents/compliance.agent.js";
 import { runOptimizationAgent } from "../agents/optimization.agent.js";
 import { runEmotionalCoherenceCheck } from "../agents/emotional-coherence-checker.agent.js";
@@ -1120,7 +1121,64 @@ export async function generateCampaignContent(
     }
   }
 
-  // ── 15. Media Brief Agent ────────────────────────────────────────────────────
+  // ── 15. SEO Organic Intelligence Agent (perpetual campaigns) ─────────────────
+  const hasSEO = ["perpetual", "perpetual_launch", "continuous_sales"].includes(campaignType);
+
+  if (hasSEO) {
+    if (!skipAgent("seo_organic_plan", "organic_traffic")) try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "organic_traffic",
+        message: "Agente SEO Orgânico — construindo estratégia de tráfego orgânico para funil perpétuo...",
+        timestamp: new Date().toISOString(),
+      });
+
+      const seoOutput = await runOrganicTrafficAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        strategy,
+        profile,
+        log,
+      );
+
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "seo_organic_plan",
+          status: "draft",
+          title: `SEO Orgânico Perpétuo — ${seoOutput.phases.length} fases | ${seoOutput.platformPlaybooks.length} plataformas`,
+          content: seoOutput as any,
+          aiProvider: "anthropic",
+          creditsUsed: 55,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("organic_traffic");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "organic_traffic",
+        message: `SEO Orgânico concluído — ${seoOutput.followerGrowthPlan.length} táticas de crescimento + calendário semanal + KPIs 30/60/90d`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: piece?.id, phases: seoOutput.phases.length }, "SEO organic plan agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "organic_traffic", error: msg });
+      log.error({ err, campaignId }, "SEO organic plan agent failed");
+      emitAgentError(campaignId, "organic_traffic", err);
+    }
+  }
+
+  // ── 16. Media Brief Agent ────────────────────────────────────────────────────
   if (!skipAgent("media_brief", "media_brief")) try {
     emitCampaignEvent({
       campaignId,

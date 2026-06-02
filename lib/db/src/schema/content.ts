@@ -35,6 +35,7 @@ export const contentTypeEnum = pgEnum("content_type", [
   "media_buying_plan",
   "video_strategy",
   "creator_growth_plan",
+  "seo_organic_plan",
   "compliance_report",
   "optimization_report",
 ]);

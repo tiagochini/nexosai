@@ -41,6 +41,9 @@ export interface Module {
   description: string;
   chapters: Chapter[];
   badge: string;
+  standalone?: boolean;
+  standalonePrice?: number;
+  standaloneOriginalPrice?: number;
 }
 
 export const CURRICULUM: Module[] = [
@@ -12886,6 +12889,565 @@ D+30: Lançou → PROBLEMA: "Quero escalar mas não sei o que otimizar"<br>
 <blockquote style="border-left:3px solid #f59e0b;padding:12px 16px;margin:16px 0;background:#0f172a;color:#94a3b8;font-style:italic">
 "Se você trata seus clientes como adultos inteligentes que você genuinamente se importa em ajudar a alcançar seus objetivos, eles vão comprar mais, voltar mais, e trazer outros. Preeminência não é uma estratégia de venda — é uma estratégia de resultado do cliente que produz mais vendas como consequência." — Jay Abraham
 </blockquote>`,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "seo-perpetuo",
+    number: 13,
+    title: "SEO para Produtos Digitais",
+    description: "O canal orgânico que alimenta o funil perpétuo. Aprenda a ranquear no Google, YouTube e redes sociais para capturar leads que já estão procurando o que você vende — sem pagar por tráfego a cada venda.",
+    badge: "Módulo Premium",
+    standalone: true,
+    standalonePrice: 497,
+    standaloneOriginalPrice: 997,
+    chapters: [
+      {
+        id: "seo-vs-lancamento",
+        number: 40,
+        title: "SEO vs Lançamento: Onde Cada Um Vive",
+        subtitle: "Por que SEO não funciona em PLF mas é ouro no perpétuo",
+        icon: "🔍",
+        color: "from-emerald-600 to-teal-600",
+        duration: "50 min",
+        summary: "Entenda a lógica de tempo de cada canal de tráfego e por que o SEO é o motor natural do funil perpétuo — enquanto o lançamento PLF depende de tráfego pago de curto ciclo.",
+        lessons: [
+          {
+            id: "seo-perp-1",
+            title: "Por Que SEO e PLF Vivem em Universos Diferentes",
+            duration: "14 min",
+            type: "text",
+            keyPoints: [
+              "PLF precisa de tráfego agora — SEO entrega tráfego em 3-9 meses",
+              "Perpétuo é o único modelo que extrai o ROI máximo do SEO",
+              "Um artigo bem ranqueado gera leads por 2-3 anos sem custo adicional",
+            ],
+            glossaryTerms: ["seo", "keyword", "autoridade-de-dominio"],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">SEO é frequentemente ensinado como um canal universal de marketing digital. Não é. Ele tem um timing específico que o torna poderoso em um modelo e quase inútil em outro. Esta aula desmonta essa confusão e posiciona o SEO exatamente onde ele pertence na sua estratégia.</p>
+</div>
+
+<h2 style="color:#34d399">🔍 A Verdade Sobre SEO e Timing</h2>
+
+<p>Antes de qualquer técnica de SEO, você precisa entender uma regra fundamental: <strong>todo canal de tráfego tem um horizonte de tempo</strong>. Ignorar esse horizonte é a razão pela qual a maioria dos produtores digitais investe em SEO no momento errado e depois declara que "SEO não funciona".</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Os Três Horizontes de Tráfego</h3>
+
+<p><strong>Horizonte Imediato (0–7 dias):</strong> Tráfego pago. Meta Ads, Google Ads, influenciadores pagos. Você paga hoje e recebe cliques amanhã. É o único canal que funciona no contexto de um lançamento PLF — onde você tem uma janela de 7 dias para abrir o carrinho, gerar vendas e fechar. Sem tráfego pago no PLF, o lançamento não acontece.</p>
+
+<p><strong>Horizonte Médio (30–90 dias):</strong> Redes sociais orgânicas. Instagram, TikTok, YouTube Shorts. Com consistência, você começa a ver retorno em 4-8 semanas. É o canal de aquecimento de audiência para lançamentos — não gera vendas diretas imediatas, mas prepara compradores.</p>
+
+<p><strong>Horizonte Longo (3–18 meses):</strong> SEO. Google, YouTube busca, Pinterest. Você planta hoje e colhe por anos. Um artigo bem posicionado começa a receber tráfego consistente em 3-6 meses e pode continuar gerando leads por 2-3 anos sem nenhum trabalho adicional.</p>
+
+<div style="background:#0a1929;border:1px solid #1e3a5f;border-radius:8px;padding:16px 20px;margin:24px 0">
+<p style="color:#60a5fa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 12px">▸ POR QUE O HORIZONTE LONGO MATA O PLF</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0 0 8px">Imagine que você vai lançar em outubro. Em janeiro você começa a trabalhar SEO. Em julho, 6 meses depois, os primeiros artigos começam a ranquear. O lançamento já aconteceu — ou não aconteceu por falta de tráfego — e agora o SEO está entregando leads para um carrinho fechado.</p>
+<p style="color:#94a3b8;font-size:13px;margin:0">Esse cenário é exatamente o que acontece com produtores que tentam usar SEO para suportar lançamentos. A defasagem de tempo torna o canal irrelevante para o objetivo imediato.</p>
+</div>
+
+<h2 style="color:#34d399">♾️ Por Que o Perpétuo é o Parceiro Natural do SEO</h2>
+
+<p>O funil perpétuo resolve o problema de timing de um golpe: <strong>o carrinho nunca fecha</strong>. Um lead que chega em janeiro compra. Um lead que chega em julho também compra. Um lead que chega em 2027 comprará se o conteúdo ainda estiver relevante.</p>
+
+<p>Isso muda completamente a equação do SEO. Em vez de plantar e esperar a colheita para um evento específico, você planta uma vez e colhe continuamente. O custo por lead cai mês a mês enquanto os rankings se consolidam.</p>
+
+<table>
+  <thead>
+    <tr><th>Métrica</th><th>PLF + Tráfego Pago</th><th>Perpétuo + SEO</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Custo por lead (mês 1)</td><td>R$15–40</td><td>Alto (investimento de conteúdo)</td></tr>
+    <tr><td>Custo por lead (mês 6)</td><td>R$15–40 (constante)</td><td>R$8–20 (caindo)</td></tr>
+    <tr><td>Custo por lead (mês 18)</td><td>R$15–40 (constante)</td><td>R$2–8 (caiu 70-80%)</td></tr>
+    <tr><td>Receita se você parar de investir</td><td>Cai para zero em dias</td><td>Continua por meses</td></tr>
+    <tr><td>Ativo que você constrói</td><td>Nenhum (você paga pelo aluguel da atenção)</td><td>Domínio com autoridade permanente</td></tr>
+  </tbody>
+</table>
+
+<blockquote style="border-left:3px solid #34d399;padding:12px 16px;margin:16px 0;background:#0f172a;color:#94a3b8;font-style:italic">
+"Tráfego pago é alugar atenção. SEO é comprar atenção. Com o perpétuo, o aluguel vira hipoteca — e em algum ponto o ativo passa a trabalhar por você."
+</blockquote>
+
+<h3 style="color:#e2e8f0;margin-top:24px">A Regra Prática</h3>
+
+<p>Use esta regra simples para decidir quando investir em SEO:</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:13px;color:#94a3b8;line-height:2">
+<span style="color:#34d399">SE</span> seu modelo é perpétuo (funil sempre aberto) → <span style="color:#34d399">INVISTA em SEO imediatamente</span><br/>
+<span style="color:#34d399">SE</span> seu modelo é PLF (carrinho abre e fecha) → <span style="color:#f59e0b">USE SEO só após consolidar o perpétuo</span><br/>
+<span style="color:#34d399">SE</span> você vai lançar nos próximos 3 meses → <span style="color:#ef4444">NÃO comece SEO agora — invista em pago</span>
+</div>`,
+          },
+          {
+            id: "seo-perp-2",
+            title: "Como o Google Decide Quem Aparece: Intenção de Busca",
+            duration: "18 min",
+            type: "text",
+            keyPoints: [
+              "Intenção informacional vs transacional vs navegacional — cada uma converte diferente",
+              "Keywords de cauda longa têm CPL 5x menor e convertem 3x mais que termos genéricos",
+              "O Google ranqueia autoridade de tópico, não só autoridade de domínio",
+            ],
+            glossaryTerms: ["seo", "keyword", "intencao-de-busca", "autoridade-de-dominio"],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">O Google não ranqueia palavras-chave. Ranqueia respostas a intenções. Esta distinção muda completamente como você cria conteúdo SEO e por que a maioria dos infoprodutores cria conteúdo que nunca ranqueia.</p>
+</div>
+
+<h2 style="color:#34d399">🧠 Intenção de Busca: A Única Coisa Que Importa no SEO</h2>
+
+<p>Quando alguém digita algo no Google, existe uma intenção por trás. O Google passou os últimos 10 anos ficando cada vez melhor em identificar essa intenção e servir exatamente o resultado que satisfaz. Se o seu conteúdo não satisfaz a intenção da busca, ele não ranqueia — independente de quantas vezes você repetir a keyword.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Os 4 Tipos de Intenção</h3>
+
+<p><strong>1. Informacional:</strong> A pessoa quer aprender. "como fazer meu primeiro lançamento", "o que é copy de vendas", "estratégia de tráfego pago para iniciantes". Alta volume, baixa intenção de compra imediata. Ideal para capturar leads no topo do funil perpétuo.</p>
+
+<p><strong>2. Comercial/Investigativa:</strong> A pessoa está comparando opções antes de decidir. "melhor ferramenta de email marketing", "curso de lançamentos vale a pena", "NexOS Academy vs concorrente". Menor volume, alta intenção de compra próxima. Ideal para converter leads que já estão considerando.</p>
+
+<p><strong>3. Transacional:</strong> A pessoa quer comprar agora. "comprar curso de lançamentos", "assinar ferramenta de automação de marketing". Menor volume ainda, altíssima intenção. Ideal para páginas de vendas otimizadas para SEO.</p>
+
+<p><strong>4. Navegacional:</strong> A pessoa quer chegar a um lugar específico. "NexOS Academy login", "Hotmart curso". Não gera tráfego novo — só serve pessoas que já te conhecem.</p>
+
+<div style="background:#0a1929;border:1px solid #1e3a5f;border-radius:8px;padding:16px 20px;margin:24px 0">
+<p style="color:#60a5fa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 12px">▸ MAPEAMENTO DE INTENÇÃO PARA O FUNIL PERPÉTUO</p>
+<table>
+  <thead><tr><th>Intenção</th><th>Etapa do Funil</th><th>Tipo de Conteúdo</th><th>CTA</th></tr></thead>
+  <tbody>
+    <tr><td>Informacional</td><td>Topo (conscientização)</td><td>Artigo de blog / YouTube</td><td>Lead magnet / lista</td></tr>
+    <tr><td>Comercial</td><td>Meio (consideração)</td><td>Comparativo / review</td><td>Demonstração / trial</td></tr>
+    <tr><td>Transacional</td><td>Fundo (decisão)</td><td>Página de vendas</td><td>Comprar agora</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Keywords de Cauda Longa: Onde o Dinheiro Está</h3>
+
+<p>A maioria dos infoprodutores mira nas keywords genéricas — "curso de marketing digital", "como vender online". Erro estratégico duplo: essas keywords têm concorrência impossível (você está competindo com Hotmart, Coursera, Neil Patel) e trazem tráfego não qualificado.</p>
+
+<p>As keywords de cauda longa — 4+ palavras, altamente específicas — têm o inverso: baixa concorrência, alta qualificação, e uma propriedade pouco conhecida: <strong>elas somam mais volume que as genéricas</strong>.</p>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0">
+<p style="color:#a78bfa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 8px">EXEMPLO REAL — NICHO DE LANÇAMENTOS</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px"><strong style="color:#ef4444">❌ Cabeça da cauda (evitar)</strong>: "lançamento digital" — 12.000 buscas/mês, concorrência impossível, intenção vaga</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px"><strong style="color:#f59e0b">⚠️ Cauda média (competitivo)</strong>: "como fazer um lançamento digital" — 3.200 buscas/mês, concorrência alta</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px"><strong style="color:#34d399">✅ Cauda longa (alvo)</strong>: "como fazer lançamento PLF sem audiência" — 320 buscas/mês, concorrência baixa, lead qualificadíssimo</p>
+<p style="color:#94a3b8;font-size:13px;margin:0">Se você tiver 50 artigos de cauda longa com 320 buscas cada: 16.000 visitas/mês qualificadas vs 12.000 não qualificadas do termo genérico — com 10% do esforço de ranquear o termo genérico.</p>
+</div>`,
+          },
+          {
+            id: "seo-perp-3",
+            title: "Pesquisa de Palavras-Chave para Infoprodutores",
+            duration: "18 min",
+            type: "exercise",
+            keyPoints: [
+              "Use YouTube Suggest, Google Suggest e Answer The Public — ferramentas gratuitas que revelam o que seu avatar digita",
+              "Fórmula de keyword para infoproduto: [problema/resultado] + [nicho específico] + [contexto/situação]",
+              "Criar mapa de conteúdo com 30 keywords cobre 80% do tráfego orgânico que você precisa",
+            ],
+            exercise: "Abra o Google e pesquise o problema central que seu produto resolve. Copie as 10 sugestões do autocomplete. Depois vá para 'Pesquisas relacionadas' no final da página e copie mais 8. Você acabou de criar a base do seu mapa de keywords em 10 minutos — sem pagar por nenhuma ferramenta.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">Pesquisa de palavras-chave não é sobre encontrar os termos com mais volume. É sobre encontrar os termos que seu avatar usa para descrever os problemas que seu produto resolve — e que você tem condições reais de ranquear. Esta aula entrega o processo completo em ferramentas 100% gratuitas.</p>
+</div>
+
+<h2 style="color:#34d399">🔑 O Processo de Pesquisa de Keywords em 4 Etapas</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Etapa 1 — Mapeie os Problemas, Não os Produtos</h3>
+
+<p>Infoprodutores cometem o erro de pesquisar keywords relacionadas ao que vendem: "curso de lançamentos", "metodologia PLF", "sistema de automação". Ninguém busca o produto — buscam o problema.</p>
+
+<p>Comece listando os 5-10 problemas que seu produto resolve. Para um curso de lançamentos:</p>
+<ul>
+  <li>"como fazer as primeiras vendas online"</li>
+  <li>"como lançar um produto digital do zero"</li>
+  <li>"como crescer seguidores para lançar"</li>
+  <li>"como criar uma sequência de emails de lançamento"</li>
+  <li>"como calcular meta de receita de lançamento"</li>
+</ul>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Etapa 2 — Ferramentas Gratuitas de Pesquisa</h3>
+
+<p><strong>Google Autocomplete:</strong> Digite o problema e copie todas as sugestões. Esses são os termos exatos que pessoas reais digitam — não estimativas de ferramentas pagas.</p>
+
+<p><strong>Seção "Outras Perguntas" do Google (PAA):</strong> Na página de resultados, existe uma seção expandível com perguntas relacionadas. Cada pergunta é uma keyword de cauda longa com volume real.</p>
+
+<p><strong>Seção "Pesquisas Relacionadas":</strong> No final da primeira página do Google, 8 termos relacionados. Repita o processo para cada um e você expande o mapa exponencialmente.</p>
+
+<p><strong>YouTube Suggest:</strong> As sugestões do YouTube são diferentes do Google — revelam intenções de aprendizado visual. Um nicho pode ter keywords fortes no YouTube que não aparecem no Google Suggest.</p>
+
+<p><strong>Answer The Public (ansthepublic.com):</strong> Gratuito com limite diário. Gera centenas de perguntas organizadas por prefixo (como, por que, quando, quem, pode, vai). Ideal para encontrar cauda longa conversacional.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Etapa 3 — Filtragem por Viabilidade</h3>
+
+<p>Com 50-100 keywords em mãos, filtre por viabilidade. Para cada keyword, abra o Google e analise a primeira página:</p>
+
+<p><strong>Sinal verde (pode ranquear):</strong> Resultados de blogs pequenos e médios, fóruns como Reddit/Quora, respostas genéricas que não respondem bem à pergunta, domínios com menos de 2 anos.</p>
+
+<p><strong>Sinal amarelo (difícil mas possível):</strong> Mix de grandes portais com blogs menores, conteúdo desatualizado (2018-2020) nos primeiros resultados.</p>
+
+<p><strong>Sinal vermelho (evitar agora):</strong> Primeiros 5 resultados todos de portais grandes (G1, UOL, Forbes, Hotmart Blog), Wikipedia, YouTube nos primeiros 3 posições para termo que não é de vídeo.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Etapa 4 — Mapa de Conteúdo</h3>
+
+<p>Organize as keywords filtradas em um mapa simples com 3 colunas:</p>
+
+<table>
+  <thead><tr><th>Keyword</th><th>Intenção</th><th>Prioridade</th></tr></thead>
+  <tbody>
+    <tr><td>como fazer lançamento PLF sem audiência</td><td>Informacional</td><td>Alta</td></tr>
+    <tr><td>diferença entre lançamento semente e PLF</td><td>Informacional</td><td>Média</td></tr>
+    <tr><td>quanto custa fazer um lançamento digital</td><td>Comercial</td><td>Alta</td></tr>
+    <tr><td>melhor curso de lançamentos 2025</td><td>Comercial</td><td>Média</td></tr>
+  </tbody>
+</table>
+
+<p>30 keywords mapeadas com prioridade = 30 peças de conteúdo que cobrem o ciclo completo do seu funil perpétuo de topo a fundo.</p>`,
+          },
+        ],
+      },
+      {
+        id: "seo-on-page",
+        number: 41,
+        title: "SEO On-Page para Infoprodutores",
+        subtitle: "Estrutura técnica que ranqueia: title, H1, meta e URL",
+        icon: "📄",
+        color: "from-teal-600 to-cyan-600",
+        duration: "55 min",
+        summary: "Domine os elementos on-page que o Google usa para decidir a posição do seu conteúdo. Checklist técnico completo aplicável a qualquer plataforma.",
+        lessons: [
+          {
+            id: "seo-perp-4",
+            title: "Anatomia da Página que Ranqueia: Title, H1, Meta, URL",
+            duration: "20 min",
+            type: "text",
+            keyPoints: [
+              "Title tag é o elemento on-page mais importante — keyword principal nos primeiros 60 caracteres",
+              "H1 deve ser diferente do title mas conter a mesma keyword com variação natural",
+              "URL curta com keyword sem stop words (o, a, de, da) ranqueia melhor",
+            ],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">SEO on-page é o que você controla 100%. Enquanto link building e autoridade de domínio dependem de terceiros, on-page é execução interna. Esta aula cobre cada campo que o Google indexa e como otimizar cada um na hora certa.</p>
+</div>
+
+<h2 style="color:#34d399">📄 Os 7 Campos que o Google Lê na Sua Página</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">1. Title Tag — O Mais Importante</h3>
+
+<p>A title tag é o texto que aparece na aba do navegador e no resultado do Google. É o fator on-page de maior peso para ranqueamento. Regras:</p>
+<ul>
+  <li>Máximo 60 caracteres (o Google corta o resto)</li>
+  <li>Keyword principal nos primeiros 30-40 caracteres</li>
+  <li>Inclui um elemento de benefício ou especificidade ("Guia Completo", "Passo a Passo", "2025")</li>
+  <li>Não repita a keyword — cada página deve ter um title único</li>
+</ul>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0;font-family:monospace;font-size:13px">
+<p style="color:#ef4444;margin:0 0 4px">❌ Ruim: "Como fazer um lançamento digital de sucesso para iniciantes que não têm audiência ainda em 2025"</p>
+<p style="color:#34d399;margin:0">✅ Bom: "Como Fazer Lançamento Digital Sem Audiência [Guia 2025]"</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">2. H1 — Um Por Página, Diferente do Title</h3>
+
+<p>O H1 é o título visível na página. Deve conter a keyword mas ser escrito de forma diferente do title — o Google valoriza a variação natural. Se o title é "Como Fazer Lançamento Digital Sem Audiência", o H1 pode ser "Lançamento Digital do Zero: Como Vender Sem Ter Seguidores".</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">3. Meta Description — Não Ranqueia, Mas Determina o CTR</h3>
+
+<p>A meta description não influencia diretamente o ranqueamento, mas influencia a taxa de clique (CTR) — que influencia indiretamente o ranqueamento. Limite de 155 caracteres. Deve incluir a keyword e um CTA implícito ("Descubra como", "Aprenda o método", "Veja o passo a passo").</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">4. URL — Curta, Com Keyword, Sem Stop Words</h3>
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:12px 0;font-family:monospace;font-size:13px">
+<p style="color:#ef4444;margin:0 0 4px">❌ /como-fazer-um-lancamento-digital-para-iniciantes-sem-audiencia-2025</p>
+<p style="color:#34d399;margin:0">✅ /lancamento-digital-sem-audiencia</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">5. Headings (H2, H3) — Estrutura de Tópico</h3>
+<p>Cada H2 deve cobrir um subtópico da keyword principal. H3 são subseções dentro do H2. O Google usa a hierarquia de headings para entender a abrangência do seu conteúdo sobre o tópico — quanto mais completo e estruturado, mais autoridade de tópico ele atribui.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">6. Densidade de Keyword — Não Force</h3>
+<p>Keyword stuffing (repetição forçada da palavra-chave) é penalizado desde 2011. Use a keyword naturalmente no primeiro parágrafo, em um H2, e algumas vezes no corpo. Use variações semânticas (LSI keywords) — o Google entende sinônimos e contexto.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">7. Imagens — Alt Text com Keyword</h3>
+<p>O Google não "vê" imagens — lê o alt text. Toda imagem deve ter alt text descritivo que inclua a keyword quando natural. Além disso, imagens com nome de arquivo descritivo (lancamento-digital-checklist.jpg vs image-23847.jpg) têm pequeno peso adicional.</p>`,
+          },
+          {
+            id: "seo-perp-5",
+            title: "Content Clusters: Como Construir Autoridade de Tópico",
+            duration: "22 min",
+            type: "text",
+            keyPoints: [
+              "Pillar page (página pilar) + cluster pages = estrutura que o Google identifica como autoridade no tópico",
+              "Links internos entre cluster pages e pillar page são o mecanismo que distribui autoridade",
+              "Um cluster bem estruturado ranqueia mais rápido que 50 artigos isolados",
+            ],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">A estratégia de content cluster é a única abordagem de SEO que funciona para produtores digitais em 2025. Artigos isolados competem no vácuo. Clusters criam ecossistemas de conteúdo que o Google reconhece como autoridade e ranqueia o conjunto, não só peças individuais.</p>
+</div>
+
+<h2 style="color:#34d399">🕸️ A Estrutura de Cluster: Como Funciona</h2>
+
+<p>Um content cluster tem dois componentes:</p>
+
+<p><strong>Pillar Page (Página Pilar):</strong> Um artigo longo (2.000–4.000 palavras) que cobre o tópico central de forma abrangente. Mira em uma keyword de volume médio. Não vai a fundo em nenhum subtópico — linka para as cluster pages para o detalhamento.</p>
+
+<p><strong>Cluster Pages (Artigos de Cluster):</strong> Artigos menores (800–1.500 palavras) que cobrem subtópicos específicos em profundidade. Cada um mira uma keyword de cauda longa. Todos linkam de volta para a pillar page.</p>
+
+<div style="background:#0a1929;border:1px solid #1e3a5f;border-radius:8px;padding:16px 20px;margin:24px 0">
+<p style="color:#60a5fa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 12px">▸ EXEMPLO — CLUSTER PARA CURSO DE LANÇAMENTOS</p>
+<p style="color:#e2e8f0;font-size:14px;margin:0 0 8px"><strong>Pillar Page:</strong> "Lançamento Digital: O Guia Completo para Vender Produtos Online"</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">Cluster 1: "Como fazer lançamento PLF passo a passo"</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">Cluster 2: "Lançamento Semente: o método para validar sem audiência"</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">Cluster 3: "Quanto investir em tráfego pago no lançamento"</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">Cluster 4: "Sequência de emails de lançamento PLF: o que enviar e quando"</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">Cluster 5: "Copywriting para página de vendas de curso digital"</p>
+<p style="color:#94a3b8;font-size:13px;margin:0">Todos os clusters linkam para a pillar page. A pillar page linka para todos os clusters. O Google vê autoridade de tópico completa sobre "lançamento digital".</p>
+</div>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Por Que Clusters Funcionam Melhor que Artigos Isolados</h3>
+
+<p>Quando você publica 10 artigos isolados sobre tópicos distintos, o Google trata cada um como uma entidade separada. Quando você publica uma pillar page com 9 cluster pages linkadas entre si, o Google entende que você é uma autoridade no tópico central — e ranqueia o conjunto.</p>
+
+<p>O mecanismo: link interno distribui PageRank (autoridade de página) entre as peças do cluster. A pillar page recebe links de todos os clusters, acumulando autoridade. Os clusters recebem link da pillar, distribuindo tráfego. Resultado: o cluster todo ranqueia melhor do que a soma das partes.</p>`,
+          },
+          {
+            id: "seo-perp-6",
+            title: "SEO para Página de Captura do Funil Perpétuo",
+            duration: "13 min",
+            type: "text",
+            keyPoints: [
+              "Páginas de captura podem ranquear no Google — mas precisam de conteúdo real acima do fold",
+              "Híbrido: artigo longo (SEO) + formulário de captura no meio e no final = tráfego orgânico que vira lead",
+              "Velocidade de carregamento afeta ranqueamento — use ferramentas leves, evite landing pages pesadas",
+            ],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">A maioria dos infoprodutores trata SEO e captação de leads como canais separados. Esta aula mostra como unificá-los em uma estratégia híbrida: páginas que ranqueiam no Google E convertem leads para o funil perpétuo simultaneamente.</p>
+</div>
+
+<h2 style="color:#34d399">🔗 A Página Híbrida: SEO + Captura de Lead</h2>
+
+<p>Uma landing page tradicional de captura tem um problema para SEO: o Google não ranqueia páginas com pouco conteúdo. Uma página com só headline + formulário tem 200-300 palavras — insuficiente para ranquear qualquer keyword competitiva.</p>
+
+<p>A solução é a <strong>página híbrida</strong>: um artigo completo de 1.200-2.000 palavras que responde a uma busca informacional de alto volume, com um formulário de captura estrategicamente posicionado no meio e no final do conteúdo.</p>
+
+<div style="background:#0a1929;border:1px solid #1e3a5f;border-radius:8px;padding:16px 20px;margin:24px 0">
+<p style="color:#60a5fa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 12px">▸ ESTRUTURA DA PÁGINA HÍBRIDA</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">1. Título H1 com keyword informacional</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">2. Introdução (150-200 palavras) com hook + promessa</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">3. Conteúdo principal (600-800 palavras) — responde a busca de verdade</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">4. <strong style="color:#34d399">Formulário de captura 1</strong> — lead magnet relacionado ao conteúdo</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">5. Continuação do conteúdo (400-600 palavras) — profundidade adicional</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px">6. <strong style="color:#34d399">Formulário de captura 2</strong> — CTA para próximo passo do funil</p>
+<p style="color:#94a3b8;font-size:13px;margin:0">7. Seção de perguntas frequentes (FAQ) — captura buscas de cauda longa adicionais</p>
+</div>
+
+<p>Essa estrutura satisfaz o Google (conteúdo rico, estruturado, relevante) e satisfaz o visitante (aprende algo real antes de ser pedido para se cadastrar). A taxa de conversão de visitante orgânico em lead costuma ser 2-4x maior que tráfego pago — porque a pessoa chegou com intenção de aprender, não de ver um anúncio.</p>`,
+          },
+        ],
+      },
+      {
+        id: "seo-perpetuo-execucao",
+        number: 42,
+        title: "SEO no Perpétuo: Execução e Calendário",
+        subtitle: "YouTube SEO, blog como motor de leads, e rotina de publicação sustentável",
+        icon: "📅",
+        color: "from-cyan-600 to-blue-600",
+        duration: "45 min",
+        summary: "Monte um calendário de conteúdo SEO que alimenta o funil perpétuo de forma contínua — sem precisar publicar todo dia ou investir em ferramentas caras.",
+        lessons: [
+          {
+            id: "seo-perp-7",
+            title: "YouTube SEO no Funil Perpétuo",
+            duration: "16 min",
+            type: "text",
+            keyPoints: [
+              "YouTube é o 2° maior buscador do mundo — vídeos ranqueiam no Google E no YouTube simultaneamente",
+              "Um vídeo bem otimizado pode gerar leads por 2-3 anos sem republicar",
+              "Sequência perpétua: vídeo educacional (SEO) → descrição com link → página híbrida → funil",
+            ],
+            glossaryTerms: ["seo", "watch-time", "ctr"],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">YouTube SEO é diferente de YouTube viralização. A maioria dos criadores busca viralize — views imediatas do algoritmo de recomendação. SEO no YouTube é diferente: busca ranqueamento em buscas específicas que geram leads qualificados por anos. Esta aula foca exclusivamente no segundo.</p>
+</div>
+
+<h2 style="color:#34d399">▶️ YouTube SEO para o Funil Perpétuo</h2>
+
+<p>YouTube é o segundo maior buscador do mundo, atrás apenas do Google (que é o dono do YouTube — e por isso videos do YouTube aparecem no Google para buscas com intenção de aprendizado). Um vídeo bem otimizado aparece em dois lugares simultaneamente: YouTube Search e Google Search.</p>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Os 5 Campos de SEO do YouTube</h3>
+
+<table>
+  <thead><tr><th>Campo</th><th>Peso no SEO</th><th>Como Otimizar</th></tr></thead>
+  <tbody>
+    <tr><td>Título do vídeo</td><td>⭐⭐⭐⭐⭐ Máximo</td><td>Keyword exata nos primeiros 50 caracteres</td></tr>
+    <tr><td>Descrição (primeiras 2 linhas)</td><td>⭐⭐⭐⭐</td><td>Keyword na primeira frase + resumo do conteúdo</td></tr>
+    <tr><td>Tags</td><td>⭐⭐</td><td>Keyword exata + 5 variações + termos do nicho</td></tr>
+    <tr><td>Transcrição/Legendas</td><td>⭐⭐⭐</td><td>Adicione legenda em PT-BR manualmente</td></tr>
+    <tr><td>Retenção (Watch Time %)</td><td>⭐⭐⭐⭐⭐ Máximo</td><td>Hook forte nos primeiros 30s, entrega a promessa rápido</td></tr>
+  </tbody>
+</table>
+
+<h3 style="color:#e2e8f0;margin-top:24px">A Sequência YouTube → Funil Perpétuo</h3>
+
+<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin:16px 0;font-family:monospace;font-size:13px;color:#94a3b8;line-height:2">
+Busca no YouTube ("como fazer lançamento digital")
+    ↓
+Encontra seu vídeo → assiste 80%+ (sinal de qualidade)
+    ↓
+Clica no link da descrição → página híbrida
+    ↓
+Preenche formulário (lead magnet relacionado ao vídeo)
+    ↓
+Entra na sequência de email do funil perpétuo
+    ↓
+Compra quando está pronto
+</div>
+
+<p>Esse fluxo funciona 24/7, 365 dias por ano, sem nenhum custo adicional depois que o vídeo está publicado e ranqueado. Um único vídeo bem executado pode gerar 50-200 leads por mês por anos.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Frequência Mínima Viável para YouTube SEO</h3>
+
+<p>Ao contrário do que muitos pregam, você não precisa publicar todo dia ou toda semana para ter resultados de SEO no YouTube. Para o modelo perpétuo:</p>
+<ul>
+  <li><strong>1 vídeo de SEO por semana</strong> durante 6 meses = 24 vídeos cobrindo 24 keywords de cauda longa</li>
+  <li>Em 12 meses, os primeiros vídeos já estão ranqueando e gerando leads passivos</li>
+  <li>Em 18-24 meses, o canal todo funciona como uma máquina de leads automática</li>
+</ul>`,
+          },
+          {
+            id: "seo-perp-8",
+            title: "Calendário de Conteúdo SEO: Rotina Sustentável",
+            duration: "14 min",
+            type: "text",
+            keyPoints: [
+              "Consistência supera volume — 1 artigo/semana por 12 meses bate 10 artigos/mês por 3 meses",
+              "Batch de conteúdo: escreva 4 artigos em 1 dia, publique 1 por semana",
+              "Repurposing obrigatório: cada artigo vira 1 vídeo YouTube + 3 posts de redes sociais",
+            ],
+            exercise: "Abra sua lista de 30 keywords do exercício anterior. Escolha as 4 com maior combinação de volume + baixa concorrência. Escreva os títulos H1 e a meta description de cada uma hoje. Você tem o esqueleto do seu primeiro mês de SEO pronto.",
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">O maior inimigo do SEO não é a concorrência — é a inconsistência. Produtores digitais começam com entusiasmo, publicam 5 artigos, não veem resultado em 30 dias e param. Esta aula monta um sistema de produção que você consegue manter por 12+ meses.</p>
+</div>
+
+<h2 style="color:#34d399">📅 O Sistema de Calendário SEO Sustentável</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Princípio 1: Batch, Não Fluxo</h3>
+
+<p>Não escreva um artigo por dia. Escreva 4 artigos em um dia, uma vez por mês. O batch elimina o custo cognitivo de "começar" repetidamente — você já está no modo de escrita, a produtividade é 3x maior, e você mantém o calendário mesmo em semanas de lançamento ou viagem.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Princípio 2: Repurposing Sistêmico</h3>
+
+<p>Cada peça de conteúdo SEO deve gerar no mínimo 4 ativos:</p>
+<ul>
+  <li><strong>Artigo do blog</strong> (1.200-1.800 palavras) — SEO no Google</li>
+  <li><strong>Vídeo do YouTube</strong> — roteiro baseado no artigo, SEO no YouTube</li>
+  <li><strong>Carrossel do Instagram</strong> — 8-10 slides com os pontos principais do artigo</li>
+  <li><strong>Thread do X/LinkedIn</strong> — versão condensada para audiência profissional</li>
+</ul>
+
+<p>Uma sessão de batch mensal de 8 horas gera: 4 artigos + 4 vídeos + 4 carrosséis + 4 threads = 16 peças de conteúdo por mês. Isso é mais do que a maioria dos criadores publica — com apenas 1 dia de trabalho.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Template de Calendário Mensal</h3>
+
+<table>
+  <thead><tr><th>Semana</th><th>Blog</th><th>YouTube</th><th>Instagram</th><th>LinkedIn</th></tr></thead>
+  <tbody>
+    <tr><td>Semana 1</td><td>Artigo keyword 1</td><td>Vídeo keyword 1</td><td>Carrossel artigo 1</td><td>Thread artigo 1</td></tr>
+    <tr><td>Semana 2</td><td>Artigo keyword 2</td><td>Vídeo keyword 2</td><td>Carrossel artigo 2</td><td>Thread artigo 2</td></tr>
+    <tr><td>Semana 3</td><td>Artigo keyword 3</td><td>Vídeo keyword 3</td><td>Carrossel artigo 3</td><td>Thread artigo 3</td></tr>
+    <tr><td>Semana 4</td><td>Artigo keyword 4</td><td>Vídeo keyword 4</td><td>Carrossel artigo 4</td><td>Thread artigo 4</td></tr>
+  </tbody>
+</table>
+
+<p>Em 12 meses com este sistema: 48 artigos de blog + 48 vídeos + 48 carrosséis = 144 peças de conteúdo cobrindo 48 keywords do seu nicho. Se 30% ranquear na primeira página do Google, você tem ~14 artigos gerando tráfego orgânico contínuo para o funil perpétuo.</p>`,
+          },
+          {
+            id: "seo-perp-9",
+            title: "Métricas de SEO: O Que Medir e Quando Esperar",
+            duration: "15 min",
+            type: "text",
+            keyPoints: [
+              "Google Search Console (gratuito) é a única ferramenta que você precisa nos primeiros 12 meses",
+              "Primeiros 90 dias: impressões sobem, cliques não — isso é normal. O Google está testando seu conteúdo",
+              "KPIs reais: leads orgânicos/mês, custo por lead orgânico, crescimento de domínio 90/180/365 dias",
+            ],
+            questions: [
+              {
+                id: "seo-quiz-1",
+                question: "Um produtor digital com funil PLF (carrinho abre/fecha a cada 3 meses) pergunta se deve investir em SEO. Qual é a resposta correta?",
+                options: [
+                  "Sim, SEO funciona para qualquer modelo de negócio",
+                  "Não, SEO nunca funciona para produtos digitais",
+                  "Só se ele também tiver um funil perpétuo rodando em paralelo",
+                  "Sim, mas apenas YouTube SEO — não Google SEO",
+                ],
+                correctIndex: 2,
+                explanation: "SEO tem um horizonte de 3-12 meses de maturação. Para um PLF que abre e fecha a cada 3 meses, o timing não funciona — os leads chegam fora da janela do carrinho. A solução é ter um funil perpétuo rodando em paralelo que captura esses leads e os monetiza continuamente, enquanto o PLF é suportado por tráfego pago.",
+              },
+              {
+                id: "seo-quiz-2",
+                question: "Qual é o elemento on-page de maior peso no ranqueamento do Google?",
+                options: [
+                  "Meta description",
+                  "Densidade de keyword no corpo do texto",
+                  "Title tag",
+                  "Alt text das imagens",
+                ],
+                correctIndex: 2,
+                explanation: "A title tag é o elemento on-page de maior peso. Deve conter a keyword principal nos primeiros 30-40 caracteres e ter no máximo 60 caracteres. A meta description não ranqueia diretamente mas influencia o CTR, que por sua vez tem impacto indireto no ranqueamento.",
+              },
+              {
+                id: "seo-quiz-3",
+                question: "O que é um content cluster e por que funciona melhor que artigos isolados?",
+                options: [
+                  "É uma coleção de artigos sobre tópicos diferentes que aumenta o volume de conteúdo",
+                  "É uma pillar page + artigos de cluster todos interligados, que o Google reconhece como autoridade de tópico",
+                  "É uma técnica de repetir a keyword em múltiplos artigos para ranquear mais rápido",
+                  "É um método de publicar vários artigos no mesmo dia para ganhar autoridade de domínio",
+                ],
+                correctIndex: 1,
+                explanation: "Um content cluster é formado por uma pillar page (artigo abrangente sobre o tópico central) + múltiplas cluster pages (artigos de cauda longa sobre subtópicos), todos interligados por links internos. O Google lê essa estrutura como autoridade de tópico completa — e ranqueia o conjunto com mais velocidade e posição do que artigos isolados.",
+              },
+            ],
+            content: `<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+<p style="color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 4px">Diretriz Metodológica</p>
+<p style="color:#e2e8f0;font-size:13px;margin:0">A maioria abandona o SEO porque não entende o que está medindo nem quando os resultados devem aparecer. Esta aula estabelece expectativas reais, as métricas certas para cada fase, e o único dashboard que você precisa nos primeiros 12 meses.</p>
+</div>
+
+<h2 style="color:#34d399">📊 Métricas de SEO: As 3 Fases</h2>
+
+<h3 style="color:#e2e8f0;margin-top:20px">Fase 1: Indexação (0–60 dias)</h3>
+<p>O Google está descobrindo e indexando seu conteúdo. O que você vai ver no Google Search Console: impressões começando a aparecer, posição média alta (50-100), zero ou poucos cliques. Isso é normal. O Google está testando o conteúdo em posições baixas para medir o CTR e a satisfação do usuário.</p>
+
+<p><strong>O que medir:</strong> Quantas das suas páginas estão indexadas (no Search Console: Cobertura → Páginas válidas). Se suas páginas estão sendo indexadas, o trabalho está funcionando.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Fase 2: Consolidação (60–180 dias)</h3>
+<p>As posições começam a subir. Conteúdo de qualidade vai de posição 40-60 para posição 10-20. Alguns artigos entram na primeira página. Os cliques começam a aparecer — ainda poucos, mas crescentes.</p>
+
+<p><strong>O que medir:</strong> Evolução de posição média por keyword (Search Console → Desempenho → Queries). Foque nas queries onde você está entre posição 8 e 20 — essas estão mais próximas da primeira página e pequenas melhorias têm impacto grande em tráfego.</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">Fase 3: Aceleração (180+ dias)</h3>
+<p>O algoritmo passou a confiar no seu domínio. Novos artigos ranqueiam mais rápido. Os artigos antigos continuam subindo. O tráfego orgânico cresce de forma composta.</p>
+
+<p><strong>O que medir:</strong> Leads orgânicos por mês (via UTM no Google Analytics), custo por lead orgânico (investimento de tempo / leads gerados), retorno sobre conteúdo (receita atribuída a leads orgânicos).</p>
+
+<h3 style="color:#e2e8f0;margin-top:24px">A Única Ferramenta que Você Precisa</h3>
+
+<p><strong>Google Search Console</strong> (gratuito, dados direto do Google) mostra impressões, cliques, posição média e CTR por keyword e por página. É a fonte de verdade do SEO do Google. Instale no primeiro dia e verifique a cada 2 semanas. Qualquer ferramenta paga é complementar — nunca substituta.</p>
+
+<div style="background:#0a1929;border:1px solid #1e3a5f;border-radius:8px;padding:16px 20px;margin:24px 0">
+<p style="color:#60a5fa;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 12px">▸ EXPECTATIVA REALISTA DE 12 MESES</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px"><strong style="color:#e2e8f0">Mês 1-3:</strong> Conteúdo publicado, indexação acontecendo, zero tráfego relevante. Normal.</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px"><strong style="color:#e2e8f0">Mês 4-6:</strong> Primeiras posições em cauda longa, 50-200 visitas/mês, primeiros leads orgânicos.</p>
+<p style="color:#94a3b8;font-size:13px;margin:0 0 4px"><strong style="color:#e2e8f0">Mês 7-9:</strong> Crescimento acelerando, 200-800 visitas/mês, 10-40 leads/mês.</p>
+<p style="color:#94a3b8;font-size:13px;margin:0">Mês 10-12: Canal estabelecido, 500-2.000+ visitas/mês, 25-100+ leads/mês, custo por lead despencando.</p>
+</div>`,
           },
         ],
       },

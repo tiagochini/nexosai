@@ -175,6 +175,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
     { n: "10", titulo: "Produto Digital & Audiência", desc: "Jobs-to-be-done, pesquisa de mercado, avatar real vs. imaginado, criação de produto, precificação e escolha de plataforma de entrega.", badge: "Produto", cor: "from-teal-600 to-emerald-700" },
     { n: "11", titulo: "Frequências Mentais & Identidade", desc: "O ciclo neuroestrutural do empreendedor. As 4 frequências de operação e por que a maioria trava na Frequência 1 sem saber.", badge: "Mindset", cor: "from-purple-600 to-fuchsia-700" },
     { n: "12", titulo: "Psicologia Avançada de Vendas", desc: "Os frameworks que os melhores copywriters e estrategistas do mundo usam: Schwartz, Kahneman, Cialdini Pre-Suasion, Van Westendorp, Jay Abraham, Bencivenga.", badge: "Premium", cor: "from-amber-600 to-yellow-700" },
+    { n: "13", titulo: "SEO para Produtos Digitais", desc: "O canal orgânico que alimenta o funil perpétuo. Ranqueie no Google e YouTube para capturar leads que já procuram o que você vende — sem pagar por tráfego a cada venda.", badge: "Módulo Premium", cor: "from-emerald-600 to-teal-700" },
   ];
 
   const frameworks = [
@@ -220,7 +221,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="flex flex-wrap items-center gap-2 mb-8">
             <span className="badge-primary">⚡ NexOS Academy</span>
-            <span className="badge-primary badge-gold">12 Módulos · {allChapters.length} Capítulos · {totalLessons} Aulas</span>
+            <span className="badge-primary badge-gold">13 Módulos · {allChapters.length} Capítulos · {totalLessons} Aulas</span>
             <span className="badge-primary" style={{ borderColor: "hsl(250 90% 65% / 0.3)", color: "hsl(250 90% 75%)" }}>🇧🇷 PT-BR</span>
           </div>
 
@@ -381,7 +382,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
         {/* ── 12 MÓDULOS ── */}
         <div>
           <div className="text-[10px] font-mono uppercase tracking-[0.4em] text-[hsl(250_90%_65%/0.6)] mb-4">— Currículo Completo —</div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3">12 módulos. Do básico ao avançado.</h2>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-white mb-3">13 módulos. Do básico ao avançado.</h2>
           <p className="text-sm text-[hsl(220_10%_55%)] mb-8 max-w-xl">
             Cada módulo foi construído com o mesmo framework dos especialistas — não como revisão de conteúdo, mas como sistema de decisão operacional.
           </p>
@@ -522,7 +523,7 @@ function AcademyLanding({ onNavigate }: Pick<HomeProps, "onNavigate">) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
             {[
-              "12 módulos com conteúdo denso e aplicado",
+              "13 módulos com conteúdo denso e aplicado",
               `${totalLessons}+ aulas com exercício prático por aula`,
               "Professor agente disponível 24h — responde qualquer dúvida",
               "Glossário completo com 80+ termos técnicos",
