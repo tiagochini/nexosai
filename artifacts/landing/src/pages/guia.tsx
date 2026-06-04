@@ -6,7 +6,7 @@ import nexosLogo from "/nexos-logo.png";
 
 // ─── Configuração — atualize aqui ────────────────────────────────────────────
 const GRUPO_LINK  = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
-const PDF_URL     = "#download"; // ← substitua pela URL real do PDF
+const PDF_URL     = "/landing/guia-7-erros-lancamento.html";
 const UNLOCK_KEY  = "nexos_guia_unlocked";
 
 const capitulos = [
@@ -141,7 +141,7 @@ export default function GuiaPage() {
   function handleSuccess() {
     handleUnlock();
     if (pendingAction === "download") {
-      if (PDF_URL !== "#download") {
+      if (PDF_URL) {
         const a = document.createElement("a");
         a.href = PDF_URL;
         a.target = "_blank";
@@ -170,7 +170,7 @@ export default function GuiaPage() {
 
   function requestDownload() {
     if (unlocked) {
-      if (PDF_URL !== "#download") {
+      if (PDF_URL) {
         window.open(PDF_URL, "_blank", "noopener,noreferrer");
       }
       return;

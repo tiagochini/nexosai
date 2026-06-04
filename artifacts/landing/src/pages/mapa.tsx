@@ -15,6 +15,7 @@ const BULLETS = [
 export default function MapaPage() {
   const [name, setName]         = useState("");
   const [email, setEmail]       = useState("");
+  const [phone, setPhone]       = useState("");
   const [refCode, setRefCode]   = useState("");
   const [loading, setLoading]   = useState(false);
   const [success, setSuccess]   = useState(false);
@@ -30,7 +31,7 @@ export default function MapaPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
+    if (!name.trim() || !email.trim() || !phone.trim()) return;
     setLoading(true);
     setError("");
 
@@ -39,6 +40,7 @@ export default function MapaPage() {
       const body: Record<string, string> = {
         name: name.trim(),
         email: email.trim().toLowerCase(),
+        phone: phone.trim(),
         utm_source:   p.get("utm_source")   || "whatsapp",
         utm_medium:   p.get("utm_medium")   || "catalog",
         utm_campaign: p.get("utm_campaign") || "mapa_gratis",
@@ -124,7 +126,7 @@ export default function MapaPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Seu primeiro nome"
+                  placeholder="Nome completo"
                   value={name}
                   onChange={e => setName(e.target.value)}
                   className="w-full font-mono bg-background/60 border border-border/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:shadow-[0_0_10px_hsl(var(--primary)/0.2)] transition-all"
@@ -132,11 +134,22 @@ export default function MapaPage() {
                 <input
                   type="email"
                   required
-                  placeholder="Seu melhor email"
+                  placeholder="Seu melhor e-mail"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="w-full font-mono bg-background/60 border border-border/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:shadow-[0_0_10px_hsl(var(--primary)/0.2)] transition-all"
                 />
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+                  <input
+                    type="tel"
+                    required
+                    placeholder="WhatsApp com DDD (ex: 11 99999-9999)"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    className="w-full font-mono bg-background/60 border border-border/50 pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/60 focus:shadow-[0_0_10px_hsl(var(--primary)/0.2)] transition-all"
+                  />
+                </div>
 
                 {error && (
                   <p className="font-mono text-xs text-destructive uppercase tracking-widest">{error}</p>
@@ -144,7 +157,7 @@ export default function MapaPage() {
 
                 <button
                   type="submit"
-                  disabled={loading || !name.trim() || !email.trim()}
+                  disabled={loading || !name.trim() || !email.trim() || !phone.trim()}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-mono font-black uppercase tracking-[0.2em] py-4 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading
