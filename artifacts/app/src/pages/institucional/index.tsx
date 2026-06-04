@@ -131,7 +131,7 @@ function HeroSection() {
 
         <div className="mt-16 grid grid-cols-3 gap-6 max-w-lg mx-auto">
           {[
-            { value: "34+", label: "Agentes AI" },
+            { value: "57+", label: "Agentes AI" },
             { value: "7", label: "Dias até o lançamento" },
             { value: "100%", label: "Autopilot" },
           ].map(s => (
@@ -158,9 +158,9 @@ const PRODUTOS = [
     badgeColor: "text-purple-300 border-purple-500/40 bg-purple-500/10",
     title: "NexOS AI",
     subtitle: "Lançamentos 100% Autopilot",
-    description: "O sistema operacional para lançamentos digitais. 34 agentes de IA executam estratégia, copy, criativos, sequência PLF e tráfego pago — do briefing ao carrinho aberto, sem precisar de equipe.",
+    description: "O sistema operacional para lançamentos digitais. 57 agentes de IA executam estratégia, copy, criativos, sequência PLF e tráfego pago — do briefing ao carrinho aberto, sem precisar de equipe.",
     features: [
-      "34 agentes de IA especializados",
+      "57 agentes de IA especializados",
       "Sequência PLF completa automatizada",
       "Estratégia, copy e criativos por IA",
       "Dashboard de métricas em tempo real",

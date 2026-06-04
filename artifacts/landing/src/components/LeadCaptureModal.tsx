@@ -41,13 +41,14 @@ function formatPhone(raw: string): string {
 interface Props {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   title?: string;
   subtitle?: string;
 }
 
 type Step = "form" | "loading" | "success" | "error";
 
-export default function LeadCaptureModal({ open, onClose, title, subtitle }: Props) {
+export default function LeadCaptureModal({ open, onClose, onSuccess, title, subtitle }: Props) {
   const [step, setStep] = useState<Step>("form");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -116,6 +117,8 @@ export default function LeadCaptureModal({ open, onClose, title, subtitle }: Pro
       }
       // Success — with or without seqId
       setStep("success");
+      // Notify parent so it can unlock content / trigger download
+      onSuccess?.();
       // Open WhatsApp after short delay so user sees confirmation
       setTimeout(openWA, 1200);
     } catch (err: unknown) {

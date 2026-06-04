@@ -1,13 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import LeadCaptureModal from "@/components/LeadCaptureModal";
-import { ArrowRight, CheckCircle2, Download, BookOpen, Lock, Users, ChevronDown, ChevronUp, Zap, Star, Shield } from "lucide-react";
+import { ArrowRight, CheckCircle2, Download, BookOpen, Lock, Users, ChevronDown, ChevronUp, Zap, Star, Shield, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import nexosLogo from "/nexos-logo.png";
 
 // ─── Configuração — atualize aqui ────────────────────────────────────────────
-const GRUPO_LINK  = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
-const PDF_URL     = "#download"; // ← substitua pela URL real do PDF
+const GRUPO_LINK    = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
+const PDF_URL       = "#download"; // ← substitua pela URL real do PDF
 const MINIGUIA_LINK = "/comprar?produto=miniguia";
+const UNLOCK_KEY    = "nexos_guia_unlocked";
 
 const capitulos = [
   {
@@ -84,7 +85,7 @@ const capitulos = [
   },
 ];
 
-function CapituloCard({ cap, idx }: { cap: typeof capitulos[0]; idx: number }) {
+function CapituloCard({ cap }: { cap: typeof capitulos[0] }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="border border-border/30 bg-card/10 transition-all duration-300">
@@ -121,7 +122,63 @@ function CapituloCard({ cap, idx }: { cap: typeof capitulos[0]; idx: number }) {
 }
 
 export default function GuiaPage() {
+  const [unlocked, setUnlocked] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"download" | "read" | null>(null);
+  const lerOnlineRef = useRef<HTMLDivElement>(null);
+
+  // Persist unlock state for the session
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(UNLOCK_KEY) === "1") setUnlocked(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  function handleUnlock() {
+    setUnlocked(true);
+    try { sessionStorage.setItem(UNLOCK_KEY, "1"); } catch { /* ignore */ }
+  }
+
+  function handleSuccess() {
+    handleUnlock();
+    if (pendingAction === "download") {
+      if (PDF_URL !== "#download") {
+        const a = document.createElement("a");
+        a.href = PDF_URL;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.click();
+      }
+    }
+    if (pendingAction === "read") {
+      setTimeout(() => {
+        lerOnlineRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 600);
+    }
+    setPendingAction(null);
+    setCaptureOpen(false);
+  }
+
+  function requestDownload() {
+    if (unlocked) {
+      if (PDF_URL !== "#download") {
+        window.open(PDF_URL, "_blank", "noopener,noreferrer");
+      }
+      return;
+    }
+    setPendingAction("download");
+    setCaptureOpen(true);
+  }
+
+  function requestRead() {
+    if (unlocked) {
+      lerOnlineRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    setPendingAction("read");
+    setCaptureOpen(true);
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Nav */}
@@ -132,9 +189,15 @@ export default function GuiaPage() {
             <span className="font-mono font-black text-sm tracking-[0.12em] uppercase">NexOS</span>
           </a>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setCaptureOpen(true)} className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] tracking-widest font-bold h-8 px-3 gap-1.5">
-              <Users className="h-3.5 w-3.5" /> Quero o Guia
-            </Button>
+            {unlocked ? (
+              <Button size="sm" onClick={requestDownload} className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] tracking-widest font-bold h-8 px-3 gap-1.5">
+                <Download className="h-3.5 w-3.5" /> Baixar PDF
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => { setPendingAction(null); setCaptureOpen(true); }} className="btn-weapon-primary rounded-none font-mono uppercase text-[10px] tracking-widest font-bold h-8 px-3 gap-1.5">
+                <Users className="h-3.5 w-3.5" /> Quero o Guia
+              </Button>
+            )}
           </div>
         </div>
       </nav>
@@ -147,7 +210,7 @@ export default function GuiaPage() {
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
             O framework que<br />
             <span className="bg-gradient-to-r from-primary via-blue-400 to-primary bg-clip-text text-transparent">
-              34 especialistas<br />vão executar<br />por você.
+              57 especialistas<br />vão executar<br />por você.
             </span>
           </h1>
           <p className="font-mono text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl mb-8">
@@ -156,21 +219,25 @@ export default function GuiaPage() {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <a href={PDF_URL} target="_blank" rel="noopener noreferrer">
-              <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-13 px-8 gap-2 text-sm w-full sm:w-auto">
-                <Download className="h-4 w-4" /> Baixar PDF Completo
-              </Button>
-            </a>
+            <Button
+              onClick={requestDownload}
+              className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-13 px-8 gap-2 text-sm w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4" /> Baixar PDF Completo
+            </Button>
             <Button
               variant="outline"
-              onClick={() => document.getElementById("ler-online")?.scrollIntoView({ behavior: "smooth" })}
+              onClick={requestRead}
               className="rounded-none font-mono uppercase tracking-widest font-bold h-13 px-6 gap-2 text-sm border-primary/30 text-primary/80 hover:text-primary hover:border-primary/60 w-full sm:w-auto"
             >
               <BookOpen className="h-4 w-4" /> Ler Online Agora
             </Button>
           </div>
           <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground/40">
-            <Lock className="h-3.5 w-3.5" /> Gratuito · sem cadastro · compartilhe livremente
+            <Lock className="h-3.5 w-3.5" />
+            {unlocked
+              ? "Acesso liberado · compartilhe livremente"
+              : "Gratuito · informe seu WhatsApp para acessar"}
           </div>
         </div>
 
@@ -180,7 +247,7 @@ export default function GuiaPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             {[
               { n: "6", label: "Capítulos completos" },
-              { n: "34+", label: "Frameworks e templates" },
+              { n: "57+", label: "Frameworks e templates" },
               { n: "7 dias", label: "Para um lançamento completo" },
             ].map(item => (
               <div key={item.label} className="border border-border/30 bg-card/15 px-6 py-4 text-center">
@@ -191,14 +258,56 @@ export default function GuiaPage() {
           </div>
         </div>
 
-        {/* Capítulos — Ler Online */}
-        <div id="ler-online" className="mb-16">
+        {/* Capítulos — Ler Online (gated) */}
+        <div ref={lerOnlineRef} id="ler-online" className="mb-16">
           <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-6">— Ler online · clique para expandir —</div>
-          <div className="space-y-2">
-            {capitulos.map((cap, idx) => (
-              <CapituloCard key={cap.num} cap={cap} idx={idx} />
-            ))}
-          </div>
+
+          {unlocked ? (
+            <div className="space-y-2">
+              {capitulos.map((cap) => (
+                <CapituloCard key={cap.num} cap={cap} />
+              ))}
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Blurred preview — first 2 chapters */}
+              <div className="space-y-2 select-none pointer-events-none" style={{ filter: "blur(3px)", opacity: 0.4 }}>
+                {capitulos.slice(0, 2).map((cap) => (
+                  <div key={cap.num} className="border border-border/30 bg-card/10 px-5 sm:px-8 py-5 flex items-start gap-4 sm:gap-6">
+                    <div className="font-mono font-black text-2xl sm:text-3xl text-primary/30 leading-none shrink-0 w-10 pt-0.5">{cap.num}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-mono font-black text-sm sm:text-base uppercase tracking-tight text-foreground leading-snug pr-4">{cap.titulo}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground/50 mt-1.5 leading-relaxed line-clamp-2">{cap.resumo}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Gate overlay */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm border border-primary/20">
+                <div className="text-center px-6 py-8 max-w-sm">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-5">
+                    <Lock className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="font-mono font-black text-lg uppercase tracking-tight mb-2">
+                    Acesso liberado em segundos
+                  </div>
+                  <p className="font-mono text-xs text-muted-foreground/70 mb-6 leading-relaxed">
+                    Informe seu nome e WhatsApp para ler os 6 capítulos completos e baixar o PDF.
+                  </p>
+                  <Button
+                    onClick={requestRead}
+                    className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-12 px-8 gap-2 text-sm w-full"
+                  >
+                    <Eye className="h-4 w-4" /> Liberar Acesso Agora
+                  </Button>
+                  <p className="font-mono text-[10px] text-muted-foreground/30 mt-3">
+                    Gratuito · sem spam · apenas o guia no WhatsApp
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Download CTA */}
@@ -210,11 +319,12 @@ export default function GuiaPage() {
           <p className="font-mono text-sm text-muted-foreground max-w-md mx-auto mb-6">
             PDF otimizado para mobile e desktop. Todos os 6 capítulos, frameworks visuais e checklist de lançamento em um arquivo.
           </p>
-          <a href={PDF_URL} target="_blank" rel="noopener noreferrer">
-            <Button className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-14 px-10 gap-2 text-sm">
-              <Download className="h-5 w-5" /> Baixar o Guia (PDF Gratuito)
-            </Button>
-          </a>
+          <Button
+            onClick={requestDownload}
+            className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-14 px-10 gap-2 text-sm"
+          >
+            <Download className="h-5 w-5" /> Baixar o Guia (PDF Gratuito)
+          </Button>
         </div>
 
         {/* Upgrade — Mini-Guia R$97 */}
@@ -272,7 +382,10 @@ export default function GuiaPage() {
           <p className="font-mono text-sm text-muted-foreground max-w-md mx-auto mb-6">
             Bastidores de lançamentos reais, estratégias novas toda semana, e acesso antecipado à plataforma quando o lançamento oficial abrir.
           </p>
-          <Button onClick={() => setCaptureOpen(true)} className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-13 px-10 gap-2 text-sm">
+          <Button
+            onClick={() => { setPendingAction(null); setCaptureOpen(true); }}
+            className="btn-weapon-primary rounded-none font-mono uppercase tracking-widest font-black h-13 px-10 gap-2 text-sm"
+          >
             <Users className="h-5 w-5" /> Quero o Guia + Entrar no Grupo
           </Button>
         </div>
@@ -288,11 +401,17 @@ export default function GuiaPage() {
         </div>
 
       </div>
+
       <LeadCaptureModal
         open={captureOpen}
         onClose={() => setCaptureOpen(false)}
-        title="Receba o guia no WhatsApp"
-        subtitle="Informe seu número e o link do guia chega direto no chat."
+        onSuccess={handleSuccess}
+        title={pendingAction === "download" ? "Informe seu WhatsApp\npara receber o PDF" : "Libere seu acesso\nao guia gratuito"}
+        subtitle={
+          pendingAction === "download"
+            ? "Cadastre-se e receba o link do PDF direto no seu WhatsApp."
+            : "Nome e WhatsApp para liberar a leitura completa dos 6 capítulos."
+        }
       />
     </div>
   );

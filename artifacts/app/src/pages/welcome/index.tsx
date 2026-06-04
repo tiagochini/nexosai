@@ -338,7 +338,7 @@ export default function Welcome() {
               lançamentos confusos — <span className="text-foreground font-bold">isso foi ontem.</span>
             </p>
             <p className="font-mono text-sm text-foreground/80 leading-relaxed text-center font-bold">
-              Agora você tem 34 especialistas trabalhando pelo seu lançamento. 24 horas por dia.
+              Agora você tem 57 especialistas trabalhando pelo seu lançamento. 24 horas por dia.
               Sem folga. Sem fatura mensal. Sem ego.
             </p>
           </div>

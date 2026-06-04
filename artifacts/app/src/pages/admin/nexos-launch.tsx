@@ -276,7 +276,7 @@ export default function NexosLaunchRoom() {
                   <span className="text-foreground font-medium">NexOS não é mais um curso. Não é mais um framework.</span>{" "}
                   É o time de execução que o Érico tem — disponível para qualquer pessoa, a qualquer hora, sem mensalidade.
                   Quando você compra NexOS, você não aprende como lançar.{" "}
-                  <span className="text-foreground font-medium">Você ganha 34 especialistas que lançam junto com você.</span>
+                  <span className="text-foreground font-medium">Você ganha 57 especialistas que lançam junto com você.</span>
                 </p>
               </div>
 
