@@ -1191,58 +1191,127 @@ function FechamentoSection() {
 
 // ─── Section AUTORIDADE — O Arquiteto do Sistema ─────────────────────────────
 function AutoridadeSection() {
-  const { ref, inView } = useInView(0.15);
+  const { ref, inView } = useInView(0.1);
+
+  const gapItems = [
+    { conhece: "Storytelling que conecta emocionalmente", falta: "Quem escreve o roteiro?" },
+    { conhece: "Funil frio, morno e quente por fase", falta: "Quem monta e programa cada etapa?" },
+    { conhece: "Landing page com copy excepcional", falta: "Quem constrói, hospeda e publica?" },
+    { conhece: "Ganchos que param o scroll", falta: "Quem cria, testa e itera?" },
+    { conhece: "E-mails e WhatsApp automáticos", falta: "Quem configura toda a automação?" },
+  ];
+
+  const capabilities = [
+    { verb: "PLANEJA", desc: "estratégia completa do lançamento" },
+    { verb: "CRIA", desc: "copy, roteiros e materiais por fase" },
+    { verb: "EDITA", desc: "vídeos, imagens e criativos" },
+    { verb: "AUTOMATIZA", desc: "sequências e fluxos completos" },
+    { verb: "EXECUTA", desc: "em modo autônomo após sua aprovação" },
+    { verb: "MONITORA", desc: "métricas diariamente, hora a hora" },
+    { verb: "ADAPTA", desc: "exclui o que não converte, adiciona o que funciona" },
+    { verb: "ORÇA", desc: "seu plano de tráfego pago e orgânico" },
+  ];
+
   return (
     <Section ref={ref as React.Ref<HTMLElement>} className="bg-background border-t border-border/20">
-      <div className="max-w-5xl mx-auto px-6 w-full">
+      <div className="max-w-6xl mx-auto px-6 w-full">
         <div className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}>
-          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-4">— O Arquiteto do Sistema —</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-            <div>
-              <h2 className="text-3xl sm:text-5xl font-mono font-black uppercase tracking-tighter leading-[1.05] mb-6">
-                Por que isso<br /><span className="text-primary">existe.</span>
-              </h2>
-              <div className="space-y-4 font-mono text-sm text-muted-foreground leading-relaxed">
-                <p>
-                  Passei anos documentando lançamentos que falharam — não por falta de produto, não por falta de tráfego. Por falha na operação. Um erro de lógica na automação. Disparo feito pela ferramenta errada. Copy genérica entregue para quem já conhecia o produto.
-                </p>
-                <p>
-                  O padrão se repetia com tanta frequência que ficou impossível ignorar: o mercado digital brasileiro tem uma brecha enorme entre estratégia e execução. As pessoas aprendem o método. Ninguém resolve a operação.
-                </p>
-                <p className="text-foreground font-bold">
-                  O NexOS nasceu para fechar essa brecha.
-                </p>
-                <p>
-                  Não como mais uma ferramenta no stack — como o sistema nervoso da operação inteira. Do briefing ao carrinho fechado, sem que você precise ser o elo entre cada peça.
-                </p>
+
+          {/* Label */}
+          <div className="font-mono text-[11px] uppercase tracking-[0.4em] text-primary/60 mb-8">— Por que isso existe —</div>
+
+          {/* Headline */}
+          <div className="mb-12">
+            <h2 className="text-4xl sm:text-6xl font-mono font-black uppercase tracking-tighter leading-[1.0] mb-4">
+              A Fórmula<br />você já tem.<br />
+              <span className="text-primary">O que falta é execução.</span>
+            </h2>
+            <p className="font-mono text-base text-muted-foreground max-w-2xl leading-relaxed mt-6">
+              Nenhum grande lançamento falhou por metodologia. A Fórmula funciona — isso não está em discussão.
+              O problema é sempre o mesmo: o abismo entre <strong className="text-foreground">saber a estratégia</strong> e <strong className="text-foreground">conseguir executá-la.</strong>
+            </p>
+          </div>
+
+          {/* The Gap Table */}
+          <div className="mb-14">
+            <div className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground/50 mb-4">— O gap que ninguém resolve —</div>
+            <div className="border border-border/20 overflow-hidden">
+              <div className="grid grid-cols-2 bg-card/30 border-b border-border/20 px-6 py-3">
+                <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-primary/60">Você sabe que precisa de…</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/40">Mas…</span>
               </div>
-            </div>
-            <div className="space-y-3">
-              {[
-                { num: "R$2.3B+", label: "em campanhas digitais analisadas para calibrar os agentes" },
-                { num: "1.200+", label: "lançamentos documentados como base de treinamento do sistema" },
-                { num: "35", label: "agentes especializados, cada um treinado com as doutrinas dos maiores profissionais do mundo" },
-                { num: "3 idiomas", label: "PT-BR nativo, EN-US e ES-LA — sem tradução automática, sem perda de nuance" },
-              ].map((item, i) => (
+              {gapItems.map((item, i) => (
                 <div
                   key={i}
-                  className={`border border-border/30 bg-card/20 px-6 py-5 transition-all duration-500 ${inView ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
-                  style={{ transitionDelay: `${i * 110}ms` }}
+                  className={`grid grid-cols-2 px-6 py-4 border-b border-border/10 last:border-0 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
+                  style={{ transitionDelay: `${i * 80}ms` }}
                 >
-                  <div className="font-mono font-black text-2xl text-primary leading-none mb-1">{item.num}</div>
-                  <div className="font-mono text-xs text-muted-foreground/70 leading-relaxed">{item.label}</div>
+                  <span className="font-mono text-sm text-foreground/80 pr-4">{item.conhece}</span>
+                  <span className="font-mono text-sm text-muted-foreground/60 flex items-center gap-2">
+                    <span className="text-primary/40">→</span> {item.falta}
+                  </span>
                 </div>
               ))}
-              <div
-                className={`border border-primary/20 bg-primary/5 px-6 py-4 transition-all duration-500 ${inView ? "opacity-100" : "opacity-0"}`}
-                style={{ transitionDelay: "440ms" }}
-              >
-                <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                  <strong className="text-foreground">Garantia pessoal de 30 dias:</strong> ative o sistema, configure seu primeiro lançamento — se não ver valor real na operação, devolvo tudo, sem formulário, sem justificativa. O risco é meu, não seu.
-                </p>
-              </div>
             </div>
           </div>
+
+          {/* Dream Quotes */}
+          <div className="mb-14 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              "Se eu soubesse executar do jeitinho que eu imagino que deveria ser…",
+              "Se eu tivesse o time que executa para os grandes lançadores…",
+            ].map((quote, i) => (
+              <div
+                key={i}
+                className={`border border-primary/15 bg-primary/5 px-8 py-6 transition-all duration-600 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                style={{ transitionDelay: `${400 + i * 120}ms` }}
+              >
+                <p className="font-mono text-base text-foreground/70 italic leading-relaxed">"{quote}"</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Answer */}
+          <div className={`mb-14 transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "640ms" }}>
+            <p className="font-mono text-lg text-muted-foreground mb-2">Com certeza você já pensou isso.</p>
+            <p className="font-mono text-xl font-bold text-foreground">Eu também pensei.</p>
+          </div>
+
+          {/* The Reveal */}
+          <div className={`mb-12 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`} style={{ transitionDelay: "760ms" }}>
+            <div className="border-l-2 border-primary pl-6 mb-3">
+              <p className="font-mono text-3xl sm:text-4xl font-black uppercase tracking-tight text-foreground">
+                NexOS AI é esse time.
+              </p>
+            </div>
+            <p className="font-mono text-sm text-muted-foreground max-w-2xl leading-relaxed">
+              Não mais uma ferramenta no seu stack. O time de execução 100% autônomo que age sobre o seu plano —
+              depois da sua aprovação final, em modo totalmente automático.
+            </p>
+          </div>
+
+          {/* Capabilities Grid */}
+          <div className={`transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "880ms" }}>
+            <div className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground/50 mb-4">— O que o NexOS executa por você —</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border/20">
+              {capabilities.map((cap, i) => (
+                <div
+                  key={i}
+                  className={`bg-background px-5 py-5 transition-all duration-400 ${inView ? "opacity-100" : "opacity-0"}`}
+                  style={{ transitionDelay: `${900 + i * 60}ms` }}
+                >
+                  <div className="font-mono text-xs font-black text-primary tracking-widest mb-1">{cap.verb}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground/60 leading-snug">{cap.desc}</div>
+                </div>
+              ))}
+            </div>
+            <div className={`mt-6 text-center transition-all duration-700 ${inView ? "opacity-100" : "opacity-0"}`} style={{ transitionDelay: "1400ms" }}>
+              <p className="font-mono text-lg font-black uppercase tracking-widest text-foreground/80">
+                Você pensa. <span className="text-primary">O NexOS executa.</span>
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
       <ScrollHint />
