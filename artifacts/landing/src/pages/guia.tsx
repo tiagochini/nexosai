@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import nexosLogo from "/nexos-logo.png";
 
 // ─── Configuração — atualize aqui ────────────────────────────────────────────
-const GRUPO_LINK  = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
+const GRUPO_LINK  = "https://chat.whatsapp.com/KpC38jdRCdOImiq8uZegiU";
 const PDF_URL     = "/landing/guia-7-erros-lancamento.html";
 const UNLOCK_KEY  = "nexos_guia_unlocked";
 
