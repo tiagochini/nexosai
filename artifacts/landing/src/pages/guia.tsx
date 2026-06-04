@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import nexosLogo from "/nexos-logo.png";
 
 // ─── Configuração — atualize aqui ────────────────────────────────────────────
-const GRUPO_LINK    = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
-const PDF_URL       = "#download"; // ← substitua pela URL real do PDF
-const MINIGUIA_LINK = "/comprar?produto=miniguia";
-const UNLOCK_KEY    = "nexos_guia_unlocked";
+const GRUPO_LINK  = "https://chat.whatsapp.com/SEU_GRUPO_AQUI";
+const PDF_URL     = "#download"; // ← substitua pela URL real do PDF
+const UNLOCK_KEY  = "nexos_guia_unlocked";
 
 const capitulos = [
   {
@@ -124,7 +123,7 @@ function CapituloCard({ cap }: { cap: typeof capitulos[0] }) {
 export default function GuiaPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<"download" | "read" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"download" | "read" | "miniguia" | null>(null);
   const lerOnlineRef = useRef<HTMLDivElement>(null);
 
   // Persist unlock state for the session
@@ -155,8 +154,18 @@ export default function GuiaPage() {
         lerOnlineRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 600);
     }
+    if (pendingAction === "miniguia") {
+      setTimeout(() => {
+        window.open(GRUPO_LINK, "_blank", "noopener,noreferrer");
+      }, 800);
+    }
     setPendingAction(null);
     setCaptureOpen(false);
+  }
+
+  function requestMiniGuia() {
+    setPendingAction("miniguia");
+    setCaptureOpen(true);
   }
 
   function requestDownload() {
@@ -357,16 +366,16 @@ export default function GuiaPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-baseline gap-3">
-                <span className="font-mono font-black text-3xl text-amber-400">R$97</span>
-                <span className="font-mono text-sm text-muted-foreground/40 line-through">R$299</span>
+                <span className="font-mono font-black text-3xl text-amber-400">Gratuito</span>
               </div>
-              <div className="font-mono text-xs text-muted-foreground/50 mt-1">Acesso vitalício · atualizado a cada lançamento</div>
+              <div className="font-mono text-xs text-muted-foreground/50 mt-1">Cadastre-se e receba no WhatsApp + acesso ao grupo</div>
             </div>
-            <a href={MINIGUIA_LINK}>
-              <Button className="rounded-none font-mono uppercase tracking-widest font-bold h-12 px-8 gap-2 text-xs bg-amber-500 hover:bg-amber-400 text-background w-full sm:w-auto">
-                Quero o Mini-Guia Completo <ArrowRight className="h-4 w-4" />
-              </Button>
-            </a>
+            <Button
+              onClick={requestMiniGuia}
+              className="rounded-none font-mono uppercase tracking-widest font-bold h-12 px-8 gap-2 text-xs bg-amber-500 hover:bg-amber-400 text-background w-full sm:w-auto"
+            >
+              Quero o Mini-Guia Completo <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
           <div className="mt-4 flex items-center gap-2 font-mono text-[10px] text-muted-foreground/40">
             <Shield className="h-3.5 w-3.5" /> Garantia de 7 dias — não gostou, devolvemos tudo

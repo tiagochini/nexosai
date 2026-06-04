@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import nexosLogo from "/nexos-logo.png";
-import { CheckCircle2, ArrowRight, Gift, Loader2, Map, Lock } from "lucide-react";
+import { CheckCircle2, ArrowRight, Gift, Loader2, Map, Lock, Phone } from "lucide-react";
 
 const SEQUENCE_ID = "f3756cb9-a767-47b5-97a2-386c080b0354";
 
