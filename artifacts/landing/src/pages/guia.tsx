@@ -340,21 +340,21 @@ export default function GuiaPage() {
         <div className="border border-amber-400/30 bg-amber-400/5 px-6 sm:px-10 py-8 mb-16">
           <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-amber-400/60 mb-4">— Próximo passo —</div>
           <h2 className="font-mono font-black text-2xl sm:text-3xl uppercase tracking-tighter leading-tight mb-4">
-            Quer o guia completo<br />
-            <span className="text-amber-400">com workbook + exemplos reais?</span>
+            Primeiros R$10K<br />
+            <span className="text-amber-400">em vendas na internet em 30 dias</span>
           </h2>
           <p className="font-mono text-sm text-muted-foreground leading-relaxed mb-6 max-w-xl">
-            O mini-guia expandido tem exemplos reais de campanhas documentadas, workbook de planejamento com os frameworks preenchíveis, e o cronograma completo dos 7 dias com scripts prontos para cada fase.
+            O plano operacional completo com cronograma de 30 dias, scripts de copy prontos e o framework que produtores usam para chegar nos primeiros 5 dígitos — sem audiência, sem agência.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
             {[
-              "Exemplos reais de campanhas de 6 dígitos documentadas",
-              "Workbook com todos os frameworks preenchíveis",
-              "Scripts prontos de email, WhatsApp e VSL por fase",
-              "Cronograma completo dos 7 dias com checklist diário",
-              "Biblioteca de headlines que funcionaram em 50+ lançamentos",
-              "Guia de segmentação de audiência para Meta e TikTok",
+              "Plano de 30 dias dia a dia com ações específicas",
+              "Scripts prontos de email, WhatsApp e stories",
+              "Framework de oferta irresistível para iniciantes",
+              "Cronograma de conteúdo para aquecer a lista",
+              "Checklist de lançamento dos primeiros R$10K",
+              "Guia de segmentação de audiência no Meta e TikTok",
             ].map(item => (
               <div key={item} className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
                 <Star className="h-3.5 w-3.5 text-amber-400/70 shrink-0 mt-0.5" />
@@ -366,15 +366,16 @@ export default function GuiaPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-baseline gap-3">
-                <span className="font-mono font-black text-3xl text-amber-400">Gratuito</span>
+                <span className="font-mono font-black text-3xl text-amber-400">R$97</span>
+                <span className="font-mono text-base text-muted-foreground/40 line-through">R$290</span>
               </div>
-              <div className="font-mono text-xs text-muted-foreground/50 mt-1">Cadastre-se e receba no WhatsApp + acesso ao grupo</div>
+              <div className="font-mono text-xs text-muted-foreground/50 mt-1">Acesso enviado via WhatsApp após cadastro</div>
             </div>
             <Button
               onClick={requestMiniGuia}
               className="rounded-none font-mono uppercase tracking-widest font-bold h-12 px-8 gap-2 text-xs bg-amber-500 hover:bg-amber-400 text-background w-full sm:w-auto"
             >
-              Quero o Mini-Guia Completo <ArrowRight className="h-4 w-4" />
+              Quero o Mini-Guia <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
           <div className="mt-4 flex items-center gap-2 font-mono text-[10px] text-muted-foreground/40">

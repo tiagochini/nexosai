@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Users, ArrowRight, CheckCircle2, Loader2, Phone, User, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const WA_LINK = "https://wa.me/message/NBJH4EXPAV2EN1";
+const WA_LINK_DEFAULT = "https://wa.me/message/NBJH4EXPAV2EN1";
 const API_BASE = "/api";
 
 function getSeqId(): string | null {
@@ -41,13 +41,14 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  redirectUrl?: string;
   title?: string;
   subtitle?: string;
 }
 
 type Step = "form" | "loading" | "success" | "error";
 
-export default function LeadCaptureModal({ open, onClose, onSuccess, title, subtitle }: Props) {
+export default function LeadCaptureModal({ open, onClose, onSuccess, redirectUrl, title, subtitle }: Props) {
   const [step, setStep] = useState<Step>("form");
   const [name, setName]   = useState("");
   const [email, setEmail] = useState("");
@@ -71,7 +72,7 @@ export default function LeadCaptureModal({ open, onClose, onSuccess, title, subt
   }, [open]);
 
   const openWA = () => {
-    window.open(WA_LINK, "_blank", "noopener,noreferrer");
+    window.open(redirectUrl ?? WA_LINK_DEFAULT, "_blank", "noopener,noreferrer");
   };
 
   async function handleSubmit(e: React.FormEvent) {
