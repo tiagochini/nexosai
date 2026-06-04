@@ -994,8 +994,8 @@ function DoisCaminhosSection() {
               <div className="space-y-2.5">
                 {[
                   "Produto validado ou em fase de lançamento",
-                  "Já conhece tráfego pago e quer escalar",
-                  "Quer automação e execução imediata",
+                  "Quer velocidade, não mais uma ferramenta para aprender",
+                  "Quer o sistema operando enquanto você foca na estratégia",
                 ].map(item => (
                   <div key={item} className="flex items-start gap-2 font-mono text-xs text-muted-foreground">
                     <span className="text-primary shrink-0 mt-0.5">✓</span> {item}

@@ -87,7 +87,7 @@ const PRODUCTS: Product[] = [
     tagColor: "hsl(220 10% 70%)",
     tagBg: "hsl(220 10% 70% / 0.06)",
     icon: <Zap size={18} />,
-    title: "NexOS AI — Plataforma de Lançamentos com IA",
+    title: "NexOS AI — Sistema de Execução Autônoma de Lançamentos",
     subtitle: "SaaS · Lançamento por carrinho · Acesso Único Vitalício",
     description: "57 agentes de IA executando seu lançamento end-to-end — estratégia, copy, sequências, métricas e atendimento. Sem agência, sem equipe.",
     cta: "Entrar na Lista de Espera →",
@@ -142,7 +142,7 @@ export default function Hub() {
           Escolha seu ponto de entrada
         </h1>
         <p style={{ color: "hsl(220 10% 55%)" }} className="text-base max-w-lg mx-auto">
-          Do PDF gratuito ao sistema completo de lançamento com IA — tudo começa aqui.
+          Do PDF gratuito ao sistema nervoso do seu lançamento — tudo começa aqui.
         </p>
       </div>
 
