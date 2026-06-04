@@ -110,7 +110,7 @@ export function generateLessonPDF(opts: LessonPDFOptions): void {
   doc.text("NEXOS ACADEMY", marginX, 11);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.text("Metodologia de Lançamento com IA", W - marginX, 11, { align: "right" });
+  doc.text("Metodologia NexOS de Lançamento", W - marginX, 11, { align: "right" });
 
   // Module + chapter breadcrumb
   let y = 30;

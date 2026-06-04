@@ -100,7 +100,7 @@ const FEATURE_AREAS: FeatureArea[] = [
     icon: Video,
     color: "text-blue-400",
     badge: "CYRUS",
-    title: "Produção de Vídeo com IA",
+    title: "Produção de Vídeo — Roteiro Autônomo",
     desire: "CYRUS transforma seu produto em um roteiro cinematográfico completo: hook, desenvolvimento, prova, CTA. O que levaria dias de roteirista, em minutos.",
     realized: "Seu VSL profissional está a poucos cliques. Com ou sem você na câmera.",
     action: "Criar meu primeiro vídeo",
@@ -169,7 +169,7 @@ const FEATURE_AREAS: FeatureArea[] = [
     color: "text-yellow-400",
     badge: "RESULTADOS",
     title: "Painel de Receita",
-    desire: "Números reais do seu lançamento: receita total, ROAS, CPL, health score com IA detectando problemas antes que você perceba.",
+    desire: "Números reais do seu lançamento: receita total, ROAS, CPL, health score com agentes detectando e agindo antes que você perceba.",
     realized: "Você tem visibilidade total do que está funcionando e o que precisa de ajuste — em tempo real.",
     action: "Ver meus resultados",
     path: "/revenue",
@@ -348,7 +348,7 @@ export default function Welcome() {
             {[
               { icon: Zap,      text: "Campanha completa montada em minutos, não semanas" },
               { icon: Shield,   text: "Compliance e copy verificados automaticamente" },
-              { icon: BarChart2, text: "Métricas ao vivo com IA otimizando em tempo real" },
+              { icon: BarChart2, text: "Métricas ao vivo com agentes otimizando em tempo real" },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-start gap-2 border border-success/20 bg-success/5 px-3 py-3">
                 <Icon className="h-4 w-4 text-success shrink-0 mt-0.5" />

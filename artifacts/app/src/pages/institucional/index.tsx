@@ -166,7 +166,7 @@ const PRODUTOS = [
       "Dashboard de métricas em tempo real",
       "Tracks: 6 dígitos → 10 dígitos",
     ],
-    cta: "Quero lançar com IA",
+    cta: "Quero execução autônoma",
     href: "/landing/",
     highlight: true,
     comingSoon: false,
@@ -182,7 +182,7 @@ const PRODUTOS = [
     features: [
       "12 módulos + 118 aulas completas",
       "PLF, Semente, Perpétuo e Afiliados",
-      "Meta Ads + Google Ads com IA",
+      "Meta Ads + Google Ads — agentes autônomos",
       "Psicologia e neuromarketing",
       "Glossário com 80+ termos técnicos",
     ],
@@ -197,7 +197,7 @@ const PRODUTOS = [
     badge: "NOVO CURSO",
     badgeColor: "text-cyan-300 border-cyan-500/40 bg-cyan-500/10",
     title: "Curso AUTOPILOT",
-    subtitle: "Automações & Redes Sociais com IA",
+    subtitle: "Automações & Redes Sociais — Piloto Automático",
     description: "Aprenda a criar conexões e automatizar operações completas nas redes sociais, anúncios e campanhas. Fluxos que trabalham por você enquanto você dorme.",
     features: [
       "Automação de redes sociais end-to-end",
@@ -243,7 +243,7 @@ function ProdutosSection() {
             Quatro produtos.<br />Um ecossistema.
           </h2>
           <p className="text-white/40 mt-4 max-w-xl mx-auto">
-            Do aprendizado à execução completa com IA — tudo integrado sob a marca NexOS.
+            Do aprendizado ao lançamento em piloto automático — tudo integrado sob a marca NexOS.
           </p>
         </FadeIn>
 
@@ -293,7 +293,7 @@ function ProdutosSection() {
 const SERVICOS = [
   { icon: <Bot className="h-6 w-6 text-purple-400" />, title: "Agentes de IA Customizados", desc: "Criação de agentes especializados para seus processos internos de vendas, atendimento, operações e marketing." },
   { icon: <Zap className="h-6 w-6 text-cyan-400" />, title: "Automações Full Autopilot", desc: "Integração de IA em todos os fluxos da empresa: CRM, e-mail, WhatsApp, redes sociais, relatórios e muito mais." },
-  { icon: <BarChart3 className="h-6 w-6 text-green-400" />, title: "Gestão de Tráfego com IA", desc: "Campanhas de Meta Ads e Google Ads gerenciadas por IA com otimização em tempo real e relatórios automáticos." },
+  { icon: <BarChart3 className="h-6 w-6 text-green-400" />, title: "Gestão de Tráfego Autônoma", desc: "Campanhas de Meta Ads e Google Ads gerenciadas por agentes com otimização em tempo real e relatórios automáticos." },
   { icon: <Rocket className="h-6 w-6 text-yellow-400" />, title: "Lançamentos Full Service", desc: "Executamos o lançamento completo do seu produto digital usando o sistema NexOS — do briefing ao carrinho fechado." },
   { icon: <Globe className="h-6 w-6 text-purple-400" />, title: "Integrações & Tech", desc: "Conectamos qualquer stack: CRMs, plataformas de pagamento, e-mail marketing, WhatsApp Business API e mais." },
   { icon: <Layers className="h-6 w-6 text-cyan-400" />, title: "White-Label Agency", desc: "Revenda o NexOS AI com sua marca. Suite completa para agências que querem oferecer IA de ponta aos seus clientes." },
@@ -384,7 +384,7 @@ function AcademySection() {
                   "Fundamentos de Lançamentos PLF",
                   "Fórmula de Lançamento Semente",
                   "Copywriting de Alta Conversão",
-                  "Meta Ads & Google Ads com IA",
+                  "Meta Ads & Google Ads — execução autônoma",
                   "Psicologia e Neuromarketing",
                   "Automação de Marketing",
                   "Sequências de E-mail e WhatsApp",
@@ -451,7 +451,7 @@ function ContatoSection() {
           <h2 className="font-mono font-black text-3xl sm:text-5xl uppercase text-white tracking-tight mb-6">
             Pronto para<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">
-              escalar com IA?
+              operar em modo autônomo?
             </span>
           </h2>
           <p className="text-white/45 text-base max-w-xl mx-auto mb-10">

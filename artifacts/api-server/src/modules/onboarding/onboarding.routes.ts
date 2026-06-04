@@ -89,7 +89,7 @@ router.post("/start", async (req, res): Promise<void> => {
       intakeData: {
         _onboardingPath: "affiliate_nexos",
         "product.name": "NexOS AI",
-        "product.description": "Plataforma de automação de lançamentos digitais com IA — executa estratégia, gera conteúdo e coordena toda a operação",
+        "product.description": "Sistema de execução autônoma de lançamentos digitais — executa estratégia, gera conteúdo e coordena toda a operação",
         "product.category": "software",
         "product.deliveryMethod": "100_online",
       },
