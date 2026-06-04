@@ -410,7 +410,7 @@ function AcademySection() {
 
 function DiferencialSection() {
   const items = [
-    { icon: <Brain className="h-5 w-5" />, title: "IA de Verdade", desc: "Claude, GPT-4o e Gemini trabalhando juntos — cada agente no seu modelo ideal." },
+    { icon: <Brain className="h-5 w-5" />, title: "IA de Verdade", desc: "Claude, GPT-5.5 e Gemini trabalhando juntos — cada agente no seu modelo ideal." },
     { icon: <Shield className="h-5 w-5" />, title: "LGPD & Compliance", desc: "Trilha de auditoria completa, consentimento automático e conformidade em cada ação." },
     { icon: <Cpu className="h-5 w-5" />, title: "Infraestrutura Sólida", desc: "BullMQ, Socket.io em tempo real, PostgreSQL e Redis — arquitetura de nível enterprise." },
     { icon: <Target className="h-5 w-5" />, title: "Foco em Resultado", desc: "Cada agente foi treinado com frameworks de performance — DOMINO, PLF, CBO e mais." },

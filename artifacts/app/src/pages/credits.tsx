@@ -101,7 +101,7 @@ const AGENT_LABELS: Record<string, string> = {
 
 const PROVIDER_BADGE: Record<string, { label: string; color: string }> = {
   anthropic: { label: "Claude",   color: "text-orange-400 border-orange-400/30 bg-orange-400/10" },
-  openai:    { label: "GPT-4o",   color: "text-green-400 border-green-400/30 bg-green-400/10" },
+  openai:    { label: "GPT-5.5",  color: "text-green-400 border-green-400/30 bg-green-400/10" },
   gemini:    { label: "Gemini",   color: "text-blue-400 border-blue-400/30 bg-blue-400/10" },
 };
 

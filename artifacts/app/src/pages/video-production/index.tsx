@@ -975,7 +975,7 @@ export default function VideoProductionPage() {
                   <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground mb-4">
                     <span className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5 text-primary" /> 18 créditos</span>
                     <span>·</span>
-                    <span>Agente: Roteirista (GPT-4o)</span>
+                    <span>Agente: Roteirista (GPT-5.5)</span>
                   </div>
                   <Button onClick={generateScript} disabled={actionLoading} className="font-mono">
                     {actionLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}

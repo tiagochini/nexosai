@@ -21,7 +21,7 @@ import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 // ── Agent catalog (must match backend) ───────────────────────────────────────
 interface AgentInfo {
   name: string; tagline: string; description: string;
-  provider: "Claude" | "GPT-4o" | "Gemini";
+  provider: "Claude" | "GPT-5.5" | "Gemini";
   icon: React.ElementType; accentColor: string;
   suggestions: string[];
 }
@@ -42,22 +42,22 @@ const AGENT_INFO: Record<string, AgentInfo> = {
   product_builder: { name: "Danny", tagline: "Descobridor de Produtos", provider: "Claude", icon: Star, accentColor: "primary",
     description: "Descobre e refina produtos digitais de alto valor percebido.",
     suggestions: ["Tenho expertise em X, qual produto criar?", "Como validar minha ideia de curso antes de criar?", "Que formato de produto vende mais no Brasil?", "Como precificar meu infoproduto?"] },
-  copywriter: { name: "Gary", tagline: "Mestre das Palavras", provider: "GPT-4o", icon: Pen, accentColor: "cyan",
+  copywriter: { name: "Gary", tagline: "Mestre das Palavras", provider: "GPT-5.5", icon: Pen, accentColor: "cyan",
     description: "Escreve copy de venda que converte. Domina AIDA, PAS e storytelling emocional.",
     suggestions: ["Escreva uma headline para meu produto", "Crie um email de pré-lançamento", "Escreva um script de VSL para meu produto", "Crie copy para anúncio de topo de funil"] },
-  creative_director: { name: "David", tagline: "Arquiteto Visual", provider: "GPT-4o", icon: Eye, accentColor: "cyan",
+  creative_director: { name: "David", tagline: "Arquiteto Visual", provider: "GPT-5.5", icon: Eye, accentColor: "cyan",
     description: "Define identidade visual, branding e direção criativa completa.",
     suggestions: ["Crie um moodboard para meu produto premium", "Que paleta de cores usar para transmitir autoridade?", "Como fazer um branding que posicione como premium?", "Sugira tipografia para um produto de saúde"] },
-  landing_page: { name: "Russell", tagline: "Especialista em Conversão", provider: "GPT-4o", icon: Globe, accentColor: "cyan",
+  landing_page: { name: "Russell", tagline: "Especialista em Conversão", provider: "GPT-5.5", icon: Globe, accentColor: "cyan",
     description: "Cria páginas de captura e vendas que convertem.",
     suggestions: ["Escreva a copy acima do fold da minha página de vendas", "Como estruturar uma VSL page que converte?", "Quais elementos de prova social incluir?", "Crie uma squeeze page para meu webinário"] },
-  targeting: { name: "Perry", tagline: "Caçador de Públicos", provider: "GPT-4o", icon: Target, accentColor: "yellow",
+  targeting: { name: "Perry", tagline: "Caçador de Públicos", provider: "GPT-5.5", icon: Target, accentColor: "yellow",
     description: "Encontra os públicos certos nas plataformas certas com arquiteturas precisas.",
     suggestions: ["Quais interesses usar no Meta Ads para coaches?", "Como montar uma arquitetura de públicos lookalike?", "Qual é o melhor público para um curso de finanças?", "Como segmentar para um produto de R$2.000?"] },
-  media_buyer: { name: "Nicholas", tagline: "Maximizador de ROAS", provider: "GPT-4o", icon: Megaphone, accentColor: "yellow",
+  media_buyer: { name: "Nicholas", tagline: "Maximizador de ROAS", provider: "GPT-5.5", icon: Megaphone, accentColor: "yellow",
     description: "Maximiza ROAS em Meta Ads, Google Ads, TikTok e YouTube.",
     suggestions: ["Como distribuir R$10k de budget num lançamento?", "Qual ROAS é considerado bom no Brasil?", "Como escalar um conjunto de anúncios vencedor?", "Quando pausar um anúncio no Meta?"] },
-  affiliate_campaign: { name: "Stuart", tagline: "Multiplicador de Alcance", provider: "GPT-4o", icon: Users, accentColor: "yellow",
+  affiliate_campaign: { name: "Stuart", tagline: "Multiplicador de Alcance", provider: "GPT-5.5", icon: Users, accentColor: "yellow",
     description: "Estrutura programas de afiliados para explosão de alcance.",
     suggestions: ["Qual comissão oferecer para afiliados top?", "Como criar um kit de materiais para afiliados?", "Como reativar afiliados inativos?", "Monte uma estratégia de co-produção"] },
   analytics: { name: "Avinash", tagline: "Intérprete de Dados", provider: "Gemini", icon: BarChart3, accentColor: "green",
@@ -78,28 +78,28 @@ const AGENT_INFO: Record<string, AgentInfo> = {
   perpetual_launch_manager: { name: "Francisco", tagline: "Motor de Vendas 24/7", provider: "Claude", icon: RefreshCw, accentColor: "primary",
     description: "Gerencia lançamentos perpétuos com evergreen funnels e automações de longo prazo.",
     suggestions: ["Como estruturar um funil perpétuo do zero?", "Qual é a diferença entre lançamento e perpétuo?", "Como criar urgência real num funil evergreen?", "Monte um funil perpétuo para meu produto de R$997"] },
-  ad_copy: { name: "Carlton", tagline: "Criativo de Performance", provider: "GPT-4o", icon: Megaphone, accentColor: "cyan",
+  ad_copy: { name: "Carlton", tagline: "Criativo de Performance", provider: "GPT-5.5", icon: Megaphone, accentColor: "cyan",
     description: "Cria copies de anúncios que param o scroll para Meta Ads e Google Ads.",
     suggestions: ["Escreva um hook para anúncio de topo de funil", "Crie copy para remarketing de carrinho abandonado", "Qual é o melhor ângulo para anúncio de curso de finanças?", "Escreva 3 variações de headline para meu produto"] },
-  social_media: { name: "Garry", tagline: "Calendário de Conteúdo", provider: "GPT-4o", icon: Hash, accentColor: "cyan",
+  social_media: { name: "Garry", tagline: "Calendário de Conteúdo", provider: "GPT-5.5", icon: Hash, accentColor: "cyan",
     description: "Cria calendários completos de conteúdo para Instagram, TikTok, YouTube e Facebook.",
     suggestions: ["Crie um calendário de conteúdo para semana de lançamento", "Qual é a proporção ideal entre posts de valor e venda?", "Como criar conteúdo que filtra o avatar certo?", "Monte estratégia de conteúdo para 30 dias pré-lançamento"] },
-  stories_sequence: { name: "Donald", tagline: "Narrativa em Frames", provider: "GPT-4o", icon: Layers, accentColor: "cyan",
+  stories_sequence: { name: "Donald", tagline: "Narrativa em Frames", provider: "GPT-5.5", icon: Layers, accentColor: "cyan",
     description: "Cria roteiros completos de stories para lançamento com ganchos e revelações.",
     suggestions: ["Crie uma sequência de stories de abertura de carrinho", "Como manter atenção por 20 stories seguidos?", "Monte sequência de stories para CPL de pré-lançamento", "Crie stories de urgência para últimas horas de carrinho"] },
-  media_brief: { name: "Andrew", tagline: "Guia para o Time de Tráfego", provider: "GPT-4o", icon: FileText, accentColor: "cyan",
+  media_brief: { name: "Andrew", tagline: "Guia para o Time de Tráfego", provider: "GPT-5.5", icon: FileText, accentColor: "cyan",
     description: "Gera briefs completos para o time de tráfego pago com objetivos, públicos e KPIs.",
     suggestions: ["Gere um brief completo para lançamento de 10 dias", "O que não pode faltar num brief de tráfego?", "Como especificar públicos para o gestor de tráfego?", "Monte um brief de remarketing para carrinho abandonado"] },
-  vsl_script: { name: "Jon", tagline: "Script de Alta Conversão", provider: "GPT-4o", icon: Video, accentColor: "cyan",
+  vsl_script: { name: "Jon", tagline: "Script de Alta Conversão", provider: "GPT-5.5", icon: Video, accentColor: "cyan",
     description: "Escreve roteiros completos de VSL com estrutura AIDA, provas sociais e fechamento.",
     suggestions: ["Como estruturar um VSL de 30 minutos?", "Qual é o hook mais forte para abrir minha VSL?", "Escreva os primeiros 5 minutos do meu VSL", "Como fazer a transição para oferta sem soar forçado?"] },
-  cpl_script: { name: "Conrado", tagline: "Conteúdo de Pré-Lançamento", provider: "GPT-4o", icon: Play, accentColor: "cyan",
+  cpl_script: { name: "Conrado", tagline: "Conteúdo de Pré-Lançamento", provider: "GPT-5.5", icon: Play, accentColor: "cyan",
     description: "Roteiros para vídeos CPL com educação, autoridade e antecipação progressiva.",
     suggestions: ["Escreva o roteiro do CPL 1 para meu produto", "Como equilibrar entrega de valor e antecipação no CPL?", "Qual é a estrutura dos 3 CPLs no PLF?", "Como terminar cada CPL com gancho para o próximo?"] },
-  webinar_script: { name: "Jason", tagline: "Apresentação de Vendas", provider: "GPT-4o", icon: Mic, accentColor: "cyan",
+  webinar_script: { name: "Jason", tagline: "Apresentação de Vendas", provider: "GPT-5.5", icon: Mic, accentColor: "cyan",
     description: "Roteiros completos para webinários de venda com slides, pitch e Q&A estratégico.",
     suggestions: ["Como estruturar um webinário de 90 minutos?", "Qual é a transição perfeita para o pitch?", "Como manter atenção durante 90 minutos ao vivo?", "Escreva a abertura de impacto do meu webinário"] },
-  live_script: { name: "Grant", tagline: "Venda ao Vivo", provider: "GPT-4o", icon: Radio, accentColor: "cyan",
+  live_script: { name: "Grant", tagline: "Venda ao Vivo", provider: "GPT-5.5", icon: Radio, accentColor: "cyan",
     description: "Roteiros para lives de lançamento com abertura de impacto e fechamento ao vivo.",
     suggestions: ["Como abrir uma live de carrinho sem soar artificial?", "Como responder objeções ao vivo no chat?", "Monte o roteiro de uma live de fechamento de 90min", "Como criar urgência real nos últimos 10 minutos?"] },
   video_strategy: { name: "Blake", tagline: "Arquitetura do Conteúdo em Vídeo", provider: "Claude", icon: Cpu, accentColor: "primary",
@@ -177,7 +177,7 @@ const ACCENT_CLASSES: Record<string, { border: string; text: string; bg: string 
 };
 const PROVIDER_BADGE_CLASS: Record<string, string> = {
   Claude:  "text-primary border-primary/40 bg-primary/10",
-  "GPT-4o":"text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
+  "GPT-5.5":"text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
   Gemini:  "text-green-400 border-green-400/40 bg-green-400/10",
 };
 const MODE_LABELS: Record<ContextMode, string> = {

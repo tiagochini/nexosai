@@ -11,7 +11,7 @@ import type { CampaignEvent } from "@/lib/socket";
 type AgentConfig = {
   role: string;
   label: string;
-  provider: "Claude" | "GPT-4o" | "Gemini";
+  provider: "Claude" | "GPT-5.5" | "Gemini";
   desc: string;
   Icon: React.ComponentType<{ className?: string }>;
 };
@@ -20,16 +20,16 @@ const AGENTS: AgentConfig[] = [
   { role: "strategy",        label: "Estrategista",           provider: "Claude",  desc: "Lendo briefing e analisando mercado...",         Icon: Target    },
   { role: "profile_builder", label: "Profile Builder",        provider: "Claude",  desc: "Construindo perfil de audiência-alvo...",         Icon: Users     },
   { role: "offer",           label: "Especialista em Oferta", provider: "Claude",  desc: "Destilando proposta de valor única...",           Icon: Zap       },
-  { role: "media_buyer",     label: "Media Buyer",            provider: "GPT-4o",  desc: "Mapeando landscape de mídia paga...",             Icon: BarChart3 },
-  { role: "copywriter",      label: "Copywriter",             provider: "GPT-4o",  desc: "Preparando arsenal de copy de conversão...",      Icon: PenTool   },
-  { role: "content_planner", label: "Planejador de Conteúdo", provider: "GPT-4o",  desc: "Arquitetando calendário e sequências...",          Icon: Activity  },
+  { role: "media_buyer",     label: "Media Buyer",            provider: "GPT-5.5",  desc: "Mapeando landscape de mídia paga...",             Icon: BarChart3 },
+  { role: "copywriter",      label: "Copywriter",             provider: "GPT-5.5",  desc: "Preparando arsenal de copy de conversão...",      Icon: PenTool   },
+  { role: "content_planner", label: "Planejador de Conteúdo", provider: "GPT-5.5",  desc: "Arquitetando calendário e sequências...",          Icon: Activity  },
   { role: "email_marketer",  label: "Email Marketer",         provider: "Gemini",  desc: "Configurando sequências de nutrição...",          Icon: Mail      },
   { role: "launch_manager",  label: "Gerente de Lançamento",  provider: "Gemini",  desc: "Calculando cronograma e checkpoints...",          Icon: Rocket    },
 ];
 
 const PROVIDER_COLORS: Record<string, string> = {
   Claude:  "text-cyan-400/70 border-cyan-400/25 bg-cyan-400/5",
-  "GPT-4o": "text-green-400/70 border-green-400/25 bg-green-400/5",
+  "GPT-5.5": "text-green-400/70 border-green-400/25 bg-green-400/5",
   Gemini:  "text-purple-400/70 border-purple-400/25 bg-purple-400/5",
 };
 

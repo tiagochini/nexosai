@@ -37,11 +37,11 @@ const STATIC_PAGES: SearchResult[] = [
 const AGENTS: SearchResult[] = [
   { id: "command",          type: "agent", label: "Comandante",       sub: "Claude · Estratégia",   href: "/agents/command",          icon: Cpu, color: "text-primary" },
   { id: "strategy",         type: "agent", label: "Estrategista",        sub: "Claude · Lançamento",   href: "/agents/strategy",         icon: Cpu, color: "text-primary" },
-  { id: "copywriter",       type: "agent", label: "Copywriter",          sub: "GPT-4o · Copy",         href: "/agents/copywriter",       icon: Cpu, color: "text-purple-400" },
+  { id: "copywriter",       type: "agent", label: "Copywriter",          sub: "GPT-5.5 · Copy",        href: "/agents/copywriter",       icon: Cpu, color: "text-purple-400" },
   { id: "compliance",       type: "agent", label: "Compliance Officer",  sub: "Claude · Regulatório",  href: "/agents/compliance",       icon: Cpu, color: "text-yellow-400" },
   { id: "analytics",        type: "agent", label: "Analista",            sub: "Gemini · Dados",        href: "/agents/analytics",        icon: Cpu, color: "text-success" },
-  { id: "media_buyer",      type: "agent", label: "Media Buyer",         sub: "GPT-4o · Tráfego",      href: "/agents/media_buyer",      icon: Cpu, color: "text-purple-400" },
-  { id: "creative_director",type: "agent", label: "Diretor Criativo",    sub: "GPT-4o · Visual",       href: "/agents/creative_director",icon: Cpu, color: "text-purple-400" },
+  { id: "media_buyer",      type: "agent", label: "Media Buyer",         sub: "GPT-5.5 · Tráfego",     href: "/agents/media_buyer",      icon: Cpu, color: "text-purple-400" },
+  { id: "creative_director",type: "agent", label: "Diretor Criativo",    sub: "GPT-5.5 · Visual",      href: "/agents/creative_director",icon: Cpu, color: "text-purple-400" },
   { id: "video",            type: "agent", label: "Estrategista Video",  sub: "Gemini · VSL",          href: "/agents/video",            icon: Cpu, color: "text-success" },
   { id: "offer",            type: "agent", label: "Especialista Oferta", sub: "Claude · Precificação", href: "/agents/offer",            icon: Cpu, color: "text-primary" },
 ];

@@ -522,7 +522,6 @@ const CATEGORIES = ["Todos", "Estratégia", "Conteúdo", "Audiência", "Vídeo",
 const PROVIDER_COLOR: Record<string, string> = {
   "Claude":  "text-orange-400 border-orange-400/30 bg-orange-400/8",
   "GPT-5.5": "text-cyan-400 border-cyan-400/30 bg-cyan-400/8",
-  "GPT-4o":  "text-cyan-400 border-cyan-400/30 bg-cyan-400/8",
   "Gemini":  "text-green-400 border-green-400/30 bg-green-400/8",
 };
 

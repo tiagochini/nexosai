@@ -73,7 +73,7 @@ const FEATURE_AREAS: FeatureArea[] = [
     path: "/agents",
     bullets: [
       "Claude (Anthropic) para estratégia e raciocínio profundo",
-      "GPT-4o para copy, criatividade e persuasão",
+      "GPT-5.5 para copy, criatividade e persuasão",
       "Gemini para analytics, otimização e vídeo",
       "Agentes de vendas, compliance, automação e mais",
     ],
