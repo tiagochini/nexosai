@@ -89,3 +89,9 @@ id = "bPMYPmjDXHfRRICy3T1Qi"
 uri = "file://attached_assets/catalog-mapa-10k.png"
 type = "image"
 title = "2. Mapa dos Primeiros R$10K"
+
+[[outputs]]
+id = "ToPGNGc34afZEKs73nAia"
+uri = "file://scripts/NexOS_AI_Investor_Prospect_v2.pdf"
+type = "pdf"
+title = "NexOS AI — Investor Prospect Paper v2.0 (NXS-2026-001)"

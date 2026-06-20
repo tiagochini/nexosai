@@ -20,6 +20,7 @@
     "stress-full-extreme": "EXTREME_ONLY=true tsx ./src/stress-test/nexos-stress-full.ts",
     "stress-full-all": "ALL=true tsx ./src/stress-test/nexos-stress-full.ts",
     "generate-audit-pdf": "tsx ./src/generate-audit-pdf.ts",
+    "generate-investor-prospect": "tsx ./src/generate-investor-prospect.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
