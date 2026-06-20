@@ -211,6 +211,29 @@ const BASE_AUDIENCE_QUESTIONS: IntakeQuestion[] = [
     ],
     required: true,
   },
+  {
+    id: "business.hasPhysicalLocation",
+    section: "audiência",
+    label: "Seu negócio tem presença física local?",
+    description: "Academias, studios, clínicas, restaurantes, lojas — ativa segmentação por raio geográfico de 3–10km.",
+    type: "select",
+    options: [
+      { value: "yes", label: "Sim — tenho endereço(s) físico(s)" },
+      { value: "no",  label: "Não — 100% digital / remoto" },
+    ],
+    required: false,
+    aiDecide: true,
+  },
+  {
+    id: "business.physicalCities",
+    section: "audiência",
+    label: "Em quais cidades/bairros está sua operação física?",
+    description: "Usado para raio geográfico de 3–10km. Ex: 'São Paulo - Vila Olímpia e Itaim'. O agente de targeting criará públicos com raio ao redor de cada localização.",
+    type: "textarea",
+    required: false,
+    aiDecide: true,
+    placeholder: "Ex: São Paulo - Pinheiros e Vila Madalena. Belo Horizonte - Savassi.",
+  },
 ];
 
 const BASE_CREATOR_QUESTIONS: IntakeQuestion[] = [

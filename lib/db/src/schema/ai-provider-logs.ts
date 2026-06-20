@@ -65,6 +65,8 @@ export const AI_PROVIDER_COSTS: Record<
     // GPT-5 family
     "gpt-5.4":      { inputPerMillion: 10.0,  outputPerMillion: 40.0 },
     "gpt-5":        { inputPerMillion: 10.0,  outputPerMillion: 40.0 },
+    "gpt-5.5":      { inputPerMillion: 10.0,  outputPerMillion: 40.0 },
+    "gpt-5.5-mini": { inputPerMillion: 1.5,   outputPerMillion: 6.0  },
     // Integration proxy model
     "gpt-5.4-mini": { inputPerMillion: 1.5,   outputPerMillion: 6.0  },
   },
@@ -90,7 +92,30 @@ export function calculateCostUsd(
     string,
     { inputPerMillion: number; outputPerMillion: number }
   >;
-  const costs = providerCosts[model];
+  let costs = providerCosts?.[model];
+
+  // Cross-provider fallback: Replit AI integrations may return a model name
+  // that belongs to a different provider (e.g. Anthropic integration returning
+  // "gpt-5.5" via its OpenAI-compatible proxy endpoint). Search all providers
+  // so we never silently return 0 on a valid completion.
+  if (!costs) {
+    for (const p of Object.values(AI_PROVIDER_COSTS)) {
+      const found = p[model];
+      if (found) { costs = found; break; }
+    }
+  }
+
+  // Last-resort: if model is unknown but we know the provider, use a safe
+  // conservative estimate rather than 0 (prevents silent zero-cost records).
+  if (!costs) {
+    const fallbackCosts: Record<string, { inputPerMillion: number; outputPerMillion: number }> = {
+      anthropic: { inputPerMillion: 3.0,  outputPerMillion: 15.0 },
+      openai:    { inputPerMillion: 2.5,  outputPerMillion: 10.0 },
+      gemini:    { inputPerMillion: 0.15, outputPerMillion: 0.6  },
+    };
+    costs = fallbackCosts[provider as string];
+  }
+
   if (!costs) return 0;
   return (
     (inputTokens / 1_000_000) * costs.inputPerMillion +

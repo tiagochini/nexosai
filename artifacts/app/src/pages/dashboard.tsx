@@ -814,27 +814,35 @@ export default function Dashboard() {
         )}
 
         {/* KPI strip simplificado */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="border border-border/30 bg-card/20 px-4 py-3">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Créditos do agente</div>
-            <div className={`font-mono font-bold text-xl ${creditsLow ? "text-yellow-400" : "text-foreground"}`}>
-              {creditsBalance.toLocaleString("pt-BR")}
+        {(() => {
+          const maxCampaigns = planSlug === "agency" ? 10 : 3;
+          const usedCampaigns = campaigns.length;
+          const remaining = Math.max(0, maxCampaigns - usedCampaigns);
+          const capacityPct = Math.round((usedCampaigns / maxCampaigns) * 100);
+          return (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-border/30 bg-card/20 px-4 py-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Lançamentos disponíveis</div>
+                <div className={`font-mono font-bold text-xl ${remaining === 0 ? "text-yellow-400" : "text-foreground"}`}>
+                  {remaining}
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground/40">{usedCampaigns} de {maxCampaigns} usados</div>
+                <div className="mt-2 h-0.5 bg-muted/20">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${capacityPct}%` }} />
+                </div>
+              </div>
+              <div className="border border-border/30 bg-card/20 px-4 py-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Receita</div>
+                <div className="font-mono font-bold text-xl text-success">
+                  {revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}` : "—"}
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground/40">
+                  {revenueData?.transactionCount ? `${revenueData.transactionCount} vendas` : "Configure webhooks"}
+                </div>
+              </div>
             </div>
-            <div className="font-mono text-[11px] text-muted-foreground/40">{creditsPct}% disponível</div>
-            <div className="mt-2 h-0.5 bg-muted/20">
-              <div className="h-full bg-primary transition-all" style={{ width: `${creditsPct}%` }} />
-            </div>
-          </div>
-          <div className="border border-border/30 bg-card/20 px-4 py-3">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Receita</div>
-            <div className="font-mono font-bold text-xl text-success">
-              {revenueTotal > 0 ? `R$${(revenueTotal / 100).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}` : "—"}
-            </div>
-            <div className="font-mono text-[11px] text-muted-foreground/40">
-              {revenueData?.transactionCount ? `${revenueData.transactionCount} vendas` : "Configure webhooks"}
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Próxima ação */}
         <div className={`border ${action.bg} p-4 flex items-center gap-4`}>

@@ -23,3 +23,4 @@
 - [Agent Count Convention](agent-count-convention.md) — canonical counts: 64 total agents (sidebar badge + i18n + all backend prompts), 35 landing-page core agents (the subset listed on landing.tsx). Benchmark dates: Q1 2026.
 - [completeWithAgent Fallback](completeWithAgent-fallback.md) — completeWithAgent() bypasses LLM router; anthropic/gemini cases need explicit try-catch → OpenAI fallback or Anthropic outage crashes direct-chat.
 - [Integration Gate Placement](integration-gate-placement.md) — gate belongs ONLY at execute/launch (execution.routes.ts); never at content approval or status PATCH.
+- [Routes "/" Mount Order](routes-slash-mount-order.md) — routers at `router.use("/", x)` with global requireAuth intercept ALL subsequent routes; register public-endpoint routers BEFORE them in routes/index.ts.

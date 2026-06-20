@@ -60,7 +60,8 @@ export const VALID_STATUS_TRANSITIONS: Readonly<Record<CampaignStatus, CampaignS
   executing: ["live", "paused", "cancelled"],
 
   // "generating" allowed: re-generate content while live (refresh copy mid-launch)
-  live: ["paused", "completed", "cancelled", "generating"],
+  // "awaiting_approval" allowed: re-strategy cycle from live (e.g. next launch phase)
+  live: ["paused", "completed", "cancelled", "generating", "awaiting_approval", "analyzing"],
 
   // RC-006: "executing" added — orchestration worker transitions paused through
   // paused → executing → live (processExecute).

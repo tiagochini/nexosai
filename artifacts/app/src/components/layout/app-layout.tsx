@@ -124,7 +124,8 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       label: tr.nav.growth,
       expertOnly: true,
       items: [
-        { name: tr.sidebar.affiliates, href: "/affiliate", icon: Star },
+        { name: tr.sidebar.affiliates, href: "/affiliate",  icon: Star   },
+        { name: "Self-Proof Engine",   href: "/self-proof", icon: Shield },
       ],
     },
     {

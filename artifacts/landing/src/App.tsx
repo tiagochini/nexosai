@@ -10,6 +10,7 @@ import TermsOfService from "@/pages/terms";
 import DataDeletion from "@/pages/data-deletion";
 import FounderPage from "@/pages/founder";
 import HubPage from "@/pages/hub";
+import PlataformaPage from "@/pages/plataforma";
 import NotFound from "@/pages/not-found";
 import { LangProvider } from "@/lib/i18n";
 
@@ -30,6 +31,8 @@ function Router() {
       <Route path="/terms-of-service" component={TermsOfService} />
       <Route path="/data-deletion" component={DataDeletion} />
       <Route path="/fundador" component={FounderPage} />
+      <Route path="/plataforma" component={() => <PlataformaPage lang="pt-BR" />} />
+      <Route path="/platform" component={() => <PlataformaPage lang="en" />} />
       <Route component={NotFound} />
     </Switch>
   );

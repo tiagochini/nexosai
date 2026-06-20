@@ -36,6 +36,7 @@ import RevenuePage from "@/pages/revenue/index";
 import ContentApproval from "@/pages/campaigns/content";
 import CreativesPage from "@/pages/campaigns/creatives";
 import AffiliatePage from "@/pages/affiliate/index";
+import SelfProofPage from "@/pages/self-proof/index";
 import CompliancePage from "@/pages/compliance/index";
 import SettingsPage from "@/pages/settings";
 import CreditsPage from "@/pages/credits";
@@ -270,6 +271,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/affiliate">
         {() => <ProtectedRoute><AffiliatePage /></ProtectedRoute>}
+      </Route>
+      <Route path="/self-proof">
+        {() => <ProtectedRoute><SelfProofPage /></ProtectedRoute>}
       </Route>
       <Route path="/compliance">
         {() => <ProtectedRoute><CompliancePage /></ProtectedRoute>}

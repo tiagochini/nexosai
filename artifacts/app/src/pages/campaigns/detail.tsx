@@ -1297,6 +1297,8 @@ export default function CampaignDetail() {
   const [reorientDirective, setReorientDirective] = useState("");
   const [showLaunchSequence, setShowLaunchSequence] = useState(false);
   const [launchReady, setLaunchReady] = useState(false);
+  const [showLaunchFeeModal, setShowLaunchFeeModal] = useState(false);
+  const [pendingStrategyFn, setPendingStrategyFn] = useState<(() => Promise<void>) | null>(null);
 
   const reorientMutation = useMutation({
     mutationFn: async (directive: string) => {
@@ -2506,6 +2508,74 @@ export default function CampaignDetail() {
         );
       })()}
 
+      {/* ── Launch Fee Confirmation Modal (R$497/launch) ── */}
+      {showLaunchFeeModal && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="border border-primary/40 bg-card w-full max-w-md shadow-2xl">
+            <div className="border-b border-primary/20 px-5 py-4 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 border border-primary/30 bg-primary/10 flex items-center justify-center shrink-0">
+                  <Rocket className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-mono font-bold text-sm uppercase tracking-wide text-primary">Confirmar Lançamento</h3>
+                  <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5">Taxa de execução por lançamento</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowLaunchFeeModal(false); setPendingStrategyFn(null); }}
+                className="text-muted-foreground hover:text-foreground shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center justify-between border border-primary/20 bg-primary/5 px-4 py-3">
+                <div>
+                  <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Taxa de lançamento</div>
+                  <div className="font-mono text-2xl font-bold text-primary mt-0.5">R$497</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/60">por lançamento executado</div>
+                </div>
+                <div className="font-mono text-[10px] text-right text-muted-foreground/70 space-y-1">
+                  <div>✓ 64 agentes ativados</div>
+                  <div>✓ Estratégia + copy completos</div>
+                  <div>✓ Sequência de email + WhatsApp</div>
+                  <div>✓ Relatório pós-lançamento</div>
+                </div>
+              </div>
+              <div className="border border-border/30 bg-muted/20 px-4 py-3 space-y-1">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70 font-bold">Recorrência mensal opcional</div>
+                <div className="font-mono text-xs text-muted-foreground">
+                  R$1.250/mês — acesso ilimitado a lançamentos + automação contínua
+                </div>
+                <div className="font-mono text-[10px] text-muted-foreground/50">Disponível em Planos após o primeiro lançamento.</div>
+              </div>
+            </div>
+            <div className="border-t border-border/30 px-5 py-4 flex gap-3">
+              <button
+                onClick={() => { setShowLaunchFeeModal(false); setPendingStrategyFn(null); }}
+                className="flex-1 font-mono text-xs uppercase tracking-widest border border-border/50 hover:border-border px-4 py-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  setShowLaunchFeeModal(false);
+                  if (pendingStrategyFn) {
+                    await pendingStrategyFn();
+                    setPendingStrategyFn(null);
+                  }
+                }}
+                className="flex-1 font-mono text-xs uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 transition-colors flex items-center justify-center gap-2"
+              >
+                <Rocket className="h-3.5 w-3.5" />
+                Confirmar — R$497
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Reorient Modal ── */}
       {reorientOpen && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -2996,19 +3066,22 @@ export default function CampaignDetail() {
                   <Button
                     className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-9 px-4 text-xs"
                     disabled={rerunStrategyLoading || executeMutation.isPending}
-                    onClick={async () => {
-                      setRerunStrategyLoading(true);
-                      try {
-                        await customFetch(`/api/campaigns/${campaignId}/execute/strategy`, { method: "POST" });
-                        toast.success("Estratégia iniciada. Os agentes estão elaborando a proposta.");
-                        setActiveTab("agentes");
-                        queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
-                      } catch (err: unknown) {
-                        const e = err as { data?: { error?: string } };
-                        toast.error(e?.data?.error ?? "Falha ao iniciar estratégia.", { duration: 6000 });
-                      } finally {
-                        setRerunStrategyLoading(false);
-                      }
+                    onClick={() => {
+                      setPendingStrategyFn(() => async () => {
+                        setRerunStrategyLoading(true);
+                        try {
+                          await customFetch(`/api/campaigns/${campaignId}/execute/strategy`, { method: "POST" });
+                          toast.success("Estratégia iniciada. Os agentes estão elaborando a proposta.");
+                          setActiveTab("agentes");
+                          queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+                        } catch (err: unknown) {
+                          const e = err as { data?: { error?: string } };
+                          toast.error(e?.data?.error ?? "Falha ao iniciar estratégia.", { duration: 6000 });
+                        } finally {
+                          setRerunStrategyLoading(false);
+                        }
+                      });
+                      setShowLaunchFeeModal(true);
                     }}
                   >
                     {rerunStrategyLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />}

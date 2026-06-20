@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useMode } from "@/lib/mode";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -335,6 +336,7 @@ function loadSimulatorData(): SimulatorData | null {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Onboarding() {
   const { user } = useAuth();
+  const { setMode } = useMode();
   const [, setLocation] = useLocation();
 
   const [step, setStep] = useState<UIStep>("welcome");
@@ -1230,6 +1232,39 @@ export default function Onboarding() {
               Configurações → Integrações
             </span>.
           </p>
+        </div>
+
+        {/* ── Mode selection — Fundador vs Arquiteto ── */}
+        <div className="space-y-3">
+          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+            Como você quer trabalhar com o NexOS?
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setMode("fundador")}
+              className="border border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10 p-4 text-left transition-colors group"
+            >
+              <div className="font-mono text-xs font-bold text-primary uppercase tracking-widest mb-1.5">
+                🚀 Modo Fundador
+              </div>
+              <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+                Guiado, passo a passo. O agente conduz tudo — você decide nos pontos certos.
+              </div>
+              <div className="font-mono text-[10px] text-primary/50 mt-2">Recomendado para primeiros lançamentos</div>
+            </button>
+            <button
+              onClick={() => setMode("arquiteto")}
+              className="border border-border/40 hover:border-border/80 bg-muted/10 hover:bg-muted/20 p-4 text-left transition-colors group"
+            >
+              <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest mb-1.5">
+                ⚙️ Modo Arquiteto
+              </div>
+              <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+                Controle total. Visualize cada decisão dos agentes, edite e itere em tempo real.
+              </div>
+              <div className="font-mono text-[10px] text-muted-foreground/40 mt-2">Para usuários avançados</div>
+            </button>
+          </div>
         </div>
 
         {/* CTA */}

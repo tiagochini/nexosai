@@ -397,7 +397,23 @@ function ScriptPanel({ project, onAction }: { project: VideoProject; onAction: (
 
 function StoryboardPanel({ project, onAction }: { project: VideoProject; onAction: () => void }) {
   const [loading, setLoading] = useState(false);
+  const [approvedScenes, setApprovedScenes] = useState<Set<string>>(new Set());
   const meta = project.config.storyboardMeta;
+  const totalScenes = project.storyboard.length;
+  const allScenesApproved = totalScenes > 0 && approvedScenes.size >= totalScenes;
+
+  function toggleSceneApproval(sceneId: string) {
+    setApprovedScenes(prev => {
+      const next = new Set(prev);
+      if (next.has(sceneId)) next.delete(sceneId);
+      else next.add(sceneId);
+      return next;
+    });
+  }
+
+  function approveAllScenes() {
+    setApprovedScenes(new Set(project.storyboard.map(s => s.id)));
+  }
 
   async function approve() {
     setLoading(true);
@@ -435,12 +451,50 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
           {meta.directorNotes && <div className="font-mono text-[10px] text-muted-foreground/60 italic">{meta.directorNotes}</div>}
         </div>
       )}
+      {/* Frame cards pre-approval progress */}
+      {project.status === "storyboard_ready" && totalScenes > 0 && (
+        <div className="border border-border/40 rounded-lg p-3 bg-muted/10 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+              Aprovação de frames — {approvedScenes.size}/{totalScenes} cenas
+            </div>
+            {!allScenesApproved && (
+              <button
+                onClick={approveAllScenes}
+                className="font-mono text-[10px] text-primary hover:underline"
+              >
+                Aprovar todas
+              </button>
+            )}
+            {allScenesApproved && (
+              <div className="flex items-center gap-1.5 font-mono text-[10px] text-green-400">
+                <CheckCircle2 className="h-3 w-3" /> Todas aprovadas
+              </div>
+            )}
+          </div>
+          <div className="w-full h-1 bg-border/40 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{ width: `${totalScenes > 0 ? (approvedScenes.size / totalScenes) * 100 : 0}%` }}
+            />
+          </div>
+          {!allScenesApproved && (
+            <p className="font-mono text-[10px] text-muted-foreground/60">
+              Revise cada frame abaixo e marque como aprovado. O render final só libera após todas as cenas confirmadas.
+            </p>
+          )}
+        </div>
+      )}
       <div className="space-y-3">
-        {project.storyboard.map((scene) => (
-          <div key={scene.id} className="border border-border/40 rounded-lg p-4 bg-background/40">
+        {project.storyboard.map((scene) => {
+          const isSceneApproved = approvedScenes.has(scene.id);
+          return (
+          <div key={scene.id} className={`border rounded-lg p-4 transition-colors ${isSceneApproved ? "border-green-400/40 bg-green-400/5" : "border-border/40 bg-background/40"}`}>
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-primary/20 text-primary font-mono text-xs flex items-center justify-center font-bold">{scene.order}</div>
+                <div className={`w-6 h-6 rounded-full font-mono text-xs flex items-center justify-center font-bold ${isSceneApproved ? "bg-green-400/20 text-green-400" : "bg-primary/20 text-primary"}`}>
+                  {isSceneApproved ? <CheckCircle2 className="h-3.5 w-3.5" /> : scene.order}
+                </div>
                 <span className="font-mono text-sm font-medium">{scene.title}</span>
                 {scene.hasAvatar && <User className="h-3.5 w-3.5 text-yellow-400" />}
               </div>
@@ -449,6 +503,18 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
                   {SCENE_TYPE_LABELS[scene.sceneType] ?? scene.sceneType}
                 </span>
                 <span className="font-mono text-[10px] text-muted-foreground">{scene.durationSeconds}s</span>
+                {project.status === "storyboard_ready" && (
+                  <button
+                    onClick={() => toggleSceneApproval(scene.id)}
+                    className={`font-mono text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                      isSceneApproved
+                        ? "border-green-400/40 text-green-400 bg-green-400/10 hover:bg-green-400/5"
+                        : "border-border/60 text-muted-foreground hover:border-primary/50 hover:text-primary"
+                    }`}
+                  >
+                    {isSceneApproved ? "✓ Aprovada" : "Aprovar"}
+                  </button>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
@@ -470,16 +536,22 @@ function StoryboardPanel({ project, onAction }: { project: VideoProject; onActio
               <span className="font-mono text-[10px] text-muted-foreground">{scene.mood} · {scene.transition}</span>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       {project.status === "storyboard_ready" && (
         <div className="flex gap-3">
           <Button variant="outline" onClick={regenerate} disabled={loading} className="font-mono">
             <RefreshCw className="h-4 w-4 mr-2" />Regenerar
           </Button>
-          <Button onClick={approve} disabled={loading} className="font-mono flex-1">
+          <Button
+            onClick={approve}
+            disabled={loading || !allScenesApproved}
+            className="font-mono flex-1"
+            title={!allScenesApproved ? `Aprove todas as ${totalScenes} cenas para continuar` : undefined}
+          >
             {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            Aprovar Storyboard — Gerar Preview
+            {allScenesApproved ? "Aprovar Storyboard — Gerar Preview" : `Aprove todas as cenas (${approvedScenes.size}/${totalScenes})`}
           </Button>
         </div>
       )}

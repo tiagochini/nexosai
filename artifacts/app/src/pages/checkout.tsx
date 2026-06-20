@@ -189,13 +189,10 @@ function CheckoutForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [cpf, setCpf] = useState("");
-  const [pack, setPack] = useState<PackId | null>("pro");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedPack = CREDIT_PACKS.find(p => p.id === pack);
   const planConfig = PLANS[plan];
-  const total = planConfig.price + (selectedPack?.priceNum ?? 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,8 +210,8 @@ function CheckoutForm({
           password,
           cpfCnpj: cpf.trim() || undefined,
           plan,
-          creditPackId: pack ?? "none",
-          creditPackCredits: selectedPack?.credits ?? 0,
+          creditPackId: "none",
+          creditPackCredits: 0,
         }),
       });
       const data = await res.json() as {
@@ -261,7 +258,7 @@ function CheckoutForm({
               NexOS — Plano {planConfig.label}
             </div>
             <div className="font-mono text-xs text-muted-foreground">
-              {planConfig.campaigns} campanhas · {planConfig.credits} créditos incluídos
+              {planConfig.campaigns} campanhas · acesso aos 64 agentes
             </div>
           </div>
           <div className="text-right">
@@ -284,26 +281,22 @@ function CheckoutForm({
         </div>
       </div>
 
-      {/* Credit pack */}
-      <CreditPackPicker selected={pack} onSelect={setPack} />
-
       {/* Total */}
       <div className="border-t border-border/30 pt-4">
         <div className="flex items-center justify-between mb-1">
           <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Plano {planConfig.label}</span>
           <span className="font-mono text-sm font-bold text-foreground">{fmtBRL(planConfig.price)}</span>
         </div>
-        {selectedPack && (
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-              Pack {selectedPack.label} ({selectedPack.credits.toLocaleString("pt-BR")} créditos)
-            </span>
-            <span className="font-mono text-sm font-bold text-foreground">{fmtBRL(selectedPack.priceNum)}</span>
-          </div>
-        )}
         <div className="flex items-center justify-between border-t border-border/20 pt-2 mt-2">
           <span className="font-mono text-xs uppercase tracking-widest font-bold text-foreground">Total hoje</span>
-          <span className="font-mono text-xl font-black text-primary">{fmtBRL(total)}</span>
+          <span className="font-mono text-xl font-black text-primary">{fmtBRL(planConfig.price)}</span>
+        </div>
+        <div className="mt-3 border border-primary/20 bg-primary/5 px-3 py-2">
+          <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+            <span className="text-primary font-bold">Acesso vitalício</span> — cada lançamento
+            completo custa <span className="text-primary font-bold">R$497</span> (cobrado no início de cada ciclo).
+            Campanhas perpétuas: <span className="text-primary font-bold">R$1.250/mês</span>.
+          </p>
         </div>
       </div>
 
