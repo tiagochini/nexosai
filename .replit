@@ -78,6 +78,10 @@ localPort = 8081
 externalPort = 80
 
 [[ports]]
+localPort = 8082
+externalPort = 8000
+
+[[ports]]
 localPort = 18150
 externalPort = 4200
 
