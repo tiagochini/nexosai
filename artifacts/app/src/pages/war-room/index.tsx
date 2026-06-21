@@ -287,14 +287,14 @@ export default function WarRoom() {
                   <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Leads</span>
                 </div>
                 <div className="font-mono font-black text-2xl text-foreground">
-                  {liveStats.totalLeads.toLocaleString("pt-BR")}
+                  {(liveStats.totalLeads ?? 0).toLocaleString("pt-BR")}
                 </div>
-                {liveStats.leadsLast24h > 0 && (
+                {(liveStats.leadsLast24h ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-success mt-0.5">
                     +{liveStats.leadsLast24h} nas últimas 24h
                   </div>
                 )}
-                {liveStats.leadsLastHour > 0 && (
+                {(liveStats.leadsLastHour ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-success/70">
                     +{liveStats.leadsLastHour} última hora
                   </div>
@@ -308,11 +308,11 @@ export default function WarRoom() {
                   <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Vendas</span>
                 </div>
                 <div className="font-mono font-black text-2xl text-foreground">
-                  {liveStats.totalSales.toLocaleString("pt-BR")}
+                  {(liveStats.totalSales ?? 0).toLocaleString("pt-BR")}
                 </div>
-                {liveStats.totalLeads > 0 && liveStats.totalSales > 0 && (
+                {(liveStats.totalLeads ?? 0) > 0 && (liveStats.totalSales ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
-                    {((liveStats.totalSales / liveStats.totalLeads) * 100).toFixed(1)}% conv.
+                    {(((liveStats.totalSales ?? 0) / (liveStats.totalLeads ?? 1)) * 100).toFixed(1)}% conv.
                   </div>
                 )}
               </div>
@@ -323,10 +323,10 @@ export default function WarRoom() {
                   <DollarSign className="h-3 w-3 text-muted-foreground/40" />
                   <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Receita</span>
                 </div>
-                <div className={`font-mono font-black text-2xl ${liveStats.totalRevenueBrl > 0 ? "text-success" : "text-foreground"}`}>
-                  {liveStats.totalRevenueBrl > 0 ? fmtBrl(liveStats.totalRevenueBrl) : "—"}
+                <div className={`font-mono font-black text-2xl ${(liveStats.totalRevenueBrl ?? 0) > 0 ? "text-success" : "text-foreground"}`}>
+                  {(liveStats.totalRevenueBrl ?? 0) > 0 ? fmtBrl(liveStats.totalRevenueBrl) : "—"}
                 </div>
-                {liveStats.revenueBrlLast24h > 0 && (
+                {(liveStats.revenueBrlLast24h ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-success mt-0.5">
                     +{fmtBrl(liveStats.revenueBrlLast24h)} hoje
                   </div>
@@ -340,9 +340,9 @@ export default function WarRoom() {
                   <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Engaj. 24h</span>
                 </div>
                 <div className="font-mono font-black text-2xl text-foreground">
-                  {liveStats.engagementEventsLast24h.toLocaleString("pt-BR")}
+                  {(liveStats.engagementEventsLast24h ?? 0).toLocaleString("pt-BR")}
                 </div>
-                {liveStats.activeSequences > 0 && (
+                {(liveStats.activeSequences ?? 0) > 0 && (
                   <div className="font-mono text-[10px] text-primary/70 mt-0.5">
                     {liveStats.activeSequences} seq. ativas
                   </div>
@@ -446,7 +446,7 @@ export default function WarRoom() {
                       "bg-muted-foreground/30"
                     }`} />
                     <span className="font-mono text-[11px] text-foreground/60 capitalize">
-                      {agent.agentRole.replace(/_/g, " ")}
+                      {(agent.agentRole ?? agent.agentName ?? "agent").replace(/_/g, " ")}
                     </span>
                     <span className={`font-mono text-[10px] ml-auto ${
                       agent.status === "completed" ? "text-success/70" :
