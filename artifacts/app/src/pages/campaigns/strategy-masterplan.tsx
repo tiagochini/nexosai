@@ -230,7 +230,25 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
     ? "border-l-amber-500/60"
     : accent.border;
 
-  if (isEmpty) return null;
+  if (isEmpty) {
+    return (
+      <div className={`border border-white/7 border-l-2 border-l-white/10 bg-card/10 opacity-60`}>
+        <div className="px-4 py-3.5 flex items-center gap-3">
+          <div className={`shrink-0 w-7 h-7 border flex items-center justify-center border-white/10 text-muted-foreground/30 bg-white/[0.02]`}>
+            <span className="font-mono text-[9px] font-bold">{String(index).padStart(2, "0")}</span>
+          </div>
+          <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/25" />
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-[11px] font-bold uppercase tracking-widest text-foreground/40">{title}</div>
+            <div className="font-mono text-[9px] text-muted-foreground/25 mt-0.5 truncate">{subtitle}</div>
+          </div>
+          <span className="font-mono text-[9px] uppercase tracking-widest px-2 py-0.5 border border-white/10 text-muted-foreground/30 bg-white/[0.02] shrink-0">
+            Aguardando
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`border border-white/7 border-l-2 ${borderColor} bg-card/20 transition-all duration-200`}>

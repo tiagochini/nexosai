@@ -70,6 +70,17 @@ export default function VslsPage() {
     queryFn: () => customFetch<{ vsls: VslItem[] }>("/api/vsls").catch(() => ({ vsls: [] })),
   });
 
+  const generateMutation = useMutation({
+    mutationFn: async (vslId: string) => {
+      await customFetch<{ vsl: VslItem }>(`/api/vsls/${vslId}/generate`, { method: "POST" });
+    },
+    onSuccess: () => {
+      toast.success("Roteiro gerado com o agente!");
+      queryClient.invalidateQueries({ queryKey: ["/api/vsls"] });
+    },
+    onError: () => toast.error("Erro ao gerar roteiro"),
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const data = await customFetch<{ vsl: VslItem }>("/api/vsls", {
@@ -88,19 +99,10 @@ export default function VslsPage() {
       setCreating(false);
       setForm({ title: "", format: "vsl", productName: "", productPrice: "", targetAudience: "", mainPromise: "", campaignId: "" });
       setSelectedVsl(d.vsl);
+      // Auto-trigger AI generation immediately after creation
+      generateMutation.mutate(d.vsl.id);
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Erro"),
-  });
-
-  const generateMutation = useMutation({
-    mutationFn: async (vslId: string) => {
-      await customFetch<{ vsl: VslItem }>(`/api/vsls/${vslId}/generate`, { method: "POST" });
-    },
-    onSuccess: () => {
-      toast.success("Roteiro gerado com o agente!");
-      queryClient.invalidateQueries({ queryKey: ["/api/vsls"] });
-    },
-    onError: () => toast.error("Erro ao gerar roteiro"),
   });
 
   const refineMutation = useMutation({
