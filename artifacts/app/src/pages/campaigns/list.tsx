@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useListCampaigns, getListCampaignsQueryKey } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Plus, Rocket, ChevronRight, Clock, CheckCircle2,
-  Loader2, Play, Search, Filter, Zap, TrendingUp, BarChart3,
+  Loader2, Play, Search, Zap, TrendingUp, BarChart3, Archive,
 } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -74,15 +77,41 @@ function PipelineBar({ status }: { status: string }) {
   );
 }
 
+// Statuses que podem ser arquivados (sem risco de interromper algo ativo)
+const ARCHIVABLE = ["draft", "intake", "strategy_ready", "awaiting_approval", "approved", "completed", "cancelled"];
+
 type FilterStatus = "all" | "active" | "completed";
 
 export default function CampaignsList() {
   const [search, setSearch]     = useState("");
   const [filter, setFilter]     = useState<FilterStatus>("all");
+  const [archivingId, setArchivingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useListCampaigns({
     query: { queryKey: getListCampaignsQueryKey() },
   });
+
+  const handleArchive = async (e: React.MouseEvent, campaignId: string, title: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (archivingId) return;
+    setArchivingId(campaignId);
+    try {
+      await customFetch(`/api/campaigns/${campaignId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      toast.success(`"${title}" arquivada`, {
+        description: "Slot liberado — você pode criar uma nova campanha.",
+      });
+      queryClient.invalidateQueries({ queryKey: getListCampaignsQueryKey() });
+    } catch {
+      toast.error("Não foi possível arquivar. Tente novamente.");
+    } finally {
+      setArchivingId(null);
+    }
+  };
 
   const allCampaigns = data?.campaigns ?? [];
 
@@ -299,21 +328,37 @@ export default function CampaignsList() {
                       <PipelineBar status={campaign.status} />
                     </div>
 
-                    {/* Arrow */}
-                    <div className="shrink-0 hidden md:flex items-center gap-2">
-                      <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
-                        {(campaign.status === "draft" || campaign.status === "intake") ? "Continuar Briefing →" :
-                         campaign.status === "analyzing" ? "Criando Estratégia..." :
-                         campaign.status === "strategy_ready" ? "Revisar Masterplan →" :
-                         campaign.status === "generating" ? "Produção em Andamento..." :
-                         campaign.status === "awaiting_approval" ? "Aprovar Conteúdo →" :
-                         campaign.status === "approved" ? "Checklist de Lançamento →" :
-                         campaign.status === "executing" ? "Lançamento em Progresso..." :
-                         campaign.status === "live" ? "Ver Resultados →" :
-                         campaign.status === "paused" ? "Retomar Campanha →" :
-                         "Ver Campanha →"}
+                    {/* Right side: archive + arrow */}
+                    <div className="shrink-0 flex items-center gap-3">
+                      {/* Arquivar — visível no hover, só para statuses não ativos */}
+                      {ARCHIVABLE.includes(campaign.status) && (
+                        <button
+                          onClick={(e) => handleArchive(e, campaign.id, campaign.title)}
+                          disabled={archivingId === campaign.id}
+                          className="hidden md:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/20 hover:text-orange-400/70 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                          title="Arquivar campanha (libera slot)"
+                        >
+                          {archivingId === campaign.id
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <Archive className="h-3 w-3" />}
+                          Arquivar
+                        </button>
+                      )}
+                      <div className="hidden md:flex items-center gap-2">
+                        <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
+                          {(campaign.status === "draft" || campaign.status === "intake") ? "Continuar Briefing →" :
+                           campaign.status === "analyzing" ? "Criando Estratégia..." :
+                           campaign.status === "strategy_ready" ? "Revisar Masterplan →" :
+                           campaign.status === "generating" ? "Produção em Andamento..." :
+                           campaign.status === "awaiting_approval" ? "Aprovar Conteúdo →" :
+                           campaign.status === "approved" ? "Checklist de Lançamento →" :
+                           campaign.status === "executing" ? "Lançamento em Progresso..." :
+                           campaign.status === "live" ? "Ver Resultados →" :
+                           campaign.status === "paused" ? "Retomar Campanha →" :
+                           "Ver Campanha →"}
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                     </div>
                   </div>
                 </div>

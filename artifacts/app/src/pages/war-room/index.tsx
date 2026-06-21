@@ -1,6 +1,7 @@
 /**
  * War Room — visão simplificada do progresso de uma campanha (Modo Fundador).
  *
+ * Quando live/executing: métricas reais (leads, vendas, receita) via live-stats.
  * Modo compacto: nome, fase, progresso, departamentos, próximo passo.
  * Modo expandido: agentes trabalhando, decisões tomadas, logs resumidos.
  * O usuário alterna com "Ver mais / Ver menos".
@@ -20,10 +21,11 @@ import { UxContextBar } from "@/components/ux-context-bar";
 import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/feature-onboarding";
 import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 import {
-  ChevronRight, ChevronDown, ChevronUp, Loader2,
-  CheckCircle2, Circle, Clock, Rocket, ArrowRight,
+  ChevronRight, ChevronDown, ChevronUp,
+  CheckCircle2, Rocket, ArrowRight,
   AlertCircle, Bot, Zap, BarChart2, Target, MessageSquare,
-  Users, Shield, Play, ExternalLink,
+  Users, Shield, Play, ExternalLink, TrendingUp, DollarSign,
+  Activity,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -108,6 +110,23 @@ function getHappening(status: string): string {
   }
 }
 
+interface LiveStats {
+  totalLeads: number;
+  leadsLast24h: number;
+  leadsLastHour: number;
+  totalSales: number;
+  revenueBrlLast24h: number;
+  totalRevenueBrl: number;
+  engagementEventsLast24h: number;
+  activeSequences: number;
+}
+
+function fmtBrl(v: number): string {
+  if (v >= 1_000_000) return `R$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `R$${(v / 1_000).toFixed(0)}k`;
+  return `R$${v.toFixed(0)}`;
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function WarRoom() {
@@ -139,6 +158,15 @@ export default function WarRoom() {
     },
   });
 
+  // Métricas ao vivo — só quando executando ou ao vivo
+  const isLiveOrExecuting = campaign?.status === "live" || campaign?.status === "executing";
+  const { data: liveStats } = useQuery<LiveStats>({
+    queryKey: ["war-room-live-stats", id],
+    enabled: !!id && isLiveOrExecuting,
+    refetchInterval: 15_000,
+    queryFn: () => customFetch<LiveStats>(`/api/campaigns/${id}/live-stats`),
+  });
+
   if (isLoading || !campaign) {
     return (
       <div className="max-w-3xl mx-auto space-y-4 py-8">
@@ -162,6 +190,9 @@ export default function WarRoom() {
   const nextStepHref = status === "intake" ? `/campaigns/${id}/intake`
     : status === "awaiting_approval" ? `/campaigns/${id}/content`
     : `/campaigns/${id}`;
+
+  // Evita warnings de variáveis não utilizadas
+  void pendingDepts;
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -213,6 +244,7 @@ export default function WarRoom() {
               "border-primary/40 text-primary bg-primary/10"
             }`}
           >
+            {status === "live" && <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse mr-1.5 inline-block" />}
             {STATUS_LABEL[status] ?? status}
           </Badge>
         </div>
@@ -233,6 +265,102 @@ export default function WarRoom() {
           </div>
         </div>
       </div>
+
+      {/* ── MÉTRICAS AO VIVO (live / executing) ── */}
+      {isLiveOrExecuting && (
+        <div className="border border-success/30 bg-success/5">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-success/20">
+            <Activity className="h-3.5 w-3.5 text-success" />
+            <span className="font-mono text-[11px] uppercase tracking-widest text-success font-bold">
+              Métricas ao Vivo
+            </span>
+            <span className="ml-auto font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">
+              Atualiza a cada 15s
+            </span>
+          </div>
+          {liveStats ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-border/20">
+              {/* Leads */}
+              <div className="p-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Users className="h-3 w-3 text-muted-foreground/40" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Leads</span>
+                </div>
+                <div className="font-mono font-black text-2xl text-foreground">
+                  {liveStats.totalLeads.toLocaleString("pt-BR")}
+                </div>
+                {liveStats.leadsLast24h > 0 && (
+                  <div className="font-mono text-[10px] text-success mt-0.5">
+                    +{liveStats.leadsLast24h} nas últimas 24h
+                  </div>
+                )}
+                {liveStats.leadsLastHour > 0 && (
+                  <div className="font-mono text-[10px] text-success/70">
+                    +{liveStats.leadsLastHour} última hora
+                  </div>
+                )}
+              </div>
+
+              {/* Vendas */}
+              <div className="p-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle2 className="h-3 w-3 text-muted-foreground/40" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Vendas</span>
+                </div>
+                <div className="font-mono font-black text-2xl text-foreground">
+                  {liveStats.totalSales.toLocaleString("pt-BR")}
+                </div>
+                {liveStats.totalLeads > 0 && liveStats.totalSales > 0 && (
+                  <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
+                    {((liveStats.totalSales / liveStats.totalLeads) * 100).toFixed(1)}% conv.
+                  </div>
+                )}
+              </div>
+
+              {/* Receita */}
+              <div className="p-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <DollarSign className="h-3 w-3 text-muted-foreground/40" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Receita</span>
+                </div>
+                <div className={`font-mono font-black text-2xl ${liveStats.totalRevenueBrl > 0 ? "text-success" : "text-foreground"}`}>
+                  {liveStats.totalRevenueBrl > 0 ? fmtBrl(liveStats.totalRevenueBrl) : "—"}
+                </div>
+                {liveStats.revenueBrlLast24h > 0 && (
+                  <div className="font-mono text-[10px] text-success mt-0.5">
+                    +{fmtBrl(liveStats.revenueBrlLast24h)} hoje
+                  </div>
+                )}
+              </div>
+
+              {/* Engajamento */}
+              <div className="p-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="h-3 w-3 text-muted-foreground/40" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Engaj. 24h</span>
+                </div>
+                <div className="font-mono font-black text-2xl text-foreground">
+                  {liveStats.engagementEventsLast24h.toLocaleString("pt-BR")}
+                </div>
+                {liveStats.activeSequences > 0 && (
+                  <div className="font-mono text-[10px] text-primary/70 mt-0.5">
+                    {liveStats.activeSequences} seq. ativas
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-border/20">
+              {["Leads", "Vendas", "Receita", "Engaj. 24h"].map(label => (
+                <div key={label} className="p-4">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">{label}</div>
+                  <div className="h-7 w-16 bg-muted/20 animate-pulse rounded-sm" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Departamentos ── */}
       <div>
