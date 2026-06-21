@@ -4,6 +4,7 @@ import { useCreateCampaign, CampaignInputType, CampaignInputTrack } from "@works
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { ApiError } from "@workspace/api-client-react/custom-fetch";
 import {
   ArrowLeft, Rocket, Brain, Zap, ChevronRight,
   TrendingUp, Users, RefreshCw, CheckCircle2,
@@ -107,7 +108,21 @@ export default function NewCampaign() {
         toast.success("Perfeito! A agente está pronta para o seu briefing.");
         setLocation(`/campaigns/${data.campaign.id}/intake`);
       },
-      onError: () => toast.error("Erro ao criar. Tente novamente."),
+      onError: (err: unknown) => {
+        const apiErr = err as { status?: number; data?: { error?: string } };
+        if (apiErr?.status === 403 || (err instanceof ApiError && err.status === 403)) {
+          toast.error("Limite de campanhas atingido", {
+            description: "Conclua ou arquive uma campanha existente para criar uma nova.",
+            duration: 10000,
+            action: {
+              label: "Gerenciar campanhas",
+              onClick: () => setLocation("/campaigns"),
+            },
+          });
+        } else {
+          toast.error("Erro ao criar. Tente novamente.");
+        }
+      },
     },
   });
 

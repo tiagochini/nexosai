@@ -1948,8 +1948,8 @@ export default function CampaignDetail() {
         };
       }
       case "approved": return { phase: "launch", label: "Lançar Campanha", description: "Conteúdo aprovado. Inicie o lançamento." };
-      case "executing": return { phase: "monitor", label: "Ativar Monitoramento", description: "Campanha em execução. Ative o monitoramento de métricas." };
-      case "live": return { href: `/campaigns/${campaignId}/content`, label: "Regenerar Conteúdo", description: "Campanha ao vivo. Gere novo conteúdo ou revise o que foi aprovado.", phase: undefined };
+      case "executing": return { href: `/war-room/${campaignId}`, label: "Abrir War Room — Missão ao Vivo", description: "Campanha em execução. Acompanhe métricas, disparos e performance em tempo real.", phase: undefined };
+      case "live": return { href: `/war-room/${campaignId}`, label: "War Room — Campanha ao Vivo 🔥", description: "Carrinho aberto. Acompanhe leads, vendas e performance em tempo real no War Room.", phase: undefined };
       default: return null;
     }
   };
@@ -2011,13 +2011,33 @@ export default function CampaignDetail() {
             </div>
             <div className="flex items-start gap-4 mb-5">
               <span className="text-3xl shrink-0">{statusInfo.emoji}</span>
-              <div>
+              <div className="flex-1">
                 <h1 className="font-mono font-black text-lg md:text-xl uppercase tracking-tight text-foreground mb-1.5">
                   {statusInfo.headline}
                 </h1>
                 <p className="font-mono text-sm text-muted-foreground/60 leading-relaxed">
                   {statusInfo.desc}
                 </p>
+                {(campaign.status === "analyzing" || campaign.status === "generating") && !isStuck && (() => {
+                  const startTime = (brainDataRaw["pipelineCheckpoint"] as { lockedAt?: string } | undefined)?.lockedAt
+                    ?? (campaignRaw["updatedAt"] as string | undefined);
+                  if (!startTime) return null;
+                  const elapsedMs = Date.now() - new Date(startTime).getTime();
+                  const elapsedSec = Math.floor(elapsedMs / 1000);
+                  const elapsedStr = elapsedSec < 60
+                    ? `${elapsedSec}s`
+                    : elapsedSec < 3600
+                      ? `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s`
+                      : `${Math.floor(elapsedSec / 3600)}h ${Math.floor((elapsedSec % 3600) / 60)}m`;
+                  return (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <Clock className="h-3 w-3 text-muted-foreground/30" />
+                      <span className="font-mono text-[10px] text-muted-foreground/30 uppercase tracking-widest">
+                        Em execução há {elapsedStr}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -2864,7 +2884,7 @@ export default function CampaignDetail() {
                 ) : nextAction.href ? (
                   <Link href={nextAction.href}>
                     <Button className="font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 px-6 w-full md:w-auto">
-                      <Layers className="h-4 w-4" />{nextAction.label}
+                      {(campaign.status === "live" || campaign.status === "executing") ? <Activity className="h-4 w-4" /> : <Layers className="h-4 w-4" />}{nextAction.label}
                     </Button>
                   </Link>
                 ) : campaign.status === "strategy_ready" ? (
