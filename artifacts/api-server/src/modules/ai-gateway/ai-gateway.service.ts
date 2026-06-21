@@ -300,7 +300,8 @@ function getGemini(): GoogleGenerativeAI {
   return geminiClient;
 }
 
-const SERVER_AI_TIMEOUT_MS = 240_000; // 4 min — allows complex strategic AI responses (Anthropic can be slow)
+// Background workers have NO timeout — LLM calls on deep agents can legitimately take 3-10 min.
+// HTTP-facing callers that need a timeout must pass their own AbortSignal explicitly.
 
 async function callAnthropic(
   model: string,
@@ -478,7 +479,6 @@ export async function callVisionChat(
 ): Promise<AICompletionResult> {
   const { client, isNative } = getAnthropic();
   const effectiveModel = isNative ? ANTHROPIC_NATIVE_MODEL : ANTHROPIC_INTEGRATION_MODEL;
-  const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);
   const startTime = Date.now();
 
   // Build image blocks for Claude's multimodal API
@@ -512,7 +512,7 @@ export async function callVisionChat(
       ...historyMessages,
       { role: "user", content: lastContent },
     ],
-  }, { signal });
+  });
 
   const content = response.content[0]?.type === "text" ? response.content[0].text : "";
   const latencyMs = Date.now() - startTime;
@@ -597,14 +597,15 @@ export async function completeWithAgent(
   const model = _fallbackMode && FALLBACK_MODEL_MAP[baseModel] ? FALLBACK_MODEL_MAP[baseModel] : baseModel;
   const effectiveSystem = systemPrompt + buildLocaleInstruction(locale);
   const startTime = Date.now();
-  const signal = AbortSignal.timeout(SERVER_AI_TIMEOUT_MS);
+  // No AbortSignal — background workers must never be killed by timeout.
+  // Deep agents can legitimately take 3–10+ min per LLM call.
 
   let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string };
 
   switch (provider) {
     case "anthropic":
       try {
-        result = await callAnthropic(model, effectiveSystem, messages, 8192, signal);
+        result = await callAnthropic(model, effectiveSystem, messages, 8192);
       } catch (anthropicErr) {
         log.warn(
           { agentRole, model, err: String(anthropicErr) },
@@ -614,16 +615,15 @@ export async function completeWithAgent(
           getDefaultModelForProvider("openai"),
           effectiveSystem,
           messages,
-          signal,
         );
       }
       break;
     case "openai":
-      result = await callOpenAI(model, effectiveSystem, messages, signal);
+      result = await callOpenAI(model, effectiveSystem, messages);
       break;
     case "gemini":
       try {
-        result = await callGemini(model, effectiveSystem, messages, signal);
+        result = await callGemini(model, effectiveSystem, messages);
       } catch (geminiErr) {
         log.warn(
           { agentRole, model, err: String(geminiErr) },
@@ -633,7 +633,6 @@ export async function completeWithAgent(
           getDefaultModelForProvider("openai"),
           effectiveSystem,
           messages,
-          signal,
         );
       }
       break;

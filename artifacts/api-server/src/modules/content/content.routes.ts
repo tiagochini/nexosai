@@ -14,6 +14,7 @@ import {
   approveMediaBrief,
   rejectMediaBrief,
   optimizeCampaign,
+  resolveComplianceReview,
 } from "./content.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { runPostApprovalHooks } from "./content-post-approval.js";
@@ -365,6 +366,44 @@ router.post("/:campaignId/content/optimize", async (req, res): Promise<void> => 
       pieceId: result.pieceId,
       output: result.output,
     });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// POST /campaigns/:campaignId/compliance/resolve
+// Called when user decides how to handle compliance violations.
+// decision: "accept_all" | "custom" | "override"
+const complianceResolveSchema = z.object({
+  decision: z.enum(["accept_all", "custom", "override"]),
+  corrections: z.array(z.object({
+    violationIndex: z.number().int().min(0),
+    acceptedText: z.string().min(1),
+  })).optional(),
+});
+
+router.post("/:campaignId/compliance/resolve", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const parsed = complianceResolveSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const result = await resolveComplianceReview(
+      campaignId,
+      req.auth.workspaceId,
+      parsed.data.decision,
+      parsed.data.corrections,
+      req.log,
+    );
+    res.json(result);
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

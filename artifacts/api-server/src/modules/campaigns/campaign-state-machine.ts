@@ -18,6 +18,7 @@ export type CampaignStatus =
   | "analyzing"
   | "strategy_ready"
   | "generating"
+  | "compliance_review"
   | "awaiting_approval"
   | "approved"
   | "executing"
@@ -51,7 +52,11 @@ export const VALID_STATUS_TRANSITIONS: Readonly<Record<CampaignStatus, CampaignS
   // pipeline auto-progression: next campaign → approved when previous → executing
   strategy_ready: ["generating", "analyzing", "approved", "cancelled"],
 
-  generating: ["awaiting_approval", "strategy_ready", "cancelled"],
+  // compliance_review: compliance gate found critical violations — pipeline paused for user
+  generating: ["awaiting_approval", "compliance_review", "strategy_ready", "cancelled"],
+
+  // compliance_review: user resolved (accept/custom/override) → awaiting_approval
+  compliance_review: ["awaiting_approval", "generating", "cancelled"],
 
   awaiting_approval: ["approved", "generating", "analyzing", "cancelled"],
 
@@ -83,6 +88,7 @@ export const STRATEGY_PHASE_ENTRY_STATUSES = [
 export const CONTENT_PHASE_ENTRY_STATUSES = [
   "strategy_ready",
   "generating", // CHECKPOINT: allows resume after server restart (campaign stays generating, re-enqueued at boot)
+  "compliance_review", // user resolved compliance → re-enter content flow to finalize
   "awaiting_approval",
   "approved",
   "live",
@@ -105,6 +111,7 @@ export const ACTIVE_STATUSES: CampaignStatus[] = ["executing", "live", "paused"]
 export const IN_PROGRESS_STATUSES: CampaignStatus[] = [
   "analyzing",
   "generating",
+  "compliance_review",
   "awaiting_approval",
   "strategy_ready",
   "approved",
@@ -149,6 +156,7 @@ export const STATUS_LABELS: Readonly<Record<CampaignStatus, string>> = {
   analyzing:         "Analisando",
   strategy_ready:    "Estratégia Pronta",
   generating:        "Gerando Conteúdo",
+  compliance_review: "Revisão de Compliance",
   awaiting_approval: "Aguardando Aprovação",
   approved:          "Aprovado",
   executing:         "Executando",
@@ -163,6 +171,7 @@ export const STATUS_PHASE_LABELS: Readonly<Record<CampaignStatus, string>> = {
   analyzing:         "FASE 2 — ESTRATÉGIA",
   strategy_ready:    "FASE 2 — ESTRATÉGIA PRONTA",
   generating:        "FASE 3 — CONTEÚDO",
+  compliance_review: "FASE 3 — REVISÃO DE COMPLIANCE",
   awaiting_approval: "FASE 3 — APROVAÇÃO PENDENTE",
   approved:          "FASE 4 — PRONTO PARA LANÇAR",
   executing:         "FASE 4 — LANÇANDO",

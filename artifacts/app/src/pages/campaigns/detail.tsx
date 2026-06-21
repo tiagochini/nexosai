@@ -49,6 +49,7 @@ import { useMode } from "@/lib/mode";
 import { useAuth } from "@/lib/auth";
 import { CreativeStudioBlock } from "@/components/CreativeStudioBlock";
 import { PreLaunchChecklist } from "@/components/PreLaunchChecklist";
+import { ComplianceReviewModal } from "@/components/ComplianceReviewModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -95,6 +96,7 @@ interface MetricsSummary {
 const STATUS_LABEL: Record<string, string> = {
   draft: "Aguardando Briefing", intake: "Coletando Inteligência", analyzing: "Time em Operação",
   strategy_ready: "Estratégia Aprovada", generating: "Produção em Andamento",
+  compliance_review: "Revisão de Compliance",
   awaiting_approval: "Aguardando Sua Revisão", approved: "Aprovado — Pronto para Lançar",
   executing: "Operação Iniciada", live: "Campanha Ao Vivo", completed: "Ciclo Concluído",
 };
@@ -103,6 +105,7 @@ const STATUS_COLOR: Record<string, string> = {
   executing: "text-primary border-primary/40 bg-primary/10",
   generating: "text-primary border-primary/40 bg-primary/10",
   analyzing: "text-primary border-primary/40 bg-primary/10",
+  compliance_review: "text-red-400 border-red-400/40 bg-red-400/10",
   awaiting_approval: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
   approved: "text-green-400 border-green-400/40 bg-green-400/10",
   strategy_ready: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
@@ -169,7 +172,7 @@ const ACTIVE_STATUSES = ["analyzing", "generating", "executing"];
 const PIPELINE = [
   { id: "intake", label: "01 · Briefing", statuses: ["draft", "intake"] },
   { id: "strategy", label: "02 · Estratégia", statuses: ["analyzing", "strategy_ready"] },
-  { id: "content", label: "03 · Conteúdo", statuses: ["generating", "awaiting_approval", "approved"] },
+  { id: "content", label: "03 · Conteúdo", statuses: ["generating", "compliance_review", "awaiting_approval", "approved"] },
   { id: "launch", label: "04 · Lançamento", statuses: ["executing", "live"] },
   { id: "monitor", label: "05 · Monitor", statuses: ["completed"] },
 ];
@@ -1936,6 +1939,15 @@ export default function CampaignDetail() {
           phase: undefined,
         };
       }
+      case "compliance_review": {
+        const cr = (brainDataRaw["complianceReview"] ?? {}) as Record<string, unknown>;
+        const score = cr["score"] as number | undefined;
+        const critical = (cr["violations"] as unknown[] | undefined)?.filter((v: any) => v?.severity === "critical").length ?? 0;
+        return {
+          label: "Resolver Compliance",
+          description: `🛡️ O Agente de Compliance encontrou violações que precisam da sua decisão${score !== undefined ? ` (Score: ${score}/100)` : ""}${critical > 0 ? ` — ${critical} crítica${critical !== 1 ? "s" : ""}` : ""}. Aceite as correções, ajuste ou publique assim mesmo.`,
+        };
+      }
       case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia validada pelos agentes. Clique para gerar as 16+ peças de conteúdo do lançamento." };
       case "awaiting_approval": {
         const piecesTotal = (previewContentData?.pieces ?? contentData?.pieces ?? []).length;
@@ -1962,6 +1974,7 @@ export default function CampaignDetail() {
       analyzing:        { emoji: "🧠", headline: "O time está estudando seu mercado", desc: "Agentes de estratégia analisando seu produto, público e concorrência. Isso leva de 1 a 3 minutos." },
       strategy_ready:   { emoji: "📋", headline: "Sua estratégia está pronta para revisar", desc: "O Estrategista montou o plano completo. Revise e confirme antes de gerar o conteúdo." },
       generating:       { emoji: "✍️", headline: "Copywriters gerando seu conteúdo", desc: "Agentes criando copy, sequências e scripts personalizados para o seu público. Quase lá." },
+      compliance_review:{ emoji: "🛡️", headline: "Compliance precisa da sua decisão", desc: "O agente encontrou pontos que precisam ser revisados antes de prosseguir. Aceite as sugestões, ajuste ou autorize assim mesmo." },
       awaiting_approval:{ emoji: "👀", headline: "Seu conteúdo está esperando por você", desc: "Tudo pronto! Revise e aprove o conteúdo gerado antes do lançamento." },
       approved:         { emoji: "📋", headline: "Quase lá! Complete o checklist de lançamento", desc: "Verifique integrações obrigatórias e criativos antes de lançar. Tudo está listado abaixo." },
       executing:        { emoji: "⚡", headline: "Campanha em execução", desc: "Os agentes estão disparando sequências e monitorando os resultados em tempo real." },
@@ -1985,7 +1998,7 @@ export default function CampaignDetail() {
 
     const PHASE_MAP = [
       { statuses: ["analyzing"],                     label: "Estratégia" },
-      { statuses: ["strategy_ready", "generating"],  label: "Conteúdo" },
+      { statuses: ["strategy_ready", "generating", "compliance_review"],  label: "Conteúdo" },
       { statuses: ["awaiting_approval", "approved"], label: "Aprovação" },
       { statuses: ["executing"],                     label: "Execução" },
       { statuses: ["live", "completed"],             label: "Resultado" },
@@ -2227,6 +2240,19 @@ export default function CampaignDetail() {
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
+
+      {/* ── Compliance Review Modal ── */}
+      {campaign.status === "compliance_review" && (() => {
+        const cr = (brainDataRaw["complianceReview"] ?? null) as Record<string, unknown> | null;
+        if (!cr || !cr["violations"]) return null;
+        return (
+          <ComplianceReviewModal
+            campaignId={campaignId}
+            complianceReview={cr as any}
+            onResolved={() => void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) })}
+          />
+        );
+      })()}
 
       {/* ── Launch Sequence Overlay ── */}
       {showLaunchSequence && (

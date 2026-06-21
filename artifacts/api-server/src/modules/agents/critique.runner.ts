@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import {
   db,
   critiqueLogsTable,
@@ -26,10 +26,16 @@ export interface CritiqueResult {
 // Turn 2: Critique own output against checklist
 // Turn 3: Refine incorporating critique
 // Cost: ~2.2x tokens of a single call — only applied to high-stakes agents
+//
+// CHECKPOINT STRATEGY: each turn is persisted to critique_logs immediately after
+// completion. On restart, the loop resumes from the last completed turn so that
+// LLM work is NEVER repeated. iteration field in the DB row tracks progress:
+//   iteration=1 → turn 1 saved, turns 2+3 still pending
+//   iteration=2 → turns 1+2 saved, turn 3 still pending
+//   iteration=3 → all 3 turns done (canonical/final row)
 
 function buildTemporalBlock(): string {
   const now = new Date();
-  // BRT-correct ISO date — toISOString() returns UTC which is 1 day ahead during 21h-00h BRT
   const isoDate = now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
   const dateStr = now.toLocaleDateString("pt-BR", {
     weekday: "long",
@@ -41,6 +47,60 @@ function buildTemporalBlock(): string {
   return `## CONTEXTO TEMPORAL OBRIGATÓRIO\n\n**Data de hoje:** ${dateStr} (${isoDate})\n\n> REGRA CRÍTICA: Todas as datas sugeridas DEVEM ser iguais ou posteriores a ${isoDate}. NUNCA sugira datas passadas.\n\n---\n\n`;
 }
 
+/** Persist checkpoint after a turn completes so restarts can resume from here. */
+async function saveCheckpoint(opts: {
+  workspaceId: string;
+  campaignId: string;
+  agentRole: AgentRole;
+  iteration: number;
+  rawOutput: string;
+  critiqueText: string;
+  refinedOutput: string;
+  selfScoreBefore?: number;
+  selfScoreAfter?: number;
+  issues?: string[];
+  tokensUsed: number;
+  creditsCharged: number;
+}, log: Logger): Promise<void> {
+  try {
+    await db.insert(critiqueLogsTable).values({
+      workspaceId: opts.workspaceId,
+      campaignId: opts.campaignId,
+      agentRole: opts.agentRole,
+      iteration: opts.iteration,
+      rawOutput: opts.rawOutput.slice(0, 8000),
+      critiqueText: opts.critiqueText.slice(0, 4000),
+      refinedOutput: opts.refinedOutput.slice(0, 8000),
+      selfScoreBefore: opts.selfScoreBefore ?? 0,
+      selfScoreAfter: opts.selfScoreAfter ?? 0,
+      improvementDelta: (opts.selfScoreAfter ?? 0) - (opts.selfScoreBefore ?? 0),
+      issues: (opts.issues ?? []) as any,
+      tokensUsed: opts.tokensUsed,
+      creditsCharged: opts.creditsCharged,
+    });
+  } catch (err) {
+    log.warn({ err, iteration: opts.iteration }, "Critique checkpoint save failed — non-fatal, will re-run this turn on restart");
+  }
+}
+
+/** Look up the latest checkpoint for this campaign+agent. Returns null if none. */
+async function loadCheckpoint(campaignId: string, agentRole: AgentRole) {
+  try {
+    const [row] = await db
+      .select()
+      .from(critiqueLogsTable)
+      .where(and(
+        eq(critiqueLogsTable.campaignId, campaignId),
+        eq(critiqueLogsTable.agentRole, agentRole),
+      ))
+      .orderBy(desc(critiqueLogsTable.createdAt))
+      .limit(1);
+    return row ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function runAgentWithCritique(opts: {
   campaignId: string;
   workspaceId: string;
@@ -48,13 +108,10 @@ export async function runAgentWithCritique(opts: {
   systemPrompt: string;
   userMessage: string;
   log: Logger;
-  /** Psychological profile block from profile-injector — injected before the system prompt. */
   profileContext?: string;
 }): Promise<CritiqueResult> {
   const { campaignId, workspaceId, agentRole, systemPrompt, userMessage, log } = opts;
 
-  // Always inject current date so the critique loop never references past dates
-  // Inject psychological profile between temporal context and agent system prompt when available
   const profileBlock = opts.profileContext ?? "";
   const enrichedSystemPrompt = buildTemporalBlock() + profileBlock + systemPrompt;
 
@@ -64,21 +121,84 @@ export async function runAgentWithCritique(opts: {
   let totalCredits = 0;
   let totalTokens = 0;
 
+  // ── Resume check: find latest checkpoint ─────────────────────────────────
+  const checkpoint = await loadCheckpoint(campaignId, agentRole);
+  const resumeFromIteration = checkpoint?.iteration ?? 0;
+
+  if (resumeFromIteration >= 3) {
+    // All 3 turns already completed — return saved result directly
+    log.info({ campaignId, agentRole, resumeFrom: "checkpoint-complete" }, "Critique loop — resuming from completed checkpoint, skipping all turns");
+    return {
+      rawOutput: checkpoint!.rawOutput,
+      critiqueText: checkpoint!.critiqueText,
+      refinedOutput: checkpoint!.refinedOutput,
+      selfScoreBefore: checkpoint!.selfScoreBefore ?? 65,
+      selfScoreAfter: checkpoint!.selfScoreAfter ?? 65,
+      issues: (checkpoint!.issues as string[]) ?? [],
+      totalCreditsCharged: checkpoint!.creditsCharged,
+      totalTokensUsed: checkpoint!.tokensUsed,
+    };
+  }
+
   // ── TURN 1: Generate ──────────────────────────────────────────────────────
-  log.info({ campaignId, agentRole, turn: 1 }, "Critique loop — generating initial output");
+  let rawOutput: string;
+  let turn1Credits = 0;
+  let turn1Tokens = 0;
+  let turn1Provider = "openai";
+  let turn1CostUsd = 0;
 
-  const turn1Messages: AIMessage[] = [{ role: "user", content: userMessage }];
+  if (resumeFromIteration >= 1) {
+    // Turn 1 already done — restore from checkpoint
+    rawOutput = checkpoint!.rawOutput;
+    log.info({ campaignId, agentRole, resumeFrom: "turn-1-checkpoint" }, "Critique loop — turn 1 restored from checkpoint, skipping LLM call");
+  } else {
+    log.info({ campaignId, agentRole, turn: 1 }, "Critique loop — generating initial output");
+    const turn1Messages: AIMessage[] = [{ role: "user", content: userMessage }];
+    const turn1 = await completeWithAgent(agentRole, enrichedSystemPrompt, turn1Messages, workspaceId, log, campaignId);
+    rawOutput = turn1.content;
+    turn1Credits = turn1.creditsCharged;
+    turn1Tokens = turn1.inputTokens + turn1.outputTokens;
+    turn1Provider = turn1.provider;
+    turn1CostUsd = turn1.costUsd;
+    totalCredits += turn1Credits;
+    totalTokens += turn1Tokens;
 
-  const turn1 = await completeWithAgent(agentRole, enrichedSystemPrompt, turn1Messages, workspaceId, log, campaignId);
-  totalCredits += turn1.creditsCharged;
-  totalTokens += turn1.inputTokens + turn1.outputTokens;
-
-  const rawOutput = turn1.content;
+    // ── CHECKPOINT: turn 1 done ───────────────────────────────────────────
+    await saveCheckpoint({
+      workspaceId, campaignId, agentRole, iteration: 1,
+      rawOutput, critiqueText: "", refinedOutput: rawOutput,
+      selfScoreBefore: 0, selfScoreAfter: 0, issues: [],
+      tokensUsed: totalTokens, creditsCharged: totalCredits,
+    }, log);
+  }
 
   // ── TURN 2: Critique ──────────────────────────────────────────────────────
-  log.info({ campaignId, agentRole, turn: 2 }, "Critique loop — self-critique pass");
+  let critiqueData: {
+    scoreBefore?: number;
+    issues?: string[];
+    critiqueNarrative?: string;
+    whatWorked?: string;
+    improvementInstructions?: string;
+  } = {};
+  let turn2Content = "";
+  let turn2Credits = 0;
+  let turn2Tokens = 0;
+  let turn2CostUsd = 0;
 
-  const critiqueSystemPrompt = `Você é um revisor crítico especialista em marketing digital de alta performance.
+  if (resumeFromIteration >= 2) {
+    // Turn 2 already done — restore from checkpoint
+    turn2Content = checkpoint!.critiqueText;
+    log.info({ campaignId, agentRole, resumeFrom: "turn-2-checkpoint" }, "Critique loop — turn 2 restored from checkpoint, skipping LLM call");
+    try {
+      const jsonMatch = turn2Content.match(/```json\s*([\s\S]*?)```/) ?? turn2Content.match(/(\{[\s\S]*\})/);
+      if (jsonMatch) critiqueData = JSON.parse(jsonMatch[1] ?? jsonMatch[0]);
+    } catch {
+      critiqueData = { critiqueNarrative: turn2Content, issues: [], scoreBefore: 65 };
+    }
+  } else {
+    log.info({ campaignId, agentRole, turn: 2 }, "Critique loop — self-critique pass");
+
+    const critiqueSystemPrompt = `Você é um revisor crítico especialista em marketing digital de alta performance.
 Seu trabalho é avaliar rigorosamente o output de um agente de IA e identificar fraquezas específicas.
 Seja honesto e preciso — outputs genéricos ou imprecisos prejudicam os resultados do cliente.
 
@@ -93,7 +213,7 @@ Seja honesto e preciso — outputs genéricos ou imprecisos prejudicam os result
 }
 \`\`\``;
 
-  const critiqueMessage = `Avalie o seguinte output de um agente ${agentRole} contra este checklist de qualidade:
+    const critiqueMessage = `Avalie o seguinte output de um agente ${agentRole} contra este checklist de qualidade:
 
 **CHECKLIST:**
 ${checklistText}
@@ -103,26 +223,29 @@ ${rawOutput.slice(0, 6000)}
 
 **TAREFA:** Identifique os problemas reais. Dê uma nota de 0-100 para o output atual. Seja específico — não avalie como "bom" o que pode ser melhorado.`;
 
-  const turn2Messages: AIMessage[] = [{ role: "user", content: critiqueMessage }];
+    const turn2Messages: AIMessage[] = [{ role: "user", content: critiqueMessage }];
+    const turn2 = await completeWithAgent(agentRole, critiqueSystemPrompt, turn2Messages, workspaceId, log, campaignId);
+    turn2Content = turn2.content;
+    turn2Credits = turn2.creditsCharged;
+    turn2Tokens = turn2.inputTokens + turn2.outputTokens;
+    turn2CostUsd = turn2.costUsd;
+    totalCredits += turn2Credits;
+    totalTokens += turn2Tokens;
 
-  const turn2 = await completeWithAgent(agentRole, critiqueSystemPrompt, turn2Messages, workspaceId, log, campaignId);
-  totalCredits += turn2.creditsCharged;
-  totalTokens += turn2.inputTokens + turn2.outputTokens;
+    try {
+      const jsonMatch = turn2Content.match(/```json\s*([\s\S]*?)```/) ?? turn2Content.match(/(\{[\s\S]*\})/);
+      if (jsonMatch) critiqueData = JSON.parse(jsonMatch[1] ?? jsonMatch[0]);
+    } catch {
+      critiqueData = { critiqueNarrative: turn2Content, issues: [], scoreBefore: 65 };
+    }
 
-  // Parse critique JSON
-  let critiqueData: {
-    scoreBefore?: number;
-    issues?: string[];
-    critiqueNarrative?: string;
-    whatWorked?: string;
-    improvementInstructions?: string;
-  } = {};
-
-  try {
-    const jsonMatch = turn2.content.match(/```json\s*([\s\S]*?)```/) ?? turn2.content.match(/(\{[\s\S]*\})/);
-    if (jsonMatch) critiqueData = JSON.parse(jsonMatch[1] ?? jsonMatch[0]);
-  } catch {
-    critiqueData = { critiqueNarrative: turn2.content, issues: [], scoreBefore: 65 };
+    // ── CHECKPOINT: turn 2 done ───────────────────────────────────────────
+    await saveCheckpoint({
+      workspaceId, campaignId, agentRole, iteration: 2,
+      rawOutput, critiqueText: turn2Content, refinedOutput: rawOutput,
+      selfScoreBefore: critiqueData.scoreBefore ?? 65, issues: critiqueData.issues ?? [],
+      tokensUsed: totalTokens, creditsCharged: totalCredits,
+    }, log);
   }
 
   const selfScoreBefore = critiqueData.scoreBefore ?? 65;
@@ -131,9 +254,6 @@ ${rawOutput.slice(0, 6000)}
   // ── TURN 3: Refine ────────────────────────────────────────────────────────
   log.info({ campaignId, agentRole, turn: 3, scoreBefore: selfScoreBefore }, "Critique loop — refining output");
 
-  // Keep refine message compact — do NOT include the full raw output again.
-  // Turn 1 output is already in the assistant role below; re-inserting 5000 chars
-  // doubles context pressure and starves the model of token budget for actual output.
   const refineMessage = `**CRÍTICA IDENTIFICADA:**
 ${critiqueData.critiqueNarrative ?? ""}
 
@@ -148,7 +268,6 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
 
 **TAREFA:** Gere o output refinado incorporando todas as melhorias. Mantenha o que funcionou. Corrija especificamente os problemas apontados. Retorne o JSON completo na mesma estrutura do output original.`;
 
-  // Truncate assistant content so Turn 1 JSON doesn't blow the context window on Turn 3
   const assistantContentForTurn3 = rawOutput.length > 4000 ? rawOutput.slice(0, 4000) + "\n... [truncated for context]" : rawOutput;
 
   const turn3Messages: AIMessage[] = [
@@ -161,39 +280,23 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
   totalCredits += turn3.creditsCharged;
   totalTokens += turn3.inputTokens + turn3.outputTokens;
 
-  // Anti-regression check: if Turn 3 output is significantly shorter than Turn 1
-  // (model ran out of tokens → produced empty JSON skeleton), fall back to Turn 1.
-  // "Significantly shorter" = less than 40% of Turn 1 length when Turn 1 has real content.
+  // Anti-regression: if turn 3 is significantly shorter than turn 1, use turn 1
   const turn3HasContent = turn3.content.trim().length > 0;
   const turn1HasContent = rawOutput.length > 500;
   const turn3Regressed = turn1HasContent && turn3.content.length < rawOutput.length * 0.4;
   const refinedOutput = (turn3HasContent && !turn3Regressed) ? turn3.content : rawOutput;
 
-  // Estimate improvement score (heuristic: if refinement has more content, assume improvement)
   const selfScoreAfter = Math.min(100, selfScoreBefore + Math.floor(Math.random() * 12 + 8));
 
-  // ── Save critique log ─────────────────────────────────────────────────────
-  try {
-    await db.insert(critiqueLogsTable).values({
-      workspaceId,
-      campaignId,
-      agentRole,
-      iteration: 1,
-      rawOutput: rawOutput.slice(0, 8000),
-      critiqueText: turn2.content.slice(0, 4000),
-      refinedOutput: refinedOutput.slice(0, 8000),
-      selfScoreBefore,
-      selfScoreAfter,
-      improvementDelta: selfScoreAfter - selfScoreBefore,
-      issues: issues as any,
-      tokensUsed: totalTokens,
-      creditsCharged: totalCredits,
-    });
-  } catch (err) {
-    log.warn({ err }, "Failed to save critique log — non-fatal");
-  }
+  // ── CHECKPOINT: turn 3 done (final) ──────────────────────────────────────
+  await saveCheckpoint({
+    workspaceId, campaignId, agentRole, iteration: 3,
+    rawOutput, critiqueText: turn2Content, refinedOutput,
+    selfScoreBefore, selfScoreAfter, issues,
+    tokensUsed: totalTokens, creditsCharged: totalCredits,
+  }, log);
 
-  // ── Charge credits for all 3 turns ───────────────────────────────────────
+  // ── Charge credits for all turns completed this run ───────────────────────
   if (totalCredits > 0) {
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance })
@@ -210,6 +313,7 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
         .set({ creditsBalance: balanceAfter })
         .where(eq(workspacesTable.id, workspaceId));
 
+      const costUsdTotal = (turn1CostUsd + turn2CostUsd + turn3.costUsd).toString();
       await db.insert(creditTransactionsTable).values({
         workspaceId,
         campaignId,
@@ -218,9 +322,9 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
         amount: totalCredits,
         balanceBefore,
         balanceAfter,
-        aiProvider: turn1.provider,
+        aiProvider: turn1Provider,
         tokensUsed: totalTokens,
-        costUsd: (turn1.costUsd + turn2.costUsd + turn3.costUsd).toString(),
+        costUsd: costUsdTotal,
       });
     }
   }
@@ -232,7 +336,7 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
 
   return {
     rawOutput,
-    critiqueText: turn2.content,
+    critiqueText: turn2Content,
     refinedOutput,
     selfScoreBefore,
     selfScoreAfter,

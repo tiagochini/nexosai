@@ -160,7 +160,7 @@ export async function runContentCalendarAgent(
 4. Crie o calendário de produção (separado do de publicação)
 5. Defina metas de KPI por plataforma
 
-Gere pelo menos 25 posts com captions completas — não resumos.
+**PRIORIDADE ABSOLUTA:** Comece o JSON pelo array "posts" imediatamente — gere TODOS os posts primeiro antes de qualquer outro campo. O array "posts" é o entregável principal; campos como "narrativeArc", "contentPillars", "productionSchedule" são secundários e podem ser curtos se o budget de tokens apertar. Gere no mínimo 20 posts com captions completas — não esboços.
 Retorne APENAS JSON.`,
       },
     ],
@@ -174,7 +174,7 @@ Retorne APENAS JSON.`,
     ],
   });
 
-  return parseAgentJSON<ContentCalendarOutput>(result.content, {
+  const defaults: ContentCalendarOutput = {
     product: productDescription,
     startDate: launchStartDate,
     totalPosts: 0,
@@ -187,5 +187,29 @@ Retorne APENAS JSON.`,
     kpiTargets: [],
     engagementStrategy: "",
     repurposingGuide: "",
-  });
+  };
+
+  const parsed = parseAgentJSON<Record<string, unknown>>(result.content, defaults as unknown as Record<string, unknown>);
+
+  // Normalize: LLM sometimes deviates from schema and returns posts under a different key
+  // (e.g. "calendar", "days", "schedule", "posts_list", "content")
+  const postsRaw = (parsed.posts ?? parsed.calendar ?? parsed.days ?? parsed.schedule ?? parsed.posts_list ?? []) as ContentPost[];
+  const postsByPlatform = (parsed.postsByPlatform ?? parsed.posts_by_platform ?? {}) as Record<string, number>;
+  const productionSchedule = (parsed.productionSchedule ?? parsed.production_schedule ?? []) as ContentCalendarOutput["productionSchedule"];
+  const kpiTargets = (parsed.kpiTargets ?? parsed.kpi_targets ?? parsed.kpis ?? []) as ContentCalendarOutput["kpiTargets"];
+
+  return {
+    product: (parsed.product as string) || productDescription,
+    startDate: (parsed.startDate as string) || launchStartDate,
+    totalPosts: postsRaw.length,
+    totalDays: (parsed.totalDays as number) || launchDays,
+    postsByPlatform,
+    narrativeArc: (parsed.narrativeArc as string) || (parsed.narrative_arc as string) || "",
+    contentPillars: (parsed.contentPillars ?? parsed.content_pillars ?? []) as string[],
+    posts: postsRaw,
+    productionSchedule,
+    kpiTargets,
+    engagementStrategy: (parsed.engagementStrategy as string) || (parsed.engagement_strategy as string) || "",
+    repurposingGuide: (parsed.repurposingGuide as string) || (parsed.repurposing_guide as string) || "",
+  };
 }

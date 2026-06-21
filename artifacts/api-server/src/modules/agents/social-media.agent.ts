@@ -263,6 +263,7 @@ ${JSON.stringify(
 - A estratégia de plataformas deve cobrir no mínimo: Instagram, Facebook, TikTok, WhatsApp (via sequências)
 - Captions COMPLETAS e prontas para publicar — não esboços
 
+**PRIORIDADE ABSOLUTA:** Comece o JSON pelo array "calendar" imediatamente — gere TODOS os posts do calendário primeiro antes de qualquer outro campo. O array "calendar" é o entregável principal; campos como "contentPillars", "platformStrategy", "hashtagStrategy" são secundários e podem ser curtos se o budget de tokens apertar. Gere no mínimo 20 entradas de calendário com captions completas.
 Retorne APENAS o JSON do calendário multi-plataforma completo.`,
       },
     ],

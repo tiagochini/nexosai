@@ -50,6 +50,7 @@ export const campaignStatusEnum = pgEnum("campaign_status", [
   "analyzing",
   "strategy_ready",
   "generating",
+  "compliance_review",
   "awaiting_approval",
   "approved",
   "executing",

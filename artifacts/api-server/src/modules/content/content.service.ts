@@ -32,7 +32,7 @@ import { runComplianceAgent } from "../agents/compliance.agent.js";
 import { runOptimizationAgent } from "../agents/optimization.agent.js";
 import { runEmotionalCoherenceCheck } from "../agents/emotional-coherence-checker.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
-import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
 import type { StrategyOutput } from "../agents/strategy.agent.js";
 import type { Logger } from "pino";
@@ -1291,6 +1291,7 @@ export async function generateCampaignContent(
 
     const violationCount = complianceOutput.violations.length;
     const criticalCount = complianceOutput.violations.filter((v) => v.severity === "critical").length;
+    const highCount = complianceOutput.violations.filter((v) => v.severity === "high").length;
 
     emitCampaignEvent({
       campaignId,
@@ -1311,6 +1312,83 @@ export async function generateCampaignContent(
       { campaignId, pieceId: piece?.id, score: complianceOutput.complianceScore, riskLevel: complianceOutput.overallRiskLevel },
       "Compliance agent completed",
     );
+
+    // ── COMPLIANCE GATE ────────────────────────────────────────────────────────
+    // If the compliance agent found critical or high-severity violations in a
+    // high_risk or blocked campaign, pause the pipeline at compliance_review.
+    // The user must resolve (accept suggestions / custom edits / override) before
+    // the pipeline can continue to awaiting_approval.
+    const needsUserReview =
+      (complianceOutput.overallRiskLevel === "high_risk" || complianceOutput.overallRiskLevel === "blocked") &&
+      (criticalCount > 0 || highCount > 0);
+
+    if (needsUserReview) {
+      // Store compliance review state in brainData so the frontend can read it
+      const [current] = await db
+        .select({ brainData: campaignsTable.brainData })
+        .from(campaignsTable)
+        .where(eq(campaignsTable.id, campaignId))
+        .limit(1);
+      const brainNow = ((current?.brainData ?? {}) as Record<string, unknown>);
+
+      await db
+        .update(campaignsTable)
+        .set({
+          brainData: {
+            ...brainNow,
+            complianceReview: {
+              pieceId: piece?.id ?? null,
+              score: complianceOutput.complianceScore,
+              riskLevel: complianceOutput.overallRiskLevel,
+              violations: complianceOutput.violations,
+              approvedElements: complianceOutput.approvedElements,
+              requiredDisclosures: complianceOutput.requiredDisclosures,
+              legalRecommendations: complianceOutput.legalRecommendations,
+              conarAnalysis: complianceOutput.conarAnalysis,
+              platformPolicies: complianceOutput.platformPolicies,
+              complianceNotes: complianceOutput.complianceNotes,
+              reviewedAt: new Date().toISOString(),
+              userDecision: null,
+            },
+          } as any,
+        })
+        .where(eq(campaignsTable.id, campaignId));
+
+      await transitionCampaign(campaignId, workspaceId, "compliance_review", "compliance gate — critical violations require user review", log);
+
+      emitCampaignEvent({
+        campaignId,
+        type: "phase_changed",
+        agentType: "compliance",
+        message: `🛡️ Compliance requer sua revisão — ${criticalCount} violações críticas e ${highCount} altas encontradas. Score: ${complianceOutput.complianceScore}/100`,
+        data: {
+          violations: violationCount,
+          critical: criticalCount,
+          high: highCount,
+          riskLevel: complianceOutput.overallRiskLevel,
+          pieceId: piece?.id,
+          requiresAction: true,
+        },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.warn(
+        { campaignId, score: complianceOutput.complianceScore, critical: criticalCount, high: highCount },
+        "COMPLIANCE GATE: pipeline paused — user review required before awaiting_approval",
+      );
+
+      setFallbackMode(false);
+      setComplianceHint(null);
+      return {
+        campaignId,
+        piecesGenerated,
+        mediaBriefsGenerated: 0,
+        agentsRun,
+        errors,
+        status: "partial",
+        pieceResults: [],
+      };
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push({ agent: "compliance", error: msg });
@@ -2118,4 +2196,91 @@ export async function rejectMediaBrief(
 
   if (!brief) throw new NotFoundError("Media brief");
   return brief;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// resolveComplianceReview
+// decision: "accept_all" | "custom" | "override"
+// All three move the campaign to awaiting_approval. Override is logged.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function resolveComplianceReview(
+  campaignId: string,
+  workspaceId: string,
+  decision: "accept_all" | "custom" | "override",
+  corrections: Array<{ violationIndex: number; acceptedText: string }> | undefined,
+  log: Logger,
+): Promise<{ ok: boolean; status: string }> {
+  const [campaign] = await db
+    .select({ id: campaignsTable.id, status: campaignsTable.status, brainData: campaignsTable.brainData })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!campaign) throw new NotFoundError("Campaign");
+  if (campaign.status !== "compliance_review") {
+    throw new AppError(409, "Campaign is not in compliance_review status", "INVALID_STATE");
+  }
+
+  const brainNow = ((campaign.brainData ?? {}) as Record<string, unknown>);
+  const reviewData = ((brainNow["complianceReview"] ?? {}) as Record<string, unknown>);
+
+  const userDecision: Record<string, unknown> = {
+    decision,
+    decidedAt: new Date().toISOString(),
+    corrections: corrections ?? [],
+    isOverride: decision === "override",
+  };
+
+  const pieceId = reviewData["pieceId"] as string | null | undefined;
+  if (pieceId) {
+    const [existingPiece] = await db
+      .select({ content: contentPiecesTable.content })
+      .from(contentPiecesTable)
+      .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+      .limit(1);
+    if (existingPiece) {
+      const pieceContent = ((existingPiece.content ?? {}) as Record<string, unknown>);
+      await db
+        .update(contentPiecesTable)
+        .set({ status: "approved", content: { ...pieceContent, userDecision } as any, updatedAt: new Date() })
+        .where(eq(contentPiecesTable.id, pieceId));
+    }
+  }
+
+  await db
+    .update(campaignsTable)
+    .set({
+      brainData: {
+        ...brainNow,
+        complianceReview: { ...reviewData, userDecision },
+        ...(decision === "override" ? { complianceOverride: { at: new Date().toISOString(), by: "user" } } : {}),
+      } as any,
+    })
+    .where(eq(campaignsTable.id, campaignId));
+
+  await db.insert(auditLogsTable).values({
+    workspaceId,
+    campaignId,
+    action: "compliance.review.resolved",
+    actor: "user",
+    data: {
+      decision,
+      riskLevel: reviewData["riskLevel"],
+      score: reviewData["score"],
+      violationCount: (reviewData["violations"] as unknown[])?.length ?? 0,
+      isOverride: decision === "override",
+    },
+  });
+
+  await transitionCampaign(campaignId, workspaceId, "awaiting_approval", `compliance resolved — decision: ${decision}`, log);
+
+  const msg = decision === "override"
+    ? "✅ Publicação autorizada — compliance registrado para auditoria."
+    : decision === "accept_all"
+    ? "✅ Sugestões de compliance aceitas — conteúdo pronto para revisão final."
+    : "✅ Correções personalizadas registradas — conteúdo pronto para revisão final.";
+
+  emitCampaignEvent({ campaignId, type: "phase_changed", message: msg, data: { decision, status: "awaiting_approval" }, timestamp: new Date().toISOString() });
+  log.info({ campaignId, decision }, "Compliance review resolved by user");
+  return { ok: true, status: "awaiting_approval" };
 }
