@@ -29,7 +29,7 @@ router.use(requireAuth);
 // Heavy jobs (execute/content) are blocked for the first 15s after restart
 // to avoid 502s from the Replit proxy before the server is fully warmed up.
 const MODULE_LOADED_AT = Date.now();
-const SERVER_CONTENT_GRACE_MS = 15_000;
+const SERVER_CONTENT_GRACE_MS = 5_000;
 
 // ── Pre-flight credit check ───────────────────────────────────────────────────
 // Returns the credits needed for a phase; throws 402 if balance insufficient.

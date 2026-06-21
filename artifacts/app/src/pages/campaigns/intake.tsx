@@ -374,11 +374,21 @@ export default function CampaignIntake() {
 
     const autoTrigger = async () => {
       setSending(true);
+      // Hard timeout: if AI takes >25s, unblock the input with a fallback greeting
+      const timeoutId = setTimeout(() => {
+        setSending(false);
+        setMessages(prev => prev.length === 0 ? [{
+          role: "assistant" as const,
+          content: "Oi! Aqui é o especialista de briefing do NexOS. 👋\n\nVou fazer algumas perguntas simples sobre o seu produto para montar o plano de lançamento — não precisa ser técnico, pode responder com suas próprias palavras.\n\nPrimeira pergunta: qual é o nome do seu produto e o que ele ensina ou entrega para quem compra?",
+        }] : prev);
+        setTimeout(() => inputRef.current?.focus(), 200);
+      }, 25_000);
       try {
         const result = await callConversation({
           message: filledKeys.length > 0 ? "continuar_intake" : "iniciar_intake",
           history: [],
         });
+        clearTimeout(timeoutId);
         setMessages([{ role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
         if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
         if (result.progress) setProgress(result.progress);
@@ -392,11 +402,13 @@ export default function CampaignIntake() {
         queryClient.invalidateQueries({ queryKey: getGetIntakeQueryKey(campaignId) });
         queryClient.invalidateQueries({ queryKey: getGetIntakeScoreQueryKey(campaignId) });
       } catch {
+        clearTimeout(timeoutId);
         setMessages([{
-          role: "assistant",
+          role: "assistant" as const,
           content: "Oi! Aqui é o especialista de briefing do NexOS. 👋\n\nVou fazer algumas perguntas simples sobre o seu produto para montar o plano de lançamento — não precisa ser técnico, pode responder com suas próprias palavras.\n\nPrimeira pergunta: qual é o nome do seu produto e o que ele ensina ou entrega para quem compra?",
         }]);
       } finally {
+        clearTimeout(timeoutId);
         setSending(false);
         setTimeout(() => inputRef.current?.focus(), 200);
       }

@@ -394,6 +394,27 @@ export async function customFetch<T = unknown>(
     }
   }
 
+  // ── 503 SERVER_STARTING auto-retry ─────────────────────────────────────────
+  // The API blocks heavy execute/* jobs for a short warm-up window after restart
+  // (code: "SERVER_STARTING"). Transparently retry up to 4 times with the
+  // Retry-After delay from the response header (default 3 s), so the user
+  // never sees the error regardless of when they trigger the action.
+  if (response.status === 503 && method !== "GET" && method !== "HEAD") {
+    const body = await response.clone().json().catch(() => ({})) as Record<string, unknown>;
+    if (body?.["code"] === "SERVER_STARTING") {
+      const MAX_RETRIES = 4;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        const retryAfterSec = Number(response.headers.get("Retry-After") ?? "3");
+        const delaySec = Math.max(retryAfterSec, 3);
+        await new Promise<void>((resolve) => setTimeout(resolve, delaySec * 1000));
+        response = await fetch(input, { ...init, method, headers });
+        if (response.status !== 503) break;
+        const next = await response.clone().json().catch(() => ({})) as Record<string, unknown>;
+        if (next?.["code"] !== "SERVER_STARTING") break;
+      }
+    }
+  }
+
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);
