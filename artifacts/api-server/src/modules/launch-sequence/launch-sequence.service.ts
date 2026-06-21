@@ -187,6 +187,33 @@ export async function deleteLaunchSequence(workspaceId: string, sequenceId: stri
   await db.delete(launchSequencesTable).where(eq(launchSequencesTable.id, sequenceId));
 }
 
+// ─── Generating Flag ───────────────────────────────────────────────────────────
+
+export async function setSequenceGeneratingFlag(
+  workspaceId: string,
+  sequenceId: string,
+  generating: boolean,
+) {
+  const [row] = await db
+    .select({ config: launchSequencesTable.config })
+    .from(launchSequencesTable)
+    .where(and(eq(launchSequencesTable.id, sequenceId), eq(launchSequencesTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!row) return;
+  const cfg = (row.config ?? {}) as Record<string, unknown>;
+  if (generating) {
+    cfg["generatingPlan"] = true;
+    cfg["generatingStartedAt"] = new Date().toISOString();
+  } else {
+    delete cfg["generatingPlan"];
+    delete cfg["generatingStartedAt"];
+  }
+  await db
+    .update(launchSequencesTable)
+    .set({ config: cfg })
+    .where(eq(launchSequencesTable.id, sequenceId));
+}
+
 // ─── AI Plan Generation ────────────────────────────────────────────────────────
 
 export async function generateSequencePlan(
@@ -281,11 +308,22 @@ export async function generateSequencePlan(
     }
   }
 
+  // Clear generatingPlan flag from config before saving final result
+  const [existingRow] = await db
+    .select({ config: launchSequencesTable.config })
+    .from(launchSequencesTable)
+    .where(eq(launchSequencesTable.id, sequenceId))
+    .limit(1);
+  const finalCfg = (existingRow?.config ?? {}) as Record<string, unknown>;
+  delete finalCfg["generatingPlan"];
+  delete finalCfg["generatingStartedAt"];
+
   await db
     .update(launchSequencesTable)
     .set({
       aiGeneratedPlan: plan as unknown as Record<string, unknown>,
       status: "scheduled",
+      config: finalCfg,
     })
     .where(eq(launchSequencesTable.id, sequenceId));
 
