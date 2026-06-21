@@ -276,6 +276,74 @@ export async function generateCampaignContent(
     return true;
   };
 
+  // ── OUTPUT CONTRACT VALIDATION ───────────────────────────────────────────────
+  // Every agent must produce output that matches the expected schema for its piece type.
+  // If the output is structurally wrong (wrong keys, empty critical arrays), throw here
+  // so the catch block records the failure WITHOUT saving corrupt data to the DB.
+  // "No crash" ≠ "good output" — this layer enforces the difference.
+  const validatePieceContract = (pieceType: string, content: unknown): void => {
+    const obj = (content ?? {}) as Record<string, unknown>;
+    switch (pieceType) {
+      case "email_sequence": {
+        // Must have emailSequence.preLaunch array — not ad copy segments format
+        const emailSeq = obj.emailSequence as { preLaunch?: unknown[]; cartOpen?: unknown[] } | undefined;
+        if (!emailSeq?.preLaunch) {
+          throw new AppError(422, `email_sequence output has wrong format — missing emailSequence.preLaunch. Got top-level keys: [${Object.keys(obj).join(", ")}]. LLM likely returned ad copy schema instead of email sequence schema.`);
+        }
+        if (emailSeq.preLaunch.length === 0 && (emailSeq.cartOpen?.length ?? 0) === 0) {
+          throw new AppError(422, `email_sequence output has zero emails in preLaunch and cartOpen — empty LLM response`);
+        }
+        break;
+      }
+      case "vsl_script": {
+        const sections = (obj.sections as unknown[] | undefined)?.length ?? 0;
+        if (sections === 0) {
+          throw new AppError(422, `vsl_script output has zero sections — LLM returned truncated or empty response`);
+        }
+        break;
+      }
+      case "ad_copy": {
+        const segs = (obj.segments as unknown[] | undefined)?.length ?? 0;
+        const ads = (obj.ads as unknown[] | undefined)?.length ?? 0;
+        if (segs === 0 && ads === 0) {
+          throw new AppError(422, `ad_copy output has no segments or ads — empty LLM response`);
+        }
+        break;
+      }
+      case "landing_page_structure": {
+        const sections = (obj.sections as unknown[] | undefined)?.length ?? 0;
+        const headline = typeof obj.headline === "string" && obj.headline.length > 0;
+        const overallStructure = typeof obj.overallStructure === "string" && obj.overallStructure.length > 0;
+        if (sections === 0 && !headline && !overallStructure) {
+          throw new AppError(422, `landing_page_structure output missing sections, headline, and overallStructure`);
+        }
+        break;
+      }
+      case "cpl_script": {
+        const videos = (obj.videos as unknown[] | undefined)?.length ?? 0;
+        if (videos === 0) {
+          throw new AppError(422, `cpl_script output has no videos — LLM returned empty response`);
+        }
+        break;
+      }
+      case "stories_sequence": {
+        const stories = (obj.stories as unknown[] | undefined)?.length ?? 0;
+        if (stories === 0) {
+          throw new AppError(422, `stories_sequence output has no stories — LLM returned empty response`);
+        }
+        break;
+      }
+      case "targeting_config": {
+        const audiences = (obj.audiences as unknown[] | undefined)?.length ?? 0;
+        const segments = (obj.segments as unknown[] | undefined)?.length ?? 0;
+        if (audiences === 0 && segments === 0) {
+          throw new AppError(422, `targeting_config output has no audiences or segments`);
+        }
+        break;
+      }
+    }
+  };
+
   // Only transition to "generating" on a fresh run — skip if already there (resume after restart)
   if (!isResume) {
     await transitionCampaign(campaignId, workspaceId, "generating", "content generation phase started", log);
@@ -397,14 +465,8 @@ export async function generateCampaignContent(
 
     capturedCopyContent = copyOutput as unknown as Record<string, unknown>;
 
-    // Validate critical fields — empty arrays here mean the LLM output failed to parse
-    const totalEmails =
-      (copyOutput.emailSequence?.preLaunch?.length ?? 0) +
-      (copyOutput.emailSequence?.cartOpen?.length ?? 0) +
-      (copyOutput.emailSequence?.cartClose?.length ?? 0);
-    if (totalEmails === 0) {
-      log.warn({ campaignId }, "Copywriter output has zero emails — LLM response may have been empty or unparseable");
-    }
+    // Output contract: throws if LLM returned wrong schema (e.g. ad copy instead of email sequence)
+    validatePieceContract("email_sequence", copyOutput);
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -572,9 +634,7 @@ export async function generateCampaignContent(
 
     capturedAdContent = adOutput as unknown as Record<string, unknown>;
 
-    if ((adOutput.segments?.length ?? 0) === 0) {
-      log.warn({ campaignId }, "Ad copy output has zero segments — LLM response may have been empty or unparseable");
-    }
+    validatePieceContract("ad_copy", adOutput);
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -628,6 +688,8 @@ export async function generateCampaignContent(
         profile,
         log,
       );
+
+      validatePieceContract("targeting_config", targetingOutput);
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -742,9 +804,7 @@ export async function generateCampaignContent(
         log,
       );
 
-      if ((vslOutput.sections?.length ?? 0) === 0) {
-        log.warn({ campaignId }, "VSL script output has zero sections — LLM response may have been empty or unparseable");
-      }
+      validatePieceContract("vsl_script", vslOutput);
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -804,6 +864,8 @@ export async function generateCampaignContent(
         log,
         arcOverviewBlock || undefined,
       );
+
+      validatePieceContract("cpl_script", cplOutput);
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -978,6 +1040,8 @@ export async function generateCampaignContent(
       log,
       arcOverviewBlock || undefined,
     );
+
+    validatePieceContract("stories_sequence", storiesOutput);
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -1504,7 +1568,12 @@ export async function generateCampaignContent(
   // After content generation: move to awaiting_approval so user can review and
   // approve before launch. If ALL agents failed fall back to strategy_ready so
   // the user can re-trigger content generation.
-  const allFailed = errors.length > 0 && agentsRun.length === 0;
+  //
+  // CHECKPOINT FIX: if done.size > 0 (existing pieces from a previous run were
+  // preserved via checkpoint skip), those pieces count as successful output.
+  // Only reset to strategy_ready when the run produced NO pieces at all (no
+  // new agents ran AND no existing checkpoint pieces exist).
+  const allFailed = errors.length > 0 && agentsRun.length === 0 && done.size === 0;
   const finalStatus: "awaiting_approval" | "strategy_ready" = allFailed
     ? "strategy_ready"
     : "awaiting_approval";
