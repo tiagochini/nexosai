@@ -446,7 +446,7 @@ export default function WarRoom() {
                       "bg-muted-foreground/30"
                     }`} />
                     <span className="font-mono text-[11px] text-foreground/60 capitalize">
-                      {(agent.agentRole ?? agent.agentName ?? "agent").replace(/_/g, " ")}
+                      {(agent.agentRole ?? "agent").replace(/_/g, " ")}
                     </span>
                     <span className={`font-mono text-[10px] ml-auto ${
                       agent.status === "completed" ? "text-success/70" :

@@ -1,11 +1,13 @@
 /**
  * PreLaunchChecklist — Gate obrigatório antes de lançar uma campanha.
  *
- * Verifica 4 gates antes de liberar o botão "Lançar":
- *   1. Canal de mensagens (WhatsApp Business ou Telegram)
- *   2. Plataforma de email (RD Station ou ActiveCampaign)
- *   3. TODAS as peças de conteúdo do schedule aprovadas pelo usuário
- *   4. Plano financeiro & de mídia revisado e confirmado
+ * Verifica 6 gates antes de liberar o botão "Lançar":
+ *   1. Canal de mensagens (WhatsApp Business ou Telegram) — obrigatório
+ *   2. Plataforma de email (RD Station ou ActiveCampaign) — obrigatório
+ *   3. Redes sociais (Instagram / TikTok) — opcional, com bypass
+ *   4. TODAS as peças de conteúdo do schedule aprovadas pelo usuário — obrigatório
+ *   5. Funil & Landing Page publicada — confirmação manual — obrigatório
+ *   6. Plano financeiro & de mídia revisado e confirmado — obrigatório
  */
 
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -66,6 +68,30 @@ const INTEGRATION_WIZARDS = {
       { label: "Encontre suas credenciais de API", detail: "Ícone do usuário → Minha Conta → Developer → URL da API e Chave de API" },
       { label: "Copie a URL e a chave", detail: "URL: https://sua-conta.api-us1.com. Chave: sequência longa. Copie ambas." },
       { label: "Cole no NexOS AI", detail: "Configurações → Integrações → ActiveCampaign → Colar URL e chave → Conectar" },
+    ],
+  },
+  instagram: {
+    name: "Instagram / Meta Business",
+    icon: "📸",
+    why: "Auto-post de conteúdo orgânico, Stories e Reels gerados pelo NexOS AI durante o lançamento",
+    steps: [
+      { label: "Acesse o Meta Business Suite", detail: "business.facebook.com → certifique-se que sua Página do Instagram está vinculada à conta Business", url: "https://business.facebook.com" },
+      { label: "Crie um App na Meta for Developers", detail: "developers.facebook.com → Meus Apps → Criar App → Tipo: Negócios. Adicione o produto Instagram Graph API.", url: "https://developers.facebook.com" },
+      { label: "Gere um token de acesso", detail: "No painel do App: Ferramentas → Gerador de Token de Acesso → selecione sua Página → copie o token de longa duração (60 dias)." },
+      { label: "Obtenha o Instagram Account ID", detail: "Faça GET https://graph.facebook.com/me/accounts com seu token → copie o id da página vinculada ao Instagram." },
+      { label: "Cole no NexOS AI", detail: "Configurações → Integrações → Instagram → Colar token + Account ID → Conectar" },
+    ],
+  },
+  tiktok: {
+    name: "TikTok Business",
+    icon: "🎵",
+    why: "Auto-post de vídeos curtos e TikTok Ads com conteúdo gerado pelo NexOS AI",
+    steps: [
+      { label: "Acesse o TikTok for Business", detail: "business.tiktok.com → crie uma conta Business ou entre na existente", url: "https://business.tiktok.com" },
+      { label: "Crie um App no TikTok Developers", detail: "developers.tiktok.com → Meus Apps → Criar App → tipo: Web. Habilite Content Posting API.", url: "https://developers.tiktok.com" },
+      { label: "Configure as permissões", detail: "No App: Produtos → Content Posting API → solicite acesso. Adicione o escopo video.publish." },
+      { label: "Gere as credenciais OAuth", detail: "Client Key e Client Secret ficam em Gerenciar Apps → seu app → Chaves e Credenciais." },
+      { label: "Cole no NexOS AI", detail: "Configurações → Integrações → TikTok Business → Colar Client Key + Secret → Autorizar" },
     ],
   },
 };
@@ -169,6 +195,9 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [contentExpanded, setContentExpanded] = useState(true);
   const [finExpanded, setFinExpanded]         = useState(true);
   const [finConfirmed, setFinConfirmed]       = useState(false);
+  const [socialExpanded, setSocialExpanded]   = useState(true);
+  const [socialBypass, setSocialBypass]       = useState(false);
+  const [funnelConfirmed, setFunnelConfirmed] = useState(false);
 
   // Gate 3 animated verification (cosmetic multi-step review)
   // 0 = pending/loading, 1 = counting pieces ✓, 2 = checking compliance ✓, 3 = validating schedule ✓
@@ -259,10 +288,15 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const isConnected   = (providers: string[]) => integrations.some(i => providers.includes(i.provider) && i.status === "connected");
   const hasMessaging  = isConnected(["whatsapp_business", "telegram"]);
   const hasEmail      = isConnected(["rd_station", "activecampaign"]);
+  const hasSocial     = isConnected(["instagram", "tiktok_ads", "meta_ads"]);
   const whatsappConn  = integrations.find(i => i.provider === "whatsapp_business" && i.status === "connected");
   const rdConn        = integrations.find(i => i.provider === "rd_station" && i.status === "connected");
+  const instagramConn = integrations.find(i => i.provider === "instagram" && i.status === "connected");
+  const tiktokConn    = integrations.find(i => i.provider === "tiktok_ads" && i.status === "connected");
+  const connectedSocials = [instagramConn && "Instagram", tiktokConn && "TikTok"].filter(Boolean).join(", ");
   const missingMsg    = !isConnected(["whatsapp_business"]) ? "whatsapp" as const : "telegram" as const;
   const missingEmail  = !isConnected(["rd_station"]) ? "rd_station" as const : "activecampaign" as const;
+  const missingSocial = !instagramConn ? "instagram" as const : "tiktok" as const;
 
   // ── Content checks ──────────────────────────────────────────────────────────
   const allPieces         = content;
@@ -274,15 +308,17 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   // ── Scan animation effect ─────────────────────────────────────────────────
   useEffect(() => {
     if (loading || scanDone) return;
-    const t1 = setTimeout(() => setRevealedGates(1), 700);
-    const t2 = setTimeout(() => setRevealedGates(2), 1600);
-    const t3 = setTimeout(() => setRevealedGates(3), 2500);
-    const t4 = setTimeout(() => setRevealedGates(4), 3400);
-    const t5 = setTimeout(() => {
+    const t1 = setTimeout(() => setRevealedGates(1), 600);
+    const t2 = setTimeout(() => setRevealedGates(2), 1200);
+    const t3 = setTimeout(() => setRevealedGates(3), 1800);
+    const t4 = setTimeout(() => setRevealedGates(4), 2400);
+    const t5 = setTimeout(() => setRevealedGates(5), 3000);
+    const t6 = setTimeout(() => setRevealedGates(6), 3600);
+    const t7 = setTimeout(() => {
       setScanDone(true);
       try { localStorage.setItem(scanKey, "1"); } catch {}
-    }, 4300);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+    }, 4400);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); clearTimeout(t6); clearTimeout(t7); };
   }, [loading, scanDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Gate 3 animated verification — triggers once when allContentApproved ──
@@ -302,7 +338,8 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   // ── Overall gate ────────────────────────────────────────────────────────────
   // Gate 3 verification must complete (animation phase 3) before launch is allowed
   const contentVerified = allContentApproved && verifyPhase >= 3;
-  const allReady = hasMessaging && hasEmail && contentVerified && finReady;
+  const socialGateOk    = hasSocial || socialBypass;
+  const allReady = hasMessaging && hasEmail && contentVerified && finReady && socialGateOk && funnelConfirmed;
 
   useEffect(() => {
     if (!loading) onLaunchReady(allReady);
@@ -339,6 +376,13 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         failMsg: "RD Station ou ActiveCampaign obrigatório — vá em Integrações → Email",
       },
       {
+        label: "Redes Sociais",
+        icon: <Users className="h-4 w-4" />,
+        passed: hasSocial || socialBypass,
+        passMsg: hasSocial ? `Conectado: ${connectedSocials}` : "Ignorado — lançamento sem auto-post social",
+        failMsg: "Instagram, Facebook ou TikTok recomendados para auto-post de conteúdo gerado",
+      },
+      {
         label: "Aprovação de Conteúdo",
         icon: <FileText className="h-4 w-4" />,
         passed: allContentApproved,
@@ -346,6 +390,13 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         failMsg: noContent
           ? "Nenhuma peça gerada — gere o conteúdo antes de lançar"
           : `${pendingPieces.length} peça${pendingPieces.length !== 1 ? "s" : ""} aguardando revisão — abra a aba Conteúdo`,
+      },
+      {
+        label: "Funil & Landing Page",
+        icon: <TrendingUp className="h-4 w-4" />,
+        passed: funnelConfirmed,
+        passMsg: "Landing page e checkout confirmados como publicados",
+        failMsg: "Confirme que sua landing page está publicada e checkout ativo antes de lançar",
       },
       {
         label: "Plano Financeiro",
@@ -440,7 +491,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
 
         {/* Footer: skip or wait */}
         <div className="px-5 py-3 border-t border-border/20 flex items-center justify-between">
-          {revealedGates < 4 ? (
+          {revealedGates < 6 ? (
             <button
               onClick={completeScanNow}
               className="font-mono text-[10px] text-muted-foreground/30 hover:text-muted-foreground/60 uppercase tracking-widest transition-colors"
@@ -452,7 +503,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
               {allPassed ? "✓ Todos os gates aprovados" : `${SCAN_GATES.filter(g => !g.passed).length} pendente${SCAN_GATES.filter(g => !g.passed).length !== 1 ? "s" : ""}`}
             </div>
           )}
-          {revealedGates >= 4 && (
+          {revealedGates >= 6 && (
             <Button
               onClick={completeScanNow}
               className="rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 btn-weapon-primary"
@@ -466,8 +517,8 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
     );
   }
 
-  const passedGates = (hasMessaging ? 1 : 0) + (hasEmail ? 1 : 0) + (contentVerified ? 1 : 0) + (finReady ? 1 : 0);
-  const failedGates = 4 - passedGates;
+  const passedGates = (hasMessaging ? 1 : 0) + (hasEmail ? 1 : 0) + (socialGateOk ? 1 : 0) + (contentVerified ? 1 : 0) + (funnelConfirmed ? 1 : 0) + (finReady ? 1 : 0);
+  const failedGates = 6 - passedGates;
 
   return (
     <div className="border border-primary/30 bg-card/20">
@@ -481,7 +532,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
               {allReady
                 ? "Todos os gates aprovados — lançamento liberado"
-                : `${passedGates}/4 verificações aprovadas — complete o restante antes de lançar`}
+                : `${passedGates}/6 verificações aprovadas — complete o restante antes de lançar`}
             </div>
           </div>
         </div>
@@ -517,6 +568,119 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
         onToggleStep={setExpandedStep}
       />
+
+      {/* ── Gate 5: Redes Sociais ────────────────────────────────────────────── */}
+      <div className="border-t border-border/20">
+        <div
+          className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-background/20 transition-colors"
+          onClick={() => setSocialExpanded(v => !v)}
+        >
+          <div className="mt-0.5 shrink-0">
+            {hasSocial ? (
+              <CheckCircle2 className="h-4 w-4 text-green-400" />
+            ) : socialBypass ? (
+              <CheckCircle2 className="h-4 w-4 text-yellow-400/70" />
+            ) : (
+              <XCircle className="h-4 w-4 text-yellow-400" />
+            )}
+          </div>
+          <div className={`shrink-0 ${hasSocial ? "text-green-400/60" : socialBypass ? "text-yellow-400/40" : "text-yellow-400/60"}`}>
+            <Users className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`font-mono text-xs font-bold ${hasSocial ? "text-green-300" : socialBypass ? "text-yellow-300/60" : "text-yellow-300"}`}>
+              Redes Sociais — Auto-post Orgânico
+            </div>
+            <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
+              {hasSocial
+                ? `Conectado: ${connectedSocials} — posts serão publicados automaticamente`
+                : socialBypass
+                ? "Ignorado — auto-post desabilitado para este lançamento"
+                : "Instagram, Facebook ou TikTok recomendados para auto-post do conteúdo gerado"}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant="outline" className={`font-mono text-[9px] uppercase tracking-widest ${hasSocial ? "border-green-500/30 text-green-400/70 bg-green-500/5" : "border-yellow-500/30 text-yellow-400/70 bg-yellow-500/5"}`}>
+              {hasSocial ? "Conectado" : "Opcional"}
+            </Badge>
+            {socialExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/30" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/30" />}
+          </div>
+        </div>
+
+        {socialExpanded && (
+          <div className="mx-5 mb-4 space-y-2">
+            {!hasSocial && !socialBypass && (
+              <>
+                {/* Instagram wizard trigger */}
+                <GateRow
+                  id="instagram" icon={<span className="text-sm">📸</span>}
+                  label="Instagram / Meta Business"
+                  passed={false}
+                  passDetail="Instagram conectado — posts e Stories automáticos"
+                  failDetail="Conecte para publicar conteúdo orgânico automaticamente durante o lançamento"
+                  wizardKey="instagram"
+                  expandedWizard={expandedWizard} expandedStep={expandedStep}
+                  onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
+                  onToggleStep={setExpandedStep}
+                />
+                <GateRow
+                  id="tiktok" icon={<span className="text-sm">🎵</span>}
+                  label="TikTok Business"
+                  passed={!!tiktokConn}
+                  passDetail="TikTok conectado — vídeos publicados automaticamente"
+                  failDetail="Conecte para auto-post de Reels e vídeos curtos gerados pelo NexOS AI"
+                  wizardKey="tiktok"
+                  expandedWizard={expandedWizard} expandedStep={expandedStep}
+                  onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
+                  onToggleStep={setExpandedStep}
+                />
+              </>
+            )}
+
+            {/* Bypass option */}
+            {!hasSocial && (
+              <div className="border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 mt-1">
+                <div className="font-mono text-[11px] text-yellow-400 font-bold mb-1">Gate opcional</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed mb-3">
+                  Redes sociais não são obrigatórias para lançar. Sem elas, o NexOS AI não publicará conteúdo orgânico automaticamente — você precisará fazer isso manualmente. Se preferir continuar assim, marque abaixo.
+                </div>
+                {!socialBypass ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => { e.stopPropagation(); setSocialBypass(true); }}
+                    className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 border-yellow-500/40 text-yellow-400/80 hover:bg-yellow-500/10 rounded-none"
+                  >
+                    Continuar sem redes sociais
+                  </Button>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-yellow-400/70">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Auto-post social desabilitado para este lançamento
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSocialBypass(false); }}
+                      className="text-muted-foreground/30 hover:text-muted-foreground text-[9px] font-mono underline"
+                    >
+                      desfazer
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {hasSocial && (
+              <div className="border border-green-500/20 bg-green-500/5 px-4 py-3">
+                <div className="flex items-center gap-2 font-mono text-[11px] text-green-400">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {connectedSocials} conectado{connectedSocials.includes(",") ? "s" : ""} — o conteúdo aprovado será publicado automaticamente conforme o calendário de lançamento
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── Gate 3: Verificação de Conteúdo ─────────────────────────────────── */}
       <div className="border-t border-border/20">
@@ -870,6 +1034,64 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         )}
       </div>
 
+      {/* ── Gate 6: Funil & Landing Page ────────────────────────────────────── */}
+      <div className="border-t border-border/20">
+        <div className="flex items-start gap-3 px-5 py-4">
+          <div className="mt-0.5 shrink-0">
+            {funnelConfirmed
+              ? <CheckCircle2 className="h-4 w-4 text-green-400" />
+              : <XCircle className="h-4 w-4 text-red-400" />}
+          </div>
+          <div className={`shrink-0 ${funnelConfirmed ? "text-green-400/60" : "text-red-400/60"}`}>
+            <TrendingUp className="h-4 w-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`font-mono text-xs font-bold ${funnelConfirmed ? "text-green-300" : "text-red-300"}`}>
+              Funil & Landing Page
+            </div>
+            <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
+              {funnelConfirmed
+                ? "Landing page publicada e checkout ativo — confirmado"
+                : "Confirme que sua landing page está publicada e o checkout está ativo antes de lançar"}
+            </div>
+          </div>
+        </div>
+
+        <div className="mx-5 mb-4 space-y-3">
+          <div className="border border-border/30 bg-background/20 px-4 py-3 space-y-2">
+            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">Checklist de funil</div>
+            {[
+              "Minha landing page está publicada e acessível pelo link público",
+              "O checkout está configurado e aceitando pagamentos (Hotmart, Kiwify, ou outro)",
+              "O pixel do Meta e/ou TikTok está instalado na landing page",
+              "O domínio de rastreamento da página de obrigado está configurado",
+            ].map((item, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <CheckCircle2 className="h-3 w-3 text-muted-foreground/20 mt-0.5 shrink-0" />
+                <span className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">{item}</span>
+              </div>
+            ))}
+          </div>
+
+          {!funnelConfirmed ? (
+            <Button
+              onClick={() => setFunnelConfirmed(true)}
+              variant="outline"
+              className="w-full rounded-none font-mono uppercase tracking-widest text-xs h-10 gap-2 border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Confirmei — Landing Page Publicada e Checkout Ativo
+            </Button>
+          ) : (
+            <div className="flex items-center justify-center gap-2 py-2 font-mono text-[11px] text-green-400">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Funil confirmado — tudo pronto para receber compradores
+              <button onClick={() => setFunnelConfirmed(false)} className="ml-2 text-muted-foreground/30 hover:text-muted-foreground text-[9px] underline">desfazer</button>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Launch button ──────────────────────────────────────────────────── */}
       <div className="px-5 pb-5 pt-4 border-t border-border/20">
         {allReady ? (
@@ -890,8 +1112,10 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             <div className="text-center font-mono text-[10px] text-muted-foreground/50 space-x-1">
               {!hasMessaging && <span>Configure mensagens •</span>}
               {!hasEmail && <span>Configure email •</span>}
+              {!socialGateOk && <span>Confirme redes sociais •</span>}
               {!allContentApproved && !noContent && <span>Aprove {pendingPieces.length} peça{pendingPieces.length > 1 ? "s" : ""} •</span>}
               {noContent && <span>Gere o conteúdo •</span>}
+              {!funnelConfirmed && <span>Confirme funil •</span>}
               {!finReady && <span>Confirme o plano financeiro</span>}
             </div>
           </div>
