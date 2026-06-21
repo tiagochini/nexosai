@@ -1,5 +1,5 @@
 import { eq, and } from "drizzle-orm";
-import { db, campaignsTable, auditLogsTable } from "@workspace/db";
+import { db, campaignsTable, auditLogsTable, campaignAgentsTable } from "@workspace/db";
 import { transitionCampaign, VALID_STATUS_TRANSITIONS, STRATEGY_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
 import { buildCampaignBrain, getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { getCreativeIntent, getApprovedDirectionContext } from "../creative-intent/creative-intent.service.js";
@@ -88,7 +88,7 @@ async function saveCheckpoint(
   const updated: PipelineCheckpoint = {
     ...cp,
     lastProgressAt: new Date().toISOString(),
-    completedSteps: [...new Set([...cp.completedSteps, step])],
+    completedSteps: [...new Set([...(cp.completedSteps ?? []), step])],
     summaries: { ...cp.summaries, [step]: summary },
   };
   const [row] = await db
@@ -124,7 +124,7 @@ async function acquireExecutionLock(
 ): Promise<PipelineCheckpoint> {
   const now = new Date().toISOString();
   const updated: PipelineCheckpoint = cp
-    ? { ...cp, lockedAt: now, lastProgressAt: now }
+    ? { ...cp, lockedAt: now, lastProgressAt: now, completedSteps: cp.completedSteps ?? [], failedSteps: (cp as any).failedSteps ?? [] }
     : {
         version: 1,
         lockedAt: now,
@@ -167,6 +167,14 @@ async function releaseExecutionLock(campaignId: string): Promise<void> {
     .update(campaignsTable)
     .set({ brainData: { ...existing, pipelineCheckpoint: released } as any })
     .where(eq(campaignsTable.id, campaignId));
+  // Clean up any orphaned "running" agent rows left from parallel agents that were
+  // still awaiting their LLM response when the pipeline's finally block executed.
+  // Without this, the trigger guards in triggerContentPhase / triggerStrategyPhase
+  // would permanently block the next phase for this campaign.
+  await db
+    .update(campaignAgentsTable)
+    .set({ status: "failed", completedAt: new Date(), errorMessage: "orphaned: pipeline exited before agent returned" } as any)
+    .where(and(eq(campaignAgentsTable.campaignId, campaignId), eq(campaignAgentsTable.status, "running")));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -407,6 +415,19 @@ export async function orchestrateCampaign(
   // Load any existing checkpoint (previous incomplete run), check for active lock,
   // then acquire the lock before running any agent.
   let cp = await loadCheckpoint(campaignId);
+
+  // Fix: Re-run from strategy_ready means the user explicitly requested a fresh strategy
+  // run (not a resume). Reset completedSteps so agents execute fresh instead of all being
+  // skipped due to an existing checkpoint — which would leave the campaign stuck in analyzing
+  // because transitionCampaign("strategy_ready") would never be called.
+  if (campaign.status === "strategy_ready" && (cp?.completedSteps?.length ?? 0) > 0) {
+    log.info(
+      { campaignId, clearedSteps: cp?.completedSteps },
+      "[CHECKPOINT_RESET] Re-run from strategy_ready — clearing completedSteps for fresh execution",
+    );
+    cp = cp ? { ...cp, completedSteps: [], failedSteps: [] } : null;
+  }
+
   if (isLockActive(cp)) {
     log.warn(
       { campaignId, lastProgressAt: cp?.lastProgressAt },
@@ -791,7 +812,7 @@ Retorne o JSON de avaliação.`,
     checkpointsPending.push("strategy_approval");
 
     await transitionCampaign(campaignId, workspaceId, "strategy_ready", "strategy agent completed", log, {
-      strategy: result as any,
+      strategyData: result as any,
     });
 
     // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)
@@ -1207,6 +1228,33 @@ Retorne o JSON de avaliação.`,
     // Always release pipeline mode and execution lock on exit
     // — including early returns (blocked verdict) and thrown errors.
     setPipelineMode(false);
+
+    // Recovery guard: if the campaign is still stuck in "analyzing" when the pipeline
+    // exits (e.g. all agents were skipped via checkpoint but transitionCampaign was never
+    // called), check if strategy was previously completed and transition to strategy_ready.
+    // This prevents campaigns from being permanently stuck in analyzing.
+    try {
+      const [finalCampaign] = await db
+        .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
+        .from(campaignsTable)
+        .where(eq(campaignsTable.id, campaignId))
+        .limit(1);
+      if (finalCampaign?.status === "analyzing") {
+        const brain = (finalCampaign.brainData ?? {}) as Record<string, unknown>;
+        const savedCp = (brain["pipelineCheckpoint"] as { completedSteps?: string[] } | undefined);
+        const doneSteps = savedCp?.completedSteps ?? [];
+        if (doneSteps.includes("strategy")) {
+          log.warn(
+            { campaignId, completedSteps: doneSteps },
+            "[PIPELINE_RECOVERY] Campaign still analyzing after pipeline exit — strategy was done, transitioning to strategy_ready",
+          );
+          await transitionCampaign(campaignId, workspaceId, "strategy_ready", "pipeline recovery: strategy was completed", log);
+        }
+      }
+    } catch (recoveryErr) {
+      log.warn({ recoveryErr, campaignId }, "[PIPELINE_RECOVERY] Recovery transition failed — non-blocking");
+    }
+
     void releaseExecutionLock(campaignId).catch(() => {});
   }
 }

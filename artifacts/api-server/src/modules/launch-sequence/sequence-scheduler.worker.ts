@@ -162,11 +162,13 @@ async function maybeNotifyStaleWaitingClarification(): Promise<void> {
 }
 
 // ── Stuck campaign auto-recovery ──────────────────────────────────────────────
-// Runs every scheduler tick (60s). Campaigns stuck in "analyzing" for > 10 min
-// or "generating" for > 30 min are force-reset to a retryable state.
+// Runs every scheduler tick (60s). Campaigns stuck in "analyzing" for > 45 min
+// or "generating" for > 90 min are force-reset to a retryable state.
+// Thresholds are generous because real AI providers (OpenAI, Anthropic) take
+// 15–40 min for strategy and 30–70 min for full 16-agent content generation.
 // The user still needs to trigger execution manually — this just unblocks the UI.
-const STUCK_ANALYZING_MS = 10 * 60 * 1000;
-const STUCK_GENERATING_MS = 30 * 60 * 1000;
+const STUCK_ANALYZING_MS = 45 * 60 * 1000;
+const STUCK_GENERATING_MS = 90 * 60 * 1000;
 
 async function recoverStuckCampaigns(): Promise<void> {
   const log = logger.child({ component: "failsafe-recovery" });
@@ -201,12 +203,27 @@ async function recoverStuckCampaigns(): Promise<void> {
       const updatedBrain = {
         ...brain,
         contentRetry: { ...contentRetry, retryCount: retryCount + 1, lastRetryAt: new Date().toISOString() },
+        // Clear pipeline lock so the next trigger can acquire it without blocking
+        pipelineCheckpoint: brain["pipelineCheckpoint"]
+          ? { ...(brain["pipelineCheckpoint"] as Record<string, unknown>), lockedAt: undefined, lastProgressAt: undefined }
+          : undefined,
       };
+
+      // If strategy was completed (checkpoint shows "strategy" in completedSteps), the
+      // user shouldn't have to redo intake. Reset to strategy_ready so they can proceed
+      // directly to content generation. Otherwise reset to intake (strategy never finished).
+      const savedCp = (brain["pipelineCheckpoint"] as { completedSteps?: string[] } | undefined);
+      const strategyDone = savedCp?.completedSteps?.includes("strategy") ?? false;
+      const targetStatus = strategyDone ? "strategy_ready" : "intake";
+
       await db
         .update(campaignsTable)
-        .set({ status: "intake" as any, updatedAt: new Date(), brainData: updatedBrain as any })
+        .set({ status: targetStatus as any, updatedAt: new Date(), brainData: updatedBrain as any })
         .where(eq(campaignsTable.id, c.id));
-      log.warn({ campaignId: c.id, retryCount: retryCount + 1 }, "[FAILSAFE-AUTO] analyzing > 10min → reset to intake");
+      log.warn(
+        { campaignId: c.id, retryCount: retryCount + 1, targetStatus, strategyDone },
+        `[FAILSAFE-AUTO] analyzing stuck → reset to ${targetStatus}`,
+      );
     } catch (err) {
       log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck analyzing campaign");
     }

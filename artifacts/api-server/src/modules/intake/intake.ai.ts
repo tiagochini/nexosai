@@ -884,7 +884,52 @@ export async function finalizeIntake(
 
   const type = (campaign.type ?? "launch") as CampaignType;
   const track = (campaign.track ?? "six_digits") as CampaignTrack;
-  const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+  const rawIntakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+
+  // ── Apply sensible defaults for optional/inferrable fields ────────────────
+  // These fields have reasonable defaults and should not block the command agent.
+  // The AI conversation may not always ask for these explicitly.
+  const intakeDefaults: Record<string, unknown> = {};
+
+  // creator.name — extract from creator.positioning or product.name, or use fallback
+  if (!rawIntakeData["creator.name"]) {
+    const positioning = rawIntakeData["creator.positioning"] as string | undefined;
+    const productName = rawIntakeData["product.name"] as string | undefined;
+    // Try to extract a name from positioning text (first two words if it starts with a name-like pattern)
+    const extractedName = positioning
+      ? positioning.split(/\s+/).slice(0, 2).join(" ").replace(/[^a-zA-ZÀ-ÿ\s]/g, "").trim()
+      : null;
+    intakeDefaults["creator.name"] = (extractedName && extractedName.length > 2)
+      ? extractedName
+      : (productName ? `Especialista em ${productName}` : "Especialista");
+  }
+
+  // content.style — default educational + storytelling (fits most digital products)
+  if (!rawIntakeData["content.style"]) {
+    intakeDefaults["content.style"] = ["educational", "storytelling"];
+  }
+
+  // content.tone — default empathetic (connects with pain-point audiences)
+  if (!rawIntakeData["content.tone"]) {
+    intakeDefaults["content.tone"] = "empathetic";
+  }
+
+  // launch.scarcityMechanism — default deadline (most universal for launches)
+  if (!rawIntakeData["launch.scarcityMechanism"]) {
+    intakeDefaults["launch.scarcityMechanism"] = "deadline";
+  }
+
+  // campaign.hasAffiliate — default false (most creators start solo)
+  if (rawIntakeData["campaign.hasAffiliate"] === undefined || rawIntakeData["campaign.hasAffiliate"] === null) {
+    intakeDefaults["campaign.hasAffiliate"] = false;
+  }
+
+  // risk.tolerance — default moderate
+  if (!rawIntakeData["risk.tolerance"]) {
+    intakeDefaults["risk.tolerance"] = "moderate";
+  }
+
+  const intakeData = { ...rawIntakeData, ...intakeDefaults };
 
   const completeness = validateIntakeCompleteness(type, track, intakeData);
   const fieldsCount = Object.keys(intakeData).length;
@@ -908,11 +953,27 @@ export async function finalizeIntake(
     status: "analyzing", // Advance out of intake so campaign detail page doesn't redirect back
   };
 
+  // Helper: parse numeric values from intake data, handling Brazilian formats (R$1.997 / 30.000)
+  const parseIntakeNumber = (raw: unknown): number | null => {
+    if (raw === null || raw === undefined) return null;
+    // Strip currency symbols, spaces, and reformat BRL thousands separator (period→nothing, comma→dot)
+    const cleaned = String(raw).replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
+  };
+
   if (intakeData["campaign.revenueTarget"]) {
-    updates["revenueTarget"] = String(Number(intakeData["campaign.revenueTarget"]));
+    const n = parseIntakeNumber(intakeData["campaign.revenueTarget"]);
+    if (n !== null) updates["revenueTarget"] = String(Math.round(n));
   }
   if (intakeData["campaign.budget.total"]) {
-    updates["budgetTotal"] = Math.round(Number(intakeData["campaign.budget.total"]));
+    const n = parseIntakeNumber(intakeData["campaign.budget.total"]);
+    if (n !== null) updates["budgetTotal"] = Math.round(n);
+  }
+
+  // Persist enriched intakeData (with applied defaults) so command agent reads complete data
+  if (Object.keys(intakeDefaults).length > 0) {
+    updates["intakeData"] = intakeData;
   }
 
   const [updated] = await db

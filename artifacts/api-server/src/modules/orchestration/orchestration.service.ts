@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gt } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -318,14 +318,19 @@ export async function triggerStrategyPhase(
     );
   }
 
-  // Guard: prevent double-triggering — if agents are already running, reject
+  // Guard: prevent double-triggering — only block on RECENT running agents (started
+  // within 15 min). Older rows are orphaned (pipeline exited before agent returned)
+  // and should not permanently block the next phase trigger.
+  const AGENT_STALE_MS = 15 * 60 * 1000;
+  const staleThreshold = new Date(Date.now() - AGENT_STALE_MS);
   const [existingRun] = await db
-    .select({ id: campaignAgentsTable.id })
+    .select({ id: campaignAgentsTable.id, startedAt: campaignAgentsTable.startedAt })
     .from(campaignAgentsTable)
     .where(
       and(
         eq(campaignAgentsTable.campaignId, campaignId),
         eq(campaignAgentsTable.status, "running"),
+        gt(campaignAgentsTable.startedAt, staleThreshold),
       ),
     )
     .limit(1);
@@ -343,6 +348,13 @@ export async function triggerStrategyPhase(
     actor: "user",
     data: { currentStatus: campaign.status },
   });
+
+  // Touch updatedAt NOW so the failsafe stuck-timer starts from this moment,
+  // not from whenever the campaign was last updated (which could be hours ago).
+  await db
+    .update(campaignsTable)
+    .set({ updatedAt: new Date() })
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   emitCampaignEvent({
     campaignId,
@@ -376,14 +388,19 @@ export async function triggerContentPhase(
     );
   }
 
-  // Guard: prevent double-triggering — if agents are already running, reject
+  // Guard: prevent double-triggering — only block on RECENT running agents (started
+  // within 15 min). Older rows are orphaned (pipeline exited before agent returned)
+  // and must not permanently block the next phase trigger.
+  const CONTENT_AGENT_STALE_MS = 15 * 60 * 1000;
+  const contentStaleThreshold = new Date(Date.now() - CONTENT_AGENT_STALE_MS);
   const [existingContentRun] = await db
-    .select({ id: campaignAgentsTable.id })
+    .select({ id: campaignAgentsTable.id, startedAt: campaignAgentsTable.startedAt })
     .from(campaignAgentsTable)
     .where(
       and(
         eq(campaignAgentsTable.campaignId, campaignId),
         eq(campaignAgentsTable.status, "running"),
+        gt(campaignAgentsTable.startedAt, contentStaleThreshold),
       ),
     )
     .limit(1);
@@ -401,6 +418,12 @@ export async function triggerContentPhase(
     actor: "user",
     data: { currentStatus: campaign.status },
   });
+
+  // Touch updatedAt NOW so the failsafe stuck-timer starts from this moment.
+  await db
+    .update(campaignsTable)
+    .set({ updatedAt: new Date() })
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
 
   emitCampaignEvent({
     campaignId,

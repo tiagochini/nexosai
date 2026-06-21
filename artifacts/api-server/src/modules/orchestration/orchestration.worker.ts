@@ -399,9 +399,13 @@ export function initOrchestrationWorker(): Worker | null {
 
       if (action === "run_strategy") {
         try {
+          // Keep campaign in "analyzing" so the user can click "Gerar Estratégia" to retry
+          // without having to redo the entire intake conversation. Reset to "intake" only
+          // if the command agent itself determined intake was incomplete (handled inside
+          // orchestrateCampaign via transitionCampaign("intake")).
           const result = await db
             .update(campaignsTable)
-            .set({ status: "intake", updatedAt: new Date() })
+            .set({ updatedAt: new Date() })
             .where(
               and(
                 eq(campaignsTable.id, campaignId),
@@ -410,7 +414,7 @@ export function initOrchestrationWorker(): Worker | null {
               ),
             );
           if (result.rowCount && result.rowCount > 0) {
-            logger.warn({ campaignId, action }, "Campaign reset to intake after strategy job failure — user can retry");
+            logger.warn({ campaignId, action }, "Strategy job failed — campaign stays in analyzing so user can retry via Gerar Estratégia");
           }
         } catch (resetErr) {
           logger.error({ resetErr, campaignId, action }, "Failed to reset campaign status after strategy job failure");
