@@ -141,10 +141,12 @@ router.delete("/:id", requireAuth, async (req, res): Promise<void> => {
 router.post("/:id/generate", requireAuth, async (req, res): Promise<void> => {
   const sequenceId = req.params["id"] as string;
   const { workspaceId } = req.auth;
+  const force = req.query["force"] === "true";
 
-  // Block double-trigger if already generating
   const existing = await getLaunchSequence(workspaceId, sequenceId);
   const cfg = (existing.config ?? {}) as Record<string, unknown>;
+
+  // Already generating — tell client to poll
   if (cfg["generatingPlan"] === true) {
     res.status(202).json({
       status: "generating",
@@ -153,7 +155,17 @@ router.post("/:id/generate", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Mark as generating immediately — clients can poll GET /:id
+  // Items already exist and force not requested — return immediately, no cost
+  if ((existing.items?.length ?? 0) > 0 && !force) {
+    res.status(200).json({
+      status: "ready",
+      sequence: existing,
+      message: "Plano já existe — retornando itens existentes. Use ?force=true para regenerar.",
+    });
+    return;
+  }
+
+  // Mark as generating immediately — clients poll GET /:id until flag clears
   await setSequenceGeneratingFlag(workspaceId, sequenceId, true);
 
   // Return 202 immediately — never block the HTTP connection
@@ -169,7 +181,6 @@ router.post("/:id/generate", requireAuth, async (req, res): Promise<void> => {
       await generateSequencePlan(workspaceId, sequenceId, log);
     } catch (err) {
       log.error({ err, sequenceId }, "Background sequence generation failed");
-      // Clear flag even on failure so client can retry
       await setSequenceGeneratingFlag(workspaceId, sequenceId, false).catch(() => {});
     }
   });
