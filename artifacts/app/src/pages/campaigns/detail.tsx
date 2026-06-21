@@ -32,6 +32,7 @@ import {
   LiveMissionControl,
 } from "@/components/campaign-stage-experience";
 import { CampaignBrief } from "@/components/campaign-brief";
+import { CampaignNorthStar } from "@/components/CampaignNorthStar";
 import { SocialPostPreview } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
 import {
@@ -1999,6 +2000,16 @@ export default function CampaignDetail() {
           <span>←</span> Minhas Campanhas
         </button>
 
+        {/* North Star — briefing sempre visível */}
+        <CampaignNorthStar
+          campaignId={campaignId}
+          title={campaign.title ?? "Campanha"}
+          track={(campaignRaw["track"] as string | undefined) ?? null}
+          status={campaign.status ?? ""}
+          intakeData={intakeD}
+          strategyData={strategyD}
+        />
+
         {/* Status emocional */}
         <div className="border border-primary/30 bg-card/30 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary/60" />
@@ -2743,6 +2754,17 @@ export default function CampaignDetail() {
             <ArrowLeft className="h-3 w-3 mr-2" />Retornar ao Radar
           </Button>
         </Link>
+
+        {/* North Star — briefing sempre visível no topo */}
+        <CampaignNorthStar
+          campaignId={campaignId}
+          title={campaign.title ?? "Campanha"}
+          track={(campaignRaw["track"] as string | undefined) ?? null}
+          status={campaign.status ?? ""}
+          intakeData={intakeD}
+          strategyData={strategyD}
+        />
+
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">

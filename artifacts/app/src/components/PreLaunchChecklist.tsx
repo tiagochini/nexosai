@@ -175,6 +175,11 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [verifyPhase, setVerifyPhase]         = useState(0);
   const verifyStarted                         = useRef(false);
 
+  // ── Pre-launch scan animation (plays once per campaign) ───────────────────
+  const scanKey = `nexos_plscan_${campaignId}`;
+  const [scanDone, setScanDone] = useState(() => { try { return !!localStorage.getItem(scanKey); } catch { return false; } });
+  const [revealedGates, setRevealedGates] = useState(0);
+
   // ── Interactive budget slider state ──────────────────────────────────────
   const [localBudget, setLocalBudget]           = useState<number>(0);
   const [localRetargetPct, setLocalRetargetPct] = useState<number>(25);
@@ -266,6 +271,20 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const allContentApproved = allPieces.length > 0 && pendingPieces.length === 0;
   const noContent         = allPieces.length === 0;
 
+  // ── Scan animation effect ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (loading || scanDone) return;
+    const t1 = setTimeout(() => setRevealedGates(1), 700);
+    const t2 = setTimeout(() => setRevealedGates(2), 1600);
+    const t3 = setTimeout(() => setRevealedGates(3), 2500);
+    const t4 = setTimeout(() => setRevealedGates(4), 3400);
+    const t5 = setTimeout(() => {
+      setScanDone(true);
+      try { localStorage.setItem(scanKey, "1"); } catch {}
+    }, 4300);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+  }, [loading, scanDone]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Gate 3 animated verification — triggers once when allContentApproved ──
   useEffect(() => {
     if (loading || !allContentApproved || verifyStarted.current) return;
@@ -294,6 +313,155 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
       <div className="border border-border/30 p-6 flex items-center justify-center gap-3">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
         <span className="font-mono text-sm text-muted-foreground">Verificando pré-requisitos de lançamento...</span>
+      </div>
+    );
+  }
+
+  // ── Scan animation overlay (shown once per campaign) ─────────────────────────
+  if (!scanDone) {
+    const completeScanNow = () => {
+      setScanDone(true);
+      try { localStorage.setItem(scanKey, "1"); } catch {}
+    };
+    const SCAN_GATES = [
+      {
+        label: "Canal de Mensagens",
+        icon: <MessageCircle className="h-4 w-4" />,
+        passed: hasMessaging,
+        passMsg: whatsappConn ? "WhatsApp Business conectado" : "Telegram conectado",
+        failMsg: "WhatsApp Business ou Telegram obrigatório — vá em Integrações → Mensagens",
+      },
+      {
+        label: "Plataforma de Email",
+        icon: <Mail className="h-4 w-4" />,
+        passed: hasEmail,
+        passMsg: rdConn ? "RD Station conectado" : "ActiveCampaign conectado",
+        failMsg: "RD Station ou ActiveCampaign obrigatório — vá em Integrações → Email",
+      },
+      {
+        label: "Aprovação de Conteúdo",
+        icon: <FileText className="h-4 w-4" />,
+        passed: allContentApproved,
+        passMsg: `${approvedCount} peça${approvedCount !== 1 ? "s" : ""} aprovada${approvedCount !== 1 ? "s" : ""}`,
+        failMsg: noContent
+          ? "Nenhuma peça gerada — gere o conteúdo antes de lançar"
+          : `${pendingPieces.length} peça${pendingPieces.length !== 1 ? "s" : ""} aguardando revisão — abra a aba Conteúdo`,
+      },
+      {
+        label: "Plano Financeiro",
+        icon: <DollarSign className="h-4 w-4" />,
+        passed: finReady,
+        passMsg: "Plano revisado e confirmado",
+        failMsg: "Revise e confirme o plano financeiro abaixo antes de lançar",
+      },
+    ] as const;
+
+    const allPassed = SCAN_GATES.every(g => g.passed);
+
+    return (
+      <div className="border border-primary/30 bg-card/20 overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-primary/20 flex items-center gap-3">
+          <div className="relative w-4 h-4 shrink-0">
+            {revealedGates < 4
+              ? <Loader2 className="h-4 w-4 text-primary animate-spin" />
+              : allPassed
+                ? <ShieldCheck className="h-4 w-4 text-green-400" />
+                : <ShieldCheck className="h-4 w-4 text-yellow-400" />}
+          </div>
+          <div>
+            <div className="font-mono text-sm font-bold uppercase tracking-widest">Auditoria de Pré-Lançamento</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
+              {revealedGates < 4 ? `Verificando ${revealedGates + 1} de 4...` : "Auditoria concluída"}
+            </div>
+          </div>
+        </div>
+
+        {/* Scan gates */}
+        <div className="divide-y divide-border/15">
+          {SCAN_GATES.map((gate, i) => {
+            const isRevealed = revealedGates > i;
+            const isScanning = revealedGates === i;
+            return (
+              <div
+                key={gate.label}
+                className={`flex items-start gap-3 px-5 py-4 transition-all duration-700 ${
+                  isRevealed || isScanning ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
+                }`}
+              >
+                {/* Status icon */}
+                <div className="mt-0.5 shrink-0">
+                  {!isRevealed
+                    ? <Loader2 className="h-4 w-4 text-primary/50 animate-spin" />
+                    : gate.passed
+                      ? <CheckCircle2 className="h-4 w-4 text-green-400" />
+                      : <XCircle className="h-4 w-4 text-red-400" />}
+                </div>
+
+                {/* Gate icon */}
+                <div className={`shrink-0 mt-0.5 transition-colors ${
+                  !isRevealed ? "text-muted-foreground/20"
+                  : gate.passed ? "text-green-400/60"
+                  : "text-red-400/60"
+                }`}>
+                  {gate.icon}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className={`font-mono text-xs font-bold transition-colors ${
+                    !isRevealed ? "text-muted-foreground/30"
+                    : gate.passed ? "text-green-300"
+                    : "text-red-300"
+                  }`}>
+                    {!isRevealed ? "Verificando..." : gate.label}
+                  </div>
+                  {isRevealed && (
+                    <div className={`font-mono text-[10px] mt-0.5 leading-relaxed ${
+                      gate.passed ? "text-green-400/60" : "text-red-400/70"
+                    }`}>
+                      {gate.passed ? gate.passMsg : gate.failMsg}
+                    </div>
+                  )}
+                </div>
+
+                {/* Scanning bar */}
+                {isScanning && (
+                  <div className="shrink-0 mt-1">
+                    <div className="w-16 h-0.5 bg-border/30 overflow-hidden">
+                      <div className="h-full bg-primary animate-pulse w-full" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer: skip or wait */}
+        <div className="px-5 py-3 border-t border-border/20 flex items-center justify-between">
+          {revealedGates < 4 ? (
+            <button
+              onClick={completeScanNow}
+              className="font-mono text-[10px] text-muted-foreground/30 hover:text-muted-foreground/60 uppercase tracking-widest transition-colors"
+            >
+              Pular animação
+            </button>
+          ) : (
+            <div className={`font-mono text-[10px] uppercase tracking-widest font-bold ${allPassed ? "text-green-400" : "text-yellow-400"}`}>
+              {allPassed ? "✓ Todos os gates aprovados" : `${SCAN_GATES.filter(g => !g.passed).length} pendente${SCAN_GATES.filter(g => !g.passed).length !== 1 ? "s" : ""}`}
+            </div>
+          )}
+          {revealedGates >= 4 && (
+            <Button
+              onClick={completeScanNow}
+              className="rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 btn-weapon-primary"
+            >
+              {allPassed ? "Ver Checklist Completo" : "Resolver Pendências"}
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       </div>
     );
   }

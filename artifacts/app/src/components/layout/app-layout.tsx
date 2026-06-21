@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { GlobalSearch, useGlobalSearch } from "@/components/global-search";
 import { toast } from "sonner";
+import { AppTour, hasDoneTour, markTourDone } from "@/components/AppTour";
 
 type LocaleCode = "pt-BR" | "en-US" | "en-AU" | "es-LA";
 const LOCALE_OPTIONS: { value: LocaleCode; flag: string; label: string }[] = [
@@ -191,8 +192,10 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
                   : item.href === "/"
                     ? location === "/"
                     : location.startsWith(item.href);
+                const TOUR_HREFS = new Set(["/campaigns", "/agents", "/sequences", "/integracoes", "/revenue"]);
                 const inner = (
                   <div
+                    {...(TOUR_HREFS.has(item.href) ? { "data-tour": item.href.slice(1) } : {})}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-sm transition-all cursor-pointer group relative overflow-hidden
                       ${isActive
                         ? "bg-primary/15 text-primary shadow-[inset_0_0_12px_hsl(var(--primary)/0.08)]"
@@ -442,11 +445,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [location] = useLocation();
 
+  // Check if welcome page requested a guided tour
+  const [showTour, setShowTour] = useState(() => {
+    try { return localStorage.getItem("nexos_show_tour_next") === "1" && !hasDoneTour(); } catch { return false; }
+  });
+
+  useEffect(() => {
+    if (showTour) {
+      try { localStorage.removeItem("nexos_show_tour_next"); } catch {}
+    }
+  }, [showTour]);
+
   // Close mobile nav on route change
   useEffect(() => { setMobileOpen(false); }, [location]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
+      {/* Guided tour overlay */}
+      {showTour && <AppTour onDone={() => setShowTour(false)} />}
+
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border/50 bg-card/30">
         <SidebarContent />
