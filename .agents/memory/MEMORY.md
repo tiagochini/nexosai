@@ -25,3 +25,4 @@
 - [Integration Gate Placement](integration-gate-placement.md) — gate belongs ONLY at execute/launch (execution.routes.ts); never at content approval or status PATCH.
 - [Strategy Pipeline Bug Cluster](strategy-pipeline-bugs.md) — 6 bugs in analyze→strategy_ready pipeline; Bug 1 root cause: wrong key `strategy` vs `strategyData` in transitionCampaign call silently drops strategyData.
 - [Routes "/" Mount Order](routes-slash-mount-order.md) — routers at `router.use("/", x)` with global requireAuth intercept ALL subsequent routes; register public-endpoint routers BEFORE them in routes/index.ts.
+- [FK Non-Fatal Pattern](fk-non-fatal-pattern.md) — stress test cleanup deletes workspaces mid-background-job; 3 inserts must be non-fatal: audit_logs (agent.runner.ts:745), credit_transactions (agent.runner.ts:692), launch_sequence_items (launch-sequence.service.ts:305). Pattern: catch FK violates → log.warn → return/continue.

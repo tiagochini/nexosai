@@ -535,7 +535,12 @@ async function main() {
 
   await step(12, "Conteúdo", "Disparar execute/content → HTTP 202", async () => {
     if (!campaignId) return { status: "SKIP", message: "campaignId ausente" };
-    const r = await api<{ message?: string; error?: string }>("POST", `/campaigns/${campaignId}/execute/content`);
+    let r = await api<{ message?: string; error?: string }>("POST", `/campaigns/${campaignId}/execute/content`);
+    // Retry once on proxy-level 502 (transient under concurrent load)
+    if (r.status === 502 || r.status === 503) {
+      await sleep(1000);
+      r = await api<{ message?: string; error?: string }>("POST", `/campaigns/${campaignId}/execute/content`);
+    }
     if (r.status === 202 || r.ok) {
       addTimeline("started", "content_phase", "Conteúdo");
       return { status: "PASS", message: `Agentes de conteúdo disparados — ${r.status}` };

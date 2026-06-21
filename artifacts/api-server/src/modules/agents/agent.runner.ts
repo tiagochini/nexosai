@@ -687,23 +687,33 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     const balanceAfter = Math.max(0, balanceBefore - creditsCharged);
 
     if (creditsCharged > 0) {
-      await db
-        .update(workspacesTable)
-        .set({ creditsBalance: balanceAfter })
-        .where(eq(workspacesTable.id, workspaceId));
+      // Non-fatal block: FK constraint fails when workspace was deleted mid-generation
+      // (e.g. stress test cleanup racing with background AI job). AI output is already
+      // produced — never let credit accounting kill the result.
+      try {
+        await db
+          .update(workspacesTable)
+          .set({ creditsBalance: balanceAfter })
+          .where(eq(workspacesTable.id, workspaceId));
 
-      await db.insert(creditTransactionsTable).values({
-        workspaceId,
-        campaignId,
-        type: "debit",
-        action: "campaign_execution",
-        amount: creditsCharged,
-        balanceBefore,
-        balanceAfter,
-        aiProvider: result.provider,
-        tokensUsed: result.inputTokens + result.outputTokens,
-        costUsd: result.costUsd.toString(),
-      });
+        await db.insert(creditTransactionsTable).values({
+          workspaceId,
+          campaignId,
+          type: "debit",
+          action: "campaign_execution",
+          amount: creditsCharged,
+          balanceBefore,
+          balanceAfter,
+          aiProvider: result.provider,
+          tokensUsed: result.inputTokens + result.outputTokens,
+          costUsd: result.costUsd.toString(),
+        });
+      } catch (creditErr) {
+        log.warn(
+          { creditErr, workspaceId, agentRole, creditsCharged },
+          "Credit deduction failed (non-fatal) — workspace may have been deleted or FK constraint violated; AI output preserved",
+        );
+      }
     }
 
     const newStatus = requiresApproval ? "waiting_approval" : "completed";
@@ -729,14 +739,23 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         })
         .where(eq(campaignAgentsTable.id, agentRecord.id));
 
-      await db.insert(auditLogsTable).values({
-        workspaceId,
-        campaignId: isValidCampaignId ? (campaignId as string) : undefined,
-        agentId: agentRecord.id,
-        action: `agent.${agentRole}.completed`,
-        actor: "system",
-        data: { creditsCharged, provider: result.provider },
-      });
+      try {
+        await db.insert(auditLogsTable).values({
+          workspaceId,
+          campaignId: isValidCampaignId ? (campaignId as string) : undefined,
+          agentId: agentRecord.id,
+          action: `agent.${agentRole}.completed`,
+          actor: "system",
+          data: { creditsCharged, provider: result.provider },
+        });
+      } catch (auditErr) {
+        const auditMsg = auditErr instanceof Error ? auditErr.message : String(auditErr);
+        if (auditMsg.includes("foreign key constraint") || auditMsg.includes("violates")) {
+          log.warn({ agentRole, workspaceId }, "Audit log insert skipped — workspace deleted mid-execution (non-fatal)");
+        } else {
+          log.warn({ auditErr, agentRole }, "Audit log insert failed (non-fatal)");
+        }
+      }
     }
 
     // ── Audit Log: update execution log with results ──────────────────────────

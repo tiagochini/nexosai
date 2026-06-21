@@ -303,6 +303,15 @@ export async function generateSequencePlan(
       ).returning({ id: launchSequenceItemsTable.id });
       log.info({ inserted: inserted.length, sequenceId }, "Sequence items inserted successfully");
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isFk = msg.includes("foreign key constraint") || msg.includes("violates");
+      if (isFk) {
+        log.warn(
+          { sequenceId, itemCount: plan.items.length },
+          "Sequence items insert aborted — sequence was deleted before background AI completed (non-fatal)",
+        );
+        return null;
+      }
       log.error({ err, sequenceId, itemCount: plan.items.length }, "Failed to insert sequence items");
       throw err;
     }
