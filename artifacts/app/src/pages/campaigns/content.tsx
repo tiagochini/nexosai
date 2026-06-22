@@ -625,31 +625,42 @@ function ComplianceBlockModal({
         </div>
 
         {/* Footer actions */}
-        <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row gap-2 shrink-0">
-          <Button
-            onClick={onRewrite}
-            className="flex-1 rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
-          >
-            <Sparkles className="h-3.5 w-3.5" />Corrigir com IA
-          </Button>
-          {!isBlocked && (
+        <div className="p-4 border-t border-border/50 flex flex-col gap-2 shrink-0">
+          {anyApplied && (
             <Button
-              onClick={onForceApprove}
-              disabled={forceLoading}
-              variant="ghost"
-              className="rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border/40 hover:border-border/80"
+              onClick={() => { onClose(); onRetryApproval(); }}
+              className="w-full rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs bg-success/15 border border-success/40 text-success hover:bg-success/25"
             >
-              {forceLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-              Aprovar mesmo assim
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Tentar aprovação novamente ({applied.size} correção{applied.size !== 1 ? "ões" : ""} aplicada{applied.size !== 1 ? "s" : ""})
             </Button>
           )}
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            className="rounded-none font-mono uppercase tracking-widest h-9 text-xs text-muted-foreground"
-          >
-            Cancelar
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={onRewrite}
+              className="flex-1 rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
+            >
+              <Sparkles className="h-3.5 w-3.5" />Corrigir tudo com IA
+            </Button>
+            {!isBlocked && (
+              <Button
+                onClick={onForceApprove}
+                disabled={forceLoading}
+                variant="ghost"
+                className="rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border/40 hover:border-border/80"
+              >
+                {forceLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                Aprovar mesmo assim
+              </Button>
+            )}
+            <Button
+              onClick={onClose}
+              variant="ghost"
+              className="rounded-none font-mono uppercase tracking-widest h-9 text-xs text-muted-foreground"
+            >
+              Cancelar
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -3472,6 +3483,13 @@ export default function ContentApproval() {
             void handleAiRewrite(pieceId);
           }}
           onClose={() => setComplianceBlock(null)}
+          onApplyFix={async (originalText, correctedText) => {
+            await customFetch(`/api/campaigns/${campaignId}/content/${complianceBlock.pieceId}/patch`, {
+              method: "PATCH",
+              body: JSON.stringify({ patches: [{ originalText, correctedText }] }),
+            });
+          }}
+          onRetryApproval={() => void handleApprove(complianceBlock.pieceId)}
         />
       )}
       {editingPiece && (
