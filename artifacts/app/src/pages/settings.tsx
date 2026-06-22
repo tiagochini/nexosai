@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,16 +13,20 @@ import {
   User, Building2, ShieldCheck, CreditCard, Copy,
   CheckCircle2, Loader2, Eye, EyeOff, ExternalLink, Zap,
   Wifi, WifiOff, Plus, XCircle, AlertTriangle, Link2, Globe,
+  Mic, Square, Upload, Fingerprint, Wand2,
+  Headphones, Camera, Sparkles,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
 
-type Tab = "perfil" | "workspace" | "seguranca" | "integracoes";
+type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "perfil",       label: "Perfil",       icon: User       },
-  { id: "workspace",    label: "Workspace",    icon: Building2  },
+  { id: "perfil",       label: "Perfil",       icon: User        },
+  { id: "workspace",    label: "Workspace",    icon: Building2   },
   { id: "seguranca",    label: "Segurança",    icon: ShieldCheck },
-  { id: "integracoes",  label: "Integrações",  icon: Link2      },
+  { id: "integracoes",  label: "Integrações",  icon: Link2       },
+  { id: "identidade",   label: "Identidade",   icon: Fingerprint },
 ];
 
 function SectionCard({ children, title, icon: Icon }: { children: React.ReactNode; title: string; icon: React.ElementType }) {
@@ -970,7 +974,450 @@ function IntegracaoTab() {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Identidade Tab (Voice Clone + Trejeitos + Avatar) ─────────────────────────
+
+type PersonaData = {
+  voiceCloneId?: string;
+  voiceCloneUpdatedAt?: string;
+  voiceName?: string;
+  heygenAvatarId?: string;
+  speakingStyle?: {
+    energia?: string;
+    velocidade?: string;
+    pausas?: string;
+    gestos?: string;
+    tom?: string;
+  };
+  trejeitos?: string;
+  brandPresence?: string;
+  reelStyle?: string;
+  updatedAt?: string;
+};
+
+function IdentidadeTab() {
+  const [persona, setPersona] = useState<PersonaData>({});
+  const [loading, setLoading] = useState(true);
+
+  // ── Voice recording state ─────────────────────────────────────────────────
+  const [recState, setRecState] = useState<"idle" | "recording" | "recorded" | "cloning" | "done">("idle");
+  const [recSeconds, setRecSeconds] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioMime, setAudioMime] = useState("audio/webm");
+  const [cloneError, setCloneError] = useState<string | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef   = useRef<BlobPart[]>([]);
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Trejeitos / persona form state ───────────────────────────────────────
+  const [voiceName,      setVoiceName]      = useState("");
+  const [heygenAvatarId, setHeygenAvatarId] = useState("");
+  const [energia,        setEnergia]        = useState("");
+  const [velocidade,     setVelocidade]     = useState("");
+  const [pausas,         setPausas]         = useState("");
+  const [gestos,         setGestos]         = useState("");
+  const [tom,            setTom]            = useState("");
+  const [trejeitos,      setTrejeitos]      = useState("");
+  const [brandPresence,  setBrandPresence]  = useState("");
+  const [reelStyle,      setReelStyle]      = useState("");
+  const [saving,         setSaving]         = useState(false);
+
+  // ── Load persona ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    customFetch<{ persona: PersonaData }>("/api/workspaces/me/persona")
+      .then(({ persona: p }) => {
+        setPersona(p);
+        setVoiceName(p.voiceName ?? "");
+        setHeygenAvatarId(p.heygenAvatarId ?? "");
+        setEnergia(p.speakingStyle?.energia ?? "");
+        setVelocidade(p.speakingStyle?.velocidade ?? "");
+        setPausas(p.speakingStyle?.pausas ?? "");
+        setGestos(p.speakingStyle?.gestos ?? "");
+        setTom(p.speakingStyle?.tom ?? "");
+        setTrejeitos(p.trejeitos ?? "");
+        setBrandPresence(p.brandPresence ?? "");
+        setReelStyle(p.reelStyle ?? "");
+        if (p.voiceCloneId) setRecState("done");
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  // ── Recording helpers ─────────────────────────────────────────────────────
+  const startRecording = useCallback(async () => {
+    setCloneError(null);
+    setAudioUrl(null);
+    setAudioBase64(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
+      setAudioMime(mime);
+      const recorder = new MediaRecorder(stream, { mimeType: mime });
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mime });
+        const url  = URL.createObjectURL(blob);
+        setAudioUrl(url);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const b64 = (reader.result as string).split(",")[1] ?? "";
+          setAudioBase64(b64);
+        };
+        reader.readAsDataURL(blob);
+        setRecState("recorded");
+        setRecSeconds(0);
+        if (timerRef.current) clearInterval(timerRef.current);
+      };
+      recorder.start();
+      recorderRef.current = recorder;
+      setRecState("recording");
+      setRecSeconds(0);
+      timerRef.current = setInterval(() => setRecSeconds(s => s + 1), 1000);
+    } catch {
+      setCloneError("Microfone não disponível — verifique as permissões do navegador.");
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.stop();
+    }
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, []);
+
+  const handleFileUpload = useCallback((file: File) => {
+    setCloneError(null);
+    const mime = file.type || "audio/mpeg";
+    setAudioMime(mime);
+    const url = URL.createObjectURL(file);
+    setAudioUrl(url);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = (reader.result as string).split(",")[1] ?? "";
+      setAudioBase64(b64);
+    };
+    reader.readAsDataURL(file);
+    setRecState("recorded");
+  }, []);
+
+  const cloneVoice = useCallback(async () => {
+    if (!audioBase64) return;
+    setCloneError(null);
+    setRecState("cloning");
+    try {
+      const result = await customFetch<{ voiceCloneId: string; success: boolean }>("/api/workspaces/me/persona/clone-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audioBase64, mimeType: audioMime, voiceName: voiceName || "Minha Voz NexOS" }),
+      });
+      setPersona(prev => ({ ...prev, voiceCloneId: result.voiceCloneId, voiceCloneUpdatedAt: new Date().toISOString() }));
+      setRecState("done");
+      toast.success("Voz clonada com sucesso! Voice ID: " + result.voiceCloneId.slice(0, 8) + "…");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao clonar voz";
+      setCloneError(msg);
+      setRecState("recorded");
+    }
+  }, [audioBase64, audioMime, voiceName]);
+
+  // ── Save persona form ────────────────────────────────────────────────────
+  const handleSavePersona = async () => {
+    setSaving(true);
+    try {
+      const result = await customFetch<{ persona: PersonaData }>("/api/workspaces/me/persona", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          voiceName:      voiceName || undefined,
+          heygenAvatarId: heygenAvatarId || undefined,
+          speakingStyle:  { energia: energia || undefined, velocidade: velocidade || undefined, pausas: pausas || undefined, gestos: gestos || undefined, tom: tom || undefined },
+          trejeitos:      trejeitos || undefined,
+          brandPresence:  brandPresence || undefined,
+          reelStyle:      reelStyle || undefined,
+        }),
+      });
+      setPersona(result.persona);
+      toast.success("Identidade salva — agentes usarão seu perfil nos próximos vídeos.");
+    } catch {
+      toast.error("Erro ao salvar identidade.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2,"0")}:${String(s % 60).padStart(2,"0")}`;
+
+  const SEL_BASE = "font-mono text-xs rounded-none bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground w-full outline-none";
+
+  if (loading) return (
+    <div className="space-y-4">
+      {[1,2,3].map(i => <Skeleton key={i} className="h-32 w-full" />)}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+
+      {/* ── Status Banner ── */}
+      <div className="border border-border/40 bg-card/30 px-5 py-4 flex items-center gap-4">
+        <Fingerprint className="h-6 w-6 text-primary shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="font-mono text-xs font-bold text-foreground uppercase tracking-widest">Identidade Digital do Lançador</div>
+          <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
+            Sua voz, presença e trejeitos são injetados nos roteiros e vídeos gerados pelos agentes NexOS
+          </div>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${persona.voiceCloneId ? "text-green-400 border-green-400/40 bg-green-400/10" : "text-muted-foreground/50"}`}>
+            {persona.voiceCloneId ? "✓ Voz Clonada" : "Voz: Pendente"}
+          </Badge>
+          <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${persona.heygenAvatarId ? "text-blue-400 border-blue-400/40 bg-blue-400/10" : "text-muted-foreground/50"}`}>
+            {persona.heygenAvatarId ? "✓ Avatar HeyGen" : "Avatar: Pendente"}
+          </Badge>
+        </div>
+      </div>
+
+      {/* ── Seção 1: Clone de Voz ── */}
+      <SectionCard title="Clone de Voz — ElevenLabs" icon={Headphones}>
+        <div className="space-y-4">
+          {/* Status atual */}
+          {persona.voiceCloneId && (
+            <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
+              <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+              <div>
+                <div className="font-mono text-[11px] font-bold text-green-300">Voz clonada com sucesso</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60">
+                  Voice ID: <span className="text-green-400/80">{persona.voiceCloneId}</span>
+                  {persona.voiceCloneUpdatedAt && ` · ${new Date(persona.voiceCloneUpdatedAt).toLocaleDateString("pt-BR")}`}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <FieldRow label="Nome da Voz" sublabel="Identificação no ElevenLabs">
+            <Input
+              value={voiceName}
+              onChange={e => setVoiceName(e.target.value)}
+              placeholder="Ex: João — Voz NexOS"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+
+          <FieldRow label="Amostras de Voz" sublabel="30–120 segundos falando naturalmente. Quanto mais variado, melhor o clone.">
+            <div className="space-y-3">
+              {/* Recorder */}
+              <div className="flex items-center gap-3">
+                {recState === "idle" || recState === "done" ? (
+                  <Button
+                    size="sm"
+                    onClick={() => void startRecording()}
+                    className="rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-2"
+                    style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", color: "#ef4444" }}
+                  >
+                    <Mic className="h-3.5 w-3.5" />
+                    {recState === "done" ? "Regravar" : "Gravar Áudio"}
+                  </Button>
+                ) : recState === "recording" ? (
+                  <Button
+                    size="sm"
+                    onClick={stopRecording}
+                    className="rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-2 animate-pulse"
+                    style={{ background: "rgba(239,68,68,0.25)", border: "1px solid rgba(239,68,68,0.6)", color: "#ef4444" }}
+                  >
+                    <Square className="h-3 w-3 fill-red-500" />
+                    Parar — {fmt(recSeconds)}
+                  </Button>
+                ) : null}
+
+                <span className="font-mono text-[10px] text-muted-foreground/40">ou</span>
+
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="sr-only"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f); }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    asChild
+                    className="rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-2 text-muted-foreground hover:text-foreground pointer-events-none"
+                  >
+                    <span><Upload className="h-3.5 w-3.5" />Enviar Arquivo</span>
+                  </Button>
+                </label>
+              </div>
+
+              {/* Audio preview */}
+              {audioUrl && recState !== "recording" && (
+                <div className="flex items-center gap-3 border border-border/30 bg-background/30 px-3 py-2">
+                  <Headphones className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <audio controls src={audioUrl} className="flex-1 h-8" style={{ filter: "invert(0) hue-rotate(180deg) brightness(0.8)" }} />
+                </div>
+              )}
+
+              {/* Clone button */}
+              {(recState === "recorded" || recState === "cloning") && (
+                <Button
+                  onClick={() => void cloneVoice()}
+                  disabled={recState === "cloning"}
+                  className="rounded-none font-mono text-[11px] uppercase tracking-widest h-9 px-5 gap-2 btn-weapon-primary w-full"
+                >
+                  {recState === "cloning"
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Clonando voz via ElevenLabs…</>
+                    : <><Sparkles className="h-3.5 w-3.5" />Clonar Minha Voz com IA</>}
+                </Button>
+              )}
+
+              {cloneError && (
+                <div className="border border-red-500/20 bg-red-500/5 px-4 py-3">
+                  <div className="font-mono text-[10px] text-red-400">{cloneError}</div>
+                </div>
+              )}
+
+              <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
+                Fale naturalmente por 30–120s. Inclua variações de tom, pausas, entusiasmo. Evite ruído de fundo. Seu Voice ID é armazenado com segurança e usado apenas em vídeos desta conta.
+              </div>
+            </div>
+          </FieldRow>
+        </div>
+      </SectionCard>
+
+      {/* ── Seção 2: Avatar Visual (HeyGen) ── */}
+      <SectionCard title="Avatar Visual — HeyGen" icon={Camera}>
+        <div className="space-y-4">
+          <div className="border border-border/30 bg-muted/10 px-4 py-3 space-y-1">
+            <div className="font-mono text-[11px] text-foreground/80 font-bold">Como criar seu avatar HeyGen</div>
+            <ol className="font-mono text-[10px] text-muted-foreground/60 space-y-1 list-decimal list-inside">
+              <li>Acesse <a href="https://www.heygen.com/avatar" target="_blank" rel="noreferrer" className="text-primary underline">heygen.com/avatar</a> e crie uma conta</li>
+              <li>Grave um vídeo de 2 minutos olhando para a câmera, sem óculos escuros</li>
+              <li>Crie o avatar — HeyGen processa em 24–48h</li>
+              <li>Copie seu Avatar ID (no painel HeyGen → My Avatars → ID) e cole abaixo</li>
+            </ol>
+          </div>
+          <FieldRow label="Avatar ID (HeyGen)" sublabel="ID do seu avatar no painel HeyGen">
+            <Input
+              value={heygenAvatarId}
+              onChange={e => setHeygenAvatarId(e.target.value)}
+              placeholder="Ex: avatar_abc123def456"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+          <div className="font-mono text-[9px] text-muted-foreground/30">
+            Com seu Avatar ID configurado, todos os vídeos de lançamento gerados pelo NexOS AI usarão seu rosto e voz clonada automaticamente.
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ── Seção 3: Trejeitos & Presença ── */}
+      <SectionCard title="Trejeitos & Estilo de Presença" icon={Sparkles}>
+        <div className="space-y-0">
+          <FieldRow label="Energia" sublabel="Como você naturalmente se apresenta">
+            <select value={energia} onChange={e => setEnergia(e.target.value)} className={SEL_BASE}>
+              <option value="">Selecionar…</option>
+              <option value="baixa">Calma / Reflexiva</option>
+              <option value="moderada">Equilibrada</option>
+              <option value="alta">Energética / Dinâmica</option>
+              <option value="muito_alta">Explosiva / Alta voltagem</option>
+            </select>
+          </FieldRow>
+
+          <FieldRow label="Velocidade de Fala" sublabel="Ritmo natural de como você fala">
+            <select value={velocidade} onChange={e => setVelocidade(e.target.value)} className={SEL_BASE}>
+              <option value="">Selecionar…</option>
+              <option value="lenta">Lenta / Pausada</option>
+              <option value="moderada">Moderada</option>
+              <option value="rapida">Rápida / Fluida</option>
+              <option value="variavel">Variável (muda conforme contexto)</option>
+            </select>
+          </FieldRow>
+
+          <FieldRow label="Uso de Pausas" sublabel="Como você usa silêncio para impacto">
+            <select value={pausas} onChange={e => setPausas(e.target.value)} className={SEL_BASE}>
+              <option value="">Selecionar…</option>
+              <option value="frequentes">Frequentes — gosto de deixar respirar</option>
+              <option value="estrategicas">Estratégicas — só nos momentos-chave</option>
+              <option value="minimas">Mínimas — falo de forma contínua</option>
+            </select>
+          </FieldRow>
+
+          <FieldRow label="Gestos" sublabel="Uso de mãos e corpo">
+            <select value={gestos} onChange={e => setGestos(e.target.value)} className={SEL_BASE}>
+              <option value="">Selecionar…</option>
+              <option value="discretos">Discretos / Contidos</option>
+              <option value="moderados">Moderados</option>
+              <option value="expressivos">Expressivos</option>
+              <option value="muito_expressivos">Muito expressivos / Amplificados</option>
+            </select>
+          </FieldRow>
+
+          <FieldRow label="Tom de Comunicação" sublabel="Estilo dominante de como você fala">
+            <Input
+              value={tom}
+              onChange={e => setTom(e.target.value)}
+              placeholder="Ex: consultivo-direto, professor-mentor, provocador-estratégico…"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+
+          <FieldRow label="Trejeitos" sublabel="Expressões, vícios de linguagem, manias específicas">
+            <Textarea
+              value={trejeitos}
+              onChange={e => setTrejeitos(e.target.value)}
+              placeholder="Ex: Começo frases com 'olha...', uso bastante a palavra 'resultado', faço pausa antes de revelar o ponto principal, tenho o hábito de repetir a última palavra com ênfase..."
+              className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
+              rows={4}
+            />
+          </FieldRow>
+        </div>
+      </SectionCard>
+
+      {/* ── Seção 4: Marca Pessoal ── */}
+      <SectionCard title="Marca Pessoal & Estilo de Vídeo" icon={Wand2}>
+        <div className="space-y-0">
+          <FieldRow label="Presença de Marca" sublabel="Como você se posiciona e se apresenta ao mercado">
+            <Textarea
+              value={brandPresence}
+              onChange={e => setBrandPresence(e.target.value)}
+              placeholder="Ex: Me posiciono como especialista em resultados rápidos para empreendedoras femininas. Minha identidade é de quem já passou pela dor, transformou, e agora ensina. Tom: direto, sem rodeios, com empat…"
+              className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
+              rows={3}
+            />
+          </FieldRow>
+
+          <FieldRow label="Estilo de Reels" sublabel="Como você estrutura e entrega seus vídeos curtos">
+            <Textarea
+              value={reelStyle}
+              onChange={e => setReelStyle(e.target.value)}
+              placeholder="Ex: Começo sempre com uma pergunta provocadora nos primeiros 3 segundos. Uso cortes rápidos. Fecho com uma frase de impacto antes do CTA. Prefiro cenário externo com luz natural…"
+              className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
+              rows={3}
+            />
+          </FieldRow>
+        </div>
+      </SectionCard>
+
+      {/* ── Save Button ── */}
+      <div className="flex items-center justify-between pt-2 border-t border-border/30">
+        <div className="font-mono text-[10px] text-muted-foreground/40">
+          Os agentes usam esses dados para gerar roteiros e takes de vídeo no seu estilo
+        </div>
+        <Button
+          onClick={() => void handleSavePersona()}
+          disabled={saving}
+          className="rounded-none font-mono uppercase text-xs tracking-widest h-9 px-6 gap-2 btn-weapon-primary shrink-0"
+        >
+          {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</> : <><CheckCircle2 className="h-3.5 w-3.5" />Salvar Identidade</>}
+        </Button>
+      </div>
+
+    </div>
+  );
+}
+
 export default function Settings() {
   const initialTab = (): Tab => {
     try {
@@ -1019,6 +1466,7 @@ export default function Settings() {
       {tab === "workspace"   && <WorkspaceTab />}
       {tab === "seguranca"   && <SecurityTab />}
       {tab === "integracoes" && <IntegracaoTab />}
+      {tab === "identidade"  && <IdentidadeTab />}
     </div>
   );
 }

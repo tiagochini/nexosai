@@ -121,6 +121,116 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   res.status(201).json({ integration });
 });
 
+// ── Persona / Voice Clone endpoints ───────────────────────────────────────────
+
+// GET /workspaces/me/persona — return current persona settings
+router.get("/me/persona", async (req, res): Promise<void> => {
+  const [ws] = await db
+    .select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  const settings = (ws?.settings ?? {}) as Record<string, unknown>;
+  res.json({ persona: (settings.persona ?? {}) as Record<string, unknown> });
+});
+
+// PATCH /workspaces/me/persona — save trejeitos, avatar ID, speaking style
+router.patch("/me/persona", async (req, res): Promise<void> => {
+  const schema = z.object({
+    voiceName:       z.string().max(80).optional(),
+    heygenAvatarId:  z.string().max(200).optional(),
+    speakingStyle: z.object({
+      energia:    z.enum(["baixa","moderada","alta","muito_alta"]).optional(),
+      velocidade: z.enum(["lenta","moderada","rapida","variavel"]).optional(),
+      pausas:     z.enum(["frequentes","estrategicas","minimas"]).optional(),
+      gestos:     z.enum(["discretos","moderados","expressivos","muito_expressivos"]).optional(),
+      tom:        z.string().max(200).optional(),
+    }).optional(),
+    trejeitos:     z.string().max(1500).optional(),
+    brandPresence: z.string().max(800).optional(),
+    reelStyle:     z.string().max(800).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const [ws] = await db
+    .select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingPersona  = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+  const patch: Record<string, unknown> = {};
+  if (parsed.data.voiceName      !== undefined) patch["voiceName"]      = parsed.data.voiceName;
+  if (parsed.data.heygenAvatarId !== undefined) patch["heygenAvatarId"] = parsed.data.heygenAvatarId;
+  if (parsed.data.speakingStyle  !== undefined) patch["speakingStyle"]  = parsed.data.speakingStyle;
+  if (parsed.data.trejeitos      !== undefined) patch["trejeitos"]      = parsed.data.trejeitos;
+  if (parsed.data.brandPresence  !== undefined) patch["brandPresence"]  = parsed.data.brandPresence;
+  if (parsed.data.reelStyle      !== undefined) patch["reelStyle"]      = parsed.data.reelStyle;
+  const updatedPersona = { ...existingPersona, ...patch, updatedAt: new Date().toISOString() };
+  await db
+    .update(workspacesTable)
+    .set({ settings: { ...existingSettings, persona: updatedPersona } as any })
+    .where(eq(workspacesTable.id, req.auth.workspaceId));
+  res.json({ persona: updatedPersona });
+});
+
+// POST /workspaces/me/persona/clone-voice — receive base64 audio → ElevenLabs → save voice_id
+router.post("/me/persona/clone-voice", async (req, res): Promise<void> => {
+  const schema = z.object({
+    audioBase64: z.string().min(10),
+    mimeType:    z.string().default("audio/webm"),
+    voiceName:   z.string().max(80).default("Minha Voz NexOS"),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "audioBase64 obrigatório", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { env } = await import("../../lib/env.js");
+  const elKey = env.ELEVENLABS_API_KEY;
+  if (!elKey) {
+    res.status(422).json({ error: "ElevenLabs não configurado — adicione ELEVENLABS_API_KEY", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  try {
+    const buf = Buffer.from(parsed.data.audioBase64, "base64");
+    const ext = parsed.data.mimeType.includes("mpeg") || parsed.data.mimeType.includes("mp3") ? "mp3"
+              : parsed.data.mimeType.includes("mp4") ? "mp4"
+              : "webm";
+    const formData = new FormData();
+    formData.append("name", parsed.data.voiceName);
+    formData.append("files", new Blob([buf], { type: parsed.data.mimeType }), `voice-sample.${ext}`);
+    const response = await fetch("https://api.elevenlabs.io/v1/voices/add", {
+      method: "POST",
+      headers: { "xi-api-key": elKey },
+      body: formData,
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`ElevenLabs ${response.status}: ${errText.slice(0, 300)}`);
+    }
+    const data = (await response.json()) as { voice_id: string };
+    const voiceCloneId = data.voice_id;
+    const [ws] = await db.select({ settings: workspacesTable.settings })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, req.auth.workspaceId))
+      .limit(1);
+    const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+    const existingPersona  = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+    await db.update(workspacesTable)
+      .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceCloneId, voiceCloneUpdatedAt: new Date().toISOString() } } as any })
+      .where(eq(workspacesTable.id, req.auth.workspaceId));
+    req.log.info({ workspaceId: req.auth.workspaceId, voiceCloneId }, "Voice clone created");
+    res.json({ voiceCloneId, success: true });
+  } catch (err) {
+    req.log.error({ err }, "Voice clone failed");
+    res.status(500).json({ error: String(err), code: "VOICE_CLONE_ERROR" });
+  }
+});
+
 // GET /workspaces/me/identity — Longitudinal strategic profile
 router.get("/me/identity", async (req, res): Promise<void> => {
   const { getIdentityProfile } = await import("../campaign-brain/identity-memory.service.js");
