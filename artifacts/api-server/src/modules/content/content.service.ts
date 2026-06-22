@@ -2419,3 +2419,55 @@ export async function resolveComplianceReview(
   log.info({ campaignId, decision }, "Compliance review resolved by user");
   return { ok: true, status: "awaiting_approval" };
 }
+
+// ── patchContentPiece — targeted text replacement without full AI rewrite ──────
+
+function deepReplaceText(val: unknown, original: string, corrected: string): unknown {
+  if (typeof val === "string") return val.split(original).join(corrected);
+  if (Array.isArray(val)) return val.map(item => deepReplaceText(item, original, corrected));
+  if (val !== null && typeof val === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      result[k] = deepReplaceText(v, original, corrected);
+    }
+    return result;
+  }
+  return val;
+}
+
+export async function patchContentPiece(
+  campaignId: string,
+  workspaceId: string,
+  pieceId: string,
+  patches: { originalText: string; correctedText: string }[],
+) {
+  const [campaign] = await db
+    .select({ id: campaignsTable.id })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!campaign) throw new NotFoundError("Campaign");
+
+  const [piece] = await db
+    .select({ content: contentPiecesTable.content })
+    .from(contentPiecesTable)
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+    .limit(1);
+  if (!piece) throw new NotFoundError("Content piece");
+
+  let updated: unknown = piece.content;
+  for (const { originalText, correctedText } of patches) {
+    if (originalText && correctedText && originalText !== correctedText) {
+      updated = deepReplaceText(updated, originalText, correctedText);
+    }
+  }
+
+  const [saved] = await db
+    .update(contentPiecesTable)
+    .set({ content: updated as Record<string, unknown> })
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+    .returning();
+
+  if (!saved) throw new NotFoundError("Content piece");
+  return saved;
+}

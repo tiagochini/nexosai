@@ -15,6 +15,7 @@ import {
   rejectMediaBrief,
   optimizeCampaign,
   resolveComplianceReview,
+  patchContentPiece,
 } from "./content.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { runPostApprovalHooks } from "./content-post-approval.js";
@@ -490,6 +491,41 @@ router.post("/:campaignId/compliance/resolve", async (req, res): Promise<void> =
       req.log,
     );
     res.json(result);
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// PATCH /campaigns/:campaignId/content/:pieceId/patch
+// Targeted text replacement per compliance-suggested correction — no full AI rewrite needed.
+const patchPieceSchema = z.object({
+  patches: z.array(z.object({
+    originalText: z.string().min(1),
+    correctedText: z.string().min(1),
+  })).min(1).max(20),
+});
+
+router.patch("/:campaignId/content/:pieceId/patch", async (req, res): Promise<void> => {
+  const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
+
+  const parsed = patchPieceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const piece = await patchContentPiece(
+      campaignId,
+      req.auth.workspaceId,
+      pieceId,
+      parsed.data.patches,
+    );
+    res.json({ message: "Content piece patched", piece });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

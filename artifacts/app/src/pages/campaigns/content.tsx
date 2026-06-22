@@ -475,6 +475,8 @@ function ComplianceBlockModal({
   onForceApprove,
   onRewrite,
   onClose,
+  onApplyFix,
+  onRetryApproval,
   forceLoading,
 }: {
   pieceTitle: string;
@@ -482,10 +484,26 @@ function ComplianceBlockModal({
   onForceApprove: () => void;
   onRewrite: () => void;
   onClose: () => void;
+  onApplyFix: (originalText: string, correctedText: string, idx: number) => Promise<void>;
+  onRetryApproval: () => void;
   forceLoading: boolean;
 }) {
+  const [applying, setApplying] = useState<number | null>(null);
+  const [applied, setApplied] = useState<Set<number>>(new Set());
   const isBlocked = compliance.riskLevel === "blocked";
   const scoreColor = compliance.complianceScore >= 70 ? "text-yellow-400" : "text-red-400";
+  const anyApplied = applied.size > 0;
+
+  const handleApplyFix = async (v: PieceLevelViolation, idx: number) => {
+    if (applying !== null || applied.has(idx)) return;
+    setApplying(idx);
+    try {
+      await onApplyFix(v.originalText, v.correctedText, idx);
+      setApplied(prev => new Set([...prev, idx]));
+    } finally {
+      setApplying(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -536,36 +554,57 @@ function ComplianceBlockModal({
 
         {/* Violations list */}
         <div className="overflow-y-auto flex-1 divide-y divide-border/30">
-          {compliance.violations.map((v, i) => (
-            <div key={i} className="p-4 space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`font-mono text-[10px] border px-1.5 py-0.5 ${SEVERITY_COLOR[v.severity]}`}>
-                  {SEVERITY_LABEL[v.severity]}
-                </span>
-                <span className="font-mono text-[10px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5">
-                  {CATEGORY_LABEL[v.category] ?? v.category}
-                </span>
-                <span className="font-mono text-[10px] text-muted-foreground/40">{v.legalBasis}</span>
-              </div>
-
-              {/* Problem */}
-              <div className="space-y-1">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Texto problemático</div>
-                <div className="font-mono text-[11px] text-foreground/80 bg-destructive/5 border border-destructive/20 px-3 py-2 leading-relaxed italic">
-                  "{v.originalText}"
+          {compliance.violations.map((v, i) => {
+            const isApplied = applied.has(i);
+            const isApplying = applying === i;
+            return (
+              <div key={i} className={`p-4 space-y-3 transition-colors ${isApplied ? "bg-success/3" : ""}`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`font-mono text-[10px] border px-1.5 py-0.5 ${SEVERITY_COLOR[v.severity]}`}>
+                    {SEVERITY_LABEL[v.severity]}
+                  </span>
+                  <span className="font-mono text-[10px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5">
+                    {CATEGORY_LABEL[v.category] ?? v.category}
+                  </span>
+                  <span className="font-mono text-[10px] text-muted-foreground/40">{v.legalBasis}</span>
+                  {isApplied && (
+                    <span className="font-mono text-[10px] border border-success/40 bg-success/10 text-success px-1.5 py-0.5 flex items-center gap-1">
+                      <CheckCircle2 className="h-2.5 w-2.5" /> Corrigido
+                    </span>
+                  )}
                 </div>
-                <div className="font-mono text-[11px] text-red-300/70 leading-relaxed">{v.issue}</div>
-              </div>
 
-              {/* Fix */}
-              <div className="space-y-1">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Versão defensável</div>
-                <div className="font-mono text-[11px] text-success/90 bg-success/5 border border-success/20 px-3 py-2 leading-relaxed">
-                  "{v.correctedText}"
+                {/* Problem */}
+                <div className="space-y-1">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Texto problemático</div>
+                  <div className={`font-mono text-[11px] bg-destructive/5 border border-destructive/20 px-3 py-2 leading-relaxed italic ${isApplied ? "line-through text-muted-foreground/40" : "text-foreground/80"}`}>
+                    "{v.originalText}"
+                  </div>
+                  <div className="font-mono text-[11px] text-red-300/70 leading-relaxed">{v.issue}</div>
+                </div>
+
+                {/* Fix */}
+                <div className="space-y-1.5">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Versão defensável</div>
+                  <div className="font-mono text-[11px] text-success/90 bg-success/5 border border-success/20 px-3 py-2 leading-relaxed">
+                    "{v.correctedText}"
+                  </div>
+                  {!isApplied && (
+                    <button
+                      onClick={() => void handleApplyFix(v, i)}
+                      disabled={isApplying || applying !== null}
+                      className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-success border border-success/30 bg-success/5 hover:bg-success/15 disabled:opacity-50 px-2.5 py-1 transition-colors"
+                    >
+                      {isApplying
+                        ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />Aplicando...</>
+                        : <><CheckCircle2 className="h-2.5 w-2.5" />Aplicar correção</>
+                      }
+                    </button>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* Recommendations */}
           {compliance.recommendations.length > 0 && (
