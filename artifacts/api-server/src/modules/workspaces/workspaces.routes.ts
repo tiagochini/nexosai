@@ -231,6 +231,85 @@ router.post("/me/persona/clone-voice", async (req, res): Promise<void> => {
   }
 });
 
+// ── Compliance / Full Identification endpoints ─────────────────────────────
+
+const complianceSchema = z.object({
+  // Personal
+  cpf:           z.string().max(20).optional(),
+  phone:         z.string().max(30).optional(),
+  whatsapp:      z.string().max(30).optional(),
+  birthdate:     z.string().max(20).optional(),
+  nationality:   z.string().max(80).optional(),
+  maritalStatus: z.enum(["single","married","divorced","widowed","other"]).optional(),
+  gender:        z.enum(["male","female","non_binary","prefer_not_to_say"]).optional(),
+  // Business
+  personType:    z.enum(["pf","pj"]).optional(),
+  cnpj:          z.string().max(20).optional(),
+  razaoSocial:   z.string().max(200).optional(),
+  nomeFantasia:  z.string().max(200).optional(),
+  inscEstadual:  z.string().max(50).optional(),
+  // Address
+  cep:           z.string().max(10).optional(),
+  logradouro:    z.string().max(300).optional(),
+  numero:        z.string().max(20).optional(),
+  complemento:   z.string().max(100).optional(),
+  bairro:        z.string().max(100).optional(),
+  cidade:        z.string().max(100).optional(),
+  estado:        z.string().max(2).optional(),
+  pais:          z.string().max(80).optional(),
+  // LGPD consents
+  consentDataProcessing: z.boolean().optional(),
+  consentMarketing:      z.boolean().optional(),
+  consentAnalytics:      z.boolean().optional(),
+});
+
+// GET /workspaces/me/compliance
+router.get("/me/compliance", async (req, res): Promise<void> => {
+  const [ws] = await db
+    .select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  const settings = (ws?.settings ?? {}) as Record<string, unknown>;
+  res.json({ compliance: (settings["compliance"] ?? {}) as Record<string, unknown> });
+});
+
+// PATCH /workspaces/me/compliance
+router.patch("/me/compliance", async (req, res): Promise<void> => {
+  const parsed = complianceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+  const [ws] = await db
+    .select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  const existingSettings    = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingCompliance  = (existingSettings["compliance"] ?? {}) as Record<string, unknown>;
+  const patch: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(parsed.data)) {
+    if (v !== undefined) {
+      if ((k === "consentDataProcessing" || k === "consentMarketing" || k === "consentAnalytics") && v === true) {
+        patch[k] = v;
+        patch[`${k}At`] = existingCompliance[`${k}At`] ?? new Date().toISOString();
+      } else if (k === "consentDataProcessing" || k === "consentMarketing" || k === "consentAnalytics") {
+        patch[k] = v;
+      } else {
+        patch[k] = v;
+      }
+    }
+  }
+  const updatedCompliance = { ...existingCompliance, ...patch, updatedAt: new Date().toISOString() };
+  await db
+    .update(workspacesTable)
+    .set({ settings: { ...existingSettings, compliance: updatedCompliance } as any })
+    .where(eq(workspacesTable.id, req.auth.workspaceId));
+  req.log.info({ workspaceId: req.auth.workspaceId }, "Compliance data updated");
+  res.json({ compliance: updatedCompliance });
+});
+
 // GET /workspaces/me/identity — Longitudinal strategic profile
 router.get("/me/identity", async (req, res): Promise<void> => {
   const { getIdentityProfile } = await import("../campaign-brain/identity-memory.service.js");

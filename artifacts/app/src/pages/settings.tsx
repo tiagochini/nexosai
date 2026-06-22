@@ -20,14 +20,15 @@ import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
 import { CloneStudioPanel } from "@/components/CloneStudioPanel";
 
-type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade";
+type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "perfil",       label: "Perfil",       icon: User        },
-  { id: "workspace",    label: "Workspace",    icon: Building2   },
-  { id: "seguranca",    label: "Segurança",    icon: ShieldCheck },
-  { id: "integracoes",  label: "Integrações",  icon: Link2       },
-  { id: "identidade",   label: "Identidade",   icon: Fingerprint },
+  { id: "perfil",       label: "Perfil",          icon: User        },
+  { id: "workspace",    label: "Workspace",        icon: Building2   },
+  { id: "compliance",   label: "Identificação",    icon: ShieldCheck },
+  { id: "seguranca",    label: "Segurança",        icon: Zap         },
+  { id: "integracoes",  label: "Integrações",      icon: Link2       },
+  { id: "identidade",   label: "Identidade",       icon: Fingerprint },
 ];
 
 function SectionCard({ children, title, icon: Icon }: { children: React.ReactNode; title: string; icon: React.ElementType }) {
@@ -870,6 +871,393 @@ function ConnectModal({
   );
 }
 
+// ── Compliance / Full Identification Tab ──────────────────────────────────────
+
+type ComplianceData = {
+  cpf?: string; phone?: string; whatsapp?: string; birthdate?: string;
+  nationality?: string; maritalStatus?: string; gender?: string;
+  personType?: "pf" | "pj"; cnpj?: string; razaoSocial?: string;
+  nomeFantasia?: string; inscEstadual?: string;
+  cep?: string; logradouro?: string; numero?: string; complemento?: string;
+  bairro?: string; cidade?: string; estado?: string; pais?: string;
+  consentDataProcessing?: boolean; consentDataProcessingAt?: string;
+  consentMarketing?: boolean; consentMarketingAt?: string;
+  consentAnalytics?: boolean; consentAnalyticsAt?: string;
+  updatedAt?: string;
+};
+
+const STATES_BR = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS",
+  "MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC",
+  "SP","SE","TO",
+];
+
+const MARITAL_OPTIONS = [
+  { value: "single",    label: "Solteiro(a)" },
+  { value: "married",   label: "Casado(a)"   },
+  { value: "divorced",  label: "Divorciado(a)" },
+  { value: "widowed",   label: "Viúvo(a)"    },
+  { value: "other",     label: "Outro"        },
+];
+
+const GENDER_OPTIONS = [
+  { value: "male",              label: "Masculino"          },
+  { value: "female",            label: "Feminino"           },
+  { value: "non_binary",        label: "Não-binário"        },
+  { value: "prefer_not_to_say", label: "Prefiro não dizer"  },
+];
+
+function ComplianceStatusBadge({ data }: { data: ComplianceData }) {
+  const filled = [data.cpf, data.phone, data.cidade, data.estado, data.consentDataProcessing ? "t" : ""].filter(Boolean).length;
+  const total = 5;
+  const pct = Math.round((filled / total) * 100);
+  const color = pct === 100 ? "text-success border-success/40 bg-success/10"
+              : pct >= 60 ? "text-yellow-400 border-yellow-400/30 bg-yellow-400/10"
+              : "text-destructive border-destructive/30 bg-destructive/10";
+  return (
+    <div className={`border px-3 py-1.5 flex items-center gap-2 ${color}`}>
+      <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+      <span className="font-mono text-[10px] uppercase tracking-widest font-bold">
+        {pct === 100 ? "Compliance Completo" : `${pct}% preenchido`}
+      </span>
+    </div>
+  );
+}
+
+function ComplianceTab() {
+  const queryClient = useQueryClient();
+  const [data, setData] = useState<ComplianceData>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+
+  useEffect(() => {
+    void customFetch<{ compliance: ComplianceData }>("/api/workspaces/me/compliance")
+      .then(r => { setData(r.compliance ?? {}); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const set = (key: keyof ComplianceData, val: unknown) =>
+    setData(prev => ({ ...prev, [key]: val }));
+
+  const lookupCep = async () => {
+    const raw = (data.cep ?? "").replace(/\D/g, "");
+    if (raw.length !== 8) { toast.error("CEP inválido — 8 dígitos."); return; }
+    setCepLoading(true);
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${raw}/json/`);
+      const j = await r.json() as { logradouro?: string; bairro?: string; localidade?: string; uf?: string; erro?: boolean };
+      if (j.erro) { toast.error("CEP não encontrado."); return; }
+      setData(prev => ({
+        ...prev,
+        logradouro: j.logradouro ?? prev.logradouro,
+        bairro: j.bairro ?? prev.bairro,
+        cidade: j.localidade ?? prev.cidade,
+        estado: j.uf ?? prev.estado,
+        pais: "BR",
+      }));
+      toast.success("Endereço preenchido automaticamente.");
+    } catch { toast.error("Erro ao consultar CEP."); }
+    finally { setCepLoading(false); }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await customFetch("/api/workspaces/me/compliance", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      toast.success("Identificação salva com sucesso.");
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/compliance"] });
+    } catch { toast.error("Erro ao salvar identificação."); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return (
+    <div className="space-y-4">
+      {[1,2,3].map(i => <div key={i} className="h-40 bg-muted/20 animate-pulse border border-border/20" />)}
+    </div>
+  );
+
+  const fmtDate = (iso?: string) => iso ? new Date(iso).toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }) : null;
+
+  return (
+    <div className="space-y-6">
+      {/* Status header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-mono text-sm font-bold uppercase tracking-widest">Identificação Completa</h2>
+          <p className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mt-0.5">LGPD · KYC · Compliance Total</p>
+        </div>
+        <ComplianceStatusBadge data={data} />
+      </div>
+
+      {/* ── Dados Pessoais ── */}
+      <SectionCard title="Dados Pessoais" icon={User}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">CPF</label>
+            <input value={data.cpf ?? ""} onChange={e => set("cpf", e.target.value)}
+              placeholder="000.000.000-00"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Telefone</label>
+            <input value={data.phone ?? ""} onChange={e => set("phone", e.target.value)}
+              placeholder="+55 11 99999-9999"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">WhatsApp</label>
+            <input value={data.whatsapp ?? ""} onChange={e => set("whatsapp", e.target.value)}
+              placeholder="+55 11 99999-9999"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Data de Nascimento</label>
+            <input type="date" value={data.birthdate ?? ""} onChange={e => set("birthdate", e.target.value)}
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Nacionalidade</label>
+            <input value={data.nationality ?? ""} onChange={e => set("nationality", e.target.value)}
+              placeholder="Brasileiro(a)"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Estado Civil</label>
+            <select value={data.maritalStatus ?? ""} onChange={e => set("maritalStatus", e.target.value)}
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none h-9">
+              <option value="">Selecione</option>
+              {MARITAL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Gênero</label>
+            <div className="flex flex-wrap gap-2">
+              {GENDER_OPTIONS.map(o => (
+                <button key={o.value} onClick={() => set("gender", data.gender === o.value ? "" : o.value)}
+                  className={`border px-3 py-1.5 font-mono text-[10px] transition-all ${data.gender === o.value ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground/60 hover:border-primary/40"}`}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ── Dados Empresariais ── */}
+      <SectionCard title="Dados Empresariais" icon={Building2}>
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            {[{ id:"pf", label:"Pessoa Física" }, { id:"pj", label:"Pessoa Jurídica" }].map(o => (
+              <button key={o.id} onClick={() => set("personType", o.id)}
+                className={`border px-4 py-2 font-mono text-[10px] uppercase tracking-widest transition-all ${data.personType === o.id ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground/60 hover:border-primary/40"}`}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+
+          {data.personType === "pj" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">CNPJ</label>
+                <input value={data.cnpj ?? ""} onChange={e => set("cnpj", e.target.value)}
+                  placeholder="00.000.000/0001-00"
+                  className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+              </div>
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Inscrição Estadual</label>
+                <input value={data.inscEstadual ?? ""} onChange={e => set("inscEstadual", e.target.value)}
+                  placeholder="Isento ou número"
+                  className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+              </div>
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Razão Social</label>
+                <input value={data.razaoSocial ?? ""} onChange={e => set("razaoSocial", e.target.value)}
+                  placeholder="Nome na Receita Federal"
+                  className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+              </div>
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Nome Fantasia</label>
+                <input value={data.nomeFantasia ?? ""} onChange={e => set("nomeFantasia", e.target.value)}
+                  placeholder="Nome comercial"
+                  className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+              </div>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
+      {/* ── Endereço ── */}
+      <SectionCard title="Endereço" icon={Globe}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-1 md:col-span-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">CEP</label>
+            <div className="flex gap-2">
+              <input value={data.cep ?? ""} onChange={e => set("cep", e.target.value)}
+                placeholder="00000-000" maxLength={9}
+                className="flex-1 font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+              <button onClick={() => void lookupCep()} disabled={cepLoading}
+                className="border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-mono text-[10px] uppercase tracking-widest px-3 h-9 shrink-0 flex items-center gap-1.5 transition-colors disabled:opacity-50">
+                {cepLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                Buscar
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Logradouro</label>
+            <input value={data.logradouro ?? ""} onChange={e => set("logradouro", e.target.value)}
+              placeholder="Rua, Av., Travessa…"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Número</label>
+            <input value={data.numero ?? ""} onChange={e => set("numero", e.target.value)}
+              placeholder="123"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Complemento</label>
+            <input value={data.complemento ?? ""} onChange={e => set("complemento", e.target.value)}
+              placeholder="Apto, Sala, Bloco…"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Bairro</label>
+            <input value={data.bairro ?? ""} onChange={e => set("bairro", e.target.value)}
+              placeholder="Nome do bairro"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Cidade</label>
+            <input value={data.cidade ?? ""} onChange={e => set("cidade", e.target.value)}
+              placeholder="São Paulo"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Estado</label>
+            <select value={data.estado ?? ""} onChange={e => set("estado", e.target.value)}
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none h-9">
+              <option value="">UF</option>
+              {STATES_BR.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">País</label>
+            <input value={data.pais ?? ""} onChange={e => set("pais", e.target.value)}
+              placeholder="BR"
+              className="w-full font-mono text-xs bg-background/60 border border-border/50 focus:border-primary px-3 py-2 text-foreground outline-none placeholder:text-muted-foreground/30 h-9" />
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ── LGPD / Consentimentos ── */}
+      <SectionCard title="LGPD — Consentimentos" icon={ShieldCheck}>
+        <div className="space-y-4">
+          <div className="border border-primary/20 bg-primary/5 px-4 py-3">
+            <p className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">
+              Em conformidade com a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018), registramos seus consentimentos de forma auditável com carimbo de data/hora. Você pode revogar qualquer consentimento a qualquer momento.
+            </p>
+          </div>
+
+          {([
+            {
+              key: "consentDataProcessing" as const,
+              atKey: "consentDataProcessingAt" as const,
+              title: "Processamento de Dados",
+              desc: "Autorizo o processamento dos meus dados pessoais para operação da plataforma NexOS AI conforme descrito na Política de Privacidade.",
+              required: true,
+            },
+            {
+              key: "consentMarketing" as const,
+              atKey: "consentMarketingAt" as const,
+              title: "Comunicações de Marketing",
+              desc: "Autorizo o envio de comunicações sobre novidades, atualizações e ofertas da NexOS AI por e-mail e WhatsApp.",
+              required: false,
+            },
+            {
+              key: "consentAnalytics" as const,
+              atKey: "consentAnalyticsAt" as const,
+              title: "Analytics e Melhoria de Produto",
+              desc: "Autorizo o uso de dados de uso da plataforma de forma anonimizada para melhoria dos produtos e serviços.",
+              required: false,
+            },
+          ] as const).map(consent => {
+            const granted = !!(data[consent.key]);
+            const grantedAt = data[consent.atKey];
+            return (
+              <div key={consent.key} className={`border px-4 py-4 flex items-start gap-4 ${granted ? "border-success/30 bg-success/5" : "border-border/40 bg-card/20"}`}>
+                <button
+                  onClick={() => set(consent.key, !granted)}
+                  className={`w-10 h-6 rounded-full border-2 relative transition-all shrink-0 mt-0.5 ${granted ? "bg-success border-success" : "bg-muted/30 border-border/50"}`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${granted ? "left-4" : "left-0.5"}`} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${granted ? "text-success" : "text-foreground/80"}`}>{consent.title}</span>
+                    {consent.required && <span className="font-mono text-[9px] border border-destructive/30 text-destructive px-1.5 py-0.5 uppercase tracking-widest">Obrigatório</span>}
+                    {granted && <span className="font-mono text-[9px] border border-success/30 text-success px-1.5 py-0.5 uppercase tracking-widest">Concedido</span>}
+                  </div>
+                  <p className="font-mono text-[10px] text-muted-foreground/60 mt-1 leading-relaxed">{consent.desc}</p>
+                  {granted && grantedAt && (
+                    <p className="font-mono text-[9px] text-muted-foreground/40 mt-1">
+                      Consentido em: {fmtDate(grantedAt)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </SectionCard>
+
+      {/* ── Direitos do Titular ── */}
+      <SectionCard title="Direitos do Titular (LGPD Art. 18)" icon={ExternalLink}>
+        <div className="space-y-3">
+          <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
+            Conforme o Art. 18 da LGPD, você tem o direito de solicitar acesso, portabilidade ou exclusão dos seus dados pessoais. Utilize os botões abaixo para formalizar sua solicitação.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { label: "Acessar meus dados",     icon: Eye,        subject: "Acesso aos Dados — LGPD Art. 18 II" },
+              { label: "Portabilidade",           icon: Copy,       subject: "Portabilidade dos Dados — LGPD Art. 18 V" },
+              { label: "Solicitar exclusão",      icon: XCircle,    subject: "Exclusão dos Dados — LGPD Art. 18 VI" },
+            ].map(item => (
+              <a key={item.label}
+                href={`mailto:privacidade@nexos.ai?subject=${encodeURIComponent(item.subject)}&body=${encodeURIComponent(`Olá, solicito o exercício do meu direito de: ${item.subject}\n\nNome: ${""}\nWorkspace ID: `)}`}
+                className="flex items-center gap-2 border border-border/40 bg-card/20 hover:border-primary/40 hover:bg-primary/5 px-4 py-3 transition-all group"
+              >
+                <item.icon className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/70 group-hover:text-primary transition-colors">{item.label}</span>
+              </a>
+            ))}
+          </div>
+          <p className="font-mono text-[9px] text-muted-foreground/30">
+            Prazo de resposta: até 15 dias úteis conforme Art. 23 LGPD · privacidade@nexos.ai
+          </p>
+        </div>
+      </SectionCard>
+
+      {/* ── Last updated + Save ── */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        {data.updatedAt && (
+          <p className="font-mono text-[10px] text-muted-foreground/40">
+            Última atualização: {fmtDate(data.updatedAt)}
+          </p>
+        )}
+        <Button onClick={() => void handleSave()} disabled={saving}
+          className="rounded-none font-mono uppercase tracking-widest text-xs h-10 px-6 btn-weapon-primary gap-2 ml-auto">
+          {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Salvando…</> : <><CheckCircle2 className="h-3.5 w-3.5" />Salvar Identificação</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function IntegracaoTab() {
   const queryClient = useQueryClient();
   const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
@@ -1654,6 +2042,7 @@ export default function Settings() {
 
       {tab === "perfil"      && <ProfileTab />}
       {tab === "workspace"   && <WorkspaceTab />}
+      {tab === "compliance"  && <ComplianceTab />}
       {tab === "seguranca"   && <SecurityTab />}
       {tab === "integracoes" && <IntegracaoTab />}
       {tab === "identidade"  && <IdentidadeTab />}
