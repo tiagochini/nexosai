@@ -382,6 +382,34 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
               {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
               {copied ? "Copiado" : "Copiar"}
             </Button>
+            {/* Hidden download fallback — escape hatch for manual posting, not promoted */}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                const text = [
+                  `# ${piece.title}`,
+                  `Plataforma: ${piece.platform} | Dia ${piece.dayIndex}`,
+                  "",
+                  piece.body,
+                  piece.callToAction ? `\nCTA: ${piece.callToAction}` : "",
+                  piece.hashtags?.length ? `\n${piece.hashtags.join(" ")}` : "",
+                  piece.tiktokHook ? `\nHook: ${piece.tiktokHook}` : "",
+                  piece.visualDirection ? `\nVisual: ${piece.visualDirection}` : "",
+                ].filter(s => s !== undefined).join("\n");
+                const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${piece.platform}-dia${piece.dayIndex}-${piece.id.slice(0, 6)}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="inline-flex items-center h-7 px-1.5 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+              title="Baixar como .txt (uso manual)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </a>
           </div>
         )}
       </div>

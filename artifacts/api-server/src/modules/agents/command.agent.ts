@@ -815,6 +815,25 @@ Retorne o JSON de avaliação.`,
       strategyData: result as any,
     });
 
+    // Persist plannedChannels from strategic brief into brainData (fire-and-forget)
+    if (strategicBrief?.channels && strategicBrief.channels.length > 0) {
+      const channelsToSave = strategicBrief.channels.map((c: string) => c.toLowerCase());
+      setImmediate(async () => {
+        try {
+          const [row] = await db
+            .select({ brainData: (campaignsTable as any).brainData })
+            .from(campaignsTable)
+            .where(eq(campaignsTable.id, campaignId))
+            .limit(1);
+          const existing = (row?.brainData ?? {}) as Record<string, unknown>;
+          await db
+            .update(campaignsTable)
+            .set({ brainData: { ...existing, plannedChannels: channelsToSave } as any })
+            .where(eq(campaignsTable.id, campaignId));
+        } catch { /* non-fatal */ }
+      });
+    }
+
     // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)
     setImmediate(() => {
       const strategySnapshot = strategy ?? {};

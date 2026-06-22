@@ -2156,6 +2156,7 @@ export default function CampaignDetail() {
             onLaunchReady={setLaunchReady}
             onLaunch={() => executeMutation.mutate({ campaignId, data: { phase: "launch" as CampaignExecuteInputPhase } })}
             launching={executeMutation.isPending}
+            plannedChannels={(brainDataRaw["plannedChannels"] as string[] | undefined)}
           />
         )}
 

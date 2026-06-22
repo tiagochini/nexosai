@@ -170,6 +170,9 @@ interface Props {
   onLaunchReady: (ready: boolean) => void;
   onLaunch: () => void;
   launching: boolean;
+  /** Channels planned by the strategy agent (e.g. ["instagram","tiktok","facebook"]).
+   *  If not provided, defaults to requiring Instagram + TikTok. */
+  plannedChannels?: string[];
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -183,7 +186,16 @@ const R$ = (n: number) =>
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launching }: Props) {
+// ─── Channel → provider(s) mapping for Gate 5 ─────────────────────────────────
+const CHANNEL_TO_PROVIDERS: Record<string, string[]> = {
+  instagram:  ["instagram"],
+  tiktok:     ["tiktok_ads", "meta_ads"],
+  facebook:   ["meta_ads"],
+  // whatsapp/email are covered by Gates 1+2; no separate Gate 5 provider needed
+};
+const DEFAULT_SOCIAL_CHANNELS = ["instagram", "tiktok"];
+
+export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launching, plannedChannels }: Props) {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [content, setContent]           = useState<ContentPiece[]>([]);
   const [financials, setFinancials]     = useState<LaunchFinancials | null>(null);
@@ -297,18 +309,31 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const isConnected   = (providers: string[]) => integrations.some(i => providers.includes(i.provider) && i.status === "connected");
   const hasMessaging  = isConnected(["whatsapp_business", "telegram"]);
   const hasEmail      = isConnected(["rd_station", "activecampaign"]);
-  // Gate 5: BOTH platforms required (Instagram AND TikTok)
-  const hasInstagram  = isConnected(["instagram"]);
-  const hasTikTok     = isConnected(["tiktok_ads", "meta_ads"]);
-  const hasSocial     = hasInstagram && hasTikTok;
+
+  // Gate 5: Dynamic — ALL channels from the strategy plan must be connected.
+  // Defaults to Instagram + TikTok when no strategy plan is available yet.
+  const _socialChannels = (plannedChannels ?? DEFAULT_SOCIAL_CHANNELS)
+    .map((c) => c.toLowerCase())
+    .filter((c) => Object.keys(CHANNEL_TO_PROVIDERS).includes(c));
+  const channelStatus = _socialChannels.map((ch) => ({
+    key: ch,
+    label: ch === "instagram" ? "Instagram" : ch === "tiktok" ? "TikTok" : ch === "facebook" ? "Facebook" : ch.charAt(0).toUpperCase() + ch.slice(1),
+    providers: CHANNEL_TO_PROVIDERS[ch] ?? [],
+    connected: isConnected(CHANNEL_TO_PROVIDERS[ch] ?? []),
+  }));
+  const hasSocial     = channelStatus.length > 0 && channelStatus.every(c => c.connected);
+  const connectedSocials = channelStatus.filter(c => c.connected).map(c => c.label).join(" + ");
+  const missingSocialLabels = channelStatus.filter(c => !c.connected).map(c => c.label);
+  // Backward-compat refs for per-platform UI rows
+  const hasInstagram  = channelStatus.find(c => c.key === "instagram")?.connected ?? false;
+  const hasTikTok     = channelStatus.find(c => c.key === "tiktok")?.connected ?? false;
+  const instagramConn = integrations.find(i => i.provider === "instagram" && i.status === "connected");
+  const tiktokConn    = integrations.find(i => (i.provider === "tiktok_ads" || i.provider === "meta_ads") && i.status === "connected");
   const whatsappConn  = integrations.find(i => i.provider === "whatsapp_business" && i.status === "connected");
   const rdConn        = integrations.find(i => i.provider === "rd_station" && i.status === "connected");
-  const instagramConn = integrations.find(i => i.provider === "instagram" && i.status === "connected");
-  const tiktokConn    = integrations.find(i => i.provider === "tiktok_ads" && i.status === "connected");
-  const connectedSocials = [instagramConn && "Instagram", tiktokConn && "TikTok"].filter(Boolean).join(" + ");
   const missingMsg    = !isConnected(["whatsapp_business"]) ? "whatsapp" as const : "telegram" as const;
   const missingEmail  = !isConnected(["rd_station"]) ? "rd_station" as const : "activecampaign" as const;
-  const missingSocial = !instagramConn ? "instagram" as const : "tiktok" as const;
+  const missingSocial = !hasInstagram ? "instagram" as const : "tiktok" as const;
 
   // ── Content checks ──────────────────────────────────────────────────────────
   const allPieces         = content;
@@ -635,16 +660,14 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-mono text-xs font-bold ${hasSocial ? "text-green-300" : "text-red-300"}`}>
-              Redes Sociais — Instagram + TikTok (ambas obrigatórias)
+              Redes Sociais — {channelStatus.map(c => c.label).join(" + ")} (todas obrigatórias)
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
               {hasSocial
                 ? `Conectado: ${connectedSocials} — posts e Reels publicados automaticamente conforme o calendário`
-                : !hasInstagram && !hasTikTok
-                  ? "Conecte Instagram Business E TikTok Business para distribuição automática"
-                  : !hasInstagram
-                    ? "Instagram ainda não conectado — conecte para completar o Gate 5"
-                    : "TikTok ainda não conectado — conecte para completar o Gate 5"}
+                : missingSocialLabels.length === channelStatus.length
+                  ? `Conecte ${missingSocialLabels.join(" + ")} para distribuição automática`
+                  : `${missingSocialLabels.join(", ")} ${missingSocialLabels.length === 1 ? "ainda não conectado" : "ainda não conectados"} — conecte para completar o Gate 5`}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
