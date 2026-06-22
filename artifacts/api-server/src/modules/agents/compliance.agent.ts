@@ -176,6 +176,151 @@ Você analisa toda a copy de campanha contra as regras do CONAR, CDC, políticas
 }
 \`\`\``;
 
+// ── Piece-level compliance (PLF-specific) ─────────────────────────────────────
+
+export interface PieceLevelViolation {
+  severity: "critical" | "high" | "medium" | "low";
+  category: "scarcity_claim" | "social_proof" | "urgency_language" | "promise_language" | "income_claim" | "other";
+  originalText: string;
+  issue: string;
+  correctedText: string;
+  legalBasis: string;
+  isDefensible: boolean;
+}
+
+export interface PieceLevelComplianceResult {
+  passed: boolean;
+  riskLevel: "safe" | "low_risk" | "medium_risk" | "high_risk" | "blocked";
+  complianceScore: number;
+  violations: PieceLevelViolation[];
+  recommendations: string[];
+}
+
+const PLF_PIECE_COMPLIANCE_PROMPT = `Você é um auditor de conformidade especializado em copy para lançamentos digitais no Brasil.
+
+## REGRAS PLF QUE VOCÊ VALIDA
+
+Analise o texto de copy fornecido com foco específico em 4 categorias de risco:
+
+### 1. ESCASSEZ (scarcity_claim)
+- ✅ DEFENSÍVEL: "Vagas limitadas a 300 alunos — gestão de qualidade" | "Somente até sexta-feira 23h59 — após isso preço sobe"
+- ❌ INDEFENSÁVEL: Números de vagas inventados sem justificativa | Timers que reiniciam | "Últimas vagas" genérico sem fundamentação
+- Exija: Todo claim de escassez precisa ter razão documentável (limite real de capacidade, data real de encerramento)
+
+### 2. PROVA SOCIAL (social_proof)
+- ✅ DEFENSÁVEL: "João Silva, 41 anos, faturou R$127.340 em 8 dias" (nome real + resultado específico + prazo específico)
+- ❌ INDEFENSÁVEL: "Nossos alunos faturam R$50k" (sem nome) | "Resultados extraordinários" (sem dado) | "Centenas de alunos" (sem especificidade)
+- Exija: Nome ou identificação + resultado numérico específico + prazo concreto
+
+### 3. URGÊNCIA (urgency_language)
+- ✅ DEFENSÁVEL: "Carrinho fecha sexta-feira às 23h59 horário de Brasília" | "Bônus X disponível apenas para os primeiros 100 compradores"
+- ❌ INDEFENSÁVEL: "Compre AGORA antes que seja tarde" sem prazo real | Countdown timer que reinicia após expirar | "Oferta expira em breve" sem data
+- Exija: Urgência deve ter data/hora/quantidade REAL e verificável
+
+### 4. LINGUAGEM DE PROMESSA (promise_language)
+- ✅ DEFENSÁVEL: "Método que ajudou X pessoas a atingirem R$Y em Z semanas" (baseado em resultado documentado)
+- ❌ INDEFENSÁVEL: "Resultado garantido para todos" | "Você VAI ganhar R$X" | "Método 100% comprovado cientificamente" sem citação | "Funciona para qualquer pessoa"
+- Exija: Promessas relativas (não absolutas), com base em casos reais, com disclaimer implícito ou explícito
+
+## SCORING
+- 90-100: safe
+- 70-89: low_risk (ajustes menores)
+- 50-69: medium_risk (precisa corrigir)
+- 30-49: high_risk (obrigatório corrigir)
+- 0-29: blocked (não pode publicar)
+
+## SAÍDA
+
+Retorne APENAS JSON válido:
+\`\`\`json
+{
+  "passed": true,
+  "riskLevel": "safe|low_risk|medium_risk|high_risk|blocked",
+  "complianceScore": 85,
+  "violations": [
+    {
+      "severity": "high",
+      "category": "scarcity_claim|social_proof|urgency_language|promise_language|income_claim|other",
+      "originalText": "trecho exato do texto problemático",
+      "issue": "qual regra viola e por quê é problemático",
+      "correctedText": "versão corrigida que mantém o poder persuasivo mas é defensável",
+      "legalBasis": "CONAR Art. 27 / CDC Art. 37 / Meta Ads Policy / etc.",
+      "isDefensible": false
+    }
+  ],
+  "recommendations": ["ação concreta que o criador deve tomar para resolver"]
+}
+\`\`\`
+
+"passed" = true quando riskLevel é "safe" ou "low_risk" (sem violações high/critical).`;
+
+/**
+ * Validates a single content piece for PLF-specific compliance issues.
+ * Faster and cheaper than the full campaign compliance check.
+ * Used as a gate before approving individual pieces.
+ */
+export async function validatePieceCompliance(
+  pieceText: string,
+  pieceType: string,
+  campaignId: string | null,
+  workspaceId: string,
+  log: Logger,
+): Promise<PieceLevelComplianceResult> {
+  if (!pieceText || pieceText.trim().length < 20) {
+    return {
+      passed: true,
+      riskLevel: "safe",
+      complianceScore: 100,
+      violations: [],
+      recommendations: [],
+    };
+  }
+
+  const truncated = pieceText.slice(0, 3000);
+
+  const userMessage = `Analise este trecho de copy PLF para conformidade CONAR/CDC/plataformas:
+
+**Tipo de peça:** ${pieceType}
+
+**Texto a analisar:**
+\`\`\`
+${truncated}
+\`\`\`
+
+Identifique violações nas 4 categorias (escassez, prova social, urgência, promessa). Para cada violação, forneça a versão corrigida que mantém o poder persuasivo.
+
+Retorne APENAS o JSON de resultado.`;
+
+  const result = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "compliance",
+    systemPrompt: PLF_PIECE_COMPLIANCE_PROMPT,
+    messages: [{ role: "user", content: userMessage }],
+    log,
+    skipAllStaticLayers: true,
+  });
+
+  // Fail-closed: if the LLM output is malformed or empty, default to blocking
+  // the approval so garbage output never silently passes compliance.
+  const parsed = parseAgentJSON<PieceLevelComplianceResult>(result.content, {
+    passed: false,
+    riskLevel: "medium_risk",
+    complianceScore: 50,
+    violations: [],
+    recommendations: ["Não foi possível analisar a copy automaticamente. Revise manualmente antes de aprovar."],
+  });
+
+  // Normalize: passed = false when riskLevel is high_risk or blocked, or when there are critical/high violations
+  const hasBlockingViolations = parsed.violations.some(
+    v => v.severity === "critical" || v.severity === "high"
+  );
+  const isBlocking = parsed.riskLevel === "high_risk" || parsed.riskLevel === "blocked";
+  parsed.passed = !hasBlockingViolations && !isBlocking;
+
+  return parsed;
+}
+
 export async function runComplianceAgent(
   campaignId: string,
   workspaceId: string,

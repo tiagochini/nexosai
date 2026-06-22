@@ -96,10 +96,96 @@ router.post("/:campaignId/content/generate", async (req, res): Promise<void> => 
 });
 
 // POST /campaigns/:campaignId/content/:pieceId/approve
+const approvePieceSchema = z.object({
+  feedback: z.string().optional().default(""),
+  force: z.boolean().optional().default(false),
+});
+
 router.post("/:campaignId/content/:pieceId/approve", async (req, res): Promise<void> => {
   const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
 
+  const parsed = approvePieceSchema.safeParse(req.body);
+  const forceApprove = parsed.success ? parsed.data.force : false;
+
   try {
+    // ── Compliance gate ────────────────────────────────────────────────────────
+    // Always runs. The `force` flag only bypasses non-blocked violations
+    // (high_risk and lower). Pieces with riskLevel="blocked" cannot be approved
+    // regardless of the force flag — they must be rewritten first.
+    {
+      const { db, contentPiecesTable, campaignsTable } = await import("@workspace/db");
+      const { eq, and } = await import("drizzle-orm");
+      const { validatePieceCompliance } = await import("../agents/compliance.agent.js");
+
+      // Enforce ownership: piece must belong to the requested campaign,
+      // and that campaign must belong to the requesting workspace.
+      const [dbPiece] = await db
+        .select({ content: contentPiecesTable.content, type: contentPiecesTable.type })
+        .from(contentPiecesTable)
+        .innerJoin(campaignsTable, and(
+          eq(campaignsTable.id, contentPiecesTable.campaignId),
+          eq(campaignsTable.id, campaignId),
+          eq(campaignsTable.workspaceId, req.auth.workspaceId),
+        ))
+        .where(eq(contentPiecesTable.id, pieceId))
+        .limit(1);
+
+      if (dbPiece?.content) {
+        const rawContent = dbPiece.content;
+        let pieceText = "";
+
+        if (typeof rawContent === "string") {
+          pieceText = rawContent;
+        } else if (rawContent && typeof rawContent === "object") {
+          // Extract human-readable text from structured JSONB content
+          const c = rawContent as Record<string, unknown>;
+          const candidates: string[] = [];
+          for (const key of ["body", "caption", "copyText", "primaryText", "script",
+            "message", "subject", "headline", "bigPromise", "openingLine"]) {
+            if (typeof c[key] === "string") candidates.push(c[key] as string);
+          }
+          // Walk one level deep into arrays for email sequences, sections, etc.
+          for (const key of ["sections", "emailSequence", "videos", "segments"]) {
+            const arr = c[key];
+            if (Array.isArray(arr)) {
+              (arr as Record<string, unknown>[]).slice(0, 5).forEach(item => {
+                for (const f of ["body", "script", "copyText", "caption", "subject"]) {
+                  if (typeof item[f] === "string") candidates.push(item[f] as string);
+                }
+              });
+            }
+          }
+          pieceText = candidates.join("\n\n").slice(0, 4000);
+        }
+
+        if (pieceText.length >= 30) {
+          const complianceResult = await validatePieceCompliance(
+            pieceText,
+            dbPiece.type ?? "content",
+            campaignId,
+            req.auth.workspaceId,
+            req.log,
+          );
+
+          const isBlocked = complianceResult.riskLevel === "blocked";
+          // Blocked pieces can never be force-approved — they must be rewritten.
+          // High-risk and lower can be overridden with explicit force=true.
+          const shouldBlock = !complianceResult.passed && (isBlocked || !forceApprove);
+
+          if (shouldBlock) {
+            res.status(422).json({
+              code: "COMPLIANCE_VIOLATION",
+              error: isBlocked
+                ? "Peça com risco BLOQUEADO não pode ser aprovada — reescreva antes de publicar"
+                : "Peça bloqueada por compliance — corrija as violações ou force a aprovação",
+              compliance: complianceResult,
+            });
+            return;
+          }
+        }
+      }
+    }
+
     const piece = await approveContentPiece(
       campaignId,
       req.auth.workspaceId,

@@ -418,6 +418,194 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
   );
 }
 
+// ── Compliance Block Modal ─────────────────────────────────────────────────────
+
+interface PieceLevelViolation {
+  severity: "critical" | "high" | "medium" | "low";
+  category: "scarcity_claim" | "social_proof" | "urgency_language" | "promise_language" | "income_claim" | "other";
+  originalText: string;
+  issue: string;
+  correctedText: string;
+  legalBasis: string;
+  isDefensible: boolean;
+}
+
+interface PieceLevelComplianceResult {
+  passed: boolean;
+  riskLevel: "safe" | "low_risk" | "medium_risk" | "high_risk" | "blocked";
+  complianceScore: number;
+  violations: PieceLevelViolation[];
+  recommendations: string[];
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  scarcity_claim: "Escassez",
+  social_proof: "Prova Social",
+  urgency_language: "Urgência",
+  promise_language: "Promessa",
+  income_claim: "Claim Financeiro",
+  other: "Outro",
+};
+
+const SEVERITY_COLOR: Record<string, string> = {
+  critical: "text-red-400 border-red-400/40 bg-red-400/10",
+  high:     "text-orange-400 border-orange-400/40 bg-orange-400/10",
+  medium:   "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
+  low:      "text-muted-foreground border-border/40 bg-muted/10",
+};
+
+const SEVERITY_LABEL: Record<string, string> = {
+  critical: "CRÍTICO", high: "ALTO", medium: "MÉDIO", low: "BAIXO",
+};
+
+function ComplianceBlockModal({
+  pieceTitle,
+  compliance,
+  onForceApprove,
+  onRewrite,
+  onClose,
+  forceLoading,
+}: {
+  pieceTitle: string;
+  compliance: PieceLevelComplianceResult;
+  onForceApprove: () => void;
+  onRewrite: () => void;
+  onClose: () => void;
+  forceLoading: boolean;
+}) {
+  const isBlocked = compliance.riskLevel === "blocked";
+  const scoreColor = compliance.complianceScore >= 70 ? "text-yellow-400" : "text-red-400";
+
+  return (
+    <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-card border border-destructive/40 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="flex items-start gap-3 p-5 border-b border-border/50 shrink-0">
+          <div className="w-9 h-9 border border-destructive/40 bg-destructive/10 flex items-center justify-center shrink-0 mt-0.5">
+            <Shield className="h-4 w-4 text-destructive" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-sm font-bold uppercase tracking-widest text-destructive mb-0.5">
+              Bloqueio Compliance — Copy Indefensável
+            </div>
+            <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+              A IA de compliance detectou {compliance.violations.length} violaç{compliance.violations.length === 1 ? "ão" : "ões"} nesta peça
+              antes de aprovar para lançamento.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground/40 hover:text-muted-foreground shrink-0 ml-2 mt-0.5">
+            <XCircle className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Score strip */}
+        <div className="flex items-center gap-4 px-5 py-3 bg-muted/5 border-b border-border/30 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Score</span>
+            <span className={`font-mono text-lg font-bold ${scoreColor}`}>{compliance.complianceScore}</span>
+            <span className="font-mono text-[10px] text-muted-foreground/40">/100</span>
+          </div>
+          <div className="flex-1 h-1.5 bg-muted/20">
+            <div
+              className={`h-full transition-all ${compliance.complianceScore >= 70 ? "bg-yellow-400" : "bg-red-400"}`}
+              style={{ width: `${compliance.complianceScore}%` }}
+            />
+          </div>
+          <span className={`font-mono text-[11px] border px-2 py-0.5 ${
+            isBlocked ? "text-red-400 border-red-400/40 bg-red-400/10" :
+            "text-orange-400 border-orange-400/40 bg-orange-400/10"
+          }`}>
+            {compliance.riskLevel === "blocked" ? "BLOQUEADO" :
+             compliance.riskLevel === "high_risk" ? "RISCO ALTO" : "RISCO MÉDIO"}
+          </span>
+          <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0 hidden sm:block">
+            {pieceTitle.slice(0, 40)}
+          </span>
+        </div>
+
+        {/* Violations list */}
+        <div className="overflow-y-auto flex-1 divide-y divide-border/30">
+          {compliance.violations.map((v, i) => (
+            <div key={i} className="p-4 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`font-mono text-[10px] border px-1.5 py-0.5 ${SEVERITY_COLOR[v.severity]}`}>
+                  {SEVERITY_LABEL[v.severity]}
+                </span>
+                <span className="font-mono text-[10px] border border-primary/30 bg-primary/5 text-primary px-1.5 py-0.5">
+                  {CATEGORY_LABEL[v.category] ?? v.category}
+                </span>
+                <span className="font-mono text-[10px] text-muted-foreground/40">{v.legalBasis}</span>
+              </div>
+
+              {/* Problem */}
+              <div className="space-y-1">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Texto problemático</div>
+                <div className="font-mono text-[11px] text-foreground/80 bg-destructive/5 border border-destructive/20 px-3 py-2 leading-relaxed italic">
+                  "{v.originalText}"
+                </div>
+                <div className="font-mono text-[11px] text-red-300/70 leading-relaxed">{v.issue}</div>
+              </div>
+
+              {/* Fix */}
+              <div className="space-y-1">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Versão defensável</div>
+                <div className="font-mono text-[11px] text-success/90 bg-success/5 border border-success/20 px-3 py-2 leading-relaxed">
+                  "{v.correctedText}"
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Recommendations */}
+          {compliance.recommendations.length > 0 && (
+            <div className="p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">
+                Recomendações do Auditor
+              </div>
+              <ul className="space-y-1.5">
+                {compliance.recommendations.map((r, i) => (
+                  <li key={i} className="font-mono text-[11px] text-muted-foreground/70 flex gap-2">
+                    <span className="text-primary shrink-0">→</span>
+                    <span>{r}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="p-4 border-t border-border/50 flex flex-col sm:flex-row gap-2 shrink-0">
+          <Button
+            onClick={onRewrite}
+            className="flex-1 rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs bg-primary/10 border border-primary/40 text-primary hover:bg-primary/20"
+          >
+            <Sparkles className="h-3.5 w-3.5" />Corrigir com IA
+          </Button>
+          {!isBlocked && (
+            <Button
+              onClick={onForceApprove}
+              disabled={forceLoading}
+              variant="ghost"
+              className="rounded-none font-mono uppercase tracking-widest h-9 gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-border/40 hover:border-border/80"
+            >
+              {forceLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+              Aprovar mesmo assim
+            </Button>
+          )}
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            className="rounded-none font-mono uppercase tracking-widest h-9 text-xs text-muted-foreground"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Generate More Modal ────────────────────────────────────────────────────────
 
 function GenerateMoreModal({
@@ -1956,6 +2144,12 @@ export default function ContentApproval() {
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
   const [rejectingPiece, setRejectingPiece] = useState<ContentPiece | null>(null);
   const [rewritingPiece, setRewritingPiece] = useState<string | null>(null);
+  const [complianceBlock, setComplianceBlock] = useState<{
+    pieceId: string;
+    pieceTitle: string;
+    compliance: PieceLevelComplianceResult;
+  } | null>(null);
+  const [forceApproving, setForceApproving] = useState(false);
   const [generateMoreTarget, setGenerateMoreTarget] = useState<Platform | null>(null);
   const [generatingMore, setGeneratingMore] = useState(false);
   const [localPieces, setLocalPieces] = useState<ContentPiece[] | null>(null);
@@ -2058,18 +2252,20 @@ export default function ContentApproval() {
     setLocalPieces(prev => fn(prev ?? pieces));
   };
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, force = false) => {
     // Mark locally first for instant feedback
     const updatedPieces = pieces.map(p => p.id === id ? { ...p, status: "approved" as const } : p);
     setPieces(() => updatedPieces);
-    setLoadingPiece(id);
+    if (force) setForceApproving(true);
+    else setLoadingPiece(id);
     try {
       const parentId = getParentId(id);
       await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback: "" }),
+        body: JSON.stringify({ feedback: "", force }),
       });
+      if (force) setComplianceBlock(null);
       toast.success("Peça aprovada");
       // Auto-transition: if this was the last pending piece, move campaign to approved
       const stillPending = updatedPieces.filter(p => p.status === "pending").length;
@@ -2077,12 +2273,28 @@ export default function ContentApproval() {
       if (stillPending === 0 && nowApproved > 0 && campaign?.status === "awaiting_approval") {
         approveCampaignMutation.mutate();
       }
-    } catch {
+    } catch (err) {
       // Revert on failure
       setPieces(prev => prev.map(p => p.id === id ? { ...p, status: "pending" } : p));
+
+      // Check for compliance violation (422 + COMPLIANCE_VIOLATION code)
+      if (err instanceof ApiError && err.status === 422) {
+        const data = err.data as { code?: string; compliance?: PieceLevelComplianceResult } | null;
+        if (data?.code === "COMPLIANCE_VIOLATION" && data.compliance) {
+          const piece = pieces.find(p => p.id === id);
+          setComplianceBlock({
+            pieceId: id,
+            pieceTitle: piece?.title ?? "Peça de conteúdo",
+            compliance: data.compliance,
+          });
+          return;
+        }
+      }
+
       toast.error("Erro ao aprovar peça");
     } finally {
       setLoadingPiece(null);
+      setForceApproving(false);
     }
   };
   const handleReject = (id: string) => {
@@ -2182,20 +2394,48 @@ export default function ContentApproval() {
   };
   const handleApproveAll = async () => {
     const pendingPieces = pieces.filter(p => p.status === "pending");
-    // Mark all approved locally immediately
-    setPieces(prev => prev.map(p => p.status === "pending" ? { ...p, status: "approved" } : p));
     // Deduplicate parent IDs to avoid duplicate API calls
-    const parentIds = [...new Set(pendingPieces.map(p => getParentId(p.id)))];
-    for (const parentId of parentIds) {
-      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feedback: "" }),
-      }).catch(() => null);
+    const uniquePairs = [...new Map(pendingPieces.map(p => [getParentId(p.id), p])).entries()];
+
+    let approvedCount = 0;
+    let firstComplianceBlock: { pieceId: string; pieceTitle: string; compliance: PieceLevelComplianceResult } | null = null;
+    const failedIds: string[] = [];
+
+    for (const [parentId, piece] of uniquePairs) {
+      try {
+        await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${parentId}/approve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedback: "" }),
+        });
+        // Mark approved in local state
+        setPieces(prev => prev.map(p => getParentId(p.id) === parentId ? { ...p, status: "approved" as const } : p));
+        approvedCount++;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 422) {
+          const data = err.data as { code?: string; compliance?: PieceLevelComplianceResult } | null;
+          if (data?.code === "COMPLIANCE_VIOLATION" && data.compliance && !firstComplianceBlock) {
+            firstComplianceBlock = {
+              pieceId: piece.id,
+              pieceTitle: piece.title ?? "Peça de conteúdo",
+              compliance: data.compliance,
+            };
+          }
+        }
+        failedIds.push(piece.id);
+      }
     }
-    toast.success(`${pendingPieces.length} peças aprovadas`);
-    // If campaign is awaiting_approval, transition it to approved and redirect to launch
-    if (campaign?.status === "awaiting_approval") {
+
+    if (approvedCount > 0) {
+      toast.success(`${approvedCount} peça${approvedCount !== 1 ? "s" : ""} aprovada${approvedCount !== 1 ? "s" : ""}`);
+    }
+    if (firstComplianceBlock) {
+      toast.error(`${failedIds.length} peça${failedIds.length !== 1 ? "s" : ""} bloqueada${failedIds.length !== 1 ? "s" : ""} por compliance`);
+      setComplianceBlock(firstComplianceBlock);
+    }
+    // Only transition campaign if ALL pieces were approved and no compliance failures remain
+    const allPiecesNowApproved = failedIds.length === 0;
+    if (allPiecesNowApproved && approvedCount > 0 && campaign?.status === "awaiting_approval") {
       approveCampaignMutation.mutate();
     }
   };
@@ -2393,6 +2633,20 @@ export default function ContentApproval() {
           onClose={() => setRejectingPiece(null)}
           onConfirm={(reason) => handleRejectWithFeedback(rejectingPiece.id, reason)}
           loading={rewritingPiece === rejectingPiece.id}
+        />
+      )}
+      {complianceBlock && (
+        <ComplianceBlockModal
+          pieceTitle={complianceBlock.pieceTitle}
+          compliance={complianceBlock.compliance}
+          forceLoading={forceApproving}
+          onForceApprove={() => void handleApprove(complianceBlock.pieceId, true)}
+          onRewrite={() => {
+            const pieceId = complianceBlock.pieceId;
+            setComplianceBlock(null);
+            void handleAiRewrite(pieceId);
+          }}
+          onClose={() => setComplianceBlock(null)}
         />
       )}
       {editingPiece && (
