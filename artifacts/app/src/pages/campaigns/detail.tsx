@@ -19,7 +19,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
-  RefreshCw, Rocket, Brain, Video, CheckCheck,
+  RefreshCw, Rocket, Brain, Video, CheckCheck, Wifi,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
@@ -2148,6 +2148,74 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {/* ─── Acesso Rápido a Criativos (Fundador) ─────────────────────────────── */}
+        {["awaiting_approval","approved","executing","live","completed"].includes(campaign.status) && (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Link href={`/campaigns/${campaignId}/content`} className="flex-1">
+              <div className="border border-border/30 bg-card/20 hover:border-primary/40 hover:bg-primary/5 transition-all px-4 py-3 flex items-center gap-3 cursor-pointer group">
+                <div className="w-8 h-8 border border-border/30 flex items-center justify-center shrink-0 group-hover:border-primary/50 transition-colors">
+                  <Layers className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/70 transition-colors" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[11px] font-bold text-foreground/70 uppercase tracking-widest group-hover:text-primary/80 transition-colors">
+                    Criativos &amp; Conteúdo
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground/40">
+                    {(previewContentData?.pieces ?? contentData?.pieces ?? []).length > 0
+                      ? `${(previewContentData?.pieces ?? contentData?.pieces ?? []).length} peça(s) gerada(s) — clique para visualizar e aprovar`
+                      : "Visualizar e aprovar conteúdo gerado pelos agentes"}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-primary/60 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </div>
+            </Link>
+            <Link href="/integracoes" className="sm:w-auto">
+              <div className="border border-border/30 bg-card/20 hover:border-cyan-400/40 hover:bg-cyan-400/5 transition-all px-4 py-3 flex items-center gap-3 cursor-pointer group h-full">
+                <Wifi className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-cyan-400/70 transition-colors shrink-0" />
+                <span className="font-mono text-[11px] text-muted-foreground/50 group-hover:text-cyan-400/80 transition-colors uppercase tracking-widest whitespace-nowrap">
+                  Redes Sociais
+                </span>
+              </div>
+            </Link>
+          </div>
+        )}
+
+        {/* ─── Reset de Status (campanha incorretamente Ao Vivo) ────────────────── */}
+        {(campaign.status === "live" || campaign.status === "executing") && (
+          <details className="group">
+            <summary className="cursor-pointer font-mono text-[10px] text-muted-foreground/20 hover:text-muted-foreground/40 uppercase tracking-widest select-none transition-colors list-none flex items-center gap-2 py-1">
+              <span className="group-open:hidden">▸ Opções avançadas</span>
+              <span className="hidden group-open:inline">▾ Opções avançadas</span>
+            </summary>
+            <div className="mt-2 border border-border/20 bg-card/10 px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex-1">
+                <div className="font-mono text-[11px] font-bold text-muted-foreground/50">Reverter para Aprovação</div>
+                <div className="font-mono text-[10px] text-muted-foreground/30 mt-0.5">
+                  Retorna a campanha para revisão de conteúdo. Use se o status estiver incorreto.
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    await customFetch(`/api/campaigns/${campaignId}/status`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ status: "awaiting_approval" }),
+                    });
+                    toast.success("Campanha revertida para aprovação");
+                    queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}`] });
+                  } catch { toast.error("Erro ao reverter status"); }
+                }}
+                className="rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 border border-border/30 text-muted-foreground/40 hover:text-orange-400/70 hover:border-orange-400/40 shrink-0"
+              >
+                Reverter Status
+              </Button>
+            </div>
+          </details>
+        )}
 
         {/* ─── Pré-Lançamento: Checklist Obrigatório (status approved) ─────── */}
         {campaign.status === "approved" && (
