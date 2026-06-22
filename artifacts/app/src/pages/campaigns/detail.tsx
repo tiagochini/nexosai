@@ -1388,12 +1388,15 @@ export default function CampaignDetail() {
   const refetchInterval = isActive ? 5000 : false;
 
   // Auto-redirect draft/intake to the intake wizard
+  // Guard with isLoading: never redirect while the query is still fetching fresh data.
+  // Without this, stale cache (status: "intake") fires redirect immediately after
+  // finalize navigation, causing an infinite loop back to the briefing screen.
   useEffect(() => {
-    if (!campaign) return;
+    if (!campaign || isLoading) return;
     if (campaign.status === "draft" || campaign.status === "intake") {
       setLocation(`/campaigns/${campaignId}/intake`);
     }
-  }, [campaign?.status, campaignId, setLocation, campaign]);
+  }, [campaign?.status, campaignId, setLocation, campaign, isLoading]);
 
   // ── Agents query ──────────────────────────────────────────────────────────────
   const { data: agentsData, isLoading: agentsLoading } = useQuery({

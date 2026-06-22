@@ -9,6 +9,7 @@ import {
   useGetIntakeScore,
   getGetIntakeQueryKey,
   getGetIntakeScoreQueryKey,
+  getGetCampaignQueryKey,
 } from "@workspace/api-client-react";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { globalSilentRefresh } from "@/lib/auth";
@@ -660,7 +661,7 @@ export default function CampaignIntake() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      toast.success("Briefing finalizado! Redirecionando para sua campanha...");
+      toast.success("Briefing finalizado! Abrindo Master Plan...");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao finalizar";
       // If intake is "too short", block navigation — otherwise go to campaign regardless
@@ -669,10 +670,18 @@ export default function CampaignIntake() {
         setFinalizing(false);
         return;
       }
-      // For any other error (e.g. already finalized, soft-incomplete), warn and navigate anyway
-      toast.warning("Briefing registrado com avisos — indo para sua campanha.");
+      // For any other error (e.g. already finalized), warn but proceed — campaign may
+      // already be in analyzing/strategy_ready which is exactly where we want to go.
+      toast.warning("Briefing registrado — abrindo campanha.");
     }
-    // Always navigate to campaign detail after finalize (success or soft error)
+    // Force-refresh campaign cache so detail.tsx sees the updated status (analyzing)
+    // before its redirect useEffect fires. Without this refetch the stale "intake"
+    // status in cache triggers an immediate redirect loop back to this page.
+    try {
+      await queryClient.refetchQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+    } catch {
+      // non-blocking — navigate even if refetch fails
+    }
     setLocation(`/campaigns/${campaignId}`);
     setFinalizing(false);
   };

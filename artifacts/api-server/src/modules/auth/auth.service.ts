@@ -192,6 +192,25 @@ export async function loginUser(
 
   log.info({ userId: user.id }, "User logged in");
 
+  // Auto-guarantee unlimited credits for founder/admin accounts on every login (idempotent).
+  // This is the authoritative gate — does not depend on frontend effects.
+  const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
+  if (ADMIN_EMAILS.has(user.email)) {
+    const currentSettings = (workspace.settings ?? {}) as Record<string, unknown>;
+    if (!currentSettings["unlimitedCredits"]) {
+      setImmediate(async () => {
+        try {
+          await db.update(workspacesTable)
+            .set({ settings: { ...currentSettings, unlimitedCredits: true } as any })
+            .where(eq(workspacesTable.id, workspace.id));
+          log.info({ userId: user.id, workspaceId: workspace.id }, "Unlimited credits auto-set for admin on login");
+        } catch (e) {
+          log.warn({ err: e }, "Failed to auto-set unlimited credits for admin");
+        }
+      });
+    }
+  }
+
   const payload: TokenPayload = {
     userId: user.id,
     workspaceId: workspace.id,
