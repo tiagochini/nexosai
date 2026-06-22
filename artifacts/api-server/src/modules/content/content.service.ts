@@ -1679,6 +1679,17 @@ export async function generateCampaignContent(
     timestamp: new Date().toISOString(),
   });
 
+  // ── Compliance pre-scan: fire-and-forget sweep of all generated pieces ───────
+  // Runs validatePieceCompliance on every pending_approval piece in background
+  // so the approval page has a full compliance landscape before user reviews.
+  if (!allFailed) {
+    const sweep = await import("./content-compliance-sweep.js");
+    setImmediate(() => {
+      sweep.runComplianceSweep(campaignId, workspaceId, log)
+        .catch(() => undefined);
+    });
+  }
+
   // ── Trava cleanup: always reset fallback mode + compliance hint after content run ──
   setFallbackMode(false);
   setComplianceHint(null);

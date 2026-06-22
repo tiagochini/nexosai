@@ -57,6 +57,22 @@ router.get("/:campaignId/content", async (req, res): Promise<void> => {
   }
 });
 
+// GET /campaigns/:campaignId/content/compliance-scan — pre-scan results
+router.get("/:campaignId/content/compliance-scan", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  try {
+    const { getComplianceSweepSummary } = await import("./content-compliance-sweep.js");
+    const summary = await getComplianceSweepSummary(campaignId, req.auth.workspaceId);
+    res.json({ summary });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
 // GET /campaigns/:campaignId/content/media-briefs — list media briefs
 router.get("/:campaignId/content/media-briefs", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;

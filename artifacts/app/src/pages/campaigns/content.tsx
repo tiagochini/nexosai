@@ -245,7 +245,7 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
 
 // ── Content Card (text view) ──────────────────────────────────────────────────
 
-function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading, rewriting }: {
+function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading, rewriting, prescanResult }: {
   piece: ContentPiece;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
@@ -253,6 +253,7 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
   onAiRewrite: (id: string) => void;
   loading?: string | null;
   rewriting?: string | null;
+  prescanResult?: PieceScanResult | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -298,6 +299,22 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
                   "text-red-400 border-red-400/40 bg-red-400/10"
                 }`}>
                   IA {piece.qualityScore}/100
+                </Badge>
+              )}
+              {prescanResult && !prescanResult.passed && (
+                <Badge
+                  variant="outline"
+                  className={`rounded-none font-mono text-[11px] px-1.5 py-0 gap-1 ${
+                    prescanResult.riskLevel === "blocked"   ? "text-red-400 border-red-400/40 bg-red-400/10" :
+                    prescanResult.riskLevel === "high_risk" ? "text-orange-400 border-orange-400/40 bg-orange-400/10" :
+                                                             "text-yellow-400 border-yellow-400/40 bg-yellow-400/10"
+                  }`}
+                  title={prescanResult.recommendations.slice(0, 2).join(" | ")}
+                >
+                  <Shield className="h-2.5 w-2.5" />
+                  {prescanResult.riskLevel === "blocked" ? "Bloqueado" :
+                   prescanResult.riskLevel === "high_risk" ? "Alto Risco" : "Revisar"}
+                  {prescanResult.violationCount > 0 && ` ·${prescanResult.violationCount}`}
                 </Badge>
               )}
             </div>
@@ -427,6 +444,28 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
       </div>
     </div>
   );
+}
+
+// ── Compliance pre-scan types ─────────────────────────────────────────────────
+
+interface PieceScanResult {
+  pieceId: string;
+  riskLevel: "safe" | "low_risk" | "medium_risk" | "high_risk" | "blocked";
+  complianceScore: number;
+  passed: boolean;
+  violationCount: number;
+  recommendations: string[];
+}
+
+interface ComplianceSweepSummary {
+  total: number;
+  passing: number;
+  withViolations: number;
+  blocked: number;
+  highRisk: number;
+  mediumRisk: number;
+  byPiece: Record<string, PieceScanResult>;
+  scanned: boolean;
 }
 
 // ── Compliance Block Modal ─────────────────────────────────────────────────────
@@ -3000,6 +3039,30 @@ export default function ContentApproval() {
 
   const [contentFetchError, setContentFetchError] = useState<string | null>(null);
 
+  // Compliance pre-scan results — fetched after content is loaded
+  const { data: complianceScanData, refetch: refetchCompliance } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/content/compliance-scan`],
+    queryFn: async () => {
+      try {
+        const result = await customFetch<{ summary: ComplianceSweepSummary }>(
+          `/api/campaigns/${campaignId}/content/compliance-scan`,
+        );
+        return result?.summary ?? null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!campaignId,
+    staleTime: 30_000,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data || !data.scanned) return 8000;
+      return false;
+    },
+  });
+
+  const complianceScan = complianceScanData ?? null;
+
   const { data: apiContentData, isLoading: isContentLoading, refetch: refetchContent } = useQuery({
     queryKey: [`/api/campaigns/${campaignId}/content`],
     queryFn: async () => {
@@ -3574,6 +3637,66 @@ export default function ContentApproval() {
           </div>
         </div>
 
+        {/* ── Compliance Pre-Scan Banner ───────────────────────────────────── */}
+        {complianceScan && complianceScan.scanned && complianceScan.withViolations > 0 && (
+          <div className={`border flex items-start gap-3 px-4 py-3 ${
+            complianceScan.blocked > 0
+              ? "border-red-500/40 bg-red-500/5"
+              : complianceScan.highRisk > 0
+              ? "border-orange-500/40 bg-orange-500/5"
+              : "border-yellow-500/40 bg-yellow-500/5"
+          }`}>
+            <div className={`w-8 h-8 border flex items-center justify-center shrink-0 mt-0.5 ${
+              complianceScan.blocked > 0
+                ? "border-red-500/40 bg-red-500/10"
+                : complianceScan.highRisk > 0
+                ? "border-orange-500/40 bg-orange-500/10"
+                : "border-yellow-500/40 bg-yellow-500/10"
+            }`}>
+              <Shield className={`h-3.5 w-3.5 ${
+                complianceScan.blocked > 0 ? "text-red-400" :
+                complianceScan.highRisk > 0 ? "text-orange-400" : "text-yellow-400"
+              }`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-mono text-[10px] uppercase tracking-widest font-bold text-foreground/80 mb-1">
+                Compliance AI — Pré-Scan Concluído
+              </div>
+              <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
+                <span className="text-foreground/90">{complianceScan.withViolations}</span> peça{complianceScan.withViolations !== 1 ? "s" : ""} com possíveis violações detectadas
+                {complianceScan.blocked > 0 && (
+                  <span className="text-red-400 ml-2 font-bold">· {complianceScan.blocked} bloqueada{complianceScan.blocked !== 1 ? "s" : ""}</span>
+                )}
+                {complianceScan.highRisk > 0 && (
+                  <span className="text-orange-400 ml-2">· {complianceScan.highRisk} alto risco</span>
+                )}
+                {complianceScan.mediumRisk > 0 && (
+                  <span className="text-yellow-400 ml-2">· {complianceScan.mediumRisk} médio risco</span>
+                )}
+                <span className="text-muted-foreground/50 ml-2">· {complianceScan.passing} ok</span>
+              </div>
+              <div className="font-mono text-[10px] text-muted-foreground/40 mt-1">
+                Peças marcadas com <Shield className="h-2.5 w-2.5 inline mb-0.5" /> precisam de revisão antes da aprovação. Clique "Aprovar" para ver detalhes.
+              </div>
+            </div>
+            <button
+              onClick={() => void refetchCompliance()}
+              className="shrink-0 p-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              title="Atualizar scan"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+        {complianceScan && complianceScan.scanned && complianceScan.withViolations === 0 && (
+          <div className="border border-success/30 bg-success/5 flex items-center gap-3 px-4 py-2.5">
+            <Shield className="h-3.5 w-3.5 text-success shrink-0" />
+            <div className="font-mono text-[11px] text-success/80">
+              Compliance AI — {complianceScan.total} peça{complianceScan.total !== 1 ? "s" : ""} analisada{complianceScan.total !== 1 ? "s" : ""}, nenhuma violação detectada
+            </div>
+          </div>
+        )}
+
         {/* ── Video Production Style Banner ───────────────────────────────── */}
         {apiContentData?.pieces?.some(p => p.type === "vsl_script" || p.type === "cpl_script") && (
           <div className={`border flex items-center gap-3 px-4 py-3 ${videoProductionStyle === "clone" && hasClone ? "border-primary/30 bg-primary/5" : "border-border/40 bg-card/30"}`}>
@@ -3809,7 +3932,7 @@ export default function ContentApproval() {
                     /* Text-based platforms: email, whatsapp, ads, landing */
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {platformPieces.map(piece => (
-                        <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} />
+                        <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
                       ))}
                     </div>
                   )}
@@ -3851,7 +3974,7 @@ export default function ContentApproval() {
                   </div>
                   <div className="ml-11 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {dayPieces.map(piece => (
-                      <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} />
+                      <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
                     ))}
                   </div>
                 </div>
@@ -3873,7 +3996,7 @@ export default function ContentApproval() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {segPieces.map(piece => (
-                    <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} />
+                    <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
                   ))}
                 </div>
               </div>
