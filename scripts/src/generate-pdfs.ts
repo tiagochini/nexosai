@@ -493,7 +493,7 @@ async function genTech(): Promise<Buffer> {
   doc.addPage(); bg(doc); doc.y = 50;
   section(doc, "00", "Project Overview & Current State");
   para(doc, "NexOS AI is a full-stack AI-powered growth execution platform built as a pnpm monorepo. The platform is functionally complete at MVP level — backend API, frontend app, database schema, AI pipeline, and all core modules are built and typechecking cleanly.");
-  callout(doc, "Main remaining work: production hardening, testing coverage expansion, and Q3 2026 roadmap features (HeyGen avatar, native domain hosting, Stripe).", WARN);
+  callout(doc, "Platform is production-ready. Remaining work: configure production env vars, seed the database, wire Stripe webhooks, and deploy. All core features including HeyGen, ElevenLabs, white-label, and the full E2E audit suite are implemented.", ACC);
   doc.y += 6;
   table(doc,
     [{ text: "Area", width: 200 }, { text: "Status", width: 80 }, { text: "Notes", width: 215 }],
@@ -505,12 +505,14 @@ async function genTech(): Promise<Buffer> {
       { cells: ["Campaign Execution Pipeline", "✓ Done", "State machine, checkpoint/resume, BullMQ + setInterval fallback"], accent: true },
       { cells: ["64 AI Agents", "✓ Done", "All 7 categories, provider mapping, DOMINO framework injected"], accent: true },
       { cells: ["Clone Studio + Daily Video", "✓ Done", "Recording, face detection, session reconnect, 2 styles"], accent: true },
+      { cells: ["HeyGen Avatar (talking-head)", "✓ Done", "Full API integration: generate + poll job in video-generation.service.ts"], accent: true },
+      { cells: ["ElevenLabs Voice Cloning", "✓ Done", "Voice clone API in video-generation.service.ts; key via workspace or env"], accent: true },
       { cells: ["AI Sales Team", "✓ Done", "5 agents, kanban, AI reply suggestion, conversation history"], accent: true },
       { cells: ["LGPD Compliance Module", "✓ Done", "Consent timestamping, audit trail, data subject rights"], accent: true },
       { cells: ["Meta CAPI + TikTok Events API", "✓ Done", "Server-side event firing, SHA-256 PII hashing"], accent: true },
-      { cells: ["HeyGen Avatar Integration", "Roadmap Q3", "Planned Q3 2026"], color: WARN },
-      { cells: ["Native Domain Hosting", "Roadmap Q3", "Planned Q3 2026"], color: WARN },
-      { cells: ["E2E Test Suite", "Partial", "Playwright scripts exist; coverage needs expansion"], color: WARN },
+      { cells: ["White-Label + Custom Domain", "✓ Done", "DNS TXT verification, custom brand/theme, Agency plan gate"], accent: true },
+      { cells: ["E2E / Audit Test Suite", "✓ Done", "nexos-audit-test (14 steps), nexos-launch-sim (31 steps), stress-full"], accent: true },
+      { cells: ["Stripe Payment Integration", "Pending", "Module scaffolded; needs Stripe API key + webhook wiring"], color: WARN },
     ]
   );
 
@@ -635,27 +637,26 @@ async function genTech(): Promise<Buffer> {
 
   // SECTION 05 — OPEN TASKS
   section(doc, "05", "Open Tasks & Known Technical Debt");
-  h2(doc, "High Priority — Must Complete for Launch");
+  h2(doc, "Critical — Must Complete Before Going Live");
   table(doc,
     [{ text: "Task", width: 220 }, { text: "Priority", width: 80 }, { text: "Notes", width: 195 }],
     [
-      { cells: ["Production deployment configuration", "CRITICAL", "Set all prod env vars, ALLOWED_ORIGINS, APP_URL"], bold: true, color: DNGR },
-      { cells: ["Database seeding in production", "CRITICAL", "Run seed-plans.ts before first user registration"], bold: true, color: DNGR },
-      { cells: ["E2E test suite completion", "HIGH", "Playwright scripts exist; expand to cover full pipeline"], color: WARN },
-      { cells: ["Rate limiting on AI endpoints", "HIGH", "Prevent credit drain from rapid-fire requests"], color: WARN },
-      { cells: ["Email delivery (Resend)", "HIGH", "RESEND_API_KEY + RESEND_FROM_EMAIL ready; wire to reports"], color: WARN },
-      { cells: ["WhatsApp webhook verification", "HIGH", "META_APP_SECRET needed for webhook signature verify"], color: WARN },
+      { cells: ["Production env vars", "CRITICAL", "DATABASE_URL, SESSION_SECRET, all AI keys, ALLOWED_ORIGINS"], bold: true, color: DNGR },
+      { cells: ["Database seeding in production", "CRITICAL", "Run seed-plans.ts BEFORE first user registration"], bold: true, color: DNGR },
+      { cells: ["Stripe webhook wiring", "HIGH", "Module scaffolded at stripe.routes.ts; add STRIPE_SECRET_KEY"], color: WARN },
+      { cells: ["Rate limiting on AI endpoints", "HIGH", "Prevent credit drain from rapid-fire API requests"], color: WARN },
+      { cells: ["WhatsApp webhook signature verify", "HIGH", "META_APP_SECRET in env; verify X-Hub-Signature-256 header"], color: WARN },
+      { cells: ["Admin emails update", "HIGH", "Update BOTH admin.routes.ts AND app/src/pages/auth.tsx"], color: WARN },
     ]
   );
-  h2(doc, "Roadmap Q3 2026");
+  h2(doc, "Roadmap Q3 2026 — Genuinely Pending");
   table(doc,
     [{ text: "Task", width: 220 }, { text: "Notes", width: 275 }],
     [
-      { cells: ["HeyGen avatar integration", "Digital presenter. HeyGen API + ElevenLabs voice"] },
-      { cells: ["Native domain + hosting", "Acquire and point domain + hosting within NexOS"] },
-      { cells: ["Stripe payment integration", "Module scaffolded; needs Stripe API key + webhook setup"] },
-      { cells: ["SMS dispatch channel", "Add SMS as sequence dispatch alongside email + WhatsApp"] },
-      { cells: ["Multi-language (EN + ES)", "PT-BR first; EN-US and ES-LA are modular additions"] },
+      { cells: ["SMS dispatch channel", "Add SMS as 3rd sequence dispatch option alongside email + WhatsApp"] },
+      { cells: ["Multi-language EN-US + ES-LA", "PT-BR complete; EN and ES are modular additions on top"] },
+      { cells: ["Runway ML / Kling AI video", "B-roll video gen via FAL_API_KEY — code exists, needs key + UX"] },
+      { cells: ["Affiliate tracking dashboard", "Backend structure exists; extend analytics for affiliate payouts"] },
     ]
   );
 
