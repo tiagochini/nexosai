@@ -307,18 +307,18 @@ function WorkspaceTab() {
           </div>
         </FieldRow>
 
-        <FieldRow label="Plano Atual" sublabel="Seu plano de assinatura">
+        <FieldRow label="Plano Atual" sublabel="Acesso vitalício · pagamento único">
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="rounded-none font-mono text-xs uppercase tracking-widest text-primary border-primary/40 bg-primary/10">
               {plan?.name ?? "—"}
             </Badge>
             <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              {total > 0 ? `${total} créditos/mês` : ""}
+              {total > 0 ? `${total} créditos incluídos` : ""}
             </span>
           </div>
         </FieldRow>
 
-        <FieldRow label="Créditos do agente" sublabel="Uso do mês atual">
+        <FieldRow label="Créditos do agente" sublabel="Saldo disponível">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <span className="font-mono text-2xl font-bold text-primary drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]">
