@@ -1633,6 +1633,13 @@ export default function CampaignDetail() {
             description: "Acesse Créditos do agente para comprar mais.",
             duration: 8000,
           });
+        } else if (code === "CONTENT_NOT_APPROVED" || code === "NO_CONTENT") {
+          const approvalUrl = (errData?.data as { approvalUrl?: string } | undefined)?.approvalUrl ?? `/campaigns/${campaignId}/content`;
+          toast.error(msg ?? "Conteúdo não aprovado.", {
+            description: "Aprove todas as peças antes de lançar.",
+            duration: 8000,
+            action: { label: "Ir para Aprovação", onClick: () => { window.location.href = approvalUrl; } },
+          });
         } else if (code === "MISSING_INTEGRATIONS") {
           setMissingIntegrations((errData?.data?.missing ?? []).map((m: { category: string; providers: string[]; reason?: string }) => m));
         } else if (code === "PARTIAL_INTEGRATIONS") {

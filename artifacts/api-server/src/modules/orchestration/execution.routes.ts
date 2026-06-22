@@ -15,10 +15,11 @@ import {
   campaignsTable,
   workspacesTable,
   workspaceIntegrationsTable,
+  contentPiecesTable,
   getCampaignCreditEstimate,
   CAMPAIGN_CREDIT_BUFFER,
 } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, ne, count } from "drizzle-orm";
 import { env } from "../../lib/env.js";
 
 const router = Router();
@@ -424,6 +425,35 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
       });
       return;
     }
+
+    // ── Content approval gate ────────────────────────────────────────────────
+    // Block launch if any content piece is not yet approved.
+    const allPieces = await db
+      .select({ status: contentPiecesTable.status })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.campaignId, campaignId));
+
+    const totalPieces = allPieces.length;
+    const unapprovedPieces = allPieces.filter(p => p.status !== "approved").length;
+
+    if (totalPieces === 0) {
+      throw new AppError(
+        422,
+        "Nenhuma peça de conteúdo encontrada. Gere e aprove o conteúdo antes de lançar.",
+        "NO_CONTENT",
+        { approvalUrl: `/campaigns/${campaignId}/content` },
+      );
+    }
+
+    if (unapprovedPieces > 0) {
+      throw new AppError(
+        422,
+        `${unapprovedPieces} peça${unapprovedPieces > 1 ? "s" : ""} de conteúdo ainda ${unapprovedPieces > 1 ? "precisam" : "precisa"} de aprovação antes do lançamento.`,
+        "CONTENT_NOT_APPROVED",
+        { unapprovedPieces, totalPieces, approvalUrl: `/campaigns/${campaignId}/content` },
+      );
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Cross-Agent Validation — blocks launch if critical financial/alignment conflicts found
     const validation = await runCrossAgentValidation(campaignId, req.auth.workspaceId, req.log);

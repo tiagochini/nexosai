@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   CheckCircle2, Loader2, Zap, Target, Users, PenTool, BarChart3, Mail,
   Rocket, Bot, Activity, Play, Eye, X, ChevronLeft, ChevronRight,
-  ThumbsUp, ThumbsDown, Sparkles, ArrowRight,
+  ThumbsUp, ThumbsDown, Sparkles, ArrowRight, ExternalLink, Clock,
+  Instagram, Music2, Globe, Calendar, RefreshCw,
 } from "lucide-react";
 import { Link } from "wouter";
+import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import type { CampaignEvent } from "@/lib/socket";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
@@ -553,45 +555,231 @@ export function ExecutingLiveDisplay({
 // ══════════════════════════════════════════════════════════════════════════════
 // STAGE 6 — LIVE: Mission Control Strip
 // ══════════════════════════════════════════════════════════════════════════════
+// ── Social post type (subset of what the API returns) ─────────────────────────
+type SocialPostItem = {
+  id: string;
+  platform: string;
+  status: "draft" | "scheduled" | "published" | "failed" | "cancelled";
+  caption?: string | null;
+  scheduledAt?: string | null;
+  publishedAt?: string | null;
+  platformUrl?: string | null;
+  platformPostId?: string | null;
+  contentPieceId?: string | null;
+};
+
+const POST_PLATFORM_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  instagram: Instagram,
+  tiktok: Music2,
+  facebook: Globe,
+  email: Mail,
+};
+
+const POST_PLATFORM_COLOR: Record<string, string> = {
+  instagram: "text-pink-400 border-pink-400/30",
+  tiktok: "text-cyan-400 border-cyan-400/30",
+  facebook: "text-blue-400 border-blue-400/30",
+  email: "text-indigo-300 border-indigo-300/30",
+};
+
+const POST_PLATFORM_LABEL: Record<string, string> = {
+  instagram: "Instagram", tiktok: "TikTok", facebook: "Facebook",
+  whatsapp_business: "WhatsApp", email: "E-mail", youtube: "YouTube",
+  linkedin: "LinkedIn", facebook_page: "Facebook",
+};
+
+function PostStatusBadge({ status }: { status: SocialPostItem["status"] }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    published:  { label: "Publicado",  cls: "text-success border-success/40 bg-success/10" },
+    scheduled:  { label: "Agendado",   cls: "text-yellow-400 border-yellow-400/30 bg-yellow-400/8" },
+    draft:      { label: "Rascunho",   cls: "text-muted-foreground border-border/40" },
+    failed:     { label: "Falhou",     cls: "text-destructive border-destructive/40 bg-destructive/8" },
+    cancelled:  { label: "Cancelado",  cls: "text-muted-foreground/50 border-border/30" },
+  };
+  const s = map[status] ?? map["draft"];
+  return (
+    <span className={`font-mono text-[10px] uppercase tracking-widest border px-1.5 py-0.5 ${s.cls}`}>
+      {s.label}
+    </span>
+  );
+}
+
 export function LiveMissionControl({ campaignId }: { campaignId: string }) {
   const [pulse, setPulse] = useState(true);
+  const [posts, setPosts] = useState<SocialPostItem[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [showTimeline, setShowTimeline] = useState(true);
 
   useEffect(() => {
     const t = setInterval(() => setPulse(p => !p), 1500);
     return () => clearInterval(t);
   }, []);
 
-  return (
-    <div className="relative overflow-hidden border border-success/50 bg-gradient-to-r from-success/12 via-success/4 to-background">
-      <div className={`absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-success to-transparent transition-opacity duration-1000 ${pulse ? "opacity-100" : "opacity-35"}`} />
+  const fetchPosts = useCallback(async () => {
+    setPostsLoading(true);
+    try {
+      const data = await customFetch<{ posts: SocialPostItem[] }>(`/api/social/posts?campaignId=${campaignId}&limit=30`);
+      setPosts(data.posts ?? []);
+    } catch {
+      setPosts([]);
+    } finally {
+      setPostsLoading(false);
+    }
+  }, [campaignId]);
 
-      <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <div className="w-12 h-12 rounded-full border-2 border-success/55 flex items-center justify-center bg-success/12">
-              <Rocket className="h-6 w-6 text-success" />
+  useEffect(() => { void fetchPosts(); }, [fetchPosts]);
+
+  const published = posts.filter(p => p.status === "published");
+  const scheduled = posts.filter(p => p.status === "scheduled");
+  const now = new Date();
+
+  return (
+    <div className="space-y-3">
+      {/* ── Status strip ── */}
+      <div className="relative overflow-hidden border border-success/50 bg-gradient-to-r from-success/12 via-success/4 to-background">
+        <div className={`absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-success to-transparent transition-opacity duration-1000 ${pulse ? "opacity-100" : "opacity-35"}`} />
+        <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <div className="w-12 h-12 rounded-full border-2 border-success/55 flex items-center justify-center bg-success/12">
+                <Rocket className="h-6 w-6 text-success" />
+              </div>
+              <div className={`absolute inset-0 rounded-full border-2 border-success/25 transition-opacity duration-1000 ${pulse ? "opacity-100 animate-ping" : "opacity-0"}`} />
             </div>
-            <div className={`absolute inset-0 rounded-full border-2 border-success/25 transition-opacity duration-1000 ${pulse ? "opacity-100 animate-ping" : "opacity-0"}`} />
+            <div>
+              <div className="flex items-center gap-2.5 mb-1">
+                <div className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 10px hsl(var(--success))" }} />
+                <span className="font-mono text-base font-bold text-success uppercase tracking-widest">CAMPANHA AO VIVO</span>
+              </div>
+              <div className="font-mono text-[11px] text-muted-foreground/60">
+                {published.length > 0
+                  ? `${published.length} post${published.length > 1 ? "s" : ""} publicado${published.length > 1 ? "s" : ""} · ${scheduled.length} agendado${scheduled.length !== 1 ? "s" : ""}`
+                  : "Todos os canais operacionais · Acompanhe resultados em tempo real pelo painel"}
+              </div>
+            </div>
           </div>
-          <div>
-            <div className="flex items-center gap-2.5 mb-1">
-              <div className="w-2.5 h-2.5 rounded-full bg-success animate-pulse" style={{ boxShadow: "0 0 10px hsl(var(--success))" }} />
-              <span className="font-mono text-base font-bold text-success uppercase tracking-widest">CAMPANHA AO VIVO</span>
-            </div>
-            <div className="font-mono text-[11px] text-muted-foreground/60">
-              Todos os canais operacionais · Acompanhe resultados em tempo real pelo painel
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Link href={`/campaigns/${campaignId}/metrics`}>
-            <button className="font-mono text-[11px] uppercase tracking-widest text-success border border-success/45 hover:bg-success/12 px-4 py-2.5 flex items-center gap-2 transition-colors">
-              <BarChart3 className="h-3.5 w-3.5" />
-              Métricas ao Vivo
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setShowTimeline(v => !v)}
+              className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground border border-border/40 hover:border-border hover:text-foreground px-3 py-2.5 flex items-center gap-2 transition-colors"
+            >
+              <Calendar className="h-3.5 w-3.5" />
+              {showTimeline ? "Ocultar" : "Ver posts"}
             </button>
-          </Link>
+            <Link href={`/campaigns/${campaignId}/metrics`}>
+              <button className="font-mono text-[11px] uppercase tracking-widest text-success border border-success/45 hover:bg-success/12 px-4 py-2.5 flex items-center gap-2 transition-colors">
+                <BarChart3 className="h-3.5 w-3.5" />
+                Métricas ao Vivo
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
+
+      {/* ── Posts timeline ── */}
+      {showTimeline && (
+        <div className="border border-border/50 bg-card/40">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              <span className="font-mono text-[11px] uppercase tracking-widest font-bold">Timeline de Posts</span>
+              {posts.length > 0 && (
+                <span className="font-mono text-[10px] text-muted-foreground/50">
+                  {published.length} publicado{published.length !== 1 ? "s" : ""} · {scheduled.length} agendado{scheduled.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => void fetchPosts()}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="Atualizar"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${postsLoading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
+
+          {postsLoading ? (
+            <div className="flex items-center justify-center py-8 gap-2">
+              <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+              <span className="font-mono text-[11px] text-muted-foreground/60">Carregando posts...</span>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2 text-center px-4">
+              <Calendar className="h-6 w-6 text-muted-foreground/30" />
+              <span className="font-mono text-[11px] text-muted-foreground/50 leading-relaxed">
+                Nenhum post encontrado para esta campanha.<br />
+                Os posts aparecem aqui conforme são publicados ou agendados.
+              </span>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/20">
+              {posts.map(post => {
+                const Icon = POST_PLATFORM_ICON[post.platform] ?? Globe;
+                const colorCls = POST_PLATFORM_COLOR[post.platform] ?? "text-muted-foreground border-border/30";
+                const platformLabel = POST_PLATFORM_LABEL[post.platform] ?? post.platform;
+                const dateObj = post.publishedAt
+                  ? new Date(post.publishedAt)
+                  : post.scheduledAt
+                  ? new Date(post.scheduledAt)
+                  : null;
+                const isUpcoming = post.scheduledAt && new Date(post.scheduledAt) > now;
+                const dateLabel = dateObj
+                  ? dateObj.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+                  : null;
+
+                return (
+                  <div key={post.id} className={`px-4 py-3 flex items-start gap-3 ${post.status === "published" ? "bg-success/3" : ""}`}>
+                    {/* Platform icon */}
+                    <div className={`w-7 h-7 border rounded-sm flex items-center justify-center shrink-0 mt-0.5 ${colorCls}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className={`font-mono text-[11px] font-bold ${colorCls.split(" ")[0]}`}>{platformLabel}</span>
+                        <PostStatusBadge status={post.status} />
+                        {dateLabel && (
+                          <span className="font-mono text-[10px] text-muted-foreground/50 flex items-center gap-1">
+                            {isUpcoming ? <Clock className="h-2.5 w-2.5" /> : null}
+                            {dateLabel}
+                          </span>
+                        )}
+                      </div>
+                      {post.caption && (
+                        <p className="font-mono text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+                          {post.caption}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Link to network or mock */}
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      {post.platformUrl ? (
+                        <a
+                          href={post.platformUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-[10px] uppercase tracking-widest text-success border border-success/30 hover:bg-success/10 px-2 py-1 flex items-center gap-1 transition-colors"
+                          title="Ver post na rede social"
+                        >
+                          <ExternalLink className="h-2.5 w-2.5" />
+                          Ver
+                        </a>
+                      ) : post.status === "scheduled" ? (
+                        <span className="font-mono text-[10px] uppercase tracking-widest text-yellow-400/70 flex items-center gap-1">
+                          <Clock className="h-2.5 w-2.5" />
+                          Agendado
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

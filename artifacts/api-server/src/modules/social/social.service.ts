@@ -324,7 +324,9 @@ export async function listPosts(
     offset?: number;
   } = {}
 ): Promise<{ posts: SocialPost[]; total: number }> {
-  const conditions = [eq(socialPostsTable.workspaceId, workspaceId)];
+  const conditions: ReturnType<typeof eq>[] = [eq(socialPostsTable.workspaceId, workspaceId)];
+  if (filters.campaignId) conditions.push(eq(socialPostsTable.campaignId, filters.campaignId));
+  if (filters.status) conditions.push(eq(socialPostsTable.status, filters.status as "draft" | "scheduled" | "published" | "failed" | "cancelled"));
 
   const rows = await db
     .select()
