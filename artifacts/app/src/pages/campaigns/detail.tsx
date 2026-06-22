@@ -19,7 +19,7 @@ import {
   Clock, AlertCircle, Loader2, ChevronRight, Bot, BarChart3,
   ShieldCheck, Layers, Zap, XCircle, Eye, TrendingUp,
   AlertTriangle, Activity, Target, DollarSign, Users, BookOpen, Link2, X,
-  RefreshCw, Rocket, Brain, Video, CheckCheck, Wifi,
+  RefreshCw, Rocket, Brain, Video, CheckCheck, Wifi, Image,
 } from "lucide-react";
 import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-sequence";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
@@ -50,6 +50,7 @@ import { useAuth } from "@/lib/auth";
 import { CreativeStudioBlock } from "@/components/CreativeStudioBlock";
 import { PreLaunchChecklist } from "@/components/PreLaunchChecklist";
 import { LaunchAuditScanner } from "@/components/LaunchAuditScanner";
+import { CampaignCreativeGallery } from "@/components/CampaignCreativeGallery";
 import { ComplianceReviewModal } from "@/components/ComplianceReviewModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1289,7 +1290,7 @@ export default function CampaignDetail() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
-  const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos">("comando");
+  const [activeTab, setActiveTab] = useState<"comando" | "agentes" | "estrategia" | "conteudo" | "metricas" | "grupos" | "galeria">("comando");
   const { isArquiteto, isFundador, setMode } = useMode();
   const { user, workspace } = useAuth();
   const [missingIntegrations, setMissingIntegrations] = useState<{ category: string; providers: string[]; reason?: string }[] | null>(null);
@@ -2312,6 +2313,7 @@ export default function CampaignDetail() {
     { id: "agentes" as const, label: "Agentes", icon: Bot },
     { id: "estrategia" as const, label: "Masterplan", icon: BookOpen },
     { id: "conteudo" as const, label: "Conteúdo", icon: Layers },
+    { id: "galeria" as const, label: "Galeria", icon: Image },
     { id: "metricas" as const, label: "Métricas", icon: BarChart3 },
     { id: "grupos" as const, label: "Grupos", icon: Users },
   ];
@@ -3499,6 +3501,11 @@ export default function CampaignDetail() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ══════════════ GALERIA TAB ══════════════ */}
+      {activeTab === "galeria" && (
+        <CampaignCreativeGallery campaignId={campaignId} />
       )}
 
       {/* ══════════════ GRUPOS TAB ══════════════ */}
