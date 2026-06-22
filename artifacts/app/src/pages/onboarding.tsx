@@ -15,11 +15,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
+import { CloneStudioPanel } from "@/components/CloneStudioPanel";
+import { CloneWowMoment } from "@/components/CloneWowMoment";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type OnboardingPath = "has_product" | "building_product" | "affiliate_nexos" | "has_audience";
 type AudienceSubPath = "micro_launch" | "members_area" | "product_from_audience";
-type UIStep = "welcome" | "path_select" | "audience_subpath" | "conversation" | "plan_preview" | "diagnosis_approval" | "integration_setup";
+type UIStep = "welcome" | "path_select" | "audience_subpath" | "conversation" | "plan_preview" | "clone_wow" | "diagnosis_approval" | "integration_setup";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -344,6 +346,10 @@ export default function Onboarding() {
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [simulatorBanner, setSimulatorBanner] = useState<SimulatorData | null>(null);
+
+  // Clone Studio state
+  const [showCloneStudio, setShowCloneStudio] = useState(false);
+  const [cloneSessionId, setCloneSessionId] = useState<string | null>(null);
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -1448,6 +1454,48 @@ export default function Onboarding() {
           ))}
         </div>
 
+        {/* ── Clone Studio ──────────────────────────────────────────────── */}
+        {!cloneSessionId && !showCloneStudio && (
+          <div className="border border-dashed border-primary/30 p-4 flex items-center gap-4 bg-primary/3 hover:bg-primary/5 transition-colors cursor-pointer group"
+            onClick={() => setShowCloneStudio(true)}
+          >
+            <div className="w-9 h-9 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+              <Video className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-0.5">
+                Clone Studio · Opcional · 5 min
+              </div>
+              <p className="font-mono text-[11px] text-muted-foreground leading-relaxed">
+                Enquanto os agentes trabalham, crie seu clone de voz. Ele vai gerar vídeos de campanha com sua voz e jeito de falar.
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        )}
+
+        {showCloneStudio && !cloneSessionId && (
+          <CloneStudioPanel
+            userName={user?.name ?? "Usuário"}
+            onComplete={(sessionId) => {
+              setCloneSessionId(sessionId);
+              setShowCloneStudio(false);
+              toast.success("Clone capturado! Seu clone está sendo processado.");
+            }}
+            onSkip={() => setShowCloneStudio(false)}
+          />
+        )}
+
+        {cloneSessionId && (
+          <div className="border border-success/30 bg-success/5 px-4 py-3 flex items-center gap-3">
+            <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+            <div className="flex-1">
+              <div className="font-mono text-[11px] font-bold text-success uppercase tracking-widest">Clone capturado com sucesso</div>
+              <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Voz e expressões em processamento · disponível em breve para geração de vídeo</div>
+            </div>
+          </div>
+        )}
+
         {/* CTA */}
         <div className="border border-primary/30 bg-primary/5 p-5 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-3 h-3 border-t border-l border-primary" />
@@ -1459,11 +1507,20 @@ export default function Onboarding() {
               Confirme o que entendemos antes de escalar o time
             </div>
             <Button
-              onClick={handleGoToDiagnosis}
+              onClick={() => {
+                if (cloneSessionId) {
+                  setStep("clone_wow");
+                } else {
+                  handleGoToDiagnosis();
+                }
+              }}
               className="w-full font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-12 text-sm"
             >
-              <CheckCircle2 className="h-4 w-4" />
-              Está correto — avançar
+              {cloneSessionId ? (
+                <><Sparkles className="h-4 w-4" /> Ver apresentação do seu clone</>
+              ) : (
+                <><CheckCircle2 className="h-4 w-4" /> Está correto — avançar</>
+              )}
             </Button>
             <button
               onClick={handleLaunch}
@@ -1474,6 +1531,21 @@ export default function Onboarding() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // ── Step: clone_wow — apresentação do clone + tour guiado ────────────────────
+  if (step === "clone_wow") {
+    const productName = proposals?.[0]?.name ?? undefined;
+    const revenueTarget = proposals?.[0]?.suggestedTrack === "8_digit" ? "R$ 10M+" :
+                          proposals?.[0]?.suggestedTrack === "10_digit" ? "R$ 100M+" : "R$ 100k+";
+    return (
+      <CloneWowMoment
+        userName={user?.name ?? "Usuário"}
+        productName={productName}
+        revenueTarget={revenueTarget}
+        onProceed={handleGoToDiagnosis}
+      />
     );
   }
 
