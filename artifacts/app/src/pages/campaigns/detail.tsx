@@ -49,6 +49,7 @@ import { useMode } from "@/lib/mode";
 import { useAuth } from "@/lib/auth";
 import { CreativeStudioBlock } from "@/components/CreativeStudioBlock";
 import { PreLaunchChecklist } from "@/components/PreLaunchChecklist";
+import { LaunchAuditScanner } from "@/components/LaunchAuditScanner";
 import { ComplianceReviewModal } from "@/components/ComplianceReviewModal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1301,6 +1302,7 @@ export default function CampaignDetail() {
   const [reorientDirective, setReorientDirective] = useState("");
   const [showLaunchSequence, setShowLaunchSequence] = useState(false);
   const [launchReady, setLaunchReady] = useState(false);
+  const [showAuditScanner, setShowAuditScanner] = useState(false);
   const [showLaunchFeeModal, setShowLaunchFeeModal] = useState(false);
   const [pendingStrategyFn, setPendingStrategyFn] = useState<(() => Promise<void>) | null>(null);
 
@@ -2222,7 +2224,7 @@ export default function CampaignDetail() {
           <PreLaunchChecklist
             campaignId={campaignId}
             onLaunchReady={setLaunchReady}
-            onLaunch={() => executeMutation.mutate({ campaignId, data: { phase: "launch" as CampaignExecuteInputPhase } })}
+            onLaunch={() => setShowAuditScanner(true)}
             launching={executeMutation.isPending}
             plannedChannels={(brainDataRaw["plannedChannels"] as string[] | undefined)}
           />
@@ -2337,6 +2339,21 @@ export default function CampaignDetail() {
           campaignTitle={campaign.title ?? "Campanha"}
           connectedProviders={connectedProviders}
           onClose={() => setShowLaunchSequence(false)}
+        />
+      )}
+
+      {/* ── Launch Audit Scanner — cinematic pre-launch gate ── */}
+      {showAuditScanner && (
+        <LaunchAuditScanner
+          campaignId={campaignId}
+          campaignName={campaign.title ?? "Campanha"}
+          intakeData={intakeD}
+          onClose={() => setShowAuditScanner(false)}
+          onConfirmLaunch={() => {
+            setShowAuditScanner(false);
+            executeMutation.mutate({ campaignId, data: { phase: "launch" as CampaignExecuteInputPhase } });
+          }}
+          launching={executeMutation.isPending}
         />
       )}
 
