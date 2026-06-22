@@ -14,10 +14,11 @@ import {
   CheckCircle2, Loader2, Eye, EyeOff, ExternalLink, Zap,
   Wifi, WifiOff, Plus, XCircle, AlertTriangle, Link2, Globe,
   Mic, Square, Upload, Fingerprint, Wand2,
-  Headphones, Camera, Sparkles,
+  Headphones, Camera, Sparkles, Video, UserCheck, UserX, ChevronRight,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
+import { CloneStudioPanel } from "@/components/CloneStudioPanel";
 
 type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade";
 
@@ -1047,8 +1048,15 @@ type PersonaData = {
 };
 
 function IdentidadeTab() {
+  const { user } = useAuth();
   const [persona, setPersona] = useState<PersonaData>({});
   const [loading, setLoading] = useState(true);
+
+  // ── Clone Studio state ────────────────────────────────────────────────────
+  const [showCloneStudio, setShowCloneStudio] = useState(false);
+  const [cloneSessionId, setCloneSessionId] = useState<string | null>(null);
+  const [videoProductionStyle, setVideoProductionStyle] = useState<"clone" | "no_face">("no_face");
+  const [savingStyle, setSavingStyle] = useState(false);
 
   // ── Voice recording state ─────────────────────────────────────────────────
   const [recState, setRecState] = useState<"idle" | "recording" | "recorded" | "cloning" | "done">("idle");
@@ -1074,10 +1082,13 @@ function IdentidadeTab() {
   const [reelStyle,      setReelStyle]      = useState("");
   const [saving,         setSaving]         = useState(false);
 
-  // ── Load persona ──────────────────────────────────────────────────────────
+  // ── Load persona + workspace metadata (clone state) ─────────────────────
   useEffect(() => {
-    customFetch<{ persona: PersonaData }>("/api/workspaces/me/persona")
-      .then(({ persona: p }) => {
+    Promise.all([
+      customFetch<{ persona: PersonaData }>("/api/workspaces/me/persona"),
+      customFetch<{ workspace: { metadata?: Record<string, unknown> } }>("/api/workspaces/me"),
+    ])
+      .then(([{ persona: p }, { workspace }]) => {
         setPersona(p);
         setVoiceName(p.voiceName ?? "");
         setHeygenAvatarId(p.heygenAvatarId ?? "");
@@ -1090,10 +1101,39 @@ function IdentidadeTab() {
         setBrandPresence(p.brandPresence ?? "");
         setReelStyle(p.reelStyle ?? "");
         if (p.voiceCloneId) setRecState("done");
+        // Load clone state from workspace metadata
+        const meta = workspace.metadata ?? {};
+        if (meta.cloneSessionId) setCloneSessionId(meta.cloneSessionId as string);
+        if (meta.videoProductionStyle === "clone" || meta.videoProductionStyle === "no_face") {
+          setVideoProductionStyle(meta.videoProductionStyle);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // ── Save video production style to workspace metadata ─────────────────────
+  const saveVideoProductionStyle = async (style: "clone" | "no_face", sessionId?: string) => {
+    setSavingStyle(true);
+    try {
+      await customFetch<unknown>("/api/workspaces/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metadata: {
+            videoProductionStyle: style,
+            ...(sessionId ? { cloneSessionId: sessionId, hasClone: true } : {}),
+          },
+        }),
+      });
+      setVideoProductionStyle(style);
+      if (sessionId) setCloneSessionId(sessionId);
+    } catch {
+      toast.error("Erro ao salvar preferência de vídeo.");
+    } finally {
+      setSavingStyle(false);
+    }
+  };
 
   // ── Recording helpers ─────────────────────────────────────────────────────
   const startRecording = useCallback(async () => {
@@ -1211,6 +1251,104 @@ function IdentidadeTab() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Seção 0: Clone Studio — Estilo de Vídeo ── */}
+      <SectionCard title="Clone Studio — Estilo de Vídeo" icon={Video}>
+        <div className="space-y-4">
+
+          {/* Style selector */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => void saveVideoProductionStyle("no_face")}
+              disabled={savingStyle}
+              className={`border px-4 py-4 text-left space-y-1.5 transition-all ${videoProductionStyle === "no_face" ? "border-primary bg-primary/10" : "border-border/40 bg-background/30 hover:border-primary/40"}`}
+            >
+              <div className="flex items-center gap-2">
+                <UserX className={`h-4 w-4 ${videoProductionStyle === "no_face" ? "text-primary" : "text-muted-foreground"}`} />
+                <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${videoProductionStyle === "no_face" ? "text-primary" : "text-foreground"}`}>Sem Face</span>
+                {videoProductionStyle === "no_face" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">Ativo</Badge>}
+              </div>
+              <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
+                Narração com IA + animações + texto na tela. Nenhuma aparição sua.
+              </p>
+            </button>
+
+            <button
+              onClick={() => {
+                if (!cloneSessionId) {
+                  setShowCloneStudio(true);
+                } else {
+                  void saveVideoProductionStyle("clone");
+                }
+              }}
+              disabled={savingStyle}
+              className={`border px-4 py-4 text-left space-y-1.5 transition-all ${videoProductionStyle === "clone" ? "border-primary bg-primary/10" : "border-border/40 bg-background/30 hover:border-primary/40"}`}
+            >
+              <div className="flex items-center gap-2">
+                <UserCheck className={`h-4 w-4 ${cloneSessionId ? (videoProductionStyle === "clone" ? "text-primary" : "text-green-400") : "text-muted-foreground/40"}`} />
+                <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${videoProductionStyle === "clone" ? "text-primary" : "text-foreground"}`}>Com Clone</span>
+                {cloneSessionId && videoProductionStyle === "clone" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-primary/20 text-primary border-primary/30">Ativo</Badge>}
+                {cloneSessionId && videoProductionStyle !== "clone" && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-green-500/10 text-green-400 border-green-500/30">Pronto</Badge>}
+                {!cloneSessionId && <Badge className="ml-auto rounded-none font-mono text-[9px] px-1.5 py-0 bg-muted/20 text-muted-foreground/50 border-border/30">Criar clone</Badge>}
+              </div>
+              <p className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed">
+                Vídeos com seu rosto e voz clonada. Requer captura de 5 min.
+              </p>
+            </button>
+          </div>
+
+          {/* Clone Studio panel — shown when user clicks "Com Clone" but has no clone yet */}
+          {showCloneStudio && !cloneSessionId && (
+            <div className="border border-primary/20 bg-primary/3 p-4">
+              <CloneStudioPanel
+                userName={user?.name ?? "Usuário"}
+                onComplete={(sessionId) => {
+                  setShowCloneStudio(false);
+                  void saveVideoProductionStyle("clone", sessionId);
+                  toast.success("Clone capturado! Vídeos futuros usarão seu rosto e voz.");
+                }}
+                onSkip={() => setShowCloneStudio(false)}
+              />
+            </div>
+          )}
+
+          {/* Clone captured status */}
+          {cloneSessionId && (
+            <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
+              <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+              <div className="flex-1">
+                <div className="font-mono text-[11px] font-bold text-green-300">Clone de vídeo capturado</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60">Sessão: {cloneSessionId.slice(0, 12)}… · Disponível para CPL e VSL</div>
+              </div>
+              <button
+                onClick={() => setShowCloneStudio(true)}
+                className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest"
+              >
+                Recriar
+              </button>
+            </div>
+          )}
+
+          {/* Recreate clone studio */}
+          {showCloneStudio && cloneSessionId && (
+            <div className="border border-primary/20 bg-primary/3 p-4">
+              <CloneStudioPanel
+                userName={user?.name ?? "Usuário"}
+                onComplete={(sessionId) => {
+                  setShowCloneStudio(false);
+                  void saveVideoProductionStyle("clone", sessionId);
+                  toast.success("Clone recriado com sucesso!");
+                }}
+                onSkip={() => setShowCloneStudio(false)}
+              />
+            </div>
+          )}
+
+          <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
+            Esta preferência se aplica a todos os CPLs e VSLs gerados pelos agentes. Você pode mudar a qualquer momento — as próximas gerações usarão o novo estilo.
+          </div>
+        </div>
+      </SectionCard>
 
       {/* ── Status Banner ── */}
       <div className="border border-border/40 bg-card/30 px-5 py-4 flex items-center gap-4">

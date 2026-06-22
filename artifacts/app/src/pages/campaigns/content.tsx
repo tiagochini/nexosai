@@ -13,6 +13,7 @@ import {
   BarChart3, Music2, ChevronRight, TrendingUp,
   Zap, Target, Activity, PlayCircle, Link2, Shield,
   RefreshCw, Rocket, AlertTriangle, Copy, Check,
+  Video, UserCheck, UserX, Settings,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -1976,6 +1977,15 @@ export default function ContentApproval() {
     enabled: !!campaignId,
   });
 
+  // Workspace metadata — video production style
+  const { data: workspaceData } = useQuery({
+    queryKey: ["/api/workspaces/me"],
+    queryFn: () => customFetch<{ workspace: { metadata?: Record<string, unknown> } }>("/api/workspaces/me"),
+    staleTime: 60_000,
+  });
+  const videoProductionStyle = (workspaceData?.workspace?.metadata?.videoProductionStyle as "clone" | "no_face" | undefined) ?? "no_face";
+  const hasClone = !!(workspaceData?.workspace?.metadata?.hasClone);
+
   const [contentFetchError, setContentFetchError] = useState<string | null>(null);
 
   const { data: apiContentData, isLoading: isContentLoading, refetch: refetchContent } = useQuery({
@@ -2460,6 +2470,36 @@ export default function ContentApproval() {
             </div>
           </div>
         </div>
+
+        {/* ── Video Production Style Banner ───────────────────────────────── */}
+        {apiContentData?.pieces?.some(p => p.type === "vsl_script" || p.type === "cpl_script") && (
+          <div className={`border flex items-center gap-3 px-4 py-3 ${videoProductionStyle === "clone" && hasClone ? "border-primary/30 bg-primary/5" : "border-border/40 bg-card/30"}`}>
+            <div className={`w-8 h-8 border flex items-center justify-center shrink-0 ${videoProductionStyle === "clone" && hasClone ? "border-primary/40 bg-primary/10" : "border-border/40 bg-muted/20"}`}>
+              {videoProductionStyle === "clone" && hasClone
+                ? <UserCheck className="h-3.5 w-3.5 text-primary" />
+                : <UserX className="h-3.5 w-3.5 text-muted-foreground" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-mono text-[10px] uppercase tracking-widest font-bold text-foreground/80">
+                Estilo de Vídeo (CPL & VSL):{" "}
+                <span className={videoProductionStyle === "clone" && hasClone ? "text-primary" : "text-muted-foreground"}>
+                  {videoProductionStyle === "clone" && hasClone ? "Com Clone — seu rosto e voz" : "Sem Face — narração + animação"}
+                </span>
+              </div>
+              <div className="font-mono text-[10px] text-muted-foreground/50 mt-0.5">
+                {videoProductionStyle === "clone" && hasClone
+                  ? "Os agentes gerarão os roteiros com instruções para vídeo com aparição do criador"
+                  : "Os roteiros serão gerados para vídeo sem aparição — narração, texto na tela e animações"}
+              </div>
+            </div>
+            <Link href="/configuracoes?tab=identidade">
+              <button className="flex items-center gap-1 font-mono text-[10px] text-primary hover:underline uppercase tracking-widest shrink-0">
+                <Settings className="h-3 w-3" />
+                Alterar
+              </button>
+            </Link>
+          </div>
+        )}
 
         {/* Empty-piece alert banner */}
         {emptyPieces.length > 0 && (
