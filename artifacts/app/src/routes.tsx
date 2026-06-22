@@ -65,6 +65,7 @@ import RecordingsPage from "@/pages/recordings/index";
 import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
 import InstitucionalPage from "@/pages/institucional/index";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, isAdmin } = useAuth();
@@ -129,6 +130,7 @@ function WelcomeRoute() {
 
 export default function AppRoutes() {
   return (
+    <ErrorBoundary>
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
@@ -378,5 +380,6 @@ export default function AppRoutes() {
 
       <Route component={NotFound} />
     </Switch>
+    </ErrorBoundary>
   );
 }

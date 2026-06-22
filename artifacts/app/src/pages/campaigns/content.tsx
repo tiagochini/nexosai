@@ -12,7 +12,7 @@ import {
   Users, Loader2, Send, ArrowRight, Eye,
   BarChart3, Music2, ChevronRight, TrendingUp,
   Zap, Target, Activity, PlayCircle, Link2, Shield,
-  RefreshCw, Rocket, AlertTriangle,
+  RefreshCw, Rocket, AlertTriangle, Copy, Check,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -252,6 +252,7 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
   rewriting?: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
   const PlatformIcon = PLATFORM_ICON[piece.platform] ?? Globe;
   const platformColor = PLATFORM_COLOR[piece.platform] ?? "text-muted-foreground border-border/40";
   const isRewriting = rewriting === piece.id;
@@ -364,6 +365,22 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onAiRewrite(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10">
               <Sparkles className="h-3 w-3" />Reescrever
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const text = [piece.title, piece.body, piece.callToAction ? `CTA: ${piece.callToAction}` : "", piece.hashtags?.join(" ") ?? ""].filter(Boolean).join("\n\n");
+                navigator.clipboard.writeText(text).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1800);
+                });
+              }}
+              className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-muted-foreground hover:text-foreground ml-auto"
+              title="Copiar texto para área de transferência"
+            >
+              {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copiado" : "Copiar"}
             </Button>
           </div>
         )}

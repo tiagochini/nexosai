@@ -297,12 +297,15 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const isConnected   = (providers: string[]) => integrations.some(i => providers.includes(i.provider) && i.status === "connected");
   const hasMessaging  = isConnected(["whatsapp_business", "telegram"]);
   const hasEmail      = isConnected(["rd_station", "activecampaign"]);
-  const hasSocial     = isConnected(["instagram", "tiktok_ads", "meta_ads"]);
+  // Gate 5: BOTH platforms required (Instagram AND TikTok)
+  const hasInstagram  = isConnected(["instagram"]);
+  const hasTikTok     = isConnected(["tiktok_ads", "meta_ads"]);
+  const hasSocial     = hasInstagram && hasTikTok;
   const whatsappConn  = integrations.find(i => i.provider === "whatsapp_business" && i.status === "connected");
   const rdConn        = integrations.find(i => i.provider === "rd_station" && i.status === "connected");
   const instagramConn = integrations.find(i => i.provider === "instagram" && i.status === "connected");
   const tiktokConn    = integrations.find(i => i.provider === "tiktok_ads" && i.status === "connected");
-  const connectedSocials = [instagramConn && "Instagram", tiktokConn && "TikTok"].filter(Boolean).join(", ");
+  const connectedSocials = [instagramConn && "Instagram", tiktokConn && "TikTok"].filter(Boolean).join(" + ");
   const missingMsg    = !isConnected(["whatsapp_business"]) ? "whatsapp" as const : "telegram" as const;
   const missingEmail  = !isConnected(["rd_station"]) ? "rd_station" as const : "activecampaign" as const;
   const missingSocial = !instagramConn ? "instagram" as const : "tiktok" as const;
@@ -632,12 +635,16 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
           </div>
           <div className="flex-1 min-w-0">
             <div className={`font-mono text-xs font-bold ${hasSocial ? "text-green-300" : "text-red-300"}`}>
-              Redes Sociais — Distribuição de Conteúdo
+              Redes Sociais — Instagram + TikTok (ambas obrigatórias)
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
               {hasSocial
-                ? `Conectado: ${connectedSocials} — posts publicados automaticamente conforme o schedule`
-                : "Conecte Instagram ou TikTok para distribuição automática do conteúdo gerado"}
+                ? `Conectado: ${connectedSocials} — posts e Reels publicados automaticamente conforme o calendário`
+                : !hasInstagram && !hasTikTok
+                  ? "Conecte Instagram Business E TikTok Business para distribuição automática"
+                  : !hasInstagram
+                    ? "Instagram ainda não conectado — conecte para completar o Gate 5"
+                    : "TikTok ainda não conectado — conecte para completar o Gate 5"}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -647,28 +654,21 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
 
         {socialExpanded && (
           <div className="mx-5 mb-4 space-y-2">
-            {/* OAuth error */}
-            {oauthError && (
-              <div className="border border-red-500/20 bg-red-500/5 px-4 py-3">
-                <div className="font-mono text-[10px] text-red-400 leading-relaxed">{oauthError}</div>
-              </div>
-            )}
-
-            {!hasSocial && (
-              <div className="border border-border/30 bg-background/20 p-4 space-y-3">
-                <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-1">
-                  Conecte via login automático (OAuth) — NexOS captura o token automaticamente
-                </div>
-
-                {/* Instagram / Meta OAuth */}
-                <div className="border border-border/30 bg-background/30 px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">📸</span>
-                    <div>
-                      <div className="font-mono text-[11px] font-bold">Instagram Business</div>
-                      <div className="font-mono text-[9px] text-muted-foreground/50">Posts, Stories e Reels automáticos via Meta Graph API</div>
-                    </div>
+            {/* Per-platform status rows — always visible when expanded */}
+            <div className="space-y-2">
+              {/* Instagram row */}
+              <div className={`px-4 py-3 flex items-center justify-between gap-3 border ${hasInstagram ? "border-green-500/20 bg-green-500/5" : "border-border/30 bg-background/30"}`}>
+                <div className="flex items-center gap-3">
+                  {hasInstagram
+                    ? <CheckCircle2 className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                    : <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />}
+                  <span className="text-base">📸</span>
+                  <div>
+                    <div className="font-mono text-[11px] font-bold">Instagram Business</div>
+                    <div className="font-mono text-[9px] text-muted-foreground/50">Posts, Stories e Reels automáticos via Meta Graph API</div>
                   </div>
+                </div>
+                {!hasInstagram && (
                   <Button
                     size="sm"
                     onClick={(e) => { e.stopPropagation(); void handleOAuth("instagram"); }}
@@ -680,17 +680,25 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                       ? <><Loader2 className="h-3 w-3 animate-spin" />Aguardando…</>
                       : <>Entrar com Instagram</>}
                   </Button>
-                </div>
+                )}
+                {hasInstagram && (
+                  <span className="font-mono text-[10px] text-green-400/70">Conectado ✓</span>
+                )}
+              </div>
 
-                {/* TikTok OAuth */}
-                <div className="border border-border/30 bg-background/30 px-4 py-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg">🎵</span>
-                    <div>
-                      <div className="font-mono text-[11px] font-bold">TikTok Business</div>
-                      <div className="font-mono text-[9px] text-muted-foreground/50">Vídeos curtos, Reels e TikTok Ads via Content Posting API</div>
-                    </div>
+              {/* TikTok row */}
+              <div className={`px-4 py-3 flex items-center justify-between gap-3 border ${hasTikTok ? "border-green-500/20 bg-green-500/5" : "border-border/30 bg-background/30"}`}>
+                <div className="flex items-center gap-3">
+                  {hasTikTok
+                    ? <CheckCircle2 className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                    : <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />}
+                  <span className="text-base">🎵</span>
+                  <div>
+                    <div className="font-mono text-[11px] font-bold">TikTok Business</div>
+                    <div className="font-mono text-[9px] text-muted-foreground/50">Vídeos curtos e TikTok Ads via Content Posting API</div>
                   </div>
+                </div>
+                {!hasTikTok && (
                   <Button
                     size="sm"
                     onClick={(e) => { e.stopPropagation(); void handleOAuth("tiktok"); }}
@@ -702,32 +710,29 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
                       ? <><Loader2 className="h-3 w-3 animate-spin" />Aguardando…</>
                       : <>Entrar com TikTok</>}
                   </Button>
-                </div>
-
-                <div className="pt-1 border-t border-border/20 flex items-center justify-between">
-                  <div className="font-mono text-[9px] text-muted-foreground/30">
-                    O NexOS captura os tokens de acesso automaticamente — sem copiar/colar credenciais
-                  </div>
-                  <Button asChild size="sm" variant="outline" className="font-mono text-[9px] uppercase tracking-widest h-6 px-2 gap-1 rounded-none border-border/30" onClick={e => e.stopPropagation()}>
-                    <Link href="/integracoes">
-                      <Zap className="h-3 w-3" />Mais opções
-                    </Link>
-                  </Button>
-                </div>
+                )}
+                {hasTikTok && (
+                  <span className="font-mono text-[10px] text-green-400/70">Conectado ✓</span>
+                )}
               </div>
-            )}
 
-            {hasSocial && (
-              <div className="border border-green-500/20 bg-green-500/5 px-4 py-3 space-y-1">
-                <div className="flex items-center gap-2 font-mono text-[11px] text-green-400">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {connectedSocials} — conectado via OAuth
+              {oauthError && (
+                <div className="border border-red-500/20 bg-red-500/5 px-4 py-3">
+                  <div className="font-mono text-[10px] text-red-400 leading-relaxed">{oauthError}</div>
                 </div>
-                <div className="font-mono text-[9px] text-muted-foreground/40">
-                  O conteúdo aprovado será publicado automaticamente conforme o calendário de lançamento
+              )}
+
+              <div className="pt-1 border-t border-border/20 flex items-center justify-between">
+                <div className="font-mono text-[9px] text-muted-foreground/30">
+                  NexOS captura tokens via OAuth — sem copiar/colar credenciais
                 </div>
+                <Button asChild size="sm" variant="outline" className="font-mono text-[9px] uppercase tracking-widest h-6 px-2 gap-1 rounded-none border-border/30" onClick={e => e.stopPropagation()}>
+                  <Link href="/integracoes">
+                    <Zap className="h-3 w-3" />Mais opções
+                  </Link>
+                </Button>
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -1201,7 +1206,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             <div className="text-center font-mono text-[10px] text-muted-foreground/50 space-x-1">
               {!hasMessaging && <span>Configure mensagens •</span>}
               {!hasEmail && <span>Configure email •</span>}
-              {!hasSocial && <span>Conecte uma rede social •</span>}
+              {!hasSocial && <span>{!hasInstagram && !hasTikTok ? "Conecte Instagram + TikTok •" : !hasInstagram ? "Conecte Instagram •" : "Conecte TikTok •"}</span>}
               {!allContentApproved && !noContent && <span>Aprove {pendingPieces.length} peça{pendingPieces.length > 1 ? "s" : ""} •</span>}
               {noContent && <span>Gere o conteúdo •</span>}
               {!funnelConfirmed && <span>Informe a URL da landing page •</span>}

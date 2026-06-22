@@ -43,7 +43,10 @@ export type CampaignType = "launch" | "evergreen" | "affiliate" | "live" | "plf"
 // * approved: pipeline auto-progression from previous campaign entering executing
 
 export const VALID_STATUS_TRANSITIONS: Readonly<Record<CampaignStatus, CampaignStatus[]>> = {
-  intake: ["analyzing", "cancelled"],
+  // "analyzing" is the normal first step.
+  // "awaiting_approval"/"generating" are recovery skip-ahead paths:
+  // command agent may complete while campaign is still in intake (race/restart).
+  intake: ["analyzing", "awaiting_approval", "generating", "cancelled"],
 
   // command.agent can end in either awaiting_approval (checkpoints pending)
   // or generating (no checkpoints). Both are valid exits from analyzing.

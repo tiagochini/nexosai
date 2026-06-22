@@ -179,7 +179,7 @@ export default function WarRoom() {
     );
   }
 
-  const status = campaign.status;
+  const status = campaign.status ?? "intake";
   const progress = STATUS_PROGRESS[status] ?? 0;
   const uxState = STATUS_STATE[status] ?? "idle";
   const activeDepts = DEPARTMENTS.filter(d => d.phases.includes(status));
