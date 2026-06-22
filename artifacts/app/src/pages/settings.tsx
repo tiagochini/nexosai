@@ -45,7 +45,7 @@ function SectionCard({ children, title, icon: Icon }: { children: React.ReactNod
   );
 }
 
-function FieldRow({ label, sublabel, children }: { label: string; sublabel?: string; children: React.ReactNode }) {
+function FieldRow({ label, sublabel, children }: { label: string; sublabel?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex flex-col md:flex-row md:items-start gap-3 md:gap-8 py-4 border-b border-border/30 last:border-0">
       <div className="md:w-48 shrink-0">
@@ -1417,6 +1417,14 @@ function IntegracaoTab() {
 
 // ── Identidade Tab (Voice Clone + Trejeitos + Avatar) ─────────────────────────
 
+type HeyGenAvatar = {
+  avatar_id: string;
+  avatar_name: string;
+  preview_image_url?: string;
+  preview_video_url?: string;
+  gender?: string;
+};
+
 type PersonaData = {
   voiceCloneId?: string;
   voiceCloneUpdatedAt?: string;
@@ -1460,6 +1468,12 @@ function IdentidadeTab() {
   // ── Trejeitos / persona form state ───────────────────────────────────────
   const [voiceName,      setVoiceName]      = useState("");
   const [heygenAvatarId, setHeygenAvatarId] = useState("");
+  const [heygenApiKeyInput,  setHeygenApiKeyInput]  = useState("");
+  const [heygenConnected,    setHeygenConnected]    = useState(false);
+  const [connectingHeygen,   setConnectingHeygen]   = useState(false);
+  const [disconnectingHeygen,setDisconnectingHeygen]= useState(false);
+  const [heygenAvatars,      setHeygenAvatars]      = useState<HeyGenAvatar[]>([]);
+  const [fetchingAvatars,    setFetchingAvatars]    = useState(false);
   const [energia,        setEnergia]        = useState("");
   const [velocidade,     setVelocidade]     = useState("");
   const [pausas,         setPausas]         = useState("");
@@ -1470,13 +1484,14 @@ function IdentidadeTab() {
   const [reelStyle,      setReelStyle]      = useState("");
   const [saving,         setSaving]         = useState(false);
 
-  // ── Load persona + workspace metadata (clone state) ─────────────────────
+  // ── Load persona + workspace metadata (clone state) + HeyGen status ─────
   useEffect(() => {
     Promise.all([
       customFetch<{ persona: PersonaData }>("/api/workspaces/me/persona"),
       customFetch<{ workspace: { metadata?: Record<string, unknown> } }>("/api/workspaces/me"),
+      customFetch<{ integrations: { provider: string; status: string }[] }>("/api/workspaces/me/integrations"),
     ])
-      .then(([{ persona: p }, { workspace }]) => {
+      .then(([{ persona: p }, { workspace }, { integrations }]) => {
         setPersona(p);
         setVoiceName(p.voiceName ?? "");
         setHeygenAvatarId(p.heygenAvatarId ?? "");
@@ -1489,6 +1504,9 @@ function IdentidadeTab() {
         setBrandPresence(p.brandPresence ?? "");
         setReelStyle(p.reelStyle ?? "");
         if (p.voiceCloneId) setRecState("done");
+        // HeyGen connection status
+        const heygenInt = integrations.find(i => i.provider === "heygen" && i.status === "connected");
+        setHeygenConnected(!!heygenInt);
         // Load clone state from workspace metadata
         const meta = workspace.metadata ?? {};
         if (meta.cloneSessionId) setCloneSessionId(meta.cloneSessionId as string);
@@ -1601,6 +1619,58 @@ function IdentidadeTab() {
       setRecState("recorded");
     }
   }, [audioBase64, audioMime, voiceName]);
+
+  // ── HeyGen connection handlers ────────────────────────────────────────────
+  const handleConnectHeygen = async () => {
+    if (!heygenApiKeyInput.trim()) return;
+    setConnectingHeygen(true);
+    try {
+      await customFetch<unknown>("/api/workspaces/me/heygen/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: heygenApiKeyInput.trim() }),
+      });
+      setHeygenConnected(true);
+      setHeygenApiKeyInput("");
+      toast.success("HeyGen conectado com sucesso!");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Chave de API inválida — verifique no painel HeyGen.";
+      toast.error(msg);
+    } finally {
+      setConnectingHeygen(false);
+    }
+  };
+
+  const handleDisconnectHeygen = async () => {
+    setDisconnectingHeygen(true);
+    try {
+      await customFetch<unknown>("/api/workspaces/me/heygen/connect", { method: "DELETE" });
+      setHeygenConnected(false);
+      setHeygenAvatars([]);
+      setHeygenAvatarId("");
+      toast.success("HeyGen desconectado.");
+    } catch {
+      toast.error("Erro ao desconectar HeyGen.");
+    } finally {
+      setDisconnectingHeygen(false);
+    }
+  };
+
+  const handleFetchAvatars = async () => {
+    setFetchingAvatars(true);
+    try {
+      const result = await customFetch<{ avatars: HeyGenAvatar[] }>("/api/workspaces/me/heygen/avatars");
+      setHeygenAvatars(result.avatars ?? []);
+      if ((result.avatars ?? []).length === 0) {
+        toast.info("Nenhum avatar encontrado nessa conta HeyGen ainda.");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao buscar avatares.";
+      toast.error(msg);
+    } finally {
+      setFetchingAvatars(false);
+    }
+  };
 
   // ── Save persona form ────────────────────────────────────────────────────
   const handleSavePersona = async () => {
@@ -1864,28 +1934,168 @@ function IdentidadeTab() {
         </div>
       </SectionCard>
 
-      {/* ── Seção 2: Avatar Visual (HeyGen) ── */}
-      <SectionCard title="Avatar Visual — HeyGen" icon={Camera}>
+      {/* ── Seção 2: Avatar Digital (HeyGen) ── */}
+      <SectionCard title="Avatar Digital — HeyGen" icon={Camera}>
         <div className="space-y-4">
-          <div className="border border-border/30 bg-muted/10 px-4 py-3 space-y-1">
-            <div className="font-mono text-[11px] text-foreground/80 font-bold">Como criar seu avatar HeyGen</div>
-            <ol className="font-mono text-[10px] text-muted-foreground/60 space-y-1 list-decimal list-inside">
-              <li>Acesse <a href="https://www.heygen.com/avatar" target="_blank" rel="noreferrer" className="text-primary underline">heygen.com/avatar</a> e crie uma conta</li>
-              <li>Grave um vídeo de 2 minutos olhando para a câmera, sem óculos escuros</li>
-              <li>Crie o avatar — HeyGen processa em 24–48h</li>
-              <li>Copie seu Avatar ID (no painel HeyGen → My Avatars → ID) e cole abaixo</li>
-            </ol>
-          </div>
-          <FieldRow label="Avatar ID (HeyGen)" sublabel="ID do seu avatar no painel HeyGen">
-            <Input
-              value={heygenAvatarId}
-              onChange={e => setHeygenAvatarId(e.target.value)}
-              placeholder="Ex: avatar_abc123def456"
-              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
-            />
-          </FieldRow>
-          <div className="font-mono text-[9px] text-muted-foreground/30">
-            Com seu Avatar ID configurado, todos os vídeos de lançamento gerados pelo NexOS AI usarão seu rosto e voz clonada automaticamente.
+
+          {/* ── Status: Conectado ── */}
+          {heygenConnected ? (
+            <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
+              <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-[11px] font-bold text-green-300">HeyGen conectado</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60">
+                  API key validada — avatares disponíveis para uso nos vídeos
+                  {persona.heygenAvatarId && (
+                    <> · Avatar ativo: <span className="text-blue-400/80">{persona.heygenAvatarId.slice(0, 16)}…</span></>
+                  )}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void handleDisconnectHeygen()}
+                disabled={disconnectingHeygen}
+                className="rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 text-red-400/70 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+              >
+                {disconnectingHeygen ? <Loader2 className="h-3 w-3 animate-spin" /> : "Desconectar"}
+              </Button>
+            </div>
+          ) : (
+            /* ── Status: Não conectado ── */
+            <div className="flex items-center gap-3 px-4 py-3 border border-yellow-500/20 bg-yellow-500/5">
+              <Video className="h-4 w-4 text-yellow-400/70 shrink-0" />
+              <div>
+                <div className="font-mono text-[11px] font-bold text-yellow-300/80">HeyGen não conectado</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60">
+                  Conecte sua conta para usar seu avatar digital nos vídeos de lançamento
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Conectar via API Key (só quando não conectado) ── */}
+          {!heygenConnected && (
+            <FieldRow
+              label="HeyGen API Key"
+              sublabel={
+                <>
+                  Encontre em{" "}
+                  <a
+                    href="https://app.heygen.com/settings?nav=API"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline"
+                  >
+                    app.heygen.com → Settings → API
+                  </a>
+                </>
+              }
+            >
+              <div className="flex gap-2">
+                <Input
+                  value={heygenApiKeyInput}
+                  onChange={e => setHeygenApiKeyInput(e.target.value)}
+                  placeholder="sk-…"
+                  type="password"
+                  className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm flex-1"
+                  onKeyDown={e => { if (e.key === "Enter" && heygenApiKeyInput.trim()) void handleConnectHeygen(); }}
+                />
+                <Button
+                  onClick={() => void handleConnectHeygen()}
+                  disabled={connectingHeygen || !heygenApiKeyInput.trim()}
+                  className="rounded-none font-mono text-[10px] uppercase tracking-widest h-9 px-4 gap-2 btn-weapon-primary shrink-0"
+                >
+                  {connectingHeygen
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Conectando…</>
+                    : <><CheckCircle2 className="h-3.5 w-3.5" />Conectar</>}
+                </Button>
+              </div>
+            </FieldRow>
+          )}
+
+          {/* ── Selecionar Avatar (só quando conectado) ── */}
+          {heygenConnected && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="font-mono text-[11px] text-foreground/70 font-bold uppercase tracking-widest">
+                  Seus Avatares
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void handleFetchAvatars()}
+                  disabled={fetchingAvatars}
+                  className="rounded-none font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5 text-primary hover:bg-primary/10"
+                >
+                  {fetchingAvatars
+                    ? <><Loader2 className="h-3 w-3 animate-spin" />Buscando…</>
+                    : <><Sparkles className="h-3 w-3" />Buscar Avatares</>}
+                </Button>
+              </div>
+
+              {heygenAvatars.length === 0 && !fetchingAvatars && (
+                <div className="font-mono text-[10px] text-muted-foreground/40 px-1">
+                  Clique em "Buscar Avatares" para listar os avatares disponíveis na sua conta HeyGen.
+                </div>
+              )}
+
+              {heygenAvatars.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {heygenAvatars.map(av => (
+                    <button
+                      key={av.avatar_id}
+                      type="button"
+                      onClick={() => {
+                        setHeygenAvatarId(av.avatar_id);
+                        setPersona(prev => ({ ...prev, heygenAvatarId: av.avatar_id }));
+                      }}
+                      className={`group relative overflow-hidden border text-left transition-all focus:outline-none ${
+                        heygenAvatarId === av.avatar_id
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                          : "border-border/30 hover:border-primary/40 bg-background/40"
+                      }`}
+                    >
+                      {av.preview_image_url ? (
+                        <img
+                          src={av.preview_image_url}
+                          alt={av.avatar_name}
+                          className="w-full aspect-[3/4] object-cover object-top"
+                        />
+                      ) : (
+                        <div className="w-full aspect-[3/4] flex items-center justify-center bg-muted/20">
+                          <UserCheck className="h-8 w-8 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      <div className="px-2 py-1.5 border-t border-border/30">
+                        <div className="font-mono text-[10px] text-foreground/80 truncate">{av.avatar_name}</div>
+                        {av.gender && (
+                          <div className="font-mono text-[9px] text-muted-foreground/40 capitalize">{av.gender}</div>
+                        )}
+                      </div>
+                      {heygenAvatarId === av.avatar_id && (
+                        <div className="absolute top-1.5 right-1.5 bg-primary rounded-full p-0.5">
+                          <CheckCircle2 className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {heygenAvatarId && (
+                <div className="font-mono text-[10px] text-muted-foreground/50 px-1">
+                  Avatar selecionado: <span className="text-primary/70">{
+                    heygenAvatars.find(a => a.avatar_id === heygenAvatarId)?.avatar_name ?? heygenAvatarId
+                  }</span>
+                  {" "}· salve abaixo para confirmar.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
+            Com o avatar configurado, todos os vídeos de lançamento gerados pelo NexOS AI usarão seu rosto e voz clonada automaticamente.
           </div>
         </div>
       </SectionCard>
