@@ -100,16 +100,16 @@ title = "NexOS AI — Investor Prospect v2.1 · Layout corrigido · Agency remov
 id = "kqdXj9p50IJjMvsmTC1zs"
 uri = "file://attached_assets/NexOS_AI_Prospect_Paper_PT_v2_2026.pdf"
 type = "pdf"
-title = "NexOS AI — Prospect Paper v2.0 (Português)"
+title = "NexOS AI — Prospect Paper v2.0 PT (corrigido)"
 
 [[outputs]]
 id = "Zv_beudWcUrBdL8wX_zub"
 uri = "file://attached_assets/NexOS_AI_Prospect_Paper_EN_v2_2026.pdf"
 type = "pdf"
-title = "NexOS AI — Prospect Paper v2.0 (English)"
+title = "NexOS AI — Prospect Paper v2.0 EN (corrigido)"
 
 [[outputs]]
 id = "JUpN1R2ccreGm58vbmrcY"
 uri = "file://attached_assets/NexOS_AI_Technical_Handoff.pdf"
 type = "pdf"
-title = "NexOS AI — Technical Handoff (Corrigido v2)"
+title = "NexOS AI — Technical Handoff (corrigido)"

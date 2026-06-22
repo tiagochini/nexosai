@@ -176,10 +176,10 @@ async function genEN(): Promise<Buffer> {
   doc.fontSize(9).fillColor(MUTED).font("Helvetica").text("Business Plan · White Paper · Investment Thesis · Economic Model & Strategic Valuation Framework", 50, doc.y, { width: 495 });
   doc.y += 30;
   kpiRow(doc, [
-    { val: "R$ 15.99B", label: "Annualized Economic Potential — Year 1" },
+    { val: "R$ 3.99B", label: "Acquisition Revenue — 1M Customers × R$3,990" },
     { val: "1,000,000", label: "Customers — 12-Month Growth Mission" },
-    { val: "R$ 12B", label: "Credit ARR — 1M Active Customers", color: PRI },
-    { val: "US$ 3T–6T", label: "Valuation — Global Expansion Scenario", color: WARN },
+    { val: "64", label: "AI Agents in Production — 7 Categories", color: PRI },
+    { val: "US$ 3T–6T", label: "Valuation Ceiling — Global Expansion Scenario", color: WARN },
   ]);
   doc.y += 10;
   doc.fontSize(8).fillColor(MUTED).text("June 2026  ·  Document NXS-2026-002-EN  ·  v2.0  ·  64 AI Agents  ·  18+ Domain Modules  ·  nexos.ai", 50, doc.y);
@@ -235,49 +235,57 @@ async function genEN(): Promise<Buffer> {
       { cells: ["Sales", "AI reply suggestion by funnel stage, kanban, conversation history", "Claude Sonnet"], bold: true },
     ]
   );
+  h2(doc, "Production Infrastructure — Also Delivered");
+  table(doc,
+    [{ text: "Feature", width: 200 }, { text: "Status", width: 80 }, { text: "Detail", width: 215 }],
+    [
+      { cells: ["HeyGen Avatar (talking-head video)", "✓ Live", "Full API integration — generate + async poll"], accent: true },
+      { cells: ["ElevenLabs Voice Cloning", "✓ Live", "Voice clone API via workspace key or env"], accent: true },
+      { cells: ["White-Label + Custom Domain", "✓ Live", "DNS TXT verify, brand/theme override, Agency gate"], accent: true },
+      { cells: ["E2E / Audit Test Suite", "✓ Live", "14-step audit + 31-step launch sim + stress-full"], accent: true },
+      { cells: ["Meta CAPI + TikTok Events API", "✓ Live", "Server-side events, SHA-256 PII hash"], accent: true },
+      { cells: ["LGPD Native Compliance", "✓ Live", "Audit trail, consent timestamping, data rights"], accent: true },
+    ]
+  );
 
   // ECONOMIC MODEL
   doc.addPage(); bg(doc); doc.y = 50;
   section(doc, "03", "Economic Model — Updated v2.0");
+  para(doc, "NexOS AI operates on a lifetime-access, one-time ticket model — no subscription, no monthly fee. Each access includes a credit balance for AI agent execution. The credit recharge marketplace is currently suspended pending model refinement; the focus is on maximizing access ticket revenue in the launch window.");
+  doc.y += 6;
   h2(doc, "Plans — One-Time Ticket, No Subscription");
   table(doc,
-    [{ text: "Plan", width: 70 }, { text: "Launch Price", width: 90 }, { text: "Regular", width: 80 }, { text: "Campaigns", width: 80 }, { text: "Credits", width: 80 }, { text: "Features", width: 95 }],
+    [{ text: "Plan", width: 70 }, { text: "Launch Price", width: 90 }, { text: "Regular", width: 80 }, { text: "Campaigns", width: 80 }, { text: "Credits Incl.", width: 80 }, { text: "Key Features", width: 95 }],
     [
-      { cells: ["Solo", "R$ 3,990", "R$ 5,000", "3", "900 cr", "6-digit · All agents"], bold: true, accent: true },
+      { cells: ["Solo", "R$ 3,990", "R$ 5,000", "3", "900 cr", "6-digit · All 64 agents"], bold: true, accent: true },
       { cells: ["Agency", "R$ 9,990", "R$ 14,000", "10", "2,000 cr", "All tracks · White-label"], bold: true, accent: true },
-      { cells: ["Academy", "R$ 2,500", "R$ 3,900", "—", "—", "Bonus for NexOS AI buyers"], bold: true, accent: true },
+      { cells: ["Academy", "R$ 2,500", "R$ 3,900", "—", "—", "Bonus included w/ NexOS AI"], bold: true, accent: true },
     ]
   );
-  h2(doc, "Credit Packs — Consumption Recurrence");
-  table(doc,
-    [{ text: "Pack", width: 70 }, { text: "Credits", width: 80 }, { text: "Price", width: 80 }, { text: "R$/Credit", width: 80 }, { text: "Typical Use", width: 185 }],
-    [
-      { cells: ["Boost", "500 cr", "R$ 85", "R$ 0.17", "1 light campaign or daily videos"], bold: true, accent: true },
-      { cells: ["Starter", "1,500 cr", "R$ 239", "R$ 0.16", "~3 complete campaigns"], bold: true, accent: true },
-      { cells: ["Pro", "3,500 cr", "R$ 529", "R$ 0.15", "~7–8 campaigns / month"], bold: true, accent: true },
-      { cells: ["Elite", "7,000 cr", "R$ 979", "R$ 0.14", "Agency operation — high volume"], bold: true, accent: true },
-    ]
-  );
-  callout(doc, "Total cost of a complete launch: ~230–400 credits (R$32–R$68) — versus R$5,000–R$30,000 for a traditional agency. 97%+ operational cost reduction.", ACC);
+  callout(doc, "AI execution cost per complete launch: ~230–400 credits — versus R$5,000–R$30,000 with a traditional agency. 97%+ operational cost reduction for the customer. Margin for NexOS: ~1.5x on underlying AI provider cost.", ACC);
 
   // REVENUE & VALUATION
   section(doc, "04", "Revenue Projection — 1 Million Customers");
+  para(doc, "Current model: acquisition revenue only. The credit recharge model will be reintroduced as a second revenue layer once the access phase closes.");
+  doc.y += 6;
   kpiRow(doc, [
-    { val: "R$3.99B", label: "Acquisition Revenue (1M × R$3,990)" },
-    { val: "R$12B", label: "Credit ARR (1M × R$1,000/month × 12)" },
-    { val: "R$15.99B+", label: "Combined Annual Economic Potential", color: WARN },
+    { val: "R$3.99B", label: "Acquisition Revenue — 1M Solo × R$3,990" },
+    { val: "R$997B", label: "Blended with 10% Agency Mix (R$9,990)", color: PRI },
+    { val: "~R$4.4B", label: "Estimated Blended Acquisition Revenue — Year 1", color: WARN },
   ]);
+  callout(doc, "Second revenue layer (credit recharges) is architected and ready in the platform — suspended in the current launch phase. When reintroduced at modest R$500/year/customer average, adds R$500M ARR at 1M customers.", MUTED);
 
   section(doc, "05", "Valuation Framework");
+  para(doc, "Valuation basis: blended acquisition revenue. Infrastructure multiples apply because NexOS is not an application — it is the layer that enables execution for any business category.");
+  doc.y += 4;
   table(doc,
-    [{ text: "Scenario", width: 220 }, { text: "ARR Base", width: 130 }, { text: "Valuation", width: 145 }],
+    [{ text: "Scenario", width: 220 }, { text: "Revenue Base", width: 130 }, { text: "Implied Valuation", width: 145 }],
     [
-      { cells: ["Traditional SaaS (6x)", "R$ 12B", "R$ 72B"], accent: true },
-      { cells: ["AI-Native Platform (25x)", "R$ 12B", "R$ 300B"], accent: true },
-      { cells: ["Growth Infrastructure (75x)", "R$ 12B", "R$ 900B"], accent: true },
-      { cells: ["Infrastructure (100x)", "R$ 12B", "R$ 1.2T"], bold: true, accent: true },
-      { cells: ["50M Global Customers (25x on US$120B ARR)", "US$ 120B", "US$ 3T"], bold: true, color: WARN },
-      { cells: ["100M Global Customers (25x on US$240B ARR)", "US$ 240B", "US$ 6T"], bold: true, color: WARN },
+      { cells: ["Conservative (5x acquisition rev)", "R$ 4.4B", "R$ 22B"], accent: true },
+      { cells: ["AI-Native Platform (15x)", "R$ 4.4B", "R$ 66B"], accent: true },
+      { cells: ["Infrastructure Category (50x)", "R$ 4.4B", "R$ 220B"], accent: true },
+      { cells: ["50M Global Customers (blended)", "US$ ~44B", "US$ 660B–2.2T"], bold: true, color: WARN },
+      { cells: ["100M Global Customers (blended)", "US$ ~88B", "US$ 1.3T–6T"], bold: true, color: WARN },
     ]
   );
 
@@ -303,10 +311,10 @@ async function genEN(): Promise<Buffer> {
   section(doc, "07", "Investor Conclusion");
   callout(doc, "NexOS AI is an infrastructure thesis. Not a tool thesis. The question is not how much is a marketing tool worth. The right question is: how much is the infrastructure that makes business growth executable, auditable, scalable, and accessible to any person or company worth? The answer: it is worth the size of the economic layer it comes to control. And that layer is global.", ACC);
   kpiRow(doc, [
-    { val: "64", label: "AI Agents in Production" },
+    { val: "64", label: "AI Agents in Production — 7 Categories" },
     { val: "18+", label: "Active Domain Modules", color: PRI },
-    { val: "R$12B", label: "Credit ARR — 1M Customers" },
-    { val: "US$6T", label: "Valuation — 100M Global Customers", color: WARN },
+    { val: "~R$4.4B", label: "Est. Year-1 Acquisition Revenue — 1M Customers" },
+    { val: "US$1.3T–6T", label: "Valuation Ceiling — 100M Global Customers", color: WARN },
   ]);
 
   footer(doc, "NXS-2026-002-EN · NexOS AI Prospect Paper v2.0 (English) · June 2026 · STRICTLY PRIVATE & CONFIDENTIAL · nexos.ai");
@@ -332,10 +340,10 @@ async function genPT(): Promise<Buffer> {
   doc.fontSize(9).fillColor(MUTED).font("Helvetica").text("Plano de Negócios · White Paper · Tese de Investimento · Modelo Econômico e Framework de Valuation Estratégico", 50, doc.y, { width: 495 });
   doc.y += 30;
   kpiRow(doc, [
-    { val: "R$ 15,99B", label: "Potencial Econômico Anualizado — Ano 1" },
+    { val: "R$ 3,99B", label: "Receita de Aquisição — 1M Clientes × R$3.990" },
     { val: "1.000.000", label: "Clientes — Missão de Crescimento 12 Meses" },
-    { val: "R$ 12B", label: "ARR de Créditos — 1M Clientes Ativos", color: PRI },
-    { val: "US$ 3T–6T", label: "Valuation — Cenário de Expansão Global", color: WARN },
+    { val: "64", label: "Agentes de IA em Produção — 7 Categorias", color: PRI },
+    { val: "US$ 3T–6T", label: "Valuation Teto — Cenário de Expansão Global", color: WARN },
   ]);
   doc.fontSize(8).fillColor(MUTED).text("Junho 2026  ·  Documento NXS-2026-002-PT  ·  v2.0  ·  64 Agentes de IA  ·  18+ Módulos  ·  nexos.ai", 50, doc.y);
 
@@ -384,47 +392,55 @@ async function genPT(): Promise<Buffer> {
       { cells: ["Vendas", "5 agentes por etapa do funil, kanban, sugestão IA de resposta", "Claude Sonnet"], bold: true },
     ]
   );
+  h2(doc, "Infraestrutura em Produção — Também Entregue");
+  table(doc,
+    [{ text: "Feature", width: 200 }, { text: "Status", width: 80 }, { text: "Detalhe", width: 215 }],
+    [
+      { cells: ["HeyGen Avatar (vídeo talking-head)", "✓ Live", "Integração API completa — gera + poll assíncrono"], accent: true },
+      { cells: ["ElevenLabs Voice Cloning", "✓ Live", "API de clonagem de voz via chave do workspace ou env"], accent: true },
+      { cells: ["White-Label + Domínio Próprio", "✓ Live", "Verificação DNS TXT, brand/theme, gate Agency"], accent: true },
+      { cells: ["Suite E2E / Audit Test", "✓ Live", "14 passos audit + 31 passos launch sim + stress-full"], accent: true },
+      { cells: ["Meta CAPI + TikTok Events API", "✓ Live", "Eventos server-side, hash SHA-256 de PII"], accent: true },
+      { cells: ["LGPD Nativa", "✓ Live", "Audit trail, timestamping de consentimento, direitos de dados"], accent: true },
+    ]
+  );
 
   doc.addPage(); bg(doc); doc.y = 50;
   section(doc, "03", "Modelo Econômico — v2.0 Atualizado");
+  para(doc, "NexOS AI opera no modelo de acesso vitalício — ticket único, sem mensalidade, sem recorrência. Cada acesso inclui saldo de créditos para execução dos agentes de IA. O marketplace de recarga de créditos está suspenso na fase atual de lançamento, com foco em maximizar a receita de aquisição de acessos.");
+  doc.y += 6;
   h2(doc, "Planos de Acesso — Ticket Único, Sem Mensalidade");
   table(doc,
-    [{ text: "Plano", width: 70 }, { text: "Lançamento", width: 90 }, { text: "Regular", width: 80 }, { text: "Campanhas", width: 80 }, { text: "Créditos", width: 80 }, { text: "Recursos", width: 95 }],
+    [{ text: "Plano", width: 70 }, { text: "Lançamento", width: 90 }, { text: "Regular", width: 80 }, { text: "Campanhas", width: 80 }, { text: "Créditos Incl.", width: 80 }, { text: "Recursos", width: 95 }],
     [
-      { cells: ["Solo", "R$ 3.990", "R$ 5.000", "3", "900 cr", "Track 6 dígitos · Todos agentes"], bold: true, accent: true },
+      { cells: ["Solo", "R$ 3.990", "R$ 5.000", "3", "900 cr", "Track 6 dígitos · 64 agentes"], bold: true, accent: true },
       { cells: ["Agency", "R$ 9.990", "R$ 14.000", "10", "2.000 cr", "Todos tracks · White-label"], bold: true, accent: true },
-      { cells: ["Academy", "R$ 2.500", "R$ 3.900", "—", "—", "Bônus incluso nos planos"], bold: true, accent: true },
+      { cells: ["Academy", "R$ 2.500", "R$ 3.900", "—", "—", "Bônus incluso com NexOS AI"], bold: true, accent: true },
     ]
   );
-  h2(doc, "Pacotes de Créditos Adicionais");
-  table(doc,
-    [{ text: "Pack", width: 70 }, { text: "Créditos", width: 80 }, { text: "Preço", width: 80 }, { text: "R$/crédito", width: 80 }, { text: "Uso Típico", width: 185 }],
-    [
-      { cells: ["Boost", "500 cr", "R$ 85", "R$ 0,17", "1 campanha leve ou vídeos diários"], bold: true, accent: true },
-      { cells: ["Starter", "1.500 cr", "R$ 239", "R$ 0,16", "~3 campanhas completas"], bold: true, accent: true },
-      { cells: ["Pro", "3.500 cr", "R$ 529", "R$ 0,15", "~7–8 campanhas / mês"], bold: true, accent: true },
-      { cells: ["Elite", "7.000 cr", "R$ 979", "R$ 0,14", "Operação de agência — alto volume"], bold: true, accent: true },
-    ]
-  );
-  callout(doc, "Custo total de um lançamento completo: ~230–400 créditos (R$32–R$68) — versus R$5.000–R$30.000 em uma agência tradicional. Redução de custo operacional de 97%+.", ACC);
+  callout(doc, "Custo de IA por lançamento completo: ~230–400 créditos — versus R$5.000–R$30.000 em agência tradicional. Redução de 97%+ no custo operacional do cliente. Margem NexOS: ~1,5x sobre custo real do provider de IA.", ACC);
 
   section(doc, "04", "Projeção de Receita — 1 Milhão de Clientes");
+  para(doc, "Modelo atual: receita de aquisição. A camada de recarga de créditos será reintroduzida como segunda fonte de receita após o fechamento da fase de acesso.");
+  doc.y += 6;
   kpiRow(doc, [
-    { val: "R$3,99B", label: "Receita de Aquisição (1M × R$3.990)" },
-    { val: "R$12B", label: "ARR de Créditos (1M × R$1.000/mês × 12)" },
-    { val: "R$15,99B+", label: "Potencial Econômico Anualizado Combinado", color: WARN },
+    { val: "R$3,99B", label: "Receita de Aquisição — 1M Solo × R$3.990" },
+    { val: "~R$4,4B", label: "Blended com 10% Agency mix (R$9.990)", color: PRI },
+    { val: "+R$500M ARR", label: "Segunda camada (recargas) quando reativada", color: WARN },
   ]);
+  callout(doc, "A segunda camada de receita (recargas de crédito) está arquitetada e pronta na plataforma — suspensa na fase atual de lançamento. Quando reativada, a R$500/ano/cliente em média, adiciona R$500M ARR para 1M clientes.", MUTED);
 
   section(doc, "05", "Framework de Valuation");
+  para(doc, "Base de valuation: receita de aquisição blended. Múltiplos de infraestrutura se aplicam porque NexOS não é uma aplicação — é a camada que viabiliza execução para qualquer categoria de negócio.");
+  doc.y += 4;
   table(doc,
-    [{ text: "Cenário", width: 220 }, { text: "Base ARR", width: 130 }, { text: "Valuation", width: 145 }],
+    [{ text: "Cenário", width: 220 }, { text: "Base de Receita", width: 130 }, { text: "Valuation Implícito", width: 145 }],
     [
-      { cells: ["SaaS Tradicional (6x)", "R$ 12B", "R$ 72B"], accent: true },
-      { cells: ["Plataforma AI-Nativa (25x)", "R$ 12B", "R$ 300B"], accent: true },
-      { cells: ["Infraestrutura de Crescimento (75x)", "R$ 12B", "R$ 900B"], accent: true },
-      { cells: ["Infraestrutura Máxima (100x)", "R$ 12B", "R$ 1,2T"], bold: true, accent: true },
-      { cells: ["50M Clientes Globais (25x sobre US$120B ARR)", "US$ 120B", "US$ 3T"], bold: true, color: WARN },
-      { cells: ["100M Clientes Globais (25x sobre US$240B ARR)", "US$ 240B", "US$ 6T"], bold: true, color: WARN },
+      { cells: ["Conservador (5x receita de aquisição)", "R$ 4,4B", "R$ 22B"], accent: true },
+      { cells: ["Plataforma AI-Nativa (15x)", "R$ 4,4B", "R$ 66B"], accent: true },
+      { cells: ["Categoria de Infraestrutura (50x)", "R$ 4,4B", "R$ 220B"], accent: true },
+      { cells: ["50M Clientes Globais (blended)", "US$ ~44B", "US$ 660B–2,2T"], bold: true, color: WARN },
+      { cells: ["100M Clientes Globais (blended)", "US$ ~88B", "US$ 1,3T–6T"], bold: true, color: WARN },
     ]
   );
 
@@ -448,10 +464,10 @@ async function genPT(): Promise<Buffer> {
   section(doc, "07", "Conclusão para o Investidor");
   callout(doc, "NexOS AI é uma tese de infraestrutura. Não uma tese de ferramenta. A pergunta não é quanto vale uma ferramenta de marketing. A pergunta certa é: quanto vale a infraestrutura que torna o crescimento de negócios executável, auditável, escalável e acessível a qualquer pessoa ou empresa? A resposta: vale o tamanho da camada econômica que vier a controlar. E essa camada é global.", ACC);
   kpiRow(doc, [
-    { val: "64", label: "Agentes de IA em Produção" },
+    { val: "64", label: "Agentes de IA em Produção — 7 Categorias" },
     { val: "18+", label: "Módulos de Domínio Ativos", color: PRI },
-    { val: "R$12B", label: "ARR de Créditos — 1M Clientes" },
-    { val: "US$6T", label: "Valuation — 100M Clientes Globais", color: WARN },
+    { val: "~R$4,4B", label: "Receita de Aquisição Est. — 1M Clientes" },
+    { val: "US$1,3T–6T", label: "Valuation Teto — 100M Clientes Globais", color: WARN },
   ]);
 
   footer(doc, "NXS-2026-002-PT · NexOS AI Prospect Paper v2.0 (Português) · Junho 2026 · ESTRITAMENTE CONFIDENCIAL · nexos.ai");
