@@ -21,13 +21,18 @@
     "stress-full-all": "ALL=true tsx ./src/stress-test/nexos-stress-full.ts",
     "generate-audit-pdf": "tsx ./src/generate-audit-pdf.ts",
     "generate-investor-prospect": "tsx ./src/generate-investor-prospect.ts",
+    "generate-pdfs": "tsx ./src/generate-pdfs.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@types/pdfkit": "^0.17.6",
     "@workspace/db": "workspace:*",
     "drizzle-orm": "catalog:",
-    "pdfkit": "^0.18.0"
+    "html-pdf-node": "^1.0.8",
+    "pdfkit": "^0.18.0",
+    "pdfmake": "^0.3.11",
+    "playwright-core": "^1.61.0",
+    "puppeteer": "^25.1.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",

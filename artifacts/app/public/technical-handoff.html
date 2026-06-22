@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NexOS AI — Technical Handoff & Developer Onboarding Document</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink:#0d0d12; --surface:#111118; --card:#16161f; --border:#252530;
+    --primary:#6c5ce7; --accent:#00d4aa; --warn:#f39c12; --danger:#e74c3c;
+    --text:#e8e8f0; --muted:#7c7c9a;
+    --mono:'JetBrains Mono','Courier New',monospace;
+    --sans:'Inter','Segoe UI',system-ui,sans-serif;
+  }
+  html { font-size:10pt; background:var(--ink); color:var(--text); }
+  body { font-family:var(--sans); line-height:1.6; background:var(--ink); }
+  @media print {
+    html { font-size:9pt; background:#fff; color:#111; }
+    body { background:#fff; }
+    :root { --ink:#fff; --surface:#f8f8fb; --card:#f2f2fa; --border:#dde; --text:#111; --muted:#555; --primary:#5241c8; --accent:#009979; --warn:#b07000; --danger:#b03030; }
+    .page-break { page-break-before:always; break-before:page; }
+    .avoid-break { page-break-inside:avoid; break-inside:avoid; }
+    a { color:inherit; text-decoration:none; }
+    code, pre { background:#f0f0f8 !important; color:#222 !important; }
+  }
+  .doc { max-width:900px; margin:0 auto; padding:0 24px 80px; }
+  /* Cover */
+  .cover { min-height:60vh; display:flex; flex-direction:column; justify-content:flex-end; padding:56px 0 48px; border-bottom:2px solid var(--primary); }
+  .cover-eyebrow { font-family:var(--mono); font-size:7.5pt; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+  .cover-logo { font-family:var(--mono); font-weight:900; font-size:44pt; color:var(--text); line-height:.9; letter-spacing:-.02em; }
+  .cover-logo span { color:var(--primary); }
+  .cover-title { font-size:18pt; font-weight:700; color:var(--text); margin-top:16px; line-height:1.2; }
+  .cover-sub { font-family:var(--mono); font-size:9pt; color:var(--muted); margin-top:8px; letter-spacing:.04em; }
+  .cover-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:24px; }
+  .cover-meta { font-family:var(--mono); font-size:8pt; color:var(--muted); margin-top:16px; display:flex; gap:20px; flex-wrap:wrap; }
+  /* Sections */
+  .section { padding-top:48px; }
+  .section-tag { font-family:var(--mono); font-size:7pt; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  h1 { font-size:20pt; font-weight:800; color:var(--text); margin-bottom:16px; line-height:1.15; letter-spacing:-.02em; }
+  h2 { font-family:var(--mono); font-size:10.5pt; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text); margin:32px 0 10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  h3 { font-family:var(--mono); font-size:9pt; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--primary); margin:20px 0 8px; }
+  h4 { font-family:var(--mono); font-size:8.5pt; font-weight:700; color:var(--accent); margin:14px 0 6px; }
+  p { margin-bottom:12px; color:var(--text); font-size:10pt; }
+  p:last-child { margin-bottom:0; }
+  strong { color:var(--text); font-weight:700; }
+  em { color:var(--accent); font-style:normal; font-weight:600; }
+  ul, ol { padding-left:20px; margin-bottom:12px; }
+  li { margin-bottom:5px; font-size:9.5pt; color:var(--text); }
+  /* Code */
+  code { font-family:var(--mono); font-size:8pt; background:var(--card); color:var(--accent); padding:1px 5px; border:1px solid var(--border); }
+  pre { font-family:var(--mono); font-size:8pt; background:var(--card); color:var(--text); padding:14px 16px; border:1px solid var(--border); margin:12px 0; overflow-x:auto; line-height:1.7; }
+  pre .cm { color:var(--muted); font-style:italic; }
+  pre .kw { color:var(--primary); }
+  pre .st { color:var(--accent); }
+  pre .num { color:var(--warn); }
+  /* Tables */
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-family:var(--mono); font-size:8.5pt; }
+  thead tr { background:var(--card); }
+  th { padding:8px 12px; text-align:left; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); font-size:7.5pt; }
+  td { padding:8px 12px; color:var(--text); border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  tr:nth-child(even) td { background:rgba(255,255,255,.018); }
+  td.accent { color:var(--accent); }
+  td.primary { color:var(--primary); }
+  td.warn { color:var(--warn); }
+  td.danger { color:var(--danger); font-weight:700; }
+  td.label { color:var(--muted); font-size:8pt; }
+  td.code { font-family:var(--mono); font-size:8pt; }
+  /* Callouts */
+  .callout { border-left:3px solid var(--primary); background:var(--card); padding:14px 18px; margin:16px 0; }
+  .callout.accent { border-left-color:var(--accent); }
+  .callout.warn { border-left-color:var(--warn); }
+  .callout.danger { border-left-color:var(--danger); }
+  .callout p { font-size:9.5pt; }
+  .callout strong { color:var(--accent); }
+  /* Tags */
+  .tag { font-family:var(--mono); font-size:7.5pt; letter-spacing:.06em; border:1px solid var(--border); padding:2px 8px; color:var(--muted); display:inline-block; }
+  .tag.primary { border-color:var(--primary); color:var(--primary); }
+  .tag.accent { border-color:var(--accent); color:var(--accent); }
+  .tag.danger { border-color:var(--danger); color:var(--danger); }
+  .tag.warn { border-color:var(--warn); color:var(--warn); }
+  /* Grid */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); border:1px solid var(--border); margin:16px 0; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; background:var(--border); border:1px solid var(--border); margin:16px 0; }
+  .grid-cell { background:var(--card); padding:16px; }
+  .grid-cell h3, .grid-cell h4 { margin-top:0; }
+  /* File tree */
+  .tree { font-family:var(--mono); font-size:8.5pt; background:var(--card); border:1px solid var(--border); padding:14px 16px; margin:12px 0; line-height:1.8; }
+  .tree .dir { color:var(--primary); }
+  .tree .file { color:var(--text); }
+  .tree .cm { color:var(--muted); font-style:italic; }
+  /* Commit log */
+  .commit { display:grid; grid-template-columns:80px 1fr; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); align-items:start; }
+  .commit:last-child { border-bottom:none; }
+  .commit-hash { font-family:var(--mono); font-size:8pt; color:var(--primary); white-space:nowrap; padding-top:1px; }
+  .commit-msg { font-size:9pt; color:var(--text); }
+  .commit-date { font-family:var(--mono); font-size:7.5pt; color:var(--muted); }
+  .commit-block { border:1px solid var(--border); padding:12px 16px; margin:12px 0; }
+  /* Env var block */
+  .env-block { background:var(--card); border:1px solid var(--border); padding:14px 16px; margin:12px 0; font-family:var(--mono); font-size:8.5pt; }
+  .env-required { color:var(--danger); }
+  .env-optional { color:var(--warn); }
+  .env-comment { color:var(--muted); }
+  /* Status badges */
+  .badge { display:inline-block; font-family:var(--mono); font-size:7.5pt; padding:2px 8px; letter-spacing:.1em; text-transform:uppercase; }
+  .badge-done { background:rgba(0,212,170,.12); color:var(--accent); border:1px solid var(--accent); }
+  .badge-wip { background:rgba(243,156,18,.1); color:var(--warn); border:1px solid var(--warn); }
+  .badge-todo { background:rgba(108,92,231,.1); color:var(--primary); border:1px solid var(--primary); }
+  .badge-danger { background:rgba(231,76,60,.1); color:var(--danger); border:1px solid var(--danger); }
+  /* Divider */
+  .divider { border:none; border-top:1px solid var(--border); margin:32px 0; }
+  /* Footer */
+  .footer { font-family:var(--mono); font-size:7.5pt; color:var(--muted); border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:space-between; margin-top:48px; flex-wrap:wrap; gap:8px; }
+  @media (max-width:600px) {
+    .grid-2,.grid-3 { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+
+<!-- ══ COVER ══════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-eyebrow">NEXOS AI · INTERNAL TECHNICAL DOCUMENT · CONFIDENTIAL</div>
+  <div class="cover-logo">NexOS<span>.</span></div>
+  <div class="cover-title">Technical Handoff &amp; Developer Onboarding Document</div>
+  <div class="cover-sub">Everything a developer needs to take over and finalize the platform</div>
+  <div class="cover-tags">
+    <span class="tag primary">Node.js 24</span>
+    <span class="tag primary">TypeScript 5.9</span>
+    <span class="tag accent">PostgreSQL + Drizzle</span>
+    <span class="tag accent">React + Vite</span>
+    <span class="tag accent">BullMQ + Redis</span>
+    <span class="tag warn">pnpm Workspace</span>
+    <span class="tag">Express 5</span>
+    <span class="tag">Socket.io</span>
+    <span class="tag">Zod v4</span>
+  </div>
+  <div class="cover-meta">
+    <span>June 2026</span>
+    <span>·</span>
+    <span>NXS-TECH-001</span>
+    <span>·</span>
+    <span>64 AI Agents · 18+ Modules · ~55 DB Tables</span>
+  </div>
+</div>
+
+<!-- ══ 00 — OVERVIEW ══════════════════════════════════ -->
+<div class="section">
+  <div class="section-tag">Section 00</div>
+  <h1>Project Overview &amp; Current State</h1>
+  <p><strong>NexOS AI</strong> is a full-stack AI-powered growth execution platform built as a <strong>pnpm monorepo</strong>. The platform transforms business intention into complete commercial campaign execution — from strategy to launch to monitoring — using 64 specialized AI agents.</p>
+  <div class="callout accent">
+    <p><strong>Current Status:</strong> The platform is <em>functionally complete at the MVP level</em>. Backend API, frontend app, database schema, AI pipeline, and all core modules are built and typechecking cleanly. The main remaining work is production hardening, testing coverage, and a few roadmap features (HeyGen avatar, domain hosting, etc.).</p>
+  </div>
+  <h2>What Is Built (Production-Ready)</h2>
+  <table>
+    <thead><tr><th>Area</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>API Server (Express 5)</td><td><span class="badge badge-done">Done</span></td><td>18+ domain modules, all routes, auth middleware, Zod validation</td></tr>
+      <tr><td>Frontend App (React + Vite)</td><td><span class="badge badge-done">Done</span></td><td>30+ pages, sidebar nav, real-time Socket.io, all flows</td></tr>
+      <tr><td>Database Schema (PostgreSQL/Drizzle)</td><td><span class="badge badge-done">Done</span></td><td>~55 tables, all migrations applied, seed scripts ready</td></tr>
+      <tr><td>AI Gateway (multi-provider)</td><td><span class="badge badge-done">Done</span></td><td>Claude + GPT-4o + Gemini with automatic fallback cascade</td></tr>
+      <tr><td>Campaign Execution Pipeline</td><td><span class="badge badge-done">Done</span></td><td>State machine, checkpoint/resume, BullMQ + setInterval fallback</td></tr>
+      <tr><td>64 AI Agents</td><td><span class="badge badge-done">Done</span></td><td>All 7 categories, provider mapping, DOMINO framework injected</td></tr>
+      <tr><td>Launch Sequences (automation)</td><td><span class="badge badge-done">Done</span></td><td>Scheduler, dispatch, email+WhatsApp, segmentation, analytics</td></tr>
+      <tr><td>Clone Studio</td><td><span class="badge badge-done">Done</span></td><td>Recording, face detection, session reconnect, two styles</td></tr>
+      <tr><td>Daily Video</td><td><span class="badge badge-done">Done</span></td><td>Script gen for Reels/TikTok/YT/Stories, credit billing</td></tr>
+      <tr><td>Sales Team (AI)</td><td><span class="badge badge-done">Done</span></td><td>5 agents, kanban, AI reply suggestion, conversation history</td></tr>
+      <tr><td>LGPD Compliance Module</td><td><span class="badge badge-done">Done</span></td><td>Consent timestamping, audit trail, data subject rights</td></tr>
+      <tr><td>Meta CAPI + TikTok Events</td><td><span class="badge badge-done">Done</span></td><td>Server-side event firing, SHA-256 PII hashing</td></tr>
+      <tr><td>WhatsApp AI Auto-Response</td><td><span class="badge badge-done">Done</span></td><td>Incoming webhook → classify intent → AI reply via Meta API</td></tr>
+      <tr><td>NexOS Academy</td><td><span class="badge badge-done">Done</span></td><td>Separate artifact, Professor Allan AI, contextual lessons</td></tr>
+      <tr><td>Landing Page</td><td><span class="badge badge-done">Done</span></td><td>Separate artifact, full marketing page with all sections</td></tr>
+      <tr><td>Affiliate Module</td><td><span class="badge badge-done">Done</span></td><td>Referral tracking, 52-week dashboard, UTM attribution</td></tr>
+      <tr><td>Admin Panel</td><td><span class="badge badge-done">Done</span></td><td>Financial analytics, user management, upsell opportunities</td></tr>
+      <tr><td>Avatar/HeyGen Integration</td><td><span class="badge badge-todo">Roadmap</span></td><td>Planned Q3 2026</td></tr>
+      <tr><td>Native Domain Hosting</td><td><span class="badge badge-todo">Roadmap</span></td><td>Planned Q3 2026</td></tr>
+      <tr><td>E2E Test Suite</td><td><span class="badge badge-wip">Partial</span></td><td>Playwright scripts exist; coverage needs expansion</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ 01 — REPO STRUCTURE ════════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 01</div>
+  <h1>Repository Structure</h1>
+  <p>The project is a <strong>pnpm workspace monorepo</strong>. All packages share TypeScript 5.9 with strict mode. Libs are composite (emit declarations); artifacts are leaf packages (no emit).</p>
+  <div class="tree">
+    <span class="dir">workspace/</span><br>
+    ├── <span class="dir">artifacts/</span> <span class="cm">← deployable applications</span><br>
+    │   ├── <span class="dir">api-server/</span> <span class="cm">← Express 5 API (port 8080, proxied at /api)</span><br>
+    │   │   ├── <span class="dir">src/modules/</span> <span class="cm">← 40+ domain modules</span><br>
+    │   │   ├── <span class="dir">src/lib/</span> <span class="cm">← env, errors, logger, shared utils</span><br>
+    │   │   └── <span class="dir">src/routes/</span> <span class="cm">← route barrel (mounts all module routers)</span><br>
+    │   ├── <span class="dir">app/</span> <span class="cm">← React + Vite frontend (BASE_PATH=/)</span><br>
+    │   │   ├── <span class="dir">src/pages/</span> <span class="cm">← 30+ page components</span><br>
+    │   │   ├── <span class="dir">src/components/</span> <span class="cm">← shared UI components</span><br>
+    │   │   ├── <span class="dir">src/lib/</span> <span class="cm">← customFetch, socket, auth context</span><br>
+    │   │   └── <span class="dir">public/</span> <span class="cm">← static assets (prospect papers, etc.)</span><br>
+    │   ├── <span class="dir">landing/</span> <span class="cm">← Marketing landing page (React + Vite)</span><br>
+    │   ├── <span class="dir">nexos-academy/</span> <span class="cm">← Training portal (React + Vite)</span><br>
+    │   ├── <span class="dir">video-editor/</span> <span class="cm">← Video editing artifact</span><br>
+    │   └── <span class="dir">video-nexos/</span> <span class="cm">← Marketing video artifact</span><br>
+    ├── <span class="dir">lib/</span> <span class="cm">← Shared composite libraries</span><br>
+    │   ├── <span class="dir">db/</span> <span class="cm">← PostgreSQL + Drizzle ORM</span><br>
+    │   │   ├── <span class="dir">src/schema/</span> <span class="cm">← ~55 table definitions (one file per domain)</span><br>
+    │   │   ├── <span class="dir">src/index.ts</span> <span class="cm">← exports: db, schema, types</span><br>
+    │   │   └── <span class="dir">src/seed-plans.ts</span> <span class="cm">← seed Solo + Agency plans</span><br>
+    ├── <span class="dir">scripts/</span> <span class="cm">← Utility scripts (audit-test, launch-sim, stress-test)</span><br>
+    ├── <span class="file">pnpm-workspace.yaml</span> <span class="cm">← workspace config, catalog pins</span><br>
+    ├── <span class="file">tsconfig.base.json</span> <span class="cm">← shared strict TS defaults</span><br>
+    ├── <span class="file">tsconfig.json</span> <span class="cm">← solution file for libs only</span><br>
+    └── <span class="file">replit.md</span> <span class="cm">← project overview + user preferences (source of truth)</span>
+  </div>
+
+  <h2>Key Domain Modules (api-server/src/modules/)</h2>
+  <div class="grid-3">
+    <div class="grid-cell">
+      <h4>Core Platform</h4>
+      <ul>
+        <li><code>auth/</code> — JWT, register, login, refresh</li>
+        <li><code>workspaces/</code> — workspace CRUD, integrations, compliance</li>
+        <li><code>plans/</code> — Solo/Agency plan management</li>
+        <li><code>credits/</code> — balance, deduction, packs, checkout</li>
+        <li><code>billing/</code> — payment gateway integrations</li>
+        <li><code>admin/</code> — financials, user management, KPIs</li>
+      </ul>
+    </div>
+    <div class="grid-cell">
+      <h4>Campaign Pipeline</h4>
+      <ul>
+        <li><code>campaigns/</code> — CRUD, state machine, transitions</li>
+        <li><code>intake/</code> — AI conversational brief builder</li>
+        <li><code>orchestration/</code> — BullMQ worker + execution pipeline</li>
+        <li><code>agents/</code> — all 64 agent runners + DOMINO core</li>
+        <li><code>content/</code> — content pieces, approval, post-approval hooks</li>
+        <li><code>ai-gateway/</code> — multi-provider AI gateway</li>
+      </ul>
+    </div>
+    <div class="grid-cell">
+      <h4>Growth &amp; Distribution</h4>
+      <ul>
+        <li><code>launch-sequence/</code> — automation sequences, scheduler, analytics</li>
+        <li><code>email-dispatch/</code> — RD Station, ActiveCampaign, Resend</li>
+        <li><code>whatsapp/</code> — Meta WhatsApp Business API</li>
+        <li><code>server-events/</code> — Meta CAPI + TikTok Events API</li>
+        <li><code>lead-capture/</code> — public lead form, UTM, referral, LGPD</li>
+        <li><code>social/</code> — auto-post to Instagram/Facebook/TikTok</li>
+      </ul>
+    </div>
+    <div class="grid-cell">
+      <h4>Video &amp; Media</h4>
+      <ul>
+        <li><code>daily-video/</code> — Daily Video script generation</li>
+        <li><code>vsl/</code> — VSL script agent</li>
+        <li><code>video-production/</code> — Clone Studio, storyboard</li>
+        <li><code>recording/</code> — session recording, clone session</li>
+        <li><code>creatives/</code> — creative assets management</li>
+      </ul>
+    </div>
+    <div class="grid-cell">
+      <h4>Analytics &amp; Intelligence</h4>
+      <ul>
+        <li><code>metrics/</code> — health score, KPIs, fatigue detector</li>
+        <li><code>revenue/</code> — revenue events, Hotmart/Kiwify webhooks</li>
+        <li><code>memory/</code> — vertical memory, cross-campaign intelligence</li>
+        <li><code>weekly-report/</code> — automated weekly email report</li>
+        <li><code>compliance/</code> — LGPD compliance check agent</li>
+      </ul>
+    </div>
+    <div class="grid-cell">
+      <h4>Sales &amp; CX</h4>
+      <ul>
+        <li><code>sales-team/</code> — 5 AI sales agents, kanban, conversation history</li>
+        <li><code>agency/</code> — agency clients, invite/revoke, white-label</li>
+        <li><code>referral/</code> — affiliate/referral program</li>
+        <li><code>waitlist/</code> — waitlist management</li>
+        <li><code>academy/</code> — NexOS Academy API (Professor Allan)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 02 — ENVIRONMENT SETUP ════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 02</div>
+  <h1>Environment Setup &amp; Local Development</h1>
+
+  <h2>Prerequisites</h2>
+  <ul>
+    <li><strong>Node.js 24+</strong> — required (the project targets Node 24 features)</li>
+    <li><strong>pnpm 10+</strong> — package manager (<code>npm install -g pnpm</code>)</li>
+    <li><strong>PostgreSQL 15+</strong> — local database or hosted (Supabase, Neon, etc.)</li>
+    <li><strong>Redis</strong> — optional for local dev (BullMQ + Socket.io degrade gracefully without it)</li>
+  </ul>
+
+  <h2>Initial Setup</h2>
+  <pre>
+<span class="cm"># 1. Clone and install</span>
+git clone &lt;repo-url&gt; nexos-ai
+cd nexos-ai
+pnpm install
+
+<span class="cm"># 2. Set environment variables (see Section 03)</span>
+cp .env.example .env   <span class="cm"># if exists, or set manually</span>
+
+<span class="cm"># 3. Push database schema</span>
+pnpm --filter @workspace/db run push
+
+<span class="cm"># 4. Seed plans (REQUIRED before first user registration)</span>
+cd lib/db &amp;&amp; npx tsx src/seed-plans.ts
+
+<span class="cm"># 5. Start services (each in a separate terminal)</span>
+pnpm --filter @workspace/api-server run dev   <span class="cm"># API on port 8080</span>
+pnpm --filter @workspace/app run dev          <span class="cm"># Frontend on $PORT</span>
+pnpm --filter @workspace/landing run dev      <span class="cm"># Landing page</span>
+pnpm --filter @workspace/nexos-academy run dev <span class="cm"># Academy</span></pre>
+
+  <h2>Important: Run Order for Type Checking</h2>
+  <div class="callout warn">
+    <p>When DB schema changes, ALWAYS run in this order:<br>
+    1. <code>pnpm run typecheck:libs</code> — builds lib/db declarations<br>
+    2. <code>pnpm --filter @workspace/api-server run typecheck</code><br>
+    3. <code>pnpm run typecheck</code> — full workspace check</p>
+  </div>
+  <pre>
+<span class="cm"># Full typecheck (recommended before any PR)</span>
+pnpm run typecheck:libs &amp;&amp; pnpm run typecheck
+
+<span class="cm"># DB schema change workflow</span>
+pnpm --filter @workspace/db run push    <span class="cm"># dev only, applies migration</span>
+pnpm run typecheck:libs                  <span class="cm"># rebuild lib declarations</span>
+pnpm run typecheck                       <span class="cm"># verify everything compiles</span></pre>
+</div>
+
+<!-- ══ 03 — ENVIRONMENT VARIABLES ════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 03</div>
+  <h1>Environment Variables</h1>
+
+  <h2>Required — Will Crash Without These</h2>
+  <div class="env-block">
+    <span class="env-required">DATABASE_URL</span>=postgresql://user:pass@host:5432/nexos<br>
+    <span class="env-required">SESSION_SECRET</span>=your-random-32+-char-string   <span class="env-comment"># used as JWT secret fallback</span>
+  </div>
+
+  <h2>Strongly Recommended</h2>
+  <div class="env-block">
+    <span class="env-optional">JWT_SECRET</span>=dedicated-jwt-signing-key        <span class="env-comment"># defaults to SESSION_SECRET</span><br>
+    <span class="env-optional">REDIS_URL</span>=redis://localhost:6379             <span class="env-comment"># BullMQ + Socket.io (graceful degradation if absent)</span><br>
+    <span class="env-optional">ANTHROPIC_API_KEY</span>=sk-ant-...              <span class="env-comment"># Claude — strategy, compliance, sales agents</span><br>
+    <span class="env-optional">OPENAI_API_KEY</span>=sk-...                   <span class="env-comment"># GPT-4o — copy, content, creative agents</span><br>
+    <span class="env-optional">GEMINI_API_KEY</span>=AIza...                  <span class="env-comment"># Gemini — analytics, optimization, video agents</span><br>
+    <span class="env-optional">RESEND_API_KEY</span>=re_...                   <span class="env-comment"># Resend email dispatch</span><br>
+    <span class="env-optional">RESEND_FROM_EMAIL</span>=noreply@nexos.ai      <span class="env-comment"># Sender address for Resend</span>
+  </div>
+
+  <h2>Replit AI Integrations (if using Replit hosting)</h2>
+  <div class="env-block">
+    <span class="env-optional">AI_INTEGRATIONS_ANTHROPIC_API_KEY</span>=...    <span class="env-comment"># auto-provisioned via Replit</span><br>
+    <span class="env-optional">AI_INTEGRATIONS_ANTHROPIC_BASE_URL</span>=...   <span class="env-comment"># Replit proxy URL</span><br>
+    <span class="env-optional">AI_INTEGRATIONS_OPENAI_API_KEY</span>=...      <span class="env-comment"># auto-provisioned via Replit</span><br>
+    <span class="env-optional">AI_INTEGRATIONS_OPENAI_BASE_URL</span>=...     <span class="env-comment"># Replit proxy URL</span><br>
+    <span class="env-optional">AI_INTEGRATIONS_GEMINI_API_KEY</span>=...     <span class="env-comment"># auto-provisioned via Replit</span><br>
+    <span class="env-optional">AI_INTEGRATIONS_GEMINI_BASE_URL</span>=...    <span class="env-comment"># Replit proxy URL</span>
+  </div>
+
+  <h2>Optional Integrations</h2>
+  <div class="env-block">
+    <span class="env-optional">ASAAS_API_KEY</span>=...                        <span class="env-comment"># Asaas payment gateway (BR)</span><br>
+    <span class="env-optional">META_APP_SECRET</span>=...                      <span class="env-comment"># Meta/Facebook webhook verification</span><br>
+    <span class="env-optional">TIKTOK_CLIENT_KEY</span>=...                    <span class="env-comment"># TikTok OAuth</span><br>
+    <span class="env-optional">TIKTOK_CLIENT_SECRET</span>=...                 <span class="env-comment"># TikTok OAuth</span><br>
+    <span class="env-optional">ALLOWED_ORIGINS</span>=https://nexos.ai,...     <span class="env-comment"># CORS whitelist for production</span><br>
+    <span class="env-optional">APP_URL</span>=https://app.nexos.ai            <span class="env-comment"># public base URL for OAuth callbacks</span><br>
+    <span class="env-optional">CREDIT_MARGIN_MULTIPLIER</span>=1.5            <span class="env-comment"># AI cost markup (default 1.5x)</span><br>
+    <span class="env-optional">PLATFORM_OPEN</span>=true                      <span class="env-comment"># if "true", skips invite code on register</span><br>
+    <span class="env-optional">ADMIN_EMAILS</span>=admin@nexos.ai,founder@nexos.ai
+  </div>
+
+  <div class="callout danger">
+    <p><strong>Critical:</strong> The admin email list is hardcoded in <code>artifacts/api-server/src/modules/admin/admin.routes.ts</code> (<code>ADMIN_EMAILS</code> Set) AND in <code>artifacts/app/src/pages/auth.tsx</code> (<code>isAdmin</code> check). Update both when changing admin access.</p>
+  </div>
+</div>
+
+<!-- ══ 04 — DATABASE SCHEMA ══════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 04</div>
+  <h1>Database Schema</h1>
+  <p>All schema files are in <code>lib/db/src/schema/</code>. The Drizzle ORM is used throughout — never write raw SQL in application code. Schema is the single source of truth for all types.</p>
+
+  <h2>Core Tables by Domain</h2>
+  <table>
+    <thead><tr><th>Schema File</th><th>Key Tables</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="code">users.ts</td><td>users</td><td>email, passwordHash, phone, role, workspaceId</td></tr>
+      <tr><td class="code">workspaces.ts</td><td>workspaces</td><td>settings JSONB (persona, compliance, videoStyle, clone)</td></tr>
+      <tr><td class="code">plans.ts</td><td>plans</td><td>Solo + Agency — must be seeded before first user</td></tr>
+      <tr><td class="code">credits.ts</td><td>creditBalances, creditTransactions</td><td>CREDIT_COSTS map is source of truth for all action costs</td></tr>
+      <tr><td class="code">campaigns.ts</td><td>campaigns</td><td>status enum: intake→analyzing→strategy_ready→generating→awaiting_approval→approved→executing→live→completed→failed</td></tr>
+      <tr><td class="code">content.ts</td><td>campaignContent</td><td>type enum: copy, email, social_post, ad_copy, vsl_script, webinar_script, content_calendar, targeting_config, media_buying_plan, landing_page</td></tr>
+      <tr><td class="code">ai-provider-logs.ts</td><td>aiProviderLogs</td><td>AI_PROVIDER_COSTS map — source of truth for token costs in USD</td></tr>
+      <tr><td class="code">campaign-agents.ts</td><td>campaignAgents</td><td>agentTypeEnum must stay in sync with AgentRole type in ai-gateway</td></tr>
+      <tr><td class="code">launch-sequences.ts</td><td>launchSequences, sequenceItems, sequenceContacts, sequenceEngagement</td><td>Full automation engine schema</td></tr>
+      <tr><td class="code">sales-conversations.ts</td><td>salesConversations, salesMessages</td><td>AI Sales Team</td></tr>
+      <tr><td class="code">audit-logs.ts</td><td>auditLogs</td><td>LGPD audit trail, all write operations</td></tr>
+      <tr><td class="code">workspace-integrations.ts</td><td>workspaceIntegrations</td><td>all 3rd-party integrations (WhatsApp, Meta, etc.)</td></tr>
+      <tr><td class="code">revenue-events.ts</td><td>revenueEvents</td><td>sales from Hotmart/Kiwify webhooks</td></tr>
+      <tr><td class="code">metrics.ts</td><td>campaignMetrics</td><td>100-pt health score system</td></tr>
+      <tr><td class="code">agent-clarifications.ts</td><td>agentClarificationRequests</td><td>AI feedback loop — clarification requests from agents</td></tr>
+      <tr><td class="code">approval-checkpoints.ts</td><td>approvalCheckpoints</td><td>checkpoint/resume for content generation pipeline</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Adding a New Table</h2>
+  <pre>
+<span class="cm">// 1. Create lib/db/src/schema/my-domain.ts</span>
+<span class="kw">import</span> { pgTable, uuid, text, timestamp } from <span class="st">"drizzle-orm/pg-core"</span>;
+<span class="kw">export const</span> myTable = pgTable(<span class="st">"my_table"</span>, {
+  id: uuid(<span class="st">"id"</span>).primaryKey().defaultRandom(),
+  workspaceId: uuid(<span class="st">"workspace_id"</span>).notNull(),
+  createdAt: timestamp(<span class="st">"created_at"</span>).defaultNow().notNull(),
+});
+
+<span class="cm">// 2. Export from lib/db/src/schema/index.ts</span>
+<span class="kw">export</span> * from <span class="st">"./my-domain"</span>;
+
+<span class="cm">// 3. Push to database (dev only)</span>
+pnpm --filter @workspace/db run push
+
+<span class="cm">// 4. Rebuild lib declarations</span>
+pnpm run typecheck:libs</pre>
+</div>
+
+<!-- ══ 05 — AI ARCHITECTURE ══════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 05</div>
+  <h1>AI Architecture &amp; Agent System</h1>
+
+  <h2>Multi-Provider Gateway</h2>
+  <p>File: <code>artifacts/api-server/src/modules/ai-gateway/ai-gateway.service.ts</code></p>
+  <table>
+    <thead><tr><th>Provider</th><th>Model</th><th>Agent Roles</th><th>Fallback</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Anthropic</strong></td><td class="code">claude-sonnet-4-6</td><td>strategy, command, compliance, sales_*, whatsapp_response</td><td>→ OpenAI integration</td></tr>
+      <tr><td><strong>OpenAI</strong></td><td class="code">gpt-4o / gpt-5.5</td><td>copywriter, creative_director, landing_page, social_media, ad_copy, vsl, cpl, sequence builder</td><td>→ Anthropic integration</td></tr>
+      <tr><td><strong>Google</strong></td><td class="code">gemini-3-flash-preview</td><td>analytics, optimization, video_director, storyboard, daily_video</td><td>→ Anthropic integration</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <p><strong>Model name gotcha:</strong> GPT-5.x models require <code>max_completion_tokens</code> NOT <code>max_tokens</code>. The <code>callOpenAI()</code> function auto-detects <code>gpt-5.*</code> model names and switches the parameter automatically. Do NOT change this behavior without testing both model families.</p>
+  </div>
+
+  <h2>Agent Runner Architecture</h2>
+  <p>File: <code>artifacts/api-server/src/modules/agents/agent.runner.ts</code></p>
+  <p>Every agent call goes through <code>runAgent(opts)</code> which:</p>
+  <ol>
+    <li>Injects <strong>DOMINO CORE</strong> persuasion framework (mandatory for all agents)</li>
+    <li>Injects <strong>Cognitive Foundations</strong> layer (16 thinkers, 5 pillars)</li>
+    <li>Injects <strong>Constraint Reasoning</strong> layer</li>
+    <li>Injects <strong>NEXOS_MASTER_EVOLUTION_PROMPT</strong></li>
+    <li>Calls the provider-specific completion function</li>
+    <li>Logs to <code>aiProviderLogs</code> + <code>campaignAgents</code> tables</li>
+    <li>Deducts credits from workspace balance</li>
+    <li>Returns <code>AICompletionResult</code> with <code>.content</code> string</li>
+  </ol>
+
+  <h2>Key Agent Files</h2>
+  <table>
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="code">agents/domino-core.ts</td><td>Central persuasion philosophy — injected into ALL agents</td></tr>
+      <tr><td class="code">agents/agent.runner.ts</td><td>Main runAgent() function with all layer injections</td></tr>
+      <tr><td class="code">agents/command.agent.ts</td><td>NexOS Command Agent — orchestrates all other agents, checkpoint/resume</td></tr>
+      <tr><td class="code">agents/strategy.agent.ts</td><td>Strategy generation (Claude)</td></tr>
+      <tr><td class="code">agents/copywriter.agent.ts</td><td>Copy with 3-turn critique loop (GPT-4o)</td></tr>
+      <tr><td class="code">agents/vsl-script.agent.ts</td><td>VSL script with critique/refine (GPT-4o)</td></tr>
+      <tr><td class="code">agents/whatsapp-response.agent.ts</td><td>AI auto-response for WhatsApp inbox</td></tr>
+      <tr><td class="code">agents/item-copy.agent.ts</td><td>Per-item copy for launch sequences</td></tr>
+      <tr><td class="code">agents/constraint-reasoning.ts</td><td>Constraint reasoning layer injected at position 4.5</td></tr>
+      <tr><td class="code">agents/isolation-sandbox.ts</td><td>runIsolatedAgent() — wraps runAgent() with typed result union, never throws</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Adding a New Agent</h2>
+  <pre>
+<span class="cm">// 1. Add to AgentRole type in ai-gateway.service.ts</span>
+type AgentRole = ... | <span class="st">"my_new_agent"</span>;
+
+<span class="cm">// 2. Add to AGENT_PROVIDER_MAP</span>
+my_new_agent: <span class="st">"anthropic"</span>  <span class="cm">// or "openai" | "gemini"</span>
+
+<span class="cm">// 3. Add to agentTypeEnum in lib/db/src/schema/campaign-agents.ts</span>
+<span class="cm">// CRITICAL: DB enum and AgentRole type must stay in sync!</span>
+
+<span class="cm">// 4. Push DB schema + typecheck:libs</span>
+pnpm --filter @workspace/db run push
+pnpm run typecheck:libs
+
+<span class="cm">// 5. Create your agent file</span>
+<span class="cm">// artifacts/api-server/src/modules/agents/my-new.agent.ts</span>
+<span class="kw">export async function</span> runMyNewAgent(campaignId, workspaceId, data, log) {
+  <span class="kw">const</span> result = <span class="kw">await</span> runAgent({
+    agentRole: <span class="st">"my_new_agent"</span>,
+    messages: [{ role: <span class="st">"user"</span>, content: buildPrompt(data) }],
+    workspaceId,
+    campaignId,   <span class="cm">// pass null for sequence-level agents</span>
+    log,
+    creditAction: <span class="st">"my_action"</span>,
+  });
+  <span class="kw">return</span> parseAgentJSON(result.content);
+}</pre>
+</div>
+
+<!-- ══ 06 — CAMPAIGN PIPELINE ═════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 06</div>
+  <h1>Campaign Execution Pipeline</h1>
+
+  <h2>State Machine</h2>
+  <p>File: <code>artifacts/api-server/src/modules/campaigns/campaign-state-machine.ts</code></p>
+  <p>The state machine is the single source of truth for campaign status transitions. <strong>Never call <code>db.update(campaigns).set({ status })</code> directly</strong> — always use <code>transitionCampaign()</code>.</p>
+  <pre>
+<span class="cm">// Valid transition flow</span>
+intake → analyzing → strategy_ready → generating
+→ awaiting_approval → approved → executing → live → completed
+
+<span class="cm">// Error states</span>
+any → failed
+executing → paused → executing  <span class="cm">// via retry</span></pre>
+
+  <h2>Execution Entry Points</h2>
+  <table>
+    <thead><tr><th>Endpoint</th><th>Phase triggered</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="code">POST /campaigns/:id/execute/strategy</td><td>Strategy</td><td>Runs intake → command → profile → strategy agents</td></tr>
+      <tr><td class="code">POST /campaigns/:id/execute/content</td><td>Content</td><td>Runs all 16 content agents with checkpoint/resume</td></tr>
+      <tr><td class="code">POST /campaigns/:id/execute/launch</td><td>Launch</td><td>Integration gate check → activates sequences → goes live</td></tr>
+      <tr><td class="code">POST /campaigns/:id/execute/monitor</td><td>Monitor</td><td>Analytics + optimization agents</td></tr>
+      <tr><td class="code">POST /campaigns/:id/execute/retry</td><td>Recovery</td><td>Clears pipeline lock + force-resets status + re-enqueues</td></tr>
+    </tbody>
+  </table>
+
+  <h2>BullMQ + Fallback</h2>
+  <div class="callout">
+    <p>When Redis is unavailable: <code>enqueueOrExecute()</code> in <code>orchestration.service.ts</code> detects the Redis connection failure and falls back to <code>setImmediate()</code> direct execution. The HTTP response always returns 202 immediately. Never block the HTTP thread for AI execution.</p>
+  </div>
+
+  <h2>Content Generation Checkpoint / Resume</h2>
+  <p>File: <code>artifacts/api-server/src/modules/agents/command.agent.ts</code></p>
+  <p>Each of the 16 content agents is wrapped with <code>skipAgent(campaignId, agentType)</code>. On each call, it checks if the content piece already exists in the DB — if yes, skips and uses existing. On server restart, <code>resumeGeneratingCampaigns()</code> is called at boot to re-enqueue any campaigns stuck in <code>generating</code> state.</p>
+</div>
+
+<!-- ══ 07 — FRONTEND ARCHITECTURE ═══════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 07</div>
+  <h1>Frontend Architecture</h1>
+
+  <h2>Key Files</h2>
+  <table>
+    <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td class="code">src/lib/queryClient.ts</td><td>TanStack Query client + <code>customFetch()</code> — always use customFetch, not raw fetch</td></tr>
+      <tr><td class="code">src/lib/socket.ts</td><td><code>useCampaignSocket()</code> hook — Socket.io singleton for real-time agent events</td></tr>
+      <tr><td class="code">src/lib/auth.tsx</td><td>Auth context — <code>useAuth()</code> hook, JWT storage, isAdmin check</td></tr>
+      <tr><td class="code">src/lib/mode.ts</td><td>Founder/Architect mode — <code>useMode()</code> hook, persisted in localStorage</td></tr>
+      <tr><td class="code">src/routes.tsx</td><td>All route definitions — add new pages here</td></tr>
+      <tr><td class="code">src/components/layout/sidebar.tsx</td><td>Main navigation — add new nav items here</td></tr>
+      <tr><td class="code">src/pages/settings.tsx</td><td>Settings (4 tabs: Perfil, Workspace, Compliance, Segurança, Integrações, Identidade)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Adding a New Page</h2>
+  <pre>
+<span class="cm">// 1. Create page component</span>
+<span class="cm">// src/pages/my-feature/index.tsx</span>
+<span class="kw">export default function</span> MyFeaturePage() {
+  <span class="kw">const</span> { data } = useQuery({
+    queryKey: [<span class="st">"/api/my-feature"</span>],
+    queryFn: () =&gt; customFetch(<span class="st">"/api/my-feature"</span>),
+  });
+  <span class="kw">return</span> &lt;div&gt;...&lt;/div&gt;;
+}
+
+<span class="cm">// 2. Register route in src/routes.tsx</span>
+&lt;Route path=<span class="st">"/my-feature"</span> component={lazy(() =&gt; import(<span class="st">"./pages/my-feature"</span>))} /&gt;
+
+<span class="cm">// 3. Add sidebar nav item in src/components/layout/sidebar.tsx</span></pre>
+
+  <h2>Real-Time Socket.io Events</h2>
+  <p>The Campaign Detail page subscribes to <code>campaign:{id}</code> Socket.io room. Events fired by the server:</p>
+  <ul>
+    <li><code>campaign:event</code> — generic event with <code>{ type, agentRole, message, data }</code></li>
+    <li>Types: <code>agent_thinking</code>, <code>agent_started</code>, <code>agent_completed</code>, <code>agent_error</code>, <code>status_change</code>, <code>content_ready</code></li>
+  </ul>
+  <pre>
+<span class="cm">// Server-side event emission</span>
+<span class="kw">import</span> { emitAgentThinking, emitAgentCompleted } from <span class="st">"../realtime/sequence-realtime"</span>;
+emitAgentThinking(campaignId, <span class="st">"strategy"</span>, <span class="st">"Analyzing market positioning..."</span>);
+emitAgentCompleted(campaignId, <span class="st">"strategy"</span>, { pieces: <span class="num">8</span> });</pre>
+</div>
+
+<!-- ══ 08 — CRITICAL GOTCHAS ════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 08</div>
+  <h1>Critical Gotchas &amp; Non-Obvious Behaviors</h1>
+  <div class="callout danger">
+    <p>Read this section carefully. These are issues that are NOT obvious from the code and have caused bugs in the past.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Topic</th><th>Gotcha</th><th>Correct Behavior</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Zod v4</strong></td><td><code>z.record()</code> requires two args</td><td><code>z.record(z.string(), z.unknown())</code> — NOT <code>z.record(z.unknown())</code></td></tr>
+      <tr><td><strong>BullMQ queue names</strong></td><td>Cannot contain <code>:</code></td><td>Use <code>-</code> instead: <code>"campaign-execution"</code> not <code>"campaign:execution"</code></td></tr>
+      <tr><td><strong>deductCredits()</strong></td><td>3rd arg is <code>log</code>, NOT optional</td><td><code>deductCredits(workspaceId, action, log, campaignId?)</code></td></tr>
+      <tr><td><strong>runAgent campaignId</strong></td><td>Pass <code>null</code> (not undefined) for sequence-level agents</td><td>Prevents FK violation in <code>campaign_agents</code> table</td></tr>
+      <tr><td><strong>parseAgentJSON</strong></td><td>LLM responses often truncated mid-JSON at 4096 tokens</td><td>Always use <code>parseAgentJSON(content)</code> — never <code>JSON.parse()</code> directly</td></tr>
+      <tr><td><strong>State machine skip</strong></td><td>If campaign is already in target state, skip transition silently</td><td>Check <code>campaign.status === targetStatus</code> before calling <code>transitionCampaign()</code></td></tr>
+      <tr><td><strong>agentTypeEnum sync</strong></td><td>DB enum + AgentRole TypeScript type must stay in sync</td><td>Add new agent roles to BOTH files or get 22P02 PostgreSQL error</td></tr>
+      <tr><td><strong>GPT-5.x tokens</strong></td><td><code>max_tokens</code> param not supported</td><td><code>callOpenAI()</code> auto-detects gpt-5.x and uses <code>max_completion_tokens</code></td></tr>
+      <tr><td><strong>Integration gate</strong></td><td>Only at <code>execute/launch</code> phase</td><td>NEVER block at content approval or status PATCH — only at launch</td></tr>
+      <tr><td><strong>Sequence contacts route</strong></td><td>Non-obvious path</td><td><code>POST /launch-sequences/:id/contacts</code> — NOT <code>/contacts/bulk</code></td></tr>
+      <tr><td><strong>Invite codes gate</strong></td><td>Registration blocked by default</td><td>Set <code>PLATFORM_OPEN=true</code> OR create <code>inviteCodesTable</code> row + pass in body</td></tr>
+      <tr><td><strong>RecordButton overlays</strong></td><td>backdrop-blur on header traps fixed-position overlays</td><td>Use <code>createPortal(…, document.body)</code> with <code>z-[9000]+</code></td></tr>
+      <tr><td><strong>Video stream auth</strong></td><td><code>&lt;video src&gt;</code> can't send auth headers</td><td>Use <code>GET /api/recordings/:id/video-stream?token=</code> — registered BEFORE <code>requireAuth</code> middleware</td></tr>
+      <tr><td><strong>Content piece types</strong></td><td>6 types need special expansion in frontend</td><td><code>content_calendar</code>, <code>ad_copy</code>, <code>vsl_script</code>, <code>webinar_script</code>, <code>targeting_config</code>, <code>media_buying_plan</code> — <code>ApiContentPiece.content</code> is <code>unknown</code> (JSONB), not string</td></tr>
+      <tr><td><strong>VSL runVSLScriptAgent</strong></td><td>Signature has no launchPlan arg</td><td><code>(campaignId, workspaceId, intakeData, strategy, profile, log)</code> — 6 args only</td></tr>
+      <tr><td><strong>completeWithAgent fallback</strong></td><td>Bypasses LLM router</td><td>Add explicit try-catch → OpenAI fallback for Anthropic/Gemini cases</td></tr>
+      <tr><td><strong>LLM token budget</strong></td><td>Sequences &gt;20 items cause JSON truncation</td><td>Keep sequence builder ≤20 items per prompt</td></tr>
+      <tr><td><strong>Redis ECONNREFUSED</strong></td><td>Appears in dev logs constantly</td><td>Expected — BullMQ/ioredis internal retry, gracefully degraded. Not a bug.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══ 09 — COMMIT HISTORY ══════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 09</div>
+  <h1>Recent Commit History</h1>
+  <p>The 30 most recent commits, ordered newest → oldest. Each commit represents a completed feature or fix that was tested and verified.</p>
+
+  <div class="commit-block">
+    <div class="commit"><span class="commit-hash">db82977</span><div><div class="commit-msg">Update investor document with current platform capabilities</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">a314b91</span><div><div class="commit-msg">Add user identification and compliance features to settings (LGPD compliance tab — CPF, CNPJ, address, consents, data subject rights)</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">249700f</span><div><div class="commit-msg">Add feature to generate daily video scripts with customizable options (Daily Video module — Reels/TikTok/YT/Stories/Shorts, credit billing 8–20cr)</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">06f6b21</span><div><div class="commit-msg">Add persistent video style selection for creators and campaigns</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">4241e08</span><div><div class="commit-msg">Add interactive clone studio and wow moment to onboarding flow</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">1199be5</span><div><div class="commit-msg">Add new payment gateways and organize integration categories (Asaas, new providers)</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">13e4494</span><div><div class="commit-msg">Add campaign creative gallery and improve social media integration flow</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">fcedf5e</span><div><div class="commit-msg">Add an audit scanner before launching campaigns (Pre-Launch Checklist gate)</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">5f325f0</span><div><div class="commit-msg">Improve campaign viewing and status management features</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">9310f11</span><div><div class="commit-msg">Add identity tab for voice cloning and persona settings (Clone Studio in Settings)</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">a03e139</span><div><div class="commit-msg">Make social media channel requirements dynamic and add content download</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">713ca32</span><div><div class="commit-msg">Add a mandatory content approval gate before campaign launch</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">4c7b983</span><div><div class="commit-msg">Add a copy button to content pieces and improve error handling</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">718c228</span><div><div class="commit-msg">Update campaign setup to improve social media and landing page integrations</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">9d5c6cd</span><div><div class="commit-msg">Add social media and landing page gates to the pre-launch checklist</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">dfd3e2d</span><div><div class="commit-msg">Improve reliability of displayed metrics on the war room page</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">dfe83f9</span><div><div class="commit-msg">Improve error handling for background operations and external service calls</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">6444dca</span><div><div class="commit-msg">Add ability to regenerate plans without losing existing data</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">9c5f2f1</span><div><div class="commit-msg">Make the plan generation process asynchronous and non-blocking</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">8da61ed</span><div><div class="commit-msg">Add validation for generated content to ensure correct format</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">8c57f78</span><div><div class="commit-msg">Add compliance review stage to content generation pipeline</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">05568c1</span><div><div class="commit-msg">Fix multiple bugs in the strategy and content generation pipeline</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">78b77fc</span><div><div class="commit-msg">Improve system stability and user experience with error handling and timeouts</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">8bdf3d6</span><div><div class="commit-msg">Improve strategy module display and automate VSL generation</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">3817d5e</span><div><div class="commit-msg">Add guided tour and campaign overview to improve user onboarding</div><div class="commit-date">June 2026</div></div></div>
+    <div class="commit"><span class="commit-hash">2ff2af6</span><div><div class="commit-msg">Add ability to archive campaigns and view live metrics</div><div class="commit-date">June 2026</div></div></div>
+  </div>
+</div>
+
+<!-- ══ 10 — OPEN TASKS / ROADMAP ════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 10</div>
+  <h1>Open Tasks &amp; Roadmap</h1>
+
+  <h2>High Priority (Must Complete for Launch)</h2>
+  <table>
+    <thead><tr><th>Task</th><th>Priority</th><th>Area</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Production deployment configuration</td><td><span class="badge badge-danger">Critical</span></td><td>DevOps</td><td>Set all production env vars, configure ALLOWED_ORIGINS, APP_URL</td></tr>
+      <tr><td>Database seeding in production</td><td><span class="badge badge-danger">Critical</span></td><td>DB</td><td>Run seed-plans.ts before first user registration</td></tr>
+      <tr><td>E2E test suite completion</td><td><span class="badge badge-wip">High</span></td><td>Testing</td><td>Playwright tests exist for some flows; expand to cover full pipeline</td></tr>
+      <tr><td>Rate limiting on AI endpoints</td><td><span class="badge badge-wip">High</span></td><td>Security</td><td>Prevent credit drain from rapid-fire requests</td></tr>
+      <tr><td>Email delivery in production</td><td><span class="badge badge-wip">High</span></td><td>Email</td><td>RESEND_API_KEY + RESEND_FROM_EMAIL configured; weekly report emails ready</td></tr>
+      <tr><td>WhatsApp webhook verification</td><td><span class="badge badge-wip">High</span></td><td>Integrations</td><td>META_APP_SECRET needed for webhook signature verification</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Medium Priority (Q3 2026 Roadmap)</h2>
+  <table>
+    <thead><tr><th>Task</th><th>Priority</th><th>Area</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>HeyGen avatar integration</td><td><span class="badge badge-todo">Medium</span></td><td>Video</td><td>Digital presenter without real clone. HeyGen API + ElevenLabs voice</td></tr>
+      <tr><td>Native domain + hosting</td><td><span class="badge badge-todo">Medium</span></td><td>Infrastructure</td><td>Acquire and point domain + hosting within NexOS (no external tools needed)</td></tr>
+      <tr><td>Stripe payment integration</td><td><span class="badge badge-todo">Medium</span></td><td>Billing</td><td>Stripe module scaffolded; needs Stripe API key + webhook setup</td></tr>
+      <tr><td>SMS dispatch channel</td><td><span class="badge badge-todo">Low</span></td><td>Dispatch</td><td>Add SMS as sequence dispatch option alongside email + WhatsApp</td></tr>
+      <tr><td>Multi-language (EN + ES)</td><td><span class="badge badge-todo">Low</span></td><td>i18n</td><td>PT-BR first; EN-US and ES-LA are modular additions</td></tr>
+      <tr><td>Telegram integration</td><td><span class="badge badge-todo">Low</span></td><td>Integrations</td><td>GROUP_LINKS already support Telegram links; API integration pending</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Known Technical Debt</h2>
+  <ul>
+    <li>TikTok organic integration stored under <code>tiktok_ads</code> DB enum value (enum unchanged to avoid migration). Display layer uses <code>tiktok</code> string.</li>
+    <li>Weekly report emails only log a compose preview when SMTP not configured — wire nodemailer or use Resend for real delivery</li>
+    <li><code>completeWithAgent()</code> bypasses the LLM router; direct-chat endpoints using Anthropic/Gemini need explicit fallback chains</li>
+    <li>Content page: 6 content types (<code>content_calendar</code>, <code>ad_copy</code>, <code>vsl_script</code>, <code>webinar_script</code>, <code>targeting_config</code>, <code>media_buying_plan</code>) need explicit expansion handlers in frontend — <code>ApiContentPiece.content</code> is <code>unknown</code> (JSONB), not string</li>
+  </ul>
+</div>
+
+<!-- ══ 11 — DEPLOYMENT GUIDE ═════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 11</div>
+  <h1>Deployment Guide</h1>
+
+  <h2>Architecture Overview</h2>
+  <p>The platform runs as a <strong>reverse-proxied multi-service monorepo</strong>. A global proxy routes traffic by path prefix to individual services:</p>
+  <table>
+    <thead><tr><th>Path</th><th>Service</th><th>Port</th></tr></thead>
+    <tbody>
+      <tr><td class="code">/api/*</td><td>api-server (Express)</td><td class="code">8080</td></tr>
+      <tr><td class="code">/</td><td>app (React/Vite)</td><td class="code">$PORT</td></tr>
+      <tr><td class="code">/landing</td><td>landing (React/Vite)</td><td class="code">$PORT</td></tr>
+      <tr><td class="code">/nexos-academy</td><td>nexos-academy (React/Vite)</td><td class="code">$PORT</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <p><strong>Port binding:</strong> All Vite-based frontends MUST read <code>process.env.PORT</code> for their dev server port. Hard-coded ports (e.g., <code>server: { port: 3000 }</code> in vite.config.ts) will cause blank preview panes on Replit because the proxy assigns a unique port per service.</p>
+  </div>
+
+  <h2>Build Commands</h2>
+  <pre>
+<span class="cm"># Build API server (esbuild CJS bundle)</span>
+pnpm --filter @workspace/api-server run build
+
+<span class="cm"># Build all frontends</span>
+pnpm --filter @workspace/app run build
+pnpm --filter @workspace/landing run build
+pnpm --filter @workspace/nexos-academy run build
+
+<span class="cm"># Full build (typecheck + build all)</span>
+pnpm run build</pre>
+
+  <h2>Production Checklist</h2>
+  <ul>
+    <li>☐ <code>DATABASE_URL</code> set to production PostgreSQL</li>
+    <li>☐ <code>SESSION_SECRET</code> = random 64-char string (never the same as dev)</li>
+    <li>☐ <code>JWT_SECRET</code> = separate random string</li>
+    <li>☐ <code>REDIS_URL</code> set (without Redis, no real-time events in production)</li>
+    <li>☐ <code>ANTHROPIC_API_KEY</code> + <code>OPENAI_API_KEY</code> + <code>GEMINI_API_KEY</code> set</li>
+    <li>☐ <code>ALLOWED_ORIGINS</code> = your production domain(s)</li>
+    <li>☐ <code>APP_URL</code> = your production URL</li>
+    <li>☐ Database schema pushed: <code>pnpm --filter @workspace/db run push</code></li>
+    <li>☐ Plans seeded: <code>npx tsx lib/db/src/seed-plans.ts</code></li>
+    <li>☐ Admin emails updated in code (see Section 03)</li>
+    <li>☐ Payment webhook URLs configured in Hotmart/Kiwify/Stripe dashboards</li>
+    <li>☐ Meta webhook URL configured: <code>POST /api/whatsapp/webhook</code></li>
+  </ul>
+</div>
+
+<!-- ══ 12 — TESTING ═══════════════════════════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 12</div>
+  <h1>Testing</h1>
+
+  <h2>Existing Test Scripts</h2>
+  <table>
+    <thead><tr><th>Script</th><th>Command</th><th>What it tests</th></tr></thead>
+    <tbody>
+      <tr><td>Full Audit Test</td><td class="code">DRY_RUN_MODE=true pnpm --filter @workspace/scripts run nexos-audit-test</td><td>Dry-run full platform audit (no real AI calls)</td></tr>
+      <tr><td>Launch Simulation</td><td class="code">pnpm --filter @workspace/scripts run nexos-launch-sim</td><td>Full end-to-end launch simulation with real agents</td></tr>
+      <tr><td>Stress Test</td><td class="code">SAMPLE=3 pnpm --filter @workspace/scripts run stress-full</td><td>Multi-user platform stress test (SAMPLE=N concurrent users)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Invite Code Gate in Tests</h2>
+  <div class="callout warn">
+    <p><strong>Important:</strong> Test scripts must create a temp row in <code>inviteCodesTable</code> and pass <code>inviteCode</code> in the register request body. The <code>PLATFORM_OPEN</code> env var must be <code>"true"</code> OR the invite code must exist. The gate is in <code>auth.routes.ts</code>.</p>
+  </div>
+
+  <h2>Manual Testing the Full Pipeline</h2>
+  <pre>
+<span class="cm"># 1. Register a test user (with PLATFORM_OPEN=true)</span>
+curl -X POST localhost:80/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"Test1234!","name":"Test User"}'
+
+<span class="cm"># 2. Login and get JWT</span>
+curl -X POST localhost:80/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"Test1234!"}'
+
+<span class="cm"># 3. Create campaign</span>
+curl -X POST localhost:80/api/campaigns \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test Campaign","type":"plf"}'
+
+<span class="cm"># 4. Run strategy phase</span>
+curl -X POST localhost:80/api/campaigns/&lt;id&gt;/execute/strategy \
+  -H "Authorization: Bearer &lt;token&gt;"</pre>
+</div>
+
+<!-- ══ 13 — CONTACTS & HANDOFF CHECKLIST ════════════ -->
+<div class="section page-break">
+  <div class="section-tag">Section 13</div>
+  <h1>Handoff Checklist</h1>
+
+  <p>Use this checklist to verify the incoming developer has everything needed to take over the project.</p>
+
+  <h2>Access &amp; Credentials</h2>
+  <ul>
+    <li>☐ Access to Replit workspace (or GitHub repo)</li>
+    <li>☐ <code>DATABASE_URL</code> for dev + production databases</li>
+    <li>☐ <code>SESSION_SECRET</code> + <code>JWT_SECRET</code></li>
+    <li>☐ Anthropic, OpenAI, and Gemini API keys</li>
+    <li>☐ Resend API key + from email</li>
+    <li>☐ Meta App ID + App Secret (for WhatsApp/Instagram webhook)</li>
+    <li>☐ TikTok Client Key + Client Secret</li>
+    <li>☐ Asaas API key (Brazil payment gateway)</li>
+    <li>☐ Redis connection URL (production)</li>
+  </ul>
+
+  <h2>Onboarding Steps</h2>
+  <ol>
+    <li>Read <code>replit.md</code> in full — it is the authoritative project README</li>
+    <li>Run <code>pnpm install</code> and verify no errors</li>
+    <li>Set all required env vars (Section 03 of this document)</li>
+    <li>Run <code>pnpm --filter @workspace/db run push</code> to apply schema</li>
+    <li>Run <code>npx tsx lib/db/src/seed-plans.ts</code> to seed plans</li>
+    <li>Start workflows (api-server + app) and verify health at <code>/api/healthz</code></li>
+    <li>Register a test user and run through the full campaign pipeline</li>
+    <li>Read Section 08 (Critical Gotchas) before writing any new code</li>
+    <li>Run <code>DRY_RUN_MODE=true pnpm --filter @workspace/scripts run nexos-audit-test</code></li>
+  </ol>
+
+  <h2>Key Contacts</h2>
+  <table>
+    <thead><tr><th>Role</th><th>Contact</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Founder / Product Owner</td><td>founder@nexos.ai</td><td>Final approval on all product decisions</td></tr>
+      <tr><td>Admin</td><td>admin@nexos.ai</td><td>Platform admin access</td></tr>
+      <tr><td>Privacy (LGPD)</td><td>privacidade@nexos.ai</td><td>Data subject requests routing</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="footer" style="margin-top:64px;padding-top:16px;">
+  <span>NXS-TECH-001 · NexOS AI Technical Handoff Document</span>
+  <span>June 2026 · INTERNAL · CONFIDENTIAL</span>
+  <span>nexos.ai</span>
+</div>
+</div>
+</body>
+</html>

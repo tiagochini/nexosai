@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NexOS AI — Investor & Early Adopter Prospect Paper v2.0 · 2026</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink:#0d0d12; --surface:#111118; --card:#16161f; --border:#252530;
+    --primary:#6c5ce7; --accent:#00d4aa; --warn:#f39c12; --danger:#e74c3c;
+    --text:#e8e8f0; --muted:#7c7c9a;
+    --mono:'JetBrains Mono','Courier New',monospace;
+    --sans:'Inter','Segoe UI',system-ui,sans-serif;
+  }
+  html { font-size:10pt; background:var(--ink); color:var(--text); }
+  body { font-family:var(--sans); line-height:1.55; background:var(--ink); }
+  @media print {
+    html { font-size:9pt; background:#fff; color:#111; }
+    body { background:#fff; }
+    :root { --ink:#fff; --surface:#f8f8fb; --card:#f0f0f7; --border:#dde; --text:#111; --muted:#555; --primary:#5241c8; --accent:#009979; }
+    .page-break { page-break-before:always; break-before:page; }
+    .avoid-break { page-break-inside:avoid; break-inside:avoid; }
+    a { color:inherit; text-decoration:none; }
+  }
+  .doc { max-width:860px; margin:0 auto; padding:0 24px 80px; }
+  /* Cover */
+  .cover { min-height:100vh; display:flex; flex-direction:column; justify-content:space-between; padding:56px 0 48px; border-bottom:1px solid var(--border); }
+  .cover-tag { font-family:var(--mono); font-size:8.5pt; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
+  .cover-badge { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--primary); padding:4px 12px; font-family:var(--mono); font-size:7.5pt; letter-spacing:.16em; text-transform:uppercase; color:var(--primary); }
+  .cover-logo { font-family:var(--mono); font-weight:900; font-size:64pt; letter-spacing:-.02em; color:var(--text); line-height:.9; }
+  .cover-logo span { color:var(--primary); }
+  .cover-sub { font-family:var(--mono); font-size:11pt; letter-spacing:.28em; text-transform:uppercase; color:var(--accent); margin-top:4px; }
+  .cover-title { font-size:17pt; font-weight:700; color:var(--text); max-width:560px; line-height:1.25; margin-top:16px; }
+  .cover-desc { font-family:var(--mono); font-size:8pt; color:var(--muted); letter-spacing:.06em; margin-top:8px; }
+  .cover-kpis { display:grid; grid-template-columns:1fr 1fr; gap:1px; border:1px solid var(--border); background:var(--border); margin-top:40px; }
+  .cover-kpi { background:var(--card); padding:18px 20px; }
+  .cover-kpi-val { font-family:var(--mono); font-size:18pt; font-weight:900; color:var(--accent); letter-spacing:-.02em; line-height:1; }
+  .cover-kpi-label { font-family:var(--mono); font-size:7pt; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+  .cover-meta { font-family:var(--mono); font-size:8pt; color:var(--muted); letter-spacing:.1em; display:flex; gap:24px; flex-wrap:wrap; }
+  /* Sections */
+  .section { padding-top:64px; }
+  .section-tag { font-family:var(--mono); font-size:7pt; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .section-num { font-family:var(--mono); font-size:48pt; font-weight:900; color:var(--border); line-height:1; letter-spacing:-.04em; margin-bottom:-12px; }
+  h1 { font-size:22pt; font-weight:800; letter-spacing:-.025em; color:var(--text); line-height:1.15; margin-bottom:20px; }
+  h2 { font-family:var(--mono); font-size:11pt; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text); margin:28px 0 10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  h3 { font-family:var(--mono); font-size:9pt; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--primary); margin:20px 0 8px; }
+  p { margin-bottom:12px; color:var(--text); font-size:10pt; }
+  p:last-child { margin-bottom:0; }
+  strong { color:var(--text); font-weight:700; }
+  em { color:var(--accent); font-style:normal; font-weight:600; }
+  /* Legal */
+  .legal-box { border:1px solid var(--border); background:var(--card); padding:28px 32px; }
+  .legal-box h2 { font-size:9pt; }
+  .legal-box p { font-size:8.5pt; color:var(--muted); line-height:1.6; }
+  /* TOC */
+  .toc-grid { display:grid; grid-template-columns:auto 1fr auto; gap:0; border:1px solid var(--border); }
+  .toc-row > * { padding:9px 14px; border-bottom:1px solid var(--border); font-size:9pt; }
+  .toc-row:last-child > * { border-bottom:none; }
+  .toc-num { font-family:var(--mono); font-size:8pt; color:var(--primary); background:var(--card); white-space:nowrap; }
+  .toc-title { color:var(--text); background:var(--surface); }
+  .toc-page { font-family:var(--mono); font-size:8pt; color:var(--muted); background:var(--card); text-align:right; white-space:nowrap; }
+  .toc-sep > * { padding:4px 14px; background:var(--ink); border-bottom:1px solid var(--border); }
+  .toc-sep-label { font-family:var(--mono); font-size:7.5pt; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  /* Tables */
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-family:var(--mono); font-size:8.5pt; }
+  thead tr { background:var(--card); }
+  th { padding:9px 12px; text-align:left; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); font-size:7.5pt; }
+  td { padding:9px 12px; color:var(--text); border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  tr:nth-child(even) td { background:rgba(255,255,255,.018); }
+  td.num { text-align:right; font-weight:700; }
+  td.accent { color:var(--accent); font-weight:700; }
+  td.primary { color:var(--primary); font-weight:700; }
+  td.warn { color:var(--warn); font-weight:700; }
+  td.danger { color:var(--danger); }
+  td.label { color:var(--muted); font-size:8pt; }
+  /* Callouts */
+  .callout { border-left:3px solid var(--primary); background:var(--card); padding:16px 20px; margin:20px 0; }
+  .callout.accent { border-left-color:var(--accent); }
+  .callout.warn { border-left-color:var(--warn); }
+  .callout p { font-size:10pt; }
+  .callout .quote { font-size:12pt; font-weight:700; color:var(--text); line-height:1.35; margin-bottom:8px; }
+  .callout .quote-sub { font-family:var(--mono); font-size:8pt; color:var(--muted); }
+  /* Stats */
+  .stat-grid { display:grid; gap:1px; background:var(--border); border:1px solid var(--border); margin:20px 0; }
+  .stat-grid-2 { grid-template-columns:1fr 1fr; }
+  .stat-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+  .stat-grid-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+  .stat-cell { background:var(--card); padding:18px 20px; }
+  .stat-val { font-family:var(--mono); font-size:20pt; font-weight:900; color:var(--accent); letter-spacing:-.03em; line-height:1; }
+  .stat-val.primary { color:var(--primary); }
+  .stat-val.warn { color:var(--warn); }
+  .stat-val.text { color:var(--text); }
+  .stat-label { font-family:var(--mono); font-size:7pt; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+  /* Tags */
+  .tag-list { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0; }
+  .tag { font-family:var(--mono); font-size:8pt; letter-spacing:.06em; border:1px solid var(--border); padding:3px 9px; color:var(--muted); }
+  .tag.primary { border-color:var(--primary); color:var(--primary); }
+  .tag.accent { border-color:var(--accent); color:var(--accent); }
+  .tag.new { border-color:var(--accent); color:var(--accent); background:rgba(0,212,170,.07); }
+  .tag.updated { border-color:var(--warn); color:var(--warn); background:rgba(243,156,18,.07); }
+  /* Grid */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); border:1px solid var(--border); margin:20px 0; }
+  .grid-cell { background:var(--card); padding:20px; }
+  .grid-cell h3 { margin-top:0; }
+  /* Pipeline */
+  .pipeline { font-family:var(--mono); font-size:8.5pt; color:var(--accent); border:1px solid var(--border); background:var(--card); padding:14px 18px; margin:16px 0; letter-spacing:.04em; line-height:2; }
+  .pipeline .arr { color:var(--muted); }
+  /* Compare */
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--border); margin:16px 0; }
+  .compare-col { padding:16px; }
+  .compare-col.old { background:rgba(231,76,60,.06); border-right:1px solid var(--border); }
+  .compare-col.new { background:rgba(0,212,170,.06); }
+  .compare-head { font-family:var(--mono); font-size:8pt; letter-spacing:.12em; text-transform:uppercase; margin-bottom:10px; }
+  .compare-head.old { color:var(--muted); }
+  .compare-head.new { color:var(--accent); }
+  .compare-col p { font-size:9pt; color:var(--text); }
+  /* Divider */
+  .divider { border:none; border-top:1px solid var(--border); margin:40px 0; }
+  /* Footer */
+  .footer { font-family:var(--mono); font-size:7.5pt; color:var(--muted); border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:space-between; margin-top:48px; flex-wrap:wrap; gap:8px; }
+  @media (max-width:600px) {
+    .cover-kpis,.stat-grid-4,.stat-grid-3 { grid-template-columns:1fr 1fr; }
+    .grid-2,.compare { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+
+<!-- COVER -->
+<div class="cover">
+  <div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div class="cover-tag">STRICTLY PRIVATE &amp; CONFIDENTIAL &nbsp;·&nbsp; NXS / 2026</div>
+      <div class="cover-badge">Growth Execution Infrastructure</div>
+    </div>
+    <div style="margin-top:40px;">
+      <div class="cover-logo">NexOS<span>.</span></div>
+      <div class="cover-sub">AI · Growth Execution Infrastructure</div>
+    </div>
+    <div style="margin-top:24px;">
+      <div class="cover-title">Investor &amp; Early Adopter Prospect Paper</div>
+      <div class="cover-desc">Business Plan · White Paper · Investment Thesis · Economic Model &amp; Strategic Valuation Framework</div>
+    </div>
+    <div class="cover-kpis">
+      <div class="cover-kpi"><div class="cover-kpi-val">R$ 15.99B</div><div class="cover-kpi-label">Annualized economic potential — Year 1 (acquisition + credit run-rate)</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-val">1,000,000</div><div class="cover-kpi-label">Customers — 12-month growth mission</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-val">R$ 12B</div><div class="cover-kpi-label">Annualized credit consumption ARR with 1M active customers</div></div>
+      <div class="cover-kpi"><div class="cover-kpi-val">US$ 3T–6T</div><div class="cover-kpi-label">Valuation range — global expansion scenario (50–100M customers)</div></div>
+    </div>
+  </div>
+  <div style="margin-top:48px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+      <span class="tag new">v2.0 — Updated</span>
+      <span class="tag primary">64 AI Agents</span>
+      <span class="tag primary">Operational Platform</span>
+      <span class="tag accent">LGPD Compliance</span>
+      <span class="tag accent">Clone Studio</span>
+      <span class="tag accent">Daily Video</span>
+    </div>
+    <div class="cover-meta">
+      <span>June 2026</span><span>·</span><span>Document NXS-2026-002-EN</span><span>·</span><span>v2.0</span><span>·</span><span>Reflects actual production platform state</span>
+    </div>
+  </div>
+</div>
+
+<!-- LEGAL -->
+<div class="section" style="padding-top:48px;">
+  <div class="legal-box avoid-break">
+    <h2>Legal Notice — Confidentiality &amp; Forward-Looking Statements</h2>
+    <p style="margin-top:12px;">This document is provided on a strictly confidential basis, exclusively for evaluation purposes by qualified investors and invited early adopters of NexOS AI. Reproduction, distribution, or disclosure — in whole or in part — to unauthorized third parties is prohibited without prior written consent from NexOS AI.</p>
+    <p>The information presented herein — including revenue projections, valuation scenarios, customer growth assumptions, and market estimates — is prospective and illustrative in nature. It reflects NexOS AI's internal assumptions regarding execution, adoption, and market dynamics, and does not constitute a guarantee of future results, investment recommendation, or offer to sell securities.</p>
+    <p>Third-party market data cited in this document (digital advertising, MarTech, creator economy, process automation) was sourced from publicly available sources considered reliable at the date of publication. NexOS AI assumes no responsibility for the accuracy of third-party projections. Actual results may differ materially from projections herein.</p>
+    <p>This document v2.0 has been updated to reflect the <strong>actual, operational state</strong> of the NexOS AI platform as of June 2026 — including capabilities, modules, agents, and architecture that are effectively implemented and in production. The previous version (v1.0, NXS-2026-001) contained projected items; this document explicitly distinguishes what is <em>in production</em> from what is <em>on the roadmap</em>.</p>
+    <p style="font-size:8pt;">By proceeding with this document, the recipient agrees to treat its contents as confidential information, subject to any non-disclosure agreement (NDA) executed with NexOS AI.</p>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="section page-break" style="padding-top:48px;">
+  <div class="section-tag">Document NXS-2026-002-EN · v2.0 · June 2026</div>
+  <h1>Table of Contents</h1>
+  <div class="toc-grid" style="margin-top:20px;">
+    <div class="toc-row"><div class="toc-num">—</div><div class="toc-title">Executive Summary</div><div class="toc-page">3</div></div>
+    <div class="toc-row"><div class="toc-num">—</div><div class="toc-title">Version Update Note v1.0 → v2.0</div><div class="toc-page">4</div></div>
+    <div class="toc-sep"><div class="toc-sep-label" style="grid-column:span 3;">I — Business Thesis</div></div>
+    <div class="toc-row"><div class="toc-num">01</div><div class="toc-title">Executive Investment Thesis</div><div class="toc-page">5</div></div>
+    <div class="toc-row"><div class="toc-num">02</div><div class="toc-title">Market Context</div><div class="toc-page">6</div></div>
+    <div class="toc-row"><div class="toc-num">03</div><div class="toc-title">The Structural Market Problem</div><div class="toc-page">7</div></div>
+    <div class="toc-sep"><div class="toc-sep-label" style="grid-column:span 3;">II — Product &amp; Capabilities</div></div>
+    <div class="toc-row"><div class="toc-num">04</div><div class="toc-title">Product Definition</div><div class="toc-page">8</div></div>
+    <div class="toc-row"><div class="toc-num">05</div><div class="toc-title">Core Product Capabilities (64 Agents)</div><div class="toc-page">9</div></div>
+    <div class="toc-row"><div class="toc-num">06</div><div class="toc-title">Platform Technical Architecture</div><div class="toc-page">12</div></div>
+    <div class="toc-row"><div class="toc-num">07</div><div class="toc-title">Advanced Modules — Launched in Production</div><div class="toc-page">13</div></div>
+    <div class="toc-sep"><div class="toc-sep-label" style="grid-column:span 3;">III — Economic Model</div></div>
+    <div class="toc-row"><div class="toc-num">08</div><div class="toc-title">Economic Model — Updated v2.0</div><div class="toc-page">14</div></div>
+    <div class="toc-row"><div class="toc-num">09</div><div class="toc-title">Year 1 Growth Mission</div><div class="toc-page">15</div></div>
+    <div class="toc-row"><div class="toc-num">10</div><div class="toc-title">Revenue Projection — 1 Million Customers</div><div class="toc-page">16</div></div>
+    <div class="toc-sep"><div class="toc-sep-label" style="grid-column:span 3;">IV — Valuation &amp; Positioning</div></div>
+    <div class="toc-row"><div class="toc-num">11</div><div class="toc-title">Valuation Framework</div><div class="toc-page">17</div></div>
+    <div class="toc-row"><div class="toc-num">12</div><div class="toc-title">Path to Trillion-Dollar Valuation</div><div class="toc-page">18</div></div>
+    <div class="toc-row"><div class="toc-num">13</div><div class="toc-title">Why NexOS Commands Infrastructure Multiples</div><div class="toc-page">19</div></div>
+    <div class="toc-row"><div class="toc-num">14</div><div class="toc-title">Strategic Moat</div><div class="toc-page">20</div></div>
+    <div class="toc-row"><div class="toc-num">15</div><div class="toc-title">Investor Conclusion</div><div class="toc-page">21</div></div>
+  </div>
+</div>
+
+<!-- EXECUTIVE SUMMARY -->
+<div class="section page-break avoid-break">
+  <div class="section-tag">Executive Summary</div>
+  <h1>An infrastructure thesis, not a tool thesis</h1>
+  <p><strong>NexOS AI transforms business intention into complete commercial execution</strong> — from idea to product, from campaign to sale, from lead to remarketing — replacing market fragmentation with an integrated, auditable, AI-automated operation.</p>
+  <div class="stat-grid stat-grid-4">
+    <div class="stat-cell"><div class="stat-val">64</div><div class="stat-label">Specialized AI agents in production</div></div>
+    <div class="stat-cell"><div class="stat-val primary">18+</div><div class="stat-label">Domain modules operating in production</div></div>
+    <div class="stat-cell"><div class="stat-val text">R$3,990</div><div class="stat-label">Solo ticket (lifetime access, no subscription)</div></div>
+    <div class="stat-cell"><div class="stat-val warn">R$9,990</div><div class="stat-label">Agency ticket (white-label + 10 campaigns)</div></div>
+  </div>
+  <p>The addressable market combines digital advertising, MarTech, creator economy, and process automation — together, multi-billion dollar markets in accelerated expansion. The central thesis is direct: <strong>if every company needs to sell, grow, appear, convert, or influence — then every company needs a growth infrastructure. NexOS AI is that infrastructure.</strong></p>
+  <div class="callout accent">
+    <div class="quote">"The question is not 'how much is a marketing tool worth?'. The right question is: how much is the infrastructure that makes business growth executable, auditable, scalable, and accessible to any person or company worth?"</div>
+    <div class="quote-sub">— NexOS AI central thesis</div>
+  </div>
+  <h2>Why now — and why this document was updated</h2>
+  <p>v1.0 (NXS-2026-001) presented the vision and projected architecture. This v2.0 document reflects what <em>has been built and is in production</em>: 64 AI agents, modular domain architecture, execution pipeline with checkpoint/resume, native LGPD compliance, Clone Studio, Daily Video, AI Sales Team, and integrations with Meta CAPI, TikTok Events API, WhatsApp Business, RD Station, ActiveCampaign, Hotmart, Kiwify, and others.</p>
+</div>
+
+<!-- VERSION UPDATE NOTE -->
+<div class="section page-break avoid-break">
+  <div class="section-tag">Version Update Note</div>
+  <h1>v1.0 → v2.0: What Changed</h1>
+  <div class="compare">
+    <div class="compare-col old">
+      <div class="compare-head old">v1.0 — June 2026 (Projected)</div>
+      <p>15+ agents mentioned generically</p>
+      <p>Economic model with illustrative pricing (500cr = R$500)</p>
+      <p>Video Production Engine described as future capability</p>
+      <p>Adaptive Interface described at high level</p>
+      <p>Landing Page / Domain Engine "coming soon"</p>
+      <p>Self-Proof Engine as a concept</p>
+      <p>Compliance, LGPD, user identification not mentioned</p>
+      <p>No detail on channel integrations</p>
+      <p>Affiliates cited in strategy, no dedicated module</p>
+      <p>Sales team not addressed</p>
+    </div>
+    <div class="compare-col new">
+      <div class="compare-head new">v2.0 — June 2026 (Production Reality)</div>
+      <p><em>64 agents</em> organized in 7 categories, all in production with provider mapping (Claude / GPT-4o / Gemini)</p>
+      <p><em>Real pricing</em>: Solo R$3,990 · Agency R$9,990 · scaled credit packs: 500cr/R$85 → 7000cr/R$979</p>
+      <p><em>Clone Studio active</em>: recording, face detection, session reconnection, clone/faceless styles</p>
+      <p><em>Founder/Architect mode</em> (lib/mode.ts) — adaptive UX with persistent switch</p>
+      <p><em>AI Site Builder</em> operational; external hosting documented</p>
+      <p><em>Self-Proof Engine</em> with dedicated module in production</p>
+      <p><em>Full LGPD compliance</em>: CPF, CNPJ, address, auditable timestamped consents, data subject rights</p>
+      <p><em>Native integrations</em>: Meta CAPI, TikTok Events API, WhatsApp AI Auto-Response, RD Station, ActiveCampaign, Hotmart, Kiwify</p>
+      <p><em>Affiliate module</em> with 52-week dashboard, referral links and KPIs</p>
+      <p><em>AI Sales Team</em>: 5 specialist agents (warmer/desire/closer/objection/consultant), funnel kanban, AI reply suggestion</p>
+    </div>
+  </div>
+</div>
+
+<!-- 01 INVESTMENT THESIS -->
+<div class="section page-break">
+  <div class="section-tag">Section 01</div>
+  <div class="section-num">01</div>
+  <h1>Executive Investment Thesis</h1>
+  <p>NexOS AI is not a marketing tool. NexOS AI is a <strong>growth execution operating infrastructure</strong>. The platform transforms business intention into complete commercial execution:</p>
+  <div class="pipeline">
+    idea <span class="arr">→</span> product <span class="arr">→</span> offer <span class="arr">→</span> campaign <span class="arr">→</span> creatives <span class="arr">→</span> videos <span class="arr">→</span> ads <span class="arr">→</span> audience <span class="arr">→</span> leads
+    <span class="arr">→</span> warming <span class="arr">→</span> cart <span class="arr">→</span> sales <span class="arr">→</span> remarketing <span class="arr">→</span> learning <span class="arr">→</span> next campaign
+  </div>
+  <p>NexOS's value is not in generating text, images, or pages. Its value is in <strong>executing growth</strong> — end to end, with 64 specialized AI agents, an execution pipeline with checkpoint/resume, and an adaptive interface that serves both the beginner launcher and the advanced operator.</p>
+  <div class="callout">
+    <div class="quote">If every company needs to sell, grow, appear, convert, or influence — then every company needs a growth infrastructure. NexOS AI is that infrastructure.</div>
+  </div>
+  <p>The current market is fragmented. Companies must hire or coordinate copywriters, designers, editors, strategists, traffic managers, analysts, agencies, CRM tools, SEO, automation, funnels, video, and sales teams. <strong>NexOS replaces this fragmentation with an integrated, auditable, automated operation.</strong></p>
+</div>
+
+<!-- 02 MARKET CONTEXT -->
+<div class="section page-break">
+  <div class="section-tag">Section 02</div>
+  <div class="section-num">02</div>
+  <h1>Market Context</h1>
+  <p>NexOS operates at the intersection of enormous markets — attention and traffic acquisition is already one of the largest corporate spending lines in the world, while companies are rapidly migrating to marketing technology infrastructure, personalization, and automation.</p>
+  <table>
+    <thead><tr><th>Market</th><th>Current Size</th><th>Projection</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>Global Advertising</td><td class="num">—</td><td class="accent">~US$ 1.26T (2026)</td><td class="label">Consolidated estimates</td></tr>
+      <tr><td>Digital Advertising</td><td class="num">US$ 567.9B (2025)</td><td class="accent">US$ 1.69T (2033)</td><td class="label">Statista / eMarketer</td></tr>
+      <tr><td>MarTech</td><td class="num">US$ 551.9B (2025)</td><td class="accent">US$ 2.38T (2033)</td><td class="label">Grand View Research</td></tr>
+      <tr><td>Creator Economy</td><td class="num">—</td><td class="accent">~US$ 480B (2027)</td><td class="label">Goldman Sachs</td></tr>
+      <tr><td>AI Agents (Enterprise)</td><td class="num">~US$ 5B (2024)</td><td class="accent">US$ 47B (2030)</td><td class="label">MarketsandMarkets</td></tr>
+      <tr><td>Intelligent Process Automation</td><td class="num">US$ 14.55B (2024)</td><td class="accent">US$ 44.74B (2030)</td><td class="label">Allied Market Research</td></tr>
+    </tbody>
+  </table>
+  <div class="tag-list">
+    <span class="tag primary">MarTech</span><span class="tag primary">Digital Advertising</span><span class="tag primary">Creator Economy</span><span class="tag primary">AI Agents</span><span class="tag primary">Business Automation</span>
+    <span class="tag accent">Sales Enablement</span><span class="tag accent">Video Production</span><span class="tag accent">Funnel Infrastructure</span><span class="tag accent">Campaign Execution</span><span class="tag accent">WhatsApp Commerce</span><span class="tag accent">LGPD / Compliance Tech</span>
+  </div>
+  <div class="callout accent">
+    <p><strong>Brazil 2026 Context:</strong> Brazil is the world's 4th largest social media market, the largest digital product launch market in Latin America, and one of the world's largest affiliate marketing markets. NexOS AI attacks this market first with a product calibrated to the Brazilian digital launcher business model, before global expansion.</p>
+  </div>
+</div>
+
+<!-- 03 STRUCTURAL PROBLEM -->
+<div class="section page-break">
+  <div class="section-tag">Section 03</div>
+  <div class="section-num">03</div>
+  <h1>The Structural Market Problem</h1>
+  <p><strong>The global problem is not a lack of tools. The problem is that tools do not execute the entire chain.</strong></p>
+  <table>
+    <thead><tr><th>Current Solution</th><th>What it does</th><th>What it doesn't do</th></tr></thead>
+    <tbody>
+      <tr><td><strong>SEO</strong></td><td>Generates organic traffic</td><td class="danger">Does not create product, offer, videos, launches, cart, or remarketing</td></tr>
+      <tr><td><strong>CRM</strong></td><td>Organizes contacts</td><td class="danger">Does not create contacts, warm audiences, create desire, or close sales</td></tr>
+      <tr><td><strong>Landing builders</strong></td><td>Create pages</td><td class="danger">Don't know which offer converts, which audience, narrative, or timing</td></tr>
+      <tr><td><strong>AI content tools</strong></td><td>Create text, images, videos</td><td class="danger">Depend on someone for strategy, campaign, audience, distribution, approval, execution</td></tr>
+      <tr><td><strong>Agencies</strong></td><td>Execute campaigns</td><td class="danger">Expensive, slow, human-limited by schedule, capacity, and proportional cost</td></tr>
+      <tr><td><strong>NexOS AI</strong></td><td class="accent">Executes the entire operation</td><td class="accent">Does not ask "what do you want to create?" — asks "what do you want to achieve?"</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 04 PRODUCT DEFINITION -->
+<div class="section page-break">
+  <div class="section-tag">Section 04</div>
+  <div class="section-num">04</div>
+  <h1>Product Definition</h1>
+  <p>NexOS AI is an <strong>AI-Powered Growth Execution Operating System</strong>. It executes:</p>
+  <div class="pipeline">
+    planning <span class="arr">·</span> product <span class="arr">·</span> offer <span class="arr">·</span> copy <span class="arr">·</span> design <span class="arr">·</span> video <span class="arr">·</span> VSL <span class="arr">·</span> CPL <span class="arr">·</span> ads <span class="arr">·</span> landing pages <span class="arr">·</span> paid traffic
+    <span class="arr">·</span> segmentation <span class="arr">·</span> warming <span class="arr">·</span> event <span class="arr">·</span> cart <span class="arr">·</span> remarketing <span class="arr">·</span> analytics <span class="arr">·</span> learning <span class="arr">·</span> daily video <span class="arr">·</span> sales team
+  </div>
+  <h2>Launch Tracks — by Revenue Target</h2>
+  <table>
+    <thead><tr><th>Track</th><th>Revenue Target</th><th>Window</th><th>Minimum Plan</th></tr></thead>
+    <tbody>
+      <tr><td><strong>6-digit</strong></td><td class="num">R$100K – R$999K</td><td>7 days</td><td>Solo</td></tr>
+      <tr><td><strong>8-digit</strong></td><td class="num">R$10M – R$99M</td><td>7 days</td><td>Agency</td></tr>
+      <tr><td><strong>10-digit</strong></td><td class="num">R$100M+</td><td>7 days</td><td>Agency + dedicated</td></tr>
+    </tbody>
+  </table>
+  <h2>Adaptive Interface — Founder Mode / Architect Mode</h2>
+  <div class="grid-2">
+    <div class="grid-cell">
+      <h3>Founder Mode</h3>
+      <p>Guided, emotional, simplified interface. The user sees results, not process. Ideal for launchers who want to execute without technical learning curves.</p>
+    </div>
+    <div class="grid-cell">
+      <h3>Architect Mode</h3>
+      <p>Full technical view: campaign state machine, active agents, execution logs, content pipeline, granular analytics, control of every phase.</p>
+    </div>
+  </div>
+  <p>The user does not need to master digital marketing. When the user cannot define elements precisely, NexOS evaluates, identifies, and recommends — filling gaps based on market analysis. <strong>The system executes.</strong></p>
+</div>
+
+<!-- 05 CORE CAPABILITIES -->
+<div class="section page-break">
+  <div class="section-tag">Section 05</div>
+  <div class="section-num">05</div>
+  <h1>Core Product Capabilities</h1>
+  <h2>5.1 — NexOS Command Agent — 64 Agents in Production</h2>
+  <p>NexOS operates with an AI General Director (NexOS Command Agent) that orchestrates 64 specialized agents organized in 7 categories. The user does not choose agents — the system summons each agent at the correct moment in the execution pipeline.</p>
+  <table>
+    <thead><tr><th>Category</th><th>Agents</th><th>Primary Provider</th><th>Core Function</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Strategy</strong></td><td>Command · Profile Builder · Strategy · Offer · Launch Manager · Financial Projector · Market Analyst · Positioning</td><td class="primary">Claude Sonnet</td><td>Strategic reasoning, positioning, launch timeline, projections</td></tr>
+      <tr><td><strong>Content</strong></td><td>Copywriter · Creative Director · Landing Page · Social Media · Stories · Live Script · Ad Copy · Media Buyer · VSL · CPL · Compliance</td><td class="accent">GPT-4o</td><td>Copywriting with 3-turn critique loop, creatives, scripts, pages</td></tr>
+      <tr><td><strong>Audience</strong></td><td>Targeting · Segmentation · Lead Qualifier · Remarketing Specialist · WhatsApp Response</td><td class="primary">Claude Sonnet</td><td>Segmentation, lead qualification, AI WhatsApp responses</td></tr>
+      <tr><td><strong>Video</strong></td><td>Video Director · Scene Director · Voice Director · Storyboard Artist · Clone Director · Daily Video</td><td class="warn">Gemini Flash</td><td>Scripts, storyboard, clone studio, daily video, recording direction</td></tr>
+      <tr><td><strong>Analytics</strong></td><td>Analytics · Optimization · Health Score · Fatigue Detector · UTM Intelligence</td><td class="warn">Gemini Flash</td><td>Metrics, ROAS, CPL, creative fatigue, engagement, continuous optimization</td></tr>
+      <tr><td><strong>Automation</strong></td><td>Sequence Builder · Item Copy · Lead Capture · Scheduler · Email Dispatch · Social Autopost</td><td class="accent">GPT-4o</td><td>Launch sequences, automated dispatch, social auto-publishing</td></tr>
+      <tr><td><strong>Sales</strong></td><td>Marco (Warmer) · Renata (Desire) · Vitor (Closer) · Clara (Objection) · Alex (Consultant)</td><td class="primary">Claude Sonnet</td><td>AI reply suggestion by funnel stage, attendance kanban, conversation history</td></tr>
+    </tbody>
+  </table>
+  <h2>5.2 — Live Production Display</h2>
+  <p>The frontend displays production happening in real time via Socket.io WebSocket — like an AI execution environment. The user sees strategy being written, campaign being structured, creatives being generated, videos being planned, audiences being defined, schedules being set, ads being prepared, and decisions being recorded.</p>
+  <div class="callout accent"><p><strong>Everything becomes an auditable log</strong> — this creates value perception, trust, and operational proof. Each agent action is recorded in the <code>campaign_agents</code> table with provider, tokens, USD cost, and credit cost.</p></div>
+  <h2>5.3 — Video Production Engine</h2>
+  <table>
+    <thead><tr><th>Mode</th><th>What NexOS Executes</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><strong>With Clone</strong></td><td>Direct presence script · expression instructions · gestures · dramatic pauses · camera direction · Clone Studio (continuous recording, face detection, session reconnection)</td><td class="accent">✓ Production</td></tr>
+      <tr><td><strong>Faceless</strong></td><td>Voiceover script · B-roll · animated text · screen recording · infographic · motion graphics</td><td class="accent">✓ Production</td></tr>
+      <tr><td><strong>Daily Video</strong></td><td>Daily script for Reels/TikTok/Shorts/Stories/YouTube · 3s hook · ready captions · upload instructions · txt download</td><td class="accent">✓ New</td></tr>
+      <tr><td><strong>Digital Avatar</strong></td><td>HeyGen integration · ElevenLabs cloned voice · synthetic presenter</td><td class="warn">Roadmap Q3 2026</td></tr>
+    </tbody>
+  </table>
+  <h2>5.4 — Campaign Type Engine</h2>
+  <p>NexOS identifies the campaign type — PLF launch, seed, affiliate, perpetual, branding, regional authority, continuous sales, remarketing, upsell, audience growth, creator monetization. The user chooses the objective; the AI chooses the architecture.</p>
+  <h2>5.5 — Launch Engine — Automation Sequences</h2>
+  <div class="pipeline">
+    capture <span class="arr">→</span> warming <span class="arr">→</span> authority <span class="arr">→</span> desire <span class="arr">→</span> offer <span class="arr">→</span> scarcity <span class="arr">→</span> cart open <span class="arr">→</span> close <span class="arr">→</span> remarketing <span class="arr">→</span> social proof <span class="arr">→</span> next cycle
+  </div>
+  <p>Automatic scheduler via BullMQ + setInterval fallback. Phase detection (warming/cart/close) → segment dispatch (hot/warm/cold). Each contact has engagement score based on opens + clicks. Engagement webhooks integrated with RD Station and ActiveCampaign.</p>
+  <h2>5.6 — Self-Proof Engine</h2>
+  <p>NexOS's biggest initial case is itself. NexOS launches itself, documents its own launch, and records its own screens — via the dedicated <code>self-proof</code> module in production. The lead doesn't watch a promise; they live the demonstration.</p>
+  <h2>5.7 — Paid Traffic &amp; Algorithm Intelligence</h2>
+  <p>Traffic specialist agents operate in depth on delivery signals, bid optimization, learning windows, dynamic segmentation, and auction behavior. Integration with <strong>Meta CAPI v20</strong> (server-side events with SHA-256 PII hashing) and <strong>TikTok Events API v1.3</strong> to maximize match rate and algorithm efficiency.</p>
+  <h2>5.8 — Adaptive Interface</h2>
+  <p>Persistent switch <strong>Founder ↔ Architect</strong> (lib/mode.ts). Founder = guided, emotional, no technical jargon. Architect = full pipeline, agent logs, granular metrics, control of every phase. Both audiences served without customization — same product, two lenses.</p>
+  <h2>5.9 — Landing Page &amp; Site Builder</h2>
+  <p>NexOS generates a complete landing page for each campaign via AI (Site Builder). External hosting documented. Native domain integration on roadmap Q3 2026.</p>
+</div>
+
+<!-- 06 TECHNICAL ARCHITECTURE -->
+<div class="section page-break">
+  <div class="section-tag">Section 06</div>
+  <div class="section-num">06</div>
+  <h1>Platform Technical Architecture</h1>
+  <p>NexOS's architecture was designed for scale, resilience, and modularity — each business domain is an independent module (service + routes), with no cross-module coupling.</p>
+  <div class="grid-2">
+    <div class="grid-cell">
+      <h3>Infrastructure Stack</h3>
+      <table style="margin:0;">
+        <tr><td class="label">Runtime</td><td>Node.js 24 · TypeScript 5.9</td></tr>
+        <tr><td class="label">API</td><td>Express 5 (modular domain)</td></tr>
+        <tr><td class="label">DB</td><td>PostgreSQL + Drizzle ORM</td></tr>
+        <tr><td class="label">Real-time</td><td>Socket.io WebSocket</td></tr>
+        <tr><td class="label">Jobs</td><td>BullMQ + Redis (graceful degradation)</td></tr>
+        <tr><td class="label">Auth</td><td>JWT 15min + Refresh 30d · bcryptjs</td></tr>
+        <tr><td class="label">Validation</td><td>Zod v4 (all endpoints)</td></tr>
+        <tr><td class="label">Build</td><td>esbuild CJS bundle</td></tr>
+        <tr><td class="label">Frontend</td><td>React + Vite · TypeScript · Wouter</td></tr>
+      </table>
+    </div>
+    <div class="grid-cell">
+      <h3>Multi-Provider AI Gateway</h3>
+      <table style="margin:0;">
+        <tr><td class="label">Anthropic</td><td>Claude Sonnet — strategy, command, compliance, sales</td></tr>
+        <tr><td class="label">OpenAI</td><td>GPT-4o/5 — copy, creatives, content, sequences</td></tr>
+        <tr><td class="label">Google</td><td>Gemini Flash — analytics, optimization, video</td></tr>
+        <tr><td class="label">Fallback</td><td>Automatic cascade: provider A fails → provider B</td></tr>
+        <tr><td class="label">Cost</td><td>Token cost calculated in USD + 1.5x margin → credits</td></tr>
+        <tr><td class="label">Log</td><td>Each call: provider, model, tokens, USD, credits, campaignId</td></tr>
+      </table>
+    </div>
+  </div>
+  <h2>Execution Pipeline with Checkpoint / Resume</h2>
+  <p>The campaign pipeline is a state machine with validated transitions. In case of failure or OOM, state is preserved in the database — on restart, only unexecuted agents are resumed (skipAgent pattern). No work is lost.</p>
+  <table>
+    <thead><tr><th>Phase</th><th>State</th><th>Agents Triggered</th></tr></thead>
+    <tbody>
+      <tr><td>Intake</td><td>intake → analyzing</td><td>Command · Profile Builder</td></tr>
+      <tr><td>Strategy</td><td>analyzing → strategy_ready</td><td>Strategy · Offer · Launch Manager · Financial Projector</td></tr>
+      <tr><td>Content</td><td>strategy_ready → generating → awaiting_approval</td><td>Creative Director · Copywriter · Landing Page · Social · Ad Copy · VSL · CPL · Compliance</td></tr>
+      <tr><td>Launch</td><td>approved → executing → live</td><td>Media Buyer · Targeting · Scheduler</td></tr>
+      <tr><td>Monitoring</td><td>live → completed</td><td>Analytics · Optimization · Health Score</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 07 ADVANCED MODULES -->
+<div class="section page-break">
+  <div class="section-tag">Section 07</div>
+  <div class="section-num">07</div>
+  <h1>Advanced Modules in Production</h1>
+  <div class="grid-2">
+    <div class="grid-cell"><h3>7.1 — UTM Intelligence</h3><p>Auto-reads UTMs from body + query params. Structured storage per contact. Conversion analytics by source/medium/campaign. Top sources ranked by volume and conversion.</p></div>
+    <div class="grid-cell"><h3>7.2 — Viral Loop / Referral</h3><p>Each captured lead receives a unique 8-char alphanumeric code. <code>?ref=CODE</code> tracks referrals. Real-time referral counter. Top referrers in analytics. Native gamification.</p></div>
+    <div class="grid-cell"><h3>7.3 — Send Time Optimization</h3><p>Each contact's engagement hour recorded (open → UTC hour). Mode of hours → <code>preferredSendHour</code> per contact. Messages dispatched at each person's optimal time.</p></div>
+    <div class="grid-cell"><h3>7.4 — Creative Fatigue Detector</h3><p>Auto-detector: if CTR drops below 70% of historical peak and peak &gt; 0.5%, alert "Creative fatigue detected" + refresh recommendation. Zero manual configuration.</p></div>
+    <div class="grid-cell"><h3>7.5 — Server-Side Events (CAPI + TikTok)</h3><p>Public endpoints for server-side event firing: Lead, Purchase, PageView, AddToCart. SHA-256 PII hashing before transmission. Meta Graph API v20 + TikTok Business API v1.3. LGPD-safe by design.</p></div>
+    <div class="grid-cell"><h3>7.6 — LGPD Audit Trail</h3><p>Every lead capture records: ISO consent timestamp, capture IP, exact consent text, UTM source, user agent. Auditable row in <code>audit_logs</code>. Full compliance with LGPD Art. 7 and Art. 9.</p></div>
+    <div class="grid-cell"><h3>7.7 — Clone Studio</h3><p>Clone recording session with face detection, automatic session reconnection, persistent <code>cloneSessionId</code>. Two video styles: <strong>With Clone</strong> (on-camera presence) and <strong>Faceless</strong> (narration/animation).</p></div>
+    <div class="grid-cell"><h3>7.8 — Daily Video</h3><p>Professional daily script generation for any social video format. Script + hook + captions + CTA + hashtags + ready upload instructions. 8–20 credits based on real market cost. TXT download for recording.</p></div>
+    <div class="grid-cell"><h3>7.9 — AI Sales Team</h3><p>5 specialist agents by funnel stage. Conversation kanban by stage. Persistent message history. "AI Suggestion" button generates instant contextual response. Integrated into main dashboard.</p></div>
+    <div class="grid-cell"><h3>7.10 — Full Identification + LGPD</h3><p>Dedicated Settings tab: CPF, CNPJ, corporate name, trade name, address with ViaCEP auto-fill. Three LGPD consents with auditable timestamps. Data Subject Rights (Art. 18): access, portability, deletion via pre-formatted email.</p></div>
+  </div>
+  <h2>7.11 — NexOS Academy</h2>
+  <p>Integrated training portal (<code>nexos-academy</code>). Professor Allan — AI agent specialized in NexOS methodology. Contextual lessons by launch track. Expanded token limit (2048), prompts with 10 pedagogical directives, real Brazilian examples. Bonus included in NexOS AI plans.</p>
+</div>
+
+<!-- 08 ECONOMIC MODEL -->
+<div class="section page-break">
+  <div class="section-tag">Section 08</div>
+  <div class="section-num">08</div>
+  <h1>Economic Model — Updated v2.0</h1>
+  <p>The economic model is based on <strong>acquisition + consumption</strong> — closer to usage infrastructure than a fixed subscription. The customer consumes more when operating more, aligning NexOS revenue with customer growth.</p>
+  <h2>8.1 — Access Plans (One-Time Ticket, No Subscription)</h2>
+  <table>
+    <thead><tr><th>Plan</th><th>Launch Price</th><th>Regular Price</th><th>Campaigns</th><th>Credits Included</th><th>Features</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Solo</strong></td><td class="accent">R$ 3,990</td><td class="num">R$ 5,000</td><td class="num">3</td><td class="num">900 cr</td><td>6-digit track · All 64 agents</td></tr>
+      <tr><td><strong>Agency</strong></td><td class="accent">R$ 9,990</td><td class="num">R$ 14,000</td><td class="num">10</td><td class="num">2,000 cr</td><td>All tracks · White-label · Client management</td></tr>
+      <tr><td><strong>NexOS Academy</strong></td><td class="accent">R$ 2,500</td><td class="num">R$ 3,900</td><td>—</td><td>—</td><td>Bonus included for NexOS AI purchasers</td></tr>
+    </tbody>
+  </table>
+  <h2>8.2 — Additional Credit Packs (Consumption Recurrence)</h2>
+  <table>
+    <thead><tr><th>Pack</th><th>Credits</th><th>Price</th><th>R$/credit</th><th>Typical Use</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Boost</strong></td><td class="num">500 cr</td><td class="accent">R$ 85</td><td class="num">R$ 0.17</td><td>1 light campaign or daily videos</td></tr>
+      <tr><td><strong>Starter</strong></td><td class="num">1,500 cr</td><td class="accent">R$ 239</td><td class="num">R$ 0.16</td><td>~3 complete campaigns</td></tr>
+      <tr><td><strong>Pro</strong></td><td class="num">3,500 cr</td><td class="accent">R$ 529</td><td class="num">R$ 0.15</td><td>~7–8 campaigns · monthly volume</td></tr>
+      <tr><td><strong>Elite</strong></td><td class="num">7,000 cr</td><td class="accent">R$ 979</td><td class="num">R$ 0.14</td><td>Agency operation · high volume</td></tr>
+    </tbody>
+  </table>
+  <div class="callout accent">
+    <p><strong>Total cost of a complete launch:</strong> ~230–400 credits (strategy + content + sequence + monitoring). Equivalent to R$32–R$68 in credits — versus R$5,000–R$30,000 for a traditional agency. <strong>97%+ operational cost reduction.</strong></p>
+  </div>
+</div>
+
+<!-- 09 YEAR 1 GROWTH MISSION -->
+<div class="section page-break avoid-break">
+  <div class="section-tag">Section 09</div>
+  <div class="section-num">09</div>
+  <h1>Year 1 Growth Mission</h1>
+  <div class="stat-grid stat-grid-2" style="margin-bottom:24px;">
+    <div class="stat-cell"><div class="stat-val">1,000,000</div><div class="stat-label">Customers in 12 months — internal mission</div></div>
+    <div class="stat-cell"><div class="stat-val primary">52</div><div class="stat-label">Weeks · strategic regions · audiences · launch cycles</div></div>
+  </div>
+  <p><strong>Strategy:</strong> 52 weeks, 52 strategic regions of Brazil, 52 priority audiences, and 52 launch cycles — combining cumulative owned campaigns, regional affiliates, growing social proof, and capital reinvestment.</p>
+  <p>The first 4 weeks serve to generate cash, public validation, social proof, and acceleration. The affiliate module with 52-week dashboard, unique referral codes, and native UTM tracking supports the decentralized distribution strategy.</p>
+  <div class="callout">
+    <div class="quote">The operational differentiator</div>
+    <p>NexOS executes this strategy with its own technology — without proportional team expansion, without increasing human operations at the same speed, without hiring an agency per region. Only NexOS can execute this breadth with low operational friction because the product is the execution machine itself.</p>
+  </div>
+</div>
+
+<!-- 10 REVENUE PROJECTION -->
+<div class="section page-break">
+  <div class="section-tag">Section 10</div>
+  <div class="section-num">10</div>
+  <h1>Revenue Projection — 1 Million Customers</h1>
+  <h2>10.1 — Acquisition Revenue</h2>
+  <table>
+    <thead><tr><th>Customers</th><th>Average Ticket</th><th>Total Revenue</th></tr></thead>
+    <tbody><tr><td class="num">1,000,000</td><td class="num">R$ 3,990</td><td class="accent">R$ 3.99 billion</td></tr></tbody>
+  </table>
+  <h2>10.2 — Recurring Credit Revenue</h2>
+  <table>
+    <thead><tr><th>Active Customers</th><th>Avg Consumption/Month</th><th>Monthly Revenue</th><th>ARR</th></tr></thead>
+    <tbody><tr><td class="num">1,000,000</td><td class="num">R$ 1,000</td><td class="num">R$ 1 billion</td><td class="accent">R$ 12 billion</td></tr></tbody>
+  </table>
+  <h2>10.3 — Combined Annual Revenue (Year 1)</h2>
+  <table>
+    <thead><tr><th>Component</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Acquisition revenue (1M customers × R$3,990)</td><td class="accent">R$ 3.99B</td></tr>
+      <tr><td>Annualized credit run-rate (1M × R$1,000/month × 12)</td><td class="accent">R$ 12B</td></tr>
+      <tr><td>Academy additional revenue (estimated)</td><td class="primary">R$ 0.5–2B</td></tr>
+      <tr><td style="font-weight:700;">Annualized economic potential (base)</td><td class="accent" style="font-weight:900;font-size:11pt;">R$ 15.99B+</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 11 VALUATION FRAMEWORK -->
+<div class="section page-break">
+  <div class="section-tag">Section 11</div>
+  <div class="section-num">11</div>
+  <h1>Valuation Framework</h1>
+  <p>Valuation depends on how the market classifies NexOS. Three evaluation perspectives are presented, from most conservative to most strategic.</p>
+  <h2>11.1 — As Traditional SaaS (conservative baseline)</h2>
+  <p>Reference: BVP Nasdaq Emerging Cloud Index, average multiple ~6.3x revenue. Applying conservative multiples to R$12B run-rate:</p>
+  <table>
+    <thead><tr><th>Multiple</th><th>Base</th><th>Valuation</th></tr></thead>
+    <tbody>
+      <tr><td>6x revenue</td><td class="num">R$ 12B ARR</td><td class="primary">R$ 72B</td></tr>
+      <tr><td>10x revenue</td><td class="num">R$ 12B ARR</td><td class="primary">R$ 120B</td></tr>
+    </tbody>
+  </table>
+  <h2>11.2 — As AI-Native High-Growth Platform</h2>
+  <table>
+    <thead><tr><th>Multiple</th><th>Base</th><th>Valuation</th></tr></thead>
+    <tbody>
+      <tr><td>15x revenue</td><td class="num">R$ 12B ARR</td><td class="primary">R$ 180B</td></tr>
+      <tr><td>20x revenue</td><td class="num">R$ 12B ARR</td><td class="primary">R$ 240B</td></tr>
+      <tr><td>25x revenue</td><td class="num">R$ 12B ARR</td><td class="primary">R$ 300B</td></tr>
+      <tr><td>40x revenue</td><td class="num">R$ 12B ARR</td><td class="primary">R$ 480B</td></tr>
+    </tbody>
+  </table>
+  <h2>11.3 — As Growth Infrastructure (maximum thesis)</h2>
+  <table>
+    <thead><tr><th>Scenario</th><th>Base</th><th>Valuation</th></tr></thead>
+    <tbody>
+      <tr><td>R$ 12B ARR × 50x</td><td class="num">R$ 12B ARR</td><td class="accent">R$ 600B</td></tr>
+      <tr><td>R$ 12B ARR × 75x</td><td class="num">R$ 12B ARR</td><td class="accent">R$ 900B</td></tr>
+      <tr><td>R$ 12B ARR × 100x</td><td class="num">R$ 12B ARR</td><td class="accent" style="font-weight:900;">R$ 1.2T</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn"><p>This valuation requires the market to see NexOS as an <strong>indispensable operational layer</strong>, not as marketing software. The difference between R$72B and R$1.2T is the positioning conquered by the product — and positioning is built through execution, moats, and category dominance.</p></div>
+</div>
+
+<!-- 12 PATH TO TRILLION -->
+<div class="section page-break">
+  <div class="section-tag">Section 12</div>
+  <div class="section-num">12</div>
+  <h1>Path to Trillion-Dollar Valuation</h1>
+  <p>The trillion thesis does not come from 1 million customers in isolation — 1 million customers is the <strong>category proof</strong>. The trillion thesis comes when the market projects NexOS will be global infrastructure.</p>
+  <h2>12.1 — 50 Million Global Customers Scenario</h2>
+  <p>Assumption: 50M active global customers · R$1,000/month avg consumption · Revenue ≈ R$600B/year ≈ US$120B ARR (illustrative exchange R$5/USD)</p>
+  <table>
+    <thead><tr><th>Multiple on ARR</th><th>ARR Base</th><th>Valuation</th></tr></thead>
+    <tbody>
+      <tr><td>25x</td><td class="num">US$ 120B</td><td class="accent">US$ 3T</td></tr>
+      <tr><td>40x</td><td class="num">US$ 120B</td><td class="accent">US$ 4.8T</td></tr>
+    </tbody>
+  </table>
+  <h2>12.2 — 100 Million Global Customers Scenario</h2>
+  <p>100M × R$1,000 × 12 = R$1.2T/year ≈ US$240B ARR</p>
+  <table>
+    <thead><tr><th>Multiple on ARR</th><th>ARR Base</th><th>Valuation</th></tr></thead>
+    <tbody>
+      <tr><td>20x</td><td class="num">US$ 240B</td><td class="accent">US$ 4.8T</td></tr>
+      <tr><td>25x</td><td class="num">US$ 240B</td><td class="accent" style="font-weight:900;">US$ 6T</td></tr>
+    </tbody>
+  </table>
+  <div class="callout accent"><p>In this scenario, the <strong>US$5T</strong> mark ceases to be an emotional statement and becomes a <strong>mathematical consequence</strong> of massive global base, recurring consumption, indispensable infrastructure, and dominant platform multiples.</p></div>
+</div>
+
+<!-- 13 WHY INFRASTRUCTURE MULTIPLES -->
+<div class="section page-break avoid-break">
+  <div class="section-tag">Section 13</div>
+  <div class="section-num">13</div>
+  <h1>Why NexOS Can Command Infrastructure Multiples</h1>
+  <table>
+    <thead><tr><th>Company</th><th>Became indispensable because</th><th>Multiple achieved</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Microsoft</strong></td><td>Personal computers needed an OS and productivity suite</td><td class="primary">20–30x revenue (peak)</td></tr>
+      <tr><td><strong>AWS</strong></td><td>Companies needed scalable on-demand computing</td><td class="primary">40–60x revenue</td></tr>
+      <tr><td><strong>Stripe</strong></td><td>Digital businesses needed to process payments</td><td class="primary">~100x revenue (2021)</td></tr>
+      <tr><td><strong>Salesforce</strong></td><td>Sales teams needed cloud CRM</td><td class="primary">8–15x revenue</td></tr>
+      <tr><td><strong>NexOS AI</strong></td><td>Every economic agent needs to grow</td><td class="accent">Thesis: 25–100x revenue</td></tr>
+    </tbody>
+  </table>
+  <p>Everyone sells, influences, works for those who sell, depends on customers, depends on audience, depends on authority, depends on conversion. NexOS transforms this into an operation.</p>
+  <div class="callout">
+    <div class="quote">Just as anyone can write without Word, any company can try to grow without NexOS. But when the alternative is slower, more expensive, and more fragile — the standard changes.</div>
+  </div>
+</div>
+
+<!-- 14 STRATEGIC MOAT -->
+<div class="section page-break">
+  <div class="section-tag">Section 14</div>
+  <div class="section-num">14</div>
+  <h1>Strategic Moat</h1>
+  <div class="grid-2">
+    <div class="grid-cell"><h3>14.1 — Data Moat</h3><p>Each campaign generates proprietary data: winning creatives, winning audiences, objections, timing, regions, CPL, CPA, ROAS, conversion and retention. No competitor will have this Brazilian launch dataset.</p></div>
+    <div class="grid-cell"><h3>14.2 — Execution Moat</h3><p>Tools generate assets. NexOS executes. Execution creates dependency. The more the customer executes campaigns through NexOS, the harder it is to migrate — campaign history, audiences, sequences, and data remain on the platform.</p></div>
+    <div class="grid-cell"><h3>14.3 — Workflow Moat</h3><p>The more the customer uses, the more NexOS understands: product, brand, audience, campaigns, results, tone, offer, and history. The Identity Profile (longitudinal memory) is built campaign by campaign — impossible to replicate in a new tool.</p></div>
+    <div class="grid-cell"><h3>14.4 — Proof Moat</h3><p>The documented self-launch becomes the central case and public proof. Self-Proof Engine in production. The platform that sells itself with its own technology is the strongest argument for the prospect — they live the demonstration before buying.</p></div>
+    <div class="grid-cell"><h3>14.5 — Category Moat</h3><p>NexOS creates the category <em>Growth Execution Infrastructure</em>. Category creators tend to capture market leadership perception — and perception leadership precedes revenue leadership.</p></div>
+    <div class="grid-cell"><h3>14.6 — Compliance Moat <span class="tag new" style="font-size:7pt;">New</span></h3><p>Native LGPD, CAPI server-side, audit trail by design. Competing platforms add compliance as an afterthought. In NexOS, compliance is architectural — reducing regulatory risk for the customer and the platform.</p></div>
+  </div>
+</div>
+
+<!-- 15 INVESTOR CONCLUSION -->
+<div class="section page-break">
+  <div class="section-tag">Section 15</div>
+  <div class="section-num">15</div>
+  <h1>Investor Conclusion</h1>
+  <p><strong>NexOS AI is an infrastructure thesis. Not a tool thesis.</strong></p>
+  <p>The market does not need another AI to write text. The market needs a layer that executes growth. NexOS delivers:</p>
+  <div class="pipeline">
+    planning <span class="arr">·</span> production <span class="arr">·</span> direction <span class="arr">·</span> creatives <span class="arr">·</span> videos <span class="arr">·</span> traffic <span class="arr">·</span> funnel <span class="arr">·</span> segmentation <span class="arr">·</span> warming <span class="arr">·</span> sales <span class="arr">·</span> remarketing <span class="arr">·</span> audit <span class="arr">·</span> learning <span class="arr">·</span> scale
+  </div>
+  <p>The first major case is NexOS itself: a platform that launches itself, sells itself, documents its own execution, and transforms that history into public proof.</p>
+  <p>With 1 million customers, NexOS reaches rare scale proof. With average consumption of R$1,000/month, NexOS reaches R$12B of annualized run-rate. With global expansion, the valuation ceases to be comparable to traditional SaaS and becomes comparable to <strong>growth economic infrastructure</strong>.</p>
+  <div class="callout accent" style="margin-top:32px;">
+    <div class="quote">"How much is a marketing tool worth?" — that is not the definitive question for investors.</div>
+    <div class="quote" style="margin-top:16px;">"The right question is: how much is the infrastructure that makes business growth executable, auditable, scalable, and accessible to any person or company worth?"</div>
+    <div class="quote-sub" style="margin-top:12px;">The answer is: it is worth the size of the economic layer it comes to control. And that layer is global.</div>
+  </div>
+  <hr class="divider" />
+  <div class="stat-grid stat-grid-4" style="margin-top:0;">
+    <div class="stat-cell"><div class="stat-val">64</div><div class="stat-label">AI agents in production</div></div>
+    <div class="stat-cell"><div class="stat-val primary">18+</div><div class="stat-label">Active domain modules</div></div>
+    <div class="stat-cell"><div class="stat-val accent">R$12B</div><div class="stat-label">Credit ARR run-rate with 1M customers</div></div>
+    <div class="stat-cell"><div class="stat-val warn">US$6T</div><div class="stat-label">Valuation — 100M global customers scenario</div></div>
+  </div>
+</div>
+
+<div class="footer" style="margin-top:64px;padding-top:16px;">
+  <span>NXS-2026-002-EN · NexOS AI Prospect Paper v2.0 (English)</span>
+  <span>June 2026 · STRICTLY PRIVATE &amp; CONFIDENTIAL</span>
+  <span>nexos.ai</span>
+</div>
+</div>
+</body>
+</html>
