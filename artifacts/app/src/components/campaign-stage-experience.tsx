@@ -3,7 +3,7 @@ import {
   CheckCircle2, Loader2, Zap, Target, Users, PenTool, BarChart3, Mail,
   Rocket, Bot, Activity, Play, Eye, X, ChevronLeft, ChevronRight,
   ThumbsUp, ThumbsDown, Sparkles, ArrowRight, ExternalLink, Clock,
-  Instagram, Music2, Globe, Calendar, RefreshCw,
+  Instagram, Music2, Globe, Calendar, RefreshCw, Edit3, Info, Send,
 } from "lucide-react";
 import { Link } from "wouter";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
@@ -798,6 +798,7 @@ export interface CinemaPiece {
   cta?: string;
   dayIndex?: number;
   status?: string;
+  visualDirection?: string;
 }
 
 const PLATFORM_META: Record<string, { label: string; color: string; bg: string; bdr: string }> = {
@@ -813,15 +814,20 @@ export function ContentCinemaOverlay({
   onClose,
   onApprove,
   onReject,
+  onEdit,
+  onAiRewrite,
 }: {
   pieces: CinemaPiece[];
   onClose: () => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onEdit?: (piece: CinemaPiece) => void;
+  onAiRewrite?: (id: string) => void;
 }) {
   const [idx, setIdx] = useState(0);
   const [decisions, setDecisions] = useState<Record<string, "approved" | "rejected">>({});
   const [animDir, setAnimDir] = useState<"none" | "left" | "right">("none");
+  const [rewriting, setRewriting] = useState<string | null>(null);
 
   const pending = pieces.filter(p => !decisions[p.id]);
   const current = pending[0] ?? null;
@@ -843,21 +849,31 @@ export function ContentCinemaOverlay({
     setDecisions(prev => ({ ...prev, [id]: decision }));
     if (decision === "approved") onApprove(id);
     else onReject(id);
-    // Auto-advance to next pending
     setAnimDir("right");
     setTimeout(() => setAnimDir("none"), 200);
   }, [onApprove, onReject]);
 
+  const handleAiRewrite = useCallback((id: string) => {
+    if (!onAiRewrite) return;
+    setRewriting(id);
+    onAiRewrite(id);
+    setTimeout(() => setRewriting(null), 3000);
+  }, [onAiRewrite]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!current) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
       if (e.key === "ArrowRight" || e.key === "Enter") decide(current.id, "approved");
       if (e.key === "ArrowLeft"  || e.key === "Backspace") decide(current.id, "rejected");
+      if ((e.key === "e" || e.key === "E") && onEdit) { e.preventDefault(); onEdit(current); }
+      if ((e.key === "r" || e.key === "R") && onAiRewrite) { e.preventDefault(); handleAiRewrite(current.id); }
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [current, decide, onClose]);
+  }, [current, decide, onClose, onEdit, onAiRewrite, handleAiRewrite]);
 
   const piece = current;
   const meta  = piece ? (PLATFORM_META[piece.platform] ?? PLATFORM_META.instagram) : null;
@@ -894,11 +910,13 @@ export function ContentCinemaOverlay({
       </div>
 
       {/* Keyboard hints */}
-      <div className="px-5 py-2 border-b border-border/20 flex items-center gap-4 shrink-0">
+      <div className="px-5 py-2 border-b border-border/20 flex flex-wrap items-center gap-3 shrink-0">
         <span className="font-mono text-[10px] text-muted-foreground/35 uppercase tracking-widest">Atalhos:</span>
         {[
           { key: "→ Enter", label: "Aprovar" },
           { key: "← Backspace", label: "Rejeitar" },
+          { key: "E", label: "Editar" },
+          { key: "R", label: "Reescrever IA" },
           { key: "Esc", label: "Fechar" },
         ].map(h => (
           <div key={h.key} className="flex items-center gap-1.5">
@@ -906,6 +924,16 @@ export function ContentCinemaOverlay({
             <span className="font-mono text-[10px] text-muted-foreground/35">{h.label}</span>
           </div>
         ))}
+      </div>
+
+      {/* Info banner — what approved means + what reject does */}
+      <div className="px-5 py-2 border-b border-border/20 bg-muted/5 shrink-0 flex items-start gap-2">
+        <Info className="h-3 w-3 text-muted-foreground/40 mt-0.5 shrink-0" />
+        <p className="font-mono text-[10px] text-muted-foreground/45 leading-relaxed">
+          <span className="text-success/70">Aprovar</span> = esta versão será disparada automaticamente na data programada.{" "}
+          <span className="text-destructive/70">Rejeitar</span> = abre campo de feedback — você explica o motivo e o agente reescreve antes de ir ao ar.{" "}
+          <span className="text-primary/70">Editar</span> = você ajusta o texto diretamente. Imagens são geradas separadamente após aprovação do copy.
+        </p>
       </div>
 
       {/* Main content area */}
@@ -995,6 +1023,14 @@ export function ContentCinemaOverlay({
                 </div>
               )}
 
+              {/* Visual direction */}
+              {piece.visualDirection && (
+                <div className="border border-purple-400/20 bg-purple-400/5 px-3 py-2">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-purple-400/60 mb-1">Direção Visual</div>
+                  <p className="font-mono text-[11px] text-muted-foreground/60 leading-relaxed">{piece.visualDirection}</p>
+                </div>
+              )}
+
               {!piece.hook && !piece.headline && !piece.body && !piece.cta && (
                 <div className="py-6 text-center font-mono text-xs text-muted-foreground/40">
                   Sem prévia disponível para esta peça
@@ -1003,11 +1039,39 @@ export function ContentCinemaOverlay({
             </div>
           </div>
 
-          {/* Decision buttons */}
-          <div className="flex gap-4 mt-6 w-full max-w-xl">
+          {/* Secondary actions — Edit + AI Rewrite */}
+          {(onEdit || onAiRewrite) && (
+            <div className="flex gap-3 mt-4 w-full max-w-xl">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(piece)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 font-mono text-xs uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:border-border/70 transition-colors"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Editar texto
+                </button>
+              )}
+              {onAiRewrite && (
+                <button
+                  onClick={() => handleAiRewrite(piece.id)}
+                  disabled={rewriting === piece.id}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 font-mono text-xs uppercase tracking-widest border border-primary/30 text-primary/70 hover:text-primary hover:border-primary/60 disabled:opacity-50 transition-colors"
+                >
+                  {rewriting === piece.id
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Reescrevendo...</>
+                    : <><Sparkles className="h-3.5 w-3.5" />Reescrever com IA</>
+                  }
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Primary decision buttons */}
+          <div className="flex gap-4 mt-3 w-full max-w-xl">
             <button
               onClick={() => decide(piece.id, "rejected")}
               className="flex-1 flex items-center justify-center gap-2 py-4 font-mono text-sm uppercase tracking-widest font-bold border border-destructive/40 text-destructive hover:bg-destructive/10 transition-colors"
+              title="Rejeitar — abre campo de feedback para o agente reescrever"
             >
               <ThumbsDown className="h-4 w-4" />
               Rejeitar
@@ -1016,6 +1080,7 @@ export function ContentCinemaOverlay({
               onClick={() => decide(piece.id, "approved")}
               className="flex-1 flex items-center justify-center gap-2 py-4 font-mono text-sm uppercase tracking-widest font-bold border border-success/40 text-success hover:bg-success/10 transition-colors"
               style={{ boxShadow: "0 0 16px hsl(var(--success)/0.15)" }}
+              title="Aprovar — esta versão será disparada automaticamente na data programada"
             >
               <ThumbsUp className="h-4 w-4" />
               Aprovar

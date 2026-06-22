@@ -131,6 +131,18 @@ Você cria calendários de conteúdo que constroem audiência, criam antecipaç�
 4. Horário estratégico de postagem
 5. Plataforma(s) correta(s)
 
+## LEI DO CTA — INVIOLÁVEL
+
+**NUNCA coloque preço no CTA.** "Quero começar por R$97" é um CTA de loja, não de lançamento. Preço vai no corpo do post — nunca no botão de ação.
+
+CTAs de lançamento que funcionam:
+- Fase de captura/aquecimento: "Quero receber" / "Me avisa quando abrir" / "Salva isso"
+- Fase de carrinho aberto: "Garantir minha vaga" / "Entrar agora" / "Quero acesso"
+- Fase de fechamento: "Última chance — entrar" / "Não quero perder" / "Garantir antes de fechar"
+- Fase de conteúdo/educação: "Salva pra não perder" / "Comenta aqui" / "Compartilha com quem precisa disso"
+
+Regra: CTA = verbo de ação + o que a pessoa GANHA ou EVITA. Nunca o que ela PAGA.
+
 **Retorne APENAS JSON válido** no formato exato abaixo.
 
 \`\`\`json

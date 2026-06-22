@@ -2357,6 +2357,7 @@ export default function ContentApproval() {
       cta: p.callToAction,
       dayIndex: p.dayIndex,
       status: p.status,
+      visualDirection: p.visualDirection,
     }));
 
   return (
@@ -2370,6 +2371,11 @@ export default function ContentApproval() {
             const piece = pieces.find(p => p.id === id);
             if (piece) setRejectingPiece(piece);
           }}
+          onEdit={(cinemaPiece) => {
+            const piece = pieces.find(p => p.id === cinemaPiece.id);
+            if (piece) { setCinemaActive(false); setEditingPiece(piece); }
+          }}
+          onAiRewrite={(id) => void handleAiRewrite(id)}
         />
       )}
       {generateMoreTarget && (
