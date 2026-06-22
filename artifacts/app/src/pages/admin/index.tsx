@@ -564,6 +564,9 @@ export default function AdminPage() {
             <Badge variant="outline" className="rounded-none font-mono text-[11px] border-yellow-400/30 text-yellow-400 bg-yellow-400/10">
               Owner
             </Badge>
+            <Badge variant="outline" className="rounded-none font-mono text-[11px] border-primary/40 text-primary bg-primary/10">
+              ∞ Créditos Ilimitados
+            </Badge>
           </div>
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
             {ov?.total ?? 0} usuários registrados · {ov?.byStatus?.["ativo_lancando"] ?? 0} lançando agora

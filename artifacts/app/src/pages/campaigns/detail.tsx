@@ -1535,6 +1535,22 @@ export default function CampaignDetail() {
     },
   });
 
+  // ── Credit stats (per-campaign usage) ────────────────────────────────────
+  const { data: creditStatsData } = useQuery({
+    queryKey: [`/api/campaigns/${campaignId}/credit-stats`],
+    enabled: !!campaignId,
+    refetchInterval: isActive ? 15000 : false,
+    queryFn: async () => {
+      return customFetch<{
+        creditsCost: number;
+        totalCredits: number;
+        totalTokens: number;
+        totalCostUsd: number;
+        byAgent: { agentRole: string; provider: string; credits: number; tokens: number; costUsd: number; runs: number }[];
+      }>(`/api/campaigns/${campaignId}/credit-stats`).catch(() => null);
+    },
+  });
+
   // ── Connected integrations (for launch sequence overlay) ───────────────────
   const { data: integrationsData } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
@@ -2952,6 +2968,40 @@ export default function CampaignDetail() {
           })}
         </div>
       </div>
+
+      {/* ── Credit Counter ── */}
+      {creditStatsData && (creditStatsData.totalCredits > 0 || creditStatsData.creditsCost > 0) && (
+        <div className="border border-border/30 bg-card/20 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Custo da Campanha</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[11px] text-primary font-bold">
+              {(creditStatsData.totalCredits || creditStatsData.creditsCost).toLocaleString("pt-BR")}
+            </span>
+            <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">créditos</span>
+          </div>
+          {creditStatsData.totalTokens > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[11px] text-foreground/70">
+                {creditStatsData.totalTokens.toLocaleString("pt-BR")}
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">tokens</span>
+            </div>
+          )}
+          {creditStatsData.totalCostUsd > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-mono text-[11px] text-foreground/50">
+                ${creditStatsData.totalCostUsd.toFixed(3)}
+              </span>
+              <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">USD</span>
+            </div>
+          )}
+          {creditStatsData.byAgent && creditStatsData.byAgent.length > 0 && (
+            <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest ml-auto">
+              {creditStatsData.byAgent.length} agentes
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ── Tabs ── */}
       <div className="flex gap-0.5 border border-border/50 bg-card/40 p-1 rounded-sm overflow-x-auto scrollbar-none">

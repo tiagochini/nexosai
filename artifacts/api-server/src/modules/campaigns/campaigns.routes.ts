@@ -226,6 +226,57 @@ router.get("/:id/launch-financials", async (req, res): Promise<void> => {
   }
 });
 
+// GET /campaigns/:id/credit-stats — per-campaign credit + token usage
+router.get("/:id/credit-stats", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];
+  const { db: _db, creditTransactionsTable, aiProviderLogsTable, campaignsTable: ct } = await import("@workspace/db");
+  const { eq: _eq, and: _and, sum, count } = await import("drizzle-orm");
+
+  // Verify ownership
+  const [campaign] = await _db.select({ id: ct.id, creditsCost: ct.creditsCost })
+    .from(ct)
+    .where(_and(_eq(ct.id, id), _eq(ct.workspaceId, req.auth.workspaceId)))
+    .limit(1);
+  if (!campaign) { res.status(404).json({ error: "Campanha não encontrada" }); return; }
+
+  // Token + cost breakdown from AI logs
+  const aiRows = await _db.select({
+    provider: aiProviderLogsTable.provider,
+    model: aiProviderLogsTable.model,
+    agentType: aiProviderLogsTable.agentType,
+    totalCredits: sum(aiProviderLogsTable.creditsCharged).mapWith(Number),
+    totalTokens: sum(aiProviderLogsTable.totalTokens).mapWith(Number),
+    totalCostUsd: sum(aiProviderLogsTable.costUsd).mapWith(Number),
+    calls: count(),
+  })
+    .from(aiProviderLogsTable)
+    .where(_and(_eq(aiProviderLogsTable.campaignId, id), _eq(aiProviderLogsTable.workspaceId, req.auth.workspaceId)))
+    .groupBy(aiProviderLogsTable.provider, aiProviderLogsTable.model, aiProviderLogsTable.agentType);
+
+  const totalCredits = aiRows.reduce((s, r) => s + (r.totalCredits ?? 0), 0);
+  const totalTokens  = aiRows.reduce((s, r) => s + (r.totalTokens ?? 0), 0);
+  const totalCostUsd = aiRows.reduce((s, r) => s + (r.totalCostUsd ?? 0), 0);
+
+  res.json({
+    campaignId: id,
+    creditsCost: campaign.creditsCost,
+    totalCredits,
+    totalTokens,
+    totalCostUsd: totalCostUsd.toFixed(4),
+    byAgent: aiRows
+      .map(r => ({
+        agentType: r.agentType ?? "desconhecido",
+        provider: r.provider,
+        model: r.model,
+        credits: r.totalCredits ?? 0,
+        tokens: r.totalTokens ?? 0,
+        costUsd: (r.totalCostUsd ?? 0).toFixed(4),
+        calls: r.calls,
+      }))
+      .sort((a, b) => b.credits - a.credits),
+  });
+});
+
 // GET /campaigns/:id/decision-trace — Arquiteto mode explainability
 router.get("/:id/decision-trace", async (req, res): Promise<void> => {
   const id = Array.isArray(req.params["id"]) ? req.params["id"][0] : req.params["id"];

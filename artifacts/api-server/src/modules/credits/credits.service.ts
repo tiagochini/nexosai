@@ -44,16 +44,21 @@ export async function deductCredits(
 
   if (!ws) throw new NotFoundError("Workspace");
 
-  if (ws.creditsBalance < cost) {
+  const unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true;
+
+  if (!unlimited && ws.creditsBalance < cost) {
     throw new InsufficientCreditsError(cost, ws.creditsBalance);
   }
 
-  const newBalance = ws.creditsBalance - cost;
+  // For regular accounts: deduct balance. For unlimited: keep balance intact.
+  const newBalance = unlimited ? ws.creditsBalance : ws.creditsBalance - cost;
 
-  await db
-    .update(workspacesTable)
-    .set({ creditsBalance: newBalance })
-    .where(eq(workspacesTable.id, workspaceId));
+  if (!unlimited) {
+    await db
+      .update(workspacesTable)
+      .set({ creditsBalance: newBalance })
+      .where(eq(workspacesTable.id, workspaceId));
+  }
 
   const [tx] = await db
     .insert(creditTransactionsTable)
@@ -68,11 +73,19 @@ export async function deductCredits(
       aiProvider,
       tokensUsed,
       costUsd: actualCostUsd?.toString(),
-      description: `${action.replace(/_/g, " ")}`,
+      description: unlimited ? `[∞] ${action.replace(/_/g, " ")}` : action.replace(/_/g, " "),
     })
     .returning();
 
-  log.info({ workspaceId, action, cost, newBalance }, "Credits deducted");
+  // Always update per-campaign credit counter when campaignId is provided
+  if (campaignId) {
+    await db
+      .update(campaignsTable)
+      .set({ creditsCost: sql`${campaignsTable.creditsCost} + ${cost}` })
+      .where(eq(campaignsTable.id, campaignId));
+  }
+
+  log.info({ workspaceId, action, cost, newBalance, unlimited }, "Credits deducted");
 
   return tx;
 }
@@ -269,8 +282,14 @@ export async function getAgentUsageHistory(
 export async function checkCredits(
   workspaceId: string,
   action: CreditAction,
-): Promise<{ sufficient: boolean; balance: number; required: number }> {
-  const balance = await getBalance(workspaceId);
+): Promise<{ sufficient: boolean; balance: number; required: number; unlimited: boolean }> {
+  const [ws] = await db
+    .select({ creditsBalance: workspacesTable.creditsBalance, settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, workspaceId))
+    .limit(1);
+  const balance = ws?.creditsBalance ?? 0;
+  const unlimited = (ws?.settings as Record<string, unknown>)?.unlimitedCredits === true;
   const required = CREDIT_COSTS[action] ?? 0;
-  return { sufficient: balance >= required, balance, required };
+  return { sufficient: unlimited || balance >= required, balance, required, unlimited };
 }

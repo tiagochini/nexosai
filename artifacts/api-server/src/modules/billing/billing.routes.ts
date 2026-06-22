@@ -182,6 +182,27 @@ router.get("/access", requireAuth, async (req, res): Promise<void> => {
   res.json({ hasAccess: false, reason: "none" });
 });
 
+// ─── Admin: activate unlimited credits for founder/admin accounts ─────────────
+router.post("/admin/unlimited-credits", requireAuth, async (req, res): Promise<void> => {
+  const ADMIN_EMAILS = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
+  if (!ADMIN_EMAILS.has(req.auth.email)) {
+    res.status(403).json({ error: "Acesso restrito a administradores.", code: "FORBIDDEN" });
+    return;
+  }
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  if (!ws) { res.status(404).json({ error: "Workspace não encontrado." }); return; }
+
+  const existing = (ws.settings ?? {}) as Record<string, unknown>;
+  await db.update(workspacesTable)
+    .set({ settings: { ...existing, unlimitedCredits: true } as any })
+    .where(eq(workspacesTable.id, req.auth.workspaceId));
+
+  res.json({ ok: true, unlimitedCredits: true });
+});
+
 // ─── Redeem invite code (logged-in user) ──────────────────────────────────────
 router.post("/redeem-code", requireAuth, async (req, res): Promise<void> => {
   const { code } = req.body as { code?: string };

@@ -72,8 +72,14 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
   const balance = creditsData?.balance ?? 0;
   const total   = plan?.creditsMonthly ?? 1500;
   const pct     = total > 0 ? Math.min(100, (balance / total) * 100) : 0;
-  const isLow   = pct < 15;
-  const barColor = isLow ? "hsl(var(--destructive))" : pct < 35 ? "hsl(45 100% 50%)" : "hsl(var(--primary))";
+  const isLow   = !isAdmin && pct < 15;
+  const barColor = isAdmin ? "hsl(var(--primary))" : isLow ? "hsl(var(--destructive))" : pct < 35 ? "hsl(45 100% 50%)" : "hsl(var(--primary))";
+
+  // Auto-activate unlimited credits for admin accounts (idempotent)
+  useEffect(() => {
+    if (!isAdmin) return;
+    customFetch<unknown>("/api/billing/admin/unlimited-credits", { method: "POST" }).catch(() => {});
+  }, [isAdmin]);
 
   const isAgency = planSlug === "agency" || isAdmin || isExpert;
 
@@ -289,17 +295,21 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{tr.credits.label}</span>
           <Link href="/credits" onClick={onNav}>
             <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">
-              {balance.toLocaleString("pt-BR")} cr
+              {isAdmin ? "∞" : balance.toLocaleString("pt-BR")} cr
             </span>
           </Link>
         </div>
         <div className="h-0.5 w-full bg-muted/20 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, background: barColor, boxShadow: `0 0 4px ${barColor}` }}
+            style={{ width: isAdmin ? "100%" : `${pct}%`, background: barColor, boxShadow: `0 0 4px ${barColor}` }}
           />
         </div>
-        {isLow && (
+        {isAdmin ? (
+          <div className="mt-1 font-mono text-[11px] text-primary/60 uppercase tracking-widest">
+            ∞ FOUNDER MODE
+          </div>
+        ) : isLow && (
           <div className="mt-1 font-mono text-[11px] text-destructive uppercase tracking-widest animate-pulse">
             {tr.credits.low}
           </div>
