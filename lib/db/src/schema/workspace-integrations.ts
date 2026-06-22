@@ -12,24 +12,37 @@ import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
 
 export const integrationProviderEnum = pgEnum("integration_provider", [
+  // Messaging
+  "whatsapp_business",
+  "telegram",
+  // Email
+  "rd_station",
+  "activecampaign",
+  "mailchimp",
+  "resend",
+  // Social
   "meta_ads",
   "instagram",
+  "facebook",
   "tiktok_ads",
   "google_ads",
   "linkedin_ads",
-  "whatsapp_business",
-  "telegram",
+  // Checkout / Payment gateways
   "stripe",
+  "paypal",
+  "mercado_pago",
+  "pagarme",
+  "asaas",
+  // Product platforms (with their own checkout)
   "hotmart",
   "eduzz",
   "kiwify",
-  "asaas",
-  "mailchimp",
-  "activecampaign",
-  "rd_station",
+  // CRM
   "hubspot",
+  // Other
   "crypto_native",
   "custom_webhook",
+  // AI / Media generation
   "heygen",
   "runway_ml",
   "kling_fal",

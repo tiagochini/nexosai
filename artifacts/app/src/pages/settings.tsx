@@ -541,10 +541,12 @@ function SecurityTab() {
 // ── Integrations Tab ──────────────────────────────────────────────────────────
 
 type IntegrationProvider =
-  | "meta_ads" | "instagram" | "tiktok" | "tiktok_ads" | "google_ads"
-  | "whatsapp_business" | "telegram" | "stripe" | "hotmart"
-  | "eduzz" | "kiwify" | "asaas" | "mailchimp" | "activecampaign" | "rd_station" | "hubspot"
-  | "resend" | "crypto_native" | "custom_webhook";
+  | "meta_ads" | "instagram" | "facebook" | "tiktok" | "tiktok_ads" | "google_ads" | "linkedin_ads"
+  | "whatsapp_business" | "telegram"
+  | "stripe" | "paypal" | "mercado_pago" | "pagarme" | "asaas"
+  | "hotmart" | "eduzz" | "kiwify"
+  | "mailchimp" | "activecampaign" | "rd_station" | "resend" | "hubspot"
+  | "crypto_native" | "custom_webhook";
 
 interface WorkspaceIntegration {
   id: string;
@@ -606,11 +608,60 @@ const INTEGRATION_CATALOG: {
       { key: "accessToken", label: "API Key", placeholder: "xxxxxx...", type: "password" },
     ],
   },
+  // Checkout / payment gateways
+  {
+    provider: "stripe",
+    label: "Stripe",
+    description: "Checkout internacional · Cartão · PIX · Recorrência · alta conversão",
+    category: "Checkout",
+    color: "text-violet-400",
+    fields: [
+      { key: "accessToken", label: "Secret Key", placeholder: "sk_live_xxxx...", type: "password" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
+      { key: "accountId",   label: "Stripe Account ID (opcional)", placeholder: "acct_xxxx" },
+    ],
+  },
+  {
+    provider: "paypal",
+    label: "PayPal",
+    description: "Checkout internacional · aceito em 200+ países",
+    category: "Checkout",
+    color: "text-blue-500",
+    fields: [
+      { key: "accountId",   label: "Client ID", placeholder: "AcXxxxx..." },
+      { key: "accessToken", label: "Client Secret", placeholder: "EJxxx...", type: "password" },
+      { key: "accountName", label: "Email / Nome da Conta", placeholder: "pagamentos@empresa.com" },
+    ],
+  },
+  {
+    provider: "mercado_pago",
+    label: "Mercado Pago",
+    description: "PIX · Boleto · Cartão · maior gateway da América Latina",
+    category: "Checkout",
+    color: "text-cyan-400",
+    fields: [
+      { key: "accessToken", label: "Access Token", placeholder: "APP_USR-xxxx...", type: "password" },
+      { key: "accountId",   label: "Public Key", placeholder: "APP_USR-xxxx..." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Loja" },
+    ],
+  },
+  {
+    provider: "pagarme",
+    label: "Pagar.me",
+    description: "Gateway brasileiro (Stone) · PIX · Boleto · Cartão · Split",
+    category: "Checkout",
+    color: "text-green-400",
+    fields: [
+      { key: "accessToken", label: "Secret Key", placeholder: "sk_live_xxxx...", type: "password" },
+      { key: "accountId",   label: "Public Key", placeholder: "pk_live_xxxx..." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
+    ],
+  },
   {
     provider: "asaas",
     label: "Asaas",
     description: "Checkout próprio · PIX · Boleto · Cartão · sem comissão de plataforma",
-    category: "Pagamentos",
+    category: "Checkout",
     color: "text-blue-400",
     fields: [
       { key: "accessToken", label: "API Key do Asaas", placeholder: "$aact_prod_xxxx...", type: "password" },
@@ -618,11 +669,12 @@ const INTEGRATION_CATALOG: {
       { key: "accountId",   label: "Ambiente (production/sandbox)", placeholder: "production" },
     ],
   },
+  // Product platforms
   {
     provider: "hotmart",
     label: "Hotmart",
     description: "Plataforma de produtos digitais — webhooks de venda automáticos",
-    category: "Pagamentos",
+    category: "Plataformas",
     color: "text-orange-400",
     fields: [
       { key: "accountId", label: "Client ID", placeholder: "hotmart-client-id" },
@@ -633,8 +685,8 @@ const INTEGRATION_CATALOG: {
   {
     provider: "kiwify",
     label: "Kiwify",
-    description: "Checkout e gestão de produtos digitais — auto-conversão de leads",
-    category: "Pagamentos",
+    description: "Plataforma de checkout e gestão de produtos — auto-conversão de leads",
+    category: "Plataformas",
     color: "text-orange-400",
     fields: [
       { key: "accountId", label: "Account ID", placeholder: "kiwify-account-id" },
@@ -643,15 +695,15 @@ const INTEGRATION_CATALOG: {
     ],
   },
   {
-    provider: "stripe",
-    label: "Stripe",
-    description: "Processamento de pagamentos internacionais",
-    category: "Pagamentos",
-    color: "text-purple-400",
+    provider: "eduzz",
+    label: "Eduzz",
+    description: "Plataforma brasileira de infoprodutos — compra dispara automação em tempo real",
+    category: "Plataformas",
+    color: "text-orange-400",
     fields: [
-      { key: "accountId", label: "Account ID", placeholder: "acct_xxxx" },
-      { key: "accountName", label: "Nome da Conta", placeholder: "Stripe Workspace" },
-      { key: "accessToken", label: "Secret Key", placeholder: "sk_live_xxxx...", type: "password" },
+      { key: "accountId",   label: "API Key (Public)", placeholder: "xxxx" },
+      { key: "accessToken", label: "API Key (Private)", placeholder: "xxxx...", type: "password" },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta Eduzz" },
     ],
   },
   {
@@ -751,7 +803,7 @@ const INTEGRATION_CATALOG: {
   },
 ];
 
-const CATEGORIES = ["Mensagens", "E-mail", "Pagamentos", "Mídia Paga", "Social Orgânico", "CRM"];
+const CATEGORIES = ["Mensagens", "E-mail", "Checkout", "Plataformas", "Mídia Paga", "Social Orgânico", "CRM"];
 
 function ConnectModal({
   info,

@@ -11,7 +11,8 @@ import {
 export type Provider =
   | "whatsapp_business" | "telegram"
   | "rd_station" | "activecampaign" | "resend"
-  | "hotmart" | "kiwify" | "stripe" | "asaas"
+  | "stripe" | "paypal" | "mercado_pago" | "pagarme" | "asaas"
+  | "hotmart" | "kiwify" | "eduzz"
   | "meta_ads" | "google_ads" | "tiktok_ads" | "linkedin_ads"
   | "instagram" | "facebook" | "tiktok"
   | "hubspot"
@@ -336,12 +337,125 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
     oauthPlatform: "tiktok",
     oauthLabel: "Entrar com TikTok",
   },
+  // ── Checkout / Payment gateways ─────────────────────────────────────────────
+  {
+    provider: "stripe",
+    label: "Stripe",
+    description: "Checkout internacional · Cartão · Pix · Recorrência · alto nível de conversão",
+    why: "Stripe é o gateway mais completo para venda internacional. Suporta cartão, PIX, Apple Pay, Google Pay e assinaturas. Ideal para produtos premium e clientes no exterior.",
+    category: "Checkout",
+    color: "text-violet-400",
+    icon: CreditCard,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "Secret Key", placeholder: "sk_live_xxxx...", type: "password",
+        hint: "Encontrada em dashboard.stripe.com → Developers → API keys → Secret key. Use a chave de produção (sk_live_...)." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
+      { key: "accountId",   label: "Stripe Account ID", placeholder: "acct_xxxx",
+        hint: "Opcional. Usado para Stripe Connect (marketplace). Encontrado em dashboard.stripe.com → Configurações → Conta." },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no Stripe (stripe.com)", "KYC aprovado (dados bancários cadastrados)"],
+      steps: [
+        { title: "Crie ou acesse sua conta Stripe", detail: "Acesse dashboard.stripe.com e complete o cadastro com dados empresariais e conta bancária.", url: "https://dashboard.stripe.com" },
+        { title: "Obtenha a Secret Key", detail: "No painel: Developers → API keys → Secret key. Clique em 'Reveal live key' e copie (começa com sk_live_...)." },
+        { title: "Configure o webhook (opcional)", detail: "Para receber eventos de pagamento em tempo real: Developers → Webhooks → Add endpoint → cole a URL gerada pelo NexOS." },
+        { title: "Cole a Secret Key aqui", detail: "Preencha o campo acima e salve. Pronto — seus checkouts processam cartão, PIX e recorrência." },
+      ],
+      docsUrl: "https://stripe.com/docs",
+      docsLabel: "Documentação Stripe",
+    },
+  },
+  {
+    provider: "paypal",
+    label: "PayPal",
+    description: "Checkout internacional · aceito em 200+ países · ideal para clientes no exterior",
+    why: "PayPal é o método de pagamento internacional mais reconhecido. Permite vender para clientes fora do Brasil sem fricção, com checkout de 1 clique.",
+    category: "Checkout",
+    color: "text-blue-500",
+    icon: CreditCard,
+    required: false,
+    fields: [
+      { key: "accountId",   label: "Client ID", placeholder: "AcXxxxx...",
+        hint: "Encontrado em developer.paypal.com → Apps & Credentials → nome do app → Client ID. Use as credenciais de produção (Live)." },
+      { key: "accessToken", label: "Client Secret", placeholder: "EJxxx...", type: "password",
+        hint: "Ao lado do Client ID, clique em 'Show' ao lado do Client Secret e copie." },
+      { key: "accountName", label: "Nome da Conta / Email PayPal", placeholder: "pagamentos@minhaempresa.com" },
+    ],
+    guide: {
+      prereqs: ["Conta Business no PayPal (paypal.com/br)"],
+      steps: [
+        { title: "Acesse o PayPal Developer", detail: "Entre em developer.paypal.com com sua conta Business.", url: "https://developer.paypal.com" },
+        { title: "Crie um App", detail: "Apps & Credentials → Create App → tipo Business. Escolha suas contas Live na seleção de sandbox/live." },
+        { title: "Copie as credenciais Live", detail: "Na tela do app, mude para 'Live' (canto superior direito) → copie o Client ID e o Client Secret." },
+        { title: "Cole aqui e salve", detail: "Preencha os campos acima com as credenciais de produção. Seus clientes podem pagar via PayPal em qualquer país." },
+      ],
+      docsUrl: "https://developer.paypal.com/docs/checkout/",
+      docsLabel: "Docs PayPal Checkout",
+    },
+  },
+  {
+    provider: "mercado_pago",
+    label: "Mercado Pago",
+    description: "PIX · Boleto · Cartão · maior gateway da América Latina",
+    why: "Mercado Pago é o gateway mais usado no Brasil e LatAm. Alta taxa de aprovação, PIX com split automático e checkout transparente nativo.",
+    category: "Checkout",
+    color: "text-cyan-400",
+    icon: CreditCard,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "Access Token", placeholder: "APP_USR-xxxx...", type: "password",
+        hint: "Encontrado em mercadopago.com.br → Seu negócio → Configurações → Credenciais → Credenciais de produção → Access Token." },
+      { key: "accountId",   label: "Public Key", placeholder: "APP_USR-xxxx...",
+        hint: "Também em Credenciais de produção → Public Key. Necessária para o checkout transparente no frontend." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Loja" },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no Mercado Pago Business", "CNPJ ou CPF validado"],
+      steps: [
+        { title: "Acesse as credenciais", detail: "Em mercadopago.com.br: Seu negócio → Configurações → Gestão e administração → Credenciais.", url: "https://www.mercadopago.com.br/settings/account/credentials" },
+        { title: "Copie o Access Token", detail: "Na aba 'Produção': copie o Access Token (começa com APP_USR-...). Nunca compartilhe este token." },
+        { title: "Copie a Public Key", detail: "Na mesma tela, copie também a Public Key. Ela é usada para o checkout transparente." },
+        { title: "Configure o IPN/Webhook", detail: "Em Configurações → Notificações IPN → cole a URL do NexOS. Assim conversões são capturadas em tempo real." },
+      ],
+      docsUrl: "https://www.mercadopago.com.br/developers/pt/docs",
+      docsLabel: "Docs Mercado Pago",
+    },
+  },
+  {
+    provider: "pagarme",
+    label: "Pagar.me",
+    description: "Gateway brasileiro by Stone · PIX · Boleto · Cartão · Split de pagamento",
+    why: "Pagar.me (Stone) oferece split de pagamento nativo, ideal para co-produções e afiliados. Alta taxa de aprovação no Brasil com suporte a PIX, boleto e cartão.",
+    category: "Checkout",
+    color: "text-green-400",
+    icon: CreditCard,
+    required: false,
+    fields: [
+      { key: "accessToken", label: "Secret Key", placeholder: "sk_live_xxxx...", type: "password",
+        hint: "Em dashboard.pagar.me → Configurações → Credenciais → Secret Key. Use a chave de produção." },
+      { key: "accountId",   label: "Public Key", placeholder: "pk_live_xxxx...",
+        hint: "Na mesma tela: Public Key. Usada para tokenizar cartões no frontend." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Empresa" },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no Pagar.me", "Conta bancária cadastrada e aprovada"],
+      steps: [
+        { title: "Acesse o Dashboard Pagar.me", detail: "Entre em dashboard.pagar.me com seu login.", url: "https://dashboard.pagar.me" },
+        { title: "Acesse as Credenciais", detail: "Menu → Configurações → Credenciais. Selecione 'Produção' no seletor de ambiente." },
+        { title: "Copie as chaves", detail: "Copie a Secret Key (sk_live_...) e a Public Key (pk_live_...). Ambas são necessárias." },
+        { title: "Configure o Webhook", detail: "Em Configurações → Webhooks → adicione a URL do NexOS para receber eventos de pagamento em tempo real." },
+      ],
+      docsUrl: "https://docs.pagar.me",
+      docsLabel: "Docs Pagar.me",
+    },
+  },
   {
     provider: "asaas",
     label: "Asaas",
     description: "Checkout próprio · PIX · Boleto · Cartão · sem comissão de plataforma",
     why: "Com o Asaas conectado, seus clientes pagam direto para você via PIX, boleto ou cartão. O dinheiro cai na sua conta sem intermediários.",
-    category: "Pagamentos",
+    category: "Checkout",
     color: "text-blue-400",
     icon: CreditCard,
     required: false,
@@ -363,12 +477,13 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
       docsLabel: "Documentação Asaas",
     },
   },
+  // ── Plataformas de produto digital ─────────────────────────────────────────
   {
     provider: "hotmart",
     label: "Hotmart",
-    description: "Produtos digitais — compra converte contato automaticamente",
-    why: "Quando alguém compra pelo Hotmart, o NexOS move o contato para 'convertido' em tempo real.",
-    category: "Pagamentos",
+    description: "Plataforma de produtos digitais — compra converte contato automaticamente",
+    why: "Quando alguém compra pelo Hotmart, o NexOS move o contato para 'convertido' em tempo real. Ideal para quem já vende na plataforma.",
+    category: "Plataformas",
     color: "text-orange-400",
     icon: CreditCard,
     required: false,
@@ -391,9 +506,9 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
   {
     provider: "kiwify",
     label: "Kiwify",
-    description: "Checkout e gestão de produtos com auto-conversão de leads",
+    description: "Plataforma de checkout e gestão de produtos — auto-conversão de leads",
     why: "Compras no Kiwify ativam automações de pós-venda no NexOS instantaneamente.",
-    category: "Pagamentos",
+    category: "Plataformas",
     color: "text-orange-400",
     icon: CreditCard,
     required: false,
@@ -411,6 +526,33 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
         { title: "Copie o Account ID", detail: "Na aba Conta, copie o Account ID exibido." },
         { title: "Gere uma API Key", detail: "Em Configurações → Desenvolvedor → API Keys → clique em Criar chave." },
       ],
+    },
+  },
+  {
+    provider: "eduzz",
+    label: "Eduzz",
+    description: "Plataforma brasileira de infoprodutos — compra dispara automação em tempo real",
+    why: "Com Eduzz conectado, cada venda automaticamente converte o contato no NexOS e dispara automações de pós-venda.",
+    category: "Plataformas",
+    color: "text-orange-400",
+    icon: CreditCard,
+    required: false,
+    fields: [
+      { key: "accountId",   label: "API Key (Public)",  placeholder: "xxxx",
+        hint: "Em Eduzz: Perfil → Configurações → API → API Key Pública." },
+      { key: "accessToken", label: "API Key (Private)", placeholder: "xxxx...", type: "password",
+        hint: "Na mesma tela: API Key Privada. Necessária para autenticação." },
+      { key: "accountName", label: "Nome da Conta", placeholder: "Minha Conta Eduzz" },
+    ],
+    guide: {
+      prereqs: ["Conta ativa no Eduzz com produtos cadastrados"],
+      steps: [
+        { title: "Acesse as configurações de API", detail: "Em eduzz.com: Menu → Perfil → Configurações → aba API.", url: "https://eduzz.com" },
+        { title: "Copie as API Keys", detail: "Copie a API Key Pública e a API Key Privada exibidas na tela." },
+        { title: "Configure o Postback", detail: "Em Eduzz → Meus Produtos → Postback → adicione a URL do NexOS para receber notificações de venda." },
+      ],
+      docsUrl: "https://docs.eduzz.com",
+      docsLabel: "Docs Eduzz API",
     },
   },
   {
@@ -564,7 +706,7 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
   },
 ];
 
-export const INTEGRATION_CATEGORIES = ["Mensagens", "E-mail", "Social Orgânico", "Pagamentos", "Mídia Paga", "CRM"];
+export const INTEGRATION_CATEGORIES = ["Mensagens", "E-mail", "Social Orgânico", "Checkout", "Plataformas", "Mídia Paga", "CRM"];
 
 // ── ConnectModal ───────────────────────────────────────────────────────────────
 export function ConnectModal({
