@@ -196,8 +196,17 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [finExpanded, setFinExpanded]         = useState(true);
   const [finConfirmed, setFinConfirmed]       = useState(false);
   const [socialExpanded, setSocialExpanded]   = useState(true);
-  const [socialBypass, setSocialBypass]       = useState(false);
-  const [funnelConfirmed, setFunnelConfirmed] = useState(false);
+  const [oauthLoading, setOauthLoading]       = useState<string | null>(null);
+  const [oauthError, setOauthError]           = useState<string | null>(null);
+  const [funnelExpanded, setFunnelExpanded]   = useState(true);
+
+  // Gate 6 — landing page URL (persisted per campaign in localStorage)
+  const funnelKey = `nexos_funnel_url_${campaignId}`;
+  const [landingUrl, setLandingUrl] = useState<string>(() => {
+    try { return localStorage.getItem(funnelKey) ?? ""; } catch { return ""; }
+  });
+  const [landingUrlInput, setLandingUrlInput] = useState(landingUrl);
+  const funnelConfirmed = landingUrl.startsWith("http");
 
   // Gate 3 animated verification (cosmetic multi-step review)
   // 0 = pending/loading, 1 = counting pieces ✓, 2 = checking compliance ✓, 3 = validating schedule ✓
@@ -338,8 +347,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   // ── Overall gate ────────────────────────────────────────────────────────────
   // Gate 3 verification must complete (animation phase 3) before launch is allowed
   const contentVerified = allContentApproved && verifyPhase >= 3;
-  const socialGateOk    = hasSocial || socialBypass;
-  const allReady = hasMessaging && hasEmail && contentVerified && finReady && socialGateOk && funnelConfirmed;
+  const allReady = hasMessaging && hasEmail && hasSocial && contentVerified && funnelConfirmed && finReady;
 
   useEffect(() => {
     if (!loading) onLaunchReady(allReady);
@@ -378,9 +386,9 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
       {
         label: "Redes Sociais",
         icon: <Users className="h-4 w-4" />,
-        passed: hasSocial || socialBypass,
-        passMsg: hasSocial ? `Conectado: ${connectedSocials}` : "Ignorado — lançamento sem auto-post social",
-        failMsg: "Instagram, Facebook ou TikTok recomendados para auto-post de conteúdo gerado",
+        passed: hasSocial,
+        passMsg: `Conectado: ${connectedSocials} — auto-post ativo`,
+        failMsg: "Conecte Instagram ou TikTok para distribuição automática do conteúdo gerado",
       },
       {
         label: "Aprovação de Conteúdo",
@@ -517,7 +525,46 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
     );
   }
 
-  const passedGates = (hasMessaging ? 1 : 0) + (hasEmail ? 1 : 0) + (socialGateOk ? 1 : 0) + (contentVerified ? 1 : 0) + (funnelConfirmed ? 1 : 0) + (finReady ? 1 : 0);
+  // ── OAuth popup helper ───────────────────────────────────────────────────────
+  const handleOAuth = async (provider: string) => {
+    setOauthLoading(provider);
+    setOauthError(null);
+    try {
+      const body = await customFetch<{ url: string }>(`/api/integrations/oauth/start/${provider}`);
+      const popup = window.open(body.url, "nexos_oauth", "width=620,height=700,scrollbars=yes,resizable=yes");
+      if (!popup) {
+        setOauthError("Popup bloqueado pelo browser. Permita popups para este site e tente novamente.");
+        setOauthLoading(null);
+        return;
+      }
+      const handler = (event: MessageEvent<{ type?: string; success?: boolean; error?: string }>) => {
+        if (event.data?.type !== "oauth_complete") return;
+        window.removeEventListener("message", handler);
+        setOauthLoading(null);
+        if (event.data.success) {
+          // Reload integrations to reflect new connection
+          Promise.all([
+            customFetch<{ integrations: Integration[] }>("/api/workspaces/me/integrations").catch(() => ({ integrations: [] })),
+          ]).then(([intRes]) => setIntegrations(intRes.integrations ?? []));
+        } else {
+          setOauthError(event.data.error ?? "Falha na autenticação.");
+        }
+      };
+      window.addEventListener("message", handler);
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          window.removeEventListener("message", handler);
+          setOauthLoading(null);
+        }
+      }, 600);
+    } catch {
+      setOauthLoading(null);
+      setOauthError("Erro ao iniciar autenticação. Verifique sua conexão e tente novamente.");
+    }
+  };
+
+  const passedGates = (hasMessaging ? 1 : 0) + (hasEmail ? 1 : 0) + (hasSocial ? 1 : 0) + (contentVerified ? 1 : 0) + (funnelConfirmed ? 1 : 0) + (finReady ? 1 : 0);
   const failedGates = 6 - passedGates;
 
   return (
@@ -569,112 +616,115 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         onToggleStep={setExpandedStep}
       />
 
-      {/* ── Gate 5: Redes Sociais ────────────────────────────────────────────── */}
+      {/* ── Gate 5: Redes Sociais (obrigatório — OAuth) ──────────────────────── */}
       <div className="border-t border-border/20">
         <div
           className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-background/20 transition-colors"
           onClick={() => setSocialExpanded(v => !v)}
         >
           <div className="mt-0.5 shrink-0">
-            {hasSocial ? (
-              <CheckCircle2 className="h-4 w-4 text-green-400" />
-            ) : socialBypass ? (
-              <CheckCircle2 className="h-4 w-4 text-yellow-400/70" />
-            ) : (
-              <XCircle className="h-4 w-4 text-yellow-400" />
-            )}
+            {hasSocial
+              ? <CheckCircle2 className="h-4 w-4 text-green-400" />
+              : <XCircle className="h-4 w-4 text-red-400" />}
           </div>
-          <div className={`shrink-0 ${hasSocial ? "text-green-400/60" : socialBypass ? "text-yellow-400/40" : "text-yellow-400/60"}`}>
+          <div className={`shrink-0 ${hasSocial ? "text-green-400/60" : "text-red-400/60"}`}>
             <Users className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className={`font-mono text-xs font-bold ${hasSocial ? "text-green-300" : socialBypass ? "text-yellow-300/60" : "text-yellow-300"}`}>
-              Redes Sociais — Auto-post Orgânico
+            <div className={`font-mono text-xs font-bold ${hasSocial ? "text-green-300" : "text-red-300"}`}>
+              Redes Sociais — Distribuição de Conteúdo
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
               {hasSocial
-                ? `Conectado: ${connectedSocials} — posts serão publicados automaticamente`
-                : socialBypass
-                ? "Ignorado — auto-post desabilitado para este lançamento"
-                : "Instagram, Facebook ou TikTok recomendados para auto-post do conteúdo gerado"}
+                ? `Conectado: ${connectedSocials} — posts publicados automaticamente conforme o schedule`
+                : "Conecte Instagram ou TikTok para distribuição automática do conteúdo gerado"}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className={`font-mono text-[9px] uppercase tracking-widest ${hasSocial ? "border-green-500/30 text-green-400/70 bg-green-500/5" : "border-yellow-500/30 text-yellow-400/70 bg-yellow-500/5"}`}>
-              {hasSocial ? "Conectado" : "Opcional"}
-            </Badge>
             {socialExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/30" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/30" />}
           </div>
         </div>
 
         {socialExpanded && (
           <div className="mx-5 mb-4 space-y-2">
-            {!hasSocial && !socialBypass && (
-              <>
-                {/* Instagram wizard trigger */}
-                <GateRow
-                  id="instagram" icon={<span className="text-sm">📸</span>}
-                  label="Instagram / Meta Business"
-                  passed={false}
-                  passDetail="Instagram conectado — posts e Stories automáticos"
-                  failDetail="Conecte para publicar conteúdo orgânico automaticamente durante o lançamento"
-                  wizardKey="instagram"
-                  expandedWizard={expandedWizard} expandedStep={expandedStep}
-                  onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
-                  onToggleStep={setExpandedStep}
-                />
-                <GateRow
-                  id="tiktok" icon={<span className="text-sm">🎵</span>}
-                  label="TikTok Business"
-                  passed={!!tiktokConn}
-                  passDetail="TikTok conectado — vídeos publicados automaticamente"
-                  failDetail="Conecte para auto-post de Reels e vídeos curtos gerados pelo NexOS AI"
-                  wizardKey="tiktok"
-                  expandedWizard={expandedWizard} expandedStep={expandedStep}
-                  onToggleWizard={(id) => { setExpandedWizard(expandedWizard === id ? null : id); setExpandedStep(null); }}
-                  onToggleStep={setExpandedStep}
-                />
-              </>
+            {/* OAuth error */}
+            {oauthError && (
+              <div className="border border-red-500/20 bg-red-500/5 px-4 py-3">
+                <div className="font-mono text-[10px] text-red-400 leading-relaxed">{oauthError}</div>
+              </div>
             )}
 
-            {/* Bypass option */}
             {!hasSocial && (
-              <div className="border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 mt-1">
-                <div className="font-mono text-[11px] text-yellow-400 font-bold mb-1">Gate opcional</div>
-                <div className="font-mono text-[10px] text-muted-foreground/60 leading-relaxed mb-3">
-                  Redes sociais não são obrigatórias para lançar. Sem elas, o NexOS AI não publicará conteúdo orgânico automaticamente — você precisará fazer isso manualmente. Se preferir continuar assim, marque abaixo.
+              <div className="border border-border/30 bg-background/20 p-4 space-y-3">
+                <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-1">
+                  Conecte via login automático (OAuth) — NexOS captura o token automaticamente
                 </div>
-                {!socialBypass ? (
+
+                {/* Instagram / Meta OAuth */}
+                <div className="border border-border/30 bg-background/30 px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">📸</span>
+                    <div>
+                      <div className="font-mono text-[11px] font-bold">Instagram Business</div>
+                      <div className="font-mono text-[9px] text-muted-foreground/50">Posts, Stories e Reels automáticos via Meta Graph API</div>
+                    </div>
+                  </div>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={(e) => { e.stopPropagation(); setSocialBypass(true); }}
-                    className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 border-yellow-500/40 text-yellow-400/80 hover:bg-yellow-500/10 rounded-none"
+                    onClick={(e) => { e.stopPropagation(); void handleOAuth("instagram"); }}
+                    disabled={oauthLoading === "instagram"}
+                    className="rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-2 shrink-0"
+                    style={{ background: "rgba(24,119,242,0.12)", border: "1px solid rgba(24,119,242,0.35)", color: "#1877F2" }}
                   >
-                    Continuar sem redes sociais
+                    {oauthLoading === "instagram"
+                      ? <><Loader2 className="h-3 w-3 animate-spin" />Aguardando…</>
+                      : <>Entrar com Instagram</>}
                   </Button>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 font-mono text-[11px] text-yellow-400/70">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Auto-post social desabilitado para este lançamento
+                </div>
+
+                {/* TikTok OAuth */}
+                <div className="border border-border/30 bg-background/30 px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">🎵</span>
+                    <div>
+                      <div className="font-mono text-[11px] font-bold">TikTok Business</div>
+                      <div className="font-mono text-[9px] text-muted-foreground/50">Vídeos curtos, Reels e TikTok Ads via Content Posting API</div>
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSocialBypass(false); }}
-                      className="text-muted-foreground/30 hover:text-muted-foreground text-[9px] font-mono underline"
-                    >
-                      desfazer
-                    </button>
                   </div>
-                )}
+                  <Button
+                    size="sm"
+                    onClick={(e) => { e.stopPropagation(); void handleOAuth("tiktok"); }}
+                    disabled={oauthLoading === "tiktok"}
+                    className="rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-2 shrink-0"
+                    style={{ background: "rgba(254,44,85,0.10)", border: "1px solid rgba(254,44,85,0.35)", color: "#fe2c55" }}
+                  >
+                    {oauthLoading === "tiktok"
+                      ? <><Loader2 className="h-3 w-3 animate-spin" />Aguardando…</>
+                      : <>Entrar com TikTok</>}
+                  </Button>
+                </div>
+
+                <div className="pt-1 border-t border-border/20 flex items-center justify-between">
+                  <div className="font-mono text-[9px] text-muted-foreground/30">
+                    O NexOS captura os tokens de acesso automaticamente — sem copiar/colar credenciais
+                  </div>
+                  <Button asChild size="sm" variant="outline" className="font-mono text-[9px] uppercase tracking-widest h-6 px-2 gap-1 rounded-none border-border/30" onClick={e => e.stopPropagation()}>
+                    <Link href="/integracoes">
+                      <Zap className="h-3 w-3" />Mais opções
+                    </Link>
+                  </Button>
+                </div>
               </div>
             )}
 
             {hasSocial && (
-              <div className="border border-green-500/20 bg-green-500/5 px-4 py-3">
+              <div className="border border-green-500/20 bg-green-500/5 px-4 py-3 space-y-1">
                 <div className="flex items-center gap-2 font-mono text-[11px] text-green-400">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  {connectedSocials} conectado{connectedSocials.includes(",") ? "s" : ""} — o conteúdo aprovado será publicado automaticamente conforme o calendário de lançamento
+                  {connectedSocials} — conectado via OAuth
+                </div>
+                <div className="font-mono text-[9px] text-muted-foreground/40">
+                  O conteúdo aprovado será publicado automaticamente conforme o calendário de lançamento
                 </div>
               </div>
             )}
@@ -1036,7 +1086,10 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
 
       {/* ── Gate 6: Funil & Landing Page ────────────────────────────────────── */}
       <div className="border-t border-border/20">
-        <div className="flex items-start gap-3 px-5 py-4">
+        <div
+          className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-background/20 transition-colors"
+          onClick={() => setFunnelExpanded(v => !v)}
+        >
           <div className="mt-0.5 shrink-0">
             {funnelConfirmed
               ? <CheckCircle2 className="h-4 w-4 text-green-400" />
@@ -1051,45 +1104,81 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             </div>
             <div className="font-mono text-[10px] text-muted-foreground/60 mt-0.5">
               {funnelConfirmed
-                ? "Landing page publicada e checkout ativo — confirmado"
-                : "Confirme que sua landing page está publicada e o checkout está ativo antes de lançar"}
+                ? `Landing page confirmada: ${landingUrl}`
+                : "Informe a URL pública da sua landing page antes de lançar"}
             </div>
+          </div>
+          <div className="shrink-0">
+            {funnelExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/30" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/30" />}
           </div>
         </div>
 
-        <div className="mx-5 mb-4 space-y-3">
+        {funnelExpanded && <div className="mx-5 mb-4 space-y-3">
+          {/* URL input */}
+          <div className="border border-border/30 bg-background/20 p-4 space-y-3">
+            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
+              URL da Landing Page publicada
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={landingUrlInput}
+                onChange={e => setLandingUrlInput(e.target.value)}
+                placeholder="https://seu-dominio.com/produto"
+                className="flex-1 bg-background/30 border border-border/40 px-3 py-2 font-mono text-[11px] text-foreground placeholder-muted-foreground/30 focus:outline-none focus:border-primary/40 focus:bg-background/50"
+              />
+              {landingUrlInput.startsWith("http") ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const url = landingUrlInput.trim();
+                    setLandingUrl(url);
+                    try { localStorage.setItem(funnelKey, url); } catch {}
+                  }}
+                  className="rounded-none font-mono text-[10px] uppercase tracking-widest h-9 px-3 gap-1.5 btn-weapon-primary shrink-0"
+                >
+                  <CheckCircle2 className="h-3 w-3" />Confirmar
+                </Button>
+              ) : (
+                <Button size="sm" disabled className="rounded-none font-mono text-[10px] uppercase tracking-widest h-9 px-3 opacity-30 shrink-0">
+                  Confirmar
+                </Button>
+              )}
+            </div>
+            {landingUrlInput && !landingUrlInput.startsWith("http") && (
+              <div className="font-mono text-[9px] text-red-400/70">URL deve começar com https://</div>
+            )}
+          </div>
+
+          {/* Checklist items */}
           <div className="border border-border/30 bg-background/20 px-4 py-3 space-y-2">
-            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">Checklist de funil</div>
+            <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest mb-2">Verificações antes de lançar</div>
             {[
-              "Minha landing page está publicada e acessível pelo link público",
-              "O checkout está configurado e aceitando pagamentos (Hotmart, Kiwify, ou outro)",
-              "O pixel do Meta e/ou TikTok está instalado na landing page",
-              "O domínio de rastreamento da página de obrigado está configurado",
+              { text: "Landing page publicada e acessível pelo link acima", done: funnelConfirmed },
+              { text: "Checkout configurado e aceitando pagamentos (Hotmart, Kiwify, etc.)", done: false },
+              { text: "Pixel do Meta e/ou TikTok instalado na landing page", done: hasSocial },
+              { text: "Página de obrigado configurada com evento de conversão", done: false },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-2">
-                <CheckCircle2 className="h-3 w-3 text-muted-foreground/20 mt-0.5 shrink-0" />
-                <span className="font-mono text-[10px] text-muted-foreground/50 leading-relaxed">{item}</span>
+                <CheckCircle2 className={`h-3 w-3 mt-0.5 shrink-0 ${item.done ? "text-green-400/60" : "text-muted-foreground/20"}`} />
+                <span className={`font-mono text-[10px] leading-relaxed ${item.done ? "text-foreground/60" : "text-muted-foreground/50"}`}>{item.text}</span>
               </div>
             ))}
           </div>
 
-          {!funnelConfirmed ? (
-            <Button
-              onClick={() => setFunnelConfirmed(true)}
-              variant="outline"
-              className="w-full rounded-none font-mono uppercase tracking-widest text-xs h-10 gap-2 border-primary/30 text-primary hover:bg-primary/10"
-            >
+          {funnelConfirmed && (
+            <div className="flex items-center gap-2 font-mono text-[11px] text-green-400 py-1">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              Confirmei — Landing Page Publicada e Checkout Ativo
-            </Button>
-          ) : (
-            <div className="flex items-center justify-center gap-2 py-2 font-mono text-[11px] text-green-400">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Funil confirmado — tudo pronto para receber compradores
-              <button onClick={() => setFunnelConfirmed(false)} className="ml-2 text-muted-foreground/30 hover:text-muted-foreground text-[9px] underline">desfazer</button>
+              <span className="flex-1 truncate">{landingUrl}</span>
+              <button
+                onClick={() => { setLandingUrl(""); setLandingUrlInput(""); try { localStorage.removeItem(funnelKey); } catch {} }}
+                className="text-muted-foreground/30 hover:text-muted-foreground text-[9px] underline shrink-0"
+              >
+                alterar
+              </button>
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* ── Launch button ──────────────────────────────────────────────────── */}
@@ -1112,10 +1201,10 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
             <div className="text-center font-mono text-[10px] text-muted-foreground/50 space-x-1">
               {!hasMessaging && <span>Configure mensagens •</span>}
               {!hasEmail && <span>Configure email •</span>}
-              {!socialGateOk && <span>Confirme redes sociais •</span>}
+              {!hasSocial && <span>Conecte uma rede social •</span>}
               {!allContentApproved && !noContent && <span>Aprove {pendingPieces.length} peça{pendingPieces.length > 1 ? "s" : ""} •</span>}
               {noContent && <span>Gere o conteúdo •</span>}
-              {!funnelConfirmed && <span>Confirme funil •</span>}
+              {!funnelConfirmed && <span>Informe a URL da landing page •</span>}
               {!finReady && <span>Confirme o plano financeiro</span>}
             </div>
           </div>
