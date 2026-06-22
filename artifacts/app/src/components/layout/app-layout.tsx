@@ -100,6 +100,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
       items: [
         { name: tr.sidebar.vsl,           href: "/vsls",             icon: Video        },
         { name: "Produção de Vídeo",   href: "/video-production", icon: Clapperboard },
+        { name: "Vídeo Diário",           href: "/video-diario",     icon: Zap,  badge: "✦" },
         { name: tr.sidebar.video,         href: "/video-editor",     icon: Film         },
         { name: "Gravações",              href: "/recordings",        icon: Camera       },
       ],

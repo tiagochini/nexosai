@@ -105,6 +105,11 @@ export const CREDIT_COSTS: Record<string, number> = {
   video_avatar: 80,             // HeyGen avatar talking-head per scene
   video_voice_clone: 30,        // ElevenLabs voice clone creation (one-time per project)
   video_hybrid: 30,             // Hybrid mode: user records + AI edits (captions, music, cuts)
+
+  // ── Daily Video ───────────────────────────────────────────────────────────
+  daily_video_short: 12,        // Reels/TikTok/Shorts (≤60s): script + hook + captions + visual dir → ~$0.08 → ~12 cr
+  daily_video_long: 20,         // YouTube/Long Form (5–15min): full script + chapters + B-roll → ~$0.13 → ~20 cr
+  daily_video_story: 8,         // Stories sequence (4–6 frames): script + visual per frame → ~$0.05 → ~8 cr
 };
 
 // ─── Campaign Credit Estimates ────────────────────────────────────────────────

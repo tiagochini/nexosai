@@ -52,6 +52,7 @@ import referralsRouter from "../modules/referrals/referrals.routes.js";
 import clarificationRouter from "../modules/agents/clarification.routes.js";
 import integrationWizardRouter from "../modules/integration-wizard/integration-wizard.routes.js";
 import fingerprintRouter from "../modules/fingerprint/fingerprint.routes.js";
+import dailyVideoRouter from "../modules/daily-video/daily-video.routes.js";
 
 const router: IRouter = Router();
 
@@ -108,5 +109,6 @@ router.use("/nexos-launch", nexosSelfLaunchRouter);
 router.use("/campaigns", clarificationRouter);
 router.use("/integration-wizard", integrationWizardRouter);
 router.use("/fingerprints", fingerprintRouter);
+router.use("/daily-video", dailyVideoRouter);
 
 export default router;

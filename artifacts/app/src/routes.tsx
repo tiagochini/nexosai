@@ -65,6 +65,7 @@ import RecordingsPage from "@/pages/recordings/index";
 import LeadCapturePage from "@/pages/c/index";
 import NotFound from "@/pages/not-found";
 import InstitucionalPage from "@/pages/institucional/index";
+import VideoDiarioPage from "@/pages/video-diario/index";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -320,6 +321,11 @@ export default function AppRoutes() {
       {/* Gravações */}
       <Route path="/recordings">
         {() => <ProtectedRoute><RecordingsPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Vídeo Diário */}
+      <Route path="/video-diario">
+        {() => <ProtectedRoute><VideoDiarioPage /></ProtectedRoute>}
       </Route>
 
       {/* Sala de Lançamento */}
