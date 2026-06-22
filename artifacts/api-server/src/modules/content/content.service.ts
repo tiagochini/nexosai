@@ -18,6 +18,7 @@ import { runAdCopyAgent } from "../agents/ad-copy.agent.js";
 import { runVSLScriptAgent } from "../agents/vsl-script.agent.js";
 import { runMediaBriefAgent } from "../agents/media-brief.agent.js";
 import { runCPLScriptAgent } from "../agents/cpl-script.agent.js";
+import { runPrelaunchWarmingAgent } from "../agents/prelaunch-warming.agent.js";
 import { runWebinarScriptAgent } from "../agents/webinar-script.agent.js";
 import { runLiveScriptAgent } from "../agents/live-script.agent.js";
 import { runStoriesSequenceAgent } from "../agents/stories-sequence.agent.js";
@@ -838,6 +839,71 @@ export async function generateCampaignContent(
       errors.push({ agent: "vsl_script", error: msg });
       log.error({ err, campaignId }, "VSL script agent failed");
       emitAgentError(campaignId, "vsl_script", err);
+    }
+  }
+
+  // ── 8.5 Pre-launch Warming Agent (optional — launch campaigns only) ──────────
+  const hasPrelaunchWarming = ["launch", "perpetual_launch"].includes(campaignType);
+
+  if (hasPrelaunchWarming && profile && strategy) {
+    if (!skipAgent("prelaunch_warming", "content_calendar")) try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "prelaunch_warming" as any,
+        message: "Agente de Aquecimento — criando sequência de micro-convicções para os 7 dias antes do CPL 1...",
+        timestamp: new Date().toISOString(),
+      });
+
+      // Derive duration from intake: check for explicit warmup days setting,
+      // default to 7. Use 14 when launch track is 8-digit or 10-digit (longer prep).
+      const rawWarmup = intakeData["launch.warmupDays"] ?? intakeData["campaign.warmupDays"];
+      const parsedWarmup = rawWarmup ? parseInt(String(rawWarmup), 10) : NaN;
+      const track = String(intakeData["campaign.track"] ?? intakeData["launch.track"] ?? "");
+      const defaultDays = (track === "8digit" || track === "10digit") ? 14 : 7;
+      const warmingDays: 7 | 14 = (!isNaN(parsedWarmup) && parsedWarmup >= 12) ? 14 : defaultDays;
+
+      const warmingOutput = await runPrelaunchWarmingAgent(
+        campaignId,
+        workspaceId,
+        strategy,
+        profile,
+        intakeData,
+        warmingDays,
+        log,
+      );
+
+      const [warmingPiece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "content_calendar",
+          status: "draft",
+          title: `Aquecimento Pré-Lançamento — ${warmingOutput.warmingDuration} dias`,
+          content: warmingOutput as any,
+          aiProvider: "anthropic",
+          creditsUsed: 40,
+        })
+        .returning();
+
+      piecesGenerated++;
+      agentsRun.push("prelaunch_warming");
+
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "prelaunch_warming" as any,
+        message: `Aquecimento concluído — ${warmingOutput.days.length} dias de conteúdo para preparar a audiência`,
+        data: { pieceId: warmingPiece?.id },
+        timestamp: new Date().toISOString(),
+      });
+
+      log.info({ campaignId, pieceId: warmingPiece?.id, days: warmingOutput.days.length }, "Prelaunch warming agent completed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push({ agent: "prelaunch_warming", error: msg });
+      log.warn({ err, campaignId }, "Prelaunch warming agent failed — continuing pipeline");
     }
   }
 

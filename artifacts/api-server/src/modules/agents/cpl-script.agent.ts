@@ -30,12 +30,21 @@ export interface CPLVideo {
   viewerFeeling: string;
 }
 
+export interface CPLCommunicationBundle {
+  cplNumber: 1 | 2 | 3;
+  emails: import("./cpl-scripts.agent.js").CPLEmailMessage[];
+  whatsappBroadcasts: import("./cpl-scripts.agent.js").CPLWhatsAppBroadcast[];
+  publishingDay: number;
+  keyMessage: string;
+}
+
 export interface CPLScriptOutput {
   campaignTitle: string;
   totalVideos: number;
   cplNarrative: string;
   emotionalArc: string;
   videos: CPLVideo[];
+  cplCommunications: CPLCommunicationBundle[];
   productionNotes: {
     formatRecommendation: string;
     averageDuration: string;
@@ -230,85 +239,63 @@ export async function runCPLScriptAgent(
   log: Logger,
   phaseContext?: string,
 ): Promise<CPLScriptOutput> {
-  const avatarContext = profile
-    ? `
-**Avatar:** ${profile.primaryAvatar?.name ?? "Avatar principal"} — ${profile.primaryAvatar?.age ?? ""}, ${profile.primaryAvatar?.occupation ?? ""}
-**Dores diárias:** ${(profile.primaryAvatar?.dailyPains ?? []).slice(0, 4).join("; ")}
-**Desejo mais profundo:** ${profile.primaryAvatar?.deepestDesire ?? ""}
-**Medos profundos:** ${(profile.primaryAvatar?.fears ?? []).slice(0, 3).join("; ")}
-**Nível de consciência:** ${profile.primaryAvatar?.awarenessLevel ?? ""}
-**Nível de sofisticação:** ${profile.primaryAvatar?.sophisticationLevel ?? ""}
-**O que os faz confiar:** ${(profile.primaryAvatar?.whatMakesThemTrust ?? []).slice(0, 3).join("; ")}
-**Tom de linguagem:** ${profile.primaryAvatar?.languageStyle ?? ""}
-**Big Idea:** ${profile.positioning?.campaignBigIdea ?? ""}
-**Mecanismo único:** ${profile.positioning?.uniqueMechanism ?? ""}
-**Gancho emocional:** ${profile.positioning?.emotionalHook ?? ""}`
-    : `**Narrativa central:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}`;
+  const { runCPL1Agent, runCPL2Agent, runCPL3Agent } = await import("./cpl-scripts.agent.js");
 
-  const preLaunchDays =
-    (launchPlan as any)?.phases?.find((p: any) => p.phase?.includes("capture") || p.phase?.includes("warmup"))?.dayRange ?? "14 dias antes";
+  const [cpl1, cpl2, cpl3] = await Promise.all([
+    runCPL1Agent(campaignId, workspaceId, strategy, profile, intakeData, log),
+    runCPL2Agent(campaignId, workspaceId, strategy, profile, intakeData, log),
+    runCPL3Agent(campaignId, workspaceId, strategy, profile, intakeData, log),
+  ]);
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "copywriter",
-    profileContext: buildPsychologicalProfileBlock(intakeData),
-    phaseContext,
-    systemPrompt: COGNITIVE_IDENTITY_CPL_SCRIPT + CPL_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Escreva os roteiros completos da sequência de CPL (Conteúdo de Pré-Lançamento).
-
-**Produto:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
-**Criador:** ${String(intakeData["creator.name"] ?? "")}
-**Posicionamento do criador:** ${String(intakeData["creator.positioning"] ?? "")}
-**Ângulo único:** ${String(intakeData["creator.uniqueAngle"] ?? "")}
-**Prova social:** ${String(intakeData["product.socialProof"] ?? "")}
-**Período de pré-lançamento:** ${String(preLaunchDays)}
-
-${avatarContext}
-
-**Posicionamento da oferta:**
-${JSON.stringify({ usp: profile?.product?.usp, uniqueMechanism: profile?.positioning?.uniqueMechanism }, null, 2)}
-
-**REQUISITOS:**
-- ${String(intakeData["campaign.revenueTarget"] ?? "") ? `Meta de faturamento: R$${String(intakeData["campaign.revenueTarget"])}` : ""}
-- Roteiros COMPLETOS por seção — não esboços
-- Cada CPL deve ter entre 8-18 minutos (dependendo do nicho)
-- A narrativa deve conectar os vídeos em sequência obrigatória
-- O CPL 1 NÃO menciona o produto — só trabalha o problema
-- O CPL 3 pode teaser a abertura mas sem revelar preço
-
-Retorne APENAS o JSON dos roteiros completos.`,
-      },
-    ],
-    log,
-    requiresApproval: false,
-    thinkingMessages: [
-      "Mapeando a jornada emocional do avatar pré-lançamento...",
-      "Estruturando CPL 1 — identificação total com o problema...",
-      "Escrevendo CPL 2 — o reframe que quebra a crença limitante...",
-      "Desenvolvendo CPL 3 — prova e transformação com casos reais...",
-      "Criando CPL 4 — antecipação máxima antes da abertura...",
-      "Conectando os cliffhangers entre os vídeos...",
-      "Finalizando direção de produção e estratégia de publicação...",
-    ],
+  const mapCPLToVideo = (cpl: import("./cpl-scripts.agent.js").CPLPhaseOutput): CPLVideo => ({
+    videoNumber: cpl.cplNumber as 1 | 2 | 3 | 4,
+    title: cpl.title,
+    subtitle: cpl.subtitle,
+    releaseTiming: `Dia ${cpl.dayIndex} do pré-lançamento`,
+    dayIndex: cpl.dayIndex,
+    durationMinutes: parseInt(cpl.liveScript.estimatedDuration) || 12,
+    objective: cpl.psychologicalObjective,
+    psychologicalJob: cpl.dominantTechnique,
+    hook: cpl.liveScript.hook,
+    openingLine: cpl.liveScript.openingStory?.slice(0, 200) ?? "",
+    structure: (cpl.liveScript.mainContentSections ?? []).map((s) => ({
+      section: s.title,
+      durationMinutes: s.durationMinutes,
+      script: s.script,
+      toneNote: s.toneNote,
+      visualDirection: "",
+    })),
+    keyMessage: cpl.keyMessage,
+    cliffhanger: cpl.liveScript.cliffhanger,
+    cta: cpl.liveScript.cta,
+    thumbnailDirection: `Thumbnail do ${cpl.title}: hook visual que transmite "${cpl.keyMessage}"`,
+    viewerFeeling: cpl.viewerFeeling,
   });
 
-  return parseAgentJSON<CPLScriptOutput>(result.content, {
+  const videos = [mapCPLToVideo(cpl1), mapCPLToVideo(cpl2), mapCPLToVideo(cpl3)];
+
+  const cplCommunications: CPLCommunicationBundle[] = [cpl1, cpl2, cpl3].map((cpl) => ({
+    cplNumber: cpl.cplNumber as 1 | 2 | 3,
+    emails: cpl.emails,
+    whatsappBroadcasts: cpl.whatsappBroadcasts,
+    publishingDay: cpl.dayIndex,
+    keyMessage: cpl.keyMessage,
+  }));
+
+  return {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     totalVideos: 3,
-    cplNarrative: "",
-    emotionalArc: "",
-    videos: [],
+    cplNarrative: `CPL 1 (${cpl1.dominantTechnique}) → CPL 2 (${cpl2.dominantTechnique}) → CPL 3 (${cpl3.dominantTechnique})`,
+    emotionalArc: `${cpl1.viewerFeeling} → ${cpl2.viewerFeeling} → ${cpl3.viewerFeeling}`,
+    videos,
+    cplCommunications,
     productionNotes: {
-      formatRecommendation: "",
-      averageDuration: "12 minutos",
-      whereToPost: ["youtube", "instagram"],
-      publishingStrategy: "",
-      captionStrategy: "",
+      formatRecommendation: "Gravação em ambiente controlado com boa iluminação — preferencialmente câmera única, fundo simples ou relevante ao nicho",
+      averageDuration: "12–16 minutos por CPL",
+      whereToPost: ["youtube", "instagram", "tiktok", "facebook"],
+      publishingStrategy: `CPL 1 dia ${cpl1.dayIndex} → CPL 2 dia ${cpl2.dayIndex} → CPL 3 dia ${cpl3.dayIndex}`,
+      captionStrategy: "Legenda em texto completo para SEO + primeiras 3 linhas com gancho para parar o scroll",
     },
-    cplNotes: result.content,
-  });
+    cplNotes: `Sequência de 3 CPLs gerada com agentes dedicados:\n• CPL1: ${cpl1.psychologicalObjective}\n• CPL2: ${cpl2.psychologicalObjective}\n• CPL3: ${cpl3.psychologicalObjective}`,
+  };
 }

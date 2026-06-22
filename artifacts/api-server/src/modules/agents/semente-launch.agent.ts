@@ -6,6 +6,10 @@
  */
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgentWithCritique } from "./critique.runner.js";
+import { COGNITIVE_IDENTITY_COPYWRITER } from "./cognitive-identity-system.js";
+import type { StrategyOutput } from "./strategy.agent.js";
+import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 
 export interface SementePhase {
@@ -223,16 +227,29 @@ export async function runSementeLaunchAgent(
   existingList: boolean,
   ticketRange: string,
   log: Logger,
+  strategy?: StrategyOutput,
+  profile?: ProfileBuilderOutput,
 ): Promise<SementeLaunchOutput> {
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "semente_launch",
-    systemPrompt: SEMENTE_LAUNCH_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Estruture o lançamento semente completo para validar e vender este produto.
+  const avatarBlock = profile ? `
+
+**AVATAR PRIMÁRIO (use as palavras DELES):**
+- Perfil: ${profile.primaryAvatar?.name ?? ""} — ${profile.primaryAvatar?.occupation ?? ""}
+- Desejo mais profundo: ${profile.primaryAvatar?.deepestDesire ?? ""}
+- Dores diárias: ${(profile.primaryAvatar?.dailyPains ?? []).slice(0, 4).join("; ")}
+- Palavras que usa: ${(profile.primaryAvatar?.keywordsTheyUse ?? []).slice(0, 8).join(", ")}
+- Tom de linguagem: ${profile.primaryAvatar?.languageStyle ?? ""}
+- Big Idea: ${profile.positioning?.campaignBigIdea ?? ""}
+- Mecanismo único: ${profile.positioning?.uniqueMechanism ?? ""}` : "";
+
+  const bigDominoBlock = strategy ? `
+
+**BIG DOMINO E ESTRATÉGIA:**
+- Crença central a instalar: ${(strategy as any).triggerMap?.dominantTrigger ?? strategy.campaignArchitecture?.coreNarrative ?? ""}
+- Sequência de gatilhos: ${((strategy as any).triggerMap?.triggerStackSequence ?? []).join(" → ")}
+- Posicionamento da oferta: ${strategy.offerPositioning?.uniqueValueProposition ?? ""}` : "";
+
+  const userMessage = `Estruture o lançamento semente completo para validar e vender este produto.
+${avatarBlock}${bigDominoBlock}
 
 **Ideia do produto:** ${productIdea}
 **Público-alvo:** ${targetAudience}
@@ -244,27 +261,49 @@ export async function runSementeLaunchAgent(
 **PROCESSO:**
 1. Defina a hipótese de validação (o que você está testando)
 2. Estruture o pré-lançamento com conteúdo que desperta interesse sem vender
-3. Crie a fase de conteúdo PLC completa (emails + WhatsApp + posts)
+3. Crie a fase de conteúdo PLC completa (emails + WhatsApp + posts) — copy real, não esqueleto
 4. Estruture a oferta de semente com posicionamento de early adopter
 5. Planeje as lives de vendas (tópico + CTA + momento de conversão)
 6. Defina o que a turma beta vai co-criar
 7. Mapeie os riscos críticos específicos para este produto e audiência
 
 Seja específico e brasileiro — use referências PLF/Érico Rocha onde relevante.
-Retorne APENAS JSON.`,
-      },
-    ],
-    log,
-    thinkingMessages: [
-      "Definindo hipótese de validação do semente...",
-      "Estruturando fase de pré-lançamento e conteúdo PLC...",
-      "Criando oferta de early adopter e posicionamento...",
-      "Planejando lives de vendas e estratégia de comunidade...",
-      "Mapeando riscos e fundação para próximo lançamento...",
-    ],
-  });
+Retorne APENAS JSON.`;
 
-  return parseAgentJSON<SementeLaunchOutput>(result.content, {
+  const systemPrompt = COGNITIVE_IDENTITY_COPYWRITER + SEMENTE_LAUNCH_PROMPT;
+
+  let content: string;
+
+  if (campaignId) {
+    const critique = await runAgentWithCritique({
+      campaignId,
+      workspaceId,
+      agentRole: "copywriter",
+      systemPrompt,
+      userMessage,
+      log,
+    });
+    content = critique.refinedOutput;
+  } else {
+    const result = await runAgent({
+      campaignId: null,
+      workspaceId,
+      agentRole: "semente_launch",
+      systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+      log,
+      thinkingMessages: [
+        "Definindo hipótese de validação do semente...",
+        "Estruturando fase de pré-lançamento e conteúdo PLC...",
+        "Criando oferta de early adopter e posicionamento...",
+        "Planejando lives de vendas e estratégia de comunidade...",
+        "Mapeando riscos e fundação para próximo lançamento...",
+      ],
+    });
+    content = result.content;
+  }
+
+  return parseAgentJSON<SementeLaunchOutput>(content, {
     productConcept: productIdea,
     validationHypothesis: "",
     targetRevenue: 0,

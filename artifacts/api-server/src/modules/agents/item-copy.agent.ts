@@ -1,4 +1,8 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgentWithCritique } from "./critique.runner.js";
+import { COGNITIVE_IDENTITY_COPYWRITER } from "./cognitive-identity-system.js";
+import type { StrategyOutput } from "./strategy.agent.js";
+import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -86,93 +90,59 @@ Escassez: nunca fake — sempre justificada. "Apenas 40 vagas porque cada aluno 
 Curiosidade: a lacuna de informação deve DOER. "Existe uma fase do lançamento que os grandes ignoram — e ela é responsável por 40% das vendas. No próximo email eu mostro."
 
 **4. O AVATAR É O HERÓI. O PRODUTO É O GUIA. (Donald Miller — StoryBrand)**
-O erro mais comum: posicionar o produto como o herói. "Nossa IA revolucionária vai transformar seu lançamento" — errado.
-O avatar é o herói numa jornada. O produto é o Gandalf — o guia que dá ao herói a ferramenta que ele precisa para vencer o vilão (o problema).
-
-Estrutura correta:
+O erro mais comum: posicionar o produto como o herói.
 - Quem é o herói? (o avatar, com nome mental: "você")
 - Qual é o vilão? (o problema específico — não genérico)
 - O que o herói quer? (o resultado que vai contar para alguém)
 - O que o impede? (obstáculo externo + interno + filosófico)
 - Quem é o guia? (o produto/criador — com empatia primeiro, autoridade segundo)
-- Qual é o plano? (os 3 passos simples para agir)
-- O que acontece se agir? (transformação específica)
-- O que acontece se NÃO agir? (custo do status quo — não exagerado, mas real)
-
-Nunca comece com "nós" ou "nosso produto". Comece sempre com "você" ou com a situação do avatar.
 
 **5. FRAMEWORK P-A-S-T-O-R (Ray Edwards) — PARA EMAILS DE CONVERSÃO:**
-- **P — Person/Problem:** Identifique a pessoa exata e o problema específico que ela tem AGORA.
-- **A — Amplify:** Amplifique o custo de NÃO resolver — não crie medo, calcule a perda real.
-- **S — Story/Solution:** Conte a história que ilustra a solução (alguém como eles que resolveu).
-- **T — Transformation/Testimony:** Mostre a transformação com números e nome real.
-- **O — Offer:** Apresente a oferta claramente — sem ambiguidade sobre o que é, como funciona, quanto custa.
-- **R — Response:** CTA único, específico, com verbo de ação + o que o avatar GANHA ao clicar.
-
-Use P-A-S-T-O-R especialmente em emails de cart_open e cart_close. A estrutura garante que cada elemento tem um propósito e nenhum espaço é desperdiçado.
+- P — Person/Problem: Identifique a pessoa exata e o problema específico que ela tem AGORA.
+- A — Amplify: Amplifique o custo de NÃO resolver — não crie medo, calcule a perda real.
+- S — Story/Solution: Conte a história que ilustra a solução.
+- T — Transformation/Testimony: Mostre a transformação com números e nome real.
+- O — Offer: Apresente a oferta claramente.
+- R — Response: CTA único, específico, com verbo de ação.
 
 **6. VOZ DO CLIENTE LITERAL — USE AS PALAVRAS DELES, NÃO AS SUAS.**
-O copy que mais converte é o que o avatar sente que escreveu sobre si mesmo.
-
-Técnica: Use as frases literais do briefing/intake/copy hints. Se o avatar diz "não tenho braço para executar na velocidade certa" — use EXATAMENTE essa frase, não "falta de recursos operacionais" ou "capacidade limitada de execução".
-
-Sinal de alerta: se você usou mais de 3 palavras que o avatar nunca usaria espontaneamente num parágrafo, reescreva.
-
-Palavras que profissionais de marketing usam mas o avatar nunca usa: "sinergia", "ecossistema", "holístico", "jornada do cliente", "proposta de valor", "metodologia proprietária".
+Use as frases literais do briefing/intake/copy hints. Sinal de alerta: se você usou mais de 3 palavras que o avatar nunca usaria espontaneamente num parágrafo, reescreva.
 
 ## ESTRUTURA POR CANAL
 
 **EMAIL — ANATOMIA DE ALTA CONVERSÃO:**
-- Assunto: provoca uma emoção (curiosidade/medo/ganância/urgência) em 5-8 palavras. Nunca neutro.
-- Preview text: não repita o assunto — continue a história ou aprofunde o gancho.
-- Abertura: primeira frase deve ser uma virada, não uma introdução. Nunca "Olá, [Nome]! Tudo bem?"
+- Assunto: provoca uma emoção em 5-8 palavras. Nunca neutro.
+- Preview text: não repita o assunto — continue a história.
+- Abertura: primeira frase deve ser uma virada, não uma introdução.
 - Corpo: parágrafos de 1-3 linhas. Cada parágrafo termina com razão para ler o próximo.
-- CTA: um único botão com verbo de ação + o que o lead GANHA ao clicar (não "Clique aqui" — mas "Garantir minha vaga antes que feche")
-- PS: a segunda coisa mais lida depois do assunto. Use para reforçar a escassez ou revelar um benefício não mencionado no email.
+- CTA: um único botão com verbo de ação + o que o lead GANHA ao clicar.
+- PS: use para reforçar a escassez ou revelar benefício não mencionado.
 
 **WHATSAPP — COPY QUE PARECE MENSAGEM DE AMIGO:**
-- Primeira mensagem: máx 160 caracteres. Deve criar curiosidade imediata ou urgência real.
-- Sem "Oi, tudo bem?" — vai direto. O lead tem 0.3 segundos de atenção no WhatsApp.
-- Emojis: máximo 2 por mensagem, posicionados estrategicamente, nunca decorativos.
-- Follow-up: enviado 2-3h depois, com angle diferente — não repita, aprofunde ou mude o gatilho.
-
-**POST DE SOCIAL — HOOK QUE PARA O SCROLL:**
-- Primeiras 2 linhas (antes do "ver mais") devem causar uma das 4 reações: curiosidade intensa, concordância visceral, discordância provocadora, ou identificação emocional imediata.
-- O post completo conta uma história com início, meio e fim — não é um comunicado.
-- CTA deve ser uma ação simples: "Comenta X se você passa por isso" ou "Compartilha com quem precisa ouvir".
+- Primeira mensagem: máx 160 caracteres. Crie curiosidade imediata ou urgência real.
+- Sem "Oi, tudo bem?" — vai direto.
+- Emojis: máximo 2 por mensagem, nunca decorativos.
 
 **SCRIPT DE VÍDEO/LIVE — OS PRIMEIROS 7 SEGUNDOS DECIDEM:**
-- Hook de abertura: paradoxo, promessa específica, pergunta visceral, ou contraintuitivo.
-  Ex: "Se você está trabalhando mais de 8h por dia e ainda não chegou em 6 dígitos, esse vídeo vai mudar sua perspectiva"
-- Estrutura: Hook → Problema agitado → Revelação do mecanismo → Prova → Oferta → CTA com urgência
-- Linguagem falada, não escrita. Frases curtas. Pausas dramáticas marcadas com [PAUSA].
+- Hook: paradoxo, promessa específica, pergunta visceral, ou contraintuitivo.
+- Estrutura: Hook → Problema agitado → Revelação do mecanismo → Prova → Oferta → CTA
 
 ## GATILHOS OBRIGATÓRIOS POR FASE
-
-- **pre_capture**: curiosidade pura — plante a lacuna de informação SEM revelar o produto. "Algo está mudando no mercado de [nicho] e os que souberem primeiro vão levar vantagem."
-- **capture**: autoridade + transformação promissora. "Em 7 dias, você vai ter o método que [resultado específico]."
-- **plc1**: oportunidade + contraintuitivo. "Por que [crença comum] está sabotando seus resultados — e o que fazer em vez disso."
-- **plc2**: transformação com prova específica. História real de um aluno com números concretos. "Antes: [situação]. Depois de X dias: [resultado]."
-- **plc3**: comunidade + pertencimento + reciprocidade. "Você não está sozinho nessa. [Número] pessoas já descobriram o mesmo caminho."
-- **cart_open**: evento + urgência + celebração. "O carrinho ABRIU. Você tem até [data] às [hora] para garantir [benefício específico + bônus exclusivo]."
-- **cart_middle**: prova social intensificada + escassez crescente. "Já são [X] alunos nas primeiras [Y] horas. As vagas estão indo mais rápido do que esperávamos."
-- **cart_close**: medo de perda + consequência de não agir + última chance. "Em [X] horas isso fecha para sempre. Não existe segunda chance, relançamento ou lista de espera."
-- **post_purchase**: celebração + confirmação da decisão certa + onboarding emocional.
-- **post_launch**: reengajamento sem pressão + curiosidade para próximo ciclo.
+- **pre_capture**: curiosidade pura — plante a lacuna de informação SEM revelar o produto.
+- **plc1**: oportunidade + contraintuitivo.
+- **plc2**: transformação com prova específica.
+- **plc3**: comunidade + pertencimento + reciprocidade.
+- **cart_open**: evento + urgência + celebração.
+- **cart_close**: medo de perda + consequência de não agir + última chance.
 
 ## SEGMENTAÇÃO OBRIGATÓRIA
 
-**🔴 HOT (score ≥ 60) — O lead que está pronto para comprar:**
-Linguagem de insider. "Você que acompanhou tudo desde o início sabe que isso é diferente." Ofereça acesso antecipado ou bônus exclusivo. Trate como VIP. No cart_open, envie 1h antes da abertura oficial.
-
-**🟡 WARM (score ≥ 25) — O lead que está em cima do muro:**
-Quebre a objeção específica. "Sei que você está pensando 'será que isso funciona para mim?' — por isso preparei algo especial." Destaque a garantia e um depoimento de alguém com o mesmo perfil que ele.
-
-**🔵 COLD (score < 25) — O lead que sumiu:**
-Não venda. Reconquiste primeiro. Mude o angle completamente. "Sei que faz um tempo que não nos falamos. Descobrimos algo que pode mudar isso." Reative com curiosidade, nunca com pressão.
+**🔴 HOT (score ≥ 60):** Linguagem de insider. Trate como VIP.
+**🟡 WARM (score ≥ 25):** Quebre a objeção específica. Destaque a garantia.
+**🔵 COLD (score < 25):** Não venda. Reconquiste com ângulo completamente diferente.
 
 ## FRASES ABSOLUTAMENTE PROIBIDAS:
-"Acompanhe", "nos próximos dias", "conteúdo de valor", "venho por meio deste", "espero que esteja bem", "aprenda a", "transforme sua vida", "resultados podem variar" como único disclaimer, "não perca essa oportunidade" sem especificidade, "clique aqui".
+"Acompanhe", "nos próximos dias", "conteúdo de valor", "venho por meio deste", "espero que esteja bem", "aprenda a", "transforme sua vida", "não perca essa oportunidade" sem especificidade, "clique aqui".
 
 **Retorne APENAS JSON válido:**
 
@@ -227,6 +197,9 @@ export async function runItemCopyAgent(
   workspaceId: string,
   input: ItemCopyInput,
   log: Logger,
+  campaignId?: string | null,
+  strategy?: StrategyOutput,
+  profile?: ProfileBuilderOutput,
 ): Promise<GeneratedItemCopy> {
   const segmentLabel = {
     hot: "LEAD QUENTE (score ≥ 60) — engajou com todo o conteúdo, pronto para comprar",
@@ -249,7 +222,35 @@ export async function runItemCopyAgent(
     evergreen: "Evergreen — Sequência Contínua",
   };
 
+  // ── Strategy + Profile Context ────────────────────────────────────────────
+  const bigDominoBlock = strategy ? `
+
+## BIG DOMINO E ESTRATÉGIA DA CAMPANHA
+
+**Crença central a instalar:** ${(strategy as any).triggerMap?.dominantTrigger ?? strategy.campaignArchitecture?.coreNarrative ?? ""}
+**Sequência de gatilhos:** ${((strategy as any).triggerMap?.triggerStackSequence ?? []).join(" → ")}
+**Ângulos anti-requisito:** ${((strategy as any).triggerMap?.antiRequisiteAngles ?? []).join(" | ")}
+**Ponte de transformação:** ${(strategy as any).triggerMap?.transformationBridge ?? ""}
+**Posicionamento da oferta:** ${strategy.offerPositioning?.uniqueValueProposition ?? ""}` : "";
+
+  const avatarBlock = profile ? `
+
+## AVATAR PRIMÁRIO (use as palavras DELES, não as suas)
+
+**Nome/perfil:** ${profile.primaryAvatar?.name ?? ""}, ${profile.primaryAvatar?.age ?? ""} — ${profile.primaryAvatar?.occupation ?? ""}
+**Desejo mais profundo:** ${profile.primaryAvatar?.deepestDesire ?? ""}
+**Dores diárias:** ${(profile.primaryAvatar?.dailyPains ?? []).slice(0, 4).join("; ")}
+**Palavras que usa:** ${(profile.primaryAvatar?.keywordsTheyUse ?? []).slice(0, 8).join(", ")}
+**Palavras a evitar:** ${(profile.primaryAvatar?.wordsToAvoid ?? []).slice(0, 5).join(", ")}
+**Tom de linguagem:** ${profile.primaryAvatar?.languageStyle ?? ""}
+**Objeções típicas:** ${(profile.primaryAvatar?.typicalObjections ?? []).slice(0, 4).join("; ")}
+**Nível de consciência:** ${profile.primaryAvatar?.awarenessLevel ?? ""}
+**Big Idea da campanha:** ${profile.positioning?.campaignBigIdea ?? ""}
+**Mecanismo único:** ${profile.positioning?.uniqueMechanism ?? ""}
+**Gancho emocional:** ${profile.positioning?.emotionalHook ?? ""}` : "";
+
   const userMessage = `Gere a copy completa para esta peça do lançamento.
+${bigDominoBlock}${avatarBlock}
 
 ## DADOS DO PRODUTO
 - **Produto:** ${input.productName}
@@ -275,20 +276,37 @@ ${input.copyHints ?? "Sem instruções específicas — use o melhor julgamento 
 Gere a copy completa para esta peça. Adapte o tom e a urgência ao segmento "${input.contactSegment ?? "all"}".
 Retorne APENAS o JSON.`;
 
-  const result = await runAgent({
-    campaignId: null,
-    workspaceId,
-    agentRole: "copywriter",
-    systemPrompt: ITEM_COPY_PROMPT,
-    messages: [{ role: "user", content: userMessage }],
-    log,
-  });
+  const systemPrompt = COGNITIVE_IDENTITY_COPYWRITER + ITEM_COPY_PROMPT;
 
-  return parseAgentJSON<GeneratedItemCopy>(result.content, {
+  let content: string;
+
+  if (campaignId) {
+    const critique = await runAgentWithCritique({
+      campaignId,
+      workspaceId,
+      agentRole: "copywriter",
+      systemPrompt,
+      userMessage,
+      log,
+    });
+    content = critique.refinedOutput;
+  } else {
+    const result = await runAgent({
+      campaignId: null,
+      workspaceId,
+      agentRole: "copywriter",
+      systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+      log,
+    });
+    content = result.content;
+  }
+
+  return parseAgentJSON<GeneratedItemCopy>(content, {
     itemId: input.itemId,
     phase: input.phase,
     contentType: input.contentType ?? "general",
     contactSegment: input.contactSegment ?? "all",
-    copywriterNotes: result.content,
+    copywriterNotes: content,
   });
 }

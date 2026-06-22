@@ -569,6 +569,23 @@ export async function generateItemCopy(
 
   await deductCredits(workspaceId, "nurturing_message", log);
 
+  // ── Fetch strategy + profile from parent campaign when available ──────────
+  let campaignStrategy: StrategyOutput | undefined;
+  let campaignProfile: ProfileBuilderOutput | undefined;
+  if (sequence.campaignId) {
+    const [campaign] = await db
+      .select({ strategyData: campaignsTable.strategyData, audienceData: campaignsTable.audienceData })
+      .from(campaignsTable)
+      .where(and(eq(campaignsTable.id, sequence.campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+      .limit(1);
+    if (campaign) {
+      const sd = campaign.strategyData as Record<string, unknown> | null;
+      if (sd && sd["triggerMap"]) campaignStrategy = sd as unknown as StrategyOutput;
+      const ad = campaign.audienceData as Record<string, unknown> | null;
+      if (ad && ad["primaryAvatar"]) campaignProfile = ad as unknown as ProfileBuilderOutput;
+    }
+  }
+
   const copy = await runItemCopyAgent(
     workspaceId,
     {
@@ -588,6 +605,9 @@ export async function generateItemCopy(
       contactSegment,
     },
     log,
+    sequence.campaignId ?? null,
+    campaignStrategy,
+    campaignProfile,
   );
 
   // Store the generated copy in the item's metadata

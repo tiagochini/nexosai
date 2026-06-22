@@ -681,18 +681,15 @@ E nenhuma ferramenta, por mais sofisticada que seja, resolve problema de coorden
 }
 \`\`\``;
 
-export async function runCopywriterAgent(
-  campaignId: string,
-  workspaceId: string,
+// ─── Shared context builder ───────────────────────────────────────────────────
+
+function buildCopywriterSharedContext(
   intakeData: Record<string, unknown>,
   strategy: StrategyOutput,
   profile: ProfileBuilderOutput | undefined,
   launchPlan: Record<string, unknown> | undefined,
-  log: Logger,
-): Promise<CopywriterOutput> {
-  const memCtx = await getMemoryContext(workspaceId, "copywriter", String(intakeData["product.category"] ?? ""));
-  const memBlock = buildMemoryContextBlock(memCtx);
-
+  memBlock: string,
+): string {
   const avatarContext = profile
     ? `
 **Avatar primário:** ${profile.primaryAvatar?.name ?? "Avatar principal"}, ${profile.primaryAvatar?.age ?? ""}, ${profile.primaryAvatar?.occupation ?? ""}
@@ -711,35 +708,18 @@ export async function runCopywriterAgent(
     : "";
 
   const triggerContext = (strategy as any).triggerMap ? `
-**BIG DOMINO desta campanha:** ${(strategy as any).triggerMap?.dominantTrigger}
+**BIG DOMINO:** ${(strategy as any).triggerMap?.dominantTrigger}
 **Por que é o gatilho dominante:** ${(strategy as any).triggerMap?.dominantTriggerJustification}
-**Sequência de ativação (dia 1 ao fechamento):** ${((strategy as any).triggerMap?.triggerStackSequence ?? []).join(" → ")}
+**Sequência de ativação:** ${((strategy as any).triggerMap?.triggerStackSequence ?? []).join(" → ")}
 **Ângulos anti-requisito:** ${((strategy as any).triggerMap?.antiRequisiteAngles ?? []).join(" | ")}
-**Ponte de transformação:** ${(strategy as any).triggerMap?.transformationBridge}
-**Pré-lançamento:** ${JSON.stringify((strategy as any).triggerMap?.preLaunch)}
-**Abertura de carrinho:** ${JSON.stringify((strategy as any).triggerMap?.cartOpen)}
-**Fechamento:** ${JSON.stringify((strategy as any).triggerMap?.cartClose)}` : "Aplicar sequência padrão: Curiosidade → Autoridade → Prova Social → Transformação → Escassez → Urgência → Medo de Perda";
+**Ponte de transformação:** ${(strategy as any).triggerMap?.transformationBridge}` : "Aplicar sequência padrão: Curiosidade → Autoridade → Prova Social → Transformação → Escassez → Urgência → Medo de Perda";
 
   const userDirectives = (intakeData["user_directives"] as Record<string, string> | undefined) ?? {};
   const directivesText = Object.entries(userDirectives).filter(([, v]) => v?.trim()).length > 0
-    ? `\n\n**DIRETRIZES ESPECÍFICAS DO CLIENTE (prioridade máxima — incorpore em todo o copy):**\n${Object.entries(userDirectives).map(([k, v]) => `- [${k}]: ${v}`).join("\n")}`
+    ? `\n**DIRETRIZES ESPECÍFICAS DO CLIENTE (prioridade máxima):**\n${Object.entries(userDirectives).map(([k, v]) => `- [${k}]: ${v}`).join("\n")}`
     : "";
 
-  const userMessage = `Escreva todo o copy da campanha — página de vendas completa, sequência completa de e-mails, scripts de WhatsApp e carrinho.${directivesText}
-
-${avatarContext}
-
----
-
-**PRODUTO:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
-**TIPO:** ${String(intakeData["campaign.type"] ?? "launch")} | **DIAS DE CARRINHO:** ${String(intakeData["launch.cartOpenDuration"] ?? 5)} | **ESCASSEZ:** ${String(intakeData["launch.scarcityMechanism"] ?? "deadline")} | **CANAL:** ${String(intakeData["campaign.salesChannel"] ?? "sales_page")}
-
----
-
-**ESTRATÉGIA APROVADA:**
-\`\`\`json
-${JSON.stringify(
-  {
+  const strategyCompact = JSON.stringify({
     executiveSummary: strategy.executiveSummary,
     offerPositioning: strategy.offerPositioning,
     campaignArchitecture: strategy.campaignArchitecture,
@@ -747,103 +727,243 @@ ${JSON.stringify(
       primaryAvatar: strategy.audienceSegmentation?.primaryAvatar,
       buyingTriggers: strategy.audienceSegmentation?.buyingTriggers,
       objections: strategy.audienceSegmentation?.objections,
-      sophisticationStrategy: strategy.audienceSegmentation?.sophisticationStrategy,
     },
-    risks: strategy.risks,
-    strategistNotes: strategy.strategistNotes,
-  },
-  null,
-  2,
-)}
-\`\`\`
+  }, null, 2);
 
-**PLANO DE LANÇAMENTO:**
+  const launchPlanCompact = launchPlan ? JSON.stringify({
+    totalDays: (launchPlan as any).totalDays,
+    phases: ((launchPlan as any).phases ?? []).slice(0, 8).map((p: any) => ({
+      phase: p.phase,
+      name: p.name,
+      dayRange: p.dayRange,
+      mentalTrigger: p.mentalTrigger,
+    })),
+  }, null, 2) : "{}";
+
+  return `${memBlock}
+${avatarContext}
+${directivesText}
+
+**PRODUTO:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
+**TIPO:** ${String(intakeData["campaign.type"] ?? "launch")} | **CARRINHO:** ${String(intakeData["launch.cartOpenDuration"] ?? 5)} dias | **ESCASSEZ:** ${String(intakeData["launch.scarcityMechanism"] ?? "deadline")} | **CANAL:** ${String(intakeData["campaign.salesChannel"] ?? "sales_page")}
+
+**ESTRATÉGIA:**
 \`\`\`json
-${JSON.stringify(
-  launchPlan
-    ? {
-        totalDays: (launchPlan as any).totalDays,
-        phases: ((launchPlan as any).phases ?? []).map((p: any) => ({
-          phase: p.phase,
-          name: p.name,
-          dayRange: p.dayRange,
-          objective: p.objective,
-          mentalTrigger: p.mentalTrigger,
-        })),
-      }
-    : {},
-  null,
-  2,
-)}
+${strategyCompact}
 \`\`\`
 
-**MAPA DE GATILHOS E BIG DOMINO (da estratégia — implante em CADA peça):**
-${triggerContext}
+**PLANO:**
+\`\`\`json
+${launchPlanCompact}
+\`\`\`
 
----
+**MAPA DE GATILHOS / BIG DOMINO:**
+${triggerContext}`;
+}
 
-## PROCESSO OBRIGATÓRIO — percorra antes de escrever qualquer peça:
+// ─── Sub-agent: Email Sequence ────────────────────────────────────────────────
 
-**PASSO 1 — IDENTIFIQUE O BIG DOMINO:**
-Qual é a UMA crença central desta campanha? Toda a sequência aponta para implantar e confirmar essa crença.
-→ Pré-lançamento implanta → Abertura confirma → Fechamento alavanca → Remarketing relembra.
+async function runEmailSubAgent(
+  campaignId: string,
+  workspaceId: string,
+  sharedContext: string,
+  systemPrompt: string,
+  profileContext: string,
+  log: Logger,
+): Promise<Pick<CopywriterOutput, "emailSequence" | "remarketingSequence">> {
+  const userMessage = `${sharedContext}
 
-**PASSO 2 — MAPEIE O ESTADO PSICOLÓGICO DE ENTRADA DE CADA FASE:**
-- Pré-lançamento: avatar está DISTANTE ou LEVEMENTE CURIOSO. Não venda. Desperte.
-- Carrinho aberto: avatar está AQUECIDO. Não force. Celebre o evento. Apresente como próximo passo natural.
-- Meio de carrinho: avatar está HESITANTE. Encontre e destrua a objeção específica — não genérica.
-- Fechamento: avatar QUER mas tem inércia. Torne o custo de NÃO agir mais doloroso que o custo de agir.
-- Remarketing: avatar PERDEU o carrinho. Segmente por razão (não abriu / abriu mas não clicou / clicou mas não comprou).
+## TAREFA: SEQUÊNCIA DE EMAILS COMPLETA
 
-**PASSO 3 — APLIQUE O SLIPPERY SLIDE:**
-Cada frase deve puxar para a próxima. Teste mental: "Por que alguém leria a frase seguinte depois desta?" Se a resposta não for clara, reescreva.
+Escreva APENAS a sequência de emails. Gere cada email com copy real — não esboço.
 
-**PASSO 4 — ESPECIFICIDADE ACIMA DE TUDO:**
-Números reais > "muitas pessoas". Nomes reais > "um aluno". Prazos reais > "em pouco tempo". Resultados reais > "transformação incrível".
+**MÍNIMOS OBRIGATÓRIOS:**
+- preLaunch: mínimo 7 emails completos (assunto, previewText, corpo, CTA, PS)
+- cartOpen: mínimo 4 emails (abertura, prova social, objeção, urgência crescente)
+- cartClose: mínimo 4 emails (urgência, custo de inação, última chance, fechamento)
+- remarketing: mínimo 2 emails por segmento (quente/frio)
 
-**PASSO 5 — NUNCA USE ESCASSEZ FAKE:**
-Vagas limitadas precisam ser REAIS e a razão precisa ser explicada. Timers que reiniciam destroem a confiança que a campanha inteira construiu.
+**Cada email DEVE ter:** assunto irresistível (5-8 palavras que provocam emoção), preview text diferente do assunto, corpo completo com slippery slide, CTA com verbo de ação + gancho, PS poderoso.
 
----
-
-**REQUISITOS DE VOLUME E COMPLETUDE — MÍNIMOS OBRIGATÓRIOS:**
-- Emails de pré-lançamento: mínimo 7 emails COMPLETOS com corpo, assunto real, preview text, PS
-- Emails de carrinho: mínimo 4 abertos + 4 fechamento, com escalada real de urgência
-- WhatsApp: mínimo 5 broadcasts completos + 3 mensagens de grupo
-- Facebook: mínimo 3 posts completos (orgânico), textos narrativos
-- TikTok: mínimo 3 roteiros completos com hook, script falado, overlay texts
-- Página de vendas: seções principais com copy real (hero, problema, solução, prova, oferta, garantia, faq, fechamento)
-- Remarketing: mínimo 2 versões por segmento (morno/quente)
-- Placeholders de URL: {{LINK_CAPTURA}}, {{LINK_PAGAMENTO}}, {{LINK_REMARKETING}}
-- Tráfego pago: copy para anúncios Meta Ads (headline + primary text) — mínimo 2 variações para teste A/B
-- "cartSegmentedCopy": obrigatório para cart_open e cart_close com variações hot/warm/cold
-
-**ATENÇÃO: produza o JSON completo e válido. Qualidade > quantidade — entregue menos itens mas completos.**
-
-Retorne APENAS o JSON. Todo o copy em português do Brasil. Nenhum placeholder vago — copy real.`;
+Retorne APENAS este JSON:
+\`\`\`json
+{
+  "emailSequence": {
+    "preLaunch": [...],
+    "cartOpen": [...],
+    "cartClose": [...],
+    "remarketing": [...]
+  },
+  "remarketingSequence": [...]
+}
+\`\`\``;
 
   const critique = await runAgentWithCritique({
     campaignId,
     workspaceId,
     agentRole: "copywriter",
-    profileContext: buildPsychologicalProfileBlock(intakeData),
-    systemPrompt: COGNITIVE_IDENTITY_COPYWRITER + memBlock + COPYWRITER_PROMPT,
+    profileContext,
+    systemPrompt,
     userMessage,
     log,
   });
 
-  const result = { content: critique.refinedOutput };
+  return parseAgentJSON<Pick<CopywriterOutput, "emailSequence" | "remarketingSequence">>(
+    critique.refinedOutput,
+    { emailSequence: { preLaunch: [], cartOpen: [], cartClose: [], remarketing: [] }, remarketingSequence: [] },
+  );
+}
 
-  return parseAgentJSON<CopywriterOutput>(result.content, {
-    campaignTitle: String(intakeData["product.name"] ?? ""),
-    emailSequence: { preLaunch: [], cartOpen: [], cartClose: [], remarketing: [] },
-    salesPage: { sections: [], totalWordCount: 0, readingTimeMinutes: 0, primaryCTA: "", guarantee: "" },
-    whatsapp: { broadcasts: [], groupMessages: [] },
-    facebook: { organicPosts: [] },
-    tiktok: { contentPlan: [] },
-    cartScripts: [],
-    remarketingSequence: [],
-    copywriterNotes: result.content,
-    triggerPlaybook: undefined,
+// ─── Sub-agent: Sales Page + Cart ────────────────────────────────────────────
+
+async function runSalesPageSubAgent(
+  campaignId: string,
+  workspaceId: string,
+  sharedContext: string,
+  systemPrompt: string,
+  profileContext: string,
+  log: Logger,
+): Promise<Pick<CopywriterOutput, "salesPage" | "cartScripts" | "cartSegmentedCopy" | "triggerPlaybook">> {
+  const userMessage = `${sharedContext}
+
+## TAREFA: PÁGINA DE VENDAS + SCRIPTS DE CARRINHO + SEGMENTAÇÃO + PLAYBOOK
+
+Escreva APENAS a página de vendas, scripts de carrinho segmentados por lead score, e o trigger playbook.
+
+**PÁGINA DE VENDAS — seções obrigatórias:** hero (headline+subheadline+CTA), identificação (avatar se reconhece), problema (dor visceral), agitação (vilão nomeado), mecanismo (por que é diferente), solução, prova (depoimentos com nome+resultado+prazo), oferta (value stack com âncora), garantia (específica e generosa), FAQ (5 objeções reais), fechamento.
+
+**CART SCRIPTS — disparos por horário:** cart_open (0h, 6h, 24h, 48h) e cart_close (48h antes, 24h, 6h, 1h).
+
+**CART SEGMENTED COPY (OBRIGATÓRIO) — 3 variações por fase:**
+- HOT (score ≥60): angle VIP/insider, urgência leve, eles já sabem tudo
+- WARM (score ≥25): urgência + benefício central, recapitula proposta
+- COLD (score <25): ângulo completamente diferente, reativação + curiosidade nova
+
+**TRIGGER PLAYBOOK:** mapeie o Big Domino por fase (preLaunch, cartOpen, cartClose, remarketing).
+
+Retorne APENAS este JSON:
+\`\`\`json
+{
+  "salesPage": { "sections": [...], "totalWordCount": 0, "readingTimeMinutes": 0, "primaryCTA": "...", "guarantee": "..." },
+  "cartScripts": [...],
+  "cartSegmentedCopy": { "cartOpen": { "hot": {...}, "warm": {...}, "cold": {...} }, "cartClose": { "hot": {...}, "warm": {...}, "cold": {...} } },
+  "triggerPlaybook": { "dominantTrigger": "...", "phaseMap": {...}, "antiRequisiteAngles": [...], "transformationBridge": "..." }
+}
+\`\`\``;
+
+  const critique = await runAgentWithCritique({
+    campaignId,
+    workspaceId,
+    agentRole: "copywriter",
+    profileContext,
+    systemPrompt,
+    userMessage,
+    log,
   });
+
+  return parseAgentJSON<Pick<CopywriterOutput, "salesPage" | "cartScripts" | "cartSegmentedCopy" | "triggerPlaybook">>(
+    critique.refinedOutput,
+    {
+      salesPage: { sections: [], totalWordCount: 0, readingTimeMinutes: 0, primaryCTA: "", guarantee: "" },
+      cartScripts: [],
+      cartSegmentedCopy: undefined,
+      triggerPlaybook: undefined,
+    },
+  );
+}
+
+// ─── Sub-agent: Social Copy (WhatsApp + Facebook + TikTok) ───────────────────
+
+async function runSocialSubAgent(
+  campaignId: string,
+  workspaceId: string,
+  sharedContext: string,
+  systemPrompt: string,
+  profileContext: string,
+  log: Logger,
+): Promise<Pick<CopywriterOutput, "whatsapp" | "facebook" | "tiktok" | "copywriterNotes">> {
+  const userMessage = `${sharedContext}
+
+## TAREFA: COPY SOCIAL COMPLETA (WhatsApp + Facebook + TikTok)
+
+Escreva APENAS os scripts de WhatsApp, posts de Facebook e roteiros de TikTok/Reels.
+
+**WHATSAPP — MÍNIMOS:**
+- broadcasts: mínimo 5 completos (pré-lançamento, CPL 1-3, cart_open, cart_close)
+- groupMessages: mínimo 3 (aquecimento de grupo + abertura + fechamento)
+- Cada mensagem: máx 160 chars na primeira parte, angle único, máx 2 emojis
+
+**FACEBOOK — MÍNIMOS:**
+- organicPosts: mínimo 3 posts narrativos longos
+- Primeiro parágrafo: para o scroll IMEDIATAMENTE (paradoxo, número contraintuitivo, início de história)
+- Facebook aceita texto longo — use narrativa pessoal de 200-400 palavras
+
+**TIKTOK/REELS — MÍNIMOS:**
+- contentPlan: mínimo 3 roteiros completos com hook (2s), script falado, overlay texts, CTA
+- Hook: paradoxo / promessa específica / contraintuitivo / identidade
+- Linguagem nativa, coloquial, zero corporativo
+
+Retorne APENAS este JSON:
+\`\`\`json
+{
+  "whatsapp": { "broadcasts": [...], "groupMessages": [...] },
+  "facebook": { "organicPosts": [...] },
+  "tiktok": { "contentPlan": [...] },
+  "copywriterNotes": "string — observações críticas para o criador"
+}
+\`\`\``;
+
+  const critique = await runAgentWithCritique({
+    campaignId,
+    workspaceId,
+    agentRole: "copywriter",
+    profileContext,
+    systemPrompt,
+    userMessage,
+    log,
+  });
+
+  return parseAgentJSON<Pick<CopywriterOutput, "whatsapp" | "facebook" | "tiktok" | "copywriterNotes">>(
+    critique.refinedOutput,
+    { whatsapp: { broadcasts: [], groupMessages: [] }, facebook: { organicPosts: [] }, tiktok: { contentPlan: [] }, copywriterNotes: "" },
+  );
+}
+
+// ─── Main orchestrator ────────────────────────────────────────────────────────
+
+export async function runCopywriterAgent(
+  campaignId: string,
+  workspaceId: string,
+  intakeData: Record<string, unknown>,
+  strategy: StrategyOutput,
+  profile: ProfileBuilderOutput | undefined,
+  launchPlan: Record<string, unknown> | undefined,
+  log: Logger,
+): Promise<CopywriterOutput> {
+  const memCtx = await getMemoryContext(workspaceId, "copywriter", String(intakeData["product.category"] ?? ""));
+  const memBlock = buildMemoryContextBlock(memCtx);
+
+  const sharedContext = buildCopywriterSharedContext(intakeData, strategy, profile, launchPlan, memBlock);
+  const systemPrompt = COGNITIVE_IDENTITY_COPYWRITER + memBlock + COPYWRITER_PROMPT;
+  const profileContext = buildPsychologicalProfileBlock(intakeData);
+
+  const [emailResult, salesPageResult, socialResult] = await Promise.all([
+    runEmailSubAgent(campaignId, workspaceId, sharedContext, systemPrompt, profileContext, log),
+    runSalesPageSubAgent(campaignId, workspaceId, sharedContext, systemPrompt, profileContext, log),
+    runSocialSubAgent(campaignId, workspaceId, sharedContext, systemPrompt, profileContext, log),
+  ]);
+
+  return {
+    campaignTitle: String(intakeData["product.name"] ?? ""),
+    emailSequence: emailResult.emailSequence ?? { preLaunch: [], cartOpen: [], cartClose: [], remarketing: [] },
+    salesPage: salesPageResult.salesPage ?? { sections: [], totalWordCount: 0, readingTimeMinutes: 0, primaryCTA: "", guarantee: "" },
+    whatsapp: socialResult.whatsapp ?? { broadcasts: [], groupMessages: [] },
+    facebook: socialResult.facebook ?? { organicPosts: [] },
+    tiktok: socialResult.tiktok ?? { contentPlan: [] },
+    cartScripts: salesPageResult.cartScripts ?? [],
+    remarketingSequence: emailResult.remarketingSequence ?? [],
+    copywriterNotes: socialResult.copywriterNotes ?? "",
+    triggerPlaybook: salesPageResult.triggerPlaybook,
+    cartSegmentedCopy: salesPageResult.cartSegmentedCopy,
+  };
 }
