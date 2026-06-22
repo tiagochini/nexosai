@@ -13,7 +13,8 @@ import {
   BarChart3, Music2, ChevronRight, TrendingUp,
   Zap, Target, Activity, PlayCircle, Link2, Shield,
   RefreshCw, Rocket, AlertTriangle, Copy, Check,
-  Video, UserCheck, UserX, Settings,
+  Video, UserCheck, UserX, Settings, ChevronDown, ChevronUp,
+  Flame, Clapperboard, Clock,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -1380,35 +1381,131 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
         body: extractBodyText(piece.content as unknown, rawType),
       }));
 
-    // ── content_calendar (social media posts) ────────────────────────────────
+    // ── content_calendar (social media posts / warming / CPL) ─────────────────
     } else if (rawType === "content_calendar") {
-      const calendar = c["calendar"] as Array<Record<string, unknown>> | undefined;
-      if (calendar?.length) {
-        calendar.forEach((post, i) => {
-          const platforms = (post["platforms"] as string[] | undefined) ?? ["instagram"];
-          const firstPlatform = platforms[0] ?? "instagram";
-          const mappedPlatform: Platform = (TYPE_TO_PLATFORM[firstPlatform] ?? "instagram") as Platform;
-          result.push(child(`post:${i}`, {
-            platform: mappedPlatform,
-            type: (post["postType"] as PieceType) ?? "post",
-            dayIndex: typeof post["day"] === "number" ? (post["day"] as number) : i,
-            title: `📱 Dia ${typeof post["day"] === "number" ? (post["day"] as number) + 1 : i + 1} — ${post["phaseName"] as string ?? post["phase"] as string ?? platforms.join("/")}`,
+      // ── PrelaunchWarmingOutput: has "days" array with organicPost ──────────
+      const warmingDays = c["days"] as Array<Record<string, unknown>> | undefined;
+      if (warmingDays?.length && c["warmingDuration"] !== undefined) {
+        warmingDays.forEach((day, i) => {
+          const dayIdx = typeof day["dayIndex"] === "number" ? (day["dayIndex"] as number) : i + 1;
+          const post = day["organicPost"] as Record<string, unknown> | undefined;
+          const wa = day["whatsapp"] as Record<string, unknown> | undefined;
+          const email = day["email"] as Record<string, unknown> | undefined;
+          // Organic post card
+          result.push(child(`warming:day${dayIdx}:post`, {
+            platform: (post?.["platform"] as Platform) ?? "instagram",
+            type: "post", dayIndex: dayIdx,
+            title: `🌱 Aquecimento Dia ${dayIdx} — ${(day["microConviction"] as string ?? "").slice(0, 50)}`,
             body: [
-              post["caption"] ? (post["caption"] as string) : post["copyText"] ? (post["copyText"] as string) : "",
-              post["hashtags"] && Array.isArray(post["hashtags"]) ? `\n${(post["hashtags"] as string[]).join(" ")}` : "",
-              post["visualDirection"] ? `\nVisual: ${post["visualDirection"] as string}` : "",
-              post["tiktokHook"] ? `\nHook TikTok: ${post["tiktokHook"] as string}` : "",
-            ].filter(Boolean).join(""),
-            callToAction: post["engagementTactic"] as string | undefined,
-            visualDirection: post["visualDirection"] as string | undefined,
-            tiktokHook: post["tiktokHook"] as string | undefined,
+              post?.["hook"] ? `Hook: ${post["hook"] as string}` : "",
+              post?.["caption"] ? (post["caption"] as string) : "",
+              post?.["callToAction"] ? `CTA: ${post["callToAction"] as string}` : "",
+            ].filter(Boolean).join("\n\n"),
+            hashtags: post?.["hashtags"] as string[] | undefined,
+            callToAction: post?.["callToAction"] as string | undefined,
+          }));
+          // WhatsApp card
+          if (wa?.["message"]) {
+            result.push(child(`warming:day${dayIdx}:wa`, {
+              platform: "whatsapp", type: "message", dayIndex: dayIdx,
+              title: `🌱 Aquecimento Dia ${dayIdx} — WhatsApp`,
+              body: wa["message"] as string,
+              callToAction: wa["sendTime"] as string | undefined,
+            }));
+          }
+          // Email card
+          if (email?.["subject"]) {
+            result.push(child(`warming:day${dayIdx}:email`, {
+              platform: "email", type: "email", dayIndex: dayIdx,
+              title: `🌱 Aquecimento Dia ${dayIdx} — ✉ ${email["subject"] as string}`,
+              body: [
+                email["previewText"] ? `Preview: ${email["previewText"] as string}` : "",
+                email["body"] ? (email["body"] as string) : "",
+              ].filter(Boolean).join("\n\n"),
+              callToAction: email["cta"] as string | undefined,
+            }));
+          }
+        });
+
+      // ── CPLPhaseOutput: has "cplNumber" and "liveScript" ──────────────────
+      } else if (c["cplNumber"] !== undefined && c["liveScript"] !== undefined) {
+        const cplNum = c["cplNumber"] as number;
+        const script = c["liveScript"] as Record<string, unknown>;
+        const sections = (script["mainContentSections"] as Array<Record<string, unknown>> | undefined) ?? [];
+        // Main script summary card
+        result.push(child(`cpl_phase:${cplNum}:script`, {
+          platform: "tiktok", type: "native_video",
+          dayIndex: typeof c["dayIndex"] === "number" ? (c["dayIndex"] as number) : cplNum,
+          title: `🎬 CPL ${cplNum}: ${c["title"] as string ?? ""}`,
+          body: [
+            script["hook"] ? `Hook: ${script["hook"] as string}` : "",
+            script["openingStory"] ? `Abertura: ${(script["openingStory"] as string).slice(0, 200)}` : "",
+            sections.length ? `${sections.length} seções — ${(script["estimatedDuration"] as string) ?? ""}` : "",
+            script["cliffhanger"] ? `Cliffhanger: ${script["cliffhanger"] as string}` : "",
+            script["cta"] ? `CTA: ${script["cta"] as string}` : "",
+          ].filter(Boolean).join("\n\n"),
+          tiktokHook: script["hook"] as string | undefined,
+          callToAction: script["cta"] as string | undefined,
+        }));
+        // Email cards
+        const emails = (c["emails"] as Array<Record<string, unknown>> | undefined) ?? [];
+        emails.forEach((email, i) => {
+          result.push(child(`cpl_phase:${cplNum}:email${i}`, {
+            platform: "email", type: "email",
+            dayIndex: typeof c["dayIndex"] === "number" ? (c["dayIndex"] as number) : cplNum,
+            title: `🎬 CPL ${cplNum} — ✉ E-mail ${i + 1}: ${email["subject"] as string ?? ""}`,
+            body: [
+              email["sendTiming"] ? `Envio: ${email["sendTiming"] as string}` : "",
+              email["previewText"] ? `Preview: ${email["previewText"] as string}` : "",
+              email["body"] ? (email["body"] as string) : "",
+            ].filter(Boolean).join("\n\n"),
+            callToAction: email["cta"] as string | undefined,
           }));
         });
+        // WhatsApp cards
+        const waList = (c["whatsappBroadcasts"] as Array<Record<string, unknown>> | undefined) ?? [];
+        waList.forEach((wa, i) => {
+          result.push(child(`cpl_phase:${cplNum}:wa${i}`, {
+            platform: "whatsapp", type: "message",
+            dayIndex: typeof c["dayIndex"] === "number" ? (c["dayIndex"] as number) : cplNum,
+            title: `🎬 CPL ${cplNum} — 💬 WhatsApp Broadcast ${i + 1}`,
+            body: [
+              wa["sendTiming"] ? `Envio: ${wa["sendTiming"] as string}` : "",
+              wa["message"] as string ?? "",
+            ].filter(Boolean).join("\n"),
+          }));
+        });
+
+      // ── Standard content_calendar ─────────────────────────────────────────
       } else {
-        result.push(child("fallback", {
-          title: "📅 Calendário de Social Media",
-          body: extractBodyText(piece.content as unknown, rawType),
-        }));
+        const calendar = c["calendar"] as Array<Record<string, unknown>> | undefined;
+        if (calendar?.length) {
+          calendar.forEach((post, i) => {
+            const platforms = (post["platforms"] as string[] | undefined) ?? ["instagram"];
+            const firstPlatform = platforms[0] ?? "instagram";
+            const mappedPlatform: Platform = (TYPE_TO_PLATFORM[firstPlatform] ?? "instagram") as Platform;
+            result.push(child(`post:${i}`, {
+              platform: mappedPlatform,
+              type: (post["postType"] as PieceType) ?? "post",
+              dayIndex: typeof post["day"] === "number" ? (post["day"] as number) : i,
+              title: `📱 Dia ${typeof post["day"] === "number" ? (post["day"] as number) + 1 : i + 1} — ${post["phaseName"] as string ?? post["phase"] as string ?? platforms.join("/")}`,
+              body: [
+                post["caption"] ? (post["caption"] as string) : post["copyText"] ? (post["copyText"] as string) : "",
+                post["hashtags"] && Array.isArray(post["hashtags"]) ? `\n${(post["hashtags"] as string[]).join(" ")}` : "",
+                post["visualDirection"] ? `\nVisual: ${post["visualDirection"] as string}` : "",
+                post["tiktokHook"] ? `\nHook TikTok: ${post["tiktokHook"] as string}` : "",
+              ].filter(Boolean).join(""),
+              callToAction: post["engagementTactic"] as string | undefined,
+              visualDirection: post["visualDirection"] as string | undefined,
+              tiktokHook: post["tiktokHook"] as string | undefined,
+            }));
+          });
+        } else {
+          result.push(child("fallback", {
+            title: "📅 Calendário de Social Media",
+            body: extractBodyText(piece.content as unknown, rawType),
+          }));
+        }
       }
 
     // ── ad_copy (meta/google/tiktok ads per segment) ─────────────────────────
@@ -2127,9 +2224,667 @@ function SocialLaunchGate({
   );
 }
 
+// ── Warming Day Card ──────────────────────────────────────────────────────────
+
+interface WarmingDayOutput {
+  dayIndex: number;
+  microConviction: string;
+  convictionCategory: string;
+  organicPost?: {
+    platform: string;
+    hook: string;
+    caption: string;
+    overlayTexts?: string[];
+    hashtags?: string[];
+    callToAction: string;
+    postingTime: string;
+  };
+  whatsapp?: {
+    message: string;
+    sendTime: string;
+    emoji: boolean;
+  };
+  email?: {
+    subject: string;
+    previewText: string;
+    body: string;
+    cta: string;
+  };
+}
+
+interface WarmingOutput {
+  campaignTitle?: string;
+  warmingDuration?: number;
+  overallObjective?: string;
+  convictionSequence?: string[];
+  days: WarmingDayOutput[];
+  productionNotes?: {
+    toneSummary?: string;
+    topicsToAvoid?: string[];
+    keyPhrases?: string[];
+    audienceMindsetOnDay1?: string;
+    audienceMindsetOnFinalDay?: string;
+  };
+  warmingNotes?: string;
+}
+
+const CONVICTION_LABELS: Record<string, string> = {
+  authority: "Autoridade",
+  curiosity: "Curiosidade",
+  problem_awareness: "Consciência do Problema",
+  social_proof: "Prova Social",
+  identity: "Identidade",
+};
+const CONVICTION_COLORS: Record<string, string> = {
+  authority: "text-blue-400 border-blue-400/40 bg-blue-400/10",
+  curiosity: "text-purple-400 border-purple-400/40 bg-purple-400/10",
+  problem_awareness: "text-orange-400 border-orange-400/40 bg-orange-400/10",
+  social_proof: "text-cyan-400 border-cyan-400/40 bg-cyan-400/10",
+  identity: "text-pink-400 border-pink-400/40 bg-pink-400/10",
+};
+
+function CopyButton({ text, label = "Copiar" }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1800);
+        });
+      }}
+      className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest border border-border/40 text-muted-foreground hover:text-foreground hover:border-border px-2 h-6 transition-colors shrink-0"
+    >
+      {copied ? <Check className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />}
+      {copied ? "Copiado" : label}
+    </button>
+  );
+}
+
+function WarmingDayCard({ day }: { day: WarmingDayOutput }) {
+  const [expandedPost, setExpandedPost] = useState(false);
+  const [expandedEmail, setExpandedEmail] = useState(false);
+  const catColor = CONVICTION_COLORS[day.convictionCategory] ?? "text-muted-foreground border-border/40 bg-muted/10";
+  const catLabel = CONVICTION_LABELS[day.convictionCategory] ?? day.convictionCategory;
+
+  return (
+    <div className="border border-border/50 bg-card/40">
+      {/* Day header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-muted/5">
+        <div className="w-8 h-8 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
+          <span className="font-mono font-bold text-xs text-primary">{day.dayIndex}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+            <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 py-0 ${catColor}`}>
+              {catLabel}
+            </Badge>
+          </div>
+          <p className="font-mono text-xs font-bold text-foreground leading-snug">{day.microConviction}</p>
+        </div>
+      </div>
+
+      <div className="divide-y divide-border/30">
+        {/* Organic Post */}
+        {day.organicPost && (
+          <div className="px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Instagram className="h-3.5 w-3.5 text-pink-400 shrink-0" />
+                <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-pink-400">
+                  Post Orgânico — {day.organicPost.platform}
+                </span>
+                {day.organicPost.postingTime && (
+                  <span className="font-mono text-[10px] text-muted-foreground/50 flex items-center gap-0.5">
+                    <Clock className="h-2.5 w-2.5" />{day.organicPost.postingTime}
+                  </span>
+                )}
+              </div>
+              <CopyButton text={[
+                day.organicPost.hook,
+                "",
+                day.organicPost.caption,
+                day.organicPost.callToAction ? `\n${day.organicPost.callToAction}` : "",
+                day.organicPost.hashtags?.length ? `\n${day.organicPost.hashtags.join(" ")}` : "",
+              ].filter(s => s !== undefined).join("\n")} />
+            </div>
+            {/* Hook */}
+            <div className="px-3 py-2 border border-pink-400/20 bg-pink-400/5">
+              <span className="font-mono text-[10px] text-pink-400 uppercase tracking-widest">Hook: </span>
+              <span className="font-mono text-[11px] text-foreground/90 italic">"{day.organicPost.hook}"</span>
+            </div>
+            {/* Caption */}
+            <div className={`font-mono text-[11px] text-muted-foreground bg-muted/10 border border-border/30 p-2.5 whitespace-pre-line leading-relaxed ${!expandedPost ? "line-clamp-3" : ""}`}>
+              {day.organicPost.caption}
+            </div>
+            {day.organicPost.caption.length > 100 && (
+              <button onClick={() => setExpandedPost(v => !v)} className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary/80 flex items-center gap-1">
+                {expandedPost ? <><ChevronUp className="h-2.5 w-2.5" />Menos</> : <><ChevronDown className="h-2.5 w-2.5" />Ver tudo</>}
+              </button>
+            )}
+            {/* CTA + Hashtags */}
+            <div className="flex flex-wrap items-center gap-2">
+              {day.organicPost.callToAction && (
+                <span className="font-mono text-[10px] text-primary border border-primary/30 bg-primary/5 px-1.5 py-0.5">{day.organicPost.callToAction}</span>
+              )}
+              {day.organicPost.hashtags?.slice(0, 4).map(h => (
+                <span key={h} className="font-mono text-[10px] text-cyan-400/70">{h}</span>
+              ))}
+              {(day.organicPost.hashtags?.length ?? 0) > 4 && (
+                <span className="font-mono text-[10px] text-muted-foreground/40">+{(day.organicPost.hashtags?.length ?? 0) - 4}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* WhatsApp */}
+        {day.whatsapp && (
+          <div className="px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-green-400">WhatsApp</span>
+                {day.whatsapp.sendTime && (
+                  <span className="font-mono text-[10px] text-muted-foreground/50 flex items-center gap-0.5">
+                    <Clock className="h-2.5 w-2.5" />{day.whatsapp.sendTime}
+                  </span>
+                )}
+              </div>
+              <CopyButton text={day.whatsapp.message} />
+            </div>
+            <div className="font-mono text-[11px] text-muted-foreground bg-muted/10 border border-border/30 p-2.5 leading-relaxed">
+              {day.whatsapp.message}
+            </div>
+          </div>
+        )}
+
+        {/* Email */}
+        {day.email && (
+          <div className="px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-blue-400">E-mail</span>
+              </div>
+              <CopyButton text={[
+                `Assunto: ${day.email.subject}`,
+                `Preview: ${day.email.previewText}`,
+                "",
+                day.email.body,
+                day.email.cta ? `\nCTA: ${day.email.cta}` : "",
+              ].filter(Boolean).join("\n")} />
+            </div>
+            {/* Subject */}
+            <div className="font-mono text-[11px] font-bold text-foreground border-l-2 border-blue-400/40 pl-2">
+              {day.email.subject}
+            </div>
+            {day.email.previewText && (
+              <div className="font-mono text-[10px] text-muted-foreground/60 italic">{day.email.previewText}</div>
+            )}
+            <div className={`font-mono text-[11px] text-muted-foreground bg-muted/10 border border-border/30 p-2.5 leading-relaxed ${!expandedEmail ? "line-clamp-4" : ""}`}
+              dangerouslySetInnerHTML={{ __html: day.email.body.replace(/<[^>]+>/g, " ").slice(0, expandedEmail ? 99999 : 600) }} />
+            {day.email.body.length > 200 && (
+              <button onClick={() => setExpandedEmail(v => !v)} className="font-mono text-[10px] uppercase tracking-widest text-primary hover:text-primary/80 flex items-center gap-1">
+                {expandedEmail ? <><ChevronUp className="h-2.5 w-2.5" />Menos</> : <><ChevronDown className="h-2.5 w-2.5" />Ver corpo completo</>}
+              </button>
+            )}
+            {day.email.cta && (
+              <span className="inline-block font-mono text-[10px] text-blue-400 border border-blue-400/30 bg-blue-400/5 px-2 py-0.5">CTA: {day.email.cta}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WarmingTab({ apiPieces }: { apiPieces: ApiContentPiece[] }) {
+  const warmingPieces = apiPieces.filter(p => {
+    try {
+      const raw = p.content as unknown;
+      const c = typeof raw === "string" ? JSON.parse(raw) as Record<string, unknown> : raw as Record<string, unknown>;
+      const days = c["days"] as Array<unknown> | undefined;
+      return Array.isArray(days) && days.length > 0 && c["warmingDuration"] !== undefined;
+    } catch { return false; }
+  });
+
+  if (warmingPieces.length === 0) {
+    return (
+      <div className="text-center py-20 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
+        Conteúdo de aquecimento ainda não gerado
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {warmingPieces.map(piece => {
+        let warming: WarmingOutput | null = null;
+        try {
+          const raw = piece.content as unknown;
+          warming = (typeof raw === "string" ? JSON.parse(raw) : raw) as WarmingOutput;
+        } catch { return null; }
+        if (!warming) return null;
+
+        return (
+          <div key={piece.id}>
+            {/* Warming header */}
+            <div className="border border-primary/30 bg-primary/5 px-4 py-3 mb-4 flex items-start gap-3">
+              <Flame className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-xs font-bold uppercase tracking-widest text-primary mb-0.5">
+                  Sequência de Aquecimento — {warming.warmingDuration ?? warming.days.length} dias
+                </div>
+                {warming.overallObjective && (
+                  <p className="font-mono text-[11px] text-muted-foreground/70">{warming.overallObjective}</p>
+                )}
+                {warming.productionNotes?.toneSummary && (
+                  <p className="font-mono text-[10px] text-muted-foreground/50 mt-1">Tom: {warming.productionNotes.toneSummary}</p>
+                )}
+              </div>
+              <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 py-0 shrink-0 ${piece.status === "approved" ? "text-success border-success/40 bg-success/10" : "text-muted-foreground border-border/40"}`}>
+                {piece.status === "approved" ? "Aprovado" : "Pendente"}
+              </Badge>
+            </div>
+
+            {/* Conviction sequence */}
+            {warming.convictionSequence?.length ? (
+              <div className="mb-4 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {warming.convictionSequence.map((conv, i) => (
+                  <div key={i} className="flex items-center gap-1 shrink-0">
+                    <div className="border border-border/40 bg-card/30 px-2 py-1">
+                      <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">Dia {i + 1}</span>
+                      <p className="font-mono text-[10px] text-foreground/80 max-w-[140px] leading-tight">{conv}</p>
+                    </div>
+                    {i < warming.convictionSequence!.length - 1 && <ChevronRight className="h-3 w-3 text-muted-foreground/30 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {/* Day cards */}
+            <div className="space-y-4">
+              {warming.days.map(day => (
+                <WarmingDayCard key={day.dayIndex} day={day} />
+              ))}
+            </div>
+
+            {/* Production notes */}
+            {warming.warmingNotes && (
+              <div className="mt-4 border border-yellow-400/20 bg-yellow-400/5 px-4 py-3">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Observações do Agente</div>
+                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{warming.warmingNotes}</p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── CPL Script Card ───────────────────────────────────────────────────────────
+
+interface CPLScriptSection {
+  title: string;
+  script: string;
+  toneNote: string;
+  durationMinutes: number;
+}
+
+interface CPLEmailMsg {
+  sequenceIndex: number;
+  subject: string;
+  previewText: string;
+  body: string;
+  cta: string;
+  ctaUrl: string;
+  sendTiming: string;
+  psychologicalObjective: string;
+}
+
+interface CPLWhatsApp {
+  sequenceIndex: number;
+  message: string;
+  sendTiming: string;
+  emoji: boolean;
+  psychologicalObjective: string;
+}
+
+interface CPLOutput {
+  cplNumber: number;
+  title: string;
+  subtitle?: string;
+  psychologicalObjective: string;
+  dominantTechnique: string;
+  dayIndex?: number;
+  keyMessage?: string;
+  viewerFeeling?: string;
+  liveScript: {
+    hook: string;
+    openingStory: string;
+    mainContentSections: CPLScriptSection[];
+    cliffhanger: string;
+    cta: string;
+    estimatedDuration: string;
+  };
+  emails: [CPLEmailMsg, CPLEmailMsg];
+  whatsappBroadcasts: [CPLWhatsApp, CPLWhatsApp];
+}
+
+function CPLScriptCard({ cpl, piece, onApprove, onReject, loading }: {
+  cpl: CPLOutput;
+  piece: ApiContentPiece;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  loading?: string | null;
+}) {
+  const [scriptOpen, setScriptOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [waOpen, setWaOpen] = useState(false);
+  const isApproved = piece.status === "approved";
+  const isRejected = piece.status === "rejected";
+  const isLoading = loading === piece.id;
+
+  const CPL_COLORS: Record<number, string> = {
+    1: "text-purple-400 border-purple-400/40 bg-purple-400/10",
+    2: "text-blue-400 border-blue-400/40 bg-blue-400/10",
+    3: "text-success border-success/40 bg-success/10",
+  };
+  const cplColor = CPL_COLORS[cpl.cplNumber] ?? "text-primary border-primary/40 bg-primary/10";
+
+  return (
+    <div className={`border ${isApproved ? "border-success/40" : isRejected ? "border-destructive/40" : "border-border/50"} bg-card/40`}>
+      {/* CPL header */}
+      <div className={`px-4 py-4 border-b border-border/40 ${isApproved ? "bg-success/5" : isRejected ? "bg-destructive/5" : "bg-muted/5"}`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 border flex items-center justify-center shrink-0 ${cplColor}`}>
+            <span className="font-mono font-bold text-sm">{cpl.cplNumber}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 py-0 ${cplColor}`}>
+                CPL {cpl.cplNumber}
+              </Badge>
+              {cpl.liveScript.estimatedDuration && (
+                <span className="font-mono text-[10px] text-muted-foreground/50 flex items-center gap-0.5">
+                  <Clock className="h-2.5 w-2.5" />{cpl.liveScript.estimatedDuration}
+                </span>
+              )}
+              {isApproved && <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 text-success border-success/40 bg-success/10">Aprovado</Badge>}
+              {isRejected && <Badge variant="outline" className="rounded-none font-mono text-[10px] px-1.5 py-0 text-destructive border-destructive/40 bg-destructive/10">Rejeitado</Badge>}
+            </div>
+            <h3 className="font-mono font-bold text-sm text-foreground leading-tight">{cpl.title}</h3>
+            {cpl.subtitle && <p className="font-mono text-[11px] text-muted-foreground/60 mt-0.5">{cpl.subtitle}</p>}
+          </div>
+        </div>
+
+        {/* Psychological objective */}
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="border border-border/30 bg-card/30 px-3 py-2">
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Objetivo Psicológico</div>
+            <p className="font-mono text-[11px] text-foreground/80 leading-snug">{cpl.psychologicalObjective}</p>
+          </div>
+          <div className="border border-border/30 bg-card/30 px-3 py-2">
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Técnica Dominante</div>
+            <p className="font-mono text-[11px] text-foreground/80 leading-snug">{cpl.dominantTechnique}</p>
+          </div>
+        </div>
+
+        {/* Key message */}
+        {cpl.keyMessage && (
+          <div className="mt-2 border-l-2 border-primary/40 pl-3">
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-0.5">Mensagem-chave</div>
+            <p className="font-mono text-[11px] text-primary/80 italic">"{cpl.keyMessage}"</p>
+          </div>
+        )}
+      </div>
+
+      {/* Script section */}
+      <div className="border-b border-border/30">
+        <button
+          onClick={() => setScriptOpen(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Clapperboard className="h-3.5 w-3.5 text-yellow-400" />
+            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-yellow-400">Roteiro de Live</span>
+            <span className="font-mono text-[10px] text-muted-foreground/50">{cpl.liveScript.mainContentSections.length} seções</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CopyButton text={[
+              `HOOK: ${cpl.liveScript.hook}`,
+              `\nABERTURA:\n${cpl.liveScript.openingStory}`,
+              ...cpl.liveScript.mainContentSections.map(s => `\n${s.title.toUpperCase()}:\n${s.script}`),
+              `\nCLIFFHANGER: ${cpl.liveScript.cliffhanger}`,
+              `\nCTA: ${cpl.liveScript.cta}`,
+            ].join("\n")} label="Copiar roteiro" />
+            {scriptOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
+          </div>
+        </button>
+
+        {scriptOpen && (
+          <div className="px-4 pb-4 space-y-3">
+            {/* Hook */}
+            <div className="border border-yellow-400/20 bg-yellow-400/5 px-3 py-2.5">
+              <div className="font-mono text-[9px] uppercase tracking-widest text-yellow-400 font-bold mb-1">Hook (30s)</div>
+              <p className="font-mono text-[11px] text-foreground/90 italic leading-relaxed">"{cpl.liveScript.hook}"</p>
+            </div>
+
+            {/* Opening story */}
+            {cpl.liveScript.openingStory && (
+              <div className="border border-border/30 bg-muted/5 px-3 py-2.5">
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 font-bold mb-1">História de Abertura</div>
+                <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed line-clamp-4">{cpl.liveScript.openingStory}</p>
+              </div>
+            )}
+
+            {/* Content sections */}
+            {cpl.liveScript.mainContentSections.map((section, i) => (
+              <div key={i} className="border border-border/30 bg-muted/5 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-foreground/70 font-bold">{section.title}</div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono text-[9px] text-muted-foreground/40">{section.durationMinutes}min</span>
+                    <CopyButton text={section.script} />
+                  </div>
+                </div>
+                {section.toneNote && (
+                  <p className="font-mono text-[9px] text-primary/60 italic mb-1">Tom: {section.toneNote}</p>
+                )}
+                <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed line-clamp-5">{section.script}</p>
+              </div>
+            ))}
+
+            {/* Cliffhanger */}
+            {cpl.liveScript.cliffhanger && (
+              <div className="border border-orange-400/20 bg-orange-400/5 px-3 py-2.5">
+                <div className="font-mono text-[9px] uppercase tracking-widest text-orange-400 font-bold mb-1">Cliffhanger</div>
+                <p className="font-mono text-[11px] text-foreground/90 italic leading-relaxed">"{cpl.liveScript.cliffhanger}"</p>
+              </div>
+            )}
+
+            {/* CTA */}
+            {cpl.liveScript.cta && (
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">CTA:</span>
+                <span className="font-mono text-xs text-primary border border-primary/30 bg-primary/5 px-2 py-0.5">{cpl.liveScript.cta}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Emails section */}
+      <div className="border-b border-border/30">
+        <button
+          onClick={() => setEmailOpen(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Mail className="h-3.5 w-3.5 text-blue-400" />
+            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-blue-400">E-mails ({cpl.emails.length})</span>
+          </div>
+          {emailOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
+        </button>
+
+        {emailOpen && (
+          <div className="px-4 pb-4 space-y-3">
+            {cpl.emails.map((email, i) => (
+              <div key={i} className="border border-blue-400/20 bg-blue-400/5 px-3 py-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="font-mono text-[9px] uppercase tracking-widest text-blue-400/60 mb-0.5">E-mail {i + 1} — {email.sendTiming}</div>
+                    <div className="font-mono text-[11px] font-bold text-foreground/90">{email.subject}</div>
+                    {email.previewText && <div className="font-mono text-[10px] text-muted-foreground/60 italic">{email.previewText}</div>}
+                  </div>
+                  <CopyButton text={[
+                    `Assunto: ${email.subject}`,
+                    `Preview: ${email.previewText}`,
+                    `Envio: ${email.sendTiming}`,
+                    "",
+                    email.body.replace(/<[^>]+>/g, " "),
+                    `\nCTA: ${email.cta}`,
+                  ].join("\n")} />
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed line-clamp-4"
+                  dangerouslySetInnerHTML={{ __html: email.body.replace(/<[^>]+>/g, " ").slice(0, 500) }} />
+                {email.psychologicalObjective && (
+                  <p className="font-mono text-[10px] text-muted-foreground/40 italic">Objetivo: {email.psychologicalObjective}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* WhatsApp section */}
+      <div>
+        <button
+          onClick={() => setWaOpen(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5 text-green-400" />
+            <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-green-400">WhatsApp ({cpl.whatsappBroadcasts.length})</span>
+          </div>
+          {waOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
+        </button>
+
+        {waOpen && (
+          <div className="px-4 pb-4 space-y-3">
+            {cpl.whatsappBroadcasts.map((wa, i) => (
+              <div key={i} className="border border-green-400/20 bg-green-400/5 px-3 py-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-green-400/60">
+                    Broadcast {i + 1} — {wa.sendTiming}
+                  </div>
+                  <CopyButton text={wa.message} />
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed">{wa.message}</div>
+                {wa.psychologicalObjective && (
+                  <p className="font-mono text-[10px] text-muted-foreground/40 italic">Objetivo: {wa.psychologicalObjective}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      {!isApproved && (
+        <div className="border-t border-border/30 px-4 py-3 flex gap-2">
+          <Button size="sm" onClick={() => onApprove(piece.id)} disabled={isLoading}
+            className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 bg-success/10 border border-success/40 text-success hover:bg-success/20">
+            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}Aprovar CPL {cpl.cplNumber}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onReject(piece.id)} disabled={isLoading}
+            className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
+            <XCircle className="h-3 w-3" />Rejeitar
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CPLTab({ apiPieces, onApprove, onReject, loading }: {
+  apiPieces: ApiContentPiece[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  loading?: string | null;
+}) {
+  const cplPieces = apiPieces.filter(p => {
+    try {
+      const raw = p.content as unknown;
+      const c = typeof raw === "string" ? JSON.parse(raw) as Record<string, unknown> : raw as Record<string, unknown>;
+      return c["cplNumber"] !== undefined && c["liveScript"] !== undefined;
+    } catch { return false; }
+  }).sort((a, b) => {
+    try {
+      const ca = (a.content as Record<string, unknown>)["cplNumber"] as number ?? 0;
+      const cb = (b.content as Record<string, unknown>)["cplNumber"] as number ?? 0;
+      return ca - cb;
+    } catch { return 0; }
+  });
+
+  if (cplPieces.length === 0) {
+    return (
+      <div className="text-center py-20 font-mono text-sm text-muted-foreground/40 uppercase tracking-widest">
+        Roteiros CPL ainda não gerados
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* CPL timeline header */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none">
+        {([1, 2, 3] as const).map((n, i) => {
+          const piece = cplPieces.find(p => {
+            try {
+              const c = p.content as Record<string, unknown>;
+              return c["cplNumber"] === n;
+            } catch { return false; }
+          });
+          const exists = !!piece;
+          const approved = piece?.status === "approved";
+          const colors = ["text-purple-400 border-purple-400/40 bg-purple-400/10", "text-blue-400 border-blue-400/40 bg-blue-400/10", "text-success border-success/40 bg-success/10"];
+          const labels = ["Quebra de Crença", "Mecanismo Único", "Prova + Pertencimento"];
+          return (
+            <div key={n} className="flex items-center gap-2 shrink-0">
+              <div className={`border px-3 py-2 ${exists ? colors[i] : "text-muted-foreground/30 border-border/20 bg-muted/5"}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-mono text-xs font-bold">CPL {n}</span>
+                  {approved && <Check className="h-3 w-3 text-success" />}
+                </div>
+                <p className="font-mono text-[9px] text-muted-foreground/60">{labels[i]}</p>
+              </div>
+              {i < 2 && <ChevronRight className="h-3 w-3 text-muted-foreground/20 shrink-0" />}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CPL cards */}
+      {cplPieces.map(piece => {
+        let cpl: CPLOutput | null = null;
+        try {
+          const raw = piece.content as unknown;
+          cpl = (typeof raw === "string" ? JSON.parse(raw) : raw) as CPLOutput;
+        } catch { return null; }
+        if (!cpl) return null;
+        return (
+          <CPLScriptCard key={piece.id} cpl={cpl} piece={piece} onApprove={onApprove} onReject={onReject} loading={loading} />
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────────
 
-type Tab = "platform" | "preview" | "flowchart" | "schedule" | "segmentation" | "landing";
+type Tab = "platform" | "preview" | "flowchart" | "schedule" | "segmentation" | "landing" | "aquecimento" | "cpl";
 
 const VISUAL_PLATFORMS: Platform[] = ["instagram", "facebook", "tiktok"];
 
@@ -2574,6 +3329,22 @@ export default function ContentApproval() {
   // Empty-piece detection — pieces where the LLM agent ran but produced empty arrays
   const emptyPieces = (apiContentData?.pieces ?? []).filter(p => isEmptyApiPiece(p));
 
+  // Detect warming and CPL pieces from raw API data
+  const hasWarmingContent = (apiContentData?.pieces ?? []).some(p => {
+    try {
+      const raw = p.content as unknown;
+      const c = typeof raw === "string" ? JSON.parse(raw) as Record<string, unknown> : raw as Record<string, unknown>;
+      return Array.isArray(c["days"]) && c["warmingDuration"] !== undefined;
+    } catch { return false; }
+  });
+  const hasCPLContent = (apiContentData?.pieces ?? []).some(p => {
+    try {
+      const raw = p.content as unknown;
+      const c = typeof raw === "string" ? JSON.parse(raw) as Record<string, unknown> : raw as Record<string, unknown>;
+      return c["cplNumber"] !== undefined && c["liveScript"] !== undefined;
+    } catch { return false; }
+  });
+
   const TABS: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: "flowchart",    label: "Fluxograma",      icon: Activity },
     { id: "preview",      label: "Preview Visual",  icon: Eye },
@@ -2581,6 +3352,8 @@ export default function ContentApproval() {
     { id: "schedule",     label: "Cronograma",      icon: Calendar },
     { id: "segmentation", label: "Segmentação",     icon: Users },
     ...(landingPageData ? [{ id: "landing" as Tab, label: "Landing Page", icon: Globe, badge: "LP" }] : []),
+    ...(hasWarmingContent ? [{ id: "aquecimento" as Tab, label: "Aquecimento", icon: Flame, badge: "PRÉ" }] : []),
+    ...(hasCPLContent ? [{ id: "cpl" as Tab, label: "CPL Scripts", icon: Clapperboard, badge: "CPL" }] : []),
   ];
 
   // Build cinema pieces from current pieces
@@ -3067,6 +3840,21 @@ export default function ContentApproval() {
               </div>
             )}
           </div>
+        )}
+
+        {/* ── Aquecimento Tab ── */}
+        {activeTab === "aquecimento" && (
+          <WarmingTab apiPieces={apiContentData?.pieces ?? []} />
+        )}
+
+        {/* ── CPL Scripts Tab ── */}
+        {activeTab === "cpl" && (
+          <CPLTab
+            apiPieces={apiContentData?.pieces ?? []}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            loading={loadingPiece}
+          />
         )}
 
         {/* ── Social Launch Gate — appears when all content approved ── */}
