@@ -10,7 +10,7 @@ import {
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
   Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair, Camera,
-  GraduationCap, ExternalLink,
+  GraduationCap, ExternalLink, Fingerprint,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -98,6 +98,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     {
       label: "Criação",
       items: [
+        { name: "Clone de Voz & Avatar", href: "/settings?tab=identidade", icon: Fingerprint, badge: "IA" },
         { name: tr.sidebar.vsl,           href: "/vsls",             icon: Video        },
         { name: "Produção de Vídeo",   href: "/video-production", icon: Clapperboard },
         { name: "Vídeo Diário",           href: "/video-diario",     icon: Zap,  badge: "✦" },
@@ -188,11 +189,12 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
+                const hrefPath = item.href.split("?")[0]!;
                 const isActive = item.external
                   ? false
-                  : item.href === "/"
+                  : hrefPath === "/"
                     ? location === "/"
-                    : location.startsWith(item.href);
+                    : location.startsWith(hrefPath);
                 const TOUR_HREFS = new Set(["/campaigns", "/agents", "/sequences", "/integracoes", "/revenue"]);
                 const inner = (
                   <div
