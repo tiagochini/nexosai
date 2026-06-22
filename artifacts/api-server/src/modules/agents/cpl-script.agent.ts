@@ -282,6 +282,11 @@ export async function runCPLScriptAgent(
     keyMessage: cpl.keyMessage,
   }));
 
+  const cplScores = [cpl1, cpl2, cpl3]
+    .map((c) => (c as any)._qualityScore as number | undefined)
+    .filter((s): s is number => typeof s === "number");
+  const _qualityScore = cplScores.length > 0 ? Math.round(cplScores.reduce((a, b) => a + b, 0) / cplScores.length) : undefined;
+
   return {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     totalVideos: 3,
@@ -297,5 +302,6 @@ export async function runCPLScriptAgent(
       captionStrategy: "Legenda em texto completo para SEO + primeiras 3 linhas com gancho para parar o scroll",
     },
     cplNotes: `Sequência de 3 CPLs gerada com agentes dedicados:\n• CPL1: ${cpl1.psychologicalObjective}\n• CPL2: ${cpl2.psychologicalObjective}\n• CPL3: ${cpl3.psychologicalObjective}`,
-  };
+    _qualityScore,
+  } as CPLScriptOutput & { _qualityScore?: number };
 }

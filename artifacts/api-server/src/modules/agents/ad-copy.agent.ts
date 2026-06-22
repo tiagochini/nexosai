@@ -344,14 +344,14 @@ Retorne APENAS o JSON do pacote de anúncios.`;
     log,
   });
 
-  const result = { content: critique.refinedOutput };
-
-  return parseAgentJSON<AdCopyOutput>(result.content, {
+  const parsed = parseAgentJSON<AdCopyOutput & { _qualityScore?: number }>(critique.refinedOutput, {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     totalBudget: Number(intakeData["campaign.budget.traffic"] ?? 0),
     overallBiddingStrategy: "",
     segments: [],
     phaseStrategy: [],
-    adCopyNotes: result.content,
+    adCopyNotes: critique.refinedOutput,
   });
+  parsed._qualityScore = critique.qualityScore;
+  return parsed;
 }

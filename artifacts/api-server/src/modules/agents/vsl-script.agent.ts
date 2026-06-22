@@ -401,9 +401,7 @@ Retorne APENAS o JSON do roteiro completo.`;
     log,
   });
 
-  const result = { content: critique.refinedOutput };
-
-  return parseAgentJSON<VSLOutput>(result.content, {
+  const parsed = parseAgentJSON<VSLOutput & { _qualityScore?: number }>(critique.refinedOutput, {
     title: `VSL — ${String(intakeData["product.name"] ?? "")}`,
     totalDuration: "35 minutos",
     totalWordCount: 0,
@@ -414,6 +412,8 @@ Retorne APENAS o JSON do roteiro completo.`;
     offerReveal: { timing: "", approach: "", stackPresentation: "", priceAnchor: "", priceReveal: "", urgencyMechanism: "" },
     ctas: { primary: "", secondary: "", urgencyLine: "", guaranteeStatement: "" },
     technicalNotes: { recommendedLength: "", pacing: "", backgroundMusic: "", captionRecommendation: "", thumbnailDirection: "" },
-    vslNotes: result.content,
+    vslNotes: critique.refinedOutput,
   });
+  parsed._qualityScore = critique.qualityScore;
+  return parsed;
 }

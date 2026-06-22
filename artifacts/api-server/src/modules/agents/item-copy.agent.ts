@@ -280,6 +280,8 @@ Retorne APENAS o JSON.`;
 
   let content: string;
 
+  let qualityScore: number | undefined;
+
   if (campaignId) {
     const critique = await runAgentWithCritique({
       campaignId,
@@ -290,6 +292,7 @@ Retorne APENAS o JSON.`;
       log,
     });
     content = critique.refinedOutput;
+    qualityScore = critique.qualityScore;
   } else {
     const result = await runAgent({
       campaignId: null,
@@ -302,11 +305,12 @@ Retorne APENAS o JSON.`;
     content = result.content;
   }
 
-  return parseAgentJSON<GeneratedItemCopy>(content, {
+  const parsed = parseAgentJSON<GeneratedItemCopy>(content, {
     itemId: input.itemId,
     phase: input.phase,
     contentType: input.contentType ?? "general",
     contactSegment: input.contactSegment ?? "all",
     copywriterNotes: content,
   });
+  return { ...parsed, _qualityScore: qualityScore } as GeneratedItemCopy & { _qualityScore?: number };
 }

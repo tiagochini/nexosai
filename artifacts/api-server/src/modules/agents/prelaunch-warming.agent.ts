@@ -219,7 +219,7 @@ Retorne APENAS o JSON. Conteúdo real, não esboços.`;
     log,
   });
 
-  return parseAgentJSON<PrelaunchWarmingOutput>(critique.refinedOutput, {
+  const parsed = parseAgentJSON<PrelaunchWarmingOutput & { _qualityScore?: number }>(critique.refinedOutput, {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     warmingDuration: durationDays,
     overallObjective: "",
@@ -234,4 +234,6 @@ Retorne APENAS o JSON. Conteúdo real, não esboços.`;
     },
     warmingNotes: critique.refinedOutput,
   });
+  parsed._qualityScore = critique.qualityScore;
+  return parsed;
 }

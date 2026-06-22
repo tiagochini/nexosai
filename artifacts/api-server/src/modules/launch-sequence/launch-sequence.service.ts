@@ -613,6 +613,8 @@ export async function generateItemCopy(
   // Store the generated copy in the item's metadata
   const existingMeta = (item.metadata as Record<string, unknown>) ?? {};
   const segKey = contactSegment ?? "all";
+  const copyQualityScore = (copy as any)._qualityScore as number | undefined;
+  const existingQualityScores = (existingMeta["qualityScores"] as Record<string, number> | undefined) ?? {};
   await db
     .update(launchSequenceItemsTable)
     .set({
@@ -622,6 +624,7 @@ export async function generateItemCopy(
           ...(existingMeta["generatedCopy"] as Record<string, unknown> ?? {}),
           [segKey]: copy,
         },
+        ...(copyQualityScore !== undefined ? { qualityScores: { ...existingQualityScores, [segKey]: copyQualityScore } } : {}),
       },
       status: item.status === "pending" ? "content_ready" : item.status,
     })

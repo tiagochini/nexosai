@@ -249,7 +249,7 @@ Retorne APENAS o JSON conforme schema.`;
     log,
   });
 
-  return parseAgentJSON<CPLPhaseOutput>(critique.refinedOutput, {
+  const _parsed1 = parseAgentJSON<CPLPhaseOutput & { _qualityScore?: number }>(critique.refinedOutput, {
     cplNumber: 1,
     title: "CPL 1",
     subtitle: "",
@@ -268,6 +268,8 @@ Retorne APENAS o JSON conforme schema.`;
     keyMessage: "",
     viewerFeeling: "",
   });
+  _parsed1._qualityScore = critique.qualityScore;
+  return _parsed1;
 }
 
 // ─── CPL 2 — New Mechanism + StoryBrand + Por que o caminho convencional falha ─
@@ -345,7 +347,7 @@ Retorne APENAS o JSON conforme schema.`;
     log,
   });
 
-  return parseAgentJSON<CPLPhaseOutput>(critique.refinedOutput, {
+  const _parsed2 = parseAgentJSON<CPLPhaseOutput & { _qualityScore?: number }>(critique.refinedOutput, {
     cplNumber: 2,
     title: "CPL 2",
     subtitle: "",
@@ -364,6 +366,8 @@ Retorne APENAS o JSON conforme schema.`;
     keyMessage: "",
     viewerFeeling: "",
   });
+  _parsed2._qualityScore = critique.qualityScore;
+  return _parsed2;
 }
 
 // ─── CPL 3 — Hauge Story Arc + Social Proof + Pertencimento ──────────────────
@@ -443,7 +447,7 @@ Retorne APENAS o JSON conforme schema.`;
     log,
   });
 
-  return parseAgentJSON<CPLPhaseOutput>(critique.refinedOutput, {
+  const _parsed3 = parseAgentJSON<CPLPhaseOutput & { _qualityScore?: number }>(critique.refinedOutput, {
     cplNumber: 3,
     title: "CPL 3",
     subtitle: "",
@@ -462,4 +466,6 @@ Retorne APENAS o JSON conforme schema.`;
     keyMessage: "",
     viewerFeeling: "",
   });
+  _parsed3._qualityScore = critique.qualityScore;
+  return _parsed3;
 }

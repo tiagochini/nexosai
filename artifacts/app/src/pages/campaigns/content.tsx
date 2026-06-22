@@ -44,6 +44,7 @@ interface ContentPiece extends PreviewPiece {
   visualDirection?: string;
   hashtags?: string[];
   rejectionReason?: string;
+  qualityScore?: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -288,6 +289,15 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
                   "text-blue-400 border-blue-400/40 bg-blue-400/10"
                 }`}>
                   {piece.status === "approved" ? "Aprovado" : piece.status === "rejected" ? "Rejeitado" : "Editado"}
+                </Badge>
+              )}
+              {piece.qualityScore != null && (
+                <Badge variant="outline" className={`rounded-none font-mono text-[11px] px-1.5 py-0 ${
+                  piece.qualityScore >= 80 ? "text-emerald-400 border-emerald-400/40 bg-emerald-400/10" :
+                  piece.qualityScore >= 60 ? "text-yellow-400 border-yellow-400/40 bg-yellow-400/10" :
+                  "text-red-400 border-red-400/40 bg-red-400/10"
+                }`}>
+                  IA {piece.qualityScore}/100
                 </Badge>
               )}
             </div>
@@ -1156,6 +1166,8 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
       else if (raw && typeof raw === "object") c = raw as Record<string, unknown>;
     } catch { c = {}; }
 
+    const pieceQualityScore = typeof c["_qualityScore"] === "number" ? c["_qualityScore"] as number : undefined;
+
     // Helper: create a child card
     const child = (subKey: string, overrides: Partial<ContentPiece>): ContentPiece => ({
       id: `${piece.id}::${subKey}`,
@@ -1167,6 +1179,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
       status,
       segment: "all",
       rejectionReason: piece.rejectionReason ?? undefined,
+      qualityScore: pieceQualityScore,
       ...overrides,
     });
 

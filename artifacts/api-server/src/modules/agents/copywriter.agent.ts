@@ -808,10 +808,12 @@ Retorne APENAS este JSON:
     log,
   });
 
-  return parseAgentJSON<Pick<CopywriterOutput, "emailSequence" | "remarketingSequence">>(
+  const _ep = parseAgentJSON<Pick<CopywriterOutput, "emailSequence" | "remarketingSequence"> & { _qualityScore?: number }>(
     critique.refinedOutput,
     { emailSequence: { preLaunch: [], cartOpen: [], cartClose: [], remarketing: [] }, remarketingSequence: [] },
   );
+  _ep._qualityScore = critique.qualityScore;
+  return _ep;
 }
 
 // ─── Sub-agent: Sales Page + Cart ────────────────────────────────────────────
@@ -861,7 +863,7 @@ Retorne APENAS este JSON:
     log,
   });
 
-  return parseAgentJSON<Pick<CopywriterOutput, "salesPage" | "cartScripts" | "cartSegmentedCopy" | "triggerPlaybook">>(
+  const _sp = parseAgentJSON<Pick<CopywriterOutput, "salesPage" | "cartScripts" | "cartSegmentedCopy" | "triggerPlaybook"> & { _qualityScore?: number }>(
     critique.refinedOutput,
     {
       salesPage: { sections: [], totalWordCount: 0, readingTimeMinutes: 0, primaryCTA: "", guarantee: "" },
@@ -870,6 +872,8 @@ Retorne APENAS este JSON:
       triggerPlaybook: undefined,
     },
   );
+  _sp._qualityScore = critique.qualityScore;
+  return _sp;
 }
 
 // ─── Sub-agent: Social Copy (WhatsApp + Facebook + TikTok) ───────────────────
@@ -923,10 +927,12 @@ Retorne APENAS este JSON:
     log,
   });
 
-  return parseAgentJSON<Pick<CopywriterOutput, "whatsapp" | "facebook" | "tiktok" | "copywriterNotes">>(
+  const _soc = parseAgentJSON<Pick<CopywriterOutput, "whatsapp" | "facebook" | "tiktok" | "copywriterNotes"> & { _qualityScore?: number }>(
     critique.refinedOutput,
     { whatsapp: { broadcasts: [], groupMessages: [] }, facebook: { organicPosts: [] }, tiktok: { contentPlan: [] }, copywriterNotes: "" },
   );
+  _soc._qualityScore = critique.qualityScore;
+  return _soc;
 }
 
 // ─── Main orchestrator ────────────────────────────────────────────────────────
@@ -953,6 +959,13 @@ export async function runCopywriterAgent(
     runSocialSubAgent(campaignId, workspaceId, sharedContext, systemPrompt, profileContext, log),
   ]);
 
+  const scores = [
+    (emailResult as any)._qualityScore as number | undefined,
+    (salesPageResult as any)._qualityScore as number | undefined,
+    (socialResult as any)._qualityScore as number | undefined,
+  ].filter((s): s is number => typeof s === "number");
+  const _qualityScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : undefined;
+
   return {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     emailSequence: emailResult.emailSequence ?? { preLaunch: [], cartOpen: [], cartClose: [], remarketing: [] },
@@ -965,5 +978,6 @@ export async function runCopywriterAgent(
     copywriterNotes: socialResult.copywriterNotes ?? "",
     triggerPlaybook: salesPageResult.triggerPlaybook,
     cartSegmentedCopy: salesPageResult.cartSegmentedCopy,
-  };
+    _qualityScore,
+  } as CopywriterOutput & { _qualityScore?: number };
 }

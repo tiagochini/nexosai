@@ -433,9 +433,7 @@ Retorne APENAS o JSON da página completa.`;
     log,
   });
 
-  const result = { content: critique.refinedOutput };
-
-  return parseAgentJSON<LandingPageOutput>(result.content, {
+  const parsed = parseAgentJSON<LandingPageOutput & { _qualityScore?: number }>(critique.refinedOutput, {
     pageTitle: String(intakeData["product.name"] ?? ""),
     pageType: "sales_page",
     metaTitle: "",
@@ -453,6 +451,8 @@ Retorne APENAS o JSON da página completa.`;
     pageSpeedNotes: [],
     seoElements: { h1: "", h2s: [], altTexts: [], schema: "" },
     technicalRequirements: [],
-    landingPageNotes: result.content,
+    landingPageNotes: critique.refinedOutput,
   });
+  parsed._qualityScore = critique.qualityScore;
+  return parsed;
 }

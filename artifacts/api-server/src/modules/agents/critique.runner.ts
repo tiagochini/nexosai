@@ -16,7 +16,11 @@ export interface CritiqueResult {
   refinedOutput: string;
   selfScoreBefore: number;
   selfScoreAfter: number;
+  /** Alias for selfScoreAfter — the final quality score after refinement (0-100). */
+  qualityScore: number;
   issues: string[];
+  /** Alias for issues — human-readable critique notes from the self-critique pass. */
+  critiqueNotes: string[];
   totalCreditsCharged: number;
   totalTokensUsed: number;
 }
@@ -134,7 +138,9 @@ export async function runAgentWithCritique(opts: {
       refinedOutput: checkpoint!.refinedOutput,
       selfScoreBefore: checkpoint!.selfScoreBefore ?? 65,
       selfScoreAfter: checkpoint!.selfScoreAfter ?? 65,
+      qualityScore: checkpoint!.selfScoreAfter ?? 65,
       issues: (checkpoint!.issues as string[]) ?? [],
+      critiqueNotes: (checkpoint!.issues as string[]) ?? [],
       totalCreditsCharged: checkpoint!.creditsCharged,
       totalTokensUsed: checkpoint!.tokensUsed,
     };
@@ -340,7 +346,9 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
     refinedOutput,
     selfScoreBefore,
     selfScoreAfter,
+    qualityScore: selfScoreAfter,
     issues,
+    critiqueNotes: issues,
     totalCreditsCharged: totalCredits,
     totalTokensUsed: totalTokens,
   };

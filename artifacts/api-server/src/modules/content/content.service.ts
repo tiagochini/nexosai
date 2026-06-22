@@ -477,7 +477,7 @@ export async function generateCampaignContent(
         type: "email_sequence",
         status: "draft",
         title: `Copy Completa — ${copyOutput.campaignTitle}`,
-        content: copyOutput as any,
+        content: { ...copyOutput, _qualityScore: (copyOutput as any)._qualityScore ?? null } as any,
         aiProvider: "openai",
         creditsUsed: 80,
       })
@@ -533,7 +533,7 @@ export async function generateCampaignContent(
           type: "landing_page_structure",
           status: "draft",
           title: `Página de Vendas — ${lpOutput.sections.length} seções | ${lpOutput.pageType}`,
-          content: lpOutput as any,
+          content: { ...lpOutput, _qualityScore: (lpOutput as any)._qualityScore ?? null } as any,
           aiProvider: "openai",
           creditsUsed: 65,
         })
@@ -645,7 +645,7 @@ export async function generateCampaignContent(
         type: "ad_copy",
         status: "draft",
         title: `Pacote de Anúncios — ${adOutput.segments.length} segmentos`,
-        content: adOutput as any,
+        content: { ...adOutput, _qualityScore: (adOutput as any)._qualityScore ?? null } as any,
         aiProvider: "openai",
         creditsUsed: 50,
       })
@@ -815,7 +815,7 @@ export async function generateCampaignContent(
           type: "vsl_script",
           status: "draft",
           title: vslOutput.title,
-          content: vslOutput as any,
+          content: { ...vslOutput, _qualityScore: (vslOutput as any)._qualityScore ?? null } as any,
           aiProvider: "openai",
           creditsUsed: 70,
         })
@@ -881,7 +881,7 @@ export async function generateCampaignContent(
           type: "content_calendar",
           status: "draft",
           title: `Aquecimento Pré-Lançamento — ${warmingOutput.warmingDuration} dias`,
-          content: warmingOutput as any,
+          content: { ...warmingOutput, _qualityScore: (warmingOutput as any)._qualityScore ?? null } as any,
           aiProvider: "anthropic",
           creditsUsed: 40,
         })
@@ -941,7 +941,7 @@ export async function generateCampaignContent(
           type: "cpl_script",
           status: "draft",
           title: `CPL — ${cplOutput.totalVideos} Vídeos de Pré-Lançamento`,
-          content: cplOutput as any,
+          content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null } as any,
           aiProvider: "openai",
           creditsUsed: 75,
         })
