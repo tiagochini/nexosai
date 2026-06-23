@@ -21,7 +21,6 @@ import {
   emitCampaignEvent,
   emitClarificationNeeded,
 } from "../realtime/realtime.service.js";
-import { InsufficientCreditsError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
 import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY, DOMINO_APPLIED_FRAMEWORKS, NEXOS_AI_IDENTITY } from "./domino-core.js";
 import { NEXOS_COGNITIVE_FOUNDATIONS } from "./cognitive-foundations.js";
@@ -531,9 +530,17 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     ownerLocale = ownerRow?.locale ?? undefined;
   }
 
-  const MIN_CREDITS_REQUIRED = 5;
-  if (!ws || ws.creditsBalance < MIN_CREDITS_REQUIRED) {
-    throw new InsufficientCreditsError(MIN_CREDITS_REQUIRED, ws?.creditsBalance ?? 0);
+  // Low-credit advisory only — never block pipeline execution.
+  // Paying customers must always receive their full deliverable regardless of credit balance.
+  // InsufficientCreditsError was removed: a hard throw here aborted entire pipeline phases.
+  const MIN_CREDITS_ADVISORY = 5;
+  if (!ws || ws.creditsBalance < MIN_CREDITS_ADVISORY) {
+    log.warn(
+      { workspaceId, agentRole, balance: ws?.creditsBalance ?? 0, required: MIN_CREDITS_ADVISORY },
+      "[CREDITS] Low credit balance — proceeding with agent run (advisory-only, never blocking)",
+    );
+    // ws must exist for locale lookup; if workspace not found, use empty shell
+    // (agent still runs, credit deduction is best-effort and will simply no-op if ws missing)
   }
 
   // Only insert into campaign_agents when we have a real UUID campaign ID
@@ -683,7 +690,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     content = result.content;
     creditsCharged = result.creditsCharged;
 
-    const balanceBefore = ws.creditsBalance;
+    const balanceBefore = ws?.creditsBalance ?? 0;
     const balanceAfter = Math.max(0, balanceBefore - creditsCharged);
 
     if (creditsCharged > 0) {
