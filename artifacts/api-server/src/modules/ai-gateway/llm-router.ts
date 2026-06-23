@@ -50,15 +50,26 @@ const TASK_PROVIDER_CHAINS: Record<
 // Max output tokens guidance per task type.
 // strategic_deep_copy and long_context use 16000 to support large campaign outputs
 // (email sequences, content calendars, VSL scripts) without truncation.
-// Claude (claude-sonnet-4-6) supports up to 64k output; GPT-4o supports 16k.
-// These values flow through routedComplete → completeWithAgent → callAnthropic/callOpenAI/callGemini.
+// structured_json uses 16000 — enough for the largest chunked targeting/media-buyer
+// JSON schemas without risking provider-side rejection.
+// These values are further clamped to PROVIDER_MAX_OUTPUT_TOKENS before each call.
 export const TASK_MAX_OUTPUT_TOKENS: Record<LLMTaskType, number> = {
   strategic_deep_copy: 16000,
-  structured_json:     32768,
+  structured_json:     16000,
   summarization:       4096,
   validation:          2048,
   long_context:        16000,
   emergency_recovery:  4096,
+};
+
+// Hard per-provider output token caps. Values come from the models active in
+// ai-gateway.service.ts: claude-sonnet-4-6 (Anthropic), gpt-5.5 (OpenAI), gemini-3-flash-preview (Gemini).
+// effectiveMaxTokens is clamped to min(requested, provider_cap) before every call so
+// task-type defaults can never exceed what the provider actually supports.
+const PROVIDER_MAX_OUTPUT_TOKENS: Record<"anthropic" | "openai" | "gemini", number> = {
+  anthropic: 16000, // claude-sonnet-4-6 safe cap (extended-output beta not enabled)
+  openai:    16384, // gpt-5.5 max output tokens
+  gemini:     8192, // gemini-3-flash-preview output limit
 };
 
 // Agent role → task type mapping (governs which provider chain to use).
@@ -162,9 +173,12 @@ export async function routedComplete(
         { campaignId, agentRole, taskType, providerOverride, attempt: attemptCount },
         "[LLM_ROUTER] Attempting provider",
       );
-      const effectiveMaxTokens = maxTokensOverride && maxTokensOverride > TASK_MAX_OUTPUT_TOKENS[taskType]
+      // Clamp to the lower of: task-type default (or caller override) vs hard provider cap.
+      // This ensures no call ever requests more tokens than the active model supports.
+      const requested = maxTokensOverride && maxTokensOverride > TASK_MAX_OUTPUT_TOKENS[taskType]
         ? maxTokensOverride
         : TASK_MAX_OUTPUT_TOKENS[taskType];
+      const effectiveMaxTokens = Math.min(requested, PROVIDER_MAX_OUTPUT_TOKENS[providerOverride]);
       const result = await completeWithAgent(
         agentRole,
         systemPrompt,
