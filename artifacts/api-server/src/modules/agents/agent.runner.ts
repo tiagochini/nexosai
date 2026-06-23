@@ -26,6 +26,7 @@ import { DOMINO_CORE_PREAMBLE, DOMINO_SELF_CRITIC, DOMINO_PLF_SUPREMACY, DOMINO_
 import { NEXOS_COGNITIVE_FOUNDATIONS } from "./cognitive-foundations.js";
 import { NEXOS_CONSTRAINT_RESOLUTION_PROTOCOL } from "./constraint-reasoning.js";
 import { EMOTIONAL_COPY_VOICE_DOCTRINE } from "./emotional-copy-voice.js";
+import { MASTERY_LIBRARY_FOR } from "./mastery-libraries.js";
 import type { Logger } from "pino";
 
 export interface RunAgentOptions {
@@ -479,10 +480,18 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   // 6. Campaign Memory Layer (workspace-specific context)
   // 7. Psychological Profile (6-map avatar synthesis — bridges intake → agent pipeline)
   // 8. Dynamic Avatar State (phase-specific emotional state — where in the funnel right now)
-  // 9. Agent-specific system prompt (role expertise)
+  // 8.5. MASTERY LIBRARY (deep operational doctrine per agent role — the HOW, not just the WHO)
+  //      Injected from mastery-libraries.ts via MASTERY_LIBRARY_FOR[agentRole].
+  //      Not injected for skipAllStaticLayers (mechanical JSON agents).
+  // 9. Agent-specific system prompt (role expertise + cognitive identity)
   // 10. DOMINO Self-Critic (mandatory pre-output review checklist)
   const profileBlock = opts.profileContext ?? "";
   const phaseBlock = opts.phaseContext ?? "";
+  // Mastery Library: deep operational doctrine for the specific agent role.
+  // Injected between the avatar/phase context and the agent task prompt so that
+  // the agent reads its full domain knowledge BEFORE receiving the task instruction.
+  // Not injected for skipAllStaticLayers (mechanical/JSON-output agents).
+  const masteryBlock = MASTERY_LIBRARY_FOR[agentRole] ?? "";
   // Use cached static layers (pre-computed at module load — avoids 130KB realloc per call).
   // Pipeline mode drops COGNITIVE_FOUNDATIONS (27KB) to reduce heap across 10+ sequential calls.
   // skipAllStaticLayers drops ALL ~110KB philosophy layers for mechanical JSON-output agents.
@@ -505,6 +514,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       memoryBlock +
       profileBlock +
       phaseBlock +
+      masteryBlock +
       complianceBlock +
       systemPrompt +
       DOMINO_SELF_CRITIC;
