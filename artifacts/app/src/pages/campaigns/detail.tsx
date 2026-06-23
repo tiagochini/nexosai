@@ -1620,8 +1620,18 @@ export default function CampaignDetail() {
   // ── Execute campaign phase ─────────────────────────────────────────────────────
   const executeMutation = useExecuteCampaign({
     mutation: {
-      onSuccess: () => {
-        toast.success("Fase iniciada. A agente está em execução.");
+      onSuccess: (data: unknown) => {
+        const resp = data as { creditWarning?: { balance: number; required: number; shortage: number } } | null;
+        if (resp?.creditWarning) {
+          const { shortage, balance } = resp.creditWarning;
+          toast.warning(`Créditos baixos — faltam ${shortage} cr (saldo: ${balance})`, {
+            description: "A fase foi iniciada, mas recomendamos comprar créditos para evitar interrupções.",
+            duration: 12000,
+            action: { label: "Comprar créditos", onClick: () => setLocation("/creditos") },
+          });
+        } else {
+          toast.success("Fase iniciada. A agente está em execução.");
+        }
         setActiveTab("agentes");
         setLiveEvents(prev => [...prev, {
           campaignId,
@@ -1652,8 +1662,9 @@ export default function CampaignDetail() {
         if (code === "INSUFFICIENT_CREDITS" && errData?.data) {
           const { shortage = 0, balance = 0, required = 0 } = errData.data;
           toast.error(`Créditos insuficientes — faltam ${shortage} cr (saldo: ${balance}, necessário: ${required})`, {
-            description: "Acesse Créditos do agente para comprar mais.",
-            duration: 8000,
+            description: "Compre créditos para continuar executando agentes.",
+            duration: 10000,
+            action: { label: "Comprar créditos", onClick: () => setLocation("/creditos") },
           });
         } else if (code === "CONTENT_NOT_APPROVED" || code === "NO_CONTENT") {
           const approvalUrl = (errData?.data as { approvalUrl?: string } | undefined)?.approvalUrl ?? `/campaigns/${campaignId}/content`;

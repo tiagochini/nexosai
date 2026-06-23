@@ -162,13 +162,20 @@ async function maybeNotifyStaleWaitingClarification(): Promise<void> {
 }
 
 // ── Stuck campaign auto-recovery ──────────────────────────────────────────────
-// Runs every scheduler tick (60s). Campaigns stuck in "analyzing" for > 45 min
-// or "generating" for > 90 min are force-reset to a retryable state.
-// Thresholds are generous because real AI providers (OpenAI, Anthropic) take
-// 15–40 min for strategy and 30–70 min for full 16-agent content generation.
-// The user still needs to trigger execution manually — this just unblocks the UI.
-const STUCK_ANALYZING_MS = 45 * 60 * 1000;
-const STUCK_GENERATING_MS = 90 * 60 * 1000;
+// Runs every scheduler tick (60s). Campaigns stuck in "analyzing" or "generating"
+// without progress are force-reset to a retryable state.
+//
+// Two-tier detection:
+//   Fast path (10 min): pipelineCheckpoint.lastProgressAt is stale by 10+ min.
+//     content.service.ts bumps updatedAt on every piece save (heartbeat), so a
+//     legitimately-running pipeline keeps its updatedAt fresh and won't be reset.
+//   Slow path (30 min): updatedAt stale — catches crashes before the first piece is saved
+//     (strategy phase, pre-pipeline-boot), keeping the 30-min grace for long LLM calls.
+//
+// AUDIT FIX: retry cap raised from 3 → 10 to match endpoint-level limit.
+const STUCK_ANALYZING_MS = 15 * 60 * 1000;
+const STUCK_GENERATING_MS = 30 * 60 * 1000;
+const STUCK_PROGRESS_MS   =  8 * 60 * 1000;
 
 async function recoverStuckCampaigns(): Promise<void> {
   const log = logger.child({ component: "failsafe-recovery" });
@@ -192,8 +199,18 @@ async function recoverStuckCampaigns(): Promise<void> {
       const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
       const retryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
 
-      // Trava 1: teto de retries — stop auto-cycling when max reached
-      if (retryCount >= 3) {
+      // Fast-path guard: check lastProgressAt — if recent, the pipeline is active, skip reset
+      const cp = (brain["pipelineCheckpoint"] as { lastProgressAt?: string } | undefined);
+      if (cp?.lastProgressAt) {
+        const progressAge = now.getTime() - new Date(cp.lastProgressAt).getTime();
+        if (progressAge < STUCK_PROGRESS_MS) {
+          log.info({ campaignId: c.id, progressAgeMs: progressAge }, "[FAILSAFE-AUTO] analyzing — lastProgressAt recent, skipping reset");
+          continue;
+        }
+      }
+
+      // AUDIT FIX: raised from 3 → 10 to match execution.routes.ts retry cap
+      if (retryCount >= 10) {
         const updated = { ...brain, contentRetry: { ...contentRetry, requiresIntervention: true } };
         await db.update(campaignsTable).set({ brainData: updated as any }).where(eq(campaignsTable.id, c.id));
         log.warn({ campaignId: c.id, retryCount }, "[FAILSAFE-AUTO] analyzing max retries — marked requiresIntervention, NOT resetting");
@@ -247,8 +264,18 @@ async function recoverStuckCampaigns(): Promise<void> {
       const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
       const retryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
 
-      // Trava 1: teto de retries — stop auto-cycling when max reached
-      if (retryCount >= 3) {
+      // Fast-path guard: check lastProgressAt — if recent (< 8 min), pipeline is active
+      const cp = (brain["pipelineCheckpoint"] as { lastProgressAt?: string } | undefined);
+      if (cp?.lastProgressAt) {
+        const progressAge = now.getTime() - new Date(cp.lastProgressAt).getTime();
+        if (progressAge < STUCK_PROGRESS_MS) {
+          log.info({ campaignId: c.id, progressAgeMs: progressAge }, "[FAILSAFE-AUTO] generating — lastProgressAt recent, skipping reset");
+          continue;
+        }
+      }
+
+      // AUDIT FIX: raised from 3 → 10 to match execution.routes.ts retry cap
+      if (retryCount >= 10) {
         const updated = { ...brain, contentRetry: { ...contentRetry, requiresIntervention: true } };
         await db.update(campaignsTable).set({ brainData: updated as any }).where(eq(campaignsTable.id, c.id));
         log.warn({ campaignId: c.id, retryCount }, "[FAILSAFE-AUTO] generating max retries — marked requiresIntervention, NOT resetting");

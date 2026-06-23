@@ -33,20 +33,33 @@ router.use(requireAuth);
 const MODULE_LOADED_AT = Date.now();
 const SERVER_CONTENT_GRACE_MS = 5_000;
 
-// ── Pre-flight credit check ───────────────────────────────────────────────────
-// Returns the credits needed for a phase; throws 402 if balance insufficient.
+// ── Pre-flight credit advisory ────────────────────────────────────────────────
+// AUDIT FIX (EFFICACY RULE): Credits are advisory — never a hard gate.
+// A paying customer's pipeline must NEVER be stopped by a low-credit state.
+// Previous behavior: threw HTTP 402, permanently blocking execution.
+// New behavior: logs a warning and returns credit state metadata.
+// The route handler can include this in the response headers/body for
+// frontend soft-warnings (toast with action), but the pipeline proceeds.
+interface CreditCheckResult {
+  sufficient: boolean;
+  balance: number;
+  required: number;
+  shortage: number;
+  phaseCost: number;
+}
+
 async function checkCreditsForPhase(
   workspaceId: string,
   campaignId: string,
   phase: "strategy" | "content" | "launch",
-): Promise<void> {
+): Promise<CreditCheckResult> {
   const [workspace] = await db
     .select({ balance: workspacesTable.creditsBalance })
     .from(workspacesTable)
     .where(eq(workspacesTable.id, workspaceId))
     .limit(1);
 
-  if (!workspace) return;
+  if (!workspace) return { sufficient: true, balance: 0, required: 0, shortage: 0, phaseCost: 0 };
 
   const [campaign] = await db
     .select({ type: campaignsTable.type })
@@ -56,6 +69,7 @@ async function checkCreditsForPhase(
 
   const campaignType = campaign?.type ?? "launch";
   const estimate = getCampaignCreditEstimate(campaignType);
+  void estimate;
 
   const phaseCost = {
     strategy: 45,
@@ -63,30 +77,16 @@ async function checkCreditsForPhase(
     launch: 37,
   }[phase];
 
-  // Require phase cost + buffer (next campaign headroom)
   const required = phaseCost + CAMPAIGN_CREDIT_BUFFER;
   const balance = workspace.balance ?? 0;
 
   if (balance < required) {
     const shortage = required - balance;
-    throw new AppError(
-      402,
-      `Créditos insuficientes para iniciar esta fase. ` +
-        `Saldo atual: ${balance} cr. ` +
-        `Necessário: ${required} cr (${phaseCost} para a fase + ${CAMPAIGN_CREDIT_BUFFER} de reserva). ` +
-        `Compre mais ${shortage} crédito${shortage !== 1 ? "s" : ""} para continuar.`,
-      "INSUFFICIENT_CREDITS",
-      {
-        balance,
-        required,
-        phaseCost,
-        buffer: CAMPAIGN_CREDIT_BUFFER,
-        shortage,
-        campaignType,
-        estimatedTotal: estimate.typical,
-      },
-    );
+    // Advisory-only: log + return deficit data; DO NOT throw.
+    // The pipeline continues. Client shows a soft "low credits" banner.
+    return { sufficient: false, balance, required, shortage, phaseCost };
   }
+  return { sufficient: true, balance, required, shortage: 0, phaseCost };
 }
 
 // GET /campaigns/:campaignId/execution/status
@@ -134,7 +134,7 @@ router.post("/:campaignId/execute/strategy", async (req, res): Promise<void> => 
   const campaignId = req.params["campaignId"] as string;
 
   try {
-    await checkCreditsForPhase(req.auth.workspaceId, campaignId, "strategy");
+    const creditAdvisory = await checkCreditsForPhase(req.auth.workspaceId, campaignId, "strategy");
     const result = await triggerStrategyPhase(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({
       message: result.queued
@@ -144,6 +144,11 @@ router.post("/:campaignId/execute/strategy", async (req, res): Promise<void> => 
       action: "run_strategy",
       jobId: result.jobId ?? null,
       queued: result.queued,
+      creditWarning: creditAdvisory.sufficient ? undefined : {
+        balance: creditAdvisory.balance,
+        required: creditAdvisory.required,
+        shortage: creditAdvisory.shortage,
+      },
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -176,7 +181,7 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
   }
 
   try {
-    await checkCreditsForPhase(req.auth.workspaceId, campaignId, "content");
+    const creditAdvisory = await checkCreditsForPhase(req.auth.workspaceId, campaignId, "content");
     const result = await triggerContentPhase(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({
       message: result.queued
@@ -186,6 +191,11 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
       action: "generate_content",
       jobId: result.jobId ?? null,
       queued: result.queued,
+      creditWarning: creditAdvisory.sufficient ? undefined : {
+        balance: creditAdvisory.balance,
+        required: creditAdvisory.required,
+        shortage: creditAdvisory.shortage,
+      },
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -490,7 +500,7 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
       );
     }
 
-    await checkCreditsForPhase(req.auth.workspaceId, campaignId, "launch");
+    const creditAdvisory = await checkCreditsForPhase(req.auth.workspaceId, campaignId, "launch");
     const result = await triggerExecutionPhase(campaignId, req.auth.workspaceId, req.log);
     res.status(202).json({
       message: result.queued
@@ -500,6 +510,11 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
       action: "execute",
       jobId: result.jobId ?? null,
       queued: result.queued,
+      creditWarning: creditAdvisory.sufficient ? undefined : {
+        balance: creditAdvisory.balance,
+        required: creditAdvisory.required,
+        shortage: creditAdvisory.shortage,
+      },
     });
   } catch (err) {
     if (err instanceof AppError) {

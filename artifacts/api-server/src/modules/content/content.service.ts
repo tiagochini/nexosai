@@ -332,17 +332,18 @@ export async function generateCampaignContent(
         break;
       }
       case "stories_sequence": {
-        const stories = (obj.stories as unknown[] | undefined)?.length ?? 0;
-        if (stories === 0) {
-          return `stories_sequence: no stories — LLM returned empty response`;
+        const sequences = (obj.sequences as unknown[] | undefined)?.length ?? 0;
+        if (sequences === 0) {
+          return `stories_sequence: no sequences — LLM returned empty response (keys: [${Object.keys(obj).join(", ")}])`;
         }
         break;
       }
       case "targeting_config": {
-        const audiences = (obj.audiences as unknown[] | undefined)?.length ?? 0;
-        const segments = (obj.segments as unknown[] | undefined)?.length ?? 0;
-        if (audiences === 0 && segments === 0) {
-          return `targeting_config: no audiences or segments`;
+        const meta = (obj.metaAudiences as unknown[] | undefined)?.length ?? 0;
+        const google = (obj.googleAudiences as unknown[] | undefined)?.length ?? 0;
+        const tiktok = (obj.tiktokAudiences as unknown[] | undefined)?.length ?? 0;
+        if (meta === 0 && google === 0 && tiktok === 0) {
+          return `targeting_config: no metaAudiences, googleAudiences, or tiktokAudiences (keys: [${Object.keys(obj).join(", ")}])`;
         }
         break;
       }
@@ -396,6 +397,28 @@ export async function generateCampaignContent(
   // Capture copy and ad content references for compliance agent (set after generation)
   let capturedCopyContent: Record<string, unknown> | undefined;
   let capturedAdContent: Record<string, unknown> | undefined;
+
+  // ── Pipeline heartbeat ────────────────────────────────────────────────────────
+  // Updates pipelineCheckpoint.lastProgressAt every 90 seconds while agents run.
+  // The stuck-campaign scheduler (sequence-scheduler.worker.ts) checks this field
+  // to distinguish "running but slow" from "truly stuck" — preventing false resets
+  // that would interrupt legitimate 30-60 min content generation pipelines.
+  const heartbeatInterval = setInterval(() => {
+    db.select({ bd: (campaignsTable as any).brainData })
+      .from(campaignsTable)
+      .where(eq(campaignsTable.id, campaignId))
+      .limit(1)
+      .then(([row]) => {
+        const brain = ((row?.bd ?? {}) as Record<string, unknown>);
+        const cp = ((brain["pipelineCheckpoint"] ?? {}) as Record<string, unknown>);
+        const nowIso = new Date().toISOString();
+        return db.update(campaignsTable).set({
+          updatedAt: new Date(),
+          brainData: { ...brain, pipelineCheckpoint: { ...cp, lastProgressAt: nowIso } } as any,
+        }).where(eq(campaignsTable.id, campaignId));
+      })
+      .catch(() => { /* non-fatal — heartbeat is best-effort */ });
+  }, 90_000);
 
   // ── 1. Creative Director (all campaigns — sets visual identity first) ─────────
   if (!skipAgent("creative_direction", "creative_director")) try {
@@ -530,6 +553,9 @@ export async function generateCampaignContent(
         log,
       );
 
+      const lpContractWarn = validatePieceContract("landing_page_structure", lpOutput);
+      if (lpContractWarn) log.warn({ campaignId, contractWarn: lpContractWarn }, "landing_page_structure contract violation — saving with _contractViolation flag");
+
       const [piece] = await db
         .insert(contentPiecesTable)
         .values({
@@ -537,8 +563,8 @@ export async function generateCampaignContent(
           workspaceId,
           type: "landing_page_structure",
           status: "draft",
-          title: `Página de Vendas — ${lpOutput.sections.length} seções | ${lpOutput.pageType}`,
-          content: { ...lpOutput, _qualityScore: (lpOutput as any)._qualityScore ?? null } as any,
+          title: `Página de Vendas — ${lpOutput.sections?.length ?? 0} seções | ${lpOutput.pageType ?? "vsl"}`,
+          content: { ...lpOutput, _qualityScore: (lpOutput as any)._qualityScore ?? null, _contractViolation: lpContractWarn ?? undefined } as any,
           aiProvider: "openai",
           creditsUsed: 65,
         })
@@ -1795,6 +1821,9 @@ export async function generateCampaignContent(
       error: e.error,
     })),
   ];
+
+  // Clear the heartbeat interval — pipeline complete (or failed)
+  clearInterval(heartbeatInterval);
 
   return {
     campaignId,
