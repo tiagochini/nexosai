@@ -63,7 +63,10 @@ export const VALID_STATUS_TRANSITIONS: Readonly<Record<CampaignStatus, CampaignS
 
   awaiting_approval: ["approved", "generating", "analyzing", "cancelled"],
 
-  approved: ["executing", "cancelled"],
+  // "generating" allowed: re-generate incomplete content (e.g. pipeline stalled mid-run)
+  // "awaiting_approval" allowed: re-open approval gate after re-generation
+  // "strategy_ready" allowed: re-run strategy phase if needed
+  approved: ["executing", "cancelled", "generating", "awaiting_approval", "strategy_ready"],
 
   executing: ["live", "paused", "cancelled"],
 
