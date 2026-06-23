@@ -26,6 +26,7 @@ import {
   agentExecutionLogsTable,
   aiProviderLogsTable,
   inviteCodesTable,
+  contentPiecesTable,
 } from "@workspace/db";
 import { eq, and, lte, desc, count, sum } from "drizzle-orm";
 import { readFileSync, writeFileSync, existsSync, unlinkSync } from "fs";
