@@ -1665,6 +1665,41 @@ export async function generateCampaignContent(
         timestamp: new Date().toISOString(),
       });
     }
+
+    // ── Mark non-regenerable empty pieces ──────────────────────────────────────
+    // Pieces whose type has no dedicated agent cannot be auto-regenerated.
+    // Tag them with _autoRepairFailed=true in the JSONB so the frontend can
+    // surface a clear warning to the reviewer instead of showing blank content.
+    const nonRegenerableEmpty = allPieces.filter(
+      (p) => !REGENERABLE_PIECE_TYPES.has(p.type ?? "") && isPieceContentEmpty(p.content),
+    );
+    if (nonRegenerableEmpty.length > 0) {
+      log.warn(
+        { campaignId, count: nonRegenerableEmpty.length, types: nonRegenerableEmpty.map(p => p.type) },
+        "[AUTO-REPAIR] %d non-regenerable empty pieces — marking _autoRepairFailed",
+        nonRegenerableEmpty.length,
+      );
+      for (const piece of nonRegenerableEmpty) {
+        try {
+          const existing = (piece.content && typeof piece.content === "object" && !Array.isArray(piece.content))
+            ? (piece.content as Record<string, unknown>)
+            : {};
+          await db
+            .update(contentPiecesTable)
+            .set({ content: { ...existing, _autoRepairFailed: true }, updatedAt: new Date() })
+            .where(eq(contentPiecesTable.id, piece.id));
+        } catch (err) {
+          log.error({ err, campaignId, pieceId: piece.id, type: piece.type }, "[AUTO-REPAIR] Failed to mark piece as _autoRepairFailed");
+        }
+      }
+      emitCampaignEvent({
+        campaignId,
+        type: "execution_update",
+        message: `⚠️ ${nonRegenerableEmpty.length} peça${nonRegenerableEmpty.length !== 1 ? "s" : ""} sem agente de reparo — requer revisão manual`,
+        data: { phase: "auto_repair_non_regenerable", pieces: nonRegenerableEmpty.map(p => p.type) },
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 
   // ── Final status ─────────────────────────────────────────────────────────────

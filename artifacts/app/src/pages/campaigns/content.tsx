@@ -45,6 +45,7 @@ interface ContentPiece extends PreviewPiece {
   hashtags?: string[];
   rejectionReason?: string;
   qualityScore?: number;
+  autoRepairFailed?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -340,6 +341,18 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
               </span>
             </div>
             <span className="font-mono text-[11px] text-red-300/80 leading-relaxed">{piece.rejectionReason}</span>
+          </div>
+        )}
+
+        {/* Auto-repair failed warning */}
+        {piece.autoRepairFailed && (
+          <div className="mb-2 px-3 py-2 border border-yellow-500/40 bg-yellow-500/8">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0" />
+              <span className="font-mono text-[11px] text-yellow-400 leading-relaxed">
+                Geração incompleta — o agente retornou conteúdo vazio e o auto-reparo não conseguiu recuperar esta peça. Reescreva manualmente ou use "Reescrever com IA".
+              </span>
+            </div>
           </div>
         )}
 
@@ -1256,6 +1269,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
     } catch { c = {}; }
 
     const pieceQualityScore = typeof c["_qualityScore"] === "number" ? c["_qualityScore"] as number : undefined;
+    const pieceAutoRepairFailed = c["_autoRepairFailed"] === true;
 
     // Helper: create a child card
     const child = (subKey: string, overrides: Partial<ContentPiece>): ContentPiece => ({
@@ -1269,6 +1283,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
       segment: "all",
       rejectionReason: piece.rejectionReason ?? undefined,
       qualityScore: pieceQualityScore,
+      autoRepairFailed: pieceAutoRepairFailed,
       ...overrides,
     });
 
