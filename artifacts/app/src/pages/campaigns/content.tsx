@@ -46,6 +46,7 @@ interface ContentPiece extends PreviewPiece {
   rejectionReason?: string;
   qualityScore?: number;
   autoRepairFailed?: boolean;
+  notGenerated?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -344,8 +345,20 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
           </div>
         )}
 
-        {/* Minimal fallback notice — piece was delivered but is a template, not AI-generated */}
-        {piece.autoRepairFailed && (
+        {/* Not generated — AI failed after all retries; user must regenerate explicitly */}
+        {piece.notGenerated && (
+          <div className="mb-2 px-3 py-2 border border-amber-500/40 bg-amber-500/5">
+            <div className="flex items-center gap-1.5">
+              <Bot className="h-3 w-3 text-amber-400 shrink-0" />
+              <span className="font-mono text-[11px] text-amber-300 leading-relaxed">
+                Não gerada — IA não conseguiu completar após múltiplas tentativas. Clique em <strong>Reescrever com IA</strong> para gerar agora.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Minimal fallback notice — legacy template fallback (pre-protocol) */}
+        {piece.autoRepairFailed && !piece.notGenerated && (
           <div className="mb-2 px-3 py-2 border border-blue-500/30 bg-blue-500/5">
             <div className="flex items-center gap-1.5">
               <Bot className="h-3 w-3 text-blue-400 shrink-0" />
@@ -1269,9 +1282,11 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
     } catch { c = {}; }
 
     const pieceQualityScore = typeof c["_qualityScore"] === "number" ? c["_qualityScore"] as number : undefined;
-    // _autoRepairFailed is legacy (pre-fallback era). _minimalFallback is the new flag.
-    // Both show the "use AI rewrite to personalize" notice — never the yellow warning banner.
-    const pieceAutoRepairFailed = c["_autoRepairFailed"] === true || c["_minimalFallback"] === true;
+    // _notGenerated: true = AI failed after all retries; piece exists but has no content.
+    // _minimalFallback without _notGenerated = legacy template fallback (pre-protocol era).
+    // _autoRepairFailed = oldest legacy flag.
+    const pieceNotGenerated = c["_notGenerated"] === true;
+    const pieceAutoRepairFailed = c["_autoRepairFailed"] === true || (c["_minimalFallback"] === true && !pieceNotGenerated);
 
     // Helper: create a child card
     const child = (subKey: string, overrides: Partial<ContentPiece>): ContentPiece => ({
@@ -1286,8 +1301,20 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
       rejectionReason: piece.rejectionReason ?? undefined,
       qualityScore: pieceQualityScore,
       autoRepairFailed: pieceAutoRepairFailed,
+      notGenerated: pieceNotGenerated,
       ...overrides,
     });
+
+    // ── _notGenerated early-return ──────────────────────────────────────────
+    // Piece has no real content (AI failed after all retries). Emit one card
+    // that shows "Não gerada — clique para regenerar" — no parsing attempted.
+    if (pieceNotGenerated) {
+      result.push(child("not_generated", {
+        title: `[Não gerada] ${AGGREGATED_TYPE_LABELS[rawType] ?? rawType}`,
+        body: String(c["reason"] ?? 'IA não conseguiu completar após múltiplas tentativas. Clique em "Reescrever com IA".'),
+      }));
+      continue;
+    }
 
     // ── email_sequence ──────────────────────────────────────────────────────
     if (rawType === "email_sequence") {

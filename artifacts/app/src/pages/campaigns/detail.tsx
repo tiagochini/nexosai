@@ -1370,7 +1370,7 @@ export default function CampaignDetail() {
   // Optimistically start polling — staleTime:0 forces a real request every 5s
   // instead of serving cached data, catching the analyzing→strategy_ready transition.
   const [localIsActive, setLocalIsActive] = useState(true);
-  const { data, isLoading } = useGetCampaign(campaignId, {
+  const { data, isLoading, isFetching } = useGetCampaign(campaignId, {
     query: {
       enabled: !!campaignId,
       queryKey: getGetCampaignQueryKey(campaignId),
@@ -1387,16 +1387,19 @@ export default function CampaignDetail() {
   }, [campaign?.status]);
   const refetchInterval = isActive ? 5000 : false;
 
-  // Auto-redirect draft/intake to the intake wizard
-  // Guard with isLoading: never redirect while the query is still fetching fresh data.
-  // Without this, stale cache (status: "intake") fires redirect immediately after
-  // finalize navigation, causing an infinite loop back to the briefing screen.
+  // Auto-redirect draft/intake to the intake wizard.
+  // Guard with BOTH isLoading AND isFetching:
+  //   - isLoading: true only on first load (no cached data yet)
+  //   - isFetching: true whenever a background refetch is in flight
+  // Without the isFetching guard, a finalize navigation lands here with stale
+  // cache (status: "intake"), isLoading=false, isFetching=true → redirect fires
+  // before the fresh data (status: "analyzing") arrives → infinite loop.
   useEffect(() => {
-    if (!campaign || isLoading) return;
+    if (!campaign || isLoading || isFetching) return;
     if (campaign.status === "draft" || campaign.status === "intake") {
       setLocation(`/campaigns/${campaignId}/intake`);
     }
-  }, [campaign?.status, campaignId, setLocation, campaign, isLoading]);
+  }, [campaign?.status, campaignId, setLocation, campaign, isLoading, isFetching]);
 
   // ── Agents query ──────────────────────────────────────────────────────────────
   const { data: agentsData, isLoading: agentsLoading } = useQuery({

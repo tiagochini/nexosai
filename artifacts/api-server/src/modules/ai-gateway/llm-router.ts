@@ -47,14 +47,17 @@ const TASK_PROVIDER_CHAINS: Record<
   emergency_recovery:  ["gemini",    "openai", "anthropic"],
 };
 
-// Max output tokens guidance per task type
+// Max output tokens guidance per task type.
+// strategic_deep_copy and long_context use 8192 to support large campaign outputs
+// (email sequences, content calendars, VSL scripts) without truncation.
+// Claude (claude-sonnet-4-6) supports up to 64k output; GPT-4o supports 16k.
 export const TASK_MAX_OUTPUT_TOKENS: Record<LLMTaskType, number> = {
-  strategic_deep_copy: 4096,
-  structured_json:     2048,
+  strategic_deep_copy: 8192,
+  structured_json:     4096,
   summarization:       2048,
   validation:          1024,
-  long_context:        4096,
-  emergency_recovery:  1024,
+  long_context:        8192,
+  emergency_recovery:  2048,
 };
 
 // Agent role → task type mapping (governs which provider chain to use).

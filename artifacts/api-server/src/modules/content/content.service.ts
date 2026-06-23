@@ -2288,54 +2288,20 @@ const PIECE_TYPE_TO_AGENT: Record<string, string> = {
   compliance_report: "compliance",
 };
 
-// ── Minimal structural fallback ────────────────────────────────────────────────
-// When ALL AI retries fail for a piece, inject a minimal but structurally valid
-// placeholder so the piece is never blank. Protocol rule: banner ≠ delivery.
-// Each piece type returns a valid-schema object the frontend can render.
-function buildMinimalFallback(pieceType: string, intakeData: Record<string, unknown>): Record<string, unknown> {
-  const productName = String(intakeData["campaign.productName"] ?? intakeData["productName"] ?? "seu produto");
-  const audience = String(intakeData["campaign.targetAudience"] ?? intakeData["targetAudience"] ?? "seu público");
-  const now = new Date().toISOString();
-  switch (pieceType) {
-    case "email_sequence":
-      return { _minimalFallback: true, emails: [{ subject: `Bem-vindo ao ${productName}`, body: `Olá,\n\nObrigado pelo seu interesse em ${productName}. Em breve você receberá mais informações.\n\nAté logo.`, phase: "abertura", dayIndex: 1, type: "nurturing" }] };
-    case "landing_page_structure":
-      return { _minimalFallback: true, headline: `Conheça ${productName}`, subheadline: `A solução definitiva para ${audience}`, cta: "Quero saber mais", sections: [] };
-    case "vsl_script":
-      return { _minimalFallback: true, hook: `O que vou te mostrar agora pode mudar tudo para ${audience}...`, problem: "...", solution: `${productName} foi criado para resolver isso.`, offer: "...", cta: "Acesse agora" };
-    case "ad_copy":
-      return { _minimalFallback: true, ads: [{ platform: "meta", format: "image", headline: `${productName}`, primaryText: `Para ${audience} que quer resultados reais.`, cta: "Saiba mais" }] };
-    case "targeting_config":
-      return { _minimalFallback: true, audiences: [], interests: [], behaviors: [], note: "Configure o targeting com base no seu nicho." };
-    case "media_buying_plan":
-      return { _minimalFallback: true, budget: {}, channels: [], note: "Defina o plano de mídia com base no orçamento disponível." };
-    case "creative_direction":
-      return { _minimalFallback: true, tone: "profissional e empático", palette: ["#000000", "#FFFFFF"], typography: "moderna", archetypes: ["Herói", "Sábio"], emotionalPillars: ["Confiança", "Transformação"] };
-    case "content_calendar":
-      return { _minimalFallback: true, posts: [{ day: 1, platform: "instagram", type: "post", caption: `Conteúdo sobre ${productName}`, hashtags: [] }] };
-    case "prelaunch_warming":
-      return { _minimalFallback: true, messages: [{ day: -7, type: "anticipation", channel: "email", content: `Em breve: ${productName}` }] };
-    case "cpl_script":
-      return { _minimalFallback: true, title: `CPL 1 — ${productName}`, hook: "...", content: "...", cta: "Inscreva-se" };
-    case "webinar_script":
-      return { _minimalFallback: true, title: `Webinar — ${productName}`, outline: ["Introdução", "Problema", "Solução", "Oferta", "Perguntas"], duration: 60 };
-    case "live_script":
-      return { _minimalFallback: true, title: `Live de Lançamento — ${productName}`, outline: ["Abertura", "Conteúdo", "Oferta", "Bônus", "Fechamento"], duration: 90 };
-    case "stories_sequence":
-      return { _minimalFallback: true, stories: [{ day: 1, sequence: [{ type: "teaser", text: `Em breve: ${productName}` }] }] };
-    case "video_strategy":
-      return { _minimalFallback: true, videos: [{ type: "vsl", duration: "10-15min", hook: `Por que ${productName} existe` }] };
-    case "creator_growth_plan":
-      return { _minimalFallback: true, strategies: ["Conteúdo consistente", "Engajamento genuíno", "Colaborações"], milestones: [] };
-    case "seo_organic_plan":
-      return { _minimalFallback: true, keywords: [productName, audience], articles: [], strategy: "Blog + YouTube + SEO local" };
-    case "media_brief":
-      return { _minimalFallback: true, product: productName, audience, tone: "profissional", formats: ["vídeo", "imagem"], deliverables: [] };
-    case "compliance_report":
-      return { _minimalFallback: true, status: "approved", issues: [], recommendations: [], reviewedAt: now };
-    default:
-      return { _minimalFallback: true, note: `Conteúdo para ${pieceType} — edite conforme necessário.`, generatedAt: now };
-  }
+// ── Not-Generated sentinel ─────────────────────────────────────────────────────
+// When ALL AI retries fail for a piece, mark it as explicitly "not generated"
+// so the frontend renders "Não gerada — clique para regenerar" instead of hiding it.
+//
+// Audit protocol rule: injecting fake template content = masking failure = FAIL.
+// A piece with _notGenerated: true is VISIBLE and ACTIONABLE (user can regenerate),
+// but makes no pretense of being real AI output.
+function buildMinimalFallback(pieceType: string, _intakeData: Record<string, unknown>): Record<string, unknown> {
+  return {
+    _notGenerated: true,
+    _minimalFallback: true,
+    pieceType,
+    reason: "Não foi possível gerar este conteúdo após múltiplas tentativas. Clique em \"Reescrever com IA\" para gerar.",
+  };
 }
 
 export async function regeneratePiece(
