@@ -11,6 +11,7 @@ import { QUEUE_NAMES, type CampaignOrchestrationJob } from "../queue/queue.servi
 import { orchestrateCampaign } from "../agents/command.agent.js";
 import { generateCampaignContent } from "../content/content.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
+import { bridgeCampaignToSequence } from "../launch-sequence/sequence-bridge.service.js";
 import { logger } from "../../lib/logger.js";
 import { env } from "../../lib/env.js";
 
@@ -272,8 +273,21 @@ async function processExecute(job: Job<CampaignOrchestrationJob>): Promise<void>
       data: { previous: "approved", next: "executing" },
     });
 
-    // Simulate channel activation delay then go live
-    await new Promise((r) => setTimeout(r, 1500));
+    // Bridge approved content pieces → launch sequence items so the scheduler
+    // has real dispatch items to send. Non-fatal: if this fails the campaign
+    // still goes live — operators can manually create sequences as fallback.
+    try {
+      const bridge = await bridgeCampaignToSequence(campaignId, workspaceId, log);
+      log.info(
+        { campaignId, sequenceId: bridge.sequenceId, itemsCreated: bridge.itemsCreated, reason: bridge.reason },
+        "[EXECUTE] Sequence bridge completed",
+      );
+    } catch (bridgeErr) {
+      log.warn(
+        { campaignId, err: bridgeErr instanceof Error ? bridgeErr.message : String(bridgeErr) },
+        "[EXECUTE] Sequence bridge failed (non-fatal) — campaign will still go live",
+      );
+    }
   }
 
   await transitionCampaign(campaignId, workspaceId, "live", "campaign channels active", log);
