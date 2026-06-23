@@ -253,31 +253,33 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
       isAdminRetry = ownerUser ? ADMIN_EMAILS_RETRY.has(ownerUser.email) : false;
     }
 
-    // ── Trava 1: Teto de retries — após 10 tentativas, requer intervenção humana ──
-    // Evita o "Bug Determinístico Loop": peça quebrada (safety block, parser error,
-    // token overflow) nunca mais pode ser re-enfileirada indefinidamente.
-    // Admin bypass: sempre pode retomar (créditos ilimitados, nunca ficam travados por retry).
-    // AUDIT FIX: raised from 3 → 10 so transient LLM failures don't permanently block
-    // paying customers. 10 attempts = enough to survive a bad model day; deterministic
-    // bugs (wrong schema, safety block on specific content) still surface eventually.
+    // ── Auto-skip de peça problemática após 10 tentativas ──
+    // Nunca bloqueia o cliente com REQUIRES_INTERVENTION. Após 10 falhas no mesmo
+    // ponto, a peça é adicionada a skippedPieces e o pipeline reinicia limpo.
+    // Admin bypass: retryCount é resetado diretamente (sem custo de skip).
     if (retryCount >= 10 && !isAdminRetry) {
-      req.log.warn({ campaignId, retryCount, contentRetry }, "[FAILSAFE] Max retries (10) reached — requires human intervention");
-      res.status(409).json({
-        error: "A campanha falhou 10 vezes seguidas no mesmo ponto. Revise o briefing ou pule a peça problemática antes de tentar novamente.",
-        code: "REQUIRES_INTERVENTION",
-        data: {
-          retryCount,
-          lastFailedAgent: contentRetry["lastFailedAgent"],
-          lastFailedPieceType: contentRetry["lastFailedPieceType"],
-          lastFailedError: contentRetry["lastFailedError"],
-        },
-      });
+      const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
+      req.log.warn({ campaignId, retryCount, failedPieceType }, "[FAILSAFE] Max retries — auto-skipping problematic piece, restarting pipeline");
+      const currentSkipped = ((brain["skippedPieces"] ?? []) as string[]);
+      const newSkipped = failedPieceType && !currentSkipped.includes(failedPieceType)
+        ? [...currentSkipped, failedPieceType]
+        : currentSkipped;
+      const autoSkipBrain = {
+        ...brain,
+        skippedPieces: newSkipped,
+        pipelineCheckpoint: { lockedAt: null, lastProgressAt: null },
+        contentRetry: { retryCount: 0, autoSkippedAt: new Date().toISOString(), autoSkippedPiece: failedPieceType },
+      };
+      if (campaign.status === "analyzing") {
+        await db.update(campaignsTable).set({ status: "intake" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, campaignId));
+        const result = await triggerStrategyPhase(campaignId, workspaceId, req.log);
+        res.status(202).json({ retried: true, phase: "strategy", queued: result.queued, retryCount: 0, autoSkipped: failedPieceType });
+      } else {
+        await db.update(campaignsTable).set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, campaignId));
+        const result = await triggerContentPhase(campaignId, workspaceId, req.log);
+        res.status(202).json({ retried: true, phase: "content", queued: result.queued, retryCount: 0, autoSkipped: failedPieceType });
+      }
       return;
-    }
-
-    // Reset retry counter for admin retries (clear the lock so pipeline can restart cleanly)
-    if (isAdminRetry && retryCount >= 10) {
-      req.log.info({ campaignId, retryCount }, "[FAILSAFE] Admin retry — resetting retry counter");
     }
 
     // Increment retry counter and clear pipeline lock

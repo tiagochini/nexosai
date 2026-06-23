@@ -64,6 +64,25 @@ async function processRunStrategy(job: Job<CampaignOrchestrationJob>): Promise<v
     timestamp: new Date().toISOString(),
   });
 
+  // ── Strategy heartbeat ────────────────────────────────────────────────────
+  // Updates pipelineCheckpoint.lastProgressAt every 90s while strategy agents run.
+  // Keeps the 5-minute stuck-campaign guard from incorrectly resetting active runs.
+  const strategyHeartbeat = setInterval(async () => {
+    try {
+      const [row] = await db
+        .select({ bd: (campaignsTable as any).brainData })
+        .from(campaignsTable)
+        .where(eq(campaignsTable.id, campaignId))
+        .limit(1);
+      const brain = ((row?.bd ?? {}) as Record<string, unknown>);
+      const cp = ((brain["pipelineCheckpoint"] ?? {}) as Record<string, unknown>);
+      await db.update(campaignsTable).set({
+        updatedAt: new Date(),
+        brainData: { ...brain, pipelineCheckpoint: { ...cp, lastProgressAt: new Date().toISOString() } } as any,
+      }).where(eq(campaignsTable.id, campaignId));
+    } catch { /* non-fatal — heartbeat is best-effort */ }
+  }, 90_000);
+
   try {
     const result = await orchestrateCampaign(campaignId, workspaceId, log);
 
@@ -85,6 +104,8 @@ async function processRunStrategy(job: Job<CampaignOrchestrationJob>): Promise<v
       timestamp: new Date().toISOString(),
     });
     throw err;
+  } finally {
+    clearInterval(strategyHeartbeat);
   }
 }
 

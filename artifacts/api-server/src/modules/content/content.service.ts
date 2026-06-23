@@ -420,6 +420,7 @@ export async function generateCampaignContent(
       .catch(() => { /* non-fatal — heartbeat is best-effort */ });
   }, 90_000);
 
+  try {
   // ── 1. Creative Director (all campaigns — sets visual identity first) ─────────
   if (!skipAgent("creative_direction", "creative_director")) try {
     emitCampaignEvent({
@@ -1822,9 +1823,6 @@ export async function generateCampaignContent(
     })),
   ];
 
-  // Clear the heartbeat interval — pipeline complete (or failed)
-  clearInterval(heartbeatInterval);
-
   return {
     campaignId,
     piecesGenerated,
@@ -1834,6 +1832,9 @@ export async function generateCampaignContent(
     status: errors.length === 0 ? "completed" : errors.length < agentsRun.length ? "partial" : "failed",
     pieceResults,
   };
+  } finally {
+    clearInterval(heartbeatInterval);
+  }
 }
 
 // ── Optimization (separate — needs live metrics) ──────────────────────────────

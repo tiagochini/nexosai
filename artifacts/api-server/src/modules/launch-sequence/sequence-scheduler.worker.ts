@@ -165,17 +165,17 @@ async function maybeNotifyStaleWaitingClarification(): Promise<void> {
 // Runs every scheduler tick (60s). Campaigns stuck in "analyzing" or "generating"
 // without progress are force-reset to a retryable state.
 //
-// Two-tier detection:
-//   Fast path (10 min): pipelineCheckpoint.lastProgressAt is stale by 10+ min.
-//     content.service.ts bumps updatedAt on every piece save (heartbeat), so a
-//     legitimately-running pipeline keeps its updatedAt fresh and won't be reset.
-//   Slow path (30 min): updatedAt stale — catches crashes before the first piece is saved
-//     (strategy phase, pre-pipeline-boot), keeping the 30-min grace for long LLM calls.
+// Two-tier detection (5-minute universal policy):
+//   Fast path (5 min): pipelineCheckpoint.lastProgressAt is stale by 5+ min.
+//     Both content.service.ts and orchestration.worker.ts heartbeats fire every
+//     90s, keeping lastProgressAt fresh on all active pipelines.
+//   Slow path (5 min): updatedAt stale — catches crashes before the heartbeat
+//     starts (very first tick). Both phases touch updatedAt at start.
 //
-// AUDIT FIX: retry cap raised from 3 → 10 to match endpoint-level limit.
-const STUCK_ANALYZING_MS = 15 * 60 * 1000;
-const STUCK_GENERATING_MS = 30 * 60 * 1000;
-const STUCK_PROGRESS_MS   =  8 * 60 * 1000;
+// After 10 scheduler resets, the problematic piece is auto-skipped (never blocked).
+const STUCK_ANALYZING_MS = 5 * 60 * 1000;
+const STUCK_GENERATING_MS = 5 * 60 * 1000;
+const STUCK_PROGRESS_MS   = 5 * 60 * 1000;
 
 async function recoverStuckCampaigns(): Promise<void> {
   const log = logger.child({ component: "failsafe-recovery" });
@@ -209,11 +209,21 @@ async function recoverStuckCampaigns(): Promise<void> {
         }
       }
 
-      // AUDIT FIX: raised from 3 → 10 to match execution.routes.ts retry cap
+      // After 10 auto-resets, auto-skip the problematic piece and continue — never block.
       if (retryCount >= 10) {
-        const updated = { ...brain, contentRetry: { ...contentRetry, requiresIntervention: true } };
-        await db.update(campaignsTable).set({ brainData: updated as any }).where(eq(campaignsTable.id, c.id));
-        log.warn({ campaignId: c.id, retryCount }, "[FAILSAFE-AUTO] analyzing max retries — marked requiresIntervention, NOT resetting");
+        const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
+        const currentSkipped = ((brain["skippedPieces"] ?? []) as string[]);
+        const newSkipped = failedPieceType && !currentSkipped.includes(failedPieceType)
+          ? [...currentSkipped, failedPieceType]
+          : currentSkipped;
+        const autoSkipBrain = {
+          ...brain,
+          skippedPieces: newSkipped,
+          pipelineCheckpoint: { lockedAt: null, lastProgressAt: null },
+          contentRetry: { retryCount: 0, autoSkippedAt: new Date().toISOString(), autoSkippedPiece: failedPieceType },
+        };
+        await db.update(campaignsTable).set({ status: "intake" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, c.id));
+        log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] analyzing max resets — auto-skipped piece, reset to intake");
         continue;
       }
 
@@ -274,11 +284,21 @@ async function recoverStuckCampaigns(): Promise<void> {
         }
       }
 
-      // AUDIT FIX: raised from 3 → 10 to match execution.routes.ts retry cap
+      // After 10 auto-resets, auto-skip the problematic piece and continue — never block.
       if (retryCount >= 10) {
-        const updated = { ...brain, contentRetry: { ...contentRetry, requiresIntervention: true } };
-        await db.update(campaignsTable).set({ brainData: updated as any }).where(eq(campaignsTable.id, c.id));
-        log.warn({ campaignId: c.id, retryCount }, "[FAILSAFE-AUTO] generating max retries — marked requiresIntervention, NOT resetting");
+        const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
+        const currentSkipped = ((brain["skippedPieces"] ?? []) as string[]);
+        const newSkipped = failedPieceType && !currentSkipped.includes(failedPieceType)
+          ? [...currentSkipped, failedPieceType]
+          : currentSkipped;
+        const autoSkipBrain = {
+          ...brain,
+          skippedPieces: newSkipped,
+          pipelineCheckpoint: { lockedAt: null, lastProgressAt: null },
+          contentRetry: { retryCount: 0, autoSkippedAt: new Date().toISOString(), autoSkippedPiece: failedPieceType },
+        };
+        await db.update(campaignsTable).set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, c.id));
+        log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] generating max resets — auto-skipped piece, reset to strategy_ready");
         continue;
       }
 
@@ -290,7 +310,7 @@ async function recoverStuckCampaigns(): Promise<void> {
         .update(campaignsTable)
         .set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: updatedBrain as any })
         .where(eq(campaignsTable.id, c.id));
-      log.warn({ campaignId: c.id, retryCount: retryCount + 1 }, "[FAILSAFE-AUTO] generating > 30min → reset to strategy_ready");
+      log.warn({ campaignId: c.id, retryCount: retryCount + 1 }, "[FAILSAFE-AUTO] generating > 5min → reset to strategy_ready");
     } catch (err) {
       log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck generating campaign");
     }
