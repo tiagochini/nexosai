@@ -243,14 +243,17 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
       isAdminRetry = ownerUser ? ADMIN_EMAILS_RETRY.has(ownerUser.email) : false;
     }
 
-    // ── Trava 1: Teto de retries — após 3 tentativas, requer intervenção humana ──
+    // ── Trava 1: Teto de retries — após 10 tentativas, requer intervenção humana ──
     // Evita o "Bug Determinístico Loop": peça quebrada (safety block, parser error,
     // token overflow) nunca mais pode ser re-enfileirada indefinidamente.
     // Admin bypass: sempre pode retomar (créditos ilimitados, nunca ficam travados por retry).
-    if (retryCount >= 3 && !isAdminRetry) {
-      req.log.warn({ campaignId, retryCount, contentRetry }, "[FAILSAFE] Max retries reached — requires human intervention");
+    // AUDIT FIX: raised from 3 → 10 so transient LLM failures don't permanently block
+    // paying customers. 10 attempts = enough to survive a bad model day; deterministic
+    // bugs (wrong schema, safety block on specific content) still surface eventually.
+    if (retryCount >= 10 && !isAdminRetry) {
+      req.log.warn({ campaignId, retryCount, contentRetry }, "[FAILSAFE] Max retries (10) reached — requires human intervention");
       res.status(409).json({
-        error: "A campanha falhou 3 vezes seguidas no mesmo ponto. Revise o briefing ou pule a peça problemática antes de tentar novamente.",
+        error: "A campanha falhou 10 vezes seguidas no mesmo ponto. Revise o briefing ou pule a peça problemática antes de tentar novamente.",
         code: "REQUIRES_INTERVENTION",
         data: {
           retryCount,
@@ -263,7 +266,7 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
     }
 
     // Reset retry counter for admin retries (clear the lock so pipeline can restart cleanly)
-    if (isAdminRetry && retryCount >= 3) {
+    if (isAdminRetry && retryCount >= 10) {
       req.log.info({ campaignId, retryCount }, "[FAILSAFE] Admin retry — resetting retry counter");
     }
 

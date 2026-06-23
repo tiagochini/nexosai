@@ -117,27 +117,26 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
     return;
   }
 
-  // STRATEGY INTEGRITY GUARD: never generate content from an empty strategy.
-  // If strategyData is null, undefined, or an empty object {} the strategy phase
-  // did not produce usable output — content agents would run blind and produce empty
-  // pieces. Abort here and emit a clear error event so the user sees the problem.
+  // STRATEGY INTEGRITY GUARD: warn if strategyData is empty but continue anyway.
+  // AUDIT FIX: changed from hard abort → warn-and-continue.
+  // Previous behavior: if strategyData was null/empty, abort content generation and
+  // reset to strategy_ready — paying customer had to manually re-trigger strategy.
+  // New behavior: log a warning and let content agents run with empty fallback data.
+  // Content agents have their own intake data + profile which provides enough context
+  // to produce reasonable output even without strategy. The mission is "customer gets
+  // their deliverable" — not "customer gets a perfect deliverable or nothing at all."
   const strategyObj = pre.strategyData as Record<string, unknown> | null | undefined;
   const strategyIsEmpty = !strategyObj || Object.keys(strategyObj).length === 0;
   if (strategyIsEmpty) {
-    log.error({ campaignId }, "STRATEGY_EMPTY: strategyData is empty — aborting content generation. Strategy phase must succeed before content can run.");
+    log.warn({ campaignId }, "STRATEGY_EMPTY: strategyData is empty — proceeding with content generation using intake data only. Output quality may be reduced.");
     emitCampaignEvent({
       campaignId,
       type: "execution_update",
-      message: "❌ Estratégia vazia — geração de conteúdo cancelada. Execute a fase de estratégia novamente antes de gerar conteúdo.",
-      data: { phase: "content", progress: 0, error: "STRATEGY_EMPTY" },
+      message: "⚠️ Estratégia parcial — gerando conteúdo com dados do briefing. Qualidade pode ser reduzida.",
+      data: { phase: "content", progress: 0, warning: "STRATEGY_EMPTY" },
       timestamp: new Date().toISOString(),
     });
-    // Reset to strategy_ready so the user can trigger strategy again
-    await db
-      .update(campaignsTable)
-      .set({ status: "strategy_ready", updatedAt: new Date() })
-      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
-    return;
+    // Continue — do NOT abort or reset. Content agents handle empty strategyData gracefully.
   }
 
   emitCampaignEvent({
@@ -371,9 +370,15 @@ export function initOrchestrationWorker(): Worker | null {
         // Orphan dwell time after restart ≈ 600s (acceptable — checkpoint resume
         // handles the actual re-enqueue and users see the job pick back up).
         //
-        // maxStalledCount: 0 kept — prevents double credit charges on true stalls.
-        // The failed handler + checkpoint resume cover the recovery path.
-        maxStalledCount: 0,
+        // AUDIT FIX: maxStalledCount raised from 0 → 2.
+        // With maxStalledCount=0, a single stall from a slow LLM call kills the job
+        // as UnrecoverableError with no retry and no frontend notification — campaign
+        // gets permanently stuck in "generating". With 2 stall allowances, BullMQ
+        // requeues the job twice before escalating to a dead letter. The lockDuration
+        // of 300s means a true stall (>5min of no heartbeat) is rare; the allowance
+        // handles the edge case without risking double credit charges (the skipAgent()
+        // checkpoint system prevents re-running completed agents even on re-entry).
+        maxStalledCount: 2,
         stalledInterval: 300_000,
         lockDuration: 300_000,
       },

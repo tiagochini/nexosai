@@ -1947,7 +1947,7 @@ export default function CampaignDetail() {
             label: "Intervenção necessária",
             failedPieceType: failedPieceTypeRaw,
             description: failedPieceName
-              ? `Pipeline travado em "${failedPieceName}" (${retryCountRaw}/3 tentativas${errorLabel}). ${piecesNow > 0 ? `${piecesNow} peça${piecesNow !== 1 ? "s" : ""} anteriores salvas. ` : ""}Pule esta peça ou ajuste o briefing.`
+              ? `Pipeline travado em "${failedPieceName}" (${retryCountRaw}/10 tentativas${errorLabel}). ${piecesNow > 0 ? `${piecesNow} peça${piecesNow !== 1 ? "s" : ""} anteriores salvas. ` : ""}Pule esta peça ou ajuste o briefing.`
               : `Pipeline travado após ${retryCountRaw} tentativas${errorLabel}. ${piecesNow > 0 ? `${piecesNow} peças salvas. ` : ""}Revise o briefing ou pule a peça problemática.`,
           };
         }

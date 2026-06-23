@@ -278,28 +278,32 @@ export async function generateCampaignContent(
   };
 
   // ── OUTPUT CONTRACT VALIDATION ───────────────────────────────────────────────
-  // Every agent must produce output that matches the expected schema for its piece type.
-  // If the output is structurally wrong (wrong keys, empty critical arrays), throw here
-  // so the catch block records the failure WITHOUT saving corrupt data to the DB.
-  // "No crash" ≠ "good output" — this layer enforces the difference.
-  const validatePieceContract = (pieceType: string, content: unknown): void => {
+  // AUDIT FIX: Changed from throw to warn-and-flag.
+  // Previous behavior: strict throw → piece lost entirely, errors array grows,
+  // retry gate could permanently block a paying customer on a single bad LLM day.
+  // New behavior: log warning + mark content as _contractViolation=true + continue.
+  // The piece IS saved to DB (customer gets something), flagged for human review,
+  // and the pipeline continues to the next agent. This matches the core efficacy rule:
+  // "Every pipeline failure must auto-heal or skip-and-continue."
+  //
+  // Returns a warning string when contract is violated, null when clean.
+  const validatePieceContract = (pieceType: string, content: unknown): string | null => {
     const obj = (content ?? {}) as Record<string, unknown>;
     switch (pieceType) {
       case "email_sequence": {
-        // Must have emailSequence.preLaunch array — not ad copy segments format
         const emailSeq = obj.emailSequence as { preLaunch?: unknown[]; cartOpen?: unknown[] } | undefined;
         if (!emailSeq?.preLaunch) {
-          throw new AppError(422, `email_sequence output has wrong format — missing emailSequence.preLaunch. Got top-level keys: [${Object.keys(obj).join(", ")}]. LLM likely returned ad copy schema instead of email sequence schema.`);
+          return `email_sequence: missing emailSequence.preLaunch — LLM may have returned wrong schema (keys: [${Object.keys(obj).join(", ")}])`;
         }
         if (emailSeq.preLaunch.length === 0 && (emailSeq.cartOpen?.length ?? 0) === 0) {
-          throw new AppError(422, `email_sequence output has zero emails in preLaunch and cartOpen — empty LLM response`);
+          return `email_sequence: preLaunch and cartOpen are empty — LLM returned minimal output`;
         }
         break;
       }
       case "vsl_script": {
         const sections = (obj.sections as unknown[] | undefined)?.length ?? 0;
         if (sections === 0) {
-          throw new AppError(422, `vsl_script output has zero sections — LLM returned truncated or empty response`);
+          return `vsl_script: zero sections — LLM returned truncated or empty response`;
         }
         break;
       }
@@ -307,7 +311,7 @@ export async function generateCampaignContent(
         const segs = (obj.segments as unknown[] | undefined)?.length ?? 0;
         const ads = (obj.ads as unknown[] | undefined)?.length ?? 0;
         if (segs === 0 && ads === 0) {
-          throw new AppError(422, `ad_copy output has no segments or ads — empty LLM response`);
+          return `ad_copy: no segments or ads — LLM returned empty response`;
         }
         break;
       }
@@ -316,21 +320,21 @@ export async function generateCampaignContent(
         const headline = typeof obj.headline === "string" && obj.headline.length > 0;
         const overallStructure = typeof obj.overallStructure === "string" && obj.overallStructure.length > 0;
         if (sections === 0 && !headline && !overallStructure) {
-          throw new AppError(422, `landing_page_structure output missing sections, headline, and overallStructure`);
+          return `landing_page_structure: missing sections, headline, and overallStructure`;
         }
         break;
       }
       case "cpl_script": {
         const videos = (obj.videos as unknown[] | undefined)?.length ?? 0;
         if (videos === 0) {
-          throw new AppError(422, `cpl_script output has no videos — LLM returned empty response`);
+          return `cpl_script: no videos — LLM returned empty response`;
         }
         break;
       }
       case "stories_sequence": {
         const stories = (obj.stories as unknown[] | undefined)?.length ?? 0;
         if (stories === 0) {
-          throw new AppError(422, `stories_sequence output has no stories — LLM returned empty response`);
+          return `stories_sequence: no stories — LLM returned empty response`;
         }
         break;
       }
@@ -338,11 +342,12 @@ export async function generateCampaignContent(
         const audiences = (obj.audiences as unknown[] | undefined)?.length ?? 0;
         const segments = (obj.segments as unknown[] | undefined)?.length ?? 0;
         if (audiences === 0 && segments === 0) {
-          throw new AppError(422, `targeting_config output has no audiences or segments`);
+          return `targeting_config: no audiences or segments`;
         }
         break;
       }
     }
+    return null;
   };
 
   // Only transition to "generating" on a fresh run — skip if already there (resume after restart)
@@ -466,8 +471,8 @@ export async function generateCampaignContent(
 
     capturedCopyContent = copyOutput as unknown as Record<string, unknown>;
 
-    // Output contract: throws if LLM returned wrong schema (e.g. ad copy instead of email sequence)
-    validatePieceContract("email_sequence", copyOutput);
+    const copyContractWarn = validatePieceContract("email_sequence", copyOutput);
+    if (copyContractWarn) log.warn({ campaignId, contractWarn: copyContractWarn }, "email_sequence contract violation — saving with _contractViolation flag");
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -476,8 +481,8 @@ export async function generateCampaignContent(
         workspaceId,
         type: "email_sequence",
         status: "draft",
-        title: `Copy Completa — ${copyOutput.campaignTitle}`,
-        content: { ...copyOutput, _qualityScore: (copyOutput as any)._qualityScore ?? null } as any,
+        title: `Copy Completa — ${copyOutput.campaignTitle ?? "Campanha"}`,
+        content: { ...copyOutput, _qualityScore: (copyOutput as any)._qualityScore ?? null, _contractViolation: copyContractWarn ?? undefined } as any,
         aiProvider: "openai",
         creditsUsed: 80,
       })
@@ -635,7 +640,8 @@ export async function generateCampaignContent(
 
     capturedAdContent = adOutput as unknown as Record<string, unknown>;
 
-    validatePieceContract("ad_copy", adOutput);
+    const adContractWarn = validatePieceContract("ad_copy", adOutput);
+    if (adContractWarn) log.warn({ campaignId, contractWarn: adContractWarn }, "ad_copy contract violation — saving with _contractViolation flag");
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -644,8 +650,8 @@ export async function generateCampaignContent(
         workspaceId,
         type: "ad_copy",
         status: "draft",
-        title: `Pacote de Anúncios — ${adOutput.segments.length} segmentos`,
-        content: { ...adOutput, _qualityScore: (adOutput as any)._qualityScore ?? null } as any,
+        title: `Pacote de Anúncios — ${(adOutput.segments?.length ?? 0)} segmentos`,
+        content: { ...adOutput, _qualityScore: (adOutput as any)._qualityScore ?? null, _contractViolation: adContractWarn ?? undefined } as any,
         aiProvider: "openai",
         creditsUsed: 50,
       })
@@ -690,7 +696,8 @@ export async function generateCampaignContent(
         log,
       );
 
-      validatePieceContract("targeting_config", targetingOutput);
+      const targetingContractWarn = validatePieceContract("targeting_config", targetingOutput);
+      if (targetingContractWarn) log.warn({ campaignId, contractWarn: targetingContractWarn }, "targeting_config contract violation — saving with _contractViolation flag");
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -699,8 +706,8 @@ export async function generateCampaignContent(
           workspaceId,
           type: "targeting_config",
           status: "draft",
-          title: `Configuração de Audiências — ${targetingOutput.metaAudiences.length} Meta + ${targetingOutput.googleAudiences.length} Google + ${targetingOutput.tiktokAudiences.length} TikTok`,
-          content: targetingOutput as any,
+          title: `Configuração de Audiências — ${(targetingOutput.metaAudiences?.length ?? 0)} Meta + ${(targetingOutput.googleAudiences?.length ?? 0)} Google + ${(targetingOutput.tiktokAudiences?.length ?? 0)} TikTok`,
+          content: { ...targetingOutput, _contractViolation: targetingContractWarn ?? undefined } as any,
           aiProvider: "openai",
           creditsUsed: 55,
         })
@@ -805,7 +812,8 @@ export async function generateCampaignContent(
         log,
       );
 
-      validatePieceContract("vsl_script", vslOutput);
+      const vslContractWarn = validatePieceContract("vsl_script", vslOutput);
+      if (vslContractWarn) log.warn({ campaignId, contractWarn: vslContractWarn }, "vsl_script contract violation — saving with _contractViolation flag");
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -814,8 +822,8 @@ export async function generateCampaignContent(
           workspaceId,
           type: "vsl_script",
           status: "draft",
-          title: vslOutput.title,
-          content: { ...vslOutput, _qualityScore: (vslOutput as any)._qualityScore ?? null } as any,
+          title: vslOutput.title ?? "VSL Script",
+          content: { ...vslOutput, _qualityScore: (vslOutput as any)._qualityScore ?? null, _contractViolation: vslContractWarn ?? undefined } as any,
           aiProvider: "openai",
           creditsUsed: 70,
         })
@@ -828,7 +836,7 @@ export async function generateCampaignContent(
         campaignId,
         type: "agent_completed",
         agentType: "vsl_script",
-        message: `VSL Script concluído — ${vslOutput.totalDuration} | ${vslOutput.sections.length} seções`,
+        message: `VSL Script concluído — ${vslOutput.totalDuration ?? ""} | ${vslOutput.sections?.length ?? 0} seções`,
         data: { pieceId: piece?.id },
         timestamp: new Date().toISOString(),
       });
@@ -931,7 +939,8 @@ export async function generateCampaignContent(
         arcOverviewBlock || undefined,
       );
 
-      validatePieceContract("cpl_script", cplOutput);
+      const cplContractWarn = validatePieceContract("cpl_script", cplOutput);
+      if (cplContractWarn) log.warn({ campaignId, contractWarn: cplContractWarn }, "cpl_script contract violation — saving with _contractViolation flag");
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -940,8 +949,8 @@ export async function generateCampaignContent(
           workspaceId,
           type: "cpl_script",
           status: "draft",
-          title: `CPL — ${cplOutput.totalVideos} Vídeos de Pré-Lançamento`,
-          content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null } as any,
+          title: `CPL — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} Vídeos de Pré-Lançamento`,
+          content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null, _contractViolation: cplContractWarn ?? undefined } as any,
           aiProvider: "openai",
           creditsUsed: 75,
         })
@@ -954,7 +963,7 @@ export async function generateCampaignContent(
         campaignId,
         type: "agent_completed",
         agentType: "cpl_script",
-        message: `CPL concluído — ${cplOutput.totalVideos} roteiros de CPL prontos para gravar`,
+        message: `CPL concluído — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} roteiros de CPL prontos para gravar`,
         data: { pieceId: piece?.id },
         timestamp: new Date().toISOString(),
       });
@@ -1107,7 +1116,8 @@ export async function generateCampaignContent(
       arcOverviewBlock || undefined,
     );
 
-    validatePieceContract("stories_sequence", storiesOutput);
+    const storiesContractWarn = validatePieceContract("stories_sequence", storiesOutput);
+    if (storiesContractWarn) log.warn({ campaignId, contractWarn: storiesContractWarn }, "stories_sequence contract violation — saving with _contractViolation flag");
 
     const [piece] = await db
       .insert(contentPiecesTable)
@@ -1116,8 +1126,8 @@ export async function generateCampaignContent(
         workspaceId,
         type: "stories_sequence",
         status: "draft",
-        title: `Stories — ${storiesOutput.totalSequences} sequências narrativas`,
-        content: storiesOutput as any,
+        title: `Stories — ${storiesOutput.totalSequences ?? storiesOutput.sequences?.length ?? 0} sequências narrativas`,
+        content: { ...storiesOutput, _contractViolation: storiesContractWarn ?? undefined } as any,
         aiProvider: "openai",
         creditsUsed: 45,
       })
@@ -1130,7 +1140,7 @@ export async function generateCampaignContent(
       campaignId,
       type: "agent_completed",
       agentType: "stories_sequence",
-      message: `Stories concluídos — ${storiesOutput.sequences.length} sequências com frames completos`,
+      message: `Stories concluídos — ${storiesOutput.sequences?.length ?? 0} sequências com frames completos`,
       data: { pieceId: piece?.id },
       timestamp: new Date().toISOString(),
     });
