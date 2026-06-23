@@ -54,7 +54,7 @@ const TASK_PROVIDER_CHAINS: Record<
 // These values flow through routedComplete → completeWithAgent → callAnthropic/callOpenAI/callGemini.
 export const TASK_MAX_OUTPUT_TOKENS: Record<LLMTaskType, number> = {
   strategic_deep_copy: 16000,
-  structured_json:     8192,
+  structured_json:     32768,
   summarization:       4096,
   validation:          2048,
   long_context:        16000,
@@ -146,6 +146,7 @@ export async function routedComplete(
   log: Logger,
   campaignId?: string,
   locale?: string,
+  maxTokensOverride?: number,
 ): Promise<RouterResult> {
   const taskType = getTaskType(agentRole);
   const chain = TASK_PROVIDER_CHAINS[taskType];
@@ -161,6 +162,9 @@ export async function routedComplete(
         { campaignId, agentRole, taskType, providerOverride, attempt: attemptCount },
         "[LLM_ROUTER] Attempting provider",
       );
+      const effectiveMaxTokens = maxTokensOverride && maxTokensOverride > TASK_MAX_OUTPUT_TOKENS[taskType]
+        ? maxTokensOverride
+        : TASK_MAX_OUTPUT_TOKENS[taskType];
       const result = await completeWithAgent(
         agentRole,
         systemPrompt,
@@ -170,7 +174,7 @@ export async function routedComplete(
         campaignId,
         locale,
         providerOverride,
-        TASK_MAX_OUTPUT_TOKENS[taskType],
+        effectiveMaxTokens,
       );
       log.info(
         {

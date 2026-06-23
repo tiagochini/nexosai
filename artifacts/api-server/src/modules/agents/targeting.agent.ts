@@ -258,6 +258,7 @@ export async function runTargetingAgent(
   intakeData: Record<string, unknown>,
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
+  maxTokens = 32768,
 ): Promise<TargetingOutput> {
   const segmentsContext = profile?.segments.length
     ? profile.segments.map((s: AudienceSegment) =>
@@ -282,6 +283,7 @@ Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(
     agentRole: "targeting",
     systemPrompt: COGNITIVE_IDENTITY_TARGETING + TARGETING_PROMPT,
     skipAllStaticLayers: true,
+    maxTokens,
     messages: [
       {
         role: "user",

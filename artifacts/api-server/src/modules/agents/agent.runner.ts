@@ -70,6 +70,13 @@ export interface RunAgentOptions {
    * persuasion philosophy — just the agent's own systemPrompt and user message.
    */
   skipAllStaticLayers?: boolean;
+  /**
+   * Override the per-task-type token ceiling for this specific agent call.
+   * The effective limit is Math.max(maxTokens, TASK_MAX_OUTPUT_TOKENS[taskType]).
+   * Use when an agent needs more output space than the task-type default allows
+   * (e.g. targeting with 14+ audiences, media buyer with 21+ daily allocations).
+   */
+  maxTokens?: number;
 }
 
 export interface RunAgentResult {
@@ -702,6 +709,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       log,
       campaignId ?? undefined,
       ownerLocale,
+      opts.maxTokens,
     );
 
     content = result.content;

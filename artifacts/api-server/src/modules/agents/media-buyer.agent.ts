@@ -299,6 +299,7 @@ export async function runMediaBuyerAgent(
   profile: ProfileBuilderOutput | undefined,
   launchPlan: Record<string, unknown> | undefined,
   log: Logger,
+  targetingAudiences?: { meta: number; google: number; tiktok: number; notes: string },
 ): Promise<MediaBuyerOutput> {
   const totalBudget = Number(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.budget.total"] ?? 0);
   const totalDays = (launchPlan as Record<string, unknown> | undefined)?.totalDays as number ?? Number(intakeData["campaign.durationDays"] ?? 21);
@@ -332,6 +333,11 @@ export async function runMediaBuyerAgent(
 
 **Segmentos e CPL estimado:**
 ${segmentsContext}
+
+**Audiências configuradas pelo Agente de Targeting (use como base para estrutura de campanha):**
+${targetingAudiences
+  ? `- Meta: ${targetingAudiences.meta} públicos configurados\n- Google: ${targetingAudiences.google} públicos configurados\n- TikTok: ${targetingAudiences.tiktok} públicos configurados\n- Notas: ${targetingAudiences.notes}`
+  : "Targeting não executado — inferir audiências a partir do perfil e intake."}
 
 **Benchmarks do mercado:**
 - CPL médio do nicho: R$${profile?.marketIntelligence?.averageCPL ?? "a calibrar"}

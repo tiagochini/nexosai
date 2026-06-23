@@ -24,7 +24,7 @@ import { runLiveScriptAgent } from "../agents/live-script.agent.js";
 import { runStoriesSequenceAgent } from "../agents/stories-sequence.agent.js";
 import { runCreativeDirectorAgent } from "../agents/creative-director.agent.js";
 import { runLandingPageAgent } from "../agents/landing-page.agent.js";
-import { runTargetingAgent } from "../agents/targeting.agent.js";
+import { runTargetingAgent, type TargetingOutput } from "../agents/targeting.agent.js";
 import { runMediaBuyerAgent } from "../agents/media-buyer.agent.js";
 import { runVideoStrategyAgent } from "../agents/video-strategy.agent.js";
 import { runCreatorGrowthAgent } from "../agents/creator-growth.agent.js";
@@ -730,6 +730,9 @@ export async function generateCampaignContent(
   }
 
   // ── 6. Targeting Agent (campaigns with traffic budget) ───────────────────────
+  // capturedTargetingOutput is passed downstream to media buyer (explicit dependency).
+  let capturedTargetingOutput: TargetingOutput | undefined;
+
   if (hasTrafficBudget) {
     if (!skipAgent("targeting_config", "targeting")) try {
       emitCampaignEvent({
@@ -740,7 +743,7 @@ export async function generateCampaignContent(
         timestamp: new Date().toISOString(),
       });
 
-      const targetingOutput = await runTargetingAgent(
+      let targetingOutput = await runTargetingAgent(
         campaignId,
         workspaceId,
         intakeData,
@@ -748,8 +751,39 @@ export async function generateCampaignContent(
         log,
       );
 
-      const targetingContractWarn = validatePieceContract("targeting_config", targetingOutput);
+      let targetingContractWarn = validatePieceContract("targeting_config", targetingOutput);
+
+      // Auto-retry: if arrays came back empty (truncation), retry once with the same
+      // expanded token budget (32768 default in runTargetingAgent). Different random
+      // seed / retry often succeeds because the truncation is stochastic, not structural.
+      if (
+        targetingContractWarn &&
+        (targetingOutput.metaAudiences?.length ?? 0) === 0 &&
+        (targetingOutput.googleAudiences?.length ?? 0) === 0
+      ) {
+        log.warn({ campaignId }, "targeting_config: all audience arrays empty — auto-retrying (token truncation recovery)");
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_started",
+          agentType: "targeting",
+          message: "Targeting — retentativa automática (recuperação de truncamento)...",
+          timestamp: new Date().toISOString(),
+        });
+        const retried = await runTargetingAgent(campaignId, workspaceId, intakeData, profile, log);
+        const retriedWarn = validatePieceContract("targeting_config", retried);
+        const retriedTotal = (retried.metaAudiences?.length ?? 0) + (retried.googleAudiences?.length ?? 0) + (retried.tiktokAudiences?.length ?? 0);
+        if (retriedTotal > 0) {
+          targetingOutput = retried;
+          targetingContractWarn = retriedWarn;
+          log.info({ campaignId, retriedTotal }, "targeting_config: retry succeeded");
+        } else {
+          log.warn({ campaignId }, "targeting_config: retry also returned empty arrays — saving with violation flag");
+        }
+      }
+
       if (targetingContractWarn) log.warn({ campaignId, contractWarn: targetingContractWarn }, "targeting_config contract violation — saving with _contractViolation flag");
+
+      capturedTargetingOutput = targetingOutput;
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -797,7 +831,17 @@ export async function generateCampaignContent(
         timestamp: new Date().toISOString(),
       });
 
-      const mediaBuyerOutput = await runMediaBuyerAgent(
+      // Pass targeting audiences summary so media buyer has explicit audience context.
+      const targetingAudiences = capturedTargetingOutput
+        ? {
+            meta: capturedTargetingOutput.metaAudiences?.length ?? 0,
+            google: capturedTargetingOutput.googleAudiences?.length ?? 0,
+            tiktok: capturedTargetingOutput.tiktokAudiences?.length ?? 0,
+            notes: capturedTargetingOutput.targetingNotes ?? "",
+          }
+        : undefined;
+
+      let mediaBuyerOutput = await runMediaBuyerAgent(
         campaignId,
         workspaceId,
         intakeData,
@@ -805,7 +849,30 @@ export async function generateCampaignContent(
         profile,
         launchPlan,
         log,
+        targetingAudiences,
       );
+
+      // Auto-retry: if daily allocations empty (truncation), retry once.
+      if (
+        (mediaBuyerOutput.dailyAllocations?.length ?? 0) === 0 &&
+        (mediaBuyerOutput.kpiTargets?.length ?? 0) === 0
+      ) {
+        log.warn({ campaignId }, "media_buying_plan: allocations empty — auto-retrying (token truncation recovery)");
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_started",
+          agentType: "media_buyer",
+          message: "Media Buyer — retentativa automática (recuperação de truncamento)...",
+          timestamp: new Date().toISOString(),
+        });
+        const retried = await runMediaBuyerAgent(campaignId, workspaceId, intakeData, strategy, profile, launchPlan, log, targetingAudiences);
+        if ((retried.dailyAllocations?.length ?? 0) > 0 || (retried.kpiTargets?.length ?? 0) > 0) {
+          mediaBuyerOutput = retried;
+          log.info({ campaignId, days: retried.dailyAllocations?.length }, "media_buying_plan: retry succeeded");
+        } else {
+          log.warn({ campaignId }, "media_buying_plan: retry also empty — saving with available data");
+        }
+      }
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -938,7 +1005,7 @@ export async function generateCampaignContent(
         .values({
           campaignId,
           workspaceId,
-          type: "content_calendar",
+          type: "prelaunch_warming",
           status: "pending_approval",
           title: `Aquecimento Pré-Lançamento — ${warmingOutput.warmingDuration} dias`,
           content: { ...warmingOutput, _qualityScore: (warmingOutput as any)._qualityScore ?? null } as any,
