@@ -1,5 +1,5 @@
 import { Worker, type Job } from "bullmq";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable } from "@workspace/db";
 import {
   transitionCampaign,
@@ -129,11 +129,21 @@ async function processGenerateContent(job: Job<CampaignOrchestrationJob>): Promi
   const strategyIsEmpty = !strategyObj || Object.keys(strategyObj).length === 0;
   if (strategyIsEmpty) {
     log.warn({ campaignId }, "STRATEGY_EMPTY: strategyData is empty — proceeding with content generation using intake data only. Output quality may be reduced.");
+    // DEGRADED-MODE CONTRACT: stamp campaign record so downstream systems + UI can detect
+    // reduced-quality mode. This flag persists and is excluded from "successful delivery"
+    // SLA metrics. It is NOT cleared by the content pipeline (intentional — auditable).
+    await db
+      .update(campaignsTable)
+      .set({
+        brainData: sql`COALESCE(${campaignsTable.brainData}, '{}'::jsonb) || ${JSON.stringify({ _degradedMode: true, _degradedReason: "STRATEGY_EMPTY", _degradedAt: new Date().toISOString() })}::jsonb`,
+      })
+      .where(eq(campaignsTable.id, campaignId))
+      .catch(() => {/* non-fatal — flag is best-effort */});
     emitCampaignEvent({
       campaignId,
       type: "execution_update",
       message: "⚠️ Estratégia parcial — gerando conteúdo com dados do briefing. Qualidade pode ser reduzida.",
-      data: { phase: "content", progress: 0, warning: "STRATEGY_EMPTY" },
+      data: { phase: "content", progress: 0, warning: "STRATEGY_EMPTY", degradedMode: true },
       timestamp: new Date().toISOString(),
     });
     // Continue — do NOT abort or reset. Content agents handle empty strategyData gracefully.

@@ -495,7 +495,7 @@ export async function generateCampaignContent(
       campaignId,
       type: "agent_completed",
       agentType: "copywriter",
-      message: `Copywriter concluído — ${copyOutput.emailSequence.preLaunch.length + copyOutput.emailSequence.cartOpen.length + copyOutput.emailSequence.cartClose.length} e-mails + página de vendas + WhatsApp`,
+      message: `Copywriter concluído — ${(copyOutput.emailSequence?.preLaunch?.length ?? 0) + (copyOutput.emailSequence?.cartOpen?.length ?? 0) + (copyOutput.emailSequence?.cartClose?.length ?? 0)} e-mails + página de vendas + WhatsApp`,
       data: { pieceId: piece?.id },
       timestamp: new Date().toISOString(),
     });
@@ -720,7 +720,7 @@ export async function generateCampaignContent(
         campaignId,
         type: "agent_completed",
         agentType: "targeting",
-        message: `Targeting concluído — ${targetingOutput.metaAudiences.length + targetingOutput.googleAudiences.length + targetingOutput.tiktokAudiences.length} audiências configuradas + UTMs prontos`,
+        message: `Targeting concluído — ${(targetingOutput.metaAudiences?.length ?? 0) + (targetingOutput.googleAudiences?.length ?? 0) + (targetingOutput.tiktokAudiences?.length ?? 0)} audiências configuradas + UTMs prontos`,
         data: { pieceId: piece?.id },
         timestamp: new Date().toISOString(),
       });
@@ -1081,7 +1081,7 @@ export async function generateCampaignContent(
         campaignId,
         type: "agent_completed",
         agentType: "live_script",
-        message: `Live Script concluído — ${liveOutput.totalDuration} | ${liveOutput.segments.length} segmentos roteirizados`,
+        message: `Live Script concluído — ${liveOutput.totalDuration ?? "—"} | ${liveOutput.segments?.length ?? 0} segmentos roteirizados`,
         data: { pieceId: piece?.id },
         timestamp: new Date().toISOString(),
       });
