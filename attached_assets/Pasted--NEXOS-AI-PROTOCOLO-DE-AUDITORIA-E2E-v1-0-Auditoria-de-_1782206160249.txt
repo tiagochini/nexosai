@@ -1,0 +1,867 @@
+# NEXOS AI — PROTOCOLO DE AUDITORIA E2E v1.0
+## Auditoria de Eficácia · UI-Only · Critérios Binários
+
+---
+
+> **PRINCÍPIO ABSOLUTO**
+> PASS = usuário recebeu o entregável completo prometido, via UI, sem bypass.
+> FAIL = qualquer entregável incompleto, vazio, truncado, silenciado ou mascarado por fallback.
+> Não existe meio-termo.
+>
+> **DEGRADAÇÃO GRACIOSA COM AVISO = FAIL.**
+> Exibir um banner, toast, aviso ou mensagem explicando que o entregável não pôde ser gerado
+> não transforma um FAIL em WARN. O aviso informa o problema — não o resolve.
+> O usuário pagou pelo entregável completo, não pela notificação de que ele não veio.
+> A correção obrigatória é entregar o entregável. Avisar é insuficiente.
+
+---
+
+## ESTRUTURA DO RELATÓRIO DE AUDITORIA
+
+Para cada item, registrar:
+
+```
+[ ] PASS   — entregável completo, sem degradação de qualquer tipo
+[ ] FAIL   — entregável ausente, incompleto, truncado, mascarado ou substituído
+             por fallback — COM ou SEM aviso ao usuário (CRÍTICO: corrigir antes de qualquer outra tarefa)
+[ ] WARN   — problema exclusivamente de UX não relacionado a entregável
+             (ex: botão mal posicionado, texto de UI com typo, loading sem feedback visual)
+             WARN nunca se aplica a entregáveis — se o entregável não está completo, é FAIL.
+[ ] N/T    — não testado nesta sessão
+```
+
+> **REGRA DE CLASSIFICAÇÃO:**
+> Se a dúvida é entre FAIL e WARN, a resposta é sempre FAIL.
+> WARN existe apenas para problemas que não afetam nenhum entregável.
+> Qualquer aviso, banner ou toast sobre entregável incompleto = FAIL do entregável, não WARN.
+
+**Identificação da sessão:**
+- Data/hora:
+- Auditor:
+- Ambiente (staging / produção):
+- Usuário de teste (e-mail):
+- Produto configurado no briefing:
+- Orçamento informado:
+
+---
+
+## PRÉ-CONDIÇÕES OBRIGATÓRIAS ANTES DE INICIAR
+
+```
+[ ] Conta de teste criada com acesso completo (Solo)
+[ ] Saldo de créditos suficiente para o fluxo completo (mínimo 900 créditos)
+[ ] NENHUMA integração pré-conectada no início do teste
+[ ] Produto de teste definido (ex: curso de culinária vegana, R$497)
+[ ] Avatar de cliente definido (ex: mulher, 30-45 anos, busca saúde)
+[ ] Orçamento de campanha definido (ex: R$2.000)
+[ ] DevTools aberto para captura de erros de console e respostas HTTP
+[ ] Cronômetro disponível para medir timeouts reais
+```
+
+---
+
+## ETAPA 1 — IDENTIDADE DIGITAL
+
+**O que o usuário espera receber:**
+Avatar de IA funcional · Clone de voz treinado · Identidade visual definida
+(paleta, tipografia, tom de comunicação)
+
+### 1.1 Avatar de IA
+
+```
+Ação: Acessar a criação de identidade digital e solicitar Avatar de IA
+Timeout máximo aceitável: 3 minutos para iniciar geração
+Entregáveis obrigatórios:
+  [ ] Avatar gerado (não placeholder, não ícone genérico)
+  [ ] Avatar visível na UI do usuário — não só "salvo internamente"
+  [ ] Avatar pode ser pré-visualizado antes de confirmar
+
+Sinais de FAIL:
+  [ ] Campo aparece vazio após o tempo de geração
+  [ ] "Avatar criado com sucesso" sem nenhuma imagem exibida
+  [ ] Spinner infinito sem timeout ou mensagem de erro
+  [ ] Erro silenciado no console (verificar DevTools)
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência (print/log):
+Observações:
+```
+
+### 1.2 Clone de Voz
+
+```
+Ação: Submeter amostra de voz (texto lido em áudio) para clonagem
+Timeout máximo aceitável: 5 minutos para processamento
+Entregáveis obrigatórios:
+  [ ] Player de áudio com a voz clonada aparece na UI
+  [ ] Áudio reproduz — não silêncio, não erro
+  [ ] Usuário consegue testar com texto customizado
+
+Sinais de FAIL:
+  [ ] "Voz salva" sem player ou arquivo acessível
+  [ ] Player aparece mas não reproduz
+  [ ] Erro de processamento silenciado — UI mostra "pronto" mas áudio falha
+  [ ] Fallback para voz sintética genérica — COM ou SEM aviso ao usuário
+        (aviso não resolve: o usuário pagou pelo clone da própria voz)
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+Observações:
+```
+
+### 1.3 Identidade Visual
+
+```
+Ação: Concluir fluxo de definição de marca
+Entregáveis obrigatórios:
+  [ ] Paleta de cores exibida (mínimo 3 cores com hex/nome)
+  [ ] Tipografia definida (mínimo fonte primária e secundária)
+  [ ] Tom de comunicação descrito (não campo vazio)
+  [ ] Todos os 3 elementos visíveis simultaneamente na UI de revisão
+
+Sinais de FAIL:
+  [ ] Qualquer dos 3 campos em branco ou com placeholder
+  [ ] "Identidade criada" mas sem exibir os valores ao usuário
+  [ ] Identidade visual não carrega nas etapas seguintes
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+Observações:
+```
+
+---
+
+## ETAPA 2 — BRIEFING (AGENTE DE INTAKE)
+
+**O que o usuário espera receber:**
+Conversa inteligente (não formulário) que processa qualquer formato de entrada ·
+Estimativa de resultado em 3 cenários (conservador / realista / otimista)
+
+### 2.1 Múltiplos Formatos de Entrada
+
+```
+Testar CADA formato separadamente:
+
+  [ ] Texto digitado — agente responde com inteligência (não eco)
+  [ ] Áudio enviado — transcrição exibida antes de processar
+  [ ] Vídeo enviado — transcrição exibida antes de processar
+  [ ] Compartilhamento de tela — captura registrada
+  [ ] Gravação de reunião (arquivo .mp3/.mp4) — processado corretamente
+
+Timeout máximo por formato: 4 minutos
+Sinal de FAIL em qualquer formato:
+  [ ] "Arquivo recebido" sem evidência de processamento
+  [ ] Transcrição não exibida ao usuário (processamento opaco)
+  [ ] Erro silenciado — UI avança sem confirmar processamento
+  [ ] Apenas texto é funcional; outros formatos retornam vazio
+
+Resultado por formato:
+  Texto:  [ ] PASS  [ ] FAIL
+  Áudio:  [ ] PASS  [ ] FAIL
+  Vídeo:  [ ] PASS  [ ] FAIL
+  Tela:   [ ] PASS  [ ] FAIL
+  Arquivo:[ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 2.2 Estimativa de Resultado
+
+```
+Ação: Informar orçamento (R$2.000) e concluir briefing
+Entregáveis obrigatórios:
+  [ ] 3 cenários exibidos: conservador, realista, otimista
+  [ ] Cada cenário tem valores numéricos (não "depende" ou campo vazio)
+  [ ] Valores são baseados no orçamento informado (não genéricos)
+  [ ] Usuário visualiza estimativa ANTES de avançar para próxima etapa
+
+Sinais de FAIL:
+  [ ] Apenas 1 ou 2 cenários exibidos
+  [ ] Valores iguais nos 3 cenários
+  [ ] Cenários com texto mas sem números
+  [ ] Estimativa não aparece — fluxo avança direto
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+Observações:
+```
+
+---
+
+## ETAPA 3 — REDES SOCIAIS
+
+**O que o usuário espera receber:**
+Auditoria das redes existentes · Bio otimizada para cada plataforma ·
+Primeiros conteúdos de autoridade (Reels e posts) ·
+Publicação automática ao conectar redes
+
+### 3.1 Auditoria das Redes
+
+```
+Ação: Informar handles/URLs das redes sociais existentes
+Entregáveis obrigatórios:
+  [ ] Relatório de auditoria exibido (o que está bom, o que precisa mudar)
+  [ ] Auditoria é específica para o produto/nicho do usuário
+  [ ] Recomendação sobre criação de novas contas quando necessário
+
+Sinais de FAIL:
+  [ ] Auditoria genérica não relacionada ao nicho
+  [ ] Relatório em branco ou "analisando..." permanente
+  [ ] Auditoria pula para bio sem mostrar diagnóstico
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 3.2 Bio Otimizada
+
+```
+Entregáveis obrigatórios (verificar CADA plataforma configurada):
+  [ ] Instagram — bio gerada, dentro do limite de caracteres
+  [ ] TikTok — bio gerada, dentro do limite de caracteres
+  [ ] YouTube — bio/descrição do canal gerada
+  [ ] LinkedIn — bio profissional gerada (se aplicável)
+  [ ] Cada bio usa a identidade visual definida na Etapa 1
+
+Sinais de FAIL:
+  [ ] Bio igual para todas as plataformas (cópia sem adaptação)
+  [ ] Bio ultrapassa limite de caracteres da plataforma
+  [ ] Bio não menciona o produto/nicho do usuário
+  [ ] Qualquer campo de bio em branco
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 3.3 Primeiros Conteúdos de Autoridade
+
+```
+Entregáveis obrigatórios:
+  [ ] Mínimo 1 roteiro de Reel gerado
+  [ ] Mínimo 1 post de feed gerado
+  [ ] Conteúdos são específicos para o produto/nicho
+  [ ] Conteúdos carregam identidade visual da Etapa 1
+  [ ] Usuário pode visualizar cada peça antes de aprovar
+
+Sinais de FAIL:
+  [ ] Conteúdo genérico não relacionado ao produto
+  [ ] "Conteúdos gerados" sem exibição das peças
+  [ ] Roteiro de Reel sem estrutura (gancho / desenvolvimento / CTA)
+  [ ] Qualquer peça retorna vazia
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 3.4 Publicação Automática
+
+```
+Ação: Conectar ao menos 1 rede social à plataforma
+Entregáveis obrigatórios:
+  [ ] Fluxo de conexão OAuth abre sem erro
+  [ ] Confirmação de conexão exibida (não apenas "salvo")
+  [ ] Teste de publicação: aprovar um post e verificar se foi publicado
+  [ ] Status da conexão visível na UI (conectado / desconectado)
+
+Sinais de FAIL:
+  [ ] OAuth completa mas status continua "desconectado"
+  [ ] Post aprovado mas não publicado sem mensagem de erro
+  [ ] Publicação "agendada" mas sem confirmação de horário
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+---
+
+## ETAPA 4 — MASTER PLAN
+
+**O que o usuário espera receber:**
+Documento completo com output de 8 agentes especializados ·
+Usuário lê, edita e aprova antes de qualquer conteúdo ser criado
+
+### 4.1 Presença dos 8 Agentes
+
+```
+Verificar se o Master Plan contém output EXPLÍCITO e NOMEADO de cada agente:
+  [ ] Estrategista — ângulo único + modelo de lançamento definido
+  [ ] Gestor de SEO — palavras-chave listadas (mínimo 10)
+  [ ] Gestor de Tráfego Pago — públicos + alocação de orçamento por canal
+  [ ] Analista de Algoritmo — formatos favorecidos por plataforma nesta semana
+  [ ] Especialista de Oferta — bônus, escassez, âncora de preço definidos
+  [ ] Projetor Financeiro — projeção semana a semana com números
+
+Timeout máximo para geração completa: 10 minutos
+Sinal de FAIL:
+  [ ] Qualquer agente ausente ou com output vazio
+  [ ] Seções do documento com "em breve" ou placeholder
+  [ ] Output de agente genérico (não específico para o produto do usuário)
+  [ ] Documento gerado sem exibir de qual agente veio cada seção
+
+Resultado por agente:
+  Estrategista:        [ ] PASS  [ ] FAIL
+  SEO:                 [ ] PASS  [ ] FAIL
+  Tráfego Pago:        [ ] PASS  [ ] FAIL
+  Analista Algoritmo:  [ ] PASS  [ ] FAIL
+  Especialista Oferta: [ ] PASS  [ ] FAIL
+  Projetor Financeiro: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 4.2 Projeção Financeira
+
+```
+Entregáveis obrigatórios:
+  [ ] Projeção semana a semana (não só totais)
+  [ ] Número de leads projetados por semana
+  [ ] Taxa de conversão esperada por fase
+  [ ] Receita projetada por fase
+  [ ] Baseada no orçamento informado no briefing (R$2.000)
+
+Sinais de FAIL:
+  [ ] Projeção sem breakdown por semana
+  [ ] Números não relacionados ao orçamento informado
+  [ ] Projeção com campos numéricos vazios ou com "—"
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 4.3 Fluxo de Aprovação
+
+```
+Ação: Editar uma seção do Master Plan manualmente e via agente
+Entregáveis obrigatórios:
+  [ ] Edição manual salva corretamente
+  [ ] Pedido de refinamento via agente retorna nova versão (não echo)
+  [ ] Botão de aprovação final disponível e funcional
+  [ ] Pipeline NÃO avança para criação de conteúdo sem aprovação do Master Plan
+
+Sinais de FAIL:
+  [ ] Pipeline avança para Etapa 5 sem aprovação do Master Plan
+  [ ] Edição manual não persiste após reload
+  [ ] Refinamento via agente retorna texto idêntico ao original
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+---
+
+## ETAPA 5 — INFRAESTRUTURA DE CONVERSÃO
+
+**O que o usuário espera receber:**
+Página de captura funcional · Página de vendas com todos os elementos ·
+Checkout Asaas configurado (PIX/boleto/cartão) · Funil testado end-to-end
+
+### 5.1 Página de Captura
+
+```
+Entregáveis obrigatórios:
+  [ ] Página publicada (URL real, não preview interno)
+  [ ] Copy gerada pelo Copywriter (não template genérico)
+  [ ] Design com identidade visual da Etapa 1
+  [ ] Pixel instalado — verificar via Facebook Pixel Helper ou equivalente
+  [ ] Formulário de opt-in funciona: preencher e submeter
+  [ ] Após opt-in: lead registrado na plataforma
+
+Sinais de FAIL:
+  [ ] Página "criada" mas URL não carrega
+  [ ] Pixel não detectado por ferramenta de verificação
+  [ ] Formulário submete mas lead não aparece na base
+  [ ] Design sem identidade visual (template branco genérico)
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 5.2 Página de Vendas
+
+```
+Entregáveis obrigatórios:
+  [ ] Página publicada (URL real)
+  [ ] Copy longa estruturada (headline, benefícios, prova social, garantia, CTA)
+  [ ] VSL embutido (player aparece — pode ser placeholder com aviso se vídeo ainda não gravado)
+  [ ] Seção de prova social presente
+  [ ] Seção de garantia presente
+  [ ] CTA com link funcional para checkout
+
+Sinais de FAIL:
+  [ ] Qualquer seção obrigatória ausente ou em branco
+  [ ] CTA não direciona para checkout
+  [ ] VSL player quebrado (não apenas vídeo não gravado ainda)
+  [ ] Página não carrega em mobile
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 5.3 Checkout via Asaas
+
+```
+Pré-condição: Integração com Asaas deve ser configurável nesta etapa
+Entregáveis obrigatórios:
+  [ ] Fluxo de configuração do Asaas disponível na UI
+  [ ] PIX habilitado
+  [ ] Boleto habilitado
+  [ ] Cartão de crédito habilitado
+  [ ] Transação de teste processada com sucesso (usar ambiente sandbox)
+
+Sinais de FAIL:
+  [ ] Checkout configurado mas não processa transação de teste
+  [ ] Menos de 3 métodos de pagamento disponíveis sem aviso
+  [ ] Webhook não dispara após pagamento de teste
+  [ ] Plataforma não registra a venda de teste
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 5.4 Teste Completo do Funil
+
+```
+Ação: Executar o funil completo — opt-in → e-mail de confirmação → página de vendas → checkout
+Entregáveis obrigatórios:
+  [ ] Opt-in → e-mail de confirmação chega em até 5 minutos
+  [ ] E-mail não vai para spam
+  [ ] Link no e-mail direciona para página de vendas correta
+  [ ] Checkout processa pagamento de teste
+  [ ] Webhook dispara e plataforma registra a venda
+  [ ] Sistema NÃO permite lançamento com funil quebrado
+
+Sinais de FAIL:
+  [ ] E-mail não chega (independente do tempo)
+  [ ] Qualquer redirecionamento quebrado no funil
+  [ ] Pagamento de teste falha sem mensagem de erro clara
+  [ ] Sistema permite ativar lançamento com funil com falha
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+---
+
+## ETAPA 6 — ARSENAL DE CONTEÚDO
+
+**O que o usuário espera receber:**
+Mínimo 60 peças de conteúdo · Organizadas por fase e lógica de lançamento ·
+Cada fase com contexto narrativo · Botões funcionais de aprovar/rejeitar/reescrever
+
+### 6.1 Volume de Peças
+
+```
+Ação: Aguardar geração completa do arsenal de conteúdo
+Timeout máximo: 20 minutos (conteúdo extenso — não reduzir)
+Contagem obrigatória:
+  [ ] E-mails: mínimo 10 peças
+  [ ] WhatsApps: mínimo 10 peças
+  [ ] Posts redes sociais: mínimo 10 peças
+  [ ] Roteiros de Reels: mínimo 5 peças
+  [ ] Anúncios (texto): mínimo 5 peças
+  [ ] Script de VSL: mínimo 1 peça completa
+  [ ] Roteiro de Live: mínimo 1 peça
+  [ ] TOTAL VISÍVEL NA UI: mínimo 60 peças
+
+Sinais de FAIL:
+  [ ] Total inferior a 60 sem aviso explicando o motivo
+  [ ] Qualquer categoria acima com 0 peças
+  [ ] Contador mostra 60+ mas peças estão em branco
+  [ ] Geração para antes de completar sem mensagem de erro
+
+Resultado: [ ] PASS  [ ] FAIL
+Contagem real:  E-mails___  WA___  Posts___  Reels___  Ads___  VSL___  Live___  TOTAL___
+Evidência:
+```
+
+### 6.2 Contexto Narrativo por Fase
+
+```
+Entregáveis obrigatórios:
+  [ ] Fase 1 tem título, datas e objetivo numérico (ex: "Meta: 500 leads")
+  [ ] Fase 2 tem título, datas e objetivo numérico
+  [ ] Cada fase explica POR QUÊ cada peça existe naquele momento
+  [ ] Cada peça tem rótulo de qual fase pertence
+
+Sinais de FAIL:
+  [ ] Lista de peças sem organização por fase
+  [ ] Peças sem contexto — apenas conteúdo bruto sem explicação
+  [ ] Objetivos numéricos ausentes nas fases
+  [ ] Peças de fases diferentes misturadas sem ordem
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 6.3 Fluxo de Aprovação de Peças
+
+```
+Ação: Para cada ação abaixo, testar com pelo menos 3 peças distintas:
+  [ ] Aprovar peça — peça move para "aprovado", não desaparece
+  [ ] Rejeitar peça — peça move para "rejeitado" com campo de motivo
+  [ ] Reescrever com IA — nova versão gerada em até 2 minutos
+  [ ] Nova versão é diferente da original (não echo)
+  [ ] Após reescrita, usuário ainda pode aprovar ou rejeitar
+Sinais de FAIL:
+  [ ] Aprovar não muda o estado da peça
+  [ ] Reescrever retorna texto idêntico
+  [ ] Peça com _autoRepairFailed=true exibe banner amarelo — isso é FAIL
+        O banner indica que a peça não foi entregue. Exibir o aviso
+        não substitui entregar a peça. A peça precisa ser gerada.
+  [ ] Peças com falha de geração não exibem aviso — aparecem em branco
+  [ ] Pipeline avança para Etapa 7 com qualquer peça não gerada,
+        independentemente de haver aviso visível sobre ela
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+---
+
+## ETAPA 7 — PROGRAMA DE EXECUÇÃO
+
+**O que o usuário espera receber:**
+Calendário dia a dia com horário exato · Sequências de automação configuradas ·
+Audiências criadas nas plataformas · WhatsApp sequences por segmento ·
+E-mails agendados
+
+### 7.1 Calendário de Execução
+
+```
+Ação: Definir data de início do lançamento (usar data 7 dias à frente)
+Entregáveis obrigatórios:
+  [ ] Calendário exibe cada dia do lançamento
+  [ ] Cada dia tem horário exato por ação (não "manhã" ou "tarde")
+  [ ] Ações são específicas (qual e-mail, qual post, qual anúncio)
+  [ ] Calendário ajusta proporcionalmente ao trocar a data de início
+
+Sinais de FAIL:
+  [ ] Calendário genérico sem horários específicos
+  [ ] Ações não identificam qual peça de conteúdo usam
+  [ ] Trocar data de início não atualiza o calendário
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 7.2 Automações e Sequências
+
+```
+Entregáveis obrigatórios:
+  [ ] Sequência de e-mails agendada (visível com datas e horários)
+  [ ] WhatsApp sequences configuradas por segmento (quente/morno/frio)
+  [ ] Lógica de segmento documentada na UI (não só "configurado")
+  [ ] Audiências de anúncios criadas (listar quais plataformas)
+  [ ] Teste de disparo: acionar manualmente 1 automação e verificar entrega
+
+Sinais de FAIL:
+  [ ] "Automações configuradas" sem detalhar o que foi configurado
+  [ ] WhatsApp sequences com uma única mensagem para todos os segmentos
+  [ ] Audiências "criadas" mas não verificáveis no Ads Manager
+  [ ] Teste de disparo não entrega a mensagem
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+---
+
+## ETAPA 8 — LANÇAMENTO NO AR
+
+**O que o usuário espera receber:**
+E-mails entregues nos horários · WhatsApp respondendo 24/7 por segmento ·
+Posts publicados automaticamente · Remarketing ativo ·
+5 agentes de vendas atendendo no WhatsApp
+
+### 8.1 Disparo Controlado (Primeiras 24h)
+
+```
+Ação: Ativar lançamento e monitorar as primeiras 24 horas
+Verificações com timestamps:
+
+  E-mails:
+  [ ] E-mail da Fase 1 enviado no horário agendado (tolerância: ±15 min)
+  [ ] E-mail chegou na inbox (não spam) do e-mail de teste
+  [ ] Conteúdo do e-mail corresponde à peça aprovada na Etapa 6
+
+  Posts:
+  [ ] Post da Fase 1 publicado na rede conectada no horário agendado
+  [ ] Post publicado é o aprovado na Etapa 6 (não versão diferente)
+
+  WhatsApp:
+  [ ] Lead de teste envia mensagem → resposta automática em até 3 minutos
+  [ ] Resposta é contextualizada (não mensagem genérica de boas-vindas)
+  [ ] Agente identifica o segmento correto (frio → aquecimento, não fechamento)
+
+Sinais de FAIL em qualquer item acima:
+  [ ] E-mail atrasado mais de 15 minutos sem notificação
+  [ ] Post não publicado sem notificação de erro
+  [ ] WhatsApp não responde após 10 minutos
+  [ ] Agente responde com texto de outro segmento
+
+Resultado:
+  E-mails:  [ ] PASS  [ ] FAIL
+  Posts:    [ ] PASS  [ ] FAIL
+  WhatsApp: [ ] PASS  [ ] FAIL
+Evidência (screenshots com timestamp):
+```
+
+### 8.2 Time de Vendas de IA — 5 Agentes
+
+```
+Testar CADA agente enviando mensagem correspondente ao seu estado:
+  [ ] Marco (Aquecimento) — lead frio, primeira interação
+        Resposta esperada: conteúdo de valor, sem pitch de venda
+  [ ] Renata (Desejo) — lead engajado, conhece o produto
+        Resposta esperada: construção de desejo, benefícios específicos
+  [ ] Vitor (Fechamento) — lead quente, pronto para comprar
+        Resposta esperada: oferta clara, CTA direto para checkout
+  [ ] Clara (Objeções) — lead com dúvida específica ("é caro", "não tenho tempo")
+        Resposta esperada: tratamento da objeção específica, não resposta genérica
+  [ ] Alex (Consultoria) — lead com pergunta técnica sobre o produto
+        Resposta esperada: resposta técnica baseada no produto cadastrado
+
+Sinais de FAIL:
+  [ ] Qualquer agente não responde após 10 minutos
+  [ ] Agente responde com conteúdo de outro agente (Marco fecha venda)
+  [ ] Agente usa nome ou produto diferente do cadastrado
+  [ ] Resposta genérica que serve para qualquer produto
+
+Resultado por agente:
+  Marco:  [ ] PASS  [ ] FAIL
+  Renata: [ ] PASS  [ ] FAIL
+  Vitor:  [ ] PASS  [ ] FAIL
+  Clara:  [ ] PASS  [ ] FAIL
+  Alex:   [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 8.3 Remarketing
+
+```
+Ação: Visitar a página de vendas sem comprar. Aguardar ativação do remarketing.
+Entregáveis obrigatórios:
+  [ ] Anúncio de remarketing exibido dentro de 24h (usar conta de teste no Ads)
+  [ ] Anúncio usa criativo aprovado na Etapa 6
+  [ ] Anúncio direciona para página de vendas correta
+  [ ] Frequência de exibição controlada (não spam de 10+ exibições/hora)
+
+Sinais de FAIL:
+  [ ] Remarketing não ativado após 48h
+  [ ] Anúncio com criativo não aprovado
+  [ ] Link do anúncio quebrado
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 8.4 Recebimento de Venda em Tempo Real
+
+```
+Ação: Realizar compra de teste via checkout Asaas (sandbox)
+Entregáveis obrigatórios:
+  [ ] Compra processada — confirmação exibida para o comprador
+  [ ] Receita aparece na plataforma em até 5 minutos
+  [ ] Sequência pós-compra disparada automaticamente
+  [ ] Comprador recebe e-mail de confirmação em até 10 minutos
+
+Sinais de FAIL:
+  [ ] Venda processada mas não aparece na plataforma
+  [ ] Sequência pós-compra não dispara
+  [ ] E-mail de confirmação não chega
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+---
+
+## ETAPA 9 — RESULTADOS E PRÓXIMO LANÇAMENTO
+
+**O que o usuário espera receber:**
+Relatório completo com métricas reais · Comparativo com estimativa do Dia 1 ·
+Aprendizados injetados no próximo lançamento automaticamente
+
+### 9.1 Relatório Final
+
+```
+Ação: Encerrar lançamento e acessar relatório
+Entregáveis obrigatórios:
+  [ ] Receita total gerada
+  [ ] ROAS por canal (não só total)
+  [ ] Custo por lead
+  [ ] Taxa de conversão por fase do funil
+  [ ] Comparativo real vs. estimativa do Dia 1 (Etapa 2.2)
+
+Sinais de FAIL:
+  [ ] Qualquer métrica acima ausente ou com "—"
+  [ ] Relatório sem comparativo com estimativa inicial
+  [ ] ROAS sem breakdown por canal
+  [ ] Métricas não batem com os dados reais (ex: receita diferente do Asaas)
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### 9.2 Injeção no Próximo Lançamento
+
+```
+Ação: Iniciar segundo lançamento e verificar pré-carregamento de aprendizados
+Entregáveis obrigatórios:
+  [ ] Briefing do segundo lançamento exibe dados do primeiro
+  [ ] Estratégia do segundo lançamento referencia resultados do primeiro
+  [ ] Agentes usam dados históricos (ex: "no seu último lançamento, X converteu melhor")
+  [ ] Estimativa financeira do 2º lançamento difere da do 1º com base nos dados reais
+
+Sinais de FAIL:
+  [ ] Segundo lançamento começa do zero sem memória do primeiro
+  [ ] Estimativa do 2º lançamento idêntica à do 1º
+  [ ] Nenhuma referência explícita ao histórico na UI
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+---
+
+## AUDITORIA DE UX — TELAS TRANSVERSAIS
+
+### /credits
+
+```
+  [ ] URL é /credits (não /creditos)
+  [ ] Saldo atual visível na tela
+  [ ] 4 pacotes listados com nomes e preços corretos:
+        Boost:   500 cr / R$85
+        Starter: 1.500 cr / R$239
+        Pro:     3.500 cr / R$529
+        Elite:   7.000 cr / R$979
+  [ ] Compra de pacote processa sem erro
+  [ ] Saldo atualiza após compra
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### /integracoes
+
+```
+  [ ] Status de cada integração visível (conectado / desconectado)
+  [ ] Ação de conectar abre formulário sem crash
+  [ ] Integração ausente NÃO bloqueia geração de conteúdo
+  [ ] Integração ausente bloqueia APENAS a fase de lançamento
+  [ ] Modal de integração faltante exibe lista + CTA para /integracoes
+
+Resultado: [ ] PASS  [ ] FAIL
+Evidência:
+```
+
+### Crédito Insuficiente (teste de comportamento)
+
+```
+Ação: Zerar créditos manualmente e tentar gerar conteúdo
+
+ESCLARECIMENTO SOBRE ESTA SEÇÃO:
+O teste verifica se o pipeline não crasha por falta de crédito.
+Isso NÃO significa que entregar conteúdo incompleto com aviso é aceitável.
+Se a geração produz peças vazias ou incompletas por falta de crédito:
+  → as peças incompletas são FAIL de entregável (registrar em Etapa 6)
+  → o aviso de saldo é a notificação do problema, nunca a solução
+
+Comportamento esperado do SISTEMA (estabilidade técnica):
+  [ ] Pipeline não crasha — HTTP 402 não gera exceção não tratada
+  [ ] Aviso de saldo baixo aparece como toast/banner informativo
+  [ ] Log registrado no DevTools sem exceção não capturada
+  [ ] Usuário é direcionado para /credits para recarregar
+
+Comportamento esperado quanto ao ENTREGÁVEL:
+  [ ] Peça não é iniciada se não há crédito suficiente para terminá-la
+        (peça pela metade com aviso = FAIL de entregável, não comportamento aceitável)
+  [ ] Se crédito acaba no meio de uma geração: peça marcada como não gerada
+        (não salva incompleta como se fosse válida)
+
+Sinais de FAIL do sistema (CRÍTICO — crash técnico):
+  [ ] HTTP 402 sem tratamento — tela branca, erro genérico ou exceção visível
+  [ ] Aviso não aparece — usuário não sabe por que a geração não ocorreu
+
+Resultado do sistema: [ ] PASS  [ ] FAIL
+Entregáveis incompletos por saldo: registrar separadamente como FAIL na Etapa 6
+Evidência:
+```
+
+---
+
+## PROTOCOLO DE TIMEOUT
+
+Para qualquer operação que exceder o limite definido neste protocolo:
+
+```
+1. Registrar: etapa, operação, tempo decorrido, tempo limite
+2. Verificar DevTools: há erros de console? Requests pendentes?
+3. Aguardar +50% do timeout (ex: timeout de 10 min → aguardar até 15 min)
+4. Se ainda travado: registrar como FAIL, documentar o estado exato da UI
+5. NÃO recarregar a página antes de documentar o estado
+
+Timeouts definidos neste protocolo:
+  Avatar IA:               3 min
+  Clone de voz:            5 min
+  Briefing (por formato):  4 min
+  Master Plan completo:    10 min
+  Arsenal de conteúdo:     20 min
+  Reescrita de peça:       2 min
+  Disparo de e-mail:       15 min após horário agendado (tolerância)
+  Resposta WhatsApp:       10 min
+  Registro de venda:       5 min após pagamento
+```
+
+---
+
+## DETECÇÃO DE FALSOS PASS — CHECKLIST OBRIGATÓRIO
+
+Antes de registrar qualquer PASS, confirmar:
+
+```
+[ ] O entregável está VISÍVEL na UI (não apenas "salvo internamente")
+[ ] O entregável tem CONTEÚDO (não placeholder, não template vazio)
+[ ] O entregável é ESPECÍFICO para o produto/nicho do usuário
+[ ] DevTools não mostra erros silenciados relacionados a este entregável
+[ ] O entregável persiste após recarregar a página (F5)
+[ ] O entregável corresponde ao que foi aprovado/configurado (não versão genérica)
+```
+
+Se qualquer item acima falhar → o PASS deve ser rebaixado para FAIL.
+
+---
+
+## RESUMO EXECUTIVO DO AUDIT
+
+Preencher ao final de cada sessão de auditoria:
+
+```
+TOTAL DE ITENS AUDITADOS:
+  PASS:  ___
+  FAIL:  ___ (CRÍTICOS — bloquear lançamento até resolução completa)
+  WARN:  ___ (problemas de UX sem impacto em entregável — corrigir antes do lançamento)
+  N/T:   ___ (não testados)
+
+NOTA: Degradação graciosa com aviso identificada durante o audit:
+  (listar casos onde o sistema exibiu aviso/banner no lugar de entregar o entregável)
+  1.
+  2.
+  Esses casos já estão contabilizados como FAIL acima.
+
+FAILs CRÍTICOS IDENTIFICADOS:
+  1.
+  2.
+  3.
+
+DECISÃO:
+  [ ] APTO PARA LANÇAMENTO — todos os FAILs resolvidos
+  [ ] BLOQUEADO — FAILs críticos pendentes (listar acima)
+
+Assinatura do auditor:
+Data da auditoria:
+Próxima auditoria agendada para:
+```
+
+---
+
+*NexOS AI E2E Audit Protocol v1.0 · Uso interno · Não distribuir*

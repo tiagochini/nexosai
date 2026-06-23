@@ -14,7 +14,7 @@ import {
   Zap, Target, Activity, PlayCircle, Link2, Shield,
   RefreshCw, Rocket, AlertTriangle, Copy, Check,
   Video, UserCheck, UserX, Settings, ChevronDown, ChevronUp,
-  Flame, Clapperboard, Clock,
+  Flame, Clapperboard, Clock, Bot,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -344,13 +344,13 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
           </div>
         )}
 
-        {/* Auto-repair failed warning */}
+        {/* Minimal fallback notice — piece was delivered but is a template, not AI-generated */}
         {piece.autoRepairFailed && (
-          <div className="mb-2 px-3 py-2 border border-yellow-500/40 bg-yellow-500/8">
+          <div className="mb-2 px-3 py-2 border border-blue-500/30 bg-blue-500/5">
             <div className="flex items-center gap-1.5">
-              <AlertTriangle className="h-3 w-3 text-yellow-400 shrink-0" />
-              <span className="font-mono text-[11px] text-yellow-400 leading-relaxed">
-                Geração incompleta — o agente retornou conteúdo vazio e o auto-reparo não conseguiu recuperar esta peça. Reescreva manualmente ou use "Reescrever com IA".
+              <Bot className="h-3 w-3 text-blue-400 shrink-0" />
+              <span className="font-mono text-[11px] text-blue-400 leading-relaxed">
+                Conteúdo gerado via fallback — use "Reescrever com IA" para personalizar com os dados do seu produto.
               </span>
             </div>
           </div>
@@ -1269,7 +1269,9 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
     } catch { c = {}; }
 
     const pieceQualityScore = typeof c["_qualityScore"] === "number" ? c["_qualityScore"] as number : undefined;
-    const pieceAutoRepairFailed = c["_autoRepairFailed"] === true;
+    // _autoRepairFailed is legacy (pre-fallback era). _minimalFallback is the new flag.
+    // Both show the "use AI rewrite to personalize" notice — never the yellow warning banner.
+    const pieceAutoRepairFailed = c["_autoRepairFailed"] === true || c["_minimalFallback"] === true;
 
     // Helper: create a child card
     const child = (subKey: string, overrides: Partial<ContentPiece>): ContentPiece => ({

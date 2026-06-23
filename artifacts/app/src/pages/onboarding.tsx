@@ -558,9 +558,59 @@ export default function Onboarding() {
     }
   };
 
+  // ── Financial scenario estimates ──────────────────────────────────────────────
+  interface FinancialScenario {
+    label: string;
+    key: "conservador" | "realista" | "otimista";
+    leads: number;
+    convRate: number;
+    revenue: number;
+    color: string;
+    active: boolean;
+  }
+  const [financialScenarios, setFinancialScenarios] = useState<FinancialScenario[] | null>(null);
+
+  const computeScenarios = (revenueTarget: number, budget: number): FinancialScenario[] => {
+    // Conservative: 40% of target, 1.2% conversion, minimal spend efficiency
+    const cRevenue = Math.round(revenueTarget * 0.4);
+    const cLeads = budget > 0 ? Math.round(budget / 12) : 200;
+    const cConv = 1.2;
+    // Realistic: 70% of target, 2% conversion
+    const rRevenue = Math.round(revenueTarget * 0.7);
+    const rLeads = budget > 0 ? Math.round(budget / 8) : 350;
+    const rConv = 2.0;
+    // Optimistic: 110% of target, 3.5% conversion
+    const oRevenue = Math.round(revenueTarget * 1.1);
+    const oLeads = budget > 0 ? Math.round(budget / 5) : 600;
+    const oConv = 3.5;
+    return [
+      { label: "Conservador", key: "conservador", leads: cLeads, convRate: cConv, revenue: cRevenue, color: "border-muted-foreground/30 text-muted-foreground", active: false },
+      { label: "Realista", key: "realista", leads: rLeads, convRate: rConv, revenue: rRevenue, color: "border-primary/50 text-primary", active: true },
+      { label: "Otimista", key: "otimista", leads: oLeads, convRate: oConv, revenue: oRevenue, color: "border-success/40 text-success", active: false },
+    ];
+  };
+
+  const formatBRL = (n: number) => {
+    if (n >= 1_000_000) return `R$ ${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `R$ ${(n / 1_000).toFixed(0)}k`;
+    return `R$ ${n.toLocaleString("pt-BR")}`;
+  };
+
   // ── Show plan preview then navigate ──────────────────────────────────────────
-  const handleFinish = () => {
+  const handleFinish = async () => {
     setStep("plan_preview");
+    // Fetch campaign intake data to compute real financial scenarios
+    if (campaignId) {
+      try {
+        const data = await customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${campaignId}`);
+        const intake = (data.campaign?.intakeData as Record<string, unknown>) ?? {};
+        const revenueTarget = Number(intake["campaign.revenueTarget"] ?? intake["revenueTarget"] ?? 100000);
+        const budget = Number(intake["campaign.budget.total"] ?? intake["budget"] ?? 0);
+        if (revenueTarget > 0) {
+          setFinancialScenarios(computeScenarios(revenueTarget, budget));
+        }
+      } catch { /* non-blocking — generic tracks shown as fallback */ }
+    }
   };
 
   const handleGoToDiagnosis = () => {
@@ -1432,27 +1482,56 @@ export default function Onboarding() {
           </div>
         </div>
 
-        {/* Revenue projection */}
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: "6 Dígitos", value: "R$ 100k–999k", color: "border-primary/40 text-primary", active: path !== "affiliate_nexos" },
-            { label: "8 Dígitos", value: "R$ 10M–99M", color: "border-cyan-400/40 text-cyan-400", active: false },
-            { label: "10 Dígitos", value: "R$ 100M+", color: "border-yellow-400/40 text-yellow-400", active: false },
-          ].map(track => (
-            <div key={track.label} className={`border px-3 py-2.5 text-center relative ${track.color} ${track.active ? "bg-primary/5" : "opacity-40"}`}>
-              {track.active && (
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2">
-                  <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 border-primary/40 text-primary bg-background">
-                    Seu track
-                  </Badge>
-                </div>
-              )}
-              <div className="font-mono text-[11px] uppercase tracking-widest opacity-60 mb-1">{track.label}</div>
-              <div className="font-mono text-xs font-bold">{track.value}</div>
-              <div className="font-mono text-[11px] text-muted-foreground">em 7 dias</div>
+        {/* Financial scenarios — real computed from intake data, fallback to tracks */}
+        {financialScenarios ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="h-3.5 w-3.5 text-primary" />
+              <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Projeção Financeira · 7 dias</span>
             </div>
-          ))}
-        </div>
+            <div className="grid grid-cols-3 gap-2">
+              {financialScenarios.map(sc => (
+                <div key={sc.key} className={`border px-3 py-3 relative ${sc.color} ${sc.active ? "bg-primary/5" : "opacity-60"}`}>
+                  {sc.active && (
+                    <div className="absolute -top-2 left-1/2 -translate-x-1/2">
+                      <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 border-primary/40 text-primary bg-background">
+                        Mais provável
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="font-mono text-[11px] uppercase tracking-widest opacity-70 mb-2">{sc.label}</div>
+                  <div className="font-mono text-sm font-bold mb-1">{formatBRL(sc.revenue)}</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{sc.leads.toLocaleString("pt-BR")} leads</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">{sc.convRate}% conv.</div>
+                </div>
+              ))}
+            </div>
+            <p className="font-mono text-[10px] text-muted-foreground/50">
+              Estimativa baseada nos dados do briefing · será refinada pelo Agente de Projeção Financeira durante a estratégia
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "6 Dígitos", value: "R$ 100k–999k", color: "border-primary/40 text-primary", active: path !== "affiliate_nexos" },
+              { label: "8 Dígitos", value: "R$ 10M–99M", color: "border-cyan-400/40 text-cyan-400", active: false },
+              { label: "10 Dígitos", value: "R$ 100M+", color: "border-yellow-400/40 text-yellow-400", active: false },
+            ].map(track => (
+              <div key={track.label} className={`border px-3 py-2.5 text-center relative ${track.color} ${track.active ? "bg-primary/5" : "opacity-40"}`}>
+                {track.active && (
+                  <div className="absolute -top-2 left-1/2 -translate-x-1/2">
+                    <Badge variant="outline" className="rounded-none font-mono text-[11px] px-1.5 border-primary/40 text-primary bg-background">
+                      Seu track
+                    </Badge>
+                  </div>
+                )}
+                <div className="font-mono text-[11px] uppercase tracking-widest opacity-60 mb-1">{track.label}</div>
+                <div className="font-mono text-xs font-bold">{track.value}</div>
+                <div className="font-mono text-[11px] text-muted-foreground">em 7 dias</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* ── Clone Studio ──────────────────────────────────────────────── */}
         {!cloneSessionId && !showCloneStudio && (
