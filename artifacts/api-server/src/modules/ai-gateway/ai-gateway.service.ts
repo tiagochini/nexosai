@@ -385,7 +385,7 @@ async function callAnthropic(
         system: systemPrompt,
         messages: continuationMessages,
       },
-      { signal },
+      { signal: effectiveSignal },
     );
     const contContent = contResp.content[0]?.type === "text" ? contResp.content[0].text : "";
     content = content + contContent;

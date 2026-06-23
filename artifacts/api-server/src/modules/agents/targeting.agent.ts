@@ -86,122 +86,213 @@ export interface TargetingOutput {
   targetingNotes: string;
 }
 
-const TARGETING_PROMPT = `Você é o Agente de Targeting Híbrido da NexOS AI — especialista em integrar tráfego PAGO e ORGÂNICO numa estratégia unificada de lançamento digital, com domínio em geolocalização e segmentação física para negócios locais (academias, studios, clínicas, unidades físicas).
+// ─── Shared context builder ──────────────────────────────────────────────────
 
-Você vai além dos segmentos teóricos — você entrega as audiências prontas para configurar no Meta Business Manager, Google Ads e TikTok Ads Manager, combinadas com a estratégia orgânica de cada canal.
+function buildCampaignContext(
+  intakeData: Record<string, unknown>,
+  profile: ProfileBuilderOutput | undefined,
+): string {
+  const segmentsContext = profile?.segments.length
+    ? profile.segments.map((s: AudienceSegment) =>
+        `- [${s.priority.toUpperCase()}] ${s.name}: ${s.messageAngle} | Canais: ${s.bestChannels.join(", ")} | CPL: R$${s.estimatedCPL}`
+      ).join("\n")
+    : "segmentos não definidos";
 
-## ESTRATÉGIA HÍBRIDA: PAGO + ORGÂNICO
+  const avatarContext = profile
+    ? `Avatar: ${profile.primaryAvatar?.name ?? "Avatar principal"}, ${profile.primaryAvatar?.age ?? ""}
+Localização: ${profile.primaryAvatar?.location ?? ""}
+Renda: ${profile.primaryAvatar?.income ?? ""}
+Ocupação: ${profile.primaryAvatar?.occupation ?? ""}
+Onde está online: ${(profile.primaryAvatar?.whereTheyHangOut ?? []).join(", ")}
+Conteúdo que consome: ${(profile.primaryAvatar?.contentTheyConsume ?? []).join(", ")}
+Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(0, 3).join("; ")}`
+    : "";
 
-**Sempre planeje os dois eixos — mesmo sem orçamento confirmado:**
-- PAGO: Meta Ads, Google Ads, TikTok Ads — capture leads frios, retargeting de visitantes
-- ORGÂNICO: Reels/TikTok para topo de funil, WhatsApp VIP para base quente, e-mail para nutrição
+  const isLocal = String(intakeData["product.category"] ?? "").toLowerCase().includes("academi")
+    || String(intakeData["product.category"] ?? "").toLowerCase().includes("fitness")
+    || String(intakeData["business.hasPhysicalLocation"] ?? "").toLowerCase() === "true";
 
-**Sinergia pago + orgânico:**
-- Orgânico cria prova social → pago amplifica com boosting dos posts mais engajados
-- Lista orgânica (e-mail/WhatsApp) → semente para Lookalike no Meta (melhor qualidade)
-- Conteúdo orgânico de autoridade → remarketing pago para quem assistiu 50%+ do vídeo
-- Google Search captura intenção ativa → Reels/TikTok criam demanda passiva
+  return `**Produto:** ${String(intakeData["product.name"] ?? "")} — categoria: ${String(intakeData["product.category"] ?? "")}
+**Budget de tráfego pago:** R$${String(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.trafficBudget"] ?? 0)}
+**Localização principal:** ${String(intakeData["audience.location"] ?? "brazil_nationwide")}
+**Negócio físico/local:** ${isLocal ? "SIM — use geolocalização por raio" : "NÃO"}
+**Endereços físicos:** ${String(intakeData["business.locations"] ?? intakeData["audience.city"] ?? "")}
+**Nível de sofisticação:** ${String(intakeData["audience.sophisticationLevel"] ?? "solution_aware")}
+**Concorrência:** ${profile?.marketIntelligence?.competitionLevel ?? "medium"}
+${avatarContext}
 
-## GEOLOCALIZAÇÃO PARA NEGÓCIOS FÍSICOS (ACADEMIAS, STUDIOS, CLÍNICAS)
+**Segmentos de audiência:**
+${segmentsContext}`;
+}
 
-**Quando o produto tem componente físico/local, use raio geográfico:**
-- Meta: "Pessoas que vivem ou frequentam recentemente" + raio de 3-15km de cada unidade
-- Google: raio de localização por CEP/cidade de cada unidade física
-- Segmento VIP: raio de 5km de academias concorrentes (meta: captação lateral)
-- Excluir: pessoas que vivem fora do raio de atendimento (evita leads inválidos)
+// ─── Chunk 1: Meta audiences ─────────────────────────────────────────────────
 
-**Estratégia para academias e fitness:**
-- Interesses: fitness, musculação, emagrecimento, crossfit, yoga, nutrição esportiva
-- Comportamentos: compradores de suplementos, ativos em apps fitness, uso de rastreador
-- Geolocalização: bairros específicos + raio das unidades + cidades da região
-- Público-alvo local: 500m a 5km de cada unidade física (criar conjunto separado por unidade)
-- Segmentos de renda: médio-alto para academias premium, médio para academias populares
+interface MetaChunk {
+  pixelSetupMeta: { events: string[]; customConversions: string[]; setupNotes: string };
+  metaAudiences: MetaAudience[];
+}
 
-## FILOSOFIA DE TARGETING
+const META_CHUNK_PROMPT = `Você é o Agente de Targeting da NexOS AI — especialista em Meta Ads (Facebook e Instagram).
 
-**O maior erro de targeting:** públicos muito pequenos ou muito amplos.
-- Muito pequeno (<50k): frequência sobe rápido, CPL sobe
-- Muito amplo (>5M): sem relevância, CTR baixo, CPL alto
-- Sweet spot para lançamentos: 500k - 2M por público no Meta
-- Para negócios locais: 20k-200k é aceitável por praça
+## REGRAS OBRIGATÓRIAS
+- Mínimo 8 públicos: 2 frios (interesses), 2 lookalike, 2 retargeting, 2 geolocalização (se negócio local)
+- Sweet spot: 500k–2M por público; para negócios locais: 20k–200k por praça
+- Excluir compradores de todos os públicos de topo de funil
+- Negócio físico/academia: OBRIGATÓRIO pelo menos 2 públicos com raio geográfico de 3–10km
 
-**A hierarquia de qualidade de audiência:**
-1. Lookalike 1% de compradores → melhor qualidade
-2. Lookalike 1% de lista engajada → ótima qualidade  
-3. Custom audience (site, vídeo, engajamento) → retargeting
-4. Geolocalização por raio + interesses → boa qualidade para negócios locais
-5. Interesses específicos e nichados → boa qualidade
-6. Comportamentos de compra → boa qualidade
-7. Interesses amplos → teste apenas
-8. Broad (sem targeting) → só com pixel maduro
-
-**Regras de exclusão sempre ativas:**
-- Excluir compradores de TODOS os públicos de topo de funil
-- Excluir quem já está na lista de e-mail dos públicos de captura
-- Excluir públicos em teste uns dos outros para não contaminar dados
-
-**UTM é obrigatório:**
-Cada conjunto de anúncio tem UTM único. Sem UTM não tem atribuição. Sem atribuição não tem otimização.
-
-**Retorne APENAS JSON válido** no formato abaixo.
-
+**Retorne APENAS JSON válido:**
 \`\`\`json
 {
-  "campaignTitle": "string",
-  "pixelSetupInstructions": {
-    "meta": {
-      "events": ["string — evento do pixel a configurar (ex: Lead, Purchase, ViewContent)"],
-      "customConversions": ["string — conversão customizada a criar"],
-      "setupNotes": "string — instruções de configuração do pixel Meta"
-    },
-    "google": {
-      "tags": ["string — tag a instalar"],
-      "conversions": ["string — conversão a criar no Google Ads"],
-      "setupNotes": "string"
-    },
-    "tiktok": {
-      "events": ["string"],
-      "setupNotes": "string"
-    }
+  "pixelSetupMeta": {
+    "events": ["Lead", "Purchase", "ViewContent"],
+    "customConversions": ["string"],
+    "setupNotes": "string"
   },
   "metaAudiences": [
     {
-      "audienceId": "string — slug único",
-      "name": "string — nome para usar no Meta",
+      "audienceId": "string",
+      "name": "string",
       "type": "interest|custom|lookalike|broad|retargeting",
-      "size": "string — tamanho estimado",
-      "interests": ["string — interesse exato como aparece no Meta"],
-      "behaviors": ["string ou null"],
-      "demographics": {
-        "ageMin": 25,
-        "ageMax": 55,
-        "genders": ["all"],
-        "locations": ["Brazil"]
-      },
-      "exclusions": ["string — o que excluir deste público"],
-      "lookalikeSeed": "string ou null — qual lista usar como semente",
-      "lookalikeSimilarity": "string ou null — ex: 1%, 2%, 5%",
+      "size": "string",
+      "interests": ["string"],
+      "behaviors": ["string"],
+      "demographics": { "ageMin": 25, "ageMax": 55, "genders": ["all"], "locations": ["Brazil"] },
+      "exclusions": ["string"],
+      "lookalikeSeed": "string ou null",
+      "lookalikeSimilarity": "string ou null",
       "customAudienceSource": "string ou null",
       "phase": "string",
       "priority": "primary|secondary|test",
       "estimatedCPL": 0,
       "notes": "string"
     }
-  ],
+  ]
+}
+\`\`\``;
+
+async function runMetaChunk(
+  campaignId: string,
+  workspaceId: string,
+  ctx: string,
+  log: Logger,
+): Promise<MetaChunk> {
+  const result = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "targeting",
+    systemPrompt: COGNITIVE_IDENTITY_TARGETING + META_CHUNK_PROMPT,
+    skipAllStaticLayers: true,
+    messages: [
+      {
+        role: "user",
+        content: `Configure as audiências do META ADS para esta campanha.\n\n${ctx}\n\nRetorne APENAS o JSON de audiências Meta.`,
+      },
+    ],
+    log,
+    requiresApproval: false,
+    thinkingMessages: ["Mapeando interesses e comportamentos no Meta...", "Configurando públicos frios, lookalike e retargeting..."],
+  });
+
+  return parseAgentJSON<MetaChunk>(result.content, {
+    pixelSetupMeta: { events: [], customConversions: [], setupNotes: "" },
+    metaAudiences: [],
+  });
+}
+
+// ─── Chunk 2: Google audiences ────────────────────────────────────────────────
+
+interface GoogleChunk {
+  pixelSetupGoogle: { tags: string[]; conversions: string[]; setupNotes: string };
+  googleAudiences: GoogleAudience[];
+}
+
+const GOOGLE_CHUNK_PROMPT = `Você é o Agente de Targeting da NexOS AI — especialista em Google Ads.
+
+## REGRAS OBRIGATÓRIAS
+- Mínimo 3 públicos: search intent + display + remarketing
+- Usar palavras-chave de intenção de compra (não informacionais)
+- Custom Intent: combinar termos do produto + concorrentes diretos
+
+**Retorne APENAS JSON válido:**
+\`\`\`json
+{
+  "pixelSetupGoogle": {
+    "tags": ["string"],
+    "conversions": ["string"],
+    "setupNotes": "string"
+  },
   "googleAudiences": [
     {
       "audienceId": "string",
       "name": "string",
       "type": "in_market|affinity|custom_intent|remarketing|similar|customer_match",
       "description": "string",
-      "keywords": ["string ou null"],
-      "urls": ["string ou null"],
-      "apps": ["string ou null"],
+      "keywords": ["string"],
+      "urls": ["string"],
+      "apps": ["string"],
       "phase": "string",
       "priority": "primary|secondary|test",
       "notes": "string"
     }
-  ],
+  ]
+}
+\`\`\``;
+
+async function runGoogleChunk(
+  campaignId: string,
+  workspaceId: string,
+  ctx: string,
+  log: Logger,
+): Promise<GoogleChunk> {
+  const result = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "targeting",
+    systemPrompt: COGNITIVE_IDENTITY_TARGETING + GOOGLE_CHUNK_PROMPT,
+    skipAllStaticLayers: true,
+    messages: [
+      {
+        role: "user",
+        content: `Configure as audiências do GOOGLE ADS para esta campanha.\n\n${ctx}\n\nRetorne APENAS o JSON de audiências Google.`,
+      },
+    ],
+    log,
+    requiresApproval: false,
+    thinkingMessages: ["Configurando audiências de intenção no Google...", "Estruturando remarketing e in-market audiences..."],
+  });
+
+  return parseAgentJSON<GoogleChunk>(result.content, {
+    pixelSetupGoogle: { tags: [], conversions: [], setupNotes: "" },
+    googleAudiences: [],
+  });
+}
+
+// ─── Chunk 3: TikTok + UTMs + testing matrix + notes ─────────────────────────
+
+interface TikTokUtmChunk {
+  pixelSetupTikTok: { events: string[]; setupNotes: string };
+  tiktokAudiences: TikTokAudience[];
+  audienceExclusions: { platform: string; audience: string; reason: string }[];
+  customAudiencesToBuild: { name: string; platform: string; source: string; instructions: string; buildNow: boolean }[];
+  audienceTestingMatrix: { phase: string; winner: string; testAudiences: string[]; successMetric: string }[];
+  utmStructure: { source: string; medium: string; campaign: string; adset: string; ad: string; examples: string[] };
+  targetingNotes: string;
+}
+
+const TIKTOK_UTM_CHUNK_PROMPT = `Você é o Agente de Targeting da NexOS AI — especialista em TikTok Ads, UTMs e estratégia de exclusão.
+
+## REGRAS OBRIGATÓRIAS
+- Mínimo 3 públicos TikTok
+- UTM obrigatório para cada conjunto — sem UTM não há atribuição
+- Exclusões: sempre excluir compradores dos públicos de topo
+
+**Retorne APENAS JSON válido:**
+\`\`\`json
+{
+  "pixelSetupTikTok": {
+    "events": ["string"],
+    "setupNotes": "string"
+  },
   "tiktokAudiences": [
     {
       "audienceId": "string",
@@ -217,40 +308,61 @@ Cada conjunto de anúncio tem UTM único. Sem UTM não tem atribuição. Sem atr
     }
   ],
   "audienceExclusions": [
-    {
-      "platform": "string",
-      "audience": "string",
-      "reason": "string"
-    }
+    { "platform": "string", "audience": "string", "reason": "string" }
   ],
   "customAudiencesToBuild": [
-    {
-      "name": "string",
-      "platform": "string",
-      "source": "string — de onde vem essa audiência",
-      "instructions": "string — como criar passo a passo",
-      "buildNow": true
-    }
+    { "name": "string", "platform": "string", "source": "string", "instructions": "string", "buildNow": true }
   ],
   "audienceTestingMatrix": [
-    {
-      "phase": "string",
-      "winner": "string — audiência hipótese de vencedora",
-      "testAudiences": ["string"],
-      "successMetric": "string"
-    }
+    { "phase": "string", "winner": "string", "testAudiences": ["string"], "successMetric": "string" }
   ],
   "utmStructure": {
-    "source": "string — ex: facebook, google, tiktok",
-    "medium": "string — ex: cpc, paid_social",
-    "campaign": "string — padrão de nomenclatura da campanha",
-    "adset": "string — padrão de nomenclatura do conjunto",
-    "ad": "string — padrão de nomenclatura do anúncio",
+    "source": "string",
+    "medium": "string",
+    "campaign": "string",
+    "adset": "string",
+    "ad": "string",
     "examples": ["string — exemplo real de UTM completo"]
   },
-  "targetingNotes": "string — observações estratégicas sobre o targeting"
+  "targetingNotes": "string — observações estratégicas"
 }
 \`\`\``;
+
+async function runTikTokUtmChunk(
+  campaignId: string,
+  workspaceId: string,
+  ctx: string,
+  log: Logger,
+): Promise<TikTokUtmChunk> {
+  const result = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "targeting",
+    systemPrompt: COGNITIVE_IDENTITY_TARGETING + TIKTOK_UTM_CHUNK_PROMPT,
+    skipAllStaticLayers: true,
+    messages: [
+      {
+        role: "user",
+        content: `Configure as audiências do TIKTOK ADS, exclusões, audiências customizadas, matriz de testes e estrutura de UTMs para esta campanha.\n\n${ctx}\n\nRetorne APENAS o JSON completo.`,
+      },
+    ],
+    log,
+    requiresApproval: false,
+    thinkingMessages: ["Criando targeting nativo para TikTok...", "Definindo exclusões e UTMs..."],
+  });
+
+  return parseAgentJSON<TikTokUtmChunk>(result.content, {
+    pixelSetupTikTok: { events: [], setupNotes: "" },
+    tiktokAudiences: [],
+    audienceExclusions: [],
+    customAudiencesToBuild: [],
+    audienceTestingMatrix: [],
+    utmStructure: { source: "", medium: "", campaign: "", adset: "", ad: "", examples: [] },
+    targetingNotes: "",
+  });
+}
+
+// ─── Main runner (3 focused calls, context renewed each time) ─────────────────
 
 export async function runTargetingAgent(
   campaignId: string,
@@ -258,92 +370,43 @@ export async function runTargetingAgent(
   intakeData: Record<string, unknown>,
   profile: ProfileBuilderOutput | undefined,
   log: Logger,
-  maxTokens = 32768,
 ): Promise<TargetingOutput> {
-  const segmentsContext = profile?.segments.length
-    ? profile.segments.map((s: AudienceSegment) =>
-        `- [${s.priority.toUpperCase()}] ${s.name}: ${s.messageAngle} | Canais: ${s.bestChannels.join(", ")} | CPL: R$${s.estimatedCPL}`
-      ).join("\n")
-    : "segmentos não definidos";
+  const ctx = buildCampaignContext(intakeData, profile);
+  const campaignTitle = String(intakeData["product.name"] ?? "");
 
-  const avatarContext = profile
-    ? `
-Avatar: ${profile.primaryAvatar?.name ?? "Avatar principal"}, ${profile.primaryAvatar?.age ?? ""}
-Localização: ${profile.primaryAvatar?.location ?? ""}
-Renda: ${profile.primaryAvatar?.income ?? ""}
-Ocupação: ${profile.primaryAvatar?.occupation ?? ""}
-Onde está online: ${(profile.primaryAvatar?.whereTheyHangOut ?? []).join(", ")}
-Conteúdo que consome: ${(profile.primaryAvatar?.contentTheyConsume ?? []).join(", ")}
-Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(0, 3).join("; ")}`
-    : "";
+  log.info({ campaignId }, "targeting: starting chunked delivery (Meta → Google → TikTok+UTMs)");
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "targeting",
-    systemPrompt: COGNITIVE_IDENTITY_TARGETING + TARGETING_PROMPT,
-    skipAllStaticLayers: true,
-    maxTokens,
-    messages: [
-      {
-        role: "user",
-        content: `Configure a estratégia HÍBRIDA (pago + orgânico) e todas as audiências para a campanha — Meta, Google e TikTok.
+  // Each call is independent — fresh context, focused output, no shared token budget.
+  const [metaChunk, googleChunk, tiktokChunk] = await Promise.all([
+    runMetaChunk(campaignId, workspaceId, ctx, log),
+    runGoogleChunk(campaignId, workspaceId, ctx, log),
+    runTikTokUtmChunk(campaignId, workspaceId, ctx, log),
+  ]);
 
-**Produto:** ${String(intakeData["product.name"] ?? "")} — categoria: ${String(intakeData["product.category"] ?? "")}
-**Budget de tráfego pago:** R$${String(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.trafficBudget"] ?? 0)}
-**Localização principal:** ${String(intakeData["audience.location"] ?? "brazil_nationwide")}
-**Tem negócio físico/local (academia, studio, clínica)?** ${String(intakeData["business.hasPhysicalLocation"] ?? intakeData["product.category"] ?? "").toLowerCase().includes("academi") || String(intakeData["product.category"] ?? "").toLowerCase().includes("fitness") ? "SIM — use geolocalização por raio" : "verificar perfil"}
-**Possui endereços físicos:** ${String(intakeData["business.locations"] ?? intakeData["audience.city"] ?? "verificar dados do produto")}
-${avatarContext}
-
-**Segmentos de audiência:**
-${segmentsContext}
-
-**Nível de sofisticação da audiência:** ${String(intakeData["audience.sophisticationLevel"] ?? "solution_aware")}
-**Concorrência no mercado:** ${profile?.marketIntelligence?.competitionLevel ?? "medium"}
-
-**Diretrizes adicionais do usuário:**
-${JSON.stringify((intakeData["user_directives"] as Record<string, string> | undefined) ?? {}, null, 2)}
-
-**ENTREGÁVEIS NECESSÁRIOS:**
-- Mínimo 8 públicos no Meta (2 frios por interesses, 2 lookalike, 2 retargeting, 2 geolocalização por raio se negócio local)
-- Mínimo 3 públicos no Google (search intent + display + remarketing)
-- Mínimo 3 públicos no TikTok
-- Configuração completa de pixel para cada plataforma
-- Estrutura de UTM padronizada
-- Lista de exclusões obrigatórias
-- Plano de sinergia: como o orgânico alimenta o pago (Lookalike seeds, boosting de Reels, etc.)
-- Se produto fitness/academia: OBRIGATÓRIO incluir pelo menos 2 públicos com raio geográfico de 3-10km
-
-Retorne APENAS o JSON de configuração de audiências.`,
-      },
-    ],
-    log,
-    requiresApproval: false,
-    thinkingMessages: [
-      "Mapeando avatar para interesses e comportamentos no Meta...",
-      "Estruturando públicos frios, lookalike e retargeting...",
-      "Configurando audiências no Google por intenção...",
-      "Criando targeting nativo para TikTok...",
-      "Definindo exclusões e proteção de audiências...",
-      "Estruturando UTMs e atribuição...",
-    ],
-  });
-
-  return parseAgentJSON<TargetingOutput>(result.content, {
-    campaignTitle: String(intakeData["product.name"] ?? ""),
-    pixelSetupInstructions: {
-      meta: { events: [], customConversions: [], setupNotes: "" },
-      google: { tags: [], conversions: [], setupNotes: "" },
-      tiktok: { events: [], setupNotes: "" },
+  log.info(
+    {
+      campaignId,
+      metaCount: metaChunk.metaAudiences.length,
+      googleCount: googleChunk.googleAudiences.length,
+      tiktokCount: tiktokChunk.tiktokAudiences.length,
     },
-    metaAudiences: [],
-    googleAudiences: [],
-    tiktokAudiences: [],
-    audienceExclusions: [],
-    customAudiencesToBuild: [],
-    audienceTestingMatrix: [],
-    utmStructure: { source: "", medium: "", campaign: "", adset: "", ad: "", examples: [] },
-    targetingNotes: result.content,
-  });
+    "targeting: all chunks delivered — merging",
+  );
+
+  return {
+    campaignTitle,
+    pixelSetupInstructions: {
+      meta: metaChunk.pixelSetupMeta,
+      google: googleChunk.pixelSetupGoogle,
+      tiktok: tiktokChunk.pixelSetupTikTok,
+    },
+    metaAudiences: metaChunk.metaAudiences,
+    googleAudiences: googleChunk.googleAudiences,
+    tiktokAudiences: tiktokChunk.tiktokAudiences,
+    audienceExclusions: tiktokChunk.audienceExclusions,
+    customAudiencesToBuild: tiktokChunk.customAudiencesToBuild,
+    audienceTestingMatrix: tiktokChunk.audienceTestingMatrix,
+    utmStructure: tiktokChunk.utmStructure,
+    targetingNotes: tiktokChunk.targetingNotes,
+  };
 }

@@ -743,7 +743,10 @@ export async function generateCampaignContent(
         timestamp: new Date().toISOString(),
       });
 
-      let targetingOutput = await runTargetingAgent(
+      // Chunked delivery: runTargetingAgent internally runs 3 focused calls
+      // (Meta → Google → TikTok+UTMs) in parallel, each with its own token budget.
+      // No single call ever generates the full output — truncation structurally impossible.
+      const targetingOutput = await runTargetingAgent(
         campaignId,
         workspaceId,
         intakeData,
@@ -751,36 +754,7 @@ export async function generateCampaignContent(
         log,
       );
 
-      let targetingContractWarn = validatePieceContract("targeting_config", targetingOutput);
-
-      // Auto-retry: if arrays came back empty (truncation), retry once with the same
-      // expanded token budget (32768 default in runTargetingAgent). Different random
-      // seed / retry often succeeds because the truncation is stochastic, not structural.
-      if (
-        targetingContractWarn &&
-        (targetingOutput.metaAudiences?.length ?? 0) === 0 &&
-        (targetingOutput.googleAudiences?.length ?? 0) === 0
-      ) {
-        log.warn({ campaignId }, "targeting_config: all audience arrays empty — auto-retrying (token truncation recovery)");
-        emitCampaignEvent({
-          campaignId,
-          type: "agent_started",
-          agentType: "targeting",
-          message: "Targeting — retentativa automática (recuperação de truncamento)...",
-          timestamp: new Date().toISOString(),
-        });
-        const retried = await runTargetingAgent(campaignId, workspaceId, intakeData, profile, log);
-        const retriedWarn = validatePieceContract("targeting_config", retried);
-        const retriedTotal = (retried.metaAudiences?.length ?? 0) + (retried.googleAudiences?.length ?? 0) + (retried.tiktokAudiences?.length ?? 0);
-        if (retriedTotal > 0) {
-          targetingOutput = retried;
-          targetingContractWarn = retriedWarn;
-          log.info({ campaignId, retriedTotal }, "targeting_config: retry succeeded");
-        } else {
-          log.warn({ campaignId }, "targeting_config: retry also returned empty arrays — saving with violation flag");
-        }
-      }
-
+      const targetingContractWarn = validatePieceContract("targeting_config", targetingOutput);
       if (targetingContractWarn) log.warn({ campaignId, contractWarn: targetingContractWarn }, "targeting_config contract violation — saving with _contractViolation flag");
 
       capturedTargetingOutput = targetingOutput;
@@ -841,7 +815,7 @@ export async function generateCampaignContent(
           }
         : undefined;
 
-      let mediaBuyerOutput = await runMediaBuyerAgent(
+      const mediaBuyerOutput = await runMediaBuyerAgent(
         campaignId,
         workspaceId,
         intakeData,
@@ -851,28 +825,6 @@ export async function generateCampaignContent(
         log,
         targetingAudiences,
       );
-
-      // Auto-retry: if daily allocations empty (truncation), retry once.
-      if (
-        (mediaBuyerOutput.dailyAllocations?.length ?? 0) === 0 &&
-        (mediaBuyerOutput.kpiTargets?.length ?? 0) === 0
-      ) {
-        log.warn({ campaignId }, "media_buying_plan: allocations empty — auto-retrying (token truncation recovery)");
-        emitCampaignEvent({
-          campaignId,
-          type: "agent_started",
-          agentType: "media_buyer",
-          message: "Media Buyer — retentativa automática (recuperação de truncamento)...",
-          timestamp: new Date().toISOString(),
-        });
-        const retried = await runMediaBuyerAgent(campaignId, workspaceId, intakeData, strategy, profile, launchPlan, log, targetingAudiences);
-        if ((retried.dailyAllocations?.length ?? 0) > 0 || (retried.kpiTargets?.length ?? 0) > 0) {
-          mediaBuyerOutput = retried;
-          log.info({ campaignId, days: retried.dailyAllocations?.length }, "media_buying_plan: retry succeeded");
-        } else {
-          log.warn({ campaignId }, "media_buying_plan: retry also empty — saving with available data");
-        }
-      }
 
       const [piece] = await db
         .insert(contentPiecesTable)
@@ -2026,7 +1978,7 @@ export async function generateCampaignContent(
     mediaBriefsGenerated,
     agentsRun,
     errors,
-    status: errors.length === 0 ? "completed" : errors.length < agentsRun.length ? "partial" : "failed",
+    status: errors.length === 0 ? "completed" : agentsRun.length > 0 ? "partial" : "failed",
     pieceResults,
   };
   } finally {
