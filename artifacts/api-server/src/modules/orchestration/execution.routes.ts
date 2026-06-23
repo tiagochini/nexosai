@@ -257,6 +257,18 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
     // Nunca bloqueia o cliente. Após 3 falhas no mesmo ponto, a peça é adicionada
     // a contentRetry.skippedPieces (lida por skipAgent() em content.service.ts)
     // e o pipeline reinicia limpo. Admin bypass: retryCount é resetado diretamente.
+    //
+    // IMPORTANT: also inserts a "skipped" placeholder piece into contentPiecesTable
+    // so the approval UI can see and display it (with a "Rewrite with AI" CTA)
+    // instead of silently hiding the piece from the user.
+    const VALID_CONTENT_TYPES = new Set([
+      "email_sequence","sales_page","whatsapp_broadcast","whatsapp_group_message","telegram_message",
+      "social_post","ad_copy","vsl_script","media_brief","content_calendar","cart_open_announcement",
+      "cart_close_urgency","remarketing_sequence","cpl_script","webinar_script","live_script",
+      "stories_sequence","landing_page_structure","creative_direction","targeting_config",
+      "media_buying_plan","video_strategy","creator_growth_plan","seo_organic_plan",
+      "compliance_report","optimization_report",
+    ]);
     if (retryCount >= 3 && !isAdminRetry) {
       const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
       req.log.warn({ campaignId, retryCount, failedPieceType }, "[FAILSAFE] 3 retries — auto-skipping problematic piece, restarting pipeline");
@@ -275,6 +287,28 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
           autoSkippedPiece: failedPieceType,
         },
       };
+
+      // Insert a visible "skipped" placeholder so the approval UI can display it
+      if (failedPieceType && VALID_CONTENT_TYPES.has(failedPieceType)) {
+        const [existingPiece] = await db
+          .select({ id: contentPiecesTable.id })
+          .from(contentPiecesTable)
+          .where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.type, failedPieceType as any)))
+          .limit(1);
+        if (!existingPiece) {
+          await db.insert(contentPiecesTable).values({
+            campaignId,
+            workspaceId,
+            type: failedPieceType as any,
+            status: "draft",
+            title: `[Pulado automaticamente] ${failedPieceType}`,
+            content: { _autoSkipped: true, _minimalFallback: true, note: "Esta peça foi pulada automaticamente após 3 tentativas. Clique em \"Reescrever com IA\" para gerar." } as any,
+            aiProvider: "none" as any,
+            creditsUsed: 0,
+          }).catch(err => req.log.warn({ err, campaignId, failedPieceType }, "[FAILSAFE] Could not insert auto-skip placeholder — non-blocking"));
+        }
+      }
+
       if (campaign.status === "analyzing") {
         await db.update(campaignsTable).set({ status: "intake" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, campaignId));
         const result = await triggerStrategyPhase(campaignId, workspaceId, req.log);

@@ -245,24 +245,29 @@ export async function generateCampaignContent(
     log.info({ campaignId, done: [...done], isResume, skippedPieces }, "CHECKPOINT: resuming content generation — skipping already completed agents");
   }
 
-  // Agent → piece type mapping (used to record lastFailedPieceType in brainData)
+  // Agent → canonical piece type mapping (must match contentTypeEnum in lib/db/src/schema/content.ts
+  // AND the pieceType keys passed to skipAgent() calls throughout this function).
+  // Non-canonical values here cause lastFailedPieceType to mismatch skippedPieces keys → auto-skip
+  // targets the wrong piece type → deterministic failure loop never breaks.
   const AGENT_PIECE_TYPE: Record<string, string> = {
     creative_director: "creative_direction",
     copywriter: "email_sequence",
-    social_media: "social_media_calendar",
+    social_media: "content_calendar",       // skipAgent uses "content_calendar"
     ad_copy: "ad_copy",
     vsl_script: "vsl_script",
     cpl_script: "cpl_script",
     webinar_script: "webinar_script",
     live_script: "live_script",
     stories_sequence: "stories_sequence",
-    landing_page: "landing_page",
+    landing_page: "landing_page_structure", // skipAgent uses "landing_page_structure"
     targeting: "targeting_config",
     media_buyer: "media_buying_plan",
     video_strategy: "video_strategy",
-    creator_growth: "creator_growth",
-    compliance: "compliance",
-    optimization: "optimization",
+    creator_growth: "creator_growth_plan",  // skipAgent uses "creator_growth_plan"
+    compliance: "compliance_report",        // skipAgent uses "compliance_report"
+    prelaunch_warming: "content_calendar",  // saved to DB as content_calendar (shares skipAgent key)
+    organic_traffic: "seo_organic_plan",    // skipAgent uses "seo_organic_plan"
+    media_brief: "media_brief",             // skipAgent uses "media_brief"
   };
 
   const skipAgent = (pieceType: string, agentName: string): boolean => {
@@ -1712,6 +1717,70 @@ export async function generateCampaignContent(
           } catch (dbErr) {
             log.error({ dbErr, campaignId, pieceId: piece.id }, "[AUTO-REPAIR] Failed to write minimal fallback");
           }
+        }
+      }
+    }
+  }
+
+  // ── TRUNCATION COMPLETENESS CHECK ──────────────────────────────────────────────
+  // Detect pieces where the LLM output was truncated mid-JSON (repairTruncatedJson
+  // auto-closed the braces, so the piece isn't "empty", but the arrays are too short
+  // to be usable). For known array-based types, verify minimum item counts.
+  // Sparse pieces are re-queued for auto-repair and, if that still fails, receive the
+  // buildMinimalFallback so they are never silently sparse in the approval UI.
+  if (agentsRun.length > 0) {
+    const SPARSE_MINIMUMS: Record<string, { key: string; min: number }> = {
+      email_sequence:   { key: "emails",   min: 3 },
+      content_calendar: { key: "posts",    min: 5 },
+      stories_sequence: { key: "stories",  min: 3 },
+      ad_copy:          { key: "ads",      min: 2 },
+    };
+    const allPiecesForSparse = await db
+      .select({ id: contentPiecesTable.id, type: contentPiecesTable.type, content: contentPiecesTable.content })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.campaignId, campaignId));
+
+    const sparsePieces = allPiecesForSparse.filter((p) => {
+      const spec = SPARSE_MINIMUMS[p.type ?? ""];
+      if (!spec) return false;
+      const c = (p.content ?? {}) as Record<string, unknown>;
+      if (c["_minimalFallback"] || c["_autoSkipped"]) return false; // already handled
+      const arr = c[spec.key];
+      return !Array.isArray(arr) || arr.length < spec.min;
+    });
+
+    if (sparsePieces.length > 0) {
+      log.warn(
+        { campaignId, count: sparsePieces.length, types: sparsePieces.map(p => p.type) },
+        "[TRUNCATION-CHECK] %d pieces are sparse (truncated output) — attempting re-generation",
+        sparsePieces.length,
+      );
+      for (const piece of sparsePieces) {
+        try {
+          await regeneratePiece(campaignId, workspaceId, piece.id, log);
+          // Verify improved after regeneration
+          const [refreshed] = await db
+            .select({ content: contentPiecesTable.content })
+            .from(contentPiecesTable)
+            .where(eq(contentPiecesTable.id, piece.id))
+            .limit(1);
+          const spec = SPARSE_MINIMUMS[piece.type ?? ""];
+          if (refreshed && spec) {
+            const rc = (refreshed.content ?? {}) as Record<string, unknown>;
+            const arr = rc[spec.key];
+            if (!Array.isArray(arr) || arr.length < spec.min) {
+              // Still sparse — inject full buildMinimalFallback so UI shows structured content
+              log.warn({ campaignId, pieceId: piece.id, type: piece.type }, "[TRUNCATION-CHECK] Still sparse after re-gen — injecting minimal fallback");
+              const fallback = buildMinimalFallback(piece.type ?? "", intakeData);
+              await db.update(contentPiecesTable).set({ content: fallback, updatedAt: new Date() }).where(eq(contentPiecesTable.id, piece.id))
+                .catch(err => log.warn({ err, campaignId, pieceId: piece.id }, "[TRUNCATION-CHECK] fallback write failed"));
+            }
+          }
+        } catch (err) {
+          log.warn({ err, campaignId, pieceId: piece.id, type: piece.type }, "[TRUNCATION-CHECK] re-gen threw — injecting minimal fallback");
+          const fallback = buildMinimalFallback(piece.type ?? "", intakeData);
+          await db.update(contentPiecesTable).set({ content: fallback, updatedAt: new Date() }).where(eq(contentPiecesTable.id, piece.id))
+            .catch(e => log.warn({ e, campaignId, pieceId: piece.id }, "[TRUNCATION-CHECK] fallback write failed"));
         }
       }
     }

@@ -8,6 +8,7 @@ import {
   emailDispatchesTable,
   whatsappDispatchesTable,
   campaignsTable,
+  contentPiecesTable,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { logger } from "../../lib/logger.js";
@@ -212,6 +213,7 @@ async function recoverStuckCampaigns(): Promise<void> {
 
       // After 3 auto-resets, auto-skip the problematic piece — write to
       // contentRetry.skippedPieces (canonical path read by skipAgent()).
+      // Also inserts a visible placeholder piece so the approval UI can display it.
       if (retryCount >= 3) {
         const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
         const currentSkipped = ((contentRetry["skippedPieces"] ?? []) as string[]);
@@ -230,6 +232,19 @@ async function recoverStuckCampaigns(): Promise<void> {
           },
         };
         await db.update(campaignsTable).set({ status: "intake" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, c.id));
+        // Insert visible placeholder so approval UI shows the piece (not silently hidden)
+        if (failedPieceType) {
+          const [existing] = await db.select({ id: contentPiecesTable.id }).from(contentPiecesTable)
+            .where(and(eq(contentPiecesTable.campaignId, c.id), eq(contentPiecesTable.type, failedPieceType as any))).limit(1);
+          if (!existing) {
+            await db.insert(contentPiecesTable).values({
+              campaignId: c.id, workspaceId: c.workspaceId, type: failedPieceType as any, status: "draft",
+              title: `[Pulado automaticamente] ${failedPieceType}`,
+              content: { _autoSkipped: true, _minimalFallback: true, note: "Pulado após 3 tentativas — use Reescrever com IA." } as any,
+              aiProvider: "none" as any, creditsUsed: 0,
+            }).catch(e => log.warn({ e, campaignId: c.id, failedPieceType }, "[FAILSAFE-AUTO] placeholder insert failed — non-blocking"));
+          }
+        }
         log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] analyzing 3 resets — auto-skipped piece, re-triggering strategy");
         triggerStrategyPhase(c.id, c.workspaceId, log).catch((err) =>
           log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to re-trigger strategy after auto-skip"),
@@ -306,6 +321,7 @@ async function recoverStuckCampaigns(): Promise<void> {
 
       // After 3 auto-resets, auto-skip the problematic piece — write to
       // contentRetry.skippedPieces (canonical path read by skipAgent()).
+      // Also inserts a visible placeholder piece so the approval UI can display it.
       if (retryCount >= 3) {
         const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
         const currentSkipped = ((contentRetry["skippedPieces"] ?? []) as string[]);
@@ -324,6 +340,19 @@ async function recoverStuckCampaigns(): Promise<void> {
           },
         };
         await db.update(campaignsTable).set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, c.id));
+        // Insert visible placeholder so approval UI shows the piece (not silently hidden)
+        if (failedPieceType) {
+          const [existing] = await db.select({ id: contentPiecesTable.id }).from(contentPiecesTable)
+            .where(and(eq(contentPiecesTable.campaignId, c.id), eq(contentPiecesTable.type, failedPieceType as any))).limit(1);
+          if (!existing) {
+            await db.insert(contentPiecesTable).values({
+              campaignId: c.id, workspaceId: c.workspaceId, type: failedPieceType as any, status: "draft",
+              title: `[Pulado automaticamente] ${failedPieceType}`,
+              content: { _autoSkipped: true, _minimalFallback: true, note: "Pulado após 3 tentativas — use Reescrever com IA." } as any,
+              aiProvider: "none" as any, creditsUsed: 0,
+            }).catch(e => log.warn({ e, campaignId: c.id, failedPieceType }, "[FAILSAFE-AUTO] placeholder insert failed — non-blocking"));
+          }
+        }
         log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] generating 3 resets — auto-skipped piece, re-triggering content");
         triggerContentPhase(c.id, c.workspaceId, log).catch((err) =>
           log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to re-trigger content after auto-skip"),
