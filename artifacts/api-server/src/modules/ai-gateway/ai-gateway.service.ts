@@ -303,6 +303,27 @@ function getGemini(): GoogleGenerativeAI {
 // Background workers have NO timeout — LLM calls on deep agents can legitimately take 3-10 min.
 // HTTP-facing callers that need a timeout must pass their own AbortSignal explicitly.
 
+// ── Continuation protocol ─────────────────────────────────────────────────────
+// Detects truncated JSON outputs and automatically requests continuation chunks.
+// Works by counting open vs closed braces; if unbalanced, requests PART N until
+// balanced or MAX_CONTINUATION_PARTS is reached. Parts are concatenated in order.
+const MAX_CONTINUATION_PARTS = 3;
+
+function isJsonTruncated(text: string): boolean {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (const ch of text) {
+    if (escape) { escape = false; continue; }
+    if (ch === "\\" && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{" || ch === "[") depth++;
+    else if (ch === "}" || ch === "]") depth--;
+  }
+  return depth > 0;
+}
+
 async function callAnthropic(
   model: string,
   systemPrompt: string,
@@ -322,13 +343,40 @@ async function callAnthropic(
     { signal },
   );
 
-  const content =
+  let content =
     response.content[0]?.type === "text" ? response.content[0].text : "";
+  let totalInputTokens = response.usage.input_tokens;
+  let totalOutputTokens = response.usage.output_tokens;
+
+  // Continuation assembly: if JSON is truncated, request continuation chunks.
+  // Stop when JSON is balanced or MAX_CONTINUATION_PARTS is reached.
+  let part = 2;
+  while (isJsonTruncated(content) && part <= MAX_CONTINUATION_PARTS + 1) {
+    const continuationMessages = [
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+      { role: "assistant" as const, content },
+      { role: "user" as const, content: `PART ${part}: Continue the JSON from exactly where you stopped. Do not repeat any previous content. Output only the continuation.` },
+    ];
+    const contResp = await client.messages.create(
+      {
+        model: effectiveModel,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: continuationMessages,
+      },
+      { signal },
+    );
+    const contContent = contResp.content[0]?.type === "text" ? contResp.content[0].text : "";
+    content = content + contContent;
+    totalInputTokens += contResp.usage.input_tokens;
+    totalOutputTokens += contResp.usage.output_tokens;
+    part++;
+  }
 
   return {
     content,
-    inputTokens: response.usage.input_tokens,
-    outputTokens: response.usage.output_tokens,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
     effectiveModel,
   };
 }
@@ -412,7 +460,7 @@ async function callOpenAI(
       }
       // No integration either — fall back to Anthropic
       if (hasAnthropicIntegration()) {
-        return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
+        return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
       }
     }
     throw err;
@@ -459,7 +507,7 @@ async function callGemini(
   } catch (geminiErr) {
     // Gemini unavailable or quota exceeded — fall back to Anthropic integration
     if (hasAnthropicIntegration()) {
-      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
+      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
     }
     throw geminiErr;
   }
