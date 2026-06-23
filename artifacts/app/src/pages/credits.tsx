@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useGetCreditsBalance, getGetCreditsBalanceQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
@@ -7,12 +7,40 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Zap, Clock, TrendingDown, TrendingUp, BarChart3,
   Bot, FileText, Shield, Video, Mail, MessageSquare,
   ArrowUpRight, Cpu, ChevronRight, Package, ListFilter,
-  Timer, DollarSign, Layers, Activity,
+  Timer, DollarSign, Layers, Activity, RefreshCw,
 } from "lucide-react";
+
+function AdminTopupButton({ onSuccess }: { onSuccess: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const handleTopup = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const result = await customFetch<{ ok: boolean; credited: number; newBalance: number }>("/api/credits/admin-topup", { method: "POST" });
+      toast.success(`+${result.credited.toLocaleString("pt-BR")} créditos recarregados. Novo saldo: ${result.newBalance.toLocaleString("pt-BR")} cr`);
+      onSuccess();
+    } catch {
+      toast.error("Erro ao recarregar créditos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <Button
+      onClick={handleTopup}
+      disabled={loading}
+      className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-9"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+      {loading ? "Recarregando..." : "Recarregar Créditos (Grátis)"}
+    </Button>
+  );
+}
 
 interface Transaction {
   id: string;
@@ -131,7 +159,7 @@ const PLAN_CREDITS: Record<string, number> = {
   agency: 2000,
 };
 
-function CreditGauge({ balance, included }: { balance: number; included: number }) {
+function CreditGauge({ balance, included, isAdmin, onTopup }: { balance: number; included: number; isAdmin?: boolean; onTopup?: () => void }) {
   const pct = included > 0 ? Math.min(100, (balance / included) * 100) : 0;
   const used = Math.max(0, included - balance);
   const isLow = balance < 150;
@@ -212,7 +240,9 @@ function CreditGauge({ balance, included }: { balance: number; included: number 
               <div className="font-mono font-bold text-lg text-muted-foreground">{launchesUsed}</div>
             </div>
           </div>
-          {isLow && (
+          {isAdmin && balance < 500 && onTopup ? (
+            <AdminTopupButton onSuccess={onTopup} />
+          ) : isLow && (
             <Link href="/billing">
               <Button className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-9">
                 <Zap className="h-3.5 w-3.5" />
@@ -476,8 +506,9 @@ function CostReference() {
 type TabId = "extrato" | "agentes" | "referencia";
 
 export default function CreditsPage() {
-  const { plan, planSlug, workspace } = useAuth();
+  const { plan, planSlug, workspace, isAdmin } = useAuth();
   const workspaceId = workspace?.id;
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabId>("agentes");
 
   const { data: balanceData, isLoading: loadingBalance } = useGetCreditsBalance({
@@ -530,7 +561,7 @@ export default function CreditsPage() {
       {loadingBalance ? (
         <Skeleton className="h-44 bg-muted/20" />
       ) : (
-        <CreditGauge balance={balance} included={included} />
+        <CreditGauge balance={balance} included={included} isAdmin={isAdmin} onTopup={() => queryClient.invalidateQueries({ queryKey: getGetCreditsBalanceQueryKey() })} />
       )}
 
       {/* Quick stats */}

@@ -10,7 +10,7 @@ import {
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
   Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair, Camera,
-  GraduationCap, ExternalLink, Fingerprint,
+  GraduationCap, ExternalLink, Fingerprint, RefreshCw,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -24,6 +24,45 @@ import {
 import { GlobalSearch, useGlobalSearch } from "@/components/global-search";
 import { toast } from "sonner";
 import { AppTour, hasDoneTour, markTourDone } from "@/components/AppTour";
+
+function AdminTopupButton({ onSuccess, compact }: { onSuccess: () => void; compact?: boolean }) {
+  const [loading, setLoading] = useState(false);
+  const handleTopup = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const result = await customFetch<{ ok: boolean; credited: number; newBalance: number }>("/api/credits/admin-topup", { method: "POST" });
+      toast.success(`+${result.credited.toLocaleString("pt-BR")} créditos recarregados. Saldo: ${result.newBalance.toLocaleString("pt-BR")} cr`);
+      onSuccess();
+    } catch {
+      toast.error("Erro ao recarregar créditos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  if (compact) {
+    return (
+      <button
+        onClick={handleTopup}
+        disabled={loading}
+        className="mt-1 flex items-center gap-1 font-mono text-[11px] text-primary uppercase tracking-widest hover:text-primary/80 disabled:opacity-50 transition-colors animate-pulse"
+      >
+        <RefreshCw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} />
+        {loading ? "Recarregando..." : "Recarregar Grátis"}
+      </button>
+    );
+  }
+  return (
+    <Button
+      onClick={handleTopup}
+      disabled={loading}
+      className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2 h-9 w-full"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+      {loading ? "Recarregando..." : "Recarregar Créditos (Grátis)"}
+    </Button>
+  );
+}
 
 type LocaleCode = "pt-BR" | "en-US" | "en-AU" | "es-LA";
 const LOCALE_OPTIONS: { value: LocaleCode; flag: string; label: string }[] = [
@@ -295,7 +334,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
           <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">{tr.credits.label}</span>
           <Link href="/credits" onClick={onNav}>
             <span className="font-mono text-[11px] text-primary hover:underline uppercase tracking-widest">
-              {isAdmin ? "∞" : balance.toLocaleString("pt-BR")} cr
+              {balance.toLocaleString("pt-BR")} cr
             </span>
           </Link>
         </div>
@@ -305,15 +344,17 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
             style={{ width: isAdmin ? "100%" : `${pct}%`, background: barColor, boxShadow: `0 0 4px ${barColor}` }}
           />
         </div>
-        {isAdmin ? (
+        {isAdmin && balance < 500 ? (
+          <AdminTopupButton onSuccess={() => queryClient.invalidateQueries({ queryKey: getGetCreditsBalanceQueryKey() })} compact />
+        ) : isAdmin ? (
           <div className="mt-1 font-mono text-[11px] text-primary/60 uppercase tracking-widest">
-            ∞ FOUNDER MODE
+            FOUNDER MODE
           </div>
-        ) : isLow && (
+        ) : isLow ? (
           <div className="mt-1 font-mono text-[11px] text-destructive uppercase tracking-widest animate-pulse">
             {tr.credits.low}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* User dropdown */}

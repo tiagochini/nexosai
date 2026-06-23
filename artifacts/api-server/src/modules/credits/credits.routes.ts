@@ -5,10 +5,20 @@ import {
   getTransactionHistory,
   getAgentUsageHistory,
   checkCredits,
+  grantCredits,
   type CreditAction,
 } from "./credits.service.js";
+import { db, usersTable, workspacesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { CREDIT_COSTS } from "@workspace/db";
 import { AppError } from "../../lib/errors.js";
+
+const ADMIN_EMAILS_TOPUP = new Set([
+  "admin@nexos.ai",
+  "founder@nexos.ai",
+  "admin@agencianexos.vip",
+  "founder@agencianexos.vip",
+]);
 
 const router = Router();
 
@@ -60,6 +70,27 @@ router.get("/usage", async (req, res): Promise<void> => {
 
 router.get("/costs", (_req, res): void => {
   res.json({ costs: CREDIT_COSTS });
+});
+
+// Admin-only free topup — for the product owner, never a customer flow.
+// Guards: must be authenticated + workspace owner email must be in ADMIN_EMAILS set.
+router.post("/admin-topup", async (req, res): Promise<void> => {
+  const { workspaceId, userId } = req.auth;
+
+  const [user] = await db
+    .select({ email: usersTable.email })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  if (!user || !ADMIN_EMAILS_TOPUP.has(user.email)) {
+    res.status(403).json({ error: "Acesso restrito ao fundador.", code: "FORBIDDEN" });
+    return;
+  }
+
+  const TOPUP_AMOUNT = 2000;
+  const tx = await grantCredits(workspaceId, TOPUP_AMOUNT, "admin_grant", req.log, "Recarga do fundador — sem custo");
+  res.json({ ok: true, credited: TOPUP_AMOUNT, newBalance: tx.balanceAfter });
 });
 
 export default router;
