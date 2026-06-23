@@ -569,7 +569,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       .values({
         campaignId: isValidCampaignId ? (campaignId as string) : undefined,
         workspaceId,
-        userId: ws.ownerId ?? undefined,
+        userId: ws?.ownerId ?? undefined,
         agentName: agentRole,
         actionType: `agent.${agentRole}.run`,
         inputSummary: buildInputSummary(messages),
