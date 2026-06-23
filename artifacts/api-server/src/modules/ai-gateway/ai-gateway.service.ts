@@ -348,7 +348,7 @@ async function callAnthropic(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
-  maxTokens = 8192,
+  maxTokens = 16384,
   signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel: string }> {
   const { client, isNative } = getAnthropic();
@@ -406,7 +406,7 @@ async function callOpenAI(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
-  maxTokens = 8192,
+  maxTokens = 16384,
   signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
@@ -494,7 +494,7 @@ async function callGemini(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
-  maxTokens = 8192,
+  maxTokens = 16384,
   signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
@@ -676,7 +676,7 @@ export async function completeWithAgent(
 
   let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string };
 
-  const effectiveMaxTokens = maxTokens ?? 8192;
+  const effectiveMaxTokens = maxTokens ?? 16384;
   switch (provider) {
     case "anthropic":
       try {

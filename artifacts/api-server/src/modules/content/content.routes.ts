@@ -269,19 +269,44 @@ router.post("/:campaignId/content/:pieceId/reject", async (req, res): Promise<vo
 });
 
 // POST /campaigns/:campaignId/content/:pieceId/regenerate — re-run the original agent for this piece type
+// Fire-and-forget: responds 202 immediately, agent runs in background.
+// Frontend polls GET /content until piece.status changes to "pending_approval".
 router.post("/:campaignId/content/:pieceId/regenerate", async (req, res): Promise<void> => {
   const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
+  const workspaceId = req.auth.workspaceId;
+  const log = req.log;
 
+  // Validate campaign + piece exist before accepting — fast DB check, no LLM
   try {
-    const piece = await regeneratePiece(campaignId, req.auth.workspaceId, pieceId, req.log);
-    res.status(202).json({ message: "Content piece regenerated", piece });
+    const { db } = await import("@workspace/db");
+    const { campaignsTable, contentPiecesTable } = await import("@workspace/db/schema");
+    const { and, eq } = await import("drizzle-orm");
+    const [campaign] = await db.select({ id: campaignsTable.id })
+      .from(campaignsTable)
+      .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+      .limit(1);
+    if (!campaign) { res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" }); return; }
+    const [piece] = await db.select({ id: contentPiecesTable.id })
+      .from(contentPiecesTable)
+      .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+      .limit(1);
+    if (!piece) { res.status(404).json({ error: "Content piece not found", code: "NOT_FOUND" }); return; }
   } catch (err) {
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({ error: err.message, code: err.code });
-      return;
-    }
+    if (err instanceof AppError) { res.status(err.statusCode).json({ error: err.message, code: err.code }); return; }
     throw err;
   }
+
+  // Accept immediately — agent runs in background
+  res.status(202).json({ message: "Regeneração iniciada — aguarde a peça atualizar", status: "regenerating" });
+
+  setImmediate(async () => {
+    try {
+      await regeneratePiece(campaignId, workspaceId, pieceId, log);
+      log.info({ campaignId, pieceId }, "Background regeneratePiece completed");
+    } catch (err) {
+      log.error({ err, campaignId, pieceId }, "Background regeneratePiece failed");
+    }
+  });
 });
 
 // POST /campaigns/:campaignId/content/:pieceId/rewrite — AI rewrites piece based on rejection feedback

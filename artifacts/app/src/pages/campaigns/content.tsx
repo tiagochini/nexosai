@@ -3657,17 +3657,40 @@ export default function ContentApproval() {
   const handleRegeneratePiece = async (pieceId: string) => {
     setRegeneratingPieceId(pieceId);
     try {
-      await customFetch<{ piece: unknown }>(`/api/campaigns/${campaignId}/content/${pieceId}/regenerate`, {
+      await customFetch<{ status: string }>(`/api/campaigns/${campaignId}/content/${pieceId}/regenerate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: "{}",
       });
-      setLocalPieces(null);
-      await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
-      toast.success("Agente regenerou a peça. Revise e aprove.");
+      // Backend accepted — agent runs in background. Poll until piece status changes.
+      toast.info("Agente iniciado — regenerando a peça, aguarde...");
+      const deadline = Date.now() + 25 * 60 * 1000; // 25 min max
+      const poll = async (): Promise<void> => {
+        if (Date.now() > deadline) {
+          toast.error("Tempo limite atingido. Verifique a peça manualmente.");
+          setRegeneratingPieceId(null);
+          return;
+        }
+        try {
+          const data = await customFetch<{ pieces: Array<{ id: string; status: string }> }>(
+            `/api/campaigns/${campaignId}/content`,
+          );
+          const updated = data.pieces.find((p) => p.id === pieceId);
+          if (updated && updated.status === "pending_approval") {
+            setLocalPieces(null);
+            await queryClient.invalidateQueries({ queryKey: [`/api/campaigns/${campaignId}/content`] });
+            toast.success("Peça regenerada! Revise e aprove.");
+            setRegeneratingPieceId(null);
+            return;
+          }
+        } catch {
+          // network hiccup — keep polling
+        }
+        setTimeout(poll, 10_000);
+      };
+      setTimeout(poll, 10_000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao regenerar a peça");
-    } finally {
       setRegeneratingPieceId(null);
     }
   };
