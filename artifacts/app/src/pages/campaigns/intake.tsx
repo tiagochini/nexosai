@@ -898,6 +898,13 @@ export default function CampaignIntake() {
       // already be in analyzing/strategy_ready which is exactly where we want to go.
       toast.warning("Briefing registrado — abrindo campanha.");
     }
+    // Auto-trigger strategy pipeline immediately after finalize.
+    // Fire-and-forget: we do NOT await this — just kick it off so detail.tsx
+    // sees the pipeline running (not "PIPELINE PAROU") when the user lands there.
+    customFetch(`/api/campaigns/${campaignId}/execute`, { method: "POST" }).catch(() => {
+      // silently ignored — detail.tsx has a "Retomar Processamento" button as fallback
+    });
+
     // Force-refresh campaign cache so detail.tsx sees the updated status (analyzing)
     // before its redirect useEffect fires. Without this refetch the stale "intake"
     // status in cache triggers an immediate redirect loop back to this page.
