@@ -1,4 +1,4 @@
-import { eq, and, desc, ne } from "drizzle-orm";
+import { eq, and, desc, ne, count, inArray } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -2162,20 +2162,21 @@ export async function approveContentPiece(
 
   if (!piece) throw new NotFoundError("Content piece");
 
-  // Auto-transition campaign awaiting_approval → approved when no pieces remain pending.
+  // Auto-transition campaign awaiting_approval → approved ONLY when every piece is
+  // approved. We must check for BOTH pending_approval AND rejected pieces — a campaign
+  // where all pending_approval are gone but some are rejected is NOT ready to launch.
   if (campaign.status === "awaiting_approval") {
-    const remaining = await db
-      .select({ id: contentPiecesTable.id })
+    const [notReady] = await db
+      .select({ count: count() })
       .from(contentPiecesTable)
       .where(
         and(
           eq(contentPiecesTable.campaignId, campaignId),
-          eq(contentPiecesTable.status, "pending_approval"),
+          inArray(contentPiecesTable.status, ["pending_approval", "rejected"]),
         ),
-      )
-      .limit(1);
+      );
 
-    if (remaining.length === 0) {
+    if ((notReady?.count ?? 1) === 0) {
       await transitionCampaign(campaignId, workspaceId, "approved", "all content pieces approved", rootLogger);
     }
   }
@@ -2190,7 +2191,7 @@ export async function rejectContentPiece(
   reason: string,
 ) {
   const [campaign] = await db
-    .select({ id: campaignsTable.id })
+    .select({ id: campaignsTable.id, status: campaignsTable.status })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
@@ -2203,6 +2204,20 @@ export async function rejectContentPiece(
     .returning();
 
   if (!piece) throw new NotFoundError("Content piece");
+
+  // If campaign was already approved and the user rejects a piece, roll back to
+  // awaiting_approval so the gate is re-opened. The state machine explicitly allows
+  // approved → awaiting_approval for this case.
+  if (campaign.status === "approved") {
+    await transitionCampaign(
+      campaignId,
+      workspaceId,
+      "awaiting_approval",
+      `piece ${pieceId} rejected after approval — re-opening review gate`,
+      rootLogger,
+    );
+  }
+
   return piece;
 }
 
