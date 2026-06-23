@@ -2,6 +2,7 @@ import { eq, desc, sql } from "drizzle-orm";
 import {
   db,
   workspacesTable,
+  usersTable,
   creditTransactionsTable,
   plansTable,
   aiProviderLogsTable,
@@ -11,6 +12,24 @@ import {
 } from "@workspace/db";
 import { InsufficientCreditsError, NotFoundError } from "../../lib/errors.js";
 import type { Logger } from "pino";
+
+// Founder/admin emails always have unlimited credits — checked directly against
+// the users table so it works even if the DB settings flag was never set.
+const ADMIN_EMAILS = new Set([
+  "admin@nexos.ai",
+  "founder@nexos.ai",
+  "admin@agencianexos.vip",
+  "founder@agencianexos.vip",
+]);
+
+async function isAdminWorkspace(workspaceOwnerId: string): Promise<boolean> {
+  const [user] = await db
+    .select({ email: usersTable.email })
+    .from(usersTable)
+    .where(eq(usersTable.id, workspaceOwnerId))
+    .limit(1);
+  return user ? ADMIN_EMAILS.has(user.email) : false;
+}
 
 export type CreditAction = string & keyof typeof CREDIT_COSTS;
 
@@ -44,7 +63,9 @@ export async function deductCredits(
 
   if (!ws) throw new NotFoundError("Workspace");
 
-  const unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true;
+  // Unlimited = DB flag OR owner email is an admin email (authoritative, no flag dependency)
+  const flagUnlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true;
+  const unlimited = flagUnlimited || await isAdminWorkspace(ws.ownerId);
 
   if (!unlimited && ws.creditsBalance < cost) {
     throw new InsufficientCreditsError(cost, ws.creditsBalance);
@@ -284,12 +305,13 @@ export async function checkCredits(
   action: CreditAction,
 ): Promise<{ sufficient: boolean; balance: number; required: number; unlimited: boolean }> {
   const [ws] = await db
-    .select({ creditsBalance: workspacesTable.creditsBalance, settings: workspacesTable.settings })
+    .select({ creditsBalance: workspacesTable.creditsBalance, settings: workspacesTable.settings, ownerId: workspacesTable.ownerId })
     .from(workspacesTable)
     .where(eq(workspacesTable.id, workspaceId))
     .limit(1);
   const balance = ws?.creditsBalance ?? 0;
-  const unlimited = (ws?.settings as Record<string, unknown>)?.unlimitedCredits === true;
+  const flagUnlimited = (ws?.settings as Record<string, unknown>)?.unlimitedCredits === true;
+  const unlimited = flagUnlimited || (ws?.ownerId ? await isAdminWorkspace(ws.ownerId) : false);
   const required = CREDIT_COSTS[action] ?? 0;
   return { sufficient: unlimited || balance >= required, balance, required, unlimited };
 }

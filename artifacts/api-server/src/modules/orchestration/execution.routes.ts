@@ -14,6 +14,7 @@ import {
   db,
   campaignsTable,
   workspacesTable,
+  usersTable,
   workspaceIntegrationsTable,
   contentPiecesTable,
   getCampaignCreditEstimate,
@@ -229,10 +230,24 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
     const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
     const retryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
 
+    // ── Trato admin: sem teto de retries ──
+    const [wsOwner] = await db
+      .select({ ownerId: workspacesTable.ownerId })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, workspaceId))
+      .limit(1);
+    const ADMIN_EMAILS_RETRY = new Set(["admin@nexos.ai", "founder@nexos.ai", "admin@agencianexos.vip", "founder@agencianexos.vip"]);
+    let isAdminRetry = false;
+    if (wsOwner?.ownerId) {
+      const [ownerUser] = await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, wsOwner.ownerId)).limit(1);
+      isAdminRetry = ownerUser ? ADMIN_EMAILS_RETRY.has(ownerUser.email) : false;
+    }
+
     // ── Trava 1: Teto de retries — após 3 tentativas, requer intervenção humana ──
     // Evita o "Bug Determinístico Loop": peça quebrada (safety block, parser error,
     // token overflow) nunca mais pode ser re-enfileirada indefinidamente.
-    if (retryCount >= 3) {
+    // Admin bypass: sempre pode retomar (créditos ilimitados, nunca ficam travados por retry).
+    if (retryCount >= 3 && !isAdminRetry) {
       req.log.warn({ campaignId, retryCount, contentRetry }, "[FAILSAFE] Max retries reached — requires human intervention");
       res.status(409).json({
         error: "A campanha falhou 3 vezes seguidas no mesmo ponto. Revise o briefing ou pule a peça problemática antes de tentar novamente.",
@@ -245,6 +260,11 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
         },
       });
       return;
+    }
+
+    // Reset retry counter for admin retries (clear the lock so pipeline can restart cleanly)
+    if (isAdminRetry && retryCount >= 3) {
+      req.log.info({ campaignId, retryCount }, "[FAILSAFE] Admin retry — resetting retry counter");
     }
 
     // Increment retry counter and clear pipeline lock
