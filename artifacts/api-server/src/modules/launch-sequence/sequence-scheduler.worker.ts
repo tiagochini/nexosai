@@ -17,6 +17,7 @@ import { sendEmailSystemNotification } from "../email-dispatch/email-dispatch.se
 import { createEmailDispatch } from "../email-dispatch/email-dispatch.service.js";
 import { emitSequenceEvent } from "./sequence-realtime.js";
 import { sendWeeklyReportsToAll } from "../weekly-report/weekly-report.service.js";
+import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
 
 const QUEUE_NAME = "sequence-scheduler";
 
@@ -209,21 +210,30 @@ async function recoverStuckCampaigns(): Promise<void> {
         }
       }
 
-      // After 10 auto-resets, auto-skip the problematic piece and continue — never block.
-      if (retryCount >= 10) {
+      // After 3 auto-resets, auto-skip the problematic piece — write to
+      // contentRetry.skippedPieces (canonical path read by skipAgent()).
+      if (retryCount >= 3) {
         const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
-        const currentSkipped = ((brain["skippedPieces"] ?? []) as string[]);
+        const currentSkipped = ((contentRetry["skippedPieces"] ?? []) as string[]);
         const newSkipped = failedPieceType && !currentSkipped.includes(failedPieceType)
           ? [...currentSkipped, failedPieceType]
           : currentSkipped;
         const autoSkipBrain = {
           ...brain,
-          skippedPieces: newSkipped,
           pipelineCheckpoint: { lockedAt: null, lastProgressAt: null },
-          contentRetry: { retryCount: 0, autoSkippedAt: new Date().toISOString(), autoSkippedPiece: failedPieceType },
+          contentRetry: {
+            ...contentRetry,
+            skippedPieces: newSkipped,
+            retryCount: 0,
+            autoSkippedAt: new Date().toISOString(),
+            autoSkippedPiece: failedPieceType,
+          },
         };
         await db.update(campaignsTable).set({ status: "intake" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, c.id));
-        log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] analyzing max resets — auto-skipped piece, reset to intake");
+        log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] analyzing 3 resets — auto-skipped piece, re-triggering strategy");
+        triggerStrategyPhase(c.id, c.workspaceId, log).catch((err) =>
+          log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to re-trigger strategy after auto-skip"),
+        );
         continue;
       }
 
@@ -249,8 +259,18 @@ async function recoverStuckCampaigns(): Promise<void> {
         .where(eq(campaignsTable.id, c.id));
       log.warn(
         { campaignId: c.id, retryCount: retryCount + 1, targetStatus, strategyDone },
-        `[FAILSAFE-AUTO] analyzing stuck → reset to ${targetStatus}`,
+        `[FAILSAFE-AUTO] analyzing stuck → reset to ${targetStatus} — re-triggering`,
       );
+      // Auto-resume: re-trigger the appropriate phase without waiting for client
+      if (targetStatus === "strategy_ready") {
+        triggerContentPhase(c.id, c.workspaceId, log).catch((err) =>
+          log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to re-trigger content after analyzing reset"),
+        );
+      } else {
+        triggerStrategyPhase(c.id, c.workspaceId, log).catch((err) =>
+          log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to re-trigger strategy after analyzing reset"),
+        );
+      }
     } catch (err) {
       log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck analyzing campaign");
     }
@@ -284,21 +304,30 @@ async function recoverStuckCampaigns(): Promise<void> {
         }
       }
 
-      // After 10 auto-resets, auto-skip the problematic piece and continue — never block.
-      if (retryCount >= 10) {
+      // After 3 auto-resets, auto-skip the problematic piece — write to
+      // contentRetry.skippedPieces (canonical path read by skipAgent()).
+      if (retryCount >= 3) {
         const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
-        const currentSkipped = ((brain["skippedPieces"] ?? []) as string[]);
+        const currentSkipped = ((contentRetry["skippedPieces"] ?? []) as string[]);
         const newSkipped = failedPieceType && !currentSkipped.includes(failedPieceType)
           ? [...currentSkipped, failedPieceType]
           : currentSkipped;
         const autoSkipBrain = {
           ...brain,
-          skippedPieces: newSkipped,
           pipelineCheckpoint: { lockedAt: null, lastProgressAt: null },
-          contentRetry: { retryCount: 0, autoSkippedAt: new Date().toISOString(), autoSkippedPiece: failedPieceType },
+          contentRetry: {
+            ...contentRetry,
+            skippedPieces: newSkipped,
+            retryCount: 0,
+            autoSkippedAt: new Date().toISOString(),
+            autoSkippedPiece: failedPieceType,
+          },
         };
         await db.update(campaignsTable).set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, c.id));
-        log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] generating max resets — auto-skipped piece, reset to strategy_ready");
+        log.warn({ campaignId: c.id, retryCount, failedPieceType }, "[FAILSAFE-AUTO] generating 3 resets — auto-skipped piece, re-triggering content");
+        triggerContentPhase(c.id, c.workspaceId, log).catch((err) =>
+          log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to re-trigger content after auto-skip"),
+        );
         continue;
       }
 
@@ -310,7 +339,11 @@ async function recoverStuckCampaigns(): Promise<void> {
         .update(campaignsTable)
         .set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: updatedBrain as any })
         .where(eq(campaignsTable.id, c.id));
-      log.warn({ campaignId: c.id, retryCount: retryCount + 1 }, "[FAILSAFE-AUTO] generating > 5min → reset to strategy_ready");
+      log.warn({ campaignId: c.id, retryCount: retryCount + 1 }, "[FAILSAFE-AUTO] generating > 5min → reset to strategy_ready, re-triggering");
+      // Auto-resume: re-trigger content phase without waiting for client
+      triggerContentPhase(c.id, c.workspaceId, log).catch((err) =>
+        log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to re-trigger content after generating reset"),
+      );
     } catch (err) {
       log.warn({ err, campaignId: c.id }, "[FAILSAFE-AUTO] failed to reset stuck generating campaign");
     }

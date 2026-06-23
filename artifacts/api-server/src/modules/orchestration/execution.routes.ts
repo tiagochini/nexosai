@@ -253,22 +253,27 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
       isAdminRetry = ownerUser ? ADMIN_EMAILS_RETRY.has(ownerUser.email) : false;
     }
 
-    // ── Auto-skip de peça problemática após 10 tentativas ──
-    // Nunca bloqueia o cliente com REQUIRES_INTERVENTION. Após 10 falhas no mesmo
-    // ponto, a peça é adicionada a skippedPieces e o pipeline reinicia limpo.
-    // Admin bypass: retryCount é resetado diretamente (sem custo de skip).
-    if (retryCount >= 10 && !isAdminRetry) {
+    // ── Auto-skip de peça problemática após 3 tentativas ──
+    // Nunca bloqueia o cliente. Após 3 falhas no mesmo ponto, a peça é adicionada
+    // a contentRetry.skippedPieces (lida por skipAgent() em content.service.ts)
+    // e o pipeline reinicia limpo. Admin bypass: retryCount é resetado diretamente.
+    if (retryCount >= 3 && !isAdminRetry) {
       const failedPieceType = contentRetry["lastFailedPieceType"] as string | undefined;
-      req.log.warn({ campaignId, retryCount, failedPieceType }, "[FAILSAFE] Max retries — auto-skipping problematic piece, restarting pipeline");
-      const currentSkipped = ((brain["skippedPieces"] ?? []) as string[]);
+      req.log.warn({ campaignId, retryCount, failedPieceType }, "[FAILSAFE] 3 retries — auto-skipping problematic piece, restarting pipeline");
+      const currentSkipped = ((contentRetry["skippedPieces"] ?? []) as string[]);
       const newSkipped = failedPieceType && !currentSkipped.includes(failedPieceType)
         ? [...currentSkipped, failedPieceType]
         : currentSkipped;
       const autoSkipBrain = {
         ...brain,
-        skippedPieces: newSkipped,
         pipelineCheckpoint: { lockedAt: null, lastProgressAt: null },
-        contentRetry: { retryCount: 0, autoSkippedAt: new Date().toISOString(), autoSkippedPiece: failedPieceType },
+        contentRetry: {
+          ...contentRetry,
+          skippedPieces: newSkipped,
+          retryCount: 0,
+          autoSkippedAt: new Date().toISOString(),
+          autoSkippedPiece: failedPieceType,
+        },
       };
       if (campaign.status === "analyzing") {
         await db.update(campaignsTable).set({ status: "intake" as any, updatedAt: new Date(), brainData: autoSkipBrain as any }).where(eq(campaignsTable.id, campaignId));
