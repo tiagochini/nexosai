@@ -233,9 +233,12 @@ async function enqueueOrExecute(
         // a user from being permanently blocked. It will NOT kill legitimate jobs
         // because real running jobs have an active worker renewing the lock and will
         // NEVER stall — they're safe for hours.
-        const ORPHAN_THRESHOLD_MS = 30 * 60_000; // 30 min — absolute last resort
+        // 3 min threshold: genuine running jobs have a live worker renewing the lock
+        // every 15s. Orphaned jobs lose the lock in 30s and stall within another 30s.
+        // Anything "active" for 3+ min with no stall event is a zombie — safe to kill.
+        const ORPHAN_THRESHOLD_MS = 3 * 60_000;
         if (ageMs > ORPHAN_THRESHOLD_MS) {
-          log.warn({ dedupJobId, state, ageMs, action: job.action }, "RC-011: Zombie active job (30+ min, stall missed) — removing and re-queueing");
+          log.warn({ dedupJobId, state, ageMs, action: job.action }, "RC-011: Zombie active job (3+ min, stall missed) — removing and re-queueing");
           await existingJob.remove().catch(() => undefined);
           // Fall through to add new job below
         } else {

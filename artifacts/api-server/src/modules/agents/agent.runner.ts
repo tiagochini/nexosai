@@ -676,6 +676,13 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     };
   }
 
+  // SAFETY NET: track whether the try/catch fully resolved the agentRecord status.
+  // If neither the success path nor the catch block ran (e.g. SIGTERM mid-await,
+  // AbortError that bypasses normal catch, or an unhandled promise rejection at the
+  // Node level), the finally block below forces the record to 'failed' so it never
+  // stays permanently 'running' and blocks future pipeline triggers.
+  let agentRecordClosed = false;
+
   try {
     const result = await routedComplete(
       agentRole,
@@ -856,10 +863,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         .from(campaignAgentsTable)
         .where(eq(campaignAgentsTable.id, agentRecord.id))
         .limit(1);
+      agentRecordClosed = true;
       return { agentRecord: updated, content, creditsCharged, checkpointId };
     }
 
     // No campaign_agents record (sequence-level agent) — return synthetic record
+    agentRecordClosed = true;
     return {
       agentRecord: { id: "none", campaignId: null, agentType: agentRole, status: "completed" } as unknown as CampaignAgent,
       content,
@@ -905,9 +914,11 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
           .from(campaignAgentsTable)
           .where(eq(campaignAgentsTable.id, agentRecord.id))
           .limit(1);
+        agentRecordClosed = true;
         return { agentRecord: updated!, content, creditsCharged: 0 };
       }
 
+      agentRecordClosed = true;
       return {
         agentRecord: { id: "none", campaignId: null, agentType: agentRole, status: "completed" } as unknown as CampaignAgent,
         content,
@@ -939,6 +950,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
           completedAt: new Date(),
         })
         .where(eq(campaignAgentsTable.id, agentRecord.id));
+      agentRecordClosed = true;
     }
 
     emitCampaignEvent({
@@ -950,6 +962,18 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     });
 
     throw err;
+  } finally {
+    // SAFETY NET: if anything bypassed the normal success/error paths (SIGTERM,
+    // unhandled rejection, AbortError mid-await before catch ran), force the DB
+    // record to 'failed' so it never stays 'running' and blocks future triggers.
+    if (!agentRecordClosed && agentRecord) {
+      log.warn({ agentRole, campaignId }, "SAFETY_NET: agent record was not closed by success/catch — forcing to failed");
+      await db
+        .update(campaignAgentsTable)
+        .set({ status: "failed", errorMessage: "process_interrupted", completedAt: new Date() })
+        .where(eq(campaignAgentsTable.id, agentRecord.id))
+        .catch(() => {/* best-effort — DB may be unavailable if process is dying */});
+    }
   }
 }
 

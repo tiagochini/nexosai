@@ -716,7 +716,7 @@ export async function generateCampaignContent(
       campaignId,
       type: "agent_completed",
       agentType: "ad_copy",
-      message: `Ad Copy concluído — ${adOutput.segments.length} segmentos com Meta + Google + TikTok`,
+      message: `Ad Copy concluído — ${adOutput.segments?.length ?? 0} segmentos com Meta + Google + TikTok`,
       data: { pieceId: piece?.id },
       timestamp: new Date().toISOString(),
     });

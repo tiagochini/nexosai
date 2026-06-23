@@ -201,6 +201,7 @@ export async function runExecutionGovernor(
     messages: [{ role: "user", content: userContent }],
     log,
     requiresApproval: false,
+    skipAllStaticLayers: true,
     thinkingMessages: [
       "Analisando complexidade e tipo da campanha...",
       "Classificando agentes por valor e custo...",

@@ -245,6 +245,403 @@ function CampaignFlowchart({ pieces }: { pieces: ContentPiece[] }) {
   );
 }
 
+// ── Master Plan Tab ───────────────────────────────────────────────────────────
+
+const PHASE_NARRATIVES: Record<string, string> = {
+  anticipation: "Antes de revelar qualquer produto, criamos o estado mental de expectativa. Conteúdo que instiga, não que explica. O prospect entra em modo de busca ativa — cada engajamento é um sinal que alimenta o algoritmo e aquece a audiência para o que vem a seguir.",
+  authority: "Você entrega valor real antes de pedir qualquer coisa. O prospect aprende com você, confia em você, começa a te ver como a referência que resolve o problema dele. Esta fase constrói o ativo mais precioso do lançamento: credibilidade que converte.",
+  desire: "Com autoridade estabelecida, ativamos a imaginação. O prospect começa a se ver transformado — não o produto, mas o resultado. Cases reais, provas sociais, antes e depois. O gatilho de desejo está no pico, pronto para a abertura do carrinho.",
+  cart_open: "O carrinho abre apenas para quem esperou. VIPs do grupo têm acesso antecipado. Os anúncios de retargeting fecham o ciclo para quem viu mas não entrou ainda. As primeiras 24 horas concentram 40% das vendas — máxima conversão aqui.",
+  midcart: "Quem ainda não comprou tem uma objeção. Esta fase existe para eliminá-las — com prova social, depoimentos, demonstrações ao vivo. O algoritmo trabalha a favor: você está nos feeds de quem mais está propenso a comprar agora.",
+  close: "Urgência máxima, vagas mínimas. As últimas horas do carrinho geram o segundo maior pico de vendas. A comunicação é direta, intensa. Quem estava na dúvida toma a decisão agora ou perde a oportunidade para sempre.",
+};
+
+const PHASE_MENTAL_TRIGGERS: Record<string, string[]> = {
+  anticipation: ["Curiosidade", "Antecipação"],
+  authority:    ["Autoridade", "Reciprocidade"],
+  desire:       ["Prova Social", "Transformação"],
+  cart_open:    ["Escassez", "Comunidade VIP"],
+  midcart:      ["Prova Social", "Superação de Objeção"],
+  close:        ["Urgência", "Medo de Perda"],
+};
+
+const PIECE_TYPE_LABELS_SHORT: Record<string, string> = {
+  post: "post", reel: "reel", story: "story",
+  native_video: "vídeo", email: "e-mail", message: "msg WhatsApp",
+  ad: "anúncio", copy: "copy",
+};
+
+function MasterPlanTab({
+  pieces,
+  apiPieces,
+  onSwitchToPhase,
+}: {
+  pieces: ContentPiece[];
+  apiPieces: ApiContentPiece[];
+  onSwitchToPhase: () => void;
+}) {
+  function fmtNum(n: number) {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
+    return String(n);
+  }
+
+  const totalReach    = pieces.reduce((s, p) => s + estimatePostMetrics(p).reach, 0);
+  const totalLeads    = pieces.reduce((s, p) => s + estimatePostMetrics(p).leads, 0);
+  const totalPlatforms = new Set(pieces.map(p => p.platform)).size;
+
+  const creativePiece = apiPieces.find(p => p.type === "creative_direction");
+  const creativeData  = creativePiece?.content as Record<string, unknown> | undefined;
+  const campaignTitle = creativeData?.["campaignTitle"] as string | undefined;
+  const moodWords     = creativeData?.["moodWords"] as string[] | undefined;
+  const coreMessage   = creativeData?.["coreMessage"] as string | undefined;
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Banner */}
+      <div className="border border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5 px-5 py-5">
+        <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-primary/60 mb-2">
+          MASTERPLAN — Plano Mestre do Lançamento
+        </div>
+        <h2 className="font-mono text-xl font-bold uppercase tracking-tight text-foreground leading-tight mb-2">
+          {campaignTitle ?? "Campanha de Lançamento"}
+        </h2>
+        {coreMessage && (
+          <p className="font-mono text-[11px] text-muted-foreground/80 leading-relaxed mb-3 max-w-2xl">
+            {coreMessage}
+          </p>
+        )}
+        {moodWords && moodWords.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {moodWords.slice(0, 6).map(w => (
+              <span key={w} className="font-mono text-[9px] uppercase tracking-widest border border-primary/30 text-primary/70 px-2 py-0.5">{w}</span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* KPI Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {[
+          { label: "Peças Criadas",        value: String(pieces.length),    color: "text-primary" },
+          { label: "Alcance Total Est.",   value: fmtNum(totalReach),      color: "text-cyan-400" },
+          { label: "Leads Esperados",      value: fmtNum(totalLeads),      color: "text-success" },
+          { label: "Plataformas Ativas",   value: String(totalPlatforms),  color: "text-purple-400" },
+        ].map(k => (
+          <div key={k.label} className="border border-border/50 bg-card/40 px-3 py-2.5">
+            <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 mb-1">{k.label}</div>
+            <div className={`font-mono text-2xl font-bold ${k.color}`}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Phase Chapters */}
+      <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/40 px-1">
+        Estratégia por fase — {PHASES.length} fases · {pieces.length} entregáveis totais
+      </div>
+
+      {PHASES.map((phase, phaseIdx) => {
+        const phasePieces = pieces.filter(p => phase.days.includes(p.dayIndex));
+        const phaseReach  = phasePieces.reduce((s, p) => s + estimatePostMetrics(p).reach, 0);
+        const phaseLeads  = phasePieces.reduce((s, p) => s + estimatePostMetrics(p).leads, 0);
+        const Icon        = phase.icon;
+        const triggers    = PHASE_MENTAL_TRIGGERS[phase.id] ?? [];
+        const narrative   = PHASE_NARRATIVES[phase.id] ?? phase.objective;
+
+        // Inventory: platform → type → count
+        const inventory: Record<string, Record<string, number>> = {};
+        for (const p of phasePieces) {
+          const plat = PLATFORM_LABEL[p.platform] ?? p.platform;
+          const typ  = PIECE_TYPE_LABELS_SHORT[p.type] ?? p.type;
+          if (!inventory[plat]) inventory[plat] = {};
+          inventory[plat][typ] = (inventory[plat][typ] ?? 0) + 1;
+        }
+
+        return (
+          <div key={phase.id} className={`border ${phase.borderColor} overflow-hidden`}>
+            {/* Phase header */}
+            <div className={`px-5 py-3 ${phase.bgColor} border-b border-current/10 flex items-center gap-3`}>
+              <div className={`w-6 h-6 border ${phase.borderColor} flex items-center justify-center shrink-0`}>
+                <Icon className={`h-3 w-3 ${phase.color}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${phase.color}`}>{phase.label}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">{phase.dayRange}</span>
+                  {phasePieces.length > 0 && (
+                    <span className={`font-mono text-[9px] border px-1.5 py-0 ${phase.borderColor} ${phase.color}`}>
+                      {phasePieces.length} peça{phasePieces.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest shrink-0">
+                Fase {phaseIdx + 1} / {PHASES.length}
+              </div>
+            </div>
+
+            {/* Phase body */}
+            <div className="px-5 py-4 space-y-4">
+              {/* Objective + Narrative */}
+              <div className="space-y-2">
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">Objetivo estratégico</div>
+                <p className="font-mono text-xs text-foreground/90 font-medium">{phase.objective}</p>
+                <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{narrative}</p>
+              </div>
+
+              {/* Mental Triggers */}
+              {triggers.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40 shrink-0">Gatilhos:</span>
+                  {triggers.map(t => (
+                    <span key={t} className={`font-mono text-[10px] border px-2 py-0.5 ${phase.borderColor} ${phase.color}`}>{t}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* Deliverables Inventory */}
+              <div className="space-y-2">
+                <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/40">Entregáveis desta fase</div>
+                {Object.keys(inventory).length === 0 ? (
+                  <div className="font-mono text-[11px] text-muted-foreground/30 italic">
+                    Peças ainda não atribuídas a esta fase — processando…
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {Object.entries(inventory).map(([platformLabel, types]) => {
+                      const platformKey = Object.entries(PLATFORM_LABEL).find(([, v]) => v === platformLabel)?.[0] as Platform | undefined;
+                      const PIcon  = platformKey ? PLATFORM_ICON[platformKey]  : Globe;
+                      const pColor = platformKey ? PLATFORM_COLOR[platformKey] : "text-muted-foreground border-border/40 bg-muted/10";
+                      const typeStr = Object.entries(types)
+                        .map(([typ, count]) => `${count} ${typ}${count > 1 && !typ.endsWith("s") ? "s" : ""}`)
+                        .join(" · ");
+                      return (
+                        <div key={platformLabel} className="flex items-center gap-2">
+                          <div className={`w-5 h-5 border flex items-center justify-center shrink-0 ${pColor}`}>
+                            <PIcon className="h-2.5 w-2.5" />
+                          </div>
+                          <span className="font-mono text-[11px] font-bold text-foreground/70 w-24 shrink-0">{platformLabel}</span>
+                          <span className={`font-mono text-[11px] ${phase.color}`}>{typeStr}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Phase Metrics footer */}
+              {phasePieces.length > 0 && (
+                <div className="flex items-center gap-4 pt-2 border-t border-border/20">
+                  <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest">Meta estimada desta fase:</span>
+                  <span className="font-mono text-[11px] text-cyan-400">{fmtNum(phaseReach)} alcance</span>
+                  <span className="font-mono text-[11px] text-success">{fmtNum(phaseLeads)} leads</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* CTA → switch to deliverables */}
+      {pieces.length > 0 && (
+        <div className="border border-primary/30 bg-primary/5 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="font-mono text-xs font-bold uppercase tracking-widest mb-0.5">
+              {pieces.length} entregáveis prontos para sua revisão
+            </div>
+            <p className="font-mono text-[11px] text-muted-foreground/60">
+              Analise cada peça, aprove, edite ou peça reescrita com IA — fase por fase, plataforma por plataforma.
+            </p>
+          </div>
+          <button
+            onClick={onSwitchToPhase}
+            className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-widest border border-primary text-primary px-4 py-2.5 hover:bg-primary/10 transition-colors shrink-0 btn-weapon-primary"
+          >
+            Revisar entregáveis <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Por Fase Tab ──────────────────────────────────────────────────────────────
+
+function PorFaseTab({
+  pieces,
+  onApprove,
+  onReject,
+  onEdit,
+  onAiRewrite,
+  loading,
+  rewriting,
+  complianceScan,
+}: {
+  pieces: ContentPiece[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  onEdit: (piece: ContentPiece) => void;
+  onAiRewrite: (id: string) => void;
+  loading?: string | null;
+  rewriting?: string | null;
+  complianceScan?: ComplianceSweepSummary | null;
+}) {
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
+    () => new Set(PHASES.map(p => p.id))
+  );
+  const [collapsedPlatforms, setCollapsedPlatforms] = useState<Set<string>>(new Set());
+
+  const togglePhase = (id: string) =>
+    setExpandedPhases(prev => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+
+  const togglePlatform = (key: string) =>
+    setCollapsedPlatforms(prev => {
+      const s = new Set(prev);
+      s.has(key) ? s.delete(key) : s.add(key);
+      return s;
+    });
+
+  return (
+    <div className="space-y-3">
+      {PHASES.map(phase => {
+        const phasePieces = pieces.filter(p => phase.days.includes(p.dayIndex));
+        const isExpanded  = expandedPhases.has(phase.id);
+        const approved    = phasePieces.filter(p => p.status === "approved").length;
+        const Icon        = phase.icon;
+
+        // Group by platform label
+        const byPlatform: Record<string, ContentPiece[]> = {};
+        for (const p of phasePieces) {
+          const plat = PLATFORM_LABEL[p.platform] ?? p.platform;
+          if (!byPlatform[plat]) byPlatform[plat] = [];
+          byPlatform[plat].push(p);
+        }
+
+        return (
+          <div key={phase.id} className={`border ${phase.borderColor} overflow-hidden`}>
+            {/* Phase accordion header */}
+            <button
+              onClick={() => togglePhase(phase.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-left ${phase.bgColor} hover:opacity-90 transition-opacity`}
+            >
+              <div className={`w-6 h-6 border ${phase.borderColor} flex items-center justify-center shrink-0`}>
+                <Icon className={`h-3 w-3 ${phase.color}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${phase.color}`}>{phase.label}</span>
+                  <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-widest">{phase.dayRange}</span>
+                  {phasePieces.length > 0 && (
+                    <span className={`font-mono text-[9px] border px-1.5 py-0 ${phase.borderColor} ${approved === phasePieces.length ? "text-success border-success/40 bg-success/10" : phase.color}`}>
+                      {approved}/{phasePieces.length} aprovadas
+                    </span>
+                  )}
+                </div>
+                <p className="font-mono text-[9px] text-muted-foreground/50 mt-0.5 truncate">{phase.objective}</p>
+              </div>
+              {isExpanded
+                ? <ChevronUp className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                : <ChevronDown className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+              }
+            </button>
+
+            {/* Phase expanded content */}
+            {isExpanded && (
+              <div className="divide-y divide-border/30">
+                {phasePieces.length === 0 ? (
+                  <div className="px-5 py-8 text-center font-mono text-[11px] text-muted-foreground/30 uppercase tracking-widest">
+                    Nenhuma peça gerada para esta fase ainda
+                  </div>
+                ) : (
+                  Object.entries(byPlatform).map(([platformLabel, platPieces]) => {
+                    const platformKey = Object.entries(PLATFORM_LABEL).find(([, v]) => v === platformLabel)?.[0] as Platform | undefined;
+                    const PIcon  = platformKey ? PLATFORM_ICON[platformKey]  : Globe;
+                    const pColor = platformKey ? PLATFORM_COLOR[platformKey] : "text-muted-foreground border-border/40 bg-muted/10";
+                    const platKey    = `${phase.id}:${platformLabel}`;
+                    const isCollapsed = collapsedPlatforms.has(platKey);
+                    const platApproved = platPieces.filter(p => p.status === "approved").length;
+
+                    return (
+                      <div key={platformLabel}>
+                        {/* Platform sub-header */}
+                        <button
+                          onClick={() => togglePlatform(platKey)}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 bg-card/20 hover:bg-card/40 transition-colors"
+                        >
+                          <div className={`w-5 h-5 border flex items-center justify-center shrink-0 ${pColor}`}>
+                            <PIcon className="h-2.5 w-2.5" />
+                          </div>
+                          <span className={`font-mono text-[11px] font-bold uppercase tracking-widest ${pColor.split(" ")[0]}`}>
+                            {platformLabel}
+                          </span>
+                          <span className="font-mono text-[10px] text-muted-foreground/40">
+                            · {platPieces.length} peça{platPieces.length !== 1 ? "s" : ""}
+                            {platApproved > 0 && (
+                              <span className="text-success ml-1">· {platApproved} ✓</span>
+                            )}
+                          </span>
+                          <div className="flex-1" />
+                          {isCollapsed
+                            ? <ChevronDown className="h-3 w-3 text-muted-foreground/30 shrink-0" />
+                            : <ChevronUp className="h-3 w-3 text-muted-foreground/30 shrink-0" />
+                          }
+                        </button>
+
+                        {/* Piece cards */}
+                        {!isCollapsed && (
+                          <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {platPieces.map(piece => (
+                              <ContentCard
+                                key={piece.id}
+                                piece={piece}
+                                onApprove={onApprove}
+                                onReject={onReject}
+                                onEdit={onEdit}
+                                onAiRewrite={onAiRewrite}
+                                loading={loading}
+                                rewriting={rewriting}
+                                prescanResult={complianceScan?.byPiece[piece.id] ?? null}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Pieces not mapped to any phase */}
+      {(() => {
+        const allPhaseDays = PHASES.flatMap(p => p.days);
+        const orphans = pieces.filter(p => !allPhaseDays.includes(p.dayIndex));
+        if (!orphans.length) return null;
+        return (
+          <div className="border border-border/50">
+            <div className="px-4 py-3 bg-card/30 flex items-center gap-2">
+              <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Outros entregáveis</span>
+              <span className="font-mono text-[10px] text-muted-foreground/40">· {orphans.length} peça{orphans.length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {orphans.map(piece => (
+                <ContentCard key={piece.id} piece={piece} onApprove={onApprove} onReject={onReject} onEdit={onEdit} onAiRewrite={onAiRewrite} loading={loading} rewriting={rewriting} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 // ── Content Card (text view) ──────────────────────────────────────────────────
 
 function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading, rewriting, prescanResult }: {
@@ -3030,7 +3427,7 @@ function CPLTab({ apiPieces, onApprove, onReject, loading }: {
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 
-type Tab = "platform" | "preview" | "flowchart" | "schedule" | "segmentation" | "landing" | "aquecimento" | "cpl";
+type Tab = "masterplan" | "por_fase" | "platform" | "preview" | "flowchart" | "schedule" | "segmentation" | "landing" | "aquecimento" | "cpl";
 
 const VISUAL_PLATFORMS: Platform[] = ["instagram", "facebook", "tiktok"];
 
@@ -3039,7 +3436,7 @@ export default function ContentApproval() {
   const campaignId = params.id;
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<Tab>("platform");
+  const [activeTab, setActiveTab] = useState<Tab>("masterplan");
   const [cinemaActive, setCinemaActive] = useState(false);
   const [editingPiece, setEditingPiece] = useState<ContentPiece | null>(null);
   const [loadingPiece, setLoadingPiece] = useState<string | null>(null);
@@ -3516,11 +3913,11 @@ export default function ContentApproval() {
   });
 
   const TABS: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
-    { id: "flowchart",    label: "Fluxograma",      icon: Activity },
+    { id: "masterplan",   label: "Masterplan",      icon: Rocket },
+    { id: "por_fase",     label: "Por Fase",        icon: Target, badge: `${pieces.length}` },
     { id: "preview",      label: "Preview Visual",  icon: Eye },
     { id: "platform",     label: "Por Plataforma",  icon: Globe },
     { id: "schedule",     label: "Cronograma",      icon: Calendar },
-    { id: "segmentation", label: "Segmentação",     icon: Users },
     ...(landingPageData ? [{ id: "landing" as Tab, label: "Landing Page", icon: Globe, badge: "LP" }] : []),
     ...(hasWarmingContent ? [{ id: "aquecimento" as Tab, label: "Aquecimento", icon: Flame, badge: "PRÉ" }] : []),
     ...(hasCPLContent ? [{ id: "cpl" as Tab, label: "CPL Scripts", icon: Clapperboard, badge: "CPL" }] : []),
@@ -3834,6 +4231,29 @@ export default function ContentApproval() {
             );
           })}
         </div>
+
+        {/* ── Masterplan Tab ── */}
+        {activeTab === "masterplan" && (
+          <MasterPlanTab
+            pieces={pieces}
+            apiPieces={apiContentData?.pieces ?? []}
+            onSwitchToPhase={() => setActiveTab("por_fase")}
+          />
+        )}
+
+        {/* ── Por Fase Tab ── */}
+        {activeTab === "por_fase" && (
+          <PorFaseTab
+            pieces={pieces}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            onEdit={setEditingPiece}
+            onAiRewrite={handleAiRewrite}
+            loading={loadingPiece}
+            rewriting={rewritingPiece}
+            complianceScan={complianceScan}
+          />
+        )}
 
         {/* ── Flowchart Tab ── */}
         {activeTab === "flowchart" && (

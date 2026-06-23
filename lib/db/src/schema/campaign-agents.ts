@@ -83,6 +83,9 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "ad_critic",
   "dynamic_avatar_state",
   "geographic_targeting",
+  "ux_simplification",
+  "campaign_memory",
+  "item_copy_generator",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [

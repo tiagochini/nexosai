@@ -1099,14 +1099,20 @@ Retorne o JSON de avaliação.`,
     }
   }
 
-  const finalStatus =
-    checkpointsPending.length > 0 ? "awaiting_approval" : "generating";
+  // PIPELINE_KERNEL: strategy pipeline always ends at strategy_ready so the user
+  // can review results before triggering content generation. The checkpointsPending
+  // list records which sub-approvals were collected DURING the strategy run (e.g.
+  // strategy_approval, launch_plan_approval) — those transitions were already applied
+  // inline (transitionCampaign → strategy_ready) as each agent completed. The final
+  // state of the orchestration is always strategy_ready; "generating" is the entry
+  // state for the CONTENT phase (triggered separately by the user).
+  const finalStatus = "strategy_ready";
 
   await transitionCampaign(
     campaignId,
     workspaceId,
     finalStatus,
-    `command agent pipeline completed — ${checkpointsPending.length} checkpoints pending`,
+    `command agent pipeline completed — ${checkpointsPending.length} checkpoints recorded`,
     log,
   );
 

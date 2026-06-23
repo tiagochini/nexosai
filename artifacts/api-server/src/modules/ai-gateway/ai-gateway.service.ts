@@ -270,16 +270,17 @@ export function getAnthropic(): { client: Anthropic; isNative: boolean } {
 export function getOpenAI(): { client: OpenAI; isNative: boolean } {
   if (!openaiClient) {
     if (env.OPENAI_API_KEY) {
-      openaiClient = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+      openaiClient = new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: LLM_CALL_TIMEOUT_MS });
       openaiClientIsNative = true;
     } else if (hasOpenAIIntegration()) {
       openaiClient = new OpenAI({
         apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
         baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        timeout: LLM_CALL_TIMEOUT_MS,
       });
       openaiClientIsNative = false;
     } else {
-      openaiClient = new OpenAI({ apiKey: "missing" });
+      openaiClient = new OpenAI({ apiKey: "missing", timeout: LLM_CALL_TIMEOUT_MS });
       openaiClientIsNative = false;
     }
   }
@@ -300,8 +301,27 @@ function getGemini(): GoogleGenerativeAI {
   return geminiClient;
 }
 
-// Background workers have NO timeout — LLM calls on deep agents can legitimately take 3-10 min.
-// HTTP-facing callers that need a timeout must pass their own AbortSignal explicitly.
+// Background workers have NO HTTP timeout — the only ceiling is the LLM_CALL_TIMEOUT_MS
+// below (30 min). Never lower it: a productive LLM call must never be interrupted mid-output.
+
+// ── LLM call timeout ──────────────────────────────────────────────────────────
+// Background workers have no HTTP timeout. LLM calls on deep strategy agents
+// can legitimately take 10-20 min for large outputs (copywriter, command, VSL).
+// 30 min is the hard ceiling — enough for any realistic output size.
+// IMPORTANT: do NOT lower this. A productive LLM call must never be interrupted.
+const LLM_CALL_TIMEOUT_MS = 30 * 60 * 1000;
+
+function withLLMTimeout(signal?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("LLM_CALL_TIMEOUT")), LLM_CALL_TIMEOUT_MS);
+  // Chain caller's signal if provided
+  if (signal) {
+    signal.addEventListener("abort", () => { clearTimeout(timer); controller.abort(signal.reason); });
+  }
+  // Clean up timer when the request finishes naturally
+  controller.signal.addEventListener("abort", () => clearTimeout(timer));
+  return controller.signal;
+}
 
 // ── Continuation protocol ─────────────────────────────────────────────────────
 // Detects truncated JSON outputs and automatically requests continuation chunks.
@@ -333,6 +353,7 @@ async function callAnthropic(
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel: string }> {
   const { client, isNative } = getAnthropic();
   const effectiveModel = isNative ? model : ANTHROPIC_INTEGRATION_MODEL;
+  const effectiveSignal = withLLMTimeout(signal);
   const response = await client.messages.create(
     {
       model: effectiveModel,
@@ -340,7 +361,7 @@ async function callAnthropic(
       system: systemPrompt,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     },
-    { signal },
+    { signal: effectiveSignal },
   );
 
   let content =
@@ -398,6 +419,7 @@ async function callOpenAI(
 
   const { client } = getOpenAI();
   const effectiveModel = usingIntegration ? OPENAI_INTEGRATION_MODEL : model;
+  const effectiveSignal = withLLMTimeout(signal);
 
   const isGpt5 = effectiveModel.startsWith("gpt-5") || effectiveModel.startsWith("o4") || effectiveModel.startsWith("o3");
   const completionParams = isGpt5
@@ -414,7 +436,7 @@ async function callOpenAI(
         ],
         ...completionParams,
       },
-      { signal },
+      { signal: effectiveSignal },
     );
 
     return {
@@ -436,6 +458,7 @@ async function callOpenAI(
         const integrationClient = new OpenAI({
           apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
           baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+          timeout: LLM_CALL_TIMEOUT_MS,
         });
         const intModel = OPENAI_INTEGRATION_MODEL;
         const intIsGpt5 = intModel.startsWith("gpt-5") || intModel.startsWith("o4") || intModel.startsWith("o3");
@@ -449,7 +472,7 @@ async function callOpenAI(
             ],
             ...intParams,
           },
-          { signal },
+          { signal: effectiveSignal },
         );
         return {
           content: intResponse.choices[0]?.message?.content ?? "",
