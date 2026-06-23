@@ -37,6 +37,7 @@ import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
 import type { StrategyOutput } from "../agents/strategy.agent.js";
 import type { Logger } from "pino";
+import { logger as rootLogger } from "../../lib/logger.js";
 import { generateCampaignEmotionalArc } from "../agents/campaign-emotional-arc.agent.js";
 import {
   getArcFromIntakeData,
@@ -2147,7 +2148,7 @@ export async function approveContentPiece(
   pieceId: string,
 ) {
   const [campaign] = await db
-    .select({ id: campaignsTable.id })
+    .select({ id: campaignsTable.id, status: campaignsTable.status })
     .from(campaignsTable)
     .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
     .limit(1);
@@ -2160,6 +2161,25 @@ export async function approveContentPiece(
     .returning();
 
   if (!piece) throw new NotFoundError("Content piece");
+
+  // Auto-transition campaign awaiting_approval → approved when no pieces remain pending.
+  if (campaign.status === "awaiting_approval") {
+    const remaining = await db
+      .select({ id: contentPiecesTable.id })
+      .from(contentPiecesTable)
+      .where(
+        and(
+          eq(contentPiecesTable.campaignId, campaignId),
+          eq(contentPiecesTable.status, "pending_approval"),
+        ),
+      )
+      .limit(1);
+
+    if (remaining.length === 0) {
+      await transitionCampaign(campaignId, workspaceId, "approved", "all content pieces approved", rootLogger);
+    }
+  }
+
   return piece;
 }
 

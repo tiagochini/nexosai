@@ -490,14 +490,13 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
       );
     }
 
-    if (integrationCheck.status === "partial" && !skipWarning) {
-      // Soft warning: has some channels but not all — ask for confirmation
-      res.status(428).json({
-        error: "Algumas integrações recomendadas não estão conectadas.",
-        code: "PARTIAL_INTEGRATIONS",
-        data: { missing: integrationCheck.missing, connectUrl: "/integracoes" },
-      });
-      return;
+    // Partial integrations: proceed with launch — integrações externas nunca bloqueiam execução.
+    // Missing channels are logged and included in the launch response as warnings only.
+    if (integrationCheck.status === "partial") {
+      req.log.warn(
+        { workspaceId: req.auth.workspaceId, missing: integrationCheck.missing },
+        "[LAUNCH] Partial integrations — proceeding without blocking",
+      );
     }
 
     // ── Content approval gate ────────────────────────────────────────────────
