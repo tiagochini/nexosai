@@ -337,13 +337,14 @@ async function callOpenAI(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
+  maxTokens = 8192,
   signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
 
   if (!env.OPENAI_API_KEY && !hasOpenAIIntegration()) {
     if (hasAnthropicIntegration()) {
-      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
+      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
     }
   }
 
@@ -352,8 +353,8 @@ async function callOpenAI(
 
   const isGpt5 = effectiveModel.startsWith("gpt-5") || effectiveModel.startsWith("o4") || effectiveModel.startsWith("o3");
   const completionParams = isGpt5
-    ? { max_completion_tokens: 16384 }
-    : { max_tokens: 8192 };
+    ? { max_completion_tokens: maxTokens }
+    : { max_tokens: maxTokens };
 
   try {
     const response = await client.chat.completions.create(
@@ -390,7 +391,7 @@ async function callOpenAI(
         });
         const intModel = OPENAI_INTEGRATION_MODEL;
         const intIsGpt5 = intModel.startsWith("gpt-5") || intModel.startsWith("o4") || intModel.startsWith("o3");
-        const intParams = intIsGpt5 ? { max_completion_tokens: 16384 } : { max_tokens: 8192 };
+        const intParams = intIsGpt5 ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens };
         const intResponse = await integrationClient.chat.completions.create(
           {
             model: intModel,
@@ -422,12 +423,13 @@ async function callGemini(
   model: string,
   systemPrompt: string,
   messages: AIMessage[],
+  maxTokens = 8192,
   signal?: AbortSignal,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
 
   if (!hasGeminiAccess) {
-    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, 8192, signal);
+    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
   }
 
   try {
@@ -586,6 +588,7 @@ export async function completeWithAgent(
   campaignId?: string,
   locale?: string,
   providerOverride?: "anthropic" | "openai" | "gemini",
+  maxTokens?: number,
 ): Promise<AICompletionResult> {
   const agentConfig = AGENT_PROVIDER_MAP[agentRole];
   const provider = providerOverride ?? agentConfig.provider;
@@ -602,10 +605,11 @@ export async function completeWithAgent(
 
   let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string };
 
+  const effectiveMaxTokens = maxTokens ?? 8192;
   switch (provider) {
     case "anthropic":
       try {
-        result = await callAnthropic(model, effectiveSystem, messages, 8192);
+        result = await callAnthropic(model, effectiveSystem, messages, effectiveMaxTokens);
       } catch (anthropicErr) {
         log.warn(
           { agentRole, model, err: String(anthropicErr) },
@@ -615,15 +619,16 @@ export async function completeWithAgent(
           getDefaultModelForProvider("openai"),
           effectiveSystem,
           messages,
+          effectiveMaxTokens,
         );
       }
       break;
     case "openai":
-      result = await callOpenAI(model, effectiveSystem, messages);
+      result = await callOpenAI(model, effectiveSystem, messages, effectiveMaxTokens);
       break;
     case "gemini":
       try {
-        result = await callGemini(model, effectiveSystem, messages);
+        result = await callGemini(model, effectiveSystem, messages, effectiveMaxTokens);
       } catch (geminiErr) {
         log.warn(
           { agentRole, model, err: String(geminiErr) },
@@ -633,6 +638,7 @@ export async function completeWithAgent(
           getDefaultModelForProvider("openai"),
           effectiveSystem,
           messages,
+          effectiveMaxTokens,
         );
       }
       break;

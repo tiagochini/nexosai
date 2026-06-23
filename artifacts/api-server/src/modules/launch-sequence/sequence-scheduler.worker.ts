@@ -240,7 +240,7 @@ async function recoverStuckCampaigns(): Promise<void> {
             await db.insert(contentPiecesTable).values({
               campaignId: c.id, workspaceId: c.workspaceId, type: failedPieceType as any, status: "draft",
               title: `[Pulado automaticamente] ${failedPieceType}`,
-              content: { _autoSkipped: true, _minimalFallback: true, note: "Pulado após 3 tentativas — use Reescrever com IA." } as any,
+              content: { _notGenerated: true, _autoSkipped: true, _minimalFallback: true, reason: "Pulado após 3 tentativas — use Reescrever com IA." } as any,
               aiProvider: "none" as any, creditsUsed: 0,
             }).catch(e => log.warn({ e, campaignId: c.id, failedPieceType }, "[FAILSAFE-AUTO] placeholder insert failed — non-blocking"));
           }
@@ -348,7 +348,7 @@ async function recoverStuckCampaigns(): Promise<void> {
             await db.insert(contentPiecesTable).values({
               campaignId: c.id, workspaceId: c.workspaceId, type: failedPieceType as any, status: "draft",
               title: `[Pulado automaticamente] ${failedPieceType}`,
-              content: { _autoSkipped: true, _minimalFallback: true, note: "Pulado após 3 tentativas — use Reescrever com IA." } as any,
+              content: { _notGenerated: true, _autoSkipped: true, _minimalFallback: true, reason: "Pulado após 3 tentativas — use Reescrever com IA." } as any,
               aiProvider: "none" as any, creditsUsed: 0,
             }).catch(e => log.warn({ e, campaignId: c.id, failedPieceType }, "[FAILSAFE-AUTO] placeholder insert failed — non-blocking"));
           }

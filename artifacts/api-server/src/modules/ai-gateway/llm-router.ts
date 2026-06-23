@@ -169,6 +169,7 @@ export async function routedComplete(
         campaignId,
         locale,
         providerOverride,
+        TASK_MAX_OUTPUT_TOKENS[taskType],
       );
       log.info(
         {

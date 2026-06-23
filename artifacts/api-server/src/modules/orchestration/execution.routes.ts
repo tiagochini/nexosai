@@ -302,7 +302,7 @@ router.post("/:campaignId/execute/retry", async (req, res): Promise<void> => {
             type: failedPieceType as any,
             status: "draft",
             title: `[Pulado automaticamente] ${failedPieceType}`,
-            content: { _autoSkipped: true, _minimalFallback: true, note: "Esta peça foi pulada automaticamente após 3 tentativas. Clique em \"Reescrever com IA\" para gerar." } as any,
+            content: { _notGenerated: true, _autoSkipped: true, _minimalFallback: true, reason: "Esta peça foi pulada automaticamente após 3 tentativas. Clique em \"Reescrever com IA\" para gerar." } as any,
             aiProvider: "none" as any,
             creditsUsed: 0,
           }).catch(err => req.log.warn({ err, campaignId, failedPieceType }, "[FAILSAFE] Could not insert auto-skip placeholder — non-blocking"));
