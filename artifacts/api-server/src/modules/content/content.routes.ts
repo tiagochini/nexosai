@@ -112,6 +112,27 @@ router.post("/:campaignId/content/generate", async (req, res): Promise<void> => 
   }
 });
 
+// POST /campaigns/:campaignId/content/:pieceId/generate-visual
+// Creates a DALL-E concept for a social-media content piece (no image yet).
+// The concept is stored in campaignCreativesTable with metadata.contentPieceId.
+// After approve-concept → preview → approve-preview → final, the finalMediaUrl
+// is written back to the piece and autopost is re-triggered.
+router.post("/:campaignId/content/:pieceId/generate-visual", async (req, res): Promise<void> => {
+  const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
+  try {
+    const { generateVisualForPiece } = await import("./creative-auto-gen.service.js");
+    const result = await generateVisualForPiece(campaignId, req.auth.workspaceId, pieceId, req.log);
+    res.json({ creativeId: result.creativeId, conceptTitle: result.conceptTitle, dallePrompt: result.dallePrompt });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    const msg = err instanceof Error ? err.message : "Erro ao gerar conceito visual";
+    res.status(500).json({ error: msg });
+  }
+});
+
 // POST /campaigns/:campaignId/content/:pieceId/approve
 const approvePieceSchema = z.object({
   feedback: z.string().optional().default(""),

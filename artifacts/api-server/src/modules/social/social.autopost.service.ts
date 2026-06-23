@@ -12,20 +12,25 @@ import { publishToInstagram, publishToFacebook, publishToTikTok } from "./social
 import type { SocialPost, WorkspaceIntegration } from "@workspace/db";
 
 // Maps content piece types → DB provider values to query
+// content_calendar is the main type emitted by the social_media agent.
+// We look at the metadata.platform field to determine the actual platform.
 const CONTENT_TYPE_PROVIDERS: Record<string, string[]> = {
-  instagram_post:  ["instagram"],
-  instagram_story: ["instagram"],
-  instagram_reel:  ["instagram"],
-  facebook_post:   ["meta_ads"],
-  facebook_video:  ["meta_ads"],
-  feed_image:      ["instagram", "meta_ads"],
-  feed_video:      ["instagram", "meta_ads", "tiktok_ads"],
-  story:           ["instagram"],
-  reel:            ["instagram", "tiktok_ads"],
-  carousel:        ["instagram"],
-  tiktok_video:    ["tiktok_ads"],
-  tiktok_reel:     ["tiktok_ads"],
-  short_video:     ["tiktok_ads", "instagram"],
+  instagram_post:   ["instagram"],
+  instagram_story:  ["instagram"],
+  instagram_reel:   ["instagram"],
+  facebook_post:    ["meta_ads"],
+  facebook_video:   ["meta_ads"],
+  feed_image:       ["instagram", "meta_ads"],
+  feed_video:       ["instagram", "meta_ads", "tiktok_ads"],
+  story:            ["instagram"],
+  reel:             ["instagram", "tiktok_ads"],
+  carousel:         ["instagram"],
+  tiktok_video:     ["tiktok_ads"],
+  tiktok_reel:      ["tiktok_ads"],
+  short_video:      ["tiktok_ads", "instagram"],
+  // Social posts from the main pipeline (social_media agent output)
+  content_calendar: ["instagram", "meta_ads", "tiktok_ads"],
+  social_post:      ["instagram", "meta_ads", "tiktok_ads"],
 };
 
 const CONTENT_TYPE_POST_TYPE: Record<string, string> = {
@@ -83,6 +88,25 @@ async function extractMediaUrls(
   content: unknown,
   campaignId?: string,
 ): Promise<string[]> {
+  // 0. Check for a creative generated specifically for this piece via generate-visual.
+  //    The creative stores metadata.contentPieceId so we can link them even without
+  //    writing back to the piece (contentPiecesTable has no metadata column).
+  {
+    const { sql: drizzleSql } = await import("drizzle-orm");
+    const linked = await db
+      .select({ finalUrl: campaignCreativesTable.finalUrl })
+      .from(campaignCreativesTable)
+      .where(
+        and(
+          drizzleSql`${campaignCreativesTable.metadata}->>'contentPieceId' = ${pieceId}`,
+          eq(campaignCreativesTable.status, "approved"),
+        ),
+      )
+      .limit(1);
+    const linkedUrl = linked[0]?.finalUrl;
+    if (typeof linkedUrl === "string" && linkedUrl) return [linkedUrl];
+  }
+
   // 1. Try to extract from content JSONB
   if (content && typeof content === "object" && content !== null) {
     const c = content as Record<string, unknown>;

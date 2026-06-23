@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import {
   db,
   campaignCreativesTable,
+  contentPiecesTable,
   campaignsTable,
   type CampaignCreative,
   type CreativeConcept,
@@ -228,6 +229,25 @@ export async function approvePreviewAndGenerateFinal(
           imageExpired: false,
         })
         .where(eq(campaignCreativesTable.id, creativeId));
+
+      // If this creative was generated for a specific content piece (metadata.contentPieceId),
+      // re-trigger autopost now that the final image is ready.  The autopost extractMediaUrls
+      // step 0 will query campaignCreativesTable by contentPieceId and find this creative.
+      const creativeMetadata = (creative.metadata && typeof creative.metadata === "object")
+        ? (creative.metadata as Record<string, unknown>)
+        : {};
+      const linkedPieceId = creativeMetadata["contentPieceId"] as string | undefined;
+      if (linkedPieceId && imageUrl && creative.campaignId) {
+        setImmediate(async () => {
+          try {
+            const { autoPostApprovedContent } = await import("../social/social.autopost.service.js");
+            await autoPostApprovedContent(workspaceId, creative.campaignId!, linkedPieceId);
+            log.info({ linkedPieceId, creativeId, imageUrl }, "Re-triggered autopost after final visual ready");
+          } catch (autoErr) {
+            log.warn({ linkedPieceId, autoErr }, "Re-trigger autopost after visual ready failed (non-fatal)");
+          }
+        });
+      }
     } catch (err) {
       log.warn({ creativeId, err }, "DALL-E HD generation failed");
       await db

@@ -14,7 +14,7 @@ import {
   Zap, Target, Activity, PlayCircle, Link2, Shield,
   RefreshCw, Rocket, AlertTriangle, Copy, Check,
   Video, UserCheck, UserX, Settings, ChevronDown, ChevronUp,
-  Flame, Clapperboard, Clock, Bot,
+  Flame, Clapperboard, Clock, Bot, ImagePlus,
 } from "lucide-react";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
@@ -469,6 +469,7 @@ function MasterPlanTab({
 
 function PorFaseTab({
   pieces,
+  campaignId,
   onApprove,
   onReject,
   onEdit,
@@ -478,6 +479,7 @@ function PorFaseTab({
   complianceScan,
 }: {
   pieces: ContentPiece[];
+  campaignId: string;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onEdit: (piece: ContentPiece) => void;
@@ -598,6 +600,7 @@ function PorFaseTab({
                               <ContentCard
                                 key={piece.id}
                                 piece={piece}
+                                campaignId={campaignId}
                                 onApprove={onApprove}
                                 onReject={onReject}
                                 onEdit={onEdit}
@@ -632,7 +635,7 @@ function PorFaseTab({
             </div>
             <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-3">
               {orphans.map(piece => (
-                <ContentCard key={piece.id} piece={piece} onApprove={onApprove} onReject={onReject} onEdit={onEdit} onAiRewrite={onAiRewrite} loading={loading} rewriting={rewriting} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
+                <ContentCard key={piece.id} piece={piece} campaignId={campaignId} onApprove={onApprove} onReject={onReject} onEdit={onEdit} onAiRewrite={onAiRewrite} loading={loading} rewriting={rewriting} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
               ))}
             </div>
           </div>
@@ -644,8 +647,9 @@ function PorFaseTab({
 
 // ── Content Card (text view) ──────────────────────────────────────────────────
 
-function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading, rewriting, prescanResult }: {
+function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewrite, loading, rewriting, prescanResult }: {
   piece: ContentPiece;
+  campaignId: string;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onEdit: (piece: ContentPiece) => void;
@@ -656,6 +660,40 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [generatingVisual, setGeneratingVisual] = useState(false);
+  const [visualCreativeId, setVisualCreativeId] = useState<string | null>(null);
+
+  const needsVisual = VISUAL_PLATFORMS.includes(piece.platform);
+
+  async function handleGenerateVisual() {
+    if (generatingVisual) return;
+    // Composite piece IDs (e.g. "abc123::post:0") — use the root piece ID
+    const rootPieceId = piece.id.includes("::") ? piece.id.split("::")[0] : piece.id;
+    setGeneratingVisual(true);
+    try {
+      const result = await customFetch<{ creativeId: string; conceptTitle: string; dallePrompt: string }>(
+        `/api/campaigns/${campaignId}/content/${rootPieceId}/generate-visual`,
+        { method: "POST" },
+      );
+      setVisualCreativeId(result.creativeId);
+      toast.success(
+        `Conceito visual criado — "${result.conceptTitle}". Acesse Criativos para aprovar e gerar a imagem com DALL-E 3.`,
+        {
+          duration: 8000,
+          action: {
+            label: "Abrir Criativos",
+            onClick: () => { window.location.href = `/campaigns/${campaignId}/creatives`; },
+          },
+        },
+      );
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Erro ao gerar conceito visual";
+      toast.error(msg);
+    } finally {
+      setGeneratingVisual(false);
+    }
+  }
+
   const PlatformIcon = PLATFORM_ICON[piece.platform] ?? Globe;
   const platformColor = PLATFORM_COLOR[piece.platform] ?? "text-muted-foreground border-border/40";
   const isRewriting = rewriting === piece.id;
@@ -818,6 +856,28 @@ function ContentCard({ piece, onApprove, onReject, onEdit, onAiRewrite, loading,
             <Button size="sm" variant="ghost" onClick={() => onAiRewrite(piece.id)} disabled={isLoading} className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-primary hover:text-primary hover:bg-primary/10">
               <Sparkles className="h-3 w-3" />Reescrever
             </Button>
+            {/* Gerar Visual — only shown for social platforms that need a real image/video */}
+            {needsVisual && piece.status === "approved" && !visualCreativeId && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleGenerateVisual}
+                disabled={generatingVisual}
+                className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-purple-400 hover:text-purple-300 hover:bg-purple-400/10"
+                title="Gera conceito DALL-E para esta peça — aprovação visual necessária antes da publicação"
+              >
+                {generatingVisual ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImagePlus className="h-3 w-3" />}
+                {generatingVisual ? "Gerando..." : "Gerar Visual"}
+              </Button>
+            )}
+            {needsVisual && piece.status === "approved" && visualCreativeId && (
+              <a
+                href={`/campaigns/${campaignId}/creatives`}
+                className="inline-flex items-center h-7 px-2 gap-1.5 rounded-none font-mono uppercase text-[11px] tracking-widest text-purple-400 border border-purple-400/40 bg-purple-400/10 hover:bg-purple-400/20"
+              >
+                <CheckCircle2 className="h-3 w-3" />Visual criado
+              </a>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -4268,6 +4328,7 @@ export default function ContentApproval() {
         {activeTab === "por_fase" && (
           <PorFaseTab
             pieces={pieces}
+            campaignId={campaignId}
             onApprove={handleApprove}
             onReject={handleReject}
             onEdit={setEditingPiece}
@@ -4419,7 +4480,7 @@ export default function ContentApproval() {
                     /* Text-based platforms: email, whatsapp, ads, landing */
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {platformPieces.map(piece => (
-                        <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
+                        <ContentCard key={piece.id} piece={piece} campaignId={campaignId} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
                       ))}
                     </div>
                   )}
@@ -4461,7 +4522,7 @@ export default function ContentApproval() {
                   </div>
                   <div className="ml-11 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {dayPieces.map(piece => (
-                      <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
+                      <ContentCard key={piece.id} piece={piece} campaignId={campaignId} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
                     ))}
                   </div>
                 </div>
@@ -4483,7 +4544,7 @@ export default function ContentApproval() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {segPieces.map(piece => (
-                    <ContentCard key={piece.id} piece={piece} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
+                    <ContentCard key={piece.id} piece={piece} campaignId={campaignId} onApprove={handleApprove} onReject={handleReject} onEdit={setEditingPiece} onAiRewrite={handleAiRewrite} loading={loadingPiece} rewriting={rewritingPiece} prescanResult={complianceScan?.byPiece[piece.id] ?? null} />
                   ))}
                 </div>
               </div>
