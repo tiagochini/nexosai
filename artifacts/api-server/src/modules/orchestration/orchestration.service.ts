@@ -210,58 +210,76 @@ async function enqueueOrExecute(
         log.warn({ dedupJobId, state, action: job.action }, "Stale completed dedup job — removing before re-enqueue");
         await existingJob.remove().catch(() => undefined);
       } else if (state === "active") {
-        // RC-011 FIX: Add age check for "active" jobs. After a server restart, BullMQ
-        // jobs that were in-flight remain "active" in Redis with no worker to extend
-        // the lock. Previously we honoured the dedup blindly — this blocked new
-        // executions indefinitely with no recovery path.
+        // RC-011 FIX: Zombie active job detection after server restart.
+        // BullMQ jobs that were in-flight remain "active" in Redis with no worker to
+        // renew the lock. We detect these by age (> lockDuration = 5 min after crash
+        // the lock has expired) and kill them so a fresh job can be queued.
         //
-        // With lockDuration=30s the worker renews every 15s. An orphaned job (no
-        // live worker) loses its lock in 30s; the stalledInterval check (30s) detects
-        // it within the following 30s → max orphan dwell = 60s. Any job that is still
-        // "active" after 90s without being detected stalled is a genuine long-runner
-        // with a live worker — honour the dedup.
+        // ROOT CAUSE OF PREVIOUS BUG: job.remove() on an active job requires the
+        // worker's lock token. Without it BullMQ rejects the call silently (our
+        // .catch(() => undefined) swallowed the error). queue.add() then returned the
+        // existing zombie via dedup — no new "waiting" job was ever created and the
+        // worker never woke up. The user had to wait 5+ min for stalledInterval to fire.
         //
-        // NOTE: lockDuration does NOT limit execution time. It only controls renewal
-        // frequency. Jobs can run for hours; only truly orphaned jobs stall.
+        // FIX: use moveToFailed('0', false) instead. BullMQ v5 runs a Lua script that
+        // checks whether the Redis lock key EXISTS:
+        //   • lock key EXISTS (TTL > 0)  → lock still valid → legitimate running job
+        //                                   → throws "Missing lock" → we honour dedup
+        //   • lock key MISSING (TTL = 0)  → lock expired → zombie confirmed
+        //                                   → moves to failed → slot freed → fresh job added
+        // This is atomic and safe: a live worker renewing every 150s is NEVER killed.
         const ageMs = Date.now() - (existingJob.timestamp ?? 0);
-        // 30 min threshold — this is a LAST RESORT safety net only.
-        // Normal orphan recovery happens via the stall mechanism (lockDuration=30s →
-        // lock expires in 30s after crash → stalledInterval=30s detects it within 30s
-        // → maxStalledCount=0 → fails → failed handler resets campaign → user retries).
-        // Total orphan recovery time ≈ 60s. The 30-min threshold here only activates
-        // if for some reason the stall mechanism didn't clear the job, preventing
-        // a user from being permanently blocked. It will NOT kill legitimate jobs
-        // because real running jobs have an active worker renewing the lock and will
-        // NEVER stall — they're safe for hours.
-        // 3 min threshold: genuine running jobs have a live worker renewing the lock
-        // every 15s. Orphaned jobs lose the lock in 30s and stall within another 30s.
-        // Anything "active" for 3+ min with no stall event is a zombie — safe to kill.
-        const ORPHAN_THRESHOLD_MS = 3 * 60_000;
+        // lockDuration is 300 s. After 5 min the lock has definitely expired on a zombie.
+        // Legitimate long-running jobs are safe because their worker keeps renewing the lock.
+        const ORPHAN_THRESHOLD_MS = 5 * 60_000;
         if (ageMs > ORPHAN_THRESHOLD_MS) {
-          log.warn({ dedupJobId, state, ageMs, action: job.action }, "RC-011: Zombie active job (3+ min, stall missed) — removing and re-queueing");
-          await existingJob.remove().catch(() => undefined);
-          // Fall through to add new job below
+          log.warn({ dedupJobId, state, ageMs, action: job.action }, "RC-011: Zombie active job (>5 min, lock expired) — clearing via moveToFailed");
+          let cleared = false;
+          try {
+            // moveToFailed with fake token '0': succeeds when Redis lock key is absent
+            // (expired zombie), throws when lock is still held (legitimate active job).
+            await existingJob.moveToFailed(
+              new Error("RC-011: zombie — lock expired, killed by enqueueOrExecute"),
+              "0",
+              false,
+            );
+            cleared = true;
+            log.info({ dedupJobId }, "RC-011: zombie cleared via moveToFailed (lock was absent in Redis)");
+          } catch (_moveErr) {
+            // Lock key still exists → the job is legitimately running or the stall
+            // mechanism hasn't fired yet. Fall back to remove() as a best-effort attempt.
+            await existingJob.remove().catch(() => undefined);
+            const afterRemove = await queue.getJob(dedupJobId);
+            if (!afterRemove) {
+              cleared = true;
+              log.info({ dedupJobId }, "RC-011: zombie cleared via remove() fallback");
+            } else {
+              log.warn(
+                { dedupJobId, ageMs },
+                "RC-011: cannot clear zombie (lock held or Redis error). Stall mechanism will recover within stalledInterval (~30 s). Honouring dedup.",
+              );
+              return { queued: true, jobId: dedupJobId };
+            }
+          }
+          if (!cleared) return { queued: true, jobId: dedupJobId };
+          // Fall through to add a fresh waiting job below
         } else {
-          // Job is actively being processed — honour the dedup, do not double-execute
+          // Job is actively being processed (age < 5 min) — honour the dedup
           log.info({ dedupJobId, state, ageMs, action: job.action }, "Dedup: job recently queued or actively running — skipping");
           return { queued: true, jobId: dedupJobId };
         }
       } else if (state === "waiting" || state === "delayed") {
-        // Job is waiting/delayed. If it has been waiting more than 30s the worker is
-        // not consuming (zombie BullMQ blocking connection) — execute directly instead.
-        const ageMs = Date.now() - (existingJob.timestamp ?? 0);
-        if (ageMs > 30_000) {
-          log.warn({ dedupJobId, state, ageMs, action: job.action }, "Zombie waiting job detected (worker not consuming) — executing directly");
-          await existingJob.remove().catch(() => undefined);
-          setImmediate(() => {
-            executeDirectly(job, logger).catch((execErr) =>
-              logger.error({ execErr, action: job.action }, "Direct execution (zombie-job fallback) failed"),
-            );
-          });
-          return { queued: false };
-        }
-        // Job was just added — honour the dedup
-        log.info({ dedupJobId, state, ageMs, action: job.action }, "Dedup: job recently queued — skipping");
+        // Job is already waiting in the queue. This is normal — the worker may be busy
+        // with other concurrent jobs (concurrency = 3). A "waiting" job does NOT mean
+        // the worker is dead; it just hasn't been picked up yet. Honour the dedup.
+        //
+        // PREVIOUS BUG: this path used executeDirectly after 30 s, which was wrong.
+        // "waiting" only indicates queueing delay, never worker failure. The worker
+        // processes waiting jobs as soon as a concurrency slot opens.
+        log.info(
+          { dedupJobId, state, ageMs: Date.now() - (existingJob.timestamp ?? 0), action: job.action },
+          "Dedup: job already waiting in queue — skipping",
+        );
         return { queued: true, jobId: dedupJobId };
       }
     }

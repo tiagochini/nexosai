@@ -397,20 +397,26 @@ export function initOrchestrationWorker(): Worker | null {
         // = 1440s worst case, which is well within Node.js's ability to renew every
         // 150s between LLM calls (each call awaits before the next starts).
         //
-        // stalledInterval raised to match: stall detection fires every 300s.
-        // Orphan dwell time after restart ≈ 600s (acceptable — checkpoint resume
-        // handles the actual re-enqueue and users see the job pick back up).
+        // stalledInterval: 30 s — stall detection fires every 30 s.
+        // After a server crash the orphaned job's lock expires after lockDuration (300 s).
+        // The next stalledInterval tick (≤ 30 s later) detects it and requeues.
+        // Total orphan recovery time after restart: ≤ 330 s (5.5 min worst case).
         //
-        // AUDIT FIX: maxStalledCount raised from 0 → 2.
-        // With maxStalledCount=0, a single stall from a slow LLM call kills the job
-        // as UnrecoverableError with no retry and no frontend notification — campaign
-        // gets permanently stuck in "generating". With 2 stall allowances, BullMQ
-        // requeues the job twice before escalating to a dead letter. The lockDuration
-        // of 300s means a true stall (>5min of no heartbeat) is rare; the allowance
-        // handles the edge case without risking double credit charges (the skipAgent()
-        // checkpoint system prevents re-running completed agents even on re-entry).
+        // Previously stalledInterval was 300 s (same as lockDuration), giving a worst-case
+        // of 600 s (10 min) — and RC-011's remove() bug meant it could be indefinite.
+        // RC-011 is now fixed (moveToFailed path) but stalledInterval=30 s is the
+        // belt-and-suspenders fallback that guarantees natural recovery even if
+        // RC-011 is bypassed or the user doesn't re-trigger manually.
+        //
+        // lockDuration stays at 300 s: the lock is renewed every 150 s (lockDuration/2).
+        // Each LLM call is a non-blocking await — the event loop is free between calls
+        // to process the renewal timer. A legitimate 16-agent content run (≤ 24 min)
+        // renews the lock safely throughout its lifetime.
+        //
+        // maxStalledCount=2: allows 2 stall detections before the job dies. Covers the
+        // edge case where a CPU-heavy JSON parse briefly delays a renewal tick.
         maxStalledCount: 2,
-        stalledInterval: 300_000,
+        stalledInterval: 30_000,
         lockDuration: 300_000,
       },
     );

@@ -219,6 +219,12 @@ Launch tracks by revenue target:
 - **Landing page**: All 6 occurrences of "29 agentes" → "34 agentes". `AgentesSection` updated with 7 categories (added Mentalidade + Time de Vendas with 5 agents). Solo plan item updated. Copyright 2025 → 2026 in `nexos-academy/src/App.tsx`.
 - **Professor Allan fix**: Zod schema limits raised (`lessonContent` 20 000, `question` 2 000, history content 5 000). `max_tokens` 1 024 → 2 048. System prompt expanded with 10 directives (practical examples, Brazilian context, APPLY not just recite). Frontend `lesson.tsx` truncates `lessonContent` to 15 000 chars + caps `keyPoints`/`previousTopics`/`upcomingTopics` before sending to API.
 
+## Integrações de Vídeo/Voz Pendentes
+
+- **HeyGen** — conta criada, API key disponível. Integrar quando o módulo de avatar/vídeo de vendas for desenvolvido (VSL com apresentador IA).
+- **ElevenLabs** — conta criada, API key disponível. Integrar quando geração de voz/narração para VSL e conteúdo de áudio for implementada.
+- Avisar o usuário quando chegar a hora de conectar essas APIs.
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
