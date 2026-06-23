@@ -408,14 +408,91 @@ type DbIntegrationProvider = "meta_ads" | "instagram" | "tiktok_ads" | "google_a
 
 type IntegrationCheckResult =
   | { status: "ok" }
-  | { status: "partial"; missing: { category: string; providers: string[]; reason: string }[] }
-  | { status: "blocked"; missing: { category: string; providers: string[]; reason: string }[] };
+  | { status: "blocked"; missing: { category: string; providers: string[]; reason: string; pieceTypes: string[] }[] };
 
-async function checkIntegrationsForLaunch(workspaceId: string): Promise<IntegrationCheckResult> {
-  const MESSAGING_PROVIDERS: DbIntegrationProvider[] = ["whatsapp_business", "telegram"];
-  const EMAIL_PROVIDERS: DbIntegrationProvider[] = ["rd_station", "activecampaign"];
-  const SOCIAL_PROVIDERS: DbIntegrationProvider[] = ["instagram", "tiktok_ads", "meta_ads"];
+// Maps each content piece type to the integration category it operationally requires.
+// If a piece of that type exists in the campaign, the corresponding integration MUST
+// be connected before launch — otherwise the piece cannot be dispatched/published.
+const PIECE_TYPE_REQUIRES: Record<string, { category: string; providers: DbIntegrationProvider[]; displayProviders: string[]; reason: string } | null> = {
+  // Messaging
+  email_sequence:           { category: "E-mail",          providers: ["rd_station", "activecampaign"],            displayProviders: ["RD Station", "ActiveCampaign", "Resend"], reason: "Disparo da sequência de e-mails" },
+  whatsapp_broadcast:       { category: "WhatsApp",         providers: ["whatsapp_business"],                       displayProviders: ["WhatsApp Business"],                      reason: "Disparo de broadcast no WhatsApp" },
+  whatsapp_group_message:   { category: "WhatsApp",         providers: ["whatsapp_business"],                       displayProviders: ["WhatsApp Business"],                      reason: "Envio de mensagens para grupos WhatsApp" },
+  prelaunch_warming:        { category: "WhatsApp",         providers: ["whatsapp_business"],                       displayProviders: ["WhatsApp Business"],                      reason: "Aquecimento pré-lançamento via WhatsApp" },
+  telegram_message:         { category: "Telegram",         providers: ["telegram"],                                displayProviders: ["Telegram"],                               reason: "Disparo de mensagens no Telegram" },
+  // Paid ads
+  ad_copy:                  { category: "Meta Ads",         providers: ["meta_ads"],                                displayProviders: ["Facebook / Meta Ads"],                    reason: "Veiculação dos anúncios criados" },
+  targeting_config:         { category: "Meta Ads",         providers: ["meta_ads"],                                displayProviders: ["Facebook / Meta Ads"],                    reason: "Configuração de audiências no Meta Ads" },
+  media_buying_plan:        { category: "Meta Ads",         providers: ["meta_ads"],                                displayProviders: ["Facebook / Meta Ads"],                    reason: "Execução do plano de media buying" },
+  // Organic social (auto-post)
+  social_post:              { category: "Instagram",        providers: ["instagram", "meta_ads"],                   displayProviders: ["Instagram", "Facebook / Meta Ads"],       reason: "Auto-post de conteúdo orgânico" },
+  stories_sequence:         { category: "Instagram",        providers: ["instagram", "meta_ads"],                   displayProviders: ["Instagram", "Facebook / Meta Ads"],       reason: "Publicação automática de Stories" },
+  // No integration required — these are pure content assets dispatched via other pieces
+  vsl_script:               null,
+  sales_page:               null,
+  landing_page_structure:   null,
+  creative_direction:       null,
+  cpl_script:               null,
+  webinar_script:           null,
+  live_script:              null,
+  media_brief:              null,
+  content_calendar:         null,
+  video_strategy:           null,
+  creator_growth_plan:      null,
+  compliance_report:        null,
+  optimization_report:      null,
+  cart_open_announcement:   null,
+  cart_close_urgency:       null,
+  remarketing_sequence:     null,
+  seo_organic_plan:         null,
+};
 
+async function checkIntegrationsForLaunch(
+  workspaceId: string,
+  campaignId: string,
+): Promise<IntegrationCheckResult> {
+  // 1. Get all approved pieces for this specific campaign
+  const pieces = await db
+    .select({ type: contentPiecesTable.type })
+    .from(contentPiecesTable)
+    .where(
+      and(
+        eq(contentPiecesTable.campaignId, campaignId),
+        eq(contentPiecesTable.status, "approved"),
+      ),
+    );
+
+  const pieceTypes = [...new Set(pieces.map((p) => p.type))];
+
+  // 2. Determine which integration categories this campaign operationally requires
+  const requiredCategories = new Map<string, { providers: DbIntegrationProvider[]; displayProviders: string[]; reason: string; pieceTypes: string[] }>();
+
+  for (const type of pieceTypes) {
+    const req = PIECE_TYPE_REQUIRES[type];
+    if (!req) continue;
+
+    const existing = requiredCategories.get(req.category);
+    if (existing) {
+      existing.pieceTypes.push(type);
+    } else {
+      requiredCategories.set(req.category, {
+        providers: req.providers,
+        displayProviders: req.displayProviders,
+        reason: req.reason,
+        pieceTypes: [type],
+      });
+    }
+  }
+
+  // E-mail: RESEND_API_KEY satisfies the e-mail requirement even without a DB integration
+  if (env.RESEND_API_KEY && requiredCategories.has("E-mail")) {
+    requiredCategories.delete("E-mail");
+  }
+
+  if (requiredCategories.size === 0) return { status: "ok" };
+
+  // 3. Check which required providers are actually connected
+  const allRequiredProviders = [...requiredCategories.values()].flatMap((r) => r.providers);
   const connected = await db
     .select({ provider: workspaceIntegrationsTable.provider })
     .from(workspaceIntegrationsTable)
@@ -423,79 +500,50 @@ async function checkIntegrationsForLaunch(workspaceId: string): Promise<Integrat
       and(
         eq(workspaceIntegrationsTable.workspaceId, workspaceId),
         eq(workspaceIntegrationsTable.status, "connected"),
-        inArray(workspaceIntegrationsTable.provider, [
-          ...MESSAGING_PROVIDERS,
-          ...EMAIL_PROVIDERS,
-          ...SOCIAL_PROVIDERS,
-        ] as DbIntegrationProvider[]),
+        inArray(workspaceIntegrationsTable.provider, [...new Set(allRequiredProviders)] as DbIntegrationProvider[]),
       ),
     );
 
-  const connectedProviders = connected.map((r) => r.provider as string);
-  const hasMessaging = MESSAGING_PROVIDERS.some((p) => connectedProviders.includes(p));
-  const hasEmail = EMAIL_PROVIDERS.some((p) => connectedProviders.includes(p)) || !!env.RESEND_API_KEY;
-  const hasSocial = SOCIAL_PROVIDERS.some((p) => connectedProviders.includes(p));
+  const connectedProviders = new Set(connected.map((r) => r.provider as string));
 
-  // All critical channels present → fully OK
-  if (hasMessaging && hasEmail) return { status: "ok" };
+  // 4. Find categories where NONE of the required providers are connected
+  const missing: { category: string; providers: string[]; reason: string; pieceTypes: string[] }[] = [];
 
-  const missing: { category: string; providers: string[]; reason: string }[] = [];
-  if (!hasMessaging) {
-    missing.push({
-      category: "Mensagens",
-      providers: ["WhatsApp Business", "Telegram"],
-      reason: "Disparo de sequências de mensagens durante o lançamento",
-    });
-  }
-  if (!hasEmail) {
-    missing.push({
-      category: "E-mail",
-      providers: ["RD Station", "ActiveCampaign", "Resend"],
-      reason: "Sequência de e-mails de lançamento",
-    });
-  }
-  if (!hasSocial) {
-    missing.push({
-      category: "Rede Social",
-      providers: ["Instagram", "Facebook/Meta Ads", "TikTok"],
-      reason: "Auto-post de conteúdo e remarketing pago",
-    });
+  for (const [category, req] of requiredCategories) {
+    const hasAny = req.providers.some((p) => connectedProviders.has(p));
+    if (!hasAny) {
+      missing.push({
+        category,
+        providers: req.displayProviders,
+        reason: req.reason,
+        pieceTypes: req.pieceTypes,
+      });
+    }
   }
 
-  // Has at least one core channel (messaging OR email) → partial warning, not a hard block
-  if (hasMessaging || hasEmail) {
-    return { status: "partial", missing };
-  }
-
-  // Zero core channels → hard block
+  if (missing.length === 0) return { status: "ok" };
   return { status: "blocked", missing };
 }
 
 // POST /campaigns/:campaignId/execute/launch
-// Query param: ?skipIntegrationWarning=true  →  bypasses soft (partial) check
 router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
-  const skipWarning = req.query["skipIntegrationWarning"] === "true";
 
   try {
-    const integrationCheck = await checkIntegrationsForLaunch(req.auth.workspaceId);
+    // Campaign-aware integration gate: checks only the integrations required by
+    // THIS campaign's approved content pieces. A campaign with email_sequence needs
+    // email connected; one with ad_copy needs Meta Ads; one with whatsapp_broadcast
+    // needs WhatsApp Business — and so on. Pure content assets (VSL, landing page,
+    // creative_direction) have no integration requirement.
+    const integrationCheck = await checkIntegrationsForLaunch(req.auth.workspaceId, campaignId);
 
     if (integrationCheck.status === "blocked") {
-      // Hard block: zero core channels — cannot launch at all
+      const categoryList = integrationCheck.missing.map((m) => m.category).join(", ");
       throw new AppError(
         422,
-        `Conecte pelo menos WhatsApp/Telegram OU RD Station/ActiveCampaign antes de lançar.`,
+        `Para lançar esta campanha, conecte as integrações necessárias: ${categoryList}. Acesse /integracoes para conectar.`,
         "MISSING_INTEGRATIONS",
         { missing: integrationCheck.missing, connectUrl: "/integracoes" },
-      );
-    }
-
-    // Partial integrations: proceed with launch — integrações externas nunca bloqueiam execução.
-    // Missing channels are logged and included in the launch response as warnings only.
-    if (integrationCheck.status === "partial") {
-      req.log.warn(
-        { workspaceId: req.auth.workspaceId, missing: integrationCheck.missing },
-        "[LAUNCH] Partial integrations — proceeding without blocking",
       );
     }
 
@@ -530,7 +578,7 @@ router.post("/:campaignId/execute/launch", async (req, res): Promise<void> => {
 
     // Cross-Agent Validation — blocks launch if critical financial/alignment conflicts found
     const validation = await runCrossAgentValidation(campaignId, req.auth.workspaceId, req.log);
-    if (!validation.isViable && !skipWarning) {
+    if (!validation.isViable) {
       const criticalBlocker = validation.blockers[0];
       throw new AppError(
         422,
