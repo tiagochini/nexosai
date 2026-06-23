@@ -24,6 +24,7 @@ import {
   Rocket, RefreshCw, Radio, TrendingUp, BarChart3,
   Users, Mail, Check, X, BarChart2, ChevronDown, ChevronUp, CornerDownLeft,
   Mic, MicOff, Paperclip, ImageIcon, File, FileAudio, FileVideo,
+  Target, DollarSign, Calendar, Clock, Shield, Star, Bot, Flame, Trophy,
 } from "lucide-react";
 import { toast } from "sonner";
 import nexosLogo from "/nexos-logo.png";
@@ -77,11 +78,11 @@ const TYPE_LABELS: Record<string, { label: string; tag: string; icon: React.Elem
   affiliate:           { label: "Afiliado",         tag: "Produto de terceiros", icon: Users,     color: "text-lime-400" },
 };
 
-const TRACK_LABELS: Record<string, { label: string; range: string }> = {
-  six_digits:      { label: "6 Dígitos",  range: "R$ 100k – 999k" },
-  eight_digits:    { label: "8 Dígitos",  range: "R$ 10M – 99M" },
-  ten_digits:      { label: "10 Dígitos", range: "R$ 100M+" },
-  not_applicable:  { label: "Crescimento", range: "Sem meta de faturamento concentrado" },
+const TRACK_LABELS: Record<string, { label: string; range: string; color: string }> = {
+  six_digits:      { label: "6 Dígitos",   range: "R$ 100k – 999k em 7 dias",             color: "text-blue-400 border-blue-400/40 bg-blue-400/10" },
+  eight_digits:    { label: "8 Dígitos",   range: "R$ 10M – 99M em 7 dias",               color: "text-violet-400 border-violet-400/40 bg-violet-400/10" },
+  ten_digits:      { label: "10 Dígitos",  range: "R$ 100M+ em 7 dias",                    color: "text-amber-400 border-amber-400/40 bg-amber-400/10" },
+  not_applicable:  { label: "Crescimento", range: "Sem meta de faturamento concentrado",   color: "text-teal-400 border-teal-400/40 bg-teal-400/10" },
 };
 
 function AgentAvatar({ agentId, size = "sm" }: { agentId?: string; size?: "sm" | "md" }) {
@@ -244,6 +245,226 @@ function TypeProposalCard({
   );
 }
 
+// ── Launch model labels ─────────────────────────────────────────────────────
+const MODEL_LABELS: Record<string, string> = {
+  plf: "PLF — Product Launch Formula",
+  formula_de_lancamento: "Fórmula de Lançamento",
+  semente: "Lançamento Semente",
+  afiliado: "Lançamento de Afiliado",
+  perpetual: "Perpétuo / Evergreen",
+  custom: "Personalizado",
+};
+
+const TIMELINE_PHASES = [
+  { day: "D-7 → D-5", phase: "Aquecimento",   desc: "Autoridade · Antecipação · Audiência aquecida",  icon: Flame,    color: "text-orange-400" },
+  { day: "D-4 → D-2", phase: "Valor",          desc: "Conteúdo premium · Prova social · Reciprocidade", icon: Star,     color: "text-yellow-400" },
+  { day: "D-1",        phase: "Abertura",       desc: "Aviso 24h · Email + WhatsApp simultâneos",        icon: Rocket,   color: "text-primary" },
+  { day: "D0 → D3",   phase: "Carrinho Aberto", desc: "Depoimentos · Objeções · Urgência crescente",    icon: Target,   color: "text-green-400" },
+  { day: "D4 → D5",   phase: "Escassez",        desc: "Contagem regressiva · Vagas limitadas",           icon: Clock,    color: "text-red-400" },
+  { day: "D6 → D7",   phase: "Fechamento",      desc: "Último aviso · Encerramento · Conversão final",  icon: Trophy,   color: "text-amber-400" },
+];
+
+const EXEC_AGENTS = [
+  { role: "Comando",           provider: "Claude",  specialty: "Orquestra toda a execução" },
+  { role: "Estrategista",      provider: "Claude",  specialty: "Plano de lançamento detalhado" },
+  { role: "Copywriter",        provider: "GPT-4o",  specialty: "Textos persuasivos por plataforma" },
+  { role: "Analista de Público",provider: "Gemini", specialty: "Segmentação e personas" },
+  { role: "Gestor de Tráfego", provider: "Gemini",  specialty: "Plano de mídia paga" },
+  { role: "Compliance",        provider: "Claude",  specialty: "LGPD · CVM · padrões éticos" },
+];
+
+function MasterPlanView({
+  formData,
+  onApprove,
+  onBack,
+  finalizing,
+}: {
+  formData: Record<string, string>;
+  onApprove: () => Promise<void>;
+  onBack: () => void;
+  finalizing: boolean;
+}) {
+  const productName   = formData["product.name"]  || formData["product.nome"]  || "Produto";
+  const rawPrice      = Number(formData["product.price"] || formData["product.preco"] || 0);
+  const audience      = formData["audience.avatar"] || formData["audience.target"] || formData["audience.primaryPersona"] || "Definido no briefing";
+  const rawBudget     = Number(formData["campaign.budget.total"] || formData["campaign.budget"] || 0);
+  const rawRevenue    = Number(formData["campaign.revenueTarget"] || 0);
+  const launchModel   = formData["campaign.model"] || formData["launch.model"] || formData["campaign.type"] || "plf";
+  const transformation= formData["product.transformation"] || formData["product.promise"] || "";
+  const rawDuration   = Number(formData["launch.duration"] || 7);
+  const trackKey      = formData["campaign.track"] || formData["launch.track"] || "six_digits";
+  const track         = TRACK_LABELS[trackKey] ?? TRACK_LABELS["six_digits"];
+  const modelLabel    = MODEL_LABELS[launchModel] ?? launchModel;
+
+  const fmtBRL = (v: number) =>
+    v > 0 ? `R$${v.toLocaleString("pt-BR")}` : "—";
+
+  // Estimated sales count
+  const estSales = rawPrice > 0 && rawRevenue > 0 ? Math.ceil(rawRevenue / rawPrice) : null;
+
+  return (
+    <div className="flex flex-col min-h-screen max-w-5xl mx-auto w-full gap-0">
+      {/* ── Top bar ── */}
+      <div className="border-b border-border/50 pb-4 mb-6">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-4"
+        >
+          <ArrowLeft className="h-3 w-3" />Voltar ao Briefing
+        </button>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+              <h1 className="text-2xl md:text-3xl font-mono uppercase tracking-tighter font-black text-foreground">
+                Master Plan do Lançamento
+              </h1>
+            </div>
+            <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
+              Revise o plano gerado pela inteligência NexOS · Aprove para iniciar os agentes
+            </p>
+          </div>
+          <Badge
+            variant="outline"
+            className={`rounded-none font-mono text-sm px-4 py-1.5 font-bold self-start md:self-auto ${track.color}`}
+          >
+            {track.label}
+          </Badge>
+        </div>
+      </div>
+
+      {/* ── Summary grid ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {[
+          { icon: Target,      label: "Meta de Receita",  value: fmtBRL(rawRevenue),            sub: estSales ? `≈ ${estSales} vendas` : undefined },
+          { icon: DollarSign,  label: "Preço do Produto", value: fmtBRL(rawPrice),               sub: "ticket unitário" },
+          { icon: BarChart3,   label: "Budget de Tráfego",value: rawBudget > 0 ? fmtBRL(rawBudget) : "A definir", sub: rawRevenue > 0 && rawBudget > 0 ? `ROAS alvo: ${(rawRevenue / rawBudget).toFixed(1)}x` : undefined },
+          { icon: Calendar,    label: "Duração",          value: `${rawDuration} dias`,          sub: modelLabel },
+        ].map(({ icon: Icon, label, value, sub }) => (
+          <div key={label} className="border border-border/40 bg-card/40 p-4 flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Icon className="h-3.5 w-3.5" />
+              <span className="font-mono text-[10px] uppercase tracking-widest">{label}</span>
+            </div>
+            <span className="font-mono text-lg font-black text-foreground">{value}</span>
+            {sub && <span className="font-mono text-[10px] text-muted-foreground/60">{sub}</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Produto + Público ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        <div className="border border-border/40 bg-card/40 p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="h-3.5 w-3.5 text-primary" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Produto</span>
+          </div>
+          <p className="font-mono text-base font-bold text-foreground">{productName}</p>
+          {transformation && (
+            <p className="font-mono text-xs text-muted-foreground/80 leading-relaxed italic">"{transformation}"</p>
+          )}
+          <div className="pt-2 border-t border-border/30">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Modelo de Lançamento</span>
+            <p className="font-mono text-sm font-semibold text-primary mt-0.5">{modelLabel}</p>
+          </div>
+        </div>
+        <div className="border border-border/40 bg-card/40 p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="h-3.5 w-3.5 text-primary" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Público-Alvo</span>
+          </div>
+          <p className="font-mono text-sm text-foreground/90 leading-relaxed">{audience}</p>
+          <div className="pt-2 border-t border-border/30">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Track</span>
+            <p className={`font-mono text-sm font-bold mt-0.5 ${track.color.split(" ")[0]}`}>{track.label} · {track.range}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Linha do tempo ── */}
+      <div className="border border-border/40 bg-card/30 p-5 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="h-4 w-4 text-primary" />
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Linha do Tempo de Execução</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {TIMELINE_PHASES.map(({ day, phase, desc, icon: Icon, color }) => (
+            <div key={day} className="border border-border/30 bg-background/40 p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Icon className={`h-3.5 w-3.5 ${color}`} />
+                <span className={`font-mono text-[10px] font-bold uppercase tracking-widest ${color}`}>{day}</span>
+              </div>
+              <p className="font-mono text-xs font-bold text-foreground">{phase}</p>
+              <p className="font-mono text-[10px] text-muted-foreground/70 leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Agentes que vão executar ── */}
+      <div className="border border-border/40 bg-card/30 p-5 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Bot className="h-4 w-4 text-primary" />
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Agentes de IA Alocados</span>
+          <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 py-0 border-primary/30 text-primary">
+            {EXEC_AGENTS.length} agentes
+          </Badge>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {EXEC_AGENTS.map(({ role, provider, specialty }) => (
+            <div key={role} className="border border-border/30 bg-background/30 p-3 flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-foreground">{role}</span>
+                <Badge variant="outline" className="rounded-none font-mono text-[9px] px-1.5 py-0 border-primary/20 text-primary/80">{provider}</Badge>
+              </div>
+              <span className="font-mono text-[10px] text-muted-foreground/70">{specialty}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Gatilhos mentais ── */}
+      <div className="border border-border/40 bg-card/30 p-5 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="h-4 w-4 text-primary" />
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Gatilhos Mentais do Plano</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {["Autoridade", "Prova Social", "Antecipação", "Escassez", "Urgência", "Reciprocidade", "Comunidade", "Transformação"].map((g) => (
+            <span key={g} className="border border-border/40 bg-muted/20 px-3 py-1.5 font-mono text-[11px] text-foreground/80 uppercase tracking-wide">
+              {g}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CTA de aprovação ── */}
+      <div className="border border-primary/30 bg-primary/5 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <p className="font-mono text-sm font-bold text-foreground">
+            Plano completo · {EXEC_AGENTS.length} agentes prontos para execução
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground mt-0.5">
+            Ao aprovar, os agentes iniciam imediatamente — estratégia, conteúdo e calendário editorial
+          </p>
+        </div>
+        <Button
+          onClick={() => void onApprove()}
+          disabled={finalizing}
+          className="font-mono uppercase tracking-widest rounded-none gap-2 h-14 px-8 text-sm btn-weapon-primary whitespace-nowrap shrink-0"
+        >
+          {finalizing
+            ? <><Loader2 className="h-5 w-5 animate-spin" />Iniciando Agentes...</>
+            : <><Rocket className="h-5 w-5" />Aprovar e Iniciar Agentes<ChevronRight className="h-5 w-5" /></>
+          }
+        </Button>
+      </div>
+
+      <div className="h-8" />
+    </div>
+  );
+}
+
 export default function CampaignIntake() {
   const [, params] = useRoute("/campaigns/:id/intake");
   const campaignId = params?.id || "";
@@ -277,6 +498,9 @@ export default function CampaignIntake() {
 
   // Budget simulator panel
   const [showSimulator, setShowSimulator] = useState(false);
+
+  // Master Plan view — shown after chat completes, before calling finalize
+  const [showMasterPlan, setShowMasterPlan] = useState(false);
 
   // Persist draft to localStorage as user types — survives any page reload
   useEffect(() => {
@@ -700,6 +924,18 @@ export default function CampaignIntake() {
 
   const isComplete = typeof data?.completeness === "object" && (data?.completeness as { valid?: boolean })?.valid;
 
+  // ── Master Plan view: shown when user clicks the big button ──
+  if (showMasterPlan) {
+    return (
+      <MasterPlanView
+        formData={formData}
+        onApprove={handleFinalize}
+        onBack={() => setShowMasterPlan(false)}
+        finalizing={finalizing}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 gap-4 md:gap-5 max-w-5xl mx-auto w-full min-h-0">
       {/* ── Header ── */}
@@ -1007,17 +1243,13 @@ export default function CampaignIntake() {
                   );
                 })()}
 
-                {/* The big button */}
+                {/* The big button — opens Master Plan for review first */}
                 <Button
-                  onClick={() => void handleFinalize()}
-                  disabled={finalizing}
+                  onClick={() => setShowMasterPlan(true)}
                   className="w-full font-mono uppercase tracking-widest rounded-none gap-2 h-14 text-sm btn-weapon-primary"
                   style={{ fontSize: "0.8rem", letterSpacing: "0.12em" }}
                 >
-                  {finalizing
-                    ? <><Loader2 className="h-5 w-5 animate-spin" />Preparando Master Plan...</>
-                    : <><Rocket className="h-5 w-5" />Ver e Aprovar Master Plan do Lançamento<ChevronRight className="h-5 w-5" /></>
-                  }
+                  <Rocket className="h-5 w-5" />Ver e Aprovar Master Plan do Lançamento<ChevronRight className="h-5 w-5" />
                 </Button>
 
                 <p className="font-mono text-[10px] text-center text-muted-foreground/40 uppercase tracking-widest -mt-1">
@@ -1331,10 +1563,9 @@ export default function CampaignIntake() {
                   {saveMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
                 {isComplete && (
-                  <Button onClick={() => void handleFinalize()} disabled={finalizing}
+                  <Button onClick={() => setShowMasterPlan(true)}
                     className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10">
-                    {finalizing ? <><Loader2 className="h-4 w-4 animate-spin" />Finalizando...</>
-                      : <><Zap className="h-4 w-4" />Finalizar e Iniciar Estratégia</>}
+                    <Rocket className="h-4 w-4" />Ver e Aprovar Master Plan
                   </Button>
                 )}
               </div>
