@@ -1983,13 +1983,8 @@ export default function CampaignDetail() {
         };
       }
       case "compliance_review": {
-        const cr = (brainDataRaw["complianceReview"] ?? {}) as Record<string, unknown>;
-        const score = cr["score"] as number | undefined;
-        const critical = (cr["violations"] as unknown[] | undefined)?.filter((v: any) => v?.severity === "critical").length ?? 0;
-        return {
-          label: "Resolver Compliance",
-          description: `🛡️ O Agente de Compliance encontrou violações que precisam da sua decisão${score !== undefined ? ` (Score: ${score}/100)` : ""}${critical > 0 ? ` — ${critical} crítica${critical !== 1 ? "s" : ""}` : ""}. Aceite as correções, ajuste ou publique assim mesmo.`,
-        };
+        // Button hidden — ComplianceReviewModal handles resolution in both Fundador and Arquiteto views
+        return null;
       }
       case "strategy_ready": return { phase: "content", label: "Gerar Conteúdo", description: "Estratégia validada pelos agentes. Clique para gerar as 16+ peças de conteúdo do lançamento." };
       case "awaiting_approval": {
@@ -2184,6 +2179,19 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {/* ─── Compliance Resolution (Fundador) — shown when pipeline is paused for compliance ─── */}
+        {campaign.status === "compliance_review" && (() => {
+          const cr = (brainDataRaw["complianceReview"] ?? null) as Record<string, unknown> | null;
+          if (!cr || !cr["violations"]) return null;
+          return (
+            <ComplianceReviewModal
+              campaignId={campaignId}
+              complianceReview={cr as any}
+              onResolved={() => void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) })}
+            />
+          );
+        })()}
 
         {/* ─── Acesso Rápido a Criativos (Fundador) ─────────────────────────────── */}
         {["awaiting_approval","approved","executing","live","completed"].includes(campaign.status) && (
