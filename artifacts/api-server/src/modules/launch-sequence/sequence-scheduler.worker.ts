@@ -261,12 +261,15 @@ async function recoverStuckCampaigns(): Promise<void> {
           : undefined,
       };
 
-      // If strategy was completed (checkpoint shows "strategy" in completedSteps), the
-      // user shouldn't have to redo intake. Reset to strategy_ready so they can proceed
-      // directly to content generation. Otherwise reset to intake (strategy never finished).
+      // If strategy was completed (checkpoint shows "strategy" in completedSteps), reset to
+      // strategy_ready so content generation can proceed directly. Otherwise keep the
+      // campaign in "analyzing" — NEVER reset to "intake" during an auto-recovery retry.
+      // Resetting to "intake" causes the frontend to redirect to the briefing page mid-run,
+      // which breaks UX. The strategy agent will re-run from "analyzing" automatically.
+      // Only after retryCount >= 3 (auto-skip path above) is user intervention needed.
       const savedCp = (brain["pipelineCheckpoint"] as { completedSteps?: string[] } | undefined);
       const strategyDone = savedCp?.completedSteps?.includes("strategy") ?? false;
-      const targetStatus = strategyDone ? "strategy_ready" : "intake";
+      const targetStatus = strategyDone ? "strategy_ready" : "analyzing";
 
       await db
         .update(campaignsTable)

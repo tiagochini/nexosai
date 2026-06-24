@@ -481,7 +481,10 @@ export default function CampaignIntake() {
     catch { return ""; }
   });
   const [sending, setSending] = useState(false);
-  const [chatComplete, setChatComplete] = useState(false);
+  const [chatComplete, setChatComplete] = useState(() => {
+    try { return localStorage.getItem(`nexos:chatComplete:${campaignId}`) === "1"; }
+    catch { return false; }
+  });
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [finalizing, setFinalizing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -620,7 +623,7 @@ export default function CampaignIntake() {
         const r0 = result as unknown as { answeredRequired?: number; totalRequired?: number };
         if (r0.answeredRequired != null) setAnsweredRequired(r0.answeredRequired);
         if (r0.totalRequired != null) setTotalRequired(r0.totalRequired);
-        if (result.isComplete) setChatComplete(true);
+        if (result.isComplete) { setChatComplete(true); try { localStorage.setItem(`nexos:chatComplete:${campaignId}`, "1"); } catch { /* ignore */ } }
         if (result.proposedType && result.proposedTrack) {
           setPendingProposal({ type: result.proposedType, track: result.proposedTrack, reason: result.proposedReason });
         }
@@ -671,7 +674,7 @@ export default function CampaignIntake() {
       const r1 = result as unknown as { answeredRequired?: number; totalRequired?: number };
       if (r1.answeredRequired != null) setAnsweredRequired(r1.answeredRequired);
       if (r1.totalRequired != null) setTotalRequired(r1.totalRequired);
-      if (result.isComplete) setChatComplete(true);
+      if (result.isComplete) { setChatComplete(true); try { localStorage.setItem(`nexos:chatComplete:${campaignId}`, "1"); } catch { /* ignore */ } }
     } catch {
       toast.error("Erro ao confirmar modelo. Tente novamente.");
     } finally {
@@ -847,7 +850,7 @@ export default function CampaignIntake() {
       const r2 = result as unknown as { answeredRequired?: number; totalRequired?: number };
       if (r2.answeredRequired != null) setAnsweredRequired(r2.answeredRequired);
       if (r2.totalRequired != null) setTotalRequired(r2.totalRequired);
-      if (result.isComplete) setChatComplete(true);
+      if (result.isComplete) { setChatComplete(true); try { localStorage.setItem(`nexos:chatComplete:${campaignId}`, "1"); } catch { /* ignore */ } }
 
       if (result.proposedType && result.proposedTrack) {
         setPendingProposal({
