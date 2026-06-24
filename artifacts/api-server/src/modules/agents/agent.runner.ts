@@ -305,21 +305,53 @@ export interface TemporalContextOpts {
  * Exported so the scheduler and other services can build the same block
  * when invoking agents during timed dispatches.
  */
+/** Format a Date into its named parts in a specific IANA timezone using formatToParts.
+ *  Returns a map like { weekday, day, month, year, hour, minute, tzOffset } */
+function tzParts(date: Date, tz: string): Record<string, string> {
+  const dtf = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: tz,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZoneName: "shortOffset",
+  });
+  const map: Record<string, string> = {};
+  for (const p of dtf.formatToParts(date)) {
+    if (p.type !== "literal") map[p.type] = p.value;
+  }
+  return map;
+}
+
+/** Format a Date to ISO date string (YYYY-MM-DD) in a given timezone without locale quirks. */
+function tzIsoDate(date: Date, tz: string): string {
+  const dtf = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+  return dtf.format(date); // yields "2026-06-24"
+}
+
+/** Derive a short TZ abbreviation (BRT, UTC+05, etc.) from an IANA timezone. */
+function tzAbbreviation(date: Date, tz: string): string {
+  if (tz.includes("Sao_Paulo")) return "BRT";
+  // Use timeZoneName:"shortOffset" to get e.g. "GMT-3", strip GMT prefix
+  const dtf = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" });
+  const parts = dtf.formatToParts(date);
+  const tzName = parts.find(p => p.type === "timeZoneName")?.value ?? "";
+  return tzName.replace("GMT", "UTC") || tz;
+}
+
 export function buildTemporalContextBlock(opts: TemporalContextOpts = {}): string {
   const tz = opts.timezone ?? "America/Sao_Paulo";
   const now = new Date();
 
-  const dateStr = now.toLocaleDateString("pt-BR", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz,
-  });
-  const isoDate = now.toLocaleDateString("en-CA", { timeZone: tz });
-  const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz });
+  const p = tzParts(now, tz);
+  const isoDate = tzIsoDate(now, tz);
+  const tzAbbr = tzAbbreviation(now, tz);
 
-  // Derive TZ abbreviation from offset
-  const offsetMin = -now.getTimezoneOffset();
-  const sign = offsetMin >= 0 ? "+" : "-";
-  const absH = Math.floor(Math.abs(offsetMin) / 60).toString().padStart(2, "0");
-  const tzAbbr = tz.includes("Sao_Paulo") ? "BRT" : `UTC${sign}${absH}`;
+  const dateStr = `${p.weekday}, ${p.day} de ${p.month} de ${p.year}`;
+  const timeStr = `${p.hour}:${p.minute}`;
 
   let block = `## CONTEXTO TEMPORAL OBRIGATÓRIO — PRECISÃO CIRÚRGICA
 
@@ -329,11 +361,9 @@ export function buildTemporalContextBlock(opts: TemporalContextOpts = {}): strin
 
   // Launch sequence context — only when sequence is active
   if (opts.launchStartAt) {
-    const startIso = opts.launchStartAt.toLocaleDateString("en-CA", { timeZone: tz });
-    const startStr = opts.launchStartAt.toLocaleDateString("pt-BR", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: tz,
-    });
-    block += `**Lançamento iniciou:** ${startStr} (${startIso})\n`;
+    const sp = tzParts(opts.launchStartAt, tz);
+    const startIso = tzIsoDate(opts.launchStartAt, tz);
+    block += `**Lançamento iniciou:** ${sp.weekday}, ${sp.day} de ${sp.month} de ${sp.year} (${startIso})\n`;
 
     if (opts.currentDayIndex != null) {
       const dayNum = opts.currentDayIndex + 1;
@@ -350,13 +380,8 @@ export function buildTemporalContextBlock(opts: TemporalContextOpts = {}): strin
   }
 
   if (opts.scheduledAt) {
-    const schedStr = opts.scheduledAt.toLocaleDateString("pt-BR", {
-      weekday: "long", day: "numeric", month: "long", timeZone: tz,
-    });
-    const schedTime = opts.scheduledAt.toLocaleTimeString("pt-BR", {
-      hour: "2-digit", minute: "2-digit", timeZone: tz,
-    });
-    block += `**Este disparo está agendado para:** ${schedStr} às ${schedTime} ${tzAbbr}\n`;
+    const scp = tzParts(opts.scheduledAt, tz);
+    block += `**Este disparo está agendado para:** ${scp.weekday}, ${scp.day} de ${scp.month} às ${scp.hour}:${scp.minute} ${tzAbbr}\n`;
   }
 
   block += `
