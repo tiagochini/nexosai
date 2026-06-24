@@ -35,6 +35,7 @@ import VslsPage from "@/pages/vsls/index";
 import RevenuePage from "@/pages/revenue/index";
 import ContentApproval from "@/pages/campaigns/content";
 import CreativesPage from "@/pages/campaigns/creatives";
+import CampaignStrategyPage from "@/pages/campaigns/strategy";
 import AffiliatePage from "@/pages/affiliate/index";
 import SelfProofPage from "@/pages/self-proof/index";
 import CompliancePage from "@/pages/compliance/index";
@@ -168,6 +169,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/campaigns/:id/creatives">
         {() => <ProtectedRoute><CreativesPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/campaigns/:id/strategy">
+        {() => <ProtectedRoute><CampaignStrategyPage /></ProtectedRoute>}
       </Route>
       <Route path="/campaigns/:id">
         {() => (

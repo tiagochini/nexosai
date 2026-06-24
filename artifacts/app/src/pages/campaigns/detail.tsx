@@ -3427,51 +3427,81 @@ export default function CampaignDetail() {
       {activeTab === "estrategia" && (
         <div className="space-y-4">
 
-          {/* Botão de aprovação — só aparece quando strategy_ready */}
-          {campaign.status === "strategy_ready" && (
-            <div className="border border-cyan-400/30 bg-cyan-400/[0.04] p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex items-center gap-2 flex-1">
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" style={{ boxShadow: "0 0 6px hsl(180 100% 60%)" }} />
-                <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold">
-                  Masterplan pronto — Revise e aprove para gerar o conteúdo
-                </span>
+          {/* ─ Masterplan card — link to dedicated page ─ */}
+          {campaign.status === "analyzing" && (
+            <div className="border border-primary/30 bg-primary/[0.04] p-6 flex flex-col items-center gap-4 text-center">
+              <div className="relative">
+                <div className="w-12 h-12 border border-primary/30 bg-primary/5 flex items-center justify-center">
+                  <Brain className="h-5 w-5 text-primary animate-pulse" />
+                </div>
+                <div className="absolute -top-1 -left-1 w-3 h-3 border-t border-l border-primary/40" />
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b border-r border-primary/40" />
+              </div>
+              <div>
+                <p className="font-mono text-xs font-black uppercase tracking-widest text-foreground mb-1">Gerando Masterplan...</p>
+                <p className="font-mono text-[11px] text-muted-foreground/60">Os agentes estão construindo seu plano de lançamento. Acompanhe em tempo real:</p>
               </div>
               <Button
-                onClick={() => executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } })}
-                disabled={executeMutation.isPending}
-                className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-5"
+                onClick={() => setLocation(`/campaigns/${campaignId}/strategy`)}
+                className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-10 text-xs px-6"
               >
-                {executeMutation.isPending
-                  ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando...</>
-                  : <><CheckCheck className="h-3.5 w-3.5" /> Aprovar e Gerar Conteúdo</>}
+                <Brain className="h-3.5 w-3.5" /> Ver Geração ao Vivo
               </Button>
             </div>
           )}
 
-          {/* Masterplan completo */}
-          {Object.keys(strategyD).length > 0 ? (
-            <StrategyMasterplan
-              strategyD={strategyD}
-              ins={parseStrategyInsights(strategyD)}
-              campaignId={campaignId}
-              campaignTitle={String(intakeD["product.name"] ?? campaign.title ?? "")}
-              track={String(intakeD["launch.track"] ?? "")}
-              userIdentity={user ? {
-                name: user.name ?? "",
-                email: user.email ?? "",
-                userId: user.id,
-                workspaceName: workspace?.name ?? "",
-                workspaceId: workspace?.id ?? "",
-              } : undefined}
-            />
-          ) : (
+          {campaign.status === "strategy_ready" && (
+            <div className="border border-cyan-400/40 bg-cyan-400/[0.04] p-6 flex flex-col sm:flex-row items-center gap-5">
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <div className="flex items-center gap-2 justify-center sm:justify-start mb-1.5">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-400 font-bold">Masterplan Pronto</span>
+                </div>
+                <p className="font-mono text-sm font-black uppercase tracking-wide text-foreground mb-1">
+                  Seu plano de lançamento está completo
+                </p>
+                <p className="font-mono text-[11px] text-muted-foreground/60">
+                  Revise cada seção e aprove para gerar automaticamente todo o conteúdo do lançamento.
+                </p>
+              </div>
+              <Button
+                onClick={() => setLocation(`/campaigns/${campaignId}/strategy`)}
+                className="shrink-0 rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary h-11 text-xs px-7"
+              >
+                <BookOpen className="h-4 w-4" /> Abrir Masterplan
+              </Button>
+            </div>
+          )}
+
+          {Object.keys(strategyD).length > 0 && !["analyzing", "strategy_ready"].includes(campaign.status) && (
+            <div className="border border-border/30 bg-muted/5 p-5 flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Estratégia — Histórico</p>
+                <p className="font-mono text-xs text-foreground font-bold uppercase tracking-wide mb-0.5">
+                  Masterplan da Campanha
+                </p>
+                <p className="font-mono text-[11px] text-muted-foreground/50">
+                  Esta estratégia foi aprovada. Acesse o histórico completo do masterplan.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setLocation(`/campaigns/${campaignId}/strategy`)}
+                className="shrink-0 rounded-none font-mono uppercase tracking-widest font-bold gap-2 border-border/40 h-9 text-xs px-5"
+              >
+                <BookOpen className="h-3.5 w-3.5" /> Ver Masterplan
+              </Button>
+            </div>
+          )}
+
+          {Object.keys(strategyD).length === 0 && !["analyzing", "strategy_ready"].includes(campaign.status) && (
             <div className="py-16 text-center border border-border/20">
               <BookOpen className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
               <p className="font-mono text-xs text-muted-foreground/40 uppercase tracking-widest mb-1">
                 Masterplan ainda não disponível
               </p>
               <p className="font-mono text-[11px] text-muted-foreground/30">
-                O Estrategista precisa finalizar a análise da campanha.
+                Complete o briefing para que os agentes elaborem o plano de lançamento.
               </p>
             </div>
           )}

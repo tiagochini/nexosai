@@ -888,7 +888,7 @@ export default function CampaignIntake() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
-      toast.success("Briefing finalizado! Abrindo Master Plan...");
+      toast.success("Briefing finalizado! Gerando Masterplan...");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro ao finalizar";
       // If intake is "too short", block navigation — otherwise go to campaign regardless
@@ -916,7 +916,7 @@ export default function CampaignIntake() {
     } catch {
       // non-blocking — navigate even if refetch fails
     }
-    setLocation(`/campaigns/${campaignId}`);
+    setLocation(`/campaigns/${campaignId}/strategy`);
     setFinalizing(false);
   };
 
