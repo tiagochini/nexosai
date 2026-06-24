@@ -240,6 +240,27 @@ export async function approvePreviewAndGenerateFinal(
       if (linkedPieceId && imageUrl && creative.campaignId) {
         setImmediate(async () => {
           try {
+            // Update any pending scheduled social post rows with the final image URL
+            // so the scheduler can publish at the correct scheduled time without waiting.
+            const { eq: deq, and: dand, inArray: dInArray } = await import("drizzle-orm");
+            const { db: ddb, socialPostsTable: dSocial } = await import("@workspace/db");
+            await ddb
+              .update(dSocial)
+              .set({ mediaUrls: [imageUrl] })
+              .where(
+                dand(
+                  deq(dSocial.contentPieceId, linkedPieceId),
+                  dInArray(dSocial.status, ["scheduled", "draft"] as any),
+                ),
+              );
+            log.info({ linkedPieceId, creativeId, imageUrl }, "Updated scheduled social posts with final media URL");
+          } catch (updateErr) {
+            log.warn({ linkedPieceId, updateErr }, "Update scheduled posts mediaUrls failed (non-fatal)");
+          }
+        });
+
+        setImmediate(async () => {
+          try {
             const { autoPostApprovedContent } = await import("../social/social.autopost.service.js");
             await autoPostApprovedContent(workspaceId, creative.campaignId!, linkedPieceId);
             log.info({ linkedPieceId, creativeId, imageUrl }, "Re-triggered autopost after final visual ready");

@@ -396,6 +396,12 @@ export async function processScheduledItems(): Promise<void> {
     log.warn({ err }, "Clarification watchdog tick failed — non-blocking"),
   );
 
+  // Social media scheduled posts (Instagram / TikTok / Facebook)
+  const { processScheduledSocialPosts } = await import("../social/social.autopost.service.js");
+  await processScheduledSocialPosts().catch((err) =>
+    log.warn({ err }, "Social post scheduler tick failed — non-blocking"),
+  );
+
   const dueItems = await db
     .select({
       item: launchSequenceItemsTable,

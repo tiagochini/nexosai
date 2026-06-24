@@ -7,6 +7,7 @@ import {
   sequenceContactsTable,
 } from "@workspace/db";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import { logger } from "../../lib/logger.js";
 import { runLaunchSequenceBuilderAgent } from "../agents/launch-sequence-builder.agent.js";
 import type { StrategyOutput } from "../agents/strategy.agent.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
@@ -382,6 +383,18 @@ export async function activateSequence(
     .update(launchSequencesTable)
     .set({ status: "active", config })
     .where(eq(launchSequencesTable.id, sequenceId));
+
+  // Schedule social media posts for every content piece linked to this campaign
+  if (sequence.campaignId) {
+    setImmediate(async () => {
+      try {
+        const { createScheduledSocialPosts } = await import("../social/social.autopost.service.js");
+        await createScheduledSocialPosts(workspaceId, sequence.campaignId!, sequenceId, startAt);
+      } catch (schedErr) {
+        logger.warn({ schedErr, sequenceId }, "activateSequence: createScheduledSocialPosts failed (non-fatal)");
+      }
+    });
+  }
 
   return getLaunchSequence(workspaceId, sequenceId);
 }

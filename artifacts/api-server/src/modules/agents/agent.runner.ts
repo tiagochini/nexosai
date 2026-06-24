@@ -77,6 +77,12 @@ export interface RunAgentOptions {
    * (e.g. targeting with 14+ audiences, media buyer with 21+ daily allocations).
    */
   maxTokens?: number;
+  /**
+   * Launch-specific temporal context injected into the temporal block.
+   * Pass when the agent runs inside an active sequence so it knows the exact
+   * launch day, phase, time, and timezone of the campaign region.
+   */
+  temporalContext?: TemporalContextOpts;
 }
 
 export interface RunAgentResult {
@@ -276,34 +282,90 @@ Se qualquer resposta for "sim" para os problemas (alucinação, genérico, inexe
 A NexOS AI opera com integridade estratégica. Entregue o que você entregaria se seu nome estivesse assinado no resultado.
 `;
 
-/** Returns a temporal context block that is prepended to every agent system prompt. */
-function buildTemporalContextBlock(): string {
+export interface TemporalContextOpts {
+  /** IANA timezone of the campaign launch region. Default: America/Sao_Paulo */
+  timezone?: string;
+  /** When the launch sequence was activated (null = not yet activated) */
+  launchStartAt?: Date | null;
+  /** Total planned duration in days */
+  durationDays?: number | null;
+  /** 0-based index of the current day in the sequence (0 = launch day) */
+  currentDayIndex?: number | null;
+  /** Human-readable phase label, e.g. "Abertura do Carrinho" */
+  phaseLabel?: string | null;
+  /** Exact scheduledAt for this specific dispatch (scheduler use) */
+  scheduledAt?: Date | null;
+}
+
+/**
+ * Returns a temporal context block prepended to every agent system prompt.
+ * Accepts optional launch-specific context so agents know exactly where in
+ * the sequence timeline they are operating.
+ *
+ * Exported so the scheduler and other services can build the same block
+ * when invoking agents during timed dispatches.
+ */
+export function buildTemporalContextBlock(opts: TemporalContextOpts = {}): string {
+  const tz = opts.timezone ?? "America/Sao_Paulo";
   const now = new Date();
+
   const dateStr = now.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "America/Sao_Paulo",
+    weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz,
   });
-  // BRT-correct ISO date (en-CA gives YYYY-MM-DD format)
-  // Using UTC date causes a 1-day error between 21h–00h BRT (UTC-3)
-  const isoDate = now.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
-  const timeBRT = now.toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  });
-  return `## CONTEXTO TEMPORAL OBRIGATÓRIO
+  const isoDate = now.toLocaleDateString("en-CA", { timeZone: tz });
+  const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz });
 
-**Data de hoje:** ${dateStr} (${isoDate}) — ${timeBRT} BRT
-**Fuso horário de referência:** America/Sao_Paulo (BRT = UTC-3)
+  // Derive TZ abbreviation from offset
+  const offsetMin = -now.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? "+" : "-";
+  const absH = Math.floor(Math.abs(offsetMin) / 60).toString().padStart(2, "0");
+  const tzAbbr = tz.includes("Sao_Paulo") ? "BRT" : `UTC${sign}${absH}`;
 
-> REGRA CRÍTICA: Todas as datas, cronogramas, timelines e planos de lançamento que você gerar DEVEM ser iguais ou posteriores a ${isoDate}. NUNCA sugira datas passadas. Se precisar de uma data de início, use a data de hoje como Dia 1.
+  let block = `## CONTEXTO TEMPORAL OBRIGATÓRIO — PRECISÃO CIRÚRGICA
+
+**Agora:** ${dateStr} — ${timeStr} ${tzAbbr}
+**ISO:** ${isoDate}  |  **Fuso:** ${tz}
+`;
+
+  // Launch sequence context — only when sequence is active
+  if (opts.launchStartAt) {
+    const startIso = opts.launchStartAt.toLocaleDateString("en-CA", { timeZone: tz });
+    const startStr = opts.launchStartAt.toLocaleDateString("pt-BR", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: tz,
+    });
+    block += `**Lançamento iniciou:** ${startStr} (${startIso})\n`;
+
+    if (opts.currentDayIndex != null) {
+      const dayNum = opts.currentDayIndex + 1;
+      const total = opts.durationDays ?? "?";
+      block += `**Dia atual:** ${dayNum} de ${total}`;
+      if (opts.phaseLabel) block += ` — "${opts.phaseLabel}"`;
+      block += `\n`;
+    }
+
+    if (opts.durationDays && opts.currentDayIndex != null) {
+      const remaining = opts.durationDays - opts.currentDayIndex - 1;
+      block += `**Dias restantes:** ${remaining}\n`;
+    }
+  }
+
+  if (opts.scheduledAt) {
+    const schedStr = opts.scheduledAt.toLocaleDateString("pt-BR", {
+      weekday: "long", day: "numeric", month: "long", timeZone: tz,
+    });
+    const schedTime = opts.scheduledAt.toLocaleTimeString("pt-BR", {
+      hour: "2-digit", minute: "2-digit", timeZone: tz,
+    });
+    block += `**Este disparo está agendado para:** ${schedStr} às ${schedTime} ${tzAbbr}\n`;
+  }
+
+  block += `
+> REGRA ABSOLUTA: Toda data, horário, cronograma ou referência temporal gerada DEVE ser igual ou posterior a ${isoDate} no fuso ${tz}. NUNCA sugira datas passadas. Quando mencionar "hoje", "amanhã" ou "em X dias", use sempre as datas reais acima — jamais valores vagos ou relativos sem âncora concreta.
 
 ---
 
 `;
+  return block;
 }
 
 /** Extract confidence/risk scores from parsed agent JSON output (best-effort). */
@@ -507,7 +569,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     // Mechanical agent: just temporal context + optional memory/profile + agent system prompt.
     // No DOMINO, no PLF, no cognitive foundations, no constraint reasoning.
     enrichedSystemPrompt =
-      buildTemporalContextBlock() +
+      buildTemporalContextBlock(opts.temporalContext ?? {}) +
       memoryBlock +
       systemPrompt;
   } else {
@@ -516,7 +578,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       ? `\n\n## ⚠️ COMPLIANCE OVERRIDE ATIVO\n${_complianceHint}\nEste bloco tem PRIORIDADE MÁXIMA. Qualquer output que viole estas diretrizes será rejeitado automaticamente pela plataforma.\n\n`
       : "";
     enrichedSystemPrompt =
-      buildTemporalContextBlock() +
+      buildTemporalContextBlock(opts.temporalContext ?? {}) +
       staticLayers +
       memoryBlock +
       profileBlock +

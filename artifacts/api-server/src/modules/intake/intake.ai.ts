@@ -138,6 +138,16 @@ export async function extractIntakeFromText(
 
   if (Object.keys(highConfidenceExtracted).length > 0) {
     await saveIntakeData(campaignId, workspaceId, merged, log);
+
+    // Non-blocking premise conflict detection — only when we're updating existing data
+    if (Object.keys(existingData).length > 2) {
+      setImmediate(async () => {
+        try {
+          const { detectPremiseConflicts } = await import("../agents/conflict-detector.service.js");
+          await detectPremiseConflicts(campaignId, workspaceId, highConfidenceExtracted, log);
+        } catch { /* non-fatal */ }
+      });
+    }
   }
 
   // Auto-detect track from revenue target if not set

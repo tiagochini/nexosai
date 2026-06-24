@@ -171,6 +171,25 @@ export async function autoPostApprovedContent(
   pieceId: string,
 ): Promise<void> {
   try {
+    // If a scheduled social post row exists for this piece, it means the launch
+    // sequence is managing timing — update the media/caption and let the scheduler
+    // fire at the right moment instead of publishing immediately.
+    const existingScheduled = await db
+      .select({ id: socialPostsTable.id })
+      .from(socialPostsTable)
+      .where(
+        and(
+          eq(socialPostsTable.contentPieceId, pieceId),
+          eq(socialPostsTable.status, "scheduled"),
+        ),
+      )
+      .limit(1);
+
+    if (existingScheduled.length > 0) {
+      logger.info({ workspaceId, pieceId }, "social.autopost: scheduled row exists — deferring to scheduler");
+      return;
+    }
+
     const [piece] = await db
       .select()
       .from(contentPiecesTable)
@@ -298,5 +317,207 @@ export async function autoPostApprovedContent(
     }
   } catch (err) {
     logger.error({ err, workspaceId, pieceId }, "social.autopost: unexpected error");
+  }
+}
+
+// ── Scheduled Social Posts ────────────────────────────────────────────────────
+
+const SOCIAL_PIECE_TYPES = ["social_post", "content_calendar", "stories_sequence"] as const;
+
+/**
+ * Called when a launch sequence is activated.
+ * Creates socialPostsTable rows (status="scheduled") for every social content
+ * piece linked to the campaign, timed by dayIndex relative to startAt.
+ * One row per piece × connected integration.
+ * Safe to call multiple times — uses onConflictDoNothing on (contentPieceId, integrationId).
+ */
+export async function createScheduledSocialPosts(
+  workspaceId: string,
+  campaignId: string,
+  _sequenceId: string,
+  startAt: Date,
+): Promise<void> {
+  try {
+    // Fetch all connected social integrations for this workspace
+    const integrations = await db
+      .select()
+      .from(workspaceIntegrationsTable)
+      .where(
+        and(
+          eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+          inArray(workspaceIntegrationsTable.provider, ["instagram", "meta_ads", "tiktok_ads"] as any),
+          eq(workspaceIntegrationsTable.status, "connected"),
+        ),
+      );
+
+    if (integrations.length === 0) {
+      logger.info({ workspaceId, campaignId }, "createScheduledSocialPosts: no connected social integrations — skip");
+      return;
+    }
+
+    // Fetch all social content pieces for this campaign that have a dayIndex
+    const pieces = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(
+        and(
+          eq(contentPiecesTable.campaignId, campaignId),
+          inArray(contentPiecesTable.type, SOCIAL_PIECE_TYPES as any),
+        ),
+      );
+
+    const { sql: drizzleSql } = await import("drizzle-orm");
+    let created = 0;
+
+    for (const piece of pieces) {
+      const dayIdx = typeof piece.dayIndex === "number" ? piece.dayIndex : 0;
+      const scheduledAt = new Date(startAt);
+      scheduledAt.setDate(scheduledAt.getDate() + dayIdx);
+      // Default to 9am in campaign timezone (scheduler will use scheduledAt directly)
+      scheduledAt.setHours(9, 0, 0, 0);
+
+      const contentType = piece.type ?? "";
+      const postType = (CONTENT_TYPE_POST_TYPE[contentType] ?? "feed_image") as any;
+      const caption = extractCaption(piece.content);
+      const providers = CONTENT_TYPE_PROVIDERS[contentType] ?? ["instagram"];
+
+      for (const integration of integrations) {
+        const provider = integration.provider as string;
+        if (!providers.includes(provider)) continue;
+        const platform = PROVIDER_TO_PLATFORM[provider] ?? "instagram";
+
+        try {
+          await db.insert(socialPostsTable).values({
+            workspaceId,
+            campaignId: campaignId || null,
+            contentPieceId: piece.id,
+            integrationId: integration.id,
+            platform: platform as any,
+            postType,
+            status: "scheduled",
+            caption,
+            hashtags: [],
+            mediaUrls: [],
+            scheduledAt,
+            aiGenerated: true,
+          });
+          created++;
+        } catch {
+          // Row may already exist — ignore duplicate key errors
+        }
+      }
+    }
+
+    logger.info({ workspaceId, campaignId, created }, "createScheduledSocialPosts: scheduled posts created");
+  } catch (err) {
+    logger.warn({ err, workspaceId, campaignId }, "createScheduledSocialPosts: error (non-fatal)");
+  }
+}
+
+/**
+ * Called every 60s by the sequence scheduler tick.
+ * Finds socialPostsTable rows where status="scheduled" AND scheduledAt <= now.
+ * If mediaUrls is empty, tries to resolve from campaignCreativesTable before posting.
+ * If still no media → skips (retries next tick) rather than failing permanently.
+ */
+export async function processScheduledSocialPosts(): Promise<void> {
+  const log = logger.child({ component: "social-post-scheduler" });
+  try {
+    const { sql: drizzleSql, lte } = await import("drizzle-orm");
+    const now = new Date();
+
+    const due = await db
+      .select({
+        post: socialPostsTable,
+        integration: workspaceIntegrationsTable,
+      })
+      .from(socialPostsTable)
+      .innerJoin(workspaceIntegrationsTable, eq(socialPostsTable.integrationId, workspaceIntegrationsTable.id))
+      .where(
+        and(
+          eq(socialPostsTable.status, "scheduled"),
+          lte(socialPostsTable.scheduledAt, now),
+        ),
+      )
+      .limit(50);
+
+    if (due.length === 0) return;
+    log.info({ count: due.length }, "processScheduledSocialPosts: processing due posts");
+
+    for (const { post, integration } of due) {
+      try {
+        // Mark as publishing to prevent double-processing
+        await db
+          .update(socialPostsTable)
+          .set({ status: "publishing" })
+          .where(eq(socialPostsTable.id, post.id));
+
+        // Resolve media URLs — prefer piece-linked creative, then existing mediaUrls
+        let mediaUrls: string[] = Array.isArray(post.mediaUrls) ? (post.mediaUrls as string[]) : [];
+
+        if (mediaUrls.length === 0 && post.contentPieceId) {
+          const linked = await db
+            .select({ finalUrl: campaignCreativesTable.finalUrl })
+            .from(campaignCreativesTable)
+            .where(
+              and(
+                drizzleSql`${campaignCreativesTable.metadata}->>'contentPieceId' = ${post.contentPieceId}`,
+                eq(campaignCreativesTable.status, "approved"),
+              ),
+            )
+            .limit(1);
+          if (linked[0]?.finalUrl) mediaUrls = [linked[0].finalUrl];
+        }
+
+        // Instagram requires media — reschedule for next tick if not yet ready
+        if (post.platform === "instagram" && mediaUrls.length === 0) {
+          log.info({ postId: post.id }, "processScheduledSocialPosts: Instagram post waiting for media — reset to scheduled");
+          await db
+            .update(socialPostsTable)
+            .set({ status: "scheduled" })
+            .where(eq(socialPostsTable.id, post.id));
+          continue;
+        }
+
+        const mockPost = { ...post, mediaUrls, status: "publishing" as const };
+
+        let result;
+        if (post.platform === "instagram") {
+          result = await publishToInstagram(mockPost as any, integration);
+        } else if (post.platform === "facebook_page") {
+          result = await publishToFacebook(mockPost as any, integration);
+        } else if (post.platform === "tiktok") {
+          result = await publishToTikTok(mockPost as any, integration);
+        } else {
+          await db.update(socialPostsTable).set({ status: "failed", errorMessage: `Unsupported platform: ${post.platform}` }).where(eq(socialPostsTable.id, post.id));
+          continue;
+        }
+
+        if (result.success) {
+          await db.update(socialPostsTable).set({
+            status: "published",
+            mediaUrls,
+            publishedAt: new Date(),
+            platformPostId: result.platformPostId ?? null,
+            platformUrl: result.platformUrl ?? null,
+          }).where(eq(socialPostsTable.id, post.id));
+          log.info({ postId: post.id, platform: post.platform }, "processScheduledSocialPosts: published");
+        } else {
+          const retryCount = (post.retryCount ?? 0) + 1;
+          const nextStatus = retryCount >= 3 ? "failed" : "scheduled";
+          await db.update(socialPostsTable).set({
+            status: nextStatus as any,
+            retryCount,
+            errorMessage: result.error ?? "Unknown error",
+          }).where(eq(socialPostsTable.id, post.id));
+          log.warn({ postId: post.id, platform: post.platform, error: result.error, retryCount }, "processScheduledSocialPosts: publish failed");
+        }
+      } catch (itemErr) {
+        await db.update(socialPostsTable).set({ status: "scheduled" }).where(eq(socialPostsTable.id, post.id)).catch(() => {});
+        log.warn({ itemErr, postId: post.id }, "processScheduledSocialPosts: item error (reset to scheduled)");
+      }
+    }
+  } catch (err) {
+    logger.warn({ err }, "processScheduledSocialPosts: tick error (non-fatal)");
   }
 }

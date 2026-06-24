@@ -96,6 +96,7 @@ export const campaignsTable = pgTable("campaigns", {
   budgetTotal: integer("budget_total"),
   revenueTarget: text("revenue_target"),
   locale: text("locale").notNull().default("pt-BR"),
+  timezone: text("timezone").notNull().default("America/Sao_Paulo"),
   creditsCost: integer("credits_cost").notNull().default(0),
   executionStartedAt: timestamp("execution_started_at", {
     withTimezone: true,
