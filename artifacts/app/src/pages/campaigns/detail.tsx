@@ -25,7 +25,6 @@ import { LaunchSequenceOverlay, LaunchRocketButton } from "@/components/launch-s
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
 import {
   AnalyzingDisplay,
-  StrategyReadyBanner,
   GeneratingDisplay,
   ContentReadyCinemaPrompt,
   ExecutingLiveDisplay,
@@ -39,7 +38,6 @@ import {
   ConnectModal, INTEGRATION_CATALOG,
   type CatalogEntry, type Provider,
 } from "@/components/integration-connect-modal";
-import { CreativeIntentPanel } from "@/components/CreativeIntentPanel";
 import { DecisionTracePanel } from "@/components/DecisionTracePanel";
 import { AgentClarificationPanel } from "@/components/AgentClarificationPanel";
 import { CampaignMindMap } from "@/components/CampaignMindMap";
@@ -1387,7 +1385,7 @@ export default function CampaignDetail() {
   }, [campaign?.status]);
   const refetchInterval = isActive ? 5000 : false;
 
-  // Auto-redirect draft/intake to the intake wizard.
+  // Auto-redirect draft/intake → intake wizard; analyzing/strategy_ready → strategy page.
   // Guard with BOTH isLoading AND isFetching:
   //   - isLoading: true only on first load (no cached data yet)
   //   - isFetching: true whenever a background refetch is in flight
@@ -1398,6 +1396,8 @@ export default function CampaignDetail() {
     if (!campaign || isLoading || isFetching) return;
     if (campaign.status === "draft" || campaign.status === "intake") {
       setLocation(`/campaigns/${campaignId}/intake`);
+    } else if (campaign.status === "analyzing" || campaign.status === "strategy_ready") {
+      setLocation(`/campaigns/${campaignId}/strategy`);
     }
   }, [campaign?.status, campaignId, setLocation, campaign, isLoading, isFetching]);
 
@@ -3331,46 +3331,9 @@ export default function CampaignDetail() {
             </div>
           )}
 
-          {/* ─ Strategy ready: cinematic reveal banner — only when strategy data exists ─ */}
-          {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (
-            <StrategyReadyBanner onReview={() => setActiveTab("estrategia")} />
-          )}
-
-          {/* ─ Creative Intent Panel — define visual direction before production ─ */}
-          {campaign.status === "strategy_ready" && (
-            <CreativeIntentPanel campaignId={campaignId} />
-          )}
-
           {/* ─ Decision Trace Panel — Modo Arquiteto only ─ */}
           {isArquiteto && campaign.status !== "draft" && (
             <DecisionTracePanel campaignId={campaignId} />
-          )}
-
-          {/* ─ Strategy Approval Board — shown only when strategy data exists ─ */}
-          {campaign.status === "strategy_ready" && Object.keys(strategyD).length > 0 && (
-            <StrategyApprovalBoard
-              strategyD={strategyD}
-              audienceD={audienceD}
-              targetingD={targetingD}
-              timelineD={timelineD}
-              intakeD={intakeD}
-              onProceed={async (notes) => {
-                const hasNotes = Object.values(notes).some(v => v?.trim());
-                if (hasNotes) {
-                  try {
-                    await customFetch(`/api/campaigns/${campaignId}/directives`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ directives: notes }),
-                    });
-                  } catch {
-                    // non-blocking — proceed anyway
-                  }
-                }
-                executeMutation.mutate({ campaignId, data: { phase: "content" as CampaignExecuteInputPhase } });
-              }}
-              proceedLoading={executeMutation.isPending}
-            />
           )}
 
           {/* ─ Empty state (no data, no activity, no pending events) ─ */}
