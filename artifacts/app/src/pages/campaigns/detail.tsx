@@ -3004,10 +3004,10 @@ export default function CampaignDetail() {
               <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">tokens</span>
             </div>
           )}
-          {creditStatsData.totalCostUsd > 0 && (
+          {Number(creditStatsData.totalCostUsd) > 0 && (
             <div className="flex items-center gap-1.5">
               <span className="font-mono text-[11px] text-foreground/50">
-                ${creditStatsData.totalCostUsd.toFixed(3)}
+                ${Number(creditStatsData.totalCostUsd).toFixed(3)}
               </span>
               <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest">USD</span>
             </div>

@@ -262,7 +262,7 @@ router.get("/:id/credit-stats", async (req, res): Promise<void> => {
     creditsCost: campaign.creditsCost,
     totalCredits,
     totalTokens,
-    totalCostUsd: totalCostUsd.toFixed(4),
+    totalCostUsd,
     byAgent: aiRows
       .map(r => ({
         agentType: r.agentType ?? "desconhecido",
@@ -270,7 +270,7 @@ router.get("/:id/credit-stats", async (req, res): Promise<void> => {
         model: r.model,
         credits: r.totalCredits ?? 0,
         tokens: r.totalTokens ?? 0,
-        costUsd: (r.totalCostUsd ?? 0).toFixed(4),
+        costUsd: r.totalCostUsd ?? 0,
         calls: r.calls,
       }))
       .sort((a, b) => b.credits - a.credits),
