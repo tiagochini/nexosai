@@ -3247,13 +3247,19 @@ export default function CampaignDetail() {
           {/* ─ Analyzing: cinematic agent activation ─ */}
           {campaign.status === "analyzing" && <AnalyzingDisplay />}
 
-          {/* ─ Generating: static placeholder until events arrive ─ */}
-          {campaign.status === "generating" && liveEvents.length === 0 && <GeneratingDisplay />}
+          {/* ─ Generating: static placeholder only while DB agents haven't loaded yet ─ */}
+          {campaign.status === "generating" && liveEvents.length === 0 && (agentsData?.agents ?? []).length === 0 && <GeneratingDisplay />}
 
-          {/* ─ Live agent feed — only when agents are actually running ─ */}
-          {(isActive || liveEvents.length > 0) &&
+          {/* ─ Live agent feed ─
+              Shows when:
+              - there are live WebSocket events, OR
+              - campaign is active (isActive), OR
+              - DB agents are persisted (survives page refresh)
+              Never shown during analyzing/executing/live (those have their own displays).
+          ─ */}
+          {(isActive || liveEvents.length > 0 || (agentsData?.agents ?? []).length > 0) &&
            !["analyzing", "executing", "live"].includes(campaign.status) &&
-           !(campaign.status === "generating" && liveEvents.length === 0) && (
+           !(campaign.status === "generating" && liveEvents.length === 0 && (agentsData?.agents ?? []).length === 0) && (
             <AgentLiveFeed
               events={liveEvents}
               dbAgents={agentsData?.agents ?? []}
