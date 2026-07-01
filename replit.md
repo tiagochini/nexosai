@@ -103,6 +103,13 @@ Launch tracks by revenue target:
 - Fallback: when `RESEND_API_KEY` is set and provider is `mailchimp/sendgrid/brevo/custom_smtp`, automatically routes through Resend instead of mock-sending.
 - Integration gate also considers `RESEND_API_KEY` as satisfying the email requirement.
 
+## Manual Integration Connect Fix (Post-session)
+
+- **Bug fixed**: `POST /api/workspaces/me/integrations` (manual credential fallback, used when OAuth isn't available) was silently broken — the zod schema dropped `accessToken` entirely (never persisted) and hardcoded `status: "disconnected"` regardless of input, and the provider enum was missing `facebook`/`tiktok`/several payment providers already present in `integrationProviderEnum`.
+- **Fix**: schema now accepts `accessToken`; provider enum matches the DB enum (facebook, tiktok, linkedin_ads, resend, paypal, mercado_pago, pagarme, asaas added); status is set to `"connected"` when credentials are supplied; endpoint now upserts (updates existing workspace+provider row) instead of always inserting a duplicate.
+- **`tiktok` (organic) provider mapping**: manual entry provider `"tiktok"` is mapped to DB enum value `"tiktok_ads"` (there is no separate organic DB value), matching the existing OAuth `dbProvider` mapping in `oauth.routes.ts`.
+- Verified end-to-end with a temp test account: facebook/tiktok manual connect now returns `status: "connected"` with token stored, and reconnecting updates the same row instead of duplicating.
+
 ## Integrações Page (Post-session)
 
 - **`/integracoes`** — new dedicated page at `artifacts/app/src/pages/integracoes/index.tsx`. Full integration management: connect/disconnect, organized by category, Full Auto status bar, per-integration "why you need it" explanation, required badges.

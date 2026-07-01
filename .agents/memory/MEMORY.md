@@ -34,3 +34,4 @@
 - [Scheduled Social Posts](scheduled-social-posts.md) — socialPostsTable IS the schedule; createScheduledSocialPosts() on sequence activate; processScheduledSocialPosts() in 60s tick; autoPostApprovedContent() defers if scheduled row exists.
 - [Temporal Context Precision](temporal-context.md) — buildTemporalContextBlock() exported with TemporalContextOpts; pass temporalContext in RunAgentOptions for launch-aware agents; campaigns.timezone column added.
 - [Premise Conflict Detector](premise-conflict.md) — conflict-detector.service.ts; detectPremiseConflicts() fires via setImmediate after intake merge; persists to brainData.premiseConflicts; Socket.io campaign:event alert; resolvePremiseConflict() for user resolution.
+- [Manual Integration Connect](manual-integration-connect.md) — manual credential-entry endpoints need their own field/status/provider-enum audit against the DB enum + OAuth mapping; a missing field is silently stripped, not an error.

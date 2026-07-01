@@ -83,13 +83,16 @@ router.get("/me/integrations", async (req, res): Promise<void> => {
 router.post("/me/integrations", async (req, res): Promise<void> => {
   const schema = z.object({
     provider: z.enum([
-      "meta_ads", "instagram", "tiktok_ads", "google_ads",
-      "whatsapp_business", "telegram", "stripe", "hotmart",
-      "eduzz", "kiwify", "mailchimp", "activecampaign", "rd_station", "hubspot",
+      "meta_ads", "instagram", "facebook", "tiktok", "tiktok_ads", "google_ads", "linkedin_ads",
+      "whatsapp_business", "telegram",
+      "rd_station", "activecampaign", "mailchimp", "resend",
+      "stripe", "paypal", "mercado_pago", "pagarme", "asaas",
+      "hotmart", "eduzz", "kiwify", "hubspot",
       "crypto_native", "custom_webhook",
     ]),
     accountId: z.string().optional(),
     accountName: z.string().optional(),
+    accessToken: z.string().optional(),
     webhookUrl: z.string().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
   });
@@ -100,25 +103,48 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
     return;
   }
 
-  const PAYMENT_GATEWAYS = ["stripe", "hotmart", "eduzz", "kiwify", "crypto_native"];
-  const isPaymentGateway = PAYMENT_GATEWAYS.includes(parsed.data.provider);
+  // "tiktok" (organic, front-end only) shares the "tiktok_ads" DB enum value —
+  // there is no separate organic-tiktok DB provider (see oauth.routes.ts dbProvider mapping).
+  const dbProvider = parsed.data.provider === "tiktok" ? "tiktok_ads" : parsed.data.provider;
 
-  const [integration] = await db
-    .insert(workspaceIntegrationsTable)
-    .values({
-      workspaceId: req.auth.workspaceId,
-      provider: parsed.data.provider,
-      status: "disconnected",
-      accountId: parsed.data.accountId,
-      accountName: parsed.data.accountName,
-      webhookUrl: parsed.data.webhookUrl,
-      metadata: parsed.data.metadata ?? {},
-      isPaymentGateway,
-      blocksExecution: false,
-    })
-    .returning();
+  const PAYMENT_GATEWAYS = ["stripe", "paypal", "mercado_pago", "pagarme", "asaas", "hotmart", "eduzz", "kiwify", "crypto_native"];
+  const isPaymentGateway = PAYMENT_GATEWAYS.includes(dbProvider);
 
-  res.status(201).json({ integration });
+  // Manual credential entry means the user actively supplied credentials — mark connected
+  // immediately (no live validation call for most providers, mirrors OAuth callback behavior).
+  const status = (parsed.data.accessToken || parsed.data.accountId) ? "connected" : "disconnected";
+
+  const [existing] = await db
+    .select({ id: workspaceIntegrationsTable.id })
+    .from(workspaceIntegrationsTable)
+    .where(and(
+      eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId),
+      eq(workspaceIntegrationsTable.provider, dbProvider),
+    ))
+    .limit(1);
+
+  const values = {
+    workspaceId: req.auth.workspaceId,
+    provider: dbProvider,
+    status,
+    accessToken: parsed.data.accessToken,
+    accountId: parsed.data.accountId,
+    accountName: parsed.data.accountName,
+    webhookUrl: parsed.data.webhookUrl,
+    metadata: parsed.data.metadata ?? {},
+    isPaymentGateway,
+    blocksExecution: false,
+  } as const;
+
+  const [integration] = existing
+    ? await db
+        .update(workspaceIntegrationsTable)
+        .set(values)
+        .where(eq(workspaceIntegrationsTable.id, existing.id))
+        .returning()
+    : await db.insert(workspaceIntegrationsTable).values(values).returning();
+
+  res.status(existing ? 200 : 201).json({ integration });
 });
 
 // ── HeyGen API Key connect / avatars ──────────────────────────────────────────
