@@ -20,6 +20,7 @@ import {
   ExternalLink, Loader2, MessageCircle, Mail,
   Rocket, ShieldCheck, Zap, FileText, Eye,
   DollarSign, TrendingUp, BarChart3, Users, Target,
+  Image, Clapperboard,
 } from "lucide-react";
 
 // ─── Integration setup wizards ────────────────────────────────────────────────
@@ -133,6 +134,10 @@ interface ContentPiece {
   platform?: string; title?: string;
 }
 
+interface CreativePiece { id: string; status: string; format?: string; }
+interface VideoProjectLite { id: string; title: string; status: string; }
+interface VslLite { id: string; title: string; sections: unknown[]; campaignId?: string | null; }
+
 interface ScenarioValues { low: number; mid: number; high: number; }
 
 interface PlatformSim {
@@ -199,6 +204,9 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [content, setContent]           = useState<ContentPiece[]>([]);
   const [financials, setFinancials]     = useState<LaunchFinancials | null>(null);
+  const [creatives, setCreatives]       = useState<CreativePiece[]>([]);
+  const [videoProjects, setVideoProjects] = useState<VideoProjectLite[]>([]);
+  const [vsls, setVsls]                 = useState<VslLite[]>([]);
   const [loading, setLoading]           = useState(true);
 
   // Wizard / expand state
@@ -211,6 +219,8 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const [oauthLoading, setOauthLoading]       = useState<string | null>(null);
   const [oauthError, setOauthError]           = useState<string | null>(null);
   const [funnelExpanded, setFunnelExpanded]   = useState(true);
+  const [entregaveisExpanded, setEntregaveisExpanded] = useState(true);
+  const [deliverablesConfirmed, setDeliverablesConfirmed] = useState(false);
 
   // Gate 6 — landing page URL (persisted per campaign in localStorage)
   const funnelKey = `nexos_funnel_url_${campaignId}`;
@@ -239,13 +249,19 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
       customFetch<{ integrations: Integration[] }>("/api/workspaces/me/integrations").catch(() => ({ integrations: [] })),
       customFetch<{ pieces: ContentPiece[] }>(`/api/campaigns/${campaignId}/content`).catch(() => ({ pieces: [] })),
       customFetch<{ financials: LaunchFinancials }>(`/api/campaigns/${campaignId}/launch-financials`).catch(() => ({ financials: null })),
-    ]).then(([intRes, contRes, finRes]) => {
+      customFetch<{ creatives: CreativePiece[] }>(`/api/campaigns/${campaignId}/creatives`).catch(() => ({ creatives: [] })),
+      customFetch<{ projects: VideoProjectLite[] }>(`/api/video-projects?campaignId=${campaignId}`).catch(() => ({ projects: [] })),
+      customFetch<{ vsls: VslLite[] }>(`/api/vsls?campaignId=${campaignId}`).catch(() => ({ vsls: [] })),
+    ]).then(([intRes, contRes, finRes, creaRes, vidRes, vslRes]) => {
       setIntegrations(intRes.integrations ?? []);
       setContent(contRes.pieces ?? []);
       const fin = finRes.financials ?? null;
       setFinancials(fin);
       setLocalBudget(fin?.paidTrafficBudget ?? 5000);
       setLocalRetargetPct(fin?.retargetingPct ?? 25);
+      setCreatives(creaRes.creatives ?? []);
+      setVideoProjects(vidRes.projects ?? []);
+      setVsls((vslRes.vsls ?? []).filter(v => v.campaignId === campaignId));
       setLoading(false);
     });
   }, [campaignId]);
@@ -342,6 +358,17 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   const allContentApproved = allPieces.length > 0 && pendingPieces.length === 0;
   const noContent         = allPieces.length === 0;
 
+  // ── Entregáveis (imagens/vídeos) checks — Gate "Produzir Entregáveis" ──────
+  const totalCreatives        = creatives.length;
+  const approvedCreativesCnt  = creatives.filter(c => c.status === "approved" || c.status === "final_approved").length;
+  const pendingCreativesCnt   = totalCreatives - approvedCreativesCnt;
+  const creativesAllApproved  = totalCreatives > 0 && pendingCreativesCnt === 0;
+  const vslsWithScript        = vsls.filter(v => (v.sections ?? []).length > 0);
+  const vslsWithoutVideo      = vslsWithScript.filter(v => !videoProjects.some(vp => vp.title.includes(v.title.slice(0, 15))));
+  const completedVideosCnt    = videoProjects.filter(v => v.status === "completed").length;
+  const hasNoDeliverableWork  = totalCreatives === 0 && videoProjects.length === 0;
+  const deliverablesReady     = creativesAllApproved || (hasNoDeliverableWork ? deliverablesConfirmed : deliverablesConfirmed && pendingCreativesCnt === 0);
+
   // ── Scan animation effect ─────────────────────────────────────────────────
   useEffect(() => {
     if (loading || scanDone) return;
@@ -375,7 +402,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
   // ── Overall gate ────────────────────────────────────────────────────────────
   // Gate 3 verification must complete (animation phase 3) before launch is allowed
   const contentVerified = allContentApproved && verifyPhase >= 3;
-  const allReady = hasMessaging && hasEmail && hasSocial && contentVerified && funnelConfirmed && finReady;
+  const allReady = hasMessaging && hasEmail && hasSocial && contentVerified && deliverablesReady && funnelConfirmed && finReady;
 
   useEffect(() => {
     if (!loading) onLaunchReady(allReady);
@@ -426,6 +453,17 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         failMsg: noContent
           ? "Nenhuma peça gerada — gere o conteúdo antes de lançar"
           : `${pendingPieces.length} peça${pendingPieces.length !== 1 ? "s" : ""} aguardando revisão — abra a aba Conteúdo`,
+      },
+      {
+        label: "Produzir Entregáveis",
+        icon: <Image className="h-4 w-4" />,
+        passed: deliverablesReady,
+        passMsg: creativesAllApproved
+          ? `${approvedCreativesCnt} criativo${approvedCreativesCnt !== 1 ? "s" : ""} aprovado${approvedCreativesCnt !== 1 ? "s" : ""}${completedVideosCnt > 0 ? ` + ${completedVideosCnt} vídeo${completedVideosCnt !== 1 ? "s" : ""} concluído${completedVideosCnt !== 1 ? "s" : ""}` : ""}`
+          : "Confirmado manualmente — sem entregáveis visuais necessários",
+        failMsg: hasNoDeliverableWork
+          ? "Nenhuma imagem ou vídeo gerado ainda — produza os entregáveis ou confirme que não são necessários"
+          : `${pendingCreativesCnt} criativo${pendingCreativesCnt !== 1 ? "s" : ""} aguardando aprovação final`,
       },
       {
         label: "Funil & Landing Page",
@@ -871,6 +909,78 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
         {contentExpanded && noContent && (
           <div className="mx-5 mb-4 border border-border/30 px-4 py-3 bg-background/20 text-center">
             <div className="font-mono text-[10px] text-muted-foreground/50">Nenhuma peça gerada. Gere o conteúdo antes de lançar.</div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Gate 3.5: Produzir Entregáveis (imagens & vídeos) ───────────────── */}
+      <div className="border-t border-border/20">
+        <div
+          className="flex items-start gap-3 px-5 py-4 cursor-pointer hover:bg-background/20 transition-colors"
+          onClick={() => setEntregaveisExpanded(v => !v)}
+        >
+          {deliverablesReady
+            ? <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
+            : <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Image className="h-3.5 w-3.5 text-pink-400" />
+              <span className="font-mono text-sm font-bold uppercase tracking-wide">Produzir Entregáveis</span>
+              <Badge variant="outline" className={`font-mono text-[9px] rounded-none px-1.5 uppercase ${deliverablesReady ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}>
+                {deliverablesReady ? "Pronto" : "Pendente"}
+              </Badge>
+            </div>
+            <p className="font-mono text-[11px] text-muted-foreground/70 mt-1">
+              Imagens (banners/criativos) e vídeos reais gerados por IA — etapa intermediária entre aprovar conteúdo e lançar.
+            </p>
+          </div>
+          {entregaveisExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+        </div>
+
+        {entregaveisExpanded && (
+          <div className="mx-5 mb-4 border border-border/30 divide-y divide-border/20">
+            <div className="px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Image className="h-3.5 w-3.5 text-pink-400 shrink-0" />
+                <span className="font-mono text-[11px] text-foreground/90">Criativos (banners/imagens)</span>
+              </div>
+              <span className={`font-mono text-[11px] ${creativesAllApproved || totalCreatives === 0 ? "text-muted-foreground" : "text-yellow-400"}`}>
+                {totalCreatives === 0 ? "Nenhum gerado" : `${approvedCreativesCnt}/${totalCreatives} aprovados`}
+              </span>
+            </div>
+            <div className="px-4 py-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Clapperboard className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                <span className="font-mono text-[11px] text-foreground/90">Vídeos</span>
+              </div>
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {videoProjects.length === 0 ? "Nenhum criado" : `${completedVideosCnt}/${videoProjects.length} concluídos`}
+                {vslsWithoutVideo.length > 0 && ` • ${vslsWithoutVideo.length} roteiro(s) sem vídeo`}
+              </span>
+            </div>
+            <div className="px-4 py-3 bg-background/10 flex items-center justify-between gap-3">
+              <div className="font-mono text-[10px] text-muted-foreground/50">
+                Gere e aprove as imagens/vídeos no Estúdio de Criativos, na aba de Conteúdo
+              </div>
+              <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest h-7 px-3 gap-1.5">
+                <Link href={`/campaigns/${campaignId}/content`}>
+                  <Clapperboard className="h-3 w-3" />Produzir Entregáveis
+                </Link>
+              </Button>
+            </div>
+            {!creativesAllApproved && (
+              <label className="px-4 py-3 flex items-start gap-2.5 cursor-pointer bg-background/5">
+                <input
+                  type="checkbox"
+                  checked={deliverablesConfirmed}
+                  onChange={e => setDeliverablesConfirmed(e.target.checked)}
+                  className="mt-0.5 accent-primary"
+                />
+                <span className="font-mono text-[10px] text-muted-foreground/80 leading-relaxed">
+                  Confirmo que este lançamento não precisa de imagens/vídeos adicionais aprovados agora (ex: campanha de teste)
+                </span>
+              </label>
+            )}
           </div>
         )}
       </div>
