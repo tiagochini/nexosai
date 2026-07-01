@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useMode } from "@/lib/mode";
 import { IdentityMemoryCard } from "@/components/IdentityMemoryCard";
+import { AvatarVoiceCloneGate } from "@/components/AvatarVoiceCloneGate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -721,6 +722,7 @@ export default function Dashboard() {
 
     return (
       <div className="max-w-2xl mx-auto space-y-5 py-2">
+        <AvatarVoiceCloneGate />
 
         {/* Greeting */}
         <div className="text-center py-4">
@@ -879,6 +881,7 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
+      <AvatarVoiceCloneGate />
 
       {/* ── Header ── */}
       <div className="border-b border-border/50 pb-5 flex items-start justify-between gap-4">

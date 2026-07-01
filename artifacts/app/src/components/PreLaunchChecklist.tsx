@@ -251,7 +251,7 @@ export function PreLaunchChecklist({ campaignId, onLaunchReady, onLaunch, launch
       customFetch<{ financials: LaunchFinancials }>(`/api/campaigns/${campaignId}/launch-financials`).catch(() => ({ financials: null })),
       customFetch<{ creatives: CreativePiece[] }>(`/api/campaigns/${campaignId}/creatives`).catch(() => ({ creatives: [] })),
       customFetch<{ projects: VideoProjectLite[] }>(`/api/video-projects?campaignId=${campaignId}`).catch(() => ({ projects: [] })),
-      customFetch<{ vsls: VslLite[] }>(`/api/vsls?campaignId=${campaignId}`).catch(() => ({ vsls: [] })),
+      customFetch<{ vsls: VslLite[] }>(`/api/vsls?campaignId=${campaignId}`).catch(() => ({ vsls: [] as VslLite[] })),
     ]).then(([intRes, contRes, finRes, creaRes, vidRes, vslRes]) => {
       setIntegrations(intRes.integrations ?? []);
       setContent(contRes.pieces ?? []);
