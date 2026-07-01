@@ -2405,6 +2405,131 @@ interface LandingPageData {
   landingPageNotes?: string;
 }
 
+function LandingPageRealRender({ data }: { data: LandingPageData }) {
+  const sections = data.sections ?? [];
+  const colorScheme = data.colorScheme;
+  const bg = colorScheme?.background || "#0a0a0f";
+  const textColor = colorScheme?.text || "#f5f5f5";
+  const primary = colorScheme?.primary || "#6d5bff";
+  const secondary = colorScheme?.secondary || primary;
+  const accent = colorScheme?.accent || primary;
+  const headlineFont = data.typography?.headline;
+  const bodyFont = data.typography?.body;
+  const aboveFold = data.aboveFoldAnalysis;
+
+  const orderedSections = aboveFold
+    ? sections
+    : sections;
+
+  return (
+    <div className="border border-border/50 bg-black/40 overflow-hidden">
+      {/* Fake browser chrome */}
+      <div className="flex items-center gap-2 bg-muted/20 border-b border-border/40 px-3 py-2">
+        <div className="flex gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-400/60" />
+          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/60" />
+          <span className="w-2.5 h-2.5 rounded-full bg-green-400/60" />
+        </div>
+        <div className="flex-1 mx-2 font-mono text-[10px] text-muted-foreground/50 bg-background/40 border border-border/30 px-2 py-1 truncate">
+          {data.metaTitle ?? data.pageTitle ?? "pagina-de-vendas"}
+        </div>
+      </div>
+
+      <div
+        className="max-h-[70vh] overflow-y-auto"
+        style={{ backgroundColor: bg, color: textColor, fontFamily: bodyFont }}
+      >
+        {/* Hero / above the fold */}
+        <div
+          className="px-6 sm:px-14 py-16 sm:py-20 text-center flex flex-col items-center gap-5"
+          style={{ background: `linear-gradient(160deg, ${primary}22, ${bg})` }}
+        >
+          <h1
+            className="text-2xl sm:text-4xl font-bold leading-tight max-w-3xl"
+            style={{ fontFamily: headlineFont, color: textColor }}
+          >
+            {aboveFold?.headline ?? data.pageTitle}
+          </h1>
+          {aboveFold?.subheadline && (
+            <p className="text-sm sm:text-base max-w-2xl opacity-75">{aboveFold.subheadline}</p>
+          )}
+          {aboveFold?.primaryCTA && (
+            <button
+              className="mt-3 px-8 py-3.5 text-sm sm:text-base font-bold rounded-md shadow-lg"
+              style={{ backgroundColor: primary, color: "#fff" }}
+            >
+              {aboveFold.primaryCTA}
+            </button>
+          )}
+          {(aboveFold?.trustElements ?? []).length > 0 && (
+            <div className="flex flex-wrap justify-center gap-4 mt-2 opacity-60 text-[11px]">
+              {aboveFold!.trustElements.map((t, i) => <span key={i}>✓ {t}</span>)}
+            </div>
+          )}
+        </div>
+
+        {/* Remaining sections rendered as real page blocks */}
+        {orderedSections.filter(s => !s.aboveTheFold).map((section, i) => (
+          <div
+            key={i}
+            className="px-6 sm:px-14 py-12 sm:py-16 border-t"
+            style={{
+              backgroundColor: section.backgroundColor || (i % 2 === 0 ? bg : `${secondary}0d`),
+              borderColor: `${textColor}1a`,
+            }}
+          >
+            <div className="max-w-3xl mx-auto flex flex-col gap-4 items-center text-center">
+              <h2 className="text-lg sm:text-2xl font-bold" style={{ fontFamily: headlineFont }}>{section.headline}</h2>
+              {section.subheadline && <p className="text-sm opacity-75">{section.subheadline}</p>}
+              {section.bodyContent && (
+                <p className="text-xs sm:text-sm opacity-70 leading-relaxed whitespace-pre-wrap text-left w-full">{section.bodyContent}</p>
+              )}
+              {section.socialProofElement && (
+                <div
+                  className="text-xs italic px-4 py-3 rounded border w-full"
+                  style={{ borderColor: `${accent}44`, backgroundColor: `${accent}0d` }}
+                >
+                  “{section.socialProofElement}”
+                </div>
+              )}
+              {(section.visualElements ?? []).length > 0 && (
+                <div className="flex flex-wrap justify-center gap-2 w-full">
+                  {section.visualElements!.map((el, j) => (
+                    <div
+                      key={j}
+                      className="flex-1 min-w-[120px] h-20 flex items-center justify-center text-[10px] opacity-50 border rounded"
+                      style={{ borderColor: `${textColor}22`, backgroundColor: `${textColor}08` }}
+                    >
+                      {el}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {section.cta && (
+                <button
+                  className="mt-1 px-6 py-2.5 text-xs sm:text-sm font-bold rounded-md"
+                  style={{ backgroundColor: section.cta.color || accent, color: "#fff" }}
+                >
+                  {section.cta.text}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* Exit intent + urgency as real footer strip */}
+        {data.exitIntentPopup && (
+          <div className="px-6 sm:px-14 py-8 border-t text-center" style={{ borderColor: `${textColor}1a`, backgroundColor: `${primary}14` }}>
+            <p className="text-sm font-bold">{data.exitIntentPopup.headline}</p>
+            <p className="text-xs opacity-70 mt-1">{data.exitIntentPopup.offer}</p>
+            <button className="mt-3 px-5 py-2 text-xs font-bold rounded" style={{ backgroundColor: primary, color: "#fff" }}>{data.exitIntentPopup.cta}</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LandingPagePreview({
   data, onApprove, onReject, isApproved, isRejected, loading,
 }: {
@@ -2416,6 +2541,7 @@ function LandingPagePreview({
   loading?: boolean;
 }) {
   const [expandedSection, setExpandedSection] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<"real" | "structure">("real");
   const sections = data.sections ?? [];
   const colorScheme = data.colorScheme;
   const primary = colorScheme?.primary ?? "hsl(var(--primary))";
@@ -2435,6 +2561,22 @@ function LandingPagePreview({
             <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 border-primary/30 text-primary">{data.pageType ?? "sales_page"}</Badge>
             <Badge variant="outline" className="rounded-none font-mono text-[10px] px-2 border-border/40 text-muted-foreground">{sections.length} seções</Badge>
           </div>
+        </div>
+
+        {/* View mode toggle */}
+        <div className="flex gap-1.5 pt-2 border-t border-border/30">
+          <button
+            onClick={() => setViewMode("real")}
+            className={`font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 border ${viewMode === "real" ? "border-primary/50 bg-primary/15 text-primary" : "border-border/30 text-muted-foreground/50"}`}
+          >
+            Página Real (Preview)
+          </button>
+          <button
+            onClick={() => setViewMode("structure")}
+            className={`font-mono text-[10px] uppercase tracking-widest px-3 py-1.5 border ${viewMode === "structure" ? "border-primary/50 bg-primary/15 text-primary" : "border-border/30 text-muted-foreground/50"}`}
+          >
+            Estrutura / Copy
+          </button>
         </div>
 
         {/* Color palette */}
@@ -2474,8 +2616,11 @@ function LandingPagePreview({
         )}
       </div>
 
+      {/* Real rendered page preview */}
+      {viewMode === "real" && <LandingPageRealRender data={data} />}
+
       {/* Above the fold */}
-      {aboveFold && (
+      {viewMode === "structure" && aboveFold && (
         <div className="border border-primary/20 bg-primary/5 p-0 overflow-hidden">
           <div className="bg-primary/10 px-4 py-2 border-b border-primary/20 flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
@@ -2507,7 +2652,7 @@ function LandingPagePreview({
       )}
 
       {/* Sections wireframe */}
-      <div className="space-y-2">
+      {viewMode === "structure" && <div className="space-y-2">
         <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50">Estrutura da Página — {sections.length} Seções</p>
         {sections.map((section, i) => {
           const isExpanded = expandedSection === i;
@@ -2595,10 +2740,10 @@ function LandingPagePreview({
             </div>
           );
         })}
-      </div>
+      </div>}
 
       {/* Exit Intent */}
-      {data.exitIntentPopup && (
+      {viewMode === "structure" && data.exitIntentPopup && (
         <div className="border border-border/40 bg-card/30 p-4">
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Pop-up de Saída</p>
           <p className="font-mono text-xs font-bold">{data.exitIntentPopup.headline}</p>
