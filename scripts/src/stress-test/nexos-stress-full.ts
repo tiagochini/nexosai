@@ -1552,10 +1552,41 @@ async function main(): Promise<void> {
   }
 
   printMegaReport(allResults, Date.now() - totalStart);
+  await cleanupTestData();
 }
 
-main().catch((e: unknown) => {
+/**
+ * Remove todos os usuários/workspaces/campanhas criados por este script
+ * (padrão de e-mail @nexos-stress.ai). Sem isso, cada execução manual
+ * deixava lixo acumulado no banco e consumindo créditos de IA reais em
+ * reprocessamentos futuros. Nunca toca em dados fora desse padrão.
+ */
+async function cleanupTestData(): Promise<void> {
+  try {
+    const { usersTable } = await import("@workspace/db");
+    const { like } = await import("drizzle-orm");
+    const deleted = await db
+      .delete(usersTable)
+      .where(like(usersTable.email, "%@nexos-stress.ai"))
+      .returning({ id: usersTable.id });
+    console.log(`\n  🧹 Cleanup: ${deleted.length} usuário(s) de teste e dados relacionados removidos (cascade).`);
+  } catch (e) {
+    console.error(`  ⚠ Cleanup falhou (dados de teste podem ter ficado no banco): ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+if (process.env["ALLOW_STRESS_TEST"] !== "true") {
+  console.error(
+    "\nFATAL: este script faz chamadas reais e pagas às APIs de IA (Anthropic/OpenAI/Gemini).\n" +
+      "Para evitar consumo acidental de créditos, ele só roda com ALLOW_STRESS_TEST=true definido explicitamente.\n" +
+      "Exemplo: ALLOW_STRESS_TEST=true pnpm --filter @workspace/scripts run stress-full\n"
+  );
+  process.exit(1);
+}
+
+main().catch(async (e: unknown) => {
   const msg = e instanceof Error ? e.message : String(e);
   console.error(`\nFATAL: ${msg}`);
+  await cleanupTestData();
   process.exit(1);
 });

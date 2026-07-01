@@ -917,6 +917,7 @@ async function main() {
   });
 
   printFinalReport();
+  await cleanupTestData();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1311,10 +1312,41 @@ function printFinalReport() {
   process.exit(fail > 0 ? 1 : 0);
 }
 
+/**
+ * Remove usuário/workspace/campanhas/leads criados por esta simulação
+ * (padrão de e-mail @nexos-test.dev / @test.dev com o SIM_TAG). Evita que
+ * cada execução manual acumule lixo no banco e gere custo de IA em
+ * reprocessamentos futuros. Nunca toca em dados fora desse padrão.
+ */
+async function cleanupTestData(): Promise<void> {
+  try {
+    const { usersTable, inviteCodesTable } = await import("@workspace/db");
+    const { like } = await import("drizzle-orm");
+    const deleted = await db
+      .delete(usersTable)
+      .where(like(usersTable.email, "%@nexos-test.dev"))
+      .returning({ id: usersTable.id });
+    await db.delete(inviteCodesTable).where(like(inviteCodesTable.label, `[sim] ${SIM_TAG}%`));
+    log(`\n  🧹 Cleanup: ${deleted.length} usuário(s) de simulação e dados relacionados removidos (cascade).`);
+  } catch (e) {
+    log(`  ⚠ Cleanup falhou (dados de teste podem ter ficado no banco): ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
-main().catch(err => {
+if (process.env["ALLOW_LAUNCH_SIM"] !== "true") {
+  console.error(
+    "\nFATAL: este script faz chamadas reais e pagas às APIs de IA (Anthropic/OpenAI/Gemini).\n" +
+      "Para evitar consumo acidental de créditos, ele só roda com ALLOW_LAUNCH_SIM=true definido explicitamente.\n" +
+      "Exemplo: ALLOW_LAUNCH_SIM=true pnpm --filter @workspace/scripts run nexos-launch-sim\n"
+  );
+  process.exit(1);
+}
+
+main().catch(async err => {
   log(`\n✗ ERRO FATAL: ${err instanceof Error ? err.message : String(err)}`);
   if (err instanceof Error && err.stack) log(err.stack);
+  await cleanupTestData();
   process.exit(1);
 });

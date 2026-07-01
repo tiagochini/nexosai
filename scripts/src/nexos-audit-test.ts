@@ -395,6 +395,15 @@ async function main() {
   }
 }
 
+if (process.env["ALLOW_AUDIT_TEST"] !== "true") {
+  console.error(
+    "\nFATAL: este script bate na API real e pode disparar agentes de IA pagos.\n" +
+      "Para evitar consumo acidental de créditos, ele só roda com ALLOW_AUDIT_TEST=true definido explicitamente.\n" +
+      "Exemplo: ALLOW_AUDIT_TEST=true DRY_RUN_MODE=true pnpm --filter @workspace/scripts run nexos-audit-test\n"
+  );
+  process.exit(1);
+}
+
 main().catch((err) => {
   console.error("Erro fatal no audit test:", err);
   process.exit(1);
