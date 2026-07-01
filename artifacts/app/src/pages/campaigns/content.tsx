@@ -2788,10 +2788,7 @@ function SocialLaunchGate({
   onLaunch: () => void;
   launching: boolean;
 }) {
-  const queryClient = useQueryClient();
-  const [connecting, setConnecting] = useState<string | null>(null);
-
-  const { data: integrationsData, refetch: refetchIntegrations } = useQuery({
+  const { data: integrationsData } = useQuery({
     queryKey: ["/api/workspaces/me/integrations", "gate"],
     queryFn: async () => {
       return customFetch<{ integrations: WorkspaceIntegration[] }>("/api/workspaces/me/integrations")
@@ -2811,55 +2808,6 @@ function SocialLaunchGate({
     integrations.some(i => i.provider === def.dbProvider && i.status === "connected");
 
   const allConnected = required.every(def => isConnected(def));
-
-  const handleOAuth = useCallback(async (def: SocialPlatformDef) => {
-    setConnecting(def.oauthProvider);
-    try {
-      const body = await customFetch<{ url: string }>(
-        `/api/integrations/oauth/start/${def.oauthProvider}`
-      );
-      const popup = window.open(body.url, "nexos_oauth", "width=620,height=700,scrollbars=yes,resizable=yes");
-      if (!popup) {
-        toast.error("Popup bloqueado. Permita popups para este site e tente novamente.");
-        setConnecting(null);
-        return;
-      }
-      const handler = (event: MessageEvent<{ type?: string; success?: boolean; error?: string }>) => {
-        if (event.data?.type !== "oauth_complete") return;
-        window.removeEventListener("message", handler);
-        clearInterval(timer);
-        setConnecting(null);
-        if (event.data.success) {
-          toast.success(`${def.label} conectado com sucesso!`);
-          void refetchIntegrations();
-          void queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
-        } else {
-          toast.error(event.data.error ?? `Falha ao conectar ${def.label}`);
-        }
-      };
-      window.addEventListener("message", handler);
-      const timer = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(timer);
-          window.removeEventListener("message", handler);
-          setConnecting(null);
-        }
-      }, 600);
-    } catch (err) {
-      setConnecting(null);
-      if (err instanceof ApiError) {
-        const data = err.data as { code?: string; error?: string } | null;
-        if (data?.code === "OAUTH_NOT_CONFIGURED") {
-          const platform = def.platform === "facebook" || def.platform === "instagram" ? "META_APP_ID e META_APP_SECRET" : "TIKTOK_CLIENT_KEY e TIKTOK_CLIENT_SECRET";
-          toast.error(`OAuth do ${def.label} não configurado. O administrador precisa definir ${platform} nas variáveis de ambiente.`, { duration: 7000 });
-        } else {
-          toast.error(data?.error ?? `Erro ao conectar ${def.label}: ${err.message}`);
-        }
-      } else {
-        toast.error(`Erro de rede ao conectar ${def.label}. Verifique sua conexão.`);
-      }
-    }
-  }, [refetchIntegrations, queryClient]);
 
   // If no social platforms require OAuth (e.g. only email/whatsapp/ads), skip gate
   if (required.length === 0) {
@@ -2894,7 +2842,6 @@ function SocialLaunchGate({
       <div className="divide-y divide-border/30">
         {required.map(def => {
           const connected = isConnected(def);
-          const isLoading = connecting === def.oauthProvider;
           const integration = integrations.find(i => i.provider === def.dbProvider && i.status === "connected");
 
           return (
@@ -2916,30 +2863,26 @@ function SocialLaunchGate({
                     </div>
                   ) : (
                     <div className="font-mono text-[11px] text-muted-foreground/50 mt-0.5">
-                      Faça login para autorizar a publicação
+                      Conecte em Integrações para autorizar a publicação
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Status / Connect button — full-width on mobile */}
+              {/* Status / Connect CTA — full-width on mobile */}
               {connected ? (
                 <div className="flex items-center gap-1.5 shrink-0">
                   <CheckCircle2 className="h-4 w-4 text-success" />
                   <span className="font-mono text-[11px] text-success uppercase tracking-widest">Conectado</span>
                 </div>
               ) : (
-                <button
-                  onClick={() => void handleOAuth(def)}
-                  disabled={isLoading}
-                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 h-9 font-mono text-[11px] uppercase tracking-widest border transition-all shrink-0 disabled:opacity-50"
+                <Link
+                  href="/integracoes"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 h-9 font-mono text-[11px] uppercase tracking-widest border transition-all shrink-0"
                   style={{ borderColor: def.brand.border, color: def.brand.text, background: def.brand.bg }}
                 >
-                  {isLoading
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Conectando...</>
-                    : <><Link2 className="h-3.5 w-3.5" />Entrar com {def.label.split(" ")[0]}</>
-                  }
-                </button>
+                  <Link2 className="h-3.5 w-3.5" />Conectar em Integrações
+                </Link>
               )}
             </div>
           );
@@ -2960,12 +2903,22 @@ function SocialLaunchGate({
             }
           </Button>
         ) : (
-          <div className="flex items-center gap-3 text-muted-foreground/50">
-            <div className="flex-1 h-px bg-border/30" />
-            <span className="font-mono text-[11px] uppercase tracking-widest">
-              {required.filter(d => !isConnected(d)).length} plataforma{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""} pendente{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""}
-            </span>
-            <div className="flex-1 h-px bg-border/30" />
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-3 text-muted-foreground/50">
+              <div className="flex-1 h-px bg-border/30" />
+              <span className="font-mono text-[11px] uppercase tracking-widest">
+                {required.filter(d => !isConnected(d)).length} plataforma{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""} pendente{required.filter(d => !isConnected(d)).length !== 1 ? "s" : ""}
+              </span>
+              <div className="flex-1 h-px bg-border/30" />
+            </div>
+            <Link href="/integracoes">
+              <Button
+                variant="outline"
+                className="w-full rounded-none font-mono uppercase tracking-widest gap-2 h-10 border-primary/40 text-primary hover:bg-primary/10"
+              >
+                <Link2 className="h-4 w-4" />Ir para Integrações<ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         )}
       </div>

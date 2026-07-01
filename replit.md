@@ -232,6 +232,13 @@ Launch tracks by revenue target:
 - **ElevenLabs** — conta criada, API key disponível. Integrar quando geração de voz/narração para VSL e conteúdo de áudio for implementada.
 - Avisar o usuário quando chegar a hora de conectar essas APIs.
 
+## Integrações — Assistente Guiado + Gate de Conexão (Post-session)
+
+- **Chat persistente de integrações**: `integrationChatConversationsTable`/`integrationChatMessagesTable` em `lib/db/src/schema/integration-chat.ts`. Rotas em `/api/integration-chat` (`GET /active` auto-cria conversa + mensagem de abertura da IA; `POST /:id/messages`; `POST /:id/end`). Prompt do especialista consolidado em `integrations-specialist.prompt.ts` (usado por `direct-chat.routes.ts` e `agents.routes.ts`), com fluxo guiado de abertura anexado.
+- **Painel flutuante**: `IntegrationChatPanel` (`artifacts/app/src/components/integration-chat-panel.tsx`) — botão "Ajuda para conectar" fixo, montado **somente** em `/integracoes`. Detecta credenciais na resposta da IA e oferece botões de copiar.
+- **OAuth inline removido da página de conteúdo**: `SocialLaunchGate` (`campaigns/content.tsx`) não abre mais popup de OAuth ("Entrar com Facebook/TikTok"). Agora mostra status "Conectado" ou um CTA que leva para `/integracoes`, onde a conexão real acontece.
+- **Meta OAuth "URL Blocked"**: causa é config externa — o Meta Developer Console precisa ter `https://agencianexos.vip/api/integrations/oauth/callback/facebook` cadastrado em "Valid OAuth Redirect URIs" (o `APP_URL` em produção já está correto).
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

@@ -207,7 +207,12 @@ export function IntegrationChatPanel() {
               Encerrar
             </button>
           )}
-          <button onClick={() => setOpen(false)} className="text-muted-foreground/50 hover:text-foreground">
+          <button
+            onClick={() => setOpen(false)}
+            aria-label="Fechar chat de integrações"
+            title="Fechar"
+            className="text-muted-foreground/50 hover:text-foreground"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
