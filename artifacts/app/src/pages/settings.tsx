@@ -1273,12 +1273,12 @@ function IntegracaoTab() {
 
   const connectMutation = useMutation({
     mutationFn: async ({
-      provider, accountId, accountName, webhookUrl, metadata,
-    }: { provider: IntegrationProvider; accountId?: string; accountName?: string; webhookUrl?: string; metadata?: Record<string, unknown> }) => {
+      provider, accountId, accountName, accessToken, webhookUrl, metadata,
+    }: { provider: IntegrationProvider; accountId?: string; accountName?: string; accessToken?: string; webhookUrl?: string; metadata?: Record<string, unknown> }) => {
       return customFetch<unknown>("/api/workspaces/me/integrations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, accountId, accountName, webhookUrl, metadata }),
+        body: JSON.stringify({ provider, accountId, accountName, accessToken, webhookUrl, metadata }),
       });
     },
     onSuccess: () => {
@@ -1295,11 +1295,11 @@ function IntegracaoTab() {
   const handleConnect = (provider: IntegrationProvider, fields: Record<string, string>) => {
     const { accountId, accountName, webhookUrl, accessToken, ...rest } = fields;
     const metadata: Record<string, unknown> = { ...rest };
-    if (accessToken) metadata["accessToken"] = accessToken;
     connectMutation.mutate({
       provider,
       accountId: accountId || undefined,
       accountName: accountName || undefined,
+      accessToken: accessToken || undefined,
       webhookUrl: webhookUrl || undefined,
       metadata,
     });

@@ -30,6 +30,9 @@ AI-powered operating system for campaign execution, launch automation and digita
 **Optional integrations:**
 - `NEXOS_BASE_DOMAIN` — base domain for white-label (default: `nexos.ai`)
 - `CREDIT_MARGIN_MULTIPLIER` — AI cost markup multiplier (default: `1.5`)
+- `RESEND_API_KEY` / `RESEND_FROM_EMAIL` — transactional/broadcast email via Resend
+- `HEYGEN_API_KEY` — AI avatar video generation (account exists; not yet connected in production — see Gotchas)
+- `ELEVENLABS_API_KEY` — voice cloning/narration (**not currently set** — voice cloning is non-functional until this secret is added)
 
 ## Stack
 
@@ -47,13 +50,26 @@ AI-powered operating system for campaign execution, launch automation and digita
 
 - `lib/db/src/schema/` — all Drizzle table definitions (one file per domain)
 - `lib/db/src/seed-plans.ts` — plan seeder
-- `artifacts/api-server/src/modules/` — domain modules (auth, credits, campaigns, workspaces, plans, ai-gateway, queue, realtime, orchestration, metrics, content, agents, intake, launch-sequence, vsl, email-dispatch, whatsapp)
+- `artifacts/api-server/src/modules/` — domain modules (auth, credits, campaigns, workspaces, plans, ai-gateway, queue, realtime, orchestration, metrics, content, agents, intake, launch-sequence, vsl, email-dispatch, whatsapp, social, creatives, video-production, weekly-report, sales-team, server-events)
 - `artifacts/api-server/src/modules/launch-sequence/sequence-scheduler.worker.ts` — automation engine (60s tick, BullMQ + setInterval fallback)
 - `artifacts/api-server/src/modules/launch-sequence/sequence-analytics.service.ts` — engagement stats, adaptive AI suggestions, contact segment recalc
 - `artifacts/api-server/src/modules/launch-sequence/sequence-realtime.ts` — Socket.io events for live automation dashboard
 - `artifacts/api-server/src/modules/agents/whatsapp-response.agent.ts` — AI auto-response (classify intent + generate reply)
+- `artifacts/api-server/src/modules/social/` — `social.publisher.ts` (Instagram/Facebook/TikTok publish calls), `social.autopost.service.ts` (fire-and-forget post on content approval)
+- `artifacts/api-server/src/modules/creatives/creatives.service.ts` — DALL-E image pipeline: concept_pending → concept_ready → preview_generating → preview_ready → final_generating → approved (each step is a manual/explicit trigger, not automatic)
+- `artifacts/api-server/src/modules/video-production/video-generation.service.ts` — real AI video generation (Runway, Kling, HeyGen avatar, ElevenLabs voice) — separate "Generate Video" action, not bulk-generated with content
+- `artifacts/api-server/src/modules/weekly-report/` — weekly HTML report composer + `POST /api/reports/send` + Monday 08:00 UTC scheduler
+- `artifacts/api-server/src/modules/sales-team/` — Time de Vendas CRUD + AI reply suggestions (`POST /api/sales-team/:id/suggest`)
+- `artifacts/api-server/src/modules/server-events/` — Meta CAPI + TikTok Events API server-side tracking (`/api/events/*`, fire-and-forget)
 - `artifacts/api-server/src/lib/` — shared utilities (env, errors, logger)
 - `artifacts/api-server/src/routes/` — route barrel (mounts all module routers)
+- `artifacts/app/src/pages/integracoes/index.tsx` — canonical integration management page (`/integracoes`); connect/disconnect, Full Auto status bar, guided AI chat panel (`integration-chat-panel.tsx`)
+- `artifacts/app/src/pages/settings.tsx` — Configurações; 4th tab duplicates integration connect UI (legacy — prefer `/integracoes`)
+- `artifacts/app/src/pages/campaigns/content.tsx` — content approval page (3 tabs: Por Plataforma, Cronograma, Segmentação)
+- `artifacts/app/src/pages/video-production/index.tsx` — recording mode + avatar/voice selection (RECORDING_MODES: no_face/partial_pip/own_recording)
+- `artifacts/app/src/components/CloneStudioPanel.tsx`, `CloneWowMoment.tsx` — avatar/voice clone onboarding flow (optional, manual trigger during `plan_preview`)
+- `artifacts/app/src/pages/atendimento/index.tsx` — Time de Vendas conversation manager (kanban-by-stage)
+- `artifacts/app/src/pages/agency/clients.tsx`, `affiliate/index.tsx`, `revenue/index.tsx`, `admin/index.tsx` — Agency client management, affiliate program, revenue analytics, Owner Command Center
 
 ## Architecture Decisions
 
@@ -64,8 +80,10 @@ AI-powered operating system for campaign execution, launch automation and digita
 - **Campaign State Machine**: `VALID_STATUS_TRANSITIONS` in `campaigns.service.ts` enforces valid transitions. Campaigns cannot skip states or go backwards except through defined paths.
 - **Socket.io rooms**: clients join `campaign:{id}` rooms to receive real-time agent events. The Live Production Display streams via `emitAgentThinking()`, `emitAgentStarted()`, `emitAgentCompleted()`.
 - **Async execution pipeline**: `POST /campaigns/:id/execute` returns 202 immediately; BullMQ worker processes asynchronously. When Redis is unavailable (dev), falls back to `setImmediate` direct execution — never blocks HTTP. Worker in `orchestration.worker.ts`, service in `orchestration.service.ts`.
-- **Campaign execution state machine phases**: intake → (execute/strategy) → analyzing → strategy_ready → (execute/content) → generating → awaiting_approval → approved → (execute/launch) → executing → live → (execute/monitor) → completed.
+- **Campaign execution state machine phases**: intake → (execute/strategy) → analyzing → strategy_ready → (execute/content) → generating → awaiting_approval → approved → (execute/launch) → executing → live → (execute/monitor) → completed. Content approval auto-advances `awaiting_approval → approved` but does NOT auto-trigger `executing`/`live` — that requires a separate launch action.
 - **Metrics health score**: 100-point system (revenue 35 + ROAS 25 + CPL 20 + email 10 + trend 10). Auto-generates alerts at thresholds. Auto-triggers optimization agent at score ≤ 30. Schema in `lib/db/src/schema/metrics.ts`.
+- **Integration gate on launch**: `checkIntegrationsForLaunch()` in `execution.routes.ts` runs before `execute/launch`; requires connected messaging (WhatsApp/Telegram) AND email (RD Station/ActiveCampaign/`RESEND_API_KEY`). Missing → HTTP 422 `MISSING_INTEGRATIONS` + blocking modal on frontend linking to `/integracoes`. This is the ONLY integration gate — never gate at content approval or status PATCH.
+- **Deliverable generation is opt-in per asset, not bulk**: content pieces (scripts/copy/plans) generate automatically during the `generating` phase, but actual DALL-E images and AI videos require an explicit follow-up action per creative — approving content does not by itself produce final image/video files.
 
 ## Product
 
@@ -89,77 +107,17 @@ Launch tracks by revenue target:
 - Payment integration is NEVER a blocker for campaign execution
 - Multilingual: PT-BR first, EN-US and ES-LA modular
 
-## TikTok Integration (Post-session)
+## Integrations
 
-- **TikTok added everywhere**: `tiktok` provider added to `settings.tsx` INTEGRATION_CATALOG (Social Orgânico category), `onboarding.tsx` INTEGRATION_CATALOG + PATH_INTEGRATIONS (all 4 paths), `dashboard.tsx` CRITICAL_INTEGRATIONS, `social.autopost.service.ts` platform mapping (`reel`, `feed_video`, `short_video`, `tiktok_video`, `tiktok_reel` → `tiktok`).
-- **TikTok Ads** also added to settings catalog (Mídia Paga category) and maintained in existing social.tsx.
-- **`publishToTikTok()`** in `social.publisher.ts`: uses TikTok Content Posting API v2 Pull Upload (`/post/publish/video/init/`). Requires video URL + access token. Fire-and-forget from autopost.
-- **TikTok Ads** (`tiktok_ads`) was already in the DB enum; organic `tiktok` is treated as a connected integration stored under the `tiktok_ads` enum value for now (DB enum unchanged to avoid migration). Display layer uses `tiktok` string, provider stored as `tiktok_ads`.
-
-## Resend Email Integration (Post-session)
-
-- **`sendViaResend()`** added to `email-dispatch.service.ts`: detects Resend Audience UUID vs. email address in `listId`. If UUID → uses Resend Broadcasts API. If email address → uses transactional `/emails` endpoint.
-- **`RESEND_API_KEY`** and **`RESEND_FROM_EMAIL`** added to `env.ts`.
-- Fallback: when `RESEND_API_KEY` is set and provider is `mailchimp/sendgrid/brevo/custom_smtp`, automatically routes through Resend instead of mock-sending.
-- Integration gate also considers `RESEND_API_KEY` as satisfying the email requirement.
-
-## Manual Integration Connect Fix (Post-session)
-
-- **Bug fixed**: `POST /api/workspaces/me/integrations` (manual credential fallback, used when OAuth isn't available) was silently broken — the zod schema dropped `accessToken` entirely (never persisted) and hardcoded `status: "disconnected"` regardless of input, and the provider enum was missing `facebook`/`tiktok`/several payment providers already present in `integrationProviderEnum`.
-- **Fix**: schema now accepts `accessToken`; provider enum matches the DB enum (facebook, tiktok, linkedin_ads, resend, paypal, mercado_pago, pagarme, asaas added); status is set to `"connected"` when credentials are supplied; endpoint now upserts (updates existing workspace+provider row) instead of always inserting a duplicate.
-- **`tiktok` (organic) provider mapping**: manual entry provider `"tiktok"` is mapped to DB enum value `"tiktok_ads"` (there is no separate organic DB value), matching the existing OAuth `dbProvider` mapping in `oauth.routes.ts`.
-- Verified end-to-end with a temp test account: facebook/tiktok manual connect now returns `status: "connected"` with token stored, and reconnecting updates the same row instead of duplicating.
-
-## Integrações Page (Post-session)
-
-- **`/integracoes`** — new dedicated page at `artifacts/app/src/pages/integracoes/index.tsx`. Full integration management: connect/disconnect, organized by category, Full Auto status bar, per-integration "why you need it" explanation, required badges.
-- **Sidebar** — "Integrações" item added under "Automações" group, always visible (not expert-only). Points to `/integracoes`.
-- **Route** registered in `routes.tsx` as protected route.
-- **Dashboard CTA** — "Conectar" button in IntegrationHealthPanel now points to `/integracoes` (was `/configuracoes?tab=integracoes`).
-
-## Integration Gate on Launch (Post-session)
-
-- **`checkIntegrationsForLaunch()`** in `execution.routes.ts`: runs before `execute/launch` phase. Checks DB for connected messaging (WhatsApp/Telegram) AND email (RD Station/ActiveCampaign) + checks env for `RESEND_API_KEY`. If missing, returns HTTP 422 with `MISSING_INTEGRATIONS` code + `data.missing[]` array.
-- **Frontend gate**: `campaigns/detail.tsx` handles `MISSING_INTEGRATIONS` code — sets `missingIntegrations` state which renders a blocking modal with the list of missing categories, connect options, and a CTA button to `/integracoes`.
-
-## AI Integration Status (Post-session)
-
-- **Replit AI Integrations active**: All 3 provisioned — Anthropic, OpenAI, Gemini via `AI_INTEGRATIONS_*` env vars.
-- **ai-gateway.service.ts updated**:
-  - `getAnthropic()`: uses `AI_INTEGRATIONS_ANTHROPIC_*` when no native key → model auto-switches to `claude-sonnet-4-6`
-  - `getOpenAI()`: uses `AI_INTEGRATIONS_OPENAI_*` when no native key → model auto-switches to `gpt-5.4` with `max_completion_tokens` (not `max_tokens`)
-  - `getGemini()`: uses `AI_INTEGRATIONS_GEMINI_API_KEY` when no native key → model `gemini-3-flash-preview`. Falls back to Anthropic integration when no Gemini access.
-  - All fallback chains: Anthropic → OpenAI integration → Anthropic integration → error
-- **env.ts**: Added `AI_INTEGRATIONS_OPENAI_BASE_URL`, `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_GEMINI_BASE_URL`, `AI_INTEGRATIONS_GEMINI_API_KEY`
-
-## Social Auto-Post Status (Post-session)
-
-- **`social.autopost.service.ts`**: Fire-and-forget post to Instagram/Facebook on content approval. Triggered from `content.routes.ts` after `approveCampaignContent()`. Maps content piece types to platforms, looks up connected workspace integrations, calls `publishToInstagram`/`publishToFacebook`, logs results to `social_posts` table.
-- **Content approval pipeline**: `POST /campaigns/:campaignId/content/:pieceId/approve` now triggers both memory save AND social auto-post (both fire-and-forget, never block HTTP response).
-
-## Frontend Status (Post-session)
-
-- **Socket.io real-time**: `artifacts/app/src/lib/socket.ts` — singleton `useCampaignSocket(campaignId, onEvent, enabled)` hook. Connects to `/api/socket.io`, auth via JWT from localStorage, joins `campaign:{id}` room, listens for `campaign:event`. Auto-scrolling live feed injected in Campaign Detail → Agentes tab (only visible when campaign is in active statuses).
-- **Integrações tab**: `artifacts/app/src/pages/settings.tsx` — 4th tab in Configurações. 10 providers in the catalog (WhatsApp Business, RD Station, ActiveCampaign, Hotmart, Kiwify, Stripe, Meta Ads, Google Ads, Telegram, HubSpot). Reads from `GET /api/workspaces/me/integrations`, writes via `POST /api/workspaces/me/integrations`. Connected integrations shown at top with live status badges.
-- **Agency Clients page**: `artifacts/app/src/pages/agency/clients.tsx` — `/agency/clients` route + sidebar link ("Clientes"). Full invite/manage/revoke flow. Plan guard shows upgrade prompt for non-Agency users. Uses `GET/POST/PATCH/DELETE /api/agency/*` endpoints.
-- **Onboarding plan preview**: `artifacts/app/src/pages/onboarding.tsx` — After conversation completes, step transitions to `plan_preview` (7-day visual timeline, AI agents grid, revenue track projections). Then CTA navigates to intake or campaign.
-- **Dashboard expandable KPIs**: `artifacts/app/src/pages/dashboard.tsx` — KpiCard now supports `breakdown`, `expanded`, `onToggle` props. Click to expand each KPI and see per-item breakdown. State managed by `expandedKpi: string | null`.
-- **Dashboard Execution Flowchart**: `ExecutionFlowchart` component renders campaign pipeline as 5 clickable nodes (Briefing → Estratégia → Conteúdo → Lançamento → Resultados). Node highlights if campaigns exist in that state. Clicking a node navigates to that campaign.
-- **Content Approval page**: `artifacts/app/src/pages/campaigns/content.tsx` — route `/campaigns/:id/content` (before `/:id` to avoid conflict). 3 tabs: Por Plataforma, Cronograma, Segmentação. Approve/reject/edit/AI-rewrite per piece. Campaign detail links here when status=`awaiting_approval`.
-- **Affiliate page**: `artifacts/app/src/pages/affiliate/index.tsx` — `/affiliate`. Join flow + active dashboard with referral link, KPI stats, 52-week teaser.
-- **Revenue page**: `artifacts/app/src/pages/revenue/index.tsx` — Evolução chart tab with recharts AreaChart/BarChart, period selector (7d/30d/90d/all), cumulative chart, CSV export. WeeklyReportCard with health score + AI insight.
-- **Dashboard Integration Health Panel**: `IntegrationHealthPanel` component in `dashboard.tsx` — shows WhatsApp/Instagram/Facebook/RD Station connection status. Displays "Full Auto" badge (green) when all connected, yellow warning with count + "Conectar" CTA when missing integrations. Fetches from `GET /api/workspaces/me/integrations`, cached 60s.
-
-## Backend Status (Post-session)
-
-- **Weekly report service**: `artifacts/api-server/src/modules/weekly-report/` — `weekly-report.service.ts` composes HTML email with metrics (revenue, sales, campaigns, credits, health score, AI insight). `weekly-report.routes.ts` exposes `POST /api/reports/send` (auth required, sends to workspace owner). Scheduler in `sequence-scheduler.worker.ts` fires `sendWeeklyReportsToAll()` every Monday at 08:00 UTC via `maybeFireWeeklyReport()` — non-blocking, idempotent (keyed by date string). No SMTP configured → logs compose preview only; wire `nodemailer`/SMTP env vars to enable real delivery.
-- **Auth**: DB schema has `phone` + `phoneVerified` columns. Register accepts optional `phone`. Login and register pages fully rebuilt with confirmations, show/hide toggles, live validation.
-- **Admin access fixed**: `ADMIN_EMAILS` set in `admin.routes.ts` includes both `admin@nexos.ai` and `founder@nexos.ai`. Frontend `auth.tsx` `isAdmin` check uses a Set (same two emails).
-- **Admin financials endpoint**: `GET /api/admin/financials` — returns access revenue, pack revenue, AI costs (USD + BRL), margin %, conversion funnel, 7d/30d signups + revenue, low-credit upsell list (balance < 150), last 10 payments. `getAdminFinancials()` in `admin.service.ts`.
-- **Owner Command Center**: `artifacts/app/src/pages/admin/index.tsx` rebuilt with 4 tabs: Visão Geral (KPI strip + SaaS status + growth), Financeiro (revenue breakdown + margin bar + funnel + recent payments), Oportunidades (low-credit upsell list + hibernated re-engagement), Usuários (full table).
-- **Agents Hub expanded**: `artifacts/app/src/pages/agents/index.tsx` — 29 agents organized in 6 categories (Estratégia/Conteúdo/Audiência/Vídeo/Analytics/Automação). Each card shows provider badge (Claude/GPT-4o/Gemini), specialties, description and direct chat link.
-- **Preparação page updated**: `WHATSAPP_LINKS` replaced with `GROUP_LINKS` supporting both WhatsApp (`https://chat.whatsapp.com/…`) and Telegram (`https://t.me/+…`) per segment. `WhatsAppButton` replaced with `GroupButtons` — shows both platform buttons when configured, two disabled placeholders when null.
-- **Checkout pricing fixed**: `CREDIT_PACKS` updated to new pricing: Boost 500cr/R$85, Starter 1500cr/R$239, Pro 3500cr/R$529, Elite 7000cr/R$979. Old 1500cr/R$150 and 3000cr/R$240 removed.
+- **Providers**: WhatsApp Business, Telegram, RD Station, ActiveCampaign, Mailchimp, Resend, Meta Ads, Instagram, Facebook, TikTok (organic — stored under DB enum value `tiktok_ads`, no separate organic value), TikTok Ads, Google Ads, LinkedIn Ads, Stripe, PayPal, Mercado Pago, Pagar.me, Asaas, Hotmart, Eduzz, Kiwify, HubSpot, HeyGen, Runway ML, Kling (fal.ai), ElevenLabs.
+- **Canonical connect page**: `/integracoes` (`artifacts/app/src/pages/integracoes/index.tsx`) — always sends `accessToken` as a top-level field on `POST /api/workspaces/me/integrations`, so manual connects reliably compute `status: "connected"`.
+- **Legacy duplicate**: `settings.tsx` Configurações → Integrações tab has the same connect form but historically only nested `accessToken` inside `metadata` (never top-level) — backend then computed `status: "disconnected"` even with a valid token saved in `metadata`. **Fixed** to send `accessToken` top-level like `/integracoes`. Prefer `/integracoes` for all new integration work; treat `settings.tsx`'s integrations tab as legacy.
+- **OAuth flow**: `oauth.routes.ts` always sets `status: "connected"` on successful callback. Meta OAuth "URL Blocked" errors are an external config issue — the Meta Developer Console must have `https://agencianexos.vip/api/integrations/oauth/callback/facebook` registered under "Valid OAuth Redirect URIs".
+- **Guided integration chat**: `integrationChatConversationsTable`/`integrationChatMessagesTable` (`lib/db/src/schema/integration-chat.ts`), routes at `/api/integration-chat`. Floating `IntegrationChatPanel` mounted only on `/integracoes`; detects credentials in AI responses and offers copy buttons. Prompt lives in `integrations-specialist.prompt.ts`.
+- **`SocialLaunchGate`** (`campaigns/content.tsx`): no inline OAuth popups — shows connection status or a CTA to `/integracoes`, where the real connection happens.
+- **Social auto-post**: `social.autopost.service.ts` fires on content approval (fire-and-forget from `content.routes.ts`), publishes to Instagram/Facebook/TikTok only when the integration is truly `connected` with a real token; logs every attempt to `social_posts`. No silent mocking — it skips and logs when not connected.
+- **AI Integrations (Anthropic/OpenAI/Gemini)**: all 3 provisioned via Replit `AI_INTEGRATIONS_*` env vars, used automatically when no native key is set (see Gotchas for exact model names). Fallback chain: Anthropic → OpenAI integration → Anthropic integration → error.
+- **HeyGen / ElevenLabs**: code paths exist end-to-end (avatar/voice clone UI in onboarding + settings + video-production), but as of the last audit no workspace in production has ever successfully connected `heygen`, `elevenlabs`, `runway_ml`, or `kling_fal`, and `ELEVENLABS_API_KEY` is not set in the environment — treat AI video/voice generation as unverified in production until a real end-to-end connect + generate is confirmed.
 
 ## Gotchas
 
@@ -198,46 +156,13 @@ Launch tracks by revenue target:
 - **Launch calendar**: `GET /launch-sequences/:id/calendar` — day-by-day view. Returns days grouped by `dayIndex` with date (if activated), phase label, items, and hasCopy flag. Also returns `phases`, `milestones`, and `summary` from the AI plan.
 - **Current phase / today**: `GET /launch-sequences/:id/today` — returns `currentDayIndex`, `currentPhaseLabel`, `progress` %, `today.items`, `tomorrow.items`, `nextSevenDays`, `performance` stats, `warnings[]`. Requires sequence to be active with `config.activatedAt` set.
 - **Segment-aware cart dispatch**: Scheduler detects `cart_open`/`cart_middle`/`cart_close` phases and routes WhatsApp by segment. Queries `sequenceContactsTable` for hot/warm/cold contacts → sends segment-specific copy (from `generatedCopy[seg]` or template fallback). hot=VIP/insider angle, warm=standard urgency, cold=reactivation/curiosity.
-
-## Growth Intelligence (Post-session)
-
-- **UTM Intelligence** (`lead-capture.routes.ts`): Auto-reads UTMs from both body and query params (`?utm_source=`, `?utm_medium=`, etc.) + `utmTerm`. Stored in `metadata.utm` (structured object) + flat keys. `getSequenceAnalytics()` returns `utmBreakdown[]` (source, count, converted) sorted by volume.
-- **Live-stats endpoint** (`GET /api/campaigns/:id/live-stats`): Real-time counters for scarcity copy — `totalLeads`, `leadsLast24h`, `leadsLastHour`, `totalSales`, `revenueBrlLast24h`, `totalRevenueBrl`, `engagementEventsLast24h`, `activeSequences`. Queries sequence contacts + revenue events linked to campaign.
-- **Viral loop / referral system** (`lead-capture.routes.ts`): Each captured lead gets a unique 8-char alphanumeric `referralCode`. Accept `?ref=CODE` or `body.referralCode` to track referrer. `metadata.referredBy` stores inbound code. Referrer's `metadata.referralCount` auto-incremented non-blocking. `GET /api/lead-capture/:sequenceId/referral/:code` returns referrer name + referredCount + captureUrl. Analytics returns `referralStats` + `topReferrers`.
-- **Send time optimization** (`sequence-analytics.service.ts`): On every `open` engagement event, UTC hour is appended to `contact.metadata.engagementHours` (capped at 20). Mode of that array → `metadata.preferredSendHour`. Analytics returns `sendTimeInsight` with `preferredHour`, `preferredHourLabel`, `topHours[]`.
-- **Creative fatigue detection** (`metrics.service.ts`): On every metric ingest, fetches historical peak CTR across all prior days. If current CTR < 70% of peak (and peak > 0.5% to avoid noise), generates a `kpi_breach` alert titled "Fadiga criativa detectada: CTR caiu X% do pico" with recommendation to refresh creatives.
-- **Server-side events / Meta CAPI + TikTok Events API** (`artifacts/api-server/src/modules/server-events/`):
-  - `server-events.service.ts`: `sendMetaCAPIEvent()` hashes PII (SHA-256) and POSTs to Graph API v20. `sendTikTokEvent()` POSTs to TikTok Business API v1.3. `fireServerEvent()` fires both platforms concurrently for canonical events (Lead, Purchase, PageView, etc.).
-  - `server-events.routes.ts`: public endpoints — `POST /api/events/:workspaceId/track` and `POST /api/events/sequence/:sequenceId/track`. Fire-and-forget (`setImmediate`), never blocks HTTP response.
-  - Registered in `routes/index.ts` at `/api/events`.
-- **LGPD audit trail** (`lead-capture.routes.ts`): Each lead capture stores `metadata.lgpd` (consentAt ISO timestamp, captureIp, consentText, source, userAgent). Writes a non-blocking `lead.captured` row to `auditLogsTable` with full context (sequenceId, contactId, utm, referralCode, IP, consentText).
-
-## Time de Vendas (Post-session)
-
-- **DB schema**: `lib/db/src/schema/sales-conversations.ts` — `salesConversationsTable` (id, workspaceId, campaignId, contactName, contactHandle, channel, funnelStage, status, notes, metadata) + `salesMessagesTable` (id, conversationId, role, content, agentRole, isAiGenerated). Migrated via `pnpm --filter @workspace/db run push`.
-- **Backend module**: `artifacts/api-server/src/modules/sales-team/` — `sales-team.service.ts` (CRUD + analytics + `suggestSalesReply`) + `sales-team.routes.ts` (all routes with `req.auth` pattern). Registered at `/api/sales-team` in `routes/index.ts`.
-- **5 new AgentRole types**: `sales_warmer`, `sales_desire`, `sales_closer`, `sales_objection`, `sales_consultant` — added to `AGENT_PROVIDER_MAP` in `ai-gateway.service.ts` (all map to `anthropic` / `claude-sonnet-4-6`).
-- **AI suggestion endpoint**: `POST /api/sales-team/:id/suggest` — detects funnel stage → picks specialist agent → calls `completeWithAgent(agentRole, systemPrompt, messages, workspaceId, log, campaignId?)` → returns `{ suggestion, agentRole, funnelStage }`. System prompts for each stage defined in `SALES_SYSTEM_PROMPTS` map in service.
-- **Frontend**: `artifacts/app/src/pages/atendimento/index.tsx` — full conversation manager with kanban-by-stage, message history, AI suggestion button. Route `/atendimento` registered in `routes.tsx`. "Atendimento" nav item added to sidebar. `SalesTeamPanel` added to dashboard. 5 agents (Marco/Renata/Vitor/Clara/Alex) added to `agents/index.tsx` under "Vendas" category.
-- **`completeWithAgent` signature**: positional args `(agentRole, systemPrompt, messages, workspaceId, log, campaignId?)` — NOT an object. Returns `AICompletionResult` with `.content` string field. `AppError` constructor is `(statusCode, message, code?)` — status code is FIRST arg.
-
-## Landing Page + Academy (Post-session)
-
-- **Landing page**: All 6 occurrences of "29 agentes" → "34 agentes". `AgentesSection` updated with 7 categories (added Mentalidade + Time de Vendas with 5 agents). Solo plan item updated. Copyright 2025 → 2026 in `nexos-academy/src/App.tsx`.
-- **Professor Allan fix**: Zod schema limits raised (`lessonContent` 20 000, `question` 2 000, history content 5 000). `max_tokens` 1 024 → 2 048. System prompt expanded with 10 directives (practical examples, Brazilian context, APPLY not just recite). Frontend `lesson.tsx` truncates `lessonContent` to 15 000 chars + caps `keyPoints`/`previousTopics`/`upcomingTopics` before sending to API.
-
-## Integrações de Vídeo/Voz Pendentes
-
-- **HeyGen** — conta criada, API key disponível. Integrar quando o módulo de avatar/vídeo de vendas for desenvolvido (VSL com apresentador IA).
-- **ElevenLabs** — conta criada, API key disponível. Integrar quando geração de voz/narração para VSL e conteúdo de áudio for implementada.
-- Avisar o usuário quando chegar a hora de conectar essas APIs.
-
-## Integrações — Assistente Guiado + Gate de Conexão (Post-session)
-
-- **Chat persistente de integrações**: `integrationChatConversationsTable`/`integrationChatMessagesTable` em `lib/db/src/schema/integration-chat.ts`. Rotas em `/api/integration-chat` (`GET /active` auto-cria conversa + mensagem de abertura da IA; `POST /:id/messages`; `POST /:id/end`). Prompt do especialista consolidado em `integrations-specialist.prompt.ts` (usado por `direct-chat.routes.ts` e `agents.routes.ts`), com fluxo guiado de abertura anexado.
-- **Painel flutuante**: `IntegrationChatPanel` (`artifacts/app/src/components/integration-chat-panel.tsx`) — botão "Ajuda para conectar" fixo, montado **somente** em `/integracoes`. Detecta credenciais na resposta da IA e oferece botões de copiar.
-- **OAuth inline removido da página de conteúdo**: `SocialLaunchGate` (`campaigns/content.tsx`) não abre mais popup de OAuth ("Entrar com Facebook/TikTok"). Agora mostra status "Conectado" ou um CTA que leva para `/integracoes`, onde a conexão real acontece.
-- **Meta OAuth "URL Blocked"**: causa é config externa — o Meta Developer Console precisa ter `https://agencianexos.vip/api/integrations/oauth/callback/facebook` cadastrado em "Valid OAuth Redirect URIs" (o `APP_URL` em produção já está correto).
+- **UTM Intelligence**: Auto-reads UTMs from body and query params (`lead-capture.routes.ts`), stored in `metadata.utm` + flat keys. `getSequenceAnalytics()` returns `utmBreakdown[]` sorted by volume.
+- **Live-stats endpoint**: `GET /api/campaigns/:id/live-stats` — real-time counters for scarcity copy (leads, sales, revenue, engagement, active sequences).
+- **Viral loop / referral system**: each captured lead gets an 8-char `referralCode`; `?ref=CODE` or `body.referralCode` tracks referrer; `GET /api/lead-capture/:sequenceId/referral/:code` returns referrer stats.
+- **Send time optimization**: `open` events append UTC hour to `contact.metadata.engagementHours` (capped 20); mode → `metadata.preferredSendHour`; analytics returns `sendTimeInsight`.
+- **Creative fatigue detection**: on every metric ingest, if current CTR < 70% of historical peak CTR (peak > 0.5%), generates a `kpi_breach` alert recommending creative refresh.
+- **completeWithAgent signature**: positional args `(agentRole, systemPrompt, messages, workspaceId, log, campaignId?)` — NOT an object. Returns `AICompletionResult` with `.content` string field. `AppError` constructor is `(statusCode, message, code?)` — status code is FIRST arg.
+- **Professor Allan (Academy)**: zod limits `lessonContent` 20 000 / `question` 2 000 / history content 5 000 chars; `max_tokens` 2 048; frontend truncates `lessonContent` to 15 000 chars before sending.
 
 ## Pointers
 
