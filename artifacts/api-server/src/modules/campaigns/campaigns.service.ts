@@ -78,6 +78,19 @@ export async function transitionCampaign(
     return;
   }
 
+  // Idempotent self-transition: pipeline steps may re-confirm a status the campaign
+  // already reached (e.g. inline sub-approvals already moved it to strategy_ready,
+  // then the final orchestration step re-asserts strategy_ready). This is not a real
+  // state change, so it must not be validated against VALID_STATUS_TRANSITIONS edges —
+  // treat as a no-op (skip DB write, keep audit trail) rather than throwing.
+  if (campaign.status === toStatus) {
+    log.info(
+      { campaignId, status: toStatus, reason },
+      `PIPELINE_KERNEL: ${toStatus} → ${toStatus} (no-op, already in target state)`,
+    );
+    return;
+  }
+
   // Level 3 enforcement: ACTIVE — invalid transitions throw, never silently execute.
   if (!isValidTransition(campaign.status, toStatus)) {
     throw new ValidationError(
