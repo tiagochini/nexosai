@@ -80,7 +80,9 @@ export type AgentRole =
   | "semente_launch"
   | "product_validator"
   // ── Vídeo Production ─────────────────────────────────────────────────────
-  | "scene_director";
+  | "scene_director"
+  // ── Suporte / Integrações ────────────────────────────────────────────────
+  | "integrations_specialist";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -183,6 +185,8 @@ const AGENT_PROVIDER_MAP: Record<
   // ── Vídeo Production ─────────────────────────────────────────────────────
   scene_director:     { provider: "gemini",    model: GEMINI_NATIVE_MODEL },
   product_validator:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Suporte / Integrações ──────────────────────────────────────────────────
+  integrations_specialist: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

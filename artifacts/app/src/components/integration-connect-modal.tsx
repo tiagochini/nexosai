@@ -3,9 +3,10 @@ import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch"
 import { Button } from "@/components/ui/button";
 import {
   X, AlertTriangle, ExternalLink, Zap, ShieldAlert, Info,
-  ChevronDown, ChevronUp, CheckCircle2, Loader2,
+  ChevronDown, ChevronUp, CheckCircle2, Loader2, Sparkles,
   MessageSquare, Mail, CreditCard, BarChart2, Instagram, Music2,
 } from "lucide-react";
+import { IntegrationAssistantChat } from "@/components/integration-assistant-chat";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export type Provider =
@@ -743,7 +744,14 @@ export function ConnectModal({
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
   const [guideOpen, setGuideOpen] = useState(true);
+  const [showAssistant, setShowAssistant] = useState(false);
   const { guide } = entry;
+
+  const handleApplyCredentials = (values: Record<string, string>) => {
+    setFields(prev => ({ ...prev, ...values }));
+    setShowManual(true);
+    setShowAssistant(false);
+  };
 
   const handleConnect = () => {
     setLoading(true);
@@ -839,11 +847,30 @@ export function ConnectModal({
               <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 leading-relaxed">{entry.description}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1 ml-3 shrink-0 mt-0.5">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0 mt-0.5">
+            {!showAssistant && (
+              <button
+                onClick={() => setShowAssistant(true)}
+                title="Falar com o especialista em integrações"
+                className="flex items-center gap-1.5 border border-primary/40 bg-primary/10 hover:bg-primary/15 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-widest text-primary transition-colors mr-1"
+              >
+                <Sparkles className="h-3 w-3" />
+                Preciso de ajuda
+              </button>
+            )}
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
+        {showAssistant ? (
+          <IntegrationAssistantChat
+            entry={entry}
+            onApplyCredentials={handleApplyCredentials}
+            onBack={() => setShowAssistant(false)}
+          />
+        ) : (
         <div className="overflow-y-auto flex-1">
           {/* Why */}
           <div className="px-5 py-3 bg-primary/5 border-b border-border/30 flex items-start gap-2">
@@ -993,8 +1020,10 @@ export function ConnectModal({
             </>
           )}
         </div>
+        )}
 
         {/* Footer */}
+        {!showAssistant && (
         <div className="border-t border-border/50 px-5 py-4 flex gap-3 shrink-0">
           {isOAuth ? (
             <Button onClick={onClose} variant="outline" className="flex-1 font-mono uppercase tracking-widest rounded-none border-border/50 h-10">
@@ -1012,6 +1041,7 @@ export function ConnectModal({
             </>
           )}
         </div>
+        )}
       </div>
     </div>
   );
