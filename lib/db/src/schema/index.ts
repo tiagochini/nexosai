@@ -39,6 +39,7 @@ export * from "./agent-execution-logs";
 export * from "./vertical-memory";
 export * from "./launch-pipelines";
 export * from "./sales-conversations";
+export * from "./integration-chat";
 export * from "./campaign-groups";
 export * from "./video-projects";
 export * from "./agent-clarifications";

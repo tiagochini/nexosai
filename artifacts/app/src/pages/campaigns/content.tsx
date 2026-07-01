@@ -20,6 +20,7 @@ import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post
 import type { PreviewPiece } from "@/components/social-post-preview";
 import { ContentCinemaOverlay } from "@/components/campaign-stage-experience";
 import type { CinemaPiece } from "@/components/campaign-stage-experience";
+import { CreativeStudioBlock } from "@/components/CreativeStudioBlock";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -4305,6 +4306,9 @@ export default function ContentApproval() {
             </div>
           </div>
         </div>
+
+        {/* ── Creative Studio: request AI/upload images & video from the deliverables page ── */}
+        <CreativeStudioBlock campaignId={campaignId} campaignTitle={campaign?.title ?? "Campanha"} />
 
         {/* ── Compliance Pre-Scan Banner ───────────────────────────────────── */}
         {complianceScan && complianceScan.scanned && complianceScan.withViolations > 0 && (

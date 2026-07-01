@@ -10,6 +10,7 @@ import {
 import { AppError } from "../../lib/errors.js";
 import { eq } from "drizzle-orm";
 import { db, workspacesTable, auditLogsTable } from "@workspace/db";
+import { INTEGRATIONS_SPECIALIST_PROMPT } from "../integrations/integrations-specialist.prompt.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -792,6 +793,8 @@ NEXOS ACADEMY:
 GARANTIA: 30 dias. Onboarding dedicado incluso.
 
 Responda com precisão técnica, entusiasmo genuíno pelo produto e exemplos concretos. Se não souber algo, diga honestamente e ofereça para verificar. Formato WhatsApp/DM ou mais formal dependendo do tom do lead.`,
+
+  integrations_specialist: INTEGRATIONS_SPECIALIST_PROMPT,
 };
 
 const AGENT_ROLES = new Set(Object.keys(AGENT_SYSTEM_PROMPTS));

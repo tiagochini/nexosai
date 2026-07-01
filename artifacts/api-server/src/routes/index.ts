@@ -34,6 +34,7 @@ import clientProfilesRouter from "../modules/client-profiles/client-profiles.rou
 import simulatorRouter from "../modules/simulator/simulator.routes.js";
 import serverEventsRouter from "../modules/server-events/server-events.routes.js";
 import oauthRouter from "../modules/integrations/oauth.routes.js";
+import integrationChatRouter from "../modules/integrations/integration-chat.routes.js";
 import socialModerationRouter from "../modules/social-moderation/social-moderation.routes.js";
 import creativesRouter from "../modules/creatives/creatives.routes.js";
 import productCheckoutRouter from "../modules/product-checkout/product-checkout.routes.js";
@@ -91,6 +92,7 @@ router.use("/client-profiles", clientProfilesRouter);
 router.use("/simulator", simulatorRouter);
 router.use("/events", serverEventsRouter);
 router.use("/integrations/oauth", oauthRouter);
+router.use("/integration-chat", integrationChatRouter);
 router.use("/social-moderation", socialModerationRouter);
 router.use("/campaigns", creativesRouter);
 router.use("/campaigns", campaignGroupsRouter);

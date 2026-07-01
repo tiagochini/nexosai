@@ -97,10 +97,39 @@ export type LsPieceContentEntry = {
 // Returns true when a content piece was saved but its payload is effectively empty
 // (LLM returned truncated JSON, empty arrays, or a bare object with no useful data).
 // Used by the auto-repair sweep to identify pieces that need regeneration.
-export function isPieceContentEmpty(content: unknown): boolean {
+// Piece types whose "real content" lives in one specific top-level array key.
+// A broken/fallback agent response for these types can still carry unrelated
+// scalar fields (e.g. a raw-text dump like `adCopyNotes`), which would fool the
+// generic hasScalar short-circuit below into treating it as non-empty. Checking
+// the meaningful key directly avoids that false negative. Mirrors the frontend's
+// isEmptyApiPiece() switch in campaigns/content.tsx.
+const PIECE_TYPE_MEANINGFUL_ARRAY_KEY: Record<string, string> = {
+  landing_page_structure: "sections",
+  vsl_script: "sections",
+  ad_copy: "segments",
+  targeting_config: "metaAudiences",
+  media_buying_plan: "dailyAllocations",
+};
+
+export function isPieceContentEmpty(content: unknown, pieceType?: string): boolean {
   if (!content || typeof content !== "object") return true;
   const obj = content as Record<string, unknown>;
   if (Object.keys(obj).length === 0) return true;
+
+  if (pieceType === "email_sequence") {
+    const es = obj["emailSequence"] as Record<string, unknown[]> | undefined;
+    const total =
+      (es?.["preLaunch"]?.length ?? 0) + (es?.["cartOpen"]?.length ?? 0) + (es?.["cartClose"]?.length ?? 0);
+    return total === 0;
+  }
+
+  const meaningfulKey = pieceType ? PIECE_TYPE_MEANINGFUL_ARRAY_KEY[pieceType] : undefined;
+  if (meaningfulKey) {
+    const arr = obj[meaningfulKey];
+    return !Array.isArray(arr) || arr.length === 0;
+  }
+
+  // Generic fallback for piece types without a known meaningful array key.
   // If every top-level array in the object is empty, the piece has no real content.
   // Scalars (strings, numbers) count as content so we only apply this when there
   // are no non-array/non-object values at the top level.
@@ -1621,7 +1650,7 @@ export async function generateCampaignContent(
       .where(eq(contentPiecesTable.campaignId, campaignId));
 
     const emptyPieces = allPieces.filter(
-      (p) => REGENERABLE_PIECE_TYPES.has(p.type ?? "") && isPieceContentEmpty(p.content),
+      (p) => REGENERABLE_PIECE_TYPES.has(p.type ?? "") && isPieceContentEmpty(p.content, p.type ?? undefined),
     );
 
     if (emptyPieces.length > 0) {
@@ -1659,7 +1688,7 @@ export async function generateCampaignContent(
               .from(contentPiecesTable)
               .where(eq(contentPiecesTable.id, piece.id))
               .limit(1);
-            if (updated && !isPieceContentEmpty(updated.content)) {
+            if (updated && !isPieceContentEmpty(updated.content, piece.type ?? undefined)) {
               emitCampaignEvent({
                 campaignId,
                 type: "agent_completed",
@@ -1719,7 +1748,9 @@ export async function generateCampaignContent(
       .from(contentPiecesTable)
       .where(eq(contentPiecesTable.campaignId, campaignId));
     const remainingEmpty = stillEmpty.filter(
-      (p) => isPieceContentEmpty(p.content) && !((p.content as Record<string, unknown>)?._minimalFallback),
+      (p) =>
+        isPieceContentEmpty(p.content, p.type ?? undefined) &&
+        !((p.content as Record<string, unknown>)?._minimalFallback),
     );
     if (remainingEmpty.length > 0) {
       log.warn(
@@ -2526,7 +2557,7 @@ export async function regeneratePiece(
   // without throwing, refuse to overwrite the DB row with empty content.
   // This prevents silent data loss where a piece goes from empty→still empty but
   // gets status "pending_approval" and appears to have been successfully regenerated.
-  if (isPieceContentEmpty(newContent)) {
+  if (isPieceContentEmpty(newContent, piece.type ?? undefined)) {
     const emptyErr = new ValidationError(
       `Agent "${agentName}" returned empty content for piece type "${piece.type}" (empty_agent_response). ` +
       `The piece was NOT updated. Retry or check LLM connectivity.`,
