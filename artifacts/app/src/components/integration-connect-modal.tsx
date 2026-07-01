@@ -520,12 +520,15 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
         hint: "Em Kiwify → Configurações → Desenvolvedor → API Keys → gere ou copie a chave." },
     ],
     guide: {
-      prereqs: ["Conta ativa no Kiwify com ao menos um produto"],
+      prereqs: ["Conta ativa no Kiwify, com ao menos um produto cadastrado"],
       steps: [
-        { title: "Acesse as configurações da conta", detail: "No Kiwify, clique no seu perfil → Configurações → aba Conta.", url: "https://dashboard.kiwify.com.br" },
-        { title: "Copie o Account ID", detail: "Na aba Conta, copie o Account ID exibido." },
-        { title: "Gere uma API Key", detail: "Em Configurações → Desenvolvedor → API Keys → clique em Criar chave." },
+        { title: "Se ainda não tiver, crie sua conta no Kiwify", detail: "Acesse kiwify.com.br → Criar conta gratuita → cadastre seus dados e o primeiro produto.", url: "https://dashboard.kiwify.com.br" },
+        { title: "Acesse as configurações da conta", detail: "Já logado, clique no seu perfil (canto superior direito) → Configurações → aba Conta." },
+        { title: "Copie o Account ID", detail: "Na aba Conta, copie o número exibido em Account ID e cole no campo acima." },
+        { title: "Gere uma chave de API (API Key)", detail: "Vá em Configurações → Desenvolvedor → API Keys → clique em Criar chave. Copie o código gerado (começa com 'kwf_') e cole no campo Access Token acima." },
       ],
+      docsUrl: "https://docs.kiwify.com.br",
+      docsLabel: "Documentação oficial (Kiwify)",
     },
   },
   {
@@ -572,14 +575,18 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
         hint: "Token de acesso com permissão ads_management. Gerado em Meta Business Suite → Usuários do Sistema → Gerar token." },
     ],
     guide: {
-      prereqs: ["Conta de Anúncios ativa no Meta Ads Manager", "Acesso ao Meta Business Suite"],
+      prereqs: [
+        "Uma conta de anúncios ativa no Meta Ads Manager, com um cartão ou forma de pagamento cadastrada",
+        "Acesso de administrador ao Meta Business Suite (o painel de gestão da sua empresa no Facebook/Instagram)",
+      ],
       steps: [
-        { title: "Encontre o Ad Account ID", detail: "No Ads Manager, o ID aparece no canto superior esquerdo ao lado do nome da conta. Formato: act_XXXXXXXXX.", url: "https://www.facebook.com/adsmanager" },
-        { title: "Crie um usuário do sistema", detail: "Em Meta Business Suite → Configurações → Usuários do Sistema → Adicionar. Defina como Administrador." },
-        { title: "Gere o Access Token", detail: "Na tela do usuário do sistema → Gerar novo token → selecione seu App → marque ads_management e ads_read → Gerar token." },
+        { title: "Se ainda não tiver, crie sua conta de anúncios", detail: "Acesse business.facebook.com → Contas → Contas de anúncios → Adicionar. Cadastre os dados da sua empresa e uma forma de pagamento.", url: "https://business.facebook.com/settings/accounts" },
+        { title: "Encontre o Ad Account ID", detail: "Abra o Gerenciador de Anúncios — o número aparece no canto superior esquerdo, ao lado do nome da conta. Formato: act_XXXXXXXXX. Copie e cole no campo acima.", url: "https://www.facebook.com/adsmanager" },
+        { title: "Crie um 'Usuário do Sistema' (uma conta técnica de acesso)", detail: "Em Meta Business Suite → Configurações → Usuários do Sistema → Adicionar. É uma conta especial só para permitir que o NexOS publique anúncios em seu nome — defina como Administrador.", url: "https://business.facebook.com/settings/system-users" },
+        { title: "Gere o código de acesso (Access Token)", detail: "Ainda na tela do usuário do sistema, clique em 'Gerar novo token' → selecione seu App → marque as permissões 'ads_management' e 'ads_read' → clique em Gerar. Copie o código gerado e cole no campo acima." },
       ],
       docsUrl: "https://developers.facebook.com/docs/marketing-api/get-started",
-      docsLabel: "Docs Meta Marketing API",
+      docsLabel: "Documentação oficial (Meta Marketing API)",
     },
     oauthPlatform: "meta",
     oauthLabel: "Entrar com Meta Ads",
@@ -598,17 +605,25 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
         hint: "ID do anunciante no TikTok Ads Manager. Encontrado em TikTok Ads → canto superior direito → nome da conta → ID." },
       { key: "accountName", label: "Nome da Conta", placeholder: "TikTok Ads" },
       { key: "accessToken", label: "Access Token",  placeholder: "act.xxxx...", type: "password",
-        hint: "Long-term access token gerado em TikTok Developers → Marketing API → Authentication." },
+        hint: "Código de acesso de longa duração ('Long-Term Access Token'), gerado em TikTok for Developers → Marketing API → Authentication." },
     ],
     guide: {
-      prereqs: ["Conta de Anúncios ativa no TikTok Ads Manager", "App aprovado no TikTok Developers"],
+      warning: "O acesso à Marketing API do TikTok passa por uma aprovação manual da própria TikTok e pode levar de 1 a 5 dias úteis. Comece esse cadastro com antecedência ao lançamento.",
+      prereqs: [
+        "Uma conta comercial gratuita no TikTok for Business",
+        "Uma conta de anúncios ativa no TikTok Ads Manager, com forma de pagamento cadastrada",
+        "Um app aprovado no TikTok for Developers com acesso liberado à Marketing API",
+      ],
       steps: [
-        { title: "Encontre o Advertiser ID", detail: "No TikTok Ads Manager, clique no nome da conta no canto superior direito. O ID numérico aparece abaixo do nome.", url: "https://ads.tiktok.com" },
-        { title: "Crie um app de marketing", detail: "Em developers.tiktok.com → Manage Apps → Create App → Marketing API.", url: "https://developers.tiktok.com" },
-        { title: "Gere o Access Token", detail: "Em seu app de Marketing API → Authentication → gere um Long-Term Access Token para o anunciante." },
+        { title: "Crie sua conta comercial no TikTok", detail: "Se ainda não tiver, acesse business.tiktok.com e crie uma conta TikTok for Business — é gratuito e leva poucos minutos.", url: "https://business.tiktok.com" },
+        { title: "Crie sua conta de anúncios no Ads Manager", detail: "Acesse ads.tiktok.com → Criar conta → preencha os dados da sua empresa e cadastre um cartão ou outra forma de pagamento.", url: "https://ads.tiktok.com" },
+        { title: "Encontre o Advertiser ID", detail: "Já dentro do Ads Manager, clique no nome da sua conta no canto superior direito. O número que aparece embaixo do nome é o Advertiser ID — copie e cole no campo acima." },
+        { title: "Cadastre-se no TikTok for Developers", detail: "Acesse developers.tiktok.com e crie uma conta de desenvolvedor — pode usar o mesmo login da sua conta TikTok.", url: "https://developers.tiktok.com" },
+        { title: "Crie um app e peça acesso à Marketing API", detail: "No painel, vá em 'Manage apps' → 'Create an app', e escolha o produto 'Marketing API'. Preencha as informações pedidas sobre sua empresa/uso e envie para aprovação da TikTok." },
+        { title: "Gere o Access Token", detail: "Depois que o app for aprovado (você recebe um e-mail da TikTok), volte em Marketing API → Authentication e gere um 'Long-Term Access Token' vinculado à sua conta de anúncios. Copie esse código e cole no campo acima." },
       ],
       docsUrl: "https://ads.tiktok.com/marketing_api/docs",
-      docsLabel: "Docs TikTok Marketing API",
+      docsLabel: "Documentação oficial (TikTok Marketing API)",
     },
     oauthPlatform: "tiktok",
     oauthLabel: "Entrar com TikTok",
@@ -632,14 +647,19 @@ export const INTEGRATION_CATALOG: CatalogEntry[] = [
         hint: "Token de desenvolvedor obtido em Google Ads API Center (google.com/apis/ads/developer). Requer aprovação do Google." },
     ],
     guide: {
-      prereqs: ["Conta ativa no Google Ads", "Acesso ao Google Cloud Console para criar credenciais OAuth"],
+      warning: "O Developer Token do Google Ads passa por revisão manual do Google e pode levar alguns dias para ser liberado no nível de acesso completo — comece esse cadastro com antecedência ao lançamento.",
+      prereqs: [
+        "Uma conta ativa no Google Ads, com forma de pagamento cadastrada",
+        "Um Developer Token (código de acesso de desenvolvedor) aprovado pelo Google",
+      ],
       steps: [
-        { title: "Encontre o Customer ID", detail: "No Google Ads, o ID de 10 dígitos fica no canto superior direito. Formato: XXX-XXX-XXXX.", url: "https://ads.google.com" },
-        { title: "Acesse o API Center", detail: "Em Google Ads → Ferramentas → API Center. Solicite um Developer Token se ainda não tiver.", url: "https://ads.google.com/aw/apicenter" },
-        { title: "Aguarde aprovação", detail: "O Google pode levar alguns dias para aprovar o Developer Token. Após aprovado, copie e cole acima." },
+        { title: "Se ainda não tiver, crie sua conta no Google Ads", detail: "Acesse ads.google.com → Nova conta → siga o assistente, informando sua empresa/produto e um cartão de pagamento.", url: "https://ads.google.com/aw/campaigns/new" },
+        { title: "Encontre o Customer ID", detail: "No topo do Google Ads, o ID de 10 dígitos fica no canto superior direito, ao lado do nome da conta. Formato: XXX-XXX-XXXX. Copie e cole no campo acima.", url: "https://ads.google.com" },
+        { title: "Solicite o Developer Token", detail: "Vá em Ferramentas e configurações → Configuração → API Center. Preencha o formulário explicando o uso (automação de campanhas de lançamento) e envie para aprovação do Google.", url: "https://ads.google.com/aw/apicenter" },
+        { title: "Aguarde a aprovação e copie o código", detail: "O Google avisa por e-mail quando aprovar. Depois de aprovado, volte no API Center, copie o Developer Token e cole no campo acima." },
       ],
       docsUrl: "https://developers.google.com/google-ads/api/docs/get-started/introduction",
-      docsLabel: "Docs Google Ads API",
+      docsLabel: "Documentação oficial (Google Ads API)",
     },
   },
   {
@@ -722,7 +742,7 @@ export function ConnectModal({
   const [oauthLoading, setOauthLoading] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
   const { guide } = entry;
 
   const handleConnect = () => {
@@ -907,7 +927,7 @@ export function ConnectModal({
                   <div className="flex items-center gap-2">
                     <Info className="h-3.5 w-3.5 text-cyan-400" />
                     <span className="font-mono text-[11px] uppercase tracking-widest text-cyan-400 font-bold">
-                      Passo a passo — como encontrar as credenciais
+                      Passo a passo completo — do cadastro até conectar
                     </span>
                   </div>
                   {guideOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50" />}
