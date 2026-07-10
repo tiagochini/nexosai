@@ -37,6 +37,7 @@ export interface RegisterInput {
   phone?: string;
   locale?: "pt-BR" | "en-US" | "en-AU" | "es-LA";
   referralCode?: string;
+  planSlug?: "solo" | "agency";
 }
 
 export interface LoginInput {
@@ -70,13 +71,18 @@ export async function registerUser(
     throw new ConflictError("Email already registered");
   }
 
-  const soloPlan = await db
+  const requestedSlug = input.planSlug === "agency" ? "agency" : "solo";
+  const requestedPlan = await db
     .select()
     .from(plansTable)
-    .where(eq(plansTable.slug, "solo"))
+    .where(eq(plansTable.slug, requestedSlug))
     .limit(1);
 
-  if (soloPlan.length === 0) {
+  const selectedPlan = requestedPlan.length > 0
+    ? requestedPlan
+    : await db.select().from(plansTable).where(eq(plansTable.slug, "solo")).limit(1);
+
+  if (selectedPlan.length === 0) {
     throw new NotFoundError("Default plan");
   }
 
@@ -100,10 +106,10 @@ export async function registerUser(
     .insert(workspacesTable)
     .values({
       ownerId: user.id,
-      planId: soloPlan[0].id,
+      planId: selectedPlan[0].id,
       name: `${input.name}'s Workspace`,
       slug,
-      creditsBalance: soloPlan[0].creditsMonthly,
+      creditsBalance: selectedPlan[0].creditsMonthly,
       settings: {
         referralCode: myReferralCode,
         referralCount: 0,

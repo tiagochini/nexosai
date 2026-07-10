@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useMode } from "@/lib/mode";
@@ -108,7 +108,12 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
     },
   });
 
-  const balance = creditsData?.balance ?? 0;
+  // Never flash "0 CR" during a background refetch/invalidation race: keep
+  // showing the last confirmed non-undefined balance until the server sends
+  // a new one. Only show 0 when the backend has actually confirmed 0.
+  const lastKnownBalanceRef = useRef<number | null>(null);
+  if (creditsData?.balance != null) lastKnownBalanceRef.current = creditsData.balance;
+  const balance = creditsData?.balance ?? lastKnownBalanceRef.current ?? 0;
   const total   = plan?.creditsMonthly ?? 1500;
   const pct     = total > 0 ? Math.min(100, (balance / total) * 100) : 0;
   const isLow   = !isAdmin && pct < 15;

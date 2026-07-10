@@ -16,6 +16,7 @@ const registerSchema = z.object({
   locale: z.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).default("pt-BR"),
   inviteCode: z.string().optional(),
   referralCode: z.string().optional(),
+  planSlug: z.enum(["solo", "agency"]).optional(),
 });
 
 const loginSchema = z.object({
@@ -55,7 +56,13 @@ router.post("/register", async (req, res): Promise<void> => {
   try {
     const tokens = await registerUser(parsed.data, req.log);
 
-    // Apply invite code after registration — upgrades workspace plan and marks code used
+    // Mark invite code as used after registration.
+    // NOTE: invite codes are an ACCESS gate only — they do not change the
+    // plan the user selected during registration (registerUser already set
+    // planId/creditsBalance from parsed.data.planSlug). Previously this
+    // block force-upgraded the workspace to invite.planSlug (defaulting to
+    // "agency"), silently overriding the user's chosen Solo plan — that was
+    // a bug, not intended behavior.
     if (parsed.data.inviteCode) {
       const code = parsed.data.inviteCode.toUpperCase().trim();
       const [invite] = await db
@@ -65,51 +72,31 @@ router.post("/register", async (req, res): Promise<void> => {
         .limit(1);
 
       if (invite && !invite.used) {
-        // Find the target plan
-        const [targetPlan] = await db
-          .select()
-          .from(plansTable)
-          .where(eq(plansTable.slug, invite.planSlug as "solo" | "agency"))
+        const [user] = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(eq(usersTable.email, parsed.data.email.toLowerCase()))
           .limit(1);
 
-        if (targetPlan) {
-          // Find the user+workspace just created
-          const [user] = await db
-            .select({ id: usersTable.id })
-            .from(usersTable)
-            .where(eq(usersTable.email, parsed.data.email.toLowerCase()))
-            .limit(1);
+        const [workspace] = await db
+          .select()
+          .from(workspacesTable)
+          .where(eq(workspacesTable.ownerId, user!.id))
+          .limit(1);
 
-          const [workspace] = await db
-            .select()
-            .from(workspacesTable)
-            .where(eq(workspacesTable.ownerId, user!.id))
-            .limit(1);
+        if (workspace) {
+          await db
+            .update(inviteCodesTable)
+            .set({
+              used: true,
+              usedByEmail: parsed.data.email.toLowerCase(),
+              usedByUserId: user!.id,
+              usedByWorkspaceId: workspace.id,
+              usedAt: new Date(),
+            })
+            .where(eq(inviteCodesTable.code, code));
 
-          if (workspace) {
-            // Upgrade to target plan
-            await db
-              .update(workspacesTable)
-              .set({
-                planId: targetPlan.id,
-                creditsBalance: targetPlan.creditsMonthly,
-              })
-              .where(eq(workspacesTable.id, workspace.id));
-
-            // Mark invite code as used
-            await db
-              .update(inviteCodesTable)
-              .set({
-                used: true,
-                usedByEmail: parsed.data.email.toLowerCase(),
-                usedByUserId: user!.id,
-                usedByWorkspaceId: workspace.id,
-                usedAt: new Date(),
-              })
-              .where(eq(inviteCodesTable.code, code));
-
-            req.log.info({ code, planSlug: invite.planSlug, email: parsed.data.email }, "Invite code applied");
-          }
+          req.log.info({ code, email: parsed.data.email }, "Invite code marked used (access gate only, plan unaffected)");
         }
       }
     }

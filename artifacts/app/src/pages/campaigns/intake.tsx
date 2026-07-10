@@ -634,9 +634,9 @@ export default function CampaignIntake() {
         clearTimeout(timeoutId);
         setMessages([{ role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
         if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
-        if (result.progress) setProgress(result.progress);
+        if (result.progress) setProgress(prev => Math.max(prev, result.progress ?? 0));
         const r0 = result as unknown as { answeredRequired?: number; totalRequired?: number };
-        if (r0.answeredRequired != null) setAnsweredRequired(r0.answeredRequired);
+        if (r0.answeredRequired != null) setAnsweredRequired(prev => Math.max(prev, r0.answeredRequired ?? 0));
         if (r0.totalRequired != null) setTotalRequired(r0.totalRequired);
         if (result.isComplete) { setChatComplete(true); try { localStorage.setItem(`nexos:chatComplete:${campaignId}`, "1"); } catch { /* ignore */ } }
         if (result.proposedType && result.proposedTrack) {
@@ -688,9 +688,9 @@ export default function CampaignIntake() {
       });
       setMessages(prev => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
-      if (result.progress != null) setProgress(result.progress);
+      if (result.progress != null) setProgress(prev => Math.max(prev, result.progress ?? 0));
       const r1 = result as unknown as { answeredRequired?: number; totalRequired?: number };
-      if (r1.answeredRequired != null) setAnsweredRequired(r1.answeredRequired);
+      if (r1.answeredRequired != null) setAnsweredRequired(prev => Math.max(prev, r1.answeredRequired ?? 0));
       if (r1.totalRequired != null) setTotalRequired(r1.totalRequired);
       if (result.isComplete) { setChatComplete(true); try { localStorage.setItem(`nexos:chatComplete:${campaignId}`, "1"); } catch { /* ignore */ } }
     } catch {
@@ -872,9 +872,9 @@ export default function CampaignIntake() {
 
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
-      if (result.progress != null) setProgress(result.progress);
+      if (result.progress != null) setProgress(prev => Math.max(prev, result.progress ?? 0));
       const r2 = result as unknown as { answeredRequired?: number; totalRequired?: number };
-      if (r2.answeredRequired != null) setAnsweredRequired(r2.answeredRequired);
+      if (r2.answeredRequired != null) setAnsweredRequired(prev => Math.max(prev, r2.answeredRequired ?? 0));
       if (r2.totalRequired != null) setTotalRequired(r2.totalRequired);
       if (result.isComplete) { setChatComplete(true); try { localStorage.setItem(`nexos:chatComplete:${campaignId}`, "1"); } catch { /* ignore */ } }
 
