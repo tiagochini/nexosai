@@ -513,8 +513,14 @@ async function callOpenAI(
         ? (err as { status?: number }).status === 429
         : err.message.includes("429") || err.message.includes("quota"));
 
-    // When native key is quota-exhausted, fall back to integration proxy or Anthropic
-    if (isQuotaError && env.OPENAI_API_KEY) {
+    const isModelAccessError =
+      err instanceof Error &&
+      ("status" in err && (err as { status?: number }).status === 403
+        ? true
+        : "code" in err && (err as { code?: string }).code === "model_not_found");
+
+    // When native key is quota-exhausted or lacks access to the model, fall back to integration proxy or Anthropic
+    if ((isQuotaError || isModelAccessError) && env.OPENAI_API_KEY) {
       if (hasOpenAIIntegration()) {
         const integrationClient = new OpenAI({
           apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
