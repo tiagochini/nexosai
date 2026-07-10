@@ -364,7 +364,12 @@ export default function Onboarding() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Restore saved onboarding state on mount + check simulator pre-fill
+  // Restore saved onboarding state on mount + check simulator pre-fill.
+  // localStorage is only a fast-path cache — if it's empty (browser data
+  // cleared, new device, private tab), fall back to asking the backend
+  // whether this account already has an in-progress intake campaign, since
+  // the conversation itself (messages + extracted data) is durably stored
+  // server-side in campaigns.intake_data, not in the browser.
   useEffect(() => {
     const saved = loadOnboardingState();
     if (saved && saved.messages.length > 0 && saved.campaignId) {
@@ -374,11 +379,55 @@ export default function Onboarding() {
       setMessages(saved.messages);
       setConversationComplete(saved.conversationComplete);
       if (saved.audienceSubPath) setAudienceSubPath(saved.audienceSubPath);
-    } else {
-      // Check for simulator data from the landing page
-      const sim = loadSimulatorData();
-      if (sim) setSimulatorBanner(sim);
+      return;
     }
+
+    // Check for simulator data from the landing page
+    const sim = loadSimulatorData();
+    if (sim) setSimulatorBanner(sim);
+
+    // No local cache — ask the backend if there's an unfinished intake to resume.
+    (async () => {
+      try {
+        const data = await customFetch<{ campaigns: Array<Record<string, unknown>> }>("/api/campaigns");
+        const intakeCampaigns = (data.campaigns ?? [])
+          .filter((c) => c["status"] === "intake")
+          .sort((a, b) =>
+            new Date(b["updatedAt"] as string).getTime() - new Date(a["updatedAt"] as string).getTime(),
+          );
+        const candidate = intakeCampaigns[0];
+        if (!candidate) return;
+
+        const detail = await customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${candidate["id"]}`);
+        const intakeData = (detail.campaign["intakeData"] as Record<string, unknown>) ?? {};
+        const history = Array.isArray(intakeData["_conversationHistory"])
+          ? (intakeData["_conversationHistory"] as Array<{ role: string; content: string }>)
+          : [];
+        const restoredPath = (intakeData["_onboardingPath"] as OnboardingPath) ?? "has_product";
+        if (history.length === 0) return;
+
+        const restoredMessages: ChatMessage[] = history.map((h) => ({
+          role: h.role === "user" ? "user" : "assistant",
+          content: h.content,
+        }));
+        const cid = candidate["id"] as string;
+
+        setPath(restoredPath);
+        setCampaignId(cid);
+        setStep("conversation");
+        setMessages(restoredMessages);
+        saveOnboardingState({
+          path: restoredPath,
+          campaignId: cid,
+          step: "conversation",
+          messages: restoredMessages,
+          conversationComplete: false,
+        });
+        toast.info("Retomamos sua campanha em andamento de onde você parou.");
+      } catch {
+        // Non-blocking — if this fails, user just starts a fresh onboarding.
+      }
+    })();
   }, []);
 
   useEffect(() => {
