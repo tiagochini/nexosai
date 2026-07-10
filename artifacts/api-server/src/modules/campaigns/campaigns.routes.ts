@@ -16,6 +16,12 @@ import { triggerStrategyPhase } from "../orchestration/orchestration.service.js"
 import { AppError } from "../../lib/errors.js";
 import { db, workspacesTable, CAMPAIGN_CREDIT_BUFFER } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import {
+  getIntakeQuestions,
+  validateIntakeCompleteness,
+  type CampaignType as IntakeCampaignType,
+  type CampaignTrack as IntakeCampaignTrack,
+} from "../intake/intake.service.js";
 
 const REORIENT_STRATEGY_COST = 45;
 
@@ -66,7 +72,28 @@ router.get("/tracks", (_req, res): void => {
 
 router.get("/", async (req, res): Promise<void> => {
   const campaigns = await listCampaigns(req.auth.workspaceId);
-  res.json({ campaigns });
+
+  // Attach real intake completeness for campaigns still in `intake` status —
+  // the list card must show the SAME percentage as the intake page itself.
+  // (Pipeline-stage progress, i.e. "intake is step 2 of 10", is a different
+  // metric and must never be labeled "completude"/"%" the same way — see
+  // replit.md Gotchas: intake completeness coherence.)
+  const enriched = campaigns.map((campaign) => {
+    if (campaign.status !== "intake") return campaign;
+    const type = (campaign.type ?? "launch") as IntakeCampaignType;
+    const track = (campaign.track ?? "six_digits") as IntakeCampaignTrack;
+    const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
+    const questions = getIntakeQuestions(type, track);
+    const totalRequired = questions.filter((q) => q.required).length;
+    const completeness = validateIntakeCompleteness(type, track, intakeData);
+    const answeredRequired = totalRequired - completeness.missingRequired.length;
+    const intakePercentage = totalRequired > 0
+      ? Math.round((answeredRequired / totalRequired) * 100)
+      : 100;
+    return { ...campaign, intakeCompleteness: { answeredRequired, totalRequired, percentage: intakePercentage } };
+  });
+
+  res.json({ campaigns: enriched });
 });
 
 router.post("/", async (req, res): Promise<void> => {

@@ -24,6 +24,7 @@ export * from "./campaignExecuteInputPhase";
 export * from "./campaignInput";
 export * from "./campaignInputTrack";
 export * from "./campaignInputType";
+export * from "./campaignIntakeCompleteness";
 export * from "./contactInput";
 export * from "./contactsAddInput";
 export * from "./createCampaign201";

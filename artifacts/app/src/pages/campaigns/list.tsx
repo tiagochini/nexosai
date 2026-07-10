@@ -56,10 +56,15 @@ const PIPELINE_ORDER = [
   "executing", "live", "completed",
 ];
 
-function PipelineBar({ status }: { status: string }) {
+function PipelineBar({ status, intakePercentage }: { status: string; intakePercentage?: number }) {
   const idx     = PIPELINE_ORDER.indexOf(status);
   const total   = PIPELINE_ORDER.length;
-  const pct     = total > 1 ? Math.round((idx / (total - 1)) * 100) : 0;
+  // While still in intake, show the SAME completude % as the intake page
+  // itself (answered/required questions) — not the pipeline-stage index.
+  // These are different metrics and must never disagree on-screen (P0 fix).
+  const pct     = status === "intake" && intakePercentage != null
+    ? intakePercentage
+    : (total > 1 ? Math.round((idx / (total - 1)) * 100) : 0);
   const isLive  = status === "live";
   const isDone  = status === "completed";
   const barColor = isDone ? "hsl(var(--success))" : isLive ? "hsl(var(--success))" : "hsl(var(--primary))";
@@ -325,7 +330,7 @@ export default function CampaignsList() {
                       </div>
 
                       {/* Pipeline progress */}
-                      <PipelineBar status={campaign.status} />
+                      <PipelineBar status={campaign.status} intakePercentage={campaign.intakeCompleteness?.percentage} />
                     </div>
 
                     {/* Right side: archive + arrow */}

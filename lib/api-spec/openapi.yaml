@@ -673,6 +673,16 @@ components:
           type: string
         updatedAt:
           type: string
+        intakeCompleteness:
+          type: object
+          description: Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself.
+          properties:
+            answeredRequired:
+              type: integer
+            totalRequired:
+              type: integer
+            percentage:
+              type: integer
       required: [id, title, type, status]
 
     CampaignInput:

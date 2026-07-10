@@ -64,6 +64,15 @@ export interface MeResponse {
   workspace: Workspace;
 }
 
+/**
+ * Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself.
+ */
+export type CampaignIntakeCompleteness = {
+  answeredRequired?: number;
+  totalRequired?: number;
+  percentage?: number;
+};
+
 export interface Campaign {
   id: string;
   title: string;
@@ -73,6 +82,8 @@ export interface Campaign {
   revenueTarget?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself. */
+  intakeCompleteness?: CampaignIntakeCompleteness;
 }
 
 export type CampaignInputType =

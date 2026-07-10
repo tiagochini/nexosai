@@ -107,6 +107,16 @@ export const ListCampaignsResponse = zod.object({
       revenueTarget: zod.string().optional(),
       createdAt: zod.string().optional(),
       updatedAt: zod.string().optional(),
+      intakeCompleteness: zod
+        .object({
+          answeredRequired: zod.number().optional(),
+          totalRequired: zod.number().optional(),
+          percentage: zod.number().optional(),
+        })
+        .optional()
+        .describe(
+          "Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself.",
+        ),
     }),
   ),
 });
@@ -138,6 +148,16 @@ export const GetCampaignResponse = zod.object({
     revenueTarget: zod.string().optional(),
     createdAt: zod.string().optional(),
     updatedAt: zod.string().optional(),
+    intakeCompleteness: zod
+      .object({
+        answeredRequired: zod.number().optional(),
+        totalRequired: zod.number().optional(),
+        percentage: zod.number().optional(),
+      })
+      .optional()
+      .describe(
+        "Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself.",
+      ),
   }),
 });
 

@@ -5,6 +5,7 @@
  * NexOS AI — Campaign execution and launch automation API
  * OpenAPI spec version: 0.1.0
  */
+import type { CampaignIntakeCompleteness } from "./campaignIntakeCompleteness";
 
 export interface Campaign {
   id: string;
@@ -15,4 +16,6 @@ export interface Campaign {
   revenueTarget?: string;
   createdAt?: string;
   updatedAt?: string;
+  /** Only present for campaigns in `intake` status — mirrors the exact percentage shown on the intake page itself. */
+  intakeCompleteness?: CampaignIntakeCompleteness;
 }

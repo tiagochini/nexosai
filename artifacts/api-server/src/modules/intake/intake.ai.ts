@@ -18,6 +18,26 @@ import {
 } from "./intake.service.js";
 import { recommendTrackFromRevenue } from "./intake.scoring.js";
 
+// ─── Completion-signal safety net ──────────────────────────────────────────────
+// The agent's aiMessage is free text and can announce readiness for the Master
+// Plan (e.g. "Temos informações suficientes...", "Clique no botão abaixo...")
+// without the accompanying `isComplete` JSON flag being set — this happens when
+// the LLM drifts out of strict JSON format, or forgets to set the flag. If the
+// message text *tells the user* the briefing is done, the UI state MUST agree,
+// or the "Ver e Aprovar Master Plan" button silently never renders while the
+// percentage stays stuck below 100 (P0 bug — see replit.md Gotchas).
+const COMPLETION_SIGNAL_PATTERNS = [
+  /informações suficientes/i,
+  /briefing (está |)?(100%\s*)?completo/i,
+  /clique no botão abaixo/i,
+  /ver e aprovar o? master plan/i,
+  /pronto para (o|montar o) master plan/i,
+];
+
+function messageSignalsCompletion(message: string): boolean {
+  return COMPLETION_SIGNAL_PATTERNS.some((re) => re.test(message));
+}
+
 // ─── Natural language extraction ──────────────────────────────────────────────
 
 const NL_SYSTEM_PROMPT = `Você é especialista em marketing digital brasileiro, focado em lançamentos e infoprodutos.
@@ -718,23 +738,23 @@ export async function processConversationalTurn(
     ].slice(-40);
     await saveIntakeData(campaignId, workspaceId, { ...currentIntake, _conversationHistory: updatedHistory }, log);
 
-    const newCompleteness2 = validateIntakeCompleteness(type, track, currentIntake);
+    // Deterministic force-completion: this branch tells the user "we're done,
+    // click below" — so the reported completeness MUST agree with that claim
+    // everywhere (100%, all required answered), never a partial number like
+    // 88%/22 of 23. Never report a stale/partial percentage alongside a
+    // completion message (P0 — see replit.md Gotchas: completion coherence).
     const requiredQs2 = questions.filter(q => q.required);
     const totalRequired2 = requiredQs2.length;
-    const answeredRequired2 = totalRequired2 - newCompleteness2.missingRequired.length;
-    const progress2 = Math.round(
-      ((questions.length - newCompleteness2.missingRequired.length) / questions.length) * 100
-    );
     return {
       agentId: "erico",
       extracted: {},
       aiMessage: forcedMessage,
       nextQuestionId: null,
       isComplete: true,
-      progress: progress2,
-      answeredRequired: answeredRequired2,
+      progress: 100,
+      answeredRequired: totalRequired2,
       totalRequired: totalRequired2,
-      missingRequired: newCompleteness2.missingRequired,
+      missingRequired: [],
       intakeData: { ...currentIntake, _conversationHistory: updatedHistory },
       proposedType: null,
       proposedTrack: null,
@@ -877,14 +897,24 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
 
   // Re-check completeness with new data
   const newCompleteness = validateIntakeCompleteness(type, track, mergedData);
-  isComplete = isComplete || newCompleteness.valid;
+
+  // Completion-signal safety net: the LLM may announce readiness for the
+  // Master Plan in aiMessage (JSON-drift, missing flag, or free-text fallback
+  // when jsonMatch fails above) without setting `isComplete` in its own JSON.
+  // If the message itself tells the user the briefing is done, trust that
+  // over a possibly-missed flag — otherwise the button never renders while
+  // the header still shows a partial percentage (P0 coherence bug).
+  isComplete = isComplete || newCompleteness.valid || messageSignalsCompletion(aiMessage);
 
   const requiredQsFinal = questions.filter(q => q.required);
   const totalRequired = requiredQsFinal.length;
-  const answeredRequired = totalRequired - newCompleteness.missingRequired.length;
-  const progress = Math.round(
-    ((questions.length - newCompleteness.missingRequired.length) / questions.length) * 100
-  );
+  // Once complete (by any signal), always report 100% / all-required-answered —
+  // never a stale partial number alongside a "you're done" message.
+  const answeredRequired = isComplete ? totalRequired : totalRequired - newCompleteness.missingRequired.length;
+  const progress = isComplete
+    ? 100
+    : Math.round(((questions.length - newCompleteness.missingRequired.length) / questions.length) * 100);
+  const finalMissingRequired = isComplete ? [] : newCompleteness.missingRequired;
 
   return {
     agentId,
@@ -895,7 +925,7 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
     progress,
     answeredRequired,
     totalRequired,
-    missingRequired: newCompleteness.missingRequired,
+    missingRequired: finalMissingRequired,
     intakeData: mergedData,
     proposedType,
     proposedTrack,

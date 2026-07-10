@@ -163,6 +163,7 @@ Launch tracks by revenue target:
 - **Creative fatigue detection**: on every metric ingest, if current CTR < 70% of historical peak CTR (peak > 0.5%), generates a `kpi_breach` alert recommending creative refresh.
 - **completeWithAgent signature**: positional args `(agentRole, systemPrompt, messages, workspaceId, log, campaignId?)` — NOT an object. Returns `AICompletionResult` with `.content` string field. `AppError` constructor is `(statusCode, message, code?)` — status code is FIRST arg.
 - **Professor Allan (Academy)**: zod limits `lessonContent` 20 000 / `question` 2 000 / history content 5 000 chars; `max_tokens` 2 048; frontend truncates `lessonContent` to 15 000 chars before sending.
+- **Intake completude coherence**: the campaigns list % and the intake page % must always be the SAME metric (answered/total required fields) — list.tsx's `PipelineBar` reads `campaign.intakeCompleteness.percentage` (computed server-side in `campaigns.routes.ts` GET "/") for `status==="intake"` rows instead of the pipeline-stage index. `intake.ai.ts`'s round-limit branch and main LLM path force `progress:100`/`missingRequired:[]` whenever completion is signaled (via `parsed.isComplete`, completeness check, or `messageSignalsCompletion()` text heuristic on the agent's free-text message) so the "Ver e Aprovar Master Plan" button and the % never disagree with what the agent says.
 
 ## Pointers
 
