@@ -315,9 +315,9 @@ function getGemini(): GoogleGenerativeAI {
 // IMPORTANT: do NOT lower this. A productive LLM call must never be interrupted.
 const LLM_CALL_TIMEOUT_MS = 30 * 60 * 1000;
 
-function withLLMTimeout(signal?: AbortSignal): AbortSignal {
+function withLLMTimeout(signal?: AbortSignal, timeoutMs: number = LLM_CALL_TIMEOUT_MS): AbortSignal {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(new Error("LLM_CALL_TIMEOUT")), LLM_CALL_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(new Error("LLM_CALL_TIMEOUT")), timeoutMs);
   // Chain caller's signal if provided
   if (signal) {
     signal.addEventListener("abort", () => { clearTimeout(timer); controller.abort(signal.reason); });
@@ -325,6 +325,48 @@ function withLLMTimeout(signal?: AbortSignal): AbortSignal {
   // Clean up timer when the request finishes naturally
   controller.signal.addEventListener("abort", () => clearTimeout(timer));
   return controller.signal;
+}
+
+// ── Retry with exponential backoff ────────────────────────────────────────────
+// Only retries transient failures (network errors, 502/504, our own timeout
+// abort). Never retries 4xx errors (bad request, context length exceeded,
+// auth, etc.) — those are deterministic and retrying just burns tokens/credits.
+const RETRYABLE_STATUS_CODES = new Set([502, 504]);
+const RETRYABLE_ERROR_CODES = new Set(["ETIMEDOUT", "ECONNRESET", "ECONNREFUSED", "ENOTFOUND", "EPIPE", "EAI_AGAIN"]);
+const RETRYABLE_MESSAGE_PATTERN = /LLM_CALL_TIMEOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|EPIPE|fetch failed|network error|socket hang up/i;
+
+function isRetryableError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const anyErr = err as { status?: number; code?: string; name?: string };
+  if (typeof anyErr.status === "number" && RETRYABLE_STATUS_CODES.has(anyErr.status)) return true;
+  if (anyErr.code && RETRYABLE_ERROR_CODES.has(anyErr.code)) return true;
+  if (anyErr.name === "AbortError") return true;
+  if (RETRYABLE_MESSAGE_PATTERN.test(err.message)) return true;
+  return false;
+}
+
+const noopLogger = { warn: () => {}, info: () => {}, error: () => {}, debug: () => {} } as unknown as Logger;
+
+async function withRetry<T>(fn: () => Promise<T>, log: Logger, label: string, maxRetries = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const retryable = isRetryableError(err);
+      if (attempt === maxRetries || !retryable) {
+        if (attempt > 0) {
+          log.warn({ label, attempt, retryable, err: String(err) }, "[withRetry] giving up");
+        }
+        throw err;
+      }
+      const backoffMs = 500 * 2 ** attempt; // 500ms, 1000ms, 2000ms
+      log.warn({ label, attempt, backoffMs, err: String(err) }, "[withRetry] transient error — retrying");
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+  throw lastErr;
 }
 
 // ── Continuation protocol ─────────────────────────────────────────────────────
@@ -354,18 +396,25 @@ async function callAnthropic(
   messages: AIMessage[],
   maxTokens = 16384,
   signal?: AbortSignal,
+  timeoutMs?: number,
+  log?: Logger,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel: string }> {
   const { client, isNative } = getAnthropic();
   const effectiveModel = isNative ? model : ANTHROPIC_INTEGRATION_MODEL;
-  const effectiveSignal = withLLMTimeout(signal);
-  const response = await client.messages.create(
-    {
-      model: effectiveModel,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
-    },
-    { signal: effectiveSignal },
+  const effectiveSignal = withLLMTimeout(signal, timeoutMs);
+  const response = await withRetry(
+    () =>
+      client.messages.create(
+        {
+          model: effectiveModel,
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        },
+        { signal: effectiveSignal },
+      ),
+    log ?? noopLogger,
+    "callAnthropic",
   );
 
   let content =
@@ -412,18 +461,21 @@ async function callOpenAI(
   messages: AIMessage[],
   maxTokens = 16384,
   signal?: AbortSignal,
+  timeoutMs?: number,
+  log?: Logger,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
+  const effectiveLog = log ?? noopLogger;
 
   if (!env.OPENAI_API_KEY && !hasOpenAIIntegration()) {
     if (hasAnthropicIntegration()) {
-      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
+      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
     }
   }
 
   const { client } = getOpenAI();
   const effectiveModel = usingIntegration ? OPENAI_INTEGRATION_MODEL : model;
-  const effectiveSignal = withLLMTimeout(signal);
+  const effectiveSignal = withLLMTimeout(signal, timeoutMs);
 
   const isGpt5 = effectiveModel.startsWith("gpt-5") || effectiveModel.startsWith("o4") || effectiveModel.startsWith("o3");
   const completionParams = isGpt5
@@ -431,16 +483,21 @@ async function callOpenAI(
     : { max_tokens: maxTokens };
 
   try {
-    const response = await client.chat.completions.create(
-      {
-        model: effectiveModel,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
-        ],
-        ...completionParams,
-      },
-      { signal: effectiveSignal },
+    const response = await withRetry(
+      () =>
+        client.chat.completions.create(
+          {
+            model: effectiveModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...messages.map((m) => ({ role: m.role, content: m.content })),
+            ],
+            ...completionParams,
+          },
+          { signal: effectiveSignal },
+        ),
+      effectiveLog,
+      "callOpenAI",
     );
 
     return {
@@ -462,21 +519,26 @@ async function callOpenAI(
         const integrationClient = new OpenAI({
           apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
           baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-          timeout: LLM_CALL_TIMEOUT_MS,
+          timeout: timeoutMs ?? LLM_CALL_TIMEOUT_MS,
         });
         const intModel = OPENAI_INTEGRATION_MODEL;
         const intIsGpt5 = intModel.startsWith("gpt-5") || intModel.startsWith("o4") || intModel.startsWith("o3");
         const intParams = intIsGpt5 ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens };
-        const intResponse = await integrationClient.chat.completions.create(
-          {
-            model: intModel,
-            messages: [
-              { role: "system", content: systemPrompt },
-              ...messages.map((m) => ({ role: m.role, content: m.content })),
-            ],
-            ...intParams,
-          },
-          { signal: effectiveSignal },
+        const intResponse = await withRetry(
+          () =>
+            integrationClient.chat.completions.create(
+              {
+                model: intModel,
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  ...messages.map((m) => ({ role: m.role, content: m.content })),
+                ],
+                ...intParams,
+              },
+              { signal: effectiveSignal },
+            ),
+          effectiveLog,
+          "callOpenAI-integrationFallback",
         );
         return {
           content: intResponse.choices[0]?.message?.content ?? "",
@@ -487,7 +549,7 @@ async function callOpenAI(
       }
       // No integration either — fall back to Anthropic
       if (hasAnthropicIntegration()) {
-        return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
+        return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
       }
     }
     throw err;
@@ -500,11 +562,14 @@ async function callGemini(
   messages: AIMessage[],
   maxTokens = 16384,
   signal?: AbortSignal,
+  timeoutMs?: number,
+  log?: Logger,
 ): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
   const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const effectiveLog = log ?? noopLogger;
 
   if (!hasGeminiAccess) {
-    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
+    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
   }
 
   try {
@@ -522,7 +587,12 @@ async function callGemini(
 
     const chat = geminiModel.startChat({ history });
     const lastMessage = messages[messages.length - 1];
-    const result = await chat.sendMessage(lastMessage?.content ?? "", { signal } as any);
+    const effectiveSignal = withLLMTimeout(signal, timeoutMs);
+    const result = await withRetry(
+      () => chat.sendMessage(lastMessage?.content ?? "", { signal: effectiveSignal } as any),
+      effectiveLog,
+      "callGemini",
+    );
     const response = await result.response;
 
     return {
@@ -534,7 +604,7 @@ async function callGemini(
   } catch (geminiErr) {
     // Gemini unavailable or quota exceeded — fall back to Anthropic integration
     if (hasAnthropicIntegration()) {
-      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal);
+      return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
     }
     throw geminiErr;
   }
@@ -664,6 +734,7 @@ export async function completeWithAgent(
   locale?: string,
   providerOverride?: "anthropic" | "openai" | "gemini",
   maxTokens?: number,
+  timeoutMs?: number,
 ): Promise<AICompletionResult> {
   const agentConfig = AGENT_PROVIDER_MAP[agentRole];
   const provider = providerOverride ?? agentConfig.provider;
@@ -675,8 +746,10 @@ export async function completeWithAgent(
   const model = _fallbackMode && FALLBACK_MODEL_MAP[baseModel] ? FALLBACK_MODEL_MAP[baseModel] : baseModel;
   const effectiveSystem = systemPrompt + buildLocaleInstruction(locale);
   const startTime = Date.now();
-  // No AbortSignal — background workers must never be killed by timeout.
-  // Deep agents can legitimately take 3–10+ min per LLM call.
+  // No AbortSignal by default — background workers must never be killed by timeout.
+  // Deep agents can legitimately take 3–10+ min per LLM call. Callers that need a
+  // short-lived ceiling (e.g. interactive intake/briefing chat) can pass timeoutMs
+  // explicitly; this never changes the default (LLM_CALL_TIMEOUT_MS) for other callers.
 
   let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string };
 
@@ -684,7 +757,7 @@ export async function completeWithAgent(
   switch (provider) {
     case "anthropic":
       try {
-        result = await callAnthropic(model, effectiveSystem, messages, effectiveMaxTokens);
+        result = await callAnthropic(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
       } catch (anthropicErr) {
         log.warn(
           { agentRole, model, err: String(anthropicErr) },
@@ -695,15 +768,18 @@ export async function completeWithAgent(
           effectiveSystem,
           messages,
           effectiveMaxTokens,
+          undefined,
+          timeoutMs,
+          log,
         );
       }
       break;
     case "openai":
-      result = await callOpenAI(model, effectiveSystem, messages, effectiveMaxTokens);
+      result = await callOpenAI(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
       break;
     case "gemini":
       try {
-        result = await callGemini(model, effectiveSystem, messages, effectiveMaxTokens);
+        result = await callGemini(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
       } catch (geminiErr) {
         log.warn(
           { agentRole, model, err: String(geminiErr) },
@@ -714,6 +790,9 @@ export async function completeWithAgent(
           effectiveSystem,
           messages,
           effectiveMaxTokens,
+          undefined,
+          timeoutMs,
+          log,
         );
       }
       break;
@@ -766,6 +845,59 @@ export async function completeWithAgent(
     costUsd,
     creditsCharged,
   };
+}
+
+// ── Safe wrapper for interactive callers ──────────────────────────────────────
+// completeWithAgent() throws on failure, which is correct for background
+// agents (the orchestration worker/pipeline catches and handles it). Interactive
+// callers (e.g. the intake/briefing chat) need a non-throwing contract so a
+// timeout or provider error becomes a graceful in-band result instead of an
+// unhandled rejection that hangs the HTTP request or crashes the process.
+export type CompleteWithAgentSafeResult =
+  | ({ success: true } & AICompletionResult)
+  | { success: false; error: "TIMEOUT" | "PROVIDER_ERROR"; message: string };
+
+export async function completeWithAgentSafe(
+  agentRole: AgentRole,
+  systemPrompt: string,
+  messages: AIMessage[],
+  workspaceId: string,
+  log: Logger,
+  campaignId?: string,
+  locale?: string,
+  providerOverride?: "anthropic" | "openai" | "gemini",
+  maxTokens?: number,
+  timeoutMs?: number,
+): Promise<CompleteWithAgentSafeResult> {
+  try {
+    const result = await completeWithAgent(
+      agentRole,
+      systemPrompt,
+      messages,
+      workspaceId,
+      log,
+      campaignId,
+      locale,
+      providerOverride,
+      maxTokens,
+      timeoutMs,
+    );
+    return { success: true, ...result };
+  } catch (err) {
+    const isTimeout =
+      err instanceof Error &&
+      (err.name === "AbortError" || /LLM_CALL_TIMEOUT|ETIMEDOUT/i.test(err.message));
+    const message = err instanceof Error ? err.message : String(err);
+    log.warn(
+      { agentRole, workspaceId, campaignId, err: message, isTimeout },
+      "[completeWithAgentSafe] call failed — returning structured error instead of throwing",
+    );
+    return {
+      success: false,
+      error: isTimeout ? "TIMEOUT" : "PROVIDER_ERROR",
+      message,
+    };
+  }
 }
 
 export function getAgentConfig(

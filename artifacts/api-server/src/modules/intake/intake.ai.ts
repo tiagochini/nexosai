@@ -5,7 +5,7 @@ import {
   auditLogsTable,
   type Campaign,
 } from "@workspace/db";
-import { completeWithAgent, buildLocaleInstruction } from "../ai-gateway/ai-gateway.service.js";
+import { completeWithAgent, completeWithAgentSafe, buildLocaleInstruction } from "../ai-gateway/ai-gateway.service.js";
 import { generateAvatarVoiceFile } from "../agents/avatar-voice-file.agent.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { Logger } from "pino";
@@ -778,18 +778,45 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
   let proposedReason: string | null = null;
   let agentId: string = currentAgent.id;
 
+  // ── Checkpoint BEFORE the AI call ─────────────────────────────────────────────
+  // Persist the user's message to history first, so a timeout/crash on the LLM
+  // call never loses what the user just said — they can resend and resume from
+  // the same turn instead of the conversation appearing to "eat" their message.
+  const HIST_KEY = "_conversationHistory";
+  const prevHistory = Array.isArray(currentIntake[HIST_KEY])
+    ? (currentIntake[HIST_KEY] as Array<{ role: string; content: string }>)
+    : [];
+  const checkpointedHistory = [
+    ...prevHistory,
+    { role: "user", content: userMessage },
+  ].slice(-40);
   try {
-    const result = await completeWithAgent(
-      "strategy",
-      CONVERSATION_SYSTEM,
-      messages,
-      workspaceId,
-      log,
-      campaignId,
-      locale
-    );
+    await saveIntakeData(campaignId, workspaceId, { ...currentIntake, [HIST_KEY]: checkpointedHistory }, log);
+  } catch (checkpointErr) {
+    // Campaign may not be in 'intake' status — allow read-only conversation to continue.
+    log.warn({ checkpointErr }, "pre-call checkpoint save skipped (campaign status prevents update)");
+  }
 
-    const jsonMatch = result.content.match(/\{[\s\S]*\}/);
+  // Intake/briefing chat is interactive — use a short timeout (90s) + the
+  // non-throwing safe wrapper so a slow/failed provider call never hangs the
+  // HTTP request. This does NOT change the 30-min ceiling used by background
+  // deep agents (strategy/content generation) elsewhere in the pipeline.
+  const INTAKE_CHAT_TIMEOUT_MS = 90 * 1000;
+  const safeResult = await completeWithAgentSafe(
+    "strategy",
+    CONVERSATION_SYSTEM,
+    messages,
+    workspaceId,
+    log,
+    campaignId,
+    locale,
+    undefined,
+    undefined,
+    INTAKE_CHAT_TIMEOUT_MS,
+  );
+
+  if (safeResult.success) {
+    const jsonMatch = safeResult.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]) as {
         agentId?: string;
@@ -810,28 +837,27 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
       proposedTrack = (parsed.proposedTrack as string) ?? null;
       proposedReason = (parsed.proposedReason as string) ?? null;
     } else {
-      aiMessage = result.content.replace(/^\[DEV MODE.*?\]/, "").trim() ||
+      aiMessage = safeResult.content.replace(/^\[DEV MODE.*?\]/, "").trim() ||
         (nextQuestion ? `${nextQuestion.label}` : "Intake concluído!");
     }
-  } catch (err) {
-    log.warn({ err }, "Conversational AI failed");
-    aiMessage = nextQuestion
-      ? `Entendido! Agora me conta: ${nextQuestion.label}${nextQuestion.description ? ` (${nextQuestion.description})` : ""}`
-      : "Ótimo! Todos os dados foram coletados.";
+  } else {
+    log.warn({ error: safeResult.error, message: safeResult.message, campaignId }, "Conversational AI failed — returning graceful retry message, history already checkpointed");
+    aiMessage = safeResult.error === "TIMEOUT"
+      ? "Essa resposta está demorando mais que o esperado. Sua mensagem já foi salva — pode tentar reenviar em alguns segundos que eu continuo de onde paramos."
+      : (nextQuestion
+        ? `Tive um problema técnico momentâneo, mas sua mensagem foi salva. Podemos continuar: ${nextQuestion.label}${nextQuestion.description ? ` (${nextQuestion.description})` : ""}`
+        : "Tive um problema técnico momentâneo, mas sua mensagem foi salva. Pode tentar novamente.");
   }
 
-  // ── Always persist conversation history ──────────────────────────────────────
-  const HIST_KEY = "_conversationHistory";
-  const prevHistory = Array.isArray(currentIntake[HIST_KEY])
-    ? (currentIntake[HIST_KEY] as Array<{ role: string; content: string }>)
-    : [];
+  // ── Persist the assistant turn on top of the already-checkpointed history ────
   const updatedHistory = [
-    ...prevHistory,
-    { role: "user", content: userMessage },
+    ...checkpointedHistory,
     { role: "assistant", content: aiMessage, agentId },
   ].slice(-40); // keep last 40 turns (20 exchanges)
 
-  // Merge extracted fields + updated history and save
+  // Merge extracted fields + updated history and save. On AI failure, extracted
+  // is empty so this is purely appending the assistant's graceful message —
+  // no user-provided data is lost or reset.
   const mergedData = {
     ...currentIntake,
     ...(Object.keys(extracted).length > 0 ? extracted : {}),
