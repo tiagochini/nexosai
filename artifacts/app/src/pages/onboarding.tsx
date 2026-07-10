@@ -346,6 +346,7 @@ export default function Onboarding() {
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [simulatorBanner, setSimulatorBanner] = useState<SimulatorData | null>(null);
+  const [resumeCheck, setResumeCheck] = useState<"checking" | "resolved" | "error">("checking");
 
   // Clone Studio state
   const [showCloneStudio, setShowCloneStudio] = useState(false);
@@ -370,7 +371,14 @@ export default function Onboarding() {
   // whether this account already has an in-progress intake campaign, since
   // the conversation itself (messages + extracted data) is durably stored
   // server-side in campaigns.intake_data, not in the browser.
-  useEffect(() => {
+  //
+  // This check BLOCKS the path-select screen (resumeCheck stays "checking")
+  // until it resolves. A failed check never silently falls through to a
+  // fresh onboarding — that could spawn a duplicate campaign and strand the
+  // user's already-answered questions. On failure we show an explicit
+  // retry screen; only the user's own confirmed choice moves past it.
+  const checkForResumableCampaign = async () => {
+    setResumeCheck("checking");
     const saved = loadOnboardingState();
     if (saved && saved.messages.length > 0 && saved.campaignId) {
       setPath(saved.path);
@@ -379,6 +387,7 @@ export default function Onboarding() {
       setMessages(saved.messages);
       setConversationComplete(saved.conversationComplete);
       if (saved.audienceSubPath) setAudienceSubPath(saved.audienceSubPath);
+      setResumeCheck("resolved");
       return;
     }
 
@@ -387,47 +396,59 @@ export default function Onboarding() {
     if (sim) setSimulatorBanner(sim);
 
     // No local cache — ask the backend if there's an unfinished intake to resume.
-    (async () => {
-      try {
-        const data = await customFetch<{ campaigns: Array<Record<string, unknown>> }>("/api/campaigns");
-        const intakeCampaigns = (data.campaigns ?? [])
-          .filter((c) => c["status"] === "intake")
-          .sort((a, b) =>
-            new Date(b["updatedAt"] as string).getTime() - new Date(a["updatedAt"] as string).getTime(),
-          );
-        const candidate = intakeCampaigns[0];
-        if (!candidate) return;
-
-        const detail = await customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${candidate["id"]}`);
-        const intakeData = (detail.campaign["intakeData"] as Record<string, unknown>) ?? {};
-        const history = Array.isArray(intakeData["_conversationHistory"])
-          ? (intakeData["_conversationHistory"] as Array<{ role: string; content: string }>)
-          : [];
-        const restoredPath = (intakeData["_onboardingPath"] as OnboardingPath) ?? "has_product";
-        if (history.length === 0) return;
-
-        const restoredMessages: ChatMessage[] = history.map((h) => ({
-          role: h.role === "user" ? "user" : "assistant",
-          content: h.content,
-        }));
-        const cid = candidate["id"] as string;
-
-        setPath(restoredPath);
-        setCampaignId(cid);
-        setStep("conversation");
-        setMessages(restoredMessages);
-        saveOnboardingState({
-          path: restoredPath,
-          campaignId: cid,
-          step: "conversation",
-          messages: restoredMessages,
-          conversationComplete: false,
-        });
-        toast.info("Retomamos sua campanha em andamento de onde você parou.");
-      } catch {
-        // Non-blocking — if this fails, user just starts a fresh onboarding.
+    try {
+      const data = await customFetch<{ campaigns: Array<Record<string, unknown>> }>("/api/campaigns");
+      const intakeCampaigns = (data.campaigns ?? [])
+        .filter((c) => c["status"] === "intake")
+        .sort((a, b) =>
+          new Date(b["updatedAt"] as string).getTime() - new Date(a["updatedAt"] as string).getTime(),
+        );
+      const candidate = intakeCampaigns[0];
+      if (!candidate) {
+        setResumeCheck("resolved");
+        return;
       }
-    })();
+
+      const detail = await customFetch<{ campaign: Record<string, unknown> }>(`/api/campaigns/${candidate["id"]}`);
+      const intakeData = (detail.campaign["intakeData"] as Record<string, unknown>) ?? {};
+      const history = Array.isArray(intakeData["_conversationHistory"])
+        ? (intakeData["_conversationHistory"] as Array<{ role: string; content: string }>)
+        : [];
+      const restoredPath = (intakeData["_onboardingPath"] as OnboardingPath) ?? "has_product";
+      if (history.length === 0) {
+        setResumeCheck("resolved");
+        return;
+      }
+
+      const restoredMessages: ChatMessage[] = history.map((h) => ({
+        role: h.role === "user" ? "user" : "assistant",
+        content: h.content,
+      }));
+      const cid = candidate["id"] as string;
+
+      setPath(restoredPath);
+      setCampaignId(cid);
+      setStep("conversation");
+      setMessages(restoredMessages);
+      saveOnboardingState({
+        path: restoredPath,
+        campaignId: cid,
+        step: "conversation",
+        messages: restoredMessages,
+        conversationComplete: false,
+      });
+      toast.info("Retomamos sua campanha em andamento de onde você parou.");
+      setResumeCheck("resolved");
+    } catch {
+      // Could not confirm whether a campaign exists — do NOT silently start
+      // fresh. Surface a blocking retry screen instead.
+      setResumeCheck("error");
+    }
+  };
+
+  useEffect(() => {
+    checkForResumableCampaign();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -683,6 +704,48 @@ export default function Onboarding() {
   };
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
+
+  // ── Resume-check gate — never let the user start (and risk duplicating) a
+  // campaign before we've confirmed whether one is already in progress.
+  if (resumeCheck === "checking") {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground/60">
+            Verificando se você já tem uma campanha em andamento...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (resumeCheck === "error") {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4">
+        <div className="w-full max-w-md text-center border border-destructive/30 bg-destructive/5 p-8">
+          <WifiOff className="h-6 w-6 text-destructive mx-auto mb-4" />
+          <h2 className="font-mono font-black text-sm uppercase tracking-widest text-foreground mb-3">
+            Não conseguimos verificar sua campanha
+          </h2>
+          <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed mb-6">
+            Antes de continuar, precisamos confirmar se você já tem uma campanha em
+            andamento — isso evita que você perca seu progresso ou crie uma duplicada.
+            Não foi possível falar com o servidor agora.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => checkForResumableCampaign()}
+              className="rounded-none font-mono uppercase tracking-widest font-black gap-2 btn-weapon-primary"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Tentar novamente
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Step: welcome — "Time de Briefing NEXOS" ─────────────────────────────────
   if (step === "welcome") {
