@@ -394,7 +394,7 @@ Retorne APENAS o JSON do roteiro completo.`;
   const critique = await runAgentWithCritique({
     campaignId,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "vsl_script",
     profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_VSL_SCRIPT + memBlock + VSL_SCRIPT_PROMPT,
     userMessage,

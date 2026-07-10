@@ -337,7 +337,7 @@ Retorne APENAS o JSON do pacote de anúncios.`;
   const critique = await runAgentWithCritique({
     campaignId,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "ad_copy",
     profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_AD_COPY + memBlock + AD_COPY_PROMPT,
     userMessage,
