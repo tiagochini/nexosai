@@ -262,6 +262,111 @@ router.post("/me/persona/clone-voice", async (req, res): Promise<void> => {
   }
 });
 
+// ── Avatar (HeyGen) endpoints ────────────────────────────────────────────────
+// NexOS-operated infra only — always env.HEYGEN_API_KEY, never a customer key.
+
+// A small curated set of NexOS-provided ready-made HeyGen public avatars, so a
+// customer can pick a face without recording their own video.
+const STOCK_AVATARS = [
+  { id: "Daisy-inskirt-20220818", label: "Daisy — Casual", gender: "female" },
+  { id: "Kayla-inblackskirt-20220818", label: "Kayla — Executiva", gender: "female" },
+  { id: "Wayne_20240711", label: "Wayne — Profissional", gender: "male" },
+  { id: "Tyler-incasualsuit-20220721", label: "Tyler — Casual Suit", gender: "male" },
+];
+
+router.get("/me/persona/stock-avatars", async (_req, res): Promise<void> => {
+  res.json({ avatars: STOCK_AVATARS });
+});
+
+// POST /workspaces/me/persona/clone-avatar — receive base64 image (frame from the
+// user's recording) → HeyGen Talking Photo → save heygenAvatarId
+router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
+  const schema = z.object({
+    imageBase64: z.string().min(10),
+    mimeType: z.string().default("image/jpeg"),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "imageBase64 obrigatório", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) {
+    res.status(422).json({ error: "HeyGen não configurado — adicione HEYGEN_API_KEY", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  try {
+    const buf = Buffer.from(parsed.data.imageBase64, "base64");
+    const uploadRes = await fetch("https://upload.heygen.com/v1/asset", {
+      method: "POST",
+      headers: { "X-Api-Key": heygenKey, "Content-Type": parsed.data.mimeType },
+      body: buf,
+    });
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      throw new Error(`HeyGen upload ${uploadRes.status}: ${errText.slice(0, 300)}`);
+    }
+    const uploadData = (await uploadRes.json()) as { data: { image_key: string } };
+    const talkingPhotoId = uploadData.data.image_key;
+
+    const [ws] = await db.select({ settings: workspacesTable.settings })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, req.auth.workspaceId))
+      .limit(1);
+    const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+    const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+    await db.update(workspacesTable)
+      .set({
+        settings: {
+          ...existingSettings,
+          persona: {
+            ...existingPersona,
+            heygenAvatarId: talkingPhotoId,
+            avatarType: "talking_photo",
+            avatarUpdatedAt: new Date().toISOString(),
+          },
+        } as any,
+      })
+      .where(eq(workspacesTable.id, req.auth.workspaceId));
+    req.log.info({ workspaceId: req.auth.workspaceId, talkingPhotoId }, "Avatar clone created (talking_photo)");
+    res.json({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo", success: true });
+  } catch (err) {
+    req.log.error({ err }, "Avatar clone failed");
+    res.status(500).json({ error: String(err), code: "AVATAR_CLONE_ERROR" });
+  }
+});
+
+// POST /workspaces/me/persona/select-stock-avatar — pick a ready-made avatar (no recording)
+router.post("/me/persona/select-stock-avatar", async (req, res): Promise<void> => {
+  const schema = z.object({ avatarId: z.string().min(1) });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success || !STOCK_AVATARS.some((a) => a.id === parsed.data.avatarId)) {
+    res.status(400).json({ error: "avatarId inválido", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+  await db.update(workspacesTable)
+    .set({
+      settings: {
+        ...existingSettings,
+        persona: {
+          ...existingPersona,
+          heygenAvatarId: parsed.data.avatarId,
+          avatarType: "stock",
+          avatarUpdatedAt: new Date().toISOString(),
+        },
+      } as any,
+    })
+    .where(eq(workspacesTable.id, req.auth.workspaceId));
+  res.json({ heygenAvatarId: parsed.data.avatarId, avatarType: "stock", success: true });
+});
+
 // ── Compliance / Full Identification endpoints ─────────────────────────────
 
 const complianceSchema = z.object({

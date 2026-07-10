@@ -48,6 +48,7 @@ export interface AvatarVideoRequest {
   voiceoverText: string;
   avatarId?: string;
   voiceId?: string;
+  avatarType?: "talking_photo" | "stock";
   durationSeconds?: number;
   aspectRatio?: "16:9" | "9:16";
 }
@@ -203,7 +204,20 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
     return { status: "provider_not_configured", setupInstructions: SETUP_INSTRUCTIONS.avatar };
   }
 
+  if (!req.avatarId || !req.voiceId) {
+    return {
+      status: "failed",
+      error: "Avatar/voz não configurados — grave ou selecione um avatar antes de gerar vídeo com apresentador.",
+      provider: "heygen",
+    };
+  }
+
   try {
+    const character =
+      req.avatarType === "talking_photo"
+        ? { type: "talking_photo", talking_photo_id: req.avatarId, talking_photo_style: "square" }
+        : { type: "avatar", avatar_id: req.avatarId, avatar_style: "normal" };
+
     const res = await fetch("https://api.heygen.com/v2/video/generate", {
       method: "POST",
       headers: {
@@ -213,11 +227,7 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
       body: JSON.stringify({
         video_inputs: [
           {
-            character: {
-              type: "avatar",
-              avatar_id: req.avatarId ?? "default",
-              avatar_style: "normal",
-            },
+            character,
             voice: {
               type: "text",
               input_text: req.voiceoverText,

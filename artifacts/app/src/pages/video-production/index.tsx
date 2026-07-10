@@ -8,7 +8,7 @@ import {
   Video, Play, CheckCircle2, Clock, AlertCircle, Sparkles,
   ChevronRight, User, Mic, Film, Wand2, Eye, Download,
   RefreshCw, Plus, Settings, Info, Clapperboard, Shirt, Lightbulb,
-  ChevronDown, ChevronUp, Camera, Upload, Scissors,
+  ChevronDown, ChevronUp, Camera, Upload, Scissors, Square,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ type VideoStatus =
   | "intake" | "script_generating" | "script_ready" | "script_approved"
   | "storyboard_generating" | "storyboard_ready" | "storyboard_approved"
   | "preview_generating" | "preview_ready" | "preview_approved"
+  | "awaiting_clone"
   | "final_generating" | "completed" | "failed";
 
 type SceneClipStatus = "pending" | "generating" | "ready" | "failed";
@@ -82,6 +83,7 @@ interface VideoProject {
   title: string;
   format: string;
   status: VideoStatus;
+  pendingAction?: "preview" | "final" | null;
   config: {
     hasUserFace: boolean;
     voiceStyle: string;
@@ -121,6 +123,7 @@ const STATUS_LABELS: Record<VideoStatus, string> = {
   preview_generating: "Gerando clipes de preview...",
   preview_ready: "Preview pronto — aguardando aprovação",
   preview_approved: "Preview aprovado",
+  awaiting_clone: "Aguardando avatar/voz do lançador",
   final_generating: "Gerando vídeo final HD...",
   completed: "Concluído",
   failed: "Erro",
@@ -651,6 +654,303 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
           </Button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Avatar/Voice Clone Gate ────────────────────────────────────────────────────
+
+interface StockAvatar { id: string; label: string; gender?: string }
+
+function AvatarCloneGate({ project, onResumed }: { project: VideoProject; onResumed: (p: VideoProject) => void }) {
+  const [voiceCloneId, setVoiceCloneId] = useState<string | null>(null);
+  const [avatarReady, setAvatarReady] = useState(false);
+  const [avatarMode, setAvatarMode] = useState<"stock" | "record" | null>(null);
+  const [stockAvatars, setStockAvatars] = useState<StockAvatar[]>([]);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [selectingStockId, setSelectingStockId] = useState<string | null>(null);
+
+  // Voice recording state
+  const [recState, setRecState] = useState<"idle" | "recording" | "recorded" | "cloning" | "done">("idle");
+  const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioMime, setAudioMime] = useState("audio/webm");
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  // Avatar frame capture state
+  const [camStream, setCamStream] = useState<MediaStream | null>(null);
+  const [frameBase64, setFrameBase64] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [error, setError] = useState<string | null>(null);
+  const [resuming, setResuming] = useState(false);
+
+  useEffect(() => {
+    return () => { camStream?.getTracks().forEach(t => t.stop()); };
+  }, [camStream]);
+
+  async function loadStockAvatars() {
+    setStockLoading(true);
+    try {
+      const res = await customFetch<{ avatars: StockAvatar[] }>("/api/workspaces/me/persona/stock-avatars");
+      setStockAvatars(res.avatars ?? []);
+    } catch {
+      setError("Não foi possível carregar os avatares padrão.");
+    } finally {
+      setStockLoading(false);
+    }
+  }
+
+  async function startVoiceRecording() {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
+      setAudioMime(mime);
+      const recorder = new MediaRecorder(stream, { mimeType: mime });
+      chunksRef.current = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mime });
+        setAudioUrl(URL.createObjectURL(blob));
+        const reader = new FileReader();
+        reader.onload = () => setAudioBase64((reader.result as string).split(",")[1] ?? "");
+        reader.readAsDataURL(blob);
+        setRecState("recorded");
+      };
+      recorder.start();
+      recorderRef.current = recorder;
+      setRecState("recording");
+    } catch {
+      setError("Microfone não disponível — verifique as permissões do navegador.");
+    }
+  }
+
+  function stopVoiceRecording() {
+    if (recorderRef.current && recorderRef.current.state !== "inactive") recorderRef.current.stop();
+  }
+
+  async function cloneVoiceNow() {
+    if (!audioBase64) return;
+    setError(null);
+    setRecState("cloning");
+    try {
+      const res = await customFetch<{ voiceCloneId: string }>("/api/workspaces/me/persona/clone-voice", {
+        method: "POST",
+        body: JSON.stringify({ audioBase64, mimeType: audioMime, voiceName: "Voz do Lançador — NexOS" }),
+      });
+      setVoiceCloneId(res.voiceCloneId);
+      setRecState("done");
+      toast.success("Voz clonada com sucesso.");
+    } catch (e: any) {
+      setError(e.message ?? "Erro ao clonar voz");
+      setRecState("recorded");
+    }
+  }
+
+  async function startCamera() {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      setCamStream(stream);
+      setTimeout(() => { if (videoRef.current) videoRef.current.srcObject = stream; }, 50);
+    } catch {
+      setError("Câmera não disponível — verifique as permissões do navegador.");
+    }
+  }
+
+  function captureFrame() {
+    if (!videoRef.current || !canvasRef.current) return;
+    const v = videoRef.current, c = canvasRef.current;
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(v, 0, 0, c.width, c.height);
+    setFrameBase64(c.toDataURL("image/jpeg", 0.92).split(",")[1] ?? "");
+    camStream?.getTracks().forEach(t => t.stop());
+    setCamStream(null);
+  }
+
+  async function createAvatarFromFrame() {
+    if (!frameBase64) return;
+    setAvatarUploading(true);
+    setError(null);
+    try {
+      await customFetch("/api/workspaces/me/persona/clone-avatar", {
+        method: "POST",
+        body: JSON.stringify({ imageBase64: frameBase64, mimeType: "image/jpeg" }),
+      });
+      setAvatarReady(true);
+      toast.success("Avatar criado a partir do seu vídeo.");
+    } catch (e: any) {
+      setError(e.message ?? "Erro ao criar avatar");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  async function selectStock(avatarId: string) {
+    setSelectingStockId(avatarId);
+    setError(null);
+    try {
+      await customFetch("/api/workspaces/me/persona/select-stock-avatar", {
+        method: "POST",
+        body: JSON.stringify({ avatarId }),
+      });
+      setAvatarReady(true);
+      toast.success("Avatar padrão selecionado.");
+    } catch (e: any) {
+      setError(e.message ?? "Erro ao selecionar avatar");
+    } finally {
+      setSelectingStockId(null);
+    }
+  }
+
+  async function resumePipeline() {
+    setResuming(true);
+    setError(null);
+    try {
+      const action = project.pendingAction === "final" ? "generate-final" : "generate-preview";
+      const res = await customFetch<{ project: VideoProject }>(`/api/video-projects/${project.id}/${action}`, { method: "POST", body: "{}" });
+      onResumed(res.project);
+    } catch (e: any) {
+      setError(e.message ?? "Erro ao retomar geração");
+    } finally {
+      setResuming(false);
+    }
+  }
+
+  const canResume = !!voiceCloneId && avatarReady;
+
+  return (
+    <div className="border border-primary/30 rounded-xl p-5 bg-primary/5 space-y-5">
+      <div>
+        <div className="font-mono text-sm font-bold flex items-center gap-2">
+          <User className="h-4 w-4 text-primary" />Este vídeo tem cenas com avatar — precisamos da sua voz e rosto
+        </div>
+        <div className="font-mono text-xs text-muted-foreground mt-1">
+          Você escolheu aparecer nas cenas. Para gerar o vídeo com avatar de IA precisamos clonar sua voz e criar seu avatar (ou você pode usar um avatar padrão).
+        </div>
+      </div>
+
+      {error && <div className="font-mono text-[11px] text-red-400 border border-red-500/30 rounded-md p-2 bg-red-500/5">{error}</div>}
+
+      {/* Step 1 — Voice */}
+      <div className="border border-border/40 rounded-lg p-4 space-y-3">
+        <div className="font-mono text-xs font-bold flex items-center gap-2">
+          {voiceCloneId ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Mic className="h-4 w-4 text-primary" />}
+          1. Sua voz {voiceCloneId && <span className="text-green-400">— clonada</span>}
+        </div>
+        {!voiceCloneId && (
+          <div className="space-y-2">
+            <div className="font-mono text-[10px] text-muted-foreground">Grave 20-30s falando naturalmente para clonarmos sua voz.</div>
+            <div className="flex items-center gap-2">
+              {recState === "idle" && (
+                <Button size="sm" onClick={startVoiceRecording} className="font-mono text-xs"><Mic className="h-3.5 w-3.5 mr-1.5" />Gravar</Button>
+              )}
+              {recState === "recording" && (
+                <Button size="sm" variant="destructive" onClick={stopVoiceRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />Parar</Button>
+              )}
+              {(recState === "recorded" || recState === "cloning") && (
+                <>
+                  {audioUrl && <audio src={audioUrl} controls className="h-8" />}
+                  <Button size="sm" onClick={cloneVoiceNow} disabled={recState === "cloning"} className="font-mono text-xs">
+                    {recState === "cloning" ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                    Clonar Voz
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setRecState("idle"); setAudioUrl(null); setAudioBase64(null); }} className="font-mono text-xs">Regravar</Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Step 2 — Avatar */}
+      <div className="border border-border/40 rounded-lg p-4 space-y-3">
+        <div className="font-mono text-xs font-bold flex items-center gap-2">
+          {avatarReady ? <CheckCircle2 className="h-4 w-4 text-green-400" /> : <Camera className="h-4 w-4 text-primary" />}
+          2. Seu avatar {avatarReady && <span className="text-green-400">— pronto</span>}
+        </div>
+        {!avatarReady && (
+          <div className="space-y-3">
+            {!avatarMode && (
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => { setAvatarMode("stock"); void loadStockAvatars(); }} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
+                  <div className="font-mono text-xs font-bold">Avatar padrão</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">Escolha um avatar pronto da NexOS</div>
+                </button>
+                <button onClick={() => setAvatarMode("record")} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
+                  <div className="font-mono text-xs font-bold">Meu próprio rosto</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">Grave um frame da sua webcam</div>
+                </button>
+              </div>
+            )}
+
+            {avatarMode === "stock" && (
+              <div className="space-y-2">
+                {stockLoading ? (
+                  <div className="font-mono text-[10px] text-muted-foreground">Carregando avatares...</div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {stockAvatars.map(a => (
+                      <button
+                        key={a.id}
+                        onClick={() => void selectStock(a.id)}
+                        disabled={!!selectingStockId}
+                        className="border border-border/40 hover:border-primary/50 rounded-lg p-2 text-center transition-colors"
+                      >
+                        <div className="w-full h-16 rounded mb-1 bg-primary/10 flex items-center justify-center">
+                          <User className="h-6 w-6 text-primary/60" />
+                        </div>
+                        <div className="font-mono text-[9px]">{selectingStockId === a.id ? "Selecionando..." : a.label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+              </div>
+            )}
+
+            {avatarMode === "record" && (
+              <div className="space-y-2">
+                {!camStream && !frameBase64 && (
+                  <Button size="sm" onClick={startCamera} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />Ligar câmera</Button>
+                )}
+                {camStream && (
+                  <div className="space-y-2">
+                    <video ref={videoRef} autoPlay muted playsInline className="w-full max-w-xs rounded-lg bg-black" />
+                    <Button size="sm" onClick={captureFrame} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />Capturar</Button>
+                  </div>
+                )}
+                {frameBase64 && !avatarReady && (
+                  <div className="space-y-2">
+                    <img src={`data:image/jpeg;base64,${frameBase64}`} alt="Frame capturado" className="w-full max-w-xs rounded-lg" />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={createAvatarFromFrame} disabled={avatarUploading} className="font-mono text-xs">
+                        {avatarUploading ? <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                        Criar Avatar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setFrameBase64(null)} className="font-mono text-xs">Refazer</Button>
+                    </div>
+                  </div>
+                )}
+                <canvas ref={canvasRef} className="hidden" />
+                <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Button onClick={resumePipeline} disabled={!canResume || resuming} className="font-mono w-full">
+        {resuming ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+        Continuar Geração do Vídeo
+      </Button>
     </div>
   );
 }
@@ -1454,6 +1754,17 @@ export default function VideoProductionPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Avatar/voice clone gate */}
+              {statusIs("awaiting_clone") && (
+                <AvatarCloneGate
+                  project={selected}
+                  onResumed={(p) => {
+                    setSelected(p);
+                    setProjects(ps => ps.map(x => x.id === p.id ? p : x));
+                  }}
+                />
               )}
 
               {/* Preview clips panel */}

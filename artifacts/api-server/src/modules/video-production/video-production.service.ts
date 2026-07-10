@@ -4,6 +4,7 @@ import {
   videoProjectsTable,
   campaignsTable,
   vslsTable,
+  workspacesTable,
   type VideoProject,
   type VideoScene,
   type VideoConfig,
@@ -28,6 +29,27 @@ import type { Logger } from "pino";
 const log = logger.child({ module: "video-production" });
 
 // ─── Validation helpers ──────────────────────────────────────────────────────
+
+interface WorkspacePersona {
+  voiceCloneId?: string;
+  heygenAvatarId?: string;
+  avatarType?: "talking_photo" | "stock";
+}
+
+async function getWorkspacePersona(workspaceId: string): Promise<WorkspacePersona> {
+  const [ws] = await db
+    .select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, workspaceId))
+    .limit(1);
+  const settings = (ws?.settings ?? {}) as Record<string, unknown>;
+  return (settings.persona ?? {}) as WorkspacePersona;
+}
+
+/** True when the project has at least one scene requiring a HeyGen avatar clip. */
+function needsAvatarClone(scenes: VideoScene[]): boolean {
+  return scenes.some((s) => s.hasAvatar) && getAvailableAvatarProvider() === "heygen";
+}
 
 async function getProject(workspaceId: string, projectId: string): Promise<VideoProject> {
   const [project] = await db
@@ -595,11 +617,25 @@ export async function generatePreviewClips(
   const avatarProvider = getAvailableAvatarProvider();
   const config = project.config as VideoConfig;
 
+  if (needsAvatarClone(scenes)) {
+    const persona = await getWorkspacePersona(workspaceId);
+    if (!persona.voiceCloneId || !persona.heygenAvatarId) {
+      const [paused] = await db
+        .update(videoProjectsTable)
+        .set({ status: "awaiting_clone", pendingAction: "preview", updatedAt: new Date() })
+        .where(eq(videoProjectsTable.id, projectId))
+        .returning();
+      reqLog.info({ projectId, workspaceId }, "Video project paused awaiting avatar/voice clone");
+      return paused!;
+    }
+  }
+
   await db
     .update(videoProjectsTable)
     .set({ status: "preview_generating", updatedAt: new Date() })
     .where(eq(videoProjectsTable.id, projectId));
 
+  const persona = await getWorkspacePersona(workspaceId);
   const creditCostPerScene = config.hasUserFace ? 80 : 50;
   const totalCost = scenes.length * creditCostPerScene;
   await deductCredits(workspaceId, config.hasUserFace ? "video_avatar" : "video_low_res", reqLog, project.campaignId ?? undefined);
@@ -611,8 +647,9 @@ export async function generatePreviewClips(
         if (scene.hasAvatar && avatarProvider === "heygen") {
           result = await generateAvatarVideo({
             voiceoverText: scene.voiceoverText,
-            avatarId: config.avatarId,
-            voiceId: config.voiceId,
+            avatarId: config.avatarId ?? persona.heygenAvatarId,
+            voiceId: config.voiceId ?? persona.voiceCloneId,
+            avatarType: persona.avatarType,
             aspectRatio: config.aspectRatio === "1:1" ? "16:9" : (config.aspectRatio as "16:9" | "9:16"),
           });
         } else if (provider) {
@@ -718,11 +755,25 @@ export async function generateFinalClips(
   const scenes = (project.storyboard as VideoScene[]) ?? [];
   const config = project.config as VideoConfig;
 
+  if (needsAvatarClone(scenes)) {
+    const personaCheck = await getWorkspacePersona(workspaceId);
+    if (!personaCheck.voiceCloneId || !personaCheck.heygenAvatarId) {
+      const [paused] = await db
+        .update(videoProjectsTable)
+        .set({ status: "awaiting_clone", pendingAction: "final", updatedAt: new Date() })
+        .where(eq(videoProjectsTable.id, projectId))
+        .returning();
+      reqLog.info({ projectId, workspaceId }, "Video project paused awaiting avatar/voice clone");
+      return paused!;
+    }
+  }
+
   await db
     .update(videoProjectsTable)
     .set({ status: "final_generating", updatedAt: new Date() })
     .where(eq(videoProjectsTable.id, projectId));
 
+  const persona = await getWorkspacePersona(workspaceId);
   const creditCostPerScene = config.hasUserFace ? 80 : 150;
   const totalCost = scenes.length * creditCostPerScene;
   await deductCredits(workspaceId, config.hasUserFace ? "video_avatar" : "video_high_res", reqLog, project.campaignId ?? undefined);
@@ -734,8 +785,9 @@ export async function generateFinalClips(
         if (scene.hasAvatar && getAvailableAvatarProvider() === "heygen") {
           result = await generateAvatarVideo({
             voiceoverText: scene.voiceoverText,
-            avatarId: config.avatarId,
-            voiceId: config.voiceId,
+            avatarId: config.avatarId ?? persona.heygenAvatarId,
+            voiceId: config.voiceId ?? persona.voiceCloneId,
+            avatarType: persona.avatarType,
           });
         } else {
           result = await generateVideoClip({
