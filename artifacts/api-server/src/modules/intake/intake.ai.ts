@@ -797,11 +797,15 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
     log.warn({ checkpointErr }, "pre-call checkpoint save skipped (campaign status prevents update)");
   }
 
-  // Intake/briefing chat is interactive — use a short timeout (90s) + the
-  // non-throwing safe wrapper so a slow/failed provider call never hangs the
-  // HTTP request. This does NOT change the 30-min ceiling used by background
-  // deep agents (strategy/content generation) elsewhere in the pipeline.
-  const INTAKE_CHAT_TIMEOUT_MS = 90 * 1000;
+  // Intake/briefing agent performs multi-step internal processing (defense
+  // analysis, internal audits, quality checks) before emitting a final
+  // response — this can legitimately take 2-5 minutes. Give it a 5-minute
+  // ceiling (not the 30-min background-agent ceiling, since this is an
+  // HTTP-request-scoped interactive call) and use the non-throwing safe
+  // wrapper so a genuinely failed provider call (after retries) never hangs
+  // or crashes the request — the checkpoint above already preserved the
+  // user's message either way.
+  const INTAKE_CHAT_TIMEOUT_MS = 5 * 60 * 1000;
   const safeResult = await completeWithAgentSafe(
     "strategy",
     CONVERSATION_SYSTEM,

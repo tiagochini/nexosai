@@ -1,0 +1,34 @@
+I have a CRITICAL production bug. Our AI agents are timing out during the intake/briefing flow, and when they fail, the system restarts the entire conversation context from zero — wasting massive amounts of tokens and credits.
+
+IMPORTANT CONTEXT ABOUT OUR AGENTS:
+Our agents are NOT simple single-call chatbots. Each agent response involves internal multi-step processing: 3 layers of defense analysis, internal audits, and quality checks BEFORE the final response is emitted. This means a single "response" from our system can take 2-5 minutes of actual AI processing time. This is BY DESIGN and must be supported, not limited.
+
+YOUR TASK — DIAGNOSE AND FIX THE ROOT CAUSE:
+
+STEP 1: DIAGNOSE — Find exactly what is causing the timeout.
+- Check `artifacts/api-server/src/modules/ai-gateway/ai-gateway-internal.ts` — Are there hardcoded timeout values on the OpenAI or Anthropic client instances? What are they set to?
+- Check `artifacts/api-server/src/modules/ai-gateway/ai-gateway.service.ts` — Is there any AbortController, setTimeout, or Promise.race that kills the request prematurely?
+- Check `artifacts/api-server/src/modules/intake/intake.ai.ts` — Is there a timeout on the HTTP request/response cycle between frontend and backend? Is there a middleware timeout?
+- Check the Replit deployment configuration — Is Replit itself imposing a request timeout (e.g., 30s or 60s gateway timeout on the deployed URL)?
+- Check if there is any reverse proxy, middleware, or Express/Fastify server timeout configured globally.
+- Check the frontend fetch/axios call — Does the frontend have a timeout that aborts the request before the backend finishes?
+
+STEP 2: FIX THE ROOT CAUSE — Eliminate all artificial time limits.
+Based on what you find, apply these fixes:
+- Remove or extend ALL timeout configurations to at minimum 300 seconds (5 minutes). Our agents need this time.
+- If Replit's deployment gateway has a hard timeout limit that cannot be changed, implement Server-Sent Events (SSE) or a polling mechanism: the backend should immediately acknowledge the request, process the AI call asynchronously, and let the frontend poll for the result or receive it via streaming. This way no HTTP timeout can kill the operation.
+- If the Anthropic/OpenAI SDK clients have timeout settings, set them to 300000ms (5 minutes) minimum.
+- If Express/Fastify has a server.timeout or request timeout, set it to 0 (disabled) or 600000ms.
+
+STEP 3: FIX THE CREDIT WASTE — Prevent context restart on failure.
+In `artifacts/api-server/src/modules/intake/intake.ai.ts`:
+- The conversation history (all messages exchanged so far) MUST be persisted to the database BEFORE making each AI call.
+- If ANY failure occurs (network, timeout, whatever), the conversation state must remain intact in the database.
+- When the user retries or sends a new message, the system must load the existing conversation from the database and continue from where it left off — NOT rebuild the entire context from scratch.
+- NEVER re-send the full system prompt + all previous messages as if it's a fresh conversation when it's actually a retry. Only send the incremental new content.
+
+STEP 4: VERIFY
+- After applying fixes, test by making a long AI call (simulate a complex intake with 10+ turns) and confirm it completes without timeout.
+- Show me what was causing the timeout and what you changed.
+
+DO NOT add "graceful error messages" or "fallback responses". The system must COMPLETE the operation, period. Failure is not an acceptable outcome — find and remove whatever is killing the process prematurely.
