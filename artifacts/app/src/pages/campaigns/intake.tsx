@@ -997,14 +997,14 @@ export default function CampaignIntake() {
           <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
             <div className="flex justify-between items-center">
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Completude</span>
-              <span className="font-mono text-xs font-bold text-primary">{chatComplete ? 100 : progress}%</span>
+              <span className="font-mono text-xs font-bold text-primary">{(chatComplete || isComplete) ? 100 : progress}%</span>
             </div>
-            <Progress value={chatComplete ? 100 : progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
+            <Progress value={(chatComplete || isComplete) ? 100 : progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
             {totalRequired > 0 && (
               <div className="flex justify-between items-center pt-0.5">
                 <span className="font-mono text-[10px] text-muted-foreground/60">Obrigatórios</span>
-                <span className={`font-mono text-[10px] font-semibold ${chatComplete || answeredRequired >= totalRequired ? "text-success" : "text-muted-foreground"}`}>
-                  {chatComplete ? totalRequired : answeredRequired}/{totalRequired}
+                <span className={`font-mono text-[10px] font-semibold ${chatComplete || isComplete || answeredRequired >= totalRequired ? "text-success" : "text-muted-foreground"}`}>
+                  {(chatComplete || isComplete) ? totalRequired : answeredRequired}/{totalRequired}
                 </span>
               </div>
             )}

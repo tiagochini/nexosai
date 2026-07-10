@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -475,8 +476,10 @@ export default function ComprarPage() {
 
       <div className="max-w-2xl mx-auto px-6 py-10">
         {loadingProduct ? (
-          <div className="flex items-center justify-center h-40">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-1/2 bg-muted/20" />
+            <Skeleton className="h-48 w-full bg-muted/20" />
+            <Skeleton className="h-10 w-full bg-muted/20" />
           </div>
         ) : notFound ? (
           <div className="text-center py-20 space-y-4">

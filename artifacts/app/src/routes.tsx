@@ -123,10 +123,11 @@ function OnboardingRoute() {
 }
 
 function WelcomeRoute() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   if (!token) return <Redirect to="/login" />;
-  // After seeing welcome, go to onboarding
-  if (hasSeenWelcome()) return <Redirect to="/onboarding" />;
+  // After seeing welcome, go to onboarding. DB flag is the source of truth;
+  // localStorage avoids a flash while /me is still loading right after signup.
+  if (user?.hasSeenOnboarding || hasSeenWelcome()) return <Redirect to="/onboarding" />;
   return <Welcome />;
 }
 

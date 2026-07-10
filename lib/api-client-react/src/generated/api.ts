@@ -42,6 +42,7 @@ import type {
   ListSequenceContacts200,
   ListSequences200,
   LoginInput,
+  MarkOnboardingSeen200,
   MeResponse,
   RefreshToken200,
   RefreshTokenInput,
@@ -369,6 +370,87 @@ export function useGetMe<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Mark the welcome/onboarding flow as seen
+ */
+export const getMarkOnboardingSeenUrl = () => {
+  return `/api/auth/onboarding/seen`;
+};
+
+export const markOnboardingSeen = async (
+  options?: RequestInit,
+): Promise<MarkOnboardingSeen200> => {
+  return customFetch<MarkOnboardingSeen200>(getMarkOnboardingSeenUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMarkOnboardingSeenMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markOnboardingSeen>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markOnboardingSeen>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["markOnboardingSeen"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markOnboardingSeen>>,
+    void
+  > = () => {
+    return markOnboardingSeen(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkOnboardingSeenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markOnboardingSeen>>
+>;
+
+export type MarkOnboardingSeenMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark the welcome/onboarding flow as seen
+ */
+export const useMarkOnboardingSeen = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markOnboardingSeen>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markOnboardingSeen>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getMarkOnboardingSeenMutationOptions(options));
+};
 
 /**
  * @summary Refresh access token

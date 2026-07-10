@@ -3,6 +3,7 @@ import { useRoute } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Send, MessageCircle, X, ChevronDown, User, Bot, ArrowRight, CheckCircle2 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -293,8 +294,13 @@ export default function LeadCapturePage() {
 
   if (isLoading || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-lg mx-auto space-y-4 pt-16">
+          <Skeleton className="h-8 w-2/3 bg-muted/20" />
+          <Skeleton className="h-4 w-full bg-muted/20" />
+          <Skeleton className="h-4 w-5/6 bg-muted/20" />
+          <Skeleton className="h-40 w-full bg-muted/20" />
+        </div>
       </div>
     );
   }

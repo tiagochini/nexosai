@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, CheckCheck, Loader2, Brain, Zap,
   BookOpen, Clock, Archive, ChevronRight, Activity,
@@ -260,11 +261,11 @@ export default function CampaignStrategyPage() {
   // ── Derived data ───────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="h-7 w-7 text-primary animate-spin" />
-        <p className="font-mono text-xs text-muted-foreground/50 uppercase tracking-widest">
-          Carregando estratégia...
-        </p>
+      <div className="space-y-6 max-w-5xl mx-auto">
+        <Skeleton className="h-8 w-64 bg-muted/20" />
+        <Skeleton className="h-32 w-full bg-muted/20" />
+        <Skeleton className="h-64 w-full bg-muted/20" />
+        <Skeleton className="h-48 w-full bg-muted/20" />
       </div>
     );
   }

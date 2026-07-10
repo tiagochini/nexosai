@@ -20,6 +20,7 @@ export const usersTable = pgTable("users", {
   locale: localeEnum("locale").notNull().default("pt-BR"),
   emailVerified: boolean("email_verified").notNull().default(false),
   phoneVerified: boolean("phone_verified").notNull().default(false),
+  hasSeenOnboarding: boolean("has_seen_onboarding").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

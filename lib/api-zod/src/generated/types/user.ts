@@ -5,10 +5,13 @@
  * NexOS AI — Campaign execution and launch automation API
  * OpenAPI spec version: 0.1.0
  */
+import type { UserLocale } from "./userLocale";
 
 export interface User {
   id: string;
   email: string;
   name?: string;
   role?: string;
+  locale?: UserLocale;
+  hasSeenOnboarding?: boolean;
 }

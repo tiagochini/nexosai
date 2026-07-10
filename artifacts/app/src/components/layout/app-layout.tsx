@@ -544,7 +544,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="shrink-0 py-3 px-6 flex justify-center">
             <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/25 select-none">
-              Criado e desenvolvido por Bruce Allan
+              NexOS AI © 2025
             </span>
           </div>
         </main>

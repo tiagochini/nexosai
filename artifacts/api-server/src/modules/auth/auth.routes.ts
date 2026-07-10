@@ -181,6 +181,13 @@ const FOUNDER_EMAILS_ME = new Set([
   "admin@agencianexos.vip",
 ]);
 
+router.post("/onboarding/seen", requireAuth, async (req, res): Promise<void> => {
+  await db.update(usersTable)
+    .set({ hasSeenOnboarding: true })
+    .where(eq(usersTable.id, req.auth.userId));
+  res.json({ ok: true });
+});
+
 router.get("/me", requireAuth, async (req, res): Promise<void> => {
   const [user] = await db
     .select({
@@ -190,6 +197,7 @@ router.get("/me", requireAuth, async (req, res): Promise<void> => {
       locale: usersTable.locale,
       emailVerified: usersTable.emailVerified,
       createdAt: usersTable.createdAt,
+      hasSeenOnboarding: usersTable.hasSeenOnboarding,
     })
     .from(usersTable)
     .where(eq(usersTable.id, req.auth.userId))

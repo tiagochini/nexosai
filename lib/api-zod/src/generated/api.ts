@@ -30,6 +30,8 @@ export const LoginResponse = zod.object({
     email: zod.string(),
     name: zod.string().optional(),
     role: zod.string().optional(),
+    locale: zod.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).optional(),
+    hasSeenOnboarding: zod.boolean().optional(),
   }),
   workspace: zod.object({
     id: zod.string(),
@@ -60,6 +62,8 @@ export const GetMeResponse = zod.object({
     email: zod.string(),
     name: zod.string().optional(),
     role: zod.string().optional(),
+    locale: zod.enum(["pt-BR", "en-US", "en-AU", "es-LA"]).optional(),
+    hasSeenOnboarding: zod.boolean().optional(),
   }),
   workspace: zod.object({
     id: zod.string(),
@@ -69,6 +73,13 @@ export const GetMeResponse = zod.object({
     campaignsUsed: zod.number().optional(),
     campaignsLimit: zod.number().optional(),
   }),
+});
+
+/**
+ * @summary Mark the welcome/onboarding flow as seen
+ */
+export const MarkOnboardingSeenResponse = zod.object({
+  ok: zod.boolean(),
 });
 
 /**

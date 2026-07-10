@@ -3,6 +3,7 @@ import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   CheckCircle2, XCircle, Loader2, Link2, AlertTriangle,
@@ -167,8 +168,17 @@ export default function IntegracoesPage() {
 
       {/* Integration catalog grouped by category */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 text-primary animate-spin" />
+        <div className="space-y-8">
+          {[0, 1].map(g => (
+            <div key={g} className="space-y-3">
+              <Skeleton className="h-4 w-32 bg-muted/20" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[0, 1, 2].map(c => (
+                  <Skeleton key={c} className="h-24 w-full bg-muted/20" />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-8">

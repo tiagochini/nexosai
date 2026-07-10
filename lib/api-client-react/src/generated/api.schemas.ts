@@ -25,12 +25,22 @@ export interface RefreshTokenInput {
   refreshToken: string;
 }
 
+export type UserLocale = (typeof UserLocale)[keyof typeof UserLocale];
+
+export const UserLocale = {
+  "pt-BR": "pt-BR",
+  "en-US": "en-US",
+  "en-AU": "en-AU",
+  "es-LA": "es-LA",
+} as const;
+
 export interface User {
   id: string;
   email: string;
   name?: string;
   role?: string;
-  locale?: "pt-BR" | "en-US" | "en-AU" | "es-LA";
+  locale?: UserLocale;
+  hasSeenOnboarding?: boolean;
 }
 
 export interface Workspace {
@@ -320,6 +330,10 @@ export interface CreditsBalance {
   used?: number;
   limit?: number;
 }
+
+export type MarkOnboardingSeen200 = {
+  ok: boolean;
+};
 
 export type RefreshToken200 = {
   accessToken?: string;
