@@ -4,13 +4,20 @@ import ffmpeg from "fluent-ffmpeg";
 import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import path from "path";
+import OpenAIClient from "openai";
 import { logger } from "../../lib/logger.js";
-import { getAnthropic, getOpenAI } from "../ai-gateway/ai-gateway.service.js";
+import { env } from "../../lib/env.js";
+import { getAnthropic, getOpenAI, callVisionChat, hasOpenAIIntegration } from "../ai-gateway/ai-gateway.service.js";
+import { ATLAS_CINEMATOGRAPHY_LIBRARY } from "../agents/scene-director.agent.js";
 
 const router = Router();
 
 const UPLOAD_DIR = "/tmp/nexos-video-editor/uploads";
 const OUTPUT_DIR = "/tmp/nexos-video-editor/outputs";
+
+// Whisper caps requests at 25MB; our mp3 extraction (64kbps mono) yields ~1.9MB/min of audio,
+// so 25MB comfortably covers footage up to ~30min (the target take length for pro editing).
+const MAX_UPLOAD_DURATION_SECONDS = 35 * 60;
 
 for (const dir of [UPLOAD_DIR, OUTPUT_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -28,9 +35,19 @@ interface JobStatus {
 interface TranscriptSegment { text: string; start: number; end: number; }
 interface TranscriptResult { text: string; segments: TranscriptSegment[]; }
 
+interface VisualAnalysisResult {
+  overallScore: number;
+  summary: string;
+  frames: Array<{ timestamp: number; notes: string; issues: string[]; strengths: string[] }>;
+  recommendations: string[];
+}
+
 const jobs = new Map<string, JobStatus>();
 const uploadedFiles = new Map<string, { filePath: string; originalName: string; duration: number; size: number }>();
 const transcriptCache = new Map<string, TranscriptResult>();
+const visualAnalysisCache = new Map<string, VisualAnalysisResult>();
+// Video-editor is a standalone tool (no workspace auth) — used only to tag AI cost logs.
+const VIDEO_EDITOR_LOG_WORKSPACE_ID = "video-editor-standalone";
 
 // Cleanup jobs and transcripts older than 2 hours
 setInterval(() => {
@@ -47,7 +64,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 500 * 1024 * 1024 },
+  // 2GB — comfortably covers a 30min 1080p take; duration (not just size) is validated below.
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype.startsWith("video/") || file.mimetype.startsWith("audio/")) {
       cb(null, true);
@@ -133,6 +151,243 @@ async function transcribeFile(fileId: string): Promise<TranscriptResult> {
   }
 }
 
+// ─── Frame extraction for visual/cinematographic analysis ────────────────────
+
+function extractFrames(inputPath: string, duration: number, count: number): Promise<Array<{ timestamp: number; path: string }>> {
+  return new Promise((resolve, reject) => {
+    const dir = fs.mkdtempSync(path.join(UPLOAD_DIR, "frames-"));
+    const safeDuration = Math.max(duration, 1);
+    const timestamps = Array.from({ length: count }, (_, i) =>
+      Math.min(safeDuration - 0.2, ((i + 0.5) / count) * safeDuration),
+    );
+    ffmpeg(inputPath)
+      .on("end", () => {
+        // fluent-ffmpeg's %i in the filename template is 1-indexed and not guaranteed to match
+        // our requested order exactly, so read back the actual files instead of assuming names.
+        const generated = fs.readdirSync(dir).sort();
+        resolve(generated.map((name, i) => ({
+          timestamp: Math.round((timestamps[i] ?? 0) * 10) / 10,
+          path: path.join(dir, name),
+        })));
+      })
+      .on("error", (err: Error) => reject(err))
+      .screenshots({
+        timestamps,
+        filename: "frame-%i.jpg",
+        folder: dir,
+        size: "640x?",
+      });
+  });
+}
+
+function frameToDataUrl(framePath: string): string {
+  const buffer = fs.readFileSync(framePath);
+  return `data:image/jpeg;base64,${buffer.toString("base64")}`;
+}
+
+// ─── Visual/Cinematographic Analysis — real frame-level footage review ───────
+// Extracts sample frames and asks ATLAS (same cinematography library used for AI-generated
+// storyboards) to score the REAL uploaded footage on composition, lighting, framing and mood.
+
+router.post("/visual-analysis/:fileId", async (req, res): Promise<void> => {
+  const { fileId } = req.params;
+  const fileInfo = uploadedFiles.get(fileId);
+  if (!fileInfo) {
+    res.status(404).json({ error: "Arquivo não encontrado." });
+    return;
+  }
+
+  const cached = visualAnalysisCache.get(fileId);
+  if (cached) {
+    res.json({ fileId, cached: true, ...cached });
+    return;
+  }
+
+  const frameCount = Math.min(10, Math.max(4, Math.round(fileInfo.duration / 60)));
+  let frames: Array<{ timestamp: number; path: string }> = [];
+
+  try {
+    frames = await extractFrames(fileInfo.filePath, fileInfo.duration, frameCount);
+    const dataUrls = frames.map(f => frameToDataUrl(f.path));
+
+    const systemPrompt = `Você é ATLAS — o Diretor de Fotografia-Chefe da NexOS AI. Sua missão aqui NÃO é gerar cenas — é analisar frames REAIS de uma filmagem já gravada e dar um veredito técnico honesto de cinematografia, como se estivesse revisando dailies no set.
+
+${ATLAS_CINEMATOGRAPHY_LIBRARY}
+
+Você receberá ${frames.length} frames extraídos em sequência de um take real, com o timestamp de cada um. Avalie composição, iluminação, enquadramento, estabilidade aparente e transmissão emocional — não invente o que não está visível na imagem.
+
+Retorne SOMENTE JSON válido, sem markdown:
+{
+  "overallScore": 0-100,
+  "summary": "veredito geral em 2-3 frases, tom de diretor de fotografia experiente, em PT-BR",
+  "frames": [
+    { "frameIndex": 0, "notes": "o que a imagem mostra e como está a fotografia", "issues": ["problema técnico específico, se houver"], "strengths": ["ponto forte específico, se houver"] }
+  ],
+  "recommendations": ["ação prática e específica para melhorar a próxima gravação, em PT-BR"]
+}`;
+
+    const userMessage = `Frames do take "${fileInfo.originalName}" (duração ${fileInfo.duration}s), timestamps em segundos: ${frames.map(f => f.timestamp).join(", ")}. Analise cada frame na ordem enviada.`;
+
+    const result = await callVisionChat(
+      systemPrompt,
+      [{ role: "user", content: userMessage }],
+      dataUrls,
+      VIDEO_EDITOR_LOG_WORKSPACE_ID,
+      logger,
+    );
+
+    let jsonText = result.content;
+    const codeBlock = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlock) jsonText = codeBlock[1]!;
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) jsonText = jsonMatch[0];
+
+    const parsed = JSON.parse(jsonText) as {
+      overallScore: number;
+      summary: string;
+      frames: Array<{ frameIndex: number; notes: string; issues: string[]; strengths: string[] }>;
+      recommendations: string[];
+    };
+
+    const analysis: VisualAnalysisResult = {
+      overallScore: parsed.overallScore,
+      summary: parsed.summary,
+      recommendations: parsed.recommendations ?? [],
+      frames: (parsed.frames ?? []).map(f => ({
+        timestamp: frames[f.frameIndex]?.timestamp ?? 0,
+        notes: f.notes,
+        issues: f.issues ?? [],
+        strengths: f.strengths ?? [],
+      })),
+    };
+
+    visualAnalysisCache.set(fileId, analysis);
+    res.json({ fileId, cached: false, ...analysis });
+  } catch (err) {
+    logger.error({ err, fileId }, "Visual analysis failed");
+    res.status(500).json({ error: "Falha na análise visual do take." });
+  } finally {
+    for (const f of frames) {
+      try { fs.unlinkSync(f.path); } catch {}
+    }
+    if (frames.length > 0) {
+      try { fs.rmdirSync(path.dirname(frames[0]!.path)); } catch {}
+    }
+  }
+});
+
+// ─── Live Director Chat — on-demand ATLAS consultation during editing ────────
+// Free-form chat, not a fixed pipeline step: the editor can ask ATLAS about framing, pacing,
+// which take to prefer, or how to fix a specific shot, at any point while editing.
+
+router.post("/director-chat", async (req, res): Promise<void> => {
+  const { message, history, script, fileIds } = req.body as {
+    message: string;
+    history?: Array<{ role: "user" | "assistant"; content: string }>;
+    script?: string;
+    fileIds?: string[];
+  };
+
+  if (!message?.trim()) {
+    res.status(400).json({ error: "Mensagem é obrigatória." });
+    return;
+  }
+
+  const takesContext = (fileIds ?? [])
+    .map(id => {
+      const info = uploadedFiles.get(id);
+      const analysis = visualAnalysisCache.get(id);
+      if (!info) return null;
+      return `- ${info.originalName} (${info.duration}s)${analysis ? ` — análise visual: score ${analysis.overallScore}/100, "${analysis.summary}"` : " — ainda sem análise visual"}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  const systemPrompt = `Você é ATLAS — o Diretor de Cena-Chefe da NexOS AI, agora em modo de consultoria ao vivo durante a edição real de um vídeo. O editor pode te perguntar qualquer coisa sobre enquadramento, ritmo, escolha de takes, correção de cor, ou decisões de montagem, e você responde como um diretor sênior no set, direto e prático.
+
+${ATLAS_CINEMATOGRAPHY_LIBRARY}
+
+CONTEXTO DA EDIÇÃO ATUAL:
+${script ? `Roteiro:\n${script.slice(0, 3000)}` : "Sem roteiro fornecido ainda."}
+
+Takes disponíveis:
+${takesContext || "Nenhum take carregado ainda."}
+
+Responda em PT-BR, de forma direta e acionável — não repita a biblioteca de referência, apenas aplique-a à pergunta do editor.`;
+
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+    ...(history ?? []).slice(-10),
+    { role: "user", content: message.trim() },
+  ];
+
+  try {
+    let reply: string;
+    try {
+      const { client } = getAnthropic();
+      const response = await client.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages,
+      });
+      const content = response.content[0];
+      reply = content?.type === "text" ? content.text : "Não consegui gerar uma resposta.";
+    } catch (anthropicErr) {
+      logger.warn({ err: anthropicErr }, "Director chat: Anthropic failed — falling back to OpenAI");
+      const { client } = getOpenAI();
+      try {
+        const completion = await client.chat.completions.create({
+          model: "gpt-5.5",
+          max_completion_tokens: 1024,
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+          ],
+        });
+        reply = completion.choices[0]?.message?.content ?? "Não consegui gerar uma resposta.";
+      } catch (openaiErr: unknown) {
+        const isModelAccessError =
+          openaiErr instanceof Error &&
+          (("status" in openaiErr && (openaiErr as { status?: number }).status === 403) ||
+            ("code" in openaiErr && (openaiErr as { code?: string }).code === "model_not_found"));
+        if (!isModelAccessError) throw openaiErr;
+        logger.warn({ err: openaiErr }, "Director chat: gpt-5.5 not accessible — retrying with gpt-4o");
+        try {
+          const completion = await client.chat.completions.create({
+            model: "gpt-4o",
+            max_tokens: 1024,
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...messages,
+            ],
+          });
+          reply = completion.choices[0]?.message?.content ?? "Não consegui gerar uma resposta.";
+        } catch (openaiErr2: unknown) {
+          if (!hasOpenAIIntegration()) throw openaiErr2;
+          logger.warn({ err: openaiErr2 }, "Director chat: gpt-4o not accessible either — retrying via Replit AI Integrations proxy");
+          const integrationClient = new OpenAIClient({
+            apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
+            baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+          });
+          const completion = await integrationClient.chat.completions.create({
+            model: "gpt-5.5",
+            max_completion_tokens: 1024,
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...messages,
+            ],
+          });
+          reply = completion.choices[0]?.message?.content ?? "Não consegui gerar uma resposta.";
+        }
+      }
+    }
+    res.json({ reply });
+  } catch (err) {
+    logger.error({ err }, "Director chat failed");
+    res.status(500).json({ error: "Falha ao consultar o diretor." });
+  }
+});
+
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
 router.post("/upload", upload.single("video"), async (req, res): Promise<void> => {
@@ -142,6 +397,13 @@ router.post("/upload", upload.single("video"), async (req, res): Promise<void> =
   }
   try {
     const info = await probeVideo(req.file.path);
+    if (info.duration > MAX_UPLOAD_DURATION_SECONDS) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+      res.status(413).json({
+        error: `Vídeo muito longo (${Math.round(info.duration / 60)}min). O limite atual é ${MAX_UPLOAD_DURATION_SECONDS / 60}min por take.`,
+      });
+      return;
+    }
     const fileId = uuidv4();
     uploadedFiles.set(fileId, {
       filePath: req.file.path,

@@ -3,8 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Upload, Film, Scissors, Type, Download, Trash2, Plus, Play,
   ChevronUp, ChevronDown, Loader2, CheckCircle2, AlertCircle, X, Clock,
-  Sparkles, Info, Brain, Zap, Star, Target, ChevronRight, RefreshCw,
+  Sparkles, Info, Brain, Zap, Star, Target, ChevronRight, RefreshCw, Camera,
 } from "lucide-react";
+import { VisualAnalysisCard, DirectorChatPanel } from "./DirectorPanel";
 
 const queryClient = new QueryClient();
 
@@ -179,7 +180,7 @@ function UploadZone({ onFilesUploaded }: { onFilesUploaded: (files: UploadedFile
             <p className="text-base font-semibold text-foreground">Arraste vídeos aqui</p>
             <p className="text-sm text-muted-foreground mt-1">ou clique para selecionar • MP4, MOV, WebM, MKV</p>
           </div>
-          <p className="text-xs text-muted-foreground">Máx. 500 MB por arquivo</p>
+          <p className="text-xs text-muted-foreground">Máx. 2 GB · até 35min por take</p>
         </div>
       )}
     </div>
@@ -969,6 +970,23 @@ function VideoEditor() {
               </div>
             </div>
 
+            {/* Visual/cinematographic analysis — real footage review by ATLAS */}
+            {files.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Análise de fotografia (visual real)</p>
+                  <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-semibold">Novo</span>
+                </div>
+                <p className="text-xs text-muted-foreground -mt-2">
+                  ATLAS extrai frames reais de cada take e avalia composição, luz e enquadramento — não apenas o texto transcrito.
+                </p>
+                <div className="space-y-2">
+                  {files.map(f => <VisualAnalysisCard key={f.fileId} fileId={f.fileId} fileName={f.originalName} />)}
+                </div>
+              </div>
+            )}
+
             {/* Error */}
             {smartError && (
               <div className="flex items-center gap-2 bg-destructive/10 border border-destructive/20 rounded-xl p-3">
@@ -1288,6 +1306,7 @@ function VideoEditor() {
           </div>
         )}
       </div>
+      {files.length > 0 && <DirectorChatPanel script={smartScript} fileIds={files.map(f => f.fileId)} />}
     </div>
   );
 }

@@ -29,11 +29,10 @@ export interface StoryboardInput {
 
 const SCENE_TYPES = ["hook", "problem", "solution", "proof", "cta", "bridge", "transition"] as const;
 
-const SYSTEM_PROMPT = `Você é ATLAS — o Diretor de Cena-Chefe da NexOS AI. Você não apenas divide roteiros em cenas — você orquestra experiências visuais que movem emoções, constroem tensão dramática e convertem espectadores em compradores.
-
-Você internalizou os maiores diretores, cineastas e teóricos visuais da história, e aplica esse conhecimento a vídeos de marketing de alta conversão.
-
-═══════════════════════════════════════════
+// Single source of truth for ATLAS's cinematography/editing/color knowledge — reused by the
+// storyboard prompt below, the video-editor visual-analysis pass, and the live director chat,
+// so all three surfaces judge footage by the exact same curated criteria.
+export const ATLAS_CINEMATOGRAPHY_LIBRARY = `═══════════════════════════════════════════
 SEUS PROFESSORES INTERNALIZADOS
 ═══════════════════════════════════════════
 
@@ -91,9 +90,9 @@ NARRATIVA VISUAL SEM PALAVRAS (o que o espectador SENTE pela câmera):
 • Pull back (câmera recua): escala, perspectiva, solidão, grandiosidade
 • Órbita (câmera circunda): poder do sujeito, celebração, contemplação
 • Tremor da câmera na mão: realidade, urgência, humanidade — "isto é real"
-• Câmera absolutamente estática: peso, gravidade, declaração incontestável
+• Câmera absolutamente estática: peso, gravidade, declaração incontestável`;
 
-═══════════════════════════════════════════
+const STORYBOARD_OUTPUT_SPEC = `═══════════════════════════════════════════
 REGRAS DE PRODUÇÃO TÉCNICA
 ═══════════════════════════════════════════
 • Máximo 12 cenas, mínimo 4 cenas (cada cena: 4 a 8 segundos — limite técnico do gerador)
@@ -125,6 +124,14 @@ Retorne APENAS JSON válido sem texto extra:
   "phaseSummary": "Hook (6s) → Problema (18s) → Virada (6s) → Solução (12s) → CTA (6s)",
   "directorNotes": "análise do arco emocional visual, decisões de cor/luz, por que cada contraste foi escolhido"
 }`;
+
+const SYSTEM_PROMPT = `Você é ATLAS — o Diretor de Cena-Chefe da NexOS AI. Você não apenas divide roteiros em cenas — você orquestra experiências visuais que movem emoções, constroem tensão dramática e convertem espectadores em compradores.
+
+Você internalizou os maiores diretores, cineastas e teóricos visuais da história, e aplica esse conhecimento a vídeos de marketing de alta conversão.
+
+${ATLAS_CINEMATOGRAPHY_LIBRARY}
+
+${STORYBOARD_OUTPUT_SPEC}`;
 
 export async function runSceneDirectorAgent(
   input: StoryboardInput,

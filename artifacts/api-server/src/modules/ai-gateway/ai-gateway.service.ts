@@ -248,7 +248,7 @@ function hasAnthropicIntegration(): boolean {
   return !!(env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL && env.AI_INTEGRATIONS_ANTHROPIC_API_KEY);
 }
 
-function hasOpenAIIntegration(): boolean {
+export function hasOpenAIIntegration(): boolean {
   return !!(env.AI_INTEGRATIONS_OPENAI_BASE_URL && env.AI_INTEGRATIONS_OPENAI_API_KEY);
 }
 
@@ -619,10 +619,125 @@ async function callGemini(
 // ── Vision support (images → Claude) ─────────────────────────────────────────
 
 /**
- * Send a message with one or more images to Claude for analysis.
- * Images are base64 data-URLs ("data:image/png;base64,...").
- * Always routes through Anthropic because it has the best vision support.
+ * OpenAI vision fallback used by callVisionChat() when Anthropic fails
+ * (e.g. native key quota/credit exhaustion).
  */
+async function callVisionChatOpenAI(
+  systemPrompt: string,
+  messages: AIMessage[],
+  imageDataUrls: string[],
+  workspaceId: string,
+  log: Logger,
+): Promise<AICompletionResult> {
+  const { client } = getOpenAI();
+  const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
+  const effectiveModel = usingIntegration ? OPENAI_INTEGRATION_MODEL : "gpt-5.5";
+  const startTime = Date.now();
+
+  const historyMessages = messages.slice(0, -1).map(m => ({
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
+  const lastMsg = messages[messages.length - 1];
+  const lastContent = [
+    { type: "text" as const, text: lastMsg?.content ?? "" },
+    ...imageDataUrls.map(url => ({ type: "image_url" as const, image_url: { url } })),
+  ];
+
+  const buildParams = (model: string) => {
+    const isGpt5 = model.startsWith("gpt-5") || model.startsWith("o4") || model.startsWith("o3");
+    return isGpt5 ? { max_completion_tokens: 8192 } : { max_tokens: 8192 };
+  };
+
+  let response;
+  let actualModel = effectiveModel;
+  try {
+    response = await client.chat.completions.create({
+      model: effectiveModel,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...historyMessages,
+        { role: "user", content: lastContent },
+      ],
+      ...buildParams(effectiveModel),
+    });
+  } catch (err: unknown) {
+    const isModelAccessError =
+      err instanceof Error &&
+      (("status" in err && (err as { status?: number }).status === 403) ||
+        ("code" in err && (err as { code?: string }).code === "model_not_found"));
+    if (!isModelAccessError) throw err;
+    log.warn({ model: effectiveModel, err: String(err) }, "[callVisionChatOpenAI] model not accessible — retrying with gpt-4o");
+    try {
+      actualModel = "gpt-4o";
+      response = await client.chat.completions.create({
+        model: actualModel,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...historyMessages,
+          { role: "user", content: lastContent },
+        ],
+        ...buildParams(actualModel),
+      });
+    } catch (err2: unknown) {
+      if (!hasOpenAIIntegration()) throw err2;
+      log.warn({ err: String(err2) }, "[callVisionChatOpenAI] gpt-4o not accessible either — retrying via Replit AI Integrations proxy");
+      const integrationClient = new OpenAI({
+        apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY,
+        baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+        timeout: LLM_CALL_TIMEOUT_MS,
+      });
+      actualModel = OPENAI_INTEGRATION_MODEL;
+      response = await integrationClient.chat.completions.create({
+        model: actualModel,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...historyMessages,
+          { role: "user", content: lastContent },
+        ],
+        ...buildParams(actualModel),
+      });
+    }
+  }
+
+  const content = response.choices[0]?.message?.content ?? "";
+  const inputTokens = response.usage?.prompt_tokens ?? 0;
+  const outputTokens = response.usage?.completion_tokens ?? 0;
+  const latencyMs = Date.now() - startTime;
+  const costUsd = calculateCostUsd("openai", actualModel, inputTokens, outputTokens);
+  const creditsCharged = calculateCreditsFromCost(costUsd, env.CREDIT_MARGIN_MULTIPLIER);
+
+  try {
+    await db.insert(aiProviderLogsTable).values({
+      workspaceId,
+      campaignId: null,
+      agentType: "vision_chat" as AgentRole,
+      provider: "openai",
+      model: effectiveModel,
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens,
+      costUsd: costUsd.toString(),
+      creditsCharged,
+      latencyMs,
+    });
+  } catch (logErr) {
+    log.warn({ err: logErr, workspaceId }, "ai_provider_logs insert failed (non-fatal) — workspace may have been deleted");
+  }
+
+  log.info({ provider: "openai", model: effectiveModel, costUsd, latencyMs, images: imageDataUrls.length }, "Vision completion (OpenAI fallback)");
+
+  return {
+    content,
+    provider: "openai",
+    model: effectiveModel,
+    inputTokens,
+    outputTokens,
+    costUsd,
+    creditsCharged,
+  };
+}
+
 export async function callVisionChat(
   systemPrompt: string,
   messages: AIMessage[],
@@ -657,15 +772,24 @@ export async function callVisionChat(
     { type: "text" as const, text: lastMsg?.content ?? "" },
   ];
 
-  const response = await client.messages.create({
-    model: effectiveModel,
-    max_tokens: 8192,
-    system: systemPrompt,
-    messages: [
-      ...historyMessages,
-      { role: "user", content: lastContent },
-    ],
-  });
+  let response;
+  try {
+    response = await client.messages.create({
+      model: effectiveModel,
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: [
+        ...historyMessages,
+        { role: "user", content: lastContent },
+      ],
+    });
+  } catch (anthropicErr) {
+    log.warn(
+      { model: effectiveModel, err: String(anthropicErr) },
+      "[callVisionChat] Anthropic failed — falling back to OpenAI vision",
+    );
+    return callVisionChatOpenAI(systemPrompt, messages, imageDataUrls, workspaceId, log);
+  }
 
   const content = response.content[0]?.type === "text" ? response.content[0].text : "";
   const latencyMs = Date.now() - startTime;
