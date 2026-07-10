@@ -68,3 +68,18 @@ export function createGCSReadStream(
 ) {
   return gcs.bucket(bucketId()).file(objectKey).createReadStream(opts ?? {});
 }
+
+/** GCS object key convention for persona cloning media (training/consent videos). */
+export function personaMediaObjectKey(workspaceId: string, kind: "training" | "consent"): string {
+  return `persona-media/${workspaceId}/${kind}-${Date.now()}.webm`;
+}
+
+/** Upload a raw buffer to GCS at an arbitrary key. Returns the object key. */
+export async function uploadBufferToGCS(
+  buf: Buffer,
+  key: string,
+  contentType = "video/webm",
+): Promise<string> {
+  await gcs.bucket(bucketId()).file(key).save(buf, { contentType, resumable: false });
+  return key;
+}

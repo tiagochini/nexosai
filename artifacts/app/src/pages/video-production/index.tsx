@@ -665,7 +665,7 @@ interface StockAvatar { id: string; label: string; gender?: string }
 function AvatarCloneGate({ project, onResumed }: { project: VideoProject; onResumed: (p: VideoProject) => void }) {
   const [voiceCloneId, setVoiceCloneId] = useState<string | null>(null);
   const [avatarReady, setAvatarReady] = useState(false);
-  const [avatarMode, setAvatarMode] = useState<"stock" | "record" | null>(null);
+  const [avatarMode, setAvatarMode] = useState<"stock" | "record" | "video" | null>(null);
   const [stockAvatars, setStockAvatars] = useState<StockAvatar[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
   const [selectingStockId, setSelectingStockId] = useState<string | null>(null);
@@ -687,6 +687,103 @@ function AvatarCloneGate({ project, onResumed }: { project: VideoProject; onResu
 
   const [error, setError] = useState<string | null>(null);
   const [resuming, setResuming] = useState(false);
+
+  // Video-based Digital Twin clone state
+  const [videoStep, setVideoStep] = useState<"training" | "consent" | "uploading" | "training_pending" | "done">("training");
+  const [videoRecState, setVideoRecState] = useState<"idle" | "recording" | "recorded">("idle");
+  const [trainingBase64, setTrainingBase64] = useState<string | null>(null);
+  const [trainingUrl, setTrainingUrl] = useState<string | null>(null);
+  const [consentBase64, setConsentBase64] = useState<string | null>(null);
+  const [consentUrl, setConsentUrl] = useState<string | null>(null);
+  const [videoMime, setVideoMime] = useState("video/webm");
+  const [avatarTrainingStatus, setAvatarTrainingStatus] = useState<string | null>(null);
+  const videoRecorderRef = useRef<MediaRecorder | null>(null);
+  const videoChunksRef = useRef<Blob[]>([]);
+  const videoStreamRef = useRef<MediaStream | null>(null);
+  const trainingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (trainingPollRef.current) clearInterval(trainingPollRef.current); };
+  }, []);
+
+  async function startVideoRecording(kind: "training" | "consent") {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: true });
+      videoStreamRef.current = stream;
+      const mime = MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
+      setVideoMime(mime);
+      const recorder = new MediaRecorder(stream, { mimeType: mime });
+      videoChunksRef.current = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(videoChunksRef.current, { type: mime });
+        const url = URL.createObjectURL(blob);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const b64 = (reader.result as string).split(",")[1] ?? "";
+          if (kind === "training") setTrainingBase64(b64); else setConsentBase64(b64);
+        };
+        reader.readAsDataURL(blob);
+        if (kind === "training") setTrainingUrl(url); else setConsentUrl(url);
+        setVideoRecState("recorded");
+      };
+      recorder.start();
+      videoRecorderRef.current = recorder;
+      setVideoRecState("recording");
+    } catch {
+      setError("Câmera/microfone não disponíveis — verifique as permissões do navegador.");
+    }
+  }
+
+  function stopVideoRecording() {
+    if (videoRecorderRef.current && videoRecorderRef.current.state !== "inactive") videoRecorderRef.current.stop();
+  }
+
+  function retakeVideo(kind: "training" | "consent") {
+    if (kind === "training") { setTrainingBase64(null); setTrainingUrl(null); } else { setConsentBase64(null); setConsentUrl(null); }
+    setVideoRecState("idle");
+  }
+
+  function pollTrainingStatus() {
+    trainingPollRef.current = setInterval(async () => {
+      try {
+        const res = await customFetch<{ status: string; heygenAvatarId?: string }>("/api/workspaces/me/persona/avatar-training-status");
+        setAvatarTrainingStatus(res.status);
+        if (res.status === "complete") {
+          if (trainingPollRef.current) clearInterval(trainingPollRef.current);
+          setVideoStep("done");
+          setAvatarReady(true);
+          toast.success("Avatar de vídeo treinado com sucesso.");
+        } else if (res.status === "failed") {
+          if (trainingPollRef.current) clearInterval(trainingPollRef.current);
+          setError("Treinamento do avatar falhou — tente novamente ou use foto rápida.");
+          setVideoStep("training");
+        }
+      } catch {
+        // transient error — keep polling
+      }
+    }, 8000);
+  }
+
+  async function submitVideoClone() {
+    if (!trainingBase64 || !consentBase64) return;
+    setVideoStep("uploading");
+    setError(null);
+    try {
+      await customFetch("/api/workspaces/me/persona/clone-avatar-video", {
+        method: "POST",
+        body: JSON.stringify({ trainingVideoBase64: trainingBase64, consentVideoBase64: consentBase64, mimeType: videoMime }),
+      });
+      setVideoStep("training_pending");
+      setAvatarTrainingStatus("pending");
+      pollTrainingStatus();
+    } catch (e: any) {
+      setError(e.message ?? "Erro ao enviar vídeos para clonagem");
+      setVideoStep("consent");
+    }
+  }
 
   useEffect(() => {
     return () => { camStream?.getTracks().forEach(t => t.stop()); };
@@ -879,15 +976,88 @@ function AvatarCloneGate({ project, onResumed }: { project: VideoProject; onResu
         {!avatarReady && (
           <div className="space-y-3">
             {!avatarMode && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button onClick={() => { setAvatarMode("stock"); void loadStockAvatars(); }} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
                   <div className="font-mono text-xs font-bold">Avatar padrão</div>
                   <div className="font-mono text-[10px] text-muted-foreground">Escolha um avatar pronto da NexOS</div>
                 </button>
                 <button onClick={() => setAvatarMode("record")} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
-                  <div className="font-mono text-xs font-bold">Meu próprio rosto</div>
-                  <div className="font-mono text-[10px] text-muted-foreground">Grave um frame da sua webcam</div>
+                  <div className="font-mono text-xs font-bold">Foto rápida</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">Capture um frame da webcam (instantâneo)</div>
                 </button>
+                <button onClick={() => setAvatarMode("video")} className="p-3 rounded-lg border border-border/40 hover:border-primary/50 text-left transition-colors">
+                  <div className="font-mono text-xs font-bold">Vídeo (mais realista)</div>
+                  <div className="font-mono text-[10px] text-muted-foreground">Grave 2 vídeos — leva alguns minutos para treinar</div>
+                </button>
+              </div>
+            )}
+
+            {avatarMode === "video" && (
+              <div className="space-y-3">
+                {videoStep === "training" && (
+                  <div className="space-y-2">
+                    <div className="font-mono text-[10px] text-muted-foreground">
+                      Passo 1/2 — Grave 20-30s olhando para a câmera, falando naturalmente e movendo levemente a cabeça (isso treina seu avatar em vídeo).
+                    </div>
+                    {!videoStreamRef.current && videoRecState === "idle" && !trainingUrl && (
+                      <Button size="sm" onClick={() => startVideoRecording("training")} className="font-mono text-xs"><Camera className="h-3.5 w-3.5 mr-1.5" />Gravar treino</Button>
+                    )}
+                    {videoRecState === "recording" && (
+                      <Button size="sm" variant="destructive" onClick={stopVideoRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />Parar</Button>
+                    )}
+                    {trainingUrl && (
+                      <div className="space-y-2">
+                        <video src={trainingUrl} controls className="w-full max-w-xs rounded-lg" />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => { setVideoStep("consent"); setVideoRecState("idle"); }} className="font-mono text-xs">
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Próximo passo
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => retakeVideo("training")} className="font-mono text-xs">Regravar</Button>
+                        </div>
+                      </div>
+                    )}
+                    <button onClick={() => setAvatarMode(null)} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+                  </div>
+                )}
+
+                {videoStep === "consent" && (
+                  <div className="space-y-2">
+                    <div className="font-mono text-[10px] text-muted-foreground">
+                      Passo 2/2 — Grave-se dizendo: <span className="text-foreground">"Eu autorizo o uso da minha imagem e voz para criar um avatar digital meu."</span>
+                    </div>
+                    {videoRecState === "idle" && !consentUrl && (
+                      <Button size="sm" onClick={() => startVideoRecording("consent")} className="font-mono text-xs"><Mic className="h-3.5 w-3.5 mr-1.5" />Gravar consentimento</Button>
+                    )}
+                    {videoRecState === "recording" && (
+                      <Button size="sm" variant="destructive" onClick={stopVideoRecording} className="font-mono text-xs"><Square className="h-3.5 w-3.5 mr-1.5" />Parar</Button>
+                    )}
+                    {consentUrl && (
+                      <div className="space-y-2">
+                        <video src={consentUrl} controls className="w-full max-w-xs rounded-lg" />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => void submitVideoClone()} className="font-mono text-xs">
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Enviar para treinamento
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => retakeVideo("consent")} className="font-mono text-xs">Regravar</Button>
+                        </div>
+                      </div>
+                    )}
+                    <button onClick={() => setVideoStep("training")} className="font-mono text-[10px] text-muted-foreground hover:underline">← Voltar</button>
+                  </div>
+                )}
+
+                {videoStep === "uploading" && (
+                  <div className="font-mono text-xs flex items-center gap-2 text-muted-foreground">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />Enviando vídeos...
+                  </div>
+                )}
+
+                {videoStep === "training_pending" && (
+                  <div className="font-mono text-xs flex items-center gap-2 text-muted-foreground">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Treinando seu avatar digital ({avatarTrainingStatus ?? "pending"})... isso pode levar alguns minutos, você pode aguardar aqui.
+                  </div>
+                )}
               </div>
             )}
 

@@ -45,7 +45,7 @@ export interface LoginInput {
   password: string;
 }
 
-function signAccess(payload: TokenPayload): string {
+export function signAccess(payload: TokenPayload): string {
   return jwt.sign(payload, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
   });

@@ -48,7 +48,7 @@ export interface AvatarVideoRequest {
   voiceoverText: string;
   avatarId?: string;
   voiceId?: string;
-  avatarType?: "talking_photo" | "stock";
+  avatarType?: "talking_photo" | "stock" | "digital_twin";
   durationSeconds?: number;
   aspectRatio?: "16:9" | "9:16";
 }

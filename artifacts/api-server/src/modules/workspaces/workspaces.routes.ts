@@ -337,6 +337,175 @@ router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
   }
 });
 
+// POST /workspaces/me/persona/clone-avatar-video — receive base64 training + consent videos
+// → HeyGen Digital Twin (video-based, more realistic than talking_photo) → training is async.
+router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> => {
+  const schema = z.object({
+    trainingVideoBase64: z.string().min(10),
+    consentVideoBase64: z.string().min(10),
+    mimeType: z.string().default("video/webm"),
+    avatarName: z.string().max(80).default("Meu Avatar NexOS"),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "trainingVideoBase64 e consentVideoBase64 obrigatórios", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) {
+    res.status(422).json({ error: "HeyGen não configurado — adicione HEYGEN_API_KEY", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  try {
+    const { personaMediaObjectKey, uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
+    const { signAccess } = await import("../auth/auth.service.js");
+    const workspaceId = req.auth.workspaceId;
+
+    const trainingKey = personaMediaObjectKey(workspaceId, "training");
+    const consentKey = personaMediaObjectKey(workspaceId, "consent");
+    await uploadBufferToGCS(Buffer.from(parsed.data.trainingVideoBase64, "base64"), trainingKey, parsed.data.mimeType);
+    await uploadBufferToGCS(Buffer.from(parsed.data.consentVideoBase64, "base64"), consentKey, parsed.data.mimeType);
+
+    // Short-lived media token so HeyGen can fetch the videos over plain HTTPS.
+    const mediaToken = signAccess({ userId: req.auth.userId, workspaceId, email: req.auth.email });
+    const base = env.APP_URL;
+    const trainingFile = trainingKey.split("/").pop()!;
+    const consentFile = consentKey.split("/").pop()!;
+    const trainingUrl = `${base}/api/workspaces/persona-media/${workspaceId}/${trainingFile}?token=${mediaToken}`;
+    const consentUrl = `${base}/api/workspaces/persona-media/${workspaceId}/${consentFile}?token=${mediaToken}`;
+
+    const dtRes = await fetch("https://api.heygen.com/v2/video_avatar", {
+      method: "POST",
+      headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        avatar_name: parsed.data.avatarName,
+        training_footage_url: trainingUrl,
+        video_consent_url: consentUrl,
+      }),
+    });
+    if (!dtRes.ok) {
+      const errText = await dtRes.text();
+      throw new Error(`HeyGen video_avatar create ${dtRes.status}: ${errText.slice(0, 300)}`);
+    }
+    const dtData = (await dtRes.json()) as { data: { avatar_id: string } };
+    const digitalTwinId = dtData.data.avatar_id;
+
+    const [ws] = await db.select({ settings: workspacesTable.settings })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, workspaceId))
+      .limit(1);
+    const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+    const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+    await db.update(workspacesTable)
+      .set({
+        settings: {
+          ...existingSettings,
+          persona: {
+            ...existingPersona,
+            digitalTwinId,
+            avatarType: "digital_twin",
+            avatarTrainingStatus: "pending",
+            avatarUpdatedAt: new Date().toISOString(),
+          },
+        } as any,
+      })
+      .where(eq(workspacesTable.id, workspaceId));
+    req.log.info({ workspaceId, digitalTwinId }, "Digital twin training started");
+    res.json({ digitalTwinId, avatarTrainingStatus: "pending", success: true });
+  } catch (err) {
+    req.log.error({ err }, "Digital twin clone failed");
+    res.status(500).json({ error: String(err), code: "AVATAR_CLONE_ERROR" });
+  }
+});
+
+// GET /workspaces/me/persona/avatar-training-status — poll HeyGen digital twin training;
+// once complete, resolves the real avatar_id via v3 avatars/looks and saves heygenAvatarId.
+router.get("/me/persona/avatar-training-status", async (req, res): Promise<void> => {
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, req.auth.workspaceId))
+    .limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+  const digitalTwinId = existingPersona["digitalTwinId"] as string | undefined;
+  if (!digitalTwinId) {
+    res.status(404).json({ error: "Nenhum treinamento de avatar em andamento", code: "NOT_FOUND" });
+    return;
+  }
+  if (existingPersona["avatarTrainingStatus"] === "complete" && existingPersona["heygenAvatarId"]) {
+    res.json({ status: "complete", heygenAvatarId: existingPersona["heygenAvatarId"] });
+    return;
+  }
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) {
+    res.status(422).json({ error: "HeyGen não configurado", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  try {
+    const statusRes = await fetch(`https://api.heygen.com/v2/video_avatar/${digitalTwinId}`, {
+      headers: { "X-Api-Key": heygenKey },
+    });
+    if (!statusRes.ok) {
+      const errText = await statusRes.text();
+      throw new Error(`HeyGen status ${statusRes.status}: ${errText.slice(0, 300)}`);
+    }
+    const statusData = (await statusRes.json()) as { data: { status: string } };
+    const heygenStatus = statusData.data.status; // in_progress | complete | failed
+
+    if (heygenStatus === "failed") {
+      await db.update(workspacesTable)
+        .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarTrainingStatus: "failed" } } as any })
+        .where(eq(workspacesTable.id, req.auth.workspaceId));
+      res.json({ status: "failed" });
+      return;
+    }
+    if (heygenStatus !== "complete") {
+      await db.update(workspacesTable)
+        .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarTrainingStatus: heygenStatus } } as any })
+        .where(eq(workspacesTable.id, req.auth.workspaceId));
+      res.json({ status: heygenStatus });
+      return;
+    }
+
+    // Complete — resolve the real playable avatar_id via v3 looks lookup.
+    const looksRes = await fetch("https://api.heygen.com/v3/avatars/looks?avatar_type=digital_twin&ownership=private", {
+      headers: { "X-Api-Key": heygenKey },
+    });
+    if (!looksRes.ok) {
+      const errText = await looksRes.text();
+      throw new Error(`HeyGen looks ${looksRes.status}: ${errText.slice(0, 300)}`);
+    }
+    const looksData = (await looksRes.json()) as { data: { avatar_id: string; look_id?: string }[] };
+    const match = looksData.data.find((a) => a.avatar_id === digitalTwinId) ?? looksData.data[0];
+    if (!match) {
+      throw new Error("Digital twin marcado como completo mas nenhum look encontrado na HeyGen");
+    }
+    const heygenAvatarId = match.avatar_id;
+
+    await db.update(workspacesTable)
+      .set({
+        settings: {
+          ...existingSettings,
+          persona: {
+            ...existingPersona,
+            heygenAvatarId,
+            avatarType: "digital_twin",
+            avatarTrainingStatus: "complete",
+            avatarUpdatedAt: new Date().toISOString(),
+          },
+        } as any,
+      })
+      .where(eq(workspacesTable.id, req.auth.workspaceId));
+    req.log.info({ workspaceId: req.auth.workspaceId, heygenAvatarId }, "Digital twin training complete");
+    res.json({ status: "complete", heygenAvatarId });
+  } catch (err) {
+    req.log.error({ err }, "Digital twin status check failed");
+    res.status(500).json({ error: String(err), code: "AVATAR_STATUS_ERROR" });
+  }
+});
+
 // POST /workspaces/me/persona/select-stock-avatar — pick a ready-made avatar (no recording)
 router.post("/me/persona/select-stock-avatar", async (req, res): Promise<void> => {
   const schema = z.object({ avatarId: z.string().min(1) });

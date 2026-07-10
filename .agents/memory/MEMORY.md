@@ -36,6 +36,7 @@
 - [Temporal Context Precision](temporal-context.md) — buildTemporalContextBlock() exported with TemporalContextOpts; pass temporalContext in RunAgentOptions for launch-aware agents; campaigns.timezone column added.
 - [Premise Conflict Detector](premise-conflict.md) — conflict-detector.service.ts; detectPremiseConflicts() fires via setImmediate after intake merge; persists to brainData.premiseConflicts; Socket.io campaign:event alert; resolvePremiseConflict() for user resolution.
 - [Manual Integration Connect](manual-integration-connect.md) — manual credential-entry endpoints need their own field/status/provider-enum audit against the DB enum + OAuth mapping; a missing field is silently stripped, not an error.
+- [HeyGen Digital Twin Plan Gate](heygen-digital-twin-plan-gate.md) — video-based avatar cloning needs HeyGen Enterprise plan; 403 forbidden is account tier, not a bug.
 - [HeyGen/ElevenLabs Avatar Gate](heygen-elevenlabs-avatar-gate.md) — talking_photo_style must be "square" not "normal"; HeyGen voice_id ≠ raw ElevenLabs ID; instant voice cloning needs paid ElevenLabs plan.
 - [AI Infra Not Customer Integration](ai-infra-not-customer-integration.md) — AI generation providers (HeyGen/ElevenLabs/Runway/Kling/etc.) must always use platform keys, never customer-supplied — bypasses credit revenue model.
 - [Onboarding Flag Source of Truth](onboarding-flag-source-of-truth.md) — hasSeenOnboarding lives on users table (DB), not localStorage; localStorage is only a flash-prevention cache.
