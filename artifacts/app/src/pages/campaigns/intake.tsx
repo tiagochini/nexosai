@@ -517,6 +517,8 @@ export default function CampaignIntake() {
   const [isTranscribing, setIsTranscribing]     = useState(false);
   const [pendingFiles, setPendingFiles]         = useState<Array<{ name: string; content?: string; url: string; isImage: boolean; isAudioVideo?: boolean; size?: number; mimeType?: string }>>([]);
   const aiTriggered = useRef(false);
+  const sendingRef = useRef(false);
+  const progressHydratedRef = useRef(false);
   const chatEndRef  = useRef<HTMLDivElement>(null);
   const inputRef    = useRef<HTMLTextAreaElement>(null);
   const fileInputRef    = useRef<HTMLInputElement>(null);
@@ -546,27 +548,38 @@ export default function CampaignIntake() {
   // Track if user is returning to an in-progress intake
   const [isReturning, setIsReturning] = useState(false);
 
-  // Load existing intake data + restore conversation history
+  // Load existing intake data + restore conversation history.
+  // IMPORTANT: this effect re-runs on every query invalidation/refetch (which
+  // happens after every chat turn). Once the user has started chatting, the
+  // in-flight response payload (handleSend/autoTrigger/etc.) is the freshest
+  // source of truth for progress/answeredRequired/totalRequired — a refetch
+  // that lands mid-flight (or before the backend has fully committed the new
+  // state) must NOT overwrite it with stale numbers. So we only hydrate these
+  // fields from `data` once, on the very first load / page refresh.
   useEffect(() => {
     if (!data?.intakeData) return;
     setFormData(data.intakeData as Record<string, string>);
-    const comp = data.completeness;
-    const compObj = typeof comp === "object" && comp !== null ? comp as { progress?: number; answeredRequired?: number; totalRequired?: number } : null;
-    setProgress(typeof comp === "number" ? comp : compObj?.progress ?? 0);
-    if (compObj?.answeredRequired != null) setAnsweredRequired(compObj.answeredRequired);
-    if (compObj?.totalRequired != null) setTotalRequired(compObj.totalRequired);
 
-    // Restore saved conversation history from the DB
-    const raw = data.intakeData as Record<string, unknown>;
-    const savedHistory = raw._conversationHistory;
-    const filledKeys = Object.keys(raw).filter(k => !k.startsWith("_") && raw[k]);
-    if (Array.isArray(savedHistory) && savedHistory.length > 0) {
-      setMessages(savedHistory as ChatMessage[]);
-      aiTriggered.current = true; // history exists — don't fire auto-trigger greeting
-      setIsReturning(true);
-    } else if (filledKeys.length > 0) {
-      // Has data but no history — auto-trigger will fire continuar_intake, mark as returning
-      setIsReturning(true);
+    if (!progressHydratedRef.current) {
+      progressHydratedRef.current = true;
+      const comp = data.completeness;
+      const compObj = typeof comp === "object" && comp !== null ? comp as { progress?: number; answeredRequired?: number; totalRequired?: number } : null;
+      setProgress(typeof comp === "number" ? comp : compObj?.progress ?? 0);
+      if (compObj?.answeredRequired != null) setAnsweredRequired(compObj.answeredRequired);
+      if (compObj?.totalRequired != null) setTotalRequired(compObj.totalRequired);
+
+      // Restore saved conversation history from the DB
+      const raw = data.intakeData as Record<string, unknown>;
+      const savedHistory = raw._conversationHistory;
+      const filledKeys = Object.keys(raw).filter(k => !k.startsWith("_") && raw[k]);
+      if (Array.isArray(savedHistory) && savedHistory.length > 0) {
+        setMessages(savedHistory as ChatMessage[]);
+        aiTriggered.current = true; // history exists — don't fire auto-trigger greeting
+        setIsReturning(true);
+      } else if (filledKeys.length > 0) {
+        // Has data but no history — auto-trigger will fire continuar_intake, mark as returning
+        setIsReturning(true);
+      }
     }
   }, [data]);
 
@@ -601,9 +614,11 @@ export default function CampaignIntake() {
     const filledKeys = Object.keys(intakeD).filter(k => !k.startsWith("_"));
 
     const autoTrigger = async () => {
+      sendingRef.current = true;
       setSending(true);
       // Hard timeout: if AI takes >25s, unblock the input with a fallback greeting
       const timeoutId = setTimeout(() => {
+        sendingRef.current = false;
         setSending(false);
         setMessages(prev => prev.length === 0 ? [{
           role: "assistant" as const,
@@ -637,6 +652,7 @@ export default function CampaignIntake() {
         }]);
       } finally {
         clearTimeout(timeoutId);
+        sendingRef.current = false;
         setSending(false);
         setTimeout(() => inputRef.current?.focus(), 200);
       }
@@ -652,6 +668,8 @@ export default function CampaignIntake() {
   // ── Confirm proposed type ─────────────────────────────────────────────────────
   const handleConfirmType = async () => {
     if (!pendingProposal) return;
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setConfirmingType(true);
     try {
       await customFetch(`/api/intake/${campaignId}/confirm-type`, {
@@ -678,6 +696,7 @@ export default function CampaignIntake() {
     } catch {
       toast.error("Erro ao confirmar modelo. Tente novamente.");
     } finally {
+      sendingRef.current = false;
       setConfirmingType(false);
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 200);
@@ -685,6 +704,8 @@ export default function CampaignIntake() {
   };
 
   const handleRejectType = async () => {
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setPendingProposal(null);
     setSending(true);
     try {
@@ -699,6 +720,7 @@ export default function CampaignIntake() {
     } catch {
       toast.error("Erro. Tente novamente.");
     } finally {
+      sendingRef.current = false;
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 200);
     }
@@ -811,7 +833,12 @@ export default function CampaignIntake() {
   // ── Send message ──────────────────────────────────────────────────────────────
   const handleSend = async () => {
     if (!inputValue.trim() && pendingFiles.length === 0) return;
-    if (sending) return;
+    // `sending` state is a stale closure across near-simultaneous invocations
+    // (e.g. Enter mashed twice before React commits the re-render) — a plain
+    // `if (sending) return` can let both calls through. Use a synchronous ref
+    // as the real guard; `sending` state remains only for UI disabling.
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     const userMsg = inputValue.trim();
     const filesSnapshot = pendingFiles;
     setPendingFiles([]);
@@ -829,20 +856,19 @@ export default function CampaignIntake() {
       name: f.name, url: f.url, isImage: f.isImage, mimeType: f.mimeType, size: f.size,
     }));
 
-    // Do NOT clear input before the request succeeds. If the token is expired
-    // or the network fails, the user's text must be preserved for retry.
+    // Clear the textarea immediately (optimistic) — the message is already
+    // committed to the chat history below. If the request fails we restore
+    // the text in the catch block so nothing is lost.
     const newMessages: ChatMessage[] = [...messages, { role: "user", content: displayMsg, files: msgFiles.length > 0 ? msgFiles : undefined }];
     setMessages(newMessages);
+    setInputValue("");
+    try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
     setSending(true);
     setPendingProposal(null);
 
     try {
       const history = newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
       const result = await callConversation({ message: aiMsg, history });
-
-      // Clear input and draft only after confirmed success
-      setInputValue("");
-      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
 
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
@@ -875,6 +901,7 @@ export default function CampaignIntake() {
         { duration: 6000 },
       );
     } finally {
+      sendingRef.current = false;
       setSending(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
@@ -970,14 +997,14 @@ export default function CampaignIntake() {
           <div className="flex flex-col gap-2 bg-card/30 p-3 border border-border/40 min-w-[220px]">
             <div className="flex justify-between items-center">
               <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">Completude</span>
-              <span className="font-mono text-xs font-bold text-primary">{progress}%</span>
+              <span className="font-mono text-xs font-bold text-primary">{chatComplete ? 100 : progress}%</span>
             </div>
-            <Progress value={progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
+            <Progress value={chatComplete ? 100 : progress} className="h-1.5 rounded-none bg-muted/30 [&>div]:bg-primary [&>div]:shadow-[0_0_8px_hsl(var(--primary)/0.5)]" />
             {totalRequired > 0 && (
               <div className="flex justify-between items-center pt-0.5">
                 <span className="font-mono text-[10px] text-muted-foreground/60">Obrigatórios</span>
-                <span className={`font-mono text-[10px] font-semibold ${answeredRequired >= totalRequired ? "text-success" : "text-muted-foreground"}`}>
-                  {answeredRequired}/{totalRequired}
+                <span className={`font-mono text-[10px] font-semibold ${chatComplete || answeredRequired >= totalRequired ? "text-success" : "text-muted-foreground"}`}>
+                  {chatComplete ? totalRequired : answeredRequired}/{totalRequired}
                 </span>
               </div>
             )}
