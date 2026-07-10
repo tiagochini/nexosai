@@ -15,11 +15,11 @@ import { NotFoundError, AppError } from "../../lib/errors.js";
 import { env } from "../../lib/env.js";
 import type { Logger } from "pino";
 
-const FORMAT_TO_DALLE_SIZE: Record<string, "1024x1024" | "1792x1024" | "1024x1792"> = {
+const FORMAT_TO_DALLE_SIZE: Record<string, "1024x1024" | "1536x1024" | "1024x1536"> = {
   feed_square:    "1024x1024",
-  feed_portrait:  "1024x1792",
-  stories:        "1024x1792",
-  banner:         "1792x1024",
+  feed_portrait:  "1024x1536",
+  stories:        "1024x1536",
+  banner:         "1536x1024",
   carousel_slide: "1024x1024",
 };
 
@@ -31,7 +31,7 @@ function buildOpenAIClient(): OpenAI {
       baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL,
     });
   }
-  throw new AppError(503, "OPENAI_API_KEY não configurado — DALL-E 3 indisponível", "AI_UNAVAILABLE");
+  throw new AppError(503, "OPENAI_API_KEY não configurado — geração de imagem indisponível", "AI_UNAVAILABLE");
 }
 
 export async function listCreatives(
@@ -378,22 +378,23 @@ async function generateDalleImage(
   log: Logger,
 ): Promise<string> {
   const size = FORMAT_TO_DALLE_SIZE[format] ?? "1024x1024";
+  const gptImageQuality = quality === "hd" ? "high" : "medium";
   const openai = buildOpenAIClient();
 
-  log.info({ format, size, quality }, "Generating DALL-E 3 image");
+  log.info({ format, size, quality: gptImageQuality }, "Generating image (gpt-image-1)");
 
   const response = await openai.images.generate({
-    model: "dall-e-3",
+    model: "gpt-image-1",
     prompt: `${prompt}. IMPORTANT: No text, words, letters, or numbers anywhere in the image. Pure visual composition only.`,
     n: 1,
     size,
-    quality,
-    response_format: "url",
+    quality: gptImageQuality,
   });
 
-  const url = response.data?.[0]?.url;
-  if (!url) throw new Error("DALL-E returned no image URL");
+  const b64 = response.data?.[0]?.b64_json;
+  if (!b64) throw new Error("gpt-image-1 returned no image data");
 
-  log.info({ url: url.substring(0, 80) }, "DALL-E image generated");
-  return url;
+  const dataUrl = `data:image/png;base64,${b64}`;
+  log.info({ bytes: b64.length }, "gpt-image-1 image generated");
+  return dataUrl;
 }
