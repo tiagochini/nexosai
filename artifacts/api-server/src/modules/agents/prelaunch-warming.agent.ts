@@ -213,7 +213,7 @@ Retorne APENAS o JSON. Conteúdo real, não esboços.`;
   const critique = await runAgentWithCritique({
     campaignId,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "social_media",
     systemPrompt: COGNITIVE_IDENTITY_COPYWRITER + PRELAUNCH_WARMING_PROMPT,
     userMessage,
     log,

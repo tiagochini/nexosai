@@ -252,7 +252,7 @@ export async function runLiveScriptAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "live_script",
     profileContext: buildPsychologicalProfileBlock(intakeData),
     phaseContext,
     systemPrompt: COGNITIVE_IDENTITY_LIVE_SCRIPT + LIVE_SYSTEM_PROMPT,

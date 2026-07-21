@@ -228,7 +228,7 @@ export async function runWebinarScriptAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "webinar_script",
     profileContext: buildPsychologicalProfileBlock(intakeData),
     phaseContext,
     systemPrompt: COGNITIVE_IDENTITY_WEBINAR_SCRIPT + WEBINAR_SYSTEM_PROMPT,

@@ -113,7 +113,7 @@ Classifique a intenção e gere a resposta ideal. Retorne APENAS o JSON.`;
   const result = await runAgent({
     campaignId: `wa-response-${workspaceId}`,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "whatsapp_response",
     systemPrompt: COGNITIVE_IDENTITY_WHATSAPP_RESPONSE + RESPONSE_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     log,

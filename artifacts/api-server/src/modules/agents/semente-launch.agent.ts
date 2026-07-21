@@ -278,7 +278,7 @@ Retorne APENAS JSON.`;
     const critique = await runAgentWithCritique({
       campaignId,
       workspaceId,
-      agentRole: "copywriter",
+      agentRole: "semente_launch",
       systemPrompt,
       userMessage,
       log,

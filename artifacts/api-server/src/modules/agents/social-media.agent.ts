@@ -231,7 +231,7 @@ export async function runSocialMediaAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "social_media",
     profileContext: buildPsychologicalProfileBlock(intakeData),
     systemPrompt: COGNITIVE_IDENTITY_SOCIAL_MEDIA + SOCIAL_MEDIA_PROMPT,
     messages: [

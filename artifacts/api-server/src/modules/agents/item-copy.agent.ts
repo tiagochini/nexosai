@@ -286,7 +286,7 @@ Retorne APENAS o JSON.`;
     const critique = await runAgentWithCritique({
       campaignId,
       workspaceId,
-      agentRole: "copywriter",
+      agentRole: "email_architect",
       systemPrompt,
       userMessage,
       log,
@@ -297,7 +297,7 @@ Retorne APENAS o JSON.`;
     const result = await runAgent({
       campaignId: null,
       workspaceId,
-      agentRole: "copywriter",
+      agentRole: "email_architect",
       systemPrompt,
       messages: [{ role: "user", content: userMessage }],
       log,

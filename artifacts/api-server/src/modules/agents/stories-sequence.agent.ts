@@ -183,7 +183,7 @@ export async function runStoriesSequenceAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "copywriter",
+    agentRole: "stories_sequence",
     profileContext: buildPsychologicalProfileBlock(intakeData),
     phaseContext,
     systemPrompt: STORIES_SYSTEM_PROMPT,
