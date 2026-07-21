@@ -1,0 +1,398 @@
+RELATÓRIO DE AUDITORIA DE ARQUITETURA — NexOS AI
+  Data: 21 Jul 2026 | Auditor: Agente de Arquitetura | Modo: Plan Only — Diagnóstico Puro
+  ================================================================================
+
+  PARTE 1 — FLUXO COMPLETO IMPLEMENTADO (Intake até Entrega)
+  ================================================================================
+
+  MAPA DE STATUS POR ETAPA
+
+  #01  Registro / Autenticação
+       O que roda: JWT access 15m + refresh 30d + bcrypt
+       Status: OK
+       Obs: Invite code gate ativo — bloqueia registro aberto se PLATFORM_OPEN≠"true"
+
+  #02  Onboarding Guiado
+       O que roda: 8 UISteps: welcome → path_select → conversation → plan_preview →
+                   clone_wow → diagnosis_approval → integration_setup
+       Status: OK
+       Obs: integration_setup existe mas sem validação de credencial antes de salvar (Bug #6)
+
+  #03  Criação de Campanha
+       O que roda: POST /campaigns com tipo, track, modelo — 9 tipos suportados
+       Status: OK
+
+  #04  Intake (Briefing)
+       O que roda: Conversacional AI (intake.ai.ts) + perguntas estruturadas + readiness score
+       Status: OK
+       Obs: % completude sincronizada entre lista e detalhe
+
+  #05  Gate Estratégia
+       O que roda: Clique consciente → POST /execute {phase:"strategy"}
+       Status: OK — Gate humano explícito
+
+  #06  Fase Analisando
+       O que roda: command.agent → strategy + profile + offer + execution_governor
+       Status: OK
+       Obs: Checkpoints criam awaiting_approval antes de avançar
+
+  #07  Gate de Validação Mercado / Oferta / Marca
+       O que roda: NÃO EXISTE
+       Status: BLOQUEADO (CRÍTICO)
+       Obs: Nenhum agente de pré-validação. Campanha vai direto do intake para execução
+            sem verificar viabilidade de mercado, oferta ou marca.
+
+  #08  Strategy Ready
+       O que roda: Estratégia gravada em brainData, disponível para review
+       Status: OK
+       Obs: Conflitos de premissa detectados por conflict-detector.service.ts
+
+  #09  Gate Conteúdo
+       O que roda: Clique consciente → POST /execute {phase:"content"}
+       Status: OK — Gate humano explícito
+
+  #10  Geração de Conteúdo (8 peças)
+       O que roda: orchestration.worker → 8 agentes especializados com critique loop
+       Status: RISCO
+       Obs: agentRole incorreto corrigido (Jul 2026). content_calendar ainda produz
+            calendar:[] por truncamento de LLM. Contract violations não auto-reprocessam.
+
+  #11  Aprovação de Conteúdo
+       O que roda: Review por peça → POST /content/:id/approve
+       Status: OK — Gate humano explícito
+
+  #12  Social Auto-Post
+       O que roda: autoPostApprovedContent() fire-and-forget após aprovação
+       Status: CRÍTICO
+       Obs: SEM GATE DE CONFIRMAÇÃO — aprovação de conteúdo dispara post nas redes
+            imediatamente, sem "Confirmar publicação?" para o usuário.
+
+  #13  Criativos (DALL-E 3)
+       O que roda: Concept → preview → final (3 gates explícitos)
+       Status: OK
+       Obs: Pipeline correto, cada step é clique consciente
+
+  #14  Gate Lançamento
+       O que roda: checkIntegrationsForLaunch() → requer WhatsApp/Telegram + email
+       Status: OK — HTTP 422 + modal de bloqueio funcional
+
+  #15  Execução
+       O que roda: Sequências auto-ativadas, scheduler 60s, despacho email+WhatsApp
+       Status: RISCO
+       Obs: Risco de dupla execução quando Redis volta (BullMQ + setInterval simultâneos)
+
+  #16  Ao Vivo / Monitoramento
+       O que roda: Métricas, health score 100pt, alertas automáticos, auto-otimização
+       Status: OK
+       Obs: Auto-trigger otimização em score ≤ 30
+
+  #17  Produção de Vídeo
+       O que roda: Seleção de modo → AvatarCloneGate → preview → final
+       Status: RISCO
+       Obs: ElevenLabs voice clone bloqueado (free tier). Digital Twin bloqueado
+            (HeyGen Enterprise). Foto-clone funciona em qualquer plano.
+
+  #18  Relatório Semanal
+       O que roda: Email de métricas toda segunda 08:00 UTC
+       Status: RISCO
+       Obs: Verifica apenas por log se SMTP não configurado — sem confirmação externa
+
+
+  ================================================================================
+  PARTE 2 — BUGS CONHECIDOS COM STATUS ATUAL
+  ================================================================================
+
+  BUG #01 — agentRole "copywriter" hardcoded em 11 agentes
+    Severidade: CRÍTICO
+    Status: CORRIGIDO (Jul 2026, commit 1f88948)
+    Impacto se não tivesse corrigido: VSL, Anúncios, Social, WhatsApp entregam
+    JSON no formato errado — entregáveis completamente inutilizáveis.
+
+  BUG #02 — content_calendar entrega calendar:[] (zero dias)
+    Severidade: CRÍTICO
+    Status: ABERTO
+    Causa: LLM trunca antes de completar 20+ posts. Anthropic sem créditos →
+           fallback OpenAI → resposta incompleta → parseAgentJSON retorna default vazio.
+    Impacto: Lançador aprova calendário vazio sem saber; equipe de social sem plano.
+    Solução necessária: Chunked generation (separar em blocos de 7 dias como targeting agent).
+
+  BUG #03 — Contract violations não bloqueiam peça nem disparam retry
+    Severidade: CRÍTICO
+    Status: ABERTO (follow-up tasks #22–#24 em andamento)
+    Causa: _contractViolation:true é setado mas peça avança para pending_approval.
+    Impacto: Entregáveis fora do contrato são aprovados e usados em campanha real.
+
+  BUG #04 — Social auto-post dispara imediatamente após aprovação
+    Severidade: CRÍTICO
+    Status: ABERTO
+    Causa: autoPostApprovedContent() é fire-and-forget sem gate de confirmação.
+    Impacto: Usuário aprova peça internamente para revisão e post vai ao ar sem querer.
+
+  BUG #05 — Dupla execução no scheduler
+    Severidade: IMPORTANTE
+    Status: ABERTO (documentado em NEXOS_WORKFLOW_MAP.md)
+    Causa: Quando Redis volta online, BullMQ Job + setInterval Fallback disparam juntos.
+    Impacto: Mesmo email/WhatsApp enviado duas vezes para a lista — dano de reputação.
+
+  BUG #06 — Credenciais salvas sem validação prévia
+    Severidade: IMPORTANTE
+    Status: ABERTO
+    Causa: Token inválido é salvo com status:"connected" sem ping de teste.
+    Impacto: Lançamento inicia, chega na hora de publicar, falha silenciosamente.
+
+  BUG #07 — Idempotência de créditos em reinício de pipeline
+    Severidade: IMPORTANTE
+    Status: PARCIAL
+    Causa: skipAgent() protege agentes com output salvo, mas depende de pieceStatus
+           estar correto antes do restart.
+    Impacto: Créditos deduzidos duas vezes pelo mesmo trabalho em caso de restart.
+
+  BUG #08 — Graceful degradation tratada como sucesso
+    Severidade: IMPORTANTE
+    Status: ABERTO
+    Causa: Resend sem API key loga "skip" sem alertar o usuário. Email nunca chega.
+    Impacto: Sequência roda, dispatch aparece como ok, zero emails entregues.
+
+  BUG #09 — autoGenerateCreativesFromBrief() dispara sem gate
+    Severidade: MENOR
+    Status: ABERTO (previsto para Fase 3 no NEXOS_WORKFLOW_MAP.md)
+    Impacto: Créditos DALL-E consumidos sem confirmação do usuário.
+
+  BUG #10 — Validação sem evidência externa
+    Severidade: IMPORTANTE
+    Status: ABERTO
+    Obs: Critério de 3 execuções limpas consecutivas não atingido. Verificação
+         baseada apenas em logs internos — sem confirmação de email recebido,
+         post publicado no Instagram, etc.
+
+
+  ================================================================================
+  PARTE 3 — AS 6 ADAPTAÇÕES: ENCAIXE, BASE E RISCOS
+  ================================================================================
+
+  ------------------------------------------------------------------------
+  ADAPTAÇÃO 1 — GATE DE VALIDAÇÃO (Mercado / Oferta / Marca)
+  ------------------------------------------------------------------------
+
+  Onde se encaixa:
+    Entre etapa #4 (Intake completo) e etapa #6 (command.agent inicia).
+    Opção A: como pré-condição do POST /execute {phase:"strategy"}
+    Opção B: como fase interna de "analyzing" antes do command.agent
+
+  O que já existe de base:
+    - intake.scoring.ts — readiness score e viability como funções puras
+    - conflict-detector.service.ts — detecta contradições, persiste em brainData
+    - campaign-state-machine.ts — mecanismo de checkpoint/awaiting_approval reutilizável
+    - runIsolatedAgent() — sandbox que nunca lança, retorna resultado tipado
+
+  O que falta:
+    - 3 novos agentes: market_validator, offer_price_validator, brand_validator
+    - Campo em brainData para persistir resultados (aprovado/ajustar/rejeitado)
+    - Lógica de curto-circuito: 1 rejeição crítica bloqueia mesmo com outros 2 aprovados
+    - UI de review dos resultados (similar aos checkpoints de estratégia)
+    - Integração no fluxo de execução
+
+  Risco de conflito: ALTO
+    Inserir antes de /execute {phase:"strategy"} requer nova transição de estado.
+    Inserir dentro de "analyzing" compete com command.agent que já inicia imediatamente.
+    Abordagem mais segura: rodar os 3 antes de invocar command.agent dentro de "analyzing".
+
+  ------------------------------------------------------------------------
+  ADAPTAÇÃO 2 — SOCIAL MEDIA ATIVO (Always-On, gestão contínua)
+  ------------------------------------------------------------------------
+
+  Onde se encaixa:
+    Processo independente de campanha — roda em paralelo, não vinculado a status.
+
+  O que já existe de base:
+    - social.worker.ts — scheduler 60s + 6h para posts de campanha
+    - social.publisher.ts — funções reais de publicação (Instagram, Facebook, TikTok)
+    - socialPostsTable — tabela de agendamento
+    - continuous_sales_manager — agente de vendas contínuas (vinculado a campanhas)
+
+  O que falta:
+    - Job contínuo desvinculado de campanha — não existe "posting orgânico autônomo"
+    - Resposta a comentários — não existe (só whatsapp-response.agent.ts cobre DMs WhatsApp)
+    - Gestão de DMs orgânicos do Instagram/TikTok — ausente
+    - Calendário editorial always-on separado do content_calendar de campanha
+    - Lógica de crescimento de audiência/captação de seguidores
+
+  Risco de conflito: MÉDIO
+    social.worker.ts e sequence-scheduler.worker.ts já têm risco de dupla execução
+    (Bug #05). Adicionar terceiro processo sem resolver esse bug amplifica o risco.
+
+  ------------------------------------------------------------------------
+  ADAPTAÇÃO 3 — MOTOR DE EXECUÇÃO REAL (Meta, WhatsApp, Google, SEO)
+  ------------------------------------------------------------------------
+
+  DIAGNÓSTICO: O QUE É REAL vs. ESPECIFICAÇÃO
+
+  Instagram .............. REAL — graph.facebook.com/v19.0 — Media Object + publish
+  Facebook ............... REAL — graph.facebook.com/v19.0 — Feed posts
+  TikTok orgânico ........ REAL — open.tiktokapis.com/v2/post/publish — imagens postam
+                                  como texto-only em certos casos (limitação API TikTok)
+  WhatsApp Business ...... REAL — graph.facebook.com/v19.0/:phoneNumberId/messages
+  Meta CAPI .............. REAL — graph.facebook.com/v17.0/:pixelId/events
+  TikTok Events API ...... REAL — business-api.tiktok.com/open_api/v1.3/pixel/track
+
+  Meta Ads (gestão paga) . NÃO EXISTE — sem criação/otimização de campanhas pagas via API
+  Google Ads ............. NÃO EXISTE — nenhum módulo implementado
+  Auto-otimização lance .. NÃO EXISTE — métricas lidas mas sem chamada de ajuste de bid
+  SEO .................... NÃO EXISTE — completamente ausente
+
+  Pontos de falha com API externa:
+    - Token expirado: sem refresh automático (só OAuth inicial)
+    - API externa cai durante sequência: fire-and-forget → falha silenciosa logada,
+      sem retry com backoff exponencial
+    - Sem dead-letter queue para posts/emails que falharam por erro externo
+
+  ------------------------------------------------------------------------
+  ADAPTAÇÃO 4 — ONBOARDING GUIADO DE CONEXÃO DE APIs
+  ------------------------------------------------------------------------
+
+  O que já existe:
+    - UIStep "integration_setup" existe no onboarding.tsx
+    - /integracoes — tela canônica de conexão, funcional
+    - integration-wizard.routes.ts — módulo existe
+    - OAuth flow funcional para Meta e TikTok
+
+  O que falta:
+    - Nenhuma rota POST /integrations/test para ping de credencial antes de salvar
+    - Token manual é salvo com status:"connected" sem verificar se funciona de verdade
+    - Sem feedback em tempo real de "credencial válida / inválida" durante onboarding
+    - integration_setup no onboarding não bloqueia progresso até integração ser validada
+
+  Risco de conflito: BAIXO — validação pré-save é adição pura, não quebra nada.
+
+  ------------------------------------------------------------------------
+  ADAPTAÇÃO 5 — NEXOS BRIDGE (navegação assistida)
+  ------------------------------------------------------------------------
+
+  Base existente: NENHUMA
+
+  RISCOS CRÍTICOS DE ARQUITETURA:
+
+  Risco 1 — Fronteira tecnológica não-garantível por software
+    A promessa "nunca insere senha/credencial" é intenção, não propriedade técnica
+    verificável. Um webview que abre URLs externas não pode distinguir programaticamente
+    campo de senha de campo de texto livre. A fronteira só é segura se o Bridge
+    APENAS abre o browser nativo do usuário (tab externa) e nunca embute o site
+    externo em iframe controlado pelo NexOS.
+
+  Risco 2 — Termos de Serviço das plataformas
+    Meta, TikTok e Google proíbem explicitamente automação de navegação em suas
+    consoles de desenvolvedor. Guiar cliques em páginas externas é grey area que
+    pode resultar em suspensão do app OAuth registrado.
+
+  Risco 3 — Phishing aparente
+    Componente que abre telas de redes sociais dentro do produto e instrui onde
+    clicar é indistinguível de ataque de phishing para usuários menos técnicos —
+    risco de rejeição em revisões de app store em versão mobile futura.
+
+  Implementação tecnicamente segura:
+    Deep-link para URL exata (abre browser nativo do usuário) + screenshot/GIF
+    anotado mostrando onde clicar + checklist de confirmação manual no produto.
+    Qualquer webview controlado pelo NexOS cria risco de ultrapassar a fronteira.
+
+  ------------------------------------------------------------------------
+  ADAPTAÇÃO 6 — NAVEGAÇÃO PLENA (botão de voltar em todas as telas)
+  ------------------------------------------------------------------------
+
+  Telas/sub-fluxos com risco confirmado:
+
+  video-production/index.tsx — AvatarCloneGate
+    Back existe dentro do gate (← Voltar entre modos) mas não roteia para
+    fora da página de produção de vídeo.
+
+  sequences/detail.tsx
+    Editor de item inline não tem rota clara de saída sem salvar.
+
+  campaigns/content.tsx — modal de aprovação de peça
+    Modal sem botão de fechar separado documentado.
+
+  onboarding.tsx — passo clone_wow
+    CloneStudioPanel tem skip, mas após gravação não há "recomeçar onboarding".
+
+  war-room/index.tsx
+    Tem navigate importado mas sem destino de saída óbvio.
+
+  launcher/index.tsx
+    Idem.
+
+  welcome/index.tsx
+    Após onboarding completo o usuário pode ficar preso.
+
+  not-found.tsx
+    Sem link para /dashboard ou / — usuário preso em 404.
+
+
+  ================================================================================
+  PARTE 4 — SÍNTESE EXECUTIVA E PRIORIDADES DE LANÇAMENTO
+  ================================================================================
+
+  BLOQUEANTES PARA LANÇAMENTO ROBUSTO
+  (Critério: 3 execuções limpas consecutivas, sem intervenção manual)
+
+  PRIORIDADE 0 — CRÍTICO (não lançar sem resolver):
+
+    Bug #04 — Social autopost sem gate de confirmação
+      Risco: Clientes postam acidentalmente nas redes ao revisar conteúdo internamente.
+
+    Bug #05 — Dupla execução scheduler (BullMQ + setInterval)
+      Risco: Lista recebe email/WhatsApp duplicado — reputação destruída.
+
+    Bug #02 — content_calendar sempre vazio
+      Risco: Calendário social entregue em branco — lançador sem plano orgânico.
+
+    Bug #03 — Contract violations não bloqueiam peça
+      Risco: Entregáveis fora de contrato aprovados e usados em campanha real.
+
+  PRIORIDADE 1 — IMPORTANTE (resolver antes do 1º cliente pagar):
+
+    Bug #06 — Credencial salva sem validação
+      Risco: Lançamento inicia e falha ao publicar por token inválido.
+
+    Bug #08 — Graceful degradation como sucesso
+      Risco: Sequência "disparada" com zero emails reais entregues.
+
+    Adaptação #3 — Meta Ads/Google Ads pagos não existem
+      Risco: Produto vende "gestão de mídia paga" que não executa via API.
+
+    Adaptação #1 — Gate Mercado/Oferta/Marca ausente
+      Risco: Campanha inviável entra no pipeline e consome créditos do cliente.
+
+  PRIORIDADE 2 — RELEVANTE (resolver no ciclo pós-lançamento imediato):
+
+    Adaptação #4 — Validação pré-save de integração
+      Risco: UX confusa — usuário acha que conectou, mas não conectou.
+
+    Adaptação #6 — Back nav em sub-estados de telas complexas
+      Risco: Usuários presos em telas sem saída clara.
+
+  PRIORIDADE 3 — MELHORIA (roadmap):
+
+    Adaptação #2 — Social always-on
+      Nota: Feature importante de produto mas não bloqueia o core.
+
+  PRIORIDADE 4 — REAVALIAÇÃO NECESSÁRIA:
+
+    Adaptação #5 — NexOS Bridge
+      Nota: Risco arquitetural e legal alto. Implementação segura exige redesign
+      completo do conceito antes de qualquer desenvolvimento.
+
+  ------------------------------------------------------------------------
+  ITENS QUE DEPENDEM EXCLUSIVAMENTE DE AÇÃO EXTERNA (não são bugs de código)
+  ------------------------------------------------------------------------
+
+    → Recarregar Anthropic + OpenAI → conteúdo de alta qualidade em todos os agentes
+    → ElevenLabs plano pago → voice cloning nos vídeos
+    → HeyGen Enterprise → Digital Twin avatar hiper-realista
+    → Registrar apps OAuth em Meta/Google/TikTok Developer Console
+      Meta callback: https://agencianexos.vip/api/integrations/oauth/callback/facebook
+    → Configurar em produção: DATABASE_URL, SESSION_SECRET, JWT_SECRET, ALLOWED_ORIGINS
+    → WhatsApp Business API: conta Meta Business Manager verificada + número aprovado
+
+
+  ================================================================================
+  Fim do Relatório — Nenhuma linha de código foi escrita ou alterada durante esta auditoria.
+  ================================================================================

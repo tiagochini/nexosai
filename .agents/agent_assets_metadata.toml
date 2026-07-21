@@ -113,3 +113,9 @@ id = "JUpN1R2ccreGm58vbmrcY"
 uri = "file://attached_assets/NexOS_AI_Technical_Handoff.pdf"
 type = "pdf"
 title = "NexOS AI — Technical Handoff (corrigido)"
+
+[[outputs]]
+id = "jvY4i-tCYNQTKNw9ZhNSl"
+uri = "file://NEXOS_AUDITORIA_ARQUITETURA_2026.rtf"
+type = "unspecified"
+title = "NexOS — Relatório de Auditoria de Arquitetura (Jul 2026)"
