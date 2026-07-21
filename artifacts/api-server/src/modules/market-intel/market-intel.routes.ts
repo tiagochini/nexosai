@@ -97,6 +97,10 @@ router.post("/:id/link-campaign", async (req, res): Promise<void> => {
     return;
   }
   const report = await linkReportToCampaign(id, req.auth.workspaceId, parsed.campaignId);
+  if (report === "already_linked") {
+    res.status(409).json({ error: "Este relatório já está vinculado a outra campanha." });
+    return;
+  }
   if (!report) {
     res.status(404).json({ error: "Relatório ou campanha não encontrados." });
     return;

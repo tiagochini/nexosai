@@ -84,9 +84,24 @@ export async function linkReportToCampaign(
   id: string,
   workspaceId: string,
   campaignId: string,
-): Promise<MarketIntelReport | null> {
+): Promise<MarketIntelReport | null | "already_linked"> {
   const owned = await campaignBelongsToWorkspace(campaignId, workspaceId);
   if (!owned) return null;
+
+  const [existing] = await db
+    .select({ campaignId: marketIntelReportsTable.campaignId })
+    .from(marketIntelReportsTable)
+    .where(
+      and(
+        eq(marketIntelReportsTable.id, id),
+        eq(marketIntelReportsTable.workspaceId, workspaceId),
+      ),
+    )
+    .limit(1);
+  if (!existing) return null;
+  if (existing.campaignId && existing.campaignId !== campaignId) {
+    return "already_linked";
+  }
 
   const [updated] = await db
     .update(marketIntelReportsTable)

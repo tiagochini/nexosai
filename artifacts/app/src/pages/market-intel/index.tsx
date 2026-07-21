@@ -46,7 +46,7 @@ interface MarketIntelOutput {
   firstMoverActions?: string[];
   clarifyingQuestions?: string[];
 }
-interface CampaignLite { id: string; name: string; status: string }
+interface CampaignLite { id: string; title: string; status: string }
 
 const MATURITY_LABEL: Record<string, string> = {
   emerging: "Emergente",
@@ -338,7 +338,7 @@ export default function MarketIntelPage() {
                   <Button key={c.id} variant="outline" size="sm" disabled={linking}
                     onClick={() => linkToCampaign(c.id)}>
                     {linking ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
-                    {c.name}
+                    {c.title}
                   </Button>
                 ))}
               </div>
