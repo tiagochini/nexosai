@@ -291,6 +291,25 @@ async function generateWeekNow(
       );
   }
 
+  // Pre-load occupied slots (non-draft posts) to avoid duplicate inserts on force regen.
+  // Key: `${platform}|${dayIndex}|${postingTime}`
+  const occupiedRows = await db
+    .select({
+      platform: socialPresencePostsTable.platform,
+      dayIndex: socialPresencePostsTable.dayIndex,
+      postingTime: socialPresencePostsTable.postingTime,
+    })
+    .from(socialPresencePostsTable)
+    .where(
+      and(
+        eq(socialPresencePostsTable.workspaceId, workspaceId),
+        eq(socialPresencePostsTable.weekStart, weekStart),
+      ),
+    );
+  const occupiedSlots = new Set(
+    occupiedRows.map((r) => `${r.platform}|${r.dayIndex}|${r.postingTime}`),
+  );
+
   // 1. Realinhamento semanal — analisa semana anterior (se houve posts publicados)
   const insight = await maybeGenerateWeeklyInsight(workspaceId, weekStart, log);
 
@@ -325,6 +344,16 @@ async function generateWeekNow(
       const autoSchedule = platform.autoPublish && !firstWeekSafety;
 
       for (const post of plan.posts) {
+        const slotKey = `${platform.platform}|${post.dayIndex}|${post.postingTime}`;
+        if (occupiedSlots.has(slotKey)) {
+          log.info(
+            { workspaceId, platform: platform.platform, dayIndex: post.dayIndex, postingTime: post.postingTime },
+            "presence.generateWeek: slot already occupied by non-draft post — skipping",
+          );
+          continue;
+        }
+        occupiedSlots.add(slotKey); // prevent intra-batch duplicates
+
         const scheduledFor = computeScheduledFor(weekStart, post.dayIndex, post.postingTime);
         await db.insert(socialPresencePostsTable).values({
           workspaceId,

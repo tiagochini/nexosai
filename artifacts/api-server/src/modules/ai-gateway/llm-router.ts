@@ -124,6 +124,9 @@ const AGENT_TASK_MAP: Partial<Record<AgentRole, LLMTaskType>> = {
   memory_compression:       "summarization",
   launch_debriefing:        "summarization",
   business_intelligence:    "summarization",
+  // Social presence — structured JSON weekly plans & bio suggestions
+  presence_planner:         "structured_json",
+  bio_optimizer:            "structured_json",
   // Long context video/creator tasks
   video:                    "long_context",
   creator_growth:           "long_context",
