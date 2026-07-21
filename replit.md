@@ -60,6 +60,7 @@ AI-powered operating system for campaign execution, launch automation and digita
 - `artifacts/api-server/src/modules/video-production/video-generation.service.ts` — real AI video generation (Runway, Kling, HeyGen avatar, ElevenLabs voice) — separate "Generate Video" action, not bulk-generated with content
 - `artifacts/api-server/src/modules/weekly-report/` — weekly HTML report composer + `POST /api/reports/send` + Monday 08:00 UTC scheduler
 - `artifacts/api-server/src/modules/sales-team/` — Time de Vendas CRUD + AI reply suggestions (`POST /api/sales-team/:id/suggest`)
+- `artifacts/api-server/src/modules/market-intel/` — Análise Mercadológica: `market-intel.service.ts` (startAnalysis bg via setImmediate, 90-day reuse of UNLINKED ready reports only, triggerMarketIntelFromIntake idempotent per campaign excluding failed, buildIntakeMarketIntelContext, deepdive chat) + routes at `/api/market-intel`. Intake fires it via setImmediate after both saveIntakeData sites in `intake.ai.ts`; clarifying questions from the agent are injected into the intake contextNote. UI: `artifacts/app/src/pages/market-intel/index.tsx` (`/market-intel`, sidebar "Inteligência de Mercado").
 - `artifacts/api-server/src/modules/server-events/` — Meta CAPI + TikTok Events API server-side tracking (`/api/events/*`, fire-and-forget)
 - `artifacts/api-server/src/lib/` — shared utilities (env, errors, logger)
 - `artifacts/api-server/src/routes/` — route barrel (mounts all module routers)

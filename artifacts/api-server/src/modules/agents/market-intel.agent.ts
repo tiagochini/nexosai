@@ -44,6 +44,7 @@ export interface MarketIntelOutput {
   platformArbitrage: string;         // platforms competitors aren't using effectively
   entryRecommendation: string;       // the fastest path to a defensible position
   firstMoverActions: string[];       // what to do NOW before competitors catch on
+  clarifyingQuestions?: string[];    // specific, pointed questions when input data is insufficient
 }
 
 const MARKET_INTEL_PROMPT = `Você é o Agente Market Intelligence do NexOS AI — o maior especialista em inteligência competitiva do mercado digital brasileiro.
@@ -150,9 +151,25 @@ Três tipos de arbitragem estratégica:
   "pricingArbitrage": "string — posições de preço não ocupadas",
   "platformArbitrage": "string — plataformas não exploradas pelo mercado",
   "entryRecommendation": "string — o caminho mais rápido para uma posição defensável",
-  "firstMoverActions": ["string — o que fazer AGORA antes dos concorrentes percebam"]
+  "firstMoverActions": ["string — o que fazer AGORA antes dos concorrentes percebam"],
+  "clarifyingQuestions": ["string — OPCIONAL: até 3 perguntas específicas e pontuais que refinariam a análise"]
 }
-\`\`\``;
+\`\`\`
+
+## PERGUNTAS DE ESCLARECIMENTO (clarifyingQuestions)
+
+Se os dados de entrada forem vagos ou insuficientes para uma análise cirúrgica, você AINDA ASSIM produz a análise completa com o que sabe — mas inclui em \`clarifyingQuestions\` até 3 perguntas ESPECÍFICAS e PONTUAIS cuja resposta mudaria materialmente a análise. Exemplos de boas perguntas:
+- "Seu produto compete com [Concorrente X] no ângulo de [Y] ou você mira outro segmento?"
+- "Qual é o ticket médio real dos seus 3 principais concorrentes diretos?"
+- "Sua audiência atual veio de tráfego pago ou orgânico? Isso muda o gap explorável."
+
+NUNCA faça perguntas genéricas ("me fale mais sobre seu produto"). Cada pergunta deve mirar UMA lacuna específica que trava uma conclusão da análise. Se os dados são suficientes, retorne \`clarifyingQuestions: []\`.`;
+
+export interface MarketIntelExtraContext {
+  priceRange?: string;
+  platforms?: string[];
+  targetAudience?: string;
+}
 
 export async function runMarketIntelAgent(
   campaignId: string | null,
@@ -162,7 +179,14 @@ export async function runMarketIntelAgent(
   knownCompetitors: string[],
   currentPositioning: string,
   log: Logger,
+  extra?: MarketIntelExtraContext,
 ): Promise<MarketIntelOutput> {
+  const extraLines = [
+    extra?.priceRange ? `**Faixa de preço:** ${extra.priceRange}` : null,
+    extra?.platforms?.length ? `**Plataformas usadas:** ${extra.platforms.join(", ")}` : null,
+    extra?.targetAudience ? `**Público-alvo:** ${extra.targetAudience}` : null,
+  ].filter(Boolean).join("\n");
+
   const result = await runAgent({
     campaignId,
     workspaceId,
@@ -176,7 +200,7 @@ export async function runMarketIntelAgent(
 **Mercado:** ${marketDescription}
 **Categoria:** ${productCategory}
 **Concorrentes conhecidos:** ${knownCompetitors.join(", ") || "não especificados"}
-**Posicionamento atual:** ${currentPositioning}
+**Posicionamento atual:** ${currentPositioning}${extraLines ? `\n${extraLines}` : ""}
 
 **PROCESSO:**
 1. Mapeie os players principais e suas estratégias reais (não o que dizem, o que fazem)

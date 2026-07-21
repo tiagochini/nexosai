@@ -44,3 +44,4 @@ export * from "./campaign-groups";
 export * from "./video-projects";
 export * from "./agent-clarifications";
 export * from "./fingerprints";
+export * from "./market-intel";

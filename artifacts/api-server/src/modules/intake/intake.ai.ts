@@ -17,6 +17,10 @@ import {
   type CampaignTrack,
 } from "./intake.service.js";
 import { recommendTrackFromRevenue } from "./intake.scoring.js";
+import {
+  triggerMarketIntelFromIntake,
+  buildIntakeMarketIntelContext,
+} from "../market-intel/market-intel.service.js";
 
 // ─── Completion-signal safety net ──────────────────────────────────────────────
 // The agent's aiMessage is free text and can announce readiness for the Master
@@ -158,6 +162,13 @@ export async function extractIntakeFromText(
 
   if (Object.keys(highConfidenceExtracted).length > 0) {
     await saveIntakeData(campaignId, workspaceId, merged, log);
+
+    // Fire-and-forget market intelligence trigger (idempotent per campaign)
+    setImmediate(() => {
+      triggerMarketIntelFromIntake(campaignId, workspaceId, merged, log).catch(
+        (err) => log.warn({ err }, "Market intel intake trigger failed — non-blocking"),
+      );
+    });
 
     // Non-blocking premise conflict detection — only when we're updating existing data
     if (Object.keys(existingData).length > 2) {
@@ -770,12 +781,25 @@ export async function processConversationalTurn(
 
   const isResume = userMessage === "continuar_intake";
 
-  const contextNote = `ESTADO DO INTAKE:
+  // ── Market intelligence context (non-fatal) ─────────────────────────────────
+  // When a market intel report exists and is ready for this campaign, inject a
+  // compact factual summary + the agent's pending clarifying questions so the
+  // intake conversation asks pointed, specific questions grounded in real
+  // competitive analysis instead of generic ones.
+  let marketIntelContext: string | null = null;
+  try {
+    marketIntelContext = await buildIntakeMarketIntelContext(campaignId, workspaceId);
+  } catch (err) {
+    log.warn({ err }, "Market intel context load failed — non-blocking");
+  }
+
+  const contextNote = (`ESTADO DO INTAKE:
 Tipo: ${type} | Track: ${track}
 Preenchidos (${answeredFields.length}): ${answeredFields.join(", ") || "nenhum"}
 Faltando obrigatórios: ${missingRequired.slice(0, 8).join(", ") || "COMPLETO"}
 Próxima pergunta: ${nextQuestion ? `"${nextQuestion.label}" [id:${nextQuestion.id}]` : "TODAS RESPONDIDAS"}
-Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO ESPECIAL: O usuário está RETOMANDO um briefing iniciado anteriormente. Apresente um resumo claro e objetivo do que já foi coletado (produto, audiência, metas já preenchidas), indique em qual fase estamos (${answeredFields.length === 0 ? "Fase 1 — Produto" : missingRequired.length === 0 ? "Completo" : "progresso parcial"}), e pergunte a próxima questão que falta de forma natural. Não comece do zero.` : ""}`.slice(0, 1400); // hard cap
+Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO ESPECIAL: O usuário está RETOMANDO um briefing iniciado anteriormente. Apresente um resumo claro e objetivo do que já foi coletado (produto, audiência, metas já preenchidas), indique em qual fase estamos (${answeredFields.length === 0 ? "Fase 1 — Produto" : missingRequired.length === 0 ? "Completo" : "progresso parcial"}), e pergunte a próxima questão que falta de forma natural. Não comece do zero.` : ""}`.slice(0, 1400)) // hard cap
+    + (marketIntelContext ? `\n\n${marketIntelContext}` : "");
 
   // Build messages for AI
   const actualUserMessage = isResume ? "Olá, estou retomando meu briefing. O que já foi preenchido e qual é o próximo passo?" : userMessage;
@@ -894,6 +918,17 @@ Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO 
     // read-only AI conversation without persisting intake data.
     log.warn({ saveErr }, "saveIntakeData skipped (campaign status prevents update)");
   }
+
+  // Fire-and-forget: trigger market intelligence analysis from within the
+  // intake as soon as we know the product + audience/description. Idempotent
+  // (skips when a report already exists for this campaign; reuses recent
+  // reports for the same product/niche). The ready report + its clarifying
+  // questions are injected into the next turns via buildIntakeMarketIntelContext.
+  setImmediate(() => {
+    triggerMarketIntelFromIntake(campaignId, workspaceId, mergedData, log).catch(
+      (err) => log.warn({ err }, "Market intel intake trigger failed — non-blocking"),
+    );
+  });
 
   // Re-check completeness with new data
   const newCompleteness = validateIntakeCompleteness(type, track, mergedData);

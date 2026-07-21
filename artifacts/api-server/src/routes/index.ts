@@ -55,6 +55,7 @@ import clarificationRouter from "../modules/agents/clarification.routes.js";
 import integrationWizardRouter from "../modules/integration-wizard/integration-wizard.routes.js";
 import fingerprintRouter from "../modules/fingerprint/fingerprint.routes.js";
 import dailyVideoRouter from "../modules/daily-video/daily-video.routes.js";
+import marketIntelRouter from "../modules/market-intel/market-intel.routes.js";
 
 const router: IRouter = Router();
 
@@ -114,5 +115,6 @@ router.use("/campaigns", clarificationRouter);
 router.use("/integration-wizard", integrationWizardRouter);
 router.use("/fingerprints", fingerprintRouter);
 router.use("/daily-video", dailyVideoRouter);
+router.use("/market-intel", marketIntelRouter);
 
 export default router;
