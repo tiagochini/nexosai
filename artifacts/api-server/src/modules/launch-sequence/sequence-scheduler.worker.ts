@@ -53,6 +53,24 @@ async function maybeFireWeeklyReport(now: Date): Promise<void> {
   }
 }
 
+// ── Presença Social: plano semanal — segunda 08:00 UTC ────────────────────────
+let lastPresenceWeeklyDate: string | null = null;
+
+async function maybeFirePresenceWeekly(now: Date): Promise<void> {
+  const log = logger.child({ component: "presence-weekly-scheduler" });
+  const isMonday = now.getUTCDay() === 1;
+  const isPlanHour = now.getUTCHours() === 8;
+  const todayKey = now.toISOString().slice(0, 10); // YYYY-MM-DD
+  if (isMonday && isPlanHour && lastPresenceWeeklyDate !== todayKey) {
+    lastPresenceWeeklyDate = todayKey;
+    log.info({ date: todayKey }, "Firing presence weekly plan generation (Monday 08:00 UTC)");
+    const { generateWeekForAllActiveConfigs } = await import(
+      "../social-presence/social-presence.service.js"
+    );
+    await generateWeekForAllActiveConfigs();
+  }
+}
+
 // ── Clarification timeout watchdog ────────────────────────────────────────────
 // Runs every scheduler tick (60s). If a campaign has been in
 // autocorrectionStatus === "waiting_clarification" for > 2 hours without the
@@ -403,6 +421,17 @@ export async function processScheduledItems(): Promise<void> {
   const { processScheduledSocialPosts } = await import("../social/social.autopost.service.js");
   await processScheduledSocialPosts().catch((err) =>
     log.warn({ err }, "Social post scheduler tick failed — non-blocking"),
+  );
+
+  // Presença Social Always-On: plano semanal (segunda 08h) + posts agendados
+  await maybeFirePresenceWeekly(now).catch((err) =>
+    log.warn({ err }, "Presence weekly tick failed — non-blocking"),
+  );
+  const { publishDuePresencePosts } = await import(
+    "../social-presence/social-presence.service.js"
+  );
+  await publishDuePresencePosts().catch((err) =>
+    log.warn({ err }, "Presence post scheduler tick failed — non-blocking"),
   );
 
   const dueItems = await db

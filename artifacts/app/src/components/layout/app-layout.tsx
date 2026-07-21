@@ -10,7 +10,7 @@ import {
   Bot, Share2, Video, DollarSign, Shield, Settings, Search,
   ChevronDown, User, Users, ShieldCheck, Star, Gauge, Zap,
   Brain, Receipt, Link2, Globe, Clapperboard, Film, ShoppingBag, MessageSquare, Crosshair, Camera,
-  GraduationCap, ExternalLink, Fingerprint, RefreshCw, Radar,
+  GraduationCap, ExternalLink, Fingerprint, RefreshCw, Radar, Megaphone,
 } from "lucide-react";
 import nexosLogo from "/nexos-logo.png";
 import { useAppI18n } from "@/lib/i18n";
@@ -138,6 +138,7 @@ function SidebarContent({ onNav }: { onNav?: () => void }) {
         { name: "Cockpit do Lançamento", href: "/launcher", icon: Crosshair },
         { name: tr.sidebar.campaigns,  href: "/campaigns", icon: Rocket },
         { name: "Inteligência de Mercado", href: "/market-intel", icon: Radar, badge: "IA" },
+        { name: "Presença Social", href: "/presence", icon: Megaphone, badge: "IA" },
       ],
     },
     {

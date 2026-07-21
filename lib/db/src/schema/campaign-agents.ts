@@ -86,6 +86,8 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "ux_simplification",
   "campaign_memory",
   "item_copy_generator",
+  "presence_planner",
+  "bio_optimizer",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [

@@ -118,6 +118,10 @@ export const CREDIT_COSTS: Record<string, number> = {
   daily_video_short: 12,        // Reels/TikTok/Shorts (≤60s): script + hook + captions + visual dir → ~$0.08 → ~12 cr
   daily_video_long: 20,         // YouTube/Long Form (5–15min): full script + chapters + B-roll → ~$0.13 → ~20 cr
   daily_video_story: 8,         // Stories sequence (4–6 frames): script + visual per frame → ~$0.05 → ~8 cr
+
+  // ── Presença Social Always-On ─────────────────────────────────────────────
+  presence_week_plan: 15,       // presence_planner: plano semanal 7 dias multi-plataforma (~5k in + 5k out)
+  presence_bio_optimize: 4,     // bio_optimizer: bio + destaques por plataforma (single-turn curto)
 };
 
 // ─── Campaign Credit Estimates ────────────────────────────────────────────────

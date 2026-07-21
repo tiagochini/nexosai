@@ -58,6 +58,7 @@ import VideoEditorPage from "@/pages/video-editor/index";
 import SiteBuilderPage from "@/pages/site-builder/index";
 import AtendimentoPage from "@/pages/atendimento/index";
 import MarketIntelPage from "@/pages/market-intel/index";
+import PresencePage from "@/pages/presence/index";
 import VideoProductionPage from "@/pages/video-production/index";
 import FilmingGuide from "@/pages/video-production/filming-guide";
 import DirectorGuide from "@/pages/video-production/director-guide";
@@ -315,6 +316,11 @@ export default function AppRoutes() {
 
       <Route path="/market-intel">
         {() => <ProtectedRoute><MarketIntelPage /></ProtectedRoute>}
+      </Route>
+
+      {/* Presença Social Always-On */}
+      <Route path="/presence">
+        {() => <ProtectedRoute><PresencePage /></ProtectedRoute>}
       </Route>
 
       {/* Produção de Vídeo agente */}

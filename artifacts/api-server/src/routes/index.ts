@@ -56,6 +56,7 @@ import integrationWizardRouter from "../modules/integration-wizard/integration-w
 import fingerprintRouter from "../modules/fingerprint/fingerprint.routes.js";
 import dailyVideoRouter from "../modules/daily-video/daily-video.routes.js";
 import marketIntelRouter from "../modules/market-intel/market-intel.routes.js";
+import socialPresenceRouter from "../modules/social-presence/social-presence.routes.js";
 
 const router: IRouter = Router();
 
@@ -116,5 +117,6 @@ router.use("/integration-wizard", integrationWizardRouter);
 router.use("/fingerprints", fingerprintRouter);
 router.use("/daily-video", dailyVideoRouter);
 router.use("/market-intel", marketIntelRouter);
+router.use("/presence", socialPresenceRouter);
 
 export default router;

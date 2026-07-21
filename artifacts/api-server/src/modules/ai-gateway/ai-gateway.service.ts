@@ -82,7 +82,10 @@ export type AgentRole =
   // ── Vídeo Production ─────────────────────────────────────────────────────
   | "scene_director"
   // ── Suporte / Integrações ────────────────────────────────────────────────
-  | "integrations_specialist";
+  | "integrations_specialist"
+  // ── Presença Social Always-On ────────────────────────────────────────────
+  | "presence_planner"
+  | "bio_optimizer";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -187,6 +190,9 @@ const AGENT_PROVIDER_MAP: Record<
   product_validator:  { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   // ── Suporte / Integrações ──────────────────────────────────────────────────
   integrations_specialist: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Presença Social Always-On ─────────────────────────────────────────────
+  presence_planner: { provider: "openai", model: OPENAI_NATIVE_MODEL },
+  bio_optimizer:    { provider: "openai", model: OPENAI_NATIVE_MODEL },
 };
 
 export interface AIMessage {

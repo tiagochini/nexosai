@@ -45,3 +45,4 @@ export * from "./video-projects";
 export * from "./agent-clarifications";
 export * from "./fingerprints";
 export * from "./market-intel";
+export * from "./social-presence";
