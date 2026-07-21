@@ -1779,6 +1779,69 @@ export async function generateCampaignContent(
     }
   }
 
+  // ── B2 FIX (Bug #03): CONTRACT VIOLATION SWEEP ───────────────────────────────
+  // Pieces saved with _contractViolation: true were silently delivered to the user
+  // as "pending_approval" — they looked valid but violated the agent output contract.
+  // Now: detect them after generation, auto-regenerate (up to 2 attempts each, max 5).
+  // If all retries fail, the piece remains with the flag — clearly visible to the user
+  // as a quality warning, but never silently delivered as if it were clean.
+  if (agentsRun.length > 0) {
+    const allPiecesForViolation = await db
+      .select({ id: contentPiecesTable.id, type: contentPiecesTable.type, content: contentPiecesTable.content, status: contentPiecesTable.status })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.campaignId, campaignId));
+
+    const violatedPieces = allPiecesForViolation.filter((p) => {
+      if (p.status === "approved" || p.status === "rejected") return false; // don't touch user-decided pieces
+      const c = (p.content ?? {}) as Record<string, unknown>;
+      return !!c["_contractViolation"];
+    });
+
+    if (violatedPieces.length > 0) {
+      log.warn(
+        { campaignId, count: violatedPieces.length, types: violatedPieces.map(p => p.type) },
+        "[CONTRACT-REPAIR] %d pieces with _contractViolation detected — auto-regenerating",
+        violatedPieces.length,
+      );
+      emitCampaignEvent({
+        campaignId,
+        type: "execution_update",
+        message: `🔄 Contrato de qualidade: ${violatedPieces.length} peça${violatedPieces.length !== 1 ? "s" : ""} fora do padrão — corrigindo automaticamente...`,
+        data: { phase: "contract_repair", pieces: violatedPieces.map(p => p.type) },
+        timestamp: new Date().toISOString(),
+      });
+
+      const MAX_CONTRACT_REPAIRS = 5;
+      for (const piece of violatedPieces.slice(0, MAX_CONTRACT_REPAIRS)) {
+        let fixed = false;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            await regeneratePiece(campaignId, workspaceId, piece.id, log);
+            // Check if the violation is cleared
+            const [updated] = await db
+              .select({ content: contentPiecesTable.content })
+              .from(contentPiecesTable)
+              .where(eq(contentPiecesTable.id, piece.id))
+              .limit(1);
+            const newContent = (updated?.content ?? {}) as Record<string, unknown>;
+            if (!newContent["_contractViolation"]) {
+              fixed = true;
+              log.info({ campaignId, pieceId: piece.id, type: piece.type, attempt }, "[CONTRACT-REPAIR] Violation cleared on attempt %d", attempt);
+              break;
+            }
+            log.warn({ campaignId, pieceId: piece.id, attempt }, "[CONTRACT-REPAIR] Attempt %d — violation still present", attempt);
+          } catch (err) {
+            log.error({ err, campaignId, pieceId: piece.id, attempt }, "[CONTRACT-REPAIR] Attempt %d threw error", attempt);
+            if (attempt === 1) await new Promise(r => setTimeout(r, 1500));
+          }
+        }
+        if (!fixed) {
+          log.error({ campaignId, pieceId: piece.id, type: piece.type }, "[CONTRACT-REPAIR] Could not clear violation after 2 attempts — piece flagged for manual review");
+        }
+      }
+    }
+  }
+
   // ── TRUNCATION COMPLETENESS CHECK ──────────────────────────────────────────────
   // Detect pieces where the LLM output was truncated mid-JSON (repairTruncatedJson
   // auto-closed the braces, so the piece isn't "empty", but the arrays are too short

@@ -435,10 +435,26 @@ export async function processScheduledItems(): Promise<void> {
   log.info({ count: dueItems.length }, "Processing due sequence items");
 
   for (const { item, sequence } of dueItems) {
-    await db
+    // A2 FIX (Bug #05): Atomic claim — only update if still "scheduled".
+    // When BullMQ + setInterval both fire (Redis restart), both processes
+    // see the same rows in the SELECT above. The UPDATE with AND status='scheduled'
+    // acts as a compare-and-swap: only one process gets 1 affected row.
+    // The loser gets 0 rows back and skips the item, preventing double-sends.
+    const claimed = await db
       .update(launchSequenceItemsTable)
       .set({ status: "content_generating" })
-      .where(eq(launchSequenceItemsTable.id, item.id));
+      .where(
+        and(
+          eq(launchSequenceItemsTable.id, item.id),
+          eq(launchSequenceItemsTable.status, "scheduled"),
+        ),
+      )
+      .returning({ id: launchSequenceItemsTable.id });
+
+    if (claimed.length === 0) {
+      log.info({ itemId: item.id }, "A2: item already claimed by another process — skip (idempotency guard)");
+      continue;
+    }
 
     try {
       const cfg = (sequence.config ?? {}) as Record<string, unknown>;

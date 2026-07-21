@@ -597,4 +597,48 @@ router.patch("/:campaignId/content/:pieceId/patch", async (req, res): Promise<vo
   }
 });
 
+// POST /campaigns/:campaignId/content/:pieceId/publish-social
+// Step 1 (no body / confirmed:false): preview — returns which platforms would receive the post.
+// Step 2 (confirmed:true): actually publishes to connected social integrations.
+// This is the GATE that replaced the old fire-and-forget autoPostApprovedContent. (Fix: Bug #04)
+const publishSocialSchema = z.object({
+  confirmed: z.boolean().optional().default(false),
+});
+
+router.post("/:campaignId/content/:pieceId/publish-social", async (req, res): Promise<void> => {
+  const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
+  const workspaceId = req.auth.workspaceId;
+
+  const parsed = publishSocialSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const { getPublishPreview, autoPostApprovedContent } = await import("../social/social.autopost.service.js");
+
+    const preview = await getPublishPreview(workspaceId, campaignId, pieceId);
+
+    if (!parsed.data.confirmed) {
+      res.json({ preview, confirmed: false });
+      return;
+    }
+
+    if (preview.platforms.length === 0) {
+      res.status(422).json({ error: "Nenhuma integração social conectada para este tipo de conteúdo", code: "NO_CONNECTED_INTEGRATIONS" });
+      return;
+    }
+
+    await autoPostApprovedContent(workspaceId, campaignId, pieceId);
+    res.json({ message: "Conteúdo publicado nas redes sociais", platforms: preview.platforms });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
 export default router;

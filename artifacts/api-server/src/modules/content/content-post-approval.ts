@@ -9,7 +9,8 @@
  * prevents the others from running.
  */
 
-import { autoPostApprovedContent } from "../social/social.autopost.service.js";
+// autoPostApprovedContent removed from fire-and-forget hook — now called only
+// from the explicit POST /campaigns/:id/content/:pieceId/publish-social endpoint. (Fix: A1/Bug #04)
 import { autoGenerateCreativesFromBrief } from "./creative-auto-gen.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
@@ -36,9 +37,12 @@ export function runPostApprovalHooks(ctx: PostApprovalContext): void {
   processContentPieceApproval(workspaceId, campaignId, pieceId, pieceType, true)
     .catch(() => undefined);
 
-  // Hook 2 — Auto-post to connected social integrations
-  autoPostApprovedContent(workspaceId, campaignId, pieceId)
-    .catch(() => undefined);
+  // Hook 2 — Social auto-post REMOVED from fire-and-forget.
+  // Publishing to social networks is now an EXPLICIT two-step action:
+  //   Step 1 (approval): piece moves to "approved" — no post fires.
+  //   Step 2 (publish):  user clicks "Publicar nas Redes", reviews platforms,
+  //                      confirms → POST /campaigns/:id/content/:pieceId/publish-social
+  // This prevents accidental publishing during internal review. (Fix: Bug #04)
 
   // Hook 3 — Auto-generate creative concepts if this is a media brief
   if (pieceType === "media_brief") {

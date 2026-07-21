@@ -228,71 +228,111 @@ export async function runSocialMediaAgent(
     (launchPlan as any)?.totalDays ??
     Number(intakeData["campaign.durationDays"] ?? 21);
 
-  const result = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "social_media",
-    profileContext: buildPsychologicalProfileBlock(intakeData),
-    systemPrompt: COGNITIVE_IDENTITY_SOCIAL_MEDIA + SOCIAL_MEDIA_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Crie o calendário COMPLETO de social media multi-plataforma para a campanha.
+  // B1 FIX (Bug #02): Generate calendar in 3 chunks of 7 days each.
+  // A single call for 21+ days routinely hits the token ceiling and returns calendar:[].
+  // Each chunk is validated individually — an empty chunk triggers an inline retry.
+  // Metadata (platformStrategy, contentPillars, etc.) is derived from chunk 1.
 
-${avatarContext}
+  const phasesSummary = JSON.stringify(
+    ((launchPlan as any)?.phases ?? []).map((p: any) => ({
+      phase: p.phase,
+      name: p.name,
+      dayRange: p.dayRange,
+      objective: p.objective,
+      primaryTactic: p.primaryTactic,
+    })),
+    null,
+    2,
+  );
+
+  const sharedContext = `${avatarContext}
 
 **Produto:** ${String(intakeData["product.name"] ?? "")}
 **Duração total:** ${totalDays} dias
 **Estilo de conteúdo:** ${Array.isArray(intakeData["content.style"]) ? (intakeData["content.style"] as string[]).join(", ") : String(intakeData["content.style"] ?? "")}
 **Tom:** ${String(intakeData["content.tone"] ?? "")}
-
 **Fases do lançamento:**
 \`\`\`json
-${JSON.stringify(
-  ((launchPlan as any)?.phases ?? []).map((p: any) => ({
-    phase: p.phase,
-    name: p.name,
-    dayRange: p.dayRange,
-    objective: p.objective,
-    primaryTactic: p.primaryTactic,
-  })),
-  null,
-  2,
-)}
+${phasesSummary}
 \`\`\`
+**Narrativa central:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}
+**Gancho emocional:** ${strategy.campaignArchitecture?.emotionalHook ?? ""}`;
 
-**Narrativa central da campanha:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}
-**Gancho emocional:** ${strategy.campaignArchitecture?.emotionalHook ?? ""}
+  const CALENDAR_CHUNK_REQ = `- Cada entrada DEVE ter platforms: [instagram, facebook, tiktok]
+- facebookCaption obrigatório em posts de texto
+- tiktokHook obrigatório em posts de vídeo
+- Captions COMPLETAS (prontas para publicar)
+- Retorne APENAS JSON com o campo "calendar" (array de posts para os dias indicados)`;
 
-**REQUISITOS OBRIGATÓRIOS:**
-- Cada entrada do calendário DEVE incluir múltiplas plataformas — MÍNIMO Instagram + Facebook + TikTok em cada dia
-- Nos dias críticos (abertura do carrinho, últimas 24h, fechamento) inclua 3-4 posts diferentes para plataformas diferentes
-- Forneça \`facebookCaption\` com texto adaptado (mais longo, narrativo) para Facebook sempre que o post for texto
-- Forneça \`tiktokHook\` (os primeiros 3 segundos) para TODOS os posts em vídeo
-- Stories do Instagram E do Facebook todos os dias
-- TikTok nativo todos os dias da fase de captura e aquecimento
-- Live no dia da abertura do carrinho (Instagram + Facebook simultâneo)
-- A estratégia de plataformas deve cobrir no mínimo: Instagram, Facebook, TikTok, WhatsApp (via sequências)
-- Captions COMPLETAS e prontas para publicar — não esboços
+  // Helper: run one chunk, retry once if calendar comes back empty
+  async function runCalendarChunk(
+    dayStart: number,
+    dayEnd: number,
+    chunkIdx: number,
+  ): Promise<SocialPost[]> {
+    const chunkPrompt = `Gere o calendário de social media para os **dias ${dayStart} a ${dayEnd}** do lançamento.
 
-**PRIORIDADE ABSOLUTA:** Comece o JSON pelo array "calendar" imediatamente — gere TODOS os posts do calendário primeiro antes de qualquer outro campo. O array "calendar" é o entregável principal; campos como "contentPillars", "platformStrategy", "hashtagStrategy" são secundários e podem ser curtos se o budget de tokens apertar. Gere no mínimo 20 entradas de calendário com captions completas.
-Retorne APENAS o JSON do calendário multi-plataforma completo.`,
-      },
-    ],
+${sharedContext}
+
+**CHUNK ${chunkIdx}/3 — APENAS dias ${dayStart}-${dayEnd}**
+${CALENDAR_CHUNK_REQ}
+
+Retorne APENAS JSON no formato: { "calendar": [ { "day": N, "phase": "...", "phaseName": "...", "platforms": [...], "postType": "...", "caption": "...", "facebookCaption": "...", "tiktokHook": "...", "hashtags": [...], "visualDirection": "...", "postingTime": "...", "engagementTactic": "...", "objective": "...", "kpi": "..." } ] }`;
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const r = await runAgent({
+        campaignId,
+        workspaceId,
+        agentRole: "social_media",
+        profileContext: buildPsychologicalProfileBlock(intakeData),
+        systemPrompt: COGNITIVE_IDENTITY_SOCIAL_MEDIA + SOCIAL_MEDIA_PROMPT,
+        messages: [{ role: "user", content: chunkPrompt }],
+        log,
+        requiresApproval: false,
+        thinkingMessages: [
+          `Gerando dias ${dayStart}-${dayEnd} do calendário (${chunkIdx}/3)...`,
+          "Criando captions e direções visuais...",
+        ],
+      });
+
+      interface ChunkResult { calendar?: SocialPost[] }
+      const parsed = parseAgentJSON<ChunkResult>(r.content, { calendar: [] });
+      if (parsed.calendar && parsed.calendar.length > 0) {
+        return parsed.calendar;
+      }
+      log.warn({ campaignId, dayStart, dayEnd, attempt }, "B1: calendar chunk %d returned empty — %s", chunkIdx, attempt === 1 ? "retrying" : "giving up");
+    }
+    return [];
+  }
+
+  // Chunk 1: days 1-7 + metadata
+  const chunk1Days = Math.min(7, totalDays);
+  const metaPrompt = `Gere o calendário de social media para os **dias 1 a ${chunk1Days}** do lançamento E a estratégia geral de plataformas.
+
+${sharedContext}
+
+**CHUNK 1/3 — dias 1-${chunk1Days} + metadados**
+${CALENDAR_CHUNK_REQ}
+
+Retorne APENAS JSON no formato completo do SocialMediaOutput (com calendar, contentPillars, platformStrategy, hashtagStrategy, highlightPosts, crossPlatformSynergy, socialMediaNotes).`;
+
+  const metaResult = await runAgent({
+    campaignId,
+    workspaceId,
+    agentRole: "social_media",
+    profileContext: buildPsychologicalProfileBlock(intakeData),
+    systemPrompt: COGNITIVE_IDENTITY_SOCIAL_MEDIA + SOCIAL_MEDIA_PROMPT,
+    messages: [{ role: "user", content: metaPrompt }],
     log,
     requiresApproval: false,
     thinkingMessages: [
-      "Mapeando as fases do lançamento no calendário...",
-      "Definindo estratégia por plataforma...",
-      "Criando conteúdo de captura e aquecimento...",
-      "Desenvolvendo posts de autoridade e desejo...",
-      "Redigindo conteúdo de abertura e fechamento de carrinho...",
-      "Planejando posts de urgência e escassez...",
-      "Montando estratégia de hashtags por nicho...",
+      "Definindo estratégia multi-plataforma...",
+      `Gerando dias 1-${chunk1Days} do calendário...`,
+      "Criando estratégia de hashtags e pilares de conteúdo...",
     ],
   });
 
-  return parseAgentJSON<SocialMediaOutput>(result.content, {
+  const metaOutput = parseAgentJSON<SocialMediaOutput>(metaResult.content, {
     campaignTitle: String(intakeData["product.name"] ?? ""),
     totalDays,
     contentPillars: strategy.campaignArchitecture?.contentPillars ?? [],
@@ -300,6 +340,31 @@ Retorne APENAS o JSON do calendário multi-plataforma completo.`,
     calendar: [],
     highlightPosts: [],
     hashtagStrategy: { branded: [], niche: [], broad: [], avoid: [] },
-    socialMediaNotes: result.content,
+    socialMediaNotes: "",
   });
+
+  // If chunk 1 calendar is empty, run a dedicated retry
+  if (metaOutput.calendar.length === 0) {
+    log.warn({ campaignId }, "B1: chunk 1 calendar empty after meta call — running dedicated retry");
+    const retryChunk1 = await runCalendarChunk(1, chunk1Days, 1);
+    metaOutput.calendar = retryChunk1;
+  }
+
+  // Chunks 2 and 3 — only if we have more days
+  if (totalDays > 7) {
+    const day8End = Math.min(14, totalDays);
+    const chunk2 = await runCalendarChunk(8, day8End, 2);
+    metaOutput.calendar = [...metaOutput.calendar, ...chunk2];
+  }
+
+  if (totalDays > 14) {
+    const day15End = totalDays;
+    const chunk3 = await runCalendarChunk(15, day15End, 3);
+    metaOutput.calendar = [...metaOutput.calendar, ...chunk3];
+  }
+
+  log.info({ campaignId, calendarCount: metaOutput.calendar.length, totalDays }, "B1: calendar generated via %d chunks", Math.ceil(totalDays / 7));
+
+  return metaOutput;
+
 }

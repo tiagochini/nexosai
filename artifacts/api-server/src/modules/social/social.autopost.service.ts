@@ -161,6 +161,57 @@ async function extractMediaUrls(
 }
 
 /**
+ * Preview which platforms would receive a post for a given content piece.
+ * Used by the publish-social gate (Bug #04 fix) to show the user what they are
+ * about to publish to BEFORE they confirm. Never publishes anything.
+ */
+export async function getPublishPreview(
+  workspaceId: string,
+  campaignId: string,
+  pieceId: string,
+): Promise<{ platforms: { provider: string; platform: string; label: string }[]; pieceType: string; caption: string }> {
+  const [piece] = await db
+    .select()
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.id, pieceId))
+    .limit(1);
+
+  if (!piece) return { platforms: [], pieceType: "", caption: "" };
+
+  const contentType = piece.type ?? "";
+  const providers = CONTENT_TYPE_PROVIDERS[contentType] ?? [];
+  if (providers.length === 0) return { platforms: [], pieceType: contentType, caption: "" };
+
+  const uniqueProviders = [...new Set(providers)];
+  const integrations = await db
+    .select({ provider: workspaceIntegrationsTable.provider })
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        inArray(workspaceIntegrationsTable.provider, uniqueProviders as any),
+        eq(workspaceIntegrationsTable.status, "connected"),
+      ),
+    );
+
+  const PROVIDER_LABELS: Record<string, string> = {
+    instagram: "Instagram",
+    meta_ads: "Facebook",
+    tiktok_ads: "TikTok",
+  };
+
+  const platforms = integrations.map((i) => ({
+    provider: i.provider as string,
+    platform: (PROVIDER_TO_PLATFORM[i.provider as string] ?? i.provider) as string,
+    label: PROVIDER_LABELS[i.provider as string] ?? i.provider as string,
+  }));
+
+  const caption = extractCaption(piece.content);
+
+  return { platforms, pieceType: contentType, caption: caption.slice(0, 280) };
+}
+
+/**
  * Triggered fire-and-forget after content piece approval.
  * Publishes to all connected social integrations that match the content type.
  * Never throws — all errors are logged internally.

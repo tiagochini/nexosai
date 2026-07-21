@@ -14,8 +14,16 @@ import {
   Zap, Target, Activity, PlayCircle, Link2, Shield,
   RefreshCw, Rocket, AlertTriangle, Copy, Check,
   Video, UserCheck, UserX, Settings, ChevronDown, ChevronUp,
-  Flame, Clapperboard, Clock, Bot, ImagePlus,
+  Flame, Clapperboard, Clock, Bot, ImagePlus, Share2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { SocialPostPreview, estimatePostMetrics } from "@/components/social-post-preview";
 import type { PreviewPiece } from "@/components/social-post-preview";
 import { ContentCinemaOverlay } from "@/components/campaign-stage-experience";
@@ -663,8 +671,52 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
   const [copied, setCopied] = useState(false);
   const [generatingVisual, setGeneratingVisual] = useState(false);
   const [visualCreativeId, setVisualCreativeId] = useState<string | null>(null);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [publishLoading, setPublishLoading] = useState(false);
+  const [publishPreview, setPublishPreview] = useState<{
+    platforms: { provider: string; platform: string; label: string }[];
+    pieceType: string;
+    caption: string;
+  } | null>(null);
+  const [publishConfirming, setPublishConfirming] = useState(false);
 
   const needsVisual = VISUAL_PLATFORMS.includes(piece.platform);
+  const isSocialPlatform = (["instagram", "facebook", "tiktok"] as Platform[]).includes(piece.platform);
+
+  async function handleOpenPublishModal() {
+    if (publishLoading) return;
+    const rootPieceId = piece.id.includes("::") ? piece.id.split("::")[0] : piece.id;
+    setPublishLoading(true);
+    try {
+      const preview = await customFetch<{
+        preview: { platforms: { provider: string; platform: string; label: string }[]; pieceType: string; caption: string };
+      }>(`/api/campaigns/${campaignId}/content/${rootPieceId}/publish-social`, { method: "POST", body: JSON.stringify({ confirmed: false }) });
+      setPublishPreview(preview.preview);
+      setPublishModalOpen(true);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao verificar integrações");
+    } finally {
+      setPublishLoading(false);
+    }
+  }
+
+  async function handleConfirmPublish() {
+    if (publishConfirming || !publishPreview) return;
+    const rootPieceId = piece.id.includes("::") ? piece.id.split("::")[0] : piece.id;
+    setPublishConfirming(true);
+    try {
+      await customFetch<{ message: string; platforms: string[] }>(
+        `/api/campaigns/${campaignId}/content/${rootPieceId}/publish-social`,
+        { method: "POST", body: JSON.stringify({ confirmed: true }) },
+      );
+      toast.success(`Publicado em ${publishPreview.platforms.map(p => p.label).join(", ")}!`);
+      setPublishModalOpen(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao publicar");
+    } finally {
+      setPublishConfirming(false);
+    }
+  }
 
   async function handleGenerateVisual() {
     if (generatingVisual) return;
@@ -879,6 +931,20 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                 <CheckCircle2 className="h-3 w-3" />Visual criado
               </a>
             )}
+            {/* A1 FIX (Bug #04): Publicar nas Redes — gate explícito, não automático */}
+            {isSocialPlatform && piece.status === "approved" && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleOpenPublishModal}
+                disabled={publishLoading}
+                className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10"
+                title="Publicar este post nas redes sociais conectadas"
+              >
+                {publishLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
+                {publishLoading ? "Verificando..." : "Publicar"}
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -926,6 +992,67 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
           </div>
         )}
       </div>
+
+      {/* A1 FIX — Modal de confirmação de publicação nas redes sociais */}
+      <Dialog open={publishModalOpen} onOpenChange={setPublishModalOpen}>
+        <DialogContent className="max-w-md rounded-none border border-border/60 bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-mono uppercase tracking-widest text-sm flex items-center gap-2">
+              <Share2 className="h-4 w-4 text-cyan-400" />Publicar nas Redes
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              Confirme onde este conteúdo será publicado imediatamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          {publishPreview && (
+            <div className="space-y-3 py-1">
+              {publishPreview.platforms.length === 0 ? (
+                <div className="text-sm text-muted-foreground border border-border/40 p-3 rounded-none bg-muted/20">
+                  Nenhuma integração social conectada para este tipo de conteúdo.{" "}
+                  <a href="/integracoes" className="text-primary underline">Conectar em Integrações →</a>
+                </div>
+              ) : (
+                <>
+                  <div className="text-xs text-muted-foreground uppercase tracking-widest font-mono">Plataformas</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {publishPreview.platforms.map((p) => (
+                      <Badge key={p.provider} variant="outline" className="rounded-none font-mono text-[10px] px-2 py-0.5 border-cyan-400/40 text-cyan-300 bg-cyan-400/10">
+                        {p.label}
+                      </Badge>
+                    ))}
+                  </div>
+                  {publishPreview.caption && (
+                    <>
+                      <div className="text-xs text-muted-foreground uppercase tracking-widest font-mono mt-2">Prévia da Caption</div>
+                      <div className="text-xs text-foreground/80 bg-muted/30 border border-border/30 p-2 rounded-none line-clamp-4">
+                        {publishPreview.caption}
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setPublishModalOpen(false)} className="rounded-none font-mono uppercase text-[11px] tracking-widest">
+              Cancelar
+            </Button>
+            {publishPreview && publishPreview.platforms.length > 0 && (
+              <Button
+                size="sm"
+                onClick={handleConfirmPublish}
+                disabled={publishConfirming}
+                className="rounded-none font-mono uppercase text-[11px] tracking-widest bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 hover:bg-cyan-500/30 gap-1.5"
+              >
+                {publishConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
+                {publishConfirming ? "Publicando..." : "Confirmar e Publicar"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
