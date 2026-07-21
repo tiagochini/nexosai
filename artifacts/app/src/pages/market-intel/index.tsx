@@ -12,34 +12,65 @@ const API = "/api/market-intel";
 
 interface Competitor {
   name: string;
-  positioning: string;
-  strengths: string[];
-  weaknesses: string[];
-  estimatedPricing: string;
-  contentStrategy: string;
-  biggestVulnerability: string;
+  estimatedRevenue?: string;
+  marketShare?: string;
+  positioningAngle?: string;
+  strengthsPerceived?: string[];
+  weaknessesExposed?: string[];
+  pricingStrategy?: string;
+  trafficSources?: string[];
+  contentStrategy?: string;
+  biggestVulnerability?: string;
+  reverseEngineeredStrategy?: string;
 }
 interface PositioningGap {
   gap: string;
-  whyOpen: string;
-  howToOwn: string;
-  difficulty: string;
+  opportunity?: string;
+  entryBarrier?: string;
+  estimatedTAM?: string;
 }
 interface MarketIntelOutput {
-  marketSize: string;
-  marketMaturity: string;
-  saturationLevel: string;
-  competitors: Competitor[];
-  positioningGaps: PositioningGap[];
-  audienceUnderserved: string;
-  keywordBattlefield: string;
-  contentArbitrage: string;
-  pricingArbitrage: string;
-  platformArbitrage: string;
-  entryRecommendation: string;
-  firstMoverActions: string[];
+  market?: string;
+  marketSize?: string;
+  marketMaturity?: string;
+  totalAdressableAudience?: string;
+  competitors?: Competitor[];
+  positioningGaps?: PositioningGap[];
+  winningStrategyVsField?: string;
+  untappedSegments?: string[];
+  keywordBattlefield?: string;
+  contentArbitrage?: string;
+  pricingArbitrage?: string;
+  platformArbitrage?: string;
+  entryRecommendation?: string;
+  firstMoverActions?: string[];
   clarifyingQuestions?: string[];
 }
+interface CampaignLite { id: string; name: string; status: string }
+
+const MATURITY_LABEL: Record<string, string> = {
+  emerging: "Emergente",
+  growing: "Em crescimento",
+  mature: "Maduro",
+  saturated: "Saturado",
+  declining: "Em declínio",
+};
+const SHARE_LABEL: Record<string, string> = {
+  dominant: "Dominante",
+  major: "Grande player",
+  significant: "Relevante",
+  minor: "Pequeno",
+  niche: "Nicho",
+};
+
+const RUNNING_PHASES = [
+  "Mapeando o campo de batalha do mercado",
+  "Fazendo engenharia reversa dos concorrentes",
+  "Identificando gaps de posicionamento",
+  "Encontrando arbitragens de conteúdo, preço e plataforma",
+  "Definindo a estratégia de entrada mais defensável",
+];
+const PHASE_SECONDS = 25;
 interface Report {
   id: string;
   campaignId: string | null;
@@ -74,7 +105,17 @@ export default function MarketIntelPage() {
   const [competitors, setCompetitors] = useState("");
   const [positioning, setPositioning] = useState("");
   const [priceRange, setPriceRange] = useState("");
+  const [platforms, setPlatforms] = useState("");
   const [audience, setAudience] = useState("");
+
+  // campaign linking
+  const [campaigns, setCampaigns] = useState<CampaignLite[] | null>(null);
+  const [showLink, setShowLink] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  // phased loading
+  const [phaseIdx, setPhaseIdx] = useState(0);
 
   // chat
   const [showChat, setShowChat] = useState(false);
@@ -115,6 +156,52 @@ export default function MarketIntelPage() {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMsgs]);
 
+  // Track phases while the selected report is running
+  useEffect(() => {
+    if (selected?.status !== "running") {
+      setPhaseIdx(0);
+      return;
+    }
+    const start = Date.now();
+    const t = setInterval(() => {
+      const elapsed = (Date.now() - start) / 1000;
+      setPhaseIdx(Math.min(Math.floor(elapsed / PHASE_SECONDS), RUNNING_PHASES.length - 1));
+    }, 2000);
+    return () => clearInterval(t);
+  }, [selected?.id, selected?.status]);
+
+  async function loadCampaigns(): Promise<CampaignLite[]> {
+    if (campaigns) return campaigns;
+    try {
+      const data = await customFetch<{ campaigns: CampaignLite[] }>("/api/campaigns");
+      setCampaigns(data.campaigns);
+      return data.campaigns;
+    } catch {
+      setCampaigns([]);
+      return [];
+    }
+  }
+
+  async function linkToCampaign(campaignId: string) {
+    if (!selected || linking) return;
+    setLinking(true);
+    setLinkError(null);
+    try {
+      const data = await customFetch<{ report: Report }>(`${API}/${selected.id}/link-campaign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId }),
+      });
+      setSelected(data.report);
+      setShowLink(false);
+      await loadReports();
+    } catch {
+      setLinkError("Não foi possível vincular. Tente novamente.");
+    } finally {
+      setLinking(false);
+    }
+  }
+
   async function createAnalysis() {
     if (!productName.trim() || market.trim().length < 3) {
       setFormError("Informe pelo menos o nome do produto e a descrição do mercado.");
@@ -132,6 +219,9 @@ export default function MarketIntelPage() {
           : undefined,
         currentPositioning: positioning.trim() || undefined,
         priceRange: priceRange.trim() || undefined,
+        platforms: platforms.trim()
+          ? platforms.split(",").map((p) => p.trim()).filter(Boolean).slice(0, 10)
+          : undefined,
         targetAudience: audience.trim() || undefined,
       };
       const data = await customFetch<{ report: Report }>(`${API}/analyze`, {
@@ -141,7 +231,7 @@ export default function MarketIntelPage() {
       });
       setShowNew(false);
       setProductName(""); setMarket(""); setCategory(""); setCompetitors("");
-      setPositioning(""); setPriceRange(""); setAudience("");
+      setPositioning(""); setPriceRange(""); setPlatforms(""); setAudience("");
       await loadReports();
       setSelected(data.report);
     } catch {
@@ -162,6 +252,8 @@ export default function MarketIntelPage() {
   async function openReport(r: Report) {
     setShowChat(false);
     setChatMsgs([]);
+    setShowLink(false);
+    setLinkError(null);
     try {
       const data = await customFetch<{ report: Report }>(`${API}/${r.id}`);
       setSelected(data.report);
@@ -213,6 +305,14 @@ export default function MarketIntelPage() {
             {selected.source === "intake" && (
               <Badge variant="outline" className="text-primary border-primary/30">Gerado no Briefing</Badge>
             )}
+            {selected.campaignId && (
+              <Badge variant="outline" className="text-green-400 border-green-400/30">Vinculado a campanha</Badge>
+            )}
+            {selected.status === "ready" && !selected.campaignId && (
+              <Button variant="outline" size="sm" onClick={() => { setShowLink((v) => !v); loadCampaigns(); }}>
+                <Target className="h-4 w-4 mr-1.5" /> Usar nesta campanha
+              </Button>
+            )}
             {selected.status === "ready" && (
               <Button size="sm" onClick={() => setShowChat((v) => !v)}>
                 <MessageSquare className="h-4 w-4 mr-1.5" /> Deepdive
@@ -221,11 +321,55 @@ export default function MarketIntelPage() {
           </div>
         </div>
 
+        {showLink && selected.status === "ready" && !selected.campaignId && (
+          <div className="border border-primary/30 bg-primary/[0.03] rounded-sm p-4 space-y-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Vincular esta análise a uma campanha — o Time de Estratégia passa a usá-la no briefing e no plano
+            </p>
+            {campaigns === null ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Carregando campanhas…
+              </div>
+            ) : campaigns.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nenhuma campanha ainda. Crie uma campanha primeiro.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {campaigns.map((c) => (
+                  <Button key={c.id} variant="outline" size="sm" disabled={linking}
+                    onClick={() => linkToCampaign(c.id)}>
+                    {linking ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
+                    {c.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {linkError && <p className="text-xs text-destructive">{linkError}</p>}
+          </div>
+        )}
+
         {selected.status === "running" && (
-          <div className="border border-amber-400/30 bg-amber-400/5 rounded-sm p-8 text-center space-y-3">
-            <Loader2 className="h-8 w-8 text-amber-400 animate-spin mx-auto" />
-            <p className="font-mono text-sm text-amber-400 uppercase tracking-wider">Time de Inteligência analisando o mercado…</p>
-            <p className="text-xs text-muted-foreground">Mapeando concorrentes, gaps de posicionamento e arbitragens. Isso leva 1–3 minutos.</p>
+          <div className="border border-amber-400/30 bg-amber-400/5 rounded-sm p-8 space-y-5">
+            <div className="text-center space-y-2">
+              <Loader2 className="h-8 w-8 text-amber-400 animate-spin mx-auto" />
+              <p className="font-mono text-sm text-amber-400 uppercase tracking-wider">Time de Inteligência em campo</p>
+              <p className="text-xs text-muted-foreground">A análise completa leva 1–3 minutos.</p>
+            </div>
+            <div className="max-w-md mx-auto space-y-2.5">
+              {RUNNING_PHASES.map((phase, i) => (
+                <div key={phase} className={`flex items-center gap-2.5 text-sm ${
+                  i < phaseIdx ? "text-green-400" : i === phaseIdx ? "text-foreground" : "text-muted-foreground/50"
+                }`}>
+                  {i < phaseIdx ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-green-400" />
+                  ) : i === phaseIdx ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-amber-400" />
+                  ) : (
+                    <div className="h-4 w-4 shrink-0 rounded-full border border-border/60" />
+                  )}
+                  <span>{phase}{i === phaseIdx ? "…" : ""}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -245,9 +389,9 @@ export default function MarketIntelPage() {
               <div className="grid sm:grid-cols-3 gap-4">
                 {[
                   { label: "Tamanho do Mercado", value: out.marketSize, icon: TrendingUp },
-                  { label: "Maturidade", value: out.marketMaturity, icon: Target },
-                  { label: "Saturação", value: out.saturationLevel, icon: Shield },
-                ].map(({ label, value, icon: Icon }) => (
+                  { label: "Maturidade", value: out.marketMaturity ? (MATURITY_LABEL[out.marketMaturity] ?? out.marketMaturity) : undefined, icon: Target },
+                  { label: "Audiência Endereçável", value: out.totalAdressableAudience, icon: Shield },
+                ].filter((s) => s.value).map(({ label, value, icon: Icon }) => (
                   <div key={label} className="border border-border/50 rounded-sm p-4 bg-card/50">
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className="h-4 w-4 text-primary" />
@@ -285,13 +429,52 @@ export default function MarketIntelPage() {
                     <div key={i} className="border border-border/50 rounded-sm p-4 bg-card/50 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <span className="font-semibold text-sm">{c.name}</span>
-                        <Badge variant="outline" className="text-[10px] shrink-0">{c.estimatedPricing}</Badge>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          {c.marketShare && (
+                            <Badge variant="outline" className="text-[10px]">{SHARE_LABEL[c.marketShare] ?? c.marketShare}</Badge>
+                          )}
+                          {c.estimatedRevenue && (
+                            <span className="text-[10px] font-mono text-muted-foreground">{c.estimatedRevenue}</span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">{c.positioning}</p>
-                      <div className="border-l-2 border-destructive/60 pl-3">
-                        <p className="text-[11px] font-mono uppercase tracking-wider text-destructive mb-0.5">Vulnerabilidade explorável</p>
-                        <p className="text-xs">{c.biggestVulnerability}</p>
-                      </div>
+                      {c.positioningAngle && <p className="text-xs text-muted-foreground">{c.positioningAngle}</p>}
+                      {c.pricingStrategy && (
+                        <p className="text-xs text-muted-foreground"><span className="text-foreground/70">Preço:</span> {c.pricingStrategy}</p>
+                      )}
+                      {(c.strengthsPerceived?.length || c.weaknessesExposed?.length) ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          {(c.strengthsPerceived?.length ?? 0) > 0 && (
+                            <div>
+                              <p className="text-[11px] font-mono uppercase tracking-wider text-green-400 mb-1">Fortes</p>
+                              <ul className="space-y-0.5">
+                                {c.strengthsPerceived!.slice(0, 3).map((s, j) => (
+                                  <li key={j} className="text-xs text-muted-foreground">• {s}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {(c.weaknessesExposed?.length ?? 0) > 0 && (
+                            <div>
+                              <p className="text-[11px] font-mono uppercase tracking-wider text-amber-400 mb-1">Fracos</p>
+                              <ul className="space-y-0.5">
+                                {c.weaknessesExposed!.slice(0, 3).map((w, j) => (
+                                  <li key={j} className="text-xs text-muted-foreground">• {w}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                      {c.reverseEngineeredStrategy && (
+                        <p className="text-xs text-muted-foreground"><span className="text-foreground/70">Estratégia real:</span> {c.reverseEngineeredStrategy}</p>
+                      )}
+                      {c.biggestVulnerability && (
+                        <div className="border-l-2 border-destructive/60 pl-3">
+                          <p className="text-[11px] font-mono uppercase tracking-wider text-destructive mb-0.5">Vulnerabilidade explorável</p>
+                          <p className="text-xs">{c.biggestVulnerability}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -306,18 +489,32 @@ export default function MarketIntelPage() {
                   <div key={i} className="border border-primary/20 rounded-sm p-4 bg-primary/[0.03] space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-medium">{g.gap}</p>
-                      <Badge variant="outline" className="text-[10px] shrink-0">{g.difficulty}</Badge>
+                      {g.estimatedTAM && <Badge variant="outline" className="text-[10px] shrink-0">{g.estimatedTAM}</Badge>}
                     </div>
-                    <p className="text-xs text-muted-foreground"><span className="text-foreground/70">Por que está aberto:</span> {g.whyOpen}</p>
-                    <p className="text-xs text-muted-foreground"><span className="text-primary">Como dominar:</span> {g.howToOwn}</p>
+                    {g.opportunity && (
+                      <p className="text-xs text-muted-foreground"><span className="text-primary">Por que é vencedor:</span> {g.opportunity}</p>
+                    )}
+                    {g.entryBarrier && (
+                      <p className="text-xs text-muted-foreground"><span className="text-foreground/70">Barreira de entrada:</span> {g.entryBarrier}</p>
+                    )}
                   </div>
                 ))}
               </div>
 
+              {/* Winning strategy */}
+              {out.winningStrategyVsField && (
+                <div className="border border-border/50 rounded-sm p-5 bg-card/50 space-y-2">
+                  <h2 className="font-mono text-sm uppercase tracking-wider flex items-center gap-2">
+                    <Sword className="h-4 w-4 text-primary" /> Como vencer este campo
+                  </h2>
+                  <p className="text-sm text-muted-foreground">{out.winningStrategyVsField}</p>
+                </div>
+              )}
+
               {/* Arbitrage */}
               <div className="grid md:grid-cols-2 gap-4">
                 {[
-                  { label: "Audiência mal atendida", value: out.audienceUnderserved, icon: Target },
+                  { label: "Segmentos não atendidos", value: out.untappedSegments?.length ? out.untappedSegments.join(" • ") : undefined, icon: Target },
                   { label: "Campo de batalha de palavras-chave", value: out.keywordBattlefield, icon: Sword },
                   { label: "Arbitragem de conteúdo", value: out.contentArbitrage, icon: Sparkles },
                   { label: "Arbitragem de preço", value: out.pricingArbitrage, icon: DollarSign },
@@ -478,6 +675,11 @@ export default function MarketIntelPage() {
               <input value={audience} onChange={(e) => setAudience(e.target.value)} placeholder="Quem compra de você"
                 className="w-full bg-background border border-border/50 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
             </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Plataformas onde você atua (vírgula)</label>
+            <input value={platforms} onChange={(e) => setPlatforms(e.target.value)} placeholder="Ex: Instagram, YouTube, TikTok…"
+              className="w-full bg-background border border-border/50 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
           </div>
           {formError && <p className="text-xs text-destructive">{formError}</p>}
           <Button onClick={createAnalysis} disabled={creating}>
