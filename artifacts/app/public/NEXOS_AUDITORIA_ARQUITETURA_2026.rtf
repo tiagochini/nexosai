@@ -1,0 +1,179 @@
+{\rtf1\ansi\deff0
+  {\fonttbl{\f0\fswiss\fcharset0 Arial;}{\f1\fmodern\fcharset0 Courier New;}}
+  {\colortbl;\red0\green0\blue0;\red220\green38\blue38;\red234\green88\blue12;\red161\green98\blue7;\red21\green128\blue61;\red37\green99\blue235;}
+  \paperw12240\paperh15840\margl1440\margr1440\margt1440\margb1440
+  \widowctrl\hyphauto
+  \pard\sb200\sa100\qc\b\fs44 RELAT\'d3RIO DE AUDITORIA DE ARQUITETURA\par\b0\fs24\pard
+\pard\qc\sb0\sa100\fs22 NexOS AI \'2014 21 Jul 2026 | Auditor: Agente de Arquitetura | Modo: Plan Only\par\pard
+\pard\sb100\sa100\brdrb\brdrs\brdrw10\brsp20 \par
+\pard\sb400\sa200\b\fs36 PARTE 1 \'2014 FLUXO COMPLETO (Intake at\'e9 Entrega)\b0\fs24\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #01  Registro / Autentica\'e7\'e3o\par
+\pard\li400\sa80\fs20\cf1 JWT access 15m + refresh 30d + bcrypt. Invite code gate ativo \'2014 bloqueia registro aberto se PLATFORM_OPEN \'2260 "true".\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #02  Onboarding Guiado\par
+\pard\li400\sa80\fs20\cf1 8 UISteps: welcome \'2192 path_select \'2192 conversation \'2192 plan_preview \'2192 clone_wow \'2192 diagnosis_approval \'2192 integration_setup. integration_setup existe mas sem valida\'e7\'e3o de credencial antes de salvar (ver Bug #6).\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #03  Cria\'e7\'e3o de Campanha\par
+\pard\li400\sa80\fs20\cf1 9 tipos de campanha suportados \'2014 POST /campaigns com tipo, track e modelo.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #04  Intake (Briefing)\par
+\pard\li400\sa80\fs20\cf1 Conversacional AI + perguntas estruturadas + readiness score. % completude sincronizada entre lista e detalhe da campanha.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #05  Gate Estrat\'e9gia\par
+\pard\li400\sa80\fs20\cf1 Clique consciente \'2192 POST /execute \{phase:"strategy"\}. Gate humano expl\'edcito.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #06  Fase Analisando\par
+\pard\li400\sa80\fs20\cf1 command.agent \'2192 strategy + profile + offer + execution_governor. Checkpoints criam awaiting_approval antes de avan\'e7ar.\par
+\pard\li200\sa80\fs22 {\b\cf2 [BLOQUEADO]} #07  Gate Valida\'e7\'e3o Mercado/Oferta/Marca\par
+\pard\li400\sa80\fs20\cf1 N\'c3O EXISTE. Nenhum agente de pr\'e9-valida\'e7\'e3o. Campanha vai direto do intake para execu\'e7\'e3o sem verificar viabilidade de mercado, oferta ou marca.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #08  Strategy Ready\par
+\pard\li400\sa80\fs20\cf1 Estrat\'e9gia gravada em brainData. Conflitos de premissa detectados por conflict-detector.service.ts.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #09  Gate Conte\'fado\par
+\pard\li400\sa80\fs20\cf1 Clique consciente \'2192 POST /execute \{phase:"content"\}. Gate humano expl\'edcito.\par
+\pard\li200\sa80\fs22 {\b\cf3 [RISCO]} #10  Gera\'e7\'e3o de Conte\'fado (8 pe\'e7as)\par
+\pard\li400\sa80\fs20\cf1 agentRole corrigido (Jul 2026). content_calendar ainda produz calendar:[] vazio por truncamento de LLM. Contract violations n\'e3o auto-reprocessam.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #11  Aprova\'e7\'e3o de Conte\'fado\par
+\pard\li400\sa80\fs20\cf1 Review por pe\'e7a \'2192 POST /content/:id/approve. Gate humano expl\'edcito.\par
+\pard\li200\sa80\fs22 {\b\cf2 [CR\'cdTICO]} #12  Social Auto-Post\par
+\pard\li400\sa80\fs20\cf1 SEM GATE DE CONFIRMA\'c7\'c3O \'2014 aprova\'e7\'e3o de conte\'fado dispara post nas redes imediatamente, sem "Confirmar publica\'e7\'e3o?" para o usu\'e1rio.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #13  Criativos DALL-E 3\par
+\pard\li400\sa80\fs20\cf1 Concept \'2192 preview \'2192 final (3 gates expl\'edcitos). Cada step exige clique consciente.\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #14  Gate Lan\'e7amento\par
+\pard\li400\sa80\fs20\cf1 checkIntegrationsForLaunch() \'2192 requer WhatsApp/Telegram + email conectados. HTTP 422 + modal de bloqueio funcional.\par
+\pard\li200\sa80\fs22 {\b\cf3 [RISCO]} #15  Execu\'e7\'e3o\par
+\pard\li400\sa80\fs20\cf1 Sequ\'eancias auto-ativadas, scheduler 60s, despacho email+WhatsApp. Risco de dupla execu\'e7\'e3o quando Redis volta (BullMQ + setInterval simult\'e2neos).\par
+\pard\li200\sa80\fs22 {\b\cf5 [OK]} #16  Ao Vivo / Monitoramento\par
+\pard\li400\sa80\fs20\cf1 M\'e9tricas, health score 100pt, alertas autom\'e1ticos. Auto-trigger de otimiza\'e7\'e3o em score \'2264 30.\par
+\pard\li200\sa80\fs22 {\b\cf3 [RISCO]} #17  Produ\'e7\'e3o de V\'eddeo\par
+\pard\li400\sa80\fs20\cf1 ElevenLabs voice clone bloqueado (free tier). Digital Twin bloqueado (HeyGen Enterprise necess\'e1rio). Foto-clone funciona em qualquer plano.\par
+\pard\li200\sa80\fs22 {\b\cf3 [RISCO]} #18  Relat\'f3rio Semanal\par
+\pard\li400\sa80\fs20\cf1 Email de m\'e9tricas toda segunda 08:00 UTC. Verifica apenas por log se SMTP n\'e3o configurado \'2014 sem confirma\'e7\'e3o externa de entrega.\par
+\pard\sb100\sa100\brdrb\brdrs\brdrw10\brsp20 \par
+\pard\sb400\sa200\b\fs36 PARTE 2 \'2014 BUGS CONHECIDOS COM STATUS ATUAL\b0\fs24\par
+\pard\sb200\sa60\b\fs24 BUG #01 \'2014 agentRole "copywriter" hardcoded em 11 agentes\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf2\b CR\'cdTICO}   {\b Status:} \'2713 CORRIGIDO (Jul 2026, commit 1f88948)\par
+\pard\li300\sa100\fs21 Critique loop roteava todos para schema/rubrica errados. VSL, An\'fancios, Social, WhatsApp entregavam JSON no formato incorreto \'2014 entreg\'e1veis completamente inutiliz\'e1veis.\par
+\pard\sb200\sa60\b\fs24 BUG #02 \'2014 content_calendar entrega calendar:[] (zero dias)\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf2\b CR\'cdTICO}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 LLM trunca antes de completar 20+ posts. Anthropic sem cr\'e9ditos \'2192 fallback OpenAI \'2192 resposta incompleta \'2192 parseAgentJSON retorna default vazio. Fix necess\'e1rio: chunked generation (blocos de 7 dias como no targeting agent).\par
+\pard\sb200\sa60\b\fs24 BUG #03 \'2014 Contract violations n\'e3o bloqueiam pe\'e7a nem disparam retry\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf2\b CR\'cdTICO}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 _contractViolation:true \'e9 setado mas pe\'e7a avan\'e7a para pending_approval. Entreg\'e1veis fora do contrato s\'e3o aprovados e usados em campanha real. (Follow-up tasks #22\'2013#24)\par
+\pard\sb200\sa60\b\fs24 BUG #04 \'2014 Social auto-post dispara imediatamente ap\'f3s aprova\'e7\'e3o\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf2\b CR\'cdTICO}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 autoPostApprovedContent() \'e9 fire-and-forget sem gate de confirma\'e7\'e3o. Usu\'e1rio aprova pe\'e7a internamente para revis\'e3o e post vai ao ar sem querer.\par
+\pard\sb200\sa60\b\fs24 BUG #05 \'2014 Dupla execu\'e7\'e3o no scheduler\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf3\b IMPORTANTE}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 Quando Redis volta online, BullMQ Job + setInterval Fallback disparam juntos. Mesmo email/WhatsApp enviado duas vezes para a lista \'2014 dano grave de reputa\'e7\'e3o.\par
+\pard\sb200\sa60\b\fs24 BUG #06 \'2014 Credenciais salvas sem valida\'e7\'e3o pr\'e9via\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf3\b IMPORTANTE}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 Token inv\'e1lido \'e9 salvo com status:"connected" sem ping de teste real. Lan\'e7amento inicia, chega na hora de publicar e falha silenciosamente.\par
+\pard\sb200\sa60\b\fs24 BUG #07 \'2014 Idempot\'eancia de cr\'e9ditos em rein\'edcio de pipeline\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf3\b IMPORTANTE}   {\b Status:} \'26a0 PARCIAL\par
+\pard\li300\sa100\fs21 skipAgent() protege agentes com output salvo, mas depende de pieceStatus estar corretamente setado antes do restart. Cr\'e9ditos podem ser deduzidos duas vezes pelo mesmo trabalho.\par
+\pard\sb200\sa60\b\fs24 BUG #08 \'2014 Graceful degradation tratada como sucesso\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf3\b IMPORTANTE}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 Resend sem API key loga "skip" sem alertar o usu\'e1rio. Sequ\'eancia roda com status "dispatched", zero emails reais entregues.\par
+\pard\sb200\sa60\b\fs24 BUG #09 \'2014 autoGenerateCreativesFromBrief() dispara sem gate\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf4\b MENOR}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 Cr\'e9ditos DALL-E consumidos sem confirma\'e7\'e3o do usu\'e1rio ao aprovar media_brief. Previsto para corre\'e7\'e3o na Fase 3.\par
+\pard\sb200\sa60\b\fs24 BUG #10 \'2014 Valida\'e7\'e3o sem evid\'eancia externa\b0\par
+\pard\li300\sa40\fs21 {\b Severidade:} {\cf3\b IMPORTANTE}   {\b Status:} \'2717 ABERTO\par
+\pard\li300\sa100\fs21 Crit\'e9rio de 3 execu\'e7\'f5es limpas consecutivas n\'e3o atingido. Verifica\'e7\'e3o baseada apenas em logs internos \'2014 sem confirma\'e7\'e3o de email recebido, post publicado, etc.\par
+\pard\sb100\sa100\brdrb\brdrs\brdrw10\brsp20 \par
+\pard\sb400\sa200\b\fs36 PARTE 3 \'2014 AS 6 ADAPTA\'c7\'d5ES: ENCAIXE, BASE E RISCOS\b0\fs24\par
+\pard\sb300\sa100\b\fs28\cf6 ADAPTA\'c7\'c3O 1 \'2014 Gate de Valida\'e7\'e3o (Mercado / Oferta / Marca)\b0\fs24\cf1\par
+\pard\li200\sb80\sa40\b\fs22 Onde se encaixa:\b0\par\pard\li400\sa80\fs21 Entre etapa #4 (Intake completo) e etapa #6 (command.agent inicia). Roda como fase interna de "analyzing" antes do command.agent, reutilizando o mecanismo de checkpoint/awaiting_approval j\'e1 existente.\par
+\pard\li200\sb80\sa40\b\fs22 O que j\u225 existe de base:\b0\par\pard\li400\sa80\fs21 \'2022 intake.scoring.ts \'2014 readiness score e viability como fun\'e7\'f5es puras
+\'2022 conflict-detector.service.ts \'2014 detecta contradi\'e7\'f5es, persiste em brainData
+\'2022 campaign-state-machine.ts \'2014 mecanismo de checkpoint reutiliz\'e1vel
+\'2022 runIsolatedAgent() \'2014 sandbox que nunca lan\'e7a\par
+\pard\li200\sb80\sa40\b\fs22 O que falta:\b0\par\pard\li400\sa80\fs21 \'2022 3 novos agentes: market_validator, offer_price_validator, brand_validator
+\'2022 Campo em brainData para persistir resultados (aprovado/ajustar/rejeitado)
+\'2022 L\'f3gica de curto-circuito: 1 rejei\'e7\'e3o cr\'edtica bloqueia mesmo com outros 2 aprovados
+\'2022 UI de review dos resultados
+\'2022 Integra\'e7\'e3o no fluxo de execu\'e7\'e3o da fase "analyzing"\par
+\pard\li200\sb80\sa120\b\fs22 Risco de conflito:\b0\par\pard\li400\sa120\fs21 ALTO \'2014 Inserir antes de /execute \{phase:"strategy"\} requer nova transi\'e7\'e3o de estado. Abordagem mais segura: rodar os 3 agentes antes de invocar command.agent dentro de "analyzing".\par
+\pard\sb300\sa100\b\fs28\cf6 ADAPTA\'c7\'c3O 2 \'2014 Social Media Ativo (Always-On, gest\'e3o cont\'ednua)\b0\fs24\cf1\par
+\pard\li200\sb80\sa40\b\fs22 Onde se encaixa:\b0\par\pard\li400\sa80\fs21 Processo independente de campanha \'2014 roda em paralelo, n\'e3o vinculado a status de campanha.\par
+\pard\li200\sb80\sa40\b\fs22 O que j\u225 existe de base:\b0\par\pard\li400\sa80\fs21 \'2022 social.worker.ts \'2014 scheduler 60s + 6h j\'e1 existe
+\'2022 social.publisher.ts \'2014 fun\'e7\'f5es reais de publica\'e7\'e3o (Instagram, Facebook, TikTok)
+\'2022 socialPostsTable \'2014 tabela de agendamento
+\'2022 continuous_sales_manager \'2014 agente de vendas cont\'ednuas (vinculado a campanhas)\par
+\pard\li200\sb80\sa40\b\fs22 O que falta:\b0\par\pard\li400\sa80\fs21 \'2022 Job cont\'ednuo desvinculado de campanha \'2014 n\'e3o existe "posting org\'e2nico aut\'f4nomo"
+\'2022 Resposta a coment\'e1rios \'2014 n\'e3o existe
+\'2022 Gest\'e3o de DMs org\'e2nicos do Instagram/TikTok \'2014 ausente
+\'2022 Calend\'e1rio editorial always-on separado do content_calendar
+\'2022 L\'f3gica de crescimento de audi\'eancia/capta\'e7\'e3o de seguidores\par
+\pard\li200\sb80\sa120\b\fs22 Risco de conflito:\b0\par\pard\li400\sa120\fs21 M\'c9DIO \'2014 social.worker.ts e sequence-scheduler.worker.ts j\'e1 t\'eam risco de dupla execu\'e7\'e3o (Bug #05). Adicionar terceiro processo sem resolver esse bug amplifica o risco.\par
+\pard\sb300\sa100\b\fs28\cf6 ADAPTA\'c7\'c3O 3 \'2014 Motor de Execu\'e7\'e3o Real (Meta, WhatsApp, Google, SEO)\b0\fs24\cf1\par
+\pard\li200\sb80\sa40\b\fs22 Onde se encaixa:\b0\par\pard\li400\sa80\fs21 Extens\'e3o dos m\'f3dulos social/, whatsapp/ e cria\'e7\'e3o de novos m\'f3dulos google-ads/, meta-ads/, seo/.\par
+\pard\li200\sb80\sa40\b\fs22 O que j\u225 existe de base:\b0\par\pard\li400\sa80\fs21 REAL HOJE: Instagram (graph.facebook.com/v19.0), Facebook (graph.facebook.com/v19.0), TikTok org\'e2nico (open.tiktokapis.com/v2), WhatsApp Business, Meta CAPI, TikTok Events API.
+
+N\'c3O EXISTE: Meta Ads gest\'e3o paga, Google Ads (nenhum m\'f3dulo), auto-otimiza\'e7\'e3o de lance/budget via API, SEO.\par
+\pard\li200\sb80\sa40\b\fs22 O que falta:\b0\par\pard\li400\sa80\fs21 \'2022 M\'f3dulo meta-ads/ com Marketing API (cria\'e7\'e3o/otimiza\'e7\'e3o de campanhas pagas)
+\'2022 M\'f3dulo google-ads/ \'2014 completamente ausente
+\'2022 Auto-bid/budget adjustment calls nas APIs
+\'2022 Retry com backoff exponencial para falhas de API externa
+\'2022 Dead-letter queue para posts/emails que falharam\par
+\pard\li200\sb80\sa120\b\fs22 Risco de conflito:\b0\par\pard\li400\sa120\fs21 ALTO \'2014 Produto vende "gest\'e3o de m\'eddia paga" que n\'e3o executa via API de ads. Tokens expirados n\'e3o t\'eam refresh autom\'e1tico \'2014 falha silenciosa no meio de uma campanha ativa.\par
+\pard\sb300\sa100\b\fs28\cf6 ADAPTA\'c7\'c3O 4 \'2014 Onboarding Guiado de Conex\'e3o de APIs\b0\fs24\cf1\par
+\pard\li200\sb80\sa40\b\fs22 Onde se encaixa:\b0\par\pard\li400\sa80\fs21 Extens\'e3o do UIStep "integration_setup" existente no onboarding.tsx e da tela /integracoes.\par
+\pard\li200\sb80\sa40\b\fs22 O que j\u225 existe de base:\b0\par\pard\li400\sa80\fs21 \'2022 UIStep "integration_setup" existe no onboarding
+\'2022 /integracoes \'2014 tela can\'f4nica funcional
+\'2022 integration-wizard.routes.ts \'2014 m\'f3dulo existe
+\'2022 OAuth flow funcional para Meta e TikTok\par
+\pard\li200\sb80\sa40\b\fs22 O que falta:\b0\par\pard\li400\sa80\fs21 \'2022 Rota POST /integrations/test para ping de credencial antes de salvar
+\'2022 Feedback em tempo real "credencial v\'e1lida/inv\'e1lida" durante onboarding
+\'2022 Bloqueio de progresso no onboarding at\'e9 ao menos 1 integra\'e7\'e3o ser validada
+\'2022 Token manual salvo atualmente com status:"connected" sem verifica\'e7\'e3o real\par
+\pard\li200\sb80\sa120\b\fs22 Risco de conflito:\b0\par\pard\li400\sa120\fs21 BAIXO \'2014 valida\'e7\'e3o pr\'e9-save \'e9 adi\'e7\'e3o pura, n\'e3o quebra nenhum fluxo existente.\par
+\pard\sb300\sa100\b\fs28\cf6 ADAPTA\'c7\'c3O 5 \'2014 NexOS Bridge (navega\'e7\'e3o assistida)\b0\fs24\cf1\par
+\pard\li200\sb80\sa40\b\fs22 Onde se encaixa:\b0\par\pard\li400\sa80\fs21 M\'f3dulo novo \'2014 sem base no c\'f3digo atual.\par
+\pard\li200\sb80\sa40\b\fs22 O que j\u225 existe de base:\b0\par\pard\li400\sa80\fs21 NENHUMA \'2014 n\'e3o existe nenhum componente de navega\'e7\'e3o assistida implementado.\par
+\pard\li200\sb80\sa40\b\fs22 O que falta:\b0\par\pard\li400\sa80\fs21 Tudo. Mas os riscos s\'e3o mais cr\'edticos do que as lacunas de c\'f3digo:
+
+\'2022 Risco 1 \'2014 Fronteira tecnol\'f3gica n\'e3o-garant\'edvel: "nunca insere senha" \'e9 inten\'e7\'e3o, n\'e3o propriedade t\'e9cnica. Webview embutido n\'e3o distingue campo de senha de campo de texto. \'danico caminho seguro: deep-link abre browser nativo do usu\'e1rio (tab externa), nunca iframe controlado pelo NexOS.
+
+\'2022 Risco 2 \'2014 Termos de Servi\'e7o: Meta, TikTok e Google pro\'edbem automa\'e7\'e3o de navega\'e7\'e3o em suas consoles. Pode resultar em suspens\'e3o do app OAuth.
+
+\'2022 Risco 3 \'2014 Phishing aparente: componente que abre telas de redes sociais dentro do produto \'e9 indistingu\'edvel de phishing para usu\'e1rios menos t\'e9cnicos.\par
+\pard\li200\sb80\sa120\b\fs22 Risco de conflito:\b0\par\pard\li400\sa120\fs21 CR\'cdTICO \'2014 Implementa\'e7\'e3o segura exige redesign completo do conceito. Qualquer webview controlado pelo NexOS cria risco de ultrapassar a fronteira por erro ou edge case.\par
+\pard\sb300\sa100\b\fs28\cf6 ADAPTA\'c7\'c3O 6 \'2014 Navega\'e7\'e3o Plena (bot\'e3o de voltar em todas as telas)\b0\fs24\cf1\par
+\pard\li200\sb80\sa40\b\fs22 Onde se encaixa:\b0\par\pard\li400\sa80\fs21 Corre\'e7\'f5es pontuais em p\'e1ginas e sub-fluxos existentes.\par
+\pard\li200\sb80\sa40\b\fs22 O que j\u225 existe de base:\b0\par\pard\li400\sa80\fs21 20 p\'e1ginas j\'e1 t\'eam navigate/useLocation/Link importados. A maioria das rotas principais tem back navigation.\par
+\pard\li200\sb80\sa40\b\fs22 O que falta:\b0\par\pard\li400\sa80\fs21 Sub-estados sem sa\'edda confirmados:
+\'2022 video-production/index.tsx \'2014 AvatarCloneGate: back dentro do gate mas n\'e3o roteia para fora da p\'e1gina
+\'2022 sequences/detail.tsx \'2014 editor inline sem sa\'edda sem salvar
+\'2022 campaigns/content.tsx \'2014 modal de aprova\'e7\'e3o sem bot\'e3o de fechar separado
+\'2022 onboarding.tsx (clone_wow) \'2014 sem "recome\'e7ar onboarding" ap\'f3s grava\'e7\'e3o
+\'2022 war-room/index.tsx \'2014 sem destino de sa\'edda \'f3bvio
+\'2022 launcher/index.tsx \'2014 sem destino de sa\'edda \'f3bvio
+\'2022 not-found.tsx \'2014 sem link para /dashboard ou /\par
+\pard\li200\sb80\sa120\b\fs22 Risco de conflito:\b0\par\pard\li400\sa120\fs21 BAIXO por tela individualmente, M\'c9DIO cumulativamente \'2014 usu\'e1rios presos em sub-estados sem sa\'edda geram frustra\'e7\'e3o e abandono.\par
+\pard\sb100\sa100\brdrb\brdrs\brdrw10\brsp20 \par
+\pard\sb400\sa200\b\fs36 PARTE 4 \'2014 S\'cdNTESE EXECUTIVA E PRIORIDADES\b0\fs24\par
+\pard\sb300\sa100\b\fs28\cf6 Bloqueantes para Lan\'e7amento Robusto\b0\fs24\cf1\par
+\pard\sa100\fs22 Crit\'e9rio: 3 execu\'e7\'f5es limpas consecutivas, sem interven\'e7\'e3o manual.\par
+\pard\sb200\sa80\b\fs24 PRIORIDADE 0 \'2014 Cr\'edtico (n\'e3o lan\'e7ar sem resolver)\b0\fs24\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Bug #04 \'2014 Social autopost sem gate: clientes postam acidentalmente nas redes ao revisar conte\'fado.\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Bug #05 \'2014 Dupla execu\'e7\'e3o scheduler: lista recebe email/WhatsApp duplicado.\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Bug #02 \'2014 content_calendar vazio: calend\'e1rio social entregue em branco.\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Bug #03 \'2014 Contract violations n\'e3o bloqueiam: entreg\'e1veis fora de contrato aprovados e usados.\par
+\pard\sb200\sa80\b\fs24 PRIORIDADE 1 \'2014 Importante (resolver antes do 1\'ba cliente pagar)\b0\fs24\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Bug #06 \'2014 Credencial sem valida\'e7\'e3o: lan\'e7amento inicia e falha ao publicar por token inv\'e1lido.\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Bug #08 \'2014 Graceful degradation como sucesso: zero emails reais entregues com status "ok".\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Adapta\'e7\'e3o #3 \'2014 Meta Ads/Google Ads pagos n\'e3o existem: produto vende gest\'e3o de m\'eddia que n\'e3o executa.\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Adapta\'e7\'e3o #1 \'2014 Gate Mercado/Oferta/Marca ausente: campanha invi\'e1vel consome cr\'e9ditos do cliente.\par
+\pard\sb200\sa80\b\fs24 PRIORIDADE 2 \'2014 Relevante (resolver p\'f3s-lan\'e7amento imediato)\b0\fs24\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Adapta\'e7\'e3o #4 \'2014 Valida\'e7\'e3o pr\'e9-save de integra\'e7\'e3o.\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Adapta\'e7\'e3o #6 \'2014 Back nav em sub-estados de telas complexas.\par
+\pard\sb200\sa80\b\fs24 PRIORIDADE 3 \'2014 Roadmap\b0\fs24\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Adapta\'e7\'e3o #2 \'2014 Social always-on: importante para o produto, n\'e3o bloqueia o core.\par
+\pard\sb200\sa80\b\fs24 PRIORIDADE 4 \'2014 Reavalia\'e7\'e3o necess\'e1ria\b0\fs24\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Adapta\'e7\'e3o #5 \'2014 NexOS Bridge: risco arquitetural e legal alto. Redesign de conceito necess\'e1rio antes de qualquer desenvolvimento.\par
+\pard\sb300\sa100\b\fs28\cf6 Itens que Dependem Exclusivamente de A\'e7\'e3o Externa\b0\fs24\cf1\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Recarregar Anthropic + OpenAI \'2192 conte\'fado de alta qualidade em todos os agentes\par
+\pard\li400\fi-200\sa60\fs22 \bullet  ElevenLabs plano pago \'2192 voice cloning nos v\'eddeos\par
+\pard\li400\fi-200\sa60\fs22 \bullet  HeyGen Enterprise \'2192 Digital Twin avatar hiper-realista\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Registrar apps OAuth: Meta callback = https://agencianexos.vip/api/integrations/oauth/callback/facebook\par
+\pard\li400\fi-200\sa60\fs22 \bullet  Configurar em produ\'e7\'e3o: DATABASE_URL, SESSION_SECRET, JWT_SECRET, ALLOWED_ORIGINS\par
+\pard\li400\fi-200\sa60\fs22 \bullet  WhatsApp Business API: conta Meta Business Manager verificada + n\'famero aprovado\par
+\pard\sb100\sa100\brdrb\brdrs\brdrw10\brsp20 \par
+\pard\qc\sb200\fs18\cf3 Fim do Relatório  Nenhuma linha de c\'f3digo foi escrita ou alterada durante esta auditoria.\par
+}
