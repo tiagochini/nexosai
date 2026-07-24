@@ -64,3 +64,4 @@ GMAIL_APP_PASSWORD = "rnpz tmiy qmvj davc"
 
 [userenv.production]
 APP_URL = "https://agencianexos.vip"
+ALLOWED_ORIGINS = "https://agencianexos.vip"
