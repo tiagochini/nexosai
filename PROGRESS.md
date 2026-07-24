@@ -8,14 +8,59 @@
 ---
 
 ## PASSO 0 — Destrave Externo (ação do Fundador)
-- [ ] Recarregar créditos Anthropic
-- [ ] Recarregar créditos OpenAI
-- [ ] ElevenLabs → plano pago (voice cloning)
-- [ ] HeyGen → Enterprise (Digital Twin avatar)
-- [ ] Configurar Resend (API key + domínio DKIM verificado)
-- [ ] Confirmar secrets em produção: DATABASE_URL, SESSION_SECRET, JWT_SECRET, ALLOWED_ORIGINS
+
+### Verificado em 24 Jul 2026 — Relatório de Estado
+
+#### Secrets de Produção
+| Secret | Dev | Produção | Ação necessária |
+|---|---|---|---|
+| `DATABASE_URL` | ✅ | ✅ Replit PG gerenciado | Nenhuma |
+| `SESSION_SECRET` | ✅ | ✅ secret registrado | Nenhuma |
+| `JWT_SECRET` | ⚠️ | ❌ AUSENTE — usa SESSION_SECRET como fallback | **Criar secret JWT_SECRET (≥32 chars aleatórios)** |
+| `ALLOWED_ORIGINS` | ❌ | ❌ NÃO CONFIGURADO | **🔴 CRÍTICO — CORS quebra prod. Configurar `https://agencianexos.vip`** |
+
+#### AI Model Keys
+| Key | Status | Evidência |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | ✅ native key presente | viewEnvVars() confirmado |
+| `OPENAI_API_KEY` | ✅ native key presente | viewEnvVars() + NEXOS_OPENAI também |
+| `GEMINI_API_KEY` | ✅ native key presente | viewEnvVars() confirmado |
+| Replit AI Integrations (3x) | ✅ todos presentes | fallback genuíno, nunca primeiro |
+| Créditos Anthropic/OpenAI | ⚠️ NÃO VERIFICÁVEL VIA CÓDIGO | **Founder confirmar no dashboard de cada provedor** |
+
+#### Probe de Modelo — evidência de 24 Jul 2026
+**Modelo primário ATIVO.** `POST /api/intake/{campaignId}/conversation` → HTTP 200, resposta coerente do agente Érico em PT-BR sem fallback degradado. Native keys tomam prioridade; Replit integration não foi acionado. Logs sem WARN de fallback.
+
+#### Resend
+| Item | Status | Ação |
+|---|---|---|
+| `RESEND_API_KEY` | ✅ secret presente | Nenhuma |
+| `RESEND_FROM_EMAIL` | ✅ `lancamento@agencianexos.vip` | Nenhuma |
+| Domínio DKIM verificado | ⚠️ NÃO VERIFICÁVEL VIA CÓDIGO | **Founder confirmar em resend.com → Domains** |
+
+#### Outras chaves
+| Key | Status | Ação |
+|---|---|---|
+| `HEYGEN_API_KEY` | ⚠️ Em runtime mas NÃO é secret Replit | **Registrar como secret (pode sumir se container reciclar)** |
+| `ELEVENLABS_API_KEY` | ✅ secret presente | Bloqueio de conta (plano pago) — issue de conta, não de código |
+| `REDIS_URL` | ✅ secret presente MAS Redis `ok:false` | **Investigar — BullMQ em modo degradado = Bug A2 ativo agora** |
+
+### Checklist original (atualizado)
+- [ ] **Recarregar créditos Anthropic + OpenAI** — chaves ativas, saldo não verificável aqui; confirmar no dashboard
+- [ ] **ElevenLabs → plano pago** (voice cloning bloqueada em conta free)
+- [ ] **HeyGen → Enterprise** (Digital Twin bloqueado; talking_photo funciona)
+- [x] **Resend API key** — ✅ PRESENTE
+- [ ] **Domínio DKIM Resend** — verificar em resend.com → Domains
+- [ ] **JWT_SECRET** — criar como secret dedicado
+- [x] **DATABASE_URL** — ✅ PRESENTE
+- [x] **SESSION_SECRET** — ✅ PRESENTE
+- [ ] **ALLOWED_ORIGINS** — 🔴 CRÍTICO, configurar em produção
+- [ ] **HEYGEN_API_KEY** — registrar como secret Replit
+- [ ] **Redis** — investigar por que ok:false com REDIS_URL configurado
 - [ ] App Review Meta (callback: https://agencianexos.vip/api/integrations/oauth/callback/facebook)
 - [ ] TikTok App Review
+
+**PASSO 0 PRONTO QUANDO:** Founder confirma créditos OK + ALLOWED_ORIGINS + DKIM + Redis → então A1.
 
 ---
 
