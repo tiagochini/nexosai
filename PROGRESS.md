@@ -12,12 +12,12 @@
 ### Verificado em 24 Jul 2026 — Relatório de Estado
 
 #### Secrets de Produção
-| Secret | Dev | Produção | Ação necessária |
+| Secret | Dev | Produção | Status |
 |---|---|---|---|
-| `DATABASE_URL` | ✅ | ✅ Replit PG gerenciado | Nenhuma |
-| `SESSION_SECRET` | ✅ | ✅ secret registrado | Nenhuma |
-| `JWT_SECRET` | ⚠️ | ❌ AUSENTE — usa SESSION_SECRET como fallback | **Criar secret JWT_SECRET (≥32 chars aleatórios)** |
-| `ALLOWED_ORIGINS` | ❌ | ❌ NÃO CONFIGURADO | **🔴 CRÍTICO — CORS quebra prod. Configurar `https://agencianexos.vip`** |
+| `DATABASE_URL` | ✅ | ✅ Replit PG gerenciado | OK |
+| `SESSION_SECRET` | ✅ | ✅ secret registrado | OK |
+| `JWT_SECRET` | ✅ | ✅ **CONFIGURADO 24 Jul 2026** | OK |
+| `ALLOWED_ORIGINS` | ✅ | ✅ **`https://agencianexos.vip` — prod env var** | OK |
 
 #### AI Model Keys
 | Key | Status | Evidência |
@@ -51,16 +51,24 @@
 - [ ] **HeyGen → Enterprise** (Digital Twin bloqueado; talking_photo funciona)
 - [x] **Resend API key** — ✅ PRESENTE
 - [ ] **Domínio DKIM Resend** — verificar em resend.com → Domains
-- [ ] **JWT_SECRET** — criar como secret dedicado
+- [x] **JWT_SECRET** — ✅ CONFIGURADO 24 Jul 2026 (64 chars, base64url)
 - [x] **DATABASE_URL** — ✅ PRESENTE
 - [x] **SESSION_SECRET** — ✅ PRESENTE
-- [ ] **ALLOWED_ORIGINS** — 🔴 CRÍTICO, configurar em produção
-- [ ] **HEYGEN_API_KEY** — registrar como secret Replit
+- [x] **ALLOWED_ORIGINS** — ✅ `https://agencianexos.vip` em produção
+- [ ] **HEYGEN_API_KEY** — registrar como secret Replit (em runtime mas não no vault)
 - [ ] **Redis** — investigar por que ok:false com REDIS_URL configurado
 - [ ] App Review Meta (callback: https://agencianexos.vip/api/integrations/oauth/callback/facebook)
 - [ ] TikTok App Review
 
-**PASSO 0 PRONTO QUANDO:** Founder confirma créditos OK + ALLOWED_ORIGINS + DKIM + Redis → então A1.
+### Evidências registradas — 24 Jul 2026
+**CORS:** `OPTIONS /api/healthz` com `Origin: https://agencianexos.vip` → `Access-Control-Allow-Origin: https://agencianexos.vip` (204 No Content)
+**JWT:** Login → token decodificado com claims corretos (userId, workspaceId, iat, exp) → `GET /api/campaigns` com esse token → HTTP 200. JWT assinado e verificado com `JWT_SECRET` real (não fallback).
+
+**PASSO 0 — itens restantes para o Founder (não bloqueiam A1):**
+- Confirmar créditos Anthropic + OpenAI no dashboard de cada provedor
+- Verificar DKIM do domínio em resend.com → Domains
+- Registrar HEYGEN_API_KEY como secret Replit
+- Investigar Redis (ok:false)
 
 ---
 
