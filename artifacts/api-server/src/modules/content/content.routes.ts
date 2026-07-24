@@ -19,6 +19,7 @@ import {
 } from "./content.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { runPostApprovalHooks } from "./content-post-approval.js";
+import { autoGenerateCreativesFromBrief } from "./creative-auto-gen.service.js";
 import { ContentTypeSchema } from "@workspace/db";
 
 const router = Router();
@@ -404,6 +405,77 @@ router.post("/:campaignId/content/media-briefs/:briefId/approve", async (req, re
   try {
     const brief = await approveMediaBrief(campaignId, req.auth.workspaceId, briefId);
     res.json({ message: "Media brief concept approved", brief });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// POST /campaigns/:campaignId/content/:pieceId/generate-creatives  (Fix E1/Bug #09)
+// Explicit second step: user confirms they want creative concept records created.
+// This is intentionally separate from approval — approving a media_brief does NOT
+// auto-trigger this. No DALL-E call happens here; it only creates concept_ready rows
+// which the user must then individually promote to preview (DALL-E) → final.
+router.post("/:campaignId/content/:pieceId/generate-creatives", async (req, res): Promise<void> => {
+  const { campaignId, pieceId } = req.params as { campaignId: string; pieceId: string };
+
+  try {
+    const { db, contentPiecesTable, campaignsTable } = await import("@workspace/db");
+    const { eq, and } = await import("drizzle-orm");
+
+    // Verify ownership: piece must belong to this campaign + this workspace
+    const [piece] = await db
+      .select({ id: contentPiecesTable.id, type: contentPiecesTable.type, status: contentPiecesTable.status })
+      .from(contentPiecesTable)
+      .innerJoin(
+        campaignsTable,
+        and(
+          eq(campaignsTable.id, contentPiecesTable.campaignId),
+          eq(campaignsTable.id, campaignId),
+          eq(campaignsTable.workspaceId, req.auth.workspaceId),
+        ),
+      )
+      .where(eq(contentPiecesTable.id, pieceId))
+      .limit(1);
+
+    if (!piece) {
+      res.status(404).json({ error: "Peça não encontrada", code: "NOT_FOUND" });
+      return;
+    }
+
+    if (piece.type !== "media_brief") {
+      res.status(422).json({
+        error: "Apenas peças do tipo media_brief podem gerar criativos",
+        code: "INVALID_PIECE_TYPE",
+      });
+      return;
+    }
+
+    if (piece.status !== "approved") {
+      res.status(422).json({
+        error: "O media brief deve estar aprovado antes de gerar criativos",
+        code: "PIECE_NOT_APPROVED",
+      });
+      return;
+    }
+
+    // Acknowledge immediately — generation runs fire-and-forget
+    res.json({
+      message: "Geração de criativos iniciada — os conceitos aparecerão em Criativos em instantes",
+      pieceId,
+      note: "Nenhum crédito DALL-E é consumido aqui. Créditos só são debitados quando você confirmar a geração da imagem (preview ou final) em cada criativo individualmente.",
+    });
+
+    // Run the concept creation async — no DALL-E calls, no credit deduction
+    setImmediate(() => {
+      autoGenerateCreativesFromBrief(campaignId, req.auth.workspaceId, pieceId, req.log)
+        .catch((err: unknown) => {
+          req.log.warn({ err, campaignId, pieceId }, "generate-creatives endpoint: autoGenerateCreativesFromBrief failed — non-blocking");
+        });
+    });
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

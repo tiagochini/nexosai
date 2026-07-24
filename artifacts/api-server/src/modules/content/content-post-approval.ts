@@ -7,11 +7,18 @@
  *
  * Each hook is individually wrapped in .catch() so a failure in one never
  * prevents the others from running.
+ *
+ * Fix E1/Bug #09: autoGenerateCreativesFromBrief() removed from this hook.
+ * Approving a media_brief NO LONGER auto-creates creative concept records.
+ * Creative generation requires an explicit second action by the user:
+ *   POST /campaigns/:id/content/:pieceId/generate-creatives
+ * This mirrors the A1/Bug #04 fix (approve ≠ execute).
  */
 
 // autoPostApprovedContent removed from fire-and-forget hook — now called only
 // from the explicit POST /campaigns/:id/content/:pieceId/publish-social endpoint. (Fix: A1/Bug #04)
-import { autoGenerateCreativesFromBrief } from "./creative-auto-gen.service.js";
+// autoGenerateCreativesFromBrief removed from fire-and-forget hook — now called only
+// from the explicit POST /campaigns/:id/content/:pieceId/generate-creatives endpoint. (Fix: E1/Bug #09)
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
 import { getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
@@ -44,13 +51,13 @@ export function runPostApprovalHooks(ctx: PostApprovalContext): void {
   //                      confirms → POST /campaigns/:id/content/:pieceId/publish-social
   // This prevents accidental publishing during internal review. (Fix: Bug #04)
 
-  // Hook 3 — Auto-generate creative concepts if this is a media brief
-  if (pieceType === "media_brief") {
-    setImmediate(() => {
-      autoGenerateCreativesFromBrief(campaignId, workspaceId, pieceId, log)
-        .catch(() => undefined);
-    });
-  }
+  // Hook 3 — REMOVED (Fix E1/Bug #09):
+  // autoGenerateCreativesFromBrief() no longer fires automatically on media_brief approval.
+  // Creative generation is now an EXPLICIT two-step flow:
+  //   Step 1 (approval): piece moves to "approved" — no creative records created.
+  //   Step 2 (generate): user confirms → POST /campaigns/:id/content/:pieceId/generate-creatives
+  //                      → autoGenerateCreativesFromBrief() runs → concept records created.
+  // No DALL-E credits are consumed without the user explicitly initiating Step 2.
 
   // Hook 4 — Contradiction detector: re-run alignment after each approval
   setImmediate(() => {

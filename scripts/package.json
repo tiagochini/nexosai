@@ -24,6 +24,7 @@
     "generate-pdfs": "tsx ./src/generate-pdfs.ts",
     "b2-contract-violation-test": "tsx ./src/b2-contract-violation-test.ts",
     "c1-integration-validator-test": "tsx ./src/c1-integration-validator-test.ts",
+    "e1-media-brief-gate-test": "tsx ./src/e1-media-brief-gate-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
