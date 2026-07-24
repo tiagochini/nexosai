@@ -22,7 +22,7 @@ import { FeatureOnboarding, FeatureOnboardingTrigger } from "@/components/featur
 import { FEATURE_KEYS } from "@/hooks/useFeatureOnboarding";
 import {
   ChevronRight, ChevronDown, ChevronUp,
-  CheckCircle2, Rocket, ArrowRight,
+  CheckCircle2, Rocket, ArrowRight, ArrowLeft,
   AlertCircle, Bot, Zap, BarChart2, Target, MessageSquare,
   Users, Shield, Play, ExternalLink, TrendingUp, DollarSign,
   Activity,
@@ -196,6 +196,13 @@ export default function WarRoom() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
+
+      {/* Back to campaign */}
+      <Link href={`/campaigns/${id}`}>
+        <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest -ml-2 text-muted-foreground hover:text-foreground gap-1.5">
+          <ArrowLeft className="h-3 w-3" />Campanha
+        </Button>
+      </Link>
 
       {/* Feature onboarding — first visit */}
       <FeatureOnboarding

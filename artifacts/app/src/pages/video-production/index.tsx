@@ -662,7 +662,7 @@ function ClipsPanel({ project, isHd, onAction }: { project: VideoProject; isHd: 
 
 interface StockAvatar { id: string; label: string; gender?: string }
 
-function AvatarCloneGate({ project, onResumed }: { project: VideoProject; onResumed: (p: VideoProject) => void }) {
+function AvatarCloneGate({ project, onResumed, onDismiss }: { project: VideoProject; onResumed: (p: VideoProject) => void; onDismiss?: () => void }) {
   const [voiceCloneId, setVoiceCloneId] = useState<string | null>(null);
   const [avatarReady, setAvatarReady] = useState(false);
   const [avatarMode, setAvatarMode] = useState<"stock" | "record" | "video" | null>(null);
@@ -925,6 +925,16 @@ function AvatarCloneGate({ project, onResumed }: { project: VideoProject; onResu
 
   return (
     <div className="border border-primary/30 rounded-xl p-5 bg-primary/5 space-y-5">
+      {onDismiss && (
+        <div className="flex justify-end">
+          <button
+            onClick={onDismiss}
+            className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+          >
+            ← Pular por agora
+          </button>
+        </div>
+      )}
       <div>
         <div className="font-mono text-sm font-bold flex items-center gap-2">
           <User className="h-4 w-4 text-primary" />Este vídeo tem cenas com avatar — precisamos da sua voz e rosto
@@ -1934,6 +1944,7 @@ export default function VideoProductionPage() {
                     setSelected(p);
                     setProjects(ps => ps.map(x => x.id === p.id ? p : x));
                   }}
+                  onDismiss={() => setSelected(null)}
                 />
               )}
 

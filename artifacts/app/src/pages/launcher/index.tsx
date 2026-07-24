@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Rocket, TrendingUp, Users, DollarSign, Zap, Bot, CheckCircle2,
   AlertCircle, Clock, ChevronRight, BarChart3, Activity, ShieldCheck,
-  Loader2, ArrowRight, Eye, Video, Link2, RefreshCw, AlertTriangle,
+  Loader2, ArrowRight, ArrowLeft, Eye, Video, Link2, RefreshCw, AlertTriangle,
   Target, MessageSquare, Mail, Layers, Star, Play, Calendar, Radio,
   Copy, Wifi,
 } from "lucide-react";
@@ -429,6 +429,11 @@ export default function LauncherDashboard() {
       <div className="border-b border-border/50 pb-5 flex flex-col md:flex-row md:items-end gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
+            <Link href="/campaigns">
+              <Button variant="ghost" size="sm" className="font-mono uppercase text-xs tracking-widest -ml-2 text-muted-foreground hover:text-foreground gap-1.5 h-7">
+                <ArrowLeft className="h-3 w-3" />Campanhas
+              </Button>
+            </Link>
             <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
             <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground/50">Painel de Controle</p>
           </div>

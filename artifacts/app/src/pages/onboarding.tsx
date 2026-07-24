@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useMode } from "@/lib/mode";
 import { customFetch, ApiError } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
@@ -1731,12 +1731,21 @@ export default function Onboarding() {
     const revenueTarget = proposals?.[0]?.suggestedTrack === "8_digit" ? "R$ 10M+" :
                           proposals?.[0]?.suggestedTrack === "10_digit" ? "R$ 100M+" : "R$ 100k+";
     return (
-      <CloneWowMoment
-        userName={user?.name ?? "Usuário"}
-        productName={productName}
-        revenueTarget={revenueTarget}
-        onProceed={handleGoToDiagnosis}
-      />
+      <div className="relative">
+        <button
+          onClick={() => setStep("plan_preview")}
+          className="absolute top-4 left-4 z-10 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        >
+          <ChevronRight className="h-3 w-3 rotate-180" />
+          Voltar ao plano
+        </button>
+        <CloneWowMoment
+          userName={user?.name ?? "Usuário"}
+          productName={productName}
+          revenueTarget={revenueTarget}
+          onProceed={handleGoToDiagnosis}
+        />
+      </div>
     );
   }
 
