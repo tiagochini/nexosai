@@ -802,6 +802,27 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     content = result.content;
     creditsCharged = result.creditsCharged;
 
+    // ── [C2] Signal model fallback — never silently pass degraded response as normal ──
+    if (result.usedFallback) {
+      log.warn(
+        {
+          campaignId,
+          agentRole,
+          provider: result.provider,
+          model: result.model,
+          attempts: result.attemptCount,
+        },
+        "[MODEL_FALLBACK] Agente respondeu via modelo de fallback — provider primário falhou ou indisponível",
+      );
+      emitCampaignEvent({
+        campaignId: campaignId ?? "system",
+        type: "agent_fallback_used",
+        agentType: agentRole,
+        message: `⚠️ ${agentRole} respondeu via fallback (${result.provider}/${result.model}) — provider primário indisponível`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const balanceBefore = ws?.creditsBalance ?? 0;
     const balanceAfter = Math.max(0, balanceBefore - creditsCharged);
 

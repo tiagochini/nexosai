@@ -209,7 +209,7 @@ export async function routedComplete(
         ...result,
         taskType,
         attemptCount,
-        usedFallback: attemptCount > 1,
+        usedFallback: attemptCount > 1 || result.usedFallback === true,
       };
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);

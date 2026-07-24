@@ -52,6 +52,7 @@ export const launchSequenceItemStatusEnum = pgEnum("launch_sequence_item_status"
   "scheduled",
   "dispatched",
   "skipped",
+  "failed",
 ]);
 
 export const launchSequencesTable = pgTable("launch_sequences", {

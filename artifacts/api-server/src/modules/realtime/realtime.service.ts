@@ -12,6 +12,7 @@ export interface CampaignEvent {
     | "agent_thinking"
     | "agent_completed"
     | "agent_failed"
+    | "agent_fallback_used"
     | "checkpoint_created"
     | "asset_generated"
     | "phase_changed"

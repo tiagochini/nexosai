@@ -238,6 +238,7 @@ export interface AICompletionResult {
   outputTokens: number;
   costUsd: number;
   creditsCharged: number;
+  usedFallback?: boolean;
 }
 
 let anthropicClient: Anthropic | null = null;
@@ -469,7 +470,7 @@ async function callOpenAI(
   signal?: AbortSignal,
   timeoutMs?: number,
   log?: Logger,
-): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
+): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string; usedFallback?: boolean }> {
   const usingIntegration = !env.OPENAI_API_KEY && hasOpenAIIntegration();
   const effectiveLog = log ?? noopLogger;
 
@@ -552,16 +553,20 @@ async function callOpenAI(
           effectiveLog,
           "callOpenAI-integrationFallback",
         );
+        effectiveLog.warn({ intModel }, "[callOpenAI] FALLBACK: native key quota/access error — using Replit AI Integrations proxy");
         return {
           content: intResponse.choices[0]?.message?.content ?? "",
           inputTokens: intResponse.usage?.prompt_tokens ?? 0,
           outputTokens: intResponse.usage?.completion_tokens ?? 0,
           effectiveModel: intModel,
+          usedFallback: true,
         };
       }
       // No integration either — fall back to Anthropic
       if (hasAnthropicIntegration()) {
-        return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
+        effectiveLog.warn({}, "[callOpenAI] FALLBACK: switching provider to Anthropic integration — no OpenAI integration available");
+        const r = await callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
+        return { ...r, usedFallback: true };
       }
     }
     throw err;
@@ -576,12 +581,14 @@ async function callGemini(
   signal?: AbortSignal,
   timeoutMs?: number,
   log?: Logger,
-): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string }> {
+): Promise<{ content: string; inputTokens: number; outputTokens: number; effectiveModel?: string; usedFallback?: boolean }> {
   const hasGeminiAccess = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
   const effectiveLog = log ?? noopLogger;
 
   if (!hasGeminiAccess) {
-    return callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
+    effectiveLog.warn({}, "[callGemini] FALLBACK: no Gemini key configured — routing to Anthropic integration");
+    const r = await callAnthropic(ANTHROPIC_INTEGRATION_MODEL, systemPrompt, messages, maxTokens, signal, timeoutMs, log);
+    return { ...r, usedFallback: true };
   }
 
   try {
@@ -887,7 +894,8 @@ export async function completeWithAgent(
   // short-lived ceiling (e.g. interactive intake/briefing chat) can pass timeoutMs
   // explicitly; this never changes the default (LLM_CALL_TIMEOUT_MS) for other callers.
 
-  let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string };
+  let result: { content: string; inputTokens: number; outputTokens: number; effectiveModel?: string; usedFallback?: boolean };
+  let internalFallback = false;
 
   const effectiveMaxTokens = maxTokens ?? 16384;
   switch (provider) {
@@ -897,7 +905,7 @@ export async function completeWithAgent(
       } catch (anthropicErr) {
         log.warn(
           { agentRole, model, err: String(anthropicErr) },
-          "[completeWithAgent] Anthropic failed — falling back to OpenAI",
+          "[completeWithAgent] FALLBACK: Anthropic failed — routing to OpenAI",
         );
         result = await callOpenAI(
           getDefaultModelForProvider("openai"),
@@ -908,18 +916,21 @@ export async function completeWithAgent(
           timeoutMs,
           log,
         );
+        internalFallback = true;
       }
       break;
     case "openai":
       result = await callOpenAI(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
+      if (result.usedFallback) internalFallback = true;
       break;
     case "gemini":
       try {
         result = await callGemini(model, effectiveSystem, messages, effectiveMaxTokens, undefined, timeoutMs, log);
+        if (result.usedFallback) internalFallback = true;
       } catch (geminiErr) {
         log.warn(
           { agentRole, model, err: String(geminiErr) },
-          "[completeWithAgent] Gemini failed — falling back to OpenAI",
+          "[completeWithAgent] FALLBACK: Gemini failed — routing to OpenAI",
         );
         result = await callOpenAI(
           getDefaultModelForProvider("openai"),
@@ -930,6 +941,7 @@ export async function completeWithAgent(
           timeoutMs,
           log,
         );
+        internalFallback = true;
       }
       break;
   }
@@ -980,6 +992,7 @@ export async function completeWithAgent(
     outputTokens: result.outputTokens,
     costUsd,
     creditsCharged,
+    usedFallback: internalFallback,
   };
 }
 

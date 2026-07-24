@@ -489,6 +489,36 @@ export async function processScheduledItems(): Promise<void> {
       const cfg = (sequence.config ?? {}) as Record<string, unknown>;
       const channels = (item.deliveryChannels as string[]) ?? [];
 
+      // ── [C2] Pre-flight: validate email channel has a configured provider ──────
+      if (channels.includes("email") && cfg["emailListId"]) {
+        const rawProvider = (cfg["emailProvider"] as string) ?? "activecampaign";
+        const needsResendKey = !["rd_station", "activecampaign"].includes(rawProvider);
+        if (needsResendKey && !env.RESEND_API_KEY) {
+          const preflightErr = `Canal email não configurado: provider "${rawProvider}" requer RESEND_API_KEY. Configure a integração em /integracoes ou adicione a env var RESEND_API_KEY.`;
+          log.warn({ itemId: item.id, rawProvider }, "[C2] Pre-flight email falhou — nenhum provider de email disponível");
+          await db
+            .update(launchSequenceItemsTable)
+            .set({
+              status: "failed",
+              metadata: {
+                ...((item.metadata as Record<string, unknown>) ?? {}),
+                dispatchError: preflightErr,
+                failedAt: now.toISOString(),
+              },
+            })
+            .where(eq(launchSequenceItemsTable.id, item.id));
+          emitSequenceEvent({
+            sequenceId: sequence.id,
+            workspaceId: sequence.workspaceId,
+            type: "item_failed",
+            itemId: item.id,
+            message: `❌ "${item.name}" falhou no pré-voo: ${preflightErr}`,
+            data: { error: preflightErr, phase: item.phase, dayIndex: item.dayIndex },
+          });
+          continue;
+        }
+      }
+
       emitSequenceEvent({
         sequenceId: sequence.id,
         workspaceId: sequence.workspaceId,
@@ -595,19 +625,44 @@ export async function processScheduledItems(): Promise<void> {
         }
       }
 
-      await db
-        .update(launchSequenceItemsTable)
-        .set({ status: "dispatched", metadata: { ...((item.metadata as Record<string, unknown>) ?? {}), dispatchedChannels: dispatched, dispatchedAt: now.toISOString() } })
-        .where(eq(launchSequenceItemsTable.id, item.id));
-
-      emitSequenceEvent({
-        sequenceId: sequence.id,
-        workspaceId: sequence.workspaceId,
-        type: "item_dispatched",
-        itemId: item.id,
-        message: `✓ "${item.name}" disparado via ${dispatched.join(" + ") || "nenhum canal configurado"}`,
-        data: { channels: dispatched, phase: item.phase, dayIndex: item.dayIndex },
-      });
+      // ── [C2] Post-dispatch integrity: only "dispatched" when at least one channel confirmed ──
+      if (dispatched.length === 0 && channels.length > 0) {
+        const noDeliveryErr = `Nenhum canal entregou (tentados: ${channels.join(", ")}). Verifique as integrações em /integracoes.`;
+        log.warn({ itemId: item.id, channels }, "[C2] Nenhum canal entregou — marcando item como failed");
+        await db
+          .update(launchSequenceItemsTable)
+          .set({
+            status: "failed",
+            metadata: {
+              ...((item.metadata as Record<string, unknown>) ?? {}),
+              dispatchedChannels: [],
+              dispatchError: noDeliveryErr,
+              failedAt: now.toISOString(),
+            },
+          })
+          .where(eq(launchSequenceItemsTable.id, item.id));
+        emitSequenceEvent({
+          sequenceId: sequence.id,
+          workspaceId: sequence.workspaceId,
+          type: "item_failed",
+          itemId: item.id,
+          message: `❌ "${item.name}" falhou: ${noDeliveryErr}`,
+          data: { channels, phase: item.phase, dayIndex: item.dayIndex },
+        });
+      } else {
+        await db
+          .update(launchSequenceItemsTable)
+          .set({ status: "dispatched", metadata: { ...((item.metadata as Record<string, unknown>) ?? {}), dispatchedChannels: dispatched, dispatchedAt: now.toISOString() } })
+          .where(eq(launchSequenceItemsTable.id, item.id));
+        emitSequenceEvent({
+          sequenceId: sequence.id,
+          workspaceId: sequence.workspaceId,
+          type: "item_dispatched",
+          itemId: item.id,
+          message: `✓ "${item.name}" disparado via ${dispatched.join(" + ")}`,
+          data: { channels: dispatched, phase: item.phase, dayIndex: item.dayIndex },
+        });
+      }
     } catch (err) {
       log.error({ err, itemId: item.id }, "Sequence item dispatch failed");
       await db
