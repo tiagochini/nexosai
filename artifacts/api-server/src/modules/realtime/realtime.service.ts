@@ -19,7 +19,8 @@ export interface CampaignEvent {
     | "execution_update"
     | "campaign_completed"
     | "clarification_needed"
-    | "clarification_answered";
+    | "clarification_answered"
+    | "contract_violation";
   agentType?: string;
   message?: string;
   data?: Record<string, unknown>;

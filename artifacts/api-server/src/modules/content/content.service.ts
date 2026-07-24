@@ -169,6 +169,80 @@ const REGENERABLE_PIECE_TYPES: ReadonlySet<string> = new Set([
   "compliance_report",
 ]);
 
+// ── B2: Contract retry ceiling ────────────────────────────────────────────────
+// A piece that keeps failing validation after MAX_CONTRACT_RETRIES regenerations
+// stays permanently rejected rather than looping forever.
+const MAX_CONTRACT_RETRIES = 2;
+
+// ── B2: Output contract validation (module-level — used by both generateCampaignContent and regeneratePiece) ──
+// Returns a human-readable violation string when the piece fails its schema contract,
+// or null when the output is structurally sound.
+// This intentionally stays lightweight (array-presence checks, not deep Zod parse)
+// because it must be fast and allocation-free inside a pipeline hot-path.
+export function validatePieceContract(pieceType: string, content: unknown): string | null {
+  const obj = (content ?? {}) as Record<string, unknown>;
+  switch (pieceType) {
+    case "email_sequence": {
+      const emailSeq = obj.emailSequence as { preLaunch?: unknown[]; cartOpen?: unknown[] } | undefined;
+      if (!emailSeq?.preLaunch) {
+        return `email_sequence: missing emailSequence.preLaunch — LLM may have returned wrong schema (keys: [${Object.keys(obj).join(", ")}])`;
+      }
+      if (emailSeq.preLaunch.length === 0 && (emailSeq.cartOpen?.length ?? 0) === 0) {
+        return `email_sequence: preLaunch and cartOpen are empty — LLM returned minimal output`;
+      }
+      break;
+    }
+    case "vsl_script": {
+      const sections = (obj.sections as unknown[] | undefined)?.length ?? 0;
+      if (sections === 0) {
+        return `vsl_script: zero sections — LLM returned truncated or empty response`;
+      }
+      break;
+    }
+    case "ad_copy": {
+      const segs = (obj.segments as unknown[] | undefined)?.length ?? 0;
+      const ads = (obj.ads as unknown[] | undefined)?.length ?? 0;
+      if (segs === 0 && ads === 0) {
+        return `ad_copy: no segments or ads — LLM returned empty response`;
+      }
+      break;
+    }
+    case "landing_page_structure": {
+      const sections = (obj.sections as unknown[] | undefined)?.length ?? 0;
+      const headline = typeof obj.headline === "string" && obj.headline.length > 0;
+      const overallStructure = typeof obj.overallStructure === "string" && obj.overallStructure.length > 0;
+      if (sections === 0 && !headline && !overallStructure) {
+        return `landing_page_structure: missing sections, headline, and overallStructure`;
+      }
+      break;
+    }
+    case "cpl_script": {
+      const videos = (obj.videos as unknown[] | undefined)?.length ?? 0;
+      if (videos === 0) {
+        return `cpl_script: no videos — LLM returned empty response`;
+      }
+      break;
+    }
+    case "stories_sequence": {
+      const sequences = (obj.sequences as unknown[] | undefined)?.length ?? 0;
+      if (sequences === 0) {
+        return `stories_sequence: no sequences — LLM returned empty response (keys: [${Object.keys(obj).join(", ")}])`;
+      }
+      break;
+    }
+    case "targeting_config": {
+      const meta = (obj.metaAudiences as unknown[] | undefined)?.length ?? 0;
+      const google = (obj.googleAudiences as unknown[] | undefined)?.length ?? 0;
+      const tiktok = (obj.tiktokAudiences as unknown[] | undefined)?.length ?? 0;
+      if (meta === 0 && google === 0 && tiktok === 0) {
+        return `targeting_config: no metaAudiences, googleAudiences, or tiktokAudiences (keys: [${Object.keys(obj).join(", ")}])`;
+      }
+      break;
+    }
+  }
+  return null;
+}
+
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
 export async function generateCampaignContent(
@@ -368,79 +442,8 @@ export async function generateCampaignContent(
     return true;
   };
 
-  // ── OUTPUT CONTRACT VALIDATION ───────────────────────────────────────────────
-  // AUDIT FIX: Changed from throw to warn-and-flag.
-  // Previous behavior: strict throw → piece lost entirely, errors array grows,
-  // retry gate could permanently block a paying customer on a single bad LLM day.
-  // New behavior: log warning + mark content as _contractViolation=true + continue.
-  // The piece IS saved to DB (customer gets something), flagged for human review,
-  // and the pipeline continues to the next agent. This matches the core efficacy rule:
-  // "Every pipeline failure must auto-heal or skip-and-continue."
-  //
-  // Returns a warning string when contract is violated, null when clean.
-  const validatePieceContract = (pieceType: string, content: unknown): string | null => {
-    const obj = (content ?? {}) as Record<string, unknown>;
-    switch (pieceType) {
-      case "email_sequence": {
-        const emailSeq = obj.emailSequence as { preLaunch?: unknown[]; cartOpen?: unknown[] } | undefined;
-        if (!emailSeq?.preLaunch) {
-          return `email_sequence: missing emailSequence.preLaunch — LLM may have returned wrong schema (keys: [${Object.keys(obj).join(", ")}])`;
-        }
-        if (emailSeq.preLaunch.length === 0 && (emailSeq.cartOpen?.length ?? 0) === 0) {
-          return `email_sequence: preLaunch and cartOpen are empty — LLM returned minimal output`;
-        }
-        break;
-      }
-      case "vsl_script": {
-        const sections = (obj.sections as unknown[] | undefined)?.length ?? 0;
-        if (sections === 0) {
-          return `vsl_script: zero sections — LLM returned truncated or empty response`;
-        }
-        break;
-      }
-      case "ad_copy": {
-        const segs = (obj.segments as unknown[] | undefined)?.length ?? 0;
-        const ads = (obj.ads as unknown[] | undefined)?.length ?? 0;
-        if (segs === 0 && ads === 0) {
-          return `ad_copy: no segments or ads — LLM returned empty response`;
-        }
-        break;
-      }
-      case "landing_page_structure": {
-        const sections = (obj.sections as unknown[] | undefined)?.length ?? 0;
-        const headline = typeof obj.headline === "string" && obj.headline.length > 0;
-        const overallStructure = typeof obj.overallStructure === "string" && obj.overallStructure.length > 0;
-        if (sections === 0 && !headline && !overallStructure) {
-          return `landing_page_structure: missing sections, headline, and overallStructure`;
-        }
-        break;
-      }
-      case "cpl_script": {
-        const videos = (obj.videos as unknown[] | undefined)?.length ?? 0;
-        if (videos === 0) {
-          return `cpl_script: no videos — LLM returned empty response`;
-        }
-        break;
-      }
-      case "stories_sequence": {
-        const sequences = (obj.sequences as unknown[] | undefined)?.length ?? 0;
-        if (sequences === 0) {
-          return `stories_sequence: no sequences — LLM returned empty response (keys: [${Object.keys(obj).join(", ")}])`;
-        }
-        break;
-      }
-      case "targeting_config": {
-        const meta = (obj.metaAudiences as unknown[] | undefined)?.length ?? 0;
-        const google = (obj.googleAudiences as unknown[] | undefined)?.length ?? 0;
-        const tiktok = (obj.tiktokAudiences as unknown[] | undefined)?.length ?? 0;
-        if (meta === 0 && google === 0 && tiktok === 0) {
-          return `targeting_config: no metaAudiences, googleAudiences, or tiktokAudiences (keys: [${Object.keys(obj).join(", ")}])`;
-        }
-        break;
-      }
-    }
-    return null;
-  };
+  // validatePieceContract is now a module-level export (see above generateCampaignContent).
+  // B2: violations now BLOCK the piece (status="rejected") and trigger auto-reprocess.
 
   // Only transition to "generating" on a fresh run — skip if already there (resume after restart)
   if (!isResume) {
@@ -587,35 +590,65 @@ export async function generateCampaignContent(
     capturedCopyContent = copyOutput as unknown as Record<string, unknown>;
 
     const copyContractWarn = validatePieceContract("email_sequence", copyOutput);
-    if (copyContractWarn) log.warn({ campaignId, contractWarn: copyContractWarn }, "email_sequence contract violation — saving with _contractViolation flag");
 
-    const [piece] = await db
-      .insert(contentPiecesTable)
-      .values({
+    // B2: contract violation → rejected + auto-reprocess; no violation → pending_approval
+    if (copyContractWarn) {
+      log.warn({ campaignId, contractWarn: copyContractWarn }, "[B2] email_sequence contract violation — blocking (status=rejected), scheduling reprocess");
+      const [blocked] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "email_sequence",
+          status: "rejected",
+          title: `Copy Completa — ${copyOutput.campaignTitle ?? "Campanha"}`,
+          content: { ...copyOutput, _qualityScore: (copyOutput as any)._qualityScore ?? null, _contractViolation: copyContractWarn, _retryCount: 0 } as any,
+          aiProvider: "openai",
+          creditsUsed: 80,
+        })
+        .returning();
+      emitCampaignEvent({
         campaignId,
-        workspaceId,
-        type: "email_sequence",
-        status: "pending_approval",
-        title: `Copy Completa — ${copyOutput.campaignTitle ?? "Campanha"}`,
-        content: { ...copyOutput, _qualityScore: (copyOutput as any)._qualityScore ?? null, _contractViolation: copyContractWarn ?? undefined } as any,
-        aiProvider: "openai",
-        creditsUsed: 80,
-      })
-      .returning();
+        type: "contract_violation",
+        agentType: "copywriter",
+        message: `⚠️ email_sequence violou o contrato — bloqueado para reprocessamento automático`,
+        data: { pieceId: blocked?.id, reason: copyContractWarn },
+        timestamp: new Date().toISOString(),
+      });
+      if (blocked) {
+        setImmediate(() => {
+          regeneratePiece(campaignId, workspaceId, blocked.id, log).catch(err => {
+            log.error({ err, campaignId, pieceId: blocked.id }, "[B2] email_sequence auto-reprocess failed");
+          });
+        });
+      }
+    } else {
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "email_sequence",
+          status: "pending_approval",
+          title: `Copy Completa — ${copyOutput.campaignTitle ?? "Campanha"}`,
+          content: { ...copyOutput, _qualityScore: (copyOutput as any)._qualityScore ?? null } as any,
+          aiProvider: "openai",
+          creditsUsed: 80,
+        })
+        .returning();
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "copywriter",
+        message: `Copywriter concluído — ${(copyOutput.emailSequence?.preLaunch?.length ?? 0) + (copyOutput.emailSequence?.cartOpen?.length ?? 0) + (copyOutput.emailSequence?.cartClose?.length ?? 0)} e-mails + página de vendas + WhatsApp`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+      log.info({ campaignId, pieceId: piece?.id }, "Copywriter agent completed");
+    }
 
     piecesGenerated++;
     agentsRun.push("copywriter");
-
-    emitCampaignEvent({
-      campaignId,
-      type: "agent_completed",
-      agentType: "copywriter",
-      message: `Copywriter concluído — ${(copyOutput.emailSequence?.preLaunch?.length ?? 0) + (copyOutput.emailSequence?.cartOpen?.length ?? 0) + (copyOutput.emailSequence?.cartClose?.length ?? 0)} e-mails + página de vendas + WhatsApp`,
-      data: { pieceId: piece?.id },
-      timestamp: new Date().toISOString(),
-    });
-
-    log.info({ campaignId, pieceId: piece?.id }, "Copywriter agent completed");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push({ agent: "copywriter", error: msg });
@@ -646,35 +679,65 @@ export async function generateCampaignContent(
       );
 
       const lpContractWarn = validatePieceContract("landing_page_structure", lpOutput);
-      if (lpContractWarn) log.warn({ campaignId, contractWarn: lpContractWarn }, "landing_page_structure contract violation — saving with _contractViolation flag");
 
-      const [piece] = await db
-        .insert(contentPiecesTable)
-        .values({
+      // B2: contract violation → rejected + auto-reprocess
+      if (lpContractWarn) {
+        log.warn({ campaignId, contractWarn: lpContractWarn }, "[B2] landing_page_structure contract violation — blocking (status=rejected), scheduling reprocess");
+        const [blocked] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "landing_page_structure",
+            status: "rejected",
+            title: `Página de Vendas — ${lpOutput.sections?.length ?? 0} seções | ${lpOutput.pageType ?? "vsl"}`,
+            content: { ...lpOutput, _qualityScore: (lpOutput as any)._qualityScore ?? null, _contractViolation: lpContractWarn, _retryCount: 0 } as any,
+            aiProvider: "openai",
+            creditsUsed: 65,
+          })
+          .returning();
+        emitCampaignEvent({
           campaignId,
-          workspaceId,
-          type: "landing_page_structure",
-          status: "pending_approval",
-          title: `Página de Vendas — ${lpOutput.sections?.length ?? 0} seções | ${lpOutput.pageType ?? "vsl"}`,
-          content: { ...lpOutput, _qualityScore: (lpOutput as any)._qualityScore ?? null, _contractViolation: lpContractWarn ?? undefined } as any,
-          aiProvider: "openai",
-          creditsUsed: 65,
-        })
-        .returning();
+          type: "contract_violation",
+          agentType: "landing_page",
+          message: `⚠️ landing_page_structure violou o contrato — bloqueado para reprocessamento automático`,
+          data: { pieceId: blocked?.id, reason: lpContractWarn },
+          timestamp: new Date().toISOString(),
+        });
+        if (blocked) {
+          setImmediate(() => {
+            regeneratePiece(campaignId, workspaceId, blocked.id, log).catch(err => {
+              log.error({ err, campaignId, pieceId: blocked.id }, "[B2] landing_page auto-reprocess failed");
+            });
+          });
+        }
+      } else {
+        const [piece] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "landing_page_structure",
+            status: "pending_approval",
+            title: `Página de Vendas — ${lpOutput.sections?.length ?? 0} seções | ${lpOutput.pageType ?? "vsl"}`,
+            content: { ...lpOutput, _qualityScore: (lpOutput as any)._qualityScore ?? null } as any,
+            aiProvider: "openai",
+            creditsUsed: 65,
+          })
+          .returning();
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_completed",
+          agentType: "landing_page",
+          message: `Landing Page concluída — ${lpOutput.sections.length} seções wireframadas com copy + specs técnicas`,
+          data: { pieceId: piece?.id },
+          timestamp: new Date().toISOString(),
+        });
+        log.info({ campaignId, pieceId: piece?.id, sections: lpOutput.sections.length }, "Landing page agent completed");
+      }
 
       piecesGenerated++;
       agentsRun.push("landing_page");
-
-      emitCampaignEvent({
-        campaignId,
-        type: "agent_completed",
-        agentType: "landing_page",
-        message: `Landing Page concluída — ${lpOutput.sections.length} seções wireframadas com copy + specs técnicas`,
-        data: { pieceId: piece?.id },
-        timestamp: new Date().toISOString(),
-      });
-
-      log.info({ campaignId, pieceId: piece?.id, sections: lpOutput.sections.length }, "Landing page agent completed");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ agent: "landing_page", error: msg });
@@ -795,35 +858,65 @@ export async function generateCampaignContent(
     capturedAdContent = adOutput as unknown as Record<string, unknown>;
 
     const adContractWarn = validatePieceContract("ad_copy", adOutput);
-    if (adContractWarn) log.warn({ campaignId, contractWarn: adContractWarn }, "ad_copy contract violation — saving with _contractViolation flag");
 
-    const [piece] = await db
-      .insert(contentPiecesTable)
-      .values({
+    // B2: contract violation → rejected + auto-reprocess
+    if (adContractWarn) {
+      log.warn({ campaignId, contractWarn: adContractWarn }, "[B2] ad_copy contract violation — blocking (status=rejected), scheduling reprocess");
+      const [blocked] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "ad_copy",
+          status: "rejected",
+          title: `Pacote de Anúncios — ${(adOutput.segments?.length ?? 0)} segmentos`,
+          content: { ...adOutput, _qualityScore: (adOutput as any)._qualityScore ?? null, _contractViolation: adContractWarn, _retryCount: 0 } as any,
+          aiProvider: "openai",
+          creditsUsed: 50,
+        })
+        .returning();
+      emitCampaignEvent({
         campaignId,
-        workspaceId,
-        type: "ad_copy",
-        status: "pending_approval",
-        title: `Pacote de Anúncios — ${(adOutput.segments?.length ?? 0)} segmentos`,
-        content: { ...adOutput, _qualityScore: (adOutput as any)._qualityScore ?? null, _contractViolation: adContractWarn ?? undefined } as any,
-        aiProvider: "openai",
-        creditsUsed: 50,
-      })
-      .returning();
+        type: "contract_violation",
+        agentType: "ad_copy",
+        message: `⚠️ ad_copy violou o contrato — bloqueado para reprocessamento automático`,
+        data: { pieceId: blocked?.id, reason: adContractWarn },
+        timestamp: new Date().toISOString(),
+      });
+      if (blocked) {
+        setImmediate(() => {
+          regeneratePiece(campaignId, workspaceId, blocked.id, log).catch(err => {
+            log.error({ err, campaignId, pieceId: blocked.id }, "[B2] ad_copy auto-reprocess failed");
+          });
+        });
+      }
+    } else {
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "ad_copy",
+          status: "pending_approval",
+          title: `Pacote de Anúncios — ${(adOutput.segments?.length ?? 0)} segmentos`,
+          content: { ...adOutput, _qualityScore: (adOutput as any)._qualityScore ?? null } as any,
+          aiProvider: "openai",
+          creditsUsed: 50,
+        })
+        .returning();
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "ad_copy",
+        message: `Ad Copy concluído — ${adOutput.segments?.length ?? 0} segmentos com Meta + Google + TikTok`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+      log.info({ campaignId, pieceId: piece?.id }, "Ad copy agent completed");
+    }
 
     piecesGenerated++;
     agentsRun.push("ad_copy");
-
-    emitCampaignEvent({
-      campaignId,
-      type: "agent_completed",
-      agentType: "ad_copy",
-      message: `Ad Copy concluído — ${adOutput.segments?.length ?? 0} segmentos com Meta + Google + TikTok`,
-      data: { pieceId: piece?.id },
-      timestamp: new Date().toISOString(),
-    });
-
-    log.info({ campaignId, pieceId: piece?.id }, "Ad copy agent completed");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push({ agent: "ad_copy", error: msg });
@@ -857,37 +950,67 @@ export async function generateCampaignContent(
       );
 
       const targetingContractWarn = validatePieceContract("targeting_config", targetingOutput);
-      if (targetingContractWarn) log.warn({ campaignId, contractWarn: targetingContractWarn }, "targeting_config contract violation — saving with _contractViolation flag");
 
       capturedTargetingOutput = targetingOutput;
 
-      const [piece] = await db
-        .insert(contentPiecesTable)
-        .values({
+      // B2: contract violation → rejected + auto-reprocess
+      if (targetingContractWarn) {
+        log.warn({ campaignId, contractWarn: targetingContractWarn }, "[B2] targeting_config contract violation — blocking (status=rejected), scheduling reprocess");
+        const [blocked] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "targeting_config",
+            status: "rejected",
+            title: `Configuração de Audiências — ${(targetingOutput.metaAudiences?.length ?? 0)} Meta + ${(targetingOutput.googleAudiences?.length ?? 0)} Google + ${(targetingOutput.tiktokAudiences?.length ?? 0)} TikTok`,
+            content: { ...targetingOutput, _contractViolation: targetingContractWarn, _retryCount: 0 } as any,
+            aiProvider: "openai",
+            creditsUsed: 55,
+          })
+          .returning();
+        emitCampaignEvent({
           campaignId,
-          workspaceId,
-          type: "targeting_config",
-          status: "pending_approval",
-          title: `Configuração de Audiências — ${(targetingOutput.metaAudiences?.length ?? 0)} Meta + ${(targetingOutput.googleAudiences?.length ?? 0)} Google + ${(targetingOutput.tiktokAudiences?.length ?? 0)} TikTok`,
-          content: { ...targetingOutput, _contractViolation: targetingContractWarn ?? undefined } as any,
-          aiProvider: "openai",
-          creditsUsed: 55,
-        })
-        .returning();
+          type: "contract_violation",
+          agentType: "targeting",
+          message: `⚠️ targeting_config violou o contrato — bloqueado para reprocessamento automático`,
+          data: { pieceId: blocked?.id, reason: targetingContractWarn },
+          timestamp: new Date().toISOString(),
+        });
+        if (blocked) {
+          setImmediate(() => {
+            regeneratePiece(campaignId, workspaceId, blocked.id, log).catch(err => {
+              log.error({ err, campaignId, pieceId: blocked.id }, "[B2] targeting auto-reprocess failed");
+            });
+          });
+        }
+      } else {
+        const [piece] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "targeting_config",
+            status: "pending_approval",
+            title: `Configuração de Audiências — ${(targetingOutput.metaAudiences?.length ?? 0)} Meta + ${(targetingOutput.googleAudiences?.length ?? 0)} Google + ${(targetingOutput.tiktokAudiences?.length ?? 0)} TikTok`,
+            content: { ...targetingOutput } as any,
+            aiProvider: "openai",
+            creditsUsed: 55,
+          })
+          .returning();
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_completed",
+          agentType: "targeting",
+          message: `Targeting concluído — ${(targetingOutput.metaAudiences?.length ?? 0) + (targetingOutput.googleAudiences?.length ?? 0) + (targetingOutput.tiktokAudiences?.length ?? 0)} audiências configuradas + UTMs prontos`,
+          data: { pieceId: piece?.id },
+          timestamp: new Date().toISOString(),
+        });
+        log.info({ campaignId, pieceId: piece?.id }, "Targeting agent completed");
+      }
 
       piecesGenerated++;
       agentsRun.push("targeting");
-
-      emitCampaignEvent({
-        campaignId,
-        type: "agent_completed",
-        agentType: "targeting",
-        message: `Targeting concluído — ${(targetingOutput.metaAudiences?.length ?? 0) + (targetingOutput.googleAudiences?.length ?? 0) + (targetingOutput.tiktokAudiences?.length ?? 0)} audiências configuradas + UTMs prontos`,
-        data: { pieceId: piece?.id },
-        timestamp: new Date().toISOString(),
-      });
-
-      log.info({ campaignId, pieceId: piece?.id }, "Targeting agent completed");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ agent: "targeting", error: msg });
@@ -986,35 +1109,65 @@ export async function generateCampaignContent(
       );
 
       const vslContractWarn = validatePieceContract("vsl_script", vslOutput);
-      if (vslContractWarn) log.warn({ campaignId, contractWarn: vslContractWarn }, "vsl_script contract violation — saving with _contractViolation flag");
 
-      const [piece] = await db
-        .insert(contentPiecesTable)
-        .values({
+      // B2: contract violation → rejected + auto-reprocess
+      if (vslContractWarn) {
+        log.warn({ campaignId, contractWarn: vslContractWarn }, "[B2] vsl_script contract violation — blocking (status=rejected), scheduling reprocess");
+        const [blocked] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "vsl_script",
+            status: "rejected",
+            title: vslOutput.title ?? "VSL Script",
+            content: { ...vslOutput, _qualityScore: (vslOutput as any)._qualityScore ?? null, _contractViolation: vslContractWarn, _retryCount: 0 } as any,
+            aiProvider: "openai",
+            creditsUsed: 70,
+          })
+          .returning();
+        emitCampaignEvent({
           campaignId,
-          workspaceId,
-          type: "vsl_script",
-          status: "pending_approval",
-          title: vslOutput.title ?? "VSL Script",
-          content: { ...vslOutput, _qualityScore: (vslOutput as any)._qualityScore ?? null, _contractViolation: vslContractWarn ?? undefined } as any,
-          aiProvider: "openai",
-          creditsUsed: 70,
-        })
-        .returning();
+          type: "contract_violation",
+          agentType: "vsl_script",
+          message: `⚠️ vsl_script violou o contrato — bloqueado para reprocessamento automático`,
+          data: { pieceId: blocked?.id, reason: vslContractWarn },
+          timestamp: new Date().toISOString(),
+        });
+        if (blocked) {
+          setImmediate(() => {
+            regeneratePiece(campaignId, workspaceId, blocked.id, log).catch(err => {
+              log.error({ err, campaignId, pieceId: blocked.id }, "[B2] vsl_script auto-reprocess failed");
+            });
+          });
+        }
+      } else {
+        const [piece] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "vsl_script",
+            status: "pending_approval",
+            title: vslOutput.title ?? "VSL Script",
+            content: { ...vslOutput, _qualityScore: (vslOutput as any)._qualityScore ?? null } as any,
+            aiProvider: "openai",
+            creditsUsed: 70,
+          })
+          .returning();
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_completed",
+          agentType: "vsl_script",
+          message: `VSL Script concluído — ${vslOutput.totalDuration ?? ""} | ${vslOutput.sections?.length ?? 0} seções`,
+          data: { pieceId: piece?.id },
+          timestamp: new Date().toISOString(),
+        });
+        log.info({ campaignId, pieceId: piece?.id, duration: vslOutput.totalDuration }, "VSL script agent completed");
+      }
 
       piecesGenerated++;
       agentsRun.push("vsl_script");
-
-      emitCampaignEvent({
-        campaignId,
-        type: "agent_completed",
-        agentType: "vsl_script",
-        message: `VSL Script concluído — ${vslOutput.totalDuration ?? ""} | ${vslOutput.sections?.length ?? 0} seções`,
-        data: { pieceId: piece?.id },
-        timestamp: new Date().toISOString(),
-      });
-
-      log.info({ campaignId, pieceId: piece?.id, duration: vslOutput.totalDuration }, "VSL script agent completed");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ agent: "vsl_script", error: msg });
@@ -1113,35 +1266,65 @@ export async function generateCampaignContent(
       );
 
       const cplContractWarn = validatePieceContract("cpl_script", cplOutput);
-      if (cplContractWarn) log.warn({ campaignId, contractWarn: cplContractWarn }, "cpl_script contract violation — saving with _contractViolation flag");
 
-      const [piece] = await db
-        .insert(contentPiecesTable)
-        .values({
+      // B2: contract violation → rejected + auto-reprocess
+      if (cplContractWarn) {
+        log.warn({ campaignId, contractWarn: cplContractWarn }, "[B2] cpl_script contract violation — blocking (status=rejected), scheduling reprocess");
+        const [blocked] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "cpl_script",
+            status: "rejected",
+            title: `CPL — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} Vídeos de Pré-Lançamento`,
+            content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null, _contractViolation: cplContractWarn, _retryCount: 0 } as any,
+            aiProvider: "openai",
+            creditsUsed: 75,
+          })
+          .returning();
+        emitCampaignEvent({
           campaignId,
-          workspaceId,
-          type: "cpl_script",
-          status: "pending_approval",
-          title: `CPL — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} Vídeos de Pré-Lançamento`,
-          content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null, _contractViolation: cplContractWarn ?? undefined } as any,
-          aiProvider: "openai",
-          creditsUsed: 75,
-        })
-        .returning();
+          type: "contract_violation",
+          agentType: "cpl_script",
+          message: `⚠️ cpl_script violou o contrato — bloqueado para reprocessamento automático`,
+          data: { pieceId: blocked?.id, reason: cplContractWarn },
+          timestamp: new Date().toISOString(),
+        });
+        if (blocked) {
+          setImmediate(() => {
+            regeneratePiece(campaignId, workspaceId, blocked.id, log).catch(err => {
+              log.error({ err, campaignId, pieceId: blocked.id }, "[B2] cpl_script auto-reprocess failed");
+            });
+          });
+        }
+      } else {
+        const [piece] = await db
+          .insert(contentPiecesTable)
+          .values({
+            campaignId,
+            workspaceId,
+            type: "cpl_script",
+            status: "pending_approval",
+            title: `CPL — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} Vídeos de Pré-Lançamento`,
+            content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null } as any,
+            aiProvider: "openai",
+            creditsUsed: 75,
+          })
+          .returning();
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_completed",
+          agentType: "cpl_script",
+          message: `CPL concluído — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} roteiros de CPL prontos para gravar`,
+          data: { pieceId: piece?.id },
+          timestamp: new Date().toISOString(),
+        });
+        log.info({ campaignId, pieceId: piece?.id, videos: cplOutput.totalVideos }, "CPL script agent completed");
+      }
 
       piecesGenerated++;
       agentsRun.push("cpl_script");
-
-      emitCampaignEvent({
-        campaignId,
-        type: "agent_completed",
-        agentType: "cpl_script",
-        message: `CPL concluído — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} roteiros de CPL prontos para gravar`,
-        data: { pieceId: piece?.id },
-        timestamp: new Date().toISOString(),
-      });
-
-      log.info({ campaignId, pieceId: piece?.id, videos: cplOutput.totalVideos }, "CPL script agent completed");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push({ agent: "cpl_script", error: msg });
@@ -1290,35 +1473,65 @@ export async function generateCampaignContent(
     );
 
     const storiesContractWarn = validatePieceContract("stories_sequence", storiesOutput);
-    if (storiesContractWarn) log.warn({ campaignId, contractWarn: storiesContractWarn }, "stories_sequence contract violation — saving with _contractViolation flag");
 
-    const [piece] = await db
-      .insert(contentPiecesTable)
-      .values({
+    // B2: contract violation → rejected + auto-reprocess
+    if (storiesContractWarn) {
+      log.warn({ campaignId, contractWarn: storiesContractWarn }, "[B2] stories_sequence contract violation — blocking (status=rejected), scheduling reprocess");
+      const [blocked] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "stories_sequence",
+          status: "rejected",
+          title: `Stories — ${storiesOutput.totalSequences ?? storiesOutput.sequences?.length ?? 0} sequências narrativas`,
+          content: { ...storiesOutput, _contractViolation: storiesContractWarn, _retryCount: 0 } as any,
+          aiProvider: "openai",
+          creditsUsed: 45,
+        })
+        .returning();
+      emitCampaignEvent({
         campaignId,
-        workspaceId,
-        type: "stories_sequence",
-        status: "pending_approval",
-        title: `Stories — ${storiesOutput.totalSequences ?? storiesOutput.sequences?.length ?? 0} sequências narrativas`,
-        content: { ...storiesOutput, _contractViolation: storiesContractWarn ?? undefined } as any,
-        aiProvider: "openai",
-        creditsUsed: 45,
-      })
-      .returning();
+        type: "contract_violation",
+        agentType: "stories_sequence",
+        message: `⚠️ stories_sequence violou o contrato — bloqueado para reprocessamento automático`,
+        data: { pieceId: blocked?.id, reason: storiesContractWarn },
+        timestamp: new Date().toISOString(),
+      });
+      if (blocked) {
+        setImmediate(() => {
+          regeneratePiece(campaignId, workspaceId, blocked.id, log).catch(err => {
+            log.error({ err, campaignId, pieceId: blocked.id }, "[B2] stories_sequence auto-reprocess failed");
+          });
+        });
+      }
+    } else {
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "stories_sequence",
+          status: "pending_approval",
+          title: `Stories — ${storiesOutput.totalSequences ?? storiesOutput.sequences?.length ?? 0} sequências narrativas`,
+          content: { ...storiesOutput } as any,
+          aiProvider: "openai",
+          creditsUsed: 45,
+        })
+        .returning();
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "stories_sequence",
+        message: `Stories concluídos — ${storiesOutput.sequences?.length ?? 0} sequências com frames completos`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
+      log.info({ campaignId, pieceId: piece?.id, sequences: storiesOutput.sequences.length }, "Stories sequence agent completed");
+    }
 
     piecesGenerated++;
     agentsRun.push("stories_sequence");
-
-    emitCampaignEvent({
-      campaignId,
-      type: "agent_completed",
-      agentType: "stories_sequence",
-      message: `Stories concluídos — ${storiesOutput.sequences?.length ?? 0} sequências com frames completos`,
-      data: { pieceId: piece?.id },
-      timestamp: new Date().toISOString(),
-    });
-
-    log.info({ campaignId, pieceId: piece?.id, sequences: storiesOutput.sequences.length }, "Stories sequence agent completed");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push({ agent: "stories_sequence", error: msg });
@@ -2704,6 +2917,73 @@ export async function regeneratePiece(
     throw emptyErr;
   }
 
+  // B2: Re-validate contract on the newly generated content.
+  // Read existing retry counter (default 0 for pieces coming from the initial pipeline).
+  const existingContent = (piece.content ?? {}) as Record<string, unknown>;
+  const currentRetryCount = typeof existingContent._retryCount === "number" ? existingContent._retryCount : 0;
+  const regenContractWarn = validatePieceContract(piece.type ?? "", newContent);
+
+  if (regenContractWarn) {
+    const nextRetryCount = currentRetryCount + 1;
+    if (nextRetryCount > MAX_CONTRACT_RETRIES) {
+      // Ceiling hit — mark permanently rejected, stop looping.
+      log.error(
+        { campaignId, pieceId, agentName, contractWarn: regenContractWarn, retries: currentRetryCount },
+        "[B2] regeneratePiece: contract still violated after MAX_CONTRACT_RETRIES — marking _permanentlyRejected",
+      );
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({
+          content: { ...newContent as Record<string, unknown>, _contractViolation: regenContractWarn, _retryCount: nextRetryCount, _permanentlyRejected: true } as any,
+          status: "rejected",
+          approvedAt: null,
+        })
+        .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+        .returning();
+      if (!updated) throw new NotFoundError("Content piece");
+      emitCampaignEvent({
+        campaignId,
+        type: "contract_violation",
+        agentType: agentName,
+        message: `🚫 ${piece.type} permanentemente rejeitado após ${nextRetryCount} tentativas — revisão manual necessária`,
+        data: { pieceId, reason: regenContractWarn, permanentlyRejected: true },
+        timestamp: new Date().toISOString(),
+      });
+      return updated;
+    }
+
+    // Under ceiling — keep rejected, increment counter, schedule another attempt.
+    log.warn(
+      { campaignId, pieceId, agentName, contractWarn: regenContractWarn, nextRetryCount },
+      `[B2] regeneratePiece: contract still violated (attempt ${nextRetryCount}/${MAX_CONTRACT_RETRIES}) — scheduling retry`,
+    );
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({
+        content: { ...newContent as Record<string, unknown>, _contractViolation: regenContractWarn, _retryCount: nextRetryCount } as any,
+        status: "rejected",
+        approvedAt: null,
+      })
+      .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
+      .returning();
+    if (!updated) throw new NotFoundError("Content piece");
+    emitCampaignEvent({
+      campaignId,
+      type: "contract_violation",
+      agentType: agentName,
+      message: `⚠️ ${piece.type} ainda viola o contrato (tentativa ${nextRetryCount}/${MAX_CONTRACT_RETRIES}) — reagendando reprocessamento`,
+      data: { pieceId, reason: regenContractWarn, retryCount: nextRetryCount },
+      timestamp: new Date().toISOString(),
+    });
+    setImmediate(() => {
+      regeneratePiece(campaignId, workspaceId, pieceId, log).catch(err => {
+        log.error({ err, campaignId, pieceId }, "[B2] scheduled retry from regeneratePiece failed");
+      });
+    });
+    return updated;
+  }
+
+  // Contract clean — promote to pending_approval.
   const [updated] = await db
     .update(contentPiecesTable)
     .set({
@@ -2716,7 +2996,7 @@ export async function regeneratePiece(
 
   if (!updated) throw new NotFoundError("Content piece");
 
-  log.info({ pieceId, campaignId, agentName }, "Content piece regenerated successfully");
+  log.info({ pieceId, campaignId, agentName }, "Content piece regenerated successfully — contract clean, status=pending_approval");
   return updated;
 }
 
