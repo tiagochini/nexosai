@@ -12,7 +12,7 @@ import {
   type CampaignAgent,
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole, type AIMessage } from "../ai-gateway/ai-gateway.service.js";
-import { routedComplete } from "../ai-gateway/llm-router.js";
+import { routedComplete, type RouterResult } from "../ai-gateway/llm-router.js";
 import {
   emitAgentStarted,
   emitAgentThinking,
@@ -83,6 +83,13 @@ export interface RunAgentOptions {
    * launch day, phase, time, and timezone of the campaign region.
    */
   temporalContext?: TemporalContextOpts;
+  /**
+   * TEST-ONLY: force a provider fallback by calling the primary with a very short timeout.
+   * The primary aborts immediately → completeWithAgent catch → OpenAI fallback →
+   * usedFallback:true propagates → [MODEL_FALLBACK] WARN + Socket.io event + DB save fire.
+   * Never set this in production code.
+   */
+  _testForceProviderFallback?: { provider: "anthropic" | "openai" | "gemini"; timeoutMs: number };
 }
 
 export interface RunAgentResult {
@@ -788,16 +795,35 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
   let agentRecordClosed = false;
 
   try {
-    const result = await routedComplete(
-      agentRole,
-      enrichedSystemPrompt,
-      messages,
-      workspaceId,
-      log,
-      campaignId ?? undefined,
-      ownerLocale,
-      opts.maxTokens,
-    );
+    let result: RouterResult;
+    if (opts._testForceProviderFallback) {
+      // TEST-ONLY: calls completeWithAgent directly with a short timeout to force fallback.
+      const { provider, timeoutMs } = opts._testForceProviderFallback;
+      const cwResult = await completeWithAgent(
+        agentRole,
+        enrichedSystemPrompt,
+        messages,
+        workspaceId,
+        log,
+        campaignId ?? undefined,
+        ownerLocale,
+        provider,
+        opts.maxTokens,
+        timeoutMs,
+      );
+      result = { ...cwResult, taskType: "strategic_deep_copy", attemptCount: 1, usedFallback: cwResult.usedFallback ?? false };
+    } else {
+      result = await routedComplete(
+        agentRole,
+        enrichedSystemPrompt,
+        messages,
+        workspaceId,
+        log,
+        campaignId ?? undefined,
+        ownerLocale,
+        opts.maxTokens,
+      );
+    }
 
     content = result.content;
     creditsCharged = result.creditsCharged;
@@ -869,6 +895,13 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
               creditsCharged,
               provider: result.provider,
               model: result.model,
+              ...(result.usedFallback
+                ? {
+                    fallbackUsed: true,
+                    fallbackProvider: result.provider,
+                    fallbackModel: result.model,
+                  }
+                : {}),
             },
           },
           completedAt: new Date(),

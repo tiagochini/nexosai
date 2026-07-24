@@ -907,13 +907,14 @@ export async function completeWithAgent(
           { agentRole, model, err: String(anthropicErr) },
           "[completeWithAgent] FALLBACK: Anthropic failed — routing to OpenAI",
         );
+        // Fallback gets its own (longer) timeout — the caller's ceiling applied to the primary only.
         result = await callOpenAI(
           getDefaultModelForProvider("openai"),
           effectiveSystem,
           messages,
           effectiveMaxTokens,
           undefined,
-          timeoutMs,
+          undefined, // no caller timeout — fallback must complete
           log,
         );
         internalFallback = true;
@@ -932,13 +933,14 @@ export async function completeWithAgent(
           { agentRole, model, err: String(geminiErr) },
           "[completeWithAgent] FALLBACK: Gemini failed — routing to OpenAI",
         );
+        // Fallback gets its own (longer) timeout — the caller's ceiling applied to the primary only.
         result = await callOpenAI(
           getDefaultModelForProvider("openai"),
           effectiveSystem,
           messages,
           effectiveMaxTokens,
           undefined,
-          timeoutMs,
+          undefined, // no caller timeout — fallback must complete
           log,
         );
         internalFallback = true;

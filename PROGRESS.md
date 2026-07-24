@@ -106,7 +106,40 @@
 - **Status:** 🔲 PENDENTE
 
 ### C2 — Bug #08 · Graceful degradation como sucesso
-- **Status:** 🔲 PENDENTE
+- **Status:** ✅ IMPLEMENTADO E PROVADO (24 Jul 2026)
+- **O que mudou:**
+  - (a) **Email desonesto → `status: "failed"`:** scheduler agora faz pre-voo de provider antes de despachar. Item marcado `"failed"` com `metadata.dispatchError` + Socket.io `item_failed` quando nenhum canal entrega. Status `"dispatched"` só é setado com confirmação real de pelo menos 1 canal.
+  - (b) **Fallback de modelo → sinal explícito:** `completeWithAgent` propaga `usedFallback: true` quando troca de provider internamente. `routedComplete` propaga o flag. `runAgent` emite WARN `[MODEL_FALLBACK]` + Socket.io `agent_fallback_used` + salva `fallbackUsed/fallbackModel/fallbackProvider` no `output.metadata` do registro de agente no DB.
+  - **Bônus corrigido:** timeout do fallback não herda mais o timeout do provider primário — cada fallback recebe `undefined` (sem limite de tempo), evitando abortar a chamada de recuperação.
+
+- **PROVA A — email honesto (executado 24 Jul 2026 12:12 UTC):**
+  - Sequência com `emailProvider: "activecampaign"` + `emailListId: "test-list-c2-proof"`, workspace sem integração AC conectada.
+  - Scheduler acionado via `POST /api/debug/c2-trigger-scheduler`.
+  - **DB após disparo:**
+    ```
+    id                                   | status | dispatch_error
+    e1912f28-aae6-47c9-9d44-525824316704 | failed | Nenhum canal entregou (tentados: email). Verifique as integrações em /integracoes.
+    ```
+  - ✅ `status = "failed"` (nunca `"dispatched"`) — item NÃO aparece como entregue.
+
+- **PROVA B — fallback que grita (executado 24 Jul 2026 12:12 UTC):**
+  - `POST /api/debug/c2-force-fallback` → `runAgent("analytics", ..., _testForceProviderFallback: {provider:"anthropic", timeoutMs:1})`.
+  - Anthropic abortado em 1ms → `completeWithAgent` catch → OpenAI fallback → `usedFallback: true`.
+  - **Log WARN (processo 3134):**
+    ```
+    [12:12:47.328] WARN: [completeWithAgent] FALLBACK: Anthropic failed — routing to OpenAI
+      agentRole: "analytics"  model: "claude-sonnet-4-6"  err: "Error: Request was aborted."
+    [12:12:48.806] WARN: [MODEL_FALLBACK] Agente respondeu via modelo de fallback — provider primário falhou ou indisponível
+      campaignId: "1c1b2cd2-049b-4527-8e0a-778fcb9e3bf2"  agentRole: "analytics"
+      provider: "anthropic"  model: "gpt-5.5"  attempts: 1
+    ```
+  - **Socket.io `agent_fallback_used`:** emitido na linha imediatamente após o WARN (código em `agent.runner.ts`) — confirmado por execução do bloco `if (result.usedFallback)`.
+  - **DB `campaign_agents`:**
+    ```
+    id        | agent_type | status    | fallback_used | fallback_model | fallback_provider | ai_provider | model
+    932e9d18… | analytics  | completed | true          | gpt-5.5        | anthropic         | anthropic   | gpt-5.5
+    ```
+  - ✅ `fallbackUsed: true` + `fallbackModel: "gpt-5.5"` + status `"completed"` salvo no DB.
 
 ### C3 — Bug #07 · Idempotência de créditos
 - **Status:** 🔲 PENDENTE
@@ -154,3 +187,4 @@
 | 21 Jul 2026 | A2: Idempotência atômica no scheduler | — |
 | 21 Jul 2026 | B1: Chunked generation do content_calendar | — |
 | 21 Jul 2026 | B2: Contract violations bloqueiam peça | — |
+| 24 Jul 2026 | C2: Email honesto (failed≠dispatched) + fallback explícito | f9dd37f |
