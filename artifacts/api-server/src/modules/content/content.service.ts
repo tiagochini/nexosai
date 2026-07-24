@@ -109,6 +109,9 @@ const PIECE_TYPE_MEANINGFUL_ARRAY_KEY: Record<string, string> = {
   ad_copy: "segments",
   targeting_config: "metaAudiences",
   media_buying_plan: "dailyAllocations",
+  // B1-3: content_calendar empty is determined by its "calendar" array — not scalar heuristics.
+  // campaignTitle (string) would fool the generic hasScalar path into reporting "not empty".
+  content_calendar: "calendar",
 };
 
 export function isPieceContentEmpty(content: unknown, pieceType?: string): boolean {
@@ -667,33 +670,69 @@ export async function generateCampaignContent(
       log,
     );
 
-    const [piece] = await db
-      .insert(contentPiecesTable)
-      .values({
+    // B1-2: Block saving calendar:[] as pending_approval.
+    // Zero posts = explicit failure — save a sentinel (status:"rejected", _calendarEmpty:true)
+    // so the auto-repair sweep detects and regenerates it.
+    // isPieceContentEmpty now checks the "calendar" key directly for content_calendar pieces.
+    if (socialOutput.calendar.length === 0) {
+      log.warn({ campaignId }, "[B1] Social media returned calendar:[] — blocking pending_approval, saving sentinel for auto-repair");
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_failed",
+        agentType: "social_media",
+        message: "Agente Social Media retornou calendário vazio (0 posts) — auto-reparo disparado automaticamente",
+        timestamp: new Date().toISOString(),
+      });
+      // Sentinel piece: status "rejected" (not pending_approval), content signals empty state.
+      // Auto-repair sweep queries ALL pieces regardless of status — will detect and regenerate this.
+      await db.insert(contentPiecesTable).values({
         campaignId,
         workspaceId,
         type: "content_calendar",
-        status: "pending_approval",
-        title: `Calendário de Social Media — ${socialOutput.totalDays} dias`,
-        content: socialOutput as any,
+        status: "rejected",
+        title: "Calendário de Social Media — aguardando auto-reparo",
+        content: {
+          _calendarEmpty: true,
+          _notGenerated: true,
+          calendar: [],
+          totalDays: socialOutput.totalDays || 0,
+          campaignTitle: socialOutput.campaignTitle || "",
+        } as any,
         aiProvider: "openai",
-        creditsUsed: 60,
-      })
-      .returning();
+        creditsUsed: 0,
+      });
+      // Track as error, not success — do NOT increment piecesGenerated or agentsRun
+      errors.push({ agent: "social_media", error: "calendar:[] — 0 posts returned; auto-repair required" });
+    } else {
+      // Calendar has posts — normal success path
+      const [piece] = await db
+        .insert(contentPiecesTable)
+        .values({
+          campaignId,
+          workspaceId,
+          type: "content_calendar",
+          status: "pending_approval",
+          title: `Calendário de Social Media — ${socialOutput.totalDays} dias`,
+          content: socialOutput as any,
+          aiProvider: "openai",
+          creditsUsed: 60,
+        })
+        .returning();
 
-    piecesGenerated++;
-    agentsRun.push("social_media");
+      piecesGenerated++;
+      agentsRun.push("social_media");
 
-    emitCampaignEvent({
-      campaignId,
-      type: "agent_completed",
-      agentType: "social_media",
-      message: `Social Media concluído — ${socialOutput.calendar.length} posts em ${socialOutput.totalDays} dias`,
-      data: { pieceId: piece?.id },
-      timestamp: new Date().toISOString(),
-    });
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: "social_media",
+        message: `Social Media concluído — ${socialOutput.calendar.length} posts em ${socialOutput.totalDays} dias`,
+        data: { pieceId: piece?.id },
+        timestamp: new Date().toISOString(),
+      });
 
-    log.info({ campaignId, pieceId: piece?.id, posts: socialOutput.calendar.length }, "Social media agent completed");
+      log.info({ campaignId, pieceId: piece?.id, posts: socialOutput.calendar.length }, "Social media agent completed");
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push({ agent: "social_media", error: msg });

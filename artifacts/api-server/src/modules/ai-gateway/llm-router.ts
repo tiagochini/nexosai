@@ -40,7 +40,7 @@ const TASK_PROVIDER_CHAINS: Record<
   ("anthropic" | "openai" | "gemini")[]
 > = {
   strategic_deep_copy: ["anthropic", "openai"],
-  structured_json:     ["openai",    "anthropic"],
+  structured_json:     ["openai",    "anthropic", "gemini"],
   summarization:       ["gemini",    "openai"],
   validation:          ["openai",    "anthropic"],
   long_context:        ["gemini",    "openai"],
@@ -114,6 +114,10 @@ const AGENT_TASK_MAP: Partial<Record<AgentRole, LLMTaskType>> = {
   ab_test_designer:         "structured_json",
   content_calendar:         "structured_json",
   hook_factory:             "structured_json",
+  // B1-4: social_media generates structured JSON (calendar array) — must use GPT-first chain.
+  // Previously absent from this map → defaulted to strategic_deep_copy (Claude) which
+  // generates calendar:[] silently. Now explicitly structured_json → OpenAI primary.
+  social_media:             "structured_json",
   // Validation & compliance
   compliance:               "validation",
   ad_critic:                "validation",

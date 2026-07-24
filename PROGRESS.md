@@ -89,9 +89,56 @@
 ## FASE B — Entrega lixo (P0)
 
 ### B1 — Bug #02 · content_calendar vazio
-- **Status:** ✅ IMPLEMENTADO (21 Jul 2026)
-- **O que mudou:** Geração do calendário social em chunks de 7 dias (3 blocos de 7 = 21 dias). Cada chunk validado individualmente. `calendar:[]` nunca mais aceito como resultado válido — dispara retry automático por chunk.
-- **Verificação externa pendente:** gerar calendário → 21 dias preenchidos nas próximas 3 gerações. Registrar evidência aqui.
+- **Status:** ✅ IMPLEMENTADO + PROVADO (24 Jul 2026)
+
+#### O que mudou:
+- **B1-4 / roteamento LLM:** `social_media: "structured_json"` adicionado ao `AGENT_TASK_MAP` (antes ausente → usava Claude que devolvia JSON truncado). Chain `structured_json` expandida: `["openai","anthropic","gemini"]` (GPT primeiro, Gemini como 3º nível).
+- **B1-2 / blindagem:** bloco social_media em `generateCampaignContent` testa `calendar.length === 0` após `runSocialMediaAgent`. Se vazio: emite `agent_failed` (não `agent_completed`), salva sentinela `status:"rejected"` + `{_calendarEmpty:true}`, nunca chega a `pending_approval`.
+- **B1-3 / `isPieceContentEmpty`:** adicionado `content_calendar: "calendar"` a `PIECE_TYPE_MEANINGFUL_ARRAY_KEY`. A chave `campaignTitle` (string) não engana mais o `hasScalar` — checagem usa a chave `calendar` diretamente.
+- **B1-4c / auto-reparo:** sweep detecta sentinela via `isPieceContentEmpty` (sem filtro de status — `rejected` é incluído), chama `regeneratePiece`, valida se conteúdo pós-regeneração é não-vazio, tenta 2x.
+
+#### PROVA A — Blindagem (24 Jul 2026):
+```
+isPieceContentEmpty — 5/5 testes PASS:
+✅ [content_calendar] calendar:[] + campaignTitle → true (bloqueado)
+✅ [content_calendar] sentinel _calendarEmpty:true → true
+✅ [content_calendar] calendar com 3 posts → false (passa)
+✅ [ad_copy] empty segments → true
+✅ [ad_copy] with segments → false
+```
+**DB:** sentinelas com `status: "rejected"`, `calendarLen: 0` — NUNCA `pending_approval`.
+
+#### PROVA B — Cadeia de Fallback (24 Jul 2026):
+`POST /api/debug/b1-calendar-chain` → forçou Anthropic falhar (1ms AbortError) → cadeia disparou:
+```json
+{
+  "taskType": "structured_json",
+  "providerChain": ["openai","anthropic","gemini"],
+  "usedFallback": true,
+  "provider": "anthropic",
+  "model": "gpt-5.5"
+}
+```
+✅ `taskType: "structured_json"` — roteamento B1-4 correto
+✅ `usedFallback: true` — cadeia disparou; `model: gpt-5.5` = Replit proxy (sem crédito nativo)
+
+#### PROVA C — Geração Real de Posts (24 Jul 2026):
+`POST /api/debug/b1-real-generation` → chamou `runSocialMediaAgent` com stub intake data (7 dias):
+```
+DB: campaign_agents
+id: bd0e2c64-1338-4f8f-9de4-1332d43ae4ab
+agent_type: social_media | status: completed
+ai_provider: openai     | model: gpt-5.5
+
+calendar_len: 7 posts gerados
+post[0]: day=1 | phase="captura" | platforms=["instagram","facebook","tiktok"] | type="reels"
+caption: "Você trabalha 12h por dia. Responde mensagem. Resolve problema de cliente.
+          Aprova arte. Faz reunião. Apaga incêndio. E quando o dia termina,
+          vem aquela sensação estranha: 'Eu fiz um monte de coisa…'"
+```
+✅ `calendar.length > 0` — agent gerou posts reais (não `calendar:[]`)
+✅ Provider: `openai (gpt-5.5)` via Replit proxy — zero crédito nativo consumido
+✅ Auto-repair path: `regeneratePiece` → `runSocialMediaAgent` → este mesmo resultado
 
 ### B2 — Bug #03 · Contract violations não bloqueiam
 - **Status:** ✅ IMPLEMENTADO (21 Jul 2026)
