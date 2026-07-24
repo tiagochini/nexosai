@@ -39,6 +39,7 @@ export const whatsappDispatchesTable = pgTable("whatsapp_dispatches", {
   displayPhoneNumber: text("display_phone_number"),
   type: whatsappDispatchTypeEnum("type").notNull().default("broadcast"),
   recipients: jsonb("recipients").notNull().default([]),
+  sequenceItemId: uuid("sequence_item_id"),
   contentPieceId: uuid("content_piece_id"),
   message: text("message").notNull(),
   mediaUrl: text("media_url"),

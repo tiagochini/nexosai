@@ -261,6 +261,7 @@ export async function createEmailDispatch(
   workspaceId: string,
   input: {
     campaignId?: string;
+    sequenceItemId?: string;
     provider:
       | "rd_station"
       | "activecampaign"
@@ -305,6 +306,7 @@ export async function createEmailDispatch(
     .values({
       workspaceId,
       campaignId: input.campaignId ?? null,
+      sequenceItemId: input.sequenceItemId ?? null,
       provider: input.provider,
       listId: input.listId,
       listName: input.listName ?? null,

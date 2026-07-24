@@ -36,6 +36,28 @@ const redisConnection = {
 let worker: Worker | null = null;
 let fallbackInterval: NodeJS.Timeout | null = null;
 
+// A2 FIX (Bug #05) — process-level in-flight guard.
+// Prevents two concurrent calls to processScheduledItems() even if BullMQ
+// and setInterval somehow both fire at the same tick (e.g. during Redis
+// reconnect). Combined with the item-level CAS below this gives two layers
+// of idempotency: (1) only one process-level execution at a time, and
+// (2) only one process can claim each item via the atomic UPDATE.
+let processingInFlight = false;
+
+async function safeProcessScheduledItems(): Promise<void> {
+  const log = logger.child({ component: "sequence-scheduler" });
+  if (processingInFlight) {
+    log.warn("A2: scheduler tick skipped — previous tick still in-flight (in-flight idempotency guard)");
+    return;
+  }
+  processingInFlight = true;
+  try {
+    await processScheduledItems();
+  } finally {
+    processingInFlight = false;
+  }
+}
+
 // ── Core processor ────────────────────────────────────────────────────────────
 
 // ── Weekly report: fires once on Monday between 08:00–08:01 UTC ───────────────
@@ -539,6 +561,7 @@ export async function processScheduledItems(): Promise<void> {
           const dbProvider = rawProvider === "resend" ? "custom_smtp" : rawProvider;
           const emailDispatch = await createEmailDispatch(sequence.workspaceId, {
             campaignId: undefined,
+            sequenceItemId: item.id,
             provider: dbProvider as "rd_station" | "activecampaign" | "custom_smtp",
             listId: String(cfg["emailListId"]),
             subject: buildEmailSubject(item),
@@ -590,6 +613,7 @@ export async function processScheduledItems(): Promise<void> {
 
               try {
                 const waDispatch = await createWhatsAppDispatch(sequence.workspaceId, {
+                  sequenceItemId: item.id,
                   type: "broadcast",
                   recipients: phones,
                   message,
@@ -611,6 +635,7 @@ export async function processScheduledItems(): Promise<void> {
           if (phones.length > 0) {
             try {
               const waDispatch = await createWhatsAppDispatch(sequence.workspaceId, {
+                sequenceItemId: item.id,
                 type: "broadcast",
                 recipients: phones,
                 message: buildWhatsAppMessage(item, sequence),
@@ -665,9 +690,22 @@ export async function processScheduledItems(): Promise<void> {
       }
     } catch (err) {
       log.error({ err, itemId: item.id }, "Sequence item dispatch failed");
+      // A2 FIX (Bug #05): do NOT reset to "scheduled" after a claim.
+      // Once this process claimed the item (CAS succeeded), resetting to
+      // "scheduled" would allow the next tick to re-dispatch it — causing
+      // duplicate sends if the email already went out before the error.
+      // Mark as "failed" instead; operators can manually retry from the UI.
       await db
         .update(launchSequenceItemsTable)
-        .set({ status: "scheduled" })
+        .set({
+          status: "failed",
+          metadata: {
+            ...((item.metadata as Record<string, unknown>) ?? {}),
+            dispatchError: err instanceof Error ? err.message : String(err),
+            failedAt: now.toISOString(),
+            _a2Note: "item claimed but dispatch threw — marked failed to prevent duplicate send on retry",
+          },
+        })
         .where(eq(launchSequenceItemsTable.id, item.id));
     }
   }
@@ -803,13 +841,23 @@ export function initSequenceScheduler(): void {
       worker = new Worker(
         QUEUE_NAME,
         async (_job: Job) => {
-          await processScheduledItems();
+          await safeProcessScheduledItems();
         },
         { connection: redisConnection, concurrency: 1 },
       );
 
       worker.on("failed", (job, err) => {
         log.error({ jobId: job?.id, err }, "Sequence scheduler job failed");
+      });
+
+      // A2 FIX (Bug #05): when BullMQ worker becomes ready (Redis connects or
+      // reconnects), disable the setInterval fallback so only one source fires.
+      worker.on("ready", () => {
+        log.info("A2: BullMQ worker ready — disabling setInterval fallback (single source of truth)");
+        if (fallbackInterval) {
+          clearInterval(fallbackInterval);
+          fallbackInterval = null;
+        }
       });
 
       log.info("Sequence scheduler BullMQ worker started (60s tick)");
@@ -820,7 +868,7 @@ export function initSequenceScheduler(): void {
   }
 
   fallbackInterval = setInterval(() => {
-    processScheduledItems().catch((err) => log.error({ err }, "Scheduler tick error"));
+    safeProcessScheduledItems().catch((err) => log.error({ err }, "Scheduler tick error"));
   }, 60_000);
 
   log.info("Sequence scheduler started via setInterval (60s) — Redis not available");

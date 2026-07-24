@@ -169,6 +169,7 @@ export async function createWhatsAppDispatch(
   workspaceId: string,
   input: {
     campaignId?: string;
+    sequenceItemId?: string;
     type: "broadcast" | "individual" | "group" | "template";
     recipients: string[];
     message?: string;
@@ -212,6 +213,7 @@ export async function createWhatsAppDispatch(
     .values({
       workspaceId,
       campaignId: input.campaignId ?? null,
+      sequenceItemId: input.sequenceItemId ?? null,
       phoneNumberId: creds.phoneNumberId,
       displayPhoneNumber: creds.displayPhoneNumber ?? null,
       type: input.type,

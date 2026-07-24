@@ -45,6 +45,7 @@ export const emailDispatchesTable = pgTable("email_dispatches", {
   previewText: text("preview_text"),
   fromName: text("from_name").notNull(),
   fromEmail: text("from_email").notNull(),
+  sequenceItemId: uuid("sequence_item_id"),
   contentPieceId: uuid("content_piece_id"),
   htmlContent: text("html_content"),
   textContent: text("text_content"),

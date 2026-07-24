@@ -112,9 +112,45 @@ PASSO 5 — social_posts APÓS confirmed:true:
 O teste acima prova a **separação lógica** (aprovar ≠ publicar) e o **gate explícito** (confirmed:true exige integração real). A verificação de que o post aparece/não aparece na rede real depende de integração social conectada — não realizada por falta de conta conectada no workspace de teste. Para validar externamente: conectar Instagram/Facebook em `/integracoes` e repetir PASSO 4 com `confirmed:true`; o post deve existir na rede após confirmação e não existir antes.
 
 ### A2 — Bug #05 · Dupla execução no scheduler
-- **Status:** ✅ IMPLEMENTADO (21 Jul 2026)
-- **O que mudou:** Dispatch de item agora usa update atômico `WHERE status='scheduled'` antes de processar. Se 0 linhas retornadas → outro processo já capturou o item → skip. BullMQ e setInterval nunca despacham o mesmo item duas vezes, mesmo se rodarem simultaneamente.
-- **Verificação externa pendente:** simular queda e retorno do Redis → inbox de contato de teste recebe exatamente 1 email (não 2). Registrar evidência aqui.
+- **Status:** ✅ IMPLEMENTADO + PROVADO (24 Jul 2026)
+
+#### O que mudou (24 Jul 2026):
+- **Guarda in-flight (Camada 1):** `processingInFlight` flag + `safeProcessScheduledItems()` wrapper. Se BullMQ e setInterval dispararem ao mesmo tempo, o segundo é bloqueado imediatamente com log "A2: scheduler tick skipped — previous tick still in-flight".
+- **BullMQ "ready" → desliga setInterval (Camada 2):** `worker.on("ready")` chama `clearInterval(fallbackInterval)`. Quando Redis volta e BullMQ reconecta, o setInterval fallback é desligado automaticamente — fonte única de disparo.
+- **BullMQ + setInterval estruturalmente não coexistem:** `lazyConnect:true` → constructors não lançam exception com Redis down → `return` L816 sempre atingido → setInterval nunca inicia quando `REDIS_URL` configurado.
+- **CAS atômico no item (Camada 3 — já existia):** `UPDATE SET status='content_generating' WHERE status='scheduled' AND id=X`. Processo que obtém 0 rows salta o item com log "A2: item already claimed by another process — skip".
+- **Fix error recovery (Camada 4 — crítico):** Antes, erro pós-claim resetava item para `"scheduled"` (re-dispatch na próxima tick). Agora reseta para `"failed"` com metadados. Item claimado nunca volta a "scheduled".
+- **sequenceItemId em dispatch tables:** Coluna `sequence_item_id uuid` adicionada em `email_dispatches` e `whatsapp_dispatches`. Migração aplicada. `createEmailDispatch`/`createWhatsAppDispatch` recebem e persistem o campo — auditoria de dispatches por item.
+
+#### PROVA DB (24 Jul 2026) — dois processos concorrentes no mesmo item:
+
+```
+SETUP:
+  INSERT launch_sequence_items: id=bc14df58, status=scheduled,
+  scheduledAt=2min atrás, delivery_channels=[]
+
+DB ANTES: status = scheduled
+
+SIMULAÇÃO (Promise.all — dois UPDATE simultâneos, exatamente como BullMQ+setInterval):
+  Processo A (BullMQ):      UPDATE WHERE id=bc14df58 AND status='scheduled' → rowsAffected = 1  ← VENCEDOR
+  Processo B (setInterval): UPDATE WHERE id=bc14df58 AND status='scheduled' → rowsAffected = 0  ← BLOQUEADO
+  (elapsed total: 5ms)
+
+✅ Processo B recebeu 0 rows → SKIP — nenhum email/WA enviado por B.
+DB DEPOIS: status = content_generating  (claimado pelo vencedor, NUNCA 'scheduled' de novo)
+email_dispatches com sequence_item_id=bc14df58: 0 linha(s)
+(0 porque delivery_channels=[]; em cenário real só o vencedor cria a linha de dispatch)
+```
+
+#### Layers de idempotência ativos:
+1. `processingInFlight` guard — bloqueia segundo tick na entrada do processo
+2. `worker.on("ready")` → `clearInterval` — desliga setInterval quando BullMQ reconecta (Redis volta)
+3. CAS atômico `UPDATE WHERE status='scheduled'` — bloqueia item já claimado por outro processo
+4. Erro pós-claim → `status: "failed"` — impede re-dispatch por falha parcial de envio
+5. `sequence_item_id` em dispatch tables — rastreabilidade auditável
+
+#### Verificação inbox real (pendente — declarada):
+Prova acima é DB-level. Para inbox real: ativar sequência com email real, derrubar/levantar Redis → contato deve receber exatamente 1 email. Não realizado: sem integração email conectada no workspace de teste.
 
 ---
 
