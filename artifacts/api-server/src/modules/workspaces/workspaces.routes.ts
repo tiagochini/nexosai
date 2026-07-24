@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../auth/auth.middleware.js";
 import { db, workspacesTable, workspaceIntegrationsTable } from "@workspace/db";
 import { AppError } from "../../lib/errors.js";
+import { testIntegrationCredential } from "../integrations/integration-validator.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -110,9 +111,54 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   const PAYMENT_GATEWAYS = ["stripe", "paypal", "mercado_pago", "pagarme", "asaas", "hotmart", "eduzz", "kiwify", "crypto_native"];
   const isPaymentGateway = PAYMENT_GATEWAYS.includes(dbProvider);
 
-  // Manual credential entry means the user actively supplied credentials — mark connected
-  // immediately (no live validation call for most providers, mirrors OAuth callback behavior).
-  const status = (parsed.data.accessToken || parsed.data.accountId) ? "connected" : "disconnected";
+  // C1: Live credential validation — ping the real provider API before saving.
+  // Only mark "connected" when the ping returns valid=true.
+  // validationSkipped providers (webhook receivers, complex OAuth) are accepted
+  // but flagged in metadata so we never silently pretend they're verified.
+  let pingAccountName = parsed.data.accountName;
+  let pingAccountId = parsed.data.accountId;
+  let validationDetail: string | undefined;
+  let status: "connected" | "disconnected" = "disconnected";
+
+  if (parsed.data.accessToken || parsed.data.accountId) {
+    const pingResult = await testIntegrationCredential(dbProvider, {
+      accessToken: parsed.data.accessToken,
+      accountId: parsed.data.accountId,
+      webhookUrl: parsed.data.webhookUrl,
+      metadata: parsed.data.metadata as Record<string, unknown> | undefined,
+    });
+
+    if (!pingResult.valid) {
+      // Hard reject — do NOT save as connected
+      res.status(422).json({
+        error: pingResult.error ?? "Credencial inválida — a plataforma recusou o token",
+        code: "INTEGRATION_VALIDATION_FAILED",
+        provider: dbProvider,
+      });
+      return;
+    }
+
+    // Valid (or skipped) — promote to connected
+    status = "connected";
+    if (pingResult.accountName) pingAccountName = pingResult.accountName;
+    if (pingResult.accountId) pingAccountId = pingResult.accountId;
+    validationDetail = pingResult.detail;
+
+    // Flag skipped validations explicitly in metadata
+    if (pingResult.validationSkipped) {
+      parsed.data.metadata = {
+        ...(parsed.data.metadata ?? {}),
+        _validationSkipped: true,
+        _validationSkippedReason: pingResult.detail,
+      };
+    } else {
+      parsed.data.metadata = {
+        ...(parsed.data.metadata ?? {}),
+        _validationSkipped: false,
+        _validatedAt: new Date().toISOString(),
+      };
+    }
+  }
 
   const [existing] = await db
     .select({ id: workspaceIntegrationsTable.id })
@@ -128,8 +174,8 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
     provider: dbProvider,
     status,
     accessToken: parsed.data.accessToken,
-    accountId: parsed.data.accountId,
-    accountName: parsed.data.accountName,
+    accountId: pingAccountId,
+    accountName: pingAccountName,
     webhookUrl: parsed.data.webhookUrl,
     metadata: parsed.data.metadata ?? {},
     isPaymentGateway,
@@ -144,7 +190,7 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
         .returning()
     : await db.insert(workspaceIntegrationsTable).values(values).returning();
 
-  res.status(existing ? 200 : 201).json({ integration });
+  res.status(existing ? 200 : 201).json({ integration, validationDetail });
 });
 
 // NOTE: HeyGen/ElevenLabs/Runway/Kling are NexOS-operated AI infrastructure,

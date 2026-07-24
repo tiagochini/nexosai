@@ -23,6 +23,7 @@
     "generate-investor-prospect": "tsx ./src/generate-investor-prospect.ts",
     "generate-pdfs": "tsx ./src/generate-pdfs.ts",
     "b2-contract-violation-test": "tsx ./src/b2-contract-violation-test.ts",
+    "c1-integration-validator-test": "tsx ./src/c1-integration-validator-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
