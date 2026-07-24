@@ -75,9 +75,41 @@
 ## FASE A — Fere o cliente (P0)
 
 ### A1 — Bug #04 · Social auto-post sem gate
-- **Status:** ✅ IMPLEMENTADO (21 Jul 2026)
-- **O que mudou:** `autoPostApprovedContent` removido de `runPostApprovalHooks`. Aprovação e publicação agora são 2 atos separados. Novo endpoint `POST /campaigns/:id/content/:pieceId/publish-social` com preview + confirmação explícita. Botão "Publicar nas Redes" aparece no UI após aprovação.
-- **Verificação externa pendente:** aprovar peça → post NÃO aparece na rede social; clicar "Publicar" e confirmar → post aparece. Registrar evidência aqui.
+- **Status:** ✅ IMPLEMENTADO + PROVADO (24 Jul 2026)
+
+#### O que mudou:
+- `autoPostApprovedContent` removido de `runPostApprovalHooks` (aprovação deixou de ser trigger de publicação)
+- Backdoor em `creatives.service.ts:262-270` eliminado — `setImmediate` que chamava `autoPostApprovedContent` após DALL-E finalizar removido (21 Jul: incompleto; 24 Jul: corrigido)
+- Endpoint `POST /campaigns/:id/content/:pieceId/publish-social` com dois passos explícitos: `{confirmed:false}` → preview (quais redes, caption), `{confirmed:true}` → publica
+- Frontend: modal "Publicar nas Redes" com badge por plataforma + caption preview + "Confirmar e Publicar"
+
+#### PROVA DB (24 Jul 2026) — sem integração social conectada no probe workspace:
+
+```
+PASSO 1 — Aprovar peça via API:
+  POST /campaigns/.../content/a1a1a1a1-.../approve
+  → { message: "Content piece approved", piece.status: "approved" }
+
+PASSO 2 — social_posts APÓS aprovação:
+  SELECT COUNT(*) FROM social_posts WHERE content_piece_id = 'a1a1a1a1-...'
+  → rows: 0   ✅  aprovação NÃO criou nenhum post
+
+PASSO 3 — Preview gate (confirmed:false):
+  POST .../publish-social { confirmed: false }
+  → { preview: { platforms: [], pieceType: "social_post", caption: "Teste A1..." }, confirmed: false }
+  ✅  gate existe, mostra plataformas e caption antes de confirmar
+
+PASSO 4 — Confirmação explícita (confirmed:true):
+  POST .../publish-social { confirmed: true }
+  → { error: "Nenhuma integração social conectada para este tipo de conteúdo", code: "NO_CONNECTED_INTEGRATIONS" }
+  ✅  gate disparou, bloqueou por falta de integração (não silencioso)
+
+PASSO 5 — social_posts APÓS confirmed:true:
+  → 0 rows   ✅  nenhum post fantasma sem integração
+```
+
+#### Verificação com conta social real (pendente — declarada conforme combinado):
+O teste acima prova a **separação lógica** (aprovar ≠ publicar) e o **gate explícito** (confirmed:true exige integração real). A verificação de que o post aparece/não aparece na rede real depende de integração social conectada — não realizada por falta de conta conectada no workspace de teste. Para validar externamente: conectar Instagram/Facebook em `/integracoes` e repetir PASSO 4 com `confirmed:true`; o post deve existir na rede após confirmação e não existir antes.
 
 ### A2 — Bug #05 · Dupla execução no scheduler
 - **Status:** ✅ IMPLEMENTADO (21 Jul 2026)

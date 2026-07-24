@@ -258,16 +258,10 @@ export async function approvePreviewAndGenerateFinal(
             log.warn({ linkedPieceId, updateErr }, "Update scheduled posts mediaUrls failed (non-fatal)");
           }
         });
-
-        setImmediate(async () => {
-          try {
-            const { autoPostApprovedContent } = await import("../social/social.autopost.service.js");
-            await autoPostApprovedContent(workspaceId, creative.campaignId!, linkedPieceId);
-            log.info({ linkedPieceId, creativeId, imageUrl }, "Re-triggered autopost after final visual ready");
-          } catch (autoErr) {
-            log.warn({ linkedPieceId, autoErr }, "Re-trigger autopost after visual ready failed (non-fatal)");
-          }
-        });
+        // A1/Bug #04: autoPostApprovedContent removed — publishing requires explicit
+        // user confirmation via POST /campaigns/:id/content/:pieceId/publish-social.
+        // The mediaUrls update above is enough: the scheduler will use the image when
+        // the user manually confirms publication, or the scheduled post fires at its time.
       }
     } catch (err) {
       log.warn({ creativeId, err }, "DALL-E HD generation failed");
