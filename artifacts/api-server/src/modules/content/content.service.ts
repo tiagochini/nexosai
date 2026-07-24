@@ -3,6 +3,7 @@ import {
   db,
   campaignsTable,
   contentPiecesTable,
+  campaignAgentsTable,
   mediaBriefsTable,
   auditLogsTable,
 } from "@workspace/db";
@@ -308,6 +309,38 @@ export async function generateCampaignContent(
     organic_traffic: "seo_organic_plan",    // skipAgent uses "seo_organic_plan"
     media_brief: "media_brief",             // skipAgent uses "media_brief"
   };
+
+  // ── [C3] Extend done Set with completed campaign_agents rows ─────────────────
+  // Covers the restart gap: runAgent completed (credits charged, campaign_agents
+  // updated to status=completed) but the server crashed BEFORE contentPiecesTable
+  // INSERT. On restart, skipAgent would return false (no piece in DB) and re-run
+  // the agent — charging credits again.
+  // Fix: if campaign_agents has a completed row for this agentType, treat the
+  // piece as done so the agent is NOT re-run (and credits NOT re-charged).
+  try {
+    const completedAgents = await db
+      .select({ agentType: campaignAgentsTable.agentType })
+      .from(campaignAgentsTable)
+      .where(
+        and(
+          eq(campaignAgentsTable.campaignId, campaignId),
+          eq(campaignAgentsTable.status, "completed"),
+        ),
+      );
+
+    for (const { agentType } of completedAgents) {
+      const pieceType = AGENT_PIECE_TYPE[agentType as string];
+      if (pieceType && !done.has(pieceType)) {
+        done.add(pieceType);
+        log.warn(
+          { campaignId, agentType, pieceType },
+          "[C3] CHECKPOINT: agent completed (campaign_agents) but content piece missing — skipping agent to prevent double credit charge",
+        );
+      }
+    }
+  } catch (c3Err) {
+    log.warn({ c3Err, campaignId }, "[C3] Failed to load completed agents for skip-check (non-fatal — pipeline continues)");
+  }
 
   const skipAgent = (pieceType: string, agentName: string): boolean => {
     if (!done.has(pieceType)) return false;

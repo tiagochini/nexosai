@@ -857,23 +857,74 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       // (e.g. stress test cleanup racing with background AI job). AI output is already
       // produced — never let credit accounting kill the result.
       try {
-        await db
-          .update(workspacesTable)
-          .set({ creditsBalance: balanceAfter })
-          .where(eq(workspacesTable.id, workspaceId));
+        // ── [C3] Idempotency guard — prevent double-charge on pipeline restart ─────
+        // Key is stable across restarts: same campaignId + same agentRole = same job.
+        // If a credit_transaction with this key already exists, the INSERT returns 0 rows
+        // (unique partial index: credit_tx_idempotency_key_uniq WHERE NOT NULL).
+        // In that case we skip the workspace balance UPDATE — credits are NOT charged again.
+        const idempotencyKey = (isValidCampaignId && campaignId)
+          ? `${campaignId}:${agentRole}`
+          : undefined;
 
-        await db.insert(creditTransactionsTable).values({
-          workspaceId,
-          campaignId,
-          type: "debit",
-          action: "campaign_execution",
-          amount: creditsCharged,
-          balanceBefore,
-          balanceAfter,
-          aiProvider: result.provider,
-          tokensUsed: result.inputTokens + result.outputTokens,
-          costUsd: result.costUsd.toString(),
-        });
+        if (idempotencyKey) {
+          const [existing] = await db
+            .select({ id: creditTransactionsTable.id })
+            .from(creditTransactionsTable)
+            .where(eq(creditTransactionsTable.idempotencyKey, idempotencyKey))
+            .limit(1);
+
+          if (existing) {
+            log.warn(
+              { workspaceId, agentRole, creditsCharged, idempotencyKey },
+              "[C3] Credit already charged for this agent run — skipping duplicate deduction (idempotency guard triggered on pipeline restart)",
+            );
+            // Skip balance update and transaction insert — credits already correct in DB
+          } else {
+            // First-time charge: update balance + insert transaction with idempotency key
+            await db
+              .update(workspacesTable)
+              .set({ creditsBalance: balanceAfter })
+              .where(eq(workspacesTable.id, workspaceId));
+
+            await db.insert(creditTransactionsTable).values({
+              workspaceId,
+              campaignId,
+              type: "debit",
+              action: "campaign_execution",
+              amount: creditsCharged,
+              balanceBefore,
+              balanceAfter,
+              aiProvider: result.provider,
+              tokensUsed: result.inputTokens + result.outputTokens,
+              costUsd: result.costUsd.toString(),
+              idempotencyKey,
+            });
+
+            log.info(
+              { workspaceId, agentRole, creditsCharged, idempotencyKey, balanceAfter },
+              "[C3] Credit deducted (new charge, idempotency key registered)",
+            );
+          }
+        } else {
+          // No idempotency key (non-campaign agents, video, legacy) — charge directly
+          await db
+            .update(workspacesTable)
+            .set({ creditsBalance: balanceAfter })
+            .where(eq(workspacesTable.id, workspaceId));
+
+          await db.insert(creditTransactionsTable).values({
+            workspaceId,
+            campaignId,
+            type: "debit",
+            action: "campaign_execution",
+            amount: creditsCharged,
+            balanceBefore,
+            balanceAfter,
+            aiProvider: result.provider,
+            tokensUsed: result.inputTokens + result.outputTokens,
+            costUsd: result.costUsd.toString(),
+          });
+        }
       } catch (creditErr) {
         log.warn(
           { creditErr, workspaceId, agentRole, creditsCharged },

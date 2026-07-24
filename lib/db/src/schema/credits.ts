@@ -6,7 +6,9 @@ import {
   integer,
   pgEnum,
   numeric,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { workspacesTable } from "./workspaces";
@@ -44,25 +46,39 @@ export const creditTransactionTypeEnum = pgEnum("credit_transaction_type", [
   "credit",
 ]);
 
-export const creditTransactionsTable = pgTable("credit_transactions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  workspaceId: uuid("workspace_id")
-    .notNull()
-    .references(() => workspacesTable.id, { onDelete: "cascade" }),
-  campaignId: uuid("campaign_id"),
-  type: creditTransactionTypeEnum("type").notNull(),
-  action: creditActionEnum("action").notNull(),
-  amount: integer("amount").notNull(),
-  balanceBefore: integer("balance_before").notNull(),
-  balanceAfter: integer("balance_after").notNull(),
-  aiProvider: text("ai_provider"),
-  tokensUsed: integer("tokens_used"),
-  costUsd: numeric("cost_usd", { precision: 10, scale: 6 }),
-  description: text("description"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const creditTransactionsTable = pgTable(
+  "credit_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspacesTable.id, { onDelete: "cascade" }),
+    campaignId: uuid("campaign_id"),
+    type: creditTransactionTypeEnum("type").notNull(),
+    action: creditActionEnum("action").notNull(),
+    amount: integer("amount").notNull(),
+    balanceBefore: integer("balance_before").notNull(),
+    balanceAfter: integer("balance_after").notNull(),
+    aiProvider: text("ai_provider"),
+    tokensUsed: integer("tokens_used"),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 6 }),
+    description: text("description"),
+    // C3 — Idempotency key: stable per agent run, prevents double-charge on pipeline restart.
+    // Format: "${campaignId}:${agentRole}" for content-pipeline agents.
+    // Null for non-idempotent charges (legacy, video, etc.).
+    idempotencyKey: text("idempotency_key"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // Partial unique index: only enforces uniqueness when idempotency_key is set.
+    // Allows multiple null rows (legacy charges) while blocking duplicate keyed charges.
+    uniqueIndex("credit_tx_idempotency_key_uniq")
+      .on(t.idempotencyKey)
+      .where(sql`idempotency_key IS NOT NULL`),
+  ],
+);
 
 export const insertCreditTransactionSchema = createInsertSchema(
   creditTransactionsTable,
