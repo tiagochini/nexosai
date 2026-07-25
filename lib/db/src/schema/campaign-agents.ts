@@ -88,6 +88,9 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "item_copy_generator",
   "presence_planner",
   "bio_optimizer",
+  "market_validator",
+  "offer_price_validator",
+  "brand_validator",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [

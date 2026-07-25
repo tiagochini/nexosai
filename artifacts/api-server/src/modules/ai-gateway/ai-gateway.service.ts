@@ -85,7 +85,11 @@ export type AgentRole =
   | "integrations_specialist"
   // ── Presença Social Always-On ────────────────────────────────────────────
   | "presence_planner"
-  | "bio_optimizer";
+  | "bio_optimizer"
+  // ── Avaliação Mercadológica ───────────────────────────────────────────────
+  | "market_validator"
+  | "offer_price_validator"
+  | "brand_validator";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -193,6 +197,10 @@ const AGENT_PROVIDER_MAP: Record<
   // ── Presença Social Always-On ─────────────────────────────────────────────
   presence_planner: { provider: "openai", model: OPENAI_NATIVE_MODEL },
   bio_optimizer:    { provider: "openai", model: OPENAI_NATIVE_MODEL },
+  // ── Avaliação Mercadológica ───────────────────────────────────────────
+  market_validator:      { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  offer_price_validator: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  brand_validator:       { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

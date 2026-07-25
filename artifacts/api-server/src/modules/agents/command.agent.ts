@@ -4,6 +4,7 @@ import { transitionCampaign, VALID_STATUS_TRANSITIONS, STRATEGY_PHASE_ENTRY_STAT
 import { buildCampaignBrain, getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { getCreativeIntent, getApprovedDirectionContext } from "../creative-intent/creative-intent.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
+import { runMarketValidation } from "./market-validation.service.js";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
 import { runStrategyAgent } from "./strategy.agent.js";
@@ -50,6 +51,7 @@ interface PipelineCheckpoint {
   completedSteps: string[];
   failedSteps: { step: string; error: string; at: string }[];
   summaries: {
+    market_validation?: { verdict: string };
     command?: { readinessScore: number; campaignComplexity: string };
     execution_governor?: { executionMode: string; skippedAgents: string[] };
     profile_builder?: { profileScore: number };
@@ -470,6 +472,48 @@ export async function orchestrateCampaign(
     const code = (auditErr as { cause?: { code?: string } })?.cause?.code;
     if (code !== "23503") throw auditErr;
     log.warn({ workspaceId, campaignId }, "audit_log FK violation — workspace deleted during agent run (ignored)");
+  }
+
+  // ── STEP 0: Avaliação Mercadológica ────────────────────────────────────────
+  // Roda 3 validadores ANTES do command.agent para não consumir créditos de
+  // estratégia em produtos inviáveis. Usa checkpoint para ser restart-safe.
+  // INVIAVEL = retorno antecipado; VIAVEL / VIAVEL_COM_AJUSTES = segue pipeline.
+  if (!isStepDone(cp, "market_validation")) {
+    const mvResult = await runMarketValidation(campaignId, workspaceId, intakeData, log);
+    cp = await saveCheckpoint(
+      campaignId,
+      "market_validation",
+      { verdict: mvResult.overallVerdict },
+      cp,
+      log,
+    );
+
+    if (mvResult.overallVerdict === "INVIAVEL" && !mvResult.userDecision) {
+      log.warn(
+        { campaignId, validators: mvResult.validators.map((v) => ({ validator: v.validator, verdict: v.verdict })) },
+        "[MARKET_VALIDATION] Produto INVIAVEL — pipeline interrompido antes de consumir créditos de estratégia",
+      );
+      emitCampaignEvent({
+        campaignId,
+        type: "phase_changed",
+        message: "⚠️ Avaliação Mercadológica: produto classificado como INVIÁVEL. Revise o briefing ou escolha uma das alternativas sugeridas.",
+        data: { marketValidation: mvResult },
+        timestamp: new Date().toISOString(),
+      });
+      // Campaign stays in "analyzing" — user can review and choose to proceed or pivot.
+      // The checkpoint step "market_validation" is saved, so re-running after
+      // POST /market-validation/proceed will skip this block entirely.
+      return {
+        campaignId,
+        type,
+        track,
+        agentsRun: ["market_validator", "offer_price_validator", "brand_validator"],
+        checkpointsPending: ["market_validation_review"],
+        status: "analyzing",
+      };
+    }
+  } else {
+    log.info({ campaignId }, "[MARKET_VALIDATION] Step já concluído (checkpoint) — pulando validadores");
   }
 
   // Command agent assesses readiness and provides special instructions

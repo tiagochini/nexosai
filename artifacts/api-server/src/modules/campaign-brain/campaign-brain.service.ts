@@ -97,6 +97,26 @@ export interface PrelaunchValidation {
   validatedAt:     string;
 }
 
+export type MarketVerdictType = "VIAVEL" | "VIAVEL_COM_AJUSTES" | "INVIAVEL";
+
+export interface MarketValidatorResult {
+  validator: "market_validator" | "offer_price_validator" | "brand_validator";
+  verdict: MarketVerdictType;
+  score: number;
+  justification: string;
+  criticalIssues: string[];
+  adjustmentSuggestions: string[];
+  isCriticalBlock: boolean;
+}
+
+export interface MarketValidationResult {
+  overallVerdict: MarketVerdictType;
+  validators: MarketValidatorResult[];
+  pivotSuggestions: string[];
+  userDecision?: "proceed";
+  validatedAt: string;
+}
+
 export interface CampaignBrain {
   icp:                 ICPProfile;
   offer:               OfferProfile;
@@ -105,6 +125,7 @@ export interface CampaignBrain {
   trafficLearnings:    TrafficLearnings;
   contradictions:      ContradictionFlag[];
   prelaunchValidation: PrelaunchValidation | null;
+  marketValidation:    MarketValidationResult | null;
   builtAt:             string;
   version:             number;
 }
@@ -200,6 +221,7 @@ export async function buildCampaignBrain(
       trafficLearnings:    existing.trafficLearnings   ?? defaultTrafficLearnings(),
       contradictions:      existing.contradictions     ?? [],
       prelaunchValidation: existing.prelaunchValidation ?? null,
+      marketValidation:    existing.marketValidation    ?? null,
       builtAt:             new Date().toISOString(),
       version:             ((existing.version ?? 0) as number) + 1,
     };

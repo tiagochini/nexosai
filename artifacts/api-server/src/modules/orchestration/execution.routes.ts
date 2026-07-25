@@ -206,6 +206,45 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
   }
 });
 
+// POST /campaigns/:campaignId/market-validation/proceed
+// Chamado quando o usuário decide ignorar o veredito INVIAVEL e continuar mesmo assim.
+// Marca userDecision="proceed" em brainData.marketValidation e re-dispara o pipeline.
+// O step "market_validation" já está no checkpoint, então é pulado na próxima execução.
+router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const { workspaceId } = req.auth;
+
+  const [campaign] = await db
+    .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!campaign) {
+    res.status(404).json({ error: "Campaign not found" });
+    return;
+  }
+  if (campaign.status !== "analyzing") {
+    res.status(422).json({ error: "Campanha não está em fase de análise", code: "INVALID_STATUS" });
+    return;
+  }
+
+  const brainRaw = ((campaign.brainData ?? {}) as Record<string, unknown>);
+  const mv = ((brainRaw["marketValidation"] ?? {}) as Record<string, unknown>);
+
+  await db
+    .update(campaignsTable)
+    .set({ brainData: { ...brainRaw, marketValidation: { ...mv, userDecision: "proceed" } } as any })
+    .where(eq(campaignsTable.id, campaignId));
+
+  await triggerStrategyPhase(campaignId, workspaceId, req.log);
+
+  res.json({
+    ok: true,
+    message: "Pipeline retomado. Validação mercadológica ignorada pelo usuário — avançando para agentes de estratégia.",
+  });
+});
+
 // POST /campaigns/:campaignId/execute/retry — failsafe recovery for stuck campaigns
 // Clears the pipeline lock, forces campaign back to a retryable state, and re-enqueues
 // the appropriate job. Safe to call from analyzing or generating status only.

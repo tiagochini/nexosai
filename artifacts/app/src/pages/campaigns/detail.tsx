@@ -50,6 +50,7 @@ import { PreLaunchChecklist } from "@/components/PreLaunchChecklist";
 import { LaunchAuditScanner } from "@/components/LaunchAuditScanner";
 import { CampaignCreativeGallery } from "@/components/CampaignCreativeGallery";
 import { ComplianceReviewModal } from "@/components/ComplianceReviewModal";
+import { MarketValidationReview } from "@/components/MarketValidationReview";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface AgentRun {
@@ -2179,6 +2180,19 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {/* ─── Avaliação Mercadológica — shown when market validation has a result ─── */}
+        {(() => {
+          const mv = (brainDataRaw["marketValidation"] ?? null) as Record<string, unknown> | null;
+          if (!mv || !mv["overallVerdict"]) return null;
+          return (
+            <MarketValidationReview
+              campaignId={campaignId}
+              marketValidation={mv as any}
+              onProceed={() => void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) })}
+            />
+          );
+        })()}
 
         {/* ─── Compliance Resolution (Fundador) — shown when pipeline is paused for compliance ─── */}
         {campaign.status === "compliance_review" && (() => {
