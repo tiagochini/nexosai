@@ -45,6 +45,7 @@ export const contentStatusEnum = pgEnum("content_status", [
   "generating",
   "draft",
   "pending_approval",
+  "budget_proposed",
   "approved",
   "rejected",
   "archived",

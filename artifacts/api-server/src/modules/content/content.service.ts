@@ -34,6 +34,7 @@ import { runComplianceAgent } from "../agents/compliance.agent.js";
 import { runOptimizationAgent } from "../agents/optimization.agent.js";
 import { runEmotionalCoherenceCheck } from "../agents/emotional-coherence-checker.agent.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
+import { calculateReverseBudget, saveBudgetProposal } from "./budget-reverse.service.js";
 import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
 import type { StrategyOutput } from "../agents/strategy.agent.js";
@@ -328,6 +329,68 @@ export async function generateCampaignContent(
   const salesChannel = String(intakeData["campaign.salesChannel"] ?? "sales_page");
   const trafficBudget = Number(intakeData["campaign.budget.traffic"] ?? 0);
   const hasTrafficBudget = trafficBudget > 0;
+
+  // ── Budget Reverse Engineering ────────────────────────────────────────────────
+  // If no traffic budget was set but a revenue target exists, calculate a
+  // proposed budget using CPL/conversion benchmarks so targeting and media
+  // buying agents are NEVER silently skipped.  The pieces are inserted with
+  // status "budget_proposed" instead of "pending_approval" so the user knows
+  // they need to confirm/adjust before the plan is actionable.
+  let isReverseBudget = false;
+  let agentIntakeData: Record<string, unknown> = intakeData;
+
+  if (!hasTrafficBudget) {
+    const revenueTarget = Number(intakeData["campaign.revenueTarget"] ?? 0);
+    if (revenueTarget > 0) {
+      const proposal = await calculateReverseBudget(campaignId, workspaceId, intakeData, log);
+      if (proposal && proposal.budgetMid > 0) {
+        isReverseBudget = true;
+        agentIntakeData = {
+          ...intakeData,
+          "campaign.budget.traffic": proposal.budgetMid,
+          "campaign.budget.traffic_is_proposed": true,
+          "campaign.budget.traffic_reasoning": proposal.reasoning,
+        };
+        await saveBudgetProposal(campaignId, workspaceId, proposal, log);
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_started",
+          agentType: "budget_reverse",
+          message:
+            `Nenhum budget informado — Engenharia Reversa calculou ` +
+            `R$${proposal.budgetMid.toLocaleString("pt-BR")} ` +
+            `para meta de R$${revenueTarget.toLocaleString("pt-BR")} ` +
+            `(ROAS implícito ${proposal.impliedROAS}x). ` +
+            `Gerando Targeting e Media Buying com budget proposto...`,
+          data: { budgetMid: proposal.budgetMid, impliedROAS: proposal.impliedROAS },
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        emitCampaignEvent({
+          campaignId,
+          type: "budget_skip_warning",
+          message:
+            "Budget de tráfego não informado e não foi possível calcular proposta " +
+            "(preço do produto ausente?). Targeting e Media Buying não foram gerados. " +
+            "Informe o preço do produto no intake para ativar o cálculo automático.",
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } else {
+      emitCampaignEvent({
+        campaignId,
+        type: "budget_skip_warning",
+        message:
+          "Budget de tráfego não informado e sem meta de resultado definida. " +
+          "Targeting e Media Buying não foram gerados. " +
+          "Acesse as configurações da campanha para informar o budget ou a meta de receita.",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  const runTrafficAgents = hasTrafficBudget || isReverseBudget;
+
   const isCreatorCampaign = ["audience_growth", "creator_monetization"].includes(campaignType);
   const isVideoFocused = isCreatorCampaign || salesChannel === "youtube";
 
@@ -924,17 +987,20 @@ export async function generateCampaignContent(
     emitAgentError(campaignId, "ad_copy", err);
   }
 
-  // ── 6. Targeting Agent (campaigns with traffic budget) ───────────────────────
+  // ── 6. Targeting Agent (campaigns with traffic budget OR reverse-engineered budget) ──
   // capturedTargetingOutput is passed downstream to media buyer (explicit dependency).
+  // When isReverseBudget=true, agentIntakeData already has the proposed budget injected.
   let capturedTargetingOutput: TargetingOutput | undefined;
 
-  if (hasTrafficBudget) {
+  if (runTrafficAgents) {
     if (!skipAgent("targeting_config", "targeting")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
         agentType: "targeting",
-        message: "Agente Targeting — configurando audiências no Meta, Google e TikTok...",
+        message: isReverseBudget
+          ? `Agente Targeting — configurando audiências com budget proposto R$${Number(agentIntakeData["campaign.budget.traffic"]).toLocaleString("pt-BR")}...`
+          : "Agente Targeting — configurando audiências no Meta, Google e TikTok...",
         timestamp: new Date().toISOString(),
       });
 
@@ -944,7 +1010,7 @@ export async function generateCampaignContent(
       const targetingOutput = await runTargetingAgent(
         campaignId,
         workspaceId,
-        intakeData,
+        agentIntakeData,
         profile,
         log,
       );
@@ -991,9 +1057,9 @@ export async function generateCampaignContent(
             campaignId,
             workspaceId,
             type: "targeting_config",
-            status: "pending_approval",
-            title: `Configuração de Audiências — ${(targetingOutput.metaAudiences?.length ?? 0)} Meta + ${(targetingOutput.googleAudiences?.length ?? 0)} Google + ${(targetingOutput.tiktokAudiences?.length ?? 0)} TikTok`,
-            content: { ...targetingOutput } as any,
+            status: isReverseBudget ? "budget_proposed" : "pending_approval",
+            title: `Configuração de Audiências — ${(targetingOutput.metaAudiences?.length ?? 0)} Meta + ${(targetingOutput.googleAudiences?.length ?? 0)} Google + ${(targetingOutput.tiktokAudiences?.length ?? 0)} TikTok${isReverseBudget ? " [Budget Proposto]" : ""}`,
+            content: { ...targetingOutput, _budgetProposed: isReverseBudget } as any,
             aiProvider: "openai",
             creditsUsed: 55,
           })
@@ -1019,14 +1085,16 @@ export async function generateCampaignContent(
     }
   }
 
-  // ── 7. Media Buyer Agent (campaigns with traffic budget) ─────────────────────
-  if (hasTrafficBudget) {
+  // ── 7. Media Buyer Agent (campaigns with traffic budget OR reverse-engineered budget) ──
+  if (runTrafficAgents) {
     if (!skipAgent("media_buying_plan", "media_buyer")) try {
       emitCampaignEvent({
         campaignId,
         type: "agent_started",
         agentType: "media_buyer",
-        message: "Agente Media Buyer — planejando veiculação e alocação diária de budget...",
+        message: isReverseBudget
+          ? `Agente Media Buyer — planejando veiculação com budget proposto R$${Number(agentIntakeData["campaign.budget.traffic"]).toLocaleString("pt-BR")}...`
+          : "Agente Media Buyer — planejando veiculação e alocação diária de budget...",
         timestamp: new Date().toISOString(),
       });
 
@@ -1043,7 +1111,7 @@ export async function generateCampaignContent(
       const mediaBuyerOutput = await runMediaBuyerAgent(
         campaignId,
         workspaceId,
-        intakeData,
+        agentIntakeData,
         strategy,
         profile,
         launchPlan,
@@ -1057,9 +1125,9 @@ export async function generateCampaignContent(
           campaignId,
           workspaceId,
           type: "media_buying_plan",
-          status: "pending_approval",
-          title: `Plano de Media Buying — R$${mediaBuyerOutput.totalBudget} | ${mediaBuyerOutput.dailyAllocations.length} dias`,
-          content: mediaBuyerOutput as any,
+          status: isReverseBudget ? "budget_proposed" : "pending_approval",
+          title: `Plano de Media Buying — R$${mediaBuyerOutput.totalBudget} | ${mediaBuyerOutput.dailyAllocations.length} dias${isReverseBudget ? " [Budget Proposto]" : ""}`,
+          content: { ...mediaBuyerOutput, _budgetProposed: isReverseBudget } as any,
           aiProvider: "openai",
           creditsUsed: 60,
         })

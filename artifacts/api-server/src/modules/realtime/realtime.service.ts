@@ -20,7 +20,9 @@ export interface CampaignEvent {
     | "campaign_completed"
     | "clarification_needed"
     | "clarification_answered"
-    | "contract_violation";
+    | "contract_violation"
+    | "budget_proposal"
+    | "budget_skip_warning";
   agentType?: string;
   message?: string;
   data?: Record<string, unknown>;

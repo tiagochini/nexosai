@@ -17,6 +17,7 @@ import {
   resolveComplianceReview,
   patchContentPiece,
 } from "./content.service.js";
+import { applyBudgetDecision } from "./budget-decision.service.js";
 import { processContentPieceApproval } from "../memory/memory.service.js";
 import { runPostApprovalHooks } from "./content-post-approval.js";
 import { autoGenerateCreativesFromBrief } from "./creative-auto-gen.service.js";
@@ -704,6 +705,41 @@ router.post("/:campaignId/content/:pieceId/publish-social", async (req, res): Pr
 
     await autoPostApprovedContent(workspaceId, campaignId, pieceId);
     res.json({ message: "Conteúdo publicado nas redes sociais", platforms: preview.platforms });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+});
+
+// POST /campaigns/:campaignId/budget-decision — respond to a reverse-budget proposal
+router.post("/:campaignId/budget-decision", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const schema = z.object({
+    decision: z.enum(["approve_proposed", "enter_own", "organic_only", "seed_launch"]),
+    budget: z.number().positive().optional(),
+    budgetFrequency: z.enum(["daily", "weekly", "total"]).optional(),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos", issues: parsed.error.issues, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const result = await applyBudgetDecision({
+      campaignId,
+      workspaceId: req.auth.workspaceId,
+      decision: parsed.data.decision,
+      budget: parsed.data.budget,
+      budgetFrequency: parsed.data.budgetFrequency,
+      log: req.log,
+    });
+    res.json(result);
   } catch (err) {
     if (err instanceof AppError) {
       res.status(err.statusCode).json({ error: err.message, code: err.code });

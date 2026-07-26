@@ -318,3 +318,125 @@ export function simulateBudget(
     benchmarkNote,
   };
 }
+
+// ─── Reverse Budget Engine ────────────────────────────────────────────────────
+// Given a revenue target + product price, calculates the minimum viable traffic
+// budget using the same CPL/conversion benchmarks as simulateBudget() — but in
+// reverse: target → sales needed → leads needed → budget.
+
+export interface ReverseBudgetResult {
+  budgetMin: number;          // optimistic (high conversion × low CPL)
+  budgetMid: number;          // typical (mid conversion × mid CPL) — used as default
+  budgetPessimistic: number;  // conservative (low conversion × high CPL)
+  impliedCPL: number;         // weighted average CPL at budgetMid scenario
+  impliedROAS: number;        // revenueTarget / budgetMid
+  salesNeeded: number;        // ceil(revenueTarget / productPrice)
+  leadsNeeded: number;        // salesNeeded / midConversionRate
+  revenueTarget: number;
+  productPrice: number;
+  campaignType: string;
+  productCategory: string;
+  reasoning: string;
+  benchmarkNote: string;
+  allocationBreakdown: {
+    platform: string;
+    label: string;
+    pct: number;
+    cplMid: number;
+    budgetShare: number;
+  }[];
+}
+
+export function reverseBudget(
+  revenueTarget: number,
+  productPrice: number,
+  campaignType: CampaignModelType,
+  productCategory: ProductCategory,
+): ReverseBudgetResult {
+  const conversion = CONVERSION_BENCHMARKS[campaignType] ?? CONVERSION_BENCHMARKS["launch"]!;
+  const allocation = BUDGET_ALLOCATION[campaignType] ?? BUDGET_ALLOCATION["launch"]!;
+
+  const benchmarkNote = "Benchmarks baseados em dados reais do mercado digital brasileiro (Q1 2026). Valores variam conforme criativo, copy, sazonalidade e histórico da conta.";
+
+  if (productPrice <= 0 || revenueTarget <= 0) {
+    return {
+      budgetMin: 0, budgetMid: 0, budgetPessimistic: 0,
+      impliedCPL: 0, impliedROAS: 0,
+      salesNeeded: 0, leadsNeeded: 0,
+      revenueTarget, productPrice, campaignType, productCategory,
+      reasoning: "Produto sem preço ou sem meta de resultado definidos — não é possível calcular budget reverso.",
+      benchmarkNote,
+      allocationBreakdown: [],
+    };
+  }
+
+  const salesNeeded = Math.ceil(revenueTarget / productPrice);
+
+  // Leads needed under each conversion scenario
+  const leadsMin = Math.ceil(salesNeeded / conversion.high);          // best conversion → fewer leads
+  const leadsMid = Math.ceil(salesNeeded / conversion.mid);           // typical
+  const leadsPessimistic = Math.ceil(salesNeeded / conversion.low);   // worst → more leads needed
+
+  // Weighted CPL and breakdown across platforms
+  let wCplLow = 0;
+  let wCplMid = 0;
+  let wCplHigh = 0;
+  const allocationBreakdown: ReverseBudgetResult["allocationBreakdown"] = [];
+
+  for (const [platformKey, pct] of Object.entries(allocation)) {
+    if (pct === 0) continue;
+    const cplBase = CPL_BENCHMARKS[platformKey]?.[productCategory];
+    const meta = PLATFORM_META[platformKey as keyof typeof PLATFORM_META];
+    if (!cplBase || !meta) continue;
+    wCplLow  += cplBase.low  * pct;
+    wCplMid  += cplBase.mid  * pct;
+    wCplHigh += cplBase.high * pct;
+    allocationBreakdown.push({
+      platform: platformKey,
+      label: meta.label,
+      pct: Math.round(pct * 100),
+      cplMid: cplBase.mid,
+      budgetShare: Math.round(leadsMid * cplBase.mid * pct),
+    });
+  }
+
+  const budgetMin         = Math.round(leadsMin         * wCplMid);   // fewer leads × typical CPL
+  const budgetMid         = Math.round(leadsMid         * wCplMid);   // typical × typical
+  const budgetPessimistic = Math.round(leadsPessimistic * wCplHigh);  // more leads × high CPL
+
+  const impliedROAS = budgetMid > 0
+    ? Math.round((revenueTarget / budgetMid) * 10) / 10
+    : 0;
+
+  const platformList = Object.entries(allocation)
+    .filter(([, p]) => p > 0)
+    .map(([k]) => PLATFORM_META[k as keyof typeof PLATFORM_META]?.label ?? k)
+    .join(", ");
+
+  const reasoning =
+    `Para atingir R$${revenueTarget.toLocaleString("pt-BR")} com produto de ` +
+    `R$${productPrice.toLocaleString("pt-BR")}, são necessárias ${salesNeeded} vendas. ` +
+    `Com conversão típica de ${(conversion.mid * 100).toFixed(1)}% (modelo ${campaignType}), ` +
+    `isso exige ~${leadsMid} leads. CPL ponderado estimado: R$${Math.round(wCplMid)} ` +
+    `(${platformList}). Budget recomendado: R$${budgetMid.toLocaleString("pt-BR")} ` +
+    `(ROAS implícito ${impliedROAS}x). ` +
+    `Cenário otimista: R$${budgetMin.toLocaleString("pt-BR")}. ` +
+    `Cenário conservador: R$${budgetPessimistic.toLocaleString("pt-BR")}.`;
+
+  return {
+    budgetMin,
+    budgetMid,
+    budgetPessimistic,
+    impliedCPL: Math.round(wCplMid),
+    impliedROAS,
+    salesNeeded,
+    leadsNeeded: leadsMid,
+    revenueTarget,
+    productPrice,
+    campaignType,
+    productCategory,
+    reasoning,
+    benchmarkNote,
+    allocationBreakdown,
+  };
+}
