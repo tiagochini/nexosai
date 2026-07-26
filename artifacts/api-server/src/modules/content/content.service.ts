@@ -3227,6 +3227,7 @@ type ComplianceViolationForRevision = {
   category: string;
   location: string;
   originalText?: string;
+  correctedText?: string;
   issue: string;
   legalBasis: string;
 };
@@ -3282,12 +3283,16 @@ function buildComplianceRevisionHint(
     lines.push(`• ${cat} (${sev}): ${issue}`);
     if (basis) lines.push(`  Base legal: ${basis}`);
     if (v.location) lines.push(`  Localização: ${v.location}`);
+    if (v.correctedText) {
+      lines.push(`  Sugestão de reformulação segura do compliance (referência, não cópia obrigatória): ${v.correctedText}`);
+      lines.push(`  Use esta sugestão como baliza de limite legal — ela já está dentro dos limites seguros. Mas não a copie literalmente: a versão do compliance tende a ser genérica e menos persuasiva. Sua tarefa é produzir uma versão que respeite os mesmos limites legais desta sugestão, mas com mais força de gancho, especificidade e apelo comercial do que a sugestão fornecida.`);
+    }
     lines.push("");
   }
   lines.push("REGRAS:");
   lines.push("- Substituir por linguagem de transformação, prova social concreta ou urgência legítima.");
   lines.push("- Manter força de gancho e poder de conversão — compliance não implica texto fraco.");
-  lines.push("- Não incluir o correctedText sugerido pelo compliance — reformule de forma original e independente.");
+  lines.push("- Se a sugestão do compliance for fornecida acima, use-a como piso legal mínimo — não como teto criativo. A cópia literal da sugestão é uma falha: significa zero valor agregado de copy. Produza algo mais forte.");
   return lines.join("\n");
 }
 
