@@ -25,6 +25,9 @@
     "b2-contract-violation-test": "tsx ./src/b2-contract-violation-test.ts",
     "c1-integration-validator-test": "tsx ./src/c1-integration-validator-test.ts",
     "e1-media-brief-gate-test": "tsx ./src/e1-media-brief-gate-test.ts",
+    "diag-e2e": "tsx ./src/diag-e2e.ts",
+    "diag-phase1": "tsx ./src/diag-phase1.ts",
+    "diag-phase2": "tsx ./src/diag-phase2.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
