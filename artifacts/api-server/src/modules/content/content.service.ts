@@ -664,6 +664,7 @@ export async function generateCampaignContent(
           workspaceId,
           type: "email_sequence",
           status: "rejected",
+          rejectionReason: "contract",
           title: `Copy Completa — ${copyOutput.campaignTitle ?? "Campanha"}`,
           content: { ...copyOutput, _qualityScore: (copyOutput as any)._qualityScore ?? null, _contractViolation: copyContractWarn, _retryCount: 0 } as any,
           aiProvider: "openai",
@@ -753,6 +754,7 @@ export async function generateCampaignContent(
             workspaceId,
             type: "landing_page_structure",
             status: "rejected",
+            rejectionReason: "contract",
             title: `Página de Vendas — ${lpOutput.sections?.length ?? 0} seções | ${lpOutput.pageType ?? "vsl"}`,
             content: { ...lpOutput, _qualityScore: (lpOutput as any)._qualityScore ?? null, _contractViolation: lpContractWarn, _retryCount: 0 } as any,
             aiProvider: "openai",
@@ -932,6 +934,7 @@ export async function generateCampaignContent(
           workspaceId,
           type: "ad_copy",
           status: "rejected",
+          rejectionReason: "contract",
           title: `Pacote de Anúncios — ${(adOutput.segments?.length ?? 0)} segmentos`,
           content: { ...adOutput, _qualityScore: (adOutput as any)._qualityScore ?? null, _contractViolation: adContractWarn, _retryCount: 0 } as any,
           aiProvider: "openai",
@@ -1029,6 +1032,7 @@ export async function generateCampaignContent(
             workspaceId,
             type: "targeting_config",
             status: "rejected",
+            rejectionReason: "contract",
             title: `Configuração de Audiências — ${(targetingOutput.metaAudiences?.length ?? 0)} Meta + ${(targetingOutput.googleAudiences?.length ?? 0)} Google + ${(targetingOutput.tiktokAudiences?.length ?? 0)} TikTok`,
             content: { ...targetingOutput, _contractViolation: targetingContractWarn, _retryCount: 0 } as any,
             aiProvider: "openai",
@@ -1188,6 +1192,7 @@ export async function generateCampaignContent(
             workspaceId,
             type: "vsl_script",
             status: "rejected",
+            rejectionReason: "contract",
             title: vslOutput.title ?? "VSL Script",
             content: { ...vslOutput, _qualityScore: (vslOutput as any)._qualityScore ?? null, _contractViolation: vslContractWarn, _retryCount: 0 } as any,
             aiProvider: "openai",
@@ -1345,6 +1350,7 @@ export async function generateCampaignContent(
             workspaceId,
             type: "cpl_script",
             status: "rejected",
+            rejectionReason: "contract",
             title: `CPL — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} Vídeos de Pré-Lançamento`,
             content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null, _contractViolation: cplContractWarn, _retryCount: 0 } as any,
             aiProvider: "openai",
@@ -1552,6 +1558,7 @@ export async function generateCampaignContent(
           workspaceId,
           type: "stories_sequence",
           status: "rejected",
+          rejectionReason: "contract",
           title: `Stories — ${storiesOutput.totalSequences ?? storiesOutput.sequences?.length ?? 0} sequências narrativas`,
           content: { ...storiesOutput, _contractViolation: storiesContractWarn, _retryCount: 0 } as any,
           aiProvider: "openai",
@@ -3004,6 +3011,7 @@ export async function regeneratePiece(
         .set({
           content: { ...newContent as Record<string, unknown>, _contractViolation: regenContractWarn, _retryCount: nextRetryCount, _permanentlyRejected: true } as any,
           status: "rejected",
+          rejectionReason: "contract",
           approvedAt: null,
         })
         .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
@@ -3030,6 +3038,7 @@ export async function regeneratePiece(
       .set({
         content: { ...newContent as Record<string, unknown>, _contractViolation: regenContractWarn, _retryCount: nextRetryCount } as any,
         status: "rejected",
+        rejectionReason: "contract",
         approvedAt: null,
       })
       .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
@@ -3052,11 +3061,13 @@ export async function regeneratePiece(
   }
 
   // Contract clean — promote to pending_approval.
+  // Clear rejectionReason so stale "compliance" or "contract" markers don't persist on a clean piece.
   const [updated] = await db
     .update(contentPiecesTable)
     .set({
       content: newContent as any,
       status: "pending_approval",
+      rejectionReason: null,
       approvedAt: null,
     })
     .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.campaignId, campaignId)))
@@ -3205,13 +3216,301 @@ export async function rejectMediaBrief(
 // decision: "accept_all" | "custom" | "override"
 // All three move the campaign to awaiting_approval. Override is logged.
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Sistema 3: Compliance Gate → Copy Loop — helpers ──────────────────────────
+// Resolves which piece types a violation affects (by scanning the `location` string),
+// builds compliance hints WITHOUT correctedText (so the copy agent reformulates
+// independently, not by copying the compliance-suggested wording), and drives the
+// two-attempt ceiling tracked per piece in brainData.complianceRevision.attempts.
+
+type ComplianceViolationForRevision = {
+  severity: string;
+  category: string;
+  location: string;
+  originalText?: string;
+  issue: string;
+  legalBasis: string;
+};
+
+function inferPieceTypesFromLocation(location: string | undefined | null): string[] {
+  if (!location) return ["email_sequence", "landing_page_structure", "ad_copy"];
+  const loc = location.toLowerCase();
+  const types: string[] = [];
+  if (loc.includes("email") || loc.includes("sequência") || loc.includes("sequencia") || loc.includes("carrinho") || loc.includes("whatsapp") || loc.includes("sms")) {
+    types.push("email_sequence");
+  }
+  if (loc.includes("landing") || loc.includes("página") || loc.includes("pagina") || loc.includes("sales page") || loc.includes("vendas") || loc.includes("hero") || loc.includes("headline")) {
+    types.push("landing_page_structure");
+  }
+  if (loc.includes("vsl") || loc.includes("video de vendas")) {
+    types.push("vsl_script");
+  }
+  if (loc.includes("ad") || loc.includes("anúncio") || loc.includes("anuncio") || loc.includes("criativo")) {
+    types.push("ad_copy");
+  }
+  // Generic location (e.g. "nome do produto") → apply to all primary content pieces
+  return types.length > 0 ? [...new Set(types)] : ["email_sequence", "landing_page_structure", "ad_copy"];
+}
+
+function groupViolationsByPieceType(
+  violations: ComplianceViolationForRevision[],
+): Record<string, ComplianceViolationForRevision[]> {
+  const grouped: Record<string, ComplianceViolationForRevision[]> = {};
+  for (const v of violations) {
+    for (const t of inferPieceTypesFromLocation(v.location)) {
+      if (!grouped[t]) grouped[t] = [];
+      grouped[t].push(v);
+    }
+  }
+  return grouped;
+}
+
+function buildComplianceRevisionHint(
+  pieceType: string,
+  violations: ComplianceViolationForRevision[],
+): string {
+  const lines: string[] = [
+    `[COMPLIANCE OVERRIDE — ${pieceType}]`,
+    "",
+    "Violações legais identificadas na versão anterior. Reescreva preservando intenção persuasiva, dentro dos limites legais. NÃO copie nenhuma frase marcada abaixo:",
+    "",
+  ];
+  for (const v of violations) {
+    const cat = (v.category ?? "VIOLAÇÃO").toUpperCase();
+    const sev = (v.severity ?? "high").toUpperCase();
+    const issue = v.issue ?? (v as any).description ?? "Ver relatório de compliance";
+    const basis = v.legalBasis ?? (v as any).legalRef ?? "";
+    lines.push(`• ${cat} (${sev}): ${issue}`);
+    if (basis) lines.push(`  Base legal: ${basis}`);
+    if (v.location) lines.push(`  Localização: ${v.location}`);
+    lines.push("");
+  }
+  lines.push("REGRAS:");
+  lines.push("- Substituir por linguagem de transformação, prova social concreta ou urgência legítima.");
+  lines.push("- Manter força de gancho e poder de conversão — compliance não implica texto fraco.");
+  lines.push("- Não incluir o correctedText sugerido pelo compliance — reformule de forma original e independente.");
+  return lines.join("\n");
+}
+
+async function clearComplianceRevisionProgress(
+  campaignId: string,
+  brainNow: Record<string, unknown>,
+): Promise<void> {
+  const existing = ((brainNow["complianceRevision"] ?? {}) as Record<string, unknown>);
+  await db
+    .update(campaignsTable)
+    .set({
+      brainData: {
+        ...brainNow,
+        complianceRevision: { ...existing, inProgress: false, errorAt: new Date().toISOString() },
+      } as any,
+    })
+    .where(eq(campaignsTable.id, campaignId))
+    .catch(() => {});
+}
+
+// ── runComplianceRevisionLoop — fire-and-forget revision engine ────────────────
+// Injects compliance hints (without correctedText) → regenerates affected pieces
+// via regeneratePiece (zero credit cost — deductCredits is never called by
+// regeneratePiece) → re-evaluates compliance via runComplianceAgent.
+// On pass: transitions to awaiting_approval.
+// On fail: stays in compliance_review; marks requiresHumanDecision when ceiling hit.
+async function runComplianceRevisionLoop(
+  campaignId: string,
+  workspaceId: string,
+  piecesToRetry: Array<{ pieceId: string; pieceType: string; hint: string; attemptNum: number }>,
+  log: Logger,
+): Promise<void> {
+  // Step 1: Regenerate each affected piece with compliance hint injected
+  for (const p of piecesToRetry) {
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_started",
+      agentType: p.pieceType,
+      message: `📋 Reescrevendo ${p.pieceType} por compliance (tentativa ${p.attemptNum} de 2)...`,
+      data: { pieceId: p.pieceId, attempt: p.attemptNum, rejectionReason: "compliance" },
+      timestamp: new Date().toISOString(),
+    });
+    setComplianceHint(p.hint);
+    try {
+      await regeneratePiece(campaignId, workspaceId, p.pieceId, log);
+      log.info({ campaignId, pieceId: p.pieceId, pieceType: p.pieceType, attempt: p.attemptNum }, "[COMPLIANCE REVISION] piece regenerated");
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_completed",
+        agentType: p.pieceType,
+        message: `✅ ${p.pieceType} reescrito (tentativa ${p.attemptNum} de 2) — aguardando reavaliação`,
+        data: { pieceId: p.pieceId, attempt: p.attemptNum },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      log.error({ err, campaignId, pieceId: p.pieceId, pieceType: p.pieceType }, "[COMPLIANCE REVISION] regeneratePiece failed");
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_failed",
+        agentType: p.pieceType,
+        message: `⚠️ Falha na reescrita de ${p.pieceType} — peça mantida como rejeitada`,
+        data: { pieceId: p.pieceId, attempt: p.attemptNum },
+        timestamp: new Date().toISOString(),
+      });
+    } finally {
+      setComplianceHint(null);
+    }
+  }
+
+  // Step 2: Re-run compliance evaluation on full content
+  emitCampaignEvent({
+    campaignId,
+    type: "agent_started",
+    agentType: "compliance",
+    message: "🔍 Reavaliando conformidade legal do conteúdo reescrito...",
+    timestamp: new Date().toISOString(),
+  });
+
+  const [campaignNow] = await db
+    .select({ brainData: campaignsTable.brainData, intakeData: campaignsTable.intakeData, status: campaignsTable.status })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+
+  if (!campaignNow || campaignNow.status !== "compliance_review") {
+    log.warn({ campaignId, status: campaignNow?.status }, "[COMPLIANCE REVISION] campaign no longer in compliance_review — aborting");
+    return;
+  }
+
+  const [emailPiece] = await db
+    .select({ content: contentPiecesTable.content })
+    .from(contentPiecesTable)
+    .where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.type, "email_sequence")))
+    .limit(1);
+
+  const [adPiece] = await db
+    .select({ content: contentPiecesTable.content })
+    .from(contentPiecesTable)
+    .where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.type, "ad_copy")))
+    .limit(1);
+
+  const intakeData = ((campaignNow.intakeData ?? {}) as Record<string, unknown>);
+  const brainNow2 = ((campaignNow.brainData ?? {}) as Record<string, unknown>);
+  const existingRevision2 = ((brainNow2["complianceRevision"] ?? {}) as Record<string, unknown>);
+
+  let complianceResult: Awaited<ReturnType<typeof runComplianceAgent>>;
+  try {
+    complianceResult = await runComplianceAgent(
+      campaignId,
+      workspaceId,
+      intakeData,
+      emailPiece?.content as Record<string, unknown> | undefined,
+      adPiece?.content as Record<string, unknown> | undefined,
+      log,
+    );
+  } catch (err) {
+    log.error({ err, campaignId }, "[COMPLIANCE REVISION] re-evaluation failed — keeping in compliance_review");
+    emitCampaignEvent({
+      campaignId,
+      type: "agent_failed",
+      agentType: "compliance",
+      message: "⚠️ Erro na reavaliação de compliance — decisão manual necessária",
+      timestamp: new Date().toISOString(),
+    });
+    await clearComplianceRevisionProgress(campaignId, brainNow2);
+    return;
+  }
+
+  // Step 3: Evaluate result and transition accordingly
+  const criticalCount2 = ((complianceResult.violations ?? []) as ComplianceViolationForRevision[]).filter(v => v.severity === "critical").length;
+  const highCount2 = ((complianceResult.violations ?? []) as ComplianceViolationForRevision[]).filter(v => v.severity === "high").length;
+  const stillFailing = (complianceResult.overallRiskLevel === "high_risk" || complianceResult.overallRiskLevel === "blocked") && (criticalCount2 > 0 || highCount2 > 0);
+
+  const [reportPiece] = await db
+    .select({ id: contentPiecesTable.id })
+    .from(contentPiecesTable)
+    .where(and(eq(contentPiecesTable.campaignId, campaignId), eq(contentPiecesTable.type, "compliance_report")))
+    .limit(1);
+
+  if (!stillFailing) {
+    // ✅ Compliance cleared — advance to awaiting_approval
+    if (reportPiece) {
+      await db
+        .update(contentPiecesTable)
+        .set({ content: complianceResult as any, status: "approved", updatedAt: new Date() })
+        .where(eq(contentPiecesTable.id, reportPiece.id));
+    }
+    await db
+      .update(campaignsTable)
+      .set({
+        brainData: {
+          ...brainNow2,
+          complianceReview: { ...complianceResult, resolvedByRevision: true, resolvedAt: new Date().toISOString() },
+          complianceRevision: { ...existingRevision2, inProgress: false, completedAt: new Date().toISOString(), outcome: "approved" },
+        } as any,
+      })
+      .where(eq(campaignsTable.id, campaignId));
+
+    emitCampaignEvent({
+      campaignId,
+      type: "phase_changed",
+      message: "✅ Compliance aprovado após reescrita automática — conteúdo pronto para revisão final!",
+      data: { status: "awaiting_approval", riskLevel: complianceResult.overallRiskLevel },
+      timestamp: new Date().toISOString(),
+    });
+    await transitionCampaign(campaignId, workspaceId, "awaiting_approval", "compliance cleared after auto-revision", log);
+    log.info({ campaignId, riskLevel: complianceResult.overallRiskLevel }, "[COMPLIANCE REVISION] cleared — transitioned to awaiting_approval");
+  } else {
+    // ❌ Still failing — keep in compliance_review with updated data
+    if (reportPiece) {
+      await db
+        .update(contentPiecesTable)
+        .set({ content: { ...(complianceResult as any), pieceId: reportPiece.id }, status: "pending_approval", updatedAt: new Date() })
+        .where(eq(contentPiecesTable.id, reportPiece.id));
+    }
+
+    const pieceAttempts2 = ((existingRevision2["attempts"] ?? {}) as Record<string, number>);
+    const hasRetriesLeft = piecesToRetry.some(p => (pieceAttempts2[p.pieceId] ?? 0) < 2);
+
+    await db
+      .update(campaignsTable)
+      .set({
+        brainData: {
+          ...brainNow2,
+          complianceReview: { ...(complianceResult as any), pieceId: reportPiece?.id },
+          complianceRevision: {
+            ...existingRevision2,
+            inProgress: false,
+            lastRevaluatedAt: new Date().toISOString(),
+            outcome: "still_failing",
+            requiresHumanDecision: !hasRetriesLeft,
+          },
+        } as any,
+      })
+      .where(eq(campaignsTable.id, campaignId));
+
+    const actionMsg = hasRetriesLeft
+      ? `⚠️ Compliance ainda detecta violações após reescrita (tentativa ${piecesToRetry[0]?.attemptNum ?? 1} de 2). Solicite nova revisão ou use accept_all/override.`
+      : "⚠️ Máximo de 2 tentativas automáticas atingido. Compliance ainda detecta violações — use accept_all ou override para avançar.";
+
+    emitCampaignEvent({
+      campaignId,
+      type: "phase_changed",
+      message: actionMsg,
+      data: {
+        riskLevel: complianceResult.overallRiskLevel,
+        violations: complianceResult.violations,
+        requiresHumanDecision: !hasRetriesLeft,
+        status: "compliance_review",
+      },
+      timestamp: new Date().toISOString(),
+    });
+    log.warn({ campaignId, criticalCount: criticalCount2, highCount: highCount2, hasRetriesLeft }, "[COMPLIANCE REVISION] still failing after auto-revision");
+  }
+}
+
 export async function resolveComplianceReview(
   campaignId: string,
   workspaceId: string,
-  decision: "accept_all" | "custom" | "override",
+  decision: "accept_all" | "custom" | "override" | "request_revision",
   corrections: Array<{ violationIndex: number; acceptedText: string }> | undefined,
   log: Logger,
-): Promise<{ ok: boolean; status: string }> {
+): Promise<{ ok: boolean; status: string; message?: string; revisionState?: Record<string, unknown> }> {
   const [campaign] = await db
     .select({ id: campaignsTable.id, status: campaignsTable.status, brainData: campaignsTable.brainData })
     .from(campaignsTable)
@@ -3225,6 +3524,138 @@ export async function resolveComplianceReview(
 
   const brainNow = ((campaign.brainData ?? {}) as Record<string, unknown>);
   const reviewData = ((brainNow["complianceReview"] ?? {}) as Record<string, unknown>);
+
+  // ── 4ª decisão: request_revision (Sistema 3 — Compliance Gate → Copy loop) ──
+  // Extrai violações HIGH/CRITICAL, constrói compliance hints SEM correctedText
+  // (o agente de copy deve reformular sozinho, não copiar a sugestão pronta),
+  // marca peças como rejected com rejectionReason: "compliance" (DISTINTO do
+  // rejectionReason: "contract" do B2), e dispara runComplianceRevisionLoop.
+  // Custo zero: regeneratePiece nunca chama deductCredits.
+  // Teto: 2 tentativas por peça em brainData.complianceRevision.attempts[pieceId].
+  if (decision === "request_revision") {
+    const violations = ((reviewData["violations"] ?? []) as ComplianceViolationForRevision[]);
+    const highCritical = violations.filter(v => v.severity === "critical" || v.severity === "high");
+
+    if (highCritical.length === 0) {
+      throw new AppError(400, "Nenhuma violação HIGH ou CRITICAL encontrada — use accept_all ou override", "NO_ACTIONABLE_VIOLATIONS");
+    }
+
+    const existingRevision = ((brainNow["complianceRevision"] ?? {}) as Record<string, unknown>);
+    const pieceAttempts = ((existingRevision["attempts"] ?? {}) as Record<string, number>);
+
+    // Load content pieces that could be affected (primary persuasive types)
+    const candidatePieces = await db
+      .select({ id: contentPiecesTable.id, type: contentPiecesTable.type })
+      .from(contentPiecesTable)
+      .where(and(
+        eq(contentPiecesTable.campaignId, campaignId),
+        inArray(contentPiecesTable.type, ["email_sequence", "landing_page_structure", "vsl_script", "ad_copy"]),
+      ));
+
+    const violationsByPieceType = groupViolationsByPieceType(highCritical);
+
+    const piecesToRetry: Array<{ pieceId: string; pieceType: string; hint: string; attemptNum: number }> = [];
+    const atMaxRetries: string[] = [];
+
+    for (const piece of candidatePieces) {
+      const pieceType = piece.type as string;
+      if (!violationsByPieceType[pieceType]) continue;
+      const currentAttempts = pieceAttempts[piece.id] ?? 0;
+      if (currentAttempts >= 2) {
+        atMaxRetries.push(pieceType);
+        continue;
+      }
+      const hint = buildComplianceRevisionHint(pieceType, violationsByPieceType[pieceType]!);
+      piecesToRetry.push({ pieceId: piece.id, pieceType, hint, attemptNum: currentAttempts + 1 });
+    }
+
+    if (piecesToRetry.length === 0) {
+      throw new AppError(
+        409,
+        "Limite de 2 tentativas automáticas atingido para todas as peças. Use accept_all ou override para avançar.",
+        "MAX_COMPLIANCE_RETRIES",
+      );
+    }
+
+    // Update per-piece attempt counts (survive across piece content replacement)
+    const newAttempts: Record<string, number> = { ...pieceAttempts };
+    for (const p of piecesToRetry) newAttempts[p.pieceId] = p.attemptNum;
+
+    // Mark affected pieces as rejected with rejectionReason: "compliance"
+    // Distinct from B2's rejectionReason: "contract" — different pipeline, different counter
+    for (const p of piecesToRetry) {
+      await db
+        .update(contentPiecesTable)
+        .set({ status: "rejected", rejectionReason: "compliance", updatedAt: new Date() })
+        .where(eq(contentPiecesTable.id, p.pieceId));
+    }
+
+    // Store hints in contentRetry.complianceCorrections for injection during regen
+    const existingContentRetry = ((brainNow["contentRetry"] ?? {}) as Record<string, unknown>);
+    const complianceCorrections = { ...((existingContentRetry["complianceCorrections"] ?? {}) as Record<string, string>) };
+    for (const p of piecesToRetry) complianceCorrections[p.pieceType] = p.hint;
+
+    const newRevision: Record<string, unknown> = {
+      ...existingRevision,
+      inProgress: true,
+      startedAt: new Date().toISOString(),
+      attempts: newAttempts,
+      activePieceTypes: piecesToRetry.map(p => p.pieceType),
+      atMaxRetries,
+    };
+
+    await db
+      .update(campaignsTable)
+      .set({
+        brainData: {
+          ...brainNow,
+          complianceReview: { ...reviewData, userDecision: { decision, decidedAt: new Date().toISOString() } },
+          complianceRevision: newRevision,
+          contentRetry: { ...existingContentRetry, complianceCorrections },
+        } as any,
+      })
+      .where(eq(campaignsTable.id, campaignId));
+
+    await db.insert(auditLogsTable).values({
+      workspaceId,
+      campaignId,
+      action: "compliance.revision.started",
+      actor: "user",
+      data: {
+        piecesToRetry: piecesToRetry.map(p => ({ pieceType: p.pieceType, attempt: p.attemptNum })),
+        atMaxRetries,
+        highCriticalViolationCount: highCritical.length,
+      },
+    });
+
+    // Fire-and-forget — never blocks HTTP response
+    setImmediate(() => {
+      runComplianceRevisionLoop(campaignId, workspaceId, piecesToRetry, log).catch(err => {
+        log.error({ err, campaignId }, "[COMPLIANCE REVISION] loop failed — non-blocking");
+      });
+    });
+
+    emitCampaignEvent({
+      campaignId,
+      type: "phase_changed",
+      message: `🔄 Correção automática iniciada — ${piecesToRetry.length} peça(s) em reescrita por compliance...`,
+      data: { decision, activePieceTypes: piecesToRetry.map(p => p.pieceType), status: "compliance_review" },
+      timestamp: new Date().toISOString(),
+    });
+
+    log.info({ campaignId, piecesToRetry: piecesToRetry.length, atMaxRetries }, "[COMPLIANCE REVISION] initiated");
+    return {
+      ok: true,
+      status: "compliance_review",
+      message: `Correção automática iniciada para ${piecesToRetry.length} peça(s). Acompanhe o progresso em tempo real.`,
+      revisionState: {
+        inProgress: true,
+        activePieceTypes: piecesToRetry.map(p => p.pieceType),
+        atMaxRetries,
+        attempts: newAttempts,
+      },
+    };
+  }
 
   const userDecision: Record<string, unknown> = {
     decision,

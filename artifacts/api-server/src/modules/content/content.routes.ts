@@ -601,7 +601,7 @@ router.post("/:campaignId/content/optimize", async (req, res): Promise<void> => 
 // Called when user decides how to handle compliance violations.
 // decision: "accept_all" | "custom" | "override"
 const complianceResolveSchema = z.object({
-  decision: z.enum(["accept_all", "custom", "override"]),
+  decision: z.enum(["accept_all", "custom", "override", "request_revision"]),
   corrections: z.array(z.object({
     violationIndex: z.number().int().min(0),
     acceptedText: z.string().min(1),
