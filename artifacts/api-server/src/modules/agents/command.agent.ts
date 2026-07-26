@@ -666,51 +666,71 @@ Retorne o JSON de avaliação.`,
   // ── 1. Profile Builder Agent (all campaign types — runs first) ─────────────
   // Builds deep product, avatar, segmentation and market intelligence.
   // Its output feeds every downstream agent as enriched context.
-  try {
-    emitCampaignEvent({
-      campaignId,
-      type: "agent_started",
-      agentType: "profile_builder",
-      message: "Construindo inteligência de perfil — produto, avatar e mercado...",
-      timestamp: new Date().toISOString(),
-    });
+  // RC-011: isStepDone guard — on retry after Redis-degraded failure, Profile
+  // Builder is skipped and its saved output is loaded from audienceData/targetingData.
+  // This prevents double-charging 25cr on a retry run.
+  if (!isStepDone(cp, "profile_builder")) {
+    try {
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_started",
+        agentType: "profile_builder",
+        message: "Construindo inteligência de perfil — produto, avatar e mercado...",
+        timestamp: new Date().toISOString(),
+      });
 
-    const result = await runProfileBuilderAgent(
-      campaignId,
-      workspaceId,
-      intakeData,
-      type,
-      log,
-    );
-    profile = result;
-    agentsRun.push("profile_builder");
-    cp = await saveCheckpoint(campaignId, "profile_builder", { profileScore: result.profileScore ?? 70 }, cp, log);
+      const result = await runProfileBuilderAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        type,
+        log,
+      );
+      profile = result;
+      agentsRun.push("profile_builder");
+      cp = await saveCheckpoint(campaignId, "profile_builder", { profileScore: result.profileScore ?? 70 }, cp, log);
 
-    // Save to audienceData (avatar + segments) and targetingData (market + positioning)
-    await db
-      .update(campaignsTable)
-      .set({
-        audienceData: {
-          primaryAvatar: result.primaryAvatar,
-          secondaryAvatars: result.secondaryAvatars,
-          segments: result.segments,
-          profileScore: result.profileScore,
-          validationWarnings: result.validationWarnings,
-          criticalInsights: result.criticalInsights,
-          profileStrengths: result.profileStrengths,
-        } as any,
-        targetingData: {
-          product: result.product,
-          marketIntelligence: result.marketIntelligence,
-          positioning: result.positioning,
-        } as any,
-      })
-      .where(eq(campaignsTable.id, campaignId));
+      // Save to audienceData (avatar + segments) and targetingData (market + positioning)
+      await db
+        .update(campaignsTable)
+        .set({
+          audienceData: {
+            primaryAvatar: result.primaryAvatar,
+            secondaryAvatars: result.secondaryAvatars,
+            segments: result.segments,
+            profileScore: result.profileScore,
+            validationWarnings: result.validationWarnings,
+            criticalInsights: result.criticalInsights,
+            profileStrengths: result.profileStrengths,
+          } as any,
+          targetingData: {
+            product: result.product,
+            marketIntelligence: result.marketIntelligence,
+            positioning: result.positioning,
+          } as any,
+        })
+        .where(eq(campaignsTable.id, campaignId));
 
-    log.info({ campaignId, profileScore: result.profileScore }, "Profile builder completed");
-  } catch (err) {
-    log.error({ err, campaignId }, "Profile builder failed — continuing without profile");
-    emitAgentError(campaignId, "profile_builder", err);
+      log.info({ campaignId, profileScore: result.profileScore }, "Profile builder completed");
+    } catch (err) {
+      log.error({ err, campaignId }, "Profile builder failed — continuing without profile");
+      emitAgentError(campaignId, "profile_builder", err);
+    }
+  } else {
+    // RC-011: Profile Builder already ran in a previous attempt — load saved output
+    // from DB columns instead of re-running (and re-charging) the agent.
+    const [savedPb] = await db
+      .select({ audienceData: campaignsTable.audienceData, targetingData: campaignsTable.targetingData })
+      .from(campaignsTable)
+      .where(eq(campaignsTable.id, campaignId))
+      .limit(1);
+    if (savedPb?.audienceData && Object.keys(savedPb.audienceData as object).length > 0) {
+      // Reconstitute the profile shape that downstream agents expect
+      profile = { ...(savedPb.audienceData as object), ...(savedPb.targetingData as object) } as typeof profile;
+      log.info({ campaignId }, "[RC-011][CHECKPOINT_SKIP] Profile Builder — loaded from audienceData/targetingData (0 cr charged)");
+    } else {
+      log.warn({ campaignId }, "[RC-011][CHECKPOINT_SKIP] Profile Builder — checkpoint done but audienceData empty, continuing without profile");
+    }
   }
 
   // ── 2. Strategic Core Briefing (after Profile Builder — before all other agents) ──
@@ -840,28 +860,81 @@ Retorne o JSON de avaliação.`,
   // ── 3. Strategy Agent (all campaign types) ──────────────────────────────────
   // Runs AFTER Strategic Core + Doctrine — uses the brief as its foundation.
   // MemoryContext already contains doctrine enrichment when available.
-  try {
-    const result = await runStrategyAgent(
-      campaignId,
-      workspaceId,
-      intakeData,
-      track,
-      log,
-      profile,
-      strategicBrief ?? undefined,
-    );
-    strategy = result as unknown as Record<string, unknown>;
-    agentsRun.push("strategy");
-    cp = await saveCheckpoint(campaignId, "strategy", { launchModel: (result as any).launchModel }, cp, log);
-    checkpointsPending.push("strategy_approval");
+  // RC-011: isStepDone guard — on retry after Redis-degraded failure, Strategy
+  // is skipped and its saved output is loaded from strategyData. No re-charge.
+  if (!isStepDone(cp, "strategy")) {
+    try {
+      const result = await runStrategyAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        track,
+        log,
+        profile,
+        strategicBrief ?? undefined,
+      );
+      strategy = result as unknown as Record<string, unknown>;
+      agentsRun.push("strategy");
+      cp = await saveCheckpoint(campaignId, "strategy", { launchModel: (result as any).launchModel }, cp, log);
+      checkpointsPending.push("strategy_approval");
 
-    await transitionCampaign(campaignId, workspaceId, "strategy_ready", "strategy agent completed", log, {
-      strategyData: result as any,
-    });
+      // NOTE: campaigns.service.ts maps data.strategy → strategyData column.
+      // Key must be "strategy" (not "strategyData") or the column stays empty.
+      await transitionCampaign(campaignId, workspaceId, "strategy_ready", "strategy agent completed", log, {
+        strategy: result as any,
+      });
 
-    // Persist plannedChannels from strategic brief into brainData (fire-and-forget)
-    if (strategicBrief?.channels && strategicBrief.channels.length > 0) {
-      const channelsToSave = strategicBrief.channels.map((c: string) => c.toLowerCase());
+      // RC-011: clear any previous failure marker from a prior degraded run
+      setImmediate(async () => {
+        try {
+          const [row] = await db
+            .select({ brainData: (campaignsTable as any).brainData })
+            .from(campaignsTable)
+            .where(eq(campaignsTable.id, campaignId))
+            .limit(1);
+          const existing = (row?.brainData ?? {}) as Record<string, unknown>;
+          if (existing.strategyTransitionFailed) {
+            const { strategyTransitionFailed: _cleared, ...cleanBrain } = existing;
+            await db
+              .update(campaignsTable)
+              .set({ brainData: cleanBrain as any })
+              .where(eq(campaignsTable.id, campaignId));
+            log.info({ campaignId }, "[RC-011] strategyTransitionFailed marker cleared — strategy succeeded");
+          }
+          // Persist plannedChannels from strategic brief
+          if (strategicBrief?.channels && strategicBrief.channels.length > 0) {
+            const channelsToSave = strategicBrief.channels.map((c: string) => c.toLowerCase());
+            const latestBrain = existing.strategyTransitionFailed
+              ? (row?.brainData ?? {}) as Record<string, unknown>
+              : existing;
+            await db
+              .update(campaignsTable)
+              .set({ brainData: { ...latestBrain, plannedChannels: channelsToSave } as any })
+              .where(eq(campaignsTable.id, campaignId));
+          }
+        } catch { /* non-fatal */ }
+      });
+
+      // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)
+      setImmediate(() => {
+        const strategySnapshot = strategy ?? {};
+        getCampaignBrain(campaignId).then(brainSnap => {
+          if (brainSnap?.offer) {
+            checkDoctrineAsync(campaignId, workspaceId, "strategy", strategySnapshot, brainSnap, log);
+          }
+        }).catch(() => {});
+        runSelfCritique(campaignId, workspaceId, "strategy", strategySnapshot, log).catch(() => {});
+      });
+    } catch (err) {
+      log.error({ err, campaignId }, "Strategy agent failed");
+      emitAgentError(campaignId, "strategy", err);
+
+      // RC-011: persist failure marker so the UI can expose the error and the
+      // user can retry without double-charging the 3 agents already run.
+      // Campaign stays in "analyzing" but brainData.strategyTransitionFailed
+      // signals the frontend to show "Estratégia falhou — clique para tentar novamente"
+      // instead of an infinite spinner.
+      const failedAt = new Date().toISOString();
       setImmediate(async () => {
         try {
           const [row] = await db
@@ -872,25 +945,49 @@ Retorne o JSON de avaliação.`,
           const existing = (row?.brainData ?? {}) as Record<string, unknown>;
           await db
             .update(campaignsTable)
-            .set({ brainData: { ...existing, plannedChannels: channelsToSave } as any })
+            .set({
+              brainData: {
+                ...existing,
+                strategyTransitionFailed: {
+                  at: failedAt,
+                  error: String(err),
+                  retryable: true,
+                  message: "Fase de estratégia falhou após execução dos agentes. Os agentes já executados não serão cobrados novamente no próximo retry.",
+                },
+              } as any,
+              updatedAt: new Date(),
+            })
             .where(eq(campaignsTable.id, campaignId));
-        } catch { /* non-fatal */ }
+          log.warn({ campaignId, failedAt }, "[RC-011] strategyTransitionFailed marker persisted to DB");
+        } catch (dbErr) {
+          log.warn({ dbErr, campaignId }, "[RC-011] failed to persist strategyTransitionFailed marker — campaign may appear stuck");
+        }
       });
     }
-
-    // Doctrine Gate + Self-Critique (fire-and-forget — never block pipeline)
-    setImmediate(() => {
-      const strategySnapshot = strategy ?? {};
-      getCampaignBrain(campaignId).then(brainSnap => {
-        if (brainSnap?.offer) {
-          checkDoctrineAsync(campaignId, workspaceId, "strategy", strategySnapshot, brainSnap, log);
-        }
-      }).catch(() => {});
-      runSelfCritique(campaignId, workspaceId, "strategy", strategySnapshot, log).catch(() => {});
-    });
-  } catch (err) {
-    log.error({ err, campaignId }, "Strategy agent failed");
-    emitAgentError(campaignId, "strategy", err);
+  } else {
+    // RC-011: Strategy already ran and was checkpointed in a previous attempt.
+    // Load saved strategyData from DB and re-assert the strategy_ready transition
+    // without re-running the agent (and re-charging credits).
+    const [savedSt] = await db
+      .select({ strategyData: campaignsTable.strategyData })
+      .from(campaignsTable)
+      .where(eq(campaignsTable.id, campaignId))
+      .limit(1);
+    if (savedSt?.strategyData && Object.keys(savedSt.strategyData as object).length > 0) {
+      strategy = savedSt.strategyData as unknown as Record<string, unknown>;
+      checkpointsPending.push("strategy_approval");
+      log.info({ campaignId }, "[RC-011][CHECKPOINT_SKIP] Strategy Agent — loaded from strategyData (0 cr charged)");
+      // Re-assert transition in case it was the transition itself that failed
+      if (campaign.status !== "strategy_ready") {
+        await transitionCampaign(campaignId, workspaceId, "strategy_ready", "RC-011: strategy checkpoint recovery", log, {
+          strategy: strategy as any,
+        });
+      }
+    } else {
+      log.warn({ campaignId }, "[RC-011][CHECKPOINT_SKIP] Strategy — checkpoint done but strategyData empty, will re-run agent");
+      // Fall through: force re-run by removing the stale "strategy" step from the checkpoint
+      cp = cp ? { ...cp, completedSteps: (cp.completedSteps ?? []).filter((s) => s !== "strategy") } : cp;
+    }
   }
 
   // ── 3. Offer Agent (all types with a product for sale) ─────────────────────

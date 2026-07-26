@@ -84,7 +84,17 @@ export function initRealtime(httpServer: HttpServer): SocketIOServer {
 
 export function emitCampaignEvent(event: CampaignEvent): void {
   if (!io) return;
-  io.to(`campaign:${event.campaignId}`).emit("campaign:event", event);
+  // RC-011: wrap in try/catch — Socket.io Redis adapter can throw synchronously
+  // when Redis is rate-limited or unavailable. Never let a realtime emit kill the
+  // DB-persistence pipeline. Campaign state lives in Postgres, not in Socket.io.
+  try {
+    io.to(`campaign:${event.campaignId}`).emit("campaign:event", event);
+  } catch (err) {
+    logger.warn(
+      { err, campaignId: event.campaignId, eventType: event.type },
+      "RC-011: emitCampaignEvent failed (Redis/Socket.io degraded) — suppressed. DB state is unaffected.",
+    );
+  }
 }
 
 export function emitAgentThinking(
