@@ -206,13 +206,13 @@ router.post("/:campaignId/execute/content", async (req, res): Promise<void> => {
   }
 });
 
-// POST /campaigns/:campaignId/market-validation/proceed
-// Chamado quando o usuário decide ignorar o veredito INVIAVEL e continuar mesmo assim.
-// Marca userDecision="proceed" em brainData.marketValidation e re-dispara o pipeline.
-// O step "market_validation" já está no checkpoint, então é pulado na próxima execução.
-router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<void> => {
+// POST /campaigns/:campaignId/market-validation/acknowledge
+// Self-proof: founder confirmou ciência dos alertas regulatórios.
+// Registra acknowledgmentRecordedAt + userId em brainData e re-dispara o pipeline.
+// O step "market_validation" já está no checkpoint — é pulado na próxima execução.
+router.post("/:campaignId/market-validation/acknowledge", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
-  const { workspaceId } = req.auth;
+  const { workspaceId, userId } = req.auth;
 
   const [campaign] = await db
     .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
@@ -232,17 +232,65 @@ router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<
   const brainRaw = ((campaign.brainData ?? {}) as Record<string, unknown>);
   const mv = ((brainRaw["marketValidation"] ?? {}) as Record<string, unknown>);
 
+  // Self-proof: registra timestamp e userId de quem confirmou ciência
+  const acknowledgmentRecordedAt = new Date().toISOString();
   await db
     .update(campaignsTable)
-    .set({ brainData: { ...brainRaw, marketValidation: { ...mv, userDecision: "proceed" } } as any })
+    .set({
+      brainData: {
+        ...brainRaw,
+        marketValidation: {
+          ...mv,
+          acknowledgmentRecordedAt,
+          acknowledgedByUserId: userId,
+          // compatibilidade com código legado que ainda lê userDecision
+          userDecision: "proceed",
+        },
+      } as any,
+    })
     .where(eq(campaignsTable.id, campaignId));
+
+  req.log.info(
+    { campaignId, workspaceId, userId, acknowledgmentRecordedAt },
+    "[COMPLIANCE] Self-proof registrado — founder confirmou ciência dos alertas regulatórios",
+  );
 
   await triggerStrategyPhase(campaignId, workspaceId, req.log);
 
   res.json({
     ok: true,
-    message: "Pipeline retomado. Validação mercadológica ignorada pelo usuário — avançando para agentes de estratégia.",
+    message: "Ciência registrada. Pipeline de estratégia iniciado.",
+    acknowledgmentRecordedAt,
   });
+});
+
+// POST /campaigns/:campaignId/market-validation/proceed  (alias legado — mantido para compatibilidade)
+router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+  const { workspaceId } = req.auth;
+
+  const [campaign] = await db
+    .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!campaign) { res.status(404).json({ error: "Campaign not found" }); return; }
+  if (campaign.status !== "analyzing") {
+    res.status(422).json({ error: "Campanha não está em fase de análise", code: "INVALID_STATUS" });
+    return;
+  }
+
+  const brainRaw = ((campaign.brainData ?? {}) as Record<string, unknown>);
+  const mv = ((brainRaw["marketValidation"] ?? {}) as Record<string, unknown>);
+
+  await db
+    .update(campaignsTable)
+    .set({ brainData: { ...brainRaw, marketValidation: { ...mv, userDecision: "proceed", acknowledgmentRecordedAt: new Date().toISOString() } } as any })
+    .where(eq(campaignsTable.id, campaignId));
+
+  await triggerStrategyPhase(campaignId, workspaceId, req.log);
+  res.json({ ok: true, message: "Pipeline retomado." });
 });
 
 // POST /campaigns/:campaignId/execute/retry — failsafe recovery for stuck campaigns

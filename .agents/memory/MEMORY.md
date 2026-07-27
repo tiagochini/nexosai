@@ -1,3 +1,4 @@
+- [Compliance Gate Architecture](compliance-gate-architecture.md) — isCriticalBlock=true ONLY for illegal content; regulated products → requiresAcknowledgment + self-proof via /acknowledge; price never blocks; see market-validation.service.ts.
 - [State Machine Governance](state-machine-governance.md) — Level 3 active: transitionCampaign() throws on invalid transitions; single source of truth is campaign-state-machine.ts. Skip transition if campaign already in target state (analyzing→analyzing pattern).
 - [DB Agent Type Enum](db-agent-type-enum.md) — lib/db/src/schema/campaign-agents.ts agentTypeEnum must stay in sync with ai-gateway AgentRole type; missing values cause 22P02 on runAgent DB insert. execution_governor + 3 new agents + 5 sales agents added.
 - [Content Post-Approval Isolation](content-post-approval-isolation.md) — all approval side-effects isolated in content-post-approval.ts; content.routes.ts calls runPostApprovalHooks() only

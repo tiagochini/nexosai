@@ -49,67 +49,108 @@ function buildIntakeSummary(intakeData: Record<string, unknown>): string {
 }
 
 // ─── Individual validator prompts ─────────────────────────────────────────────
-// CALIBRAÇÃO PENDENTE — qualidade de análise será aprofundada em iteração futura.
+// REGRA CENTRAL DE COMPLIANCE:
+//   • isCriticalBlock = true SOMENTE para conteúdo intrinsecamente ilegal na plataforma:
+//     venda de drogas ilícitas, pirâmide financeira, instruções criminosas (ex: como sonegar,
+//     como fabricar entorpecentes), conteúdo CSAM, golpes declarados.
+//   • Produtos REGULADOS (saúde, finanças, jurídico, educação regulada) NÃO são bloqueados —
+//     geram requiresAcknowledgment=true + regulatoryAlerts listando o que a lei exige.
+//   • Preço fora do perfil do público NUNCA bloqueia — gera alerta mercadológico com sugestões.
+//   • O pipeline só para para isCriticalBlock=true. Todo o resto segue após ciência do founder.
 
 const MARKET_VALIDATOR_PROMPT = `Você é o Market Validator da NexOS AI.
 Avalie se existe demanda real e tamanho de mercado suficiente para este produto.
-Analise: existência de concorrentes (sinal de mercado), pesquisas no Google Trends, 
-tamanho estimado do público, urgência da dor, e se o nicho não está saturado a ponto de inviabilizar entrada.
+Analise: existência de concorrentes (sinal de mercado), tamanho estimado do público,
+urgência da dor, e se o nicho tem viabilidade de entrada com diferencial.
+
+REGRA DE BLOQUEIO (isCriticalBlock):
+- true APENAS se o produto/serviço for INTRINSECAMENTE ILEGAL no Brasil:
+  ex: venda de entorpecentes ilícitos, pirâmide financeira, esquema Ponzi,
+  instruções para crimes (sonegação, fraude, fabricação de drogas),
+  conteúdo sexualizando menores, golpes financeiros declarados.
+- Mercado saturado, nicho fraco, demanda baixa → NUNCA bloqueiam → gere VIAVEL_COM_AJUSTES com sugestões.
+- Produtos regulados (remédios com receita, investimentos, advocacia) → NUNCA bloqueiam → use requiresAcknowledgment.
 
 RETORNE APENAS JSON válido:
 \`\`\`json
 {
-  "verdict": "VIAVEL|VIAVEL_COM_AJUSTES|INVIAVEL",
+  "verdict": "VIAVEL|VIAVEL_COM_AJUSTES",
   "score": 0,
   "justification": "string — 2-3 frases diretas",
   "criticalIssues": ["string"],
   "adjustmentSuggestions": ["string"],
-  "isCriticalBlock": false
+  "isCriticalBlock": false,
+  "requiresAcknowledgment": false,
+  "regulatoryAlerts": []
 }
 \`\`\`
-isCriticalBlock = true apenas se o mercado for inexistente ou o nicho for comprovadamente saturado sem diferencial.`;
+Use verdict="INVIAVEL" + isCriticalBlock=true SOMENTE para conteúdo ilegal flagrante listado acima.
+Para produtos regulados que exijam registro/licença/aprovação legal, use requiresAcknowledgment=true
+e liste em regulatoryAlerts o que a lei brasileira exige (ex: "Registro ANVISA obrigatório para comercialização").`;
 
 const OFFER_PRICE_VALIDATOR_PROMPT = `Você é o Offer & Price Validator da NexOS AI.
 Avalie se o preço e a oferta são compatíveis com o mercado brasileiro e o público-alvo descrito.
-Analise: ticket médio do nicho, relação custo-benefício percebida, ancoragem de preço possível,
-e se o modelo de precificação é sustentável para o volume de vendas necessário.
+Analise: ticket médio do nicho, relação custo-benefício percebida, e sustentabilidade do modelo.
+
+REGRA DE BLOQUEIO (isCriticalBlock):
+- true APENAS se a oferta for um esquema ilegal: pirâmide, Ponzi, promessa de retorno garantido
+  não regulamentado (crime contra o sistema financeiro), ou fraude declarada.
+- Preço alto para o público, ticket acima da média, incompatibilidade com perfil socioeconômico →
+  NUNCA bloqueiam → gere VIAVEL_COM_AJUSTES com sugestões de ajuste de público ou preço.
+- Produtos financeiros regulados (investimentos, seguros, crédito) → use requiresAcknowledgment.
 
 RETORNE APENAS JSON válido:
 \`\`\`json
 {
-  "verdict": "VIAVEL|VIAVEL_COM_AJUSTES|INVIAVEL",
+  "verdict": "VIAVEL|VIAVEL_COM_AJUSTES",
   "score": 0,
   "justification": "string — 2-3 frases diretas",
   "criticalIssues": ["string"],
   "adjustmentSuggestions": ["string"],
-  "isCriticalBlock": false
+  "isCriticalBlock": false,
+  "requiresAcknowledgment": false,
+  "regulatoryAlerts": []
 }
 \`\`\`
-isCriticalBlock = true apenas se o preço for absolutamente incompatível com o mercado (ex: R$50.000 para público classe C sem financiamento).`;
+Use verdict="INVIAVEL" + isCriticalBlock=true SOMENTE para esquemas ilegais declarados.
+Incompatibilidade de preço/público é um alerta mercadológico — nunca um bloqueio.`;
 
 const BRAND_VALIDATOR_PROMPT = `Você é o Brand & Authority Validator da NexOS AI.
-Avalie se o empreendedor/marca tem credenciais mínimas para vender este produto com autoridade.
-Analise: sinais de autoridade declarados, reputação no nicho, presença digital mínima, 
-e se a proposta tem consistência de marca.
+Avalie autoridade, credibilidade e conformidade regulatória do empreendedor para este produto.
+
+REGRA DE BLOQUEIO (isCriticalBlock):
+- true APENAS se o founder estiver fazendo ALEGAÇÕES FRAUDULENTAS SEM QUALQUER BASE:
+  ex: vender-se como médico sem CRM, prometer cura de doenças sem qualquer embasamento,
+  ou fabricar credenciais inexistentes em área que coloca vidas em risco.
+- Ausência de presença digital → NUNCA bloqueia → VIAVEL_COM_AJUSTES com sugestões.
+- Nicho regulado (saúde, finanças, direito, educação formal) → NÃO bloqueia →
+  use requiresAcknowledgment=true + liste em regulatoryAlerts o que a lei exige.
+  Exemplo de regulatoryAlerts para saúde: "CRM ativo obrigatório para prescrição",
+  "CFM veda publicidade com garantia de resultados", "ANVISA regula alegações terapêuticas".
+  Exemplo para finanças: "CVM exige habilitação para assessoria de investimentos".
+  O founder profissional HABILITADO deve apenas confirmar ciência — o pipeline segue.
 
 RETORNE APENAS JSON válido:
 \`\`\`json
 {
-  "verdict": "VIAVEL|VIAVEL_COM_AJUSTES|INVIAVEL",
+  "verdict": "VIAVEL|VIAVEL_COM_AJUSTES",
   "score": 0,
   "justification": "string — 2-3 frases diretas",
   "criticalIssues": ["string"],
   "adjustmentSuggestions": ["string"],
-  "isCriticalBlock": false
+  "isCriticalBlock": false,
+  "requiresAcknowledgment": false,
+  "regulatoryAlerts": []
 }
 \`\`\`
-isCriticalBlock = true apenas se houver ausência TOTAL de autoridade E o produto exigir alta confiança (ex: saúde, finanças, jurídico).`;
+Use verdict="INVIAVEL" + isCriticalBlock=true SOMENTE para fraude de identidade/credencial declarada.
+Um médico com CRM vendendo programa de saúde = VIAVEL ou VIAVEL_COM_AJUSTES, nunca INVIAVEL.`;
 
 // ─── Default fallback values per validator ────────────────────────────────────
 const VALIDATOR_DEFAULTS: Record<string, Partial<MarketValidatorResult>> = {
-  market_validator:      { verdict: "VIAVEL_COM_AJUSTES", score: 60, justification: "Análise não concluída — avaliação manual recomendada.", criticalIssues: [], adjustmentSuggestions: [], isCriticalBlock: false },
-  offer_price_validator: { verdict: "VIAVEL_COM_AJUSTES", score: 60, justification: "Análise não concluída — avaliação manual recomendada.", criticalIssues: [], adjustmentSuggestions: [], isCriticalBlock: false },
-  brand_validator:       { verdict: "VIAVEL_COM_AJUSTES", score: 60, justification: "Análise não concluída — avaliação manual recomendada.", criticalIssues: [], adjustmentSuggestions: [], isCriticalBlock: false },
+  market_validator:      { verdict: "VIAVEL_COM_AJUSTES", score: 60, justification: "Análise não concluída — avaliação manual recomendada.", criticalIssues: [], adjustmentSuggestions: [], isCriticalBlock: false, requiresAcknowledgment: false, regulatoryAlerts: [] },
+  offer_price_validator: { verdict: "VIAVEL_COM_AJUSTES", score: 60, justification: "Análise não concluída — avaliação manual recomendada.", criticalIssues: [], adjustmentSuggestions: [], isCriticalBlock: false, requiresAcknowledgment: false, regulatoryAlerts: [] },
+  brand_validator:       { verdict: "VIAVEL_COM_AJUSTES", score: 60, justification: "Análise não concluída — avaliação manual recomendada.", criticalIssues: [], adjustmentSuggestions: [], isCriticalBlock: false, requiresAcknowledgment: false, regulatoryAlerts: [] },
 };
 
 // ─── Persist result directly to brainData ────────────────────────────────────
@@ -182,6 +223,8 @@ async function runSingleValidator(
       criticalIssues: Array.isArray(parsed.criticalIssues) ? parsed.criticalIssues : [],
       adjustmentSuggestions: Array.isArray(parsed.adjustmentSuggestions) ? parsed.adjustmentSuggestions : [],
       isCriticalBlock: parsed.isCriticalBlock === true,
+      requiresAcknowledgment: parsed.requiresAcknowledgment === true,
+      regulatoryAlerts: Array.isArray(parsed.regulatoryAlerts) ? parsed.regulatoryAlerts : [],
     };
   } catch (err) {
     log.warn({ err, campaignId, validatorKey }, "[MARKET_VALIDATION] Validator falhou — usando fallback VIAVEL_COM_AJUSTES");
@@ -197,19 +240,19 @@ async function runSingleValidator(
   }
 }
 
-// ─── Compute overall verdict with short-circuit logic ─────────────────────────
+// ─── Compute overall verdict ───────────────────────────────────────────────────
+// REGRA: só isCriticalBlock=true (conteúdo ilegal flagrante) retorna INVIAVEL.
+// Tudo o mais — produtos regulados, preço alto, autoridade baixa — vira
+// VIAVEL_COM_AJUSTES. O pipeline não para; o founder recebe alertas e
+// confirma ciência quando requiresAcknowledgment=true.
 
 function computeOverallVerdict(validators: MarketValidatorResult[]): MarketVerdictType {
-  // Short-circuit: 1 critical block = INVIAVEL regardless of others
-  if (validators.some((v) => v.isCriticalBlock && v.verdict === "INVIAVEL")) {
+  // Único motivo de bloqueio real: conteúdo intrinsecamente ilegal na plataforma
+  if (validators.some((v) => v.isCriticalBlock)) {
     return "INVIAVEL";
   }
-  // Any INVIAVEL = overall INVIAVEL
-  if (validators.some((v) => v.verdict === "INVIAVEL")) {
-    return "INVIAVEL";
-  }
-  // Any VIAVEL_COM_AJUSTES = overall VIAVEL_COM_AJUSTES
-  if (validators.some((v) => v.verdict === "VIAVEL_COM_AJUSTES")) {
+  // Qualquer alerta mercadológico, regulatório ou de autoridade → segue com ajustes
+  if (validators.some((v) => v.verdict === "VIAVEL_COM_AJUSTES" || v.requiresAcknowledgment)) {
     return "VIAVEL_COM_AJUSTES";
   }
   return "VIAVEL";

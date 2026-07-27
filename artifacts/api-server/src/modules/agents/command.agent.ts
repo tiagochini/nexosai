@@ -474,43 +474,76 @@ export async function orchestrateCampaign(
     log.warn({ workspaceId, campaignId }, "audit_log FK violation — workspace deleted during agent run (ignored)");
   }
 
-  // ── STEP 0: Avaliação Mercadológica ────────────────────────────────────────
-  // Roda 3 validadores ANTES do command.agent para não consumir créditos de
-  // estratégia em produtos inviáveis. Usa checkpoint para ser restart-safe.
-  // INVIAVEL = retorno antecipado; VIAVEL / VIAVEL_COM_AJUSTES = segue pipeline.
+  // ── STEP 0: Avaliação Mercadológica & Compliance ──────────────────────────
+  // Roda 3 validadores ANTES do command.agent.
+  // Único motivo de parada: isCriticalBlock=true (conteúdo ilegal na plataforma).
+  // Produtos regulados → requiresAcknowledgment=true → aguarda ciência do founder.
+  // VIAVEL_COM_AJUSTES sem ack obrigatório → segue pipeline automaticamente.
   if (!isStepDone(cp, "market_validation")) {
     const mvResult = await runMarketValidation(campaignId, workspaceId, intakeData, log);
     cp = await saveCheckpoint(
       campaignId,
       "market_validation",
-      { verdict: mvResult.overallVerdict },
+      {
+        verdict: mvResult.overallVerdict,
+        requiresAcknowledgment: mvResult.validators.some((v) => v.requiresAcknowledgment),
+      },
       cp,
       log,
     );
 
-    if (mvResult.overallVerdict === "INVIAVEL" && !mvResult.userDecision) {
+    // Caso 1: conteúdo ilegal flagrante — bloqueio definitivo, sem override possível
+    if (mvResult.overallVerdict === "INVIAVEL") {
       log.warn(
-        { campaignId, validators: mvResult.validators.map((v) => ({ validator: v.validator, verdict: v.verdict })) },
-        "[MARKET_VALIDATION] Produto INVIAVEL — pipeline interrompido antes de consumir créditos de estratégia",
+        { campaignId, validators: mvResult.validators.map((v) => ({ validator: v.validator, isCriticalBlock: v.isCriticalBlock })) },
+        "[COMPLIANCE] Conteúdo ilegal detectado — pipeline bloqueado definitivamente",
       );
       emitCampaignEvent({
         campaignId,
         type: "phase_changed",
-        message: "⚠️ Avaliação Mercadológica: produto classificado como INVIÁVEL. Revise o briefing ou escolha uma das alternativas sugeridas.",
+        message: "🚫 Compliance: este produto/serviço não está em conformidade com as regras da plataforma e não pode ser lançado.",
         data: { marketValidation: mvResult },
         timestamp: new Date().toISOString(),
       });
-      // Campaign stays in "analyzing" — user can review and choose to proceed or pivot.
-      // The checkpoint step "market_validation" is saved, so re-running after
-      // POST /market-validation/proceed will skip this block entirely.
       return {
         campaignId,
         type,
         track,
         agentsRun: ["market_validator", "offer_price_validator", "brand_validator"],
-        checkpointsPending: ["market_validation_review"],
+        checkpointsPending: ["compliance_block"],
         status: "analyzing",
       };
+    }
+
+    // Caso 2: produto regulado — aguarda confirmação de ciência do founder (self-proof)
+    const needsAck = mvResult.validators.some((v) => v.requiresAcknowledgment);
+    if (needsAck && !mvResult.acknowledgmentRecordedAt && !mvResult.userDecision) {
+      log.info(
+        { campaignId, regulatoryValidators: mvResult.validators.filter((v) => v.requiresAcknowledgment).map((v) => v.validator) },
+        "[COMPLIANCE] Produto regulado — aguardando confirmação de ciência do founder",
+      );
+      emitCampaignEvent({
+        campaignId,
+        type: "phase_changed",
+        message: "⚠️ Aviso Regulatório: este produto exige habilitação/licença específica. Confirme ciência para prosseguir.",
+        data: { marketValidation: mvResult },
+        timestamp: new Date().toISOString(),
+      });
+      // Pipeline aguarda o founder clicar "Confirmo ciência" no frontend.
+      // POST /market-validation/acknowledge registra self-proof e re-dispara.
+      return {
+        campaignId,
+        type,
+        track,
+        agentsRun: ["market_validator", "offer_price_validator", "brand_validator"],
+        checkpointsPending: ["compliance_acknowledgment_pending"],
+        status: "analyzing",
+      };
+    }
+
+    // Caso 3: VIAVEL / VIAVEL_COM_AJUSTES sem ack obrigatório (ou já confirmado) → segue
+    if (mvResult.validators.some((v) => v.verdict === "VIAVEL_COM_AJUSTES")) {
+      log.info({ campaignId }, "[COMPLIANCE] Alertas mercadológicos registrados — pipeline segue normalmente");
     }
   } else {
     log.info({ campaignId }, "[MARKET_VALIDATION] Step já concluído (checkpoint) — pulando validadores");

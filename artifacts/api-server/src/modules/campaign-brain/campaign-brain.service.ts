@@ -107,12 +107,19 @@ export interface MarketValidatorResult {
   criticalIssues: string[];
   adjustmentSuggestions: string[];
   isCriticalBlock: boolean;
+  /** true quando o nicho/produto exige habilitação legal — gera alerta de ciência, não bloqueio */
+  requiresAcknowledgment?: boolean;
+  /** lista dos alertas legais/regulatórios que o founder precisa confirmar ciência */
+  regulatoryAlerts?: string[];
 }
 
 export interface MarketValidationResult {
   overallVerdict: MarketVerdictType;
   validators: MarketValidatorResult[];
   pivotSuggestions: string[];
+  /** timestamp de quando o founder clicou "Confirmo ciência" — registra self-proof */
+  acknowledgmentRecordedAt?: string;
+  /** @deprecated mantido para compatibilidade — use acknowledgmentRecordedAt */
   userDecision?: "proceed";
   validatedAt: string;
 }
