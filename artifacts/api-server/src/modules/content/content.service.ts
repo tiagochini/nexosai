@@ -1,4 +1,4 @@
-import { eq, and, desc, ne, count, inArray } from "drizzle-orm";
+import { eq, and, desc, ne, count, inArray, sql } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -268,6 +268,42 @@ export async function generateCampaignContent(
     throw new ValidationError(
       `Cannot generate content from status "${campaign.status}". Allowed: ${[...CONTENT_GENERATION_ALLOWED_STATUSES].join(", ")}.`,
     );
+  }
+
+  // ── [#56] Serialization lock — prevent concurrent generateCampaignContent runs ──
+  // pg_try_advisory_lock is NON-BLOCKING: the first caller acquires the lock (true),
+  // all concurrent callers for the same campaignId return false immediately.
+  // This prevents B-4: multiple rapid execute/content triggers running the same
+  // agents in parallel and creating duplicate content_pieces rows.
+  // Lock is session-scoped and released in the finally block at the end of this function.
+  let contentAdvisoryLockHash: number | null = null;
+  try {
+    const lockResult = await db.execute(
+      sql`SELECT pg_try_advisory_lock(hashtext(${campaignId})) AS acquired`,
+    );
+    const row = (Array.isArray(lockResult) ? lockResult[0] : (lockResult as any).rows?.[0]) as Record<string, unknown> | undefined;
+    if (row?.["acquired"] === false) {
+      log.warn({ campaignId }, "[#56] generateCampaignContent: advisory lock already held by concurrent execution — aborting to prevent duplicate content pieces");
+      return {
+        campaignId,
+        piecesGenerated: 0,
+        mediaBriefsGenerated: 0,
+        agentsRun: [],
+        errors: [],
+        status: "completed" as const,
+        pieceResults: [],
+      };
+    }
+    // Lock acquired — compute the hash for the unlock call in finally.
+    // hashtext() returns a 32-bit integer; cast to number is safe.
+    contentAdvisoryLockHash = typeof row?.["acquired"] === "boolean"
+      ? (await db.execute(sql`SELECT hashtext(${campaignId}) AS h`).then(
+          (r) => Number(((Array.isArray(r) ? r[0] : (r as any).rows?.[0]) as any)?.h ?? 0),
+        ).catch(() => null))
+      : null;
+  } catch (lockErr) {
+    // Non-fatal: if advisory lock call fails (e.g. permissions), proceed without lock.
+    log.warn({ lockErr, campaignId }, "[#56] Advisory lock check failed — proceeding without lock (non-fatal)");
   }
 
   let intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
@@ -2438,6 +2474,11 @@ export async function generateCampaignContent(
   };
   } finally {
     clearInterval(heartbeatInterval);
+    // ── [#56] Release advisory lock ───────────────────────────────────────────
+    if (contentAdvisoryLockHash !== null) {
+      await db.execute(sql`SELECT pg_advisory_unlock(${contentAdvisoryLockHash})`)
+        .catch((unlockErr) => log.warn({ unlockErr, campaignId }, "[#56] Advisory lock release failed (non-fatal)"));
+    }
   }
 }
 

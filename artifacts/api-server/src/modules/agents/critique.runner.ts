@@ -302,8 +302,13 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
     tokensUsed: totalTokens, creditsCharged: totalCredits,
   }, log);
 
-  // ── Charge credits for all turns completed this run ───────────────────────
+  // ── [C3] Critique credit idempotency — mirrors agent.runner.ts [C3] guard ──
+  // Key: ${campaignId}:${agentRole} — stable across restarts; same campaign + same
+  // agent role always produces the same key, so a duplicate run triggered by B-4
+  // (concurrent execute/content calls) or a process restart charges only once.
   if (totalCredits > 0) {
+    const idempotencyKey = `${campaignId}:${agentRole}`;
+
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance })
       .from(workspacesTable)
@@ -313,25 +318,50 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
     if (ws) {
       const balanceBefore = ws.creditsBalance;
       const balanceAfter = Math.max(0, balanceBefore - totalCredits);
-
-      await db
-        .update(workspacesTable)
-        .set({ creditsBalance: balanceAfter })
-        .where(eq(workspacesTable.id, workspaceId));
-
       const costUsdTotal = (turn1CostUsd + turn2CostUsd + turn3.costUsd).toString();
-      await db.insert(creditTransactionsTable).values({
-        workspaceId,
-        campaignId,
-        type: "debit",
-        action: "campaign_execution",
-        amount: totalCredits,
-        balanceBefore,
-        balanceAfter,
-        aiProvider: turn1Provider,
-        tokensUsed: totalTokens,
-        costUsd: costUsdTotal,
+
+      let isDuplicate = false;
+      await db.transaction(async (trx) => {
+        // First writer: INSERT wins → claimed is defined → UPDATE balance in same txn.
+        // Concurrent writer: INSERT conflicts (unique partial index on idempotency_key)
+        // → claimed is undefined → skip UPDATE → txn commits as a no-op.
+        const [claimed] = await trx
+          .insert(creditTransactionsTable)
+          .values({
+            workspaceId,
+            campaignId,
+            type: "debit",
+            action: "campaign_execution",
+            amount: totalCredits,
+            balanceBefore,
+            balanceAfter,
+            aiProvider: turn1Provider,
+            tokensUsed: totalTokens,
+            costUsd: costUsdTotal,
+            idempotencyKey,
+          })
+          .onConflictDoNothing()
+          .returning();
+
+        if (!claimed) { isDuplicate = true; return; }
+
+        await trx
+          .update(workspacesTable)
+          .set({ creditsBalance: balanceAfter })
+          .where(eq(workspacesTable.id, workspaceId));
       });
+
+      if (isDuplicate) {
+        log.warn(
+          { workspaceId, agentRole, totalCredits, idempotencyKey },
+          "[C3] Critique credit already charged — skipping duplicate deduction (idempotency guard triggered)",
+        );
+      } else {
+        log.info(
+          { workspaceId, agentRole, totalCredits, idempotencyKey, balanceAfter },
+          "[C3] Critique credit deducted (idempotency key registered)",
+        );
+      }
     }
   }
 
