@@ -37,6 +37,8 @@
 - [Premise Conflict Detector](premise-conflict.md) — conflict-detector.service.ts; detectPremiseConflicts() fires via setImmediate after intake merge; persists to brainData.premiseConflicts; Socket.io campaign:event alert; resolvePremiseConflict() for user resolution.
 - [Manual Integration Connect](manual-integration-connect.md) — manual credential-entry endpoints need their own field/status/provider-enum audit against the DB enum + OAuth mapping; a missing field is silently stripped, not an error.
 - [Intake-Triggered Background Analysis](intake-triggered-background-analysis.md) — reuse only unlinked reports, exclude failed from idempotency, verify campaignId ownership (IDOR via runAgent).
+- [Dev/Prod Redis Queue Isolation](jornada-limpa-1-redis-queue-isolation.md) — QUEUE_PREFIX env var isolates dev/prod queues; post-restart probe creates separate TCP connection that fails while BullMQ worker is healthy.
+- [Content Agent Credit Idempotency Gap](content-agent-credit-idempotency-gap.md) — content.service.ts deducts credits without idempotency_key; [C3] only covers agent.runner.ts path. Content deductions can double-charge.
 - [HeyGen Digital Twin Plan Gate](heygen-digital-twin-plan-gate.md) — video-based avatar cloning needs HeyGen Enterprise plan; 403 forbidden is account tier, not a bug.
 - [HeyGen/ElevenLabs Avatar Gate](heygen-elevenlabs-avatar-gate.md) — talking_photo_style must be "square" not "normal"; HeyGen voice_id ≠ raw ElevenLabs ID; instant voice cloning needs paid ElevenLabs plan.
 - [AI Infra Not Customer Integration](ai-infra-not-customer-integration.md) — AI generation providers (HeyGen/ElevenLabs/Runway/Kling/etc.) must always use platform keys, never customer-supplied — bypasses credit revenue model.
