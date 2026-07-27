@@ -1921,6 +1921,25 @@ export default function CampaignDetail() {
         if (isAutocorrectionDone) {
           return { isRetry: true, label: "Retomar — corrigido automaticamente", description: `✅ Ethics Agent ajustou a linguagem de "${failedPieceName}" para conformidade. Clique para tentar novamente com a nova diretriz.` };
         }
+        // RC-011: Strategy phase failed — brainData.strategyTransitionFailed is the marker
+        // written by the catch block in command.agent.ts when transitionCampaign throws.
+        // Takes priority over generic isStale so the Founder sees a precise message + retry.
+        const strategyFailed = brainDataRaw["strategyTransitionFailed"] as { at?: string; retryable?: boolean; message?: string } | undefined;
+        if (strategyFailed) {
+          if (strategyFailed.retryable !== false) {
+            return {
+              isRetry: true,
+              label: "Tentar novamente — fase de estratégia",
+              description: strategyFailed.message ?? "A fase de estratégia falhou ao finalizar. Clique para tentar novamente — o progresso dos agentes anteriores foi preservado e nenhum crédito extra será cobrado.",
+            };
+          }
+          return {
+            isIntervention: true,
+            isRetry: false,
+            label: "Requer suporte técnico",
+            description: `A fase de estratégia encontrou um erro não recuperável${strategyFailed.at ? ` (${new Date(strategyFailed.at).toLocaleString("pt-BR")})` : ""}. Entre em contato com o suporte.`,
+          };
+        }
         if (requiresIntervention) {
           const errorLabel = lastErrorType === "COMPLIANCE_VIOLATION" ? " (filtro de compliance)" : lastErrorType === "INVALID_INPUT_CONTEXT" ? " (dados insuficientes)" : "";
           return { isIntervention: true, isRetry: false, label: "Intervenção necessária", failedPieceType: failedPieceTypeRaw, description: failedPieceName ? `Falha repetida na criação de "${failedPieceName}"${errorLabel}. Pule esta peça ou ajuste o briefing para desbloquear.` : "Falha repetida no pipeline de estratégia. Revise o briefing e tente novamente." };

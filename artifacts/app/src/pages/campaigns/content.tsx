@@ -37,6 +37,17 @@ type PieceType = "post" | "story" | "reel" | "native_video" | "email" | "message
 type Status = "pending" | "approved" | "rejected" | "edited";
 type Segment = "hot" | "warm" | "cold" | "all";
 
+// Compliance revision state derived from brainData.complianceRevision
+interface ComplianceRevisionInfo {
+  inProgress?: boolean;
+  attempts?: Record<string, number>;    // pieceId → attemptCount
+  atMaxRetries?: string[];              // pieceTypes that hit the 2-attempt ceiling
+  requiresHumanDecision?: boolean;
+  startedAt?: string;
+  completedAt?: string;
+  outcome?: string;
+}
+
 interface ContentPiece extends PreviewPiece {
   id: string;
   platform: Platform;
@@ -56,6 +67,12 @@ interface ContentPiece extends PreviewPiece {
   qualityScore?: number;
   autoRepairFailed?: boolean;
   notGenerated?: boolean;
+  /** Compliance auto-correction state for this specific piece (Sistema 3) */
+  complianceRevisionState?: {
+    attempt: number;          // current attempt number (1 or 2)
+    isRewriting: boolean;     // correction is actively in progress right now
+    isEscalated: boolean;     // hit 2-attempt ceiling, requires human decision
+  };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -817,6 +834,34 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
           <div className="mb-2 px-2 py-1 border border-red-400/30 bg-red-400/5">
             <span className="font-mono text-[10px] text-red-400 uppercase tracking-widest">Hook: </span>
             <span className="font-mono text-[11px] text-foreground/80 italic">"{piece.tiktokHook}"</span>
+          </div>
+        )}
+
+        {/* ── Sistema 3: Compliance auto-correction state ────────────────────── */}
+        {/* State (b) / (c): rewriting in progress — tentativa 1 ou 2 de 2       */}
+        {piece.complianceRevisionState?.isRewriting && (
+          <div className="mb-2 px-3 py-2 border border-amber-400/40 bg-amber-400/5">
+            <div className="flex items-center gap-1.5">
+              <Loader2 className="h-3 w-3 text-amber-400 animate-spin shrink-0" />
+              <span className="font-mono text-[11px] text-amber-300/90 leading-relaxed">
+                Correção automática por compliance em andamento — tentativa{" "}
+                <strong>{piece.complianceRevisionState.attempt}</strong> de 2
+              </span>
+            </div>
+          </div>
+        )}
+        {/* State (d): hit 2-attempt ceiling — requires human decision             */}
+        {piece.complianceRevisionState?.isEscalated && (
+          <div className="mb-2 px-3 py-2 border border-orange-500/40 bg-orange-500/8">
+            <div className="flex items-center gap-1.5 mb-1">
+              <AlertTriangle className="h-3 w-3 text-orange-400 shrink-0" />
+              <span className="font-mono text-[10px] text-orange-400 uppercase tracking-widest font-bold">
+                Decisão necessária
+              </span>
+            </div>
+            <span className="font-mono text-[11px] text-orange-300/80 leading-relaxed">
+              2 tentativas de reescrita automática por compliance foram insuficientes. Revise a peça e aprove, edite manualmente, ou force a aprovação.
+            </span>
           </div>
         )}
 
@@ -1844,12 +1889,21 @@ function getParentId(id: string): string {
 
 // Expand aggregated AI documents into individual reviewable cards.
 // Each sub-item (email, story, CPL video, landing section…) becomes its own card.
-function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
+// complianceRevision: from brainData.complianceRevision — enriches each card with
+// its Sistema 3 correction state (rewriting attempt N, escalated to human, etc.)
+function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: ComplianceRevisionInfo | null): ContentPiece[] {
   const STATUS_MAP: Record<string, Status> = {
     draft: "pending", pending_approval: "pending",
     approved: "approved", rejected: "rejected",
+    regenerating: "pending",
   };
   const result: ContentPiece[] = [];
+
+  // Pre-compute compliance revision lookup helpers (Sistema 3)
+  const crAttempts = complianceRevision?.attempts ?? {};
+  const crAtMaxRetries = complianceRevision?.atMaxRetries ?? [];
+  const crInProgress = complianceRevision?.inProgress ?? false;
+  const crRequiresHuman = complianceRevision?.requiresHumanDecision ?? false;
 
   for (const piece of pieces) {
     try {
@@ -1873,6 +1927,17 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
     const pieceNotGenerated = c["_notGenerated"] === true;
     const pieceAutoRepairFailed = c["_autoRepairFailed"] === true || (c["_minimalFallback"] === true && !pieceNotGenerated);
 
+    // ── Sistema 3: compliance revision state for this piece ─────────────────
+    // crAttempts maps pieceId → attemptCount (set by runComplianceRevisionLoop).
+    // crAtMaxRetries maps pieceType[] that hit the 2-attempt ceiling.
+    const pieceAttempt = crAttempts[piece.id] ?? 0;
+    const pieceIsEscalated = crAtMaxRetries.includes(rawType) && crRequiresHuman && !crInProgress;
+    const pieceIsRewriting = crInProgress && pieceAttempt > 0;
+    const complianceRevisionState: ContentPiece["complianceRevisionState"] =
+      pieceAttempt > 0 || pieceIsEscalated
+        ? { attempt: pieceAttempt, isRewriting: pieceIsRewriting, isEscalated: pieceIsEscalated }
+        : undefined;
+
     // Helper: create a child card
     const child = (subKey: string, overrides: Partial<ContentPiece>): ContentPiece => ({
       id: `${piece.id}::${subKey}`,
@@ -1887,6 +1952,7 @@ function expandApiPieces(pieces: ApiContentPiece[]): ContentPiece[] {
       qualityScore: pieceQualityScore,
       autoRepairFailed: pieceAutoRepairFailed,
       notGenerated: pieceNotGenerated,
+      complianceRevisionState,
       ...overrides,
     });
 
@@ -3795,7 +3861,7 @@ export default function ContentApproval() {
     queryFn: async () => {
       try {
         setContentFetchError(null);
-        const result = await customFetch<{ pieces: ApiContentPiece[]; total?: number }>(`/api/campaigns/${campaignId}/content`);
+        const result = await customFetch<{ pieces: ApiContentPiece[]; total?: number; complianceRevision?: ComplianceRevisionInfo | null }>(`/api/campaigns/${campaignId}/content`);
         return result;
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Erro ao carregar conteúdo";
@@ -3842,7 +3908,7 @@ export default function ContentApproval() {
   const realPieces: ContentPiece[] | null = (() => {
     if (!apiContentData?.pieces?.length) return null;
     try {
-      const expanded = expandApiPieces(apiContentData.pieces);
+      const expanded = expandApiPieces(apiContentData.pieces, apiContentData.complianceRevision);
       return expanded.length > 0 ? expanded : null;
     } catch (err) {
       console.error("[content] expandApiPieces failed", err);

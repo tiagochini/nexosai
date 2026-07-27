@@ -2532,7 +2532,7 @@ export async function getCampaignContent(
   launchPhase?: string,
 ) {
   const [campaign] = await db
-    .select({ id: campaignsTable.id })
+    .select({ id: campaignsTable.id, brainData: (campaignsTable as any).brainData })
     .from(campaignsTable)
     .where(
       and(
@@ -2543,6 +2543,19 @@ export async function getCampaignContent(
     .limit(1);
 
   if (!campaign) throw new NotFoundError("Campaign");
+
+  // Extract complianceRevision from brainData — drives per-piece correction UI
+  const brain = ((campaign as any).brainData ?? {}) as Record<string, unknown>;
+  const complianceRevision = (brain["complianceRevision"] ?? null) as {
+    inProgress?: boolean;
+    startedAt?: string;
+    completedAt?: string;
+    outcome?: string;
+    attempts?: Record<string, number>;   // pieceId → attemptCount
+    activePieceTypes?: string[];
+    atMaxRetries?: string[];             // pieceTypes that hit 2-attempt ceiling
+    requiresHumanDecision?: boolean;
+  } | null;
 
   const conditions = [eq(contentPiecesTable.campaignId, campaignId)];
   if (type) {
@@ -2565,7 +2578,7 @@ export async function getCampaignContent(
     .where(and(...conditions))
     .orderBy(desc(contentPiecesTable.createdAt));
 
-  return { pieces, total: pieces.length };
+  return { pieces, total: pieces.length, complianceRevision };
 }
 
 export async function getMediaBriefs(campaignId: string, workspaceId: string) {
