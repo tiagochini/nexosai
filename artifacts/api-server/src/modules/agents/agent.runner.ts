@@ -871,7 +871,19 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
           : undefined;
 
         if (idempotencyKey) {
-          let c3Duplicate = false;
+          // ── [C3] Atomic idempotency via INSERT ON CONFLICT DO NOTHING + db.transaction() ──
+          //
+          // Two concurrent executions of the same agent race through here. Both compute the same
+          // idempotencyKey. Without a transaction, both could pass a SELECT check and then both
+          // UPDATE the workspace balance — double-charging. Instead we:
+          //   1. Open a single Postgres transaction.
+          //   2. Attempt INSERT with ON CONFLICT DO NOTHING RETURNING.
+          //      • First writer  → INSERT succeeds → claimed is defined → UPDATE balance.
+          //      • Second writer → INSERT conflicts (unique partial index) → claimed is undefined
+          //        → skip UPDATE → transaction commits as a no-op.
+          //   Postgres serialises the two INSERTs at the row level; the balance UPDATE runs
+          //   exactly once regardless of concurrency.
+          let isDuplicate = false;
 
           await db.transaction(async (trx) => {
             const [claimed] = await trx
@@ -890,22 +902,21 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
                 idempotencyKey,
               })
               .onConflictDoNothing()
-              .returning({ id: creditTransactionsTable.id });
+              .returning();
 
             if (!claimed) {
-              // Another worker already registered this charge — commit no-op and skip.
-              c3Duplicate = true;
-              return;
+              isDuplicate = true;
+              return; // Early return — txn commits as a no-op, nothing mutated
             }
 
-            // INSERT succeeded — deduct balance in the same atomic transaction.
+
             await trx
               .update(workspacesTable)
               .set({ creditsBalance: balanceAfter })
               .where(eq(workspacesTable.id, workspaceId));
           });
 
-          if (c3Duplicate) {
+          if (isDuplicate) {
             log.warn(
               { workspaceId, agentRole, creditsCharged, idempotencyKey },
               "[C3] Credit already charged for this agent run — skipping duplicate deduction (idempotency guard triggered on pipeline restart)",
