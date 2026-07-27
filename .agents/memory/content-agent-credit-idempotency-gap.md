@@ -1,16 +1,31 @@
 ---
 name: Content Agent Credit Idempotency Gap
-description: content.service.ts deducts credits without setting an idempotency_key — unlike agent.runner.ts [C3] guard. 43 transactions recorded with empty key during JORNADA LIMPA #1.
+description: FIXED — generateExtraContent was using the pipeline-level C3 key; also covers regeneratePiece and rewriteContentPiece regen-context pattern
 ---
 
-# Content Agent Credit Idempotency Gap
-
 ## Rule
-Credit deductions made directly by `content.service.ts` (not via `agent.runner.ts`) bypass the [C3] `ON CONFLICT DO NOTHING` idempotency guard because they pass an empty/null `idempotency_key` to `deductCredits()`.
+Every code path that calls `runAgent` (or a critique-runner agent) OUTSIDE the initial pipeline MUST be wrapped in `withRegenContext(key, fn)`. Without this, C3 falls back to `${campaignId}:${agentRole}` — the same key the initial pipeline already consumed — and `ON CONFLICT DO NOTHING` blocks the charge forever.
 
-**Why:** `agent.runner.ts` sets `idempotencyKey: "${campaignId}:${agentRole}"`. The content service's direct deductions pass no key, so the DB unique-constraint check is skipped. This means concurrent or repeated content-phase runs can double-charge credits for content pieces.
+**Why:** C3 idempotency uses a partial unique index on `credit_transactions.idempotency_key`. First insert wins; duplicates are silently dropped. Any subsequent call with the same key charges 0 credits.
 
-**How to apply:** Any call to `deductCredits()` in `content.service.ts` must pass a non-null `idempotencyKey` — format: `"${campaignId}:${contentType}:${pieceIndex}"`. Audit all call sites in `artifacts/api-server/src/modules/content/content.service.ts`.
+**How to apply:**
+- `regeneratePiece` → key: `${campaignId}:${pieceId}:regen:${Math.floor(Date.now()/60000)}`
+- `rewriteContentPiece` → key: `${campaignId}:${pieceId}:rewrite:${Math.floor(Date.now()/60000)}`
+- `generateExtraContent` → key: `${campaignId}:${platform}:extra:${Math.floor(Date.now()/60000)}`
+- Same-minute calls share the bucket key → exactly 1 charge (dedup of rapid double-clicks)
+- New minute → fresh key → new charge
 
-## Observed in production
-JORNADA LIMPA #1: 43 of 70 credit transactions had empty idempotency_key (all content-phase). Zero duplicates on strategy agents (all had keys). Strategy [C3] = protected. Content = unprotected.
+## Fixed paths
+- `generateExtraContent()` — **FIXED**: now wraps `runAgent` with `withRegenContext(extraIdempotencyKey, ...)`
+- `regeneratePiece()` — already fixed (AsyncLocalStorage)
+- `rewriteContentPiece()` — already fixed (AsyncLocalStorage)
+
+## New path pattern
+```typescript
+const extraBucket = Math.floor(Date.now() / 60_000);
+const extraIdempotencyKey = `${campaignId}:${platform}:extra:${extraBucket}`;
+const rawOutput = await withRegenContext(extraIdempotencyKey, async () => {
+  const result = await runAgent({ ... });
+  return result.content;
+});
+```

@@ -3278,6 +3278,16 @@ export async function generateExtraContent(
     .map(p => JSON.stringify(p.content).slice(0, 400))
     .join("\n---\n");
 
+  // [#62] Extra-content idempotency key — scoped to (campaignId, platform, 1-minute bucket).
+  // Without this, runAgent falls back to the pipeline-level key `${campaignId}:copywriter`,
+  // which was already registered during initial content generation → C3 fires ON CONFLICT DO
+  // NOTHING and charges 0 credits for every subsequent "gerar mais conteúdo" call.
+  // Key format: `${campaignId}:${platform}:extra:${bucket}`
+  //   → Same call twice within the same minute → 1 charge (idempotent, dedup rapid double-clicks)
+  //   → A new minute → fresh key → new charge
+  const extraBucket = Math.floor(Date.now() / 60_000);
+  const extraIdempotencyKey = `${campaignId}:${platform}:extra:${extraBucket}`;
+
   const systemPrompt = `Você é um especialista em copywriting para lançamentos digitais brasileiros.
 Gere exatamente ${safeCount} peça(s) de conteúdo para a plataforma ${platformLabel}.
 
@@ -3311,13 +3321,19 @@ REGRAS:
     `\nGere ${safeCount} peça(s) para ${platformLabel}.`,
   ].filter(Boolean).join("\n\n");
 
-  const { content: rawOutput } = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "copywriter",
-    systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-    log,
+  // [#62] Wrap runAgent inside withRegenContext so C3 uses the extra-scoped key,
+  // not the pipeline-level `${campaignId}:copywriter` key that was consumed at initial generation.
+  // withRegenContext<T> returns Promise<T> — we propagate the string directly.
+  const rawOutput = await withRegenContext(extraIdempotencyKey, async () => {
+    const result = await runAgent({
+      campaignId,
+      workspaceId,
+      agentRole: "copywriter",
+      systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+      log,
+    });
+    return result.content;
   });
 
   const parsed = parseAgentJSON<{ extraPieces?: unknown[] }>(rawOutput, { extraPieces: [] });
