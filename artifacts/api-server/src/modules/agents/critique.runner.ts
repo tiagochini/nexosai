@@ -114,6 +114,13 @@ export async function runAgentWithCritique(opts: {
   userMessage: string;
   log: Logger;
   profileContext?: string;
+  /**
+   * [#61] When true, bypass any existing checkpoint and force fresh LLM calls
+   * for all three turns. Use on retry paths where the cached result is known to
+   * be incomplete — without this flag the runner returns the bad cached output
+   * and the retry never actually calls the LLM again.
+   */
+  skipCheckpoint?: boolean;
 }): Promise<CritiqueResult> {
   const { campaignId, workspaceId, agentRole, systemPrompt, userMessage, log } = opts;
 
@@ -127,7 +134,12 @@ export async function runAgentWithCritique(opts: {
   let totalTokens = 0;
 
   // ── Resume check: find latest checkpoint ─────────────────────────────────
-  const checkpoint = await loadCheckpoint(campaignId, agentRole);
+  // [#61] skipCheckpoint=true → treat as if no checkpoint exists so all turns
+  // run fresh. This is required on CPL retries to actually call the LLM again.
+  const checkpoint = opts.skipCheckpoint ? null : await loadCheckpoint(campaignId, agentRole);
+  if (opts.skipCheckpoint) {
+    log.info({ campaignId, agentRole }, "[#61] skipCheckpoint=true — ignoring existing checkpoint, running all turns fresh");
+  }
   const resumeFromIteration = checkpoint?.iteration ?? 0;
 
   if (resumeFromIteration >= 3) {

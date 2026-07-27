@@ -227,6 +227,8 @@ export async function runCPL1Agent(
   profile: ProfileBuilderOutput | undefined,
   intakeData: Record<string, unknown>,
   log: Logger,
+  /** [#61] Pass { skipCheckpoint: true } on retry paths to force a fresh LLM call. */
+  opts?: { skipCheckpoint?: boolean },
 ): Promise<CPLPhaseOutput> {
   const context = buildCPLContext(strategy, profile, intakeData);
 
@@ -238,7 +240,18 @@ ${context}
 
 O dayIndex deve ser calculado como: primeiro CPL = dia 1 ou 2 do pré-lançamento.
 
-Retorne APENAS o JSON conforme schema.`;
+Retorne APENAS o JSON exatamente no schema abaixo — sem texto antes, sem texto depois, sem markdown extra. Substitua CADA campo string pelo conteúdo real completo.
+
+${CPL_JSON_SCHEMA}
+
+REGRAS CRÍTICAS DE PREENCHIMENTO:
+- liveScript.hook: escreva os primeiros 30s completos (paradoxo ou contraintuitivo que para o scroll)
+- liveScript.openingStory: história COMPLETA de 2-3 min com identificação total
+- liveScript.mainContentSections: MÍNIMO 3 seções, cada uma com roteiro COMPLETO em português coloquial
+- liveScript.cliffhanger: promessa específica do CPL 2 (não genérica)
+- liveScript.estimatedDuration: ex "12-15 minutos"
+- emails[0] e emails[1]: corpo HTML completo em <p> e <strong>
+- cplNumber deve ser 1`;
 
   const critique = await runAgentWithCritique({
     campaignId,
@@ -247,6 +260,7 @@ Retorne APENAS o JSON conforme schema.`;
     systemPrompt: CPL1_SYSTEM_PROMPT,
     userMessage,
     log,
+    skipCheckpoint: opts?.skipCheckpoint,
   });
 
   const _parsed1 = parseAgentJSON<CPLPhaseOutput & { _qualityScore?: number }>(critique.refinedOutput, {
@@ -325,6 +339,8 @@ export async function runCPL2Agent(
   profile: ProfileBuilderOutput | undefined,
   intakeData: Record<string, unknown>,
   log: Logger,
+  /** [#61] Pass { skipCheckpoint: true } on retry paths to force a fresh LLM call. */
+  opts?: { skipCheckpoint?: boolean },
 ): Promise<CPLPhaseOutput> {
   const context = buildCPLContext(strategy, profile, intakeData);
 
@@ -336,7 +352,18 @@ ${context}
 
 O dayIndex deve ser: CPL 1 dia 1-2, CPL 2 dia 5-7 do pré-lançamento.
 
-Retorne APENAS o JSON conforme schema.`;
+Retorne APENAS o JSON exatamente no schema abaixo — sem texto antes, sem texto depois, sem markdown extra. Substitua CADA campo string pelo conteúdo real completo.
+
+${CPL_JSON_SCHEMA}
+
+REGRAS CRÍTICAS DE PREENCHIMENTO:
+- liveScript.hook: gancho dos primeiros 30s que revela o mecanismo único indiretamente
+- liveScript.openingStory: história COMPLETA que introduz o vilão/obstáculo sistêmico
+- liveScript.mainContentSections: MÍNIMO 3 seções, roteiro COMPLETO — apresentar o mecanismo único
+- liveScript.cliffhanger: promessa específica do que o CPL 3 vai revelar (prova social)
+- liveScript.estimatedDuration: ex "14-18 minutos"
+- emails[0] e emails[1]: corpo HTML completo em <p> e <strong>
+- cplNumber deve ser 2`;
 
   const critique = await runAgentWithCritique({
     campaignId,
@@ -345,6 +372,7 @@ Retorne APENAS o JSON conforme schema.`;
     systemPrompt: CPL2_SYSTEM_PROMPT,
     userMessage,
     log,
+    skipCheckpoint: opts?.skipCheckpoint,
   });
 
   const _parsed2 = parseAgentJSON<CPLPhaseOutput & { _qualityScore?: number }>(critique.refinedOutput, {
@@ -425,6 +453,8 @@ export async function runCPL3Agent(
   profile: ProfileBuilderOutput | undefined,
   intakeData: Record<string, unknown>,
   log: Logger,
+  /** [#61] Pass { skipCheckpoint: true } on retry paths to force a fresh LLM call. */
+  opts?: { skipCheckpoint?: boolean },
 ): Promise<CPLPhaseOutput> {
   const context = buildCPLContext(strategy, profile, intakeData);
 
@@ -436,7 +466,18 @@ ${context}
 
 O dayIndex deve ser: CPL 3 dia 10-12 do pré-lançamento (2-3 dias antes da abertura do carrinho).
 
-Retorne APENAS o JSON conforme schema.`;
+Retorne APENAS o JSON exatamente no schema abaixo — sem texto antes, sem texto depois, sem markdown extra. Substitua CADA campo string pelo conteúdo real completo.
+
+${CPL_JSON_SCHEMA}
+
+REGRAS CRÍTICAS DE PREENCHIMENTO:
+- liveScript.hook: gancho que apresenta uma transformação real de aluno (prova social como abertura)
+- liveScript.openingStory: história COMPLETA de aluno que o avatar se identifica — antes e depois
+- liveScript.mainContentSections: MÍNIMO 3 seções com roteiro COMPLETO — provas sociais + pertencimento + antecipação
+- liveScript.cliffhanger: convite para o evento de lançamento sem revelar preço
+- liveScript.estimatedDuration: ex "15-20 minutos"
+- emails[0] e emails[1]: corpo HTML completo em <p> e <strong>
+- cplNumber deve ser 3`;
 
   const critique = await runAgentWithCritique({
     campaignId,
@@ -445,6 +486,7 @@ Retorne APENAS o JSON conforme schema.`;
     systemPrompt: CPL3_SYSTEM_PROMPT,
     userMessage,
     log,
+    skipCheckpoint: opts?.skipCheckpoint,
   });
 
   const _parsed3 = parseAgentJSON<CPLPhaseOutput & { _qualityScore?: number }>(critique.refinedOutput, {

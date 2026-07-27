@@ -289,10 +289,14 @@ export async function runCPLScriptAgent(
     return last;
   }
 
+  // [#61] skipCheckpoint: true forces a real LLM call on retry — without it the
+  // critique runner finds the cached incomplete checkpoint and returns it again,
+  // making the retry a no-op. We only bypass the checkpoint for the retry path;
+  // the initial parallel run above still benefits from normal checkpoint resume.
   const [cpl1, cpl2, cpl3] = await Promise.all([
-    retryCPLIfNeeded(init1, 1, () => runCPL1Agent(campaignId, workspaceId, strategy, profile, intakeData, log)),
-    retryCPLIfNeeded(init2, 2, () => runCPL2Agent(campaignId, workspaceId, strategy, profile, intakeData, log)),
-    retryCPLIfNeeded(init3, 3, () => runCPL3Agent(campaignId, workspaceId, strategy, profile, intakeData, log)),
+    retryCPLIfNeeded(init1, 1, () => runCPL1Agent(campaignId, workspaceId, strategy, profile, intakeData, log, { skipCheckpoint: true })),
+    retryCPLIfNeeded(init2, 2, () => runCPL2Agent(campaignId, workspaceId, strategy, profile, intakeData, log, { skipCheckpoint: true })),
+    retryCPLIfNeeded(init3, 3, () => runCPL3Agent(campaignId, workspaceId, strategy, profile, intakeData, log, { skipCheckpoint: true })),
   ]);
 
   const mapCPLToVideo = (cpl: import("./cpl-scripts.agent.js").CPLPhaseOutput): CPLVideo => {

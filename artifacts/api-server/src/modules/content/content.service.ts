@@ -1438,14 +1438,34 @@ export async function generateCampaignContent(
 
         // [#60] Warn founder when any CPL still has empty liveScript after retries
         if (degradedCPLs.length > 0) {
+          const warningMsg = `⚠️ CPL ${degradedCPLs.map((n) => `${n}`).join(", ")} gerado com roteiro incompleto — regeneração recomendada`;
           log.warn({ campaignId, pieceId: piece?.id, degradedCPLs }, "[#60] CPL roteiros incompletos após retries — emitindo agent_warning");
+
+          // Real-time Socket.io event (visible while the founder is watching live)
           emitCampaignEvent({
             campaignId,
             type: "agent_warning",
             agentType: "cpl_script",
-            message: `⚠️ CPL ${degradedCPLs.map((n) => `${n}`).join(", ")} gerado com roteiro incompleto — regeneração recomendada`,
+            message: warningMsg,
             data: { pieceId: piece?.id, degradedCPLs },
             timestamp: new Date().toISOString(),
+          });
+
+          // [#60] Persist to audit_logs so the warning survives after the live feed
+          // disappears — founders who weren't watching can still see it in history.
+          db.insert(auditLogsTable).values({
+            workspaceId,
+            campaignId,
+            action: "agent_warning",
+            actor: "system",
+            data: {
+              type: "cpl_degraded",
+              pieceId: piece?.id ?? null,
+              degradedCPLs,
+              message: warningMsg,
+            },
+          }).catch((err: unknown) => {
+            log.warn({ err, campaignId }, "[#60] audit_log persist for agent_warning failed — non-fatal");
           });
         }
 
