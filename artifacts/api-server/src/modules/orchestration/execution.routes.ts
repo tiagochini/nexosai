@@ -232,6 +232,18 @@ router.post("/:campaignId/market-validation/acknowledge", async (req, res): Prom
   const brainRaw = ((campaign.brainData ?? {}) as Record<string, unknown>);
   const mv = ((brainRaw["marketValidation"] ?? {}) as Record<string, unknown>);
 
+  // Guard: conteúdo ilegal flagrante — bloqueio definitivo, não pode ser desbloqueado
+  // nem pelo founder nem por nenhum endpoint. O acknowledge serve APENAS para alertas
+  // regulatórios (requiresAcknowledgment=true), nunca para casos isCriticalBlock=true.
+  if (mv["overallVerdict"] === "INVIAVEL") {
+    req.log.warn({ campaignId, workspaceId, userId }, "[COMPLIANCE] Tentativa de acknowledge em campanha com bloqueio definitivo (INVIAVEL) — rejeitado");
+    res.status(403).json({
+      error: "Esta campanha contém conteúdo incompatível com as regras da plataforma e não pode prosseguir. O bloqueio é definitivo e não pode ser removido por nenhuma ação do usuário.",
+      code: "COMPLIANCE_HARD_BLOCK",
+    });
+    return;
+  }
+
   // Self-proof: registra timestamp e userId de quem confirmou ciência
   const acknowledgmentRecordedAt = new Date().toISOString();
   await db
@@ -264,10 +276,13 @@ router.post("/:campaignId/market-validation/acknowledge", async (req, res): Prom
   });
 });
 
-// POST /campaigns/:campaignId/market-validation/proceed  (alias legado — mantido para compatibilidade)
+// POST /campaigns/:campaignId/market-validation/proceed  (alias legado — NÃO é bypass)
+// Este endpoint é um alias do /acknowledge. Não oferece nenhuma capacidade além do que
+// o founder já tem via /acknowledge. Bloqueios definitivos (INVIAVEL / isCriticalBlock)
+// são rejeitados aqui exatamente como no /acknowledge — não existe caminho de override.
 router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<void> => {
   const campaignId = req.params["campaignId"] as string;
-  const { workspaceId } = req.auth;
+  const { workspaceId, userId } = req.auth;
 
   const [campaign] = await db
     .select({ status: campaignsTable.status, brainData: (campaignsTable as any).brainData })
@@ -284,13 +299,36 @@ router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<
   const brainRaw = ((campaign.brainData ?? {}) as Record<string, unknown>);
   const mv = ((brainRaw["marketValidation"] ?? {}) as Record<string, unknown>);
 
+  // Guard idêntico ao /acknowledge — bloqueio definitivo não pode ser removido por nenhuma rota
+  if (mv["overallVerdict"] === "INVIAVEL") {
+    req.log.warn({ campaignId, workspaceId, userId }, "[COMPLIANCE] Tentativa de proceed em campanha com bloqueio definitivo (INVIAVEL) — rejeitado");
+    res.status(403).json({
+      error: "Esta campanha contém conteúdo incompatível com as regras da plataforma e não pode prosseguir. O bloqueio é definitivo.",
+      code: "COMPLIANCE_HARD_BLOCK",
+    });
+    return;
+  }
+
+  // Alias do /acknowledge: registra self-proof completo (userId + timestamp)
+  const acknowledgmentRecordedAt = new Date().toISOString();
   await db
     .update(campaignsTable)
-    .set({ brainData: { ...brainRaw, marketValidation: { ...mv, userDecision: "proceed", acknowledgmentRecordedAt: new Date().toISOString() } } as any })
+    .set({
+      brainData: {
+        ...brainRaw,
+        marketValidation: {
+          ...mv,
+          userDecision: "proceed",
+          acknowledgmentRecordedAt,
+          acknowledgedByUserId: userId,
+        },
+      } as any,
+    })
     .where(eq(campaignsTable.id, campaignId));
 
+  req.log.info({ campaignId, workspaceId, userId, acknowledgmentRecordedAt }, "[COMPLIANCE] /proceed (legado) — self-proof registrado via alias");
   await triggerStrategyPhase(campaignId, workspaceId, req.log);
-  res.json({ ok: true, message: "Pipeline retomado." });
+  res.json({ ok: true, message: "Pipeline retomado.", acknowledgmentRecordedAt });
 });
 
 // POST /campaigns/:campaignId/execute/retry — failsafe recovery for stuck campaigns
