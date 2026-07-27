@@ -140,7 +140,7 @@ export async function runComplianceSweep(
       const result = await validatePieceCompliance(
         pieceText,
         piece.type ?? "content",
-        null,
+        campaignId,
         workspaceId,
         log,
       );
