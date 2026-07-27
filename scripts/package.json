@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "jornada-limpa-3": "tsx ./src/jornada-limpa-3.ts",
     "hello": "tsx ./src/hello.ts",
     "seed-plans": "tsx ./src/seed-plans.ts",
     "nexos-audit-test": "tsx ./src/nexos-audit-test.ts",
