@@ -252,11 +252,13 @@ function AcknowledgmentPanel({
   campaignId,
   alreadyAcknowledged,
   acknowledgedAt,
+  regulatoryAlerts,
   onProceed,
 }: {
   campaignId: string;
   alreadyAcknowledged: boolean;
   acknowledgedAt?: string;
+  regulatoryAlerts?: string[];
   onProceed?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -282,15 +284,39 @@ function AcknowledgmentPanel({
 
   if (alreadyAcknowledged) {
     return (
-      <div className="border border-orange-400/20 bg-orange-400/5 rounded-none p-4 flex items-center gap-3">
-        <CheckCircle2 className="h-4 w-4 text-orange-400 flex-shrink-0" />
-        <div>
-          <p className="text-xs text-orange-200/70">
-            Ciência confirmada pelo founder em{" "}
-            {acknowledgedAt ? new Date(acknowledgedAt).toLocaleString("pt-BR") : "—"}.
-            {" "}Self-proof registrado no sistema.
-          </p>
+      <div className="border border-orange-400/20 bg-orange-400/5 rounded-none p-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="h-4 w-4 text-orange-400 flex-shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400/80 font-bold">
+              Ciência regulatória confirmada
+            </p>
+            <p className="text-xs text-orange-200/70">
+              Registrado em{" "}
+              <span className="font-mono text-orange-300/80">
+                {acknowledgedAt ? new Date(acknowledgedAt).toLocaleString("pt-BR") : "—"}
+              </span>
+              {" "}— self-proof imutável gravado no sistema.
+            </p>
+          </div>
         </div>
+
+        {/* Lista dos alertas que foram confirmados — registro permanente */}
+        {regulatoryAlerts && regulatoryAlerts.length > 0 && (
+          <div className="pl-7 space-y-1.5">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-orange-400/50">
+              Alertas confirmados pelo founder:
+            </p>
+            <ul className="space-y-1">
+              {regulatoryAlerts.map((alert, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-orange-200/60 leading-relaxed">
+                  <FileWarning className="h-3 w-3 flex-shrink-0 mt-0.5 text-orange-400/40" />
+                  {alert}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }
@@ -432,6 +458,9 @@ export function MarketValidationReview({ campaignId, marketValidation, onProceed
               campaignId={campaignId}
               alreadyAcknowledged={alreadyAcknowledged}
               acknowledgedAt={marketValidation.acknowledgmentRecordedAt}
+              regulatoryAlerts={marketValidation.validators
+                .filter((v) => v.requiresAcknowledgment)
+                .flatMap((v) => v.regulatoryAlerts ?? [])}
               onProceed={onProceed}
             />
           )}

@@ -17,6 +17,7 @@ import {
   usersTable,
   workspaceIntegrationsTable,
   contentPiecesTable,
+  auditLogsTable,
   getCampaignCreditEstimate,
   CAMPAIGN_CREDIT_BUFFER,
 } from "@workspace/db";
@@ -246,6 +247,13 @@ router.post("/:campaignId/market-validation/acknowledge", async (req, res): Prom
 
   // Self-proof: registra timestamp e userId de quem confirmou ciência
   const acknowledgmentRecordedAt = new Date().toISOString();
+
+  // Extrai lista de alertas regulatórios dos validators que exigem ciência
+  const validators = (mv["validators"] as Array<Record<string, unknown>> | undefined) ?? [];
+  const regulatoryAlerts = validators
+    .filter((v) => v["requiresAcknowledgment"])
+    .flatMap((v) => (v["regulatoryAlerts"] as string[] | undefined) ?? []);
+
   await db
     .update(campaignsTable)
     .set({
@@ -262,8 +270,22 @@ router.post("/:campaignId/market-validation/acknowledge", async (req, res): Prom
     })
     .where(eq(campaignsTable.id, campaignId));
 
+  // Audit log imutável — self-proof de ciência regulatória com lista de alertas confirmados
+  await db.insert(auditLogsTable).values({
+    workspaceId,
+    campaignId,
+    action: "campaign.regulatory.acknowledged",
+    actor: userId,
+    data: {
+      acknowledgmentRecordedAt,
+      acknowledgedByUserId: userId,
+      regulatoryAlerts,
+      overallVerdict: mv["overallVerdict"],
+    },
+  });
+
   req.log.info(
-    { campaignId, workspaceId, userId, acknowledgmentRecordedAt },
+    { campaignId, workspaceId, userId, acknowledgmentRecordedAt, regulatoryAlerts },
     "[COMPLIANCE] Self-proof registrado — founder confirmou ciência dos alertas regulatórios",
   );
 
@@ -311,6 +333,13 @@ router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<
 
   // Alias do /acknowledge: registra self-proof completo (userId + timestamp)
   const acknowledgmentRecordedAt = new Date().toISOString();
+
+  // Extrai lista de alertas regulatórios dos validators que exigem ciência
+  const validators = (mv["validators"] as Array<Record<string, unknown>> | undefined) ?? [];
+  const regulatoryAlerts = validators
+    .filter((v) => v["requiresAcknowledgment"])
+    .flatMap((v) => (v["regulatoryAlerts"] as string[] | undefined) ?? []);
+
   await db
     .update(campaignsTable)
     .set({
@@ -325,6 +354,20 @@ router.post("/:campaignId/market-validation/proceed", async (req, res): Promise<
       } as any,
     })
     .where(eq(campaignsTable.id, campaignId));
+
+  // Audit log imutável — self-proof de ciência regulatória com lista de alertas confirmados
+  await db.insert(auditLogsTable).values({
+    workspaceId,
+    campaignId,
+    action: "campaign.regulatory.acknowledged",
+    actor: userId,
+    data: {
+      acknowledgmentRecordedAt,
+      acknowledgedByUserId: userId,
+      regulatoryAlerts,
+      overallVerdict: mv["overallVerdict"],
+    },
+  });
 
   req.log.info({ campaignId, workspaceId, userId, acknowledgmentRecordedAt }, "[COMPLIANCE] /proceed (legado) — self-proof registrado via alias");
   await triggerStrategyPhase(campaignId, workspaceId, req.log);

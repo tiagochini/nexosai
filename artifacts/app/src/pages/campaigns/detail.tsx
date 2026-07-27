@@ -2205,11 +2205,73 @@ export default function CampaignDetail() {
           const mv = (brainDataRaw["marketValidation"] ?? null) as Record<string, unknown> | null;
           if (!mv || !mv["overallVerdict"]) return null;
           return (
-            <MarketValidationReview
-              campaignId={campaignId}
-              marketValidation={mv as any}
-              onProceed={() => void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) })}
-            />
+            <>
+              <MarketValidationReview
+                campaignId={campaignId}
+                marketValidation={mv as any}
+                onProceed={() => void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) })}
+              />
+
+              {/* ─── Linha do tempo: Alertas regulatórios confirmados ─── */}
+              {mv["acknowledgmentRecordedAt"] && (() => {
+                const validators = (mv["validators"] as Array<Record<string, unknown>> | undefined) ?? [];
+                const confirmedAlerts = validators
+                  .filter((v) => v["requiresAcknowledgment"])
+                  .flatMap((v) => (v["regulatoryAlerts"] as string[] | undefined) ?? []);
+                const acknowledgedAt = mv["acknowledgmentRecordedAt"] as string;
+                return (
+                  <div className="border border-orange-400/15 bg-orange-400/[0.03] rounded-none">
+                    {/* Timeline header */}
+                    <div className="px-4 py-3 border-b border-orange-400/15 flex items-center gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5 text-orange-400/70 flex-shrink-0" />
+                      <span className="font-mono text-[11px] uppercase tracking-widest text-orange-400/80 font-bold flex-1">
+                        Histórico de Conformidade Regulatória
+                      </span>
+                      <span className="font-mono text-[9px] text-orange-400/40 uppercase tracking-widest">IMUTÁVEL</span>
+                    </div>
+
+                    {/* Timeline event */}
+                    <div className="px-4 py-3 flex items-start gap-3">
+                      <div className="flex flex-col items-center mt-0.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-orange-400/70 flex-shrink-0" />
+                        {confirmedAlerts.length > 0 && (
+                          <div className="w-px flex-1 bg-orange-400/15 mt-1 min-h-[1.5rem]" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div>
+                          <p className="font-mono text-[11px] font-bold text-foreground/80">
+                            Alertas regulatórios confirmados
+                          </p>
+                          <p className="font-mono text-[10px] text-muted-foreground/50">
+                            {new Date(acknowledgedAt).toLocaleString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
+                            {" · "}Self-proof gravado e imutável
+                          </p>
+                        </div>
+
+                        {confirmedAlerts.length > 0 && (
+                          <div className="space-y-1">
+                            {confirmedAlerts.map((alert, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs text-orange-200/55 leading-relaxed">
+                                <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-0.5 text-orange-400/40" />
+                                {alert}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
           );
         })()}
 
