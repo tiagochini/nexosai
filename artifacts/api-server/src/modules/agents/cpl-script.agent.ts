@@ -247,30 +247,40 @@ export async function runCPLScriptAgent(
     runCPL3Agent(campaignId, workspaceId, strategy, profile, intakeData, log),
   ]);
 
-  const mapCPLToVideo = (cpl: import("./cpl-scripts.agent.js").CPLPhaseOutput): CPLVideo => ({
-    videoNumber: cpl.cplNumber as 1 | 2 | 3 | 4,
-    title: cpl.title,
-    subtitle: cpl.subtitle,
-    releaseTiming: `Dia ${cpl.dayIndex} do pré-lançamento`,
-    dayIndex: cpl.dayIndex,
-    durationMinutes: parseInt(cpl.liveScript.estimatedDuration) || 12,
-    objective: cpl.psychologicalObjective,
-    psychologicalJob: cpl.dominantTechnique,
-    hook: cpl.liveScript.hook,
-    openingLine: cpl.liveScript.openingStory?.slice(0, 200) ?? "",
-    structure: (cpl.liveScript.mainContentSections ?? []).map((s) => ({
-      section: s.title,
-      durationMinutes: s.durationMinutes,
-      script: s.script,
-      toneNote: s.toneNote,
-      visualDirection: "",
-    })),
-    keyMessage: cpl.keyMessage,
-    cliffhanger: cpl.liveScript.cliffhanger,
-    cta: cpl.liveScript.cta,
-    thumbnailDirection: `Thumbnail do ${cpl.title}: hook visual que transmite "${cpl.keyMessage}"`,
-    viewerFeeling: cpl.viewerFeeling,
-  });
+  const mapCPLToVideo = (cpl: import("./cpl-scripts.agent.js").CPLPhaseOutput): CPLVideo => {
+    const ls = cpl.liveScript ?? {
+      hook: "",
+      openingStory: "",
+      mainContentSections: [],
+      cliffhanger: "",
+      cta: "",
+      estimatedDuration: "12 minutos",
+    };
+    return {
+      videoNumber: cpl.cplNumber as 1 | 2 | 3 | 4,
+      title: cpl.title ?? "",
+      subtitle: cpl.subtitle ?? "",
+      releaseTiming: `Dia ${cpl.dayIndex ?? 0} do pré-lançamento`,
+      dayIndex: cpl.dayIndex ?? 0,
+      durationMinutes: parseInt(ls.estimatedDuration ?? "12") || 12,
+      objective: cpl.psychologicalObjective ?? "",
+      psychologicalJob: cpl.dominantTechnique ?? "",
+      hook: ls.hook ?? "",
+      openingLine: ls.openingStory?.slice(0, 200) ?? "",
+      structure: (ls.mainContentSections ?? []).map((s) => ({
+        section: s.title ?? "",
+        durationMinutes: s.durationMinutes ?? 0,
+        script: s.script ?? "",
+        toneNote: s.toneNote ?? "",
+        visualDirection: "",
+      })),
+      keyMessage: cpl.keyMessage ?? "",
+      cliffhanger: ls.cliffhanger ?? "",
+      cta: ls.cta ?? "",
+      thumbnailDirection: `Thumbnail do ${cpl.title ?? ""}: hook visual que transmite "${cpl.keyMessage ?? ""}"`,
+      viewerFeeling: cpl.viewerFeeling ?? "",
+    };
+  };
 
   const videos = [mapCPLToVideo(cpl1), mapCPLToVideo(cpl2), mapCPLToVideo(cpl3)];
 
