@@ -580,7 +580,8 @@ export async function generateItemCopy(
   const item = sequence.items.find((i) => i.id === itemId);
   if (!item) throw new NotFoundError("Sequence item not found");
 
-  await deductCredits(workspaceId, "nurturing_message", log);
+  // [C3-STANDALONE] idempotency: one charge per sequence item — prevents double-charge on double-click
+  await deductCredits(workspaceId, "nurturing_message", log, undefined, undefined, undefined, undefined, `ws:${workspaceId}:seq:item_copy:${itemId}`);
 
   // ── Fetch strategy + profile from parent campaign when available ──────────
   let campaignStrategy: StrategyOutput | undefined;

@@ -96,8 +96,8 @@ export async function generateCreativeIntent(
     throw new ValidationError("This campaign already has an approved creative direction. Revoke approval before regenerating.");
   }
 
-  // Deduct credits before AI call
-  await deductCredits(workspaceId, "creative_brief", log, campaignId ?? undefined);
+  // Deduct credits before AI call — [C3-STANDALONE] idempotency: one charge per campaign creative intent
+  await deductCredits(workspaceId, "creative_brief", log, campaignId ?? undefined, undefined, undefined, undefined, `ws:${workspaceId}:creative_intent:${campaignId}`);
 
   // Get campaign brain for context
   const brain = await getCampaignBrain(campaignId);

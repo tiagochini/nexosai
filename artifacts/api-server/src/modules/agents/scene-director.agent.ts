@@ -25,6 +25,8 @@ export interface StoryboardInput {
   campaignId?: string | null;
   workspaceId: string;
   campaignArc?: CampaignArc;
+  /** [C3-STANDALONE] Idempotency key — passed from video-production.service so double-click cannot double-charge. */
+  idempotencyKey?: string;
 }
 
 const SCENE_TYPES = ["hook", "problem", "solution", "proof", "cta", "bridge", "transition"] as const;
@@ -137,7 +139,7 @@ export async function runSceneDirectorAgent(
   input: StoryboardInput,
   log: Logger,
 ): Promise<{ scenes: VideoScene[]; totalDurationSeconds: number; phaseSummary: string; directorNotes: string }> {
-  await deductCredits(input.workspaceId, "video_storyboard", log, input.campaignId ?? undefined);
+  await deductCredits(input.workspaceId, "video_storyboard", log, input.campaignId ?? undefined, undefined, undefined, undefined, input.idempotencyKey);
 
   const hasAvatar = input.config.hasUserFace ?? false;
   const voiceStyle = input.config.voiceStyle ?? "narrator";

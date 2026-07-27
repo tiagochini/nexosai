@@ -79,7 +79,8 @@ export async function generateConcept(
       "Empreendedores digitais",
   );
 
-  await deductCredits(workspaceId, "creative_brief", log, campaignId);
+  // [C3-STANDALONE] idempotency: one concept charge per campaign+platform+format combination
+  await deductCredits(workspaceId, "creative_brief", log, campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:concept:${campaignId}:${platform}:${format}`);
 
   const systemPrompt = `Você é o Creative Director da NexOS AI, especialista em criativos visuais de alta conversão para o mercado digital brasileiro.
 Crie um conceito criativo completo para ${platform.toUpperCase()} no formato ${format.replace(/_/g, " ")}.
@@ -153,7 +154,8 @@ export async function approveConceptAndGeneratePreview(
   if (!creative) throw new NotFoundError("Criativo");
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
 
-  await deductCredits(workspaceId, "video_low_res", log, creative.campaignId);
+  // [C3-STANDALONE] idempotency: one preview charge per creative — concept approval is a one-time action
+  await deductCredits(workspaceId, "video_low_res", log, creative.campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:preview:${creativeId}`);
 
   await db
     .update(campaignCreativesTable)
@@ -205,7 +207,8 @@ export async function approvePreviewAndGenerateFinal(
   if (!creative) throw new NotFoundError("Criativo");
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
 
-  await deductCredits(workspaceId, "video_high_res", log, creative.campaignId);
+  // [C3-STANDALONE] idempotency: one final charge per creative — preview approval is a one-time action
+  await deductCredits(workspaceId, "video_high_res", log, creative.campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:final:${creativeId}`);
 
   await db
     .update(campaignCreativesTable)
@@ -319,7 +322,9 @@ export async function regenerateImage(
   if (!creative.concept) throw new AppError(400, "Conceito não encontrado", "CONCEPT_NOT_READY");
 
   const creditAction = quality === "hd" ? "video_high_res" : "video_low_res";
-  await deductCredits(workspaceId, creditAction, log, creative.campaignId);
+  // [C3-STANDALONE] 5-minute bucket key: same regen within 5 min = blocked; new regen after = charged.
+  const idemBucket = Math.floor(Date.now() / 300_000);
+  await deductCredits(workspaceId, creditAction, log, creative.campaignId, undefined, undefined, undefined, `ws:${workspaceId}:creative:regen:${creativeId}:${quality}:${idemBucket}`);
 
   const targetStatus = quality === "hd" ? "final_generating" : "preview_generating";
   await db

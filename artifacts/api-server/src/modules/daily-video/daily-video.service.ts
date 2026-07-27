@@ -143,7 +143,12 @@ export async function generateDailyVideo(
   const creditKey = FORMAT_CREDIT_KEY[request.format];
   const creditCost = CREDIT_COSTS[creditKey] ?? 12;
 
-  await deductCredits(workspaceId, creditKey, log);
+  // [C3-STANDALONE] Idempotency key scoped to request identity (format + style + topic slug).
+  // Only identical requests within the same 5-minute window are treated as duplicates.
+  // Different topics or formats within the same workspace are always charged independently.
+  const idemBucket = Math.floor(Date.now() / 300_000);
+  const topicSlug = (request.topic ?? "").slice(0, 48).replace(/\s+/g, "_").toLowerCase();
+  await deductCredits(workspaceId, creditKey, log, undefined, undefined, undefined, undefined, `ws:${workspaceId}:daily_video:${request.format}:${request.style ?? "clone"}:${topicSlug}:${idemBucket}`);
 
   const styleLabel = request.style === "clone"
     ? "COM CLONE (criador aparece na câmera — roteiro de presença direta)"

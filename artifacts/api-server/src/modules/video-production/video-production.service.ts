@@ -162,7 +162,8 @@ export async function generateScript(
     .where(eq(videoProjectsTable.id, projectId));
 
   try {
-    await deductCredits(workspaceId, "video_script", reqLog, project.campaignId ?? undefined);
+    // [C3-STANDALONE] idempotency: one charge per project script generation
+    await deductCredits(workspaceId, "video_script", reqLog, project.campaignId ?? undefined, undefined, undefined, undefined, `ws:${workspaceId}:video:script:${projectId}`);
 
     let productName = project.title;
     let productDescription = "";
@@ -532,6 +533,7 @@ export async function generateStoryboard(
         config,
         campaignId: project.campaignId,
         workspaceId,
+        idempotencyKey: `ws:${workspaceId}:video:storyboard:${projectId}`,
         // ── Campaign arc context injected into ATLAS ──
         campaignArc: {
           emotionalHook,
@@ -638,7 +640,8 @@ export async function generatePreviewClips(
   const persona = await getWorkspacePersona(workspaceId);
   const creditCostPerScene = config.hasUserFace ? 80 : 50;
   const totalCost = scenes.length * creditCostPerScene;
-  await deductCredits(workspaceId, config.hasUserFace ? "video_avatar" : "video_low_res", reqLog, project.campaignId ?? undefined);
+  // [C3-STANDALONE] idempotency: one charge per project preview generation
+  await deductCredits(workspaceId, config.hasUserFace ? "video_avatar" : "video_low_res", reqLog, project.campaignId ?? undefined, undefined, undefined, undefined, `ws:${workspaceId}:video:preview:${projectId}`);
 
   const updatedScenes: VideoScene[] = await Promise.all(
     scenes.map(async (scene) => {
@@ -776,7 +779,8 @@ export async function generateFinalClips(
   const persona = await getWorkspacePersona(workspaceId);
   const creditCostPerScene = config.hasUserFace ? 80 : 150;
   const totalCost = scenes.length * creditCostPerScene;
-  await deductCredits(workspaceId, config.hasUserFace ? "video_avatar" : "video_high_res", reqLog, project.campaignId ?? undefined);
+  // [C3-STANDALONE] idempotency: one charge per project final generation
+  await deductCredits(workspaceId, config.hasUserFace ? "video_avatar" : "video_high_res", reqLog, project.campaignId ?? undefined, undefined, undefined, undefined, `ws:${workspaceId}:video:final:${projectId}`);
 
   const updatedScenes: VideoScene[] = await Promise.all(
     scenes.map(async (scene) => {
@@ -906,6 +910,7 @@ export async function generateFilmingBrief(
       config: project.config as any,
       workspaceId,
       campaignId: project.campaignId ?? null,
+      idempotencyKey: `ws:${workspaceId}:video:filming_brief:${projectId}`,
     },
     log,
   );

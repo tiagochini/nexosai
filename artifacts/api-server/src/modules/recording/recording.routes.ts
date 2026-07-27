@@ -103,7 +103,8 @@ router.post("/:id/upload", async (req, res): Promise<void> => {
   if (!result) { res.status(404).json({ error: "Gravação não encontrada" }); return; }
   if (req.query["mode"] === "hybrid") {
     setImmediate(async () => {
-      try { await deductCredits(req.auth.workspaceId, "video_hybrid", req.log); } catch {}
+      // [C3-STANDALONE] idempotency: one charge per recording upload — prevents double-charge on retry
+      try { await deductCredits(req.auth.workspaceId, "video_hybrid", req.log, undefined, undefined, undefined, undefined, `ws:${req.auth.workspaceId}:recording:hybrid:${req.params["id"]!}`); } catch {}
     });
   }
   res.json({ ok: true, size: result.size, path: result.path });

@@ -196,7 +196,8 @@ export async function generateVsl(
       })
       .where(eq(vslsTable.id, vslId));
 
-    await deductCredits(workspaceId, "copy_generation", log, vsl.campaignId ?? undefined).catch(() => {});
+    // [C3-STANDALONE] idempotency: one charge per VSL — prevents double-charge on duplicate requests
+    await deductCredits(workspaceId, "copy_generation", log, vsl.campaignId ?? undefined, undefined, undefined, undefined, `ws:${workspaceId}:vsl:script:${vslId}`).catch(() => {});
 
     return getVsl(workspaceId, vslId);
   } catch (err) {

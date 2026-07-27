@@ -23,6 +23,8 @@ export interface FilmingBriefInput {
   config: Partial<VideoConfig>;
   workspaceId: string;
   campaignId?: string | null;
+  /** [C3-STANDALONE] Idempotency key — passed from video-production.service so double-click cannot double-charge. */
+  idempotencyKey?: string;
 }
 
 export interface SceneTake {
@@ -140,7 +142,7 @@ export async function runFilmingBriefAgent(
   input: FilmingBriefInput,
   log: Logger,
 ): Promise<FilmingBrief> {
-  await deductCredits(input.workspaceId, "video_storyboard", log, input.campaignId ?? undefined);
+  await deductCredits(input.workspaceId, "video_storyboard", log, input.campaignId ?? undefined, undefined, undefined, undefined, input.idempotencyKey);
 
   const hasAvatar = input.config.hasUserFace ?? false;
   const tone = input.config.tone ?? "inspirational";
