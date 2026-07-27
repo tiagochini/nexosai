@@ -44,3 +44,4 @@
 - [Invite Code Plan Assignment](invite-code-plan.md) — invite codes are an access GATE only; must never override the plan a user selected at registration. `invite_codes.planSlug` defaults to "agency" in the schema — don't read it to set workspace plan.
 - [Intake Chat Resilience Pattern](intake-chat-resilience.md) — interactive AI calls use completeWithAgentSafe + per-call timeoutMs (never lower the global 30-min ceiling); checkpoint history before the LLM call, not after.
 - [Budget Reverse Engineering](budget-reverse-engineering.md) — when no budget set, reverse-engineer from revenueTarget; pieces get status=budget_proposed; resolve via /budget-decision
+- [BullMQ Repeat Score Encoding](bullmq-repeat-score-encoding.md) — raw ZRANGEBYSCORE score ≠ ms timestamp; BullMQ packs nextRunTs*2^12+idx; use job ID suffix or queue.getJobSchedulers() for real scheduledAt.
