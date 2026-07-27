@@ -859,47 +859,58 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       try {
         // ── [C3] Idempotency guard — prevent double-charge on pipeline restart ─────
         // Key is stable across restarts: same campaignId + same agentRole = same job.
-        // If a credit_transaction with this key already exists, the INSERT returns 0 rows
-        // (unique partial index: credit_tx_idempotency_key_uniq WHERE NOT NULL).
-        // In that case we skip the workspace balance UPDATE — credits are NOT charged again.
+        //
+        // ATOMIC IMPLEMENTATION (mirrors deductCredits() post-Task-#41):
+        // INSERT is the claim point — two concurrent workers racing on the same key:
+        //   • One wins the INSERT → proceeds to UPDATE balance in the same db.transaction().
+        //   • The other gets ON CONFLICT DO NOTHING → transaction commits as no-op → skip.
+        // If the balance UPDATE fails, the entire transaction rolls back, releasing the key
+        // so a future retry can claim it cleanly (no "claimed-but-not-charged" state).
         const idempotencyKey = (isValidCampaignId && campaignId)
           ? `${campaignId}:${agentRole}`
           : undefined;
 
         if (idempotencyKey) {
-          const [existing] = await db
-            .select({ id: creditTransactionsTable.id })
-            .from(creditTransactionsTable)
-            .where(eq(creditTransactionsTable.idempotencyKey, idempotencyKey))
-            .limit(1);
+          let c3Duplicate = false;
 
-          if (existing) {
+          await db.transaction(async (trx) => {
+            const [claimed] = await trx
+              .insert(creditTransactionsTable)
+              .values({
+                workspaceId,
+                campaignId,
+                type: "debit",
+                action: "campaign_execution",
+                amount: creditsCharged,
+                balanceBefore,
+                balanceAfter,
+                aiProvider: result.provider,
+                tokensUsed: result.inputTokens + result.outputTokens,
+                costUsd: result.costUsd.toString(),
+                idempotencyKey,
+              })
+              .onConflictDoNothing()
+              .returning({ id: creditTransactionsTable.id });
+
+            if (!claimed) {
+              // Another worker already registered this charge — commit no-op and skip.
+              c3Duplicate = true;
+              return;
+            }
+
+            // INSERT succeeded — deduct balance in the same atomic transaction.
+            await trx
+              .update(workspacesTable)
+              .set({ creditsBalance: balanceAfter })
+              .where(eq(workspacesTable.id, workspaceId));
+          });
+
+          if (c3Duplicate) {
             log.warn(
               { workspaceId, agentRole, creditsCharged, idempotencyKey },
               "[C3] Credit already charged for this agent run — skipping duplicate deduction (idempotency guard triggered on pipeline restart)",
             );
-            // Skip balance update and transaction insert — credits already correct in DB
           } else {
-            // First-time charge: update balance + insert transaction with idempotency key
-            await db
-              .update(workspacesTable)
-              .set({ creditsBalance: balanceAfter })
-              .where(eq(workspacesTable.id, workspaceId));
-
-            await db.insert(creditTransactionsTable).values({
-              workspaceId,
-              campaignId,
-              type: "debit",
-              action: "campaign_execution",
-              amount: creditsCharged,
-              balanceBefore,
-              balanceAfter,
-              aiProvider: result.provider,
-              tokensUsed: result.inputTokens + result.outputTokens,
-              costUsd: result.costUsd.toString(),
-              idempotencyKey,
-            });
-
             log.info(
               { workspaceId, agentRole, creditsCharged, idempotencyKey, balanceAfter },
               "[C3] Credit deducted (new charge, idempotency key registered)",

@@ -323,6 +323,18 @@ async function generateWeekNow(
   const businessContext = await buildBusinessContext(workspaceId, config);
   const enabled = (config.platforms ?? []).filter((p) => p.enabled);
 
+  // ── [#44 fix] Claim this week in the DB BEFORE charging any credits ───────────
+  // lastWeekGeneratedAt is set here (start) so that if the process crashes after
+  // a credit deduction but before posts are inserted, a restart sees this timestamp
+  // (>= weekStart) and skips re-generation — preventing double-charge.
+  // The second update at the end of the loop overwrites it with the completion time;
+  // both values are >= weekStart so generateWeekForAllActiveConfigs' guard works either way.
+  // force=true path: re-stamps intentionally (user explicitly asked for regeneration).
+  await db
+    .update(socialPresenceConfigTable)
+    .set({ lastWeekGeneratedAt: new Date() })
+    .where(eq(socialPresenceConfigTable.workspaceId, workspaceId));
+
   for (const platform of enabled) {
     try {
       const plan = await runPresencePlannerAgent(
