@@ -121,6 +121,7 @@ export async function runPresencePlannerAgent(
   workspaceId: string,
   input: PresencePlannerInput,
   log: Logger,
+  opts?: { idempotencyKeyOverride?: string },
 ): Promise<PresenceWeekPlanOutput> {
   const totalPosts = Math.min(input.postsPerDay, 5) * 7;
 
@@ -146,6 +147,7 @@ Ajustes recomendados: ${input.insight.adjustments.join("; ") || "—"}`
     agentRole: "presence_planner",
     systemPrompt: PLANNER_PROMPT,
     maxTokens: 20000,
+    idempotencyKeyOverride: opts?.idempotencyKeyOverride,
     messages: [
       {
         role: "user",
@@ -218,12 +220,14 @@ export async function runPresenceInsightAgent(
   workspaceId: string,
   prevWeekSummary: string,
   log: Logger,
+  opts?: { idempotencyKeyOverride?: string },
 ): Promise<PresenceInsightOutput> {
   const result = await runAgent({
     campaignId: null,
     workspaceId,
     agentRole: "presence_planner",
     systemPrompt: INSIGHT_PROMPT,
+    idempotencyKeyOverride: opts?.idempotencyKeyOverride,
     messages: [
       {
         role: "user",

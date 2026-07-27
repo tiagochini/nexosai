@@ -278,6 +278,21 @@ async function generateWeekNow(
   log: Logger,
   opts: { force?: boolean },
 ): Promise<void> {
+  const weekStartISO = weekStart.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // ── [#44 fix] Claim this week in the DB as the VERY FIRST operation ───────────
+  // lastWeekGeneratedAt is stamped before any AI agent runs (including the insight
+  // agent below). This means a restart sees this timestamp (>= weekStart) and skips
+  // re-generation even if the crash occurred after the insight credit deduction but
+  // before the planner ran. The completion update at the end overwrites it with the
+  // final timestamp; both values are >= weekStart so the guard in
+  // generateWeekForAllActiveConfigs works either way.
+  // force=true: re-stamps intentionally (user explicitly asked for regeneration).
+  await db
+    .update(socialPresenceConfigTable)
+    .set({ lastWeekGeneratedAt: new Date() })
+    .where(eq(socialPresenceConfigTable.workspaceId, workspaceId));
+
   // Regeneração: descarta apenas rascunhos da semana (mantém aprovados/publicados)
   if (opts.force) {
     await db
@@ -311,7 +326,13 @@ async function generateWeekNow(
   );
 
   // 1. Realinhamento semanal — analisa semana anterior (se houve posts publicados)
-  const insight = await maybeGenerateWeeklyInsight(workspaceId, weekStart, log);
+  // Idempotency key is stable across restarts: same workspace + same prev-week date.
+  const prevWeekISO = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const insight = await maybeGenerateWeeklyInsight(workspaceId, weekStart, log, {
+    idempotencyKeyOverride: `presence_insight:${workspaceId}:${prevWeekISO}`,
+  });
 
   // 2. Alinhamento com lançamento ativo
   const launch = await findActiveLaunchContext(workspaceId);
@@ -323,20 +344,12 @@ async function generateWeekNow(
   const businessContext = await buildBusinessContext(workspaceId, config);
   const enabled = (config.platforms ?? []).filter((p) => p.enabled);
 
-  // ── [#44 fix] Claim this week in the DB BEFORE charging any credits ───────────
-  // lastWeekGeneratedAt is set here (start) so that if the process crashes after
-  // a credit deduction but before posts are inserted, a restart sees this timestamp
-  // (>= weekStart) and skips re-generation — preventing double-charge.
-  // The second update at the end of the loop overwrites it with the completion time;
-  // both values are >= weekStart so generateWeekForAllActiveConfigs' guard works either way.
-  // force=true path: re-stamps intentionally (user explicitly asked for regeneration).
-  await db
-    .update(socialPresenceConfigTable)
-    .set({ lastWeekGeneratedAt: new Date() })
-    .where(eq(socialPresenceConfigTable.workspaceId, workspaceId));
-
   for (const platform of enabled) {
     try {
+      // Stable idempotency key: workspace + week + platform — survives process restarts.
+      // If the server crashes after this platform's credit deduction, a restart rebuilds
+      // the same key and the C3 guard in agent.runner.ts blocks the duplicate charge.
+      const plannerIdempotencyKey = `presence:${workspaceId}:${weekStartISO}:${platform.platform}`;
       const plan = await runPresencePlannerAgent(
         workspaceId,
         {
@@ -346,11 +359,12 @@ async function generateWeekNow(
           contentPillars: config.contentPillars ?? [],
           tone: config.tone ?? "",
           businessContext,
-          weekStartISO: weekStart.toISOString().slice(0, 10),
+          weekStartISO,
           launchContext: launch?.context ?? null,
           insight,
         },
         log,
+        { idempotencyKeyOverride: plannerIdempotencyKey },
       );
 
       const autoSchedule = platform.autoPublish && !firstWeekSafety;
@@ -413,6 +427,7 @@ async function maybeGenerateWeeklyInsight(
   workspaceId: string,
   weekStart: Date,
   log: Logger,
+  opts?: { idempotencyKeyOverride?: string },
 ): Promise<PresenceInsightOutput | null> {
   try {
     const prevWeekStart = new Date(weekStart);
@@ -454,7 +469,9 @@ async function maybeGenerateWeeklyInsight(
 ${lines.join("\n")}
 ${notPublished > 0 ? `\n${notPublished} posts planejados não foram publicados (rascunho/cancelado/falha).` : ""}`;
 
-    const insight = await runPresenceInsightAgent(workspaceId, summaryText, log);
+    const insight = await runPresenceInsightAgent(workspaceId, summaryText, log, {
+      idempotencyKeyOverride: opts?.idempotencyKeyOverride,
+    });
     if (!insight.summary) return null;
 
     const weeklyInsight: PresenceWeeklyInsight = {

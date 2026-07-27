@@ -84,6 +84,16 @@ export interface RunAgentOptions {
    */
   temporalContext?: TemporalContextOpts;
   /**
+   * Explicit idempotency key for agents that run without a campaignId (e.g. presence planner,
+   * insight agent). When set, this key is used instead of the auto-derived
+   * `${campaignId}:${agentRole}` key, enabling credit-level dedup even for null-campaignId agents.
+   *
+   * Format convention: `<module>:<workspaceId>:<stableIdentifier>` — must be stable across
+   * process restarts so a second run after a crash sees the same key and skips the charge.
+   * Example: `presence:ws_abc:2026-01-26:instagram`
+   */
+  idempotencyKeyOverride?: string;
+  /**
    * TEST-ONLY: force a provider fallback by calling the primary with a very short timeout.
    * The primary aborts immediately → completeWithAgent catch → OpenAI fallback →
    * usedFallback:true propagates → [MODEL_FALLBACK] WARN + Socket.io event + DB save fire.
@@ -866,9 +876,14 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         //   • The other gets ON CONFLICT DO NOTHING → transaction commits as no-op → skip.
         // If the balance UPDATE fails, the entire transaction rolls back, releasing the key
         // so a future retry can claim it cleanly (no "claimed-but-not-charged" state).
-        const idempotencyKey = (isValidCampaignId && campaignId)
-          ? `${campaignId}:${agentRole}`
-          : undefined;
+        // ── [C3-ext] Idempotency key resolution ──────────────────────────────────
+        // Priority: explicit override (presence/non-campaign agents) > campaign-derived.
+        // Callers with campaignId:null pass idempotencyKeyOverride to get the same
+        // dedup guarantee that campaign agents get via the campaign-derived key.
+        const idempotencyKey: string | undefined = opts.idempotencyKeyOverride
+          ?? ((isValidCampaignId && campaignId)
+            ? `${campaignId}:${agentRole}`
+            : undefined);
 
         if (idempotencyKey) {
           // ── [C3] Atomic idempotency via INSERT ON CONFLICT DO NOTHING + db.transaction() ──
