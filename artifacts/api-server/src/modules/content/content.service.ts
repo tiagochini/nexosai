@@ -3201,6 +3201,36 @@ export async function regeneratePiece(
 
   if (!updated) throw new NotFoundError("Content piece");
 
+  // [#60] Emit agent_warning in the regenerate path when CPL liveScripts are degraded.
+  // Without this, founders who regenerate a CPL (vs. initial generation) would never see
+  // the amber badge warning — the audit_log row would simply never be written.
+  if (piece.type === "cpl_script") {
+    const regenDegradedCPLs: number[] = Array.isArray((newContent as Record<string, unknown>)._degradedCPLs)
+      ? ((newContent as Record<string, unknown>)._degradedCPLs as number[])
+      : [];
+    if (regenDegradedCPLs.length > 0) {
+      const regenWarningMsg = `⚠️ CPL ${regenDegradedCPLs.join(", ")} regenerado com roteiro incompleto — nova regeneração recomendada`;
+      log.warn({ campaignId, pieceId, degradedCPLs: regenDegradedCPLs }, "[#60] CPL roteiros incompletos no caminho regenerate — emitindo agent_warning");
+      emitCampaignEvent({
+        campaignId,
+        type: "agent_warning",
+        agentType: "cpl_script",
+        message: regenWarningMsg,
+        data: { pieceId, degradedCPLs: regenDegradedCPLs },
+        timestamp: new Date().toISOString(),
+      });
+      db.insert(auditLogsTable).values({
+        workspaceId,
+        campaignId,
+        action: "agent_warning",
+        actor: "system",
+        data: { type: "cpl_degraded", pieceId, degradedCPLs: regenDegradedCPLs, message: regenWarningMsg },
+      }).catch((err: unknown) => {
+        log.warn({ err, campaignId }, "[#60] audit_log persist for agent_warning (regenerate path) failed — non-fatal");
+      });
+    }
+  }
+
   log.info({ pieceId, campaignId, agentName }, "Content piece regenerated successfully — contract clean, status=pending_approval");
   return updated;
 }
