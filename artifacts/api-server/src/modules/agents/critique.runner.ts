@@ -7,6 +7,7 @@ import {
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole } from "../ai-gateway/ai-gateway.service.js";
 import { AGENT_CRITIQUE_CHECKLIST } from "../memory/memory.service.js";
+import { getRegenIdempotencyKey } from "./regen-context.js";
 import type { AIMessage } from "../ai-gateway/ai-gateway.service.js";
 import type { Logger } from "pino";
 
@@ -306,8 +307,14 @@ ${critiqueData.improvementInstructions ?? "Corrija os problemas identificados e 
   // Key: ${campaignId}:${agentRole} — stable across restarts; same campaign + same
   // agent role always produces the same key, so a duplicate run triggered by B-4
   // (concurrent execute/content calls) or a process restart charges only once.
+  //
+  // [C3-REGEN] When called from regeneratePiece(), a per-piece time-bucketed key is
+  // injected via AsyncLocalStorage (regen-context.ts). This key is different from the
+  // initial pipeline key so each user-triggered regeneration is charged exactly once,
+  // while rapid double-clicks within the same 1-minute window share the same key and
+  // are deduplicated by ON CONFLICT DO NOTHING.
   if (totalCredits > 0) {
-    const idempotencyKey = `${campaignId}:${agentRole}`;
+    const idempotencyKey = getRegenIdempotencyKey() ?? `${campaignId}:${agentRole}`;
 
     const [ws] = await db
       .select({ creditsBalance: workspacesTable.creditsBalance })

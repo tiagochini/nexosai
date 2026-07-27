@@ -12,6 +12,7 @@ import {
   type CampaignAgent,
 } from "@workspace/db";
 import { completeWithAgent, type AgentRole, type AIMessage } from "../ai-gateway/ai-gateway.service.js";
+import { getRegenIdempotencyKey } from "./regen-context.js";
 import { routedComplete, type RouterResult } from "../ai-gateway/llm-router.js";
 import {
   emitAgentStarted,
@@ -877,10 +878,15 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
         // If the balance UPDATE fails, the entire transaction rolls back, releasing the key
         // so a future retry can claim it cleanly (no "claimed-but-not-charged" state).
         // ── [C3-ext] Idempotency key resolution ──────────────────────────────────
-        // Priority: explicit override (presence/non-campaign agents) > campaign-derived.
-        // Callers with campaignId:null pass idempotencyKeyOverride to get the same
-        // dedup guarantee that campaign agents get via the campaign-derived key.
-        const idempotencyKey: string | undefined = opts.idempotencyKeyOverride
+        // Priority: regen-context > explicit override > campaign-derived.
+        //
+        // [C3-REGEN] When called from regeneratePiece(), a per-piece time-bucketed key
+        // is injected via AsyncLocalStorage (regen-context.ts). This overrides the
+        // initial pipeline key so each user-triggered regeneration is charged exactly
+        // once, while rapid double-clicks within the same 1-minute window share the
+        // same key and are deduplicated by ON CONFLICT DO NOTHING.
+        const idempotencyKey: string | undefined = getRegenIdempotencyKey()
+          ?? opts.idempotencyKeyOverride
           ?? ((isValidCampaignId && campaignId)
             ? `${campaignId}:${agentRole}`
             : undefined);

@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { transitionCampaign, CONTENT_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
 import { runAgent, parseAgentJSON, setComplianceHint } from "../agents/agent.runner.js";
+import { withRegenContext } from "../agents/regen-context.js";
 import { setFallbackMode } from "../ai-gateway/ai-gateway.service.js";
 import { classifyPipelineError } from "../agents/error-classifier.js";
 import { runEthicsAutocorrect } from "../agents/ethics-autocorrect.agent.js";
@@ -2794,13 +2795,24 @@ FEEDBACK DO REVISOR:
 
 Reescreva essa peça incorporando o feedback acima. Retorne APENAS o JSON com a mesma estrutura do original.`;
 
-  const { content: rawOutput } = await runAgent({
-    campaignId,
-    workspaceId,
-    agentRole: "copywriter",
-    systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
-    log,
+  // ── [C3-REGEN] Rewrite idempotency key ────────────────────────────────────
+  // Same pattern as regeneratePiece: piece-scoped + time-bucketed so rapid
+  // double-submits within 1 minute share the key (1 charge) while subsequent
+  // rewrites get a fresh key (new charge).
+  const rewriteBucket = Math.floor(Date.now() / 60_000);
+  const rewriteIdempotencyKey = `${campaignId}:${pieceId}:rewrite:${rewriteBucket}`;
+
+  let rawOutput!: string;
+  await withRegenContext(rewriteIdempotencyKey, async () => {
+    const result = await runAgent({
+      campaignId,
+      workspaceId,
+      agentRole: "copywriter",
+      systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+      log,
+    });
+    rawOutput = result.content;
   });
 
   const fallbackContent = piece.content as Record<string, unknown>;
@@ -2898,9 +2910,22 @@ export async function regeneratePiece(
 
   log.info({ campaignId, pieceId, agentName, pieceType: piece.type }, "Regenerating content piece");
 
+  // ── [C3-REGEN] Regeneration idempotency key ────────────────────────────────
+  // A time-bucketed key scoped to this specific piece, distinct from the initial
+  // pipeline key (${campaignId}:${agentRole}).  Two concurrent requests within
+  // the same 1-minute window share the same key → ON CONFLICT DO NOTHING → 1
+  // credit charge.  A new regeneration after a minute → fresh key → new charge.
+  const regenBucket = Math.floor(Date.now() / 60_000);
+  const regenIdempotencyKey = `${campaignId}:${pieceId}:regen:${regenBucket}`;
+
+  log.debug({ campaignId, pieceId, regenIdempotencyKey }, "[C3-REGEN] regeneration idempotency key set");
+
   let newContent: unknown;
 
   try {
+    // Wrap all agent calls so critique.runner.ts and agent.runner.ts use the
+    // regen-specific key for credit deduction instead of the pipeline key.
+    await withRegenContext(regenIdempotencyKey, async () => {
     switch (agentName) {
       case "copywriter": {
         const out = await runCopywriterAgent(campaignId, workspaceId, intakeData, strategy, profile, launchPlan, log);
@@ -3025,6 +3050,7 @@ export async function regeneratePiece(
       default:
         throw new ValidationError(`Unknown agent: ${agentName}`);
     }
+    }); // end withRegenContext
   } catch (err) {
     log.error({ err, campaignId, pieceId, agentName }, "Regeneration agent failed");
     throw err;
