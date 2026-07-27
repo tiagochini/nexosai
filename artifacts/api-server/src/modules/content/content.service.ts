@@ -219,9 +219,16 @@ export function validatePieceContract(pieceType: string, content: unknown): stri
       break;
     }
     case "cpl_script": {
-      const videos = (obj.videos as unknown[] | undefined)?.length ?? 0;
-      if (videos === 0) {
+      const videos = (obj.videos as { hook?: string; structure?: unknown[] }[] | undefined) ?? [];
+      if (videos.length === 0) {
         return `cpl_script: no videos — LLM returned empty response`;
+      }
+      // [#61] Also flag if every video has an empty hook AND empty structure sections
+      const allEmpty = videos.every(
+        (v) => (!v.hook || v.hook.trim() === "") && (!v.structure || v.structure.length === 0),
+      );
+      if (allEmpty) {
+        return `cpl_script: all videos have empty liveScript (hook+structure) — output degradado`;
       }
       break;
     }
@@ -1410,6 +1417,7 @@ export async function generateCampaignContent(
           });
         }
       } else {
+        const degradedCPLs: number[] = (cplOutput as any)._degradedCPLs ?? [];
         const [piece] = await db
           .insert(contentPiecesTable)
           .values({
@@ -1418,11 +1426,29 @@ export async function generateCampaignContent(
             type: "cpl_script",
             status: "pending_approval",
             title: `CPL — ${cplOutput.totalVideos ?? cplOutput.videos?.length ?? 0} Vídeos de Pré-Lançamento`,
-            content: { ...cplOutput, _qualityScore: (cplOutput as any)._qualityScore ?? null } as any,
+            content: {
+              ...cplOutput,
+              _qualityScore: (cplOutput as any)._qualityScore ?? null,
+              ...(degradedCPLs.length > 0 ? { _degradedCPLs: degradedCPLs } : {}),
+            } as any,
             aiProvider: "openai",
             creditsUsed: 75,
           })
           .returning();
+
+        // [#60] Warn founder when any CPL still has empty liveScript after retries
+        if (degradedCPLs.length > 0) {
+          log.warn({ campaignId, pieceId: piece?.id, degradedCPLs }, "[#60] CPL roteiros incompletos após retries — emitindo agent_warning");
+          emitCampaignEvent({
+            campaignId,
+            type: "agent_warning",
+            agentType: "cpl_script",
+            message: `⚠️ CPL ${degradedCPLs.map((n) => `${n}`).join(", ")} gerado com roteiro incompleto — regeneração recomendada`,
+            data: { pieceId: piece?.id, degradedCPLs },
+            timestamp: new Date().toISOString(),
+          });
+        }
+
         emitCampaignEvent({
           campaignId,
           type: "agent_completed",
@@ -1431,7 +1457,7 @@ export async function generateCampaignContent(
           data: { pieceId: piece?.id },
           timestamp: new Date().toISOString(),
         });
-        log.info({ campaignId, pieceId: piece?.id, videos: cplOutput.totalVideos }, "CPL script agent completed");
+        log.info({ campaignId, pieceId: piece?.id, videos: cplOutput.totalVideos, degradedCPLs }, "CPL script agent completed");
       }
 
       piecesGenerated++;

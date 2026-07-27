@@ -67,6 +67,8 @@ interface ContentPiece extends PreviewPiece {
   qualityScore?: number;
   autoRepairFailed?: boolean;
   notGenerated?: boolean;
+  /** [#60] CPL numbers (1/2/3) whose liveScript was still incomplete after all retries */
+  degradedCPLs?: number[];
   /** Compliance auto-correction state for this specific piece (Sistema 3) */
   complianceRevisionState?: {
     attempt: number;          // current attempt number (1 or 2)
@@ -806,6 +808,15 @@ function ContentCard({ piece, campaignId, onApprove, onReject, onEdit, onAiRewri
                   "text-red-400 border-red-400/40 bg-red-400/10"
                 }`}>
                   IA {piece.qualityScore}/100
+                </Badge>
+              )}
+              {piece.degradedCPLs && piece.degradedCPLs.length > 0 && (
+                <Badge
+                  variant="outline"
+                  className="rounded-none font-mono text-[11px] px-1.5 py-0 gap-1 text-amber-400 border-amber-400/40 bg-amber-400/10"
+                  title={`CPL ${piece.degradedCPLs.join(", ")} gerado com roteiro incompleto — recomendamos regenerar esta peça`}
+                >
+                  ⚠ CPL {piece.degradedCPLs.join("/")} incompleto
                 </Badge>
               )}
               {prescanResult && !prescanResult.passed && (
@@ -1926,6 +1937,10 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
     // _autoRepairFailed = oldest legacy flag.
     const pieceNotGenerated = c["_notGenerated"] === true;
     const pieceAutoRepairFailed = c["_autoRepairFailed"] === true || (c["_minimalFallback"] === true && !pieceNotGenerated);
+    // [#60] CPL numbers whose liveScript was still incomplete after all retries
+    const pieceDegradedCPLs = Array.isArray(c["_degradedCPLs"])
+      ? (c["_degradedCPLs"] as unknown[]).filter((n): n is number => typeof n === "number")
+      : undefined;
 
     // ── Sistema 3: compliance revision state for this piece ─────────────────
     // crAttempts maps pieceId → attemptCount (set by runComplianceRevisionLoop).
@@ -1953,6 +1968,7 @@ function expandApiPieces(pieces: ApiContentPiece[], complianceRevision?: Complia
       autoRepairFailed: pieceAutoRepairFailed,
       notGenerated: pieceNotGenerated,
       complianceRevisionState,
+      degradedCPLs: pieceDegradedCPLs,
       ...overrides,
     });
 

@@ -5,6 +5,21 @@ import type { ProfileBuilderOutput } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 import { COGNITIVE_IDENTITY_CPL_SCRIPT } from "./cognitive-identity-system.js";
 
+// ── [#61] CPL liveScript completeness validator ───────────────────────────────
+// Returns true only when hook, mainContentSections (non-empty), and
+// estimatedDuration are all present. An empty-but-parsed liveScript (the
+// parseAgentJSON fallback) will fail this check and trigger a retry.
+const MAX_CPL_RETRIES = 2;
+
+function isCPLLiveScriptComplete(cpl: { liveScript?: { hook?: string; mainContentSections?: unknown[]; estimatedDuration?: string } | null }): boolean {
+  const ls = cpl.liveScript;
+  if (!ls) return false;
+  if (!ls.hook || ls.hook.trim() === "") return false;
+  if (!ls.mainContentSections || ls.mainContentSections.length === 0) return false;
+  if (!ls.estimatedDuration || ls.estimatedDuration.trim() === "") return false;
+  return true;
+}
+
 export interface CPLVideo {
   videoNumber: 1 | 2 | 3 | 4;
   title: string;
@@ -45,6 +60,8 @@ export interface CPLScriptOutput {
   emotionalArc: string;
   videos: CPLVideo[];
   cplCommunications: CPLCommunicationBundle[];
+  /** CPL numbers (1/2/3) whose liveScript was still incomplete after all retries */
+  _degradedCPLs?: number[];
   productionNotes: {
     formatRecommendation: string;
     averageDuration: string;
@@ -241,10 +258,41 @@ export async function runCPLScriptAgent(
 ): Promise<CPLScriptOutput> {
   const { runCPL1Agent, runCPL2Agent, runCPL3Agent } = await import("./cpl-scripts.agent.js");
 
-  const [cpl1, cpl2, cpl3] = await Promise.all([
+  // ── Initial parallel run ───────────────────────────────────────────────────
+  const [init1, init2, init3] = await Promise.all([
     runCPL1Agent(campaignId, workspaceId, strategy, profile, intakeData, log),
     runCPL2Agent(campaignId, workspaceId, strategy, profile, intakeData, log),
     runCPL3Agent(campaignId, workspaceId, strategy, profile, intakeData, log),
+  ]);
+
+  // ── [#61] Retry individual CPLs whose liveScript is incomplete ─────────────
+  // Retries are also run in parallel (one Promise per degraded CPL).
+  const degradedCPLs: number[] = [];
+
+  async function retryCPLIfNeeded(
+    initial: import("./cpl-scripts.agent.js").CPLPhaseOutput,
+    cplNumber: 1 | 2 | 3,
+    runFn: () => Promise<import("./cpl-scripts.agent.js").CPLPhaseOutput>,
+  ): Promise<import("./cpl-scripts.agent.js").CPLPhaseOutput> {
+    if (isCPLLiveScriptComplete(initial)) return initial;
+    let last = initial;
+    for (let attempt = 1; attempt <= MAX_CPL_RETRIES; attempt++) {
+      log.warn({ campaignId, cplNumber, attempt }, "[#61] CPL liveScript incompleto — retentando");
+      last = await runFn();
+      if (isCPLLiveScriptComplete(last)) {
+        log.info({ campaignId, cplNumber, attempt }, "[#61] CPL liveScript válido após retry");
+        return last;
+      }
+    }
+    log.error({ campaignId, cplNumber }, "[#61] CPL liveScript ainda incompleto após max retries — output degradado");
+    degradedCPLs.push(cplNumber);
+    return last;
+  }
+
+  const [cpl1, cpl2, cpl3] = await Promise.all([
+    retryCPLIfNeeded(init1, 1, () => runCPL1Agent(campaignId, workspaceId, strategy, profile, intakeData, log)),
+    retryCPLIfNeeded(init2, 2, () => runCPL2Agent(campaignId, workspaceId, strategy, profile, intakeData, log)),
+    retryCPLIfNeeded(init3, 3, () => runCPL3Agent(campaignId, workspaceId, strategy, profile, intakeData, log)),
   ]);
 
   const mapCPLToVideo = (cpl: import("./cpl-scripts.agent.js").CPLPhaseOutput): CPLVideo => {
@@ -313,5 +361,6 @@ export async function runCPLScriptAgent(
     },
     cplNotes: `Sequência de 3 CPLs gerada com agentes dedicados:\n• CPL1: ${cpl1.psychologicalObjective}\n• CPL2: ${cpl2.psychologicalObjective}\n• CPL3: ${cpl3.psychologicalObjective}`,
     _qualityScore,
+    ...(degradedCPLs.length > 0 ? { _degradedCPLs: degradedCPLs } : {}),
   } as CPLScriptOutput & { _qualityScore?: number };
 }
