@@ -58,13 +58,25 @@ export async function isRedisAvailable(): Promise<boolean> {
   }
 }
 
+// ── Queue name isolation ────────────────────────────────────────────────────
+// Dev and prod share the same Redis instance (same REDIS_URL secret).
+// Without a prefix, a dev job enqueued to "campaign-orchestration" is picked up
+// by the production worker first — the campaign doesn't exist in the prod DB →
+// RC-010 fires and the job is silently skipped, stalling the dev pipeline.
+// The QUEUE_PREFIX env var (or NODE_ENV fallback) ensures complete isolation:
+//   development → "dev:campaign-orchestration"
+//   production  → "prod:campaign-orchestration" (or just "campaign-orchestration"
+//                  if no prefix is set, to preserve backward-compat with existing jobs)
+const RAW_PREFIX = process.env["QUEUE_PREFIX"] ?? (process.env["NODE_ENV"] === "production" ? "prod" : "dev");
+const QUEUE_PREFIX = RAW_PREFIX ? `${RAW_PREFIX}:` : "";
+
 export const QUEUE_NAMES = {
-  CAMPAIGN_ORCHESTRATION: "campaign-orchestration",
-  AGENT_EXECUTION: "agent-execution",
-  CONTENT_GENERATION: "content-generation",
-  EXECUTION_ENGINE: "execution-engine",
-  NURTURING: "nurturing",
-  ANALYTICS: "analytics",
+  CAMPAIGN_ORCHESTRATION: `${QUEUE_PREFIX}campaign-orchestration`,
+  AGENT_EXECUTION: `${QUEUE_PREFIX}agent-execution`,
+  CONTENT_GENERATION: `${QUEUE_PREFIX}content-generation`,
+  EXECUTION_ENGINE: `${QUEUE_PREFIX}execution-engine`,
+  NURTURING: `${QUEUE_PREFIX}nurturing`,
+  ANALYTICS: `${QUEUE_PREFIX}analytics`,
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
