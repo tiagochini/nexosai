@@ -409,13 +409,21 @@ export async function triggerContentPhase(
     );
   }
 
-  // Guard: prevent double-triggering — only block on RECENT running agents (started
-  // within 15 min). Older rows are orphaned (pipeline exited before agent returned)
-  // and must not permanently block the next phase trigger.
+  // Guard: prevent double-triggering — only block on RECENT CONTENT-PHASE running agents
+  // (started within 15 min). Strategy-phase agents (strategy, offer, command,
+  // execution_governor, launch_manager, profile_builder, etc.) may still be completing
+  // background work (doctrine gate, self-critique, analytics) when the campaign reaches
+  // strategy_ready. They must NOT block the user from starting content generation.
+  // Only block if a content-phase agent is already running (i.e. generation already started).
+  const STRATEGY_PHASE_AGENT_TYPES = new Set([
+    "command", "execution_governor", "profile_builder", "strategy", "offer",
+    "launch_manager", "market_validator", "offer_price_validator", "brand_validator",
+    "market_intel", "analytics", "self_critique", "doctrine_gate",
+  ]);
   const CONTENT_AGENT_STALE_MS = 15 * 60 * 1000;
   const contentStaleThreshold = new Date(Date.now() - CONTENT_AGENT_STALE_MS);
-  const [existingContentRun] = await db
-    .select({ id: campaignAgentsTable.id, startedAt: campaignAgentsTable.startedAt })
+  const runningAgents = await db
+    .select({ id: campaignAgentsTable.id, agentType: campaignAgentsTable.agentType, startedAt: campaignAgentsTable.startedAt })
     .from(campaignAgentsTable)
     .where(
       and(
@@ -423,8 +431,11 @@ export async function triggerContentPhase(
         eq(campaignAgentsTable.status, "running"),
         gt(campaignAgentsTable.startedAt, contentStaleThreshold),
       ),
-    )
-    .limit(1);
+    );
+
+  const existingContentRun = runningAgents.find(
+    (a) => !STRATEGY_PHASE_AGENT_TYPES.has(a.agentType ?? ""),
+  );
 
   if (existingContentRun) {
     throw new ValidationError(

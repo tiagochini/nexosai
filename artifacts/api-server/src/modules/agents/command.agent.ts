@@ -911,10 +911,12 @@ Retorne o JSON de avaliação.`,
       cp = await saveCheckpoint(campaignId, "strategy", { launchModel: (result as any).launchModel }, cp, log);
       checkpointsPending.push("strategy_approval");
 
-      // NOTE: campaigns.service.ts maps data.strategy → strategyData column.
-      // Key must be "strategy" (not "strategyData") or the column stays empty.
+      // transitionCampaign spreads `extra` directly into the Drizzle UPDATE set.
+      // Key must match the Drizzle column name (strategyData), NOT the service-layer
+      // data.strategy alias used by updateCampaignStatus. Using "strategy" here is a
+      // silent no-op because Drizzle ignores unknown column keys.
       await transitionCampaign(campaignId, workspaceId, "strategy_ready", "strategy agent completed", log, {
-        strategy: result as any,
+        strategyData: result as any,
       });
 
       // RC-011: clear any previous failure marker from a prior degraded run

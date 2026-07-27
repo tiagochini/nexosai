@@ -19,6 +19,7 @@ import {
   BookOpen, Clock, Archive, ChevronRight, Activity,
 } from "lucide-react";
 import { StrategyMasterplan, parseStrategyInsights } from "./strategy-masterplan";
+import { MarketValidationReview } from "@/components/MarketValidationReview";
 import { useQuery } from "@tanstack/react-query";
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
@@ -289,6 +290,14 @@ export default function CampaignStrategyPage() {
   const isReady = status === "strategy_ready";
   const isAnalyzing = status === "analyzing";
 
+  // ── Market validation acknowledgment gate ─────────────────────────────────
+  const brainDataRaw = ((campaignRaw["brainData"] ?? {}) as Record<string, unknown>);
+  const mv = (brainDataRaw["marketValidation"] ?? null) as Record<string, unknown> | null;
+  const needsAcknowledgment = isAnalyzing
+    && !!mv?.["overallVerdict"]
+    && (mv["validators"] as Array<Record<string, unknown>> | undefined)?.some(v => v["requiresAcknowledgment"])
+    && !mv["acknowledgmentRecordedAt"];
+
   const userIdentity = user ? {
     name: user.name ?? "",
     email: user.email ?? "",
@@ -347,9 +356,20 @@ export default function CampaignStrategyPage() {
       {/* ── Content ─────────────────────────────────────────────────────────── */}
       <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
 
-        {/* ANALYZING — show live loading state */}
+        {/* ANALYZING — show market validation ack gate if pipeline is paused, else spinner */}
         {isAnalyzing && (
-          <AnalyzingMasterplanDisplay liveEvents={liveEvents} />
+          needsAcknowledgment && mv ? (
+            <MarketValidationReview
+              campaignId={campaignId}
+              marketValidation={mv as any}
+              onProceed={() => {
+                void queryClient.invalidateQueries({ queryKey: getGetCampaignQueryKey(campaignId) });
+                setLocalIsActive(true);
+              }}
+            />
+          ) : (
+            <AnalyzingMasterplanDisplay liveEvents={liveEvents} />
+          )
         )}
 
         {/* STRATEGY READY — full masterplan + approve */}
