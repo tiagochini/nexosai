@@ -1752,13 +1752,13 @@ function IdentidadeTab() {
             {persona.voiceCloneId ? "✓ Voz Clonada" : "Voz: Pendente"}
           </Badge>
           <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-2 py-0.5 ${persona.heygenAvatarId ? "text-blue-400 border-blue-400/40 bg-blue-400/10" : "text-muted-foreground/50"}`}>
-            {persona.heygenAvatarId ? "✓ Avatar HeyGen" : "Avatar: Pendente"}
+            {persona.heygenAvatarId ? "✓ Avatar Ativo" : "Avatar: Pendente"}
           </Badge>
         </div>
       </div>
 
       {/* ── Seção 1: Clone de Voz ── */}
-      <SectionCard title="Clone de Voz — ElevenLabs" icon={Headphones}>
+      <SectionCard title="Clone de Voz" icon={Headphones}>
         <div className="space-y-4">
           {/* Status atual */}
           {persona.voiceCloneId && (
@@ -1774,7 +1774,7 @@ function IdentidadeTab() {
             </div>
           )}
 
-          <FieldRow label="Nome da Voz" sublabel="Identificação no ElevenLabs">
+          <FieldRow label="Nome da Voz" sublabel="Identificação da voz clonada">
             <Input
               value={voiceName}
               onChange={e => setVoiceName(e.target.value)}
@@ -1845,7 +1845,7 @@ function IdentidadeTab() {
                   className="rounded-none font-mono text-[11px] uppercase tracking-widest h-9 px-5 gap-2 btn-weapon-primary w-full"
                 >
                   {recState === "cloning"
-                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Clonando voz via ElevenLabs…</>
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Clonando voz com IA…</>
                     : <><Sparkles className="h-3.5 w-3.5" />Clonar Minha Voz com IA</>}
                 </Button>
               )}
@@ -1864,8 +1864,8 @@ function IdentidadeTab() {
         </div>
       </SectionCard>
 
-      {/* ── Seção 2: Avatar Digital (HeyGen) ── */}
-      <SectionCard title="Avatar Digital — HeyGen" icon={Camera}>
+      {/* ── Seção 2: Avatar Digital ── */}
+      <SectionCard title="Avatar Digital" icon={Camera}>
         <div className="space-y-4">
 
           {/* ── Avatar provisionado pela infraestrutura NexOS ── */}

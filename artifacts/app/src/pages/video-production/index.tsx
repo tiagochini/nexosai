@@ -241,7 +241,7 @@ function CreateProjectForm({ onCreated }: { onCreated: (p: VideoProject) => void
           >
             <User className="h-5 w-5 mb-1 text-primary" />
             <div className="font-mono text-xs font-bold">Sim — Apresentador</div>
-            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Requer HeyGen configurado</div>
+            <div className="font-mono text-[10px] text-muted-foreground mt-0.5">Requer avatar digital configurado</div>
           </button>
         </div>
         {hasUserFace && (
@@ -267,8 +267,8 @@ function CreateProjectForm({ onCreated }: { onCreated: (p: VideoProject) => void
         <div>
           <label className="font-mono text-xs text-muted-foreground mb-1 block">VOZ</label>
           <select value={voiceStyle} onChange={e => setVoiceStyle(e.target.value)} className="w-full bg-background border border-border rounded-md px-3 py-2 font-mono text-xs">
-            <option value="avatar">Avatar padrão HeyGen</option>
-            <option value="voice_clone">Clonar minha voz (ElevenLabs)</option>
+            <option value="avatar">Avatar digital NexOS</option>
+            <option value="voice_clone">Clonar minha voz com IA</option>
           </select>
         </div>
       )}

@@ -1,6 +1,6 @@
 /**
- * AvatarVoiceCloneGate — persistent dashboard reminder to finish avatar (HeyGen)
- * + voice clone (ElevenLabs) setup before a launch track can rely on them.
+ * AvatarVoiceCloneGate — persistent dashboard reminder to finish avatar
+ * + voice clone setup before a launch track can rely on them.
  *
  * Reappears every time the dashboard mounts until BOTH persona.heygenAvatarId
  * and persona.voiceCloneId are set. Dismissing only hides it for the current
@@ -67,7 +67,7 @@ export function AvatarVoiceCloneGate() {
           </div>
 
           <p className="font-mono text-[12px] text-muted-foreground leading-relaxed">
-            Seu track de lançamento usa vídeos com avatar digital (HeyGen) e voz clonada (ElevenLabs) para gerar CPLs e VSLs automaticamente. Finalize as duas etapas abaixo para liberar a geração de vídeo com IA.
+            Seu track de lançamento usa vídeos com avatar digital e voz clonada para gerar CPLs e VSLs automaticamente. Finalize as duas etapas abaixo para liberar a geração de vídeo com IA.
           </p>
 
           <div className="space-y-2">
@@ -75,10 +75,10 @@ export function AvatarVoiceCloneGate() {
               {hasAvatar ? <Check className="h-4 w-4 text-green-400 shrink-0" /> : <Camera className="h-4 w-4 text-muted-foreground shrink-0" />}
               <div className="flex-1 min-w-0">
                 <div className={`font-mono text-[11px] font-bold uppercase ${hasAvatar ? "text-green-300" : "text-foreground"}`}>
-                  Avatar Digital (HeyGen)
+                  Avatar Digital
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">
-                  {hasAvatar ? "Avatar selecionado" : "Conecte sua conta HeyGen e escolha um avatar"}
+                  {hasAvatar ? "Avatar configurado" : "Configure seu avatar digital para vídeos"}
                 </div>
               </div>
             </div>
@@ -87,7 +87,7 @@ export function AvatarVoiceCloneGate() {
               {hasVoice ? <Check className="h-4 w-4 text-green-400 shrink-0" /> : <Mic className="h-4 w-4 text-muted-foreground shrink-0" />}
               <div className="flex-1 min-w-0">
                 <div className={`font-mono text-[11px] font-bold uppercase ${hasVoice ? "text-green-300" : "text-foreground"}`}>
-                  Clone de Voz (ElevenLabs)
+                  Clone de Voz
                 </div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">
                   {hasVoice ? "Voz clonada" : "Grave takes rápidos para clonar sua voz"}
