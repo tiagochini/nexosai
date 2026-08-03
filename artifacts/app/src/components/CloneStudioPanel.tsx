@@ -394,88 +394,108 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
 
       {/* Main area */}
       <div className="flex-1 flex gap-0 overflow-hidden">
-        {/* Camera */}
-        <div className="flex-1 relative bg-black flex items-center justify-center">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="max-h-full max-w-full object-cover"
-            style={{ transform: "scaleX(-1)" }}
-          />
+        {/* Left column: camera + button bar */}
+        <div className="flex-1 flex flex-col min-h-0">
 
-          {/* ── PRÉ-TAKE: Direção aparece ANTES de gravar ─────────────────── */}
-          {/* O usuário lê a instrução com destaque total antes de poder gravar */}
-          {phase === "camera_check" && countdown === null && (
-            <div className="absolute inset-0 overflow-y-auto bg-black/85">
-            <div className="min-h-full flex flex-col items-center justify-center px-6 py-8">
-              {/* Identificação emocional do take */}
-              <div className={`flex items-center gap-2 mb-5 ${currentTake.color.split(" ")[0]}`}>
-                <TakeIcon className="h-5 w-5" />
-                <span className="font-mono text-sm font-bold uppercase tracking-widest">
-                  Take {currentTakeIdx + 1} de {CLONE_TAKES.length} · {currentTake.emotion}
+          {/* Câmera — sempre montada para o stream funcionar */}
+          <div className="flex-1 relative bg-black flex items-center justify-center min-h-0">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="max-h-full max-w-full object-cover"
+              style={{ transform: "scaleX(-1)" }}
+            />
+
+            {/* ── PRÉ-TAKE: overlay de direção sobre a câmera ──────────────── */}
+            {phase === "camera_check" && countdown === null && (
+              <div className="absolute inset-0 overflow-y-auto bg-black/90 flex flex-col">
+                {/* Conteúdo scrollável */}
+                <div className="flex-1 flex flex-col items-center justify-center px-6 pt-8 pb-4">
+                  <div className={`flex items-center gap-2 mb-5 ${currentTake.color.split(" ")[0]}`}>
+                    <TakeIcon className="h-5 w-5" />
+                    <span className="font-mono text-sm font-bold uppercase tracking-widest">
+                      Take {currentTakeIdx + 1} de {CLONE_TAKES.length} · {currentTake.emotion}
+                    </span>
+                  </div>
+
+                  <div className="border border-white/20 bg-white/5 px-5 py-4 mb-4 max-w-lg w-full">
+                    <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">
+                      Leia esta frase:
+                    </div>
+                    <p className="font-mono text-base text-white leading-relaxed font-bold text-center">
+                      "{CORE_PHRASE}"
+                    </p>
+                  </div>
+
+                  <div className="border border-white/15 bg-black/50 px-5 py-4 max-w-lg w-full">
+                    <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">
+                      Como entregar este take:
+                    </div>
+                    <p className={`font-mono text-[14px] leading-relaxed ${currentTake.color.split(" ")[0]}`}>
+                      {currentTake.instruction}
+                    </p>
+                    <div className="font-mono text-[10px] text-white/30 mt-3">
+                      Duração alvo: ~{currentTake.targetSecs} segundos
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Countdown overlay */}
+            {countdown !== null && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+                <div className="font-mono text-8xl font-black text-white">
+                  {countdown === 0 ? "GO" : countdown}
+                </div>
+              </div>
+            )}
+
+            {/* Recording indicator */}
+            {phase === "recording" && (
+              <div className="absolute top-3 left-3 flex items-center gap-2 border border-red-500/40 bg-red-500/20 px-3 py-1">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="font-mono text-xs text-red-400 font-bold">
+                  {String(Math.floor(recordingSecs / 60)).padStart(2,"0")}:{String(recordingSecs % 60).padStart(2,"0")}
                 </span>
               </div>
+            )}
 
-              {/* A frase */}
-              <div className="border border-white/20 bg-white/5 px-5 py-4 mb-4 max-w-lg w-full">
-                <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">
-                  Leia esta frase:
-                </div>
-                <p className="font-mono text-base text-white leading-relaxed font-bold text-center">
-                  "{CORE_PHRASE}"
-                </p>
-              </div>
-
-              {/* DIREÇÃO DO TAKE — destaque principal, aparece antes de gravar */}
-              <div className="border border-white/15 bg-black/50 px-5 py-4 mb-7 max-w-lg w-full">
-                <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">
-                  Como entregar este take:
-                </div>
-                <p className={`font-mono text-[14px] leading-relaxed ${currentTake.color.split(" ")[0]}`}>
-                  {currentTake.instruction}
-                </p>
-                <div className="font-mono text-[10px] text-white/30 mt-3">
-                  Duração alvo: ~{currentTake.targetSecs} segundos
+            {/* Uploading overlay */}
+            {phase === "uploading" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-4">
+                <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                <p className="font-mono text-sm text-white">Enviando takes… {uploadProgress}%</p>
+                <div className="w-48 h-1 bg-white/10">
+                  <div className="h-1 bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
                 </div>
               </div>
+            )}
+          </div>
 
-              {/* CTA — só aparece depois de exibir a direção completa */}
+          {/* ── BARRA DE BOTÕES — fora da câmera, nunca clipada ─────────── */}
+
+          {/* Botão iniciar gravação — fase camera_check */}
+          {phase === "camera_check" && countdown === null && (
+            <div className="flex-none flex flex-col items-center gap-2 py-5 border-t border-white/10 bg-black">
               <Button
                 onClick={startTake}
-                className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8"
-                style={{ background: "var(--primary)", color: "black" }}
+                className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-10"
+                style={{ background: "var(--primary)", color: "black", minWidth: 280 }}
               >
                 <Radio className="h-4 w-4" /> Entendi — Iniciar gravação
               </Button>
             </div>
-            </div>
           )}
 
-          {/* Countdown overlay */}
-          {countdown !== null && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70">
-              <div className="font-mono text-8xl font-black text-white">
-                {countdown === 0 ? "GO" : countdown}
-              </div>
-            </div>
-          )}
-
-          {/* Recording indicator (canto superior) */}
+          {/* Botão finalizar leitura — fase recording */}
           {phase === "recording" && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 border border-red-500/40 bg-red-500/20 px-3 py-1">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="font-mono text-xs text-red-400 font-bold">{String(Math.floor(recordingSecs / 60)).padStart(2,"0")}:{String(recordingSecs % 60).padStart(2,"0")}</span>
-            </div>
-          )}
-
-          {/* ── DURANTE GRAVAÇÃO: botão "Terminei de ler" bem visível ──────── */}
-          {phase === "recording" && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+            <div className="flex-none flex flex-col items-center gap-2 py-5 border-t border-white/10 bg-black">
               <Button
                 onClick={stopTake}
-                className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8 shadow-2xl"
+                className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8"
                 style={{ background: "var(--primary)", color: "black", minWidth: 280 }}
               >
                 <Check className="h-4 w-4" /> Terminei de ler esta frase
@@ -486,34 +506,23 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
             </div>
           )}
 
-          {/* Review overlay — aparece após terminar */}
+          {/* Botões de review — fase review */}
           {phase === "review" && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            <div className="flex-none flex items-center justify-center gap-3 py-5 border-t border-white/10 bg-black">
               <Button
                 onClick={redoTake}
                 variant="outline"
-                className="font-mono text-[11px] uppercase tracking-widest rounded-none gap-1.5 border-white/20 bg-black/60 text-white hover:bg-white/10 h-9 px-3"
+                className="font-mono text-[11px] uppercase tracking-widest rounded-none gap-1.5 border-white/20 bg-black text-white hover:bg-white/10 h-10 px-4"
               >
                 <RotateCcw className="h-3.5 w-3.5" /> Regravar
               </Button>
               <Button
                 onClick={advanceTake}
-                className="font-mono text-[11px] uppercase tracking-widest rounded-none gap-1.5 btn-weapon-primary h-9 px-4"
+                className="font-mono text-[11px] uppercase tracking-widest rounded-none gap-1.5 btn-weapon-primary h-10 px-5"
               >
                 <Check className="h-3.5 w-3.5" />
                 {currentTakeIdx < CLONE_TAKES.length - 1 ? "Próximo take" : "Finalizar clone"}
               </Button>
-            </div>
-          )}
-
-          {/* Uploading overlay */}
-          {phase === "uploading" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-4">
-              <Loader2 className="h-10 w-10 text-primary animate-spin" />
-              <p className="font-mono text-sm text-white">Enviando takes… {uploadProgress}%</p>
-              <div className="w-48 h-1 bg-white/10">
-                <div className="h-1 bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
-              </div>
             </div>
           )}
         </div>
