@@ -408,7 +408,8 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
           {/* ── PRÉ-TAKE: Direção aparece ANTES de gravar ─────────────────── */}
           {/* O usuário lê a instrução com destaque total antes de poder gravar */}
           {phase === "camera_check" && countdown === null && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 px-6 py-8">
+            <div className="absolute inset-0 overflow-y-auto bg-black/85">
+            <div className="min-h-full flex flex-col items-center justify-center px-6 py-8">
               {/* Identificação emocional do take */}
               <div className={`flex items-center gap-2 mb-5 ${currentTake.color.split(" ")[0]}`}>
                 <TakeIcon className="h-5 w-5" />
@@ -448,6 +449,7 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
               >
                 <Radio className="h-4 w-4" /> Entendi — Iniciar gravação
               </Button>
+            </div>
             </div>
           )}
 
