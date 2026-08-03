@@ -119,3 +119,10 @@ id = "jvY4i-tCYNQTKNw9ZhNSl"
 uri = "file://NEXOS_AUDITORIA_ARQUITETURA_2026.rtf"
 type = "unspecified"
 title = "NexOS — Relatório de Auditoria de Arquitetura (Jul 2026)"
+
+[[outputs]]
+id = "HSrnfgJB2BNcRH25yAYLK"
+uri = "file://INVENTARIO_AGENTES_NEXOS.md"
+type = "text"
+title = "Inventário Completo — Identidade Especializada dos Agentes NexOS AI"
+description = "Relatório completo de doctrinas, frameworks, fórmulas, bibliotecas e estruturas de output de todos os agentes. 64 agentes · ~80 autores referenciados · 17 bibliotecas de maestria."
