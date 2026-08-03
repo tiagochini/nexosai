@@ -409,7 +409,7 @@ export async function runProfileBuilderAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "command",
+    agentRole: "profile_builder",
     systemPrompt: COGNITIVE_IDENTITY_AVATAR_INTELLIGENCE + PROFILE_BUILDER_PROMPT,
     messages: [
       {

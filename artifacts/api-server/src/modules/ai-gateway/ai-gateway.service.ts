@@ -89,7 +89,12 @@ export type AgentRole =
   // ── Avaliação Mercadológica ───────────────────────────────────────────────
   | "market_validator"
   | "offer_price_validator"
-  | "brand_validator";
+  | "brand_validator"
+  // ── Agentes com role próprio (corrigido de roles emprestados em #70-B) ────
+  | "profile_builder"
+  | "traffic_intelligence"
+  | "creative_concept"
+  | "prelaunch_warming";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -201,6 +206,11 @@ const AGENT_PROVIDER_MAP: Record<
   market_validator:      { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   offer_price_validator: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   brand_validator:       { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Agentes com role próprio (corrigido de roles emprestados em #70-B) ─
+  profile_builder:       { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  traffic_intelligence:  { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  creative_concept:      { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  prelaunch_warming:     { provider: "openai",    model: OPENAI_NATIVE_MODEL },
 };
 
 export interface AIMessage {

@@ -759,7 +759,7 @@ export async function runTrafficIntelligenceAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "media_buyer",
+    agentRole: "traffic_intelligence",
     systemPrompt: TRAFFIC_INTELLIGENCE_PROMPT,
     memoryContext,
     thinkingMessages: [

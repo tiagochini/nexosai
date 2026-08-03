@@ -91,6 +91,11 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "market_validator",
   "offer_price_validator",
   "brand_validator",
+  // Agentes com role próprio (corrigido de roles emprestados em #70-B)
+  "profile_builder",
+  "traffic_intelligence",
+  "creative_concept",
+  "prelaunch_warming",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [

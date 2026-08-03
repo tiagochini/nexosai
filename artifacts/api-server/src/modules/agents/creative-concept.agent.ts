@@ -213,7 +213,7 @@ Retorne APENAS o JSON do conceito visual.`;
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "creative_director",
+    agentRole: "creative_concept",
     systemPrompt: CREATIVE_CONCEPT_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     log,
