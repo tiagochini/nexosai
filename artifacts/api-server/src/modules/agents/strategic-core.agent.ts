@@ -318,7 +318,7 @@ Insights críticos: ${(profile.criticalInsights ?? []).join("; ")}`
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "strategy",
+    agentRole: "strategic_core",
     systemPrompt: STRATEGIC_CORE_BRIEFING_PROMPT,
     messages: [
       {
@@ -423,10 +423,13 @@ export async function runStrategicCoreValidation(
 - Critérios de sucesso: ${strategicBrief.successCriteria.join("; ") || "não definidos"}
 - Avisos do Strategic Core: ${strategicBrief.coreWarnings.join("; ") || "nenhum"}`;
 
+  // idempotencyKeyOverride includes the validated agentRole so each validation of a
+  // different agent gets a distinct C3 key — avoids silent skip when called multiple times.
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "compliance",
+    agentRole: "strategic_core_validation",
+    idempotencyKeyOverride: `${campaignId}:strategic_core_validation:${agentRole}`,
     systemPrompt: STRATEGIC_CORE_VALIDATION_PROMPT,
     messages: [
       {

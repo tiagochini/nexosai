@@ -384,7 +384,7 @@ export async function runStrategicDoctrineEngine(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "strategy",
+    agentRole: "strategic_doctrine",
     systemPrompt: COGNITIVE_IDENTITY_STRATEGIC_DOCTRINE + DOCTRINE_SYSTEM_PROMPT,
     memoryContext,
     thinkingMessages: [

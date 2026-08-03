@@ -96,6 +96,9 @@ export const agentTypeEnum = pgEnum("agent_type", [
   "traffic_intelligence",
   "creative_concept",
   "prelaunch_warming",
+  // Agentes com role próprio (corrigido de roles emprestados em #70-C)
+  "conflict_detector",
+  "strategic_core_validation",
 ]);
 
 export const agentStatusEnum = pgEnum("agent_status", [

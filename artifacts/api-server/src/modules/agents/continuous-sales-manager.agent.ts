@@ -213,7 +213,7 @@ export async function runContinuousSalesManagerAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "launch_manager",
+    agentRole: "continuous_sales_manager",
     systemPrompt: CONTINUOUS_SALES_PROMPT,
     memoryContext,
     messages: [

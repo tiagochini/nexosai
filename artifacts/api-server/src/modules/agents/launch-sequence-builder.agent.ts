@@ -362,7 +362,7 @@ export async function runLaunchSequenceBuilderAgent(
   const result = await runAgent({
     campaignId: null,
     workspaceId,
-    agentRole: "strategy",
+    agentRole: "launch_sequence_builder",
     systemPrompt: COGNITIVE_IDENTITY_LAUNCH_SEQUENCE_BUILDER + memBlock + SEQUENCE_BUILDER_PROMPT,
     messages: [{ role: "user", content: userMessage }],
     log,

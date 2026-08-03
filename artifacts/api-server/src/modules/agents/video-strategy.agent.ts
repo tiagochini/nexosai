@@ -231,7 +231,7 @@ export async function runVideoStrategyAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "video",
+    agentRole: "video_strategy",
     systemPrompt: VIDEO_STRATEGY_PROMPT,
     messages: [
       {

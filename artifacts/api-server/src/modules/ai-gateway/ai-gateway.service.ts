@@ -94,7 +94,12 @@ export type AgentRole =
   | "profile_builder"
   | "traffic_intelligence"
   | "creative_concept"
-  | "prelaunch_warming";
+  | "prelaunch_warming"
+  // ── Agentes com role próprio (corrigido de roles emprestados em #70-C) ────
+  | "strategic_core"
+  | "strategic_doctrine"
+  | "conflict_detector"
+  | "strategic_core_validation";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -211,6 +216,11 @@ const AGENT_PROVIDER_MAP: Record<
   traffic_intelligence:  { provider: "openai",    model: OPENAI_NATIVE_MODEL },
   creative_concept:      { provider: "openai",    model: OPENAI_NATIVE_MODEL },
   prelaunch_warming:     { provider: "openai",    model: OPENAI_NATIVE_MODEL },
+  // ── Agentes com role próprio (corrigido de roles emprestados em #70-C) ─
+  strategic_core:            { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  strategic_doctrine:        { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  conflict_detector:         { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  strategic_core_validation: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

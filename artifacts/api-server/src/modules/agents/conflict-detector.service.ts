@@ -121,7 +121,7 @@ Detecte conflitos e retorne o JSON acima.`;
     const agentResult = await runAgent({
       campaignId,
       workspaceId,
-      agentRole: "command",
+      agentRole: "conflict_detector",
       systemPrompt,
       messages: [{ role: "user", content: userMessage }],
       log,

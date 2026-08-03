@@ -153,7 +153,7 @@ export async function runPerpetualLaunchManagerAgent(
   const result = await runAgent({
     campaignId,
     workspaceId,
-    agentRole: "launch_manager",
+    agentRole: "perpetual_launch_manager",
     systemPrompt: COGNITIVE_IDENTITY_PERPETUAL_LAUNCH + PERPETUAL_LAUNCH_PROMPT,
     memoryContext,
     messages: [
