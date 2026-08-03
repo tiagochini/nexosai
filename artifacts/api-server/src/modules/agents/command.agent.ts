@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { db, campaignsTable, auditLogsTable, campaignAgentsTable } from "@workspace/db";
 import { transitionCampaign, VALID_STATUS_TRANSITIONS, STRATEGY_PHASE_ENTRY_STATUSES } from "../campaigns/campaigns.service.js";
+import { CAMPAIGN_STATUS_RANK, type CampaignStatus } from "../campaigns/campaign-state-machine.js";
 import { buildCampaignBrain, getCampaignBrain, updateBrainSection } from "../campaign-brain/campaign-brain.service.js";
 import { getCreativeIntent, getApprovedDirectionContext } from "../creative-intent/creative-intent.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
@@ -1319,13 +1320,69 @@ Retorne o JSON de avaliação.`,
   // state for the CONTENT phase (triggered separately by the user).
   const finalStatus = "strategy_ready";
 
-  await transitionCampaign(
-    campaignId,
-    workspaceId,
-    finalStatus,
-    `command agent pipeline completed — ${checkpointsPending.length} checkpoints recorded`,
-    log,
-  );
+  // ── Regression guard: read current status before writing strategy_ready ──────
+  // Race condition: the user may click "Aprovar e Gerar Conteúdo" while the strategy
+  // pipeline is still finishing (e.g. launch_manager in waiting_approval). When that
+  // happens the content pipeline advances the campaign to "generating" (or beyond)
+  // BEFORE this line runs. Writing "strategy_ready" on top of "generating" would
+  // silently regress the campaign — content pieces exist but the UI shows "Estratégia
+  // Pronta" as if generation never happened.
+  //
+  // Fix: read the live status, compare ranks, block and persist a diagnostic audit
+  // event if the campaign is already past strategy_ready. Do NOT throw — the strategy
+  // pipeline itself completed correctly; only the terminal DB write is skipped.
+  {
+    const [liveSnapshot] = await db
+      .select({ status: campaignsTable.status })
+      .from(campaignsTable)
+      .where(eq(campaignsTable.id, campaignId))
+      .limit(1);
+
+    const liveRank   = CAMPAIGN_STATUS_RANK[liveSnapshot?.status as CampaignStatus] ?? 0;
+    const targetRank = CAMPAIGN_STATUS_RANK["strategy_ready"] ?? 0;
+
+    if (liveRank > targetRank) {
+      // Campaign already advanced past strategy_ready — block the regression.
+      log.warn(
+        {
+          campaignId,
+          liveStatus:   liveSnapshot?.status,
+          blockedTarget: "strategy_ready",
+          agentsCompleted: agentsRun.length,
+          reason: "strategy pipeline completed after content pipeline was triggered — regression blocked",
+        },
+        `PIPELINE_KERNEL: strategy finalStatus regression blocked — campaign is at "${liveSnapshot?.status}" (rank ${liveRank}), which is ahead of "strategy_ready" (rank ${targetRank}); status NOT overwritten`,
+      );
+      try {
+        await db.insert(auditLogsTable).values({
+          workspaceId,
+          campaignId,
+          action: "campaign.orchestration.regression_blocked",
+          actor:  "system",
+          data: {
+            liveStatus:    liveSnapshot?.status,
+            blockedTarget: "strategy_ready",
+            reason:        "strategy pipeline completed after content pipeline was triggered",
+            agentsRun,
+            checkpointsPending,
+            executionMode: executionPlan?.executionMode ?? "standard",
+          },
+        });
+      } catch (blockAuditErr: unknown) {
+        const code = (blockAuditErr as { cause?: { code?: string } })?.cause?.code;
+        if (code !== "23503") log.warn({ blockAuditErr, campaignId }, "PIPELINE_KERNEL: failed to write regression_blocked audit log");
+      }
+      // Skip the transitionCampaign call — fall through to audit log + emitCampaignEvent below.
+    } else {
+      await transitionCampaign(
+        campaignId,
+        workspaceId,
+        finalStatus,
+        `command agent pipeline completed — ${checkpointsPending.length} checkpoints recorded`,
+        log,
+      );
+    }
+  }
 
   try {
     await db.insert(auditLogsTable).values({

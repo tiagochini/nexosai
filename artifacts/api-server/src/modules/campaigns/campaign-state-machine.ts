@@ -114,6 +114,39 @@ export const CREATIVE_INTENT_PHASE_ENTRY_STATUSES = [
 
 export const TERMINAL_STATUSES: CampaignStatus[] = ["completed", "cancelled"];
 export const ACTIVE_STATUSES: CampaignStatus[] = ["executing", "live", "paused"];
+
+// ─── Pipeline Progress Rank ───────────────────────────────────────────────────
+// Canonical forward-pipeline order. Only statuses on the main happy path are
+// ranked; lateral/terminal statuses (paused, compliance_review, cancelled) are
+// intentionally EXCLUDED so that side-steps are never mis-classified as regressions.
+//
+// Use isRegressionTransition() to detect when a caller is trying to write a status
+// that is earlier in the pipeline than the current one. Detection ≠ automatic block:
+// some backward transitions are intentional (re-generation: approved → generating).
+// The call SITE decides whether to block or allow; transitionCampaign logs a WARN
+// and writes a diagnostic audit event whenever it detects a regression.
+export const CAMPAIGN_STATUS_RANK: Readonly<Partial<Record<CampaignStatus, number>>> = {
+  intake:            1,
+  analyzing:         2,
+  strategy_ready:    3,
+  generating:        4,
+  awaiting_approval: 5,
+  approved:          6,
+  executing:         7,
+  live:              8,
+  completed:         9,
+};
+
+/**
+ * Returns true when `to` is earlier than `from` in the canonical pipeline order.
+ * Returns false when either status is unranked (paused, compliance_review, cancelled)
+ * so that lateral transitions are never flagged as regressions.
+ */
+export function isRegressionTransition(from: string, to: string): boolean {
+  const fromRank = CAMPAIGN_STATUS_RANK[from as CampaignStatus];
+  const toRank   = CAMPAIGN_STATUS_RANK[to   as CampaignStatus];
+  return fromRank !== undefined && toRank !== undefined && fromRank > toRank;
+}
 export const IN_PROGRESS_STATUSES: CampaignStatus[] = [
   "analyzing",
   "generating",

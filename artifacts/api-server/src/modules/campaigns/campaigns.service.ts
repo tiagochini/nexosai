@@ -33,6 +33,7 @@ import {
   LAUNCH_PHASE_ENTRY_STATUSES,
   CREATIVE_INTENT_PHASE_ENTRY_STATUSES,
   isValidTransition,
+  isRegressionTransition,
 } from "./campaign-state-machine.js";
 
 // ── Re-exports for backward compatibility ─────────────────────────────────────
@@ -89,6 +90,30 @@ export async function transitionCampaign(
       `PIPELINE_KERNEL: ${toStatus} → ${toStatus} (no-op, already in target state)`,
     );
     return;
+  }
+
+  // ── Regression detector ─────────────────────────────────────────────────────
+  // Fires when the requested target is earlier in the canonical pipeline order
+  // than the current status. Some backward transitions are intentional (re-gen:
+  // approved → generating), so this does NOT block — it logs WARN and persists a
+  // diagnostic audit event so regressions are always visible in the audit trail.
+  // Callers that want to actively block a regression must do so BEFORE calling
+  // transitionCampaign (see the command.agent.ts strategy-pipeline finalStatus guard).
+  if (isRegressionTransition(campaign.status, toStatus)) {
+    log.warn(
+      { campaignId, from: campaign.status, to: toStatus, reason },
+      `PIPELINE_KERNEL: regression transition detected — "${campaign.status}" → "${toStatus}" moves backward in pipeline order`,
+    );
+    db.insert(auditLogsTable)
+      .values({
+        workspaceId,
+        campaignId,
+        action: "campaign.status.regression_detected",
+        actor:  "system",
+        data:   { from: campaign.status, to: toStatus, reason, ts: new Date().toISOString() },
+      })
+      .catch((err) => log.warn({ err, campaignId }, "PIPELINE_KERNEL: failed to write regression_detected audit log"));
+    // Fall through — isValidTransition below will still gate the transition.
   }
 
   // Level 3 enforcement: ACTIVE — invalid transitions throw, never silently execute.

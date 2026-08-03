@@ -39,6 +39,7 @@
 - [Premise Conflict Detector](premise-conflict.md) — conflict-detector.service.ts; detectPremiseConflicts() fires via setImmediate after intake merge; persists to brainData.premiseConflicts; Socket.io campaign:event alert; resolvePremiseConflict() for user resolution.
 - [Manual Integration Connect](manual-integration-connect.md) — manual credential-entry endpoints need their own field/status/provider-enum audit against the DB enum + OAuth mapping; a missing field is silently stripped, not an error.
 - [Intake-Triggered Background Analysis](intake-triggered-background-analysis.md) — reuse only unlinked reports, exclude failed from idempotency, verify campaignId ownership (IDOR via runAgent).
+- [Race Condition: Strategy vs Content Pipeline](race-condition-content-strategy-pipeline.md) — command.agent.ts finalStatus hardcode overwrites "generating"; fix: rank guard + read-before-write block + regression_detected audit event.
 - [Dev/Prod Redis Queue Isolation](jornada-limpa-1-redis-queue-isolation.md) — QUEUE_PREFIX env var isolates dev/prod queues; post-restart probe creates separate TCP connection that fails while BullMQ worker is healthy.
 - [Content Agent Credit Idempotency Gap](content-agent-credit-idempotency-gap.md) — FIXED via AsyncLocalStorage regen-context.ts; regeneratePiece + rewriteContentPiece now inject piece-scoped time-bucketed C3 keys.
 - [HeyGen Digital Twin Plan Gate](heygen-digital-twin-plan-gate.md) — video-based avatar cloning needs HeyGen Enterprise plan; 403 forbidden is account tier, not a bug.
