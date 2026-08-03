@@ -181,6 +181,12 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
     const answeredRequired = totalRequired - completeness.missingRequired.length;
     const percentage = totalRequired > 0 ? Math.round((answeredRequired / totalRequired) * 100) : 100;
 
+    // _intakeChatComplete is set server-side when the agent sends the wrap-up
+    // "click below" message. This survives browser close + re-login (localStorage
+    // chatComplete does not). Use it as an OR condition so the "Ver e Aprovar
+    // Master Plan" button reappears after any session reset.
+    const chatCompletedOnServer = intakeData["_intakeChatComplete"] === true;
+
     // Map id → key so the client-generated schema (IntakeQuestion.key) matches
     const questionsForClient = questions.map((q) => ({
       key: q.id,
@@ -200,13 +206,13 @@ router.get("/:campaignId", async (req, res): Promise<void> => {
       intakeData,
       questions: questionsForClient,
       completeness: {
-        valid: completeness.valid,
-        missingRequired: completeness.missingRequired,
-        progress: Math.round(
+        valid: completeness.valid || chatCompletedOnServer,
+        missingRequired: chatCompletedOnServer ? [] : completeness.missingRequired,
+        progress: chatCompletedOnServer ? 100 : Math.round(
           (Object.keys(intakeData).length / Math.max(questions.length, 1)) * 100,
         ),
-        percentage,
-        answeredRequired,
+        percentage: chatCompletedOnServer ? 100 : percentage,
+        answeredRequired: chatCompletedOnServer ? totalRequired : answeredRequired,
         totalRequired,
       },
     });

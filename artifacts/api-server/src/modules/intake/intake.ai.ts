@@ -705,7 +705,10 @@ export async function processConversationalTurn(
     );
     const wrapUpMessage = `Perfeito! Temos tudo que precisamos para montar o Master Plan de Lançamento de **${productName}** 🎯\n\nO briefing está 100% completo. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento — com estratégia, calendário editorial, criativos e projeções de resultado.`;
 
-    // Persist the wrap-up as the last assistant message in history
+    // Persist the wrap-up as the last assistant message in history.
+    // Also persist _intakeChatComplete: true so the server can restore
+    // the "Ver e Aprovar Master Plan" button after a browser close + re-login
+    // (chatComplete lives only in localStorage and is lost on session end).
     const prevHistory = Array.isArray(currentIntake["_conversationHistory"])
       ? (currentIntake["_conversationHistory"] as Array<{ role: string; content: string }>)
       : [];
@@ -714,7 +717,11 @@ export async function processConversationalTurn(
       { role: "user", content: userMessage },
       { role: "assistant", content: wrapUpMessage, agentId: "erico" },
     ].slice(-40);
-    await saveIntakeData(campaignId, workspaceId, { ...currentIntake, _conversationHistory: updatedHistory }, log);
+    await saveIntakeData(campaignId, workspaceId, {
+      ...currentIntake,
+      _conversationHistory: updatedHistory,
+      _intakeChatComplete: true,
+    }, log);
 
     const requiredQs1 = questions.filter(q => q.required);
     const totalRequired1 = requiredQs1.length;
@@ -747,7 +754,11 @@ export async function processConversationalTurn(
       { role: "user", content: userMessage },
       { role: "assistant", content: forcedMessage, agentId: "erico" },
     ].slice(-40);
-    await saveIntakeData(campaignId, workspaceId, { ...currentIntake, _conversationHistory: updatedHistory }, log);
+    await saveIntakeData(campaignId, workspaceId, {
+      ...currentIntake,
+      _conversationHistory: updatedHistory,
+      _intakeChatComplete: true,
+    }, log);
 
     // Deterministic force-completion: this branch tells the user "we're done,
     // click below" — so the reported completeness MUST agree with that claim

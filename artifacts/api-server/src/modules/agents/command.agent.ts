@@ -919,6 +919,15 @@ Retorne o JSON de avaliação.`,
         strategyData: result as any,
       });
 
+      // Fix #67: transitionCampaign is a no-op when campaign is already at strategy_ready
+      // (e.g. a concurrent pipeline run already transitioned it). In that case strategyData
+      // was not persisted above. Always write strategyData via a bare UPDATE so it is never
+      // silently lost regardless of transition outcome.
+      await db
+        .update(campaignsTable)
+        .set({ strategyData: result as any })
+        .where(and(eq(campaignsTable.id, campaignId), eq(campaignsTable.workspaceId, workspaceId)));
+
       // RC-011: clear any previous failure marker from a prior degraded run
       setImmediate(async () => {
         try {
@@ -1015,7 +1024,7 @@ Retorne o JSON de avaliação.`,
       // Re-assert transition in case it was the transition itself that failed
       if (campaign.status !== "strategy_ready") {
         await transitionCampaign(campaignId, workspaceId, "strategy_ready", "RC-011: strategy checkpoint recovery", log, {
-          strategy: strategy as any,
+          strategyData: strategy as any,
         });
       }
     } else {
@@ -1067,7 +1076,33 @@ Retorne o JSON de avaliação.`,
 
   // ── 4. Type-specific Manager Agent ─────────────────────────────────────────
   if (strategy) {
-    try {
+    // Fix #68: checkpoint skip for manager agents (same RC-011 pattern as strategy).
+    // If the server restarted mid-execution, the agent row is marked "failed" in
+    // campaign_agents but the checkpoint + timelineData may already be saved.
+    // On retry, load from timelineData and skip re-running (and re-charging).
+    const managerCheckpointKey = typeConfig.managerAgent === "launch_manager" ? "launch_manager"
+      : typeConfig.managerAgent === "continuous_sales_manager" ? "continuous_sales_manager"
+      : typeConfig.managerAgent === "perpetual_launch_manager" ? "perpetual_launch_manager"
+      : null;
+
+    if (managerCheckpointKey && isStepDone(cp, managerCheckpointKey)) {
+      const [savedTl] = await db
+        .select({ timelineData: campaignsTable.timelineData })
+        .from(campaignsTable)
+        .where(eq(campaignsTable.id, campaignId))
+        .limit(1);
+      if (savedTl?.timelineData && Object.keys(savedTl.timelineData as object).length > 0) {
+        launchPlan = savedTl.timelineData as unknown as Record<string, unknown>;
+        checkpointsPending.push("launch_plan_approval");
+        log.info({ campaignId, managerAgent: typeConfig.managerAgent },
+          "[RC-011][CHECKPOINT_SKIP] Manager agent — loaded from timelineData (0 cr charged)");
+      } else {
+        // Checkpoint exists but timelineData is empty — strip checkpoint and re-run
+        cp = cp ? { ...cp, completedSteps: (cp.completedSteps ?? []).filter((s) => s !== managerCheckpointKey) } : cp;
+      }
+    }
+
+    if (!launchPlan) try {
       if (typeConfig.managerAgent === "launch_manager") {
         const result = await runLaunchManagerAgent(
           campaignId,
