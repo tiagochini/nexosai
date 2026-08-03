@@ -732,7 +732,9 @@ export async function runTrafficIntelligenceAgent(
       },
       audience: {
         sophisticationLevel: intakeData["audience.sophisticationLevel"],
-        awarenessLevel: intakeData["audience.awarenessLevel"],
+        // awarenessLevel: fallback para sophisticationLevel — o intake armazena os estágios
+        // de consciência de Schwartz (unaware→most_aware) sob a chave sophisticationLevel.
+        awarenessLevel: intakeData["audience.awarenessLevel"] ?? intakeData["audience.sophisticationLevel"],
         geography: intakeData["audience.geography"],
       },
       offerSummary: offerAnalysis ? {

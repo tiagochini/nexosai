@@ -624,6 +624,21 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       return;
     }
 
+    // 1.5 Register the "ended" listener IMMEDIATELY — before any awaits.
+    // If the user clicks "Stop sharing" in the browser while we're still setting
+    // up (server session, canvas compositing, etc.), the event would fire with
+    // no listener and the stream would silently die. We capture that via a flag.
+    let endedDuringSetup = false;
+    displayStream.getVideoTracks()[0]?.addEventListener("ended", () => {
+      const id = recordingRef.current?.id;
+      if (id) {
+        void stopCapture(id);
+      } else {
+        // Track ended before recording session was created — abort cleanly later
+        endedDuringSetup = true;
+      }
+    });
+
     // 2. Microphone (if needed)
     let micStream: MediaStream | null = null;
     if (needMic) {
@@ -770,6 +785,19 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
 
     mr.onstop = async () => {
       const blob = new Blob(chunksRef.current, { type: mimeType || "video/webm" });
+
+      // Guard: if blob is empty (stream died before recording started), reset cleanly
+      if (blob.size < 512) {
+        toast.error("Nenhum conteúdo foi gravado. Verifique se o compartilhamento de tela estava ativo e tente novamente.");
+        setUiState("idle");
+        setRecording(null);
+        recordingRef.current = null;
+        cameraStream?.getTracks().forEach(t => t.stop());
+        camStreamRef.current = null;
+        setCamStream(null);
+        return;
+      }
+
       setVideoBlob(blob);
 
       // Auto-download to device gallery immediately
@@ -804,10 +832,18 @@ export function RecordButton({ campaignId }: { campaignId?: string }) {
       setCamStream(null);
     };
 
-    // If user ends screen share via browser button
-    displayStream.getVideoTracks()[0]?.addEventListener("ended", () => {
-      void stopCapture(rec.id);
-    });
+    // If screen share was stopped during setup, abort now that we have the recId
+    if (endedDuringSetup) {
+      displayStream.getTracks().forEach(t => t.stop());
+      micStream?.getTracks().forEach(t => t.stop());
+      cameraStream?.getTracks().forEach(t => t.stop());
+      audioCtxRef.current?.close().catch(() => {});
+      if (canvasRafRef.current !== null) { cancelAnimationFrame(canvasRafRef.current); canvasRafRef.current = null; }
+      try { await customFetch(`/api/recordings/${rec.id}/stop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); } catch { /* best-effort */ }
+      toast.error("Compartilhamento de tela encerrado antes de iniciar. Tente novamente.");
+      setUiState("idle");
+      return;
+    }
 
     mr.start(2000);
 

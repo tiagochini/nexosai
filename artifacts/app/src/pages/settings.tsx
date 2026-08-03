@@ -14,7 +14,7 @@ import {
   CheckCircle2, Loader2, Eye, EyeOff, ExternalLink, Zap,
   Wifi, WifiOff, Plus, XCircle, AlertTriangle, Link2, Globe,
   Mic, Square, Upload, Fingerprint, Wand2,
-  Headphones, Camera, Sparkles, Video, UserCheck, UserX, ChevronRight,
+  Headphones, Camera, Sparkles, Video, UserCheck, UserX, ChevronRight, Trash2,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
@@ -1567,6 +1567,19 @@ function IdentidadeTab() {
     if (timerRef.current) clearInterval(timerRef.current);
   }, []);
 
+  const clearAudio = useCallback(() => {
+    setAudioUrl(null);
+    setAudioBase64(null);
+    setRecState("idle");
+    setCloneError(null);
+    if (recorderRef.current && recorderRef.current.state !== "inactive") {
+      recorderRef.current.stop();
+    }
+    if (timerRef.current) clearInterval(timerRef.current);
+    recorderRef.current = null;
+    chunksRef.current = [];
+  }, []);
+
   const handleFileUpload = useCallback((file: File) => {
     setCloneError(null);
     const mime = file.type || "audio/mpeg";
@@ -1685,50 +1698,27 @@ function IdentidadeTab() {
             </button>
           </div>
 
-          {/* Clone Studio panel — shown when user clicks "Com Clone" but has no clone yet */}
-          {showCloneStudio && !cloneSessionId && (
-            <div className="border border-primary/20 bg-primary/3 p-4">
-              <CloneStudioPanel
-                userName={user?.name ?? "Usuário"}
-                onComplete={(sessionId) => {
-                  setShowCloneStudio(false);
-                  void saveVideoProductionStyle("clone", sessionId);
-                  toast.success("Clone capturado! Vídeos futuros usarão seu rosto e voz.");
-                }}
-                onSkip={() => setShowCloneStudio(false)}
-              />
-            </div>
+          {/* Clone Studio panel — portal fullscreen, triggered from here or Avatar Digital section */}
+          {showCloneStudio && (
+            <CloneStudioPanel
+              userName={user?.name ?? "Usuário"}
+              onComplete={(sessionId) => {
+                setShowCloneStudio(false);
+                void saveVideoProductionStyle("clone", sessionId);
+                toast.success(cloneSessionId ? "Clone recriado com sucesso!" : "Clone capturado! Vídeos futuros usarão seu rosto e voz.");
+              }}
+              onSkip={() => setShowCloneStudio(false)}
+            />
           )}
 
           {/* Clone captured status */}
-          {cloneSessionId && (
+          {cloneSessionId && !showCloneStudio && (
             <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
               <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
               <div className="flex-1">
                 <div className="font-mono text-[11px] font-bold text-green-300">Clone de vídeo capturado</div>
                 <div className="font-mono text-[10px] text-muted-foreground/60">Sessão: {cloneSessionId.slice(0, 12)}… · Disponível para CPL e VSL</div>
               </div>
-              <button
-                onClick={() => setShowCloneStudio(true)}
-                className="font-mono text-[10px] text-primary hover:underline uppercase tracking-widest"
-              >
-                Recriar
-              </button>
-            </div>
-          )}
-
-          {/* Recreate clone studio */}
-          {showCloneStudio && cloneSessionId && (
-            <div className="border border-primary/20 bg-primary/3 p-4">
-              <CloneStudioPanel
-                userName={user?.name ?? "Usuário"}
-                onComplete={(sessionId) => {
-                  setShowCloneStudio(false);
-                  void saveVideoProductionStyle("clone", sessionId);
-                  toast.success("Clone recriado com sucesso!");
-                }}
-                onSkip={() => setShowCloneStudio(false)}
-              />
             </div>
           )}
 
@@ -1787,7 +1777,7 @@ function IdentidadeTab() {
             <div className="space-y-3">
               {/* Recorder */}
               <div className="flex items-center gap-3">
-                {recState === "idle" || recState === "done" ? (
+                {recState === "idle" || recState === "done" || recState === "recorded" ? (
                   <Button
                     size="sm"
                     onClick={() => void startRecording()}
@@ -1795,7 +1785,7 @@ function IdentidadeTab() {
                     style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", color: "#ef4444" }}
                   >
                     <Mic className="h-3.5 w-3.5" />
-                    {recState === "done" ? "Regravar" : "Gravar Áudio"}
+                    {recState === "done" || recState === "recorded" ? "Regravar" : "Gravar Áudio"}
                   </Button>
                 ) : recState === "recording" ? (
                   <Button
@@ -1831,9 +1821,16 @@ function IdentidadeTab() {
 
               {/* Audio preview */}
               {audioUrl && recState !== "recording" && (
-                <div className="flex items-center gap-3 border border-border/30 bg-background/30 px-3 py-2">
+                <div className="flex items-center gap-2 border border-border/30 bg-background/30 px-3 py-2">
                   <Headphones className="h-3.5 w-3.5 text-primary shrink-0" />
-                  <audio controls src={audioUrl} className="flex-1 h-8" style={{ filter: "invert(0) hue-rotate(180deg) brightness(0.8)" }} />
+                  <audio controls src={audioUrl} className="flex-1 h-8 min-w-0" style={{ filter: "invert(0) hue-rotate(180deg) brightness(0.8)" }} />
+                  <button
+                    onClick={clearAudio}
+                    title="Excluir gravação e recomeçar"
+                    className="shrink-0 p-1.5 text-muted-foreground/40 hover:text-red-400 hover:bg-red-500/10 transition-colors rounded"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
 
@@ -1868,19 +1865,44 @@ function IdentidadeTab() {
       <SectionCard title="Avatar Digital" icon={Camera}>
         <div className="space-y-4">
 
-          {/* ── Avatar provisionado pela infraestrutura NexOS ── */}
-          <div className="flex items-center gap-3 px-4 py-3 border border-blue-500/20 bg-blue-500/5">
-            <Video className="h-4 w-4 text-blue-400/70 shrink-0" />
-            <div>
-              <div className="font-mono text-[11px] font-bold text-blue-300/80">Avatar gerado pela NexOS</div>
-              <div className="font-mono text-[10px] text-muted-foreground/60">
-                A geração de vídeo com avatar é feita pela infraestrutura de IA da NexOS — não é necessário conectar nenhuma conta externa.
-                {persona.heygenAvatarId && (
-                  <> · Avatar ativo: <span className="text-blue-400/80">{persona.heygenAvatarId.slice(0, 16)}…</span></>
-                )}
+          {/* Clone capturado */}
+          {cloneSessionId ? (
+            <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
+              <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-[11px] font-bold text-green-300">Clone de avatar capturado</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60">
+                  Sessão: {cloneSessionId.slice(0, 12)}… · Disponível para CPL e VSL
+                </div>
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowCloneStudio(true)}
+                className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-1.5 border-green-500/30 text-green-400 hover:bg-green-500/10"
+              >
+                <Camera className="h-3 w-3" /> Regravar
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-start gap-3 px-4 py-3 border border-border/40 bg-background/30">
+              <Camera className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-[11px] font-bold text-foreground">Nenhum clone gravado</div>
+                <div className="font-mono text-[10px] text-muted-foreground/60">
+                  Grave 5 takes guiados (~5 min) para criar vídeos com seu rosto e voz clonada.
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setShowCloneStudio(true)}
+                className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-1.5"
+                style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.35)", color: "hsl(var(--primary))" }}
+              >
+                <Camera className="h-3 w-3" /> Gravar
+              </Button>
+            </div>
+          )}
 
           <div className="font-mono text-[9px] text-muted-foreground/30 leading-relaxed">
             Com sua identidade configurada, os vídeos de lançamento gerados pelo NexOS AI usarão seu perfil de voz clonada automaticamente.

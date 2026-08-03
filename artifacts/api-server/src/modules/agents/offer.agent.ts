@@ -615,6 +615,7 @@ export async function runOfferAgent(
   intakeData: Record<string, unknown>,
   log: Logger,
   memoryContext?: string,
+  strategyData?: Record<string, unknown>,
 ): Promise<OfferArchitectOutput> {
   const intakeJson = JSON.stringify(
     {
@@ -635,6 +636,60 @@ export async function runOfferAgent(
     2,
   );
 
+  // ── Build strategy context block ─────────────────────────────────────────────
+  // When strategyData is present, extract the fields that anchor the offer:
+  // positioning, unique mechanism name, big domino, sophistication strategy,
+  // core narrative and emotional hook. The offer MUST use the same mechanism
+  // name the strategy agent already defined — never invent a parallel name.
+  let strategyContextBlock = "";
+  if (strategyData && Object.keys(strategyData).length > 0) {
+    const sd = strategyData as any;
+    const primaryDifferentiator: string = sd.offerPositioning?.primaryDifferentiator ?? "";
+    const positioning: string            = sd.offerPositioning?.positioning ?? "";
+    const uvp: string                    = sd.offerPositioning?.uniqueValueProposition ?? "";
+    const bigDomino: string              = sd.bigDomino ?? "";
+    const sophisticationStrategy: string = sd.audienceSegmentation?.sophisticationStrategy ?? "";
+    const coreNarrative: string          = sd.campaignArchitecture?.coreNarrative ?? "";
+    const emotionalHook: string          = sd.campaignArchitecture?.emotionalHook ?? "";
+    const competitiveAdvantages: string[] = sd.offerPositioning?.competitiveAdvantages ?? [];
+
+    if (primaryDifferentiator || bigDomino || positioning) {
+      strategyContextBlock = `
+**⚠ POSICIONAMENTO ESTRATÉGICO — OUTPUT DO AGENTE DE ESTRATÉGIA (OBRIGATÓRIO)**
+
+O Agente de Estratégia já definiu o posicionamento desta campanha. Você DEVE construir a oferta ancorada neste posicionamento — não invente uma estratégia paralela.
+
+| Campo                    | Valor definido pela Estratégia |
+|--------------------------|-------------------------------|
+| Big Domino               | ${bigDomino} |
+| Posicionamento           | ${positioning} |
+| UVP                      | ${uvp} |
+| Diferenciador Principal  | ${primaryDifferentiator} |
+| Sofisticação de Mercado  | ${sophisticationStrategy} |
+| Narrativa Central        | ${coreNarrative} |
+| Hook Emocional           | ${emotionalHook} |
+${competitiveAdvantages.length > 0 ? `| Vantagens Competitivas   | ${competitiveAdvantages.slice(0, 3).join(" · ")} |` : ""}
+
+**REGRA CRÍTICA — MECANISMO ÚNICO:**
+O campo \`uniqueMechanism.name\` no seu JSON de saída DEVE ser o diferenciador principal já definido:
+"${primaryDifferentiator}"
+
+Não crie um nome diferente. O mecanismo único já foi nomeado e validado pela estratégia. Seu trabalho é detalhar como ele funciona, por que os concorrentes falham sem ele, e como provar sem exagerar — usando exatamente este nome.
+
+---
+`;
+    }
+
+    log.info({
+      campaignId,
+      hasPrimaryDifferentiator: !!primaryDifferentiator,
+      hasBigDomino: !!bigDomino,
+      hasPositioning: !!positioning,
+    }, "[OFFER_AGENT] strategyData recebido e injetado no prompt");
+  } else {
+    log.warn({ campaignId }, "[OFFER_AGENT] strategyData ausente — oferta construída sem contexto estratégico");
+  }
+
   const result = await runAgent({
     campaignId,
     workspaceId,
@@ -643,8 +698,9 @@ export async function runOfferAgent(
     systemPrompt: COGNITIVE_IDENTITY_OFFER + OFFER_ARCHITECT_PROMPT,
     memoryContext,
     thinkingMessages: [
+      "Lendo posicionamento estratégico — big domino, mecanismo único, sofisticação...",
       "Analisando mercado — desejo dominante, medo principal, sofisticação...",
-      "Construindo mecanismo único nomeável...",
+      "Ancorando mecanismo único ao posicionamento estratégico...",
       "Definindo transformação desejada e identity shift...",
       "Arquitetando value stack com ancoragem de 10x...",
       "Mapeando objeções racionais e emocionais com respostas...",
@@ -656,7 +712,7 @@ export async function runOfferAgent(
       {
         role: "user",
         content: `Construa a oferta irresistível para este produto. Execute os 7 passos em sequência, depois audite com 12 dimensões.
-
+${strategyContextBlock}
 **Dados do produto e campanha:**
 \`\`\`json
 ${intakeJson}
@@ -664,7 +720,7 @@ ${intakeJson}
 
 Sequência obrigatória:
 0. Análise de Mercado (desejo dominante, medo, sofisticação, objeções racionais e emocionais)
-1. Mecanismo Único Nomeável (com prova)
+1. Mecanismo Único Nomeável — use o nome definido pela estratégia acima, não invente outro
 2. Transformação Desejada (before/after/identity shift)
 3. Promessa Central + Value Stack (total percebido ≥ 5x o preço)
 4. Urgência Legítima + Motivo para Agir Agora

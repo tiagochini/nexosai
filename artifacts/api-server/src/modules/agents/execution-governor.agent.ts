@@ -174,7 +174,13 @@ export async function runExecutionGovernor(
   availableCredits: number,
   log: Logger,
 ): Promise<ExecutionPlan> {
-  const budget = Number(intakeData["campaign.trafficBudget"] ?? 0);
+  // campaign.budget.traffic = chave atual do intake (AI conversacional)
+  // campaign.trafficBudget  = chave legada (direct-form anterior)
+  const budget = Number(
+    intakeData["campaign.budget.traffic"] ??
+    intakeData["campaign.trafficBudget"] ??
+    0,
+  );
   const ticket = Number(intakeData["product.price"] ?? intakeData["product.ticket"] ?? 0);
   const isSimpleType = ["flash_sale", "remarketing", "upsell", "authority", "audience_growth", "branding"].includes(campaignType);
   const isComplexType = ["launch", "perpetual_launch", "continuous_sales", "subscription_growth", "affiliate"].includes(campaignType);
@@ -231,5 +237,17 @@ export async function runExecutionGovernor(
     tokenBudgetWarning: false,
   };
 
-  return parseAgentJSON<ExecutionPlan>(result.content, defaultPlan);
+  const plan = parseAgentJSON<ExecutionPlan>(result.content, defaultPlan);
+
+  // Hard guard: the LLM must never skip traffic_intelligence when the caller
+  // has already confirmed hasTraffic=true. The budget misread (legacy key vs new
+  // key) could still fool the LLM into thinking there's no budget even when
+  // hasTraffic is explicitly true. This deterministic override prevents that.
+  if (hasTraffic) {
+    plan.skippedAgents = (plan.skippedAgents ?? []).filter(
+      (a) => a !== "traffic_intelligence",
+    );
+  }
+
+  return plan;
 }

@@ -405,7 +405,12 @@ export async function orchestrateCampaign(
   const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
   const typeConfig = CAMPAIGN_TYPE_CONFIG[type] ?? CAMPAIGN_TYPE_CONFIG.launch;
   const hasTraffic = Boolean(
-    intakeData["campaign.trafficBudget"] || intakeData["campaign.paidTraffic"],
+    // campaign.budget.traffic = chave atual do intake (AI conversacional)
+    // campaign.trafficBudget  = chave legada (direct-form anterior)
+    // campaign.paidTraffic    = chave alternativa (import externo)
+    intakeData["campaign.budget.traffic"] ||
+    intakeData["campaign.trafficBudget"] ||
+    intakeData["campaign.paidTraffic"],
   );
 
   const { valid, missingRequired } = validateIntakeCompleteness(
@@ -1049,7 +1054,7 @@ Retorne o JSON de avaliação.`,
 
   if (typesWithOfferAnalysis.includes(type)) {
     try {
-      const result = await runOfferAgent(campaignId, workspaceId, intakeData, log, memoryContext);
+      const result = await runOfferAgent(campaignId, workspaceId, intakeData, log, memoryContext, strategy ?? undefined);
       offerAnalysis = result as unknown as Record<string, unknown>;
       agentsRun.push("offer");
       cp = await saveCheckpoint(campaignId, "offer", { offerName: (result as any).offerName }, cp, log);

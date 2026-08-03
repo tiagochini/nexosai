@@ -287,70 +287,82 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   if (phase === "intro") {
-    return (
-      <div className="border border-primary/40 bg-primary/5 p-6 space-y-5 relative overflow-hidden">
-        {/* Corner marks */}
-        {["top-0 left-0 border-t border-l","top-0 right-0 border-t border-r","bottom-0 left-0 border-b border-l","bottom-0 right-0 border-b border-r"].map((c,i) => (
-          <div key={i} className={`absolute w-3 h-3 ${c} border-primary`} />
-        ))}
+    return createPortal(
+      <div className="fixed inset-0 z-[8000] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="relative w-full max-w-lg bg-[#0a0a0a] border border-primary/40 p-6 space-y-5 overflow-y-auto max-h-[90dvh]">
+          {/* Corner marks */}
+          {["top-0 left-0 border-t border-l","top-0 right-0 border-t border-r","bottom-0 left-0 border-b border-l","bottom-0 right-0 border-b border-r"].map((c,i) => (
+            <div key={i} className={`absolute w-3 h-3 ${c} border-primary`} />
+          ))}
 
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
-            <Video className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">
-              Clone Studio · Enquanto seu plano é processado
+          {/* Close button */}
+          <button
+            onClick={onSkip}
+            className="absolute top-3 right-3 text-white/30 hover:text-white/70 transition-colors z-10"
+            aria-label="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
+              <Video className="h-5 w-5 text-primary" />
             </div>
-            <h3 className="font-mono text-base font-bold uppercase tracking-tight text-foreground">
-              Vamos criar seu Clone NexOS
-            </h3>
-            <p className="font-mono text-[12px] text-muted-foreground mt-1.5 leading-relaxed">
-              Em menos de 5 minutos, você grava 5 takes da mesma frase com emoções diferentes. Seu clone usará sua voz e jeito de falar para criar vídeos de campanha automaticamente.
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">
+                Clone Studio · Gravação de Avatar
+              </div>
+              <h3 className="font-mono text-base font-bold uppercase tracking-tight text-white">
+                Vamos criar seu Clone NexOS
+              </h3>
+              <p className="font-mono text-[12px] text-white/50 mt-1.5 leading-relaxed">
+                Em menos de 5 minutos, você grava 5 takes da mesma frase com emoções diferentes. Seu clone usará sua voz e jeito de falar para criar vídeos de campanha automaticamente.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-1">
+            {CLONE_TAKES.map((t, i) => {
+              const Icon = t.icon;
+              return (
+                <div key={t.id} className={`border px-2 py-2 text-center ${t.color}`}>
+                  <Icon className="h-3.5 w-3.5 mx-auto mb-1" />
+                  <div className="font-mono text-[10px] font-bold uppercase leading-tight">{t.emotion.split(" · ")[0]}</div>
+                  <div className="font-mono text-[9px] text-white/30 mt-0.5">Take {i + 1}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="border border-white/10 bg-white/5 px-4 py-3">
+            <p className="font-mono text-[11px] text-white/60 leading-relaxed">
+              <span className="text-white font-bold">A frase que você vai gravar:</span><br />
+              "{CORE_PHRASE}"
+            </p>
+            <p className="font-mono text-[10px] text-white/30 mt-2">
+              A mesma frase · 5 entregas emocionais diferentes · cada take ≈ 8-10 segundos
             </p>
           </div>
-        </div>
 
-        <div className="grid grid-cols-5 gap-1">
-          {CLONE_TAKES.map((t, i) => {
-            const Icon = t.icon;
-            return (
-              <div key={t.id} className={`border px-2 py-2 text-center ${t.color}`}>
-                <Icon className="h-3.5 w-3.5 mx-auto mb-1" />
-                <div className="font-mono text-[10px] font-bold uppercase leading-tight">{t.emotion.split(" · ")[0]}</div>
-                <div className="font-mono text-[9px] text-muted-foreground/60 mt-0.5">Take {i + 1}</div>
-              </div>
-            );
-          })}
-        </div>
+          {cameraError && (
+            <div className="border border-destructive/40 bg-destructive/10 px-3 py-2 flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <span className="font-mono text-[11px] text-destructive">{cameraError}</span>
+            </div>
+          )}
 
-        <div className="border border-border/40 bg-background/40 px-4 py-3">
-          <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">
-            <span className="text-foreground font-bold">A frase que você vai gravar:</span><br />
-            "{CORE_PHRASE}"
-          </p>
-          <p className="font-mono text-[10px] text-muted-foreground/50 mt-2">
-            A mesma frase · 5 entregas emocionais diferentes · cada take ≈ 8-10 segundos
-          </p>
-        </div>
-
-        {cameraError && (
-          <div className="border border-destructive/40 bg-destructive/10 px-3 py-2 flex items-center gap-2">
-            <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
-            <span className="font-mono text-[11px] text-destructive">{cameraError}</span>
+          <div className="flex gap-2">
+            <Button onClick={initCamera} className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 text-xs">
+              <Camera className="h-3.5 w-3.5" />
+              Ativar câmera e iniciar
+            </Button>
+            <Button variant="ghost" onClick={onSkip} className="font-mono text-[11px] uppercase tracking-widest rounded-none text-white/30 hover:text-white/70 h-10 px-3">
+              Cancelar
+            </Button>
           </div>
-        )}
-
-        <div className="flex gap-2">
-          <Button onClick={initCamera} className="flex-1 font-mono uppercase tracking-widest rounded-none gap-2 btn-weapon-primary h-10 text-xs">
-            <Camera className="h-3.5 w-3.5" />
-            Ativar câmera e iniciar
-          </Button>
-          <Button variant="ghost" onClick={onSkip} className="font-mono text-[11px] uppercase tracking-widest rounded-none text-muted-foreground/50 h-10 px-3">
-            <X className="h-3.5 w-3.5 mr-1" /> Pular
-          </Button>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 

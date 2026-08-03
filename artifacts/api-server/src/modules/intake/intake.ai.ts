@@ -1045,6 +1045,19 @@ export async function finalizeIntake(
     intakeDefaults["risk.tolerance"] = "moderate";
   }
 
+  // campaign.type + campaign.track — inject from campaign DB columns so agents
+  // that read intakeData["campaign.type"] / intakeData["campaign.track"] directly
+  // (campaign-emotional-arc, strategic-doctrine, financial-projector,
+  //  traffic-intelligence) always find a value instead of undefined.
+  // These values come from the campaign row itself, not user input, so they are
+  // always authoritative and never overwrite a user-supplied key.
+  if (!rawIntakeData["campaign.type"]) {
+    intakeDefaults["campaign.type"] = type;
+  }
+  if (!rawIntakeData["campaign.track"]) {
+    intakeDefaults["campaign.track"] = track;
+  }
+
   const intakeData = { ...rawIntakeData, ...intakeDefaults };
 
   const completeness = validateIntakeCompleteness(type, track, intakeData);

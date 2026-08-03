@@ -407,8 +407,14 @@ ${JSON.stringify(
     "product.name": intakeData["product.name"],
     "product.category": intakeData["product.category"],
     "product.price": intakeData["product.price"],
+    // audience.sophisticationLevel = chave do intake (contém dados de Schwartz awareness,
+    //   apesar do nome — opções: unaware|problem_aware|solution_aware|product_aware|most_aware)
+    // audience.awarenessLevel = chave semântica correta; fallback para sophisticationLevel
+    //   pois o intake armazena os estágios de consciência sob o nome errado.
+    // NOTA: sofisticação de mercado (geração 1-5 de Schwartz) é conceito distinto e
+    //   NÃO é coletada pelo intake — este campo cobre apenas consciência individual.
     "audience.sophisticationLevel": intakeData["audience.sophisticationLevel"],
-    "audience.awarenessLevel": intakeData["audience.awarenessLevel"],
+    "audience.awarenessLevel": intakeData["audience.awarenessLevel"] ?? intakeData["audience.sophisticationLevel"],
     "campaign.type": intakeData["campaign.type"],
     "campaign.revenueTarget": intakeData["campaign.revenueTarget"],
     "campaign.durationDays": intakeData["campaign.durationDays"],
