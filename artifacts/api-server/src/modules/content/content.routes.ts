@@ -525,7 +525,7 @@ router.get("/:campaignId/content/coherence", async (req, res): Promise<void> => 
   const { eq } = await import("drizzle-orm");
 
   const [campaign] = await db
-    .select({ intakeData: campaignsTable.intakeData })
+    .select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
     .where(eq(campaignsTable.id, campaignId))
     .limit(1);
@@ -535,8 +535,8 @@ router.get("/:campaignId/content/coherence", async (req, res): Promise<void> => 
     return;
   }
 
-  const intake = (campaign.intakeData ?? {}) as Record<string, unknown>;
-  const report = intake["_coherenceReport"] ?? null;
+  const brain = (campaign.brainData ?? {}) as Record<string, unknown>;
+  const report = brain["coherenceReport"] ?? null;
 
   res.json({ report });
 });

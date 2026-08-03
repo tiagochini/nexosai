@@ -10,8 +10,9 @@
  *   if the live script picks up where CPL3 left off, or if the
  *   ad copy is creating the right emotional entry state for the funnel.
  *
- * Result stored in campaignsTable.metadata._coherenceReport
- * Triggered fire-and-forget after content generation completes.
+ * Result stored in campaignsTable.brainData.coherenceReport (persistent, survives restart).
+ * Awaited after content generation — result is visible to founder in approval UI
+ * via GET /campaigns/:id/content/coherence.
  */
 
 import { eq } from "drizzle-orm";
@@ -187,10 +188,11 @@ export async function runEmotionalCoherenceCheck(
   log: Logger,
 ): Promise<CoherenceReport | null> {
   try {
-    // Load campaign + arc
+    // Load campaign + arc (arc lives in brainData.emotionalArc, not intakeData)
     const [campaign] = await db
       .select({
         intakeData: campaignsTable.intakeData,
+        brainData: campaignsTable.brainData,
       })
       .from(campaignsTable)
       .where(eq(campaignsTable.id, campaignId))
@@ -198,8 +200,8 @@ export async function runEmotionalCoherenceCheck(
 
     if (!campaign) return null;
 
-    const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
-    const arc = intakeData["_emotionalArc"] as CampaignEmotionalArc | undefined;
+    const brainData = (campaign.brainData ?? {}) as Record<string, unknown>;
+    const arc = brainData["emotionalArc"] as CampaignEmotionalArc | undefined;
 
     if (!arc?.phases?.length) {
       log.info({ campaignId }, "Coherence check skipped — no emotional arc present");
@@ -256,7 +258,7 @@ Audite a coerência emocional desta campanha. Verifique se cada peça opera no e
     const result = await runAgent({
       campaignId,
       workspaceId,
-      agentRole: "strategy",
+      agentRole: "emotional_coherence_checker",
       systemPrompt: COHERENCE_CHECKER_PROMPT,
       messages: [{ role: "user", content: userMessage }],
       log,
@@ -282,11 +284,11 @@ Audite a coerência emocional desta campanha. Verifique se cada peça opera no e
       piecesReviewed: pieces.length,
     };
 
-    // Save to intakeData (same JSONB field used by _emotionalArc)
-    const existingIntake = (campaign.intakeData ?? {}) as Record<string, unknown>;
+    // Persist to brainData (durable, survives restarts, readable via GET /content/coherence)
+    const currentBrain = (campaign.brainData ?? {}) as Record<string, unknown>;
     await db
       .update(campaignsTable)
-      .set({ intakeData: { ...existingIntake, _coherenceReport: report } })
+      .set({ brainData: { ...currentBrain, coherenceReport: report } as any })
       .where(eq(campaignsTable.id, campaignId));
 
     log.info(

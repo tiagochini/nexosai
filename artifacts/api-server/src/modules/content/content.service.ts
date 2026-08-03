@@ -584,9 +584,11 @@ export async function generateCampaignContent(
   // Generated BEFORE any content agent runs. Provides the 9-phase psychological
   // progression map so every agent knows WHERE in the funnel each piece belongs.
   // Fire-and-wait: arc must exist before CPL/live/stories/webinar agents consume it.
-  const existingArc = getArcFromIntakeData(intakeData);
-  const arc = existingArc ?? await generateCampaignEmotionalArc(campaignId, workspaceId, intakeData, strategy, log);
-  if (arc && !existingArc) {
+  // Idempotency is handled inside generateCampaignEmotionalArc via brainData.emotionalArc.
+  const arc = await generateCampaignEmotionalArc(campaignId, workspaceId, intakeData, strategy, log);
+  if (arc) {
+    // Mirror arc into in-memory intakeData so phase-aware helpers (getArcFromIntakeData,
+    // buildArcOverviewBlock) work for the current generation session without extra DB reads.
     intakeData = { ...intakeData, _emotionalArc: arc };
   }
 
@@ -2482,14 +2484,14 @@ export async function generateCampaignContent(
       .catch(err => log.warn({ err, campaignId }, "[FAILSAFE] Failed to clear contentRetry state — non-blocking"));
   }
 
-  // ── Emotional Coherence Check (fire-and-forget) ───────────────────────────
+  // ── Emotional Coherence Check (awaited) ─────────────────────────────────────
   // Runs after content generation completes. Checks if pieces respect the arc
-  // progression. Non-blocking — saves report to campaign.metadata._coherenceReport.
+  // progression. Awaited so the result is persisted to brainData.coherenceReport
+  // before this function returns — founder sees it immediately in the approval UI.
+  // Any failure is non-fatal; generation result is unaffected.
   if (!allFailed && piecesGenerated > 0) {
-    setImmediate(() => {
-      runEmotionalCoherenceCheck(campaignId, workspaceId, log).catch(err => {
-        log.error({ err, campaignId }, "Coherence check fire-and-forget failed");
-      });
+    await runEmotionalCoherenceCheck(campaignId, workspaceId, log).catch(err => {
+      log.error({ err, campaignId }, "Coherence check failed — non-blocking");
     });
   }
 

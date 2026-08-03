@@ -6,8 +6,10 @@
  * to post-purchase — belief level, resistance, dominant emotion, and
  * copy directives per phase.
  *
- * Stored in campaignsTable.intakeData._emotionalArc after generation.
+ * Stored in campaignsTable.brainData.emotionalArc after generation.
  * Injected by profile-injector into all content agents as context.
+ * Idempotency: if brainData.emotionalArc already exists the agent is skipped —
+ * no re-execution, no credit charge.
  */
 
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
@@ -125,9 +127,16 @@ export async function generateCampaignEmotionalArc(
   strategy: StrategyOutput,
   log: Logger,
 ): Promise<CampaignEmotionalArc | null> {
-  if (intakeData["_emotionalArc"]) {
-    log.info({ campaignId }, "Emotional Arc already exists — skipping regeneration");
-    return intakeData["_emotionalArc"] as CampaignEmotionalArc;
+  // Idempotency gate: check brainData (persistent across restarts), not intakeData (volatile)
+  const [existing] = await db
+    .select({ brainData: campaignsTable.brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+  const existingBrain = (existing?.brainData ?? {}) as Record<string, unknown>;
+  if (existingBrain["emotionalArc"]) {
+    log.info({ campaignId }, "Emotional Arc already in brainData — skipping regeneration");
+    return existingBrain["emotionalArc"] as CampaignEmotionalArc;
   }
 
   try {
@@ -169,7 +178,7 @@ Gere o Arco Emocional Completo de 9 fases para ESTA campanha específica.`;
     const result = await runAgent({
       campaignId,
       workspaceId,
-      agentRole: "strategy",
+      agentRole: "campaign_emotional_arc",
       systemPrompt: EMOTIONAL_ARC_PROMPT,
       messages: [{ role: "user", content: userMessage }],
       log,
@@ -192,17 +201,17 @@ Gere o Arco Emocional Completo de 9 fases para ESTA campanha específica.`;
       generatedAt: new Date().toISOString(),
     };
 
-    // Persist to DB alongside existing intakeData
+    // Persist to brainData (survives restarts; idempotency key on next call checks here)
     const [current] = await db
-      .select({ intakeData: campaignsTable.intakeData })
+      .select({ brainData: campaignsTable.brainData })
       .from(campaignsTable)
       .where(eq(campaignsTable.id, campaignId))
       .limit(1);
 
-    const existing = (current?.intakeData ?? {}) as Record<string, unknown>;
+    const currentBrain = (current?.brainData ?? {}) as Record<string, unknown>;
     await db
       .update(campaignsTable)
-      .set({ intakeData: { ...existing, _emotionalArc: arc } })
+      .set({ brainData: { ...currentBrain, emotionalArc: arc } as any })
       .where(eq(campaignsTable.id, campaignId));
 
     log.info({ campaignId, phases: arc.phases.length }, "Campaign Emotional Arc generated and saved");
