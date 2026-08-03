@@ -405,16 +405,62 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
             style={{ transform: "scaleX(-1)" }}
           />
 
+          {/* ── PRÉ-TAKE: Direção aparece ANTES de gravar ─────────────────── */}
+          {/* O usuário lê a instrução com destaque total antes de poder gravar */}
+          {phase === "camera_check" && countdown === null && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 px-6 py-8">
+              {/* Identificação emocional do take */}
+              <div className={`flex items-center gap-2 mb-5 ${currentTake.color.split(" ")[0]}`}>
+                <TakeIcon className="h-5 w-5" />
+                <span className="font-mono text-sm font-bold uppercase tracking-widest">
+                  Take {currentTakeIdx + 1} de {CLONE_TAKES.length} · {currentTake.emotion}
+                </span>
+              </div>
+
+              {/* A frase */}
+              <div className="border border-white/20 bg-white/5 px-5 py-4 mb-4 max-w-lg w-full">
+                <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">
+                  Leia esta frase:
+                </div>
+                <p className="font-mono text-base text-white leading-relaxed font-bold text-center">
+                  "{CORE_PHRASE}"
+                </p>
+              </div>
+
+              {/* DIREÇÃO DO TAKE — destaque principal, aparece antes de gravar */}
+              <div className="border border-white/15 bg-black/50 px-5 py-4 mb-7 max-w-lg w-full">
+                <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">
+                  Como entregar este take:
+                </div>
+                <p className={`font-mono text-[14px] leading-relaxed ${currentTake.color.split(" ")[0]}`}>
+                  {currentTake.instruction}
+                </p>
+                <div className="font-mono text-[10px] text-white/30 mt-3">
+                  Duração alvo: ~{currentTake.targetSecs} segundos
+                </div>
+              </div>
+
+              {/* CTA — só aparece depois de exibir a direção completa */}
+              <Button
+                onClick={startTake}
+                className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8"
+                style={{ background: "var(--primary)", color: "black" }}
+              >
+                <Radio className="h-4 w-4" /> Entendi — Iniciar gravação
+              </Button>
+            </div>
+          )}
+
           {/* Countdown overlay */}
           {countdown !== null && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-              <div className="font-mono text-8xl font-black text-white animate-ping-once">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+              <div className="font-mono text-8xl font-black text-white">
                 {countdown === 0 ? "GO" : countdown}
               </div>
             </div>
           )}
 
-          {/* Recording indicator */}
+          {/* Recording indicator (canto superior) */}
           {phase === "recording" && (
             <div className="absolute top-3 left-3 flex items-center gap-2 border border-red-500/40 bg-red-500/20 px-3 py-1">
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -422,7 +468,23 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
             </div>
           )}
 
-          {/* Review overlay */}
+          {/* ── DURANTE GRAVAÇÃO: botão "Terminei de ler" bem visível ──────── */}
+          {phase === "recording" && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+              <Button
+                onClick={stopTake}
+                className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8 shadow-2xl"
+                style={{ background: "var(--primary)", color: "black", minWidth: 280 }}
+              >
+                <Check className="h-4 w-4" /> Terminei de ler esta frase
+              </Button>
+              <span className="font-mono text-[10px] text-white/30">
+                Clique ao terminar a leitura para avançar
+              </span>
+            </div>
+          )}
+
+          {/* Review overlay — aparece após terminar */}
           {phase === "review" && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
               <Button
@@ -454,10 +516,10 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
           )}
         </div>
 
-        {/* Sidebar — instructions */}
-        <div className="w-72 border-l border-white/10 bg-black/60 flex flex-col overflow-y-auto">
+        {/* Sidebar — referência rápida durante gravação */}
+        <div className="w-64 border-l border-white/10 bg-black/60 flex flex-col overflow-y-auto">
           {/* Emotion badge */}
-          <div className={`border-b border-white/10 px-4 py-3`}>
+          <div className="border-b border-white/10 px-4 py-3">
             <div className={`flex items-center gap-2 mb-1 ${currentTake.color.split(" ")[0]}`}>
               <TakeIcon className="h-4 w-4" />
               <span className="font-mono text-[11px] font-bold uppercase tracking-widest">{currentTake.emotion}</span>
@@ -467,27 +529,23 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
             </div>
           </div>
 
-          {/* The phrase */}
-          <div className="px-4 py-4 border-b border-white/10">
-            <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Sua frase:</div>
-            <p className="font-mono text-sm text-white/90 leading-relaxed font-bold">
+          {/* The phrase — referência rápida */}
+          <div className="px-4 py-3 border-b border-white/10">
+            <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Frase:</div>
+            <p className="font-mono text-[12px] text-white/90 leading-relaxed font-bold">
               "{CORE_PHRASE}"
             </p>
           </div>
 
-          {/* Direction */}
-          <div className="px-4 py-4 border-b border-white/10">
-            <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Direção do take:</div>
-            <p className="font-mono text-[12px] text-white/70 leading-relaxed">
-              {currentTake.instruction}
-            </p>
-          </div>
-
-          {/* Target duration */}
-          <div className="px-4 py-3 border-b border-white/10">
-            <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-1">Duração alvo:</div>
-            <div className="font-mono text-sm text-white/60">~{currentTake.targetSecs} segundos</div>
-          </div>
+          {/* Direção — lembrete condensado visível durante gravação */}
+          {phase === "recording" && (
+            <div className="px-4 py-3 border-b border-white/10">
+              <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-1.5">Lembre-se:</div>
+              <p className={`font-mono text-[11px] leading-relaxed ${currentTake.color.split(" ")[0]}`}>
+                {currentTake.instruction}
+              </p>
+            </div>
+          )}
 
           {/* Take list */}
           <div className="px-4 py-4 flex-1">
@@ -520,29 +578,22 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="px-4 py-4 border-t border-white/10 space-y-2">
-            {phase === "camera_check" && (
-              <Button
-                onClick={startTake}
-                className="w-full font-mono text-[11px] uppercase tracking-widest rounded-none gap-2 h-10"
-                style={{ background: "var(--primary)", color: "black" }}
-              >
-                <Radio className="h-3.5 w-3.5" /> Gravar take
-              </Button>
+          {/* Status contextual no rodapé */}
+          <div className="px-4 py-4 border-t border-white/10">
+            {phase === "camera_check" && countdown === null && (
+              <div className="font-mono text-[10px] text-white/30 text-center leading-relaxed">
+                Leia a direção na tela<br />e clique para iniciar
+              </div>
             )}
             {phase === "recording" && (
-              <Button
-                onClick={stopTake}
-                variant="outline"
-                className="w-full font-mono text-[11px] uppercase tracking-widest rounded-none gap-2 border-red-500/40 text-red-400 hover:bg-red-500/10 h-10"
-              >
-                <Square className="h-3.5 w-3.5" /> Parar gravação
-              </Button>
+              <div className="font-mono text-[10px] text-primary/70 text-center flex items-center justify-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                Clique o botão ao terminar de ler
+              </div>
             )}
             {phase === "review" && (
               <div className="font-mono text-[10px] text-white/40 text-center">
-                Take gravado ✓ — escolha acima
+                Take gravado ✓ — escolha na câmera
               </div>
             )}
           </div>
