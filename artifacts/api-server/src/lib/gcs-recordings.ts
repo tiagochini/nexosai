@@ -83,3 +83,30 @@ export async function uploadBufferToGCS(
   await gcs.bucket(bucketId()).file(key).save(buf, { contentType, resumable: false });
   return key;
 }
+
+/** GCS object key convention for presence-post storyboard frames (internal preview). */
+export function presenceStoryboardObjectKey(workspaceId: string, postId: string, frameIndex: number): string {
+  return `presence-storyboard/${workspaceId}/${postId}/frame-${frameIndex}.png`;
+}
+
+/** GCS object key convention for user-uploaded presence-post media. */
+export function presenceMediaObjectKey(workspaceId: string, postId: string, filename: string): string {
+  return `presence-media/${workspaceId}/${postId}/${filename}`;
+}
+
+/** Create a read stream for any GCS object key. */
+export function createGCSObjectStream(
+  objectKey: string,
+  opts?: { start?: number; end?: number },
+) {
+  return gcs.bucket(bucketId()).file(objectKey).createReadStream(opts ?? {});
+}
+
+/** Get content type + size for a GCS object. */
+export async function getGCSObjectMeta(objectKey: string): Promise<{ contentType: string; size: number }> {
+  const [meta] = await gcs.bucket(bucketId()).file(objectKey).getMetadata();
+  return {
+    contentType: (meta.contentType as string) ?? "application/octet-stream",
+    size: parseInt(meta.size as string, 10),
+  };
+}

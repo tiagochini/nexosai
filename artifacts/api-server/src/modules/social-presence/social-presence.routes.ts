@@ -17,9 +17,23 @@ import {
   findCampaignContextById,
   listWorkspaceCampaigns,
   currentPlanWeekStart,
+  generatePostStoryboard,
+  streamPublicPresenceMedia,
+  approveStoryboardGenerateVideo,
+  pollPostMediaJob,
+  attachUploadedMedia,
+  confirmVideoAttachment,
 } from "./social-presence.service.js";
 
 const router = Router();
+
+// ─── Rota pública (sem auth) — serving de mídia para publicação nas redes ────
+// Registrada ANTES do requireAuth para Instagram/TikTok poderem baixar a mídia.
+router.get("/media/serve", async (req, res): Promise<void> => {
+  const key = (req.query as { key?: string }).key ?? "";
+  await streamPublicPresenceMedia(key, res);
+});
+
 router.use(requireAuth);
 
 const platformConfigSchema = z.object({
@@ -187,6 +201,97 @@ router.patch("/posts/:id", async (req, res): Promise<void> => {
 router.get("/campaigns", async (req, res): Promise<void> => {
   const campaigns = await listWorkspaceCampaigns(req.auth.workspaceId);
   res.json({ campaigns });
+});
+
+// ─── Media Production Pipeline ───────────────────────────────────────────────
+
+// POST /api/presence/posts/:id/media/generate-storyboard
+// Salva eventuais edições de direção/roteiro e inicia geração do storyboard.
+router.post("/posts/:id/media/generate-storyboard", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  const schema = z.object({
+    visualDirection: z.string().max(2000).optional(),
+    videoScript: z.string().max(4000).nullable().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  // Salvar edições se fornecidas
+  if (parsed.success && (parsed.data.visualDirection !== undefined || parsed.data.videoScript !== undefined)) {
+    await updatePost(req.auth.workspaceId, id, {
+      visualDirection: parsed.data.visualDirection,
+      videoScript: parsed.data.videoScript,
+    }).catch(() => {});
+  }
+  const post = await generatePostStoryboard(req.auth.workspaceId, id, req.log);
+  if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
+  res.status(202).json({ post });
+});
+
+// POST /api/presence/posts/:id/media/generate-video — inicia geração do vídeo após aprovar storyboard
+router.post("/posts/:id/media/generate-video", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  try {
+    const post = await approveStoryboardGenerateVideo(req.auth.workspaceId, id, req.log);
+    if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
+    res.status(202).json({ post });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao iniciar geração de vídeo.";
+    res.status(409).json({ error: msg });
+  }
+});
+
+// GET /api/presence/posts/:id/media/poll — verifica status do job de vídeo
+router.get("/posts/:id/media/poll", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  const post = await pollPostMediaJob(req.auth.workspaceId, id, req.log);
+  if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
+  res.json({ post });
+});
+
+// POST /api/presence/posts/:id/media/confirm-video — confirma o vídeo gerado e limpa estado temporário
+router.post("/posts/:id/media/confirm-video", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  try {
+    const post = await confirmVideoAttachment(req.auth.workspaceId, id);
+    if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
+    res.json({ post });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao confirmar vídeo.";
+    res.status(409).json({ error: msg });
+  }
+});
+
+// POST /api/presence/posts/:id/media/upload — recebe arquivo binário e salva no GCS
+// Client: fetch(url, { method: 'POST', body: file, headers: { 'Content-Type': file.type, 'X-Filename': file.name } })
+router.post("/posts/:id/media/upload", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  const contentType = (req.headers["content-type"] ?? "application/octet-stream").split(";")[0].trim();
+  const filename = (req.headers["x-filename"] as string | undefined) ?? `upload.${contentType.split("/")[1] ?? "bin"}`;
+
+  const chunks: Buffer[] = [];
+  req.on("data", (chunk: Buffer) => chunks.push(chunk));
+  await new Promise<void>((resolve, reject) => {
+    req.on("end", resolve);
+    req.on("error", reject);
+  });
+  const buffer = Buffer.concat(chunks);
+
+  if (buffer.length === 0) {
+    res.status(400).json({ error: "Arquivo vazio." });
+    return;
+  }
+  if (buffer.length > 200 * 1024 * 1024) { // 200 MB máx
+    res.status(413).json({ error: "Arquivo muito grande (máx 200 MB)." });
+    return;
+  }
+
+  try {
+    const post = await attachUploadedMedia(req.auth.workspaceId, id, buffer, contentType, filename, req.log);
+    if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
+    res.json({ post });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao fazer upload.";
+    res.status(500).json({ error: msg });
+  }
 });
 
 // ─── Test post ────────────────────────────────────────────────────────────────

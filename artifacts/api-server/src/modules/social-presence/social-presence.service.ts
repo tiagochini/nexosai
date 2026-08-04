@@ -6,13 +6,27 @@
  */
 
 import { eq, and, desc, gte, lt, lte, inArray } from "drizzle-orm";
+import OpenAI from "openai";
 import {
   db,
   socialPresenceConfigTable,
   socialPresencePostsTable,
   campaignsTable,
   workspaceIntegrationsTable,
+  workspacesTable,
 } from "@workspace/db";
+import {
+  uploadBufferToGCS,
+  presenceMediaObjectKey,
+  createGCSObjectStream,
+  getGCSObjectMeta,
+} from "../../lib/gcs-recordings.js";
+import {
+  generateVideoClip,
+  generateAvatarVideo,
+  pollVideoJob,
+} from "../video-production/video-generation.service.js";
+import { env } from "../../lib/env.js";
 import type {
   SocialPresenceConfig,
   SocialPresencePost,
@@ -1264,6 +1278,346 @@ export async function publishDuePresencePosts(): Promise<void> {
   } catch (err) {
     logger.warn({ err }, "publishDuePresencePosts: tick error (non-fatal)");
   }
+}
+
+// ─── Media Generation Pipeline ────────────────────────────────────────────────
+// Fluxo: roteiro → storyboard (baixa resolução) → vídeo final com avatar clone
+
+function buildImageClient(): OpenAI {
+  if (env.OPENAI_API_KEY) return new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  if (env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+    return new OpenAI({ apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY, baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL });
+  }
+  throw new Error("OPENAI_API_KEY não configurado — geração de imagem indisponível");
+}
+
+function formatToAspectSize(format: string): "1024x1024" | "1536x1024" | "1024x1536" {
+  if (["reel", "story"].includes(format)) return "1024x1536";   // 9:16
+  if (["live"].includes(format)) return "1536x1024";            // 16:9
+  return "1024x1024";                                           // 1:1 para feed/carousel
+}
+
+async function generateStoryboardFrame(
+  visualDirection: string,
+  caption: string,
+  platform: string,
+  format: string,
+  log: Logger,
+): Promise<Buffer> {
+  const openai = buildImageClient();
+  const size = formatToAspectSize(format);
+  const prompt = [
+    `Storyboard frame for a ${platform} ${format} post.`,
+    `Visual direction: ${visualDirection}`,
+    `Context: ${caption.slice(0, 200)}`,
+    "Cinematic composition, professional photography style.",
+    "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
+  ].join(" ");
+
+  log.info({ platform, format, size }, "presence: generating storyboard frame (gpt-image-1 low)");
+  const response = await openai.images.generate({
+    model: "gpt-image-1",
+    prompt,
+    n: 1,
+    size,
+    quality: "low",
+  });
+
+  const b64 = response.data?.[0]?.b64_json;
+  if (!b64) throw new Error("gpt-image-1 returned no image data");
+  return Buffer.from(b64, "base64");
+}
+
+async function getWorkspacePersona(workspaceId: string): Promise<{
+  heygenAvatarId?: string;
+  voiceCloneId?: string;
+  avatarType?: "talking_photo" | "stock" | "digital_twin";
+}> {
+  const [ws] = await db
+    .select({ settings: workspacesTable.settings })
+    .from(workspacesTable)
+    .where(eq(workspacesTable.id, workspaceId))
+    .limit(1);
+  const persona = ((ws?.settings as Record<string, unknown> | null)?.persona ?? {}) as Record<string, unknown>;
+  return {
+    heygenAvatarId: persona.heygenAvatarId as string | undefined,
+    voiceCloneId: persona.voiceCloneId as string | undefined,
+    avatarType: (persona.avatarType as "talking_photo" | "stock" | "digital_twin" | undefined) ?? "talking_photo",
+  };
+}
+
+/** Inicia geração do storyboard (baixa resolução) para aprovação.
+ *  Fire-and-forget: retorna imediatamente com status 'storyboard_generating'.
+ *  O storyboard é armazenado como base64 data URL em storyboardUrls para
+ *  fácil exibição no frontend sem endpoint de serving adicional. */
+export async function generatePostStoryboard(
+  workspaceId: string,
+  postId: string,
+  log: Logger,
+): Promise<SocialPresencePost | null> {
+  const [post] = await db
+    .select()
+    .from(socialPresencePostsTable)
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!post) return null;
+
+  const [updating] = await db
+    .update(socialPresencePostsTable)
+    .set({ mediaGenStatus: "storyboard_generating", storyboardUrls: [], mediaJobId: null, mediaJobProvider: null })
+    .where(eq(socialPresencePostsTable.id, postId))
+    .returning();
+
+  setImmediate(async () => {
+    try {
+      const imgBuf = await generateStoryboardFrame(
+        post.visualDirection,
+        post.caption,
+        post.platform,
+        post.format,
+        log,
+      );
+      // Armazenar como base64 data URL diretamente — sem serving endpoint extra
+      const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
+
+      await db
+        .update(socialPresencePostsTable)
+        .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [dataUrl] })
+        .where(eq(socialPresencePostsTable.id, postId));
+
+      log.info({ postId }, "presence: storyboard generated");
+    } catch (err) {
+      log.warn({ err, postId }, "presence: storyboard generation failed");
+      await db
+        .update(socialPresencePostsTable)
+        .set({
+          mediaGenStatus: "failed",
+          errorMessage: `Storyboard falhou: ${err instanceof Error ? err.message : String(err)}`,
+        })
+        .where(eq(socialPresencePostsTable.id, postId));
+    }
+  });
+
+  return updating;
+}
+
+/** Stream de uma mídia pública (user upload) para publicação nas redes sociais. */
+export async function streamPublicPresenceMedia(
+  gcsKey: string,
+  res: import("express").Response,
+): Promise<void> {
+  // Validação de segurança: só serve objetos no prefixo controlado
+  if (!gcsKey.startsWith("presence-media/")) {
+    res.status(403).end();
+    return;
+  }
+  try {
+    const { contentType, size } = await getGCSObjectMeta(gcsKey);
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Length", String(size));
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    createGCSObjectStream(gcsKey).pipe(res);
+  } catch {
+    res.status(404).end();
+  }
+}
+
+/** Aprova o storyboard e inicia a geração do vídeo real.
+ *  Usa HeyGen avatar (se configurado) → fallback para Runway/Kling. */
+export async function approveStoryboardGenerateVideo(
+  workspaceId: string,
+  postId: string,
+  log: Logger,
+): Promise<SocialPresencePost | null> {
+  const [post] = await db
+    .select()
+    .from(socialPresencePostsTable)
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!post) return null;
+
+  if (post.mediaGenStatus !== "storyboard_ready") {
+    throw new Error("Storyboard ainda não aprovado ou não disponível.");
+  }
+
+  const [updating] = await db
+    .update(socialPresencePostsTable)
+    .set({ mediaGenStatus: "video_generating" })
+    .where(eq(socialPresencePostsTable.id, postId))
+    .returning();
+
+  setImmediate(async () => {
+    try {
+      const persona = await getWorkspacePersona(workspaceId);
+      let result;
+
+      // Prefere vídeo com avatar (HeyGen) se o workspace tiver configurado
+      if (persona.heygenAvatarId && persona.voiceCloneId) {
+        const voiceoverText = post.videoScript?.trim()
+          ? post.videoScript
+          : `${post.caption}\n\n${post.hashtags.map((h) => `#${h}`).join(" ")}`;
+
+        result = await generateAvatarVideo({
+          voiceoverText,
+          avatarId: persona.heygenAvatarId,
+          voiceId: persona.voiceCloneId,
+          avatarType: persona.avatarType ?? "talking_photo",
+          aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "16:9",
+        });
+      } else {
+        // Fallback: vídeo cinematográfico sem avatar (Runway / Kling)
+        const prompt = [
+          post.visualDirection,
+          `Platform: ${post.platform}, format: ${post.format}.`,
+          "High quality, cinematic, professional social media content. No text overlays.",
+        ].join(" ");
+
+        result = await generateVideoClip({
+          prompt,
+          durationSeconds: ["story", "reel"].includes(post.format) ? 10 : 8,
+          aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "1:1",
+          resolution: "1080p",
+          negativePrompt: "text, subtitles, watermark, low quality, blurry",
+        });
+      }
+
+      if (result.status === "failed" || result.status === "provider_not_configured") {
+        throw new Error(result.error ?? result.setupInstructions ?? "Provedor de vídeo não configurado.");
+      }
+
+      if (result.status === "ready" && result.clipUrl) {
+        // Vídeo entregue imediatamente (raro, mas possível)
+        await db
+          .update(socialPresencePostsTable)
+          .set({
+            mediaGenStatus: "video_ready",
+            mediaJobId: null,
+            mediaJobProvider: null,
+            mediaUrls: [result.clipUrl],
+          })
+          .where(eq(socialPresencePostsTable.id, postId));
+      } else {
+        // Vídeo assíncrono: salvar job ID para polling
+        await db
+          .update(socialPresencePostsTable)
+          .set({
+            mediaJobId: result.jobId ?? null,
+            mediaJobProvider: result.provider ?? null,
+          })
+          .where(eq(socialPresencePostsTable.id, postId));
+      }
+
+      log.info({ postId, provider: result.provider, jobId: result.jobId }, "presence: video generation submitted");
+    } catch (err) {
+      log.warn({ err, postId }, "presence: video generation failed");
+      await db
+        .update(socialPresencePostsTable)
+        .set({
+          mediaGenStatus: "failed",
+          errorMessage: `Geração de vídeo falhou: ${err instanceof Error ? err.message : String(err)}`,
+        })
+        .where(eq(socialPresencePostsTable.id, postId));
+    }
+  });
+
+  return updating;
+}
+
+/** Verifica o status do job de geração de vídeo no provedor e atualiza o post. */
+export async function pollPostMediaJob(
+  workspaceId: string,
+  postId: string,
+  log: Logger,
+): Promise<SocialPresencePost | null> {
+  const [post] = await db
+    .select()
+    .from(socialPresencePostsTable)
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!post) return null;
+  if (post.mediaGenStatus !== "video_generating" || !post.mediaJobId || !post.mediaJobProvider) {
+    return post;
+  }
+
+  try {
+    const result = await pollVideoJob(post.mediaJobId, post.mediaJobProvider);
+    if (result.status === "ready" && result.clipUrl) {
+      const [updated] = await db
+        .update(socialPresencePostsTable)
+        .set({ mediaGenStatus: "video_ready", mediaUrls: [result.clipUrl], mediaJobId: null })
+        .where(eq(socialPresencePostsTable.id, postId))
+        .returning();
+      log.info({ postId, url: result.clipUrl }, "presence: video ready");
+      return updated;
+    } else if (result.status === "failed") {
+      const [updated] = await db
+        .update(socialPresencePostsTable)
+        .set({ mediaGenStatus: "failed", errorMessage: result.error ?? "Geração de vídeo falhou." })
+        .where(eq(socialPresencePostsTable.id, postId))
+        .returning();
+      return updated;
+    }
+    // ainda processando
+    return post;
+  } catch (err) {
+    log.warn({ err, postId }, "presence: pollPostMediaJob error (non-fatal)");
+    return post;
+  }
+}
+
+/** Upload de mídia enviada pelo usuário (imagem ou vídeo) → GCS → atualiza mediaUrls. */
+export async function attachUploadedMedia(
+  workspaceId: string,
+  postId: string,
+  buffer: Buffer,
+  contentType: string,
+  originalFilename: string,
+  log: Logger,
+): Promise<SocialPresencePost | null> {
+  const [post] = await db
+    .select({ id: socialPresencePostsTable.id, workspaceId: socialPresencePostsTable.workspaceId })
+    .from(socialPresencePostsTable)
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!post) return null;
+
+  const ext = originalFilename.split(".").pop()?.toLowerCase() ?? "bin";
+  const key = presenceMediaObjectKey(workspaceId, postId, `${Date.now()}.${ext}`);
+  await uploadBufferToGCS(buffer, key, contentType);
+
+  // URL pública que o Instagram/TikTok consegue acessar
+  const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+  log.info({ postId, key, serveUrl }, "presence: media uploaded");
+
+  const [updated] = await db
+    .update(socialPresencePostsTable)
+    .set({ mediaUrls: [serveUrl], mediaGenStatus: null, mediaJobId: null })
+    .where(eq(socialPresencePostsTable.id, postId))
+    .returning();
+  return updated;
+}
+
+/** Vincula o vídeo gerado pela IA ao post (transição video_ready → mediaUrls confirmado). */
+export async function confirmVideoAttachment(
+  workspaceId: string,
+  postId: string,
+): Promise<SocialPresencePost | null> {
+  const [post] = await db
+    .select()
+    .from(socialPresencePostsTable)
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!post) return null;
+  if (post.mediaGenStatus !== "video_ready" || !post.mediaUrls?.length) {
+    throw new Error("Vídeo ainda não está pronto ou não gerado.");
+  }
+  // Limpar estado temporário da pipeline — o vídeo já está em mediaUrls
+  const [updated] = await db
+    .update(socialPresencePostsTable)
+    .set({ mediaGenStatus: null, storyboardUrls: [], mediaJobId: null, mediaJobProvider: null })
+    .where(eq(socialPresencePostsTable.id, postId))
+    .returning();
+  return updated;
 }
 
 /**

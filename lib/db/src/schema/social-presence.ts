@@ -147,6 +147,15 @@ export const socialPresencePostsTable = pgTable("social_presence_posts", {
     .default({ likes: 0, comments: 0, shares: 0, views: 0, reach: 0, impressions: 0 }),
   metricsSyncedAt: timestamp("metrics_synced_at", { withTimezone: true }),
   aiGenerated: boolean("ai_generated").notNull().default(true),
+  // ─── Pipeline de produção de mídia (storyboard → vídeo) ─────────────────────
+  // 'storyboard_generating' | 'storyboard_ready' | 'video_generating' | 'video_ready' | 'failed'
+  mediaGenStatus: text("media_gen_status"),
+  // GCS keys dos frames do storyboard (baixa resolução, só preview interno)
+  storyboardUrls: jsonb("storyboard_urls").notNull().$type<string[]>().default([]),
+  // Job ID do provedor de vídeo (Runway / Kling / HeyGen) para polling
+  mediaJobId: text("media_job_id"),
+  // 'runway' | 'kling' | 'heygen'
+  mediaJobProvider: text("media_job_provider"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

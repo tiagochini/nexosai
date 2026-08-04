@@ -6,8 +6,10 @@ import {
   Share2, Settings, Sparkles, Loader2, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, X, Instagram, Facebook, Music2, Linkedin,
   CalendarDays, ListChecks, BarChart3, Lightbulb, Copy, Check,
-  Rocket, PenLine, ThumbsUp, Zap, Send, Link2Off,
+  Rocket, PenLine, ThumbsUp, Zap, Send, Link2Off, Film, ImageIcon,
 } from "lucide-react";
+import { MediaProductionDrawer } from "./MediaProductionDrawer";
+import type { MediaPresencePost } from "./MediaProductionDrawer";
 
 const API = "/api/presence";
 
@@ -75,6 +77,11 @@ interface PresencePost {
   platformUrl: string | null;
   errorMessage: string | null;
   metrics: { likes: number; comments: number; shares: number; views: number; reach: number; impressions: number };
+  // Media production pipeline
+  mediaGenStatus: string | null;
+  storyboardUrls: string[];
+  mediaJobId: string | null;
+  mediaJobProvider: string | null;
 }
 interface MetricsOverview {
   totals: {
@@ -132,6 +139,7 @@ export default function PresencePage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
+  const [mediaDrawerPostId, setMediaDrawerPostId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadConfig = useCallback(async () => {
@@ -255,6 +263,12 @@ export default function PresencePage() {
       setOptimizingBio(false);
     }
   };
+
+  const openMediaDrawer = useCallback((postId: string) => setMediaDrawerPostId(postId), []);
+
+  const handleMediaDrawerUpdate = useCallback((updated: MediaPresencePost) => {
+    setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } as PresencePost : p)));
+  }, []);
 
   const currentWeekPosts = posts.filter((p) => !weekStart || p.weekStart?.slice(0, 10) === weekStart.slice(0, 10));
   const drafts = posts.filter((p) => p.status === "draft");
@@ -434,6 +448,7 @@ export default function PresencePage() {
                             onMarkPublished={() => patchPost(p.id, { status: "published" })}
                             onPublishNow={() => publishNow(p.id)}
                             publishingNow={publishingNow.has(p.id)}
+                            onOpenMediaDrawer={() => openMediaDrawer(p.id)}
                           />
                         ))}
                       </div>
@@ -462,6 +477,7 @@ export default function PresencePage() {
                     onSaveCaption={(caption) => patchPost(p.id, { caption })}
                     onPublishNow={() => publishNow(p.id)}
                     publishingNow={publishingNow.has(p.id)}
+                    onOpenMediaDrawer={() => openMediaDrawer(p.id)}
                   />
                 ))}
               </div>
@@ -534,6 +550,17 @@ export default function PresencePage() {
       {showBio && config && (
         <BioModal suggestions={config.bioSuggestions ?? []} onClose={() => setShowBio(false)} />
       )}
+      {mediaDrawerPostId && (() => {
+        const drawerPost = posts.find((p) => p.id === mediaDrawerPostId);
+        if (!drawerPost) return null;
+        return (
+          <MediaProductionDrawer
+            post={drawerPost as unknown as MediaPresencePost}
+            onClose={() => setMediaDrawerPostId(null)}
+            onPostUpdated={handleMediaDrawerUpdate}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -566,8 +593,10 @@ function EmptyWeek({ generating, onGenerate }: { generating: boolean; onGenerate
 
 // ─── Calendar post card ───────────────────────────────────────────────────────
 
+const REQUIRES_MEDIA = ["instagram", "tiktok"];
+
 function CalendarPostCard({
-  post, expanded, onToggle, onApprove, onCancel, onMarkPublished, onPublishNow, publishingNow,
+  post, expanded, onToggle, onApprove, onCancel, onMarkPublished, onPublishNow, publishingNow, onOpenMediaDrawer,
 }: {
   post: PresencePost;
   expanded: boolean;
@@ -577,22 +606,32 @@ function CalendarPostCard({
   onMarkPublished: () => void;
   onPublishNow: () => void;
   publishingNow: boolean;
+  onOpenMediaDrawer: () => void;
 }) {
   const meta = PLATFORM_META[post.platform];
   const status = STATUS_META[post.status];
+  const hasMedia = (post.mediaUrls?.length ?? 0) > 0;
+  const needsMedia = REQUIRES_MEDIA.includes(post.platform) && post.format !== "text" && !hasMedia;
+  const isGeneratingMedia = post.mediaGenStatus === "storyboard_generating" || post.mediaGenStatus === "video_generating";
+
   return (
-    <div className="rounded-md border border-border bg-background/60 p-2 text-xs">
+    <div className={`rounded-md border bg-background/60 p-2 text-xs ${needsMedia ? "border-amber-500/30" : "border-border"}`}>
       <button onClick={onToggle} className="w-full text-left" data-testid={`post-card-${post.id}`}>
         <div className="flex items-center gap-1.5">
           {meta && <meta.icon className={`h-3.5 w-3.5 shrink-0 ${meta.cls}`} />}
           <span className="text-muted-foreground">{post.postingTime}</span>
           <span className="ml-auto rounded border border-border px-1 py-0.5 text-[10px]">{FORMAT_LABEL[post.format] ?? post.format}</span>
+          {isGeneratingMedia && <Loader2 className="h-3 w-3 animate-spin text-primary shrink-0" />}
+          {hasMedia && !isGeneratingMedia && <ImageIcon className="h-3 w-3 text-green-400 shrink-0" aria-label="Tem mídia" />}
         </div>
         <p className={`mt-1.5 ${expanded ? "" : "line-clamp-3"}`}>{post.caption}</p>
       </button>
-      <div className="mt-1.5 flex items-center gap-1">
+      <div className="mt-1.5 flex items-center gap-1 flex-wrap">
         {status && <span className={`rounded border px-1.5 py-0.5 text-[10px] ${status.cls}`}>{status.label}</span>}
         {post.launchAligned && <Rocket className="h-3 w-3 text-primary" aria-label="Alinhado ao lançamento" />}
+        {needsMedia && (post.status === "draft" || post.status === "scheduled") && (
+          <span className="rounded border border-amber-500/30 bg-amber-500/8 px-1.5 py-0.5 text-[10px] text-amber-400">Aguardando mídia</span>
+        )}
       </div>
       {expanded && (
         <div className="mt-2 space-y-2 border-t border-border pt-2">
@@ -609,6 +648,18 @@ function CalendarPostCard({
             <p className="text-[11px] text-amber-400">{post.errorMessage}</p>
           )}
           <div className="flex flex-wrap gap-1.5">
+            {(post.status === "draft" || post.status === "scheduled") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[11px] border-primary/40 text-primary hover:bg-primary/10"
+                onClick={onOpenMediaDrawer}
+                data-testid={`button-media-${post.id}`}
+              >
+                <Film className="mr-1 h-3 w-3" />
+                {hasMedia ? "Trocar Mídia" : isGeneratingMedia ? "Ver Produção" : "Adicionar Mídia"}
+              </Button>
+            )}
             {post.status === "draft" && (
               <Button size="sm" className="h-6 px-2 text-[11px]" onClick={onApprove} data-testid={`button-approve-${post.id}`}>
                 <ThumbsUp className="mr-1 h-3 w-3" /> Aprovar
@@ -649,7 +700,7 @@ function CalendarPostCard({
 // ─── Queue post card (aprovação com edição) ──────────────────────────────────
 
 function QueuePostCard({
-  post, onApprove, onCancel, onSaveCaption, onPublishNow, publishingNow,
+  post, onApprove, onCancel, onSaveCaption, onPublishNow, publishingNow, onOpenMediaDrawer,
 }: {
   post: PresencePost;
   onApprove: () => void;
@@ -657,17 +708,32 @@ function QueuePostCard({
   onSaveCaption: (caption: string) => void;
   onPublishNow: () => void;
   publishingNow: boolean;
+  onOpenMediaDrawer: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [caption, setCaption] = useState(post.caption);
   const meta = PLATFORM_META[post.platform];
+  const hasMedia = (post.mediaUrls?.length ?? 0) > 0;
+  const needsMedia = REQUIRES_MEDIA.includes(post.platform) && post.format !== "text" && !hasMedia;
+  const isGeneratingMedia = post.mediaGenStatus === "storyboard_generating" || post.mediaGenStatus === "video_generating";
+
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4">
+    <div className={`rounded-lg border bg-card/50 p-4 ${needsMedia ? "border-amber-500/25" : "border-border"}`}>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         {meta && <meta.icon className={`h-4 w-4 ${meta.cls}`} />}
         <span className="font-medium">{meta?.label ?? post.platform}</span>
         <Badge variant="outline">{FORMAT_LABEL[post.format] ?? post.format}</Badge>
         {post.pillar && <Badge variant="outline" className="text-muted-foreground">{post.pillar}</Badge>}
+        {isGeneratingMedia && (
+          <Badge variant="outline" className="border-primary/30 text-primary gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" /> Gerando mídia…
+          </Badge>
+        )}
+        {hasMedia && !isGeneratingMedia && (
+          <Badge variant="outline" className="border-green-500/30 text-green-400 gap-1">
+            <ImageIcon className="h-3 w-3" /> Mídia pronta
+          </Badge>
+        )}
         <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3.5 w-3.5" /> {DAYS[post.dayIndex]} · {post.postingTime}
         </span>
@@ -695,6 +761,18 @@ function QueuePostCard({
       {post.visualDirection && (
         <p className="mt-2 text-xs text-muted-foreground"><strong>Direção visual:</strong> {post.visualDirection}</p>
       )}
+      {needsMedia && (
+        <div className="mt-2 flex items-center gap-2 rounded-md border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-400">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span className="flex-1">Aguardando mídia — Instagram/TikTok requerem imagem ou vídeo para publicação.</span>
+          <button
+            className="text-amber-300 underline underline-offset-2 hover:text-amber-200 shrink-0 font-medium"
+            onClick={onOpenMediaDrawer}
+          >
+            Adicionar
+          </button>
+        </div>
+      )}
       {!editing && (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" onClick={onApprove} data-testid={`button-queue-approve-${post.id}`}>
@@ -712,6 +790,16 @@ function QueuePostCard({
               ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               : <Zap className="mr-1.5 h-3.5 w-3.5" />}
             {publishingNow ? "Publicando..." : "Publicar Agora"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-primary/10"
+            onClick={onOpenMediaDrawer}
+            data-testid={`button-queue-media-${post.id}`}
+          >
+            <Film className="mr-1.5 h-3.5 w-3.5" />
+            {hasMedia ? "Trocar Mídia" : isGeneratingMedia ? "Ver Produção" : "Adicionar Mídia"}
           </Button>
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             <PenLine className="mr-1.5 h-3.5 w-3.5" /> Editar
