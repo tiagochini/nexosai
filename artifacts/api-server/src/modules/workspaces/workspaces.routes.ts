@@ -193,6 +193,46 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   res.status(existing ? 200 : 201).json({ integration, validationDetail });
 });
 
+// ── Test saved integration ────────────────────────────────────────────────────
+// POST /workspaces/me/integrations/:id/test
+// Re-pings the provider API using the stored token and returns a ValidationResult.
+// The accessToken is never exposed to the client — only the result detail/error.
+router.post("/me/integrations/:id/test", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+
+  const [integration] = await db
+    .select()
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.id, id),
+        eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId),
+      ),
+    )
+    .limit(1);
+
+  if (!integration) {
+    res.status(404).json({ error: "Integração não encontrada." });
+    return;
+  }
+
+  const result = await testIntegrationCredential(integration.provider, {
+    accessToken: integration.accessToken ?? undefined,
+    accountId: integration.accountId ?? undefined,
+    webhookUrl: integration.webhookUrl ?? undefined,
+    metadata: (integration.metadata as Record<string, unknown> | null) ?? undefined,
+  });
+
+  // Never echo the token back — return only the human-readable result.
+  res.json({
+    valid: result.valid,
+    detail: result.detail,
+    error: result.error,
+    validationSkipped: result.validationSkipped ?? false,
+    accountName: result.accountName,
+  });
+});
+
 // NOTE: HeyGen/ElevenLabs/Runway/Kling are NexOS-operated AI infrastructure,
 // never customer-connectable integrations — there is intentionally no
 // "bring your own API key" endpoint for them here. Do not re-add one; it

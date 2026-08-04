@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   CheckCircle2, XCircle, Loader2, Link2, AlertTriangle,
-  Wifi, WifiOff,
+  Wifi, WifiOff, Plug,
 } from "lucide-react";
 import {
   ConnectModal, INTEGRATION_CATALOG, INTEGRATION_CATEGORIES,
@@ -23,6 +23,31 @@ export default function IntegracoesPage() {
   const queryClient = useQueryClient();
   const [connectModal, setConnectModal] = useState<CatalogEntry | null>(null);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+
+  type TestResult = { valid: boolean; detail?: string; error?: string; validationSkipped?: boolean };
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+
+  const handleTestConnection = async (integrationId: string) => {
+    setTesting(integrationId);
+    setTestResults(prev => { const n = { ...prev }; delete n[integrationId]; return n; });
+    try {
+      const result = await customFetch<TestResult>(
+        `/api/workspaces/me/integrations/${integrationId}/test`,
+        { method: "POST" },
+      );
+      setTestResults(prev => ({ ...prev, [integrationId]: result }));
+      // Auto-clear success after 8s; keep error until next action
+      if (result.valid) setTimeout(() => setTestResults(p => { const n = { ...p }; delete n[integrationId]; return n; }), 8000);
+    } catch (err) {
+      setTestResults(prev => ({
+        ...prev,
+        [integrationId]: { valid: false, error: err instanceof Error ? err.message : "Erro ao testar conexão." },
+      }));
+    } finally {
+      setTesting(null);
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
@@ -238,22 +263,55 @@ export default function IntegracoesPage() {
                         {/* Action */}
                         <div className="shrink-0 flex flex-col items-end gap-1.5">
                           {isConn ? (
-                            entry.provider !== "facebook" ? (
-                              <button
-                                onClick={() => integration && handleDisconnect(integration.id)}
-                                disabled={disconnecting === integration?.id}
-                                className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-destructive transition-colors flex items-center gap-1"
-                              >
-                                {disconnecting === integration?.id
-                                  ? <Loader2 className="h-3 w-3 animate-spin" />
-                                  : <XCircle className="h-3 w-3" />}
-                                Desconectar
-                              </button>
-                            ) : (
-                              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
-                                Desconecte pelo Instagram
-                              </span>
-                            )
+                            <>
+                              {/* Test result badge */}
+                              {integration && testResults[integration.id] && (
+                                <div className={`font-mono text-[10px] flex items-center gap-1 max-w-[180px] text-right leading-tight ${
+                                  testResults[integration.id].valid
+                                    ? "text-success"
+                                    : "text-destructive"
+                                }`}>
+                                  {testResults[integration.id].valid
+                                    ? <CheckCircle2 className="h-3 w-3 shrink-0" />
+                                    : <XCircle className="h-3 w-3 shrink-0" />}
+                                  <span className="truncate">
+                                    {testResults[integration.id].valid
+                                      ? (testResults[integration.id].detail ?? "Conexão OK")
+                                      : (testResults[integration.id].error ?? "Falha na conexão")}
+                                  </span>
+                                </div>
+                              )}
+                              {/* Test connection button */}
+                              {entry.provider !== "facebook" && (
+                                <button
+                                  onClick={() => integration && handleTestConnection(integration.id)}
+                                  disabled={testing === integration?.id}
+                                  className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1"
+                                >
+                                  {testing === integration?.id
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <Plug className="h-3 w-3" />}
+                                  {testing === integration?.id ? "Testando..." : "Testar Conexão"}
+                                </button>
+                              )}
+                              {/* Disconnect button */}
+                              {entry.provider !== "facebook" ? (
+                                <button
+                                  onClick={() => integration && handleDisconnect(integration.id)}
+                                  disabled={disconnecting === integration?.id}
+                                  className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-destructive transition-colors flex items-center gap-1"
+                                >
+                                  {disconnecting === integration?.id
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <XCircle className="h-3 w-3" />}
+                                  Desconectar
+                                </button>
+                              ) : (
+                                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
+                                  Desconecte pelo Instagram
+                                </span>
+                              )}
+                            </>
                           ) : (
                             <Button
                               size="sm"
