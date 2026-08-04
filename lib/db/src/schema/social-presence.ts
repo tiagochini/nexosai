@@ -84,6 +84,12 @@ export const socialPresenceConfigTable = pgTable("social_presence_config", {
   contentPillars: text("content_pillars").array().notNull().default([]),
   tone: text("tone").notNull().default(""),
   businessContext: text("business_context").notNull().default(""),
+  // Alinhamento de campanha explicitamente escolhido pelo usuário.
+  // null = sem alinhamento; preenchido = conteúdo alinhado a essa campanha.
+  alignedCampaignId: uuid("aligned_campaign_id").references(
+    () => campaignsTable.id,
+    { onDelete: "set null" },
+  ),
   weeklyInsight: jsonb("weekly_insight").$type<PresenceWeeklyInsight | null>(),
   bioSuggestions: jsonb("bio_suggestions")
     .notNull()

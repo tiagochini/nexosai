@@ -6,7 +6,7 @@ import {
   Share2, Settings, Sparkles, Loader2, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, X, Instagram, Facebook, Music2, Linkedin,
   CalendarDays, ListChecks, BarChart3, Lightbulb, Copy, Check,
-  Rocket, PenLine, ThumbsUp, Zap,
+  Rocket, PenLine, ThumbsUp, Zap, Send, Link2Off,
 } from "lucide-react";
 
 const API = "/api/presence";
@@ -43,6 +43,7 @@ interface PresenceConfig {
   contentPillars: string[];
   tone: string;
   businessContext: string;
+  alignedCampaignId: string | null;
   weeklyInsight: WeeklyInsight | null;
   bioSuggestions: BioSuggestion[];
   lastWeekGeneratedAt: string | null;
@@ -298,14 +299,34 @@ export default function PresencePage() {
         </div>
       </div>
 
-      {/* Launch alignment badge */}
+      {/* Campaign alignment badge — shown only if user chose one (or auto-detected active launch) */}
       {activeLaunch && (
-        <div className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm">
-          <Rocket className="h-4 w-4 shrink-0 text-primary" />
-          <span>
-            <strong>Semana de Lançamento</strong> — conteúdo alinhado à campanha{" "}
-            <span className="text-primary">{activeLaunch.title}</span>
-          </span>
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-4 py-2.5 text-sm">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-4 w-4 shrink-0 text-primary" />
+            <span>
+              Conteúdo alinhado à campanha{" "}
+              <span className="text-primary font-medium">{activeLaunch.title}</span>
+            </span>
+          </div>
+          <button
+            className="text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 shrink-0"
+            onClick={() => setShowConfig(true)}
+          >
+            Alterar
+          </button>
+        </div>
+      )}
+      {!activeLaunch && config && (
+        <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/10 px-4 py-2.5 text-sm text-muted-foreground/60">
+          <Link2Off className="h-4 w-4 shrink-0" />
+          <span>Sem alinhamento de campanha — conteúdo de autoridade independente.</span>
+          <button
+            className="ml-auto text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 shrink-0"
+            onClick={() => setShowConfig(true)}
+          >
+            Alinhar
+          </button>
         </div>
       )}
 
@@ -720,11 +741,48 @@ function ConfigModal({
   const [pillars, setPillars] = useState((config?.contentPillars ?? []).join(", "));
   const [tone, setTone] = useState(config?.tone ?? "");
   const [businessContext, setBusinessContext] = useState(config?.businessContext ?? "");
+  const [alignedCampaignId, setAlignedCampaignId] = useState<string>(config?.alignedCampaignId ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Campaign list for alignment dropdown
+  const [campaigns, setCampaigns] = useState<{ id: string; title: string; status: string }[]>([]);
+  useEffect(() => {
+    customFetch<{ campaigns: { id: string; title: string; status: string }[] }>(`${API}/campaigns`)
+      .then((d) => setCampaigns(d.campaigns))
+      .catch(() => {});
+  }, []);
+
+  // Test post state
+  const enabledPlatforms = platforms.filter((p) => p.enabled && p.platform !== "linkedin");
+  const [testPlatform, setTestPlatform] = useState<string>("");
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; platformUrl?: string; error?: string } | null>(null);
+
+  // Auto-select first enabled testable platform
+  useEffect(() => {
+    if (!testPlatform && enabledPlatforms.length > 0) setTestPlatform(enabledPlatforms[0].platform);
+  }, [enabledPlatforms.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const updatePlatform = (idx: number, patch: Partial<PlatformConfig>) => {
     setPlatforms((prev) => prev.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
+  };
+
+  const runTestPost = async () => {
+    if (!testPlatform) return;
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const res = await customFetch<{ success: boolean; platformUrl?: string; error?: string }>(
+        `${API}/test-post`,
+        { method: "POST", body: JSON.stringify({ platform: testPlatform }) },
+      );
+      setTestResult(res);
+    } catch (err) {
+      setTestResult({ success: false, error: err instanceof Error ? err.message : "Erro ao enviar post de teste." });
+    } finally {
+      setTestLoading(false);
+    }
   };
 
   const save = async () => {
@@ -739,6 +797,7 @@ function ConfigModal({
           contentPillars: pillars.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 8),
           tone,
           businessContext,
+          alignedCampaignId: alignedCampaignId || null,
         }),
       });
       onSaved();
@@ -747,6 +806,12 @@ function ConfigModal({
     } finally {
       setSaving(false);
     }
+  };
+
+  const STATUS_LABEL: Record<string, string> = {
+    intake: "Intake", analyzing: "Analisando", awaiting_approval: "Aguardando",
+    generating: "Gerando", ready: "Pronto", executing: "Executando",
+    live: "Ao vivo", completed: "Concluído", cancelled: "Cancelado",
   };
 
   return (
@@ -765,6 +830,7 @@ function ConfigModal({
           <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} data-testid="checkbox-active" />
         </label>
 
+        {/* ── Platforms ──────────────────────────────────────────────────── */}
         <div className="mt-4 space-y-3">
           <h3 className="text-sm font-medium">Plataformas</h3>
           {platforms.map((p, idx) => {
@@ -828,6 +894,28 @@ function ConfigModal({
           })}
         </div>
 
+        {/* ── Campaign alignment ─────────────────────────────────────────── */}
+        <div className="mt-4 space-y-1.5 text-sm">
+          <h3 className="font-medium">Alinhamento de Campanha</h3>
+          <p className="text-xs text-muted-foreground">
+            A IA adapta o conteúdo ao contexto da campanha escolhida. Deixe em "Sem alinhamento" para conteúdo de autoridade independente.
+          </p>
+          <select
+            className="w-full rounded-md border border-border bg-background p-2 text-sm"
+            value={alignedCampaignId}
+            onChange={(e) => setAlignedCampaignId(e.target.value)}
+            data-testid="select-aligned-campaign"
+          >
+            <option value="">— Sem alinhamento —</option>
+            {campaigns.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title} [{STATUS_LABEL[c.status] ?? c.status}]
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* ── Content fields ─────────────────────────────────────────────── */}
         <div className="mt-4 space-y-3 text-sm">
           <label className="block space-y-1">
             <span className="text-muted-foreground">Pilares de conteúdo (separados por vírgula)</span>
@@ -853,13 +941,74 @@ function ConfigModal({
             <span className="text-muted-foreground">Contexto do negócio (produto, público, promessa)</span>
             <textarea
               className="w-full rounded-md border border-border bg-background p-2"
-              rows={4}
+              rows={3}
               value={businessContext}
               onChange={(e) => setBusinessContext(e.target.value)}
-              placeholder="Se vazio, a IA usa os dados da sua campanha mais recente."
+              placeholder="Se vazio, a IA usa os dados da campanha selecionada ou da mais recente."
               data-testid="textarea-business-context"
             />
           </label>
+        </div>
+
+        {/* ── Test post ──────────────────────────────────────────────────── */}
+        <div className="mt-5 rounded-lg border border-dashed border-border p-3.5 space-y-3">
+          <div>
+            <h3 className="text-sm font-medium flex items-center gap-1.5">
+              <Send className="h-3.5 w-3.5 text-primary" /> Publicação de Teste
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Envia um post real de teste para confirmar que a integração está funcionando antes de investir tempo na estrutura.
+            </p>
+          </div>
+
+          {enabledPlatforms.length === 0 ? (
+            <p className="text-xs text-amber-400">Ative pelo menos uma plataforma acima (Instagram, Facebook ou TikTok) para testar.</p>
+          ) : (
+            <div className="flex gap-2 items-end flex-wrap">
+              <label className="flex-1 min-w-[140px] space-y-1 text-xs">
+                <span className="text-muted-foreground">Plataforma</span>
+                <select
+                  className="w-full rounded-md border border-border bg-background p-1.5 text-sm"
+                  value={testPlatform}
+                  onChange={(e) => { setTestPlatform(e.target.value); setTestResult(null); }}
+                >
+                  {enabledPlatforms.map((p) => {
+                    const meta = PLATFORM_META[p.platform];
+                    return <option key={p.platform} value={p.platform}>{meta?.label ?? p.platform}</option>;
+                  })}
+                </select>
+              </label>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={runTestPost}
+                disabled={testLoading || !testPlatform}
+                className="h-8"
+                data-testid="button-test-post"
+              >
+                {testLoading
+                  ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Enviando...</>
+                  : <><Send className="mr-1.5 h-3.5 w-3.5" /> Enviar Post de Teste</>}
+              </Button>
+            </div>
+          )}
+
+          {testResult && (
+            <div className={`rounded-md px-3 py-2 text-xs flex items-start gap-2 ${
+              testResult.success
+                ? "bg-green-500/10 border border-green-500/20 text-green-400"
+                : "bg-destructive/10 border border-destructive/20 text-destructive"
+            }`}>
+              {testResult.success
+                ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                : <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
+              <div>
+                {testResult.success
+                  ? <>Post publicado com sucesso! {testResult.platformUrl && <a href={testResult.platformUrl} target="_blank" rel="noreferrer" className="underline">Ver post →</a>}</>
+                  : <>{testResult.error ?? "Erro ao publicar post de teste."}</>}
+              </div>
+            </div>
+          )}
         </div>
 
         {error && <p className="mt-3 text-sm text-destructive">{error}</p>}

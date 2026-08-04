@@ -10,9 +10,12 @@ import {
   approvePost,
   updatePost,
   publishPostNow,
+  publishTestPost,
   optimizeBio,
   getMetricsOverview,
   findActiveLaunchContext,
+  findCampaignContextById,
+  listWorkspaceCampaigns,
   currentPlanWeekStart,
 } from "./social-presence.service.js";
 
@@ -33,6 +36,7 @@ const configSchema = z.object({
   contentPillars: z.array(z.string().min(1).max(120)).max(8).optional(),
   tone: z.string().max(300).optional(),
   businessContext: z.string().max(4000).optional(),
+  alignedCampaignId: z.string().uuid().nullable().optional(),
 });
 
 const postPatchSchema = z.object({
@@ -50,14 +54,29 @@ const postPatchSchema = z.object({
 
 router.get("/config", async (req, res): Promise<void> => {
   const config = await getConfig(req.auth.workspaceId);
-  const launch = await findActiveLaunchContext(req.auth.workspaceId).catch(() => null);
+
+  // Resolve aligned campaign:
+  // 1. If user explicitly chose a campaign → use it (even if not active)
+  // 2. Otherwise → fall back to auto-detecting the active launch
+  let alignedCampaign: { campaignId: string; title: string; status: string } | null = null;
+  if (config?.alignedCampaignId) {
+    const ctx = await findCampaignContextById(req.auth.workspaceId, config.alignedCampaignId).catch(() => null);
+    if (ctx) {
+      alignedCampaign = { campaignId: ctx.campaignId, title: ctx.context.campaignTitle, status: ctx.context.campaignStatus };
+    }
+  } else {
+    const launch = await findActiveLaunchContext(req.auth.workspaceId).catch(() => null);
+    if (launch) {
+      alignedCampaign = { campaignId: launch.campaignId, title: launch.context.campaignTitle, status: launch.context.campaignStatus };
+    }
+  }
+
   res.json({
     config,
     generating: isGeneratingWeek(req.auth.workspaceId),
     currentWeekStart: currentPlanWeekStart().toISOString(),
-    activeLaunch: launch
-      ? { campaignId: launch.campaignId, title: launch.context.campaignTitle, status: launch.context.campaignStatus }
-      : null,
+    // activeLaunch kept for backwards compat — now carries the user-chosen or auto-detected campaign
+    activeLaunch: alignedCampaign,
   });
 });
 
@@ -161,6 +180,28 @@ router.patch("/posts/:id", async (req, res): Promise<void> => {
     const msg = err instanceof Error ? err.message : "Erro ao editar post.";
     res.status(409).json({ error: msg });
   }
+});
+
+// ─── Campaigns list (for alignment dropdown) ─────────────────────────────────
+
+router.get("/campaigns", async (req, res): Promise<void> => {
+  const campaigns = await listWorkspaceCampaigns(req.auth.workspaceId);
+  res.json({ campaigns });
+});
+
+// ─── Test post ────────────────────────────────────────────────────────────────
+
+router.post("/test-post", async (req, res): Promise<void> => {
+  const schema = z.object({
+    platform: z.enum(["instagram", "facebook", "tiktok"]),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Plataforma inválida. Use instagram, facebook ou tiktok." });
+    return;
+  }
+  const result = await publishTestPost(req.auth.workspaceId, parsed.data.platform);
+  res.status(result.success ? 200 : 422).json(result);
 });
 
 // ─── Bio Optimizer ────────────────────────────────────────────────────────────

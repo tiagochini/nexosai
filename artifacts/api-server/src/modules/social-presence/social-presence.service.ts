@@ -68,6 +68,8 @@ export interface ConfigPatch {
   contentPillars?: string[];
   tone?: string;
   businessContext?: string;
+  /** Explicitly chosen campaign to align presence content with. null = no alignment. */
+  alignedCampaignId?: string | null;
 }
 
 export async function upsertConfig(
@@ -75,10 +77,19 @@ export async function upsertConfig(
   patch: ConfigPatch,
 ): Promise<SocialPresenceConfig> {
   const existing = await getConfig(workspaceId);
+  // Build the set object so we can explicitly set alignedCampaignId to null
+  const setData: Record<string, unknown> = {};
+  if (patch.active !== undefined) setData.active = patch.active;
+  if (patch.platforms !== undefined) setData.platforms = patch.platforms;
+  if (patch.contentPillars !== undefined) setData.contentPillars = patch.contentPillars;
+  if (patch.tone !== undefined) setData.tone = patch.tone;
+  if (patch.businessContext !== undefined) setData.businessContext = patch.businessContext;
+  if ("alignedCampaignId" in patch) setData.alignedCampaignId = patch.alignedCampaignId ?? null;
+
   if (existing) {
     const [updated] = await db
       .update(socialPresenceConfigTable)
-      .set(patch)
+      .set(setData)
       .where(eq(socialPresenceConfigTable.workspaceId, workspaceId))
       .returning();
     return updated;
@@ -92,6 +103,7 @@ export async function upsertConfig(
       contentPillars: patch.contentPillars ?? [],
       tone: patch.tone ?? "",
       businessContext: patch.businessContext ?? "",
+      alignedCampaignId: patch.alignedCampaignId ?? null,
     })
     .returning();
   return created;
@@ -175,6 +187,164 @@ export async function findActiveLaunchContext(
           : "aquecimento — antecipação e crença, sem venda direta",
     },
   };
+}
+
+// ─── Alinhamento por campanha explícita ──────────────────────────────────────
+
+/**
+ * Like findActiveLaunchContext but for a specific campaign chosen by the user.
+ * Returns null if the campaign doesn't exist or isn't accessible to the workspace.
+ */
+export async function findCampaignContextById(
+  workspaceId: string,
+  campaignId: string,
+): Promise<{ campaignId: string; context: PresenceLaunchContext } | null> {
+  const [campaign] = await db
+    .select({
+      id: campaignsTable.id,
+      title: campaignsTable.title,
+      status: campaignsTable.status,
+    })
+    .from(campaignsTable)
+    .where(
+      and(
+        eq(campaignsTable.id, campaignId),
+        eq(campaignsTable.workspaceId, workspaceId),
+      ),
+    )
+    .limit(1);
+
+  if (!campaign) return null;
+
+  const brain = await getCampaignBrain(campaign.id).catch(() => null);
+  const narrative = brain?.narrative;
+
+  return {
+    campaignId: campaign.id,
+    context: {
+      campaignTitle: campaign.title,
+      campaignStatus: campaign.status,
+      centralNarrative: narrative?.centralNarrative || undefined,
+      bigDomino: narrative?.bigDomino || undefined,
+      forbiddenTopics: narrative?.forbiddenTopics?.length
+        ? narrative.forbiddenTopics
+        : undefined,
+      launchPhaseHint:
+        campaign.status === "live"
+          ? "carrinho aberto — urgência permitida"
+          : campaign.status === "executing"
+          ? "aquecimento — antecipação e crença, sem venda direta"
+          : "campanha em elaboração — conteúdo de autoridade e posicionamento",
+    },
+  };
+}
+
+// ─── Listar campanhas do workspace (para seletor no modal) ───────────────────
+
+export async function listWorkspaceCampaigns(
+  workspaceId: string,
+): Promise<{ id: string; title: string; status: string }[]> {
+  return db
+    .select({
+      id: campaignsTable.id,
+      title: campaignsTable.title,
+      status: campaignsTable.status,
+    })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.workspaceId, workspaceId))
+    .orderBy(desc(campaignsTable.updatedAt))
+    .limit(50);
+}
+
+// ─── Publicação de teste ──────────────────────────────────────────────────────
+
+export async function publishTestPost(
+  workspaceId: string,
+  platform: "instagram" | "facebook" | "tiktok",
+): Promise<{ success: boolean; platformUrl?: string; platformPostId?: string; error?: string }> {
+  const log = logger.child({ component: "presence-test-post", workspaceId, platform });
+
+  const provider = PLATFORM_TO_PROVIDER[platform];
+  if (!provider) {
+    return { success: false, error: `Plataforma ${platform} não suporta publicação automática.` };
+  }
+
+  const [integration] = await db
+    .select()
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        eq(workspaceIntegrationsTable.provider, provider as never),
+        eq(workspaceIntegrationsTable.status, "connected"),
+      ),
+    )
+    .limit(1);
+
+  if (!integration) {
+    return {
+      success: false,
+      error: `Integração com ${platform} não conectada. Vá em /integracoes e conecte.`,
+    };
+  }
+
+  const now = new Date();
+  const ts = now.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  const caption =
+    `🧪 Post de teste NexOS — ${ts}\n\nEste é um post automático para verificar a integração. Pode apagar após confirmar que está funcionando! ✅`;
+
+  const mockPost = {
+    id: `test-${Date.now()}`,
+    workspaceId,
+    campaignId: null,
+    contentPieceId: null,
+    integrationId: integration.id,
+    platform: (platform === "facebook" ? "facebook_page" : platform) as never,
+    postType: "feed_image" as never,
+    status: "publishing" as never,
+    caption,
+    hashtags: ["#NexOS", "#Teste"],
+    mediaUrls: [],
+    callToAction: null,
+    linkUrl: null,
+    scheduledAt: now,
+    publishedAt: null,
+    platformPostId: null,
+    platformUrl: null,
+    metrics: { likes: 0, comments: 0, shares: 0, views: 0, reach: 0, impressions: 0, clicks: 0 },
+    retryCount: 0,
+    errorMessage: null,
+    aiGenerated: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    let result;
+    if (platform === "instagram") {
+      result = await publishToInstagram(mockPost as never, integration);
+    } else if (platform === "facebook") {
+      result = await publishToFacebook(mockPost as never, integration);
+    } else {
+      result = await publishToTikTok(mockPost as never, integration);
+    }
+
+    if (result.success) {
+      log.info({ platformPostId: result.platformPostId }, "presence: test post published");
+      return {
+        success: true,
+        platformUrl: result.platformUrl ?? undefined,
+        platformPostId: result.platformPostId ?? undefined,
+      };
+    } else {
+      log.warn({ error: result.error }, "presence: test post failed");
+      return { success: false, error: result.error ?? "Erro desconhecido ao publicar." };
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.warn({ err }, "presence: test post exception");
+    return { success: false, error: msg };
+  }
 }
 
 // ─── Semana de planejamento ──────────────────────────────────────────────────
