@@ -18,6 +18,8 @@
     "stress-full-3": "SAMPLE=3 tsx ./src/stress-test/nexos-stress-full.ts",
     "stress-full-10": "SAMPLE=10 tsx ./src/stress-test/nexos-stress-full.ts",
     "stress-full-critico": "DIFFICULTY=critico tsx ./src/stress-test/nexos-stress-full.ts",
+    "proof-prohibited-promises": "tsx ./src/proof-prohibited-promises.ts",
+    "proof-acknowledge": "tsx ./src/proof-acknowledge-and-wait.ts",
     "stress-full-extreme": "EXTREME_ONLY=true tsx ./src/stress-test/nexos-stress-full.ts",
     "stress-full-all": "ALL=true tsx ./src/stress-test/nexos-stress-full.ts",
     "generate-audit-pdf": "tsx ./src/generate-audit-pdf.ts",
