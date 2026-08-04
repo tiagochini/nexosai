@@ -266,6 +266,27 @@ export default function PresencePage() {
 
   const openMediaDrawer = useCallback((postId: string) => setMediaDrawerPostId(postId), []);
 
+  /**
+   * "Publicar Agora" com guarda de mídia:
+   * - Se o post requer mídia (Instagram/TikTok, formato não-texto) e ainda não tem
+   *   mediaUrls preenchido → abre o MediaProductionDrawer em vez de chamar publish-now.
+   * - Só dispara publish-now quando a mídia já está presente (ou não é necessária).
+   */
+  const handlePublishNow = useCallback((postId: string) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    const hasMedia = (post.mediaUrls?.length ?? 0) > 0;
+    const needsMedia =
+      REQUIRES_MEDIA.includes(post.platform) &&
+      post.format !== "text" &&
+      !hasMedia;
+    if (needsMedia) {
+      openMediaDrawer(postId);
+    } else {
+      publishNow(postId);
+    }
+  }, [posts, openMediaDrawer, publishNow]);
+
   const handleMediaDrawerUpdate = useCallback((updated: MediaPresencePost) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } as PresencePost : p)));
   }, []);
@@ -446,7 +467,7 @@ export default function PresencePage() {
                             onApprove={() => approve(p.id)}
                             onCancel={() => patchPost(p.id, { status: "cancelled" })}
                             onMarkPublished={() => patchPost(p.id, { status: "published" })}
-                            onPublishNow={() => publishNow(p.id)}
+                            onPublishNow={() => handlePublishNow(p.id)}
                             publishingNow={publishingNow.has(p.id)}
                             onOpenMediaDrawer={() => openMediaDrawer(p.id)}
                           />
@@ -475,7 +496,7 @@ export default function PresencePage() {
                     onApprove={() => approve(p.id)}
                     onCancel={() => patchPost(p.id, { status: "cancelled" })}
                     onSaveCaption={(caption) => patchPost(p.id, { caption })}
-                    onPublishNow={() => publishNow(p.id)}
+                    onPublishNow={() => handlePublishNow(p.id)}
                     publishingNow={publishingNow.has(p.id)}
                     onOpenMediaDrawer={() => openMediaDrawer(p.id)}
                   />
