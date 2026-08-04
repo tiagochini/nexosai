@@ -9,6 +9,7 @@ import {
   listPosts,
   approvePost,
   updatePost,
+  publishPostNow,
   optimizeBio,
   getMetricsOverview,
   findActiveLaunchContext,
@@ -121,6 +122,21 @@ router.post("/posts/:id/approve", async (req, res): Promise<void> => {
     res.json({ post });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro ao aprovar post.";
+    res.status(409).json({ error: msg });
+  }
+});
+
+router.post("/posts/:id/publish-now", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  try {
+    const post = await publishPostNow(req.auth.workspaceId, id);
+    if (!post) {
+      res.status(404).json({ error: "Post não encontrado." });
+      return;
+    }
+    res.status(202).json({ post });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao publicar post.";
     res.status(409).json({ error: msg });
   }
 });

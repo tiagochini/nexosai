@@ -6,7 +6,7 @@ import {
   Share2, Settings, Sparkles, Loader2, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, X, Instagram, Facebook, Music2, Linkedin,
   CalendarDays, ListChecks, BarChart3, Lightbulb, Copy, Check,
-  Rocket, PenLine, ThumbsUp,
+  Rocket, PenLine, ThumbsUp, Zap,
 } from "lucide-react";
 
 const API = "/api/presence";
@@ -130,6 +130,7 @@ export default function PresencePage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState<string | null>(null);
+  const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadConfig = useCallback(async () => {
@@ -221,6 +222,22 @@ export default function PresencePage() {
       setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Erro ao atualizar post.");
+    }
+  };
+
+  const publishNow = async (postId: string) => {
+    setActionError(null);
+    setPublishingNow((prev) => new Set(prev).add(postId));
+    try {
+      const { post } = await customFetch<{ post: PresencePost }>(`${API}/posts/${postId}/publish-now`, { method: "POST" });
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
+      // Poll for a few seconds so UI reflects when status transitions to published/failed
+      setTimeout(async () => { try { await loadPosts(); } catch { /* noop */ } }, 3000);
+      setTimeout(async () => { try { await loadPosts(); } catch { /* noop */ } }, 8000);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Erro ao publicar post.");
+    } finally {
+      setPublishingNow((prev) => { const s = new Set(prev); s.delete(postId); return s; });
     }
   };
 
@@ -394,6 +411,8 @@ export default function PresencePage() {
                             onApprove={() => approve(p.id)}
                             onCancel={() => patchPost(p.id, { status: "cancelled" })}
                             onMarkPublished={() => patchPost(p.id, { status: "published" })}
+                            onPublishNow={() => publishNow(p.id)}
+                            publishingNow={publishingNow.has(p.id)}
                           />
                         ))}
                       </div>
@@ -420,6 +439,8 @@ export default function PresencePage() {
                     onApprove={() => approve(p.id)}
                     onCancel={() => patchPost(p.id, { status: "cancelled" })}
                     onSaveCaption={(caption) => patchPost(p.id, { caption })}
+                    onPublishNow={() => publishNow(p.id)}
+                    publishingNow={publishingNow.has(p.id)}
                   />
                 ))}
               </div>
@@ -525,7 +546,7 @@ function EmptyWeek({ generating, onGenerate }: { generating: boolean; onGenerate
 // ─── Calendar post card ───────────────────────────────────────────────────────
 
 function CalendarPostCard({
-  post, expanded, onToggle, onApprove, onCancel, onMarkPublished,
+  post, expanded, onToggle, onApprove, onCancel, onMarkPublished, onPublishNow, publishingNow,
 }: {
   post: PresencePost;
   expanded: boolean;
@@ -533,6 +554,8 @@ function CalendarPostCard({
   onApprove: () => void;
   onCancel: () => void;
   onMarkPublished: () => void;
+  onPublishNow: () => void;
+  publishingNow: boolean;
 }) {
   const meta = PLATFORM_META[post.platform];
   const status = STATUS_META[post.status];
@@ -570,6 +593,21 @@ function CalendarPostCard({
                 <ThumbsUp className="mr-1 h-3 w-3" /> Aprovar
               </Button>
             )}
+            {(post.status === "draft" || post.status === "scheduled") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[11px] border-amber-500/40 text-amber-400 hover:bg-amber-400/10"
+                onClick={onPublishNow}
+                disabled={publishingNow}
+                data-testid={`button-publish-now-${post.id}`}
+              >
+                {publishingNow
+                  ? <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  : <Zap className="mr-1 h-3 w-3" />}
+                {publishingNow ? "Publicando..." : "Publicar Agora"}
+              </Button>
+            )}
             {post.status === "scheduled" && (
               <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={onMarkPublished}>
                 <Check className="mr-1 h-3 w-3" /> Marcar publicado
@@ -590,12 +628,14 @@ function CalendarPostCard({
 // ─── Queue post card (aprovação com edição) ──────────────────────────────────
 
 function QueuePostCard({
-  post, onApprove, onCancel, onSaveCaption,
+  post, onApprove, onCancel, onSaveCaption, onPublishNow, publishingNow,
 }: {
   post: PresencePost;
   onApprove: () => void;
   onCancel: () => void;
   onSaveCaption: (caption: string) => void;
+  onPublishNow: () => void;
+  publishingNow: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [caption, setCaption] = useState(post.caption);
@@ -638,6 +678,19 @@ function QueuePostCard({
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" onClick={onApprove} data-testid={`button-queue-approve-${post.id}`}>
             <ThumbsUp className="mr-1.5 h-3.5 w-3.5" /> Aprovar e Agendar
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-500/40 text-amber-400 hover:bg-amber-400/10"
+            onClick={onPublishNow}
+            disabled={publishingNow}
+            data-testid={`button-queue-publish-now-${post.id}`}
+          >
+            {publishingNow
+              ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              : <Zap className="mr-1.5 h-3.5 w-3.5" />}
+            {publishingNow ? "Publicando..." : "Publicar Agora"}
           </Button>
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             <PenLine className="mr-1.5 h-3.5 w-3.5" /> Editar

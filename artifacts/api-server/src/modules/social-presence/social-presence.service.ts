@@ -860,6 +860,52 @@ export async function getMetricsOverview(
  * - facebook: publica texto puro ou com mídia
  * Retry até 3× antes de marcar failed.
  */
+// ─── Publish Now ─────────────────────────────────────────────────────────────
+// Immediately triggers publication of a single post by setting scheduledFor=now
+// and firing the scheduler. Works for draft OR scheduled posts.
+export async function publishPostNow(
+  workspaceId: string,
+  postId: string,
+): Promise<SocialPresencePost | null> {
+  const log = logger.child({ component: "presence-publish-now", postId });
+
+  const [post] = await db
+    .select()
+    .from(socialPresencePostsTable)
+    .where(
+      and(
+        eq(socialPresencePostsTable.id, postId),
+        eq(socialPresencePostsTable.workspaceId, workspaceId),
+      ),
+    )
+    .limit(1);
+
+  if (!post) return null;
+
+  if (post.status === "published" || post.status === "cancelled") {
+    throw new Error("Post já foi publicado ou cancelado.");
+  }
+  if (post.status === "publishing") {
+    throw new Error("Post já está sendo publicado. Aguarde alguns instantes.");
+  }
+
+  // Force scheduledFor to now so publishDuePresencePosts picks it up immediately.
+  const [updated] = await db
+    .update(socialPresencePostsTable)
+    .set({ status: "scheduled", scheduledFor: new Date(), errorMessage: null })
+    .where(eq(socialPresencePostsTable.id, postId))
+    .returning();
+
+  log.info({ platform: post.platform }, "presence: publish-now triggered");
+
+  // Fire-and-forget: the scheduler runs and processes this (and any other due) post.
+  setImmediate(() => publishDuePresencePosts().catch((err) => {
+    log.warn({ err }, "presence: publish-now scheduler tick error");
+  }));
+
+  return updated;
+}
+
 export async function publishDuePresencePosts(): Promise<void> {
   const log = logger.child({ component: "presence-post-scheduler" });
   try {
