@@ -351,7 +351,7 @@ Urgência: ${strategicBrief.urgencyLevel}
 Canais: ${strategicBrief.channels.join(", ")}
 Funil: ${strategicBrief.funnelStage}
 Promessas PERMITIDAS: ${strategicBrief.permittedPromises.join("; ") || "ver diferenciais do produto"}
-Promessas PROIBIDAS: ${strategicBrief.prohibitedPromises.join("; ")}
+Promessas PROIBIDAS (hardConstraints): ${strategicBrief.hardConstraints.join("; ")}
 Limites éticos: ${strategicBrief.ethicalBoundaries.join("; ") || "nenhum listado"}
 Limites legais: ${strategicBrief.legalBoundaries.join("; ")}
 Critérios de sucesso: ${strategicBrief.successCriteria.join("; ")}

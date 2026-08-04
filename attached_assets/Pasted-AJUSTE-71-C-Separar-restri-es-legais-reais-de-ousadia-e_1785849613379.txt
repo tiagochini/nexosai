@@ -1,0 +1,55 @@
+AJUSTE #71-C — Separar restrições legais reais de ousadia estilística,
+com nível de apelo escolhível pelo founder
+
+CONTEXTO: A injeção de prohibitedPromises está funcionando, mas trata
+tudo como restrição rígida. O founder quer distinguir: (a) o que
+realmente arrisca banimento de plataforma ou violação legal — isso
+permanece travado sempre; (b) o que é apenas linguagem ousada/agressiva
+dentro da lei — isso deve ser uma OPÇÃO disponível, não suprimido por
+padrão.
+
+TAREFA:
+1. No strategic_core, separar a saída em duas listas distintas:
+   - hardConstraints: violação legal real (CDC, CONAR, política de
+     anúncio Meta/Google/TikTok) ou claim que pode causar banimento
+     de conta. Nunca opcional.
+   - boldnessOpportunities ou equivalente: onde a linguagem PODERIA
+     ser mais agressiva/ousada mas está sendo contida por segurança
+     de marca, não por exigência legal. Reportar cada item com o
+     motivo da contenção.
+
+2. Adicionar um parâmetro de nível de apelo na campanha (ex:
+   appealIntensity: "protegido" | "ousado"), configurável pelo
+   founder no intake ou nas configurações da campanha.
+   - "protegido" (default): comportamento atual, hardConstraints
+     aplicadas com folga de segurança.
+   - "ousado": hardConstraints continuam intransponíveis (nunca
+     removidas), mas boldnessOpportunities são liberadas — o offer
+     usa linguagem mais forte onde é seguro fazê-lo.
+
+3. offer.agent.ts consome esse parâmetro: quando "ousado", o prompt
+   deve explicitamente permitir e incentivar os itens marcados como
+   boldnessOpportunities, mantendo hardConstraints como restrição
+   absoluta em qualquer nível.
+
+4. Reavaliar o score: rodar a mesma campanha de teste (5c82666d) nos
+   dois níveis e comparar. A expectativa é que "ousado" recupere
+   parte ou todo o score perdido (84→72) SEM violar nenhum dos 10
+   itens de hardConstraints reais — só recuperando a linguagem que
+   foi contida por excesso de cautela, não por exigência legal.
+
+PROVA EXIGIDA:
+1. Mostrar a divisão real gerada pelo strategic_core: quantos itens
+   caíram em hardConstraints vs. boldnessOpportunities para a
+   campanha de teste.
+2. Rodar o offer nos dois níveis (protegido/ousado) e comparar:
+   score, launchReadiness, e o texto real lado a lado.
+3. Confirmar que NENHUM item de hardConstraints foi violado no nível
+   "ousado" — check item a item, como já foi feito na prova anterior.
+4. Se o score no nível "ousado" não subir significativamente mesmo
+   sem violar hardConstraints, investigar se o modelo está sendo
+   penalizado por outro critério não relacionado a compliance.
+
+Este ajuste vale para todos os agentes futuros do grupo (#69) — a
+mesma lógica de "restrição real vs. ousadia opcional" deve ser
+doutrina padrão, não exceção do offer.

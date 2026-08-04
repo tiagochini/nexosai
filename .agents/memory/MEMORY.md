@@ -51,3 +51,5 @@
 - [Intake Chat Resilience Pattern](intake-chat-resilience.md) — interactive AI calls use completeWithAgentSafe + per-call timeoutMs (never lower the global 30-min ceiling); checkpoint history before the LLM call, not after.
 - [Budget Reverse Engineering](budget-reverse-engineering.md) — when no budget set, reverse-engineer from revenueTarget; pieces get status=budget_proposed; resolve via /budget-decision
 - [BullMQ Repeat Score Encoding](bullmq-repeat-score-encoding.md) — raw ZRANGEBYSCORE score ≠ ms timestamp; BullMQ packs nextRunTs*2^12+idx; use job ID suffix or queue.getJobSchedulers() for real scheduledAt.
+- [Constraint Architecture Split](constraint-architecture-split.md) — StrategicBrief.prohibitedPromises split into hardConstraints (legal/ban risk, always active) + boldnessOpportunities (brand-safety self-restraint, released when appealIntensity="ousado").
+- [Meta App Review Compliance](meta-app-review-compliance.md) — legal entity DasKapital Holdings / B.A.T Cabral (ABN 38 320 484 941, AU) must appear in privacy.tsx section 12 + terms.tsx section 1; deletion callback URL must be agencianexos.vip/data-deletion (never .replit.app).

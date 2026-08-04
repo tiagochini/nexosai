@@ -26,6 +26,15 @@ import type { Logger } from "pino";
 
 // ─── Output Types ──────────────────────────────────────────────────────────────
 
+// A boldness opportunity is a claim that COULD be expressed more aggressively
+// within the law but was self-restrained for brand-safety reasons. When the
+// campaign appealIntensity is "ousado", the offer agent is explicitly authorised
+// to use these claims at full strength.
+export interface BoldnessOpportunity {
+  claim: string;              // the bolder version of the claim
+  containmentReason: string;  // why it was held back (brand safety, not legal requirement)
+}
+
 export interface StrategicBrief {
   // Identidade da campanha
   campaignId: string;
@@ -37,7 +46,16 @@ export interface StrategicBrief {
   // Narrativa
   uniqueMechanism: string;          // mecanismo único — spec item 5
   permittedPromises: string[];      // promessas permitidas — spec item 6
-  prohibitedPromises: string[];     // promessas proibidas — spec item 7
+  // ── Constraint architecture (replaces flat prohibitedPromises) ──────────────
+  // hardConstraints: legal/platform violations (CDC, CONAR, Meta/Google/TikTok
+  //   ad policy) or claims that risk account ban. NEVER optional, regardless of
+  //   appealIntensity setting.
+  hardConstraints: string[];
+  // boldnessOpportunities: language that could be more aggressive within the law
+  //   but is currently self-restrained for brand safety. Released when
+  //   appealIntensity === "ousado".
+  boldnessOpportunities: BoldnessOpportunity[];
+  // ─────────────────────────────────────────────────────────────────────────────
   tone: string;                     // tom de comunicação — spec item 8
   language: string;                 // estilo linguístico específico
   // Canais e estratégias
@@ -183,7 +201,13 @@ Retorne APENAS JSON válido.
   "dominantDesire": "string — desejo dominante — o que este avatar realmente quer conquistar/ser/ter",
   "uniqueMechanism": "string — nome e explicação compacta do mecanismo único que justifica o método",
   "permittedPromises": ["string — promessas que o produto pode sustentar com base nos dados fornecidos"],
-  "prohibitedPromises": ["string — promessas que NÃO podem ser feitas (exageradas, sem base, ilegais ou enganosas)"],
+  "hardConstraints": ["string — violação legal real (CDC, CONAR, política de anúncio Meta/Google/TikTok) OU claim que pode causar banimento de conta. NUNCA opcional independentemente do nível de apelo."],
+  "boldnessOpportunities": [
+    {
+      "claim": "string — linguagem mais ousada/agressiva que seria LEGAL e tecnicamente sustentável pelos dados do produto",
+      "containmentReason": "string — por que está sendo contida agora: segurança de marca ou cautela estilística, NÃO exigência legal"
+    }
+  ],
   "tone": "string — tom de comunicação específico (ex: 'direto, autoridade sem arrogância, linguagem de empreendedor sênior')",
   "language": "string — estilo linguístico: nível de vocabulário, o que usar, o que evitar, exemplos de frases-chave",
   "channels": ["string — canais prioritários desta campanha"],
@@ -229,12 +253,12 @@ Você verifica:
 3. Limites éticos: alguma afirmação cruza os limites éticos definidos?
 4. Limites legais: alguma afirmação viola os limites legais definidos?
 5. Contradições internas: o output contradiz a si mesmo ou a estratégia global?
-6. Promessas exageradas: alguma claim não está em permittedPromises e viola prohibitedPromises?
+6. Promessas exageradas: alguma claim não está em permittedPromises e viola hardConstraints?
 7. Experiência do usuário: alguma automação ou decisão sacrifica a experiência do cliente final?
 8. Coerência com o avatar: o output fala com o primaryAvatar correto, na linguagem correta?
 
 ## CRITÉRIOS DE BLOQUEIO (approvalStatus = "blocked")
-- Promessa de resultado que está nas prohibitedPromises ou não tem base nos dados do produto
+- Promessa de resultado que está em hardConstraints ou não tem base nos dados do produto
 - Afirmação que viola ethicalBoundaries ou legalBoundaries definidos no brief
 - Contradição direta com o posicionamento aprovado
 - Segmentação ou copy que insinua atributos sensíveis/proibidos
@@ -244,7 +268,7 @@ Você verifica:
 - Inconsistência com o avatar ou a dor central definidos
 - Urgência que parece fabricada ou não está alinhada com urgencyLevel do brief
 - Métricas ou claims sem base nos dados do brief
-- Promessa não listada em permittedPromises (pode ser válida, mas precisa de validação)
+- Promessa não listada em permittedPromises nem em boldnessOpportunities (pode ser válida, mas precisa de validação)
 
 ## CRITÉRIO DE requiresHumanReview = true
 - approvalStatus = "blocked" ou "requires_revision" com severidade "critical"
@@ -368,7 +392,8 @@ Retorne APENAS o JSON do Brief Estratégico Global.`,
     dominantDesire: profile?.primaryAvatar?.deepestDesire ?? "",
     uniqueMechanism: profile?.positioning?.uniqueMechanism ?? "",
     permittedPromises: [],
-    prohibitedPromises: ["garantir resultado específico de renda", "prometer retorno em prazo fixo sem base"],
+    hardConstraints: ["garantir resultado específico de renda", "prometer retorno em prazo fixo sem base"],
+    boldnessOpportunities: [],
     tone: String(intakeData["content.tone"] ?? "direto, autoridade, linguagem de praticante"),
     language: "",
     channels: [],
@@ -417,7 +442,8 @@ export async function runStrategicCoreValidation(
 - Mecanismo único: ${strategicBrief.uniqueMechanism}
 - Gatilho dominante: ${strategicBrief.dominantTrigger}
 - Promessas PERMITIDAS: ${strategicBrief.permittedPromises.join("; ") || "ver differentials"}
-- Promessas PROIBIDAS: ${strategicBrief.prohibitedPromises.join("; ") || "nenhuma listada"}
+- Restrições absolutas (hardConstraints): ${strategicBrief.hardConstraints.join("; ") || "nenhuma listada"}
+- Oportunidades de ousadia (boldnessOpportunities): ${strategicBrief.boldnessOpportunities.map(b => b.claim).join("; ") || "nenhuma identificada"}
 - Limites éticos: ${strategicBrief.ethicalBoundaries.join("; ") || "nenhum listado"}
 - Limites legais: ${strategicBrief.legalBoundaries.join("; ") || "nenhum listado"}
 - Critérios de sucesso: ${strategicBrief.successCriteria.join("; ") || "não definidos"}

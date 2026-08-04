@@ -799,7 +799,8 @@ Retorne o JSON de avaliação.`,
       confidenceScore: strategicBrief.confidenceScore,
       requiresHumanReview: strategicBrief.requiresHumanReview,
       warnings: strategicBrief.coreWarnings.length,
-      prohibitedPromises: strategicBrief.prohibitedPromises.length,
+      hardConstraints: strategicBrief.hardConstraints.length,
+      boldnessOpportunities: strategicBrief.boldnessOpportunities.length,
     }, "Strategic Core brief generated");
 
     // ── Campaign Memory Layer — initialize from Strategic Brief ──────────────
@@ -1061,7 +1062,9 @@ Retorne o JSON de avaliação.`,
         log,
         memoryContext,
         strategy ?? undefined,
-        strategicBrief?.prohibitedPromises ?? [],
+        strategicBrief?.hardConstraints ?? [],
+        strategicBrief?.boldnessOpportunities ?? [],
+        (intakeData["campaign.appealIntensity"] as string | undefined) === "ousado" ? "ousado" : "protegido",
       );
       offerAnalysis = result as unknown as Record<string, unknown>;
       agentsRun.push("offer");

@@ -247,7 +247,7 @@ export async function initializeCampaignMemory(
   memory.positioning = brief.positioning;
   memory.approvedChannels = brief.channels;
   memory.permittedPromises = brief.permittedPromises;
-  memory.prohibitedClaims = brief.prohibitedPromises;
+  memory.prohibitedClaims = brief.hardConstraints;
   memory.ethicalBoundaries = brief.ethicalBoundaries;
   memory.legalBoundaries = brief.legalBoundaries;
   memory.complianceRules = [

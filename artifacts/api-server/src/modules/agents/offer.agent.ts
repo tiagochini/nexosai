@@ -638,7 +638,9 @@ export async function runOfferAgent(
   log: Logger,
   memoryContext?: string,
   strategyData?: Record<string, unknown>,
-  prohibitedPromises?: string[],
+  hardConstraints?: string[],
+  boldnessOpportunities?: { claim: string; containmentReason: string }[],
+  appealIntensity?: "protegido" | "ousado",
 ): Promise<OfferArchitectOutput> {
   const intakeJson = JSON.stringify(
     {
@@ -727,17 +729,21 @@ Exemplo ERRADO:    "Gold-Calibrated Martingale Automation: a gold-specific logic
     log.warn({ campaignId }, "[OFFER_AGENT] strategyData ausente — oferta construída sem contexto estratégico");
   }
 
-  // ── Build prohibited promises block ──────────────────────────────────────────
-  // Injects Strategic Core's prohibitedPromises as a hard constraint, preventing
-  // the offer from generating claims that will fail compliance downstream.
-  let prohibitedPromisesBlock = "";
-  const activeForbiddenPromises = (prohibitedPromises ?? []).filter(p => p?.trim());
-  if (activeForbiddenPromises.length > 0) {
-    const list = activeForbiddenPromises.map((p, i) => `${i + 1}. ${p}`).join("\n");
-    prohibitedPromisesBlock = `
-**🚫 PROMESSAS PROIBIDAS — STRATEGIC CORE (RESTRIÇÃO ABSOLUTA)**
+  // ── Build constraint + boldness blocks ───────────────────────────────────────
+  // hardConstraints: legal/platform violations from Strategic Core — ALWAYS injected
+  //   as absolute restrictions regardless of appealIntensity.
+  // boldnessOpportunities: brand-safety self-restraints that are RELEASED when
+  //   appealIntensity === "ousado". hardConstraints remain fully in force even then.
+  const activeIntensity = appealIntensity ?? "protegido";
+  let constraintBlock = "";
 
-O Strategic Core identificou as seguintes promessas como proibidas para este produto. Elas NÃO podem aparecer em NENHUM campo do JSON de saída — incluindo corePromise, offerStructure.corePromise, valueStack, objections.response e urgencyArchitecture.messaging:
+  const activeHardConstraints = (hardConstraints ?? []).filter(p => p?.trim());
+  if (activeHardConstraints.length > 0) {
+    const list = activeHardConstraints.map((p, i) => `${i + 1}. ${p}`).join("\n");
+    constraintBlock += `
+**🚫 RESTRIÇÕES ABSOLUTAS — STRATEGIC CORE (NUNCA violáveis)**
+
+O Strategic Core identificou as seguintes restrições como hardConstraints: violações legais reais (CDC, CONAR, política Meta/Google/TikTok) ou claims que causam banimento de conta. NÃO podem aparecer em NENHUM campo do JSON de saída, independentemente do nível de apelo:
 
 ${list}
 
@@ -747,9 +753,48 @@ Na dimensão 12 da auto-auditoria, verifique explicitamente se alguma claim viol
 `;
     log.info({
       campaignId,
-      prohibitedPromisesCount: activeForbiddenPromises.length,
-    }, "[OFFER_AGENT] prohibitedPromises injetadas no prompt como restrição absoluta");
+      hardConstraintsCount: activeHardConstraints.length,
+      appealIntensity: activeIntensity,
+    }, "[OFFER_AGENT] hardConstraints injetadas no prompt como restrição absoluta");
   }
+
+  const activeBoldness = (boldnessOpportunities ?? []).filter(b => b?.claim?.trim());
+  if (activeIntensity === "ousado" && activeBoldness.length > 0) {
+    const list = activeBoldness.map((b, i) =>
+      `${i + 1}. **${b.claim}** _(estava contida por: ${b.containmentReason})_`,
+    ).join("\n");
+    constraintBlock += `
+**✅ OPORTUNIDADES DE OUSADIA — LIBERADAS (nível: ousado)**
+
+O Strategic Core identificou os seguintes claims que PODEM ser expressos com linguagem mais forte e direta neste nível de apelo. Você está AUTORIZADO — e INCENTIVADO — a usá-los em sua forma mais ousada e persuasiva. As restrições absolutas acima continuam intransponíveis; apenas o excesso de cautela estilística é removido:
+
+${list}
+
+Use esses claims para amplificar a promessa central, o mecanismo único e o value stack. Seja direto, específico e impactante.
+
+---
+`;
+    log.info({
+      campaignId,
+      boldnessCount: activeBoldness.length,
+    }, "[OFFER_AGENT] boldnessOpportunities liberadas — nível ousado ativo");
+  } else if (activeIntensity === "ousado" && activeBoldness.length === 0) {
+    log.info({ campaignId }, "[OFFER_AGENT] nível ousado solicitado mas Strategic Core não gerou boldnessOpportunities");
+  } else if (activeBoldness.length > 0) {
+    // "protegido" level: inform the LLM that bolder options exist but are held back
+    const list = activeBoldness.map((b, i) => `${i + 1}. ${b.claim} (contida por: ${b.containmentReason})`).join("\n");
+    constraintBlock += `
+**ℹ️ CLAIMS DISPONÍVEIS MAS CONTIDOS (nível: protegido)**
+
+Os seguintes claims seriam válidos legalmente mas estão sendo suprimidos por cautela de marca neste nível de apelo. Não os use na forma ousada; use versões moderadas e cuidadosas se relevantes:
+
+${list}
+
+---
+`;
+  }
+  // Keep legacy alias for any caller that still references `prohibitedPromisesBlock`
+  const prohibitedPromisesBlock = constraintBlock;
 
   const result = await runAgent({
     campaignId,

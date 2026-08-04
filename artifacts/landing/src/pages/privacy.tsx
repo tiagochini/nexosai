@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 
 export default function PrivacyPolicy() {
-  const lastUpdated = "15 de maio de 2026";
+  const lastUpdated = "4 de agosto de 2026";
   const contactEmail = "privacy@agencianexos.vip";
   const companyName = "NexOS";
   const appUrl = "https://app.agencianexos.vip";
+  const legalEntity = "DasKapital Holdings / B.A.T Cabral";
+  const abn = "38 320 484 941";
 
   useEffect(() => {
     document.title = "NexOS Privacy Policy";
@@ -107,6 +109,9 @@ export default function PrivacyPolicy() {
             <h2 className="text-white font-bold text-base mb-3 uppercase tracking-widest border-b border-white/10 pb-2">4. Integração com Meta (Instagram e Facebook)</h2>
             <p>
               O {companyName} usa a API do Meta para publicar conteúdo no Instagram e Facebook, gerenciar anúncios via Meta Ads, e enviar mensagens via WhatsApp Business API — exclusivamente mediante sua autorização via OAuth.
+            </p>
+            <p className="mt-3 border-l-2 border-blue-500 pl-3">
+              <strong className="text-white">Finalidade estrita de uso da API:</strong> Os dados obtidos por meio das APIs do Meta são utilizados exclusivamente para executar as funcionalidades declaradas neste documento (publicação de conteúdo, gestão de anúncios e envio de mensagens) em nome do usuário que autorizou o acesso. Esses dados não são utilizados para nenhum outro propósito, incluindo re-targeting próprio do NexOS, criação de perfis de usuários finais, ou repasse a terceiros fora do contexto operacional da plataforma.
             </p>
             <div className="mt-4 space-y-2">
               <p><strong className="text-white">Permissões usadas:</strong></p>
@@ -232,7 +237,9 @@ export default function PrivacyPolicy() {
               Para dúvidas, solicitações ou exercício dos seus direitos:
             </p>
             <div className="mt-3 border border-white/10 p-4 bg-white/5 space-y-1">
-              <p><span className="text-white/40">Empresa:</span> NexOS</p>
+              <p><span className="text-white/40">Nome da plataforma:</span> NexOS</p>
+              <p><span className="text-white/40">Operador legal:</span> <strong className="text-white">{legalEntity}</strong></p>
+              <p><span className="text-white/40">ABN (Austrália):</span> {abn}</p>
               <p><span className="text-white/40">E-mail:</span> <a href={`mailto:${contactEmail}`} className="text-blue-400 hover:underline">{contactEmail}</a></p>
               <p><span className="text-white/40">Website:</span> <a href={appUrl} className="text-blue-400 hover:underline">{appUrl}</a></p>
             </div>

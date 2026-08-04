@@ -442,7 +442,7 @@ ${JSON.stringify(
     channels: brief.channels,
     tone: brief.tone,
     permittedPromises: brief.permittedPromises,
-    prohibitedPromises: brief.prohibitedPromises,
+    prohibitedPromises: brief.hardConstraints,
     urgencyLevel: brief.urgencyLevel,
     confidenceScore: brief.confidenceScore,
     coreWarnings: brief.coreWarnings,

@@ -21,11 +21,22 @@ export default function TermsOfService() {
         <div className="mb-12">
           <div className="font-mono text-xs uppercase tracking-widest text-white/30 mb-3">Termos de Uso</div>
           <h1 className="font-mono text-3xl font-bold text-white mb-2">NexOS Terms of Service</h1>
-          <p className="font-mono text-sm text-white/40">Última atualização: 15 de maio de 2026</p>
+          <p className="font-mono text-sm text-white/40">Última atualização: 4 de agosto de 2026</p>
         </div>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">1. Aceitação dos Termos</h2>
+          <h2 className="text-xl font-semibold mb-3">1. Operador do Serviço</h2>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            O NexOS é operado por <strong className="text-white">DasKapital Holdings / B.A.T Cabral</strong>,
+            entidade registrada na Austrália sob o ABN <strong className="text-white">38 320 484 941</strong>.
+          </p>
+          <p className="text-gray-300 leading-relaxed">
+            Contato legal: <a href="mailto:legal@agencianexos.vip" className="text-blue-400 hover:underline">legal@agencianexos.vip</a>
+          </p>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-3">2. Aceitação dos Termos</h2>
           <p className="text-gray-300 leading-relaxed">
             Ao acessar ou usar a plataforma NexOS ("Serviço"), você concorda em ficar
             vinculado a estes Termos de Uso. Se você não concordar com qualquer parte dos
@@ -34,7 +45,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">2. Descrição do Serviço</h2>
+          <h2 className="text-xl font-semibold mb-3">3. Descrição do Serviço</h2>
           <p className="text-gray-300 leading-relaxed">
             O NexOS é uma plataforma SaaS de automação de campanhas digitais com inteligência
             artificial. O Serviço permite que usuários criem, gerenciem e publiquem campanhas de
@@ -44,7 +55,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">3. Contas de Usuário</h2>
+          <h2 className="text-xl font-semibold mb-3">4. Contas de Usuário</h2>
           <p className="text-gray-300 leading-relaxed mb-3">
             Para usar o Serviço, você deve criar uma conta fornecendo informações precisas e
             completas. Você é responsável por manter a confidencialidade de sua senha e por
@@ -58,7 +69,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">4. Integrações com Plataformas de Terceiros</h2>
+          <h2 className="text-xl font-semibold mb-3">5. Integrações com Plataformas de Terceiros</h2>
           <p className="text-gray-300 leading-relaxed mb-3">
             O Serviço integra-se com plataformas de terceiros, incluindo Meta (Facebook e
             Instagram), Google, TikTok e LinkedIn. Ao conectar essas integrações, você autoriza
@@ -72,7 +83,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">5. Uso Aceitável</h2>
+          <h2 className="text-xl font-semibold mb-3">6. Uso Aceitável</h2>
           <p className="text-gray-300 leading-relaxed mb-3">Você concorda em não usar o Serviço para:</p>
           <ul className="list-disc list-inside text-gray-300 space-y-2 ml-4">
             <li>Publicar conteúdo ilegal, enganoso, difamatório ou ofensivo</li>
@@ -85,7 +96,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">6. Créditos e Pagamentos</h2>
+          <h2 className="text-xl font-semibold mb-3">7. Créditos e Pagamentos</h2>
           <p className="text-gray-300 leading-relaxed mb-3">
             O Serviço opera com um sistema de créditos. Os créditos são consumidos conforme o
             uso de funcionalidades do agente. Créditos não utilizados ao final do ciclo de
@@ -100,7 +111,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">7. Propriedade Intelectual</h2>
+          <h2 className="text-xl font-semibold mb-3">8. Propriedade Intelectual</h2>
           <p className="text-gray-300 leading-relaxed">
             O Serviço e seu conteúdo original, recursos e funcionalidades são e permanecerão
             propriedade exclusiva do NexOS. O conteúdo gerado pelo agente em nome do usuário
@@ -111,7 +122,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">8. Limitação de Responsabilidade</h2>
+          <h2 className="text-xl font-semibold mb-3">9. Limitação de Responsabilidade</h2>
           <p className="text-gray-300 leading-relaxed">
             O NexOS não se responsabiliza por resultados de negócios, receitas ou metas de
             conversão não atingidas. O Serviço é fornecido "como está". Em nenhuma circunstância
@@ -121,7 +132,7 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">9. Rescisão</h2>
+          <h2 className="text-xl font-semibold mb-3">10. Rescisão</h2>
           <p className="text-gray-300 leading-relaxed">
             O NexOS pode encerrar ou suspender sua conta imediatamente, sem aviso prévio,
             por violação destes Termos. Após a rescisão, seu direito de usar o Serviço cessa
@@ -131,15 +142,21 @@ export default function TermsOfService() {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">10. Lei Aplicável</h2>
+          <h2 className="text-xl font-semibold mb-3">11. Lei Aplicável</h2>
+          <p className="text-gray-300 leading-relaxed mb-3">
+            O NexOS é operado por <strong className="text-white">DasKapital Holdings / B.A.T Cabral</strong>{" "}
+            (ABN 38 320 484 941), entidade registrada na Austrália. A lei australiana rege as
+            obrigações corporativas do operador.
+          </p>
           <p className="text-gray-300 leading-relaxed">
-            Estes Termos são regidos pelas leis da República Federativa do Brasil. Qualquer
-            disputa será submetida à jurisdição exclusiva dos tribunais da comarca de São Paulo, SP.
+            Para usuários situados no Brasil, aplica-se adicionalmente a Lei Geral de Proteção de Dados
+            (LGPD — Lei 13.709/2018) e o Código de Defesa do Consumidor (CDC). Disputas envolvendo
+            usuários brasileiros serão submetidas à jurisdição dos tribunais competentes no Brasil.
           </p>
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">11. Contato</h2>
+          <h2 className="text-xl font-semibold mb-3">12. Contato</h2>
           <p className="text-gray-300 leading-relaxed">
             Para dúvidas sobre estes Termos de Uso, entre em contato:
           </p>
