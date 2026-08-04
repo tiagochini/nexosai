@@ -54,7 +54,7 @@ export interface OfferArchitectOutput {
   offerName: string;
 
   uniqueMechanism: {
-    name: string;                     // nome nomeável — cria categoria própria
+    name: string;                     // ≤ 8 palavras — nome nomeável, SEM descrição embutida; detalhes vão em explanation
     explanation: string;              // como funciona mecanicamente
     whyCompetitorsFail: string;       // por que alternativas não têm este mecanismo
     ahaStatement: string;             // a frase que o avatar pensa ao entender
@@ -399,7 +399,7 @@ Retorne APENAS JSON válido. Zero texto fora do bloco.
   },
   "offerName": "string",
   "uniqueMechanism": {
-    "name": "string",
+    "name": "string — MÁXIMO 8 PALAVRAS; apenas o nome, SEM descrição, SEM dois-pontos, SEM ponto-e-vírgula; a descrição vai em explanation",
     "explanation": "string",
     "whyCompetitorsFail": "string",
     "ahaStatement": "string",
@@ -609,6 +609,28 @@ function defaultOutput(intakeData: Record<string, unknown>): OfferArchitectOutpu
 
 // ─── Runner ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Extracts the short mechanism name from a primaryDifferentiator string.
+ * Strategy agents often produce: "Short Name: long description...".
+ * The offer must use ONLY the short name (≤ 8 words, no colon, no description).
+ */
+function extractMechanismShortName(primaryDifferentiator: string): string {
+  if (!primaryDifferentiator) return "";
+  // "Name: description" or "Name — description"
+  const colonIdx = primaryDifferentiator.indexOf(":");
+  if (colonIdx > 4 && colonIdx < 80) {
+    const candidate = primaryDifferentiator.slice(0, colonIdx).trim();
+    if (candidate.split(/\s+/).length <= 8) return candidate;
+  }
+  const dashIdx = primaryDifferentiator.indexOf(" — ");
+  if (dashIdx > 4 && dashIdx < 80) {
+    const candidate = primaryDifferentiator.slice(0, dashIdx).trim();
+    if (candidate.split(/\s+/).length <= 8) return candidate;
+  }
+  // Fallback: first 8 words
+  return primaryDifferentiator.trim().split(/\s+/).slice(0, 8).join(" ");
+}
+
 export async function runOfferAgent(
   campaignId: string,
   workspaceId: string,
@@ -616,6 +638,7 @@ export async function runOfferAgent(
   log: Logger,
   memoryContext?: string,
   strategyData?: Record<string, unknown>,
+  prohibitedPromises?: string[],
 ): Promise<OfferArchitectOutput> {
   const intakeJson = JSON.stringify(
     {
@@ -637,14 +660,15 @@ export async function runOfferAgent(
   );
 
   // ── Build strategy context block ─────────────────────────────────────────────
-  // When strategyData is present, extract the fields that anchor the offer:
-  // positioning, unique mechanism name, big domino, sophistication strategy,
-  // core narrative and emotional hook. The offer MUST use the same mechanism
-  // name the strategy agent already defined — never invent a parallel name.
+  // When strategyData is present, extract the fields that anchor the offer.
+  // CRITICAL: primaryDifferentiatorShortName is the ≤8-word extracted name that
+  // will be hard-overridden into uniqueMechanism.name after parse — the LLM is
+  // instructed to use this exact name, and the server enforces it regardless.
   let strategyContextBlock = "";
+  let primaryDifferentiatorShortName = ""; // exposed for post-parse override
   if (strategyData && Object.keys(strategyData).length > 0) {
     const sd = strategyData as any;
-    const primaryDifferentiator: string = sd.offerPositioning?.primaryDifferentiator ?? "";
+    const primaryDifferentiator: string  = sd.offerPositioning?.primaryDifferentiator ?? "";
     const positioning: string            = sd.offerPositioning?.positioning ?? "";
     const uvp: string                    = sd.offerPositioning?.uniqueValueProposition ?? "";
     const bigDomino: string              = sd.bigDomino ?? "";
@@ -652,6 +676,11 @@ export async function runOfferAgent(
     const coreNarrative: string          = sd.campaignArchitecture?.coreNarrative ?? "";
     const emotionalHook: string          = sd.campaignArchitecture?.emotionalHook ?? "";
     const competitiveAdvantages: string[] = sd.offerPositioning?.competitiveAdvantages ?? [];
+
+    // Extract the short name (≤8 words, before any colon or em-dash)
+    if (primaryDifferentiator) {
+      primaryDifferentiatorShortName = extractMechanismShortName(primaryDifferentiator);
+    }
 
     if (primaryDifferentiator || bigDomino || positioning) {
       strategyContextBlock = `
@@ -670,11 +699,18 @@ O Agente de Estratégia já definiu o posicionamento desta campanha. Você DEVE 
 | Hook Emocional           | ${emotionalHook} |
 ${competitiveAdvantages.length > 0 ? `| Vantagens Competitivas   | ${competitiveAdvantages.slice(0, 3).join(" · ")} |` : ""}
 
-**REGRA CRÍTICA — MECANISMO ÚNICO:**
-O campo \`uniqueMechanism.name\` no seu JSON de saída DEVE ser o diferenciador principal já definido:
-"${primaryDifferentiator}"
+**REGRA CRÍTICA — NOME DO MECANISMO ÚNICO (formato obrigatório):**
+O campo \`uniqueMechanism.name\` DEVE ser EXATAMENTE:
+**"${primaryDifferentiatorShortName}"**
 
-Não crie um nome diferente. O mecanismo único já foi nomeado e validado pela estratégia. Seu trabalho é detalhar como ele funciona, por que os concorrentes falham sem ele, e como provar sem exagerar — usando exatamente este nome.
+Regras de formato para \`uniqueMechanism.name\`:
+- Máximo 8 palavras
+- Zero dois-pontos, zero vírgulas, zero descrição embutida
+- É um NOME, não uma frase explicativa
+- A explicação do mecanismo vai SOMENTE em \`uniqueMechanism.explanation\`
+
+Exemplo correto:   "Gold-Calibrated Martingale Automation"
+Exemplo ERRADO:    "Gold-Calibrated Martingale Automation: a gold-specific logic built around..."
 
 ---
 `;
@@ -683,11 +719,36 @@ Não crie um nome diferente. O mecanismo único já foi nomeado e validado pela 
     log.info({
       campaignId,
       hasPrimaryDifferentiator: !!primaryDifferentiator,
+      primaryDifferentiatorShortName,
       hasBigDomino: !!bigDomino,
       hasPositioning: !!positioning,
     }, "[OFFER_AGENT] strategyData recebido e injetado no prompt");
   } else {
     log.warn({ campaignId }, "[OFFER_AGENT] strategyData ausente — oferta construída sem contexto estratégico");
+  }
+
+  // ── Build prohibited promises block ──────────────────────────────────────────
+  // Injects Strategic Core's prohibitedPromises as a hard constraint, preventing
+  // the offer from generating claims that will fail compliance downstream.
+  let prohibitedPromisesBlock = "";
+  const activeForbiddenPromises = (prohibitedPromises ?? []).filter(p => p?.trim());
+  if (activeForbiddenPromises.length > 0) {
+    const list = activeForbiddenPromises.map((p, i) => `${i + 1}. ${p}`).join("\n");
+    prohibitedPromisesBlock = `
+**🚫 PROMESSAS PROIBIDAS — STRATEGIC CORE (RESTRIÇÃO ABSOLUTA)**
+
+O Strategic Core identificou as seguintes promessas como proibidas para este produto. Elas NÃO podem aparecer em NENHUM campo do JSON de saída — incluindo corePromise, offerStructure.corePromise, valueStack, objections.response e urgencyArchitecture.messaging:
+
+${list}
+
+Na dimensão 12 da auto-auditoria, verifique explicitamente se alguma claim viola estas restrições.
+
+---
+`;
+    log.info({
+      campaignId,
+      prohibitedPromisesCount: activeForbiddenPromises.length,
+    }, "[OFFER_AGENT] prohibitedPromises injetadas no prompt como restrição absoluta");
   }
 
   const result = await runAgent({
@@ -699,6 +760,7 @@ Não crie um nome diferente. O mecanismo único já foi nomeado e validado pela 
     memoryContext,
     thinkingMessages: [
       "Lendo posicionamento estratégico — big domino, mecanismo único, sofisticação...",
+      "Lendo promessas proibidas do Strategic Core — restrições absolutas...",
       "Analisando mercado — desejo dominante, medo principal, sofisticação...",
       "Ancorando mecanismo único ao posicionamento estratégico...",
       "Definindo transformação desejada e identity shift...",
@@ -712,7 +774,7 @@ Não crie um nome diferente. O mecanismo único já foi nomeado e validado pela 
       {
         role: "user",
         content: `Construa a oferta irresistível para este produto. Execute os 7 passos em sequência, depois audite com 12 dimensões.
-${strategyContextBlock}
+${strategyContextBlock}${prohibitedPromisesBlock}
 **Dados do produto e campanha:**
 \`\`\`json
 ${intakeJson}
@@ -720,7 +782,7 @@ ${intakeJson}
 
 Sequência obrigatória:
 0. Análise de Mercado (desejo dominante, medo, sofisticação, objeções racionais e emocionais)
-1. Mecanismo Único Nomeável — use o nome definido pela estratégia acima, não invente outro
+1. Mecanismo Único — use EXATAMENTE o nome "${primaryDifferentiatorShortName || "definido pela estratégia acima"}" em uniqueMechanism.name (≤8 palavras, sem descrição embutida)
 2. Transformação Desejada (before/after/identity shift)
 3. Promessa Central + Value Stack (total percebido ≥ 5x o preço)
 4. Urgência Legítima + Motivo para Agir Agora
@@ -743,6 +805,27 @@ Retorne APENAS o JSON válido.`,
 
   const parsed = parseAgentJSON<OfferArchitectOutput>(result.content, defaultOutput(intakeData));
   const output: OfferArchitectOutput = { ...defaultOutput(intakeData), ...parsed };
+
+  // ── Server-side uniqueMechanism.name enforcement ──────────────────────────────
+  // The LLM is instructed to use the exact short name, but as a hard server-side
+  // guarantee: if strategyData provided a primaryDifferentiatorShortName, always
+  // override the LLM output with it. This ensures the name is NEVER a paraphrase
+  // regardless of model behavior, context truncation, or prompt drift.
+  if (primaryDifferentiatorShortName && output.uniqueMechanism) {
+    const llmName = output.uniqueMechanism.name ?? "";
+    if (llmName !== primaryDifferentiatorShortName) {
+      // Move the LLM's verbose name into explanation if explanation is empty/thin
+      if (llmName && (!output.uniqueMechanism.explanation || output.uniqueMechanism.explanation.length < 40)) {
+        output.uniqueMechanism.explanation = llmName;
+      }
+      output.uniqueMechanism.name = primaryDifferentiatorShortName;
+      log.info({
+        campaignId,
+        overriddenFrom: llmName.slice(0, 80),
+        overriddenTo: primaryDifferentiatorShortName,
+      }, "[OFFER_AGENT] uniqueMechanism.name overridden to match strategy primaryDifferentiator");
+    }
+  }
 
   // Ensure nested objects are not completely missing
   if (!output.marketAnalysis?.dominantDesire) {

@@ -1054,7 +1054,15 @@ Retorne o JSON de avaliação.`,
 
   if (typesWithOfferAnalysis.includes(type)) {
     try {
-      const result = await runOfferAgent(campaignId, workspaceId, intakeData, log, memoryContext, strategy ?? undefined);
+      const result = await runOfferAgent(
+        campaignId,
+        workspaceId,
+        intakeData,
+        log,
+        memoryContext,
+        strategy ?? undefined,
+        strategicBrief?.prohibitedPromises ?? [],
+      );
       offerAnalysis = result as unknown as Record<string, unknown>;
       agentsRun.push("offer");
       cp = await saveCheckpoint(campaignId, "offer", { offerName: (result as any).offerName }, cp, log);
