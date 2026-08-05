@@ -205,8 +205,14 @@ export function MediaProductionDrawer({
     setUploading(true);
     setActionError(null);
     try {
-      // Use native fetch to avoid customFetch overriding Content-Type
-      const token = localStorage.getItem("nexos_access_token") ?? sessionStorage.getItem("nexos_access_token") ?? "";
+      // Use native fetch to avoid customFetch overriding Content-Type.
+      // The auth store (lib/auth.tsx) saves the token under "accessToken".
+      const token =
+        localStorage.getItem("accessToken") ??
+        localStorage.getItem("nexos_access_token") ??
+        sessionStorage.getItem("accessToken") ??
+        sessionStorage.getItem("nexos_access_token") ??
+        "";
       const headers: Record<string, string> = {
         "Content-Type": selectedFile.type || "application/octet-stream",
         "X-Filename": selectedFile.name,

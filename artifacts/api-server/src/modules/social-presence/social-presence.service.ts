@@ -7,6 +7,7 @@
 
 import { eq, and, desc, gte, lt, lte, inArray } from "drizzle-orm";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   db,
   socialPresenceConfigTable,
@@ -1293,21 +1294,20 @@ function buildImageClient(): OpenAI {
   throw new Error("OPENAI_API_KEY não configurado — geração de imagem indisponível");
 }
 
-function formatToAspectSize(format: string): "1024x1024" | "1536x1024" | "1024x1536" {
-  if (["reel", "story"].includes(format)) return "1024x1536";   // 9:16
-  if (["live"].includes(format)) return "1536x1024";            // 16:9
-  return "1024x1024";                                           // 1:1 para feed/carousel
-}
-
+/**
+ * Tenta gerar um storyboard via AI (dall-e-3 ou Gemini) e cai no gerador
+ * SVG server-side se nenhuma key de imagem estiver disponível/funcional.
+ *
+ * O SVG garante que o pipeline completo (roteiro → storyboard → vídeo) pode
+ * ser testado sem dependência de API externa de geração de imagem.
+ */
 async function generateStoryboardFrame(
   visualDirection: string,
   caption: string,
   platform: string,
   format: string,
   log: Logger,
-): Promise<Buffer> {
-  const openai = buildImageClient();
-  const size = formatToAspectSize(format);
+): Promise<{ buf: Buffer; mimeType: string }> {
   const prompt = [
     `Storyboard frame for a ${platform} ${format} post.`,
     `Visual direction: ${visualDirection}`,
@@ -1316,18 +1316,131 @@ async function generateStoryboardFrame(
     "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
   ].join(" ");
 
-  log.info({ platform, format, size }, "presence: generating storyboard frame (gpt-image-1 low)");
-  const response = await openai.images.generate({
-    model: "gpt-image-1",
-    prompt,
-    n: 1,
-    size,
-    quality: "low",
-  });
+  // Attempt AI image generation (dall-e-3) if a capable key is present
+  const imageApiKey = env.NEXOS_OPENAI || env.OPENAI_API_KEY || env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseURL =
+    !env.NEXOS_OPENAI && !env.OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL
+      ? env.AI_INTEGRATIONS_OPENAI_BASE_URL
+      : undefined;
 
-  const b64 = response.data?.[0]?.b64_json;
-  if (!b64) throw new Error("gpt-image-1 returned no image data");
-  return Buffer.from(b64, "base64");
+  if (imageApiKey) {
+    try {
+      const openai = new OpenAI({ apiKey: imageApiKey, ...(baseURL ? { baseURL } : {}) });
+      const size = ["reel", "story"].includes(format)
+        ? ("1024x1792" as const)
+        : ["live"].includes(format)
+          ? ("1792x1024" as const)
+          : ("1024x1024" as const);
+
+      log.info({ platform, format, size }, "presence: attempting dall-e-3 storyboard");
+      const response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size,
+        quality: "standard",
+      });
+
+      const b64 = response.data?.[0]?.b64_json;
+      if (b64) return { buf: Buffer.from(b64, "base64"), mimeType: "image/png" };
+
+      const imgUrl = response.data?.[0]?.url;
+      if (imgUrl) {
+        const imgRes = await fetch(imgUrl);
+        if (imgRes.ok) return { buf: Buffer.from(await imgRes.arrayBuffer()), mimeType: "image/png" };
+      }
+    } catch (aiErr) {
+      log.warn({ aiErr }, "presence: AI image generation failed — falling back to SVG storyboard");
+    }
+  }
+
+  // SVG storyboard fallback — generated server-side, no external dependency
+  log.info({ platform, format }, "presence: generating SVG storyboard (fallback)");
+  const svg = buildStoryboardSVG({ visualDirection, caption, platform, format });
+  return { buf: Buffer.from(svg, "utf-8"), mimeType: "image/svg+xml" };
+}
+
+/** Generates a branded SVG storyboard frame from post metadata. */
+function buildStoryboardSVG(opts: {
+  visualDirection: string;
+  caption: string;
+  platform: string;
+  format: string;
+}): string {
+  const { visualDirection, caption, platform, format } = opts;
+  const isPortrait = ["reel", "story"].includes(format);
+  const w = isPortrait ? 540 : 960;
+  const h = isPortrait ? 960 : 540;
+
+  // Wrap long text into lines of ~60 chars
+  const wrap = (text: string, maxLen = 60): string[] => {
+    const words = text.replace(/\n/g, " ").split(" ");
+    const lines: string[] = [];
+    let line = "";
+    for (const word of words) {
+      if ((line + " " + word).trim().length > maxLen) {
+        if (line) lines.push(line.trim());
+        line = word;
+      } else {
+        line = (line + " " + word).trim();
+      }
+    }
+    if (line) lines.push(line.trim());
+    return lines.slice(0, 5); // max 5 lines
+  };
+
+  const dirLines = wrap(visualDirection, 55);
+  const capLines = wrap(caption, 50);
+  const platformLabel = `${platform.toUpperCase()} · ${format.toUpperCase()}`;
+
+  const renderLines = (lines: string[], x: number, y: number, lineHeight: number, color: string, fontSize: number) =>
+    lines
+      .map(
+        (l, i) =>
+          `<text x="${x}" y="${y + i * lineHeight}" font-size="${fontSize}" fill="${color}" font-family="system-ui, sans-serif">${l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</text>`,
+      )
+      .join("\n");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="100%" stop-color="#0d0d2b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="${w}" height="${h}" fill="url(#bg)"/>
+  <!-- Grid lines -->
+  <line x1="${w * 0.333}" y1="0" x2="${w * 0.333}" y2="${h}" stroke="#1e1e3a" stroke-width="1"/>
+  <line x1="${w * 0.667}" y1="0" x2="${w * 0.667}" y2="${h}" stroke="#1e1e3a" stroke-width="1"/>
+  <line x1="0" y1="${h * 0.333}" x2="${w}" y2="${h * 0.333}" stroke="#1e1e3a" stroke-width="1"/>
+  <line x1="0" y1="${h * 0.667}" x2="${w}" y2="${h * 0.667}" stroke="#1e1e3a" stroke-width="1"/>
+  <!-- Rule-of-thirds center mark -->
+  <circle cx="${w * 0.333}" cy="${h * 0.333}" r="4" fill="none" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <circle cx="${w * 0.667}" cy="${h * 0.333}" r="4" fill="none" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <!-- Platform badge -->
+  <rect x="24" y="24" width="${platformLabel.length * 8 + 20}" height="28" rx="6" fill="url(#accent)" opacity="0.9"/>
+  <text x="34" y="42" font-size="13" fill="white" font-family="system-ui, sans-serif" font-weight="600">${platformLabel}</text>
+  <!-- STORYBOARD label -->
+  <text x="${w - 24}" y="42" font-size="11" fill="#6366f1" font-family="system-ui, monospace" text-anchor="end" opacity="0.7" letter-spacing="2">STORYBOARD</text>
+  <!-- Visual direction section -->
+  <rect x="24" y="${h * 0.42}" width="${w - 48}" height="${dirLines.length * 22 + 44}" rx="10" fill="#1a1a2e" opacity="0.9"/>
+  <text x="40" y="${h * 0.42 + 22}" font-size="11" fill="#8b5cf6" font-family="system-ui, monospace" letter-spacing="1" font-weight="600">DIREÇÃO VISUAL</text>
+  ${renderLines(dirLines, 40, h * 0.42 + 42, 22, "#e2e8f0", 14)}
+  <!-- Caption section -->
+  <rect x="24" y="${h * 0.72}" width="${w - 48}" height="${capLines.length * 20 + 44}" rx="10" fill="#0f172a" opacity="0.85"/>
+  <text x="40" y="${h * 0.72 + 22}" font-size="11" fill="#6366f1" font-family="system-ui, monospace" letter-spacing="1" font-weight="600">CAPTION</text>
+  ${renderLines(capLines, 40, h * 0.72 + 42, 20, "#94a3b8", 13)}
+  <!-- Corner markers -->
+  <path d="M0,30 L0,0 L30,0" fill="none" stroke="#6366f1" stroke-width="2" opacity="0.5"/>
+  <path d="${w - 30},0 L${w},0 L${w},30" fill="none" stroke="#6366f1" stroke-width="2" opacity="0.5"/>
+  <path d="${w},${h - 30} L${w},${h} L${w - 30},${h}" fill="none" stroke="#6366f1" stroke-width="2" opacity="0.5"/>
+  <path d="30,${h} L0,${h} L0,${h - 30}" fill="none" stroke="#6366f1" stroke-width="2" opacity="0.5"/>
+</svg>`;
 }
 
 async function getWorkspacePersona(workspaceId: string): Promise<{
@@ -1372,7 +1485,7 @@ export async function generatePostStoryboard(
 
   setImmediate(async () => {
     try {
-      const imgBuf = await generateStoryboardFrame(
+      const { buf: imgBuf, mimeType } = await generateStoryboardFrame(
         post.visualDirection,
         post.caption,
         post.platform,
@@ -1380,7 +1493,7 @@ export async function generatePostStoryboard(
         log,
       );
       // Armazenar como base64 data URL diretamente — sem serving endpoint extra
-      const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
+      const dataUrl = `data:${mimeType};base64,${imgBuf.toString("base64")}`;
 
       await db
         .update(socialPresencePostsTable)

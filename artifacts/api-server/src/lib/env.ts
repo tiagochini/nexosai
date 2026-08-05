@@ -10,6 +10,7 @@ export const env = {
   REDIS_URL: process.env["REDIS_URL"] ?? "redis://localhost:6379",
   ANTHROPIC_API_KEY: process.env["ANTHROPIC_API_KEY"] ?? "",
   OPENAI_API_KEY: process.env["OPENAI_API_KEY"] ?? "",
+  NEXOS_OPENAI: process.env["NEXOS_OPENAI"] ?? "",
   GEMINI_API_KEY: process.env["GEMINI_API_KEY"] ?? "",
   AI_INTEGRATIONS_ANTHROPIC_BASE_URL: process.env["AI_INTEGRATIONS_ANTHROPIC_BASE_URL"] ?? "",
   AI_INTEGRATIONS_ANTHROPIC_API_KEY: process.env["AI_INTEGRATIONS_ANTHROPIC_API_KEY"] ?? "",
