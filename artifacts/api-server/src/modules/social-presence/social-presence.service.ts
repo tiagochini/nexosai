@@ -15,11 +15,13 @@ import {
   workspaceIntegrationsTable,
   workspacesTable,
 } from "@workspace/db";
+import jwt from "jsonwebtoken";
 import {
   uploadBufferToGCS,
   presenceMediaObjectKey,
   createGCSObjectStream,
   getGCSObjectMeta,
+  getPresenceMediaSignedUrl,
 } from "../../lib/gcs-recordings.js";
 import {
   generateVideoClip,
@@ -1402,21 +1404,101 @@ export async function generatePostStoryboard(
 }
 
 /** Stream de uma mídia pública (user upload) para publicação nas redes sociais. */
-export async function streamPublicPresenceMedia(
+const MEDIA_TOKEN_TTL_SECONDS = 1800; // 30 minutos
+const MEDIA_TOKEN_TYPE = "presence-media-stream";
+
+/**
+ * Valida a key, confirma ownership no banco e emite um redirect 302 para
+ * uma URL de streaming com TTL:
+ *   1. Tenta GCS V4 Signed URL (30 min) — sem fallback silencioso.
+ *   2. Se o GCS não suportar signing (Replit sidecar), emite um JWT
+ *      curto (30 min) e redireciona para /api/presence/media/stream?tok=…
+ *
+ * Instagram/TikTok seguem o 302 normalmente sem precisar de auth header.
+ * URLs "vazadas" expiram em 30 min e post deletado retorna 404.
+ */
+export async function redirectToPresenceMedia(
   gcsKey: string,
   res: import("express").Response,
 ): Promise<void> {
-  // Validação de segurança: só serve objetos no prefixo controlado
+  // 1. Prefix guard
   if (!gcsKey.startsWith("presence-media/")) {
     res.status(403).end();
     return;
   }
+
+  // 2. Parse: presence-media/{workspaceId}/{postId}/{filename}
+  const parts = gcsKey.split("/");
+  if (parts.length < 4) {
+    res.status(400).end();
+    return;
+  }
+  const workspaceId = parts[1];
+  const postId      = parts[2];
+
+  // 3. Ownership check — post deve existir e não estar cancelado
+  const [row] = await db
+    .select({ id: socialPresencePostsTable.id })
+    .from(socialPresencePostsTable)
+    .where(
+      and(
+        eq(socialPresencePostsTable.id, postId),
+        eq(socialPresencePostsTable.workspaceId, workspaceId),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    res.status(404).end();
+    return;
+  }
+
+  // 4a. Tentar GCS V4 Signed URL
+  const signedUrl = await getPresenceMediaSignedUrl(gcsKey, MEDIA_TOKEN_TTL_SECONDS);
+  if (signedUrl) {
+    res.redirect(302, signedUrl);
+    return;
+  }
+
+  // 4b. Fallback: JWT de servidor com TTL de 30 min
+  const token = jwt.sign(
+    { key: gcsKey, type: MEDIA_TOKEN_TYPE },
+    env.JWT_SECRET,
+    { expiresIn: MEDIA_TOKEN_TTL_SECONDS },
+  );
+  // Constrói a URL do stream endpoint relativa ao mesmo host
+  const streamPath = `/api/presence/media/stream?tok=${encodeURIComponent(token)}`;
+  res.redirect(302, streamPath);
+}
+
+/**
+ * Stream endpoint sem auth — valida o JWT e faz pipe do arquivo GCS.
+ * Chamado apenas via redirect de redirectToPresenceMedia.
+ */
+export async function streamPresenceMediaByToken(
+  token: string,
+  res: import("express").Response,
+): Promise<void> {
+  let payload: { key: string; type: string };
   try {
-    const { contentType, size } = await getGCSObjectMeta(gcsKey);
+    payload = jwt.verify(token, env.JWT_SECRET) as typeof payload;
+  } catch {
+    res.status(401).end(); // token inválido ou expirado
+    return;
+  }
+
+  if (payload.type !== MEDIA_TOKEN_TYPE || !payload.key?.startsWith("presence-media/")) {
+    res.status(403).end();
+    return;
+  }
+
+  try {
+    const { contentType, size } = await getGCSObjectMeta(payload.key);
     res.setHeader("Content-Type", contentType);
     res.setHeader("Content-Length", String(size));
-    res.setHeader("Cache-Control", "public, max-age=86400");
-    createGCSObjectStream(gcsKey).pipe(res);
+    // max-age curto — o token já limita o acesso; browsers podem cachear por 5 min
+    res.setHeader("Cache-Control", "private, max-age=300");
+    createGCSObjectStream(payload.key).pipe(res);
   } catch {
     res.status(404).end();
   }

@@ -110,3 +110,31 @@ export async function getGCSObjectMeta(objectKey: string): Promise<{ contentType
     size: parseInt(meta.size as string, 10),
   };
 }
+
+/**
+ * Attempt to generate a GCS V4 Signed URL for a presence-media object.
+ * Returns the signed URL string on success, or null if the GCS credentials
+ * do not support signing (e.g. Replit external_account sidecar without
+ * iam.serviceAccounts.signBlob permission).
+ *
+ * Callers should fall back to a server-issued short-lived token when null is returned.
+ */
+export async function getPresenceMediaSignedUrl(
+  objectKey: string,
+  ttlSeconds = 1800,
+): Promise<string | null> {
+  try {
+    const [url] = await gcs
+      .bucket(bucketId())
+      .file(objectKey)
+      .getSignedUrl({
+        version: "v4",
+        action: "read",
+        expires: Date.now() + ttlSeconds * 1000,
+      });
+    return url;
+  } catch {
+    // Signing not supported with current credentials — caller will use server token.
+    return null;
+  }
+}

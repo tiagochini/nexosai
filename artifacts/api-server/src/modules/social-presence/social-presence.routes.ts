@@ -18,7 +18,8 @@ import {
   listWorkspaceCampaigns,
   currentPlanWeekStart,
   generatePostStoryboard,
-  streamPublicPresenceMedia,
+  redirectToPresenceMedia,
+  streamPresenceMediaByToken,
   approveStoryboardGenerateVideo,
   pollPostMediaJob,
   attachUploadedMedia,
@@ -27,11 +28,19 @@ import {
 
 const router = Router();
 
-// ─── Rota pública (sem auth) — serving de mídia para publicação nas redes ────
-// Registrada ANTES do requireAuth para Instagram/TikTok poderem baixar a mídia.
+// ─── Rotas públicas (sem auth) — serving de mídia para publicação nas redes ──
+// Registradas ANTES do requireAuth para Instagram/TikTok poderem baixar a mídia.
+
+// Ponto de entrada: valida ownership + emite redirect 302 para URL com TTL 30 min.
 router.get("/media/serve", async (req, res): Promise<void> => {
   const key = (req.query as { key?: string }).key ?? "";
-  await streamPublicPresenceMedia(key, res);
+  await redirectToPresenceMedia(key, res);
+});
+
+// Stream endpoint: só chamado via redirect de /media/serve; valida o JWT curto.
+router.get("/media/stream", async (req, res): Promise<void> => {
+  const tok = (req.query as { tok?: string }).tok ?? "";
+  await streamPresenceMediaByToken(tok, res);
 });
 
 router.use(requireAuth);

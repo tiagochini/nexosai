@@ -112,6 +112,11 @@ router.use("/sales-team", salesTeamRouter);
 router.use("/live-launcher", liveLauncherRouter);
 router.use("/self-proof", selfProofRouter);
 router.use("/referrals", referralsRouter);
+// Presence router registrado ANTES dos routers montados em "/" que têm requireAuth global
+// (videoProductionRouter e metaDeletionRouter com router.use(requireAuth) interceptam tudo).
+// As rotas públicas /presence/media/serve e /presence/media/stream precisam ser acessíveis
+// sem auth para Instagram/TikTok fazerem download da mídia.
+router.use("/presence", socialPresenceRouter);
 router.use("/", videoProductionRouter);
 router.use("/", metaDeletionRouter);
 router.use("/nexos-launch", nexosSelfLaunchRouter);
@@ -120,7 +125,6 @@ router.use("/integration-wizard", integrationWizardRouter);
 router.use("/fingerprints", fingerprintRouter);
 router.use("/daily-video", dailyVideoRouter);
 router.use("/market-intel", marketIntelRouter);
-router.use("/presence", socialPresenceRouter);
 router.use("/debug", debugRouter);
 
 export default router;
