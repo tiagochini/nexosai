@@ -110,7 +110,7 @@ export default function IntegracoesPage() {
   const handleDisconnect = async (integrationId: string) => {
     setDisconnecting(integrationId);
     try {
-      await customFetch<unknown>(`/api/workspaces/me/integrations/${integrationId}`, { method: "DELETE" });
+      await customFetch<unknown>(`/api/social/accounts/${integrationId}`, { method: "DELETE" });
       toast.success("Integração removida.");
       queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
     } catch {
