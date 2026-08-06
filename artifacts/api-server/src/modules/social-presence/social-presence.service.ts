@@ -1295,11 +1295,13 @@ function buildImageClient(): OpenAI {
 }
 
 /**
- * Tenta gerar um storyboard via AI (dall-e-3 ou Gemini) e cai no gerador
- * SVG server-side se nenhuma key de imagem estiver disponível/funcional.
+ * Tenta gerar um storyboard via AI:
+ *   1. Gemini direto (GEMINI_API_KEY, chave já usada pelos agentes de lançamento)
+ *   2. SVG server-side rotulado como RASCUNHO — apenas se IA não disponível/sem crédito.
  *
- * O SVG garante que o pipeline completo (roteiro → storyboard → vídeo) pode
- * ser testado sem dependência de API externa de geração de imagem.
+ * Retorna { buf, mimeType, isAI } para que o caller registre o status correto:
+ *   - isAI=true  → "storyboard_ready" (imagem real gerada por IA)
+ *   - isAI=false → "storyboard_draft" (placeholder visual, sem crédito de IA)
  */
 async function generateStoryboardFrame(
   visualDirection: string,
@@ -1307,7 +1309,7 @@ async function generateStoryboardFrame(
   platform: string,
   format: string,
   log: Logger,
-): Promise<{ buf: Buffer; mimeType: string }> {
+): Promise<{ buf: Buffer; mimeType: string; isAI: boolean }> {
   const prompt = [
     `Storyboard frame for a ${platform} ${format} post.`,
     `Visual direction: ${visualDirection}`,
@@ -1316,48 +1318,52 @@ async function generateStoryboardFrame(
     "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
   ].join(" ");
 
-  // Attempt AI image generation (dall-e-3) if a capable key is present
-  const imageApiKey = env.NEXOS_OPENAI || env.OPENAI_API_KEY || env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  const baseURL =
-    !env.NEXOS_OPENAI && !env.OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL
-      ? env.AI_INTEGRATIONS_OPENAI_BASE_URL
-      : undefined;
+  // ── Tentativa 1: Gemini direto (mesma chave dos agentes de lançamento) ──────
+  const geminiKey = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  if (geminiKey) {
+    // Modelos para image output via generateContent (responseModalities: IMAGE)
+    const imageModels = ["gemini-2.0-flash-exp", "gemini-2.5-flash-preview-05-20"];
+    for (const modelId of imageModels) {
+      try {
+        log.info({ platform, format, model: modelId }, "presence: attempting Gemini storyboard");
+        // Usa GEMINI_API_KEY direto (sem baseURL = Google API nativa) ou proxy como fallback
+        const useProxy = !env.GEMINI_API_KEY && !!(env.AI_INTEGRATIONS_GEMINI_API_KEY && env.AI_INTEGRATIONS_GEMINI_BASE_URL);
+        const gemini = new GoogleGenerativeAI(geminiKey);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const reqOpts: any = useProxy ? { baseUrl: env.AI_INTEGRATIONS_GEMINI_BASE_URL } : {};
+        const model = gemini.getGenerativeModel(
+          {
+            model: modelId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            generationConfig: { responseModalities: ["IMAGE"] } as any,
+          },
+          reqOpts,
+        );
 
-  if (imageApiKey) {
-    try {
-      const openai = new OpenAI({ apiKey: imageApiKey, ...(baseURL ? { baseURL } : {}) });
-      const size = ["reel", "story"].includes(format)
-        ? ("1024x1792" as const)
-        : ["live"].includes(format)
-          ? ("1792x1024" as const)
-          : ("1024x1024" as const);
+        const result = await model.generateContent(prompt);
+        const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const imgPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/")) as any;
 
-      log.info({ platform, format, size }, "presence: attempting dall-e-3 storyboard");
-      const response = await openai.images.generate({
-        model: "dall-e-3",
-        prompt,
-        n: 1,
-        size,
-        quality: "standard",
-      });
-
-      const b64 = response.data?.[0]?.b64_json;
-      if (b64) return { buf: Buffer.from(b64, "base64"), mimeType: "image/png" };
-
-      const imgUrl = response.data?.[0]?.url;
-      if (imgUrl) {
-        const imgRes = await fetch(imgUrl);
-        if (imgRes.ok) return { buf: Buffer.from(await imgRes.arrayBuffer()), mimeType: "image/png" };
+        if (imgPart?.inlineData?.data) {
+          log.info({ model: modelId }, "presence: Gemini storyboard generated ✓");
+          return {
+            buf: Buffer.from(imgPart.inlineData.data, "base64"),
+            mimeType: imgPart.inlineData.mimeType as string,
+            isAI: true,
+          };
+        }
+        log.warn({ model: modelId }, "presence: Gemini returned no image part — trying next model");
+      } catch (geminiErr) {
+        log.warn({ geminiErr, model: modelId }, "presence: Gemini model failed — trying next");
       }
-    } catch (aiErr) {
-      log.warn({ aiErr }, "presence: AI image generation failed — falling back to SVG storyboard");
     }
   }
 
-  // SVG storyboard fallback — generated server-side, no external dependency
-  log.info({ platform, format }, "presence: generating SVG storyboard (fallback)");
-  const svg = buildStoryboardSVG({ visualDirection, caption, platform, format });
-  return { buf: Buffer.from(svg, "utf-8"), mimeType: "image/svg+xml" };
+  // ── SVG fallback — rascunho visual rotulado, sem IA ──────────────────────────
+  log.info({ platform, format }, "presence: generating SVG draft storyboard (no AI credits available)");
+  const svg = buildStoryboardSVG({ visualDirection, caption, platform, format, isDraft: true });
+  return { buf: Buffer.from(svg, "utf-8"), mimeType: "image/svg+xml", isAI: false };
 }
 
 /** Generates a branded SVG storyboard frame from post metadata. */
@@ -1366,8 +1372,9 @@ function buildStoryboardSVG(opts: {
   caption: string;
   platform: string;
   format: string;
+  isDraft?: boolean;
 }): string {
-  const { visualDirection, caption, platform, format } = opts;
+  const { visualDirection, caption, platform, format, isDraft = false } = opts;
   const isPortrait = ["reel", "story"].includes(format);
   const w = isPortrait ? 540 : 960;
   const h = isPortrait ? 960 : 540;
@@ -1425,8 +1432,16 @@ function buildStoryboardSVG(opts: {
   <!-- Platform badge -->
   <rect x="24" y="24" width="${platformLabel.length * 8 + 20}" height="28" rx="6" fill="url(#accent)" opacity="0.9"/>
   <text x="34" y="42" font-size="13" fill="white" font-family="system-ui, sans-serif" font-weight="600">${platformLabel}</text>
-  <!-- STORYBOARD label -->
+  <!-- STORYBOARD / RASCUNHO label -->
   <text x="${w - 24}" y="42" font-size="11" fill="#6366f1" font-family="system-ui, monospace" text-anchor="end" opacity="0.7" letter-spacing="2">STORYBOARD</text>
+  ${isDraft ? `
+  <!-- RASCUNHO diagonal watermark -->
+  <g transform="translate(${w / 2},${h / 2}) rotate(-30)">
+    <text x="0" y="0" font-size="${isPortrait ? 56 : 72}" fill="#f59e0b" font-family="system-ui, sans-serif" font-weight="900" text-anchor="middle" dominant-baseline="middle" opacity="0.12" letter-spacing="4">RASCUNHO</text>
+  </g>
+  <!-- RASCUNHO badge top-right -->
+  <rect x="${w - 110}" y="58" width="86" height="22" rx="5" fill="#f59e0b" opacity="0.9"/>
+  <text x="${w - 67}" y="73" font-size="11" fill="#0a0a1a" font-family="system-ui, sans-serif" font-weight="700" text-anchor="middle">SEM CRÉDITO IA</text>` : ""}
   <!-- Visual direction section -->
   <rect x="24" y="${h * 0.42}" width="${w - 48}" height="${dirLines.length * 22 + 44}" rx="10" fill="#1a1a2e" opacity="0.9"/>
   <text x="40" y="${h * 0.42 + 22}" font-size="11" fill="#8b5cf6" font-family="system-ui, monospace" letter-spacing="1" font-weight="600">DIREÇÃO VISUAL</text>
@@ -1485,7 +1500,7 @@ export async function generatePostStoryboard(
 
   setImmediate(async () => {
     try {
-      const { buf: imgBuf, mimeType } = await generateStoryboardFrame(
+      const { buf: imgBuf, mimeType, isAI } = await generateStoryboardFrame(
         post.visualDirection,
         post.caption,
         post.platform,
@@ -1494,13 +1509,15 @@ export async function generatePostStoryboard(
       );
       // Armazenar como base64 data URL diretamente — sem serving endpoint extra
       const dataUrl = `data:${mimeType};base64,${imgBuf.toString("base64")}`;
+      // isAI=true → storyboard_ready (IA real); isAI=false → storyboard_draft (rascunho SVG)
+      const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
 
       await db
         .update(socialPresencePostsTable)
-        .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [dataUrl] })
+        .set({ mediaGenStatus: newStatus, storyboardUrls: [dataUrl] })
         .where(eq(socialPresencePostsTable.id, postId));
 
-      log.info({ postId }, "presence: storyboard generated");
+      log.info({ postId, isAI, newStatus }, "presence: storyboard generated");
     } catch (err) {
       log.warn({ err, postId }, "presence: storyboard generation failed");
       await db
@@ -1631,7 +1648,9 @@ export async function approveStoryboardGenerateVideo(
     .limit(1);
   if (!post) return null;
 
-  if (post.mediaGenStatus !== "storyboard_ready") {
+  // Aceita tanto storyboard_ready (IA real) quanto storyboard_draft (rascunho SVG)
+  const approvedStatuses = ["storyboard_ready", "storyboard_draft"];
+  if (!approvedStatuses.includes(post.mediaGenStatus ?? "")) {
     throw new Error("Storyboard ainda não aprovado ou não disponível.");
   }
 

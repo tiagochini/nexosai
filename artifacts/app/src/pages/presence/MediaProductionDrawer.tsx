@@ -77,6 +77,7 @@ export function MediaProductionDrawer({
       currentPost.mediaGenStatus === "storyboard_generating" ||
       currentPost.mediaGenStatus === "video_generating";
 
+
     if (generating && !pollRef.current) {
       pollRef.current = setInterval(async () => {
         try {
@@ -89,6 +90,7 @@ export function MediaProductionDrawer({
             const stillGenerating =
               updated.mediaGenStatus === "storyboard_generating" ||
               updated.mediaGenStatus === "video_generating";
+            // storyboard_draft and storyboard_ready both stop polling
             if (!stillGenerating && pollRef.current) {
               clearInterval(pollRef.current);
               pollRef.current = null;
@@ -513,6 +515,69 @@ function AITabContent({
         </div>
         <p className="text-center text-xs text-muted-foreground">
           {hasAvatar ? "O vídeo será gerado com o seu clone digital e voz clonada." : "O vídeo será gerado cinematograficamente. Configure seu clone digital para aparecer no vídeo."}
+        </p>
+      </div>
+    );
+  }
+
+  // Step: Storyboard rascunho (SVG gerado sem crédito de IA)
+  if (step === "storyboard_draft") {
+    return (
+      <div className="space-y-4">
+        <AvatarBanner />
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="rounded-full border border-green-500/50 bg-green-500/10 text-green-400 w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">✓</span>
+          <span className="opacity-50">Roteiro</span>
+          <ArrowRight className="h-3 w-3 shrink-0" />
+          <span className="rounded-full bg-amber-500 w-5 h-5 flex items-center justify-center text-[10px] text-white font-bold shrink-0">2</span>
+          <span className="font-medium text-amber-400">Rascunho</span>
+          <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
+          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
+        </div>
+
+        {/* RASCUNHO notice */}
+        <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/8 px-3 py-2.5 text-xs text-amber-300">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Storyboard gerado sem IA (créditos indisponíveis)</p>
+            <p className="text-amber-300/70 mt-0.5">
+              Este é um rascunho visual com os textos do post. Quando os créditos Gemini estiverem disponíveis,
+              regenere para obter uma imagem gerada por IA.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-amber-400/20 overflow-hidden bg-background/50">
+          {post.storyboardUrls?.[0] ? (
+            <img
+              src={post.storyboardUrls[0]}
+              alt="Rascunho do storyboard"
+              className="w-full object-cover max-h-80"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-40 text-muted-foreground">
+              <ImageIcon className="h-8 w-8 opacity-40" />
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-lg border border-border bg-background/40 p-3 text-xs text-muted-foreground">
+          <strong className="text-foreground">Direção visual:</strong> {post.visualDirection}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
+            {busy
+              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Iniciando geração de vídeo...</>
+              : <><Video className="mr-2 h-4 w-4" /> Continuar e Gerar Vídeo</>}
+          </Button>
+          <Button variant="outline" onClick={onReset} disabled={busy} className="w-full text-xs">
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Regenerar storyboard com IA
+          </Button>
+        </div>
+        <p className="text-center text-xs text-muted-foreground">
+          {hasAvatar ? "O vídeo usará seu clone digital e voz clonada." : "Configure seu clone digital em Configurações para aparecer no vídeo."}
         </p>
       </div>
     );
