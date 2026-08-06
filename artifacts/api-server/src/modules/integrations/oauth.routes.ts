@@ -549,19 +549,20 @@ router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
 
     // Ping real a cada API para verificar se o token ainda aceita requisições
     async function pingMeta(token: string, accountId: string): Promise<{
-      ok: boolean; httpStatus: number; accountName?: string; igUsername?: string; errorMsg?: string;
+      ok: boolean; httpStatus: number; accountName?: string; errorMsg?: string;
     }> {
       try {
-        const url = `https://graph.facebook.com/v20.0/${accountId}?fields=id,name,username&access_token=${token}`;
+        // username field deprecated in Graph API v2.0+ — use only id,name
+        const url = `https://graph.facebook.com/v20.0/${accountId}?fields=id,name&access_token=${token}`;
         const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
         const body = (await r.json()) as {
-          id?: string; name?: string; username?: string;
+          id?: string; name?: string;
           error?: { message: string; type: string; code: number };
         };
         if (!r.ok || body.error) {
           return { ok: false, httpStatus: r.status, errorMsg: body.error?.message ?? `HTTP ${r.status}` };
         }
-        return { ok: true, httpStatus: r.status, accountName: body.name, igUsername: body.username };
+        return { ok: true, httpStatus: r.status, accountName: body.name };
       } catch (e) {
         return { ok: false, httpStatus: 0, errorMsg: e instanceof Error ? e.message : "timeout" };
       }
@@ -611,7 +612,7 @@ router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
             // instagram, facebook, meta_ads — usa Graph API
             const accountId = i.accountId ?? "me";
             const r = await pingMeta(i.accessToken, accountId);
-            ping = { ok: r.ok, httpStatus: r.httpStatus, liveAccountName: r.accountName ?? r.igUsername, errorMsg: r.errorMsg };
+            ping = { ok: r.ok, httpStatus: r.httpStatus, liveAccountName: r.accountName, errorMsg: r.errorMsg };
           }
         }
 
