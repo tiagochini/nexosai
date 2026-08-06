@@ -75,13 +75,13 @@ interface ProviderConfig {
 const PROVIDER_MAP: Record<string, ProviderConfig> = {
   instagram: {
     platform: "meta",
-    scope: "public_profile",
+    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts,business_management",
     label: "Instagram Business",
     dbProvider: "instagram",
   },
   facebook: {
     platform: "meta",
-    scope: "public_profile",
+    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts,business_management",
     label: "Facebook Páginas",
     dbProvider: "instagram",
   },
@@ -270,6 +270,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     let accessToken = "";
     let accountId = "";
     let accountName = config.label;
+    let metadataExtra: Record<string, unknown> = {};
 
     if (config.platform === "meta") {
       const qs = new URLSearchParams({
@@ -288,12 +289,54 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         return;
       }
       accessToken = tokenData.access_token;
+
+      // Buscar dados do usuário
       const meRes = await fetch(
         `https://graph.facebook.com/v20.0/me?access_token=${accessToken}&fields=id,name`,
       );
       const me = (await meRes.json()) as { id?: string; name?: string };
-      accountId = me.id ?? "";
       accountName = me.name ?? config.label;
+
+      // Buscar Páginas que o usuário administra + Instagram Business Account vinculado
+      const pagesRes = await fetch(
+        `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${accessToken}`,
+      );
+      const pagesData = (await pagesRes.json()) as {
+        data?: Array<{
+          id: string;
+          name: string;
+          access_token: string;
+          instagram_business_account?: { id: string };
+        }>;
+      };
+      const pages = pagesData.data ?? [];
+
+      if (pages.length > 0) {
+        // Preferir a página que já tem Instagram Business vinculado
+        const pageWithIg = pages.find((p) => p.instagram_business_account) ?? pages[0];
+        const igAccountId = pageWithIg.instagram_business_account?.id ?? me.id ?? "";
+
+        // Usar o Page Access Token (válido para posts via Graph API)
+        const pageToken = pageWithIg.access_token || accessToken;
+
+        accountId = igAccountId;
+        accessToken = pageToken;
+        metadataExtra = {
+          accountId: pageWithIg.id,          // Facebook Page ID — usado para posting
+          accountName: pageWithIg.name,       // Nome da Página
+          igAccountId: igAccountId,           // Instagram Business Account ID
+          userId: me.id,                      // ID pessoal do FB
+        };
+        logger.info(
+          { pageId: pageWithIg.id, igAccountId, pageName: pageWithIg.name },
+          "Meta OAuth: Page encontrada e vinculada",
+        );
+      } else {
+        // Fallback: sem acesso a páginas (escopo limitado), usa ID pessoal
+        accountId = me.id ?? "";
+        metadataExtra = { userId: me.id, note: "no_pages_found" };
+        logger.warn({ userId: me.id }, "Meta OAuth: nenhuma Página encontrada — escopo pode estar restrito");
+      }
 
     } else if (config.platform === "tiktok") {
       const tokenRes = await fetch(platform.tokenUrl, {
@@ -450,6 +493,12 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       )
       .limit(1);
 
+    const newMetadata = {
+      oauthConnected: true,
+      connectedAt: new Date().toISOString(),
+      ...metadataExtra,
+    };
+
     if (existing) {
       await db
         .update(workspaceIntegrationsTable)
@@ -458,6 +507,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
           accessToken,
           accountId,
           accountName,
+          metadata: newMetadata,
           updatedAt: new Date(),
         })
         .where(eq(workspaceIntegrationsTable.id, existing.id));
@@ -471,7 +521,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         accountName,
         isPaymentGateway: false,
         blocksExecution: false,
-        metadata: { oauthConnected: true, connectedAt: new Date().toISOString() },
+        metadata: newMetadata,
       });
     }
 
