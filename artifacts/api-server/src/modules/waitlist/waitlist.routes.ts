@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { eq, sql } from "drizzle-orm";
-import { db, waitlistTable } from "@workspace/db";
+import { db, waitlistTable, workspaceIntegrationsTable } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../../lib/logger.js";
@@ -49,6 +49,116 @@ async function sendWaitlistConfirmationEmail(opts: {
   }
 }
 
+// ── Notificação para o ADMIN quando novo lead entra na lista ─────────────────
+
+async function notifyAdminNewLead(opts: {
+  name: string;
+  whatsapp: string;
+  email?: string;
+  segment: string;
+}): Promise<void> {
+  const adminEmail = env.ADMIN_NOTIFY_EMAIL;
+  const adminPhone = env.ADMIN_NOTIFY_PHONE;
+  const log = logger.child({ component: "waitlist-admin-notify" });
+
+  const segmentLabel = opts.segment === "agency" ? "🏢 Agência/Gestor" : "🚀 Lançador Solo";
+  const emailInfo = opts.email ? `\nEmail: ${opts.email}` : "";
+
+  // ── Email para o admin ──────────────────────────────────────────────────────
+  if (adminEmail && env.RESEND_API_KEY) {
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:monospace;color:#e2e8f0;">
+<div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+  <div style="border:1px solid #f59e0b44;padding:32px;">
+    <div style="border-bottom:1px solid #f59e0b33;padding-bottom:16px;margin-bottom:24px;">
+      <span style="font-size:11px;letter-spacing:0.3em;color:#f59e0b;text-transform:uppercase;">🔔 Novo Lead — NexOS AI</span>
+    </div>
+    <p style="font-size:16px;font-weight:700;margin:0 0 20px;color:#fff;">Novo solicitante de acesso!</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr><td style="padding:8px 0;color:#94a3b8;width:110px;">Nome</td><td style="padding:8px 0;color:#fff;font-weight:700;">${opts.name}</td></tr>
+      <tr><td style="padding:8px 0;color:#94a3b8;">WhatsApp</td><td style="padding:8px 0;color:#00f0ff;">${opts.whatsapp}</td></tr>
+      ${opts.email ? `<tr><td style="padding:8px 0;color:#94a3b8;">Email</td><td style="padding:8px 0;color:#e2e8f0;">${opts.email}</td></tr>` : ""}
+      <tr><td style="padding:8px 0;color:#94a3b8;">Segmento</td><td style="padding:8px 0;color:#e2e8f0;">${segmentLabel}</td></tr>
+      <tr><td style="padding:8px 0;color:#94a3b8;">Horário</td><td style="padding:8px 0;color:#e2e8f0;">${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</td></tr>
+    </table>
+    <div style="margin-top:24px;padding:12px;background:#f59e0b11;border:1px solid #f59e0b33;">
+      <p style="font-size:12px;color:#94a3b8;margin:0;">Acesse o painel admin para liberar o código de acesso e entrar em contato via WhatsApp.</p>
+    </div>
+    <div style="border-top:1px solid #ffffff0d;padding-top:16px;margin-top:24px;">
+      <span style="font-size:11px;color:#475569;">lancamento@agencianexos.vip · agencianexos.vip</span>
+    </div>
+  </div>
+</div>
+</body></html>`;
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: `NexOS AI Alertas <${env.RESEND_FROM_EMAIL}>`,
+          to: [adminEmail],
+          subject: `🔔 Novo lead: ${opts.name} (${opts.segment}) — NexOS AI`,
+          html,
+        }),
+      });
+      log.info({ adminEmail, leadName: opts.name }, "Admin alert email sent");
+    } catch (err) {
+      log.warn({ err }, "Admin alert email failed — non-blocking");
+    }
+  }
+
+  // ── WhatsApp para o admin (via workspace do founder com WA conectado) ───────
+  if (adminPhone) {
+    try {
+      // Busca workspace do founder que tenha WhatsApp Business conectado
+      const [waIntegration] = await db
+        .select({
+          workspaceId: workspaceIntegrationsTable.workspaceId,
+          accessToken: workspaceIntegrationsTable.accessToken,
+          accountId: workspaceIntegrationsTable.accountId,
+        })
+        .from(workspaceIntegrationsTable)
+        .where(
+          eq(workspaceIntegrationsTable.provider, "whatsapp_business"),
+        )
+        .limit(1);
+
+      if (waIntegration?.accessToken && waIntegration.accountId) {
+        const waMessage =
+          `🔔 *Novo lead NexOS AI*\n\n` +
+          `*Nome:* ${opts.name}\n` +
+          `*WhatsApp:* ${opts.whatsapp}\n` +
+          `${opts.email ? `*Email:* ${opts.email}\n` : ""}` +
+          `*Segmento:* ${segmentLabel}\n` +
+          `*Horário:* ${new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}`;
+
+        await fetch(
+          `https://graph.facebook.com/v20.0/${waIntegration.accountId}/messages`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${waIntegration.accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: adminPhone,
+              type: "text",
+              text: { body: waMessage },
+            }),
+          },
+        );
+        log.info({ adminPhone: adminPhone.slice(0, 5) + "***" }, "Admin WhatsApp alert sent");
+      } else {
+        log.info("Admin WhatsApp alert skipped — no WhatsApp Business integration connected");
+      }
+    } catch (err) {
+      log.warn({ err }, "Admin WhatsApp alert failed — non-blocking");
+    }
+  }
+}
+
 const router = Router();
 
 const waitlistSchema = z.object({
@@ -93,14 +203,26 @@ router.post("/", async (req, res): Promise<void> => {
     source: source ?? null,
   });
 
-  // Fire-and-forget confirmation email (non-blocking, only if email provided)
-  if (email) {
-    setImmediate(() => {
-      sendWaitlistConfirmationEmail({ toEmail: email, name }).catch((err) =>
-        logger.warn({ err }, "Waitlist confirmation email error"),
+  // Fire-and-forget: confirmação para o lead + alerta para o admin (paralelo, não-bloqueante)
+  setImmediate(() => {
+    const tasks: Promise<void>[] = [];
+
+    if (email) {
+      tasks.push(
+        sendWaitlistConfirmationEmail({ toEmail: email, name }).catch((err) =>
+          logger.warn({ err }, "Waitlist confirmation email error"),
+        ),
       );
-    });
-  }
+    }
+
+    tasks.push(
+      notifyAdminNewLead({ name, whatsapp, email, segment }).catch((err) =>
+        logger.warn({ err }, "Admin waitlist notification error"),
+      ),
+    );
+
+    Promise.all(tasks).catch(() => {});
+  });
 
   res.status(201).json({
     joined: true,

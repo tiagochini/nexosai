@@ -24,9 +24,11 @@ export default function IntegracoesPage() {
   const [connectModal, setConnectModal] = useState<CatalogEntry | null>(null);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
-  type TestResult = { valid: boolean; detail?: string; error?: string; validationSkipped?: boolean };
+  type TestResultRow = { label: string; value: string; status?: "ok" | "warn" | "error" };
+  type TestResult = { valid: boolean; detail?: string; error?: string; validationSkipped?: boolean; rows?: TestResultRow[]; accountName?: string };
   const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+  const [expandedTest, setExpandedTest] = useState<string | null>(null);
 
   const handleTestConnection = async (integrationId: string) => {
     setTesting(integrationId);
@@ -264,53 +266,93 @@ export default function IntegracoesPage() {
                         <div className="shrink-0 flex flex-col items-end gap-1.5">
                           {isConn ? (
                             <>
-                              {/* Test result badge */}
-                              {integration && testResults[integration.id] && (
-                                <div className={`font-mono text-[10px] flex items-center gap-1 max-w-[180px] text-right leading-tight ${
-                                  testResults[integration.id].valid
-                                    ? "text-success"
-                                    : "text-destructive"
-                                }`}>
-                                  {testResults[integration.id].valid
-                                    ? <CheckCircle2 className="h-3 w-3 shrink-0" />
-                                    : <XCircle className="h-3 w-3 shrink-0" />}
-                                  <span className="truncate">
-                                    {testResults[integration.id].valid
-                                      ? (testResults[integration.id].detail ?? "Conexão OK")
-                                      : (testResults[integration.id].error ?? "Falha na conexão")}
+                              {/* Test result panel — expands below the card when rows exist */}
+                              {integration && testResults[integration.id] && (() => {
+                                const tr = testResults[integration.id];
+                                const hasRows = tr.rows && tr.rows.length > 0;
+                                const isExpanded = expandedTest === integration.id;
+                                return (
+                                  <div className="w-full mt-1">
+                                    {/* Summary line — always visible */}
+                                    <button
+                                      onClick={() => hasRows && setExpandedTest(isExpanded ? null : integration.id)}
+                                      className={`w-full text-left font-mono text-[10px] flex items-center gap-1.5 leading-tight py-1 px-2 border ${
+                                        tr.valid
+                                          ? "border-success/30 bg-success/5 text-success"
+                                          : "border-destructive/30 bg-destructive/5 text-destructive"
+                                      } ${hasRows ? "cursor-pointer hover:bg-success/10" : ""}`}
+                                    >
+                                      {tr.valid
+                                        ? <CheckCircle2 className="h-3 w-3 shrink-0" />
+                                        : <XCircle className="h-3 w-3 shrink-0" />}
+                                      <span className="flex-1 truncate">
+                                        {tr.valid
+                                          ? (tr.accountName ? `✓ Conta: ${tr.accountName}` : "Conexão verificada")
+                                          : (tr.error ?? "Falha na conexão")}
+                                      </span>
+                                      {hasRows && (
+                                        <span className="text-[9px] opacity-50 shrink-0">{isExpanded ? "▲" : "▼"} detalhes</span>
+                                      )}
+                                    </button>
+
+                                    {/* Expanded rows */}
+                                    {hasRows && isExpanded && (
+                                      <div className="border border-t-0 border-success/20 bg-black/30 p-2 space-y-1">
+                                        {tr.rows!.map((row, i) => (
+                                          <div key={i} className="flex gap-2 font-mono text-[10px]">
+                                            <span className="text-muted-foreground/50 shrink-0 w-[130px] text-right">{row.label}</span>
+                                            <span className={
+                                              row.status === "ok" ? "text-success/80" :
+                                              row.status === "warn" ? "text-amber-400/80" :
+                                              row.status === "error" ? "text-destructive/80" :
+                                              "text-foreground/70"
+                                            }>
+                                              {row.value}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Test connection + disconnect buttons */}
+                              <div className="flex items-center gap-3 mt-0.5">
+                                {entry.provider !== "facebook" && (
+                                  <button
+                                    onClick={() => {
+                                      if (integration) {
+                                        setExpandedTest(integration.id);
+                                        handleTestConnection(integration.id);
+                                      }
+                                    }}
+                                    disabled={testing === integration?.id}
+                                    className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1"
+                                  >
+                                    {testing === integration?.id
+                                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                                      : <Plug className="h-3 w-3" />}
+                                    {testing === integration?.id ? "Testando..." : "Testar Conexão"}
+                                  </button>
+                                )}
+                                {entry.provider !== "facebook" ? (
+                                  <button
+                                    onClick={() => integration && handleDisconnect(integration.id)}
+                                    disabled={disconnecting === integration?.id}
+                                    className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-destructive transition-colors flex items-center gap-1"
+                                  >
+                                    {disconnecting === integration?.id
+                                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                                      : <XCircle className="h-3 w-3" />}
+                                    Desconectar
+                                  </button>
+                                ) : (
+                                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
+                                    Desconecte pelo Instagram
                                   </span>
-                                </div>
-                              )}
-                              {/* Test connection button */}
-                              {entry.provider !== "facebook" && (
-                                <button
-                                  onClick={() => integration && handleTestConnection(integration.id)}
-                                  disabled={testing === integration?.id}
-                                  className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1"
-                                >
-                                  {testing === integration?.id
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <Plug className="h-3 w-3" />}
-                                  {testing === integration?.id ? "Testando..." : "Testar Conexão"}
-                                </button>
-                              )}
-                              {/* Disconnect button */}
-                              {entry.provider !== "facebook" ? (
-                                <button
-                                  onClick={() => integration && handleDisconnect(integration.id)}
-                                  disabled={disconnecting === integration?.id}
-                                  className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 hover:text-destructive transition-colors flex items-center gap-1"
-                                >
-                                  {disconnecting === integration?.id
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <XCircle className="h-3 w-3" />}
-                                  Desconectar
-                                </button>
-                              ) : (
-                                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/30">
-                                  Desconecte pelo Instagram
-                                </span>
-                              )}
+                                )}
+                              </div>
                             </>
                           ) : (
                             <Button

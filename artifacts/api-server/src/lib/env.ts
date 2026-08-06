@@ -44,6 +44,9 @@ export const env = {
   GMAIL_USER: process.env["GMAIL_USER"] ?? "",
   GMAIL_APP_PASSWORD: process.env["GMAIL_APP_PASSWORD"] ?? "",
   LAUNCH_CAMPAIGN_DATE: process.env["LAUNCH_CAMPAIGN_DATE"] ?? "",
+  // Admin alert destination — receives email + WhatsApp when a new lead joins the waitlist
+  ADMIN_NOTIFY_EMAIL: process.env["ADMIN_NOTIFY_EMAIL"] ?? "bruceallan04@gmail.com",
+  ADMIN_NOTIFY_PHONE: process.env["ADMIN_NOTIFY_PHONE"] ?? "", // E.164 format, e.g. 5511999999999
   // Simulator / lead funnel config
   SIMULATOR_CART_OPEN: process.env["SIMULATOR_CART_OPEN"] === "true",
   SIMULATOR_CHECKOUT_URL: process.env["SIMULATOR_CHECKOUT_URL"] ?? "",

@@ -230,6 +230,7 @@ router.post("/me/integrations/:id/test", async (req, res): Promise<void> => {
     error: result.error,
     validationSkipped: result.validationSkipped ?? false,
     accountName: result.accountName,
+    rows: result.rows ?? [],
   });
 });
 

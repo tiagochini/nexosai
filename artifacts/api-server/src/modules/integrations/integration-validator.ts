@@ -20,6 +20,8 @@ export type ValidationResult = {
   error?: string;
   /** true when the provider has no testable endpoint — credential is accepted but unverified */
   validationSkipped?: boolean;
+  /** Structured key-value rows for rich UI display — provider-specific details */
+  rows?: Array<{ label: string; value: string; status?: "ok" | "warn" | "error" }>;
 };
 
 type Credentials = {
@@ -326,27 +328,117 @@ async function validateRdStation(creds: Credentials): Promise<ValidationResult> 
 async function validateMetaGraph(creds: Credentials, providerLabel: string): Promise<ValidationResult> {
   if (!creds.accessToken) return { valid: false, error: `Token obrigatório para ${providerLabel}` };
   try {
-    const res = await fetchWithTimeout(
+    // 1. Valida o token e pega dados do usuário
+    const meRes = await fetchWithTimeout(
       `https://graph.facebook.com/v20.0/me?fields=id,name&access_token=${encodeURIComponent(creds.accessToken)}`,
       {},
     );
-    if (res.status === 401 || res.status === 400) {
-      const body = (await res.json()) as { error?: { message?: string } };
+    if (meRes.status === 401 || meRes.status === 400) {
+      const body = (await meRes.json()) as { error?: { message?: string } };
       return { valid: false, error: `Token ${providerLabel} inválido: ${body.error?.message ?? "acesso negado"}` };
     }
-    if (!res.ok) {
-      return { valid: false, error: `${providerLabel} Graph API retornou ${res.status}` };
+    if (!meRes.ok) {
+      return { valid: false, error: `${providerLabel} Graph API retornou ${meRes.status}` };
     }
-    const body = (await res.json()) as { id?: string; name?: string; error?: { message?: string } };
-    if (body.error) {
-      return { valid: false, error: `Token ${providerLabel} inválido: ${body.error.message}` };
+    const me = (await meRes.json()) as { id?: string; name?: string; error?: { message?: string } };
+    if (me.error) {
+      return { valid: false, error: `Token ${providerLabel} inválido: ${me.error.message}` };
     }
-    const name = body.name ?? body.id ?? "Conta Meta";
+
+    const rows: ValidationResult["rows"] = [];
+    rows.push({ label: "Usuário", value: `${me.name ?? "—"} (ID: ${me.id ?? "—"})`, status: "ok" });
+
+    // 2. Busca Páginas gerenciadas + Instagram Business Account vinculado
+    let pageInfo: string | null = null;
+    let igAccountId: string | null = null;
+    try {
+      const pagesRes = await fetchWithTimeout(
+        `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,instagram_business_account&access_token=${encodeURIComponent(creds.accessToken)}`,
+        {},
+      );
+      if (pagesRes.ok) {
+        const pagesData = (await pagesRes.json()) as {
+          data?: Array<{ id: string; name: string; instagram_business_account?: { id: string } }>;
+        };
+        const pages = pagesData.data ?? [];
+        if (pages.length > 0) {
+          const pageWithIg = pages.find(p => p.instagram_business_account) ?? pages[0];
+          pageInfo = `${pageWithIg.name} (ID: ${pageWithIg.id})`;
+          igAccountId = pageWithIg.instagram_business_account?.id ?? null;
+          rows.push({ label: "Página Facebook", value: pageInfo, status: "ok" });
+          if (igAccountId) {
+            rows.push({ label: "Instagram Business", value: `ID: ${igAccountId}`, status: "ok" });
+          } else {
+            rows.push({ label: "Instagram Business", value: "Nenhuma conta IG vinculada à Página", status: "warn" });
+          }
+          if (pages.length > 1) {
+            rows.push({ label: "Outras Páginas", value: `${pages.length - 1} página(s) adicional(is) encontrada(s)`, status: "ok" });
+          }
+        } else {
+          rows.push({ label: "Páginas Facebook", value: "Nenhuma Página gerenciada encontrada — verifique as permissões do token", status: "warn" });
+        }
+      }
+    } catch {
+      rows.push({ label: "Páginas Facebook", value: "Não foi possível verificar (escopo pode estar limitado)", status: "warn" });
+    }
+
+    // 3. Debug do token — permissões e expiração
+    try {
+      const debugRes = await fetchWithTimeout(
+        `https://graph.facebook.com/v20.0/debug_token?input_token=${encodeURIComponent(creds.accessToken)}&access_token=${encodeURIComponent(creds.accessToken)}`,
+        {},
+      );
+      if (debugRes.ok) {
+        const debug = (await debugRes.json()) as {
+          data?: {
+            expires_at?: number;
+            scopes?: string[];
+            is_valid?: boolean;
+            app_id?: string;
+          };
+        };
+        const d = debug.data;
+        if (d) {
+          // Expiração
+          if (d.expires_at && d.expires_at > 0) {
+            const expiresDate = new Date(d.expires_at * 1000);
+            const daysLeft = Math.ceil((expiresDate.getTime() - Date.now()) / 86_400_000);
+            const expLabel = daysLeft > 0
+              ? `${expiresDate.toLocaleDateString("pt-BR")} (${daysLeft} dias restantes)`
+              : `EXPIRADO em ${expiresDate.toLocaleDateString("pt-BR")}`;
+            rows.push({ label: "Expira em", value: expLabel, status: daysLeft > 14 ? "ok" : daysLeft > 0 ? "warn" : "error" });
+          } else {
+            rows.push({ label: "Expira em", value: "Token de longa duração (sem expiração definida)", status: "ok" });
+          }
+
+          // Permissões
+          const scopes = d.scopes ?? [];
+          const keyPerms = ["instagram_basic", "instagram_content_publish", "pages_manage_posts", "pages_show_list"];
+          const granted = keyPerms.filter(p => scopes.includes(p));
+          const missing = keyPerms.filter(p => !scopes.includes(p));
+          if (granted.length > 0) {
+            rows.push({ label: "Permissões OK", value: granted.join(", "), status: "ok" });
+          }
+          if (missing.length > 0) {
+            rows.push({ label: "Permissões faltando", value: missing.join(", "), status: "warn" });
+          }
+        }
+      }
+    } catch {
+      // debug_token falhou silenciosamente — não crítico
+    }
+
+    const name = me.name ?? me.id ?? "Conta Meta";
+    const detailLine = pageInfo
+      ? `✓ ${providerLabel}: ${name} — Página: ${pageInfo}${igAccountId ? ` — IG: ${igAccountId}` : ""}`
+      : `✓ ${providerLabel}: conta "${name}" (ID: ${me.id})`;
+
     return {
       valid: true,
       accountName: name,
-      accountId: body.id,
-      detail: `✓ ${providerLabel}: conta "${name}" (id: ${body.id})`,
+      accountId: me.id,
+      detail: detailLine,
+      rows,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
