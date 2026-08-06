@@ -1360,10 +1360,8 @@ async function generateStoryboardFrame(
     }
   }
 
-  // ── SVG fallback — rascunho visual rotulado, sem IA ──────────────────────────
-  log.info({ platform, format }, "presence: generating SVG draft storyboard (no AI credits available)");
-  const svg = buildStoryboardSVG({ visualDirection, caption, platform, format, isDraft: true });
-  return { buf: Buffer.from(svg, "utf-8"), mimeType: "image/svg+xml", isAI: false };
+  // Todos os provedores falharam — propagar erro para o caller setar status="failed"
+  throw new Error("Geração de imagem indisponível: nenhum provedor retornou uma imagem. Verifique créditos das APIs de IA (Gemini).");
 }
 
 /** Generates a branded SVG storyboard frame from post metadata. */
