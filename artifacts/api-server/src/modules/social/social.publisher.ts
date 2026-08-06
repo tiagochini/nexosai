@@ -147,8 +147,14 @@ export async function publishToInstagram(
       platformUrl: `https://www.instagram.com/p/${published.id}/`,
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const raw = err instanceof Error ? err.message : String(err);
     logger.error({ err, postId: post.id }, "Instagram publish failed");
+    // Meta permission/auth errors → mensagem acionável em vez de texto técnico da API
+    const isPermissionError =
+      /does not exist|missing permissions|OAuthException|invalid token|token|Invalid OAuth/i.test(raw);
+    const msg = isPermissionError
+      ? `Conta Instagram desconectada ou token expirado. Reconecte em /integracoes para voltar a publicar. (Detalhe técnico: ${raw})`
+      : raw;
     return { success: false, error: msg };
   }
 }
@@ -203,7 +209,14 @@ export async function publishToFacebook(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error({ err, postId: post.id }, "Facebook publish failed");
-    return { success: false, error: msg };
+    const isPermissionError =
+      /does not exist|missing permissions|OAuthException|invalid token|token|Invalid OAuth/i.test(msg);
+    return {
+      success: false,
+      error: isPermissionError
+        ? `Página Facebook desconectada ou token expirado. Reconecte em /integracoes para voltar a publicar. (Detalhe técnico: ${msg})`
+        : msg,
+    };
   }
 }
 

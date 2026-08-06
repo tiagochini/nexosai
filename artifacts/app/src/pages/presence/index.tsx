@@ -665,9 +665,25 @@ function CalendarPostCard({
           {post.videoScript && (
             <p className="whitespace-pre-wrap text-[11px] text-muted-foreground"><strong>Roteiro:</strong> {post.videoScript}</p>
           )}
-          {post.errorMessage && (
-            <p className="text-[11px] text-amber-400">{post.errorMessage}</p>
-          )}
+          {post.errorMessage && (() => {
+            const isReconnect = post.errorMessage.includes("Reconecte em /integracoes");
+            const displayMsg = isReconnect
+              ? post.errorMessage.split(". (Detalhe técnico:")[0] + "."
+              : post.errorMessage;
+            return (
+              <div className="text-[11px] text-amber-400 space-y-0.5">
+                <p>{displayMsg}</p>
+                {isReconnect && (
+                  <a
+                    href="/app/integracoes"
+                    className="inline-flex items-center gap-1 underline hover:text-amber-300 font-medium"
+                  >
+                    → Ir para Integrações e reconectar
+                  </a>
+                )}
+              </div>
+            );
+          })()}
           <div className="flex flex-wrap gap-1.5">
             {(post.status === "draft" || post.status === "scheduled") && (
               <Button
