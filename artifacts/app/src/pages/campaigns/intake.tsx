@@ -516,6 +516,13 @@ export default function CampaignIntake() {
   const [isListening, setIsListening]           = useState(false);
   const [isTranscribing, setIsTranscribing]     = useState(false);
   const [pendingFiles, setPendingFiles]         = useState<Array<{ name: string; content?: string; url: string; isImage: boolean; isAudioVideo?: boolean; size?: number; mimeType?: string }>>([]);
+  // ── Voice mode (auto-send + TTS) ──────────────────────────────────────────────
+  const [voiceMode, setVoiceMode]               = useState(false);
+  const voiceModeRef                            = useRef(false);
+  const [autoSendSecsLeft, setAutoSendSecsLeft] = useState(0);
+  const [triggerAutoSend, setTriggerAutoSend]   = useState(false);
+  const autoSendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const aiTriggered = useRef(false);
   const sendingRef = useRef(false);
   const progressHydratedRef = useRef(false);
@@ -726,28 +733,107 @@ export default function CampaignIntake() {
     }
   };
 
-  // ── Voice to text ─────────────────────────────────────────────────────────────
+  // ── Voice helpers ──────────────────────────────────────────────────────────────
+  const stopAutoSendCountdown = () => {
+    if (autoSendTimerRef.current) { clearInterval(autoSendTimerRef.current); autoSendTimerRef.current = null; }
+    setAutoSendSecsLeft(0);
+  };
+
+  /** Toggle voice-mode on/off and persist to ref so closures see latest value. */
+  const handleSetVoiceMode = (v: boolean) => {
+    setVoiceMode(v);
+    voiceModeRef.current = v;
+    if (!v) {
+      stopAutoSendCountdown();
+      recognitionRef.current?.stop();
+      window.speechSynthesis?.cancel();
+    }
+  };
+
+  /** Speak text aloud (pt-BR) — only when voice mode is active. */
+  const speakText = (text: string) => {
+    if (!voiceModeRef.current) return;
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    // Strip markdown-ish symbols so TTS sounds natural
+    const clean = text.replace(/[_*`#>]/g, "").substring(0, 900);
+    const utt = new SpeechSynthesisUtterance(clean);
+    utt.lang = "pt-BR";
+    utt.rate = 1.05;
+    const voices = window.speechSynthesis.getVoices();
+    const ptVoice = voices.find(v => v.lang.startsWith("pt-BR")) ?? voices.find(v => v.lang.startsWith("pt")) ?? null;
+    if (ptVoice) utt.voice = ptVoice;
+    window.speechSynthesis.speak(utt);
+  };
+
   const toggleVoice = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRec = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-    if (!SpeechRec) { toast.error("Seu navegador não suporta voz. Use Chrome ou Edge."); return; }
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    if (!SpeechRec) { toast.error("Voz não suportada. Use Chrome ou Edge."); return; }
+
+    // If already listening → stop + cancel countdown
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      stopAutoSendCountdown();
+      return;
+    }
+
+    // Cancel any pending countdown before starting a new recording
+    stopAutoSendCountdown();
+
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any
     const rec = new SpeechRec() as any;
-    rec.lang = "pt-BR"; rec.continuous = false; rec.interimResults = false;
+    rec.lang = "pt-BR";
+    rec.continuous = false;
+    rec.interimResults = false;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (e: any) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const t = (e.results[0]?.[0]?.transcript as string | undefined) ?? "";
       if (t) setInputValue(prev => prev ? `${prev} ${t}` : t);
     };
-    rec.onend = () => setIsListening(false);
-    rec.onerror = () => { setIsListening(false); toast.error("Erro ao capturar áudio. Verifique as permissões do microfone."); };
+
+    rec.onend = () => {
+      setIsListening(false);
+      // If voice mode is on AND there's content → start 5-second countdown
+      if (voiceModeRef.current) {
+        const currentVal = inputRef.current?.value?.trim() ?? "";
+        if (currentVal) {
+          let secs = 5;
+          setAutoSendSecsLeft(secs);
+          autoSendTimerRef.current = setInterval(() => {
+            secs -= 1;
+            setAutoSendSecsLeft(secs);
+            if (secs <= 0) {
+              if (autoSendTimerRef.current) { clearInterval(autoSendTimerRef.current); autoSendTimerRef.current = null; }
+              setTriggerAutoSend(true);
+            }
+          }, 1000);
+        }
+      }
+    };
+
+    rec.onerror = () => {
+      setIsListening(false);
+      stopAutoSendCountdown();
+      toast.error("Erro ao capturar áudio. Verifique as permissões do microfone.");
+    };
+
     recognitionRef.current = rec;
     rec.start();
     setIsListening(true);
-    toast("Ouvindo… fale agora.", { duration: 2500 });
   };
+
+  // ── Auto-send trigger (fires when countdown reaches 0) ────────────────────────
+  useEffect(() => {
+    if (!triggerAutoSend) return;
+    setTriggerAutoSend(false);
+    setAutoSendSecsLeft(0);
+    void handleSend();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerAutoSend]);
 
   // ── File select (text / images / docs) ───────────────────────────────────────
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -871,6 +957,7 @@ export default function CampaignIntake() {
       const result = await callConversation({ message: aiMsg, history });
 
       setMessages((prev) => [...prev, { role: "assistant", content: result.aiMessage, agentId: result.agentId }]);
+      speakText(result.aiMessage);
       if (result.intakeData) setFormData(result.intakeData as Record<string, string>);
       if (result.progress != null) setProgress(prev => Math.max(prev, result.progress ?? 0));
       const r2 = result as unknown as { answeredRequired?: number; totalRequired?: number };
@@ -1361,57 +1448,103 @@ export default function CampaignIntake() {
                 </div>
               )}
 
-              {/* Transcribing indicator */}
+              {/* ── Transcribing indicator ── */}
               {isTranscribing && (
-                <div className="flex items-center gap-2 px-2 py-1 border border-violet-500/40 bg-violet-500/10">
-                  <Loader2 className="w-3 h-3 text-violet-400 animate-spin shrink-0" />
+                <div className="flex items-center gap-2 px-3 py-2 border border-violet-500/40 bg-violet-500/10 rounded-sm">
+                  <Loader2 className="w-3.5 h-3.5 text-violet-400 animate-spin shrink-0" />
                   <span className="font-mono text-[11px] text-violet-400 uppercase tracking-widest">Transcrevendo… aguarde</span>
                 </div>
               )}
 
-              {/* Listening indicator */}
+              {/* ── Listening indicator ── */}
               {isListening && !isTranscribing && (
-                <div className="flex items-center gap-2 px-2 py-1 border border-destructive/40 bg-destructive/10">
-                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse shrink-0" />
-                  <span className="font-mono text-[11px] text-destructive uppercase tracking-widest">Ouvindo… fale agora</span>
-                  <button onClick={toggleVoice} className="ml-auto text-destructive"><X className="h-3 w-3" /></button>
+                <div className="flex items-center gap-2 px-3 py-2 border border-red-500/50 bg-red-500/10 rounded-sm">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                  <span className="font-mono text-[12px] text-red-400 font-semibold">Ouvindo… fale agora</span>
+                  {voiceMode && <span className="font-mono text-[10px] text-red-400/60 ml-1">— envio automático ao parar</span>}
+                  <button onClick={toggleVoice} aria-label="Parar gravação" className="ml-auto text-red-400 hover:text-red-300 transition-colors">
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               )}
 
-              {/* Textarea */}
+              {/* ── Auto-send countdown ── */}
+              {autoSendSecsLeft > 0 && !isListening && (
+                <div className="flex items-center gap-3 px-3 py-2 border border-amber-500/50 bg-amber-500/10 rounded-sm">
+                  <span className="font-mono text-[13px] font-bold text-amber-400 tabular-nums w-5 text-center">{autoSendSecsLeft}</span>
+                  <span className="font-mono text-[11px] text-amber-400/80 flex-1">Enviando em {autoSendSecsLeft}s… clique no microfone para cancelar</span>
+                  <div className="h-1.5 flex-1 max-w-[80px] bg-amber-500/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-400 rounded-full transition-all duration-1000"
+                      style={{ width: `${(autoSendSecsLeft / 5) * 100}%` }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => { stopAutoSendCountdown(); }}
+                    aria-label="Cancelar envio automático"
+                    className="shrink-0 font-mono text-[10px] text-amber-400 border border-amber-500/50 px-2 py-0.5 rounded hover:bg-amber-500/20 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+
+              {/* ── Textarea ── */}
               <textarea
                 ref={inputRef}
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => { setInputValue(e.target.value); if (autoSendSecsLeft > 0) stopAutoSendCountdown(); }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
+                    stopAutoSendCountdown();
                     void handleSend();
                   }
                 }}
-                placeholder="Digite sua resposta aqui... ou use o microfone para falar (o agente entende tudo)"
+                placeholder={voiceMode ? "Modo voz ativo — clique no microfone para falar, o agente responde e lê a resposta em voz alta" : "Digite sua resposta ou clique no microfone para falar…"}
                 disabled={sending || confirmingType}
-                rows={isMobile ? 5 : 7}
-                className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/50 transition-all min-h-[100px]"
+                rows={isMobile ? 4 : 6}
+                className="w-full font-mono text-sm bg-background/60 border border-border/50 focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 rounded-sm px-3 py-3 resize-y text-foreground placeholder:text-muted-foreground/40 transition-all min-h-[90px]"
               />
 
-              {/* Action toolbar */}
-              <div className="flex items-center gap-1.5">
+              {/* ── Voice mode toggle (always visible) + action toolbar ── */}
+              <div className="flex flex-wrap items-center gap-2">
 
-                {/* Mic */}
-                <button type="button" onClick={toggleVoice}
-                  title={isListening ? "Parar gravação" : "Falar por voz (PT-BR)"}
-                  className={`h-9 w-9 flex items-center justify-center border transition-all rounded-sm shrink-0
-                    ${isListening
-                      ? "border-destructive bg-destructive/20 text-destructive"
-                      : "border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"}`}>
+                {/* VOICE MODE TOGGLE — destaque principal */}
+                <button
+                  type="button"
+                  onClick={() => handleSetVoiceMode(!voiceMode)}
+                  title={voiceMode ? "Desativar modo voz (auto-envio + leitura em voz alta)" : "Ativar modo voz — fale, o agente responde em voz alta"}
+                  className={`h-10 px-3 flex items-center gap-2 border-2 font-mono text-[11px] uppercase tracking-widest font-bold transition-all rounded-sm shrink-0 ${
+                    voiceMode
+                      ? "border-primary bg-primary/20 text-primary shadow-[0_0_12px_rgba(var(--primary),0.3)]"
+                      : "border-border/60 bg-muted/10 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5"
+                  }`}
+                >
+                  {voiceMode ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{voiceMode ? "Modo Voz ON" : "Modo Voz"}</span>
+                </button>
+
+                {/* MIC — gravar fala */}
+                <button
+                  type="button"
+                  onClick={toggleVoice}
+                  disabled={sending || confirmingType || isTranscribing}
+                  title={isListening ? "Parar gravação" : "Gravar mensagem por voz (PT-BR)"}
+                  className={`h-10 px-3 flex items-center gap-2 border font-mono text-[11px] uppercase tracking-widest transition-all rounded-sm shrink-0 ${
+                    isListening
+                      ? "border-red-500 bg-red-500/20 text-red-400 animate-pulse"
+                      : "border-border/60 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
                   {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{isListening ? "Parar" : "Gravar"}</span>
                 </button>
 
                 {/* Attach text/image */}
                 <button type="button" onClick={() => fileInputRef.current?.click()}
                   title="Anexar arquivo ou imagem"
-                  className="h-9 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0">
+                  className="h-10 px-2.5 flex items-center gap-1.5 border border-border/50 bg-muted/10 hover:bg-muted/30 text-muted-foreground hover:text-foreground transition-all rounded-sm shrink-0">
                   <Paperclip className="h-4 w-4" />
                   <span className="font-mono text-[10px] uppercase tracking-widest hidden sm:inline">Arquivo</span>
                   {pendingFiles.length > 0 && (
@@ -1423,8 +1556,8 @@ export default function CampaignIntake() {
                 <button type="button"
                   onClick={() => audioInputRef.current?.click()}
                   disabled={isTranscribing || sending}
-                  title="Subir áudio ou vídeo — transcrição automática via transcrição (MP3, MP4, WAV, WebM…)"
-                  className={`h-9 px-2.5 flex items-center gap-1.5 border transition-all rounded-sm shrink-0
+                  title="Subir áudio ou vídeo para transcrição automática (MP3, MP4, WAV, WebM…)"
+                  className={`h-10 px-2.5 flex items-center gap-1.5 border transition-all rounded-sm shrink-0
                     ${isTranscribing
                       ? "border-violet-500/60 bg-violet-500/20 text-violet-400 cursor-not-allowed"
                       : "border-border/50 bg-muted/10 hover:bg-violet-500/10 hover:border-violet-500/40 text-muted-foreground hover:text-violet-400"}`}>
@@ -1443,23 +1576,25 @@ export default function CampaignIntake() {
                   <Button variant="outline" size="sm" title="Nova linha"
                     onClick={() => { setInputValue(v => v + "\n"); setTimeout(() => inputRef.current?.focus(), 0); }}
                     disabled={sending || confirmingType}
-                    className="font-mono rounded-sm h-9 px-3 border-border/50 text-muted-foreground hover:text-foreground shrink-0">
+                    className="font-mono rounded-sm h-10 px-3 border-border/50 text-muted-foreground hover:text-foreground shrink-0">
                     <CornerDownLeft className="h-4 w-4" />
                   </Button>
                 )}
 
                 {/* Send */}
                 <Button
-                  onClick={() => void handleSend()}
+                  onClick={() => { stopAutoSendCountdown(); void handleSend(); }}
                   disabled={sending || (inputValue.trim() === "" && pendingFiles.length === 0) || confirmingType}
                   title="Enviar (Enter)"
-                  className="font-mono rounded-sm h-9 px-4 btn-weapon-primary shrink-0 gap-1.5">
+                  className="font-mono rounded-sm h-10 px-4 btn-weapon-primary shrink-0 gap-1.5">
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" /><span className="hidden sm:inline text-[11px] uppercase tracking-widest">Enviar</span></>}
                 </Button>
               </div>
 
               <p className="text-[10px] font-mono text-muted-foreground/40 text-right">
-                Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF, áudio e vídeo
+                {voiceMode
+                  ? "Modo voz: clique em Gravar → fale → aguarde 5s → enviado automaticamente · agente responde em voz alta"
+                  : "Enter = enviar · Shift+Enter = nova linha · suporta texto, imagens, PDF, áudio e vídeo"}
               </p>
             </div>
           ))}
