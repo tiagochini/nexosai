@@ -61,6 +61,8 @@ export function MediaProductionDrawer({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadDone, setUploadDone] = useState(false);
+  const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -233,7 +235,8 @@ export function MediaProductionDrawer({
       }
       const { post: updated } = (await res.json()) as { post: MediaPresencePost };
       updatePost(updated);
-      onClose();
+      setUploadedMediaUrl(updated.mediaUrls?.[0] ?? previewUrl);
+      setUploadDone(true);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Erro ao fazer upload.");
     } finally {
@@ -326,9 +329,13 @@ export function MediaProductionDrawer({
               selectedFile={selectedFile}
               previewUrl={previewUrl}
               uploading={uploading}
+              uploadDone={uploadDone}
+              uploadedMediaUrl={uploadedMediaUrl}
               fileInputRef={fileInputRef}
               onFileSelect={handleFileSelect}
               onUpload={uploadFile}
+              onClose={onClose}
+              onUploadAnother={() => { setUploadDone(false); setUploadedMediaUrl(null); setSelectedFile(null); setPreviewUrl(null); }}
             />
           )}
         </div>
@@ -686,16 +693,24 @@ function UploadTabContent({
   selectedFile,
   previewUrl,
   uploading,
+  uploadDone,
+  uploadedMediaUrl,
   fileInputRef,
   onFileSelect,
   onUpload,
+  onClose,
+  onUploadAnother,
 }: {
   selectedFile: File | null;
   previewUrl: string | null;
   uploading: boolean;
+  uploadDone: boolean;
+  uploadedMediaUrl: string | null;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileSelect: (file: File) => void;
   onUpload: () => void;
+  onClose: () => void;
+  onUploadAnother: () => void;
 }) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -704,6 +719,50 @@ function UploadTabContent({
   };
 
   const isVideo = selectedFile?.type.startsWith("video/");
+  const uploadedIsVideo = uploadedMediaUrl && /\.(mp4|mov|webm)(\?|$)/i.test(uploadedMediaUrl);
+
+  // ── Upload success state ──────────────────────────────────────────────────
+  if (uploadDone) {
+    return (
+      <div className="space-y-4">
+        {/* Success header */}
+        <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/8 px-3 py-2.5 text-sm text-green-400">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span className="font-medium">Mídia salva no post com sucesso!</span>
+        </div>
+
+        {/* Preview of what was saved */}
+        {uploadedMediaUrl && (
+          <div className="rounded-xl overflow-hidden border border-border bg-black">
+            {uploadedIsVideo ? (
+              <video
+                src={uploadedMediaUrl}
+                className="w-full max-h-72 object-contain"
+                controls
+                playsInline
+              />
+            ) : (
+              <img
+                src={uploadedMediaUrl}
+                alt="Mídia salva"
+                className="w-full max-h-72 object-contain"
+              />
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onUploadAnother}>
+            <Upload className="mr-2 h-4 w-4" /> Trocar arquivo
+          </Button>
+          <Button className="flex-1" onClick={onClose}>
+            <CheckCircle2 className="mr-2 h-4 w-4" /> Concluído
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

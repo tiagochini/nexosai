@@ -140,6 +140,9 @@ export default function PresencePage() {
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [mediaDrawerPostId, setMediaDrawerPostId] = useState<string | null>(null);
+  const [socialHealthWarnings, setSocialHealthWarnings] = useState<{
+    provider: string; accountName: string | null; daysLeft: number | null; expired: boolean; expiringSoon: boolean;
+  }[]>([]);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadConfig = useCallback(async () => {
@@ -168,10 +171,19 @@ export default function PresencePage() {
     setMetrics(data);
   }, []);
 
+  const loadSocialHealth = useCallback(async () => {
+    try {
+      const data = await customFetch<{
+        integrations: { provider: string; accountName: string | null; daysLeft: number | null; expired: boolean; expiringSoon: boolean; needsAction: boolean }[];
+      }>("/api/integrations/oauth/social-health");
+      setSocialHealthWarnings(data.integrations.filter((i) => i.needsAction));
+    } catch { /* não bloquear a página se health check falhar */ }
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
-        await Promise.all([loadConfig(), loadPosts(), loadMetrics()]);
+        await Promise.all([loadConfig(), loadPosts(), loadMetrics(), loadSocialHealth()]);
       } catch { /* sem config ainda */ }
       setLoading(false);
     })();
@@ -333,6 +345,42 @@ export default function PresencePage() {
           </Button>
         </div>
       </div>
+
+      {/* ── Social token health warnings ────────────────────────────────────── */}
+      {socialHealthWarnings.length > 0 && (
+        <div className="space-y-2">
+          {socialHealthWarnings.map((w) => {
+            const providerLabel =
+              w.provider === "instagram" ? "Instagram" :
+              w.provider === "facebook" || w.provider === "meta_ads" ? "Facebook/Instagram" :
+              w.provider === "tiktok" ? "TikTok" : w.provider;
+            const msg = w.expired
+              ? `${providerLabel}${w.accountName ? ` (${w.accountName})` : ""} — conexão expirada. Os posts agendados não serão publicados até reconectar.`
+              : `${providerLabel}${w.accountName ? ` (${w.accountName})` : ""} — conexão expira em ${w.daysLeft} dia${w.daysLeft === 1 ? "" : "s"}. Reconecte antes de expirar para manter a publicação autônoma funcionando.`;
+            return (
+              <div
+                key={w.provider}
+                className={`flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm ${
+                  w.expired
+                    ? "border-destructive/40 bg-destructive/8 text-destructive"
+                    : "border-amber-500/40 bg-amber-500/8 text-amber-400"
+                }`}
+              >
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{msg}</span>
+                <a
+                  href="/api/integrations/oauth/start/meta"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 rounded-md border border-current px-3 py-1 text-xs font-medium hover:bg-white/5 transition-colors"
+                >
+                  Reconectar agora →
+                </a>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Campaign alignment badge — shown only if user chose one (or auto-detected active launch) */}
       {activeLaunch && (
@@ -658,6 +706,16 @@ function CalendarPostCard({
         <div className="mt-2 space-y-2 border-t border-border pt-2">
           {post.hashtags.length > 0 && (
             <p className="text-[11px] text-blue-300">{post.hashtags.map((h) => `#${h}`).join(" ")}</p>
+          )}
+          {/* Thumbnail da mídia já salva */}
+          {hasMedia && (
+            <div className="rounded-lg overflow-hidden border border-green-500/20 bg-black max-h-48">
+              {/\.(mp4|mov|webm)(\?|$)/i.test(post.mediaUrls[0]) ? (
+                <video src={post.mediaUrls[0]} className="w-full max-h-48 object-contain" controls playsInline />
+              ) : (
+                <img src={post.mediaUrls[0]} alt="Mídia do post" className="w-full max-h-48 object-contain" />
+              )}
+            </div>
           )}
           {post.visualDirection && (
             <p className="text-[11px] text-muted-foreground"><strong>Visual:</strong> {post.visualDirection}</p>

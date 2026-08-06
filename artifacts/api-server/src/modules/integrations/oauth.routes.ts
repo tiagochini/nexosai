@@ -483,4 +483,42 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
   }
 });
 
+// ── GET /integrations/oauth/social-health ─────────────────────────────────────
+// Verifica validade dos tokens sociais. Usado pela página de Presença para
+// exibir avisos proativos de reconexão antes que a publicação autônoma falhe.
+router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
+  try {
+    const SOCIAL_PROVIDERS = ["instagram", "facebook", "meta_ads", "tiktok"];
+    const all = await db
+      .select()
+      .from(workspaceIntegrationsTable)
+      .where(eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId));
+
+    const now = Date.now();
+    const WARN_DAYS = 14;
+
+    const integrations = all
+      .filter((i) => SOCIAL_PROVIDERS.includes(i.provider) && i.status === "connected")
+      .map((i) => {
+        const expiresMs = i.tokenExpiresAt ? new Date(i.tokenExpiresAt).getTime() : null;
+        const daysLeft = expiresMs !== null ? Math.ceil((expiresMs - now) / 86_400_000) : null;
+        const expired = daysLeft !== null && daysLeft <= 0;
+        const expiringSoon = !expired && daysLeft !== null && daysLeft <= WARN_DAYS;
+        return {
+          provider: i.provider,
+          accountName: i.accountName ?? null,
+          daysLeft,
+          expired,
+          expiringSoon,
+          needsAction: expired || expiringSoon,
+        };
+      });
+
+    res.json({ integrations });
+  } catch (err) {
+    logger.warn({ err }, "social-health check failed");
+    res.json({ integrations: [] });
+  }
+});
+
 export default router;
