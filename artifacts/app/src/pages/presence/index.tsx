@@ -140,9 +140,24 @@ export default function PresencePage() {
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [mediaDrawerPostId, setMediaDrawerPostId] = useState<string | null>(null);
-  const [socialHealthWarnings, setSocialHealthWarnings] = useState<{
-    provider: string; accountName: string | null; daysLeft: number | null; expired: boolean; expiringSoon: boolean;
+  const [socialHealth, setSocialHealth] = useState<{
+    provider: string;
+    accountId: string | null;
+    accountName: string | null;
+    daysLeft: number | null;
+    tokenExpired: boolean;
+    expiringSoon: boolean;
+    pingOk: boolean;
+    pingStatus: number;
+    liveAccountName: string | null;
+    pingError: string | null;
+    needsAction: boolean;
+    statusLabel: string;
+    connectedSince: string;
+    lastUpdated: string;
+    metadata: Record<string, unknown>;
   }[]>([]);
+  const [healthChecking, setHealthChecking] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadConfig = useCallback(async () => {
@@ -171,13 +186,14 @@ export default function PresencePage() {
     setMetrics(data);
   }, []);
 
-  const loadSocialHealth = useCallback(async () => {
+  const loadSocialHealth = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setHealthChecking(true);
     try {
-      const data = await customFetch<{
-        integrations: { provider: string; accountName: string | null; daysLeft: number | null; expired: boolean; expiringSoon: boolean; needsAction: boolean }[];
-      }>("/api/integrations/oauth/social-health");
-      setSocialHealthWarnings(data.integrations.filter((i) => i.needsAction));
-    } catch { /* não bloquear a página se health check falhar */ }
+      const data = await customFetch<{ integrations: typeof socialHealth }>("/api/integrations/oauth/social-health");
+      setSocialHealth(data.integrations);
+    } catch { /* não bloquear se health check falhar */ }
+    finally { setHealthChecking(false); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -346,39 +362,112 @@ export default function PresencePage() {
         </div>
       </div>
 
-      {/* ── Social token health warnings ────────────────────────────────────── */}
-      {socialHealthWarnings.length > 0 && (
-        <div className="space-y-2">
-          {socialHealthWarnings.map((w) => {
-            const providerLabel =
-              w.provider === "instagram" ? "Instagram" :
-              w.provider === "facebook" || w.provider === "meta_ads" ? "Facebook/Instagram" :
-              w.provider === "tiktok" ? "TikTok" : w.provider;
-            const msg = w.expired
-              ? `${providerLabel}${w.accountName ? ` (${w.accountName})` : ""} — conexão expirada. Os posts agendados não serão publicados até reconectar.`
-              : `${providerLabel}${w.accountName ? ` (${w.accountName})` : ""} — conexão expira em ${w.daysLeft} dia${w.daysLeft === 1 ? "" : "s"}. Reconecte antes de expirar para manter a publicação autônoma funcionando.`;
-            return (
-              <div
-                key={w.provider}
-                className={`flex flex-wrap items-center gap-3 rounded-lg border px-4 py-3 text-sm ${
-                  w.expired
-                    ? "border-destructive/40 bg-destructive/8 text-destructive"
-                    : "border-amber-500/40 bg-amber-500/8 text-amber-400"
-                }`}
-              >
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{msg}</span>
-                <a
-                  href="/api/integrations/oauth/start/meta"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 rounded-md border border-current px-3 py-1 text-xs font-medium hover:bg-white/5 transition-colors"
+      {/* ── Social connection health panel ──────────────────────────────────── */}
+      {socialHealth.length > 0 && (
+        <div className="rounded-xl border border-border bg-background/60 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <Share2 className="h-4 w-4 text-primary" />
+              Status das conexões sociais
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-3 text-xs"
+              onClick={() => loadSocialHealth(true)}
+              disabled={healthChecking}
+            >
+              {healthChecking
+                ? <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" />Verificando…</>
+                : <><RefreshCw className="mr-1.5 h-3 w-3" />Verificar agora</>}
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {socialHealth.map((c) => {
+              const providerLabel =
+                c.provider === "instagram" ? "Instagram" :
+                c.provider === "facebook" ? "Facebook" :
+                c.provider === "meta_ads" ? "Facebook/Meta Ads" :
+                c.provider === "tiktok_ads" ? "TikTok" : c.provider;
+
+              const reconnectPlatform = c.provider.startsWith("tiktok") ? "tiktok" : "meta";
+
+              // Linha de status verde / âmbar / vermelho
+              const isOk = c.pingOk;
+              const isCritical = !c.pingOk && (c.tokenExpired || c.statusLabel === "falhou_ping");
+              const isWarning = !isCritical && (c.expiringSoon || !c.pingOk);
+
+              return (
+                <div
+                  key={c.provider}
+                  className={`rounded-lg border px-3 py-2.5 text-xs flex flex-wrap items-start gap-x-4 gap-y-1.5 ${
+                    isOk
+                      ? "border-green-500/25 bg-green-500/5"
+                      : isCritical
+                      ? "border-destructive/35 bg-destructive/6"
+                      : "border-amber-500/35 bg-amber-500/6"
+                  }`}
                 >
-                  Reconectar agora →
-                </a>
-              </div>
-            );
-          })}
+                  {/* Status dot + nome */}
+                  <div className="flex items-center gap-2 min-w-[130px]">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${isOk ? "bg-green-500" : isCritical ? "bg-destructive" : "bg-amber-400"}`} />
+                    <span className={`font-medium ${isOk ? "text-green-400" : isCritical ? "text-destructive" : "text-amber-400"}`}>
+                      {providerLabel}
+                    </span>
+                  </div>
+
+                  {/* Conta confirmada pela rede */}
+                  <div className="flex-1 space-y-0.5">
+                    {c.pingOk && c.liveAccountName && (
+                      <p className="text-green-400">
+                        ✓ Conectado como <strong>{c.liveAccountName}</strong>
+                        {c.accountId && <span className="text-muted-foreground ml-1">(ID: {c.accountId})</span>}
+                      </p>
+                    )}
+                    {!c.pingOk && (
+                      <p className="text-destructive">
+                        ✗ Ping falhou — {c.pingError ?? "sem resposta da rede social"}
+                      </p>
+                    )}
+                    {c.accountName && !c.liveAccountName && (
+                      <p className="text-muted-foreground">Conta salva: {c.accountName}</p>
+                    )}
+                    {c.daysLeft !== null && (
+                      <p className={c.tokenExpired ? "text-destructive" : c.expiringSoon ? "text-amber-400" : "text-muted-foreground"}>
+                        Token: {c.tokenExpired
+                          ? "EXPIRADO"
+                          : c.daysLeft > 365
+                          ? "sem expiração definida"
+                          : `expira em ${c.daysLeft} dia${c.daysLeft === 1 ? "" : "s"}`}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Ação */}
+                  {(!c.pingOk || c.tokenExpired || c.expiringSoon) && (
+                    <a
+                      href={`/api/integrations/oauth/start/${reconnectPlatform}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`shrink-0 self-start rounded border px-2.5 py-1 font-medium hover:bg-white/5 transition-colors ${
+                        isCritical ? "border-destructive/50 text-destructive" : "border-amber-500/50 text-amber-400"
+                      }`}
+                    >
+                      Reconectar →
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {socialHealth.every((c) => c.pingOk) && (
+            <p className="text-xs text-green-400/70 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Todas as redes confirmaram conexão ativa — publicação autônoma operacional.
+            </p>
+          )}
         </div>
       )}
 

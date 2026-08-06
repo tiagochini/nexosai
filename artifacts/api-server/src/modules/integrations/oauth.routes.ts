@@ -484,11 +484,11 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
 });
 
 // ── GET /integrations/oauth/social-health ─────────────────────────────────────
-// Verifica validade dos tokens sociais. Usado pela página de Presença para
-// exibir avisos proativos de reconexão antes que a publicação autônoma falhe.
+// Verifica validade dos tokens sociais + faz ping real nas APIs das redes sociais.
+// Retorna: dados da DB + resultado do ping ao vivo para cada integração.
 router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
   try {
-    const SOCIAL_PROVIDERS = ["instagram", "facebook", "meta_ads", "tiktok"];
+    const SOCIAL_PROVIDERS = ["instagram", "facebook", "meta_ads", "tiktok_ads"];
     const all = await db
       .select()
       .from(workspaceIntegrationsTable)
@@ -497,24 +497,105 @@ router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
     const now = Date.now();
     const WARN_DAYS = 14;
 
-    const integrations = all
-      .filter((i) => SOCIAL_PROVIDERS.includes(i.provider) && i.status === "connected")
-      .map((i) => {
+    // Ping real a cada API para verificar se o token ainda aceita requisições
+    async function pingMeta(token: string, accountId: string): Promise<{
+      ok: boolean; httpStatus: number; accountName?: string; igUsername?: string; errorMsg?: string;
+    }> {
+      try {
+        const url = `https://graph.facebook.com/v20.0/${accountId}?fields=id,name,username&access_token=${token}`;
+        const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        const body = (await r.json()) as {
+          id?: string; name?: string; username?: string;
+          error?: { message: string; type: string; code: number };
+        };
+        if (!r.ok || body.error) {
+          return { ok: false, httpStatus: r.status, errorMsg: body.error?.message ?? `HTTP ${r.status}` };
+        }
+        return { ok: true, httpStatus: r.status, accountName: body.name, igUsername: body.username };
+      } catch (e) {
+        return { ok: false, httpStatus: 0, errorMsg: e instanceof Error ? e.message : "timeout" };
+      }
+    }
+
+    async function pingTikTok(token: string): Promise<{
+      ok: boolean; httpStatus: number; displayName?: string; errorMsg?: string;
+    }> {
+      try {
+        const r = await fetch("https://open.tiktokapis.com/v2/user/info/?fields=display_name,avatar_url", {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(8000),
+        });
+        const body = (await r.json()) as {
+          data?: { user?: { display_name?: string } };
+          error?: { message?: string };
+        };
+        if (!r.ok || body.error?.message) {
+          return { ok: false, httpStatus: r.status, errorMsg: body.error?.message ?? `HTTP ${r.status}` };
+        }
+        return { ok: true, httpStatus: r.status, displayName: body.data?.user?.display_name };
+      } catch (e) {
+        return { ok: false, httpStatus: 0, errorMsg: e instanceof Error ? e.message : "timeout" };
+      }
+    }
+
+    const social = all.filter(
+      (i) => SOCIAL_PROVIDERS.includes(i.provider) && i.status === "connected",
+    );
+
+    const results = await Promise.all(
+      social.map(async (i) => {
         const expiresMs = i.tokenExpiresAt ? new Date(i.tokenExpiresAt).getTime() : null;
         const daysLeft = expiresMs !== null ? Math.ceil((expiresMs - now) / 86_400_000) : null;
-        const expired = daysLeft !== null && daysLeft <= 0;
-        const expiringSoon = !expired && daysLeft !== null && daysLeft <= WARN_DAYS;
-        return {
-          provider: i.provider,
-          accountName: i.accountName ?? null,
-          daysLeft,
-          expired,
-          expiringSoon,
-          needsAction: expired || expiringSoon,
-        };
-      });
+        const tokenExpired = daysLeft !== null && daysLeft <= 0;
+        const expiringSoon = !tokenExpired && daysLeft !== null && daysLeft <= WARN_DAYS;
 
-    res.json({ integrations });
+        // Ping ao vivo
+        let ping: { ok: boolean; httpStatus: number; liveAccountName?: string; errorMsg?: string } = {
+          ok: false, httpStatus: 0, errorMsg: "não testado",
+        };
+        if (i.accessToken) {
+          if (i.provider === "tiktok") {
+            const r = await pingTikTok(i.accessToken);
+            ping = { ok: r.ok, httpStatus: r.httpStatus, liveAccountName: r.displayName, errorMsg: r.errorMsg };
+          } else {
+            // instagram, facebook, meta_ads — usa Graph API
+            const accountId = i.accountId ?? "me";
+            const r = await pingMeta(i.accessToken, accountId);
+            ping = { ok: r.ok, httpStatus: r.httpStatus, liveAccountName: r.accountName ?? r.igUsername, errorMsg: r.errorMsg };
+          }
+        }
+
+        // Se o ping funcionou mas o token estava marcado como "expirado" na DB → corrigir
+        const needsAction = !ping.ok || tokenExpired || expiringSoon;
+
+        return {
+          // ─ dados da DB ─
+          provider: i.provider,
+          accountId: i.accountId ?? null,
+          accountName: i.accountName ?? null,
+          tokenExpiresAt: i.tokenExpiresAt ?? null,
+          daysLeft,
+          connectedSince: i.createdAt,
+          lastUpdated: i.updatedAt,
+          tokenPresente: !!i.accessToken,
+          metadata: i.metadata ?? {},
+          // ─ expiração calculada ─
+          tokenExpired,
+          expiringSoon,
+          // ─ ping ao vivo ─
+          pingOk: ping.ok,
+          pingStatus: ping.httpStatus,
+          liveAccountName: ping.liveAccountName ?? null,
+          pingError: ping.errorMsg ?? null,
+          // ─ resumo ─
+          needsAction,
+          statusLabel: ping.ok ? "conectado" : tokenExpired ? "expirado" : "falhou_ping",
+        };
+      }),
+    );
+
+    logger.info({ workspaceId: req.auth.workspaceId, count: results.length }, "social-health check complete");
+    res.json({ integrations: results });
   } catch (err) {
     logger.warn({ err }, "social-health check failed");
     res.json({ integrations: [] });
