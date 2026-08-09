@@ -21,6 +21,7 @@ import jwt from "jsonwebtoken";
 import {
   uploadBufferToGCS,
   presenceMediaObjectKey,
+  presenceStoryboardObjectKey,
   createGCSObjectStream,
   getGCSObjectMeta,
   getPresenceMediaSignedUrl,
@@ -1287,13 +1288,17 @@ export async function publishDuePresencePosts(): Promise<void> {
             setImmediate(() => {
               generateStoryboardFrame(postSnapshot.visualDirection, postSnapshot.caption, postSnapshot.platform, postSnapshot.format, log)
                 .then(async ({ buf, mimeType, isAI }) => {
-                  const dataUrl = `data:${mimeType};base64,${buf.toString("base64")}`;
                   const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
+                  // Upload imediatamente ao GCS — nunca armazenar base64 no banco
+                  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+                  const key = presenceStoryboardObjectKey(postSnapshot.workspaceId, postSnapshot.id, 0).replace(/\.png$/, `.${ext}`);
+                  await uploadBufferToGCS(buf, key, mimeType);
+                  const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
                   await db
                     .update(socialPresencePostsTable)
-                    .set({ mediaGenStatus: newStatus, storyboardUrls: [dataUrl], errorMessage: "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar." })
+                    .set({ mediaGenStatus: newStatus, storyboardUrls: [serveUrl], errorMessage: "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar." })
                     .where(eq(socialPresencePostsTable.id, postSnapshot.id));
-                  log.info({ postId: postSnapshot.id, newStatus }, "presence: imagem auto-gerada ✓ — aguardando aprovação");
+                  log.info({ postId: postSnapshot.id, newStatus, key }, "presence: imagem auto-gerada e enviada ao GCS ✓ — aguardando aprovação");
                 })
                 .catch(async (err) => {
                   log.warn({ err, postId: postSnapshot.id }, "presence: auto-geração de imagem falhou");
@@ -1715,17 +1720,21 @@ export async function generatePostStoryboard(
         post.format,
         log,
       );
-      // Armazenar como base64 data URL diretamente — sem serving endpoint extra
-      const dataUrl = `data:${mimeType};base64,${imgBuf.toString("base64")}`;
       // isAI=true → storyboard_ready (IA real); isAI=false → storyboard_draft (rascunho SVG)
       const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
 
+      // Upload imediatamente ao GCS — nunca armazenar base64 no banco
+      const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+      const key = presenceStoryboardObjectKey(workspaceId, postId, 0).replace(/\.png$/, `.${ext}`);
+      await uploadBufferToGCS(imgBuf, key, mimeType);
+      const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+
       await db
         .update(socialPresencePostsTable)
-        .set({ mediaGenStatus: newStatus, storyboardUrls: [dataUrl] })
+        .set({ mediaGenStatus: newStatus, storyboardUrls: [serveUrl] })
         .where(eq(socialPresencePostsTable.id, postId));
 
-      log.info({ postId, isAI, newStatus }, "presence: storyboard generated");
+      log.info({ postId, isAI, newStatus, key }, "presence: storyboard generated and uploaded to GCS");
     } catch (err) {
       log.warn({ err, postId }, "presence: storyboard generation failed");
       await db
@@ -2061,23 +2070,32 @@ export async function approveStoryboardAsImage(
     .limit(1);
   if (!post) return null;
 
-  const storyboardDataUrl = (post.storyboardUrls as string[] | null)?.[0];
-  if (!storyboardDataUrl?.startsWith("data:image/")) {
+  const storyboardEntry = (post.storyboardUrls as string[] | null)?.[0];
+  if (!storyboardEntry) {
     throw new Error("Storyboard ainda não disponível. Aguarde a geração ou gere novamente.");
   }
 
-  const match = storyboardDataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-  if (!match) throw new Error("Formato interno do storyboard inválido.");
-  const mimeType = match[1];
-  const b64 = match[2];
-  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
-  const buf = Buffer.from(b64, "base64");
+  let serveUrl: string;
 
-  const key = presenceMediaObjectKey(workspaceId, postId, `${Date.now()}-storyboard.${ext}`);
-  await uploadBufferToGCS(buf, key, mimeType);
-
-  const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
-  log.info({ postId, key, mimeType }, "presence: storyboard aprovado como imagem final ✓");
+  if (storyboardEntry.startsWith("data:image/")) {
+    // Legado: base64 ainda no banco — fazer upload agora
+    const match = storyboardEntry.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+    if (!match) throw new Error("Formato interno do storyboard inválido.");
+    const mimeType = match[1];
+    const b64 = match[2];
+    const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+    const buf = Buffer.from(b64, "base64");
+    const key = presenceMediaObjectKey(workspaceId, postId, `${Date.now()}-storyboard.${ext}`);
+    await uploadBufferToGCS(buf, key, mimeType);
+    serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+    log.info({ postId, key, mimeType }, "presence: storyboard (legado base64) enviado ao GCS ✓");
+  } else if (storyboardEntry.includes("/api/presence/media/serve")) {
+    // Novo caminho: já foi enviado ao GCS durante a geração — reutilizar URL
+    serveUrl = storyboardEntry;
+    log.info({ postId, serveUrl }, "presence: storyboard já no GCS — aprovado como imagem final ✓");
+  } else {
+    throw new Error("Formato do storyboard não reconhecido.");
+  }
 
   const [updated] = await db
     .update(socialPresencePostsTable)
