@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import nexosLogo from "/nexos-logo.png";
-import { CloneStudioPanel } from "@/components/CloneStudioPanel";
+import { useLocation } from "wouter";
 
 type Tab = "perfil" | "workspace" | "seguranca" | "integracoes" | "identidade" | "compliance";
 
@@ -1449,8 +1449,8 @@ function IdentidadeTab() {
   const [persona, setPersona] = useState<PersonaData>({});
   const [loading, setLoading] = useState(true);
 
-  // ── Clone Studio state ────────────────────────────────────────────────────
-  const [showCloneStudio, setShowCloneStudio] = useState(false);
+  // ── Clone navigation ──────────────────────────────────────────────────────
+  const [, navigate] = useLocation();
   const [cloneSessionId, setCloneSessionId] = useState<string | null>(null);
   const [videoProductionStyle, setVideoProductionStyle] = useState<"clone" | "no_face">("no_face");
   const [savingStyle, setSavingStyle] = useState(false);
@@ -1710,7 +1710,7 @@ function IdentidadeTab() {
             <button
               onClick={() => {
                 if (!cloneSessionId) {
-                  setShowCloneStudio(true);
+                  navigate("/clone-digital");
                 } else {
                   void saveVideoProductionStyle("clone");
                 }
@@ -1731,21 +1731,8 @@ function IdentidadeTab() {
             </button>
           </div>
 
-          {/* Clone Studio panel — portal fullscreen, triggered from here or Avatar Digital section */}
-          {showCloneStudio && (
-            <CloneStudioPanel
-              userName={user?.name ?? "Usuário"}
-              onComplete={(sessionId) => {
-                setShowCloneStudio(false);
-                void saveVideoProductionStyle("clone", sessionId);
-                toast.success(cloneSessionId ? "Clone recriado com sucesso!" : "Clone capturado! Vídeos futuros usarão seu rosto e voz.");
-              }}
-              onSkip={() => setShowCloneStudio(false)}
-            />
-          )}
-
           {/* Clone captured status */}
-          {cloneSessionId && !showCloneStudio && (
+          {cloneSessionId && (
             <div className="flex items-center gap-3 px-4 py-3 border border-green-500/20 bg-green-500/5">
               <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
               <div className="flex-1">
@@ -1911,7 +1898,7 @@ function IdentidadeTab() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setShowCloneStudio(true)}
+                onClick={() => navigate("/clone-digital")}
                 className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-1.5 border-green-500/30 text-green-400 hover:bg-green-500/10"
               >
                 <Camera className="h-3 w-3" /> Regravar
@@ -1928,7 +1915,7 @@ function IdentidadeTab() {
               </div>
               <Button
                 size="sm"
-                onClick={() => setShowCloneStudio(true)}
+                onClick={() => navigate("/clone-digital")}
                 className="shrink-0 rounded-none font-mono text-[10px] uppercase tracking-widest h-8 px-3 gap-1.5"
                 style={{ background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.35)", color: "hsl(var(--primary))" }}
               >

@@ -1693,9 +1693,9 @@ async function generateStoryboardFrame(
   // ── Tentativa 1: Gemini direto (mesma chave dos agentes de lançamento) ──────
   const geminiKey = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
   if (geminiKey) {
-    // Modelos com suporte a image output (responseModalities: IMAGE)
-    // gemini-2.0-flash-preview-image-generation é o modelo atual da Google para geração de imagens
-    const imageModels = ["gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp"];
+    // Único modelo da Google que suporta geração de imagens via SDK (@google/generative-ai)
+    // gemini-2.0-flash-exp e gemini-2.5-flash-preview-05-20 NÃO geram imagens → removidos
+    const imageModels = ["gemini-2.0-flash-preview-image-generation"];
     for (const modelId of imageModels) {
       try {
         log.info({ platform, format, model: modelId }, "presence: attempting Gemini storyboard");
@@ -1735,26 +1735,36 @@ async function generateStoryboardFrame(
   }
 
   // ── Tentativa 2: DALL-E 3 (OpenAI) ──────────────────────────────────────────
+  // Nota: o proxy de AI Integrations não aceita response_format="b64_json" (parâmetro não mapeado).
+  // Usamos response_format="url" e fazemos download manual da imagem.
   try {
     const client = buildImageClient();
     const isPortrait = ["reel", "story"].includes(format);
-    // DALL-E 3 sizes: 1024x1024, 1792x1024 (landscape), 1024x1792 (portrait)
     const size: "1024x1024" | "1792x1024" | "1024x1792" = isPortrait ? "1024x1792" : "1792x1024";
-    log.info({ platform, format, size }, "presence: attempting DALL-E 3 storyboard");
+    log.info({ platform, format, size }, "presence: attempting DALL-E 3 storyboard (url mode)");
     const resp = await client.images.generate({
       model: "dall-e-3",
       prompt: prompt.slice(0, 4000),
       n: 1,
       size,
-      response_format: "b64_json",
       quality: "standard",
+      // Não passar response_format — deixa o padrão (url) que funciona com o proxy
     });
-    const b64 = resp.data?.[0]?.b64_json;
-    if (b64) {
-      log.info({ format, size }, "presence: DALL-E 3 storyboard generated ✓");
-      return { buf: Buffer.from(b64, "base64"), mimeType: "image/png", isAI: true };
+    const imgUrl = resp.data?.[0]?.url;
+    if (imgUrl) {
+      // Download da imagem a partir da URL gerada
+      const imgResp = await fetch(imgUrl, { signal: AbortSignal.timeout(30_000) });
+      if (imgResp.ok) {
+        const arrayBuf = await imgResp.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        const mimeType = imgResp.headers.get("content-type") ?? "image/png";
+        log.info({ format, size }, "presence: DALL-E 3 storyboard generated ✓");
+        return { buf, mimeType, isAI: true };
+      }
+      log.warn({ status: imgResp.status }, "presence: DALL-E 3 image download failed");
+    } else {
+      log.warn({}, "presence: DALL-E 3 returned no url");
     }
-    log.warn({}, "presence: DALL-E 3 returned no b64 data");
   } catch (dalleErr) {
     log.warn({ dalleErr }, "presence: DALL-E 3 failed — all providers exhausted");
   }

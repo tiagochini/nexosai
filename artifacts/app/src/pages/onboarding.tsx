@@ -1667,7 +1667,7 @@ export default function Onboarding() {
 
         {showCloneStudio && !cloneSessionId && (
           <CloneStudioPanel
-            userName={user?.name ?? "Usuário"}
+            firstName={user?.name?.split(" ")[0] ?? "Fundador"}
             onComplete={(sessionId) => {
               setCloneSessionId(sessionId);
               setShowCloneStudio(false);

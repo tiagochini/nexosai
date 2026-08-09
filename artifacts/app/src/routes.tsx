@@ -59,6 +59,7 @@ import SiteBuilderPage from "@/pages/site-builder/index";
 import AtendimentoPage from "@/pages/atendimento/index";
 import MarketIntelPage from "@/pages/market-intel/index";
 import PresencePage from "@/pages/presence/index";
+import CloneDigitalPage from "@/pages/clone-digital/index";
 import VideoProductionPage from "@/pages/video-production/index";
 import FilmingGuide from "@/pages/video-production/filming-guide";
 import DirectorGuide from "@/pages/video-production/director-guide";
@@ -363,6 +364,9 @@ export default function AppRoutes() {
       </Route>
       <Route path="/settings">
         {() => <ProtectedRoute><SettingsPage /></ProtectedRoute>}
+      </Route>
+      <Route path="/clone-digital">
+        {() => <ProtectedRoute><CloneDigitalPage /></ProtectedRoute>}
       </Route>
       <Route path="/credits">
         {() => <ProtectedRoute><CreditsPage /></ProtectedRoute>}
