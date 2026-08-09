@@ -29,6 +29,33 @@ const PSYCH_SUPPORTING_SECTIONS = [
 /** Minimum supporting (non-hook) sections required for the layer to be "complete". */
 export const PSYCH_LAYER_MIN_OTHER_SECTIONS = 2;
 
+/** Human-readable agent labels for display in UI warnings. */
+export const PSYCH_AGENT_DISPLAY_NAMES: Record<string, string> = {
+  pricing: "Pricing Psychologist",
+  upsell: "Upsell Architect",
+  objections: "Objection Killer",
+  testimonials: "Testimonial Curator",
+  scarcity: "Scarcity Engineer",
+  hooks: "Hook Factory",
+};
+
+/**
+ * Returns the list of psychology layer sections (agent names) that are absent
+ * in the given layer. An empty array means the layer is complete.
+ *
+ * Useful for UI diagnostics — shows which specific agents need to be re-run.
+ * Does NOT enforce the minimum-sections rule (use assertPsychologyLayerComplete for that).
+ */
+export function getPsychologyLayerMissingAgents(
+  layer: Record<string, unknown> | null,
+): string[] {
+  if (!layer) return Object.values(PSYCH_AGENT_DISPLAY_NAMES);
+  const allSections = ["pricing", "upsell", "objections", "testimonials", "scarcity", "hooks"] as const;
+  return allSections
+    .filter((k) => layer[k] === null || layer[k] === undefined)
+    .map((k) => PSYCH_AGENT_DISPLAY_NAMES[k] ?? k);
+}
+
 /**
  * Assert that the offer psychology layer is present and complete for the given
  * campaign type. Throws AppError(409) if:

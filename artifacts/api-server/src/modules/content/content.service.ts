@@ -39,8 +39,15 @@ import { calculateReverseBudget, saveBudgetProposal } from "./budget-reverse.ser
 import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
 import {
   assertPsychologyLayerComplete,
+  getPsychologyLayerMissingAgents,
   TYPES_WITH_PSYCHOLOGY_LAYER,
 } from "../../lib/psychology-layer.js";
+import { runPricingPsychologistAgent, type PricingPsychologyOutput } from "../agents/pricing-psychologist.agent.js";
+import { runUpsellArchitectAgent, type UpsellArchitectOutput } from "../agents/upsell-architect.agent.js";
+import { runObjectionKillerAgent, type ObjectionMapOutput } from "../agents/objection-killer.agent.js";
+import { runTestimonialCuratorAgent, type TestimonialCuratorOutput } from "../agents/testimonial-curator.agent.js";
+import { runScarcityEngineerAgent, type ScarcityEngineOutput } from "../agents/scarcity-engineer.agent.js";
+import { runHookFactoryAgent, type HookFactoryOutput } from "../agents/hook-factory.agent.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
 import type { StrategyOutput } from "../agents/strategy.agent.js";
 import type { Logger } from "pino";
@@ -256,6 +263,176 @@ export function validatePieceContract(pieceType: string, content: unknown): stri
   return null;
 }
 
+// ── Inline Psychology Layer Recovery ─────────────────────────────────────────
+// Runs the 6+1 psychology agents inline when the layer is absent at content time.
+// This handles old campaigns (strategy ran before Task 69 was deployed) and cases
+// where any agent failed silently during the strategy phase.
+//
+// Mirrors the A→B→C pipeline in command.agent.ts 3b block, but uses only data
+// that is always available at content-generation time (intakeData + audienceData).
+// Non-fatal per-agent: any individual agent failure is logged + emitted but does
+// not abort the recovery — a partial layer is still better than no context.
+//
+// Callers must call assertPsychologyLayerComplete() on the returned layer to
+// confirm it meets the minimum completeness threshold before proceeding.
+async function runInlinePsychologyRecovery(
+  campaignId: string,
+  workspaceId: string,
+  intakeData: Record<string, unknown>,
+  audienceData: unknown,
+  campaignType: string,
+  brainRaw: Record<string, unknown>,
+  log: Logger,
+): Promise<Record<string, unknown>> {
+  log.info({ campaignId, campaignType }, "[PSYCH-RECOVERY] Starting inline psychology layer recovery");
+  emitCampaignEvent({
+    campaignId,
+    type: "agent_started",
+    agentType: "psychology_recovery",
+    message: "🧠 Agentes de psicologia de oferta ausentes — executando recuperação inline antes de gerar copy...",
+    timestamp: new Date().toISOString(),
+  });
+
+  // ── Build shared inputs ──────────────────────────────────────────────────
+  const offerAnalysis = (brainRaw["offerAnalysis"] ?? null) as Record<string, unknown> | null;
+
+  const psyProductName = String(intakeData["product.name"] ?? "");
+  const psyProductDesc = [
+    String(intakeData["product.description"] ?? psyProductName),
+    offerAnalysis ? [
+      (offerAnalysis as any).offerName ? `Oferta: ${(offerAnalysis as any).offerName}` : "",
+      (offerAnalysis as any).corePromise ? `Promessa: ${(offerAnalysis as any).corePromise}` : "",
+    ].filter(Boolean).join(" | ") : "",
+  ].filter(Boolean).join(" | ");
+
+  const psyPrice = parseFloat(
+    String(
+      (offerAnalysis as any)?.offerStructure?.anchoringLogic?.strategicPrice
+        ?? intakeData["product.price"]
+        ?? "0",
+    ),
+  ) || 0;
+
+  const profile = audienceData
+    ? (audienceData as Record<string, unknown>)
+    : null;
+
+  const psyAvatar = profile
+    ? [
+        (profile as any).primaryAvatar?.name ? `Avatar: ${(profile as any).primaryAvatar.name}` : "",
+        (profile as any).primaryAvatar?.deepestDesire ? `Desejo: ${(profile as any).primaryAvatar.deepestDesire}` : "",
+        ((profile as any).primaryAvatar?.typicalObjections as string[] | undefined)?.length
+          ? `Objeções: ${((profile as any).primaryAvatar.typicalObjections as string[]).slice(0, 3).join("; ")}`
+          : "",
+        (profile as any).primaryAvatar?.languageStyle ? `Tom: ${(profile as any).primaryAvatar.languageStyle}` : "",
+      ].filter(Boolean).join(" | ")
+    : String(intakeData["audience.primaryAvatar"] ?? intakeData["audience.profile"] ?? "");
+
+  const psyChannels = String(
+    intakeData["campaign.channels"] ?? intakeData["campaign.mainChannel"] ?? "instagram,facebook",
+  ).split(",").map((c) => c.trim()).filter(Boolean);
+
+  const psyProductFull = psyProductDesc || psyProductName || "Produto sem descrição";
+  const psyOfferSnapshot = offerAnalysis
+    ? JSON.stringify(offerAnalysis).slice(0, 600)
+    : psyProductFull;
+
+  let pricingOutput: PricingPsychologyOutput | null = null;
+  let upsellOutput: UpsellArchitectOutput | null = null;
+  let objectionOutput: ObjectionMapOutput | null = null;
+  let testimonialOutput: TestimonialCuratorOutput | null = null;
+  let scarcityOutput: ScarcityEngineOutput | null = null;
+  let hookOutput: HookFactoryOutput | null = null;
+
+  // ── Step A: pricing_psychologist + upsell_architect [parallel] ─────────
+  const [pricingRes, upsellRes] = await Promise.allSettled([
+    runPricingPsychologistAgent(campaignId, workspaceId, psyProductFull, psyPrice, psyAvatar, [], log),
+    runUpsellArchitectAgent(campaignId, workspaceId, psyProductFull, psyPrice, psyAvatar, [], log),
+  ]);
+
+  if (pricingRes.status === "fulfilled" && pricingRes.value) {
+    pricingOutput = pricingRes.value;
+    log.info({ campaignId }, "[PSYCH-RECOVERY] pricing_psychologist ✓");
+  } else if (pricingRes.status === "rejected") {
+    log.warn({ err: pricingRes.reason, campaignId }, "[PSYCH-RECOVERY] pricing_psychologist failed (non-fatal)");
+    emitCampaignEvent({ campaignId, type: "agent_failed", agentType: "pricing_psychologist", message: `Pricing Psychologist falhou na recuperação: ${pricingRes.reason instanceof Error ? pricingRes.reason.message : String(pricingRes.reason)}`, timestamp: new Date().toISOString() });
+  }
+  if (upsellRes.status === "fulfilled" && upsellRes.value) {
+    upsellOutput = upsellRes.value;
+    log.info({ campaignId }, "[PSYCH-RECOVERY] upsell_architect ✓");
+  } else if (upsellRes.status === "rejected") {
+    log.warn({ err: upsellRes.reason, campaignId }, "[PSYCH-RECOVERY] upsell_architect failed (non-fatal)");
+  }
+
+  // ── Step B: objection_killer + testimonial_curator + scarcity_engineer [parallel] ──
+  const psyKnownObjections = (pricingOutput?.priceObjectionKills ?? []).slice(0, 5);
+  const [objRes, testRes, scarcRes] = await Promise.allSettled([
+    runObjectionKillerAgent(campaignId, workspaceId, psyProductFull, psyAvatar, psyPrice, psyKnownObjections, log),
+    runTestimonialCuratorAgent(campaignId, workspaceId, psyProductFull, psyAvatar, [], psyKnownObjections, log),
+    runScarcityEngineerAgent(campaignId, workspaceId, psyProductFull, campaignType, psyOfferSnapshot, psyAvatar, log),
+  ]);
+
+  if (objRes.status === "fulfilled" && objRes.value) { objectionOutput = objRes.value; log.info({ campaignId }, "[PSYCH-RECOVERY] objection_killer ✓"); }
+  else if (objRes.status === "rejected") { log.warn({ err: objRes.reason, campaignId }, "[PSYCH-RECOVERY] objection_killer failed (non-fatal)"); }
+  if (testRes.status === "fulfilled" && testRes.value) { testimonialOutput = testRes.value; log.info({ campaignId }, "[PSYCH-RECOVERY] testimonial_curator ✓"); }
+  else if (testRes.status === "rejected") { log.warn({ err: testRes.reason, campaignId }, "[PSYCH-RECOVERY] testimonial_curator failed (non-fatal)"); }
+  if (scarcRes.status === "fulfilled" && scarcRes.value) { scarcityOutput = scarcRes.value; log.info({ campaignId }, "[PSYCH-RECOVERY] scarcity_engineer ✓"); }
+  else if (scarcRes.status === "rejected") { log.warn({ err: scarcRes.reason, campaignId }, "[PSYCH-RECOVERY] scarcity_engineer failed (non-fatal)"); }
+
+  // ── Step C: hook_factory [sequential — synthesizes A+B] ─────────────────
+  const hookTopic = [
+    psyProductName || psyProductDesc.slice(0, 100),
+    (offerAnalysis as any)?.corePromise ? `Promessa: ${(offerAnalysis as any).corePromise}` : "",
+    objectionOutput ? `Objeção principal: ${(objectionOutput as any).topObjections?.[0]?.objection ?? ""}` : "",
+    psyPrice > 0 ? `Preço: R$${psyPrice}` : "",
+  ].filter(Boolean).join(" | ");
+
+  try {
+    hookOutput = await runHookFactoryAgent(
+      campaignId, workspaceId, hookTopic, psyAvatar, psyChannels, "launch_hook", log,
+    );
+    log.info({ campaignId }, "[PSYCH-RECOVERY] hook_factory ✓");
+  } catch (hookErr) {
+    log.warn({ err: hookErr, campaignId }, "[PSYCH-RECOVERY] hook_factory failed (non-fatal)");
+  }
+
+  // ── Persist recovered layer to brainData ─────────────────────────────────
+  const recoveredLayer = {
+    pricing: pricingOutput,
+    upsell: upsellOutput,
+    objections: objectionOutput,
+    testimonials: testimonialOutput,
+    scarcity: scarcityOutput,
+    hooks: hookOutput,
+    generatedAt: new Date().toISOString(),
+    recoveredAt: new Date().toISOString(),
+  };
+
+  const [latestBrainRow] = await db
+    .select({ brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+  const latestBrain = ((latestBrainRow?.brainData ?? {}) as Record<string, unknown>);
+
+  await db
+    .update(campaignsTable)
+    .set({ brainData: { ...latestBrain, offerPsychologyLayer: recoveredLayer } as any })
+    .where(eq(campaignsTable.id, campaignId));
+
+  const sectionsPresent = [pricingOutput, upsellOutput, objectionOutput, testimonialOutput, scarcityOutput, hookOutput].filter(Boolean).length;
+  log.info({ campaignId, sectionsPresent }, "[PSYCH-RECOVERY] Layer persisted — recovery complete");
+  emitCampaignEvent({
+    campaignId,
+    type: "agent_completed",
+    agentType: "psychology_recovery",
+    message: `🧠 Recuperação de psicologia concluída — ${sectionsPresent}/6 agentes executados. Gerando copy...`,
+    timestamp: new Date().toISOString(),
+  });
+
+  return recoveredLayer as Record<string, unknown>;
+}
+
 // ── Main orchestrator ─────────────────────────────────────────────────────────
 
 export async function generateCampaignContent(
@@ -361,14 +538,79 @@ export async function generateCampaignContent(
   // it in their user message — giving them pricing, objections, hooks, and scarcity
   // context they previously lacked.
   //
-  // PRECONDITION CHECK: for campaign types that run the psychology pipeline,
-  // the layer must be present AND complete before content generation proceeds.
-  // "Complete" means at least 3 of the 6 agent sections must be non-null AND
-  // hook_factory (the synthesizer that requires A+B) must be present.
-  // Partial layers (e.g. only 1 agent succeeded) are insufficient context for copy.
+  // GUARD: for campaign types that run the psychology pipeline the layer must be
+  // present and complete. If it is absent or incomplete, we attempt INLINE RECOVERY
+  // (runs the 6+1 agents right now, persists, then continues). Only if recovery
+  // itself fails do we write brainData.psychologyLayerMissing and abort — the UI
+  // reads that field to surface a targeted "Re-run Strategy" warning.
   const campaignTypeForPsychCheck = String(campaign.type ?? "launch");
-  const offerPsychologyLayer = (brainRaw["offerPsychologyLayer"] ?? null) as Record<string, unknown> | null;
-  assertPsychologyLayerComplete(campaignTypeForPsychCheck, offerPsychologyLayer);
+  let offerPsychologyLayer = (brainRaw["offerPsychologyLayer"] ?? null) as Record<string, unknown> | null;
+
+  if (TYPES_WITH_PSYCHOLOGY_LAYER.includes(campaignTypeForPsychCheck)) {
+    // Check if existing layer is complete
+    let layerIsComplete = false;
+    if (offerPsychologyLayer) {
+      try {
+        assertPsychologyLayerComplete(campaignTypeForPsychCheck, offerPsychologyLayer);
+        layerIsComplete = true;
+      } catch {
+        // Layer exists but is incomplete — will attempt recovery
+        log.warn({ campaignId, campaignType: campaignTypeForPsychCheck }, "[PSYCH-LAYER] Existing layer is incomplete — attempting inline recovery");
+      }
+    } else {
+      log.warn({ campaignId, campaignType: campaignTypeForPsychCheck }, "[PSYCH-LAYER] Layer absent at content phase — attempting inline recovery");
+    }
+
+    if (!layerIsComplete) {
+      try {
+        offerPsychologyLayer = await runInlinePsychologyRecovery(
+          campaignId, workspaceId, intakeData, campaign.audienceData, campaignTypeForPsychCheck, brainRaw, log,
+        );
+        // Verify the recovered layer meets the completeness threshold
+        assertPsychologyLayerComplete(campaignTypeForPsychCheck, offerPsychologyLayer);
+        log.info({ campaignId }, "[PSYCH-LAYER] Inline recovery succeeded — proceeding with content generation");
+      } catch (recoveryErr) {
+        // Recovery failed or recovered layer still incomplete — write error state so UI can surface it
+        const missingAgents = getPsychologyLayerMissingAgents(offerPsychologyLayer);
+        log.error({ err: recoveryErr, campaignId, missingAgents }, "[PSYCH-LAYER] Inline recovery failed — aborting content generation");
+        try {
+          const [freshBrainRow] = await db
+            .select({ brainData: (campaignsTable as any).brainData })
+            .from(campaignsTable)
+            .where(eq(campaignsTable.id, campaignId))
+            .limit(1);
+          const freshBrain = ((freshBrainRow?.brainData ?? {}) as Record<string, unknown>);
+          await db
+            .update(campaignsTable)
+            .set({
+              brainData: {
+                ...freshBrain,
+                psychologyLayerMissing: {
+                  at: new Date().toISOString(),
+                  missingAgents,
+                  recoveryAttempted: true,
+                  message:
+                    `Os agentes de psicologia de oferta (${missingAgents.join(", ")}) não puderam ser executados. ` +
+                    "Re-execute a fase de estratégia para gerar o contexto de pricing, objections e hooks necessário para copy agents.",
+                },
+              } as any,
+            })
+            .where(eq(campaignsTable.id, campaignId));
+        } catch (dbErr) {
+          log.error({ err: dbErr, campaignId }, "[PSYCH-LAYER] Failed to persist psychologyLayerMissing state");
+        }
+        emitCampaignEvent({
+          campaignId,
+          type: "agent_failed",
+          agentType: "psychology_recovery",
+          message: `❌ Recuperação dos agentes de psicologia falhou — copy de anúncios, VSL e página de vendas não podem ser gerados sem este contexto. Re-execute a fase de estratégia.`,
+          timestamp: new Date().toISOString(),
+        });
+        throw recoveryErr;
+      }
+    }
+  }
+
   if (offerPsychologyLayer) {
     const psychBlocks: string[] = [];
     const psy_pricing = offerPsychologyLayer.pricing as Record<string, unknown> | null;

@@ -1954,6 +1954,15 @@ export default function CampaignDetail() {
         const GEN_STALE_MS = 20 * 60 * 1000;
         const piecesNow = contentData?.pieces?.length ?? 0;
         const genIsStale = !!genUpdatedAt && Date.now() - new Date(genUpdatedAt).getTime() > GEN_STALE_MS;
+        // Psychology layer missing — inline recovery failed; user must re-run strategy
+        const psychLayerMissing = !!(brainDataRaw["psychologyLayerMissing"]);
+        if (psychLayerMissing) {
+          return {
+            isIntervention: true, isRetry: false,
+            label: "Agentes de psicologia ausentes",
+            description: "Os agentes de pricing, objections e hooks não foram executados. Copy de anúncios, VSL e página de vendas dependem deles. Veja o painel abaixo e re-execute a fase de estratégia.",
+          };
+        }
         if (isAutocorrecting) {
           const autocorrectDesc = lastErrorType === "COMPLIANCE_VIOLATION"
             ? `🛡️ Ethics Agent analisando o bloqueio e reescrevendo "${failedPieceName}" sem violar políticas de anúncios...`
@@ -2199,6 +2208,65 @@ export default function CampaignDetail() {
             )}
           </div>
         </div>
+
+        {/* ─── Psychology Layer Missing Warning ─────────────────────────────────── */}
+        {(() => {
+          const plm = (brainDataRaw["psychologyLayerMissing"] ?? null) as Record<string, unknown> | null;
+          if (!plm) return null;
+          const missingAgents = (plm["missingAgents"] as string[] | undefined) ?? [];
+          const detectedAt = plm["at"] as string | undefined;
+          return (
+            <div className="border border-rose-400/30 bg-rose-400/[0.04] rounded-none">
+              <div className="px-4 py-3 border-b border-rose-400/30 flex items-center gap-2">
+                <Brain className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                <span className="font-mono text-[11px] uppercase tracking-widest text-rose-400 font-bold flex-1">
+                  Agentes de Psicologia de Oferta Ausentes
+                </span>
+                {detectedAt && (
+                  <span className="font-mono text-[9px] text-rose-400/50 uppercase tracking-widest">
+                    {new Date(detectedAt).toLocaleString("pt-BR")}
+                  </span>
+                )}
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="font-mono text-xs text-muted-foreground/70 leading-relaxed">
+                  Os agentes de psicologia de oferta não foram executados durante a fase de estratégia.
+                  Os agentes de copy (<strong className="text-foreground/80">Anúncios, VSL, Página de Vendas</strong>) precisam
+                  dessas análises para gerar copy com pricing, objections e hooks otimizados.
+                </p>
+                {missingAgents.length > 0 && (
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-rose-400/70 mb-2">
+                      Agentes em falta:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {missingAgents.map((agent) => (
+                        <span
+                          key={agent}
+                          className="font-mono text-[10px] px-2 py-0.5 border border-rose-400/30 text-rose-300/80 bg-rose-400/5"
+                        >
+                          {agent}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => executeMutation.mutate({ campaignId, data: { phase: "strategy" as CampaignExecuteInputPhase } })}
+                    disabled={executeMutation.isPending}
+                    className="rounded-none font-mono uppercase tracking-widest font-black gap-2 text-xs border-rose-400/40 text-rose-300 hover:bg-rose-400/10"
+                  >
+                    {executeMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    {executeMutation.isPending ? "Executando estratégia..." : "Re-executar fase de estratégia"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ─── Avaliação Mercadológica — shown when market validation has a result ─── */}
         {(() => {
