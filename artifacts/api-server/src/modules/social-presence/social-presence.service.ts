@@ -1088,9 +1088,10 @@ export async function publishPostNow(
   }
 
   // Force scheduledFor to now so publishDuePresencePosts picks it up immediately.
+  // Reset retryCount so a manual retry always gets 3 full attempts — not residual count.
   const [updated] = await db
     .update(socialPresencePostsTable)
-    .set({ status: "scheduled", scheduledFor: new Date(), errorMessage: null })
+    .set({ status: "scheduled", scheduledFor: new Date(), errorMessage: null, retryCount: 0 })
     .where(eq(socialPresencePostsTable.id, postId))
     .returning();
 
@@ -1634,22 +1635,28 @@ export async function redirectToPresenceMedia(
     return;
   }
 
-  // 4a. Tentar GCS V4 Signed URL
+  // 4a. Tentar GCS V4 Signed URL (requer iam.serviceAccounts.signBlob — indisponível no Replit)
   const signedUrl = await getPresenceMediaSignedUrl(gcsKey, MEDIA_TOKEN_TTL_SECONDS);
   if (signedUrl) {
     res.redirect(302, signedUrl);
     return;
   }
 
-  // 4b. Fallback: JWT de servidor com TTL de 30 min
-  const token = jwt.sign(
-    { key: gcsKey, type: MEDIA_TOKEN_TYPE },
-    env.JWT_SECRET,
-    { expiresIn: MEDIA_TOKEN_TTL_SECONDS },
-  );
-  // Constrói a URL do stream endpoint relativa ao mesmo host
-  const streamPath = `/api/presence/media/stream?tok=${encodeURIComponent(token)}`;
-  res.redirect(302, streamPath);
+  // 4b. Fallback: pipe direto do GCS sem redirect.
+  // Motivo: o downloader assíncrono do Instagram/TikTok não segue redirects de forma
+  // confiável quando o destino é um JWT de servidor — isso causa container status=ERROR.
+  // Servir os bytes diretamente garante que a URL passada na image_url/video_url já
+  // entrega o arquivo, sem nenhum salto extra.
+  try {
+    const { contentType, size } = await getGCSObjectMeta(gcsKey);
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Length", String(size));
+    // Presença media é conteúdo publicável — pode ser cacheado publicamente
+    res.setHeader("Cache-Control", "public, max-age=1800");
+    createGCSObjectStream(gcsKey).pipe(res);
+  } catch {
+    res.status(404).end();
+  }
 }
 
 /**

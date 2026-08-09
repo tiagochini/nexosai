@@ -1,4 +1,5 @@
 - [Social Presence Automation](social-presence-automation.md) — reel 5min timeout; silent skip for video generating; highlights auto-add; DM flows via instagram_dm_sequences; lib/db build order required.
+- [Instagram Media Serve — Direct Stream Fix](instagram-serve-redirect-bug.md) — /media/serve must stream GCS bytes directly (not redirect to JWT endpoint) when signedUrl is null; Instagram's async downloader doesn't follow redirects → container ERROR.
 - [Offer Psychology Layer](offer-psychology-layer.md) — 7 agents wired after offer in command.agent.ts (A→B→C→D); output in brainData.offerPsychologyLayer; injected into ad_copy/vsl_script/landing_page via intakeData._psychologyLayer.
 - [Meta OAuth Scopes](meta-oauth-scopes.md) — instagram_business_manage_messages added to META_SCOPES; App Review required for Advanced Access; DM webhook dormant until Meta approves permission.
 - [Compliance Gate Architecture](compliance-gate-architecture.md) — isCriticalBlock=true ONLY for illegal content; regulated products → requiresAcknowledgment + self-proof via /acknowledge; price never blocks; see market-validation.service.ts.
