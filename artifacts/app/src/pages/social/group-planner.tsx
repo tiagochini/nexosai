@@ -365,7 +365,7 @@ export default function GroupPlannerPage() {
                 </Badge>
                 {group.memberCount && (
                   <Badge variant="outline" className="rounded-none font-mono text-[11px] px-2 py-0.5 text-muted-foreground border-border/40">
-                    <Users className="h-2.5 w-2.5 mr-1" />{group.memberCount.toLocaleString()} membros
+                    <Users className="h-2.5 w-2.5 mr-1" />{group.memberCount.toLocaleString("pt-BR")} membros
                   </Badge>
                 )}
               </div>

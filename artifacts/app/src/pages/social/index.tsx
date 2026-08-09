@@ -556,7 +556,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
                     </div>
                     {post.caption && <p className="text-xs font-mono text-foreground/70 leading-relaxed line-clamp-2 flex-1">{post.caption}</p>}
                     <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono text-muted-foreground/50">
-                      {post.impressions && <span><Eye className="h-2.5 w-2.5 inline mr-1" />{post.impressions.toLocaleString()}</span>}
+                      {post.impressions && <span><Eye className="h-2.5 w-2.5 inline mr-1" />{post.impressions.toLocaleString("pt-BR")}</span>}
                     </div>
                   </div>
                 ))}
@@ -610,7 +610,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
                             </Badge>
                           </div>
                           <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest">
-                            {group.memberCount ? `${group.memberCount.toLocaleString()} membros · ` : ""}
+                            {group.memberCount ? `${group.memberCount.toLocaleString("pt-BR")} membros · ` : ""}
                             Criado {new Date(group.createdAt).toLocaleDateString("pt-BR")}
                           </div>
                         </div>

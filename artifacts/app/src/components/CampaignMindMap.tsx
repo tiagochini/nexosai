@@ -385,7 +385,7 @@ function AgentNode({
                 )}
                 {agent.tokensUsed && (
                   <span className="font-mono text-[10px] text-muted-foreground/30">
-                    {agent.tokensUsed.toLocaleString()} tok
+                    {agent.tokensUsed.toLocaleString("pt-BR")} tok
                   </span>
                 )}
                 {pieces.length > 0 && (

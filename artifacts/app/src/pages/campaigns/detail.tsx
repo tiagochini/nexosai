@@ -751,7 +751,7 @@ function AgentRunLog({ agents }: { agents: AgentRun[] }) {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {agent.tokensUsed && <span className="text-[10px] font-mono text-muted-foreground/40">{agent.tokensUsed.toLocaleString()} tok</span>}
+                {agent.tokensUsed && <span className="text-[10px] font-mono text-muted-foreground/40">{agent.tokensUsed.toLocaleString("pt-BR")} tok</span>}
                 <Badge variant="outline" className={`rounded-none font-mono text-[10px] px-1.5 py-0 ${agent.status === "completed" ? "border-success/30 text-success" : agent.status === "failed" ? "border-destructive/30 text-destructive" : "border-primary/30 text-primary"}`}>
                   {agent.status}
                 </Badge>

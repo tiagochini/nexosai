@@ -1350,7 +1350,7 @@ export async function publishDuePresencePosts(): Promise<void> {
               .where(eq(socialPresencePostsTable.id, post.id));
             const videoPostSnapshot = { ...post };
             setImmediate(() => {
-              generateStoryboardFrame(videoPostSnapshot.visualDirection, videoPostSnapshot.caption, videoPostSnapshot.platform, videoPostSnapshot.format, log)
+              generateStoryboardFrame(videoPostSnapshot.visualDirection, videoPostSnapshot.caption, videoPostSnapshot.platform, videoPostSnapshot.format, log, videoPostSnapshot.videoScript ?? videoPostSnapshot.reelScript)
                 .then(async ({ buf, mimeType, isAI }) => {
                   const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
                   const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
@@ -1400,7 +1400,7 @@ export async function publishDuePresencePosts(): Promise<void> {
             // Capturar variáveis locais para o closure
             const postSnapshot = { ...post };
             setImmediate(() => {
-              generateStoryboardFrame(postSnapshot.visualDirection, postSnapshot.caption, postSnapshot.platform, postSnapshot.format, log)
+              generateStoryboardFrame(postSnapshot.visualDirection, postSnapshot.caption, postSnapshot.platform, postSnapshot.format, log, postSnapshot.videoScript ?? postSnapshot.reelScript)
                 .then(async ({ buf, mimeType, isAI }) => {
                   const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
                   // Upload imediatamente ao GCS — nunca armazenar base64 no banco
@@ -1639,11 +1639,14 @@ async function generateStoryboardFrame(
   platform: string,
   format: string,
   log: Logger,
+  videoScript?: string | null,
 ): Promise<{ buf: Buffer; mimeType: string; isAI: boolean }> {
   const prompt = [
     `Storyboard frame for a ${platform} ${format} post.`,
-    `Visual direction: ${visualDirection}`,
-    `Context: ${caption.slice(0, 200)}`,
+    `Visual direction: ${visualDirection || "professional, clean composition"}`,
+    videoScript?.trim()
+      ? `Script/narration context: ${videoScript.slice(0, 300)}`
+      : `Caption context: ${caption.slice(0, 200)}`,
     "Cinematic composition, professional photography style.",
     "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
   ].join(" ");
@@ -2043,11 +2046,13 @@ export async function approveStoryboardGenerateVideo(
         });
       } else {
         // Fallback: vídeo cinematográfico sem avatar (Runway / Kling)
+        const script = post.videoScript?.trim() || post.reelScript?.trim();
         const prompt = [
           post.visualDirection,
+          script ? `Script context: ${script.slice(0, 300)}` : "",
           `Platform: ${post.platform}, format: ${post.format}.`,
           "High quality, cinematic, professional social media content. No text overlays.",
-        ].join(" ");
+        ].filter(Boolean).join(" ");
 
         result = await generateVideoClip({
           prompt,

@@ -369,7 +369,7 @@ function MessageProcess({ msg, agentName, phaseCount }:
             {tokensUsed != null && (
               <div>
                 <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/30">Tokens</div>
-                <div className="font-mono text-xs text-muted-foreground/60">{tokensUsed.toLocaleString()}</div>
+                <div className="font-mono text-xs text-muted-foreground/60">{tokensUsed.toLocaleString("pt-BR")}</div>
               </div>
             )}
             {creditsCharged != null && (

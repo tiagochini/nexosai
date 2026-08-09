@@ -445,23 +445,30 @@ function AITabContent({
       return (
         <div className="flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-2 text-xs text-green-400">
           <User className="h-3.5 w-3.5 shrink-0" />
-          <span>Avatar e voz configurados — o vídeo usará seu clone digital.</span>
+          <span>Clone digital configurado — o vídeo usará seu avatar e voz clonada.</span>
         </div>
       );
     }
     return (
-      <div className="flex items-start gap-2 rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2.5 text-xs text-amber-300">
-        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-medium">Avatar ou voz clone não configurados.</p>
-          <p className="text-amber-300/70">
-            O vídeo será gerado sem apresentador (cinematográfico). Para incluir o seu clone digital,{" "}
-            <a href="/app/configuracoes" className="underline hover:text-amber-200">
-              configure em Configurações → Clone Digital
-            </a>
-            .
-          </p>
+      <div className="rounded-lg border border-amber-400/30 bg-amber-400/8 p-3 space-y-2.5">
+        <div className="flex items-start gap-2 text-xs text-amber-300">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">Clone digital não configurado</p>
+            <p className="text-amber-300/70 mt-0.5">
+              Sem clone, o vídeo será gerado cinematograficamente (sem você). Crie seu avatar para aparecer nos vídeos.
+            </p>
+          </div>
         </div>
+        <a
+          href="/video-production"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-2 w-full rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-300 hover:bg-amber-400/20 transition-colors"
+        >
+          <User className="h-3.5 w-3.5" />
+          Criar meu clone digital agora →
+        </a>
       </div>
     );
   };

@@ -132,7 +132,7 @@ function LogDetailModal({ log, onClose }: { log: AuditLogRow; onClose: () => voi
             </div>
             <div>
               <p className="text-zinc-500 text-xs mb-1">Tokens / Custo</p>
-              <p className="text-zinc-200">{log.tokensUsed?.toLocaleString() ?? "—"} / ${log.estimatedCostUsd?.toFixed(4) ?? "—"}</p>
+              <p className="text-zinc-200">{log.tokensUsed?.toLocaleString("pt-BR") ?? "—"} / ${log.estimatedCostUsd?.toFixed(4) ?? "—"}</p>
             </div>
             <div>
               <p className="text-zinc-500 text-xs mb-1">Confidence Score</p>
@@ -268,11 +268,11 @@ export default function AuditLogsPage() {
         {summary && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
-              { label: "Total execuções", value: summary.totals.total?.toLocaleString() ?? "0", icon: Bot, color: "text-cyan-400" },
-              { label: "Concluídas", value: summary.totals.completed?.toLocaleString() ?? "0", icon: CheckCircle2, color: "text-emerald-400" },
-              { label: "Falhas", value: summary.totals.failed?.toLocaleString() ?? "0", icon: XCircle, color: "text-red-400" },
-              { label: "Aprovação pendente", value: summary.totals.pendingApproval?.toLocaleString() ?? "0", icon: Clock, color: "text-yellow-400" },
-              { label: "DRY RUN", value: summary.totals.dryRun?.toLocaleString() ?? "0", icon: FlaskConical, color: "text-purple-400" },
+              { label: "Total execuções", value: summary.totals.total?.toLocaleString("pt-BR") ?? "0", icon: Bot, color: "text-cyan-400" },
+              { label: "Concluídas", value: summary.totals.completed?.toLocaleString("pt-BR") ?? "0", icon: CheckCircle2, color: "text-emerald-400" },
+              { label: "Falhas", value: summary.totals.failed?.toLocaleString("pt-BR") ?? "0", icon: XCircle, color: "text-red-400" },
+              { label: "Aprovação pendente", value: summary.totals.pendingApproval?.toLocaleString("pt-BR") ?? "0", icon: Clock, color: "text-yellow-400" },
+              { label: "DRY RUN", value: summary.totals.dryRun?.toLocaleString("pt-BR") ?? "0", icon: FlaskConical, color: "text-purple-400" },
             ].map(({ label, value, icon: Icon, color }) => (
               <div key={label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -289,7 +289,7 @@ export default function AuditLogsPage() {
         {summary && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Tokens totais", value: summary.totals.totalTokens?.toLocaleString() ?? "0" },
+              { label: "Tokens totais", value: summary.totals.totalTokens?.toLocaleString("pt-BR") ?? "0" },
               { label: "Custo estimado (USD)", value: `$${(summary.totals.totalCostUsd ?? 0).toFixed(4)}` },
               { label: "Risk Score médio", value: `${(summary.totals.avgRiskScore ?? 0).toFixed(1)}/100` },
               { label: "Confidence médio", value: `${((summary.totals.avgConfidence ?? 0) * (summary.totals.avgConfidence > 1 ? 1 : 100)).toFixed(1)}%` },
@@ -445,7 +445,7 @@ export default function AuditLogsPage() {
                       <span className="text-xs text-zinc-400">{row.providerUsed ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-zinc-400">{row.tokensUsed?.toLocaleString() ?? "—"}</span>
+                      <span className="text-xs text-zinc-400">{row.tokensUsed?.toLocaleString("pt-BR") ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-zinc-400">{row.estimatedCostUsd != null ? `$${row.estimatedCostUsd.toFixed(4)}` : "—"}</span>
