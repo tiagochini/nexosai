@@ -45,10 +45,12 @@ export function MediaProductionDrawer({
   post: initialPost,
   onClose,
   onPostUpdated,
+  onPublishNow,
 }: {
   post: MediaPresencePost;
   onClose: () => void;
   onPostUpdated: (post: MediaPresencePost) => void;
+  onPublishNow?: (postId: string) => void;
 }) {
   const [tab, setTab] = useState<"ai" | "upload">("ai");
   const [currentPost, setCurrentPost] = useState(initialPost);
@@ -335,6 +337,7 @@ export function MediaProductionDrawer({
               onFileSelect={handleFileSelect}
               onUpload={uploadFile}
               onClose={onClose}
+              onPublishNow={onPublishNow ? () => { onClose(); onPublishNow(currentPost.id); } : undefined}
               onUploadAnother={() => { setUploadDone(false); setUploadedMediaUrl(null); setSelectedFile(null); setPreviewUrl(null); }}
             />
           )}
@@ -699,6 +702,7 @@ function UploadTabContent({
   onFileSelect,
   onUpload,
   onClose,
+  onPublishNow,
   onUploadAnother,
 }: {
   selectedFile: File | null;
@@ -710,6 +714,7 @@ function UploadTabContent({
   onFileSelect: (file: File) => void;
   onUpload: () => void;
   onClose: () => void;
+  onPublishNow?: () => void;
   onUploadAnother: () => void;
 }) {
   const handleDrop = (e: React.DragEvent) => {
@@ -752,14 +757,30 @@ function UploadTabContent({
         )}
 
         {/* Actions */}
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={onUploadAnother}>
-            <Upload className="mr-2 h-4 w-4" /> Trocar arquivo
-          </Button>
-          <Button className="flex-1" onClick={onClose}>
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Concluído
-          </Button>
-        </div>
+        {onPublishNow ? (
+          <div className="flex flex-col gap-2">
+            <Button className="w-full" onClick={onPublishNow}>
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Publicar Agora
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 text-xs" onClick={onUploadAnother}>
+                <Upload className="mr-1.5 h-3.5 w-3.5" /> Trocar arquivo
+              </Button>
+              <Button variant="ghost" className="flex-1 text-xs" onClick={onClose}>
+                Salvar sem publicar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={onUploadAnother}>
+              <Upload className="mr-2 h-4 w-4" /> Trocar arquivo
+            </Button>
+            <Button className="flex-1" onClick={onClose}>
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Concluído
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

@@ -25,7 +25,7 @@ async function metaGraphRequest<T>(
   options: RequestInit & { params?: Record<string, string> } = {}
 ): Promise<T> {
   const { params, ...fetchOptions } = options;
-  const url = new URL(`https://graph.facebook.com/v19.0${path}`);
+  const url = new URL(`https://graph.facebook.com/v22.0${path}`);
   if (params) {
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   }
@@ -41,6 +41,34 @@ async function metaGraphRequest<T>(
     throw new Error(msg);
   }
   return data;
+}
+
+/**
+ * Aguarda o container do Instagram estar pronto (status_code === "FINISHED") antes de publicar.
+ * Instagram processa imagens e vídeos de forma assíncrona — publicar sem esperar causa
+ * "Media ID is not available".
+ */
+async function waitForInstagramContainer(
+  containerId: string,
+  token: string,
+  maxWaitMs = 30_000
+): Promise<void> {
+  const pollIntervalMs = 2_000;
+  const maxAttempts = Math.ceil(maxWaitMs / pollIntervalMs);
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const status = await metaGraphRequest<{ status_code: string; id: string }>(
+      `/${containerId}`,
+      { params: { fields: "status_code", access_token: token } }
+    );
+    if (status.status_code === "FINISHED") return;
+    if (status.status_code === "ERROR") {
+      throw new Error("Instagram rejeitou a mídia ao criar o container (status: ERROR). Verifique se a URL da imagem está acessível publicamente.");
+    }
+    // "IN_PROGRESS" ou "PUBLISHED" — aguardar
+    await new Promise<void>((r) => setTimeout(r, pollIntervalMs));
+  }
+  throw new Error(`Instagram container ${containerId} não ficou pronto após ${maxWaitMs / 1000}s. Tente novamente.`);
 }
 
 export async function publishToInstagram(
@@ -88,6 +116,8 @@ export async function publishToInstagram(
           }),
         }
       );
+      // Aguardar container ficar pronto (obrigatório para não receber "Media ID is not available")
+      await waitForInstagramContainer(container.id, token);
       // Publish
       const published = await metaGraphRequest<{ id: string }>(
         `/${igAccountId}/media_publish`,
@@ -129,6 +159,9 @@ export async function publishToInstagram(
       `/${igAccountId}/media`,
       { method: "POST", body: JSON.stringify(body) }
     );
+
+    // Aguardar container ficar pronto (obrigatório para imagens e vídeos)
+    await waitForInstagramContainer(container.id, token);
 
     const published = await metaGraphRequest<{ id: string }>(
       `/${igAccountId}/media_publish`,

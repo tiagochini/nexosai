@@ -133,6 +133,7 @@ export default function PresencePage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"calendar" | "queue" | "metrics">("calendar");
   const [showConfig, setShowConfig] = useState(false);
+  const [showTestPost, setShowTestPost] = useState(false);
   const [showBio, setShowBio] = useState(false);
   const [optimizingBio, setOptimizingBio] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -266,7 +267,7 @@ export default function PresencePage() {
     setActionError(null);
     setPublishingNow((prev) => new Set(prev).add(postId));
     try {
-      const { post } = await customFetch<{ post: PresencePost }>(`${API}/posts/${postId}/publish`, { method: "POST" });
+      const { post } = await customFetch<{ post: PresencePost }>(`${API}/posts/${postId}/publish-now`, { method: "POST" });
       setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
 
       // Poll and open the platform URL when the post is confirmed published
@@ -343,7 +344,9 @@ export default function PresencePage() {
       new Date(p.scheduledFor) < new Date() &&
       (!weekStart || p.weekStart?.slice(0, 10) !== weekStart.slice(0, 10)),
   );
-  const queueItems = [...drafts, ...stuckScheduled];
+  // Posts em processo de publicação — aparecem na fila enquanto o scheduler processa
+  const publishingInProgress = posts.filter((p) => p.status === "publishing");
+  const queueItems = [...drafts, ...stuckScheduled, ...publishingInProgress];
 
   if (loading) {
     return (
@@ -376,6 +379,9 @@ export default function PresencePage() {
               <Button size="sm" onClick={() => generateWeek(currentWeekPosts.length > 0)} disabled={generating} data-testid="button-generate-week">
                 {generating ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}
                 {generating ? "Gerando semana..." : currentWeekPosts.length > 0 ? "Regenerar Semana" : "Gerar Semana"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowTestPost(true)} data-testid="button-test-post-header">
+                <Send className="mr-1.5 h-4 w-4" /> Testar Publicação
               </Button>
             </>
           )}
@@ -733,6 +739,12 @@ export default function PresencePage() {
           }}
         />
       )}
+      {showTestPost && config && (
+        <TestPostPanel
+          platforms={config.platforms.filter((p) => p.enabled && p.platform !== "linkedin")}
+          onClose={() => setShowTestPost(false)}
+        />
+      )}
       {showBio && config && (
         <BioModal suggestions={config.bioSuggestions ?? []} onClose={() => setShowBio(false)} />
       )}
@@ -744,6 +756,7 @@ export default function PresencePage() {
             post={drawerPost as unknown as MediaPresencePost}
             onClose={() => setMediaDrawerPostId(null)}
             onPostUpdated={handleMediaDrawerUpdate}
+            onPublishNow={(postId) => { setMediaDrawerPostId(null); publishNow(postId); }}
           />
         );
       })()}
@@ -839,6 +852,22 @@ function CalendarPostCard({
           )}
           {post.videoScript && (
             <p className="whitespace-pre-wrap text-[11px] text-muted-foreground"><strong>Roteiro:</strong> {post.videoScript}</p>
+          )}
+          {/* Link "Ver post" quando publicado */}
+          {post.status === "published" && post.platformUrl && (
+            <a
+              href={post.platformUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded border border-green-500/30 bg-green-500/8 px-2 py-1 text-[11px] text-green-400 hover:bg-green-500/15 transition-colors"
+            >
+              <CheckCircle2 className="h-3 w-3" /> Ver post publicado →
+            </a>
+          )}
+          {post.status === "publishing" && (
+            <div className="flex items-center gap-1.5 text-[11px] text-primary">
+              <Loader2 className="h-3 w-3 animate-spin" /> Publicando no Instagram…
+            </div>
           )}
           {post.errorMessage && (() => {
             const isReconnect = post.errorMessage.includes("Reconecte em /integracoes");
@@ -985,7 +1014,33 @@ function QueuePostCard({
           </button>
         </div>
       )}
-      {!editing && (
+      {/* Estado: Publicando */}
+      {post.status === "publishing" && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 text-sm text-primary">
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <span>Publicando… aguarde alguns segundos.</span>
+        </div>
+      )}
+
+      {/* Estado: Publicado */}
+      {post.status === "published" && (
+        <div className="mt-3 flex items-center gap-3 rounded-lg border border-green-500/25 bg-green-500/8 px-3 py-2.5 text-sm text-green-400">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span className="flex-1 font-medium">Publicado com sucesso!</span>
+          {post.platformUrl && (
+            <a
+              href={post.platformUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 underline underline-offset-2 hover:text-green-300 font-medium text-xs"
+            >
+              Ver post →
+            </a>
+          )}
+        </div>
+      )}
+
+      {!editing && (post.status === "draft" || post.status === "scheduled") && (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" onClick={onApprove} data-testid={`button-queue-approve-${post.id}`}>
             <ThumbsUp className="mr-1.5 h-3.5 w-3.5" /> Aprovar e Agendar
@@ -1379,6 +1434,129 @@ function BioModal({ suggestions, onClose }: { suggestions: BioSuggestion[]; onCl
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Test Post Panel ──────────────────────────────────────────────────────────
+
+function TestPostPanel({
+  platforms,
+  onClose,
+}: {
+  platforms: PlatformConfig[];
+  onClose: () => void;
+}) {
+  const [platform, setPlatform] = useState<string>(platforms[0]?.platform ?? "instagram");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; platformUrl?: string; error?: string } | null>(null);
+
+  const runTest = async () => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await customFetch<{ success: boolean; platformUrl?: string; error?: string }>(
+        `${API}/test-post`,
+        { method: "POST", body: JSON.stringify({ platform }) },
+      );
+      setResult(res);
+      if (res.success && res.platformUrl) {
+        setTimeout(() => window.open(res.platformUrl, "_blank", "noopener,noreferrer"), 800);
+      }
+    } catch (err) {
+      setResult({ success: false, error: err instanceof Error ? err.message : "Erro ao enviar post de teste." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <Send className="h-4 w-4 text-primary" /> Publicação de Teste
+          </h2>
+          <button onClick={onClose} aria-label="Fechar"><X className="h-4 w-4" /></button>
+        </div>
+
+        <p className="mt-2 text-sm text-muted-foreground">
+          Publica um post real de teste na plataforma escolhida — com imagem e legenda de teste — para confirmar que a integração está funcionando.
+        </p>
+
+        {platforms.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-sm text-amber-400">
+            Nenhuma plataforma habilitada. Vá em Configurações e ative o Instagram, Facebook ou TikTok.
+          </div>
+        ) : (
+          <div className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Plataforma</label>
+              <div className="flex gap-2 flex-wrap">
+                {platforms.map((p) => {
+                  const meta = PLATFORM_META[p.platform];
+                  return (
+                    <button
+                      key={p.platform}
+                      onClick={() => { setPlatform(p.platform); setResult(null); }}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        platform === p.platform
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      {meta && <meta.icon className={`h-4 w-4 ${meta.cls}`} />}
+                      {meta?.label ?? p.platform}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={runTest}
+              disabled={loading}
+              data-testid="button-run-test-post"
+            >
+              {loading
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Publicando… (aguarde ~5s)</>
+                : <><Send className="mr-2 h-4 w-4" /> Enviar Post de Teste no {PLATFORM_META[platform]?.label ?? platform}</>
+              }
+            </Button>
+
+            {result && (
+              <div className={`rounded-lg border px-4 py-3 text-sm flex items-start gap-2.5 ${
+                result.success
+                  ? "border-green-500/20 bg-green-500/10 text-green-400"
+                  : "border-destructive/20 bg-destructive/10 text-destructive"
+              }`}>
+                {result.success
+                  ? <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                  : <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />}
+                <div>
+                  {result.success ? (
+                    <>
+                      Post publicado com sucesso!{" "}
+                      {result.platformUrl && (
+                        <a href={result.platformUrl} target="_blank" rel="noreferrer" className="underline font-medium">
+                          Ver post →
+                        </a>
+                      )}
+                    </>
+                  ) : (
+                    result.error ?? "Erro ao publicar post de teste."
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
