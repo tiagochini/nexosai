@@ -1168,14 +1168,64 @@ export async function publishDuePresencePosts(): Promise<void> {
           }),
         );
         const needsMedia = post.platform === "instagram" || post.platform === "tiktok";
-        const isVideoFormat = post.format === "reel" || post.format === "feed_video";
+        const isVideoFormat = post.format === "reel" || post.format === "feed_video" || post.format === "story";
+        // Image formats are Instagram feed posts that don't need video
+        const isImageFormat = !isVideoFormat && post.platform === "instagram";
         if (needsMedia && mediaUrls.length === 0) {
-          // Vídeo ainda sendo gerado — skip silencioso, não marcar como erro.
-          // O scheduler vai tentar novamente no próximo tick (60s).
-          if (isVideoFormat && (post.mediaGenStatus === "video_generating" || post.mediaGenStatus === "storyboard_generating" || post.mediaGenStatus === "storyboard_ready")) {
-            log.info({ postId: post.id, mediaGenStatus: post.mediaGenStatus }, "presence: reel sem vídeo pronto — aguardando geração (skip silencioso)");
+          // ── Vídeo: aguardar geração em andamento ──────────────────────────────
+          if (isVideoFormat && (post.mediaGenStatus === "video_generating" || post.mediaGenStatus === "storyboard_generating" || post.mediaGenStatus === "storyboard_ready" || post.mediaGenStatus === "storyboard_draft")) {
+            log.info({ postId: post.id, mediaGenStatus: post.mediaGenStatus }, "presence: reel/story sem vídeo pronto — aguardando geração (skip silencioso)");
             continue;
           }
+
+          // ── Imagem: auto-gerar storyboard → aguardar aprovação ───────────────
+          if (isImageFormat) {
+            const gs = post.mediaGenStatus;
+            // Já gerando — aguardar
+            if (gs === "storyboard_generating") {
+              continue;
+            }
+            // Gerado — aguardar aprovação do usuário
+            if (gs === "storyboard_ready" || gs === "storyboard_draft") {
+              if (!post.errorMessage?.includes("Aprovação pendente")) {
+                await db
+                  .update(socialPresencePostsTable)
+                  .set({ errorMessage: "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar." })
+                  .where(eq(socialPresencePostsTable.id, post.id));
+              }
+              continue;
+            }
+            // null / idle / failed → auto-gerar agora
+            log.info({ postId: post.id, platform: post.platform, format: post.format }, "presence: sem mídia — iniciando geração automática de imagem (draft p/ aprovação)");
+            await db
+              .update(socialPresencePostsTable)
+              .set({ status: "draft", mediaGenStatus: "storyboard_generating", errorMessage: null, storyboardUrls: [] })
+              .where(eq(socialPresencePostsTable.id, post.id));
+            // Capturar variáveis locais para o closure
+            const postSnapshot = { ...post };
+            setImmediate(() => {
+              generateStoryboardFrame(postSnapshot.visualDirection, postSnapshot.caption, postSnapshot.platform, postSnapshot.format, log)
+                .then(async ({ buf, mimeType, isAI }) => {
+                  const dataUrl = `data:${mimeType};base64,${buf.toString("base64")}`;
+                  const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ mediaGenStatus: newStatus, storyboardUrls: [dataUrl], errorMessage: "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar." })
+                    .where(eq(socialPresencePostsTable.id, postSnapshot.id));
+                  log.info({ postId: postSnapshot.id, newStatus }, "presence: imagem auto-gerada ✓ — aguardando aprovação");
+                })
+                .catch(async (err) => {
+                  log.warn({ err, postId: postSnapshot.id }, "presence: auto-geração de imagem falhou");
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ mediaGenStatus: "failed", status: "draft", errorMessage: `Auto-geração de imagem falhou: ${err instanceof Error ? err.message : String(err)}` })
+                    .where(eq(socialPresencePostsTable.id, postSnapshot.id));
+                });
+            });
+            continue;
+          }
+
+          // ── Fallback: plataformas que precisam de mídia manual ────────────────
           if (!post.errorMessage) {
             await db
               .update(socialPresencePostsTable)
@@ -1414,8 +1464,33 @@ async function generateStoryboardFrame(
     }
   }
 
+  // ── Tentativa 2: DALL-E 3 (OpenAI) ──────────────────────────────────────────
+  try {
+    const client = buildImageClient();
+    const isPortrait = ["reel", "story"].includes(format);
+    // DALL-E 3 sizes: 1024x1024, 1792x1024 (landscape), 1024x1792 (portrait)
+    const size: "1024x1024" | "1792x1024" | "1024x1792" = isPortrait ? "1024x1792" : "1792x1024";
+    log.info({ platform, format, size }, "presence: attempting DALL-E 3 storyboard");
+    const resp = await client.images.generate({
+      model: "dall-e-3",
+      prompt: prompt.slice(0, 4000),
+      n: 1,
+      size,
+      response_format: "b64_json",
+      quality: "standard",
+    });
+    const b64 = resp.data[0]?.b64_json;
+    if (b64) {
+      log.info({ format, size }, "presence: DALL-E 3 storyboard generated ✓");
+      return { buf: Buffer.from(b64, "base64"), mimeType: "image/png", isAI: true };
+    }
+    log.warn({}, "presence: DALL-E 3 returned no b64 data");
+  } catch (dalleErr) {
+    log.warn({ dalleErr }, "presence: DALL-E 3 failed — all providers exhausted");
+  }
+
   // Todos os provedores falharam — propagar erro para o caller setar status="failed"
-  throw new Error("Geração de imagem indisponível: nenhum provedor retornou uma imagem. Verifique créditos das APIs de IA (Gemini).");
+  throw new Error("Geração de imagem indisponível: nenhum provedor retornou uma imagem. Verifique créditos das APIs de IA (Gemini / DALL-E).");
 }
 
 /** Generates a branded SVG storyboard frame from post metadata. */
@@ -1884,6 +1959,56 @@ export async function attachUploadedMedia(
   const [updated] = await db
     .update(socialPresencePostsTable)
     .set({ mediaUrls: [serveUrl], mediaGenStatus: null, mediaJobId: null })
+    .where(eq(socialPresencePostsTable.id, postId))
+    .returning();
+  return updated;
+}
+
+/**
+ * Aprova o storyboard como imagem final para posts de feed (feed_image / feed_carousel).
+ * Faz upload do base64 para o GCS, define mediaUrls e agenda o post.
+ */
+export async function approveStoryboardAsImage(
+  workspaceId: string,
+  postId: string,
+  log: Logger,
+): Promise<SocialPresencePost | null> {
+  const [post] = await db
+    .select()
+    .from(socialPresencePostsTable)
+    .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
+    .limit(1);
+  if (!post) return null;
+
+  const storyboardDataUrl = (post.storyboardUrls as string[] | null)?.[0];
+  if (!storyboardDataUrl?.startsWith("data:image/")) {
+    throw new Error("Storyboard ainda não disponível. Aguarde a geração ou gere novamente.");
+  }
+
+  const match = storyboardDataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+  if (!match) throw new Error("Formato interno do storyboard inválido.");
+  const mimeType = match[1];
+  const b64 = match[2];
+  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+  const buf = Buffer.from(b64, "base64");
+
+  const key = presenceMediaObjectKey(workspaceId, postId, `${Date.now()}-storyboard.${ext}`);
+  await uploadBufferToGCS(buf, key, mimeType);
+
+  const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+  log.info({ postId, key, mimeType }, "presence: storyboard aprovado como imagem final ✓");
+
+  const [updated] = await db
+    .update(socialPresencePostsTable)
+    .set({
+      mediaUrls: [serveUrl],
+      mediaGenStatus: null,
+      storyboardUrls: [],
+      mediaJobId: null,
+      mediaJobProvider: null,
+      errorMessage: null,
+      status: "scheduled",
+    })
     .where(eq(socialPresencePostsTable.id, postId))
     .returning();
   return updated;

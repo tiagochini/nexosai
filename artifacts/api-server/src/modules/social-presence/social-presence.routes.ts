@@ -21,6 +21,7 @@ import {
   redirectToPresenceMedia,
   streamPresenceMediaByToken,
   approveStoryboardGenerateVideo,
+  approveStoryboardAsImage,
   pollPostMediaJob,
   attachUploadedMedia,
   confirmVideoAttachment,
@@ -234,6 +235,19 @@ router.post("/posts/:id/media/generate-storyboard", async (req, res): Promise<vo
   const post = await generatePostStoryboard(req.auth.workspaceId, id, req.log);
   if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
   res.status(202).json({ post });
+});
+
+// POST /api/presence/posts/:id/media/approve-image — aprova storyboard como imagem final (feed_image / feed_carousel)
+router.post("/posts/:id/media/approve-image", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  try {
+    const post = await approveStoryboardAsImage(req.auth.workspaceId, id, req.log);
+    if (!post) { res.status(404).json({ error: "Post não encontrado." }); return; }
+    res.json({ post });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao aprovar imagem.";
+    res.status(409).json({ error: msg });
+  }
 });
 
 // POST /api/presence/posts/:id/media/generate-video — inicia geração do vídeo após aprovar storyboard

@@ -157,6 +157,23 @@ export function MediaProductionDrawer({
     }
   };
 
+  const approveImage = async () => {
+    setBusy(true);
+    setActionError(null);
+    try {
+      const { post: updated } = await customFetch<{ post: MediaPresencePost }>(
+        `/api/presence/posts/${currentPost.id}/media/approve-image`,
+        { method: "POST" },
+      );
+      updatePost(updated);
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Erro ao aprovar imagem.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmVideo = async () => {
     setBusy(true);
     setActionError(null);
@@ -320,6 +337,7 @@ export function MediaProductionDrawer({
               onEditScript={setEditedScript}
               onGenerateStoryboard={generateStoryboard}
               onGenerateVideo={generateVideo}
+              onApproveImage={approveImage}
               onConfirmVideo={confirmVideo}
               onReset={resetPipeline}
               busy={busy}
@@ -358,6 +376,7 @@ function AITabContent({
   onEditScript,
   onGenerateStoryboard,
   onGenerateVideo,
+  onApproveImage,
   onConfirmVideo,
   onReset,
   busy,
@@ -371,11 +390,14 @@ function AITabContent({
   onEditScript: (v: string) => void;
   onGenerateStoryboard: () => void;
   onGenerateVideo: () => void;
+  onApproveImage: () => void;
   onConfirmVideo: () => void;
   onReset: () => void;
   busy: boolean;
 }) {
   const step = post.mediaGenStatus;
+  // Formats that produce a final image (not video)
+  const isImageFormat = !["reel", "story", "feed_video"].includes(post.format);
 
   // Avatar warning banner
   const AvatarBanner = () => {
@@ -409,16 +431,18 @@ function AITabContent({
   if (!step || step === "idle") {
     return (
       <div className="space-y-4">
-        <AvatarBanner />
+        {!isImageFormat && <AvatarBanner />}
 
         {/* Pipeline steps indicator */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="rounded-full bg-primary w-5 h-5 flex items-center justify-center text-[10px] text-primary-foreground font-bold shrink-0">1</span>
-          <span className="font-medium text-foreground">Roteiro</span>
+          <span className="font-medium text-foreground">Direção Visual</span>
           <ArrowRight className="h-3 w-3 shrink-0" />
-          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">2</span>Storyboard</span>
-          <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
-          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
+          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">2</span>{isImageFormat ? "Imagem" : "Storyboard"}</span>
+          {!isImageFormat && <>
+            <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
+            <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
+          </>}
         </div>
 
         <div className="space-y-3">
@@ -453,11 +477,13 @@ function AITabContent({
 
         <Button onClick={onGenerateStoryboard} disabled={busy || !editedDirection.trim()} className="w-full">
           {busy
-            ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando storyboard...</>
-            : <><Wand2 className="mr-2 h-4 w-4" /> Gerar Storyboard (baixa resolução)</>}
+            ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Gerando imagem...</>
+            : <><Wand2 className="mr-2 h-4 w-4" /> {isImageFormat ? "Gerar Imagem com IA" : "Gerar Storyboard (baixa resolução)"}</>}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          A IA cria um storyboard de baixa resolução para aprovação antes de gerar o vídeo final.
+          {isImageFormat
+            ? "A IA gera a imagem final baseada na sua direção visual. Você aprova antes de publicar."
+            : "A IA cria um storyboard de baixa resolução para aprovação antes de gerar o vídeo final."}
         </p>
       </div>
     );
@@ -476,27 +502,29 @@ function AITabContent({
     );
   }
 
-  // Step: Storyboard pronto — aprovação
+  // Step: Imagem / Storyboard pronto — aprovação
   if (step === "storyboard_ready") {
     return (
       <div className="space-y-4">
-        <AvatarBanner />
+        {!isImageFormat && <AvatarBanner />}
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="rounded-full border border-green-500/50 bg-green-500/10 text-green-400 w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">✓</span>
-          <span className="opacity-50">Roteiro</span>
+          <span className="opacity-50">Direção Visual</span>
           <ArrowRight className="h-3 w-3 shrink-0" />
           <span className="rounded-full bg-primary w-5 h-5 flex items-center justify-center text-[10px] text-primary-foreground font-bold shrink-0">2</span>
-          <span className="font-medium text-foreground">Storyboard</span>
-          <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
-          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
+          <span className="font-medium text-foreground">{isImageFormat ? "Imagem Gerada" : "Storyboard"}</span>
+          {!isImageFormat && <>
+            <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
+            <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
+          </>}
         </div>
 
         <div className="rounded-xl border border-border overflow-hidden bg-background/50">
           {post.storyboardUrls?.[0] ? (
             <img
               src={post.storyboardUrls[0]}
-              alt="Storyboard preview"
+              alt={isImageFormat ? "Imagem gerada pela IA" : "Storyboard preview"}
               className="w-full object-cover max-h-80"
             />
           ) : (
@@ -511,46 +539,60 @@ function AITabContent({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
-            {busy
-              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Iniciando geração de vídeo...</>
-              : <><Video className="mr-2 h-4 w-4" /> Aprovar e Gerar Vídeo</>}
-          </Button>
+          {isImageFormat ? (
+            <Button onClick={onApproveImage} disabled={busy} className="w-full">
+              {busy
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando imagem...</>
+                : <><CheckCircle2 className="mr-2 h-4 w-4" /> Usar esta imagem no post</>}
+            </Button>
+          ) : (
+            <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
+              {busy
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Iniciando geração de vídeo...</>
+                : <><Video className="mr-2 h-4 w-4" /> Aprovar e Gerar Vídeo</>}
+            </Button>
+          )}
           <Button variant="outline" onClick={onReset} disabled={busy} className="w-full text-xs">
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Editar direção e regenerar storyboard
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Editar direção e {isImageFormat ? "gerar nova imagem" : "regenerar storyboard"}
           </Button>
         </div>
-        <p className="text-center text-xs text-muted-foreground">
-          {hasAvatar ? "O vídeo será gerado com o seu clone digital e voz clonada." : "O vídeo será gerado cinematograficamente. Configure seu clone digital para aparecer no vídeo."}
-        </p>
+        {!isImageFormat && (
+          <p className="text-center text-xs text-muted-foreground">
+            {hasAvatar ? "O vídeo será gerado com o seu clone digital e voz clonada." : "O vídeo será gerado cinematograficamente. Configure seu clone digital para aparecer no vídeo."}
+          </p>
+        )}
       </div>
     );
   }
 
-  // Step: Storyboard rascunho (SVG gerado sem crédito de IA)
+  // Step: Rascunho (gerado sem IA — todos os provedores falharam)
   if (step === "storyboard_draft") {
     return (
       <div className="space-y-4">
-        <AvatarBanner />
+        {!isImageFormat && <AvatarBanner />}
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="rounded-full border border-green-500/50 bg-green-500/10 text-green-400 w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">✓</span>
-          <span className="opacity-50">Roteiro</span>
+          <span className="opacity-50">Direção Visual</span>
           <ArrowRight className="h-3 w-3 shrink-0" />
           <span className="rounded-full bg-amber-500 w-5 h-5 flex items-center justify-center text-[10px] text-white font-bold shrink-0">2</span>
           <span className="font-medium text-amber-400">Rascunho</span>
-          <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
-          <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
+          {!isImageFormat && <>
+            <ArrowRight className="h-3 w-3 shrink-0 opacity-50" />
+            <span className="opacity-50 flex items-center gap-1"><span className="rounded-full border border-border w-5 h-5 flex items-center justify-center text-[10px] font-bold shrink-0">3</span>Vídeo</span>
+          </>}
         </div>
 
-        {/* RASCUNHO notice */}
         <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/8 px-3 py-2.5 text-xs text-amber-300">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">Storyboard gerado sem IA (créditos indisponíveis)</p>
+            <p className="font-semibold">
+              {isImageFormat ? "Imagem gerada sem IA (Gemini e DALL-E indisponíveis)" : "Storyboard gerado sem IA (créditos indisponíveis)"}
+            </p>
             <p className="text-amber-300/70 mt-0.5">
-              Este é um rascunho visual com os textos do post. Quando os créditos Gemini estiverem disponíveis,
-              regenere para obter uma imagem gerada por IA.
+              {isImageFormat
+                ? "Este é um rascunho visual com os textos do post. Regenere quando os créditos de IA estiverem disponíveis para obter uma imagem real."
+                : "Este é um rascunho visual com os textos do post. Quando os créditos Gemini / DALL-E estiverem disponíveis, regenere para obter uma imagem gerada por IA."}
             </p>
           </div>
         </div>
@@ -559,7 +601,7 @@ function AITabContent({
           {post.storyboardUrls?.[0] ? (
             <img
               src={post.storyboardUrls[0]}
-              alt="Rascunho do storyboard"
+              alt="Rascunho"
               className="w-full object-cover max-h-80"
             />
           ) : (
@@ -574,18 +616,28 @@ function AITabContent({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
-            {busy
-              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Iniciando geração de vídeo...</>
-              : <><Video className="mr-2 h-4 w-4" /> Continuar e Gerar Vídeo</>}
-          </Button>
+          {isImageFormat ? (
+            <Button onClick={onApproveImage} disabled={busy} variant="outline" className="w-full border-amber-500/40 text-amber-400 hover:bg-amber-400/10">
+              {busy
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</>
+                : <><CheckCircle2 className="mr-2 h-4 w-4" /> Usar este rascunho assim mesmo</>}
+            </Button>
+          ) : (
+            <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
+              {busy
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Iniciando geração de vídeo...</>
+                : <><Video className="mr-2 h-4 w-4" /> Continuar e Gerar Vídeo</>}
+            </Button>
+          )}
           <Button variant="outline" onClick={onReset} disabled={busy} className="w-full text-xs">
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Regenerar storyboard com IA
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> {isImageFormat ? "Tentar gerar imagem novamente" : "Regenerar storyboard com IA"}
           </Button>
         </div>
-        <p className="text-center text-xs text-muted-foreground">
-          {hasAvatar ? "O vídeo usará seu clone digital e voz clonada." : "Configure seu clone digital em Configurações para aparecer no vídeo."}
-        </p>
+        {!isImageFormat && (
+          <p className="text-center text-xs text-muted-foreground">
+            {hasAvatar ? "O vídeo usará seu clone digital e voz clonada." : "Configure seu clone digital em Configurações para aparecer no vídeo."}
+          </p>
+        )}
       </div>
     );
   }
