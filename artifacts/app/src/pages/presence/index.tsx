@@ -756,7 +756,6 @@ export default function PresencePage() {
             post={drawerPost as unknown as MediaPresencePost}
             onClose={() => setMediaDrawerPostId(null)}
             onPostUpdated={handleMediaDrawerUpdate}
-            onPublishNow={(postId) => { setMediaDrawerPostId(null); publishNow(postId); }}
           />
         );
       })()}
