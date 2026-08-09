@@ -174,10 +174,16 @@ export async function publishToInstagram(
       }
     );
 
+    // Stories use a different URL scheme; carousel/feed use /p/
+    const platformUrl =
+      post.postType === "story"
+        ? null // Story URLs require the username which we don't have here; link will be absent
+        : `https://www.instagram.com/p/${published.id}/`;
+
     return {
       success: true,
       platformPostId: published.id,
-      platformUrl: `https://www.instagram.com/p/${published.id}/`,
+      platformUrl: platformUrl ?? undefined,
     };
   } catch (err) {
     const raw = err instanceof Error ? err.message : String(err);

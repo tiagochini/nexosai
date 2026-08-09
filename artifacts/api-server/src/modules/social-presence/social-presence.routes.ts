@@ -24,6 +24,7 @@ import {
   pollPostMediaJob,
   attachUploadedMedia,
   confirmVideoAttachment,
+  uploadTestMedia,
 } from "./social-presence.service.js";
 
 const router = Router();
@@ -305,16 +306,37 @@ router.post("/posts/:id/media/upload", async (req, res): Promise<void> => {
 
 // ─── Test post ────────────────────────────────────────────────────────────────
 
+// POST /api/presence/test-media-upload — upload temporário para usar no post de teste
+// (sem vínculo a post; salvo em presence-media/test/{workspaceId}/)
+router.post("/test-media-upload", async (req, res): Promise<void> => {
+  const contentType = (req.headers["content-type"] ?? "application/octet-stream").split(";")[0].trim();
+  const filename = (req.headers["x-filename"] as string | undefined) ?? `test.${contentType.split("/")[1] ?? "bin"}`;
+  const chunks: Buffer[] = [];
+  req.on("data", (chunk: Buffer) => chunks.push(chunk));
+  await new Promise<void>((resolve, reject) => { req.on("end", resolve); req.on("error", reject); });
+  const buffer = Buffer.concat(chunks);
+  if (buffer.length === 0) { res.status(400).json({ error: "Arquivo vazio." }); return; }
+  if (buffer.length > 50 * 1024 * 1024) { res.status(413).json({ error: "Arquivo muito grande (máx 50 MB para teste)." }); return; }
+  try {
+    const url = await uploadTestMedia(req.auth.workspaceId, buffer, contentType, filename, req.log);
+    res.json({ url });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Erro ao fazer upload." });
+  }
+});
+
 router.post("/test-post", async (req, res): Promise<void> => {
   const schema = z.object({
     platform: z.enum(["instagram", "facebook", "tiktok"]),
+    imageUrl: z.string().url().optional(),
+    caption: z.string().max(2200).optional(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Plataforma inválida. Use instagram, facebook ou tiktok." });
     return;
   }
-  const result = await publishTestPost(req.auth.workspaceId, parsed.data.platform);
+  const result = await publishTestPost(req.auth.workspaceId, parsed.data.platform, parsed.data.imageUrl, parsed.data.caption);
   res.status(result.success ? 200 : 422).json(result);
 });
 

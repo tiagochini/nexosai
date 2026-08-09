@@ -6,7 +6,7 @@ import {
   Share2, Settings, Sparkles, Loader2, RefreshCw, CheckCircle2,
   Clock, AlertTriangle, X, Instagram, Facebook, Music2, Linkedin,
   CalendarDays, ListChecks, BarChart3, Lightbulb, Copy, Check,
-  Rocket, PenLine, ThumbsUp, Zap, Send, Link2Off, Film, ImageIcon,
+  Rocket, PenLine, ThumbsUp, Zap, Send, Link2Off, Film, ImageIcon, Upload,
 } from "lucide-react";
 import { MediaProductionDrawer } from "./MediaProductionDrawer";
 import type { MediaPresencePost } from "./MediaProductionDrawer";
@@ -836,6 +836,11 @@ function CalendarPostCard({
           {post.hashtags.length > 0 && (
             <p className="text-[11px] text-blue-300">{post.hashtags.map((h) => `#${h}`).join(" ")}</p>
           )}
+          {post.format === "story" && (
+            <p className="text-[11px] text-amber-400/80 italic">
+              ⚡ Story: o Instagram não exibe caption via API — use este texto como sticker de texto ou narração.
+            </p>
+          )}
           {/* Thumbnail da mídia já salva */}
           {hasMedia && (
             <div className="rounded-lg overflow-hidden border border-green-500/20 bg-black max-h-48">
@@ -1451,7 +1456,48 @@ function TestPostPanel({
 }) {
   const [platform, setPlatform] = useState<string>(platforms[0]?.platform ?? "instagram");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; platformUrl?: string; error?: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setUploadedImageUrl(null);
+    setResult(null);
+    const reader = new FileReader();
+    reader.onload = (e) => setPreviewUrl(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && /^image\//.test(file.type)) handleFileSelect(file);
+  };
+
+  const handleUploadImage = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    try {
+      const res = await customFetch<{ url: string }>(
+        `${API}/test-media-upload`,
+        {
+          method: "POST",
+          body: selectedFile,
+          headers: { "Content-Type": selectedFile.type, "X-Filename": selectedFile.name },
+        },
+      );
+      setUploadedImageUrl(res.url);
+    } catch (err) {
+      setResult({ success: false, error: "Erro ao fazer upload da imagem: " + (err instanceof Error ? err.message : String(err)) });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const runTest = async () => {
     setLoading(true);
@@ -1459,7 +1505,7 @@ function TestPostPanel({
     try {
       const res = await customFetch<{ success: boolean; platformUrl?: string; error?: string }>(
         `${API}/test-post`,
-        { method: "POST", body: JSON.stringify({ platform }) },
+        { method: "POST", body: JSON.stringify({ platform, imageUrl: uploadedImageUrl ?? undefined, caption: caption.trim() || undefined }) },
       );
       setResult(res);
       if (res.success && res.platformUrl) {
@@ -1487,7 +1533,7 @@ function TestPostPanel({
         </div>
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Publica um post real de teste na plataforma escolhida — com imagem e legenda de teste — para confirmar que a integração está funcionando.
+          Publica um post real de teste na plataforma escolhida para confirmar que a integração está funcionando.
         </p>
 
         {platforms.length === 0 ? (
@@ -1496,6 +1542,7 @@ function TestPostPanel({
           </div>
         ) : (
           <div className="mt-4 space-y-4">
+            {/* Plataforma */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Plataforma</label>
               <div className="flex gap-2 flex-wrap">
@@ -1519,15 +1566,83 @@ function TestPostPanel({
               </div>
             </div>
 
+            {/* Legenda */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Legenda <span className="text-muted-foreground font-normal">(opcional)</span></label>
+              <textarea
+                className="w-full rounded-md border border-border bg-background p-2.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                rows={3}
+                maxLength={2200}
+                placeholder="Escreva a legenda do post... (deixe em branco para usar texto de teste padrão)"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+              />
+              {caption.length > 0 && (
+                <p className="text-right text-[11px] text-muted-foreground">{caption.length}/2200</p>
+              )}
+            </div>
+
+            {/* Imagem opcional */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Imagem <span className="text-muted-foreground font-normal">(opcional)</span></label>
+                {selectedFile && (
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => { setSelectedFile(null); setPreviewUrl(null); setUploadedImageUrl(null); }}
+                  >
+                    Remover
+                  </button>
+                )}
+              </div>
+
+              {previewUrl ? (
+                <div className="relative rounded-lg overflow-hidden border border-border bg-black">
+                  <img src={previewUrl} alt="Preview" className="w-full max-h-40 object-contain" />
+                  {uploadedImageUrl ? (
+                    <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded bg-green-500/80 px-2 py-1 text-[11px] text-white">
+                      <CheckCircle2 className="h-3 w-3" /> Pronto para enviar
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <Button size="sm" onClick={handleUploadImage} disabled={uploading}>
+                        {uploading ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Enviando…</> : <><Upload className="mr-1.5 h-3.5 w-3.5" /> Usar esta imagem</>}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-center cursor-pointer hover:border-primary/40 transition-colors"
+                  onDrop={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground">Arraste ou clique para escolher uma imagem</p>
+                  <p className="text-[11px] text-muted-foreground/60">Sem imagem → usa foto padrão de teste</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+              />
+            </div>
+
             <Button
               className="w-full"
               onClick={runTest}
-              disabled={loading}
+              disabled={loading || (!!selectedFile && !uploadedImageUrl)}
               data-testid="button-run-test-post"
             >
               {loading
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Publicando… (aguarde ~5s)</>
-                : <><Send className="mr-2 h-4 w-4" /> Enviar Post de Teste no {PLATFORM_META[platform]?.label ?? platform}</>
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Publicando… (aguarde ~10s)</>
+                : selectedFile && !uploadedImageUrl
+                  ? <><Upload className="mr-2 h-4 w-4" /> Confirme o upload da imagem acima</>
+                  : <><Send className="mr-2 h-4 w-4" /> Enviar Post de Teste no {PLATFORM_META[platform]?.label ?? platform}</>
               }
             </Button>
 

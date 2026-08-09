@@ -278,6 +278,8 @@ export async function listWorkspaceCampaigns(
 export async function publishTestPost(
   workspaceId: string,
   platform: "instagram" | "facebook" | "tiktok",
+  imageUrl?: string,
+  customCaption?: string,
 ): Promise<{ success: boolean; platformUrl?: string; platformPostId?: string; error?: string }> {
   const log = logger.child({ component: "presence-test-post", workspaceId, platform });
 
@@ -307,8 +309,9 @@ export async function publishTestPost(
 
   const now = new Date();
   const ts = now.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
-  const caption =
-    `🧪 Post de teste NexOS — ${ts}\n\nEste é um post automático para verificar a integração. Pode apagar após confirmar que está funcionando! ✅`;
+  const caption = customCaption?.trim()
+    ? customCaption.trim()
+    : `🧪 Post de teste NexOS — ${ts}\n\nEste é um post automático para verificar a integração. Pode apagar após confirmar que está funcionando! ✅`;
 
   // Imagem de teste pública e estável — usada apenas quando nenhuma mídia foi enviada.
   // Instagram exige image_url acessível publicamente para o Container API.
@@ -326,7 +329,7 @@ export async function publishTestPost(
     status: "publishing" as never,
     caption,
     hashtags: ["#NexOS", "#Teste"],
-    mediaUrls: [TEST_IMAGE_URL],
+    mediaUrls: [imageUrl ?? TEST_IMAGE_URL],
     callToAction: null,
     linkUrl: null,
     scheduledAt: now,
@@ -1146,7 +1149,20 @@ export async function publishDuePresencePosts(): Promise<void> {
           continue;
         }
 
-        const mediaUrls = Array.isArray(post.mediaUrls) ? post.mediaUrls : [];
+        const rawMediaUrls = Array.isArray(post.mediaUrls) ? (post.mediaUrls as string[]) : [];
+        // Resolve internal serve URLs → fresh GCS signed URL so Instagram/TikTok
+        // can fetch the file directly without following an internal redirect.
+        const mediaUrls = await Promise.all(
+          rawMediaUrls.map(async (url) => {
+            const match = typeof url === "string" && url.match(/[?&]key=([^&]+)/);
+            if (match) {
+              const key = decodeURIComponent(match[1]);
+              const signed = await getPresenceMediaSignedUrl(key, 3600).catch(() => null);
+              return signed ?? url;
+            }
+            return url;
+          }),
+        );
         const needsMedia = post.platform === "instagram" || post.platform === "tiktok";
         if (needsMedia && mediaUrls.length === 0) {
           if (!post.errorMessage) {
@@ -1213,7 +1229,13 @@ export async function publishDuePresencePosts(): Promise<void> {
           contentPieceId: null,
           integrationId: integration.id,
           platform: (post.platform === "facebook" ? "facebook_page" : post.platform) as never,
-          postType: (post.format === "reel" ? "reel" : "feed_image") as never,
+          postType: (
+            post.format === "reel" ? "reel"
+            : post.format === "story" ? "story"
+            : post.format === "carousel" ? "carousel"
+            : post.format === "feed_video" ? "feed_video"
+            : "feed_image"
+          ) as never,
           status: "publishing" as never,
           caption,
           hashtags,
@@ -1780,6 +1802,26 @@ export async function pollPostMediaJob(
     log.warn({ err, postId }, "presence: pollPostMediaJob error (non-fatal)");
     return post;
   }
+}
+
+/** Upload temporário de mídia para uso no post de teste (sem vínculo a post). */
+export async function uploadTestMedia(
+  workspaceId: string,
+  buffer: Buffer,
+  contentType: string,
+  originalFilename: string,
+  log: Logger,
+): Promise<string> {
+  const ext = originalFilename.split(".").pop()?.toLowerCase() ?? "bin";
+  const key = `presence-media/test/${workspaceId}/${Date.now()}.${ext}`;
+  await uploadBufferToGCS(buffer, key, contentType);
+
+  // Prefer a 1-hour signed URL so Instagram can fetch directly without redirect
+  const signed = await getPresenceMediaSignedUrl(key, 3600).catch(() => null);
+  if (signed) return signed;
+
+  // Fallback: internal serve URL (publicly accessible)
+  return `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
 }
 
 /** Upload de mídia enviada pelo usuário (imagem ou vídeo) → GCS → atualiza mediaUrls. */

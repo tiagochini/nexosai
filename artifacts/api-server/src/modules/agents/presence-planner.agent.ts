@@ -16,6 +16,7 @@ export interface PresencePlannedPost {
   pillar: string;
   caption: string;
   hashtags: string[];
+  atMentions?: string[]; // usernames sem @ mencionados inline na caption
   visualDirection: string;
   videoScript?: string;
   objective: string;
@@ -89,11 +90,13 @@ const PLANNER_PROMPT = `Você é o Agente de Presença Social do NexOS AI — es
 ## REGRAS DE QUALIDADE
 - Cada caption completa e pronta para publicar (não "escreva aqui...")
 - Gancho forte na primeira linha — a primeira frase decide se o resto é lido
-- Hashtags: 5–10 para instagram/tiktok (mix volume alto + nicho), 3–5 facebook, 3 linkedin
+- Hashtags: 5–10 para instagram/tiktok (mix volume alto + nicho), 3–5 facebook, 3 linkedin — coloque NO CAMPO hashtags (sem #), NÃO inline na caption
+- @mentions: use inline na caption quando contextualmente relevante — ex: "@parceiro" se colaboração, "@suaconta" para crosspost, "@evento" para cobertura. Se não há menção relevante, omita. NÃO invente perfis que não existem.
 - visualDirection: direção clara para foto/arte/vídeo (o usuário ou o módulo de vídeo produz)
 - videoScript: apenas para reel/vídeo — roteiro com gancho, desenvolvimento, CTA (máx 150 palavras)
 - Captions em PT-BR, no tom configurado pelo usuário
 - Varie formatos ao longo da semana — nunca 7 dias do mesmo formato
+- Para stories: a caption deve ser o texto do sticker/overlay que o usuário colará manualmente, pois a API do Instagram não exibe caption em stories — escreva como frase curta e impactante (máx 2 linhas)
 
 **Retorne APENAS JSON válido:**
 
@@ -106,8 +109,9 @@ const PLANNER_PROMPT = `Você é o Agente de Presença Social do NexOS AI — es
       "postingTime": "19:30",
       "format": "reel|carousel|feed|story|text|live",
       "pillar": "string — pilar de conteúdo deste post",
-      "caption": "string — caption completa pronta para publicar",
-      "hashtags": ["string sem #"],
+      "caption": "string — caption completa pronta para publicar, com @mentions inline onde relevante",
+      "hashtags": ["string sem # — NÃO repita o que já está na caption"],
+      "atMentions": ["username sem @ — apenas perfis mencionados inline na caption, para rastreamento"],
       "visualDirection": "string — direção visual clara",
       "videoScript": "string — apenas se formato de vídeo",
       "objective": "string — o que este post deve causar",
@@ -193,6 +197,7 @@ Gere exatamente ${totalPosts} posts (${Math.min(input.postsPerDay, 5)}/dia × 7 
       format: p.format || "feed",
       pillar: p.pillar || "",
       hashtags: Array.isArray(p.hashtags) ? p.hashtags.map((h) => String(h).replace(/^#/, "")) : [],
+      atMentions: Array.isArray(p.atMentions) ? p.atMentions.map((m) => String(m).replace(/^@/, "")) : [],
       visualDirection: p.visualDirection || "",
       objective: p.objective || "",
     }));
