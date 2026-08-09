@@ -76,6 +76,8 @@ interface PresencePost {
   publishedAt: string | null;
   platformUrl: string | null;
   errorMessage: string | null;
+  retryCount: number;
+  manualRetryCount: number;
   metrics: { likes: number; comments: number; shares: number; views: number; reach: number; impressions: number };
   // Media production pipeline
   mediaGenStatus: string | null;
@@ -985,6 +987,21 @@ function CalendarPostCard({
                 {publishingNow ? "Publicando..." : "Publicar Agora"}
               </Button>
             )}
+            {post.status === "failed" && (post.manualRetryCount ?? 0) <= 3 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[11px] border-red-500/40 text-red-400 hover:bg-red-400/10"
+                onClick={onPublishNow}
+                disabled={publishingNow}
+                data-testid={`button-retry-${post.id}`}
+              >
+                {publishingNow
+                  ? <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  : <RefreshCw className="mr-1 h-3 w-3" />}
+                {publishingNow ? "Retentando..." : `Tentar Novamente (${post.manualRetryCount ?? 0}/3)`}
+              </Button>
+            )}
             {post.status === "scheduled" && (
               <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={onMarkPublished}>
                 <Check className="mr-1 h-3 w-3" /> Marcar publicado
@@ -1100,6 +1117,36 @@ function QueuePostCard({
             >
               Ver post →
             </a>
+          )}
+        </div>
+      )}
+
+      {!editing && post.status === "failed" && (
+        <div className="mt-3">
+          {(post.manualRetryCount ?? 0) <= 3 ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-500/40 text-red-400 hover:bg-red-400/10"
+                onClick={onPublishNow}
+                disabled={publishingNow}
+                data-testid={`button-queue-retry-${post.id}`}
+              >
+                {publishingNow
+                  ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
+                {publishingNow ? "Retentando..." : `Tentar Novamente (${post.manualRetryCount ?? 0}/3)`}
+              </Button>
+              <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={onCancel}>
+                Descartar post
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2.5 text-sm text-red-400">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="flex-1">Post bloqueado após {post.manualRetryCount} retentativas manuais. Intervenção técnica necessária.</span>
+            </div>
           )}
         </div>
       )}

@@ -155,6 +155,9 @@ export const socialPresencePostsTable = pgTable("social_presence_posts", {
   platformUrl: text("platform_url"),
   errorMessage: text("error_message"),
   retryCount: integer("retry_count").notNull().default(0),
+  // Conta quantas vezes o operador clicou em "Publicar Agora" após falha.
+  // Quando excede MANUAL_RETRY_LIMIT o post é bloqueado como failed permanente.
+  manualRetryCount: integer("manual_retry_count").notNull().default(0),
   // Métricas pós-publicação
   metrics: jsonb("metrics")
     .notNull()

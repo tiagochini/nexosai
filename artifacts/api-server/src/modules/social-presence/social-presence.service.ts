@@ -49,6 +49,7 @@ import {
   type PresenceInsightOutput,
 } from "../agents/presence-planner.agent.js";
 import { getCampaignBrain } from "../campaign-brain/campaign-brain.service.js";
+import { emitWorkspaceAlert } from "../realtime/realtime.service.js";
 import {
   publishToInstagram,
   publishToFacebook,
@@ -56,6 +57,11 @@ import {
   getInstagramMetrics,
   getTikTokMetrics,
 } from "../social/social.publisher.js";
+
+// Maximum number of times an operator may manually trigger "Publish Now" on a
+// failed post before it is permanently locked. Shared between publishPostNow()
+// and publishDuePresencePosts() so the threshold is always consistent.
+const MANUAL_RETRY_LIMIT = 3;
 
 // Presence platform → DB integration provider
 const PLATFORM_TO_PROVIDER: Record<string, string> = {
@@ -1169,15 +1175,72 @@ export async function publishPostNow(
     throw new Error("Post já está sendo publicado. Aguarde alguns instantes.");
   }
 
+  const newManualRetryCount = (post.manualRetryCount ?? 0) + 1;
+
+  // If the operator has already retried manually too many times, lock the post permanently.
+  if (newManualRetryCount > MANUAL_RETRY_LIMIT) {
+    const [locked] = await db
+      .update(socialPresencePostsTable)
+      .set({
+        status: "failed",
+        errorMessage: `Bloqueado após ${MANUAL_RETRY_LIMIT} retentativas manuais. Intervenção técnica necessária.`,
+        manualRetryCount: newManualRetryCount,
+      })
+      .where(eq(socialPresencePostsTable.id, postId))
+      .returning();
+
+    emitWorkspaceAlert(
+      workspaceId,
+      "social_post_manual_retry_exhausted",
+      `⚠️ Post de ${post.platform} falhou ${newManualRetryCount}× mesmo após retentativas manuais. Verifique a integração.`,
+      {
+        postId: post.id,
+        platform: post.platform,
+        manualRetryCount: newManualRetryCount,
+        errorMessage: post.errorMessage,
+      },
+    );
+
+    log.warn(
+      { platform: post.platform, manualRetryCount: newManualRetryCount },
+      "presence: publish-now blocked — manual retry limit exhausted",
+    );
+
+    return locked ?? null;
+  }
+
   // Force scheduledFor to now so publishDuePresencePosts picks it up immediately.
-  // Reset retryCount so a manual retry always gets 3 full attempts — not residual count.
+  // Reset automatic retryCount so a manual retry always gets 3 full attempts — not residual count.
   const [updated] = await db
     .update(socialPresencePostsTable)
-    .set({ status: "scheduled", scheduledFor: new Date(), errorMessage: null, retryCount: 0 })
+    .set({
+      status: "scheduled",
+      scheduledFor: new Date(),
+      errorMessage: null,
+      retryCount: 0,
+      manualRetryCount: newManualRetryCount,
+    })
     .where(eq(socialPresencePostsTable.id, postId))
     .returning();
 
-  log.info({ platform: post.platform }, "presence: publish-now triggered");
+  // Emit a warning alert when the operator is on their last allowed manual retry.
+  if (newManualRetryCount === MANUAL_RETRY_LIMIT) {
+    emitWorkspaceAlert(
+      workspaceId,
+      "social_post_manual_retry_warning",
+      `⚠️ Post de ${post.platform} está na última retentativa manual permitida (${newManualRetryCount}/${MANUAL_RETRY_LIMIT}). Se falhar novamente, será bloqueado.`,
+      {
+        postId: post.id,
+        platform: post.platform,
+        manualRetryCount: newManualRetryCount,
+      },
+    );
+  }
+
+  log.info(
+    { platform: post.platform, manualRetryCount: newManualRetryCount },
+    "presence: publish-now triggered",
+  );
 
   // Fire-and-forget: the scheduler runs and processes this (and any other due) post.
   setImmediate(() => publishDuePresencePosts().catch((err) => {
@@ -1339,14 +1402,23 @@ export async function publishDuePresencePosts(): Promise<void> {
 
         if (!integration) {
           const retryCount = (post.retryCount ?? 0) + 1;
+          const isPermanentlyFailed = retryCount >= 3;
           await db
             .update(socialPresencePostsTable)
             .set({
-              status: retryCount >= 3 ? "failed" : "scheduled",
+              status: isPermanentlyFailed ? "failed" : "scheduled",
               retryCount,
               errorMessage: `Integração ${post.platform} não conectada. Conecte em /integracoes.`,
             })
             .where(eq(socialPresencePostsTable.id, post.id));
+          if (isPermanentlyFailed && (post.manualRetryCount ?? 0) >= MANUAL_RETRY_LIMIT) {
+            emitWorkspaceAlert(
+              post.workspaceId,
+              "social_post_manual_retry_exhausted",
+              `⚠️ Post de ${post.platform} falhou permanentemente — integração desconectada após ${post.manualRetryCount} retentativas manuais. Reconecte em /integracoes.`,
+              { postId: post.id, platform: post.platform, manualRetryCount: post.manualRetryCount },
+            );
+          }
           continue;
         }
 
@@ -1446,10 +1518,11 @@ export async function publishDuePresencePosts(): Promise<void> {
           }
         } else {
           const retryCount = (post.retryCount ?? 0) + 1;
+          const isPermanentlyFailed = retryCount >= 3;
           await db
             .update(socialPresencePostsTable)
             .set({
-              status: retryCount >= 3 ? "failed" : "scheduled",
+              status: isPermanentlyFailed ? "failed" : "scheduled",
               retryCount,
               errorMessage: result.error ?? "Erro desconhecido",
             })
@@ -1458,6 +1531,22 @@ export async function publishDuePresencePosts(): Promise<void> {
             { postId: post.id, platform: post.platform, error: result.error, retryCount },
             "presence: publish failed",
           );
+
+          // If this post was triggered by a manual retry and has now exhausted all
+          // automatic retries, alert the operator via workspace Socket.io event.
+          if (isPermanentlyFailed && (post.manualRetryCount ?? 0) >= MANUAL_RETRY_LIMIT) {
+            emitWorkspaceAlert(
+              post.workspaceId,
+              "social_post_manual_retry_exhausted",
+              `⚠️ Post de ${post.platform} falhou permanentemente após ${post.manualRetryCount} retentativas manuais. Verifique a integração.`,
+              {
+                postId: post.id,
+                platform: post.platform,
+                manualRetryCount: post.manualRetryCount,
+                errorMessage: result.error,
+              },
+            );
+          }
         }
       } catch (itemErr) {
         await db
@@ -1565,7 +1654,7 @@ async function generateStoryboardFrame(
       response_format: "b64_json",
       quality: "standard",
     });
-    const b64 = resp.data[0]?.b64_json;
+    const b64 = resp.data?.[0]?.b64_json;
     if (b64) {
       log.info({ format, size }, "presence: DALL-E 3 storyboard generated ✓");
       return { buf: Buffer.from(b64, "base64"), mimeType: "image/png", isAI: true };

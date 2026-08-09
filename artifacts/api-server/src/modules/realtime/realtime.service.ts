@@ -173,6 +173,29 @@ export function emitClarificationNeeded(
   });
 }
 
+export function emitWorkspaceAlert(
+  workspaceId: string,
+  type: string,
+  message: string,
+  data?: Record<string, unknown>,
+): void {
+  if (!io) return;
+  try {
+    io.to(`workspace:${workspaceId}`).emit("workspace:alert", {
+      workspaceId,
+      type,
+      message,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.warn(
+      { err, workspaceId, type },
+      "emitWorkspaceAlert failed (Socket.io degraded) — suppressed.",
+    );
+  }
+}
+
 export function getIO(): SocketIOServer | null {
   return io;
 }

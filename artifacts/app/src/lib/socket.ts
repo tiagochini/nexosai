@@ -21,6 +21,14 @@ export interface CampaignEvent {
   timestamp: string;
 }
 
+export interface WorkspaceAlert {
+  workspaceId: string;
+  type: string;
+  message: string;
+  data?: Record<string, unknown>;
+  timestamp: string;
+}
+
 let _socket: Socket | null = null;
 
 function getSocket(): Socket {
@@ -80,6 +88,47 @@ export function useCampaignSocket(
       socket.off("connect", joinAndListen);
     };
   }, [campaignId, enabled]);
+}
+
+/**
+ * Joins the authenticated workspace room and listens for workspace-level alerts.
+ * Use this in a top-level layout component so operator alerts are always visible.
+ */
+export function useWorkspaceSocket(
+  workspaceId: string | undefined,
+  onAlert: (alert: WorkspaceAlert) => void,
+) {
+  const cbRef = useRef(onAlert);
+  cbRef.current = onAlert;
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    const socket = getSocket();
+
+    const joinWorkspace = () => {
+      socket.emit("join:workspace");
+    };
+
+    if (socket.connected) {
+      joinWorkspace();
+    } else {
+      socket.once("connect", joinWorkspace);
+    }
+
+    const handler = (alert: WorkspaceAlert) => {
+      if (alert.workspaceId === workspaceId) {
+        cbRef.current(alert);
+      }
+    };
+
+    socket.on("workspace:alert", handler);
+
+    return () => {
+      socket.off("workspace:alert", handler);
+      socket.off("connect", joinWorkspace);
+    };
+  }, [workspaceId]);
 }
 
 export function disconnectSocket() {

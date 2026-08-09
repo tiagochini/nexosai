@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useMode } from "@/lib/mode";
@@ -24,6 +24,7 @@ import {
 import { GlobalSearch, useGlobalSearch } from "@/components/global-search";
 import { toast } from "sonner";
 import { AppTour, hasDoneTour, markTourDone } from "@/components/AppTour";
+import { useWorkspaceSocket } from "@/lib/socket";
 
 function AdminTopupButton({ onSuccess, compact }: { onSuccess: () => void; compact?: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -505,6 +506,20 @@ function TopBar({ onMenuOpen }: { onMenuOpen: () => void }) {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [location] = useLocation();
+  const { workspace } = useAuth();
+
+  // Workspace-level operator alerts (e.g. Instagram post retry exhausted)
+  const handleWorkspaceAlert = useCallback((alert: { type: string; message: string }) => {
+    if (alert.type === "social_post_manual_retry_exhausted") {
+      toast.error(alert.message, { duration: 12000, id: `ws-alert-${Date.now()}` });
+    } else if (alert.type === "social_post_manual_retry_warning") {
+      toast.warning(alert.message, { duration: 8000, id: `ws-alert-${Date.now()}` });
+    } else {
+      toast.warning(alert.message, { duration: 8000 });
+    }
+  }, []);
+
+  useWorkspaceSocket(workspace?.id, handleWorkspaceAlert);
 
   // Check if welcome page requested a guided tour
   const [showTour, setShowTour] = useState(() => {
