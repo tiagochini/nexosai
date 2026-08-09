@@ -335,6 +335,15 @@ export default function PresencePage() {
 
   const currentWeekPosts = posts.filter((p) => !weekStart || p.weekStart?.slice(0, 10) === weekStart.slice(0, 10));
   const drafts = posts.filter((p) => p.status === "draft");
+  // Posts agendados com data passada que ainda não foram publicados (sem mídia ou com erro)
+  const stuckScheduled = posts.filter(
+    (p) =>
+      p.status === "scheduled" &&
+      p.scheduledFor !== null &&
+      new Date(p.scheduledFor) < new Date() &&
+      (!weekStart || p.weekStart?.slice(0, 10) !== weekStart.slice(0, 10)),
+  );
+  const queueItems = [...drafts, ...stuckScheduled];
 
   if (loading) {
     return (
@@ -577,7 +586,7 @@ export default function PresencePage() {
           <div className="flex gap-1 border-b border-border">
             {[
               { id: "calendar" as const, label: "Calendário da Semana", icon: CalendarDays },
-              { id: "queue" as const, label: `Fila de Aprovação${drafts.length ? ` (${drafts.length})` : ""}`, icon: ListChecks },
+              { id: "queue" as const, label: `Fila de Aprovação${queueItems.length ? ` (${queueItems.length})` : ""}`, icon: ListChecks },
               { id: "metrics" as const, label: "Métricas", icon: BarChart3 },
             ].map((t) => (
               <button
@@ -633,14 +642,19 @@ export default function PresencePage() {
 
           {/* Fila de aprovação */}
           {tab === "queue" && (
-            drafts.length === 0 ? (
+            queueItems.length === 0 ? (
               <div className="rounded-xl border border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
                 <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-green-400" />
                 Nenhum post aguardando aprovação.
               </div>
             ) : (
               <div className="space-y-3">
-                {drafts.map((p) => (
+                {stuckScheduled.length > 0 && (
+                  <div className="rounded-lg border border-amber-400/30 bg-amber-400/8 px-4 py-2 text-xs text-amber-400">
+                    ⚠ {stuckScheduled.length} post{stuckScheduled.length > 1 ? "s" : ""} agendado{stuckScheduled.length > 1 ? "s" : ""} de semanas anteriores ainda não publicado{stuckScheduled.length > 1 ? "s" : ""} — adicione mídia ou publique manualmente.
+                  </div>
+                )}
+                {queueItems.map((p) => (
                   <QueuePostCard
                     key={p.id}
                     post={p}

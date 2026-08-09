@@ -310,6 +310,11 @@ export async function publishTestPost(
   const caption =
     `🧪 Post de teste NexOS — ${ts}\n\nEste é um post automático para verificar a integração. Pode apagar após confirmar que está funcionando! ✅`;
 
+  // Imagem de teste pública e estável — usada apenas quando nenhuma mídia foi enviada.
+  // Instagram exige image_url acessível publicamente para o Container API.
+  const TEST_IMAGE_URL =
+    "https://images.pexels.com/photos/1181244/pexels-photo-1181244.jpeg?auto=compress&cs=tinysrgb&w=1080";
+
   const mockPost = {
     id: `test-${Date.now()}`,
     workspaceId,
@@ -321,7 +326,7 @@ export async function publishTestPost(
     status: "publishing" as never,
     caption,
     hashtags: ["#NexOS", "#Teste"],
-    mediaUrls: [],
+    mediaUrls: [TEST_IMAGE_URL],
     callToAction: null,
     linkUrl: null,
     scheduledAt: now,
