@@ -266,11 +266,25 @@ export default function PresencePage() {
     setActionError(null);
     setPublishingNow((prev) => new Set(prev).add(postId));
     try {
-      const { post } = await customFetch<{ post: PresencePost }>(`${API}/posts/${postId}/publish-now`, { method: "POST" });
+      const { post } = await customFetch<{ post: PresencePost }>(`${API}/posts/${postId}/publish`, { method: "POST" });
       setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
-      // Poll for a few seconds so UI reflects when status transitions to published/failed
-      setTimeout(async () => { try { await loadPosts(); } catch { /* noop */ } }, 3000);
-      setTimeout(async () => { try { await loadPosts(); } catch { /* noop */ } }, 8000);
+
+      // Poll and open the platform URL when the post is confirmed published
+      const pollAndOpen = async () => {
+        try {
+          await loadPosts();
+          // Find the updated post from the latest state
+          const { post: fresh } = await customFetch<{ post: PresencePost }>(`${API}/posts/${postId}`);
+          if (fresh.status === "published" && fresh.platformUrl) {
+            window.open(fresh.platformUrl, "_blank", "noopener,noreferrer");
+          } else if (fresh.status === "failed") {
+            setActionError(fresh.errorMessage ?? "Falha ao publicar na rede social.");
+          }
+        } catch { /* noop */ }
+      };
+
+      setTimeout(pollAndOpen, 5000);
+      setTimeout(async () => { try { await loadPosts(); } catch { /* noop */ } }, 12000);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Erro ao publicar post.");
     } finally {
