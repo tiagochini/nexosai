@@ -75,13 +75,13 @@ interface ProviderConfig {
 const PROVIDER_MAP: Record<string, ProviderConfig> = {
   instagram: {
     platform: "meta",
-    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts,business_management",
+    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management",
     label: "Instagram Business",
     dbProvider: "instagram",
   },
   facebook: {
     platform: "meta",
-    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,pages_manage_posts,business_management",
+    scope: "public_profile,instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management",
     label: "Facebook Páginas",
     dbProvider: "instagram",
   },
