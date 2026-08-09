@@ -56,7 +56,6 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-META_APP_ID = "992748096543542"
 ASAAS_SANDBOX = "false"
 RESEND_FROM_EMAIL = "lancamento@agencianexos.vip"
 GMAIL_USER = "bruceallan04@gmail.com"
