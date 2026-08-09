@@ -52,6 +52,8 @@ const createCampaignSchema = z.object({
       // Expansion
       "scale",
       "regional_dominance",
+      // Seed / validation launch
+      "semente_launch",
     ])
     .default("launch"),
   track: z

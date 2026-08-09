@@ -61,7 +61,6 @@ RESEND_FROM_EMAIL = "lancamento@agencianexos.vip"
 GMAIL_USER = "bruceallan04@gmail.com"
 GMAIL_APP_PASSWORD = "rnpz tmiy qmvj davc"
 ADMIN_NOTIFY_PHONE = "61452378265"
-META_WEBHOOK_VERIFY_TOKEN = "nexos-meta-2026"
 
 [userenv.production]
 APP_URL = "https://agencianexos.vip"

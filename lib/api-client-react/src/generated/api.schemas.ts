@@ -93,6 +93,21 @@ export const CampaignInputType = {
   launch: "launch",
   evergreen: "evergreen",
   relaunch: "relaunch",
+  perpetual_launch: "perpetual_launch",
+  flash_sale: "flash_sale",
+  live_sale: "live_sale",
+  continuous_sales: "continuous_sales",
+  subscription_growth: "subscription_growth",
+  authority: "authority",
+  audience_growth: "audience_growth",
+  branding: "branding",
+  creator_monetization: "creator_monetization",
+  upsell: "upsell",
+  remarketing: "remarketing",
+  affiliate: "affiliate",
+  scale: "scale",
+  regional_dominance: "regional_dominance",
+  semente_launch: "semente_launch",
 } as const;
 
 export type CampaignInputTrack =

@@ -605,7 +605,7 @@ router.get("/social-health", requireAuth, async (req, res): Promise<void> => {
           ok: false, httpStatus: 0, errorMsg: "não testado",
         };
         if (i.accessToken) {
-          if (i.provider === "tiktok") {
+          if (i.provider === "tiktok_ads") {
             const r = await pingTikTok(i.accessToken);
             ping = { ok: r.ok, httpStatus: r.httpStatus, liveAccountName: r.displayName, errorMsg: r.errorMsg };
           } else {

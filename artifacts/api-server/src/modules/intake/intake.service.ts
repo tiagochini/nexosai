@@ -23,7 +23,9 @@ export type CampaignType =
   | "remarketing"
   | "affiliate"
   | "scale"
-  | "regional_dominance";
+  | "regional_dominance"
+  // Seed / validation launch — sell before building, validate with real money
+  | "semente_launch";
 
 export type CampaignTrack =
   | "six_digits"

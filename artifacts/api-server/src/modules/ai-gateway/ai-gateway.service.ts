@@ -99,7 +99,10 @@ export type AgentRole =
   | "strategic_core"
   | "strategic_doctrine"
   | "conflict_detector"
-  | "strategic_core_validation";
+  | "strategic_core_validation"
+  // ── Arco Emocional & Coerência ────────────────────────────────────────────
+  | "campaign_emotional_arc"
+  | "emotional_coherence_checker";
 
 // ─── Model selection ──────────────────────────────────────────────────────────
 // Integration path (no native key): use Replit-provisioned models
@@ -221,6 +224,9 @@ const AGENT_PROVIDER_MAP: Record<
   strategic_doctrine:        { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   conflict_detector:         { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
   strategic_core_validation: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  // ── Arco Emocional & Coerência ────────────────────────────────────────────
+  campaign_emotional_arc:    { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
+  emotional_coherence_checker: { provider: "anthropic", model: ANTHROPIC_NATIVE_MODEL },
 };
 
 export interface AIMessage {

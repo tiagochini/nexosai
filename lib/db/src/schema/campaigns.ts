@@ -34,6 +34,8 @@ export const campaignTypeEnum = pgEnum("campaign_type", [
   // Expansion
   "scale",
   "regional_dominance",
+  // Seed / validation launch (sell before building)
+  "semente_launch",
 ]);
 
 export const campaignTrackEnum = pgEnum("campaign_track", [

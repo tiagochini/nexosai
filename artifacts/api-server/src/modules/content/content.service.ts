@@ -37,6 +37,10 @@ import { runEmotionalCoherenceCheck } from "../agents/emotional-coherence-checke
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { calculateReverseBudget, saveBudgetProposal } from "./budget-reverse.service.js";
 import { AppError, NotFoundError, ValidationError } from "../../lib/errors.js";
+import {
+  assertPsychologyLayerComplete,
+  TYPES_WITH_PSYCHOLOGY_LAYER,
+} from "../../lib/psychology-layer.js";
 import type { ProfileBuilderOutput } from "../agents/profile-builder.agent.js";
 import type { StrategyOutput } from "../agents/strategy.agent.js";
 import type { Logger } from "pino";
@@ -356,7 +360,15 @@ export async function generateCampaignContent(
   // The copy agents (ad_copy, vsl_script, landing_page) read this key and include
   // it in their user message — giving them pricing, objections, hooks, and scarcity
   // context they previously lacked.
+  //
+  // PRECONDITION CHECK: for campaign types that run the psychology pipeline,
+  // the layer must be present AND complete before content generation proceeds.
+  // "Complete" means at least 3 of the 6 agent sections must be non-null AND
+  // hook_factory (the synthesizer that requires A+B) must be present.
+  // Partial layers (e.g. only 1 agent succeeded) are insufficient context for copy.
+  const campaignTypeForPsychCheck = String(campaign.type ?? "launch");
   const offerPsychologyLayer = (brainRaw["offerPsychologyLayer"] ?? null) as Record<string, unknown> | null;
+  assertPsychologyLayerComplete(campaignTypeForPsychCheck, offerPsychologyLayer);
   if (offerPsychologyLayer) {
     const psychBlocks: string[] = [];
     const psy_pricing = offerPsychologyLayer.pricing as Record<string, unknown> | null;

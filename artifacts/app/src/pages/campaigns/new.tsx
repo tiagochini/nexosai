@@ -92,6 +92,22 @@ const GOAL_OPTIONS: GoalOption[] = [
     nameSuggestion: "Crescimento de Audiência",
     accentLine: "bg-cyan-400",
   },
+  {
+    id: "semente",
+    icon: Brain,
+    title: "Quero validar e vender antes de criar o produto",
+    desc: "Lançamento Semente — vende antes de existir, valida com dinheiro real, e constrói o produto junto com os primeiros alunos. O agente monta a PLC, oferta de fundador e lives de venda.",
+    badge: "Semente",
+    badgeTextColor: "text-orange-400",
+    badgeBorderColor: "border-orange-400/40",
+    badgeBgColor: "bg-orange-400/10",
+    targetLabel: "Validação + primeiros alunos",
+    ideal: "Mesmo sem produto · Mesmo sem audiência grande",
+    type: "semente_launch" as CampaignInputType,
+    track: "not_applicable" as CampaignInputTrack,
+    nameSuggestion: "Lançamento Semente",
+    accentLine: "bg-orange-400",
+  },
 ];
 
 export default function NewCampaign() {

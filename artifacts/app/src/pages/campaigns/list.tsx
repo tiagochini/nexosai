@@ -41,6 +41,7 @@ const TYPE_LABEL: Record<string, string> = {
   live_sale: "Live Sale", continuous_sales: "Contínuo", subscription_growth: "Assinatura",
   authority: "Autoridade", audience_growth: "Crescimento", affiliate: "Afiliado",
   branding: "Branding", upsell: "Upsell", remarketing: "Remarketing", scale: "Escala",
+  regional_dominance: "Reg. Local", semente_launch: "Semente",
 };
 const TRACK_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   six_digits:    { label: "6 Díg",  color: "text-blue-400 border-blue-400/30 bg-blue-400/8",   icon: Rocket    },

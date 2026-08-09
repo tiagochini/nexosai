@@ -42,6 +42,7 @@ import { runSelfCritique } from "../campaign-brain/self-critique.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { setPipelineMode } from "./agent.runner.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
+import { assertPsychologyLayerComplete } from "../../lib/psychology-layer.js";
 import { validateIntakeCompleteness, type CampaignType, type CampaignTrack } from "../intake/intake.service.js";
 import { getCampaignCreditEstimate } from "@workspace/db";
 import type { Logger } from "pino";
@@ -325,6 +326,14 @@ const CAMPAIGN_TYPE_CONFIG: Record<
     hasFinancialProjection: true,
     defaultTrack: "not_applicable",
     thinkingMessage: "Mapeando estratégia de dominância regional...",
+  },
+  // Seed launch: validate before building — runs semente_launch agent (Step D) instead of A/B/C
+  semente_launch: {
+    label: "Lançamento semente (venda antes de criar o produto)",
+    managerAgent: "generic",
+    hasFinancialProjection: false,
+    defaultTrack: "not_applicable",
+    thinkingMessage: "Estruturando estratégia de validação e primeira venda...",
   },
 };
 
@@ -1107,6 +1116,77 @@ Retorne o JSON de avaliação.`,
   // All 7 inherit hardConstraints + boldnessOpportunities via productFull string.
   // Non-fatal: any agent failure is logged as warn, pipeline continues.
   if (typesWithOfferAnalysis.includes(type) && offerAnalysis) {
+    // ── Idempotency guard: skip entire psychology pipeline if layer already persisted ──
+    // On retry-after-crash: all 6 agent checkpoints may exist but brainData write
+    // may not have completed. Re-read brainData from DB here so we either skip cleanly
+    // (layer present) or run the full pipeline and persist (layer absent).
+    // This prevents in-memory outputs from being null on retry when agents are
+    // checkpoint-skipped but the brainData write never completed.
+    // ── Crash-window recovery: clear psychology checkpoints when layer absent ──
+    // Scenario: A/B/C agents all ran + were checkpointed, but the brainData write
+    // crashed before completing. On retry, isStepDone() returns true for all 6
+    // agents → outputs stay null → hasPsychOutput = false → layer never persists
+    // → PSYCHOLOGY_LAYER_MISSING deadlock in content phase.
+    //
+    // Fix: re-read brainData from DB first. If offerPsychologyLayer is already
+    // present and has generatedAt, skip the pipeline (clean idempotency). If the
+    // layer is ABSENT but psychology agent checkpoints exist, we're in the crash
+    // window — clear those 6 checkpoints so the agents re-run and produce fresh
+    // in-memory outputs for the persistence write.
+    const PSYCH_AGENT_STEPS = [
+      "pricing_psychologist", "upsell_architect", "objection_killer",
+      "testimonial_curator", "scarcity_engineer", "hook_factory",
+    ] as const;
+
+    let psychologyLayerAlreadyPersisted = false;
+    {
+      const [existingBrainRow] = await db
+        .select({ brainData: (campaignsTable as any).brainData })
+        .from(campaignsTable)
+        .where(eq(campaignsTable.id, campaignId))
+        .limit(1);
+      const existingPsychLayer = (existingBrainRow?.brainData as Record<string, unknown> | null)?.["offerPsychologyLayer"] as Record<string, unknown> | null;
+
+      // Use the production completeness predicate — not just generatedAt —
+      // to decide whether to skip. A partial layer (some agents failed) has
+      // generatedAt set but will FAIL assertPsychologyLayerComplete, causing
+      // a permanent deadlock if we naively skip agents on retry.
+      if (existingPsychLayer) {
+        try {
+          assertPsychologyLayerComplete(type, existingPsychLayer);
+          // Layer passes completeness check → safe to skip A/B/C pipeline
+          log.info({ campaignId }, "[PSYCH-LAYER] already persisted and complete — skipping psychology pipeline (idempotency)");
+          psychologyLayerAlreadyPersisted = true;
+        } catch {
+          // Layer exists but is INCOMPLETE (partial failure from previous run).
+          // Fall through to checkpoint clearing + re-run so a complete layer
+          // can replace the partial one.
+          log.warn({ campaignId }, "[PSYCH-LAYER] existing layer is incomplete — will clear psychology checkpoints and re-run for complete layer");
+        }
+      }
+
+      if (!psychologyLayerAlreadyPersisted) {
+        // Layer absent OR incomplete: check for crash-window scenario (checkpoints
+        // saved but brainData write didn't complete / produced partial layer).
+        // Clear psychology checkpoints so all 6 agents re-run fresh.
+        const hasPsychCheckpoints = PSYCH_AGENT_STEPS.some((s) => isStepDone(cp, s));
+        if (hasPsychCheckpoints) {
+          const nonPsychSteps = (cp?.completedSteps ?? []).filter(
+            (s) => !(PSYCH_AGENT_STEPS as readonly string[]).includes(s),
+          );
+          if (cp) {
+            cp = { ...cp, completedSteps: nonPsychSteps };
+          }
+          log.warn(
+            { campaignId, clearedSteps: PSYCH_AGENT_STEPS },
+            "[PSYCH-LAYER] Psychology checkpoints cleared for re-run (layer absent or incomplete)",
+          );
+        }
+      }
+    }
+
+    if (!psychologyLayerAlreadyPersisted) {
+
     const psyAppealIntensity = (intakeData["campaign.appealIntensity"] as string | undefined) === "ousado"
       ? "ousado" : "protegido";
 
@@ -1269,10 +1349,28 @@ Retorne o JSON de avaliação.`,
         }
       }
 
-      // ── Persist psychology layer to brainData (fire-and-forget) ─────────────
+      // ── Persist psychology layer to brainData (synchronous — must complete before content phase) ──
+      // Previously fire-and-forget via setImmediate; now awaited so that content.service.ts
+      // is guaranteed to read the completed layer from brainData when it runs copy agents.
+      // A persistence failure here is logged as ERROR and re-thrown to surface it in the
+      // pipeline rather than silently producing copy without psychology context.
+      // ── Completeness check before persist ───────────────────────────────────
+      // Only persist a layer that is complete enough for content agents to use.
+      // hook_factory (Step C) must have succeeded — it synthesises A+B context.
+      // Additionally at least 2 of the other 5 sections should be non-null.
+      // A partial layer (< 2 sections) is stored with a WARN so the ops team
+      // can diagnose; the content precondition (assertPsychologyLayerComplete)
+      // will abort content generation if it encounters this partial state.
       const hasPsychOutput = pricingOutput || upsellOutput || objectionOutput
         || testimonialOutput || scarcityOutput || hookOutput;
       if (hasPsychOutput) {
+        const nonNullSections = [pricingOutput, upsellOutput, objectionOutput,
+          testimonialOutput, scarcityOutput, hookOutput].filter(Boolean).length;
+        if (!hookOutput) {
+          log.warn({ campaignId, nonNullSections }, "[PSYCH-LAYER] hook_factory absent — partial layer will fail content precondition");
+        } else if (nonNullSections < 3) { // hook + at least 2 others
+          log.warn({ campaignId, nonNullSections }, "[PSYCH-LAYER] layer has only " + nonNullSections + " sections — may fail content precondition (min 3 required incl. hooks)");
+        }
         const psychLayer = {
           pricing: pricingOutput,
           upsell: upsellOutput,
@@ -1282,63 +1380,85 @@ Retorne o JSON de avaliação.`,
           hooks: hookOutput,
           generatedAt: new Date().toISOString(),
         };
-        setImmediate(async () => {
-          try {
-            const [brainRow] = await db
-              .select({ brainData: (campaignsTable as any).brainData })
-              .from(campaignsTable)
-              .where(eq(campaignsTable.id, campaignId))
-              .limit(1);
-            const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
-            await db
-              .update(campaignsTable)
-              .set({ brainData: { ...existingBrain, offerPsychologyLayer: psychLayer } as any })
-              .where(eq(campaignsTable.id, campaignId));
-            log.info({ campaignId }, "offer psychology layer persisted to brainData");
-          } catch (brainErr) {
-            log.warn({ err: brainErr, campaignId }, "psychology layer persist failed (non-fatal)");
-          }
-        });
+        try {
+          const [brainRow] = await db
+            .select({ brainData: (campaignsTable as any).brainData })
+            .from(campaignsTable)
+            .where(eq(campaignsTable.id, campaignId))
+            .limit(1);
+          const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
+          await db
+            .update(campaignsTable)
+            .set({ brainData: { ...existingBrain, offerPsychologyLayer: psychLayer } as any })
+            .where(eq(campaignsTable.id, campaignId));
+          log.info({ campaignId }, "offer psychology layer persisted to brainData ✓");
+        } catch (brainErr) {
+          log.error({ err: brainErr, campaignId }, "[PSYCH-LAYER] PERSIST FAILED — copy agents will run without psychology context");
+          throw brainErr; // propagate: content phase must not proceed with missing psychology layer
+        }
       }
-    }
+    } // end if (!allPsychSkipped)
+    } // end if (!psychologyLayerAlreadyPersisted)
+  } // end if (typesWithOfferAnalysis)
 
-    // ── Step D: semente_launch [only when type = semente_launch] ─────────────
-    if (type === ("semente_launch" as CampaignType) && !isStepDone(cp, "semente_launch")) {
-      try {
-        const sementeResult = await runSementeLaunchAgent(
-          campaignId,
-          workspaceId,
-          psyProductFull,
-          psyAvatar,
-          String(intakeData["brand.story"] ?? intakeData["brand.creatorBackground"] ?? ""),
-          parseFloat(String(intakeData["audience.size"] ?? "0")) || 0,
-          Boolean(intakeData["audience.hasExistingList"] ?? false),
-          String(intakeData["product.price"] ?? ""),
-          log,
-          strategy as any,
-          profile as any,
-        );
-        agentsRun.push("semente_launch");
-        cp = await saveCheckpoint(campaignId, "semente_launch", { done: true }, cp, log);
-        log.info({ campaignId }, "semente_launch ✓");
-        setImmediate(async () => {
-          try {
-            const [brainRow] = await db
-              .select({ brainData: (campaignsTable as any).brainData })
-              .from(campaignsTable)
-              .where(eq(campaignsTable.id, campaignId))
-              .limit(1);
-            const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
-            await db
-              .update(campaignsTable)
-              .set({ brainData: { ...existingBrain, sementeLaunchPlan: sementeResult } as any })
-              .where(eq(campaignsTable.id, campaignId));
-          } catch { /* non-fatal */ }
-        });
-      } catch (sementeErr) {
-        log.warn({ err: sementeErr, campaignId }, "semente_launch failed (non-fatal)");
-        emitAgentError(campaignId, "semente_launch", sementeErr);
-      }
+  // ── Step D: semente_launch [only when type = semente_launch] ─────────────
+  // IMPORTANT: this block lives OUTSIDE typesWithOfferAnalysis gate on purpose.
+  // semente_launch campaigns take an alternative path: no standard offer agent,
+  // no A/B/C psychology agents — only this specialised seed-launch orchestration.
+  // Previously trapped inside the outer if-block (unreachable because semente_launch
+  // is not in typesWithOfferAnalysis), hence the independent placement here.
+  if (type === ("semente_launch" as CampaignType) && !isStepDone(cp, "semente_launch")) {
+    // Build simplified product + avatar context from intakeData (no offerAnalysis available)
+    const sementeProductDesc = [
+      String(intakeData["product.name"] ?? ""),
+      String(intakeData["product.description"] ?? ""),
+    ].filter(Boolean).join(" — ");
+    const sementeAvatar = profile
+      ? [
+          (profile as any).primaryAvatar?.name
+            ? `Avatar: ${(profile as any).primaryAvatar.name}` : "",
+          (profile as any).primaryAvatar?.deepestDesire
+            ? `Desejo: ${(profile as any).primaryAvatar.deepestDesire}` : "",
+          ((profile as any).primaryAvatar?.typicalObjections as string[] | undefined)?.length
+            ? `Objeções: ${((profile as any).primaryAvatar.typicalObjections as string[]).slice(0, 3).join("; ")}`
+            : "",
+        ].filter(Boolean).join(" | ")
+      : String(intakeData["audience.primaryAvatar"] ?? intakeData["audience.profile"] ?? "");
+
+    try {
+      const sementeResult = await runSementeLaunchAgent(
+        campaignId,
+        workspaceId,
+        sementeProductDesc,
+        sementeAvatar,
+        String(intakeData["brand.story"] ?? intakeData["brand.creatorBackground"] ?? ""),
+        parseFloat(String(intakeData["audience.size"] ?? "0")) || 0,
+        Boolean(intakeData["audience.hasExistingList"] ?? false),
+        String(intakeData["product.price"] ?? ""),
+        log,
+        strategy as any,
+        profile as any,
+      );
+      agentsRun.push("semente_launch");
+      cp = await saveCheckpoint(campaignId, "semente_launch", { done: true }, cp, log);
+      log.info({ campaignId }, "semente_launch ✓");
+      setImmediate(async () => {
+        try {
+          const [brainRow] = await db
+            .select({ brainData: (campaignsTable as any).brainData })
+            .from(campaignsTable)
+            .where(eq(campaignsTable.id, campaignId))
+            .limit(1);
+          const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
+          await db
+            .update(campaignsTable)
+            .set({ brainData: { ...existingBrain, sementeLaunchPlan: sementeResult } as any })
+            .where(eq(campaignsTable.id, campaignId));
+        } catch { /* non-fatal */ }
+      });
+    } catch (sementeErr) {
+      log.warn({ err: sementeErr, campaignId }, "semente_launch failed (non-fatal)");
+      emitAgentError(campaignId, "semente_launch", sementeErr);
     }
   }
 

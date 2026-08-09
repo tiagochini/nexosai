@@ -543,6 +543,7 @@ const confirmTypeSchema = z.object({
     "launch", "perpetual_launch", "flash_sale", "live_sale", "continuous_sales",
     "subscription_growth", "authority", "audience_growth", "branding",
     "creator_monetization", "upsell", "remarketing", "affiliate", "scale", "regional_dominance",
+    "semente_launch",
   ]),
   track: z.enum(["six_digits", "eight_digits", "ten_digits", "not_applicable"]),
 });
