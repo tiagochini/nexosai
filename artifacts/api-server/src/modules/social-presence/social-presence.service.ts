@@ -1262,8 +1262,7 @@ export async function publishDuePresencePosts(): Promise<void> {
   try {
     const now = new Date();
 
-    // Recuperação: posts presos em "publishing" há mais de 10min (crash entre
-    // claim e resultado) voltam para "scheduled" para nova tentativa.
+    // Recuperação 1: posts presos em "publishing" há mais de 10min voltam para "scheduled".
     const staleThreshold = new Date(now.getTime() - 10 * 60 * 1000);
     await db
       .update(socialPresencePostsTable)
@@ -1272,6 +1271,22 @@ export async function publishDuePresencePosts(): Promise<void> {
         and(
           eq(socialPresencePostsTable.status, "publishing"),
           lte(socialPresencePostsTable.updatedAt, staleThreshold),
+        ),
+      )
+      .catch(() => {});
+
+    // Recuperação 2: posts presos em status="draft" com mediaGenStatus="failed" (storyboard falhou)
+    // e que ainda têm menos de 5 tentativas → resetar para "scheduled" para nova geração.
+    // Isso acontecia antes porque o handler de falha setava status="draft" em vez de "scheduled".
+    await db
+      .update(socialPresencePostsTable)
+      .set({ status: "scheduled", mediaGenStatus: null, errorMessage: null })
+      .where(
+        and(
+          eq(socialPresencePostsTable.status, "draft"),
+          eq(socialPresencePostsTable.mediaGenStatus as any, "failed"),
+          lte(socialPresencePostsTable.retryCount, 4),
+          lte(socialPresencePostsTable.scheduledFor, new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)),
         ),
       )
       .catch(() => {});
@@ -1370,9 +1385,19 @@ export async function publishDuePresencePosts(): Promise<void> {
                 })
                 .catch(async (err) => {
                   log.warn({ err, postId: videoPostSnapshot.id }, "presence: auto-geração de storyboard de vídeo falhou");
+                  const newRetryCount = (videoPostSnapshot.retryCount ?? 0) + 1;
+                  const giveUp = newRetryCount >= 5;
                   await db
                     .update(socialPresencePostsTable)
-                    .set({ mediaGenStatus: "failed", status: "draft", errorMessage: `Auto-geração de storyboard falhou: ${err instanceof Error ? err.message : String(err)}` })
+                    .set({
+                      mediaGenStatus: giveUp ? "failed" : null,
+                      // Keep scheduled so the next tick retries — only give up after 5 attempts
+                      status: giveUp ? "draft" : "scheduled",
+                      retryCount: newRetryCount,
+                      errorMessage: giveUp
+                        ? `Geração de mídia falhou após ${newRetryCount} tentativas — adicione manualmente.`
+                        : null,
+                    })
                     .where(eq(socialPresencePostsTable.id, videoPostSnapshot.id));
                 });
             });
@@ -1421,9 +1446,18 @@ export async function publishDuePresencePosts(): Promise<void> {
                 })
                 .catch(async (err) => {
                   log.warn({ err, postId: postSnapshot.id }, "presence: auto-geração de imagem falhou");
+                  const newRetryCount = (postSnapshot.retryCount ?? 0) + 1;
+                  const giveUp = newRetryCount >= 5;
                   await db
                     .update(socialPresencePostsTable)
-                    .set({ mediaGenStatus: "failed", status: "draft", errorMessage: `Auto-geração de imagem falhou: ${err instanceof Error ? err.message : String(err)}` })
+                    .set({
+                      mediaGenStatus: giveUp ? "failed" : null,
+                      status: giveUp ? "draft" : "scheduled",
+                      retryCount: newRetryCount,
+                      errorMessage: giveUp
+                        ? `Geração de imagem falhou após ${newRetryCount} tentativas — adicione manualmente.`
+                        : null,
+                    })
                     .where(eq(socialPresencePostsTable.id, postSnapshot.id));
                 });
             });
@@ -1659,8 +1693,9 @@ async function generateStoryboardFrame(
   // ── Tentativa 1: Gemini direto (mesma chave dos agentes de lançamento) ──────
   const geminiKey = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
   if (geminiKey) {
-    // Modelos para image output via generateContent (responseModalities: IMAGE)
-    const imageModels = ["gemini-2.0-flash-exp", "gemini-2.5-flash-preview-05-20"];
+    // Modelos com suporte a image output (responseModalities: IMAGE)
+    // gemini-2.0-flash-preview-image-generation é o modelo atual da Google para geração de imagens
+    const imageModels = ["gemini-2.0-flash-preview-image-generation", "gemini-2.0-flash-exp"];
     for (const modelId of imageModels) {
       try {
         log.info({ platform, format, model: modelId }, "presence: attempting Gemini storyboard");
@@ -1672,8 +1707,9 @@ async function generateStoryboardFrame(
         const model = gemini.getGenerativeModel(
           {
             model: modelId,
+            // TEXT must be included alongside IMAGE for the API to accept the request
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            generationConfig: { responseModalities: ["IMAGE"] } as any,
+            generationConfig: { responseModalities: ["TEXT", "IMAGE"] } as any,
           },
           reqOpts,
         );

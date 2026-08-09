@@ -405,12 +405,12 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
       </div>
 
       {/* Main area */}
-      <div className="flex-1 flex gap-0 overflow-hidden">
+      <div className="flex-1 flex gap-0 overflow-auto min-h-0">
         {/* Left column: camera + button bar */}
         <div className="flex-1 flex flex-col min-h-0">
 
           {/* Câmera — sempre montada para o stream funcionar */}
-          <div className="flex-1 relative bg-black flex items-center justify-center min-h-0">
+          <div className="flex-1 relative bg-black flex items-center justify-center" style={{ minHeight: 0, maxHeight: "calc(100vh - 240px)" }}>
             <video
               ref={videoRef}
               autoPlay
@@ -491,7 +491,7 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
 
           {/* Botão iniciar gravação — fase camera_check */}
           {phase === "camera_check" && countdown === null && (
-            <div className="flex-none flex flex-col items-center gap-2 py-5 border-t border-white/10 bg-black">
+            <div className="flex-none flex flex-col items-center gap-2 py-4 border-t border-white/10 bg-black min-h-[80px]">
               <Button
                 onClick={startTake}
                 className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-10"
@@ -504,7 +504,7 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
 
           {/* Botão finalizar leitura — fase recording */}
           {phase === "recording" && (
-            <div className="flex-none flex flex-col items-center gap-2 py-5 border-t border-white/10 bg-black">
+            <div className="flex-none flex flex-col items-center gap-2 py-4 border-t border-white/10 bg-black min-h-[80px]">
               <Button
                 onClick={stopTake}
                 className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8"
@@ -520,7 +520,7 @@ export function CloneStudioPanel({ userName, onComplete, onSkip }: Props) {
 
           {/* Botões de review — fase review */}
           {phase === "review" && (
-            <div className="flex-none flex items-center justify-center gap-3 py-5 border-t border-white/10 bg-black">
+            <div className="flex-none flex items-center justify-center gap-3 py-4 border-t border-white/10 bg-black min-h-[80px]">
               <Button
                 onClick={redoTake}
                 variant="outline"
