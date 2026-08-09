@@ -174,6 +174,9 @@ export const socialPresencePostsTable = pgTable("social_presence_posts", {
   mediaJobId: text("media_job_id"),
   // 'runway' | 'kling' | 'heygen'
   mediaJobProvider: text("media_job_provider"),
+  // ─── Story Media Type ────────────────────────────────────────────────────────
+  // Para stories: 'image' | 'video' | null (null = video por padrão)
+  storyMediaType: text("story_media_type"),
   // ─── Destaques (Highlights) ──────────────────────────────────────────────────
   // Para stories: nome do destaque que deve receber este story após publicação
   highlightName: text("highlight_name"),

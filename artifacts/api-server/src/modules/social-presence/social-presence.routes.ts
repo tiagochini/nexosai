@@ -74,6 +74,7 @@ const postPatchSchema = z.object({
   postingTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   scheduledFor: z.string().optional(),
   status: z.enum(["cancelled", "published", "draft"]).optional(),
+  storyMediaType: z.enum(["image", "video"]).nullable().optional(),
 });
 
 // ─── Config ───────────────────────────────────────────────────────────────────

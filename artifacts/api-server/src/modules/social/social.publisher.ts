@@ -143,6 +143,10 @@ export async function publishToInstagram(
     const mediaUrl = mediaUrls[0];
     if (!mediaUrl) return { success: false, error: "No media URL provided" };
 
+    // For story posts, detect image vs video by URL extension so video-mode stories
+    // use video_url (not image_url) while still targeting the STORIES media_type.
+    const isStoryVideoUrl = post.postType === "story" && /\.(mp4|mov|avi|webm)(\?|$)/i.test(mediaUrl);
+
     const body: Record<string, unknown> = {
       caption,
       access_token: token,
@@ -151,7 +155,11 @@ export async function publishToInstagram(
       body["video_url"] = mediaUrl;
       body["media_type"] = post.postType === "reel" ? "REELS" : "VIDEO";
     } else if (post.postType === "story") {
-      body["image_url"] = mediaUrl;
+      if (isStoryVideoUrl) {
+        body["video_url"] = mediaUrl;
+      } else {
+        body["image_url"] = mediaUrl;
+      }
       body["media_type"] = "STORIES";
     } else {
       body["image_url"] = mediaUrl;
@@ -162,9 +170,9 @@ export async function publishToInstagram(
       { method: "POST", body: JSON.stringify(body) }
     );
 
-    // Vídeos (Reels, feed_video) precisam de até 5 min para processar no Instagram.
+    // Vídeos (Reels, feed_video, story-video) precisam de até 5 min para processar no Instagram.
     // Imagens ficam prontas em segundos — mantemos 30s como fallback seguro.
-    const containerWaitMs = isVideo ? 300_000 : 30_000;
+    const containerWaitMs = (isVideo || isStoryVideoUrl) ? 300_000 : 30_000;
     await waitForInstagramContainer(container.id, token, containerWaitMs);
 
     const published = await metaGraphRequest<{ id: string }>(

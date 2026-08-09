@@ -776,6 +776,7 @@ export interface PostPatch {
   postingTime?: string;
   scheduledFor?: string;
   status?: "cancelled" | "published" | "draft";
+  storyMediaType?: "image" | "video" | null;
 }
 
 export async function updatePost(
@@ -829,6 +830,7 @@ export async function updatePost(
       set.publishedAt = new Date();
     }
   }
+  if (patch.storyMediaType !== undefined) set.storyMediaType = patch.storyMediaType;
 
   if (Object.keys(set).length === 0) return post;
 
@@ -1313,9 +1315,12 @@ export async function publishDuePresencePosts(): Promise<void> {
           }),
         );
         const needsMedia = post.platform === "instagram" || post.platform === "tiktok";
-        const isVideoFormat = post.format === "reel" || post.format === "feed_video" || post.format === "story";
-        // Image formats are Instagram feed posts that don't need video
-        const isImageFormat = !isVideoFormat && post.platform === "instagram";
+        // Stories can be image or video depending on storyMediaType chosen by the operator.
+        // storyMediaType === "image" → treat as image (storyboard → approve); otherwise → video.
+        const isStoryImage = post.format === "story" && (post as Record<string, unknown>).storyMediaType === "image";
+        const isVideoFormat = (post.format === "reel" || post.format === "feed_video" || post.format === "story") && !isStoryImage;
+        // Image formats are Instagram feed posts that don't need video (includes image-mode stories)
+        const isImageFormat = (!isVideoFormat && post.platform === "instagram") || isStoryImage;
         if (needsMedia && mediaUrls.length === 0) {
           // ── Vídeo: aguardar geração em andamento ──────────────────────────────
           if (isVideoFormat && (post.mediaGenStatus === "video_generating" || post.mediaGenStatus === "storyboard_generating" || post.mediaGenStatus === "storyboard_ready" || post.mediaGenStatus === "storyboard_draft")) {

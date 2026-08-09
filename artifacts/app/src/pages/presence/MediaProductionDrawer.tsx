@@ -31,6 +31,7 @@ export interface MediaPresencePost {
   mediaJobProvider: string | null;
   status: string;
   errorMessage: string | null;
+  storyMediaType?: string | null;
 }
 
 interface Persona {
@@ -57,6 +58,10 @@ export function MediaProductionDrawer({
   const [editedScript, setEditedScript] = useState(initialPost.videoScript ?? "");
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // For story posts: track whether the operator chose image or video
+  const [storyMediaType, setStoryMediaType] = useState<"image" | "video">(
+    initialPost.storyMediaType === "image" ? "image" : "video",
+  );
   // Upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -212,6 +217,30 @@ export function MediaProductionDrawer({
     } catch { /* noop */ }
   };
 
+  // For story posts: save type choice and reset media pipeline
+  const changeStoryMediaType = async (type: "image" | "video") => {
+    if (type === storyMediaType) return;
+    setStoryMediaType(type);
+    try {
+      await customFetch<{ post: MediaPresencePost }>(
+        `/api/presence/posts/${currentPost.id}`,
+        { method: "PATCH", body: JSON.stringify({ storyMediaType: type, mediaUrls: [] }) },
+      );
+      // Also reset any in-progress pipeline so user starts fresh with the new type
+      const reset: MediaPresencePost = {
+        ...currentPost,
+        storyMediaType: type,
+        mediaGenStatus: null,
+        storyboardUrls: [],
+        mediaJobId: null,
+        mediaJobProvider: null,
+        mediaUrls: [],
+      };
+      setCurrentPost(reset);
+      onPostUpdated(reset);
+    } catch { /* noop — local state already updated */ }
+  };
+
   // ── Upload Tab actions ─────────────────────────────────────────────────────
 
   const handleFileSelect = (file: File) => {
@@ -333,8 +362,10 @@ export function MediaProductionDrawer({
               hasAvatar={hasAvatar}
               editedDirection={editedDirection}
               editedScript={editedScript}
+              storyMediaType={storyMediaType}
               onEditDirection={setEditedDirection}
               onEditScript={setEditedScript}
+              onChangeStoryMediaType={changeStoryMediaType}
               onGenerateStoryboard={generateStoryboard}
               onGenerateVideo={generateVideo}
               onApproveImage={approveImage}
@@ -372,8 +403,10 @@ function AITabContent({
   hasAvatar,
   editedDirection,
   editedScript,
+  storyMediaType,
   onEditDirection,
   onEditScript,
+  onChangeStoryMediaType,
   onGenerateStoryboard,
   onGenerateVideo,
   onApproveImage,
@@ -386,8 +419,10 @@ function AITabContent({
   hasAvatar: boolean;
   editedDirection: string;
   editedScript: string;
+  storyMediaType: "image" | "video";
   onEditDirection: (v: string) => void;
   onEditScript: (v: string) => void;
+  onChangeStoryMediaType: (type: "image" | "video") => void;
   onGenerateStoryboard: () => void;
   onGenerateVideo: () => void;
   onApproveImage: () => void;
@@ -396,8 +431,12 @@ function AITabContent({
   busy: boolean;
 }) {
   const step = post.mediaGenStatus;
-  // Formats that produce a final image (not video)
-  const isImageFormat = !["reel", "story", "feed_video"].includes(post.format);
+  // Formats that produce a final image (not video).
+  // Stories can be either image or video — decided by storyMediaType.
+  const isImageFormat =
+    post.format === "story"
+      ? storyMediaType === "image"
+      : !["reel", "feed_video"].includes(post.format);
 
   // Avatar warning banner
   const AvatarBanner = () => {
@@ -431,6 +470,37 @@ function AITabContent({
   if (!step || step === "idle") {
     return (
       <div className="space-y-4">
+        {/* Story type selector — shown only for story format */}
+        {post.format === "story" && (
+          <div className="rounded-lg border border-border bg-background/40 p-3 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Tipo de Story</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onChangeStoryMediaType("image")}
+                disabled={busy}
+                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  storyMediaType === "image"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                }`}
+              >
+                <ImageIcon className="h-3.5 w-3.5" /> Imagem
+              </button>
+              <button
+                onClick={() => onChangeStoryMediaType("video")}
+                disabled={busy}
+                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  storyMediaType === "video"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                }`}
+              >
+                <Video className="h-3.5 w-3.5" /> Vídeo
+              </button>
+            </div>
+          </div>
+        )}
+
         {!isImageFormat && <AvatarBanner />}
 
         {/* Pipeline steps indicator */}
@@ -459,7 +529,8 @@ function AITabContent({
             />
           </div>
 
-          {(post.format === "reel" || post.format === "story" || post.videoScript) && (
+          {/* Script field: show for reel, or video-mode story, or when there's an existing script */}
+          {(post.format === "reel" || (post.format === "story" && !isImageFormat) || post.videoScript) && (
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Roteiro / Narração (opcional)
