@@ -833,6 +833,87 @@ export async function updatePost(
   return updated;
 }
 
+// ─── Bio Publisher ────────────────────────────────────────────────────────────
+
+export async function publishBio(
+  workspaceId: string,
+  platform: "instagram" | "facebook",
+  bio: string,
+  log: Logger,
+): Promise<{ success: boolean; error?: string }> {
+  const provider = PLATFORM_TO_PROVIDER[platform];
+  if (!provider) {
+    return { success: false, error: `Plataforma ${platform} não suporta publicação de bio.` };
+  }
+
+  const [integration] = await db
+    .select()
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        eq(workspaceIntegrationsTable.provider, provider as never),
+        eq(workspaceIntegrationsTable.status, "connected"),
+      ),
+    )
+    .limit(1);
+
+  if (!integration?.accessToken || !integration?.accountId) {
+    return {
+      success: false,
+      error: `Integração com ${platform} não conectada. Vá em /integracoes e conecte.`,
+    };
+  }
+
+  const token = integration.accessToken;
+  const accountId = integration.accountId;
+  const GV = "v22.0";
+
+  try {
+    if (platform === "instagram") {
+      // Instagram Graph API: update IG Business Account biography
+      const url = `https://graph.facebook.com/${GV}/${accountId}`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ biography: bio, access_token: token }),
+      });
+      const data = (await resp.json()) as Record<string, unknown>;
+      if (!resp.ok || data.error) {
+        const msg = (data.error as Record<string, string>)?.message ?? JSON.stringify(data);
+        log.error({ msg }, "presence: bio publish instagram error");
+        return { success: false, error: `Instagram: ${msg}` };
+      }
+      log.info({ accountId }, "presence: bio published to instagram");
+      return { success: true };
+    }
+
+    if (platform === "facebook") {
+      // Facebook Graph API: update Page bio
+      const url = `https://graph.facebook.com/${GV}/${accountId}`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio, access_token: token }),
+      });
+      const data = (await resp.json()) as Record<string, unknown>;
+      if (!resp.ok || data.error) {
+        const msg = (data.error as Record<string, string>)?.message ?? JSON.stringify(data);
+        log.error({ msg }, "presence: bio publish facebook error");
+        return { success: false, error: `Facebook: ${msg}` };
+      }
+      log.info({ accountId }, "presence: bio published to facebook");
+      return { success: true };
+    }
+
+    return { success: false, error: "Plataforma não suportada." };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg }, "presence: bio publish exception");
+    return { success: false, error: msg };
+  }
+}
+
 // ─── Bio Optimizer ────────────────────────────────────────────────────────────
 
 export async function optimizeBio(

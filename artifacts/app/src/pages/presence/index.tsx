@@ -1445,13 +1445,113 @@ function ConfigModal({
 
 // ─── Bio modal ────────────────────────────────────────────────────────────────
 
-function BioModal({ suggestions, onClose }: { suggestions: BioSuggestion[]; onClose: () => void }) {
-  const [copied, setCopied] = useState<string | null>(null);
-  const copy = (key: string, text: string) => {
-    navigator.clipboard.writeText(text).catch(() => {});
-    setCopied(key);
-    setTimeout(() => setCopied(null), 1500);
+function BioCard({
+  suggestion,
+}: {
+  suggestion: BioSuggestion;
+}) {
+  const [editedBio, setEditedBio] = useState(suggestion.bio);
+  const [copied, setCopied] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const meta = PLATFORM_META[suggestion.platform];
+  const canPublish = suggestion.platform === "instagram" || suggestion.platform === "facebook";
+
+  const copy = () => {
+    navigator.clipboard.writeText(editedBio).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
+
+  const publishBio = async () => {
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      await customFetch(`${API}/bio/publish`, {
+        method: "POST",
+        body: JSON.stringify({ platform: suggestion.platform, bio: editedBio }),
+      });
+      setPublished(true);
+    } catch (err) {
+      setPublishError(err instanceof Error ? err.message : "Erro ao publicar bio.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border p-3.5 space-y-3">
+      {/* Header */}
+      <div className="flex items-center gap-2 text-sm font-medium">
+        {meta && <meta.icon className={`h-4 w-4 ${meta.cls}`} />}
+        <span>{meta?.label ?? suggestion.platform}</span>
+        <Button
+          size="sm" variant="ghost" className="ml-auto h-7 px-2 text-xs"
+          onClick={copy}
+          data-testid={`button-copy-bio-${suggestion.platform}`}
+        >
+          {copied ? <Check className="mr-1 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1 h-3.5 w-3.5" />}
+          {copied ? "Copiado!" : "Copiar"}
+        </Button>
+      </div>
+
+      {/* Editable bio */}
+      <textarea
+        className="w-full rounded-md border border-border bg-background/70 p-2.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary/50 min-h-[80px]"
+        value={editedBio}
+        onChange={(e) => { setEditedBio(e.target.value); setPublished(false); setPublishError(null); }}
+        rows={4}
+        data-testid={`textarea-bio-${suggestion.platform}`}
+      />
+
+      {/* Highlights / keywords */}
+      {suggestion.highlights.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          <strong>Destaques:</strong> {suggestion.highlights.join(" · ")}
+        </p>
+      )}
+      {suggestion.keywords.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          <strong>Palavras-chave:</strong> {suggestion.keywords.join(", ")}
+        </p>
+      )}
+
+      {/* Publish action */}
+      {canPublish && (
+        <div className="space-y-1.5 pt-1">
+          {published ? (
+            <div className="flex items-center gap-2 rounded-md bg-green-500/10 border border-green-500/20 px-3 py-2 text-xs text-green-400">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              Bio publicada com sucesso no {meta?.label ?? suggestion.platform}!
+            </div>
+          ) : (
+            <Button
+              className="w-full"
+              size="sm"
+              onClick={publishBio}
+              disabled={publishing || !editedBio.trim()}
+              data-testid={`button-publish-bio-${suggestion.platform}`}
+            >
+              {publishing
+                ? <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Publicando...</>
+                : <><Send className="mr-2 h-3.5 w-3.5" /> Publicar bio no {meta?.label ?? suggestion.platform}</>}
+            </Button>
+          )}
+          {publishError && (
+            <p className="text-xs text-destructive flex items-start gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              {publishError}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BioModal({ suggestions, onClose }: { suggestions: BioSuggestion[]; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
@@ -1460,44 +1560,20 @@ function BioModal({ suggestions, onClose }: { suggestions: BioSuggestion[]; onCl
       >
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Sparkles className="h-4 w-4 text-primary" /> Bios Otimizadas
+            <Sparkles className="h-4 w-4 text-primary" /> Bios Otimizadas pela IA
           </h2>
           <button onClick={onClose} aria-label="Fechar bios"><X className="h-4 w-4" /></button>
         </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Edite o texto se quiser e clique em <strong>Publicar bio</strong> para atualizar direto na plataforma.
+        </p>
         {suggestions.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">Nenhuma sugestão gerada ainda.</p>
         ) : (
           <div className="mt-4 space-y-4">
-            {suggestions.map((s) => {
-              const meta = PLATFORM_META[s.platform];
-              return (
-                <div key={s.platform} className="rounded-lg border border-border p-3.5">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    {meta && <meta.icon className={`h-4 w-4 ${meta.cls}`} />}
-                    {meta?.label ?? s.platform}
-                    <Button
-                      size="sm" variant="ghost" className="ml-auto h-7 px-2 text-xs"
-                      onClick={() => copy(s.platform, s.bio)}
-                      data-testid={`button-copy-bio-${s.platform}`}
-                    >
-                      {copied === s.platform ? <Check className="mr-1 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1 h-3.5 w-3.5" />}
-                      Copiar
-                    </Button>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap rounded-md bg-background/70 p-2.5 text-sm">{s.bio}</p>
-                  {s.highlights.length > 0 && (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      <strong>Destaques:</strong> {s.highlights.join(" · ")}
-                    </p>
-                  )}
-                  {s.keywords.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      <strong>Palavras-chave:</strong> {s.keywords.join(", ")}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            {suggestions.map((s) => (
+              <BioCard key={s.platform} suggestion={s} />
+            ))}
           </div>
         )}
       </div>

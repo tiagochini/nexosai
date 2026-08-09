@@ -12,6 +12,7 @@ import {
   publishPostNow,
   publishTestPost,
   optimizeBio,
+  publishBio,
   getMetricsOverview,
   findActiveLaunchContext,
   findCampaignContextById,
@@ -363,6 +364,25 @@ router.post("/bio/optimize", async (req, res): Promise<void> => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erro ao otimizar bio.";
     res.status(400).json({ error: msg });
+  }
+});
+
+router.post("/bio/publish", async (req, res): Promise<void> => {
+  try {
+    const { platform, bio } = req.body as { platform: "instagram" | "facebook"; bio: string };
+    if (!platform || !bio?.trim()) {
+      res.status(400).json({ error: "platform e bio são obrigatórios." });
+      return;
+    }
+    const result = await publishBio(req.auth.workspaceId, platform, bio.trim(), req.log);
+    if (!result.success) {
+      res.status(422).json({ error: result.error });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao publicar bio.";
+    res.status(500).json({ error: msg });
   }
 });
 
