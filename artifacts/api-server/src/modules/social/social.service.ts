@@ -559,14 +559,42 @@ export async function processMetaWebhook(body: unknown): Promise<void> {
     entry?: Array<{
       id: string;
       changes?: Array<{ field: string; value: unknown }>;
+      messaging?: Array<{
+        sender: { id: string };
+        recipient: { id: string };
+        timestamp: number;
+        message?: { mid: string; text?: string };
+      }>;
     }>;
   };
 
   if (!payload.entry) return;
 
   for (const entry of payload.entry) {
+    // Eventos de mudança (comentários, menções, etc.)
     for (const change of entry.changes ?? []) {
       logger.info({ field: change.field, entryId: entry.id }, "Meta webhook received");
+    }
+
+    // Mensagens diretas (DM) — dispara fluxos de resposta automatizados
+    for (const msg of entry.messaging ?? []) {
+      if (!msg.message?.text) continue;
+      // entry.id é o ID da conta Instagram que recebeu a mensagem
+      const igAccountId = entry.id;
+      const senderId = msg.sender.id;
+      // Ignorar mensagens do próprio bot (echo)
+      if (senderId === igAccountId) continue;
+
+      logger.info({ igAccountId, senderId, text: msg.message.text }, "Meta webhook: DM recebida");
+
+      const { handleInstagramDmTrigger } = await import(
+        "../social-presence/social-presence.service.js"
+      );
+      setImmediate(() =>
+        handleInstagramDmTrigger(igAccountId, senderId, msg.message!.text!).catch((err) =>
+          logger.warn({ err }, "Meta webhook: DM trigger error (non-fatal)"),
+        ),
+      );
     }
   }
 }

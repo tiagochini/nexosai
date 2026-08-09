@@ -9,6 +9,17 @@
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
 
+export interface DmResponseStep {
+  delayMinutes: number; // 0 = imediato
+  message: string;
+}
+
+export interface DmResponseFlow {
+  triggerKeyword: string;       // ex: "QUERO"
+  triggerInstructions: string;  // texto que vai na caption: "Mande QUERO no DM"
+  steps: DmResponseStep[];
+}
+
 export interface PresencePlannedPost {
   dayIndex: number; // 0=segunda … 6=domingo
   postingTime: string; // "HH:MM"
@@ -19,6 +30,9 @@ export interface PresencePlannedPost {
   atMentions?: string[]; // usernames sem @ mencionados inline na caption
   visualDirection: string;
   videoScript?: string;
+  reelScript?: string;   // roteiro específico para reel (hook 3s + corpo + CTA)
+  highlightName?: string; // para stories: nome do Destaque que deve receber este story
+  dmResponseFlow?: DmResponseFlow | null; // fluxo DM planejado (quando CTA induz DM)
   objective: string;
   launchPhase?: string;
 }
@@ -91,12 +105,25 @@ const PLANNER_PROMPT = `Você é o Agente de Presença Social do NexOS AI — es
 - Cada caption completa e pronta para publicar (não "escreva aqui...")
 - Gancho forte na primeira linha — a primeira frase decide se o resto é lido
 - Hashtags: 5–10 para instagram/tiktok (mix volume alto + nicho), 3–5 facebook, 3 linkedin — coloque NO CAMPO hashtags (sem #), NÃO inline na caption
-- @mentions: use inline na caption quando contextualmente relevante — ex: "@parceiro" se colaboração, "@suaconta" para crosspost, "@evento" para cobertura. Se não há menção relevante, omita. NÃO invente perfis que não existem.
-- visualDirection: direção clara para foto/arte/vídeo (o usuário ou o módulo de vídeo produz)
-- videoScript: apenas para reel/vídeo — roteiro com gancho, desenvolvimento, CTA (máx 150 palavras)
+- @mentions: use inline na caption quando contextualmente relevante. NÃO invente perfis que não existem.
 - Captions em PT-BR, no tom configurado pelo usuário
 - Varie formatos ao longo da semana — nunca 7 dias do mesmo formato
-- Para stories: a caption deve ser o texto do sticker/overlay que o usuário colará manualmente, pois a API do Instagram não exibe caption em stories — escreva como frase curta e impactante (máx 2 linhas)
+
+**REELS (reel):**
+- São o formato de maior alcance — inclua pelo menos 1 reel por dia quando possível
+- reelScript: roteiro completo com 3 seções: HOOK (primeiros 3 segundos — frase de impacto que para o scroll), CORPO (desenvolvimento em 30–60s), CTA (chamada final)
+- visualDirection: estilo visual do vídeo — enquadramento, ambiente, ritmo de corte
+- caption: legenda curta e magnética (o vídeo faz o trabalho pesado)
+
+**STORIES (story):**
+- caption: texto do sticker/overlay que o usuário colará manualmente — frase curta e impactante (máx 2 linhas). A API do Instagram não exibe caption em stories automaticamente.
+- highlightName: SEMPRE defina o nome do Destaque onde este story deve ser arquivado após expirar (ex: "Resultados", "Bastidores", "Ofertas", "Dicas", "Depoimentos"). Isso garante que o story viva além das 24h.
+
+**DM FLOW (quando aplicável):**
+- Se o post tiver uma CTA que induz resposta no DM (ex: "mande X no DM", "responda QUERO", "comente e te mando no DM") → preencha dmResponseFlow com a sequência de respostas automáticas planejadas
+- A triggerKeyword deve ser simples (1 palavra, maiúscula)
+- steps: mínimo 2 passos — o imediato (delayMinutes: 0) e um follow-up (ex: 60 min depois)
+- Se o post não tem CTA de DM → dmResponseFlow: null
 
 **Retorne APENAS JSON válido:**
 
@@ -108,14 +135,24 @@ const PLANNER_PROMPT = `Você é o Agente de Presença Social do NexOS AI — es
       "dayIndex": 0,
       "postingTime": "19:30",
       "format": "reel|carousel|feed|story|text|live",
-      "pillar": "string — pilar de conteúdo deste post",
-      "caption": "string — caption completa pronta para publicar, com @mentions inline onde relevante",
-      "hashtags": ["string sem # — NÃO repita o que já está na caption"],
-      "atMentions": ["username sem @ — apenas perfis mencionados inline na caption, para rastreamento"],
+      "pillar": "string — pilar de conteúdo",
+      "caption": "string — caption completa pronta para publicar",
+      "hashtags": ["string sem #"],
+      "atMentions": ["username sem @"],
       "visualDirection": "string — direção visual clara",
-      "videoScript": "string — apenas se formato de vídeo",
+      "reelScript": "string — APENAS para reels: HOOK / CORPO / CTA",
+      "videoScript": "string — igual reelScript, mantido por compatibilidade",
+      "highlightName": "string — APENAS para stories: nome do Destaque alvo",
+      "dmResponseFlow": {
+        "triggerKeyword": "QUERO",
+        "triggerInstructions": "Mande QUERO no DM e te envio o link",
+        "steps": [
+          { "delayMinutes": 0, "message": "Olá! Aqui está o link prometido: ..." },
+          { "delayMinutes": 60, "message": "Conseguiu acessar? Me conta o que achou!" }
+        ]
+      },
       "objective": "string — o que este post deve causar",
-      "launchPhase": "string — apenas em semana de lançamento (teaser|aquecimento|carrinho)"
+      "launchPhase": "string — apenas em semana de lançamento"
     }
   ]
 }
@@ -199,6 +236,10 @@ Gere exatamente ${totalPosts} posts (${Math.min(input.postsPerDay, 5)}/dia × 7 
       hashtags: Array.isArray(p.hashtags) ? p.hashtags.map((h) => String(h).replace(/^#/, "")) : [],
       atMentions: Array.isArray(p.atMentions) ? p.atMentions.map((m) => String(m).replace(/^@/, "")) : [],
       visualDirection: p.visualDirection || "",
+      reelScript: p.reelScript || p.videoScript || undefined,
+      videoScript: p.videoScript || p.reelScript || undefined,
+      highlightName: typeof p.highlightName === "string" && p.highlightName.trim() ? p.highlightName.trim() : undefined,
+      dmResponseFlow: p.dmResponseFlow ?? null,
       objective: p.objective || "",
     }));
 

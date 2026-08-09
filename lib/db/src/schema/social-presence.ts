@@ -68,6 +68,21 @@ export type PresencePostMetrics = {
   impressions: number;
 };
 
+/** Resposta automática planejada para DM induzido por CTA no post */
+export type DmResponseStep = {
+  delayMinutes: number; // 0 = imediato
+  message: string;
+};
+
+export type DmResponseFlow = {
+  triggerKeyword: string;      // palavra-chave que dispara o fluxo (ex: "QUERO")
+  triggerInstructions: string; // texto da CTA no post ("Mande QUERO no DM")
+  steps: DmResponseStep[];
+};
+
+/** Sequência de DM em progresso (acompanha cada conversa individual) */
+export type DmSequenceSteps = DmResponseStep[];
+
 // ─── Tables ───────────────────────────────────────────────────────────────────
 
 export const socialPresenceConfigTable = pgTable("social_presence_config", {
@@ -156,6 +171,12 @@ export const socialPresencePostsTable = pgTable("social_presence_posts", {
   mediaJobId: text("media_job_id"),
   // 'runway' | 'kling' | 'heygen'
   mediaJobProvider: text("media_job_provider"),
+  // ─── Destaques (Highlights) ──────────────────────────────────────────────────
+  // Para stories: nome do destaque que deve receber este story após publicação
+  highlightName: text("highlight_name"),
+  // ─── Fluxo de DM automatizado ────────────────────────────────────────────────
+  // Sequência de respostas automáticas planejada pelo AI para posts com CTA de DM
+  dmResponseFlow: jsonb("dm_response_flow").$type<DmResponseFlow | null>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -164,6 +185,39 @@ export const socialPresencePostsTable = pgTable("social_presence_posts", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+// ─── Instagram DM Sequences ───────────────────────────────────────────────────
+// Rastreia execução de fluxos de DM para conversas individuais.
+// Criado quando alguém envia a trigger keyword no DM após um post com dmResponseFlow.
+
+export const instagramDmSequencesTable = pgTable("instagram_dm_sequences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id")
+    .notNull()
+    .references(() => workspacesTable.id, { onDelete: "cascade" }),
+  // ID da conta IG do negócio (quem responde)
+  igAccountId: text("ig_account_id").notNull(),
+  // ID do usuário que mandou o DM (recipiente das respostas)
+  recipientId: text("recipient_id").notNull(),
+  // Post que gerou este fluxo
+  postId: uuid("post_id").references(() => socialPresencePostsTable.id, {
+    onDelete: "set null",
+  }),
+  // Todos os steps do fluxo (copiado do dmResponseFlow no momento do disparo)
+  steps: jsonb("steps").notNull().$type<DmSequenceSteps>().default([]),
+  // Qual step será enviado a seguir (0-based)
+  currentStep: integer("current_step").notNull().default(0),
+  // Quando enviar o próximo step
+  nextStepAt: timestamp("next_step_at", { withTimezone: true }).notNull(),
+  // Nulo enquanto em progresso; preenchido quando todos os steps foram enviados
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type InstagramDmSequence =
+  typeof instagramDmSequencesTable.$inferSelect;
 
 // ─── Zod / Types ──────────────────────────────────────────────────────────────
 

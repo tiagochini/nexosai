@@ -53,7 +53,9 @@ async function waitForInstagramContainer(
   token: string,
   maxWaitMs = 30_000
 ): Promise<void> {
-  const pollIntervalMs = 2_000;
+  // Vídeos (Reels, VIDEO) levam até 5 minutos para processar no Instagram.
+  // Imagens geralmente ficam prontas em 2-5s.
+  const pollIntervalMs = 3_000;
   const maxAttempts = Math.ceil(maxWaitMs / pollIntervalMs);
 
   for (let i = 0; i < maxAttempts; i++) {
@@ -63,7 +65,7 @@ async function waitForInstagramContainer(
     );
     if (status.status_code === "FINISHED") return;
     if (status.status_code === "ERROR") {
-      throw new Error("Instagram rejeitou a mídia ao criar o container (status: ERROR). Verifique se a URL da imagem está acessível publicamente.");
+      throw new Error("Instagram rejeitou a mídia ao criar o container (status: ERROR). Verifique se a URL da imagem/vídeo está acessível publicamente.");
     }
     // "IN_PROGRESS" ou "PUBLISHED" — aguardar
     await new Promise<void>((r) => setTimeout(r, pollIntervalMs));
@@ -160,8 +162,10 @@ export async function publishToInstagram(
       { method: "POST", body: JSON.stringify(body) }
     );
 
-    // Aguardar container ficar pronto (obrigatório para imagens e vídeos)
-    await waitForInstagramContainer(container.id, token);
+    // Vídeos (Reels, feed_video) precisam de até 5 min para processar no Instagram.
+    // Imagens ficam prontas em segundos — mantemos 30s como fallback seguro.
+    const containerWaitMs = isVideo ? 300_000 : 30_000;
+    await waitForInstagramContainer(container.id, token, containerWaitMs);
 
     const published = await metaGraphRequest<{ id: string }>(
       `/${igAccountId}/media_publish`,

@@ -5,13 +5,14 @@
  * (narrativa injetada via Campaign Brain) quando há campanha executing/live.
  */
 
-import { eq, and, desc, gte, lt, lte, inArray } from "drizzle-orm";
+import { eq, and, desc, gte, lt, lte, inArray, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   db,
   socialPresenceConfigTable,
   socialPresencePostsTable,
+  instagramDmSequencesTable,
   campaignsTable,
   workspaceIntegrationsTable,
   workspacesTable,
@@ -589,11 +590,13 @@ async function generateWeekNow(
           caption: post.caption,
           hashtags: post.hashtags,
           visualDirection: post.visualDirection,
-          videoScript: post.videoScript ?? null,
+          videoScript: post.videoScript ?? post.reelScript ?? null,
           objective: post.objective,
           launchAligned: Boolean(launch),
           campaignId: launch?.campaignId ?? null,
           launchPhase: post.launchPhase ?? null,
+          highlightName: post.highlightName ?? null,
+          dmResponseFlow: (post.dmResponseFlow as never) ?? null,
           aiGenerated: true,
         });
       }
@@ -1164,7 +1167,14 @@ export async function publishDuePresencePosts(): Promise<void> {
           }),
         );
         const needsMedia = post.platform === "instagram" || post.platform === "tiktok";
+        const isVideoFormat = post.format === "reel" || post.format === "feed_video";
         if (needsMedia && mediaUrls.length === 0) {
+          // Vídeo ainda sendo gerado — skip silencioso, não marcar como erro.
+          // O scheduler vai tentar novamente no próximo tick (60s).
+          if (isVideoFormat && (post.mediaGenStatus === "video_generating" || post.mediaGenStatus === "storyboard_generating" || post.mediaGenStatus === "storyboard_ready")) {
+            log.info({ postId: post.id, mediaGenStatus: post.mediaGenStatus }, "presence: reel sem vídeo pronto — aguardando geração (skip silencioso)");
+            continue;
+          }
           if (!post.errorMessage) {
             await db
               .update(socialPresencePostsTable)
@@ -1281,6 +1291,22 @@ export async function publishDuePresencePosts(): Promise<void> {
             })
             .where(eq(socialPresencePostsTable.id, post.id));
           log.info({ postId: post.id, platform: post.platform }, "presence: published");
+
+          // Auto-Highlight: se é story com highlightName e foi publicado no Instagram,
+          // adiciona ao Destaque automaticamente (fire-and-forget).
+          const postHighlight = (post as { highlightName?: string | null }).highlightName;
+          if (post.platform === "instagram" && post.format === "story" && postHighlight && result.platformPostId && integration.accessToken && integration.accountId) {
+            const safeIntegration = { accessToken: integration.accessToken, accountId: integration.accountId };
+            setImmediate(() =>
+              addStoryToHighlight(
+                post.workspaceId,
+                result.platformPostId!,
+                postHighlight,
+                safeIntegration,
+                log,
+              ).catch((err) => log.warn({ err, postId: post.id }, "presence: auto-highlight failed (non-fatal)"))
+            );
+          }
         } else {
           const retryCount = (post.retryCount ?? 0) + 1;
           await db
@@ -1877,6 +1903,228 @@ export async function confirmVideoAttachment(
     .where(eq(socialPresencePostsTable.id, postId))
     .returning();
   return updated;
+}
+
+// ─── Auto-Highlight: adiciona story ao Destaque após publicação ───────────────
+
+async function addStoryToHighlight(
+  workspaceId: string,
+  storyMediaId: string,
+  highlightName: string,
+  integration: { accessToken: string; accountId: string },
+  log: { info(obj: object, msg: string): void; warn(obj: object, msg: string): void },
+): Promise<void> {
+  const token = integration.accessToken;
+  const igAccountId = integration.accountId;
+
+  // 1. Buscar highlights existentes
+  const listRes = await fetch(
+    `https://graph.facebook.com/v22.0/${igAccountId}/highlight_albums?fields=id,title&access_token=${token}`,
+  );
+  const listData = (await listRes.json()) as {
+    data?: Array<{ id: string; title: string }>;
+    error?: { message: string };
+  };
+
+  const existing = listData.data?.find(
+    (h) => h.title.toLowerCase().trim() === highlightName.toLowerCase().trim(),
+  );
+
+  if (existing) {
+    // 2a. Adicionar ao destaque existente
+    await fetch(`https://graph.facebook.com/v22.0/${existing.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ media_ids_to_add: storyMediaId, access_token: token }),
+    });
+    log.info({ postId: storyMediaId, highlight: highlightName }, "presence: story adicionada ao destaque existente");
+  } else {
+    // 2b. Criar novo destaque
+    await fetch(`https://graph.facebook.com/v22.0/${igAccountId}/highlight_albums`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: highlightName,
+        media_ids: storyMediaId,
+        cover_media_id: storyMediaId,
+        access_token: token,
+      }),
+    });
+    log.info({ postId: storyMediaId, highlight: highlightName }, "presence: novo destaque criado");
+  }
+}
+
+// ─── DM Sequences: processa steps pendentes a cada tick ──────────────────────
+
+export async function processDmSequences(): Promise<void> {
+  const log = logger.child({ component: "dm-sequence-scheduler" });
+  try {
+    const now = new Date();
+    const pending = await db
+      .select()
+      .from(instagramDmSequencesTable)
+      .where(
+        and(
+          isNull(instagramDmSequencesTable.completedAt),
+          lte(instagramDmSequencesTable.nextStepAt, now),
+        ),
+      )
+      .limit(20);
+
+    for (const seq of pending) {
+      try {
+        const step = seq.steps[seq.currentStep];
+        if (!step) {
+          // Sem mais steps — marcar completo
+          await db
+            .update(instagramDmSequencesTable)
+            .set({ completedAt: new Date() })
+            .where(eq(instagramDmSequencesTable.id, seq.id));
+          continue;
+        }
+
+        // Buscar integração Instagram do workspace
+        const [integration] = await db
+          .select()
+          .from(workspaceIntegrationsTable)
+          .where(
+            and(
+              eq(workspaceIntegrationsTable.workspaceId, seq.workspaceId),
+              eq(workspaceIntegrationsTable.provider, "instagram" as never),
+              eq(workspaceIntegrationsTable.status, "connected"),
+            ),
+          )
+          .limit(1);
+
+        if (!integration) continue;
+
+        // Enviar mensagem via Graph API
+        await fetch(
+          `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipient: { id: seq.recipientId },
+              message: { text: step.message },
+              access_token: integration.accessToken,
+            }),
+          },
+        );
+
+        const nextStep = seq.currentStep + 1;
+        const nextStepData = seq.steps[nextStep];
+
+        if (nextStepData) {
+          const nextStepAt = new Date(now.getTime() + nextStepData.delayMinutes * 60 * 1000);
+          await db
+            .update(instagramDmSequencesTable)
+            .set({ currentStep: nextStep, nextStepAt })
+            .where(eq(instagramDmSequencesTable.id, seq.id));
+        } else {
+          await db
+            .update(instagramDmSequencesTable)
+            .set({ currentStep: nextStep, completedAt: new Date() })
+            .where(eq(instagramDmSequencesTable.id, seq.id));
+        }
+
+        log.info({ seqId: seq.id, step: seq.currentStep }, "dm-sequence: step enviado");
+      } catch (err) {
+        log.warn({ err, seqId: seq.id }, "dm-sequence: step falhou (non-fatal)");
+      }
+    }
+  } catch (err) {
+    log.warn({ err }, "processDmSequences: tick error (non-fatal)");
+  }
+}
+
+// ─── DM Trigger: dispara fluxo quando mensagem com keyword chega ─────────────
+
+export async function handleInstagramDmTrigger(
+  igAccountId: string,
+  recipientId: string,
+  messageText: string,
+): Promise<void> {
+  const log = logger.child({ component: "dm-trigger", igAccountId });
+  try {
+    // Encontrar workspace desta conta Instagram
+    const [integration] = await db
+      .select()
+      .from(workspaceIntegrationsTable)
+      .where(
+        and(
+          eq(workspaceIntegrationsTable.accountId, igAccountId),
+          eq(workspaceIntegrationsTable.provider, "instagram" as never),
+          eq(workspaceIntegrationsTable.status, "connected"),
+        ),
+      )
+      .limit(1);
+
+    if (!integration) return;
+
+    // Buscar posts recentes (últimos 30 dias) com dmResponseFlow
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const posts = await db
+      .select()
+      .from(socialPresencePostsTable)
+      .where(
+        and(
+          eq(socialPresencePostsTable.workspaceId, integration.workspaceId),
+          eq(socialPresencePostsTable.platform, "instagram"),
+          gte(socialPresencePostsTable.publishedAt, since),
+        ),
+      )
+      .limit(50);
+
+    const keyword = messageText.trim().toUpperCase();
+    for (const post of posts) {
+      const flow = (post as { dmResponseFlow?: { triggerKeyword?: string; steps?: unknown[] } | null }).dmResponseFlow;
+      if (!flow || !flow.triggerKeyword) continue;
+      if (flow.triggerKeyword.toUpperCase() !== keyword) continue;
+      if (!Array.isArray(flow.steps) || flow.steps.length === 0) continue;
+
+      // Evitar duplicatas: verificar se já existe sequência ativa para este par
+      const existing = await db
+        .select({ id: instagramDmSequencesTable.id })
+        .from(instagramDmSequencesTable)
+        .where(
+          and(
+            eq(instagramDmSequencesTable.workspaceId, integration.workspaceId),
+            eq(instagramDmSequencesTable.igAccountId, igAccountId),
+            eq(instagramDmSequencesTable.recipientId, recipientId),
+            isNull(instagramDmSequencesTable.completedAt),
+          ),
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        log.info({ recipientId }, "dm-trigger: sequência já ativa para este usuário — ignorando duplicata");
+        return;
+      }
+
+      const firstStep = flow.steps[0] as { delayMinutes?: number };
+      const nextStepAt = new Date(Date.now() + (firstStep.delayMinutes ?? 0) * 60 * 1000);
+
+      await db.insert(instagramDmSequencesTable).values({
+        workspaceId: integration.workspaceId,
+        igAccountId,
+        recipientId,
+        postId: post.id,
+        steps: flow.steps as never,
+        currentStep: 0,
+        nextStepAt,
+      });
+
+      log.info({ postId: post.id, keyword, recipientId }, "dm-trigger: sequência criada");
+      // Processar o step 0 imediatamente se delayMinutes=0
+      if ((firstStep.delayMinutes ?? 0) === 0) {
+        setImmediate(() => processDmSequences().catch(() => {}));
+      }
+      return; // Disparou o primeiro match — sair
+    }
+  } catch (err) {
+    log.warn({ err }, "handleInstagramDmTrigger: error (non-fatal)");
+  }
 }
 
 /**

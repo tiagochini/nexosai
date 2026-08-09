@@ -449,11 +449,14 @@ export async function processScheduledItems(): Promise<void> {
   await maybeFirePresenceWeekly(now).catch((err) =>
     log.warn({ err }, "Presence weekly tick failed — non-blocking"),
   );
-  const { publishDuePresencePosts } = await import(
+  const { publishDuePresencePosts, processDmSequences } = await import(
     "../social-presence/social-presence.service.js"
   );
   await publishDuePresencePosts().catch((err) =>
     log.warn({ err }, "Presence post scheduler tick failed — non-blocking"),
+  );
+  await processDmSequences().catch((err) =>
+    log.warn({ err }, "DM sequence scheduler tick failed — non-blocking"),
   );
 
   const dueItems = await db
