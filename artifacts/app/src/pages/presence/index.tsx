@@ -348,6 +348,20 @@ export default function PresencePage() {
   const publishingInProgress = posts.filter((p) => p.status === "publishing");
   const queueItems = [...drafts, ...stuckScheduled, ...publishingInProgress];
 
+  // Posts publicados nos últimos 30 dias — ficam visíveis como histórico
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const recentlyPublished = posts
+    .filter(
+      (p) =>
+        p.status === "published" &&
+        (p.publishedAt ? new Date(p.publishedAt) >= thirtyDaysAgo : true),
+    )
+    .sort((a, b) => {
+      const da = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const db = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return db - da; // mais recente primeiro
+    });
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -648,32 +662,78 @@ export default function PresencePage() {
 
           {/* Fila de aprovação */}
           {tab === "queue" && (
-            queueItems.length === 0 ? (
-              <div className="rounded-xl border border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
-                <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-green-400" />
-                Nenhum post aguardando aprovação.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {stuckScheduled.length > 0 && (
-                  <div className="rounded-lg border border-amber-400/30 bg-amber-400/8 px-4 py-2 text-xs text-amber-400">
-                    ⚠ {stuckScheduled.length} post{stuckScheduled.length > 1 ? "s" : ""} agendado{stuckScheduled.length > 1 ? "s" : ""} de semanas anteriores ainda não publicado{stuckScheduled.length > 1 ? "s" : ""} — adicione mídia ou publique manualmente.
+            <div className="space-y-6">
+              {/* Pendentes de ação */}
+              {queueItems.length === 0 ? (
+                <div className="rounded-xl border border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+                  <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-green-400" />
+                  Nenhum post aguardando aprovação.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stuckScheduled.length > 0 && (
+                    <div className="rounded-lg border border-amber-400/30 bg-amber-400/8 px-4 py-2 text-xs text-amber-400">
+                      ⚠ {stuckScheduled.length} post{stuckScheduled.length > 1 ? "s" : ""} agendado{stuckScheduled.length > 1 ? "s" : ""} de semanas anteriores ainda não publicado{stuckScheduled.length > 1 ? "s" : ""} — adicione mídia ou publique manualmente.
+                    </div>
+                  )}
+                  {queueItems.map((p) => (
+                    <QueuePostCard
+                      key={p.id}
+                      post={p}
+                      onApprove={() => approve(p.id)}
+                      onCancel={() => patchPost(p.id, { status: "cancelled" })}
+                      onSaveCaption={(caption) => patchPost(p.id, { caption })}
+                      onPublishNow={() => handlePublishNow(p.id)}
+                      publishingNow={publishingNow.has(p.id)}
+                      onOpenMediaDrawer={() => openMediaDrawer(p.id)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Publicados recentemente — ficam visíveis por 30 dias */}
+              {recentlyPublished.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-400" />
+                    <span className="text-sm font-medium text-green-400">Publicados recentemente</span>
+                    <span className="text-xs text-muted-foreground">({recentlyPublished.length} nos últimos 30 dias)</span>
+                    <div className="flex-1 h-px bg-green-400/20" />
                   </div>
-                )}
-                {queueItems.map((p) => (
-                  <QueuePostCard
-                    key={p.id}
-                    post={p}
-                    onApprove={() => approve(p.id)}
-                    onCancel={() => patchPost(p.id, { status: "cancelled" })}
-                    onSaveCaption={(caption) => patchPost(p.id, { caption })}
-                    onPublishNow={() => handlePublishNow(p.id)}
-                    publishingNow={publishingNow.has(p.id)}
-                    onOpenMediaDrawer={() => openMediaDrawer(p.id)}
-                  />
-                ))}
-              </div>
-            )
+                  {recentlyPublished.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-xl border border-green-500/20 bg-green-500/5 p-4 space-y-2"
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {(() => { const meta = PLATFORM_META[p.platform]; return meta ? <meta.icon className={`h-3.5 w-3.5 ${meta.cls}`} /> : null; })()}
+                        <span className="text-xs font-medium text-green-400">{STATUS_META.published.label}</span>
+                        <span className="rounded border border-border px-1 py-0.5 text-[10px] text-muted-foreground">{FORMAT_LABEL[p.format] ?? p.format}</span>
+                        {p.publishedAt && (
+                          <span className="ml-auto text-[11px] text-muted-foreground">
+                            {new Date(p.publishedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm line-clamp-3">{p.caption}</p>
+                      {p.hashtags.length > 0 && (
+                        <p className="text-[11px] text-blue-300 line-clamp-1">{p.hashtags.map((h) => `#${h}`).join(" ")}</p>
+                      )}
+                      {p.platformUrl && (
+                        <a
+                          href={p.platformUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded border border-green-500/30 bg-green-500/8 px-2.5 py-1 text-[11px] text-green-400 hover:bg-green-500/15 transition-colors"
+                        >
+                          <CheckCircle2 className="h-3 w-3" /> Ver post publicado →
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Métricas */}
