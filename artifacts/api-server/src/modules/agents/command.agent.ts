@@ -10,6 +10,13 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
 import { runStrategyAgent } from "./strategy.agent.js";
 import { runOfferAgent } from "./offer.agent.js";
+import { runPricingPsychologistAgent, type PricingPsychologyOutput } from "./pricing-psychologist.agent.js";
+import { runUpsellArchitectAgent, type UpsellArchitectOutput } from "./upsell-architect.agent.js";
+import { runObjectionKillerAgent, type ObjectionMapOutput } from "./objection-killer.agent.js";
+import { runTestimonialCuratorAgent, type TestimonialCuratorOutput } from "./testimonial-curator.agent.js";
+import { runScarcityEngineerAgent, type ScarcityEngineOutput } from "./scarcity-engineer.agent.js";
+import { runHookFactoryAgent, type HookFactoryOutput } from "./hook-factory.agent.js";
+import { runSementeLaunchAgent } from "./semente-launch.agent.js";
 import { runStrategicCoreBriefing, type StrategicBrief } from "./strategic-core.agent.js";
 import { runLaunchManagerAgent } from "./launch-manager.agent.js";
 import { runContinuousSalesManagerAgent } from "./continuous-sales-manager.agent.js";
@@ -1088,6 +1095,250 @@ Retorne o JSON de avaliação.`,
     } catch (err) {
       log.error({ err, campaignId }, "Offer agent failed");
       emitAgentError(campaignId, "offer", err);
+    }
+  }
+
+  // ── 3b. Offer Psychology Layer (TASK #69 — 6+1 agents) ─────────────────────
+  // Execution order:
+  //   A [parallel]: pricing_psychologist + upsell_architect
+  //   B [parallel]: objection_killer + testimonial_curator + scarcity_engineer
+  //   C [sequential]: hook_factory (synthesizes A+B — cannot run before them)
+  //   D [conditional]: semente_launch (alternative path, only type=semente_launch)
+  // All 7 inherit hardConstraints + boldnessOpportunities via productFull string.
+  // Non-fatal: any agent failure is logged as warn, pipeline continues.
+  if (typesWithOfferAnalysis.includes(type) && offerAnalysis) {
+    const psyAppealIntensity = (intakeData["campaign.appealIntensity"] as string | undefined) === "ousado"
+      ? "ousado" : "protegido";
+
+    // ── Shared input extraction ──────────────────────────────────────────────
+    const psyProductName = String(intakeData["product.name"] ?? "");
+    const psyProductDesc = [
+      String(intakeData["product.description"] ?? psyProductName),
+      (offerAnalysis as any).offerName ? `Oferta: ${(offerAnalysis as any).offerName}` : "",
+      (offerAnalysis as any).corePromise ? `Promessa: ${(offerAnalysis as any).corePromise}` : "",
+      (offerAnalysis as any).uniqueMechanism
+        ? `Mecanismo único: ${typeof (offerAnalysis as any).uniqueMechanism === "object"
+            ? ((offerAnalysis as any).uniqueMechanism.name ?? JSON.stringify((offerAnalysis as any).uniqueMechanism).slice(0, 150))
+            : String((offerAnalysis as any).uniqueMechanism)}`
+        : "",
+    ].filter(Boolean).join(" | ");
+
+    // Constraint suffix injected into every agent's productDescription
+    const psyConstraintSuffix = [
+      (strategicBrief?.hardConstraints?.length ?? 0) > 0
+        ? `\n\n⚠️ RESTRIÇÕES ABSOLUTAS (nunca viole): ${strategicBrief!.hardConstraints.join(" | ")}`
+        : "",
+      (strategicBrief?.boldnessOpportunities?.length ?? 0) > 0 && psyAppealIntensity === "ousado"
+        ? `\n\n✅ OUSADIA LIBERADA: ${strategicBrief!.boldnessOpportunities.join(" | ")}`
+        : "",
+    ].join("");
+    const psyProductFull = psyProductDesc + psyConstraintSuffix;
+
+    const psyPrice = parseFloat(
+      String((offerAnalysis as any).offerStructure?.anchoringLogic?.strategicPrice
+        ?? intakeData["product.price"] ?? "0")
+    ) || 0;
+
+    const psyAvatar = profile
+      ? [
+          (profile as any).primaryAvatar?.name ? `Avatar: ${(profile as any).primaryAvatar.name}` : "",
+          (profile as any).primaryAvatar?.deepestDesire ? `Desejo: ${(profile as any).primaryAvatar.deepestDesire}` : "",
+          ((profile as any).primaryAvatar?.typicalObjections as string[] | undefined)?.length
+            ? `Objeções: ${((profile as any).primaryAvatar.typicalObjections as string[]).slice(0, 3).join("; ")}`
+            : "",
+          (profile as any).primaryAvatar?.languageStyle ? `Tom: ${(profile as any).primaryAvatar.languageStyle}` : "",
+        ].filter(Boolean).join(" | ")
+      : String(intakeData["audience.primaryAvatar"] ?? intakeData["audience.profile"] ?? "");
+
+    const psyChannels = String(
+      intakeData["campaign.channels"] ?? intakeData["campaign.mainChannel"] ?? "instagram,youtube,facebook"
+    ).split(",").map((c) => c.trim()).filter(Boolean);
+
+    let pricingOutput: PricingPsychologyOutput | null = null;
+    let upsellOutput: UpsellArchitectOutput | null = null;
+    let objectionOutput: ObjectionMapOutput | null = null;
+    let testimonialOutput: TestimonialCuratorOutput | null = null;
+    let scarcityOutput: ScarcityEngineOutput | null = null;
+    let hookOutput: HookFactoryOutput | null = null;
+
+    const allPsychSkipped = [
+      "pricing_psychologist", "upsell_architect", "objection_killer",
+      "hook_factory", "testimonial_curator", "scarcity_engineer",
+    ].every((a) => isSkippedByGovernor(a));
+
+    if (!allPsychSkipped) {
+      // ── Step A: pricing_psychologist + upsell_architect [parallel] ──────────
+      const [pricingRes, upsellRes] = await Promise.allSettled([
+        !isSkippedByGovernor("pricing_psychologist") && !isStepDone(cp, "pricing_psychologist")
+          ? runPricingPsychologistAgent(campaignId, workspaceId, psyProductFull, psyPrice, psyAvatar, [], log)
+          : Promise.resolve(null),
+        !isSkippedByGovernor("upsell_architect") && !isStepDone(cp, "upsell_architect")
+          ? runUpsellArchitectAgent(campaignId, workspaceId, psyProductFull, psyPrice, psyAvatar, [], log)
+          : Promise.resolve(null),
+      ]);
+
+      if (pricingRes.status === "fulfilled" && pricingRes.value) {
+        pricingOutput = pricingRes.value;
+        agentsRun.push("pricing_psychologist");
+        cp = await saveCheckpoint(campaignId, "pricing_psychologist",
+          { recommendedPrice: pricingOutput.recommendedPrice }, cp, log);
+        log.info({ campaignId, recommendedPrice: pricingOutput.recommendedPrice }, "pricing_psychologist ✓");
+      } else if (pricingRes.status === "rejected") {
+        log.warn({ err: pricingRes.reason, campaignId }, "pricing_psychologist failed (non-fatal)");
+        emitAgentError(campaignId, "pricing_psychologist", pricingRes.reason);
+      }
+
+      if (upsellRes.status === "fulfilled" && upsellRes.value) {
+        upsellOutput = upsellRes.value;
+        agentsRun.push("upsell_architect");
+        cp = await saveCheckpoint(campaignId, "upsell_architect", { done: true }, cp, log);
+        log.info({ campaignId }, "upsell_architect ✓");
+      } else if (upsellRes.status === "rejected") {
+        log.warn({ err: upsellRes.reason, campaignId }, "upsell_architect failed (non-fatal)");
+        emitAgentError(campaignId, "upsell_architect", upsellRes.reason);
+      }
+
+      // ── Step B: objection_killer + testimonial_curator + scarcity_engineer [parallel] ──
+      const psyKnownObjections = (pricingOutput?.priceObjectionKills ?? []).slice(0, 5);
+      const psyOfferSnapshot = offerAnalysis
+        ? JSON.stringify(offerAnalysis).slice(0, 600)
+        : psyProductDesc;
+
+      const [objRes, testRes, scarcRes] = await Promise.allSettled([
+        !isSkippedByGovernor("objection_killer") && !isStepDone(cp, "objection_killer")
+          ? runObjectionKillerAgent(campaignId, workspaceId, psyProductFull, psyAvatar, psyPrice, psyKnownObjections, log)
+          : Promise.resolve(null),
+        !isSkippedByGovernor("testimonial_curator") && !isStepDone(cp, "testimonial_curator")
+          ? runTestimonialCuratorAgent(campaignId, workspaceId, psyProductFull, psyAvatar, [], psyKnownObjections, log)
+          : Promise.resolve(null),
+        !isSkippedByGovernor("scarcity_engineer") && !isStepDone(cp, "scarcity_engineer")
+          ? runScarcityEngineerAgent(campaignId, workspaceId, psyProductFull, type, psyOfferSnapshot, psyAvatar, log)
+          : Promise.resolve(null),
+      ]);
+
+      if (objRes.status === "fulfilled" && objRes.value) {
+        objectionOutput = objRes.value;
+        agentsRun.push("objection_killer");
+        cp = await saveCheckpoint(campaignId, "objection_killer", { done: true }, cp, log);
+        log.info({ campaignId }, "objection_killer ✓");
+      } else if (objRes.status === "rejected") {
+        log.warn({ err: objRes.reason, campaignId }, "objection_killer failed (non-fatal)");
+        emitAgentError(campaignId, "objection_killer", objRes.reason);
+      }
+
+      if (testRes.status === "fulfilled" && testRes.value) {
+        testimonialOutput = testRes.value;
+        agentsRun.push("testimonial_curator");
+        cp = await saveCheckpoint(campaignId, "testimonial_curator", { done: true }, cp, log);
+        log.info({ campaignId }, "testimonial_curator ✓");
+      } else if (testRes.status === "rejected") {
+        log.warn({ err: testRes.reason, campaignId }, "testimonial_curator failed (non-fatal)");
+        emitAgentError(campaignId, "testimonial_curator", testRes.reason);
+      }
+
+      if (scarcRes.status === "fulfilled" && scarcRes.value) {
+        scarcityOutput = scarcRes.value;
+        agentsRun.push("scarcity_engineer");
+        cp = await saveCheckpoint(campaignId, "scarcity_engineer", { done: true }, cp, log);
+        log.info({ campaignId }, "scarcity_engineer ✓");
+      } else if (scarcRes.status === "rejected") {
+        log.warn({ err: scarcRes.reason, campaignId }, "scarcity_engineer failed (non-fatal)");
+        emitAgentError(campaignId, "scarcity_engineer", scarcRes.reason);
+      }
+
+      // ── Step C: hook_factory [sequential — synthesizes A+B] ─────────────────
+      if (!isSkippedByGovernor("hook_factory") && !isStepDone(cp, "hook_factory")) {
+        const hookTopic = [
+          psyProductName || psyProductDesc.slice(0, 100),
+          (offerAnalysis as any).corePromise ? `Promessa: ${(offerAnalysis as any).corePromise}` : "",
+          objectionOutput ? `Objeção principal: ${(objectionOutput as any).topObjections?.[0]?.objection ?? ""}` : "",
+          pricingOutput ? `Preço: R$${pricingOutput.recommendedPrice}` : "",
+        ].filter(Boolean).join(" | ") + psyConstraintSuffix;
+
+        try {
+          hookOutput = await runHookFactoryAgent(
+            campaignId, workspaceId, hookTopic, psyAvatar, psyChannels, "launch_hook", log,
+          );
+          agentsRun.push("hook_factory");
+          cp = await saveCheckpoint(campaignId, "hook_factory",
+            { hooksCount: hookOutput.hooks?.length ?? 0 }, cp, log);
+          log.info({ campaignId, hooksCount: hookOutput.hooks?.length }, "hook_factory ✓");
+        } catch (hookErr) {
+          log.warn({ err: hookErr, campaignId }, "hook_factory failed (non-fatal)");
+          emitAgentError(campaignId, "hook_factory", hookErr);
+        }
+      }
+
+      // ── Persist psychology layer to brainData (fire-and-forget) ─────────────
+      const hasPsychOutput = pricingOutput || upsellOutput || objectionOutput
+        || testimonialOutput || scarcityOutput || hookOutput;
+      if (hasPsychOutput) {
+        const psychLayer = {
+          pricing: pricingOutput,
+          upsell: upsellOutput,
+          objections: objectionOutput,
+          testimonials: testimonialOutput,
+          scarcity: scarcityOutput,
+          hooks: hookOutput,
+          generatedAt: new Date().toISOString(),
+        };
+        setImmediate(async () => {
+          try {
+            const [brainRow] = await db
+              .select({ brainData: (campaignsTable as any).brainData })
+              .from(campaignsTable)
+              .where(eq(campaignsTable.id, campaignId))
+              .limit(1);
+            const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
+            await db
+              .update(campaignsTable)
+              .set({ brainData: { ...existingBrain, offerPsychologyLayer: psychLayer } as any })
+              .where(eq(campaignsTable.id, campaignId));
+            log.info({ campaignId }, "offer psychology layer persisted to brainData");
+          } catch (brainErr) {
+            log.warn({ err: brainErr, campaignId }, "psychology layer persist failed (non-fatal)");
+          }
+        });
+      }
+    }
+
+    // ── Step D: semente_launch [only when type = semente_launch] ─────────────
+    if (type === ("semente_launch" as CampaignType) && !isStepDone(cp, "semente_launch")) {
+      try {
+        const sementeResult = await runSementeLaunchAgent(
+          campaignId,
+          workspaceId,
+          psyProductFull,
+          psyAvatar,
+          String(intakeData["brand.story"] ?? intakeData["brand.creatorBackground"] ?? ""),
+          parseFloat(String(intakeData["audience.size"] ?? "0")) || 0,
+          Boolean(intakeData["audience.hasExistingList"] ?? false),
+          String(intakeData["product.price"] ?? ""),
+          log,
+          strategy as any,
+          profile as any,
+        );
+        agentsRun.push("semente_launch");
+        cp = await saveCheckpoint(campaignId, "semente_launch", { done: true }, cp, log);
+        log.info({ campaignId }, "semente_launch ✓");
+        setImmediate(async () => {
+          try {
+            const [brainRow] = await db
+              .select({ brainData: (campaignsTable as any).brainData })
+              .from(campaignsTable)
+              .where(eq(campaignsTable.id, campaignId))
+              .limit(1);
+            const existingBrain = ((brainRow?.brainData ?? {}) as Record<string, unknown>);
+            await db
+              .update(campaignsTable)
+              .set({ brainData: { ...existingBrain, sementeLaunchPlan: sementeResult } as any })
+              .where(eq(campaignsTable.id, campaignId));
+          } catch { /* non-fatal */ }
+        });
+      } catch (sementeErr) {
+        log.warn({ err: sementeErr, campaignId }, "semente_launch failed (non-fatal)");
+        emitAgentError(campaignId, "semente_launch", sementeErr);
+      }
     }
   }
 

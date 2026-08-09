@@ -350,6 +350,83 @@ export async function generateCampaignContent(
   const currentRetryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
   const skippedPieces = ((contentRetry["skippedPieces"] ?? []) as string[]);
 
+  // ── Offer Psychology Layer injection ──────────────────────────────────────
+  // Read the 7-agent psychology layer built during the strategy phase and inject
+  // it as a structured context block (_psychologyLayer key) into intakeData.
+  // The copy agents (ad_copy, vsl_script, landing_page) read this key and include
+  // it in their user message — giving them pricing, objections, hooks, and scarcity
+  // context they previously lacked.
+  const offerPsychologyLayer = (brainRaw["offerPsychologyLayer"] ?? null) as Record<string, unknown> | null;
+  if (offerPsychologyLayer) {
+    const psychBlocks: string[] = [];
+    const psy_pricing = offerPsychologyLayer.pricing as Record<string, unknown> | null;
+    const psy_obj = offerPsychologyLayer.objections as Record<string, unknown> | null;
+    const psy_hooks = offerPsychologyLayer.hooks as Record<string, unknown> | null;
+    const psy_scarcity = offerPsychologyLayer.scarcity as Record<string, unknown> | null;
+    const psy_upsell = offerPsychologyLayer.upsell as Record<string, unknown> | null;
+    const psy_testimonials = offerPsychologyLayer.testimonials as Record<string, unknown> | null;
+
+    if (psy_pricing) {
+      psychBlocks.push([
+        `## Pricing Psychology`,
+        `Preço recomendado: R$${(psy_pricing as any).recommendedPrice ?? ""} | Justificativa: ${(psy_pricing as any).priceJustification ?? ""}`,
+        `Ancoramento: ${(psy_pricing as any).anchoring?.anchorScript ?? ""}`,
+        `Parcelamento: ${(psy_pricing as any).paymentPlanPsychology?.recommendedStructure ?? ""}`,
+        `Garantia: ${(psy_pricing as any).guaranteeStrategy?.type ?? ""} — ${(psy_pricing as any).guaranteeStrategy?.guaranteeCopy ?? ""}`,
+      ].filter(Boolean).join("\n"));
+    }
+    if (psy_obj) {
+      const kills = ((psy_obj as any).topObjections as unknown[] ?? [])
+        .slice(0, 5)
+        .map((o: any) => `- "${o.objection}": ${o.killer}`)
+        .join("\n");
+      if (kills) psychBlocks.push(`## Objection Kills\n${kills}`);
+    }
+    if (psy_hooks) {
+      const topHooks = ((psy_hooks as any).hooks as unknown[] ?? [])
+        .filter((h: any) => h.estimatedCTR === "very_high" || h.estimatedCTR === "high")
+        .slice(0, 5)
+        .map((h: any) => `- [${h.type}] ${h.hook}`)
+        .join("\n");
+      if (topHooks) {
+        psychBlocks.push([
+          `## High-CTR Hooks`,
+          topHooks,
+          `Hook vencedor: ${(psy_hooks as any).winnerRecommendation?.reasoning ?? ""}`,
+        ].join("\n"));
+      }
+    }
+    if (psy_scarcity) {
+      const primaryScarcity = (psy_scarcity as any).primaryScarcity;
+      if (primaryScarcity) {
+        psychBlocks.push([
+          `## Scarcity Architecture`,
+          `Mecanismo: ${primaryScarcity.mechanism ?? ""}`,
+          `Script de urgência: ${primaryScarcity.script ?? ""}`,
+        ].join("\n"));
+      }
+    }
+    if (psy_upsell) {
+      const upsells = ((psy_upsell as any).upsells as unknown[] ?? [])
+        .slice(0, 3)
+        .map((u: any) => `- ${u.name} (R$${u.price}): ${u.pitch ?? u.positioning ?? ""}`)
+        .join("\n");
+      if (upsells) psychBlocks.push(`## Upsell Architecture\n${upsells}`);
+    }
+    if (psy_testimonials) {
+      const strategy_proof = (psy_testimonials as any).collectionStrategy?.immediateRequests?.slice(0, 3)?.join("; ");
+      if (strategy_proof) psychBlocks.push(`## Proof Strategy\nBuscar depoimentos sobre: ${strategy_proof}`);
+    }
+
+    if (psychBlocks.length > 0) {
+      intakeData = {
+        ...intakeData,
+        _psychologyLayer: `# Offer Psychology Layer (Agentes de Psicologia de Oferta)\n\n${psychBlocks.join("\n\n")}`,
+      };
+      log.info({ campaignId, sections: psychBlocks.length }, "[PSYCH-LAYER] injected into content agent context");
+    }
+  }
+
   // ── Compliance hint injection ─────────────────────────────────────────────
   // If a previous COMPLIANCE_VIOLATION autocorrection stored a rewrite directive
   // for the last-failed piece type, inject it into agent.runner so the LLM

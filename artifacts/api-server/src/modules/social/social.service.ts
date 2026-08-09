@@ -29,6 +29,7 @@ const META_SCOPES = [
   "instagram_basic",
   "instagram_content_publish",
   "instagram_manage_insights",
+  "instagram_business_manage_messages",
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_posts",

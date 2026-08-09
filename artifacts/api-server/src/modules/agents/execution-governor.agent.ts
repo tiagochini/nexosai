@@ -111,9 +111,16 @@ function buildGovernorSystemPrompt(): string {
     `- financial_projector (skip se: sem budget declarado, authority/branding types)\n` +
     `- traffic_intelligence (skip se: sem budget de tráfego declarado)\n` +
     `- manager_agents (launch_manager / continuous_sales_manager / perpetual_launch_manager)\n` +
+    `- pricing_psychologist (STANDARD+; skip em QUICK e tipos authority/branding)\n` +
+    `- upsell_architect (STANDARD+; skip em QUICK e tipos authority/branding)\n` +
+    `- objection_killer (STANDARD+; skip em QUICK)\n` +
+    `- testimonial_curator (STANDARD+; skip em QUICK sem prova social declarada)\n` +
+    `- scarcity_engineer (STANDARD+; skip em QUICK sem janela de urgência autêntica)\n` +
     `\n` +
     `EXPENSIVE (só no PREMIUM ou quando valor claramente justifica):\n` +
     `- critique loops internos (ad_copy, landing_page, vsl_script — já embutidos no pipeline B)\n` +
+    `- hook_factory (PREMIUM; ou STANDARD se budget tráfego > R$20k ou múltiplos canais)\n` +
+    `- semente_launch (apenas quando campaign type = semente_launch)\n` +
     `\n` +
     `PASSIVE (fire-and-forget — nunca bloqueiam o pipeline):\n` +
     `- memory_compression, ux_simplification, business_intelligence, launch_debriefing\n` +

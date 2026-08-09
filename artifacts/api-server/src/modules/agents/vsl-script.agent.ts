@@ -369,6 +369,10 @@ export async function runVSLScriptAgent(
 **Narrativa central:** ${strategy.campaignArchitecture?.coreNarrative ?? ""}
 **Gancho:** ${strategy.campaignArchitecture?.emotionalHook ?? ""}`;
 
+  const psychologyLayerBlock = intakeData["_psychologyLayer"]
+    ? `\n\n---\n${String(intakeData["_psychologyLayer"])}\n---`
+    : "";
+
   const userMessage = `Escreva o roteiro VSL completo para esta campanha.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")}
@@ -379,6 +383,7 @@ ${avatarContext}
 
 **USP:** ${profile?.product?.usp ?? strategy.offerPositioning?.uniqueValueProposition ?? ""}
 **Objeções a superar:** ${profile?.primaryAvatar?.typicalObjections?.join("; ") ?? strategy.audienceSegmentation?.objections?.join("; ") ?? ""}
+${psychologyLayerBlock}
 
 **PROCESSO OBRIGATÓRIO:**
 1. Declare o tipo de lead (Schwartz) antes de escrever qualquer seção

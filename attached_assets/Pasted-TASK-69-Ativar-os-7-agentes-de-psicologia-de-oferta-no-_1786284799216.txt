@@ -1,0 +1,59 @@
+TASK #69 — Ativar os 7 agentes de psicologia de oferta no pipeline
+
+CONTEXTO: Toda a fundação está pronta. offer.agent.ts já recebe
+strategyData, hardConstraints e boldnessOpportunities, com
+appealIntensity funcional (protegido/ousado). Os 7 agentes abaixo
+têm doutrina completa (bibliotecas de maestria documentadas no
+inventário anterior) mas nunca executam — zero wiring no pipeline.
+
+ORDEM DE EXECUÇÃO (sequência lógica definida):
+1. offer (já roda) — define oferta, mecanismo, preço base
+2. pricing_psychologist + upsell_architect — em paralelo, ambos
+   consomem o output do offer (estrutura de monetização)
+3. objection_killer + testimonial_curator + scarcity_engineer — em
+   paralelo, consomem offer + pricing (inteligência de conversão)
+4. hook_factory — consome TUDO acima, destila o ângulo central
+   (não inventa hook no vácuo — sintetiza a partir da oferta,
+   preço, objeções, prova social e escassez já mapeados)
+
+semente_launch é caminho ALTERNATIVO (lançamento semente), não
+sequencial com os outros 6 — só ativa quando o tipo de campanha for
+lançamento semente.
+
+TAREFA:
+1. Adicionar os 7 na chamada de command.agent.ts, na ordem acima,
+   logo após offer.
+2. Cada agente recebe: intakeData + strategyData + output do offer
+   + outputs dos agentes anteriores na sequência (conforme mapa
+   acima).
+3. Aplicar a mesma lógica de hardConstraints (sempre respeitadas) +
+   boldnessOpportunities (liberadas só em appealIntensity="ousado")
+   já validada no offer — os 7 devem herdar essa régua, não cada um
+   reinventar.
+4. Cada agente gera content_piece visível ao founder (não só
+   brainData), com duas camadas: aplicada (o output usado na copy)
+   e raciocínio (o "porquê", expansível/colapsável).
+5. Aplicar guard de idempotência (mesmo padrão já usado em todo o
+   sistema) — cada um dos 7 precisa de agentRole próprio, sem
+   colisão.
+6. Classificar os 7 no execution_governor por modo (QUICK/STANDARD/
+   PREMIUM) — não fazer todos rodarem em toda campanha
+   indiscriminadamente; QUICK (budget < R$5k) provavelmente não
+   precisa do stack completo.
+
+PROVA EXIGIDA:
+1. Rodar uma campanha de teste completa e confirmar via SELECT que
+   os 7 executam, na ordem certa, cada um com seu próprio agentRole.
+2. Mostrar o output real de cada um dos 7 (não resumo) para
+   avaliação qualitativa.
+3. Confirmar que ad_copy, vsl_script e landing_page (os agentes de
+   copy maduros) agora recebem e usam os outputs desses 7 como
+   contexto — comparar copy ANTES (cega ao layer de oferta) e
+   DEPOIS (com os 7 alimentando).
+4. Zero cobrança duplicada, zero colisão de idempotência — SELECT
+   confirmando.
+5. Custo real em créditos do stack completo, para eu avaliar contra
+   a classificação de modo QUICK/STANDARD/PREMIUM.
+
+Um item de cada vez se necessário — pode ser dividido em sub-tasks
+se o escopo for grande demais para uma rodada.

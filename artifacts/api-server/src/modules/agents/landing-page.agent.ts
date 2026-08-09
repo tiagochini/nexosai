@@ -396,6 +396,10 @@ export async function runLandingPageAgent(
     ? `Avatar: ${profile.primaryAvatar.name} | Desejo: ${profile.primaryAvatar.deepestDesire} | Objeções: ${profile.primaryAvatar.typicalObjections.slice(0, 3).join("; ")} | Tom: ${profile.primaryAvatar.languageStyle}`
     : "";
 
+  const psychologyLayerBlock = intakeData["_psychologyLayer"]
+    ? `\n\n---\n${String(intakeData["_psychologyLayer"])}\n---`
+    : "";
+
   const userMessage = `Projete a estrutura completa da página de vendas para esta campanha.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
@@ -410,6 +414,7 @@ ${avatarContext}
 
 **Estrutura da oferta:**
 ${JSON.stringify(strategy.offerPositioning ?? {}, null, 2)}
+${psychologyLayerBlock}
 
 **REQUISITOS:**
 - Defina o attention ratio (Oli Gardner) antes de projetar — 1 objetivo, 1 CTA principal

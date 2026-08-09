@@ -309,6 +309,10 @@ ${profile.segments
   .join("\n")}`
     : "";
 
+  const psychologyLayerBlock = intakeData["_psychologyLayer"]
+    ? `\n\n---\n${String(intakeData["_psychologyLayer"])}\n---`
+    : "";
+
   const userMessage = `Crie o pacote completo de anúncios para a campanha — Meta Ads, Google Ads e TikTok Ads por segmento.
 
 **Produto:** ${String(intakeData["product.name"] ?? "")} — R$${String(intakeData["product.price"] ?? "")}
@@ -323,6 +327,7 @@ ${profile ? `${profile.primaryAvatar.name} — ${profile.primaryAvatar.deepestDe
 
 **Mecanismo único:** ${profile?.positioning?.uniqueMechanism ?? ""}
 **Big Idea:** ${profile?.positioning?.campaignBigIdea ?? strategy.campaignArchitecture?.coreNarrative ?? ""}
+${psychologyLayerBlock}
 
 **REQUISITOS:**
 - Diagnostique o estágio de consciência do avatar antes de começar (Ryan Deiss)
