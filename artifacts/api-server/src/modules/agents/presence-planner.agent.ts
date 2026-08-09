@@ -68,6 +68,16 @@ export interface PresenceLaunchContext {
   launchPhaseHint?: string;
 }
 
+export interface LifestylePreferences {
+  hobbies?: string;
+  gastronomy?: string;
+  vehicles?: string;
+  scenarios?: string;
+  accessories?: string;
+  countries?: string;
+  other?: string;
+}
+
 export interface PresencePlannerInput {
   platform: "instagram" | "facebook" | "tiktok" | "linkedin";
   postsPerDay: number;
@@ -78,6 +88,7 @@ export interface PresencePlannerInput {
   weekStartISO: string; // segunda-feira da semana planejada (YYYY-MM-DD)
   launchContext?: PresenceLaunchContext | null;
   insight?: PresenceInsightOutput | null;
+  lifestylePreferences?: LifestylePreferences | null;
 }
 
 const PLANNER_PROMPT = `Você é o Agente de Presença Social do NexOS AI — estrategista de conteúdo orgânico que mantém a marca do usuário viva TODOS os dias, com ou sem lançamento ativo.
@@ -182,6 +193,19 @@ Formatos vencedores: ${input.insight.winningFormats.join(", ") || "—"}
 Ajustes recomendados: ${input.insight.adjustments.join("; ") || "—"}`
     : "";
 
+  const lp = input.lifestylePreferences;
+  const lifestyleBlock = lp && Object.values(lp).some(v => v?.trim())
+    ? `**LIFESTYLE E PREFERÊNCIAS PESSOAIS DO APRESENTADOR:**
+Use esses elementos para enriquecer a direção visual (visualDirection) e os roteiros (reelScript/videoScript) — mencione adereços, cenários, veículos, gastronomia e hobbies de forma natural e contextual. NUNCA force — incorpore quando fizer sentido para o post.
+${lp.hobbies     ? `- Hobbies: ${lp.hobbies}` : ""}
+${lp.gastronomy  ? `- Gastronomia favorita: ${lp.gastronomy}` : ""}
+${lp.vehicles    ? `- Veículos: ${lp.vehicles}` : ""}
+${lp.scenarios   ? `- Cenários favoritos: ${lp.scenarios}` : ""}
+${lp.accessories ? `- Adereços/acessórios: ${lp.accessories}` : ""}
+${lp.countries   ? `- Países/destinos: ${lp.countries}` : ""}
+${lp.other       ? `- Outros: ${lp.other}` : ""}`
+    : "";
+
   const result = await runAgent({
     campaignId: null,
     workspaceId,
@@ -207,6 +231,8 @@ ${input.businessContext || "não informado — gere conteúdo de autoridade gen�
 ${launchBlock}
 
 ${insightBlock}
+
+${lifestyleBlock}
 
 Gere exatamente ${totalPosts} posts (${Math.min(input.postsPerDay, 5)}/dia × 7 dias, dayIndex 0 a 6). Distribua os horários preferidos. Retorne APENAS JSON.`,
       },

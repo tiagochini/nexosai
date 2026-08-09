@@ -1432,6 +1432,15 @@ type PersonaData = {
   trejeitos?: string;
   brandPresence?: string;
   reelStyle?: string;
+  lifestylePreferences?: {
+    hobbies?: string;
+    gastronomy?: string;
+    vehicles?: string;
+    scenarios?: string;
+    accessories?: string;
+    countries?: string;
+    other?: string;
+  };
   updatedAt?: string;
 };
 
@@ -1468,6 +1477,14 @@ function IdentidadeTab() {
   const [trejeitos,      setTrejeitos]      = useState("");
   const [brandPresence,  setBrandPresence]  = useState("");
   const [reelStyle,      setReelStyle]      = useState("");
+  // ── Lifestyle preferences ─────────────────────────────────────────────────
+  const [lsHobbies,      setLsHobbies]      = useState("");
+  const [lsGastronomy,   setLsGastronomy]   = useState("");
+  const [lsVehicles,     setLsVehicles]     = useState("");
+  const [lsScenarios,    setLsScenarios]    = useState("");
+  const [lsAccessories,  setLsAccessories]  = useState("");
+  const [lsCountries,    setLsCountries]    = useState("");
+  const [lsOther,        setLsOther]        = useState("");
   const [saving,         setSaving]         = useState(false);
 
   // ── Load persona + workspace metadata (clone state) + HeyGen status ─────
@@ -1488,6 +1505,13 @@ function IdentidadeTab() {
         setTrejeitos(p.trejeitos ?? "");
         setBrandPresence(p.brandPresence ?? "");
         setReelStyle(p.reelStyle ?? "");
+        setLsHobbies(p.lifestylePreferences?.hobbies ?? "");
+        setLsGastronomy(p.lifestylePreferences?.gastronomy ?? "");
+        setLsVehicles(p.lifestylePreferences?.vehicles ?? "");
+        setLsScenarios(p.lifestylePreferences?.scenarios ?? "");
+        setLsAccessories(p.lifestylePreferences?.accessories ?? "");
+        setLsCountries(p.lifestylePreferences?.countries ?? "");
+        setLsOther(p.lifestylePreferences?.other ?? "");
         if (p.voiceCloneId) setRecState("done");
         // Load clone state from workspace metadata
         const meta = workspace.metadata ?? {};
@@ -1629,6 +1653,15 @@ function IdentidadeTab() {
           trejeitos:      trejeitos || undefined,
           brandPresence:  brandPresence || undefined,
           reelStyle:      reelStyle || undefined,
+          lifestylePreferences: {
+            hobbies:     lsHobbies     || undefined,
+            gastronomy:  lsGastronomy  || undefined,
+            vehicles:    lsVehicles    || undefined,
+            scenarios:   lsScenarios   || undefined,
+            accessories: lsAccessories || undefined,
+            countries:   lsCountries   || undefined,
+            other:       lsOther       || undefined,
+          },
         }),
       });
       setPersona(result.persona);
@@ -1991,6 +2024,73 @@ function IdentidadeTab() {
               value={reelStyle}
               onChange={e => setReelStyle(e.target.value)}
               placeholder="Ex: Começo sempre com uma pergunta provocadora nos primeiros 3 segundos. Uso cortes rápidos. Fecho com uma frase de impacto antes do CTA. Prefiro cenário externo com luz natural…"
+              className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
+              rows={3}
+            />
+          </FieldRow>
+        </div>
+      </SectionCard>
+
+      {/* ── Seção 5: Lifestyle & Preferências Pessoais ── */}
+      <SectionCard title="Lifestyle & Preferências Pessoais" icon={Wand2}>
+        <p className="text-[11px] text-muted-foreground/60 mb-4 leading-relaxed">
+          Os agentes de roteiro e direção visual usam esses dados para enriquecer <strong className="text-muted-foreground/80">automaticamente</strong> o{" "}
+          <code className="font-mono text-[10px]">visualDirection</code> e os scripts de vídeo — adereços, cenários, hobbies e referências que aparecem de forma natural nos conteúdos, sem que você precise especificar em cada post.
+        </p>
+        <div className="space-y-0">
+          <FieldRow label="Hobbies & Esportes" sublabel="O que você pratica no tempo livre">
+            <Input
+              value={lsHobbies}
+              onChange={e => setLsHobbies(e.target.value)}
+              placeholder="Ex: golfe, mergulho, automobilismo, equitação, pesca esportiva"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+          <FieldRow label="Gastronomia" sublabel="Culinária, restaurantes, bebidas favoritas">
+            <Input
+              value={lsGastronomy}
+              onChange={e => setLsGastronomy(e.target.value)}
+              placeholder="Ex: japonesa, italiana, vinhos naturais, whisky japonês, fine dining"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+          <FieldRow label="Veículos" sublabel="Carros, motos, embarcações ou aeronaves">
+            <Input
+              value={lsVehicles}
+              onChange={e => setLsVehicles(e.target.value)}
+              placeholder="Ex: Porsche 911 GT3 RS, lancha Azimut 50, Ferrari SF90"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+          <FieldRow label="Adereços & Acessórios" sublabel="Relógios, joias, peças de vestuário icônicas">
+            <Input
+              value={lsAccessories}
+              onChange={e => setLsAccessories(e.target.value)}
+              placeholder="Ex: Richard Mille RM 11-03 (casual), Rolex Daytona (formal), Air Jordan 1 Chicago"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+          <FieldRow label="Cenários Favoritos" sublabel="Locais, ambientes e paisagens de referência">
+            <Input
+              value={lsScenarios}
+              onChange={e => setLsScenarios(e.target.value)}
+              placeholder="Ex: Alpes suíços, Maldivas, Quinta em Trás-os-Montes, penthouse vista para o mar"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+          <FieldRow label="Países & Destinos" sublabel="Países com que você tem afinidade ou frequenta">
+            <Input
+              value={lsCountries}
+              onChange={e => setLsCountries(e.target.value)}
+              placeholder="Ex: Portugal, Japão, Maldivas, Mônaco, Dubai, Itália"
+              className="font-mono h-9 rounded-none bg-background/60 border-border/50 focus-visible:ring-primary text-sm"
+            />
+          </FieldRow>
+          <FieldRow label="Outros Elementos" sublabel="Qualquer detalhe de estilo de vida relevante">
+            <Textarea
+              value={lsOther}
+              onChange={e => setLsOther(e.target.value)}
+              placeholder="Ex: colecionador de arte contemporânea, frequenta leilões em Londres, pratica meditação diária, tem uma adega com mais de 300 rótulos…"
               className="font-mono text-xs rounded-none bg-background/60 border-border/50 focus-visible:ring-primary resize-none"
               rows={3}
             />

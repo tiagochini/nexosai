@@ -267,6 +267,15 @@ router.patch("/me/persona", async (req, res): Promise<void> => {
     trejeitos:     z.string().max(1500).optional(),
     brandPresence: z.string().max(800).optional(),
     reelStyle:     z.string().max(800).optional(),
+    lifestylePreferences: z.object({
+      hobbies:     z.string().max(600).optional(),
+      gastronomy:  z.string().max(600).optional(),
+      vehicles:    z.string().max(600).optional(),
+      scenarios:   z.string().max(600).optional(),
+      accessories: z.string().max(600).optional(),
+      countries:   z.string().max(600).optional(),
+      other:       z.string().max(600).optional(),
+    }).optional(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
@@ -281,12 +290,13 @@ router.patch("/me/persona", async (req, res): Promise<void> => {
   const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
   const existingPersona  = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
   const patch: Record<string, unknown> = {};
-  if (parsed.data.voiceName      !== undefined) patch["voiceName"]      = parsed.data.voiceName;
-  if (parsed.data.heygenAvatarId !== undefined) patch["heygenAvatarId"] = parsed.data.heygenAvatarId;
-  if (parsed.data.speakingStyle  !== undefined) patch["speakingStyle"]  = parsed.data.speakingStyle;
-  if (parsed.data.trejeitos      !== undefined) patch["trejeitos"]      = parsed.data.trejeitos;
-  if (parsed.data.brandPresence  !== undefined) patch["brandPresence"]  = parsed.data.brandPresence;
-  if (parsed.data.reelStyle      !== undefined) patch["reelStyle"]      = parsed.data.reelStyle;
+  if (parsed.data.voiceName             !== undefined) patch["voiceName"]             = parsed.data.voiceName;
+  if (parsed.data.heygenAvatarId        !== undefined) patch["heygenAvatarId"]        = parsed.data.heygenAvatarId;
+  if (parsed.data.speakingStyle         !== undefined) patch["speakingStyle"]         = parsed.data.speakingStyle;
+  if (parsed.data.trejeitos             !== undefined) patch["trejeitos"]             = parsed.data.trejeitos;
+  if (parsed.data.brandPresence         !== undefined) patch["brandPresence"]         = parsed.data.brandPresence;
+  if (parsed.data.reelStyle             !== undefined) patch["reelStyle"]             = parsed.data.reelStyle;
+  if (parsed.data.lifestylePreferences  !== undefined) patch["lifestylePreferences"]  = parsed.data.lifestylePreferences;
   const updatedPersona = { ...existingPersona, ...patch, updatedAt: new Date().toISOString() };
   await db
     .update(workspacesTable)

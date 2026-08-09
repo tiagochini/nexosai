@@ -547,6 +547,10 @@ async function generateWeekNow(
   const businessContext = await buildBusinessContext(workspaceId, config);
   const enabled = (config.platforms ?? []).filter((p) => p.enabled);
 
+  // Load lifestyle preferences once for this workspace (shared across all platforms)
+  const lifestylePersona = await getWorkspacePersona(workspaceId);
+  const lifestylePreferences = lifestylePersona.lifestylePreferences ?? null;
+
   for (const platform of enabled) {
     try {
       // Stable idempotency key: workspace + week + platform — survives process restarts.
@@ -565,6 +569,7 @@ async function generateWeekNow(
           weekStartISO,
           launchContext: launch?.context ?? null,
           insight,
+          lifestylePreferences,
         },
         log,
         { idempotencyKeyOverride: plannerIdempotencyKey },
@@ -1829,6 +1834,7 @@ async function getWorkspacePersona(workspaceId: string): Promise<{
     heygenAvatarId: persona.heygenAvatarId as string | undefined,
     voiceCloneId: persona.voiceCloneId as string | undefined,
     avatarType: (persona.avatarType as "talking_photo" | "stock" | "digital_twin" | undefined) ?? "talking_photo",
+    lifestylePreferences: (persona.lifestylePreferences ?? null) as import("../agents/presence-planner.agent.js").LifestylePreferences | null,
   };
 }
 
