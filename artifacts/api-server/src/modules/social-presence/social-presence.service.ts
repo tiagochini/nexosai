@@ -1322,9 +1322,55 @@ export async function publishDuePresencePosts(): Promise<void> {
         // Image formats are Instagram feed posts that don't need video (includes image-mode stories)
         const isImageFormat = (!isVideoFormat && post.platform === "instagram") || isStoryImage;
         if (needsMedia && mediaUrls.length === 0) {
-          // ── Vídeo: aguardar geração em andamento ──────────────────────────────
-          if (isVideoFormat && (post.mediaGenStatus === "video_generating" || post.mediaGenStatus === "storyboard_generating" || post.mediaGenStatus === "storyboard_ready" || post.mediaGenStatus === "storyboard_draft")) {
-            log.info({ postId: post.id, mediaGenStatus: post.mediaGenStatus }, "presence: reel/story sem vídeo pronto — aguardando geração (skip silencioso)");
+          // ── Vídeo: gerenciar pipeline de storyboard → aprovação → vídeo ───────
+          if (isVideoFormat) {
+            const gs = post.mediaGenStatus;
+
+            // Vídeo ou storyboard já em geração — aguardar silenciosamente
+            if (gs === "video_generating" || gs === "storyboard_generating") {
+              continue;
+            }
+
+            // Storyboard gerado — aguardar aprovação do usuário para gerar vídeo
+            if (gs === "storyboard_ready" || gs === "storyboard_draft") {
+              if (!post.errorMessage?.includes("Aprovação pendente")) {
+                await db
+                  .update(socialPresencePostsTable)
+                  .set({ errorMessage: "Storyboard pronto — abra o post e clique em 'Gerar Vídeo' para gerar o vídeo com IA." })
+                  .where(eq(socialPresencePostsTable.id, post.id));
+              }
+              continue;
+            }
+
+            // null / idle / failed → auto-gerar storyboard como referência visual
+            log.info({ postId: post.id, platform: post.platform, format: post.format }, "presence: sem mídia — iniciando geração automática de storyboard para vídeo");
+            await db
+              .update(socialPresencePostsTable)
+              .set({ status: "draft", mediaGenStatus: "storyboard_generating", errorMessage: null, storyboardUrls: [] })
+              .where(eq(socialPresencePostsTable.id, post.id));
+            const videoPostSnapshot = { ...post };
+            setImmediate(() => {
+              generateStoryboardFrame(videoPostSnapshot.visualDirection, videoPostSnapshot.caption, videoPostSnapshot.platform, videoPostSnapshot.format, log)
+                .then(async ({ buf, mimeType, isAI }) => {
+                  const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
+                  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+                  const key = presenceStoryboardObjectKey(videoPostSnapshot.workspaceId, videoPostSnapshot.id, 0).replace(/\.png$/, `.${ext}`);
+                  await uploadBufferToGCS(buf, key, mimeType);
+                  const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ mediaGenStatus: newStatus, storyboardUrls: [serveUrl], errorMessage: "Storyboard pronto — abra o post e clique em 'Gerar Vídeo' para gerar o vídeo com IA." })
+                    .where(eq(socialPresencePostsTable.id, videoPostSnapshot.id));
+                  log.info({ postId: videoPostSnapshot.id, newStatus, key }, "presence: storyboard de vídeo auto-gerado ✓");
+                })
+                .catch(async (err) => {
+                  log.warn({ err, postId: videoPostSnapshot.id }, "presence: auto-geração de storyboard de vídeo falhou");
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ mediaGenStatus: "failed", status: "draft", errorMessage: `Auto-geração de storyboard falhou: ${err instanceof Error ? err.message : String(err)}` })
+                    .where(eq(socialPresencePostsTable.id, videoPostSnapshot.id));
+                });
+            });
             continue;
           }
 
