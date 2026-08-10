@@ -280,9 +280,51 @@ export default function IntegracoesPage() {
                               )}
                             </div>
                             <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 leading-relaxed">{entry.description}</p>
-                            {isConn && integration?.accountName && (
-                              <p className="text-[10px] font-mono text-success/70 mt-0.5">{integration.accountName}</p>
-                            )}
+                            {isConn && integration && (() => {
+                              const meta = integration.metadata;
+                              const profilePic = meta?.igProfilePictureUrl;
+                              const username = meta?.igUsername;
+                              const followers = meta?.igFollowersCount;
+                              const mediaCount = meta?.igMediaCount;
+                              const hasIgData = profilePic || username || followers !== undefined;
+                              if (!hasIgData && !integration.accountName) return null;
+                              return (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  {profilePic ? (
+                                    <img
+                                      src={profilePic}
+                                      alt="Instagram profile"
+                                      className="w-8 h-8 rounded-full border border-success/40 object-cover shrink-0"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full border border-success/30 bg-success/10 flex items-center justify-center shrink-0">
+                                      <span className="text-[10px] font-mono text-success/60">
+                                        {(integration.accountName ?? "?")[0].toUpperCase()}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    {integration.accountName && (
+                                      <p className="text-[10px] font-mono text-success/80 truncate leading-tight">
+                                        {integration.accountName}
+                                      </p>
+                                    )}
+                                    {username && integration.accountName !== `@${username}` && (
+                                      <p className="text-[10px] font-mono text-success/50 truncate leading-tight">
+                                        @{username}
+                                      </p>
+                                    )}
+                                    {(followers !== undefined || mediaCount !== undefined) && (
+                                      <p className="text-[9px] font-mono text-muted-foreground/50 leading-tight mt-0.5">
+                                        {followers !== undefined && `${followers.toLocaleString("pt-BR")} seguidores`}
+                                        {followers !== undefined && mediaCount !== undefined && " · "}
+                                        {mediaCount !== undefined && `${mediaCount.toLocaleString("pt-BR")} posts`}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
 

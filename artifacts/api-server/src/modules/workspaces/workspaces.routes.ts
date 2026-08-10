@@ -71,6 +71,7 @@ router.get("/me/integrations", async (req, res): Promise<void> => {
       status: workspaceIntegrationsTable.status,
       accountId: workspaceIntegrationsTable.accountId,
       accountName: workspaceIntegrationsTable.accountName,
+      metadata: workspaceIntegrationsTable.metadata,
       isPaymentGateway: workspaceIntegrationsTable.isPaymentGateway,
       blocksExecution: workspaceIntegrationsTable.blocksExecution,
       createdAt: workspaceIntegrationsTable.createdAt,

@@ -23,7 +23,17 @@ export interface WorkspaceIntegration {
   id: string;
   provider: Provider;
   status: "connected" | "disconnected" | "error";
+  accountId?: string;
   accountName?: string;
+  metadata?: {
+    igUsername?: string;
+    igFollowersCount?: number;
+    igProfilePictureUrl?: string;
+    igMediaCount?: number;
+    accountName?: string;
+    igAccountId?: string;
+    [key: string]: unknown;
+  };
   isPaymentGateway: boolean;
   blocksExecution: boolean;
   createdAt: string;

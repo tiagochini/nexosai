@@ -364,14 +364,48 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
 
         accountId = igAccountId;
         accessToken = pageToken;
+
+        // Buscar dados detalhados do perfil Instagram Business (username, seguidores, foto)
+        let igUsername: string | undefined;
+        let igFollowersCount: number | undefined;
+        let igProfilePictureUrl: string | undefined;
+        let igMediaCount: number | undefined;
+        if (igAccountId) {
+          try {
+            const igProfileRes = await fetch(
+              `https://graph.facebook.com/v20.0/${igAccountId}?fields=username,profile_picture_url,followers_count,media_count&access_token=${encodeURIComponent(pageToken)}`,
+            );
+            if (igProfileRes.ok) {
+              const igProfile = (await igProfileRes.json()) as {
+                username?: string;
+                profile_picture_url?: string;
+                followers_count?: number;
+                media_count?: number;
+              };
+              igUsername = igProfile.username;
+              igFollowersCount = igProfile.followers_count;
+              igProfilePictureUrl = igProfile.profile_picture_url;
+              igMediaCount = igProfile.media_count;
+              // Se tiver username do IG, usar como accountName principal
+              if (igProfile.username) accountName = `@${igProfile.username}`;
+            }
+          } catch {
+            // Non-critical — profile details are optional
+          }
+        }
+
         metadataExtra = {
           accountId: pageWithIg.id,          // Facebook Page ID — usado para posting
-          accountName: pageWithIg.name,       // Nome da Página
+          accountName: pageWithIg.name,       // Nome da Página Facebook
           igAccountId: igAccountId,           // Instagram Business Account ID
           userId: me.id,                      // ID pessoal do FB
+          igUsername,                         // @username do Instagram
+          igFollowersCount,                   // Número de seguidores
+          igProfilePictureUrl,                // URL da foto de perfil
+          igMediaCount,                       // Total de posts publicados
         };
         logger.info(
-          { pageId: pageWithIg.id, igAccountId, pageName: pageWithIg.name },
+          { pageId: pageWithIg.id, igAccountId, pageName: pageWithIg.name, igUsername, igFollowersCount },
           "Meta OAuth: Page encontrada e vinculada",
         );
       } else {
