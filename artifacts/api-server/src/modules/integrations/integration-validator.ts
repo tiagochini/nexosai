@@ -456,10 +456,15 @@ async function validateMetaGraph(creds: Credentials, providerLabel: string): Pro
       // debug_token falhou silenciosamente — não crítico
     }
 
-    const name = me.name ?? me.id ?? "Conta Meta";
+    // Prefer Instagram @username (from IG profile row) over the Facebook user/page name
+    const igUsernameRow = rows.find(r => r.label === "Username");
+    const igDisplayName = igUsernameRow?.value; // e.g. "@agencianexosai"
+    const fbName = me.name ?? me.id ?? "Conta Meta";
+    const name = igDisplayName ?? fbName;
+
     const detailLine = pageInfo
       ? `✓ ${providerLabel}: ${name} — Página: ${pageInfo}${igAccountId ? ` — IG: ${igAccountId}` : ""}`
-      : `✓ ${providerLabel}: conta "${name}" (ID: ${me.id})`;
+      : `✓ ${providerLabel}: conta "${fbName}" (ID: ${me.id})`;
 
     return {
       valid: true,

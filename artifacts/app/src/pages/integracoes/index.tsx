@@ -282,19 +282,25 @@ export default function IntegracoesPage() {
                             <p className="text-[11px] font-mono text-muted-foreground/60 mt-0.5 leading-relaxed">{entry.description}</p>
                             {isConn && integration && (() => {
                               const meta = integration.metadata;
-                              const profilePic = meta?.igProfilePictureUrl;
+                              // Use server-side proxy for the profile picture so it loads
+                              // on all devices regardless of Facebook CDN geographic routing.
+                              const hasProfilePic = !!(meta?.igProfilePictureUrl);
+                              const profilePicProxy = hasProfilePic
+                                ? `/api/workspaces/me/integrations/${integration.id}/profile-picture`
+                                : null;
                               const username = meta?.igUsername;
                               const followers = meta?.igFollowersCount;
                               const mediaCount = meta?.igMediaCount;
-                              const hasIgData = profilePic || username || followers !== undefined;
+                              const hasIgData = hasProfilePic || username || followers !== undefined;
                               if (!hasIgData && !integration.accountName) return null;
                               return (
                                 <div className="flex items-center gap-2 mt-1.5">
-                                  {profilePic ? (
+                                  {profilePicProxy ? (
                                     <img
-                                      src={profilePic}
+                                      src={profilePicProxy}
                                       alt="Instagram profile"
                                       className="w-8 h-8 rounded-full border border-success/40 object-cover shrink-0"
+                                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                                     />
                                   ) : (
                                     <div className="w-8 h-8 rounded-full border border-success/30 bg-success/10 flex items-center justify-center shrink-0">

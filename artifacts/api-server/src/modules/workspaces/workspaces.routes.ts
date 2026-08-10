@@ -194,6 +194,51 @@ router.post("/me/integrations", async (req, res): Promise<void> => {
   res.status(existing ? 200 : 201).json({ integration, validationDetail });
 });
 
+// ── Profile picture proxy ─────────────────────────────────────────────────────
+// GET /workspaces/me/integrations/:id/profile-picture
+// Proxies the stored igProfilePictureUrl through our server so the image loads
+// on all devices regardless of Facebook CDN geographic routing.
+router.get("/me/integrations/:id/profile-picture", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+
+  const [integration] = await db
+    .select({ metadata: workspaceIntegrationsTable.metadata })
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.id, id),
+        eq(workspaceIntegrationsTable.workspaceId, req.auth.workspaceId),
+      ),
+    )
+    .limit(1);
+
+  const meta = integration?.metadata as Record<string, unknown> | null;
+  const picUrl = meta?.igProfilePictureUrl as string | undefined;
+
+  if (!picUrl) {
+    res.status(404).end();
+    return;
+  }
+
+  try {
+    const imgRes = await fetch(picUrl, {
+      signal: AbortSignal.timeout(10_000),
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; NexOS/1.0)" },
+    });
+    if (!imgRes.ok) {
+      res.status(502).end();
+      return;
+    }
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Cache-Control", "public, max-age=86400"); // 24h cache
+    res.send(buf);
+  } catch {
+    res.status(502).end();
+  }
+});
+
 // ── Test saved integration ────────────────────────────────────────────────────
 // POST /workspaces/me/integrations/:id/test
 // Re-pings the provider API using the stored token and returns a ValidationResult.
