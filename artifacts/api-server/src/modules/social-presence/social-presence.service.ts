@@ -1880,19 +1880,25 @@ async function generateStoryboardFrame(
         size,
         // Não passar quality nem response_format — compatibilidade máxima com o proxy
       } as Parameters<typeof client.images.generate>[0]);
+      // gpt-image-1.5 retorna b64_json por padrão; dall-e-3 retorna url
+      const b64 = resp.data?.[0]?.b64_json;
       const imgUrl = resp.data?.[0]?.url;
-      if (imgUrl) {
+      if (b64) {
+        const buf = Buffer.from(b64, "base64");
+        log.info({ format, size, model: oaiModel, bytes: buf.length }, `presence: ${oaiModel} storyboard generated ✓ (b64)`);
+        return { buf, mimeType: "image/png", isAI: true };
+      } else if (imgUrl) {
         const imgResp = await fetch(imgUrl, { signal: AbortSignal.timeout(30_000) });
         if (imgResp.ok) {
           const arrayBuf = await imgResp.arrayBuffer();
           const buf = Buffer.from(arrayBuf);
           const mimeType = imgResp.headers.get("content-type") ?? "image/png";
-          log.info({ format, size, model: oaiModel }, `presence: ${oaiModel} storyboard generated ✓`);
+          log.info({ format, size, model: oaiModel }, `presence: ${oaiModel} storyboard generated ✓ (url)`);
           return { buf, mimeType, isAI: true };
         }
         log.warn({ status: imgResp.status, model: oaiModel }, "presence: OpenAI image download failed — trying next");
       } else {
-        log.warn({ model: oaiModel }, "presence: OpenAI returned no url — trying next");
+        log.warn({ model: oaiModel, data: JSON.stringify(resp.data).slice(0, 200) }, "presence: OpenAI returned no b64 or url — trying next");
       }
     } catch (oaiErr) {
       log.warn({ oaiErr, model: oaiModel }, `presence: ${oaiModel} failed — trying next`);
