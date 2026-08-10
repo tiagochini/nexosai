@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,30 @@ import { IntegrationChatPanel } from "@/components/integration-chat-panel";
 export default function IntegracoesPage() {
   const queryClient = useQueryClient();
   const [connectModal, setConnectModal] = useState<CatalogEntry | null>(null);
+
+  // Handle mobile OAuth redirect-mode return: the server redirects to
+  // /integracoes?oauth_connected=instagram  (success)
+  // /integracoes?oauth_error=<message>       (failure)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("oauth_connected");
+    const errMsg   = params.get("oauth_error");
+
+    if (connected || errMsg) {
+      // Clean the URL immediately so the toast doesn't re-fire on refresh
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
+
+      if (connected) {
+        toast.success(`${connected.charAt(0).toUpperCase() + connected.slice(1)} conectado com sucesso!`);
+        // Refresh the integrations list so the connected status appears
+        void queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+      } else if (errMsg) {
+        toast.error(`Falha ao conectar: ${errMsg}`);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
   type TestResultRow = { label: string; value: string; status?: "ok" | "warn" | "error" };

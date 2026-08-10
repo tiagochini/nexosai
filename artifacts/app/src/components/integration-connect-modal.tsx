@@ -763,9 +763,26 @@ export function ConnectModal({
     setOauthLoading(true);
     setOauthError(null);
     try {
-      const body = await customFetch<{ url: string }>(
-        `/api/integrations/oauth/start/${entry.provider}`,
-      );
+      // Detect mobile — Android / iOS browsers intercept Meta OAuth via the Facebook/Instagram
+      // native app, which means window.opener is null and the callback can't reach the
+      // original tab via postMessage or localStorage. The fix: on mobile, redirect the
+      // current tab to the OAuth URL (redirect-mode) and let the callback redirect back
+      // to /integracoes with ?oauth_connected=<provider> or ?oauth_error=<msg>.
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      const startUrl = isMobile
+        ? `/api/integrations/oauth/start/${entry.provider}?redirect_mode=1`
+        : `/api/integrations/oauth/start/${entry.provider}`;
+
+      const body = await customFetch<{ url: string }>(startUrl);
+
+      if (isMobile) {
+        // Full-page redirect: navigates the current tab to Meta OAuth.
+        // The callback will redirect back to /integracoes?oauth_connected=<provider>.
+        window.location.href = body.url;
+        return; // state updates don't matter — page is leaving
+      }
+
       const popup = window.open(body.url, "nexos_oauth", "width=620,height=700,scrollbars=yes,resizable=yes");
       if (!popup) {
         setOauthError("O popup foi bloqueado pelo browser. Permita popups para este site e tente novamente.");
@@ -840,7 +857,9 @@ export function ConnectModal({
           }
         } catch { /* ignore */ }
 
-        handleResult(false, undefined);
+        // Popup closed without any completion signal and integration not found.
+        // This usually means the user cancelled OAuth or it failed silently on mobile.
+        handleResult(false, "Conexão não concluída. Verifique se autorizou o acesso e tente novamente.");
         setOauthLoading(false); // explicitly reset if handleResult didn't fire success
       }, 600);
     } catch (err) {

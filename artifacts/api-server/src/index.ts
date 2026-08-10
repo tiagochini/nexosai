@@ -24,8 +24,8 @@ import { resumeGeneratingCampaigns } from "./modules/orchestration/orchestration
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
-import { db, campaignAgentsTable, campaignsTable } from "@workspace/db";
-import { eq, and, lt } from "drizzle-orm";
+import { db, campaignAgentsTable, campaignsTable, workspaceIntegrationsTable } from "@workspace/db";
+import { eq, and, lt, sql as sqlRaw } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
 
@@ -131,6 +131,26 @@ Promise.all([
   // NOTE: "generating" campaigns are NOT reset here — they will be re-enqueued
   // below (after agents are marked failed) so content generation resumes from
   // the last checkpoint saved in contentPiecesTable.
+
+  // INTEGRATION-DEDUP: Delete older duplicate rows in workspace_integrations, keeping only the
+  // most recent row per (workspace_id, provider). This fixes the state where multiple failed
+  // OAuth attempts each created a separate disconnected row (no UNIQUE constraint on the pair).
+  // The OAuth upsert now does DELETE + INSERT to prevent new duplicates, but existing ones
+  // in production must be cleaned up at boot. Safe to run on every boot — idempotent.
+  db.execute(sqlRaw`
+    DELETE FROM workspace_integrations
+    WHERE id NOT IN (
+      SELECT DISTINCT ON (workspace_id, provider) id
+      FROM workspace_integrations
+      ORDER BY workspace_id, provider, created_at DESC
+    )
+  `)
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup: removed duplicate workspace_integrations rows");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup (integration dedup) failed")),
 
   // RC-FIX: Only reset campaigns stuck in "analyzing" for > 30 min.
   // Campaigns that JUST transitioned (e.g. fresh finalize before a restart) must NOT be reset,

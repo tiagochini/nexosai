@@ -217,8 +217,13 @@ router.get("/start/:provider", requireAuth, (req, res): void => {
     return;
   }
 
+  // Mobile redirect-mode: embed flag in state so callback can do a full-page redirect
+  // instead of the popup-based postMessage flow (which doesn't work when the Meta
+  // OAuth is handled by the Facebook/Instagram native app on Android).
+  const redirectMode = req.query["redirect_mode"] === "1";
+
   const state = jwt.sign(
-    { workspaceId: req.auth.workspaceId, provider },
+    { workspaceId: req.auth.workspaceId, provider, redirectMode },
     env.JWT_SECRET,
     { expiresIn: "10m" },
   );
@@ -246,11 +251,33 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
   const { code, state, error } = req.query;
 
   if (error || !code || !state) {
-    res.send(popupPage(false, typeof error === "string" ? error : "Autorização cancelada."));
+    // Normalize empty-string error from Meta (sends ?error= without value) to a readable message
+    const errMsg = (typeof error === "string" && error.trim())
+      ? error.trim()
+      : !code
+      ? "Autorização cancelada ou negada pelo Instagram."
+      : "Parâmetros inválidos na resposta do Instagram.";
+    logger.warn({ provider, queryError: error, hasCode: !!code, hasState: !!state }, "OAuth callback: missing/cancelled");
+    // Peek at the state JWT (without verifying signature) to detect redirectMode for mobile.
+    let earlyRedirectMode = false;
+    if (state && typeof state === "string") {
+      try {
+        const rawPayload = state.split(".")[1];
+        if (rawPayload) {
+          const decoded = JSON.parse(Buffer.from(rawPayload, "base64url").toString()) as { redirectMode?: boolean };
+          earlyRedirectMode = !!decoded.redirectMode;
+        }
+      } catch { /* ignore — fall back to popupPage */ }
+    }
+    if (earlyRedirectMode) {
+      res.redirect(302, `${env.APP_URL}/integracoes?oauth_error=${encodeURIComponent(errMsg)}`);
+    } else {
+      res.send(popupPage(false, errMsg));
+    }
     return;
   }
 
-  let stateData: { workspaceId: string; provider: string };
+  let stateData: { workspaceId: string; provider: string; redirectMode?: boolean };
   try {
     stateData = jwt.verify(state as string, env.JWT_SECRET) as typeof stateData;
   } catch {
@@ -263,6 +290,21 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
     res.send(popupPage(false, "Provedor desconhecido."));
     return;
   }
+
+  // Helper: finish the OAuth callback.
+  // On desktop (popup mode): sends the popupPage HTML that postMessages the result back.
+  // On mobile (redirect mode): does a 302 redirect to the integrations page with a query param.
+  const finishOAuth = (success: boolean, errorMessage?: string) => {
+    if (stateData.redirectMode) {
+      const dest = success
+        ? `${env.APP_URL}/integracoes?oauth_connected=${encodeURIComponent(provider)}`
+        : `${env.APP_URL}/integracoes?oauth_error=${encodeURIComponent(errorMessage ?? "Falha na autenticação.")}`;
+      res.redirect(302, dest);
+    } else {
+      const msg = success ? "Conectado com sucesso!" : (errorMessage ?? "Falha na autenticação.");
+      res.send(popupPage(success, msg, provider));
+    }
+  };
 
   const platform = PLATFORMS[config.platform];
   const redirectUri = `${env.APP_URL}/api/integrations/oauth/callback/${provider}`;
@@ -286,7 +328,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         error?: { message: string };
       };
       if (!tokenData.access_token) {
-        res.send(popupPage(false, tokenData.error?.message ?? "Falha ao obter access token."));
+        finishOAuth(false, tokenData.error?.message ?? "Falha ao obter access token do Meta.");
         return;
       }
       accessToken = tokenData.access_token;
@@ -356,7 +398,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         error?: { code?: string; message?: string };
       };
       if (!tokenData.data?.access_token) {
-        res.send(popupPage(false, tokenData.error?.message ?? "Falha ao obter token TikTok."));
+        finishOAuth(false, tokenData.error?.message ?? "Falha ao obter token TikTok.");
         return;
       }
       accessToken = tokenData.data.access_token;
@@ -380,7 +422,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         error_description?: string;
       };
       if (!tokenData.access_token) {
-        res.send(popupPage(false, tokenData.error_description ?? "Falha ao obter token Google."));
+        finishOAuth(false, tokenData.error_description ?? "Falha ao obter token Google.");
         return;
       }
       accessToken = tokenData.access_token;
@@ -408,7 +450,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         message?: string;
       };
       if (!tokenData.access_token) {
-        res.send(popupPage(false, tokenData.message ?? "Falha ao obter token HubSpot."));
+        finishOAuth(false, tokenData.message ?? "Falha ao obter token HubSpot.");
         return;
       }
       accessToken = tokenData.access_token;
@@ -441,7 +483,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         error_description?: string;
       };
       if (!tokenData.access_token) {
-        res.send(popupPage(false, tokenData.error_description ?? "Falha ao obter token LinkedIn."));
+        finishOAuth(false, tokenData.error_description ?? "Falha ao obter token LinkedIn.");
         return;
       }
       accessToken = tokenData.access_token;
@@ -470,7 +512,7 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
         error?: string;
       };
       if (!tokenData.access_token) {
-        res.send(popupPage(false, tokenData.error ?? "Falha ao obter token RD Station."));
+        finishOAuth(false, tokenData.error ?? "Falha ao obter token RD Station.");
         return;
       }
       accessToken = tokenData.access_token;
@@ -482,55 +524,43 @@ router.get("/callback/:provider", async (req, res): Promise<void> => {
       accountName = me.name ?? config.label;
     }
 
-    // Upsert integration
-    const [existing] = await db
-      .select({ id: workspaceIntegrationsTable.id })
-      .from(workspaceIntegrationsTable)
-      .where(
-        and(
-          eq(workspaceIntegrationsTable.workspaceId, stateData.workspaceId),
-          eq(workspaceIntegrationsTable.provider, config.dbProvider),
-        ),
-      )
-      .limit(1);
-
+    // Upsert integration — delete ALL existing rows for this workspace+provider first,
+    // then insert a fresh one. This ensures there is always exactly ONE row per provider
+    // per workspace, preventing the duplicate-row problem that occurs when multiple
+    // failed OAuth attempts each created a separate row (no UNIQUE constraint yet on
+    // the composite key).
     const newMetadata = {
       oauthConnected: true,
       connectedAt: new Date().toISOString(),
       ...metadataExtra,
     };
 
-    if (existing) {
-      await db
-        .update(workspaceIntegrationsTable)
-        .set({
-          status: "connected",
-          accessToken,
-          accountId,
-          accountName,
-          metadata: newMetadata,
-          updatedAt: new Date(),
-        })
-        .where(eq(workspaceIntegrationsTable.id, existing.id));
-    } else {
-      await db.insert(workspaceIntegrationsTable).values({
-        workspaceId: stateData.workspaceId,
-        provider: config.dbProvider,
-        status: "connected",
-        accessToken,
-        accountId,
-        accountName,
-        isPaymentGateway: false,
-        blocksExecution: false,
-        metadata: newMetadata,
-      });
-    }
+    await db
+      .delete(workspaceIntegrationsTable)
+      .where(
+        and(
+          eq(workspaceIntegrationsTable.workspaceId, stateData.workspaceId),
+          eq(workspaceIntegrationsTable.provider, config.dbProvider),
+        ),
+      );
+
+    await db.insert(workspaceIntegrationsTable).values({
+      workspaceId: stateData.workspaceId,
+      provider: config.dbProvider,
+      status: "connected",
+      accessToken,
+      accountId,
+      accountName,
+      isPaymentGateway: false,
+      blocksExecution: false,
+      metadata: newMetadata,
+    });
 
     logger.info({ workspaceId: stateData.workspaceId, provider }, "OAuth integration connected");
-    res.send(popupPage(true, "Conectado com sucesso!", provider));
+    finishOAuth(true);
   } catch (err) {
     logger.error({ err, provider }, "OAuth callback error");
-    res.send(popupPage(false, "Erro interno ao processar autorização."));
+    finishOAuth(false, "Erro interno ao processar autorização.");
   }
 });
 
