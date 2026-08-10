@@ -1845,43 +1845,49 @@ async function generateStoryboardFrame(
     }
   }
 
-  // ── Tentativa 2: DALL-E 3 (OpenAI) ──────────────────────────────────────────
-  // Nota: o proxy de AI Integrations não aceita response_format="b64_json" (parâmetro não mapeado).
-  // Usamos response_format="url" e fazemos download manual da imagem.
-  try {
-    const client = buildImageClient();
-    const isPortrait = ["reel", "story"].includes(format);
-    const size: "1024x1024" | "1792x1024" | "1024x1792" = isPortrait ? "1024x1792" : "1792x1024";
-    log.info({ platform, format, size }, "presence: attempting DALL-E 3 storyboard (url mode)");
-    const resp = await client.images.generate({
-      model: "dall-e-3",
-      prompt: prompt.slice(0, 4000),
-      n: 1,
-      size,
-      quality: "standard",
-      // Não passar response_format — deixa o padrão (url) que funciona com o proxy
-    });
-    const imgUrl = resp.data?.[0]?.url;
-    if (imgUrl) {
-      // Download da imagem a partir da URL gerada
-      const imgResp = await fetch(imgUrl, { signal: AbortSignal.timeout(30_000) });
-      if (imgResp.ok) {
-        const arrayBuf = await imgResp.arrayBuffer();
-        const buf = Buffer.from(arrayBuf);
-        const mimeType = imgResp.headers.get("content-type") ?? "image/png";
-        log.info({ format, size }, "presence: DALL-E 3 storyboard generated ✓");
-        return { buf, mimeType, isAI: true };
+  // ── Tentativa 2: OpenAI image generation ────────────────────────────────────
+  // Tenta gpt-image-1 (novo, suportado pelo proxy de AI Integrations) e depois
+  // dall-e-3 (chave direta). Ambos usam response_format default (url).
+  const imageModelsOAI = ["gpt-image-1", "dall-e-3"];
+  for (const oaiModel of imageModelsOAI) {
+    try {
+      const client = buildImageClient();
+      const isPortrait = ["reel", "story"].includes(format);
+      const size: "1024x1024" | "1792x1024" | "1024x1792" = isPortrait ? "1024x1792" : "1792x1024";
+      log.info({ platform, format, size, model: oaiModel }, `presence: attempting ${oaiModel} storyboard (url mode)`);
+      const resp = await client.images.generate({
+        model: oaiModel,
+        prompt: prompt.slice(0, 4000),
+        n: 1,
+        size,
+        // Não passar quality nem response_format — compatibilidade máxima com o proxy
+      } as Parameters<typeof client.images.generate>[0]);
+      const imgUrl = resp.data?.[0]?.url;
+      if (imgUrl) {
+        const imgResp = await fetch(imgUrl, { signal: AbortSignal.timeout(30_000) });
+        if (imgResp.ok) {
+          const arrayBuf = await imgResp.arrayBuffer();
+          const buf = Buffer.from(arrayBuf);
+          const mimeType = imgResp.headers.get("content-type") ?? "image/png";
+          log.info({ format, size, model: oaiModel }, `presence: ${oaiModel} storyboard generated ✓`);
+          return { buf, mimeType, isAI: true };
+        }
+        log.warn({ status: imgResp.status, model: oaiModel }, "presence: OpenAI image download failed — trying next");
+      } else {
+        log.warn({ model: oaiModel }, "presence: OpenAI returned no url — trying next");
       }
-      log.warn({ status: imgResp.status }, "presence: DALL-E 3 image download failed");
-    } else {
-      log.warn({}, "presence: DALL-E 3 returned no url");
+    } catch (oaiErr) {
+      log.warn({ oaiErr, model: oaiModel }, `presence: ${oaiModel} failed — trying next`);
     }
-  } catch (dalleErr) {
-    log.warn({ dalleErr }, "presence: DALL-E 3 failed — all providers exhausted");
   }
 
-  // Todos os provedores falharam — propagar erro para o caller setar status="failed"
-  throw new Error("Geração de imagem indisponível: nenhum provedor retornou uma imagem. Verifique créditos das APIs de IA (Gemini / DALL-E).");
+  // ── Fallback: SVG placeholder (rascunho visual, sem crédito de IA) ──────────
+  // Todos os provedores de IA falharam (keys indisponíveis, cota esgotada, etc.).
+  // Gera um placeholder SVG de alta qualidade para que o usuário veja o contexto
+  // do post e possa fornecer mídia manualmente ou aguardar retry com IA.
+  log.warn({ platform, format }, "presence: all AI image providers failed — using SVG placeholder draft");
+  const svgStr = buildStoryboardSVG({ visualDirection, caption, platform, format, isDraft: true });
+  return { buf: Buffer.from(svgStr, "utf-8"), mimeType: "image/svg+xml", isAI: false };
 }
 
 /** Generates a branded SVG storyboard frame from post metadata. */
