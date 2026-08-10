@@ -320,6 +320,13 @@ export interface AccountAnalyticsPost {
   saved?: number;
 }
 
+export interface DailyMetricPoint {
+  date: string; // "YYYY-MM-DD"
+  followers?: number;
+  reach?: number;
+  impressions?: number;
+}
+
 export interface AccountAnalytics {
   integrationId: string;
   provider: string;
@@ -334,6 +341,7 @@ export interface AccountAnalytics {
   avgEngagement: number | null;
   totalReach30d: number | null;
   totalImpressions30d: number | null;
+  dailyMetrics: DailyMetricPoint[];
   recentPosts: AccountAnalyticsPost[];
   status: string;
   error?: string;
@@ -357,6 +365,7 @@ async function fetchInstagramAnalytics(
     avgEngagement: null,
     totalReach30d: null,
     totalImpressions30d: null,
+    dailyMetrics: [],
     recentPosts: [],
     status,
   };
@@ -410,19 +419,29 @@ async function fetchInstagramAnalytics(
 
       base.recentPosts = posts;
 
-      // 3. 30-day account insights
+      // 3. 30-day account insights (daily breakdown)
       try {
         const since = Math.floor((Date.now() - 30 * 86400_000) / 1000);
         const until = Math.floor(Date.now() / 1000);
-        const accInsightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=reach,impressions&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
+        const accInsightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=reach,impressions,follower_count&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
         const accInsightRes = await fetchWithTimeout(accInsightUrl);
         if (accInsightRes.ok) {
-          const accData = await accInsightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
+          const accData = await accInsightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number; end_time: string }> }> };
+          const dailyMap: Record<string, DailyMetricPoint> = {};
           for (const m of accData.data ?? []) {
             const total = (m.values ?? []).reduce((s, v) => s + (v.value ?? 0), 0);
             if (m.name === "reach") base.totalReach30d = total;
             if (m.name === "impressions") base.totalImpressions30d = total;
+            for (const v of m.values ?? []) {
+              const date = v.end_time ? v.end_time.split("T")[0] : "";
+              if (!date) continue;
+              if (!dailyMap[date]) dailyMap[date] = { date };
+              if (m.name === "reach") dailyMap[date].reach = v.value ?? 0;
+              if (m.name === "impressions") dailyMap[date].impressions = v.value ?? 0;
+              if (m.name === "follower_count") dailyMap[date].followers = v.value ?? 0;
+            }
           }
+          base.dailyMetrics = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
         }
       } catch { /* non-critical */ }
 
@@ -458,6 +477,7 @@ async function fetchFacebookAnalytics(
     avgEngagement: null,
     totalReach30d: null,
     totalImpressions30d: null,
+    dailyMetrics: [],
     recentPosts: [],
     status,
   };
@@ -499,18 +519,29 @@ async function fetchFacebookAnalytics(
       }
     }
 
-    // 30-day page insights
+    // 30-day page insights (daily breakdown)
     try {
       const since = Math.floor((Date.now() - 30 * 86400_000) / 1000);
       const until = Math.floor(Date.now() / 1000);
-      const insightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=page_post_engagements,page_impressions&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
+      const insightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=page_fans,page_impressions,page_impressions_unique&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
       const insightRes = await fetchWithTimeout(insightUrl);
       if (insightRes.ok) {
-        const insightData = await insightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
+        const insightData = await insightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number; end_time: string }> }> };
+        const dailyMap: Record<string, DailyMetricPoint> = {};
         for (const m of insightData.data ?? []) {
           const total = (m.values ?? []).reduce((s, v) => s + (v.value ?? 0), 0);
           if (m.name === "page_impressions") base.totalImpressions30d = total;
+          if (m.name === "page_impressions_unique") base.totalReach30d = total;
+          for (const v of m.values ?? []) {
+            const date = v.end_time ? v.end_time.split("T")[0] : "";
+            if (!date) continue;
+            if (!dailyMap[date]) dailyMap[date] = { date };
+            if (m.name === "page_fans") dailyMap[date].followers = v.value ?? 0;
+            if (m.name === "page_impressions") dailyMap[date].impressions = v.value ?? 0;
+            if (m.name === "page_impressions_unique") dailyMap[date].reach = v.value ?? 0;
+          }
         }
+        base.dailyMetrics = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
       }
     } catch { /* non-critical */ }
 
@@ -539,6 +570,7 @@ async function fetchTikTokAnalytics(
     avgEngagement: null,
     totalReach30d: null,
     totalImpressions30d: null,
+    dailyMetrics: [],
     recentPosts: [],
     status,
   };
@@ -594,6 +626,20 @@ async function fetchTikTokAnalytics(
         if (base.recentPosts.length > 0) {
           const engSum = base.recentPosts.reduce((s, p) => s + p.likes + p.comments, 0);
           base.avgEngagement = Math.round(engSum / base.recentPosts.length);
+
+          // Fallback daily metrics from posts sorted by date (TikTok has no historical API)
+          const cutoff = Date.now() - 30 * 86400_000;
+          const dailyMap: Record<string, DailyMetricPoint> = {};
+          for (const p of base.recentPosts) {
+            if (!p.timestamp) continue;
+            const ts = new Date(p.timestamp).getTime();
+            if (ts < cutoff) continue;
+            const date = p.timestamp.split("T")[0];
+            if (!dailyMap[date]) dailyMap[date] = { date, reach: 0, impressions: 0 };
+            dailyMap[date].reach = (dailyMap[date].reach ?? 0) + p.reach;
+            dailyMap[date].impressions = (dailyMap[date].impressions ?? 0) + p.impressions;
+          }
+          base.dailyMetrics = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
         }
       }
     } catch { /* non-critical */ }
@@ -657,6 +703,7 @@ export async function getAccountsWithAnalytics(workspaceId: string): Promise<Acc
         avgEngagement: null,
         totalReach30d: null,
         totalImpressions30d: null,
+        dailyMetrics: [],
         recentPosts: [],
         status,
       } satisfies AccountAnalytics;
@@ -677,6 +724,7 @@ export async function getAccountsWithAnalytics(workspaceId: string): Promise<Acc
       avgEngagement: null,
       totalReach30d: null,
       totalImpressions30d: null,
+      dailyMetrics: [],
       recentPosts: [],
       status: acct.status,
       error: r.reason instanceof Error ? r.reason.message : "Erro desconhecido",

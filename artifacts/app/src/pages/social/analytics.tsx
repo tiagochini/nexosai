@@ -10,8 +10,18 @@ import {
   Eye, TrendingUp, Globe, X, AlertTriangle, ChevronRight,
   BarChart3, Image, Film, Radio, Plus, Loader2,
 } from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+} from "recharts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface DailyMetricPoint {
+  date: string;
+  followers?: number;
+  reach?: number;
+  impressions?: number;
+}
 
 interface AccountAnalyticsPost {
   id: string;
@@ -41,6 +51,7 @@ interface AccountAnalytics {
   avgEngagement: number | null;
   totalReach30d: number | null;
   totalImpressions30d: number | null;
+  dailyMetrics: DailyMetricPoint[];
   recentPosts: AccountAnalyticsPost[];
   status: string;
   error?: string;
@@ -99,6 +110,135 @@ function StatChip({ icon: Icon, label, value, color }: { icon: React.ElementType
         <Icon className={`h-2.5 w-2.5 ${color ?? ""}`} />{label}
       </div>
       <div className={`font-mono font-bold text-sm ${color ?? "text-foreground"}`}>{value}</div>
+    </div>
+  );
+}
+
+// ─── Trend Chart ──────────────────────────────────────────────────────────────
+
+type ChartMetric = "reach" | "impressions" | "followers";
+
+const METRIC_LABELS: Record<ChartMetric, string> = {
+  reach: "Alcance",
+  impressions: "Impressões",
+  followers: "Seguidores",
+};
+
+const METRIC_COLORS: Record<ChartMetric, string> = {
+  reach: "#a78bfa",
+  impressions: "#38bdf8",
+  followers: "#34d399",
+};
+
+function fmtShort(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function AccountTrendChart({ dailyMetrics, provider }: { dailyMetrics: DailyMetricPoint[]; provider: string }) {
+  const availableMetrics: ChartMetric[] = (["reach", "impressions", "followers"] as ChartMetric[]).filter(
+    m => dailyMetrics.some(d => d[m] != null && d[m]! > 0)
+  );
+  const [activeMetrics, setActiveMetrics] = useState<Set<ChartMetric>>(new Set(availableMetrics));
+
+  if (availableMetrics.length === 0) return null;
+
+  const providerColor =
+    provider === "instagram" ? "#f472b6"
+    : provider === "facebook" || provider === "meta_ads" ? "#60a5fa"
+    : "#22d3ee";
+
+  const toggleMetric = (m: ChartMetric) => {
+    setActiveMetrics(prev => {
+      const next = new Set(prev);
+      if (next.has(m)) {
+        if (next.size > 1) next.delete(m); // keep at least one active
+      } else {
+        next.add(m);
+      }
+      return next;
+    });
+  };
+
+  const chartData = dailyMetrics.map(({ date, ...rest }) => ({
+    date: date.slice(5), // "MM-DD"
+    ...rest,
+  }));
+
+  return (
+    <div className="space-y-3">
+      {/* Metric toggles */}
+      <div className="flex flex-wrap gap-1.5">
+        {availableMetrics.map(m => (
+          <button
+            key={m}
+            onClick={() => toggleMetric(m)}
+            className={`font-mono text-[10px] uppercase tracking-widest px-2 py-0.5 border transition-colors ${
+              activeMetrics.has(m)
+                ? "border-current text-foreground bg-muted/20"
+                : "border-border/30 text-muted-foreground/40"
+            }`}
+            style={activeMetrics.has(m) ? { borderColor: METRIC_COLORS[m], color: METRIC_COLORS[m] } : {}}
+          >
+            {METRIC_LABELS[m]}
+          </button>
+        ))}
+      </div>
+
+      {/* Chart */}
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 9, fontFamily: "monospace", fill: "rgba(255,255,255,0.35)" }}
+            tickLine={false}
+            axisLine={{ stroke: "rgba(255,255,255,0.1)" }}
+            interval="preserveStartEnd"
+          />
+          <YAxis
+            tick={{ fontSize: 9, fontFamily: "monospace", fill: "rgba(255,255,255,0.35)" }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={fmtShort}
+            width={36}
+          />
+          <Tooltip
+            contentStyle={{
+              background: "hsl(var(--card))",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 0,
+              fontSize: 11,
+              fontFamily: "monospace",
+              color: "hsl(var(--foreground))",
+            }}
+            formatter={(value: number, name: string) => [
+              fmtShort(value),
+              METRIC_LABELS[name as ChartMetric] ?? name,
+            ]}
+            labelStyle={{ color: "rgba(255,255,255,0.5)", marginBottom: 4 }}
+          />
+          {availableMetrics.filter(m => activeMetrics.has(m)).map(m => (
+            <Line
+              key={m}
+              type="monotone"
+              dataKey={m}
+              stroke={METRIC_COLORS[m]}
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={{ r: 3, stroke: METRIC_COLORS[m], fill: METRIC_COLORS[m] }}
+              connectNulls
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+
+      {provider === "tiktok_ads" && (
+        <p className="text-[10px] font-mono text-muted-foreground/40 italic">
+          * Dados de alcance via posts publicados nos últimos 30 dias (TikTok não expõe histórico de seguidores)
+        </p>
+      )}
     </div>
   );
 }
@@ -175,6 +315,14 @@ function AccountDrawer({ account, onClose }: { account: AccountAnalytics; onClos
               )}
             </div>
           </div>
+
+          {/* 30-day trend chart */}
+          {account.dailyMetrics && account.dailyMetrics.length > 1 && (
+            <div className="px-5 py-4 border-b border-border/30">
+              <div className="text-[11px] font-mono text-muted-foreground/60 uppercase tracking-widest mb-3">Evolução 30 dias</div>
+              <AccountTrendChart dailyMetrics={account.dailyMetrics} provider={account.provider} />
+            </div>
+          )}
 
           {/* Recent posts */}
           {account.recentPosts.length > 0 && (
