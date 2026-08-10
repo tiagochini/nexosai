@@ -773,31 +773,60 @@ export function ConnectModal({
         return;
       }
 
-      // Track whether postMessage already handled the result (desktop path).
-      // On mobile, window.opener is null so postMessage never fires — we fall
-      // back to an API check when the popup/tab closes.
-      let messageHandled = false;
+      // Track whether any signal already handled the result so we don't double-fire.
+      let resultHandled = false;
 
-      const handler = (event: MessageEvent<{ type?: string; success?: boolean; provider?: string; error?: string }>) => {
-        if (event.data?.type !== "oauth_complete") return;
-        window.removeEventListener("message", handler);
-        messageHandled = true;
-        setOauthLoading(false);
-        if (event.data.success) { onOAuthSuccess(); }
-        else { setOauthError(event.data.error ?? "Falha na autenticação."); }
+      const handleResult = (success: boolean, error?: string) => {
+        if (resultHandled) return;
+        resultHandled = true;
+        window.removeEventListener("message", messageHandler);
+        window.removeEventListener("storage", storageHandler);
+        clearInterval(closedTimer);
+        if (success) {
+          onOAuthSuccess(); // modal closes — no need to setOauthLoading(false)
+        } else {
+          setOauthLoading(false);
+          setOauthError(error ?? "Falha na autenticação.");
+        }
       };
-      window.addEventListener("message", handler);
 
-      const timer = setInterval(async () => {
+      // Path 1: postMessage — works on desktop where window.opener is set.
+      const messageHandler = (event: MessageEvent<{ type?: string; success?: boolean; provider?: string; error?: string }>) => {
+        if (event.data?.type !== "oauth_complete") return;
+        handleResult(!!event.data.success, event.data.error);
+      };
+      window.addEventListener("message", messageHandler);
+
+      // Path 2: localStorage — works on mobile Chrome/Android where window.opener
+      // is null (different-tab OAuth). The callback page writes to localStorage;
+      // the storage event fires in ALL other tabs of the same origin immediately.
+      // Clear any stale value first so a leftover key doesn't fire instantly.
+      try { localStorage.removeItem("nexos_oauth_result"); } catch { /* ignore */ }
+      const storageHandler = (event: StorageEvent) => {
+        if (event.key !== "nexos_oauth_result" || !event.newValue) return;
+        try {
+          const data = JSON.parse(event.newValue) as { type?: string; success?: boolean; error?: string; ts?: number };
+          if (data.type !== "oauth_complete") return;
+          // Guard against stale values older than 30s
+          if (data.ts && Date.now() - data.ts > 30_000) return;
+          try { localStorage.removeItem("nexos_oauth_result"); } catch { /* ignore */ }
+          handleResult(!!data.success, data.error);
+        } catch { /* malformed — ignore */ }
+      };
+      window.addEventListener("storage", storageHandler);
+
+      // Path 3: popup.closed polling — last-resort API check when the tab closes
+      // without either signal firing (e.g. pop-up blocker edge cases).
+      const closedTimer = setInterval(async () => {
         if (!popup.closed) return;
-        clearInterval(timer);
-        window.removeEventListener("message", handler);
+        clearInterval(closedTimer);
+        if (resultHandled) return;
 
-        // Desktop: postMessage already handled it — nothing to do.
-        if (messageHandled) return;
+        // Small delay to let localStorage storage event fire first if it's in-flight.
+        await new Promise(r => setTimeout(r, 400));
+        if (resultHandled) return;
 
-        // Mobile fallback: postMessage couldn't reach us (window.opener was null).
-        // Check the API once to see if the provider connected successfully.
+        // Check the API once as the final fallback.
         try {
           const integrations = await customFetch<Array<{ provider: string; status: string }>>(
             "/api/workspaces/me/integrations"
@@ -806,14 +835,13 @@ export function ConnectModal({
             (i) => i.provider === entry.provider && i.status === "connected"
           );
           if (justConnected) {
-            onOAuthSuccess();
-            return; // modal will close — no need to setOauthLoading(false)
+            handleResult(true);
+            return;
           }
-        } catch {
-          // ignore — fall through to stop the spinner
-        }
+        } catch { /* ignore */ }
 
-        setOauthLoading(false);
+        handleResult(false, undefined);
+        setOauthLoading(false); // explicitly reset if handleResult didn't fire success
       }, 600);
     } catch (err) {
       setOauthLoading(false);

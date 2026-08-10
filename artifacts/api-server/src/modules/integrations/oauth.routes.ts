@@ -168,6 +168,7 @@ function popupPage(success: boolean, message: string, provider?: string): string
   <script>
     var payload=${payload};
     try{if(window.opener)window.opener.postMessage(payload,"*")}catch(e){}
+    try{localStorage.setItem("nexos_oauth_result",JSON.stringify({...payload,ts:Date.now()}))}catch(e){}
     setTimeout(function(){try{window.close()}catch(e){}},2000);
   </script>
 </body>
