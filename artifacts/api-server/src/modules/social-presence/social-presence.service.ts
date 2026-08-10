@@ -5,7 +5,7 @@
  * (narrativa injetada via Campaign Brain) quando há campanha executing/live.
  */
 
-import { eq, and, desc, gte, lt, lte, inArray, isNull } from "drizzle-orm";
+import { eq, and, desc, gte, gt, lt, lte, inArray, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
@@ -1649,6 +1649,117 @@ export async function publishDuePresencePosts(): Promise<void> {
     }
   } catch (err) {
     logger.warn({ err }, "publishDuePresencePosts: tick error (non-fatal)");
+  }
+}
+
+/**
+ * preGeneratePresenceMedia — pré-geração proativa de storyboards para posts futuros
+ *
+ * O publishDuePresencePosts só inicia a geração de mídia no momento exato de publicação,
+ * o que impede aprovação antes do horário. Esta função roda a cada tick e busca posts
+ * Instagram/TikTok agendados nas próximas 48 horas sem mídia nem geração iniciada,
+ * disparando o storyboard com antecedência para que o usuário possa aprovar.
+ *
+ * Limite: 5 posts por tick para não sobrecarregar o pipeline de imagens.
+ */
+export async function preGeneratePresenceMedia(): Promise<void> {
+  const log = logger.child({ component: "presence-media-pregenerator" });
+  try {
+    const now = new Date();
+    // 48-hour look-ahead window
+    const horizon = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const upcoming = await db
+      .select()
+      .from(socialPresencePostsTable)
+      .where(
+        and(
+          eq(socialPresencePostsTable.status, "scheduled"),
+          gt(socialPresencePostsTable.scheduledFor, now),   // future only (due posts handled by publishDuePresencePosts)
+          lte(socialPresencePostsTable.scheduledFor, horizon),
+          isNull(socialPresencePostsTable.mediaGenStatus),   // no generation started
+        ),
+      )
+      .limit(5);
+
+    if (upcoming.length === 0) return;
+    log.info({ count: upcoming.length }, "presence: proactive media pre-generation — posts found");
+
+    for (const post of upcoming) {
+      try {
+        // Only Instagram and TikTok need storyboard-based media
+        const needsMedia = post.platform === "instagram" || post.platform === "tiktok";
+        if (!needsMedia) continue;
+
+        const rawMediaUrls = Array.isArray(post.mediaUrls) ? (post.mediaUrls as string[]) : [];
+        if (rawMediaUrls.length > 0) continue; // already has media — skip
+
+        const isStoryImage =
+          post.format === "story" && (post as Record<string, unknown>).storyMediaType === "image";
+        const isVideoFormat =
+          (post.format === "reel" || post.format === "feed_video" || post.format === "story") &&
+          !isStoryImage;
+
+        log.info(
+          { postId: post.id, platform: post.platform, format: post.format, scheduledFor: post.scheduledFor },
+          "presence: starting proactive storyboard generation",
+        );
+
+        // Lock the post so concurrent ticks don't double-generate
+        await db
+          .update(socialPresencePostsTable)
+          .set({ mediaGenStatus: "storyboard_generating", storyboardUrls: [] })
+          .where(
+            and(
+              eq(socialPresencePostsTable.id, post.id),
+              isNull(socialPresencePostsTable.mediaGenStatus), // guard against race
+            ),
+          );
+
+        const snap = { ...post };
+        setImmediate(() => {
+          generateStoryboardFrame(
+            snap.visualDirection,
+            snap.caption,
+            snap.platform,
+            snap.format,
+            log,
+            snap.videoScript ?? snap.reelScript,
+          )
+            .then(async ({ buf, mimeType, isAI }) => {
+              const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
+              const ext =
+                mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
+              const key = presenceStoryboardObjectKey(snap.workspaceId, snap.id, 0).replace(
+                /\.png$/,
+                `.${ext}`,
+              );
+              await uploadBufferToGCS(buf, key, mimeType);
+              const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+              const readyMsg = isVideoFormat
+                ? "Storyboard pronto — abra o post e clique em 'Gerar Vídeo' para gerar o vídeo com IA."
+                : "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar.";
+              await db
+                .update(socialPresencePostsTable)
+                .set({ mediaGenStatus: newStatus, storyboardUrls: [serveUrl], errorMessage: readyMsg })
+                .where(eq(socialPresencePostsTable.id, snap.id));
+              log.info({ postId: snap.id, newStatus }, "presence: proactive storyboard generated ✓");
+            })
+            .catch(async (err) => {
+              log.warn({ err, postId: snap.id }, "presence: proactive storyboard generation failed — resetting for retry");
+              // Reset mediaGenStatus to null so next tick retries (no retryCount increment — this is pre-generation, not a publish attempt)
+              await db
+                .update(socialPresencePostsTable)
+                .set({ mediaGenStatus: null })
+                .where(eq(socialPresencePostsTable.id, snap.id));
+            });
+        });
+      } catch (postErr) {
+        log.warn({ postErr, postId: post.id }, "presence: preGeneratePresenceMedia post-level error (non-fatal)");
+      }
+    }
+  } catch (err) {
+    logger.warn({ err }, "presence: preGeneratePresenceMedia tick error (non-fatal)");
   }
 }
 

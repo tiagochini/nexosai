@@ -449,8 +449,14 @@ export async function processScheduledItems(): Promise<void> {
   await maybeFirePresenceWeekly(now).catch((err) =>
     log.warn({ err }, "Presence weekly tick failed — non-blocking"),
   );
-  const { publishDuePresencePosts, processDmSequences } = await import(
+  const { publishDuePresencePosts, processDmSequences, preGeneratePresenceMedia } = await import(
     "../social-presence/social-presence.service.js"
+  );
+  // Pré-geração proativa: storyboards para posts das próximas 48h que ainda não têm mídia.
+  // Roda ANTES do publishDuePresencePosts para que posts futuros já tenham storyboard
+  // gerado antes do momento de publicação — sem isso, a geração só começa na hora H.
+  await preGeneratePresenceMedia().catch((err) =>
+    log.warn({ err }, "Presence media pre-generation tick failed — non-blocking"),
   );
   await publishDuePresencePosts().catch((err) =>
     log.warn({ err }, "Presence post scheduler tick failed — non-blocking"),
