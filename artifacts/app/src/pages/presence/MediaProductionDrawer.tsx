@@ -978,21 +978,63 @@ function AITabContent({
     );
   }
 
-  // Step: Falhou
+  // Step: Falhou — mas preserva a thumbnail se ela existir
   if (step === "failed") {
+    const hasThumbnail = !!post.storyboardUrls?.[0];
     return (
       <div className="space-y-4">
+        {/* Thumbnail preservada — não perde o trabalho já feito */}
+        {hasThumbnail && (
+          <div className="space-y-2">
+            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Thumbnail gerada</p>
+            <div className="rounded-xl border border-border overflow-hidden bg-background/50">
+              <img
+                src={post.storyboardUrls![0]}
+                alt="Thumbnail"
+                className="w-full object-cover max-h-80"
+              />
+            </div>
+          </div>
+        )}
+
         <div className="rounded-xl border border-destructive/30 bg-destructive/8 p-4 text-sm">
           <p className="font-medium text-destructive flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 shrink-0" /> Geração falhou
+            <AlertTriangle className="h-4 w-4 shrink-0" /> Geração de vídeo falhou
           </p>
           {post.errorMessage && (
             <p className="mt-2 text-xs text-muted-foreground">{post.errorMessage}</p>
           )}
         </div>
-        <Button variant="outline" onClick={onReset} className="w-full">
-          <RefreshCw className="mr-2 h-4 w-4" /> Tentar novamente
-        </Button>
+
+        <div className="flex flex-col gap-2">
+          {/* Se tem thumbnail e é reel, pode tentar gerar vídeo novamente com avatar */}
+          {hasThumbnail && !isImageFormat && (
+            <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
+              {busy
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Iniciando...</>
+                : <><Video className="mr-2 h-4 w-4" />Tentar gerar vídeo novamente</>}
+            </Button>
+          )}
+          {/* Se tem thumbnail e é formato de imagem, pode aprovar direto */}
+          {hasThumbnail && isImageFormat && (
+            <Button onClick={onApproveImage} disabled={busy} className="w-full">
+              {busy
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Aprovando...</>
+                : <><CheckCircle2 className="mr-2 h-4 w-4" />Usar esta thumbnail no post</>}
+            </Button>
+          )}
+          <Button variant="outline" onClick={onReset} disabled={busy} className="w-full text-xs">
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refazer do zero
+          </Button>
+        </div>
+
+        {hasThumbnail && !isImageFormat && (
+          <p className="text-center text-xs text-muted-foreground">
+            {hasAvatar
+              ? "Avatar HeyGen configurado — clique acima para gerar o vídeo com seu avatar."
+              : "Configure um avatar HeyGen na seção acima para gerar o vídeo."}
+          </p>
+        )}
       </div>
     );
   }

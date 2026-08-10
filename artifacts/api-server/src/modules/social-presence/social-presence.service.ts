@@ -1873,13 +1873,15 @@ async function generateStoryboardFrame(
         ? (isPortrait ? "1024x1792" : "1792x1024")
         : (isPortrait ? "1024x1536" : "1536x1024");
       log.info({ platform, format, size, model: oaiModel }, `presence: attempting ${oaiModel} storyboard (url mode)`);
-      const resp = await client.images.generate({
+      const respRaw = await client.images.generate({
         model: oaiModel,
         prompt: prompt.slice(0, 4000),
         n: 1,
         size,
         // Não passar quality nem response_format — compatibilidade máxima com o proxy
       } as Parameters<typeof client.images.generate>[0]);
+      // Cast necessário: SDK tipagem retorna Stream | ImagesResponse mas chamadas sync sempre retornam ImagesResponse
+      const resp = respRaw as import("openai/resources/images.js").ImagesResponse;
       // gpt-image-1.5 retorna b64_json por padrão; dall-e-3 retorna url
       const b64 = resp.data?.[0]?.b64_json;
       const imgUrl = resp.data?.[0]?.url;
@@ -2011,6 +2013,7 @@ async function getWorkspacePersona(workspaceId: string): Promise<{
   voiceCloneId?: string;
   heygenVoiceId?: string;
   avatarType?: "talking_photo" | "stock" | "digital_twin";
+  lifestylePreferences?: import("../agents/presence-planner.agent.js").LifestylePreferences | null;
 }> {
   const [ws] = await db
     .select({ settings: workspacesTable.settings })

@@ -122,9 +122,31 @@ const PLANNER_PROMPT = `Você é o Agente de Presença Social do NexOS AI — es
 
 **REELS (reel):**
 - São o formato de maior alcance — inclua pelo menos 1 reel por dia quando possível
-- reelScript: roteiro completo com 3 seções: HOOK (primeiros 3 segundos — frase de impacto que para o scroll), CORPO (desenvolvimento em 30–60s), CTA (chamada final)
-- visualDirection: estilo visual do vídeo — enquadramento, ambiente, ritmo de corte
 - caption: legenda curta e magnética (o vídeo faz o trabalho pesado)
+- visualDirection: estilo visual detalhado — iluminação (natural/estúdio/golden hour), enquadramento (close, plano médio, plano aberto), cenário, ambientação, ritmo de corte (rápido/respirado), cores dominantes, mood geral
+- reelScript: ROTEIRO CINEMATOGRÁFICO COMPLETO — não escreva esboços nem frases soltas. Este roteiro será lido por um ator/apresentador e enviado diretamente para produção de vídeo com IA. Exija:
+
+  📍 HOOK (0–3 segundos): frase de abertura exata que PARA O SCROLL — surpreendente, controversa ou que faz uma promessa irrecusável. Escreva a frase palavra por palavra como será dita na câmera.
+
+  🎬 SET & FIGURINO: onde a pessoa está (cenário concreto — ex: "escritório minimalista com luz natural lateral, mesa branca, notebook visível ao fundo"), o que veste (ex: "blazer preto casual sem gravata, cabelo arrumado mas não formal"), qual é a energia corporal (ex: "de pé, gesticulando com leveza, tom confidente sem ser arrogante").
+
+  🗣️ CORPO (15–45 segundos): narração COMPLETA, frase por frase, como será falada. Inclua:
+  - O argumento principal dividido em 3–5 beats curtos
+  - Momentos de pausa para corte (indicados como [CORTE])
+  - Sugestões de B-roll onde cabe inserir (ex: "[B-ROLL: tela do celular mostrando resultado, 2s]")
+  - Tom e ritmo para cada trecho (ex: "[devagar, com peso]" ou "[animado, acelerando]")
+
+  🎵 TRILHA/MOOD: estilo de música de fundo que amplifica a mensagem (ex: "lo-fi beats calmos com piano, sem letra, 90 BPM" ou "silêncio total — deixa a voz liderar").
+
+  ✅ CTA (últimos 3–5 segundos): frase exata de encerramento + ação que o usuário deve tomar (seguir, comentar, salvar, clicar no link da bio). Específico e urgente.
+
+  EXEMPLO de nível esperado:
+  HOOK: "Você está desperdiçando dinheiro em anúncios sem saber o porquê — e eu vou te provar agora."
+  SET: Escritório clean, luz de janela lateral, sentado à mesa com notebook, camisa branca sem estampa, gesticulando ao falar.
+  [CORPO]
+  "Todo mundo faz campanhas. Mas 80% dos empresários..." [CORTE] "[B-ROLL: dashboard de anúncios com CPC alto, 2s]" "...não sabem que o problema não é o anúncio." [pausa 1s, levemente inclinado para a câmera] "É a OFERTA. Se a oferta não encaixa na dor, nenhum criativo salva." [CORTE] "Eu vi isso destruir R$50 mil em três semanas numa empresa que fatura milhões." [tom mais baixo, sério] [B-ROLL: gráfico caindo, 1.5s] "Quer saber como diagnosticar isso em 10 minutos?"
+  TRILHA: lo-fi minimalista, piano suave, sem letra.
+  CTA: "Salva esse vídeo e comenta DIAGNÓSTICO — te mando o checklist gratuito."
 
 **STORIES (story):**
 - caption: texto do sticker/overlay que o usuário colará manualmente — frase curta e impactante (máx 2 linhas). A API do Instagram não exibe caption em stories automaticamente.
@@ -151,8 +173,8 @@ const PLANNER_PROMPT = `Você é o Agente de Presença Social do NexOS AI — es
       "hashtags": ["string sem #"],
       "atMentions": ["username sem @"],
       "visualDirection": "string — direção visual clara",
-      "reelScript": "string — APENAS para reels: HOOK / CORPO / CTA",
-      "videoScript": "string — igual reelScript, mantido por compatibilidade",
+      "reelScript": "string — APENAS para reels: roteiro cinematográfico completo com HOOK (frase exata 0–3s), SET & FIGURINO, CORPO (narração linha por linha com [CORTE] e [B-ROLL]), TRILHA/MOOD e CTA (frase exata). Mínimo 200 palavras. Nunca escreva esboço.",
+      "videoScript": "string — mesmo conteúdo que reelScript (mantido por compatibilidade)",
       "highlightName": "string — APENAS para stories: nome do Destaque alvo",
       "dmResponseFlow": {
         "triggerKeyword": "QUERO",
