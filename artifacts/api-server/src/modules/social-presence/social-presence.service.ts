@@ -1803,11 +1803,49 @@ async function generateStoryboardFrame(
     "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
   ].join(" ");
 
-  // ── Tentativa 1: Gemini direto (mesma chave dos agentes de lançamento) ──────
+  // ── Tentativa 1a: Imagen 3 via REST (Google AI Studio — não requer SDK extra) ──
+  // Suporta aspect ratios nativos: 1:1, 3:4, 4:3, 9:16, 16:9
+  const imagenKey = env.GEMINI_API_KEY; // GEMINI_API_KEY é a chave Google AI Studio direta
+  if (imagenKey) {
+    try {
+      const isPortrait = ["reel", "story"].includes(format);
+      const aspectRatio = isPortrait ? "9:16" : "4:3";
+      log.info({ platform, format, aspectRatio }, "presence: attempting Imagen 3 storyboard (REST)");
+      const imagenResp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${imagenKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            instances: [{ prompt: prompt.slice(0, 2000) }],
+            parameters: { aspectRatio, sampleCount: 1 },
+          }),
+          signal: AbortSignal.timeout(45_000),
+        },
+      );
+      if (imagenResp.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const imagenData = await imagenResp.json() as any;
+        const b64 = imagenData?.predictions?.[0]?.bytesBase64Encoded as string | undefined;
+        const mime = (imagenData?.predictions?.[0]?.mimeType as string | undefined) ?? "image/png";
+        if (b64) {
+          log.info({ format, aspectRatio }, "presence: Imagen 3 storyboard generated ✓");
+          return { buf: Buffer.from(b64, "base64"), mimeType: mime, isAI: true };
+        }
+        log.warn({ imagenData }, "presence: Imagen 3 returned no prediction — trying next");
+      } else {
+        const errText = await imagenResp.text().catch(() => "");
+        log.warn({ status: imagenResp.status, errText }, "presence: Imagen 3 REST failed — trying next");
+      }
+    } catch (imagenErr) {
+      log.warn({ imagenErr }, "presence: Imagen 3 exception — trying next");
+    }
+  }
+
+  // ── Tentativa 1b: Gemini generateContent com inline image output ─────────────
   const geminiKey = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
   if (geminiKey) {
-    // Único modelo da Google que suporta geração de imagens via SDK (@google/generative-ai)
-    // gemini-2.0-flash-exp e gemini-2.5-flash-preview-05-20 NÃO geram imagens → removidos
+    // gemini-2.0-flash-preview-image-generation: suporta output de imagem inline
     const imageModels = ["gemini-2.0-flash-preview-image-generation"];
     for (const modelId of imageModels) {
       try {
