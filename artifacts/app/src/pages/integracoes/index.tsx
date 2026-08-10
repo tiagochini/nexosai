@@ -25,7 +25,7 @@ export default function IntegracoesPage() {
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
 
   type TestResultRow = { label: string; value: string; status?: "ok" | "warn" | "error" };
-  type TestResult = { valid: boolean; detail?: string; error?: string; validationSkipped?: boolean; rows?: TestResultRow[]; accountName?: string };
+  type TestResult = { valid: boolean; detail?: string; error?: string; validationSkipped?: boolean; rows?: TestResultRow[]; accountName?: string; profilePictureUrl?: string };
   const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
   const [expandedTest, setExpandedTest] = useState<string | null>(null);
@@ -296,23 +296,37 @@ export default function IntegracoesPage() {
                                     </button>
 
                                     {/* Expanded rows */}
-                                    {hasRows && isExpanded && (
-                                      <div className="border border-t-0 border-success/20 bg-black/30 p-2 space-y-1">
-                                        {tr.rows!.map((row, i) => (
-                                          <div key={i} className="flex gap-2 font-mono text-[10px]">
-                                            <span className="text-muted-foreground/50 shrink-0 w-[130px] text-right">{row.label}</span>
-                                            <span className={
-                                              row.status === "ok" ? "text-success/80" :
-                                              row.status === "warn" ? "text-amber-400/80" :
-                                              row.status === "error" ? "text-destructive/80" :
-                                              "text-foreground/70"
-                                            }>
-                                              {row.value}
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
+                                    {hasRows && isExpanded && (() => {
+                                      const picRow = tr.rows!.find(r => r.label === "__profilePictureUrl");
+                                      const visibleRows = tr.rows!.filter(r => r.label !== "__profilePictureUrl");
+                                      return (
+                                        <div className="border border-t-0 border-success/20 bg-black/30 p-2 space-y-1">
+                                          {picRow && (
+                                            <div className="flex gap-2 font-mono text-[10px] items-center mb-2">
+                                              <span className="text-muted-foreground/50 shrink-0 w-[130px] text-right">Foto de Perfil</span>
+                                              <img
+                                                src={picRow.value}
+                                                alt="Instagram profile"
+                                                className="w-10 h-10 rounded-full border border-success/30 object-cover"
+                                              />
+                                            </div>
+                                          )}
+                                          {visibleRows.map((row, i) => (
+                                            <div key={i} className="flex gap-2 font-mono text-[10px]">
+                                              <span className="text-muted-foreground/50 shrink-0 w-[130px] text-right">{row.label}</span>
+                                              <span className={
+                                                row.status === "ok" ? "text-success/80" :
+                                                row.status === "warn" ? "text-amber-400/80" :
+                                                row.status === "error" ? "text-destructive/80" :
+                                                "text-foreground/70"
+                                              }>
+                                                {row.value}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 );
                               })()}

@@ -22,6 +22,8 @@ export type ValidationResult = {
   validationSkipped?: boolean;
   /** Structured key-value rows for rich UI display — provider-specific details */
   rows?: Array<{ label: string; value: string; status?: "ok" | "warn" | "error" }>;
+  /** Profile picture URL for display in UI (Instagram Business accounts) */
+  profilePictureUrl?: string;
 };
 
 type Credentials = {
@@ -368,6 +370,32 @@ async function validateMetaGraph(creds: Credentials, providerLabel: string): Pro
           rows.push({ label: "Página Facebook", value: pageInfo, status: "ok" });
           if (igAccountId) {
             rows.push({ label: "Instagram Business", value: `ID: ${igAccountId}`, status: "ok" });
+
+            // Fetch IG Business profile details (username, picture, followers)
+            try {
+              const igProfileRes = await fetchWithTimeout(
+                `https://graph.facebook.com/v20.0/${igAccountId}?fields=username,profile_picture_url,followers_count,media_count&access_token=${encodeURIComponent(creds.accessToken ?? "")}`,
+                {},
+              );
+              if (igProfileRes.ok) {
+                const igProfile = (await igProfileRes.json()) as {
+                  username?: string;
+                  profile_picture_url?: string;
+                  followers_count?: number;
+                  media_count?: number;
+                };
+                if (igProfile.username) rows.push({ label: "Username", value: `@${igProfile.username}`, status: "ok" });
+                if (igProfile.followers_count !== undefined) rows.push({ label: "Seguidores", value: igProfile.followers_count.toLocaleString("pt-BR"), status: "ok" });
+                if (igProfile.media_count !== undefined) rows.push({ label: "Posts publicados", value: igProfile.media_count.toString(), status: "ok" });
+                if (igProfile.profile_picture_url) {
+                  // Store URL for frontend image display — not shown as plain text row
+                  // We include it in a special row so the frontend can detect it
+                  rows.push({ label: "__profilePictureUrl", value: igProfile.profile_picture_url, status: "ok" });
+                }
+              }
+            } catch {
+              // Non-critical — profile details are optional
+            }
           } else {
             rows.push({ label: "Instagram Business", value: "Nenhuma conta IG vinculada à Página", status: "warn" });
           }
