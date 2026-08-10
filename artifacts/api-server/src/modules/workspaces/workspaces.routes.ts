@@ -650,8 +650,12 @@ router.get("/me/persona/avatar-training-status", async (req, res): Promise<void>
 });
 
 // POST /workspaces/me/persona/select-stock-avatar — pick a ready-made avatar (no recording)
+// Also accepts voiceId to set a HeyGen stock voice for reel generation (saved as heygenVoiceId)
 router.post("/me/persona/select-stock-avatar", async (req, res): Promise<void> => {
-  const schema = z.object({ avatarId: z.string().min(1) });
+  const schema = z.object({
+    avatarId: z.string().min(1),
+    voiceId: z.string().min(1).optional(),
+  });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success || !STOCK_AVATARS.some((a) => a.id === parsed.data.avatarId)) {
     res.status(400).json({ error: "avatarId inválido", code: "VALIDATION_ERROR" });
@@ -672,11 +676,58 @@ router.post("/me/persona/select-stock-avatar", async (req, res): Promise<void> =
           heygenAvatarId: parsed.data.avatarId,
           avatarType: "stock",
           avatarUpdatedAt: new Date().toISOString(),
+          ...(parsed.data.voiceId ? { heygenVoiceId: parsed.data.voiceId } : {}),
         },
       } as any,
     })
     .where(eq(workspacesTable.id, req.auth.workspaceId));
-  res.json({ heygenAvatarId: parsed.data.avatarId, avatarType: "stock", success: true });
+  res.json({ heygenAvatarId: parsed.data.avatarId, avatarType: "stock", heygenVoiceId: parsed.data.voiceId, success: true });
+});
+
+// GET /workspaces/me/persona/heygen-voices — list Portuguese voices from HeyGen for reel narration
+router.get("/me/persona/heygen-voices", async (req, res): Promise<void> => {
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) {
+    res.status(422).json({ error: "HeyGen não configurado", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  try {
+    const r = await fetch("https://api.heygen.com/v2/voices?limit=500", {
+      headers: { "X-Api-Key": heygenKey, Accept: "application/json" },
+    });
+    if (!r.ok) throw new Error(`HeyGen voices ${r.status}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await r.json() as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const all: any[] = data?.data?.voices ?? [];
+    // Filter for Portuguese (Brazil) voices — HeyGen uses "Portuguese" or contains "pt"
+    const ptVoices = all
+      .filter((v) => {
+        const lang = (v.language ?? v.locale ?? "").toLowerCase();
+        return lang.includes("portuguese") || lang.includes("portugu") || lang.startsWith("pt");
+      })
+      .slice(0, 12)
+      .map((v) => ({
+        voice_id: v.voice_id,
+        name: v.display_name ?? v.name ?? v.voice_id,
+        language: v.language ?? v.locale ?? "pt",
+        gender: v.gender ?? "neutral",
+        preview_audio: v.preview_audio ?? null,
+      }));
+    // Fallback: if no pt voices found return top 6 generic voices
+    const voices = ptVoices.length > 0 ? ptVoices : all.slice(0, 6).map((v) => ({
+      voice_id: v.voice_id,
+      name: v.display_name ?? v.name ?? v.voice_id,
+      language: v.language ?? "",
+      gender: v.gender ?? "neutral",
+      preview_audio: v.preview_audio ?? null,
+    }));
+    res.json({ voices });
+  } catch (err) {
+    req.log.error({ err }, "heygen-voices fetch failed");
+    res.status(500).json({ error: String(err), code: "FETCH_ERROR" });
+  }
 });
 
 // ── Compliance / Full Identification endpoints ─────────────────────────────

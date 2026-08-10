@@ -2009,6 +2009,7 @@ function buildStoryboardSVG(opts: {
 async function getWorkspacePersona(workspaceId: string): Promise<{
   heygenAvatarId?: string;
   voiceCloneId?: string;
+  heygenVoiceId?: string;
   avatarType?: "talking_photo" | "stock" | "digital_twin";
 }> {
   const [ws] = await db
@@ -2020,6 +2021,7 @@ async function getWorkspacePersona(workspaceId: string): Promise<{
   return {
     heygenAvatarId: persona.heygenAvatarId as string | undefined,
     voiceCloneId: persona.voiceCloneId as string | undefined,
+    heygenVoiceId: persona.heygenVoiceId as string | undefined,
     avatarType: (persona.avatarType as "talking_photo" | "stock" | "digital_twin" | undefined) ?? "talking_photo",
     lifestylePreferences: (persona.lifestylePreferences ?? null) as import("../agents/presence-planner.agent.js").LifestylePreferences | null,
   };
@@ -2224,8 +2226,11 @@ export async function approveStoryboardGenerateVideo(
       const persona = await getWorkspacePersona(workspaceId);
       let result;
 
-      // Prefere vídeo com avatar (HeyGen) se o workspace tiver configurado
-      if (persona.heygenAvatarId && persona.voiceCloneId) {
+      // Prefere vídeo com avatar (HeyGen) se o workspace tiver configurado.
+      // heygenVoiceId: voz stock HeyGen selecionada diretamente no drawer de mídia.
+      // voiceCloneId: fallback (voz clonada via ElevenLabs, salva em projetos de vídeo).
+      const effectiveVoiceId = persona.heygenVoiceId || persona.voiceCloneId;
+      if (persona.heygenAvatarId && effectiveVoiceId) {
         const voiceoverText = post.videoScript?.trim()
           ? post.videoScript
           : `${post.caption}\n\n${post.hashtags.map((h) => `#${h}`).join(" ")}`;
@@ -2233,7 +2238,7 @@ export async function approveStoryboardGenerateVideo(
         result = await generateAvatarVideo({
           voiceoverText,
           avatarId: persona.heygenAvatarId,
-          voiceId: persona.voiceCloneId,
+          voiceId: effectiveVoiceId,
           avatarType: persona.avatarType ?? "talking_photo",
           aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "16:9",
         });

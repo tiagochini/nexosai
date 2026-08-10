@@ -37,8 +37,12 @@ export interface MediaPresencePost {
 interface Persona {
   heygenAvatarId?: string;
   voiceCloneId?: string;
+  heygenVoiceId?: string;
   avatarType?: string;
 }
+
+interface StockAvatar { id: string; label: string; gender: string; }
+interface HeyGenVoice { voice_id: string; name: string; language: string; gender: string; }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -58,6 +62,14 @@ export function MediaProductionDrawer({
   const [editedScript, setEditedScript] = useState(initialPost.videoScript ?? "");
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Avatar selector state
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [avatarSelectorLoading, setAvatarSelectorLoading] = useState(false);
+  const [stockAvatars, setStockAvatars] = useState<StockAvatar[]>([]);
+  const [heygenVoices, setHeygenVoices] = useState<HeyGenVoice[]>([]);
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
   // For story posts: track whether the operator chose image or video
   const [storyMediaType, setStoryMediaType] = useState<"image" | "video">(
     initialPost.storyMediaType === "image" ? "image" : "video",
@@ -290,7 +302,43 @@ export function MediaProductionDrawer({
     }
   };
 
-  const hasAvatar = !!(persona?.heygenAvatarId && persona?.voiceCloneId);
+  const hasAvatar = !!(persona?.heygenAvatarId && (persona?.voiceCloneId || persona?.heygenVoiceId));
+
+  const openAvatarSelector = async () => {
+    setShowAvatarSelector(true);
+    setAvatarSelectorLoading(true);
+    try {
+      const [avatarsRes, voicesRes] = await Promise.all([
+        customFetch<{ avatars: StockAvatar[] }>("/api/workspaces/me/persona/stock-avatars"),
+        customFetch<{ voices: HeyGenVoice[] }>("/api/workspaces/me/persona/heygen-voices").catch(() => ({ voices: [] })),
+      ]);
+      setStockAvatars(avatarsRes.avatars ?? []);
+      setHeygenVoices(voicesRes.voices ?? []);
+      // Pre-select current values if already configured
+      if (persona?.heygenAvatarId) setSelectedAvatarId(persona.heygenAvatarId);
+      if (voicesRes.voices.length > 0 && !selectedVoiceId) setSelectedVoiceId(voicesRes.voices[0].voice_id);
+    } catch { /* noop */ }
+    setAvatarSelectorLoading(false);
+  };
+
+  const saveAvatarSelection = async () => {
+    if (!selectedAvatarId || !selectedVoiceId) return;
+    setSavingAvatar(true);
+    try {
+      const result = await customFetch<{ heygenAvatarId: string; heygenVoiceId: string; success: boolean }>(
+        "/api/workspaces/me/persona/select-stock-avatar",
+        { method: "POST", body: JSON.stringify({ avatarId: selectedAvatarId, voiceId: selectedVoiceId }) },
+      );
+      if (result.success) {
+        setPersona((p) => p ? { ...p, heygenAvatarId: result.heygenAvatarId, heygenVoiceId: result.heygenVoiceId, avatarType: "stock" } : p);
+        setShowAvatarSelector(false);
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Erro ao salvar avatar.");
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
 
   const content = (
     <div
@@ -372,6 +420,18 @@ export function MediaProductionDrawer({
               onConfirmVideo={confirmVideo}
               onReset={resetPipeline}
               busy={busy}
+              showAvatarSelector={showAvatarSelector}
+              avatarSelectorLoading={avatarSelectorLoading}
+              stockAvatars={stockAvatars}
+              heygenVoices={heygenVoices}
+              selectedAvatarId={selectedAvatarId}
+              selectedVoiceId={selectedVoiceId}
+              savingAvatar={savingAvatar}
+              onOpenAvatarSelector={openAvatarSelector}
+              onCloseAvatarSelector={() => setShowAvatarSelector(false)}
+              onSelectAvatar={setSelectedAvatarId}
+              onSelectVoice={setSelectedVoiceId}
+              onSaveAvatarSelection={saveAvatarSelection}
             />
           ) : (
             <UploadTabContent
@@ -413,6 +473,18 @@ function AITabContent({
   onConfirmVideo,
   onReset,
   busy,
+  showAvatarSelector,
+  avatarSelectorLoading,
+  stockAvatars,
+  heygenVoices,
+  selectedAvatarId,
+  selectedVoiceId,
+  savingAvatar,
+  onOpenAvatarSelector,
+  onCloseAvatarSelector,
+  onSelectAvatar,
+  onSelectVoice,
+  onSaveAvatarSelection,
 }: {
   post: MediaPresencePost;
   persona: Persona | null;
@@ -429,6 +501,18 @@ function AITabContent({
   onConfirmVideo: () => void;
   onReset: () => void;
   busy: boolean;
+  showAvatarSelector: boolean;
+  avatarSelectorLoading: boolean;
+  stockAvatars: StockAvatar[];
+  heygenVoices: HeyGenVoice[];
+  selectedAvatarId: string | null;
+  selectedVoiceId: string | null;
+  savingAvatar: boolean;
+  onOpenAvatarSelector: () => void;
+  onCloseAvatarSelector: () => void;
+  onSelectAvatar: (id: string) => void;
+  onSelectVoice: (id: string) => void;
+  onSaveAvatarSelection: () => void;
 }) {
   const step = post.mediaGenStatus;
   // Formats that produce a final image (not video).
@@ -467,11 +551,10 @@ function AITabContent({
           </div>
 
           {/* Option 2 — HeyGen stock avatar */}
-          <a
-            href="/video-production?setup=avatar"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-lg border border-border/50 bg-background/40 hover:border-border hover:bg-background/70 p-2.5 flex flex-col gap-1.5 transition-colors cursor-pointer"
+          <button
+            type="button"
+            onClick={onOpenAvatarSelector}
+            className={`rounded-lg border p-2.5 flex flex-col gap-1.5 transition-colors text-left ${hasAvatar && persona?.avatarType === "stock" ? "border-green-500/50 bg-green-500/5" : "border-border/50 bg-background/40 hover:border-border hover:bg-background/70"}`}
           >
             <div className="flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -480,8 +563,10 @@ function AITabContent({
             <p className="text-[9px] text-muted-foreground leading-tight">
               +1.000 avatares profissionais da biblioteca HeyGen.
             </p>
-            <span className="text-[9px] text-muted-foreground/60 mt-auto">Configurar →</span>
-          </a>
+            <span className={`text-[9px] mt-auto font-medium ${hasAvatar && persona?.avatarType === "stock" ? "text-green-400" : "text-primary/70"}`}>
+              {hasAvatar && persona?.avatarType === "stock" ? "✓ Configurado" : "Selecionar →"}
+            </span>
+          </button>
 
           {/* Option 3 — Personal clone */}
           <a
@@ -500,6 +585,83 @@ function AITabContent({
             <span className="text-[9px] text-muted-foreground/60 mt-auto">Configurar →</span>
           </a>
         </div>
+
+        {/* Inline avatar + voice selector */}
+        {showAvatarSelector && (
+          <div className="border border-border/60 rounded-xl bg-background/60 p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-mono font-bold">Selecionar avatar e voz</p>
+              <button type="button" onClick={onCloseAvatarSelector} className="text-muted-foreground hover:text-foreground">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {avatarSelectorLoading ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-xs">Carregando avatares...</span>
+              </div>
+            ) : (
+              <>
+                {/* Avatar grid */}
+                <div>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Avatar</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {stockAvatars.map((av) => (
+                      <button
+                        key={av.id}
+                        type="button"
+                        onClick={() => onSelectAvatar(av.id)}
+                        className={`rounded-lg border p-2.5 text-left transition-colors ${selectedAvatarId === av.id ? "border-primary bg-primary/10" : "border-border/40 hover:border-border"}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold leading-tight">{av.label}</p>
+                            <p className="text-[9px] text-muted-foreground capitalize">{av.gender}</p>
+                          </div>
+                        </div>
+                        {selectedAvatarId === av.id && <span className="text-[9px] text-primary font-medium">✓ Selecionado</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Voice selector */}
+                {heygenVoices.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-2">Voz para narração</p>
+                    <div className="space-y-1 max-h-36 overflow-y-auto">
+                      {heygenVoices.map((v) => (
+                        <button
+                          key={v.voice_id}
+                          type="button"
+                          onClick={() => onSelectVoice(v.voice_id)}
+                          className={`w-full rounded-lg border px-3 py-2 text-left text-[10px] transition-colors ${selectedVoiceId === v.voice_id ? "border-primary bg-primary/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border hover:text-foreground"}`}
+                        >
+                          <span className="font-medium">{v.name}</span>
+                          <span className="ml-2 text-[9px] opacity-60">{v.gender} · {v.language}</span>
+                          {selectedVoiceId === v.voice_id && <span className="ml-2 text-primary">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  size="sm"
+                  className="w-full font-mono text-xs"
+                  disabled={!selectedAvatarId || !selectedVoiceId || savingAvatar}
+                  onClick={onSaveAvatarSelection}
+                >
+                  {savingAvatar ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Salvando...</> : <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Confirmar avatar e voz</>}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     );
   };
