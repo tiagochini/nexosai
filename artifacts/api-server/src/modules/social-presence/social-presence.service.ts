@@ -1849,12 +1849,17 @@ async function generateStoryboardFrame(
 
   // ── Tentativa 2: OpenAI image generation ────────────────────────────────────
   // Tenta dall-e-3 primeiro (mais disponível em contas padrão), depois gpt-image-1.
+  // Tamanhos suportados diferem por modelo:
+  //   dall-e-3:   portrait=1024x1792, landscape=1792x1024
+  //   gpt-image-1: portrait=1024x1536, landscape=1536x1024 (não suporta 1792)
   const imageModelsOAI = ["dall-e-3", "gpt-image-1"];
   for (const oaiModel of imageModelsOAI) {
     try {
       const client = buildImageClient();
       const isPortrait = ["reel", "story"].includes(format);
-      const size: "1024x1024" | "1792x1024" | "1024x1792" = isPortrait ? "1024x1792" : "1792x1024";
+      const size = oaiModel === "gpt-image-1"
+        ? (isPortrait ? "1024x1536" : "1536x1024")
+        : (isPortrait ? "1024x1792" : "1792x1024");
       log.info({ platform, format, size, model: oaiModel }, `presence: attempting ${oaiModel} storyboard (url mode)`);
       const resp = await client.images.generate({
         model: oaiModel,

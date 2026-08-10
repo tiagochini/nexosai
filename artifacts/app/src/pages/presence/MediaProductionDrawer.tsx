@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   X, Sparkles, Upload, Loader2, AlertTriangle, Film,
   RefreshCw, CheckCircle2, Video, ImageIcon, User,
-  ArrowRight, Play, Wand2, PenLine, Settings,
+  ArrowRight, Play, Wand2, PenLine, Settings, Clapperboard, Users,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -438,7 +438,7 @@ function AITabContent({
       ? storyMediaType === "image"
       : !["reel", "feed_video"].includes(post.format);
 
-  // Avatar warning banner
+  // Avatar / video style banner
   const AvatarBanner = () => {
     if (persona === null) return null; // still loading
     if (hasAvatar) {
@@ -449,26 +449,57 @@ function AITabContent({
         </div>
       );
     }
+    // No avatar: show 3 options side-by-side
     return (
-      <div className="rounded-lg border border-amber-400/30 bg-amber-400/8 p-3 space-y-2.5">
-        <div className="flex items-start gap-2 text-xs text-amber-300">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold">Clone digital não configurado</p>
-            <p className="text-amber-300/70 mt-0.5">
-              Sem clone, o vídeo será gerado cinematograficamente (sem você). Crie seu avatar para aparecer nos vídeos.
+      <div className="space-y-2">
+        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Como gerar o vídeo</p>
+        <div className="grid grid-cols-3 gap-2">
+          {/* Option 1 — Cinematic (default, no setup needed) */}
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-2.5 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <Clapperboard className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-[10px] font-bold text-primary">Cinematográfico</span>
+            </div>
+            <p className="text-[9px] text-muted-foreground leading-tight">
+              IA gera vídeo profissional sem você aparecer. Pronto agora.
             </p>
+            <span className="text-[9px] text-primary/70 font-medium mt-auto">✓ Padrão selecionado</span>
           </div>
+
+          {/* Option 2 — HeyGen stock avatar */}
+          <a
+            href="/video-production?setup=avatar"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-border/50 bg-background/40 hover:border-border hover:bg-background/70 p-2.5 flex flex-col gap-1.5 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-[10px] font-bold text-foreground">Avatar HeyGen</span>
+            </div>
+            <p className="text-[9px] text-muted-foreground leading-tight">
+              +1.000 avatares profissionais da biblioteca HeyGen.
+            </p>
+            <span className="text-[9px] text-muted-foreground/60 mt-auto">Configurar →</span>
+          </a>
+
+          {/* Option 3 — Personal clone */}
+          <a
+            href="/video-production?setup=avatar"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-border/50 bg-background/40 hover:border-border hover:bg-background/70 p-2.5 flex flex-col gap-1.5 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="text-[10px] font-bold text-foreground">Meu Clone</span>
+            </div>
+            <p className="text-[9px] text-muted-foreground leading-tight">
+              Seu rosto e voz clonada em cada vídeo.
+            </p>
+            <span className="text-[9px] text-muted-foreground/60 mt-auto">Configurar →</span>
+          </a>
         </div>
-        <a
-          href="/video-production?setup=avatar"
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center justify-center gap-2 w-full rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-300 hover:bg-amber-400/20 transition-colors"
-        >
-          <User className="h-3.5 w-3.5" />
-          Criar meu clone digital agora →
-        </a>
       </div>
     );
   };
@@ -636,7 +667,9 @@ function AITabContent({
         </div>
         {!isImageFormat && (
           <p className="text-center text-xs text-muted-foreground">
-            {hasAvatar ? "O vídeo será gerado com o seu clone digital e voz clonada." : "O vídeo será gerado cinematograficamente. Configure seu clone digital para aparecer no vídeo."}
+            {hasAvatar
+              ? "O vídeo usará seu clone digital e voz clonada."
+              : "Vídeo cinematográfico por IA — configure avatar HeyGen ou clone próprio para aparecer nos vídeos."}
           </p>
         )}
       </div>
