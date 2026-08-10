@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { useTextAnnotation, AnnotationToolbar, AnnotationDialog } from "@/components/strategy-annotation";
 import {
   Target, Users, Zap, BarChart3, Brain, ShieldAlert,
   TrendingUp, MessageSquare, Lightbulb, Flame, Star,
@@ -282,7 +283,11 @@ function Module({ index, id, icon: Icon, title, subtitle, status, accentColor, c
 
       {expanded && (
         <div className="border-t border-white/5">
-          <div className="px-5 py-4 space-y-5">
+          <div
+            className="px-5 py-4 space-y-5"
+            data-section-id={id}
+            data-section-title={title}
+          >
             {children}
           </div>
           <div className="px-5 pb-4 flex items-center gap-2">
@@ -416,6 +421,11 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
   const [showConsent, setShowConsent]     = useState(false);
   const [downloading, setDownloading]     = useState(false);
 
+  // ── Inline annotation (highlight → Indagar / Sugerir) ──
+  const masterplanRef = useRef<HTMLDivElement>(null);
+  const { selection, clearSelection, openDialog, dialog, closeDialog } =
+    useTextAnnotation(masterplanRef);
+
   const setStatus = (id: string, next: ModuleStatus) =>
     setStatuses(prev => ({ ...prev, [id]: prev[id] === next ? "pending" : next }));
   const getStatus = (id: string): ModuleStatus => statuses[id] ?? "pending";
@@ -464,7 +474,7 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
   }
 
   return (
-    <div className="space-y-2.5">
+    <div ref={masterplanRef} className="space-y-2.5">
 
       {/* ═══ HEADER ══════════════════════════════════════════════════════════ */}
       <div className="border border-white/7 bg-gradient-to-r from-primary/[0.05] to-transparent px-5 py-4">
@@ -1053,6 +1063,24 @@ export function StrategyMasterplan({ strategyD, ins, userIdentity, campaignId, c
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* ═══ INLINE ANNOTATION ───────────────────────────────────────────────
+           Floating toolbar appears when the user selects text inside a section.
+           Portal-rendered so it is never clipped by overflow containers.        */}
+      {selection && (
+        <AnnotationToolbar
+          selection={selection}
+          onAction={openDialog}
+          onDismiss={clearSelection}
+        />
+      )}
+      {dialog && campaignId && (
+        <AnnotationDialog
+          state={dialog}
+          campaignId={campaignId}
+          onClose={closeDialog}
+        />
       )}
     </div>
   );

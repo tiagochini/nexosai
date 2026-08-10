@@ -749,4 +749,97 @@ router.post("/:campaignId/budget-decision", async (req, res): Promise<void> => {
   }
 });
 
+// ── POST /campaigns/:campaignId/strategy/annotate ────────────────────────────
+// Lightweight "inline debate" endpoint — the user selected a text passage in the
+// strategy masterplan and wants to either question (indagar) or suggest an
+// alternative (sugerir). This is NOT a full agent run; it does not create DB
+// records or charge credits. It calls the LLM directly with a focused prompt.
+const annotateSchema = z.object({
+  type:            z.enum(["indagar", "sugerir"]),
+  sectionId:       z.string().min(1).max(80),
+  sectionTitle:    z.string().min(1).max(120),
+  highlightedText: z.string().min(5).max(2000),
+  userMessage:     z.string().min(1).max(1200),
+});
+
+router.post("/:campaignId/strategy/annotate", async (req, res): Promise<void> => {
+  const campaignId = req.params["campaignId"] as string;
+
+  const parsed = annotateSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    // Verify campaign ownership
+    const { db, campaignsTable } = await import("@workspace/db");
+    const { eq, and } = await import("drizzle-orm");
+
+    const [campaign] = await db
+      .select({ id: campaignsTable.id, title: campaignsTable.title })
+      .from(campaignsTable)
+      .where(and(
+        eq(campaignsTable.id, campaignId),
+        eq(campaignsTable.workspaceId, req.auth.workspaceId),
+      ));
+
+    if (!campaign) {
+      res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
+      return;
+    }
+
+    const { type, sectionTitle, highlightedText, userMessage } = parsed.data;
+    const isIndagar = type === "indagar";
+
+    const systemPrompt = `Você é o Estrategista da NexOS AI — um especialista em lançamentos digitais, marketing, posicionamento e monetização. Você produziu uma análise estratégica completa para esta campanha e o usuário está revisando o documento.
+
+O usuário selecionou um trecho específico da sua análise e quer aprofundar o debate. Sua resposta deve:
+1. Processar genuinamente a perspectiva do usuário — não apenas confirmar o que você disse antes
+2. ${isIndagar
+  ? "Se o questionamento for válido, reconheça abertamente e revise sua posição com novos argumentos. Se você ainda defende o trecho, explique o raciocínio mais profundo que não estava explícito."
+  : "Avaliar o mérito concreto da sugestão. Incorpore o que for válido e proponha como isso mudaria ou enriqueceria a análise. Se a sugestão tiver limitações, explique-as com dados ou raciocínio específico."
+}
+3. Ser direta, prática e orientada a ação — sem formalidades ou parafrasear o que o usuário disse
+4. Trazer perspectivas não óbvias que agreguem valor genuíno
+5. Ter no máximo 3-4 parágrafos curtos, densos e de alto valor estratégico`;
+
+    const userPrompt = `**Campanha:** ${campaign.title}
+**Seção do Masterplan:** ${sectionTitle}
+
+**Trecho em questão:**
+"${highlightedText}"
+
+**${isIndagar ? "Questionamento" : "Sugestão"} do usuário:**
+${userMessage}
+
+Responda diretamente ao ponto levantado, sem reafirmar o trecho ou o questionamento — vá direto ao raciocínio novo ou revisado.`;
+
+    const { completeWithAgent } = await import("../ai-gateway/ai-gateway.service.js");
+    const messages = [{ role: "user" as const, content: userPrompt }];
+
+    const result = await completeWithAgent(
+      "strategy",                  // agentRole — uses the strategic provider chain
+      systemPrompt,
+      messages,
+      req.auth.workspaceId,
+      req.log,
+      campaignId,
+      undefined,                   // locale
+      undefined,                   // providerOverride — let the router decide
+      1024,                        // maxTokens — focused response, not a full agent run
+      30_000,                      // timeoutMs — interactive call, 30s ceiling
+    );
+
+    res.json({ response: result.content ?? "" });
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.statusCode).json({ error: err.message, code: err.code });
+      return;
+    }
+    req.log.error({ err, campaignId }, "strategy/annotate: LLM call failed");
+    res.status(500).json({ error: "Falha ao processar a anotação. Tente novamente.", code: "ANNOTATION_FAILED" });
+  }
+});
+
 export default router;
