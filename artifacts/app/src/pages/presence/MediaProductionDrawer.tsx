@@ -454,14 +454,14 @@ function AITabContent({
       <div className="space-y-2">
         <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Como gerar o vídeo</p>
         <div className="grid grid-cols-3 gap-2">
-          {/* Option 1 — Cinematic (default, no setup needed) */}
+          {/* Option 1 — Cinematic (requires Runway / FAL video provider) */}
           <div className="rounded-lg border border-primary/40 bg-primary/5 p-2.5 flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5">
               <Clapperboard className="h-3.5 w-3.5 text-primary shrink-0" />
               <span className="text-[10px] font-bold text-primary">Cinematográfico</span>
             </div>
             <p className="text-[9px] text-muted-foreground leading-tight">
-              IA gera vídeo profissional sem você aparecer. Pronto agora.
+              Vídeo sem apresentador. Requer provedor de vídeo (Runway / FAL) configurado.
             </p>
             <span className="text-[9px] text-primary/70 font-medium mt-auto">✓ Padrão selecionado</span>
           </div>
@@ -698,12 +698,10 @@ function AITabContent({
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">
-              {isImageFormat ? "Imagem gerada sem IA (Gemini e DALL-E indisponíveis)" : "Storyboard gerado sem IA (créditos indisponíveis)"}
+              {isImageFormat ? "Rascunho visual — clique em Regenerar para gerar a imagem final" : "Rascunho visual — clique em Regenerar para gerar a imagem final"}
             </p>
             <p className="text-amber-300/70 mt-0.5">
-              {isImageFormat
-                ? "Este é um rascunho visual com os textos do post. Regenere quando os créditos de IA estiverem disponíveis para obter uma imagem real."
-                : "Este é um rascunho visual com os textos do post. Quando os créditos Gemini / DALL-E estiverem disponíveis, regenere para obter uma imagem gerada por IA."}
+              {"Este é um esboço com os textos do post. Clique em Regenerar para gerar a imagem real com IA (gpt-image-1.5)."}
             </p>
           </div>
         </div>
