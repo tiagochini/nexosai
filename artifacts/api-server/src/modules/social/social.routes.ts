@@ -70,7 +70,7 @@ router.get("/callback/meta", async (req, res): Promise<void> => {
     const integrations = await handleMetaCallback(code, workspaceId);
 
     const appUrl = process.env["APP_URL"] ?? "";
-    const redirectUrl = `${appUrl}/app/settings/integrations?connected=meta&count=${integrations.length}`;
+    const redirectUrl = `${appUrl}/settings?tab=integracoes&connected=meta&count=${integrations.length}`;
     res.redirect(redirectUrl);
   } catch (err) {
     if (err instanceof AppError) {
@@ -99,7 +99,7 @@ router.get("/callback/tiktok", async (req, res): Promise<void> => {
     const integration = await handleTikTokCallback(code, workspaceId);
 
     const appUrl = process.env["APP_URL"] ?? "";
-    const redirectUrl = `${appUrl}/app/settings/integrations?connected=tiktok&account=${integration.accountName}`;
+    const redirectUrl = `${appUrl}/settings?tab=integracoes&connected=tiktok&account=${encodeURIComponent(integration.accountName ?? "")}`;
     res.redirect(redirectUrl);
   } catch (err) {
     if (err instanceof AppError) {

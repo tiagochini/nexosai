@@ -807,6 +807,14 @@ const INTEGRATION_CATALOG: {
 
 const CATEGORIES = ["Mensagens", "E-mail", "Checkout", "Plataformas", "Mídia Paga", "Social Orgânico", "CRM"];
 
+// Social providers that connect via OAuth (not manual token entry)
+const SOCIAL_OAUTH_PROVIDERS: Partial<Record<IntegrationProvider, "meta" | "tiktok">> = {
+  meta_ads: "meta",
+  instagram: "meta",
+  tiktok_ads: "tiktok",
+  tiktok: "tiktok",
+};
+
 function ConnectModal({
   info,
   onClose,
@@ -1262,6 +1270,32 @@ function IntegracaoTab() {
   const queryClient = useQueryClient();
   const [connectModal, setConnectModal] = useState<ConnectModalState | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("Todos");
+  const [oauthLoading, setOauthLoading] = useState<"meta" | "tiktok" | null>(null);
+
+  // Show toast when redirected back from OAuth
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("connected");
+    const count = params.get("count");
+    const account = params.get("account");
+    if (connected === "meta" && count) {
+      toast.success(`${count} conta${Number(count) !== 1 ? "s" : ""} Meta conectada${Number(count) !== 1 ? "s" : ""} com sucesso!`);
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+      // Clean up query params without full reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete("connected");
+      url.searchParams.delete("count");
+      window.history.replaceState({}, "", url.toString());
+    } else if (connected === "tiktok" && account) {
+      toast.success(`TikTok conectado: ${decodeURIComponent(account)}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+      const url = new URL(window.location.href);
+      url.searchParams.delete("connected");
+      url.searchParams.delete("account");
+      window.history.replaceState({}, "", url.toString());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["/api/workspaces/me/integrations"],
@@ -1289,8 +1323,39 @@ function IntegracaoTab() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const disconnectSocialMutation = useMutation({
+    mutationFn: async (integrationId: string) =>
+      customFetch(`/api/social/accounts/${integrationId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Conta desconectada com sucesso.");
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces/me/integrations"] });
+    },
+    onError: () => toast.error("Erro ao desconectar conta."),
+  });
+
+  const handleSocialOAuthConnect = async (platform: "meta" | "tiktok") => {
+    setOauthLoading(platform);
+    try {
+      const { url } = await customFetch<{ url: string }>(`/api/social/connect/${platform}`);
+      window.location.href = url;
+    } catch {
+      toast.error("Erro ao iniciar conexão OAuth. Verifique a configuração do app Meta/TikTok.");
+      setOauthLoading(null);
+    }
+  };
+
   const integrations = data?.integrations ?? [];
   const connectedProviders = new Set(integrations.map(i => i.provider));
+
+  // Group social integrations by provider for catalog display
+  const socialAccountsByProvider = integrations.reduce((map, intg) => {
+    if (SOCIAL_OAUTH_PROVIDERS[intg.provider]) {
+      const list = map.get(intg.provider) ?? [];
+      list.push(intg);
+      map.set(intg.provider, list);
+    }
+    return map;
+  }, new Map<IntegrationProvider, WorkspaceIntegration[]>());
 
   const handleConnect = (provider: IntegrationProvider, fields: Record<string, string>) => {
     const { accountId, accountName, webhookUrl, accessToken, ...rest } = fields;
@@ -1325,6 +1390,7 @@ function IntegracaoTab() {
           <div className="space-y-2">
             {integrations.map(intg => {
               const catalog = INTEGRATION_CATALOG.find(c => c.provider === intg.provider);
+              const isSocial = Boolean(SOCIAL_OAUTH_PROVIDERS[intg.provider]);
               return (
                 <div key={intg.id} className="flex items-center justify-between py-2.5 border-b border-border/20 last:border-0 gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -1341,6 +1407,17 @@ function IntegracaoTab() {
                     <Badge variant="outline" className={`rounded-none font-mono text-[11px] ${intg.status === "connected" ? "border-success/40 text-success" : intg.status === "error" ? "border-destructive/40 text-destructive" : "border-border/40 text-muted-foreground"}`}>
                       {intg.status === "connected" ? "Conectado" : intg.status === "error" ? "Erro" : "Desconectado"}
                     </Badge>
+                    {isSocial && (
+                      <button
+                        aria-label={`Desconectar ${intg.accountName ?? intg.provider}`}
+                        onClick={() => disconnectSocialMutation.mutate(intg.id)}
+                        disabled={disconnectSocialMutation.isPending}
+                        className="p-1 text-muted-foreground/40 hover:text-destructive transition-colors disabled:opacity-50"
+                        title="Desconectar conta"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -1374,8 +1451,67 @@ function IntegracaoTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filtered.map(intg => {
+            const oauthPlatform = SOCIAL_OAUTH_PROVIDERS[intg.provider];
             const isConnected = connectedProviders.has(intg.provider);
             const existing = integrations.find(i => i.provider === intg.provider);
+            const connectedAccounts = socialAccountsByProvider.get(intg.provider) ?? [];
+
+            // Social OAuth providers — always show "Add Another Account" button
+            if (oauthPlatform) {
+              return (
+                <div key={intg.provider}
+                  className={`border bg-card/30 p-4 relative transition-all ${isConnected ? "border-success/30 bg-success/5" : "border-border/50 hover:border-primary/30"}`}>
+                  {isConnected && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                    </div>
+                  )}
+                  <div className="mb-3">
+                    <div className={`font-mono font-bold text-sm mb-0.5 ${intg.color}`}>{intg.label}</div>
+                    <div className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest mb-1">{intg.category}</div>
+                    <p className="font-mono text-[11px] text-muted-foreground/70 leading-relaxed">{intg.description}</p>
+                  </div>
+                  {/* List connected accounts with disconnect */}
+                  {connectedAccounts.length > 0 && (
+                    <div className="mb-2 space-y-1">
+                      {connectedAccounts.map(acc => (
+                        <div key={acc.id} className="flex items-center justify-between text-xs font-mono">
+                          <span className="flex items-center gap-1.5 text-success truncate">
+                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{acc.accountName ?? acc.accountId ?? "—"}</span>
+                          </span>
+                          <button
+                            aria-label={`Desconectar ${acc.accountName}`}
+                            onClick={() => disconnectSocialMutation.mutate(acc.id)}
+                            disabled={disconnectSocialMutation.isPending}
+                            className="ml-2 p-1 text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 disabled:opacity-50"
+                            title="Desconectar"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleSocialOAuthConnect(oauthPlatform)}
+                    disabled={oauthLoading === oauthPlatform}
+                    className="rounded-none font-mono uppercase text-[11px] tracking-widest h-7 gap-1.5 btn-weapon-outline"
+                  >
+                    {oauthLoading === oauthPlatform ? (
+                      <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                    ) : (
+                      <Plus className="h-2.5 w-2.5" />
+                    )}
+                    {connectedAccounts.length > 0 ? "Adicionar outra conta" : "Conectar"}
+                  </Button>
+                </div>
+              );
+            }
+
+            // Non-social providers — original behavior
             return (
               <div key={intg.provider}
                 className={`border bg-card/30 p-4 relative transition-all ${isConnected ? "border-success/30 bg-success/5" : "border-border/50 hover:border-primary/30"}`}>

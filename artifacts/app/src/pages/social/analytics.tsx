@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
   Instagram, Facebook, RefreshCw, Users, Heart, MessageCircle,
   Eye, TrendingUp, Globe, X, AlertTriangle, ChevronRight,
-  BarChart3, Image, Film, Radio,
+  BarChart3, Image, Film, Radio, Plus, Loader2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -304,6 +305,7 @@ function AccountCard({ account, onClick }: { account: AccountAnalytics; onClick:
 
 export function SocialAnalyticsTab() {
   const [selectedAccount, setSelectedAccount] = useState<AccountAnalytics | null>(null);
+  const [addingMeta, setAddingMeta] = useState(false);
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["/api/social/accounts/analytics"],
@@ -316,6 +318,17 @@ export function SocialAnalyticsTab() {
 
   const analytics = data?.analytics ?? [];
 
+  const handleAddMetaAccount = async () => {
+    setAddingMeta(true);
+    try {
+      const { url } = await customFetch<{ url: string }>("/api/social/connect/meta");
+      window.location.href = url;
+    } catch {
+      toast.error("Erro ao iniciar conexão OAuth. Verifique a configuração do app Meta.");
+      setAddingMeta(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {selectedAccount && (
@@ -323,7 +336,7 @@ export function SocialAnalyticsTab() {
       )}
 
       {/* Header row */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-xs font-mono uppercase tracking-widest font-bold text-muted-foreground">
             {analytics.length} conta{analytics.length !== 1 ? "s" : ""} conectada{analytics.length !== 1 ? "s" : ""}
@@ -332,16 +345,30 @@ export function SocialAnalyticsTab() {
             Clique em um card para ver análise completa · Dados em tempo real das APIs
           </div>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8 shrink-0"
-        >
-          <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          {analytics.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleAddMetaAccount}
+              disabled={addingMeta}
+              className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8"
+            >
+              {addingMeta ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              Adicionar conta
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 h-8"
+          >
+            <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Loading state */}
@@ -382,7 +409,7 @@ export function SocialAnalyticsTab() {
           <p className="font-mono text-xs text-muted-foreground/40 mb-5">
             Conecte Instagram, Facebook ou TikTok em Configurações → Integrações
           </p>
-          <a href="/settings/integrations">
+          <a href="/settings?tab=integracoes">
             <Button size="sm" className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-primary gap-2">
               <TrendingUp className="h-3.5 w-3.5" />
               Conectar Conta Social
