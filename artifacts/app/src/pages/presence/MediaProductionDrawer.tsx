@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   X, Sparkles, Upload, Loader2, AlertTriangle, Film,
   RefreshCw, CheckCircle2, Video, ImageIcon, User,
-  ArrowRight, Play, Wand2, PenLine, Settings, Clapperboard, Users,
+  ArrowRight, Play, Wand2, PenLine, Settings, Clapperboard, Users, Mic, Camera,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -533,58 +533,76 @@ function AITabContent({
         </div>
       );
     }
-    // No avatar: show 3 options side-by-side
+    // No avatar: show clone-digital style setup prompt
     return (
-      <div className="space-y-2">
-        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Como gerar o vídeo</p>
-        <div className="grid grid-cols-3 gap-2">
-          {/* Option 1 — Cinematic (requires Runway / FAL video provider) */}
-          <div className="rounded-lg border border-primary/40 bg-primary/5 p-2.5 flex flex-col gap-1.5">
-            <div className="flex items-center gap-1.5">
-              <Clapperboard className="h-3.5 w-3.5 text-primary shrink-0" />
-              <span className="text-[10px] font-bold text-primary">Cinematográfico</span>
-            </div>
-            <p className="text-[9px] text-muted-foreground leading-tight">
-              Vídeo sem apresentador. Requer provedor de vídeo (Runway / FAL) configurado.
-            </p>
-            <span className="text-[9px] text-primary/70 font-medium mt-auto">✓ Padrão selecionado</span>
-          </div>
-
-          {/* Option 2 — HeyGen stock avatar */}
-          <button
-            type="button"
-            onClick={onOpenAvatarSelector}
-            className={`rounded-lg border p-2.5 flex flex-col gap-1.5 transition-colors text-left ${hasAvatar && persona?.avatarType === "stock" ? "border-green-500/50 bg-green-500/5" : "border-border/50 bg-background/40 hover:border-border hover:bg-background/70"}`}
-          >
-            <div className="flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-[10px] font-bold text-foreground">Avatar HeyGen</span>
-            </div>
-            <p className="text-[9px] text-muted-foreground leading-tight">
-              +1.000 avatares profissionais da biblioteca HeyGen.
-            </p>
-            <span className={`text-[9px] mt-auto font-medium ${hasAvatar && persona?.avatarType === "stock" ? "text-green-400" : "text-primary/70"}`}>
-              {hasAvatar && persona?.avatarType === "stock" ? "✓ Configurado" : "Selecionar →"}
-            </span>
-          </button>
-
-          {/* Option 3 — Personal clone */}
-          <a
-            href="/video-production?setup=avatar"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-lg border border-border/50 bg-background/40 hover:border-border hover:bg-background/70 p-2.5 flex flex-col gap-1.5 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-[10px] font-bold text-foreground">Meu Clone</span>
-            </div>
-            <p className="text-[9px] text-muted-foreground leading-tight">
-              Seu rosto e voz clonada em cada vídeo.
-            </p>
-            <span className="text-[9px] text-muted-foreground/60 mt-auto">Configurar →</span>
-          </a>
+      <div className="space-y-3">
+        {/* Header */}
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+          <p className="text-xs font-bold text-foreground">Clone Digital</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+            Seu clone é composto por dois elementos: sua <span className="text-foreground font-medium">voz clonada</span> e seu <span className="text-foreground font-medium">avatar de vídeo</span>.
+          </p>
         </div>
+
+        {/* Clone de Voz card */}
+        <a
+          href="/clone-digital"
+          className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/50 hover:border-primary/40 hover:bg-primary/5 px-3 py-3 transition-colors cursor-pointer group"
+        >
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+            <Mic className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold text-foreground">Clone de Voz</p>
+              <span className="text-[9px] font-mono bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">Não configurado</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+              Grave 5 takes com emoções diferentes. Em ~5 minutos, sua voz narra automaticamente cada campanha.
+            </p>
+            <span className="text-[10px] text-primary font-medium mt-1 inline-block group-hover:underline">Criar clone de voz agora →</span>
+          </div>
+        </a>
+
+        {/* Avatar Digital card */}
+        <a
+          href="/clone-digital"
+          className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/50 hover:border-primary/40 hover:bg-primary/5 px-3 py-3 transition-colors cursor-pointer group"
+        >
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+            <Camera className="h-4 w-4 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold text-foreground">Avatar Digital</p>
+              <span className="text-[9px] font-mono bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-full">Não configurado</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+              Grave 2 vídeos curtos (treino + consentimento). O HeyGen treina seu avatar — aparece falando em cada reel.
+            </p>
+            <span className="text-[10px] text-primary font-medium mt-1 inline-block group-hover:underline">Criar avatar digital agora →</span>
+          </div>
+        </a>
+
+        {/* Alternative: stock HeyGen avatar */}
+        <div className="relative">
+          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-border/40" />
+          <p className="relative text-center text-[9px] text-muted-foreground bg-background/80 px-2 mx-auto w-fit">ou usar avatar da biblioteca</p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenAvatarSelector}
+          className="w-full flex items-center gap-3 rounded-xl border border-border/50 bg-background/40 hover:border-border hover:bg-background/70 px-3 py-2.5 transition-colors text-left"
+        >
+          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-foreground">Avatar HeyGen</p>
+            <p className="text-[10px] text-muted-foreground">+1.000 avatares profissionais — configure sem câmera</p>
+          </div>
+          <span className="text-[10px] text-primary/70 font-medium shrink-0">Selecionar →</span>
+        </button>
 
         {/* Inline avatar + voice selector */}
         {showAvatarSelector && (
