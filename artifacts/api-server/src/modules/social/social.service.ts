@@ -296,6 +296,394 @@ export async function getConnectedAccounts(workspaceId: string) {
     );
 }
 
+// ─── Account Analytics ────────────────────────────────────────────────────────
+
+const ANALYTICS_TIMEOUT_MS = 12_000;
+
+function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ANALYTICS_TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+export interface AccountAnalyticsPost {
+  id: string;
+  mediaUrl?: string;
+  thumbnailUrl?: string;
+  mediaType?: string;
+  caption?: string;
+  timestamp?: string;
+  likes: number;
+  comments: number;
+  reach: number;
+  impressions: number;
+  saved?: number;
+}
+
+export interface AccountAnalytics {
+  integrationId: string;
+  provider: string;
+  accountName: string;
+  accountId: string | null;
+  profilePictureUrl?: string;
+  biography?: string;
+  website?: string;
+  followers: number | null;
+  following: number | null;
+  mediaCount: number | null;
+  avgEngagement: number | null;
+  totalReach30d: number | null;
+  totalImpressions30d: number | null;
+  recentPosts: AccountAnalyticsPost[];
+  status: string;
+  error?: string;
+}
+
+async function fetchInstagramAnalytics(
+  integrationId: string,
+  accountId: string,
+  accountName: string,
+  accessToken: string,
+  status: string,
+): Promise<AccountAnalytics> {
+  const base: AccountAnalytics = {
+    integrationId,
+    provider: "instagram",
+    accountName,
+    accountId,
+    followers: null,
+    following: null,
+    mediaCount: null,
+    avgEngagement: null,
+    totalReach30d: null,
+    totalImpressions30d: null,
+    recentPosts: [],
+    status,
+  };
+
+  try {
+    // 1. Profile
+    const profileUrl = `https://graph.facebook.com/v20.0/${accountId}?fields=username,profile_picture_url,followers_count,follows_count,media_count,biography,website&access_token=${encodeURIComponent(accessToken)}`;
+    const profileRes = await fetchWithTimeout(profileUrl);
+    if (!profileRes.ok) return { ...base, error: `Graph API ${profileRes.status}` };
+    const profile = await profileRes.json() as {
+      username?: string; profile_picture_url?: string; followers_count?: number;
+      follows_count?: number; media_count?: number; biography?: string; website?: string;
+    };
+
+    base.accountName = profile.username ? `@${profile.username}` : accountName;
+    base.profilePictureUrl = profile.profile_picture_url;
+    base.followers = profile.followers_count ?? null;
+    base.following = profile.follows_count ?? null;
+    base.mediaCount = profile.media_count ?? null;
+    base.biography = profile.biography;
+    base.website = profile.website;
+
+    // 2. Recent media with insights
+    const mediaUrl = `https://graph.facebook.com/v20.0/${accountId}/media?fields=id,media_type,media_url,thumbnail_url,caption,timestamp&limit=12&access_token=${encodeURIComponent(accessToken)}`;
+    const mediaRes = await fetchWithTimeout(mediaUrl);
+    if (mediaRes.ok) {
+      const mediaData = await mediaRes.json() as { data?: Array<{ id: string; media_type?: string; media_url?: string; thumbnail_url?: string; caption?: string; timestamp?: string }> };
+      const posts: AccountAnalyticsPost[] = [];
+
+      for (const media of (mediaData.data ?? []).slice(0, 9)) {
+        try {
+          const insightUrl = `https://graph.facebook.com/v20.0/${media.id}/insights?metric=impressions,reach,likes,comments,saved&access_token=${encodeURIComponent(accessToken)}`;
+          const insightRes = await fetchWithTimeout(insightUrl);
+          let likes = 0, comments = 0, reach = 0, impressions = 0, saved = 0;
+          if (insightRes.ok) {
+            const insightData = await insightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
+            for (const m of insightData.data ?? []) {
+              const v = m.values?.[0]?.value ?? 0;
+              if (m.name === "impressions") impressions = v;
+              else if (m.name === "reach") reach = v;
+              else if (m.name === "likes") likes = v;
+              else if (m.name === "comments") comments = v;
+              else if (m.name === "saved") saved = v;
+            }
+          }
+          posts.push({ id: media.id, mediaUrl: media.media_url, thumbnailUrl: media.thumbnail_url, mediaType: media.media_type, caption: media.caption, timestamp: media.timestamp, likes, comments, reach, impressions, saved });
+        } catch {
+          posts.push({ id: media.id, mediaUrl: media.media_url, thumbnailUrl: media.thumbnail_url, mediaType: media.media_type, caption: media.caption, timestamp: media.timestamp, likes: 0, comments: 0, reach: 0, impressions: 0 });
+        }
+      }
+
+      base.recentPosts = posts;
+
+      // 3. 30-day account insights
+      try {
+        const since = Math.floor((Date.now() - 30 * 86400_000) / 1000);
+        const until = Math.floor(Date.now() / 1000);
+        const accInsightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=reach,impressions&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
+        const accInsightRes = await fetchWithTimeout(accInsightUrl);
+        if (accInsightRes.ok) {
+          const accData = await accInsightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
+          for (const m of accData.data ?? []) {
+            const total = (m.values ?? []).reduce((s, v) => s + (v.value ?? 0), 0);
+            if (m.name === "reach") base.totalReach30d = total;
+            if (m.name === "impressions") base.totalImpressions30d = total;
+          }
+        }
+      } catch { /* non-critical */ }
+
+      // 4. Avg engagement
+      if (posts.length > 0) {
+        const engSum = posts.reduce((s, p) => s + p.likes + p.comments + (p.saved ?? 0), 0);
+        base.avgEngagement = Math.round(engSum / posts.length);
+      }
+    }
+
+    return base;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ...base, error: msg.includes("abort") ? "Timeout ao buscar dados" : msg };
+  }
+}
+
+async function fetchFacebookAnalytics(
+  integrationId: string,
+  accountId: string,
+  accountName: string,
+  accessToken: string,
+  status: string,
+): Promise<AccountAnalytics> {
+  const base: AccountAnalytics = {
+    integrationId,
+    provider: "facebook",
+    accountName,
+    accountId,
+    followers: null,
+    following: null,
+    mediaCount: null,
+    avgEngagement: null,
+    totalReach30d: null,
+    totalImpressions30d: null,
+    recentPosts: [],
+    status,
+  };
+
+  try {
+    // Page profile + fan count
+    const profileUrl = `https://graph.facebook.com/v20.0/${accountId}?fields=name,picture.type(large),fan_count,followers_count,about,website&access_token=${encodeURIComponent(accessToken)}`;
+    const profileRes = await fetchWithTimeout(profileUrl);
+    if (!profileRes.ok) return { ...base, error: `Graph API ${profileRes.status}` };
+    const profile = await profileRes.json() as {
+      name?: string; picture?: { data?: { url?: string } }; fan_count?: number;
+      followers_count?: number; about?: string; website?: string;
+    };
+
+    base.accountName = profile.name ?? accountName;
+    base.profilePictureUrl = profile.picture?.data?.url;
+    base.followers = profile.followers_count ?? profile.fan_count ?? null;
+    base.biography = profile.about;
+    base.website = profile.website;
+
+    // Recent posts
+    const postsUrl = `https://graph.facebook.com/v20.0/${accountId}/posts?fields=id,message,full_picture,created_time,likes.summary(true),comments.summary(true)&limit=9&access_token=${encodeURIComponent(accessToken)}`;
+    const postsRes = await fetchWithTimeout(postsUrl);
+    if (postsRes.ok) {
+      const postsData = await postsRes.json() as { data?: Array<{ id: string; message?: string; full_picture?: string; created_time?: string; likes?: { summary?: { total_count?: number } }; comments?: { summary?: { total_count?: number } } }> };
+      base.recentPosts = (postsData.data ?? []).map(p => ({
+        id: p.id,
+        mediaUrl: p.full_picture,
+        caption: p.message,
+        timestamp: p.created_time,
+        likes: p.likes?.summary?.total_count ?? 0,
+        comments: p.comments?.summary?.total_count ?? 0,
+        reach: 0,
+        impressions: 0,
+      }));
+      if (base.recentPosts.length > 0) {
+        const engSum = base.recentPosts.reduce((s, p) => s + p.likes + p.comments, 0);
+        base.avgEngagement = Math.round(engSum / base.recentPosts.length);
+      }
+    }
+
+    // 30-day page insights
+    try {
+      const since = Math.floor((Date.now() - 30 * 86400_000) / 1000);
+      const until = Math.floor(Date.now() / 1000);
+      const insightUrl = `https://graph.facebook.com/v20.0/${accountId}/insights?metric=page_post_engagements,page_impressions&period=day&since=${since}&until=${until}&access_token=${encodeURIComponent(accessToken)}`;
+      const insightRes = await fetchWithTimeout(insightUrl);
+      if (insightRes.ok) {
+        const insightData = await insightRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
+        for (const m of insightData.data ?? []) {
+          const total = (m.values ?? []).reduce((s, v) => s + (v.value ?? 0), 0);
+          if (m.name === "page_impressions") base.totalImpressions30d = total;
+        }
+      }
+    } catch { /* non-critical */ }
+
+    return base;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ...base, error: msg.includes("abort") ? "Timeout ao buscar dados" : msg };
+  }
+}
+
+async function fetchTikTokAnalytics(
+  integrationId: string,
+  accountId: string,
+  accountName: string,
+  accessToken: string,
+  status: string,
+): Promise<AccountAnalytics> {
+  const base: AccountAnalytics = {
+    integrationId,
+    provider: "tiktok",
+    accountName,
+    accountId,
+    followers: null,
+    following: null,
+    mediaCount: null,
+    avgEngagement: null,
+    totalReach30d: null,
+    totalImpressions30d: null,
+    recentPosts: [],
+    status,
+  };
+
+  try {
+    // User info
+    const userRes = await fetchWithTimeout(
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url,follower_count,following_count,video_count,likes_count,bio_description,profile_web_url",
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!userRes.ok) return { ...base, error: `TikTok API ${userRes.status}` };
+    const userData = await userRes.json() as {
+      data?: {
+        user?: {
+          display_name?: string; avatar_url?: string; follower_count?: number;
+          following_count?: number; video_count?: number; likes_count?: number;
+          bio_description?: string; profile_web_url?: string;
+        }
+      }
+    };
+    const user = userData.data?.user;
+    if (user) {
+      base.accountName = user.display_name ? `@${user.display_name}` : accountName;
+      base.profilePictureUrl = user.avatar_url;
+      base.followers = user.follower_count ?? null;
+      base.following = user.following_count ?? null;
+      base.mediaCount = user.video_count ?? null;
+      base.biography = user.bio_description;
+      base.website = user.profile_web_url;
+    }
+
+    // Recent videos
+    try {
+      const videosRes = await fetchWithTimeout(
+        "https://open.tiktokapis.com/v2/video/list/?fields=id,title,cover_image_url,create_time,like_count,comment_count,share_count,view_count",
+        { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ max_count: 9 }) }
+      );
+      if (videosRes.ok) {
+        const videosData = await videosRes.json() as {
+          data?: { videos?: Array<{ id: string; title?: string; cover_image_url?: string; create_time?: number; like_count?: number; comment_count?: number; share_count?: number; view_count?: number }> }
+        };
+        const videos = videosData.data?.videos ?? [];
+        base.recentPosts = videos.map(v => ({
+          id: v.id,
+          thumbnailUrl: v.cover_image_url,
+          caption: v.title,
+          timestamp: v.create_time ? new Date(v.create_time * 1000).toISOString() : undefined,
+          likes: v.like_count ?? 0,
+          comments: v.comment_count ?? 0,
+          reach: v.view_count ?? 0,
+          impressions: v.view_count ?? 0,
+        }));
+        if (base.recentPosts.length > 0) {
+          const engSum = base.recentPosts.reduce((s, p) => s + p.likes + p.comments, 0);
+          base.avgEngagement = Math.round(engSum / base.recentPosts.length);
+        }
+      }
+    } catch { /* non-critical */ }
+
+    return base;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ...base, error: msg.includes("abort") ? "Timeout ao buscar dados" : msg };
+  }
+}
+
+export async function getAccountsWithAnalytics(workspaceId: string): Promise<AccountAnalytics[]> {
+  // Fetch accounts WITH access tokens for live API calls
+  const accounts = await db
+    .select({
+      id: workspaceIntegrationsTable.id,
+      provider: workspaceIntegrationsTable.provider,
+      status: workspaceIntegrationsTable.status,
+      accountId: workspaceIntegrationsTable.accountId,
+      accountName: workspaceIntegrationsTable.accountName,
+      accessToken: workspaceIntegrationsTable.accessToken,
+      metadata: workspaceIntegrationsTable.metadata,
+    })
+    .from(workspaceIntegrationsTable)
+    .where(
+      and(
+        eq(workspaceIntegrationsTable.workspaceId, workspaceId),
+        eq(workspaceIntegrationsTable.isPaymentGateway, false),
+        inArray(workspaceIntegrationsTable.provider, ["instagram", "facebook", "meta_ads", "tiktok_ads"]),
+        inArray(workspaceIntegrationsTable.status, ["connected", "expired"])
+      )
+    );
+
+  const results = await Promise.allSettled(
+    accounts.map(async (acct) => {
+      const token = acct.accessToken ?? "";
+      const id = acct.id;
+      const name = acct.accountName ?? "Conta";
+      const accountId = acct.accountId ?? "";
+      const status = acct.status;
+
+      if (acct.provider === "instagram") {
+        return fetchInstagramAnalytics(id, accountId, name, token, status);
+      }
+      if (acct.provider === "facebook" || acct.provider === "meta_ads") {
+        const pageId = (acct.metadata as Record<string, string> | null)?.["pageId"] ?? accountId;
+        return fetchFacebookAnalytics(id, pageId, name, token, status);
+      }
+      if (acct.provider === "tiktok_ads") {
+        return fetchTikTokAnalytics(id, accountId, name, token, status);
+      }
+      // Unsupported — return stub
+      return {
+        integrationId: id,
+        provider: acct.provider,
+        accountName: name,
+        accountId,
+        followers: null,
+        following: null,
+        mediaCount: null,
+        avgEngagement: null,
+        totalReach30d: null,
+        totalImpressions30d: null,
+        recentPosts: [],
+        status,
+      } satisfies AccountAnalytics;
+    })
+  );
+
+  return results.map((r, i) => {
+    if (r.status === "fulfilled") return r.value;
+    const acct = accounts[i]!;
+    return {
+      integrationId: acct.id,
+      provider: acct.provider,
+      accountName: acct.accountName ?? "Conta",
+      accountId: acct.accountId,
+      followers: null,
+      following: null,
+      mediaCount: null,
+      avgEngagement: null,
+      totalReach30d: null,
+      totalImpressions30d: null,
+      recentPosts: [],
+      status: acct.status,
+      error: r.reason instanceof Error ? r.reason.message : "Erro desconhecido",
+    } satisfies AccountAnalytics;
+  });
+}
+
 // ─── Posts ────────────────────────────────────────────────────────────────────
 
 export async function createPost(

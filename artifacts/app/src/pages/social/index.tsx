@@ -13,7 +13,9 @@ import {
   MessageSquare, Users, Plus, Copy, ChevronRight, Bot,
   Zap, Send, Phone, ArrowRight, Clock, Sparkles, Lock,
   AlertTriangle, Wifi, WifiOff, Target, TrendingUp, Radio,
+  BarChart3,
 } from "lucide-react";
+import { SocialAnalyticsTab } from "./analytics";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -418,7 +420,7 @@ function CreateGroupModal({ onClose, onCreate }: { onClose: () => void; onCreate
 
 export default function SocialPage() {
   const { workspace } = useAuth();
-  const [activeTab, setActiveTab] = useState<"platforms" | "groups" | "dm">("platforms");
+  const [activeTab, setActiveTab] = useState<"platforms" | "groups" | "dm" | "analytics">("platforms");
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [generatingPlatform, setGeneratingPlatform] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -477,6 +479,7 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
 
   const TABS = [
     { id: "platforms" as const, label: "Plataformas" },
+    { id: "analytics" as const, label: "Analytics" },
     { id: "groups" as const, label: `Grupos (${groups.length})` },
     { id: "dm" as const, label: "DM Assist" },
   ];
@@ -518,6 +521,9 @@ Seja específico, persuasivo e use gatilhos mentais de autoridade, antecipação
       <div className="flex border-b border-border/50 overflow-x-auto">
         {TABS.map(t => <TabBtn key={t.id} id={t.id} label={t.label} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} />)}
       </div>
+
+      {/* ══════════════ TAB: ANALYTICS ══════════════ */}
+      {activeTab === "analytics" && <SocialAnalyticsTab />}
 
       {/* ══════════════ TAB: PLATAFORMAS ══════════════ */}
       {activeTab === "platforms" && (

@@ -11,6 +11,7 @@ import {
   handleTikTokCallback,
   disconnectAccount,
   getConnectedAccounts,
+  getAccountsWithAnalytics,
   createPost,
   listPosts,
   getPost,
@@ -110,6 +111,11 @@ router.get("/callback/tiktok", async (req, res): Promise<void> => {
 });
 
 // ─── Accounts management ──────────────────────────────────────────────────────
+
+router.get("/accounts/analytics", requireAuth, async (req, res): Promise<void> => {
+  const analytics = await getAccountsWithAnalytics(req.auth.workspaceId);
+  res.json({ analytics });
+});
 
 router.get("/accounts", requireAuth, async (req, res): Promise<void> => {
   const accounts = await getConnectedAccounts(req.auth.workspaceId);
