@@ -772,20 +772,48 @@ export function ConnectModal({
         setOauthLoading(false);
         return;
       }
+
+      // Track whether postMessage already handled the result (desktop path).
+      // On mobile, window.opener is null so postMessage never fires — we fall
+      // back to an API check when the popup/tab closes.
+      let messageHandled = false;
+
       const handler = (event: MessageEvent<{ type?: string; success?: boolean; provider?: string; error?: string }>) => {
         if (event.data?.type !== "oauth_complete") return;
         window.removeEventListener("message", handler);
+        messageHandled = true;
         setOauthLoading(false);
         if (event.data.success) { onOAuthSuccess(); }
         else { setOauthError(event.data.error ?? "Falha na autenticação."); }
       };
       window.addEventListener("message", handler);
-      const timer = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(timer);
-          window.removeEventListener("message", handler);
-          setOauthLoading(false);
+
+      const timer = setInterval(async () => {
+        if (!popup.closed) return;
+        clearInterval(timer);
+        window.removeEventListener("message", handler);
+
+        // Desktop: postMessage already handled it — nothing to do.
+        if (messageHandled) return;
+
+        // Mobile fallback: postMessage couldn't reach us (window.opener was null).
+        // Check the API once to see if the provider connected successfully.
+        try {
+          const integrations = await customFetch<Array<{ provider: string; status: string }>>(
+            "/api/workspaces/me/integrations"
+          );
+          const justConnected = integrations.find(
+            (i) => i.provider === entry.provider && i.status === "connected"
+          );
+          if (justConnected) {
+            onOAuthSuccess();
+            return; // modal will close — no need to setOauthLoading(false)
+          }
+        } catch {
+          // ignore — fall through to stop the spinner
         }
+
+        setOauthLoading(false);
       }, 600);
     } catch (err) {
       setOauthLoading(false);
