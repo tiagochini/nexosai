@@ -1161,6 +1161,7 @@ export default function VideoProductionPage() {
   // Auto-select project from URL param (e.g. coming from CreativeStudioBlock)
   const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const projectIdParam = search?.get("projectId");
+  const setupAvatarMode = search?.get("setup") === "avatar";
 
   useEffect(() => {
     loadProjects();
@@ -1411,6 +1412,31 @@ export default function VideoProductionPage() {
           </div>
         </div>
       </div>
+
+      {/* Avatar setup banner — shown when coming from Presença Social */}
+      {setupAvatarMode && (
+        <div className="border-b border-amber-400/20 bg-amber-400/5 px-6 py-4">
+          <div className="max-w-7xl mx-auto flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
+              <User className="h-4 w-4 text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-mono text-sm font-bold text-amber-300">Configurar clone digital para vídeos automáticos</p>
+              <p className="font-mono text-xs text-amber-300/70 mt-0.5">
+                Para criar vídeos com você na câmera, crie um projeto abaixo, selecione <strong>"Quero aparecer nos vídeos"</strong> e configure seu avatar e voz clonada. Depois os posts de Presença Social usarão você automaticamente.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="font-mono text-xs shrink-0 bg-amber-400/20 border border-amber-400/30 text-amber-300 hover:bg-amber-400/30"
+              variant="outline"
+              onClick={() => setCreating(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />Criar projeto
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-6 py-6 flex gap-6">
         {/* Left: project list */}

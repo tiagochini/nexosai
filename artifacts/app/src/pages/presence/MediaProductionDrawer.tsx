@@ -461,7 +461,7 @@ function AITabContent({
           </div>
         </div>
         <a
-          href="/video-production"
+          href="/video-production?setup=avatar"
           target="_blank"
           rel="noreferrer"
           className="flex items-center justify-center gap-2 w-full rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-300 hover:bg-amber-400/20 transition-colors"
@@ -695,11 +695,10 @@ function AITabContent({
 
         <div className="flex flex-col gap-2">
           {isImageFormat ? (
-            <Button onClick={onApproveImage} disabled={busy} variant="outline" className="w-full border-amber-500/40 text-amber-400 hover:bg-amber-400/10">
-              {busy
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</>
-                : <><CheckCircle2 className="mr-2 h-4 w-4" /> Usar este rascunho assim mesmo</>}
-            </Button>
+            <div className="rounded-lg border border-red-500/30 bg-red-500/8 px-3 py-2.5 text-xs text-red-400">
+              <p className="font-semibold">Rascunho SVG não pode ser publicado</p>
+              <p className="text-red-400/70 mt-0.5">Instagram e TikTok rejeitam SVG. Use "Tentar gerar imagem novamente" ou faça upload de uma imagem real via "Fazer Upload".</p>
+            </div>
           ) : (
             <Button onClick={onGenerateVideo} disabled={busy} className="w-full">
               {busy

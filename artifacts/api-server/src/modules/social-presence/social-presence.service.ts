@@ -1767,6 +1767,8 @@ export async function preGeneratePresenceMedia(): Promise<void> {
 // Fluxo: roteiro → storyboard (baixa resolução) → vídeo final com avatar clone
 
 function buildImageClient(): OpenAI {
+  // NEXOS_OPENAI é a chave dedicada para geração de imagem (sem restrições de org)
+  if (env.NEXOS_OPENAI) return new OpenAI({ apiKey: env.NEXOS_OPENAI });
   if (env.OPENAI_API_KEY) return new OpenAI({ apiKey: env.OPENAI_API_KEY });
   if (env.AI_INTEGRATIONS_OPENAI_API_KEY && env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
     return new OpenAI({ apiKey: env.AI_INTEGRATIONS_OPENAI_API_KEY, baseURL: env.AI_INTEGRATIONS_OPENAI_BASE_URL });
@@ -1846,9 +1848,8 @@ async function generateStoryboardFrame(
   }
 
   // ── Tentativa 2: OpenAI image generation ────────────────────────────────────
-  // Tenta gpt-image-1 (novo, suportado pelo proxy de AI Integrations) e depois
-  // dall-e-3 (chave direta). Ambos usam response_format default (url).
-  const imageModelsOAI = ["gpt-image-1", "dall-e-3"];
+  // Tenta dall-e-3 primeiro (mais disponível em contas padrão), depois gpt-image-1.
+  const imageModelsOAI = ["dall-e-3", "gpt-image-1"];
   for (const oaiModel of imageModelsOAI) {
     try {
       const client = buildImageClient();
@@ -2080,8 +2081,8 @@ export async function redirectToPresenceMedia(
   gcsKey: string,
   res: import("express").Response,
 ): Promise<void> {
-  // 1. Prefix guard
-  if (!gcsKey.startsWith("presence-media/")) {
+  // 1. Prefix guard — aceita presence-media/ (mídia de posts) e presence-storyboard/ (frames de IA)
+  if (!gcsKey.startsWith("presence-media/") && !gcsKey.startsWith("presence-storyboard/")) {
     res.status(403).end();
     return;
   }
@@ -2405,6 +2406,13 @@ export async function approveStoryboardAsImage(
     log.info({ postId, key, mimeType }, "presence: storyboard (legado base64) enviado ao GCS ✓");
   } else if (storyboardEntry.includes("/api/presence/media/serve")) {
     // Novo caminho: já foi enviado ao GCS durante a geração — reutilizar URL
+    // Bloquear SVG: Instagram/TikTok rejeitam SVG com "Only photo or video accepted"
+    if (storyboardEntry.includes(".svg") || post.mediaGenStatus === "storyboard_draft") {
+      throw new Error(
+        "Este é um rascunho gerado sem IA (SVG) e não pode ser publicado diretamente. " +
+        "Use 'Tentar gerar imagem novamente' para obter uma imagem real, ou faça upload de uma imagem/vídeo próprio.",
+      );
+    }
     serveUrl = storyboardEntry;
     log.info({ postId, serveUrl }, "presence: storyboard já no GCS — aprovado como imagem final ✓");
   } else {
