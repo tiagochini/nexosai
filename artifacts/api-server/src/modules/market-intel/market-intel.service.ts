@@ -336,11 +336,13 @@ export async function buildIntakeMarketIntelContext(
   const parts: string[] = ["ANÁLISE DE MERCADO DISPONÍVEL (use como base factual, não invente além):"];
   if (out.marketMaturity) parts.push(`Maturidade: ${out.marketMaturity}${out.marketSize ? ` | Tamanho: ${out.marketSize}` : ""}`);
   const topCompetitors = (out.competitors ?? []).slice(0, 3)
-    .map((c) => `${c.name} (vulnerável em: ${c.biggestVulnerability})`)
+    .map((c) => `${c.name} (vulnerável em: ${c.biggestVulnerability}; preço: ${c.pricingStrategy})`)
     .join("; ");
   if (topCompetitors) parts.push(`Concorrentes: ${topCompetitors}`);
   const topGap = out.positioningGaps?.[0];
-  if (topGap) parts.push(`Gap principal: ${topGap.gap}`);
+  if (topGap) parts.push(`Gap principal: ${topGap.gap} — ${topGap.opportunity}`);
+  // Pricing arbitrage — critical for Jeff when user doesn't know their price
+  if (out.pricingArbitrage) parts.push(`ARBITRAGEM DE PREÇO: ${out.pricingArbitrage.slice(0, 300)}`);
   if (out.entryRecommendation) parts.push(`Entrada recomendada: ${out.entryRecommendation.slice(0, 200)}`);
   const questions = (out.clarifyingQuestions ?? []).slice(0, 3);
   if (questions.length > 0) {
@@ -348,7 +350,7 @@ export async function buildIntakeMarketIntelContext(
       `PERGUNTAS PENDENTES DA ANÁLISE (faça-as de forma natural durante a conversa, UMA por vez, quando fizer sentido): ${questions.join(" | ")}`,
     );
   }
-  return parts.join("\n").slice(0, 900);
+  return parts.join("\n").slice(0, 1200);
 }
 
 // ─── Deep-dive chat ──────────────────────────────────────────────────────────

@@ -30,8 +30,12 @@ import {
 // message text *tells the user* the briefing is done, the UI state MUST agree,
 // or the "Ver e Aprovar Master Plan" button silently never renders while the
 // percentage stays stuck below 100 (P0 bug — see replit.md Gotchas).
+// IMPORTANT: patterns must be specific enough to NOT fire on mid-conversation
+// phrases like "precisamos de informações suficientes sobre preço" — only fire
+// when the message is actually announcing completion to the user.
 const COMPLETION_SIGNAL_PATTERNS = [
-  /informações suficientes/i,
+  /já temos (as |todas as )?informações suficientes/i,
+  /temos tudo (o )?que precisamos/i,
   /briefing (está |)?(100%\s*)?completo/i,
   /clique no botão abaixo/i,
   /ver e aprovar o? master plan/i,
@@ -372,6 +376,30 @@ Nunca avance um campo com especificidade baixa. Sonde primeiro.
 **Jeff — quando revenueTarget é ausente ou sem lógica:**
   → "Sem meta definida, trabalhamos sem direção. Me diz: quantas vendas do [produto] a R$[preço] fariam sentido para você nesse lançamento? Vamos calcular juntos."
   → "Pensando nos últimos lançamentos que você fez ou viu no mercado — qual resultado te pareceu alcançável e te animaria se fosse o seu?"
+
+**Jeff — PROTOCOLO DE PRECIFICAÇÃO INCERTA (quando usuário não sabe o preço)**
+
+Detecte ATIVAMENTE quando o usuário sinaliza incerteza sobre preço ou meta:
+Sinais: "não sei", "ainda pesquisando", "não tenho certeza", "qual você recomenda", "me ajuda a definir", "quanto cobrar", "não sei quanto cobrar", "tô em dúvida", "depende", "ainda não decidi".
+
+Quando detectar incerteza de precificação, Jeff age em 3 camadas:
+
+CAMADA 1 — Se ANÁLISE DE MERCADO DISPONÍVEL (com ARBITRAGEM DE PREÇO no contexto):
+  Jeff apresenta os dados de mercado DIRETAMENTE ao usuário:
+  → "Perfeito — o time de inteligência de mercado já fez uma análise dessa categoria. [Apresente o que o pricingArbitrage diz sobre posições de preço abertas e o que os concorrentes estão cobrando.] Com base nisso, onde você se vê: na posição premium, no meio-campo, ou na entrada acessível?"
+  → Depois de o usuário escolher, calcule a meta juntos: preço × vendas realistas = revenueTarget.
+
+CAMADA 2 — Se análise ainda não está pronta / não disponível:
+  Jeff oferece DUAS saídas rápidas:
+  a) Trabalhar de trás pra frente pela meta: "Me diz quanto você quer fazer nesse lançamento — mesmo que seja um número de sonho. Com isso eu calculo o preço e as vendas que fazem sentido para chegar lá."
+  b) Consulta de mercado: "Posso acionar o time de Inteligência de Mercado para analisar o que os produtos semelhantes ao seu estão cobrando na sua categoria. Isso leva alguns minutos. Quer que eu faça isso agora?"
+  → Se o usuário aceitar: responda "Acionando agora — enquanto isso, me conta mais sobre [próximo campo mais importante]. Quando o relatório estiver pronto, eu trago os números direto aqui."
+
+CAMADA 3 — NUNCA:
+  × Não force um número inventado
+  × Não avance para a próxima fase deixando product.price = vazio
+  × Não marque isComplete: true enquanto produto.price E revenueTarget estiverem ambos ausentes
+  × Não diga "precisamos continuar" sem oferecer ajuda concreta primeiro
 
 **Walker — quando scarcityMechanism ou cartOpenDuration é ausente:**
   → "Quanto tempo você quer manter o carrinho aberto? Lançamentos de 7 dias com escassez real convertem melhor — mas depende do seu modelo. Qual faz mais sentido para você?"
@@ -743,17 +771,26 @@ export async function processConversationalTurn(
     };
   }
 
-  // ── Round limit: after 40 history entries (~20 exchanges), force completion ─
+  // ── Round limit: after 60 history entries (~30 exchanges), force completion ─
+  // IMPORTANT: only force-complete when critical pricing/revenue fields are present.
+  // If both product.price AND campaign.revenueTarget are missing, Jeff must first
+  // present market data or offer to work backwards — NEVER cut the user off while
+  // they're still figuring out their pricing strategy.
   const existingHistory = Array.isArray(currentIntake["_conversationHistory"])
     ? (currentIntake["_conversationHistory"] as unknown[])
     : [];
-  if (existingHistory.length >= 40) {
-    const forcedMessage = `Temos informações suficientes para começar! Briefing registrado com os dados coletados até aqui. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento.`;
+  const hasPriceData = currentIntake["product.price"] != null && currentIntake["product.price"] !== "";
+  const hasRevenueTarget = currentIntake["campaign.revenueTarget"] != null && currentIntake["campaign.revenueTarget"] !== "";
+  const criticalFieldsMissing = !hasPriceData && !hasRevenueTarget;
+
+  if (existingHistory.length >= 60 && !criticalFieldsMissing) {
+    // Both conditions met: long conversation AND has at least price OR revenue target
+    const forcedMessage = `Temos tudo que precisamos para montar o Master Plan! Briefing registrado com os dados coletados. Clique no botão abaixo para ver e aprovar o Master Plan do Lançamento.`;
     const updatedHistory = [
       ...existingHistory as Array<{ role: string; content: string }>,
       { role: "user", content: userMessage },
-      { role: "assistant", content: forcedMessage, agentId: "erico" },
-    ].slice(-40);
+      { role: "assistant", content: forcedMessage, agentId: "jeff" },
+    ].slice(-60);
     await saveIntakeData(campaignId, workspaceId, {
       ...currentIntake,
       _conversationHistory: updatedHistory,
@@ -768,7 +805,7 @@ export async function processConversationalTurn(
     const requiredQs2 = questions.filter(q => q.required);
     const totalRequired2 = requiredQs2.length;
     return {
-      agentId: "erico",
+      agentId: "jeff",
       extracted: {},
       aiMessage: forcedMessage,
       nextQuestionId: null,
@@ -804,12 +841,20 @@ export async function processConversationalTurn(
     log.warn({ err }, "Market intel context load failed — non-blocking");
   }
 
+  // Detect if critical pricing fields are still missing so we can flag this for Jeff
+  const priceMissing = !currentIntake["product.price"] && !currentIntake["campaign.revenueTarget"];
+  const pricingUncertaintyAlert = priceMissing && marketIntelContext
+    ? `\n\nALERTA JEFF: product.price E campaign.revenueTarget ainda não estão definidos. O usuário pode não saber quanto cobrar. A ANÁLISE DE MERCADO ABAIXO contém dados de ARBITRAGEM DE PREÇO — Jeff DEVE apresentar esses dados proativamente ao usuário neste turno, em linguagem acessível, e ajudá-lo a definir preço e meta juntos. Não passe para outro campo sem resolver isso.`
+    : priceMissing && !marketIntelContext
+    ? `\n\nALERTA JEFF: product.price E campaign.revenueTarget ainda não estão definidos. Aplique o PROTOCOLO DE PRECIFICAÇÃO INCERTA: ofereça trabalhar de trás pra frente pela meta, ou ofereça acionar análise de mercado.`
+    : "";
+
   const contextNote = (`ESTADO DO INTAKE:
 Tipo: ${type} | Track: ${track}
 Preenchidos (${answeredFields.length}): ${answeredFields.join(", ") || "nenhum"}
 Faltando obrigatórios: ${missingRequired.slice(0, 8).join(", ") || "COMPLETO"}
 Próxima pergunta: ${nextQuestion ? `"${nextQuestion.label}" [id:${nextQuestion.id}]` : "TODAS RESPONDIDAS"}
-Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO ESPECIAL: O usuário está RETOMANDO um briefing iniciado anteriormente. Apresente um resumo claro e objetivo do que já foi coletado (produto, audiência, metas já preenchidas), indique em qual fase estamos (${answeredFields.length === 0 ? "Fase 1 — Produto" : missingRequired.length === 0 ? "Completo" : "progresso parcial"}), e pergunte a próxima questão que falta de forma natural. Não comece do zero.` : ""}`.slice(0, 1400)) // hard cap
+Resumo preenchidos:\n${filledSummary || "(vazio)"}${isResume ? `\n\nINSTRUÇÃO ESPECIAL: O usuário está RETOMANDO um briefing iniciado anteriormente. Apresente um resumo claro e objetivo do que já foi coletado (produto, audiência, metas já preenchidas), indique em qual fase estamos (${answeredFields.length === 0 ? "Fase 1 — Produto" : missingRequired.length === 0 ? "Completo" : "progresso parcial"}), e pergunte a próxima questão que falta de forma natural. Não comece do zero.` : ""}${pricingUncertaintyAlert}`.slice(0, 1800)) // hard cap
     + (marketIntelContext ? `\n\n${marketIntelContext}` : "");
 
   // Build messages for AI
