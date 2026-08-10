@@ -1803,84 +1803,56 @@ async function generateStoryboardFrame(
     "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
   ].join(" ");
 
-  // ── Tentativa 1a: Imagen 3 via REST (Google AI Studio — não requer SDK extra) ──
-  // Suporta aspect ratios nativos: 1:1, 3:4, 4:3, 9:16, 16:9
-  const imagenKey = env.GEMINI_API_KEY; // GEMINI_API_KEY é a chave Google AI Studio direta
-  if (imagenKey) {
-    try {
-      const isPortrait = ["reel", "story"].includes(format);
-      const aspectRatio = isPortrait ? "9:16" : "4:3";
-      log.info({ platform, format, aspectRatio }, "presence: attempting Imagen 3 storyboard (REST)");
-      const imagenResp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${imagenKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            instances: [{ prompt: prompt.slice(0, 2000) }],
-            parameters: { aspectRatio, sampleCount: 1 },
-          }),
-          signal: AbortSignal.timeout(45_000),
-        },
-      );
-      if (imagenResp.ok) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const imagenData = await imagenResp.json() as any;
-        const b64 = imagenData?.predictions?.[0]?.bytesBase64Encoded as string | undefined;
-        const mime = (imagenData?.predictions?.[0]?.mimeType as string | undefined) ?? "image/png";
-        if (b64) {
-          log.info({ format, aspectRatio }, "presence: Imagen 3 storyboard generated ✓");
-          return { buf: Buffer.from(b64, "base64"), mimeType: mime, isAI: true };
-        }
-        log.warn({ imagenData }, "presence: Imagen 3 returned no prediction — trying next");
-      } else {
-        const errText = await imagenResp.text().catch(() => "");
-        log.warn({ status: imagenResp.status, errText }, "presence: Imagen 3 REST failed — trying next");
-      }
-    } catch (imagenErr) {
-      log.warn({ imagenErr }, "presence: Imagen 3 exception — trying next");
-    }
-  }
-
-  // ── Tentativa 1b: Gemini generateContent com inline image output ─────────────
+  // ── Tentativa 1: Gemini Image Generation via REST (Google AI Studio) ────────
+  // Modelos confirmados disponíveis na conta (verificados via ListModels):
+  //   gemini-3.1-flash-image, gemini-3.1-flash-image-preview, gemini-3.1-flash-lite-image,
+  //   gemini-2.5-flash-image, gemini-2.0-flash-preview-image-generation
+  // Todos usam generateContent com responseModalities:["IMAGE","TEXT"]
   const geminiKey = env.GEMINI_API_KEY || env.AI_INTEGRATIONS_GEMINI_API_KEY;
   if (geminiKey) {
-    // gemini-2.0-flash-preview-image-generation: suporta output de imagem inline
-    const imageModels = ["gemini-2.0-flash-preview-image-generation"];
-    for (const modelId of imageModels) {
+    const geminiImageModels = [
+      "gemini-3.1-flash-image",
+      "gemini-2.5-flash-image",
+      "gemini-3.1-flash-lite-image",
+      "gemini-2.0-flash-preview-image-generation",
+    ];
+    for (const modelId of geminiImageModels) {
       try {
-        log.info({ platform, format, model: modelId }, "presence: attempting Gemini storyboard");
-        // Usa GEMINI_API_KEY direto (sem baseURL = Google API nativa) ou proxy como fallback
-        const useProxy = !env.GEMINI_API_KEY && !!(env.AI_INTEGRATIONS_GEMINI_API_KEY && env.AI_INTEGRATIONS_GEMINI_BASE_URL);
-        const gemini = new GoogleGenerativeAI(geminiKey);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const reqOpts: any = useProxy ? { baseUrl: env.AI_INTEGRATIONS_GEMINI_BASE_URL } : {};
-        const model = gemini.getGenerativeModel(
+        log.info({ platform, format, model: modelId }, "presence: attempting Gemini image storyboard (REST)");
+        const geminiResp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${geminiKey}`,
           {
-            model: modelId,
-            // TEXT must be included alongside IMAGE for the API to accept the request
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            generationConfig: { responseModalities: ["TEXT", "IMAGE"] } as any,
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt.slice(0, 4000) }], role: "user" }],
+              generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+            }),
+            signal: AbortSignal.timeout(45_000),
           },
-          reqOpts,
         );
-
-        const result = await model.generateContent(prompt);
-        const parts = result.response.candidates?.[0]?.content?.parts ?? [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const imgPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/")) as any;
-
-        if (imgPart?.inlineData?.data) {
-          log.info({ model: modelId }, "presence: Gemini storyboard generated ✓");
-          return {
-            buf: Buffer.from(imgPart.inlineData.data, "base64"),
-            mimeType: imgPart.inlineData.mimeType as string,
-            isAI: true,
-          };
+        if (geminiResp.ok) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const geminiData = await geminiResp.json() as any;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const parts: any[] = geminiData?.candidates?.[0]?.content?.parts ?? [];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const imgPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
+          if (imgPart?.inlineData?.data) {
+            log.info({ model: modelId }, "presence: Gemini image storyboard generated ✓");
+            return {
+              buf: Buffer.from(imgPart.inlineData.data as string, "base64"),
+              mimeType: imgPart.inlineData.mimeType as string,
+              isAI: true,
+            };
+          }
+          log.warn({ model: modelId, geminiData: JSON.stringify(geminiData).slice(0, 200) }, "presence: Gemini image returned no image part — trying next");
+        } else {
+          const errText = await geminiResp.text().catch(() => "");
+          log.warn({ model: modelId, status: geminiResp.status, errText: errText.slice(0, 200) }, "presence: Gemini image REST failed — trying next");
         }
-        log.warn({ model: modelId }, "presence: Gemini returned no image part — trying next model");
       } catch (geminiErr) {
-        log.warn({ geminiErr, model: modelId }, "presence: Gemini model failed — trying next");
+        log.warn({ geminiErr, model: modelId }, "presence: Gemini image exception — trying next");
       }
     }
   }
