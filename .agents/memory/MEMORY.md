@@ -1,3 +1,4 @@
+- [HeyGen v3 Migration](heygen-v3-migration.md) — v3 uses flat payload (no video_inputs[]); avatar_id must be look UUID from /v3/avatars/looks; poll via GET /v3/videos/{id}; v2 IDs cause 400.
 - [Clone Digital Persistence](clone-digital-persistence.md) — per-take upload queue; voice resume via voice-clone-progress endpoint; avatar flow restores step from GCS; trainingKey optional in clone-avatar-video.
 - [Social Presence Automation](social-presence-automation.md) — reel 5min timeout; silent skip for video generating; highlights auto-add; DM flows via instagram_dm_sequences; lib/db build order required.
 - [Instagram Media Serve — Direct Stream Fix](instagram-serve-redirect-bug.md) — /media/serve must stream GCS bytes directly (not redirect to JWT endpoint) when signedUrl is null; Instagram's async downloader doesn't follow redirects → container ERROR.

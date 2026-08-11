@@ -173,43 +173,51 @@ Promise.all([
     .catch((err) => logger.error({ err }, "Boot cleanup (presence business_context) failed")),
 
   // HEYGEN-FIX: Clear stale/invalid heygenAvatarId values from workspace persona settings.
-  // HeyGen periodically retires stock avatars; workspaces that had one of these saved IDs
-  // will get a 404 on every video generation attempt. Removing the stale ID forces the user
-  // to re-select from the live HeyGen catalog, which now loads dynamically.
+  // v3 API requer look UUIDs (ex: "f29d5ce5-..."). IDs no formato v2 legado
+  // ("Name_style_YYYYMMDD") são rejeitados com 400 e devem ser limpos para forçar
+  // o usuário a reselecionar da lista v3 atualizada. Regex cobre o padrão: Word_word_8digits.
   db.execute(sqlRaw`
     UPDATE workspaces
     SET settings = settings #- '{persona,heygenAvatarId}'
-    WHERE settings->'persona'->>'heygenAvatarId' IN (
-      'Daisy-inskirt-20220818',
-      'Kayla-inblackskirt-20220818',
-      'Tyler-incasualsuit-20220721'
-    )
+    WHERE settings->'persona'->>'heygenAvatarId' ~ '^[A-Za-z][A-Za-z0-9]*[-_][A-Za-z][A-Za-z0-9]*[-_][0-9]{8}$'
+       OR settings->'persona'->>'heygenAvatarId' IN (
+         'Daisy-inskirt-20220818',
+         'Kayla-inblackskirt-20220818',
+         'Tyler-incasualsuit-20220721'
+       )
   `)
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: cleared stale HeyGen avatar IDs from workspace settings");
+        logger.warn({ count: result.rowCount }, "Boot cleanup: cleared legacy v2 HeyGen avatar IDs — users must re-select from v3 catalog");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (heygen avatar) failed")),
 
-  // HEYGEN-FIX: Reset social presence posts that failed due to the stale Daisy avatar.
-  // These posts have a valid storyboard — only the video generation step failed.
-  // Resetting them to storyboard_ready + scheduled allows the scheduler to retry
-  // automatically once the user selects a valid avatar.
+  // HEYGEN-FIX: Reset social presence posts bloqueados por avatar v2 inválido.
+  // Posts com storyboard pronto mas falha na geração de vídeo (avatar rejeitado pelo v3)
+  // são resetados para storyboard_ready + scheduled para nova tentativa automática.
   db.execute(sqlRaw`
     UPDATE social_presence_posts
     SET
       media_gen_status = 'storyboard_ready',
       status           = 'scheduled',
-      error_message    = 'Avatar anterior inválido foi corrigido automaticamente — configure um avatar em Configurações → Persona para gerar o vídeo.',
+      error_message    = 'Avatar anterior inválido foi atualizado — selecione um novo avatar em Configurações → Persona para gerar o vídeo automaticamente.',
       updated_at       = NOW()
-    WHERE error_message LIKE '%Daisy-inskirt-20220818%'
+    WHERE (
+        error_message LIKE '%Daisy-inskirt%'
+     OR error_message LIKE '%avatar not found%'
+     OR error_message LIKE '%does not support Avatar IV%'
+     OR error_message LIKE '%Unable to extract tag%'
+     OR error_message LIKE '%HeyGen API error 400%'
+     OR error_message LIKE '%HeyGen API error 404%'
+    )
       AND format IN ('reel', 'feed_video', 'story')
-      AND status != 'published'
+      AND status NOT IN ('published', 'failed')
+      AND media_gen_status IN ('failed', 'storyboard_ready', 'storyboard_draft')
   `)
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: reset social presence posts blocked by stale HeyGen avatar");
+        logger.warn({ count: result.rowCount }, "Boot cleanup: reset social presence posts blocked by invalid HeyGen avatar");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (heygen posts reset) failed")),

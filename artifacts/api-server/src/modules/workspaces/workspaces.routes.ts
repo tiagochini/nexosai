@@ -410,35 +410,78 @@ router.post("/me/persona/clone-voice", async (req, res): Promise<void> => {
 
 // A small curated set of NexOS-provided ready-made HeyGen public avatars, so a
 // customer can pick a face without recording their own video.
-// Avatars obtidos dinamicamente da HeyGen API (GET /v2/avatars) —
-// nunca hardcoded, pois a HeyGen atualiza o catálogo sem aviso.
-router.get("/me/persona/stock-avatars", async (_req, res): Promise<void> => {
+// Avatars obtidos dinamicamente da HeyGen API v3 (GET /v3/avatars/looks).
+// Retorna UUIDs de looks — únicos identificadores válidos para POST /v3/videos.
+// Twins privados do usuário aparecem primeiro; avatars de estoque depois.
+// Nunca hardcoded: o catálogo HeyGen muda sem aviso.
+router.get("/me/persona/stock-avatars", async (req, res): Promise<void> => {
   const { env } = await import("../../lib/env.js");
   const heygenKey = env.HEYGEN_API_KEY;
   if (!heygenKey) {
     res.json({ avatars: [] });
     return;
   }
+
+  type HeyGenLook = {
+    id: string;
+    name: string;
+    gender?: string;
+    avatar_type?: string;
+    preview_image_url?: string;
+    preview_video_url?: string;
+    preferred_orientation?: string;
+    supported_api_engines?: string[];
+    group_id?: string;
+    default_voice_id?: string;
+  };
+
+  async function fetchLooks(params: string): Promise<HeyGenLook[]> {
+    const all: HeyGenLook[] = [];
+    let nextToken: string | null = null;
+    do {
+      const url = `https://api.heygen.com/v3/avatars/looks?limit=50${params}${nextToken ? `&next_token=${encodeURIComponent(nextToken)}` : ""}`;
+      const r = await fetch(url, { headers: { "X-Api-Key": heygenKey! } });
+      if (!r.ok) break;
+      const d = (await r.json()) as { data: HeyGenLook[]; has_more: boolean; next_token?: string };
+      all.push(...(d.data ?? []));
+      nextToken = d.has_more && d.next_token ? d.next_token : null;
+    } while (nextToken && all.length < 200);
+    return all;
+  }
+
   try {
-    const r = await fetch("https://api.heygen.com/v2/avatars", {
-      headers: { "X-Api-Key": heygenKey },
-    });
-    if (!r.ok) throw new Error(`HeyGen avatars ${r.status}`);
-    const d = (await r.json()) as {
-      data: { avatars: { avatar_id: string; avatar_name: string; gender?: string; preview_image_url?: string }[] };
-    };
-    const avatars = (d.data?.avatars ?? [])
-      .filter((a) => a.avatar_id && a.avatar_name)
-      .slice(0, 20)
+    // 1. Buscar twins privados do workspace (digital_twin + photo_avatar ownership=private)
+    const [privateTwins, stockLooks] = await Promise.all([
+      fetchLooks("&ownership=private").catch(() => [] as HeyGenLook[]),
+      fetchLooks("").catch(() => [] as HeyGenLook[]),
+    ]);
+
+    // Construir set de IDs privados para marcar no frontend
+    const privateIds = new Set(privateTwins.map((a) => a.id));
+
+    // Combinar: privados primeiro, depois estoque (sem duplicatas)
+    const combined = [
+      ...privateTwins,
+      ...stockLooks.filter((a) => !privateIds.has(a.id)),
+    ];
+
+    const avatars = combined
+      .filter((a) => a.id && a.name)
       .map((a) => ({
-        id: a.avatar_id,
-        label: a.avatar_name,
+        id: a.id,                                          // UUID do look — usar como heygenAvatarId
+        label: a.name,
         gender: a.gender ?? "unknown",
+        avatarType: a.avatar_type ?? "photo_avatar",      // "photo_avatar" | "digital_twin"
+        isPrivate: privateIds.has(a.id),                  // twin do próprio usuário
         previewUrl: a.preview_image_url ?? null,
+        previewVideoUrl: a.preview_video_url ?? null,
+        orientation: a.preferred_orientation ?? "landscape",
+        defaultVoiceId: a.default_voice_id ?? null,
       }));
+
+    req.log.info({ total: avatars.length, private: privateTwins.length }, "HeyGen looks fetched (v3)");
     res.json({ avatars });
   } catch (err) {
-    // Fallback: lista vazia — o usuário pode usar seu próprio avatar (talking photo)
     res.json({ avatars: [], error: String(err) });
   }
 });
