@@ -681,6 +681,127 @@ router.get("/me/persona/avatar-training-status", async (req, res): Promise<void>
   }
 });
 
+// GET /workspaces/me/persona/avatar-recovery-status
+// Returns full avatar state from DB + whether GCS training videos still exist.
+// Used by the frontend to decide whether to show a recovery/retry UI.
+router.get("/me/persona/avatar-recovery-status", async (req, res): Promise<void> => {
+  const workspaceId = req.auth.workspaceId;
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const persona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+
+  let hasGCSVideos = false;
+  try {
+    const { personaMediaObjectKey, getGCSObjectMeta } = await import("../../lib/gcs-recordings.js");
+    await getGCSObjectMeta(personaMediaObjectKey(workspaceId, "training"));
+    hasGCSVideos = true;
+  } catch { /* file not found — normal */ }
+
+  res.json({
+    heygenAvatarId:       persona["heygenAvatarId"]       ?? null,
+    digitalTwinId:        persona["digitalTwinId"]         ?? null,
+    avatarTrainingStatus: persona["avatarTrainingStatus"]  ?? null,
+    avatarType:           persona["avatarType"]            ?? null,
+    hasGCSVideos,
+  });
+});
+
+// POST /workspaces/me/persona/retry-avatar-from-gcs
+// Retry avatar creation without re-recording: reuses the GCS training+consent videos
+// that were already uploaded. Accepts optional frameBase64 (JPEG snapshot from webcam)
+// used as talking_photo fallback when HeyGen Digital Twin is not available on the plan.
+router.post("/me/persona/retry-avatar-from-gcs", async (req, res): Promise<void> => {
+  const schema = z.object({
+    frameBase64: z.string().min(10).optional(),
+    avatarName:  z.string().max(80).default("Meu Avatar NexOS"),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) {
+    res.status(422).json({ error: "HeyGen não configurado", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  const workspaceId = req.auth.workspaceId;
+
+  try {
+    const { personaMediaObjectKey, getGCSObjectMeta } = await import("../../lib/gcs-recordings.js");
+    const { signAccess } = await import("../auth/auth.service.js");
+    const trainingKey = personaMediaObjectKey(workspaceId, "training");
+    const consentKey  = personaMediaObjectKey(workspaceId, "consent");
+
+    try { await getGCSObjectMeta(trainingKey); } catch {
+      res.status(404).json({ error: "Vídeos de treino não encontrados no storage. Grave novamente.", code: "GCS_VIDEOS_NOT_FOUND" });
+      return;
+    }
+
+    const [ws] = await db.select({ settings: workspacesTable.settings })
+      .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+    const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+    const existingPersona  = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+
+    async function savePersona(fields: Record<string, unknown>) {
+      await db.update(workspacesTable)
+        .set({ settings: { ...existingSettings, persona: { ...existingPersona, ...fields, avatarUpdatedAt: new Date().toISOString() } } as any })
+        .where(eq(workspacesTable.id, workspaceId));
+    }
+
+    // Build signed GCS URLs so HeyGen can fetch the videos
+    const mediaToken  = signAccess({ userId: req.auth.userId, workspaceId, email: req.auth.email });
+    const base        = env.APP_URL;
+    const trainingUrl = `${base}/api/workspaces/persona-media/${workspaceId}/${trainingKey.split("/").pop()!}?token=${mediaToken}`;
+    const consentUrl  = `${base}/api/workspaces/persona-media/${workspaceId}/${consentKey.split("/").pop()!}?token=${mediaToken}`;
+
+    // Try Digital Twin (Enterprise plans only)
+    const dtRes = await fetch("https://api.heygen.com/v2/video_avatar", {
+      method: "POST",
+      headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar_name: parsed.data.avatarName, training_footage_url: trainingUrl, video_consent_url: consentUrl }),
+    });
+    if (dtRes.ok) {
+      const dtData = (await dtRes.json()) as { data: { avatar_id: string } };
+      const digitalTwinId = dtData.data.avatar_id;
+      await savePersona({ digitalTwinId, avatarType: "digital_twin", avatarTrainingStatus: "pending" });
+      req.log.info({ workspaceId, digitalTwinId }, "Avatar retry: digital twin started");
+      res.json({ digitalTwinId, avatarTrainingStatus: "pending", avatarType: "digital_twin", success: true });
+      return;
+    }
+
+    // Fallback to talking_photo using webcam snapshot
+    if (!parsed.data.frameBase64) {
+      res.status(422).json({
+        error: "Plano HeyGen não suporta Digital Twin. Tire uma foto (frameBase64) para criar o avatar básico.",
+        code: "HEYGEN_ENTERPRISE_REQUIRED",
+      });
+      return;
+    }
+    const buf       = Buffer.from(parsed.data.frameBase64, "base64");
+    const uploadRes = await fetch("https://upload.heygen.com/v1/asset", {
+      method: "POST",
+      headers: { "X-Api-Key": heygenKey, "Content-Type": "image/jpeg" },
+      body: buf,
+    });
+    if (!uploadRes.ok) {
+      const t = await uploadRes.text();
+      throw new Error(`HeyGen asset upload ${uploadRes.status}: ${t.slice(0, 200)}`);
+    }
+    const uploadData  = (await uploadRes.json()) as { data: { image_key: string } };
+    const talkingPhotoId = uploadData.data.image_key;
+    await savePersona({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo" });
+    req.log.info({ workspaceId, talkingPhotoId }, "Avatar retry: talking_photo created");
+    res.json({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo", fallback: true, success: true });
+
+  } catch (err) {
+    req.log.error({ err }, "Avatar retry from GCS failed");
+    res.status(500).json({ error: String(err), code: "AVATAR_RETRY_ERROR" });
+  }
+});
+
 // POST /workspaces/me/persona/select-stock-avatar — pick a ready-made avatar (no recording)
 // Also accepts voiceId to set a HeyGen stock voice for reel generation (saved as heygenVoiceId)
 router.post("/me/persona/select-stock-avatar", async (req, res): Promise<void> => {
