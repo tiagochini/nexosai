@@ -742,6 +742,7 @@ export async function listPosts(
 export async function approvePost(
   workspaceId: string,
   postId: string,
+  log: Logger,
 ): Promise<SocialPresencePost | null> {
   const [post] = await db
     .select()
@@ -759,6 +760,22 @@ export async function approvePost(
     throw new Error("Apenas rascunhos podem ser aprovados.");
   }
 
+  // Se já tem storyboard gerado, roteia para o aprovador correto por formato
+  const hasStoryboard = ["storyboard_ready", "storyboard_draft"].includes(post.mediaGenStatus ?? "");
+  if (hasStoryboard) {
+    const isVideoFormat =
+      (post.format === "reel" || post.format === "feed_video" || post.format === "story") &&
+      (post as Record<string, unknown>).storyMediaType !== "image";
+    if (isVideoFormat) {
+      // Dispara geração automática de vídeo com HeyGen (ou Runway fallback)
+      return approveStoryboardGenerateVideo(workspaceId, postId, log);
+    } else {
+      // Imagem aprovada → vai direto para scheduled
+      return approveStoryboardAsImage(workspaceId, postId, log);
+    }
+  }
+
+  // Post sem storyboard (rascunho simples) → apenas agenda
   let scheduledFor = post.scheduledFor ?? new Date();
   if (scheduledFor.getTime() < Date.now()) {
     scheduledFor = new Date(Date.now() + 10 * 60 * 1000); // horário já passou → +10min

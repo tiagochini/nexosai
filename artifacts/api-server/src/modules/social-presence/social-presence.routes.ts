@@ -163,7 +163,7 @@ router.get("/posts", async (req, res): Promise<void> => {
 router.post("/posts/:id/approve", async (req, res): Promise<void> => {
   const { id } = req.params as { id: string };
   try {
-    const post = await approvePost(req.auth.workspaceId, id);
+    const post = await approvePost(req.auth.workspaceId, id, req.log);
     if (!post) {
       res.status(404).json({ error: "Post não encontrado." });
       return;
