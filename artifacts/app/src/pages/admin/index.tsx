@@ -14,9 +14,28 @@ import {
   RefreshCw, CheckCircle2, ArrowUpRight, Percent,
   QrCode, FileText, CheckCheck, Filter, Wallet, Shield,
   X, Phone, Mail, Calendar, Tag, Layers, ChevronRight, Copy, Trash2,
+  ChevronDown, Search,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface CampaignCostRow {
+  campaignId: string;
+  campaignName: string | null;
+  workspaceId: string;
+  workspaceName: string | null;
+  ownerEmail: string;
+  totalCostUsd: number;
+  totalCredits: number;
+  totalTokens: number;
+  totalCalls: number;
+  byAgent: { agentType: string; costUsd: number; credits: number; calls: number }[];
+}
+
+interface CostBreakdownResponse {
+  campaigns: CampaignCostRow[];
+  platformTotals: { totalCostUsd: number; totalCredits: number; totalTokens: number; totalCalls: number };
+}
 
 interface AdminPaymentRow {
   id: string;
@@ -362,8 +381,10 @@ const PAYMENT_STATUS: Record<string, { label: string; cls: string }> = {
 export default function AdminPage() {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes" | "rastreamento">("pagamentos");
+  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes" | "rastreamento" | "custo">("pagamentos");
   const [fpSearch, setFpSearch] = useState("");
+  const [costWorkspaceFilter, setCostWorkspaceFilter] = useState("");
+  const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
   const [fpResult, setFpResult] = useState<null | { found: boolean; record?: { fingerprint: string; userName: string; userEmail: string; userId: string; workspaceName: string; workspaceId: string; campaignId: string; campaignTitle: string | null; track: string | null; generatedAt: string; ipAddress: string | null; userAgent: string | null } }>(null);
   const [fpLoading, setFpLoading] = useState(false);
   const [payFilter, setPayFilter] = useState<"all" | "pending" | "paid">("pending");
@@ -417,6 +438,13 @@ export default function AdminPage() {
     segment: string; source: string | null; notified: boolean;
     confirmedAt: string | null; createdAt: string;
   }
+
+  const { data: costData, isLoading: loadingCost, refetch: refetchCost } = useQuery({
+    queryKey: ["/api/admin/cost-breakdown"],
+    enabled: isAdmin && tab === "custo",
+    queryFn: () => customFetch<CostBreakdownResponse>("/api/admin/cost-breakdown?limit=100"),
+    staleTime: 60_000,
+  });
 
   const { data: waitlistData, isLoading: loadingWaitlist, refetch: refetchWaitlist } = useQuery({
     queryKey: ["/api/admin/waitlist"],
@@ -548,6 +576,7 @@ export default function AdminPage() {
     { id: "convites" as const,     label: "🎟️ Convites" },
     { id: "solicitacoes" as const, label: "📋 Solicitações" },
     { id: "rastreamento" as const, label: "🔍 Rastreamento" },
+    { id: "custo" as const,        label: "💰 Custo IA" },
   ];
 
   return (
@@ -1549,6 +1578,232 @@ export default function AdminPage() {
           )}
 
           <FingerprintDownloadsList />
+        </div>
+      )}
+
+      {/* ─── TAB: CUSTO IA ─────────────────────────────────────────────────── */}
+      {tab === "custo" && (
+        <div className="space-y-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">💰 Custo Real por Lançamento</h2>
+              <p className="font-mono text-xs text-muted-foreground/60 mt-1">
+                Custo real de tokens em USD por campanha, agente por agente. Use para calibrar precificação de créditos e detectar vazamentos.
+              </p>
+            </div>
+            <Button variant="outline" size="sm"
+              className="rounded-none font-mono uppercase text-xs tracking-widest btn-weapon-outline gap-2 shrink-0"
+              onClick={() => refetchCost()}>
+              <RefreshCw className="h-3 w-3" /> Atualizar
+            </Button>
+          </div>
+
+          {loadingCost ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                {[1,2,3].map(i => <Skeleton key={i} className="h-24 bg-muted/20 rounded-none" />)}
+              </div>
+              <div className="space-y-2">
+                {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-14 bg-muted/20 rounded-none" />)}
+              </div>
+            </div>
+          ) : !costData ? (
+            <div className="border border-border/20 bg-card/10 p-8 text-center font-mono text-xs text-muted-foreground/40">
+              Erro ao carregar dados. Tente novamente.
+            </div>
+          ) : (() => {
+            const pt = costData.platformTotals;
+            const campaigns = costData.campaigns;
+            const filtered = campaigns.filter(c =>
+              !costWorkspaceFilter ||
+              (c.workspaceName ?? "").toLowerCase().includes(costWorkspaceFilter.toLowerCase()) ||
+              (c.ownerEmail ?? "").toLowerCase().includes(costWorkspaceFilter.toLowerCase())
+            );
+            const mostExpensive = campaigns[0];
+            const avgCost = campaigns.length > 0 ? pt.totalCostUsd / campaigns.length : 0;
+
+            return (
+              <>
+                {/* ── Summary cards ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <MetricCard
+                    label="Custo Total Plataforma"
+                    value={`$${pt.totalCostUsd.toFixed(4)}`}
+                    sub={`${pt.totalCalls.toLocaleString("pt-BR")} chamadas`}
+                    icon={DollarSign}
+                    color="text-yellow-400"
+                    border="border-yellow-400/20"
+                  />
+                  <MetricCard
+                    label="Média por Campanha"
+                    value={`$${avgCost.toFixed(4)}`}
+                    sub={`${campaigns.length} campanhas`}
+                    icon={BarChart3}
+                    color="text-primary"
+                    border="border-primary/20"
+                  />
+                  <MetricCard
+                    label="Campanha Mais Cara"
+                    value={`$${(mostExpensive?.totalCostUsd ?? 0).toFixed(4)}`}
+                    sub={mostExpensive?.campaignName ?? mostExpensive?.campaignId?.slice(0,8) ?? "—"}
+                    icon={TrendingUp}
+                    color="text-orange-400"
+                    border="border-orange-400/20"
+                  />
+                  <MetricCard
+                    label="Total de Tokens"
+                    value={(pt.totalTokens / 1_000_000).toFixed(2) + "M"}
+                    sub={`${pt.totalCredits.toLocaleString("pt-BR")} créditos`}
+                    icon={Zap}
+                    color="text-cyan-400"
+                    border="border-cyan-400/20"
+                  />
+                </div>
+
+                {/* ── Workspace filter ── */}
+                <div className="flex items-center gap-2 border border-border/40 bg-card/20 px-3 py-2">
+                  <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Filtrar por workspace ou e-mail..."
+                    value={costWorkspaceFilter}
+                    onChange={e => setCostWorkspaceFilter(e.target.value)}
+                    className="flex-1 bg-transparent font-mono text-xs text-foreground placeholder:text-muted-foreground/40 outline-none"
+                  />
+                  {costWorkspaceFilter && (
+                    <button onClick={() => setCostWorkspaceFilter("")}
+                      className="text-muted-foreground/50 hover:text-foreground transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <span className="font-mono text-[10px] text-muted-foreground/40 shrink-0">
+                    {filtered.length}/{campaigns.length}
+                  </span>
+                </div>
+
+                {/* ── Column headers ── */}
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-x-4 px-4 pb-1 border-b border-border/30">
+                  {["Campanha / Workspace", "USD", "Créditos", "Tokens", "Chamadas", ""].map((h, i) => (
+                    <span key={i} className={`font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 ${i > 0 ? "text-right" : ""}`}>{h}</span>
+                  ))}
+                </div>
+
+                {/* ── Campaign rows ── */}
+                {filtered.length === 0 ? (
+                  <div className="border border-border/20 bg-card/10 p-8 text-center font-mono text-xs text-muted-foreground/40">
+                    Nenhuma campanha encontrada
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {filtered.map((c, idx) => {
+                      const isExpanded = expandedCampaign === c.campaignId;
+                      const maxAgentCost = Math.max(...c.byAgent.map(a => a.costUsd), 0.000001);
+
+                      return (
+                        <div key={c.campaignId} className="border border-border/30 overflow-hidden">
+                          {/* Row */}
+                          <button
+                            onClick={() => setExpandedCampaign(isExpanded ? null : c.campaignId)}
+                            className="w-full grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-x-4 px-4 py-3 items-center text-left hover:bg-white/[0.02] transition-colors"
+                          >
+                            {/* Name + workspace */}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-[10px] text-muted-foreground/40 shrink-0 tabular-nums">
+                                  #{idx + 1}
+                                </span>
+                                <span className="font-mono text-sm font-bold text-foreground truncate">
+                                  {c.campaignName ?? `Campanha ${c.campaignId.slice(0, 8)}`}
+                                </span>
+                              </div>
+                              <div className="font-mono text-[11px] text-muted-foreground/50 truncate pl-5">
+                                {c.workspaceName ?? c.workspaceId.slice(0, 8)} · {c.ownerEmail}
+                              </div>
+                            </div>
+
+                            {/* Cost USD — colored by magnitude */}
+                            <span className={`font-mono text-sm font-bold tabular-nums text-right ${
+                              c.totalCostUsd >= 0.05 ? "text-red-400" :
+                              c.totalCostUsd >= 0.01 ? "text-orange-400" :
+                              c.totalCostUsd >= 0.003 ? "text-yellow-400" : "text-green-400"
+                            }`}>
+                              ${c.totalCostUsd.toFixed(4)}
+                            </span>
+
+                            <span className="font-mono text-xs text-muted-foreground/70 tabular-nums text-right">
+                              {c.totalCredits.toLocaleString("pt-BR")}
+                            </span>
+                            <span className="font-mono text-[11px] text-muted-foreground/50 tabular-nums text-right">
+                              {c.totalTokens >= 1000
+                                ? `${(c.totalTokens / 1000).toFixed(1)}k`
+                                : c.totalTokens.toLocaleString("pt-BR")}
+                            </span>
+                            <span className="font-mono text-[11px] text-muted-foreground/50 tabular-nums text-right">
+                              {c.totalCalls}×
+                            </span>
+                            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                          </button>
+
+                          {/* Expanded agent breakdown */}
+                          {isExpanded && (
+                            <div className="border-t border-border/30 bg-card/20 px-4 py-3 space-y-2">
+                              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 mb-3">
+                                Breakdown por agente — {c.byAgent.length} agentes
+                              </div>
+                              {c.byAgent.length === 0 ? (
+                                <div className="font-mono text-[11px] text-muted-foreground/40">
+                                  Sem logs de agentes para esta campanha
+                                </div>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  {c.byAgent.map(a => (
+                                    <div key={a.agentType} className="grid grid-cols-[180px_1fr_80px_60px_50px] gap-3 items-center">
+                                      {/* Agent name */}
+                                      <span className="font-mono text-[11px] text-muted-foreground/80 truncate" title={a.agentType}>
+                                        {a.agentType}
+                                      </span>
+
+                                      {/* Horizontal bar */}
+                                      <div className="h-1.5 bg-border/30 rounded-full overflow-hidden">
+                                        <div
+                                          className="h-full rounded-full transition-all"
+                                          style={{
+                                            width: `${Math.max(1, (a.costUsd / maxAgentCost) * 100)}%`,
+                                            background: a.costUsd >= maxAgentCost * 0.5
+                                              ? "var(--color-primary)"
+                                              : "hsl(var(--primary) / 0.4)",
+                                          }}
+                                        />
+                                      </div>
+
+                                      {/* USD */}
+                                      <span className="font-mono text-[11px] font-bold tabular-nums text-right text-foreground/70">
+                                        ${a.costUsd.toFixed(5)}
+                                      </span>
+
+                                      {/* Credits */}
+                                      <span className="font-mono text-[10px] tabular-nums text-right text-muted-foreground/50">
+                                        {a.credits}cr
+                                      </span>
+
+                                      {/* Calls */}
+                                      <span className="font-mono text-[10px] tabular-nums text-right text-muted-foreground/40">
+                                        {a.calls}×
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
     </div>
