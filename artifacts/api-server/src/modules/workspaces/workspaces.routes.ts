@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { z } from "zod/v4";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../auth/auth.middleware.js";
@@ -480,22 +480,55 @@ router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
   }
 });
 
-// POST /workspaces/me/persona/clone-avatar-video — receive base64 training + consent videos
-// → tries HeyGen Digital Twin first (Enterprise plan); on 403 falls back to talking_photo
-//   using the frameBase64 (extracted by the client from the training video).
+// POST /workspaces/me/persona/upload-video/:kind — raw binary upload for large video files.
+// Bypasses the global 10 MB JSON body limit via express.raw() applied inline.
+// kind: "training" | "consent"
+// Content-Type: video/webm or video/mp4
+// Returns: { key: string } — the stable GCS key for this video.
+router.post(
+  "/me/persona/upload-video/:kind",
+  express.raw({ type: "*/*", limit: "300mb" }),
+  async (req, res): Promise<void> => {
+    const kind = req.params["kind"];
+    if (kind !== "training" && kind !== "consent") {
+      res.status(400).json({ error: "kind deve ser 'training' ou 'consent'", code: "VALIDATION_ERROR" });
+      return;
+    }
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ error: "Body vazio — envie o arquivo de vídeo como binário raw", code: "EMPTY_BODY" });
+      return;
+    }
+    const contentType = (req.headers["content-type"] ?? "video/webm").split(";")[0]!.trim();
+    try {
+      const { personaMediaObjectKey, uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
+      const key = personaMediaObjectKey(req.auth.workspaceId, kind as "training" | "consent");
+      await uploadBufferToGCS(req.body as Buffer, key, contentType);
+      req.log.info({ workspaceId: req.auth.workspaceId, kind, bytes: req.body.length, key }, "Persona video uploaded to GCS");
+      res.json({ key, bytes: req.body.length });
+    } catch (err) {
+      req.log.error({ err }, "Persona video GCS upload failed");
+      res.status(500).json({ error: String(err), code: "GCS_UPLOAD_ERROR" });
+    }
+  },
+);
+
+// POST /workspaces/me/persona/clone-avatar-video — create HeyGen avatar from already-uploaded GCS videos.
+// Accepts { trainingKey, consentKey, frameBase64?, avatarName? } — videos must already be in GCS
+// via POST /me/persona/upload-video/:kind.  No base64 video in body (avoids 10 MB JSON limit).
+// Falls back to talking_photo when HeyGen Digital Twin is unavailable (non-Enterprise plan).
 router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> => {
   const schema = z.object({
-    trainingVideoBase64: z.string().min(10),
-    consentVideoBase64: z.string().min(10),
-    mimeType: z.string().default("video/webm"),
-    avatarName: z.string().max(80).default("Meu Avatar NexOS"),
-    // Optional frame extracted by the client — used as talking_photo fallback when
-    // Digital Twin is not available on the current HeyGen plan.
+    // trainingKey is optional — when absent the backend uses the stable GCS key
+    // (persona-media/{workspaceId}/training.webm) so the caller can omit it when
+    // the training video was already uploaded in a previous step.
+    trainingKey: z.string().min(5).optional(),
+    consentKey:  z.string().min(5),
     frameBase64: z.string().min(10).optional(),
+    avatarName:  z.string().max(80).default("Meu Avatar NexOS"),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "trainingVideoBase64 e consentVideoBase64 obrigatórios", code: "VALIDATION_ERROR" });
+    res.status(400).json({ error: "consentKey obrigatório (use o endpoint upload-video antes)", code: "VALIDATION_ERROR" });
     return;
   }
   const { env } = await import("../../lib/env.js");
@@ -507,18 +540,16 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
 
   const workspaceId = req.auth.workspaceId;
 
-  // ── Helper: save avatar id to workspace persona ────────────────────────────
   async function savePersona(fields: Record<string, unknown>) {
     const [ws] = await db.select({ settings: workspacesTable.settings })
       .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
     const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
-    const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+    const existingPersona  = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
     await db.update(workspacesTable)
       .set({ settings: { ...existingSettings, persona: { ...existingPersona, ...fields, avatarUpdatedAt: new Date().toISOString() } } as any })
       .where(eq(workspacesTable.id, workspaceId));
   }
 
-  // ── Talking photo fallback (works on any HeyGen plan) ────────────────────
   async function talkingPhotoFallback(frameBase64: string): Promise<string> {
     const buf = Buffer.from(frameBase64, "base64");
     const uploadRes = await fetch("https://upload.heygen.com/v1/asset", {
@@ -528,39 +559,54 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
     });
     if (!uploadRes.ok) {
       const t = await uploadRes.text();
-      throw new Error(`HeyGen talking_photo upload ${uploadRes.status}: ${t.slice(0, 200)}`);
+      throw new Error(`HeyGen asset upload ${uploadRes.status}: ${t.slice(0, 300)}`);
     }
     const uploadData = (await uploadRes.json()) as { data: { image_key: string } };
     return uploadData.data.image_key;
   }
 
   try {
-    const { personaMediaObjectKey, uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
-    const { signAccess } = await import("../auth/auth.service.js");
+    const { getPersonaMediaSignedUrl, personaMediaObjectKey } = await import("../../lib/gcs-recordings.js");
+    const { signAccess }               = await import("../auth/auth.service.js");
 
-    // Upload training + consent videos to GCS so HeyGen can fetch via HTTPS.
-    const trainingKey = personaMediaObjectKey(workspaceId, "training");
-    const consentKey  = personaMediaObjectKey(workspaceId, "consent");
-    await Promise.all([
-      uploadBufferToGCS(Buffer.from(parsed.data.trainingVideoBase64, "base64"), trainingKey, parsed.data.mimeType),
-      uploadBufferToGCS(Buffer.from(parsed.data.consentVideoBase64,  "base64"), consentKey,  parsed.data.mimeType),
+    // Prefer GCS V4 signed URLs (HeyGen downloads directly from GCS, no proxy hop).
+    // Fall back to our persona-media endpoint with a long-lived JWT when signing is
+    // unavailable (Replit external_account sidecar without signBlob permission).
+    const base = env.APP_URL;
+
+    async function buildDownloadUrl(key: string): Promise<string> {
+      const signed = await getPersonaMediaSignedUrl(key, 7200);
+      if (signed) return signed;
+      // Fallback: stream through our server using a long-lived token.
+      const token    = signAccess({ userId: req.auth.userId, workspaceId, email: req.auth.email });
+      const filename = key.split("/").pop()!;
+      return `${base}/api/workspaces/persona-media/${workspaceId}/${filename}?token=${token}`;
+    }
+
+    // Resolve the training key — fall back to stable GCS key when not supplied
+    const resolvedTrainingKey = parsed.data.trainingKey
+      ?? personaMediaObjectKey(workspaceId, "training");
+
+    const [trainingUrl, consentUrl] = await Promise.all([
+      buildDownloadUrl(resolvedTrainingKey),
+      buildDownloadUrl(parsed.data.consentKey),
     ]);
 
-    const mediaToken  = signAccess({ userId: req.auth.userId, workspaceId, email: req.auth.email });
-    const base        = env.APP_URL;
-    const trainingUrl = `${base}/api/workspaces/persona-media/${workspaceId}/${trainingKey.split("/").pop()!}?token=${mediaToken}`;
-    const consentUrl  = `${base}/api/workspaces/persona-media/${workspaceId}/${consentKey.split("/").pop()!}?token=${mediaToken}`;
+    req.log.info({ workspaceId, trainingUrl: trainingUrl.slice(0, 80) }, "Calling HeyGen Digital Twin");
 
     // ── Attempt Digital Twin (Enterprise only) ─────────────────────────────
     const dtRes = await fetch("https://api.heygen.com/v2/video_avatar", {
       method: "POST",
       headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ avatar_name: parsed.data.avatarName, training_footage_url: trainingUrl, video_consent_url: consentUrl }),
+      body: JSON.stringify({
+        avatar_name:           parsed.data.avatarName,
+        training_footage_url:  trainingUrl,
+        video_consent_url:     consentUrl,
+      }),
     });
 
     if (dtRes.ok) {
-      // ── Digital Twin success path ────────────────────────────────────────
-      const dtData = (await dtRes.json()) as { data: { avatar_id: string } };
+      const dtData      = (await dtRes.json()) as { data: { avatar_id: string } };
       const digitalTwinId = dtData.data.avatar_id;
       await savePersona({ digitalTwinId, avatarType: "digital_twin", avatarTrainingStatus: "pending" });
       req.log.info({ workspaceId, digitalTwinId }, "Digital twin training started");
@@ -568,21 +614,21 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
       return;
     }
 
-    // ── Digital Twin failed — check if it's a plan restriction (403) ──────
-    const dtStatus = dtRes.status;
+    const dtStatus  = dtRes.status;
     const dtErrText = await dtRes.text();
-    req.log.warn({ workspaceId, dtStatus, dtErrText: dtErrText.slice(0, 200) }, "Digital Twin not available — attempting talking_photo fallback");
+    req.log.warn({ workspaceId, dtStatus, dtErrText: dtErrText.slice(0, 300) }, "Digital Twin rejected — trying talking_photo fallback");
 
     if (!parsed.data.frameBase64) {
-      // No frame provided — we can't fall back; report to client
       res.status(422).json({
-        error: "Avatar Digital Twin requer plano HeyGen Enterprise. Forneça frameBase64 para ativar o fallback automático.",
-        code: "HEYGEN_ENTERPRISE_REQUIRED",
+        error: `HeyGen rejeitou Digital Twin (HTTP ${dtStatus}). Forneça frameBase64 para criar um avatar básico sem Enterprise.`,
+        code:  "HEYGEN_ENTERPRISE_REQUIRED",
+        heygenStatus: dtStatus,
+        heygenError:  dtErrText.slice(0, 200),
       });
       return;
     }
 
-    // ── Fallback: talking photo from extracted frame ───────────────────────
+    // ── Fallback: talking_photo from webcam frame ──────────────────────────
     const talkingPhotoId = await talkingPhotoFallback(parsed.data.frameBase64);
     await savePersona({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo" });
     req.log.info({ workspaceId, talkingPhotoId }, "Avatar created via talking_photo fallback");
@@ -682,8 +728,8 @@ router.get("/me/persona/avatar-training-status", async (req, res): Promise<void>
 });
 
 // GET /workspaces/me/persona/avatar-recovery-status
-// Returns full avatar state from DB + whether GCS training videos still exist.
-// Used by the frontend to decide whether to show a recovery/retry UI.
+// Returns full avatar state from DB + which GCS videos exist (checked independently).
+// hasTrainingVideo + hasConsentVideo let the frontend restore the correct recording step.
 router.get("/me/persona/avatar-recovery-status", async (req, res): Promise<void> => {
   const workspaceId = req.auth.workspaceId;
   const [ws] = await db.select({ settings: workspacesTable.settings })
@@ -691,20 +737,72 @@ router.get("/me/persona/avatar-recovery-status", async (req, res): Promise<void>
   const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
   const persona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
 
-  let hasGCSVideos = false;
+  let hasTrainingVideo = false;
+  let hasConsentVideo  = false;
   try {
     const { personaMediaObjectKey, getGCSObjectMeta } = await import("../../lib/gcs-recordings.js");
-    await getGCSObjectMeta(personaMediaObjectKey(workspaceId, "training"));
-    hasGCSVideos = true;
-  } catch { /* file not found — normal */ }
+    await Promise.allSettled([
+      getGCSObjectMeta(personaMediaObjectKey(workspaceId, "training")).then(() => { hasTrainingVideo = true; }),
+      getGCSObjectMeta(personaMediaObjectKey(workspaceId, "consent")).then(()  => { hasConsentVideo  = true; }),
+    ]);
+  } catch { /* ignore — GCS unavailable */ }
 
   res.json({
     heygenAvatarId:       persona["heygenAvatarId"]       ?? null,
     digitalTwinId:        persona["digitalTwinId"]         ?? null,
     avatarTrainingStatus: persona["avatarTrainingStatus"]  ?? null,
     avatarType:           persona["avatarType"]            ?? null,
-    hasGCSVideos,
+    hasTrainingVideo,
+    hasConsentVideo,
+    hasGCSVideos: hasTrainingVideo || hasConsentVideo,
   });
+});
+
+// GET /workspaces/me/persona/voice-clone-progress
+// Returns in-progress voice clone session so the UI can offer "Resume (X/5 takes)" on reload.
+router.get("/me/persona/voice-clone-progress", async (req, res): Promise<void> => {
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
+  const persona = (((ws?.settings ?? {}) as Record<string, unknown>)["persona"] ?? {}) as Record<string, unknown>;
+  const progress = persona["voiceCloneProgress"] as
+    | { recordingId?: string; completedTakeIds?: string[] }
+    | null
+    | undefined;
+  if (!progress?.recordingId) {
+    res.json({ inProgress: false });
+    return;
+  }
+  res.json({
+    inProgress:       true,
+    recordingId:      progress.recordingId,
+    completedTakeIds: progress.completedTakeIds ?? [],
+  });
+});
+
+// POST /workspaces/me/persona/voice-clone-progress
+// Saves or clears in-progress voice clone session.
+// Pass recordingId: null to clear (after completion or cancellation).
+router.post("/me/persona/voice-clone-progress", async (req, res): Promise<void> => {
+  const schema = z.object({
+    recordingId:      z.string().nullable(),
+    completedTakeIds: z.array(z.string()).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Dados inválidos" });
+    return;
+  }
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, req.auth.workspaceId)).limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const existingPersona  = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+  const newProgress = parsed.data.recordingId
+    ? { recordingId: parsed.data.recordingId, completedTakeIds: parsed.data.completedTakeIds ?? [] }
+    : null;
+  await db.update(workspacesTable)
+    .set({ settings: { ...existingSettings, persona: { ...existingPersona, voiceCloneProgress: newProgress } } as any })
+    .where(eq(workspacesTable.id, req.auth.workspaceId));
+  res.json({ ok: true });
 });
 
 // POST /workspaces/me/persona/retry-avatar-from-gcs

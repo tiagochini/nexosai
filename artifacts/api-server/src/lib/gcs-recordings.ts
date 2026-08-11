@@ -69,9 +69,39 @@ export function createGCSReadStream(
   return gcs.bucket(bucketId()).file(objectKey).createReadStream(opts ?? {});
 }
 
-/** GCS object key convention for persona cloning media (training/consent videos). */
+/**
+ * GCS object key for persona cloning media (training/consent videos).
+ * Intentionally stable — no timestamp — so recovery checks and retries can
+ * always find the same key regardless of when they run.
+ * Each new upload of the same kind overwrites the previous one.
+ */
 export function personaMediaObjectKey(workspaceId: string, kind: "training" | "consent"): string {
-  return `persona-media/${workspaceId}/${kind}-${Date.now()}.webm`;
+  return `persona-media/${workspaceId}/${kind}.webm`;
+}
+
+/**
+ * Generate a GCS V4 Signed URL for a persona-media file so that external
+ * providers (HeyGen) can download it directly from GCS without going through
+ * our API server.  Returns null if the current credentials don't support signing
+ * (e.g. Replit external_account sidecar without signBlob permission).
+ */
+export async function getPersonaMediaSignedUrl(
+  objectKey: string,
+  ttlSeconds = 7200,
+): Promise<string | null> {
+  try {
+    const [url] = await gcs
+      .bucket(bucketId())
+      .file(objectKey)
+      .getSignedUrl({
+        version: "v4",
+        action: "read",
+        expires: Date.now() + ttlSeconds * 1000,
+      });
+    return url;
+  } catch {
+    return null;
+  }
 }
 
 /** Upload a raw buffer to GCS at an arbitrary key. Returns the object key. */

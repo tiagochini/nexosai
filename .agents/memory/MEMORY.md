@@ -1,3 +1,4 @@
+- [Clone Digital Persistence](clone-digital-persistence.md) — per-take upload queue; voice resume via voice-clone-progress endpoint; avatar flow restores step from GCS; trainingKey optional in clone-avatar-video.
 - [Social Presence Automation](social-presence-automation.md) — reel 5min timeout; silent skip for video generating; highlights auto-add; DM flows via instagram_dm_sequences; lib/db build order required.
 - [Instagram Media Serve — Direct Stream Fix](instagram-serve-redirect-bug.md) — /media/serve must stream GCS bytes directly (not redirect to JWT endpoint) when signedUrl is null; Instagram's async downloader doesn't follow redirects → container ERROR.
 - [Offer Psychology Layer](offer-psychology-layer.md) — 7 agents wired after offer in command.agent.ts (A→B→C→D); output in brainData.offerPsychologyLayer; injected into ad_copy/vsl_script/landing_page via intakeData._psychologyLayer.

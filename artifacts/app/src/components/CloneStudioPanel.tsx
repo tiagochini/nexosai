@@ -112,25 +112,46 @@ interface TakeResult {
   uploaded: boolean;
 }
 
+/** When provided, the component resumes from a previous in-progress session. */
+export interface CloneResumeState {
+  recordingId: string;
+  completedTakeIds: string[];
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function CloneStudioPanel({ firstName = "Fundador", onComplete, onSkip }: Props) {
+export function CloneStudioPanel({
+  firstName = "Fundador",
+  onComplete,
+  onSkip,
+  resumeState,
+}: Props & { resumeState?: CloneResumeState }) {
+  const initialTakeIdx = resumeState ? resumeState.completedTakeIds.length : 0;
+
   const [phase, setPhase] = useState<Phase>("intro");
-  const [currentTakeIdx, setCurrentTakeIdx] = useState(0);
-  const [takeStates, setTakeStates] = useState<TakeState[]>(CLONE_TAKES.map(() => "pending"));
+  const [currentTakeIdx, setCurrentTakeIdx] = useState(initialTakeIdx);
+  const [takeStates, setTakeStates] = useState<TakeState[]>(
+    CLONE_TAKES.map((_, i) => i < initialTakeIdx ? "done" : "pending"),
+  );
   const [results, setResults] = useState<TakeResult[]>([]);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [recordingSecs, setRecordingSecs] = useState(0);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [sessionRecordingId, setSessionRecordingId] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const videoRef    = useRef<HTMLVideoElement>(null);
+  const streamRef   = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chunksRef   = useRef<Blob[]>([]);
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
+
+  // Serialised background upload queue — new uploads chain onto this Promise.
+  const uploadQueueRef      = useRef<Promise<void>>(Promise.resolve());
+  // Recording session ID — created lazily on first take acceptance.
+  const sessionRecordingIdRef = useRef<string | null>(resumeState?.recordingId ?? null);
+  // Track how many takes have been queued for upload (for progress bar in finalize).
+  const uploadedCountRef = useRef<number>(resumeState?.completedTakeIds.length ?? 0);
 
   const currentTake = CLONE_TAKES[currentTakeIdx]!;
   const TakeIcon = currentTake.icon;
@@ -224,52 +245,93 @@ export function CloneStudioPanel({ firstName = "Fundador", onComplete, onSkip }:
     setPhase("camera_check");
   };
 
+  // ── Upload helpers ───────────────────────────────────────────────────────────
+
+  /** Lazily create the recording session on first use. Idempotent. */
+  const ensureSession = async (): Promise<string> => {
+    if (sessionRecordingIdRef.current) return sessionRecordingIdRef.current;
+    const startRes = await customFetch<{ recording: { id: string } }>("/api/recordings", {
+      method: "POST",
+      body: JSON.stringify({ name: `Clone Studio — ${firstName} — ${new Date().toLocaleDateString("pt-BR")}` }),
+    });
+    sessionRecordingIdRef.current = startRes.recording.id;
+    return startRes.recording.id;
+  };
+
+  /** Upload one take blob and save progress to the backend. Fire-and-forget safe. */
+  const uploadTakeToServer = async (result: TakeResult): Promise<void> => {
+    const recId = await ensureSession();
+    await fetch(`/api/recordings/${recId}/upload?mode=clone`, {
+      method: "POST",
+      headers: { "Content-Type": "video/webm" },
+      credentials: "include",
+      body: result.blob,
+    });
+    await customFetch(`/api/recordings/${recId}/events`, {
+      method: "POST",
+      body: JSON.stringify({ type: "custom", phase: "clone_take", data: { takeId: result.takeId, durationMs: result.durationMs } }),
+    });
+    uploadedCountRef.current += 1;
+    setResults(r => r.map(x => x.takeId === result.takeId ? { ...x, uploaded: true } : x));
+
+    // Persist progress so user can resume if they navigate away
+    const completedTakeIds = CLONE_TAKES
+      .slice(0, currentTakeIdx + 1)
+      .map(t => t.id)
+      .filter(id => id === result.takeId || (resumeState?.completedTakeIds ?? []).includes(id));
+    await customFetch("/api/workspaces/me/persona/voice-clone-progress", {
+      method: "POST",
+      body: JSON.stringify({ recordingId: recId, completedTakeIds }),
+    }).catch(() => {}); // non-fatal
+  };
+
+  /** Chain a take upload onto the serialised upload queue. Returns immediately. */
+  const queueTakeUpload = (result: TakeResult) => {
+    uploadQueueRef.current = uploadQueueRef.current.then(() => uploadTakeToServer(result)).catch(e => {
+      console.error("Background take upload failed:", e);
+    });
+  };
+
   const advanceTake = () => {
+    // Queue the current take for background upload immediately
+    const currentResult = results.find(r => r.takeId === currentTake.id);
+    if (currentResult && !currentResult.uploaded) {
+      queueTakeUpload(currentResult);
+    }
+
     if (currentTakeIdx < CLONE_TAKES.length - 1) {
       setCurrentTakeIdx(i => i + 1);
       setPhase("camera_check");
     } else {
-      void submitSession();
+      void finalizeSession();
     }
   };
 
   // ── Upload & finalize ────────────────────────────────────────────────────────
-  const submitSession = async () => {
+  const finalizeSession = async () => {
     setPhase("uploading");
-    setUploadProgress(0);
+    setUploadProgress(10);
     try {
-      const startRes = await customFetch<{ recording: { id: string } }>("/api/recordings", {
-        method: "POST",
-        body: JSON.stringify({ name: `Clone Studio — ${firstName} — ${new Date().toLocaleDateString("pt-BR")}` }),
-      });
-      const recId = startRes.recording.id;
-      setSessionRecordingId(recId);
+      // Await all background uploads before stopping the session
+      await uploadQueueRef.current;
+      setUploadProgress(90);
 
-      for (let i = 0; i < results.length; i++) {
-        const r = results[i]!;
-        setUploadProgress(Math.round((i / results.length) * 85));
-        await fetch(`/api/recordings/${recId}/upload?mode=clone`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "video/webm",
-            Authorization: `Bearer ${localStorage.getItem("nexos_access_token") ?? ""}`,
-          },
-          body: r.blob,
-        });
-        await customFetch(`/api/recordings/${recId}/events`, {
-          method: "POST",
-          body: JSON.stringify({ type: "custom", phase: "clone_take", data: { takeId: r.takeId, durationMs: r.durationMs } }),
-        });
-      }
-
+      const recId = await ensureSession();
       await customFetch(`/api/recordings/${recId}/stop`, { method: "POST" });
       setUploadProgress(100);
+
+      // Clear voice clone progress — session complete
+      await customFetch("/api/workspaces/me/persona/voice-clone-progress", {
+        method: "POST",
+        body: JSON.stringify({ recordingId: null }),
+      }).catch(() => {});
+
       stopStream();
       setPhase("complete");
       onComplete(recId);
     } catch (e) {
       console.error(e);
-      toast.error("Erro ao salvar takes. Tente novamente.");
+      toast.error("Erro ao finalizar sessão. Tente novamente.");
       setPhase("review");
     }
   };
@@ -286,15 +348,28 @@ export function CloneStudioPanel({ firstName = "Fundador", onComplete, onSkip }:
             <X className="h-4 w-4" />
           </button>
 
+          {resumeState && (
+            <div className="flex items-center gap-2 border border-primary/30 bg-primary/10 px-3 py-2 rounded-lg -mt-1">
+              <span className="font-mono text-[11px] text-primary">
+                ✓ Sessão anterior salva — {resumeState.completedTakeIds.length}/5 takes já enviados ao servidor.
+                Continue de onde parou.
+              </span>
+            </div>
+          )}
+
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 border border-primary/40 bg-primary/10 flex items-center justify-center shrink-0">
               <Mic className="h-5 w-5 text-primary" />
             </div>
             <div>
               <div className="font-mono text-[11px] uppercase tracking-widest text-primary mb-1">Clone de Voz · NexOS</div>
-              <h3 className="font-mono text-base font-bold uppercase tracking-tight text-white">Vamos criar sua voz clonada</h3>
+              <h3 className="font-mono text-base font-bold uppercase tracking-tight text-white">
+                {resumeState ? `Retomando — take ${resumeState.completedTakeIds.length + 1} de 5` : "Vamos criar sua voz clonada"}
+              </h3>
               <p className="font-mono text-[12px] text-white/50 mt-1.5 leading-relaxed">
-                Em menos de 5 minutos, você grava a mesma frase com 5 emoções diferentes. Sua voz será usada para narrar vídeos de campanha automaticamente.
+                {resumeState
+                  ? `Você já completou ${resumeState.completedTakeIds.length} take${resumeState.completedTakeIds.length !== 1 ? "s" : ""}. Os áudios estão salvos no servidor — grave os takes restantes para finalizar.`
+                  : "Em menos de 5 minutos, você grava a mesma frase com 5 emoções diferentes. Sua voz será usada para narrar vídeos de campanha automaticamente."}
               </p>
             </div>
           </div>
