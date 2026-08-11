@@ -136,12 +136,34 @@ export async function upsertConfig(
 
 // ─── Contexto do negócio ─────────────────────────────────────────────────────
 
+// Strings que indicam que o businessContext foi preenchido com texto de teste/plataforma
+// e devem ser descartadas em favor dos dados reais da campanha.
+const NEXOS_PLATFORM_STRINGS = [
+  "nexos", "nexos ai", "a prova de que a nexos", "integração das redes sociais",
+  "teste de integração", "post de teste", "prova de conceito do produto",
+];
+
+function isPlaceholderContext(ctx: string): boolean {
+  const lower = ctx.toLowerCase();
+  return NEXOS_PLATFORM_STRINGS.some((s) => lower.includes(s));
+}
+
 async function buildBusinessContext(
   workspaceId: string,
   config: SocialPresenceConfig,
 ): Promise<string> {
-  if (config.businessContext && config.businessContext.trim().length > 0) {
-    return config.businessContext;
+  const rawCtx = config.businessContext?.trim() ?? "";
+  // Usa o businessContext configurado somente se for sobre o negócio real do cliente,
+  // não um texto de teste/plataforma NexOS que foi salvo indevidamente.
+  if (rawCtx.length > 0 && !isPlaceholderContext(rawCtx)) {
+    return rawCtx;
+  }
+
+  if (rawCtx.length > 0 && isPlaceholderContext(rawCtx)) {
+    logger.warn(
+      { workspaceId, ctx: rawCtx.slice(0, 80) },
+      "buildBusinessContext: businessContext parece texto de teste NexOS — ignorando, usando campanha real",
+    );
   }
   // Fallback: intake da campanha mais recente do workspace
   const [campaign] = await db
