@@ -125,6 +125,48 @@ const DEFAULT_PLATFORMS: PlatformConfig[] = [
   { platform: "linkedin",  enabled: false, postsPerDay: 1, autoPublish: false, preferredTimes: ["09:00"] },
 ];
 
+// ─── Rationale: por que este post segue esta lógica ──────────────────────────
+
+function buildPostRationale(post: PresencePost): string {
+  const parts: string[] = [];
+
+  const FORMAT_REASON: Record<string, string> = {
+    reel: "Reels têm alcance orgânico 3–5× maior que feed estático",
+    carousel: "Carrosseis geram mais salvamentos — ideais para conteúdo educativo",
+    story: "Stories criam urgência e mantêm sua conta ativa no algoritmo diariamente",
+    feed: "Posts de feed constroem autoridade permanente no perfil",
+    text: "Posts de texto geram alto engajamento em LinkedIn e perfis de autoridade",
+    live: "Lives aumentam alcance imediato via notificações para seguidores",
+  };
+
+  const PILLAR_REASON: Record<string, string> = {
+    autoridade: "posicionar você como referência no mercado",
+    produto: "apresentar sua solução com prova de valor",
+    bastidores: "humanizar a marca e criar conexão emocional",
+    comunidade: "fortalecer o senso de pertencimento da sua audiência",
+    educacao: "educar o mercado sobre o problema que você resolve",
+    lancamento: "gerar aquecimento e antecipação para o lançamento",
+    depoimento: "usar prova social para reduzir objeções de compra",
+  };
+
+  if (FORMAT_REASON[post.format]) parts.push(FORMAT_REASON[post.format]);
+
+  const pillar = (post.pillar ?? "").toLowerCase().replace(/\s+/g, "").split(/[_-]/)[0];
+  for (const [key, val] of Object.entries(PILLAR_REASON)) {
+    if (pillar.includes(key)) { parts.push(`Pilar "${post.pillar}" — objetivo: ${val}`); break; }
+  }
+
+  if (post.launchAligned && post.launchPhase) {
+    parts.push(`Alinhado à fase de ${post.launchPhase} do seu lançamento ativo`);
+  } else if (post.launchAligned) {
+    parts.push("Alinhado ao seu lançamento ativo para maximizar aquecimento de audiência");
+  }
+
+  if (post.objective) parts.push(post.objective);
+
+  return parts.slice(0, 2).join(". ");
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PresencePage() {
@@ -145,6 +187,7 @@ export default function PresencePage() {
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [mediaDrawerPostId, setMediaDrawerPostId] = useState<string | null>(null);
   const [showProfileAnalysis, setShowProfileAnalysis] = useState(false);
+  const [creatingTestReel, setCreatingTestReel] = useState(false);
   const [socialHealth, setSocialHealth] = useState<{
     provider: string;
     accountId: string | null;
@@ -185,6 +228,27 @@ export default function PresencePage() {
     setGenerating(data.generating);
     return data;
   }, []);
+
+  const createTestReel = useCallback(async () => {
+    setActionError(null);
+    setCreatingTestReel(true);
+    try {
+      const { post } = await customFetch<{ post: PresencePost }>(
+        `${API}/posts/create-test-reel`,
+        { method: "POST", body: JSON.stringify({ platform: "instagram" }) },
+      );
+      await loadPosts();
+      setTab("queue");
+      alert(
+        `✅ Reel de teste criado!\n\nAgendado para: ${post.scheduledFor ? new Date(post.scheduledFor).toLocaleTimeString("pt-BR") : "1h"}\n\n` +
+        `Vá para a aba "Aprovação Criativa", aprove o storyboard assim que ele aparecer (~30s), e o scheduler vai disparar a geração do vídeo com seu clone e publicar automaticamente no horário marcado.`,
+      );
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Erro ao criar reel de teste.");
+    } finally {
+      setCreatingTestReel(false);
+    }
+  }, [loadPosts]);
 
   const loadMetrics = useCallback(async () => {
     const data = await customFetch<MetricsOverview>(`${API}/metrics`);
@@ -253,6 +317,25 @@ export default function PresencePage() {
       setActionError(err instanceof Error ? err.message : "Erro ao aprovar post.");
     }
   };
+
+  const [bulkApproving, setBulkApproving] = useState<Set<string>>(new Set());
+
+  const bulkApprove = useCallback(async (postIds: string[], label: string) => {
+    setActionError(null);
+    const key = postIds.join(",");
+    setBulkApproving((prev) => new Set([...prev, key]));
+    try {
+      await customFetch<{ approved: number; videoTriggered: number; skipped: number; errors: string[] }>(
+        `${API}/approve-bulk`,
+        { method: "POST", body: JSON.stringify({ postIds }) },
+      );
+      await loadPosts();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : `Erro ao aprovar ${label}.`);
+    } finally {
+      setBulkApproving((prev) => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  }, [loadPosts]);
 
   const patchPost = async (postId: string, patch: Record<string, unknown>) => {
     setActionError(null);
@@ -350,6 +433,10 @@ export default function PresencePage() {
   );
   // Posts em processo de publicação — aparecem na fila enquanto o scheduler processa
   const publishingInProgress = posts.filter((p) => p.status === "publishing");
+  // Posts com storyboard pronto aguardando aprovação criativa
+  const pendingApproval = posts.filter(
+    (p) => p.mediaGenStatus === "storyboard_ready" || p.mediaGenStatus === "storyboard_draft",
+  );
   const queueItems = [...drafts, ...stuckScheduled, ...publishingInProgress];
 
   // Posts publicados nos últimos 30 dias — ficam visíveis como histórico
@@ -398,8 +485,19 @@ export default function PresencePage() {
                 {generating ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1.5 h-4 w-4" />}
                 {generating ? "Gerando semana..." : currentWeekPosts.length > 0 ? "Regenerar Semana" : "Gerar Semana"}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={createTestReel}
+                disabled={creatingTestReel}
+                title="Cria um reel sobre a NexOS AI agendado para 1h — para testar se o scheduler dispara automaticamente"
+                data-testid="button-create-test-reel"
+              >
+                {creatingTestReel ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Film className="mr-1.5 h-4 w-4" />}
+                {creatingTestReel ? "Criando..." : "Criar Reel Teste (1h)"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setShowTestPost(true)} data-testid="button-test-post-header">
-                <Send className="mr-1.5 h-4 w-4" /> Testar
+                <Send className="mr-1.5 h-4 w-4" /> Publicar Teste
               </Button>
             </>
           )}
@@ -615,7 +713,7 @@ export default function PresencePage() {
           <div className="flex gap-1 border-b border-border">
             {[
               { id: "calendar" as const, label: "Calendário da Semana", icon: CalendarDays },
-              { id: "queue" as const, label: `Fila de Aprovação${queueItems.length ? ` (${queueItems.length})` : ""}`, icon: ListChecks },
+              { id: "queue" as const, label: `Aprovação Criativa${(pendingApproval.length + queueItems.length) ? ` (${pendingApproval.length + queueItems.length})` : ""}`, icon: ListChecks },
               { id: "metrics" as const, label: "Métricas", icon: BarChart3 },
             ].map((t) => (
               <button
@@ -669,20 +767,176 @@ export default function PresencePage() {
             )
           )}
 
-          {/* Fila de aprovação */}
+          {/* Aprovação Criativa */}
           {tab === "queue" && (
             <div className="space-y-6">
-              {/* Pendentes de ação */}
-              {queueItems.length === 0 ? (
+
+              {/* ── Seção principal: storyboards aguardando decisão criativa ── */}
+              {pendingApproval.length > 0 && (
+                <div className="space-y-4">
+                  {/* Contexto racional: por que isso funciona assim */}
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm space-y-2">
+                    <p className="font-medium text-primary flex items-center gap-2">
+                      <Lightbulb className="h-4 w-4" />
+                      Por que você aprova antes de publicar?
+                    </p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      A IA planejou e gerou o conteúdo com base nos seus objetivos reais — produto, promessa, público-alvo e fase do lançamento. Mas <strong className="text-foreground">cada post é uma decisão criativa sua</strong>: ele representa a sua voz, sua marca, sua reputação. Você revisa uma vez, aprova, e a partir daí tudo roda automaticamente. <strong className="text-foreground">Para imagens: aprovação → publicação automática. Para vídeos: aprovação → geração automática do vídeo com seu avatar.</strong> Nenhuma outra etapa necessária.
+                    </p>
+                  </div>
+
+                  {/* Aprovação em lote: toda semana */}
+                  {pendingApproval.length > 1 && (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/50 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-medium">{pendingApproval.length} posts prontos para revisão</p>
+                        <p className="text-xs text-muted-foreground">Aprovar tudo dispara imagens + geração de vídeo automaticamente</p>
+                      </div>
+                      <button
+                        onClick={() => bulkApprove(pendingApproval.map(p => p.id), "toda a semana")}
+                        disabled={bulkApproving.size > 0}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                      >
+                        {bulkApproving.size > 0 ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
+                        Aprovar Semana Toda
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Agrupado por dia */}
+                  {DAYS.map((dayName, idx) => {
+                    const dayPosts = pendingApproval.filter((p) => p.dayIndex === idx);
+                    if (dayPosts.length === 0) return null;
+                    const dayKey = dayPosts.map(p => p.id).join(",");
+                    const isApproving = bulkApproving.has(dayKey);
+                    return (
+                      <div key={dayName} className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{dayName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {dayPosts.length} post{dayPosts.length > 1 ? "s" : ""} aguardando
+                            </span>
+                          </div>
+                          {dayPosts.length > 0 && (
+                            <button
+                              onClick={() => bulkApprove(dayPosts.map(p => p.id), dayName)}
+                              disabled={bulkApproving.size > 0}
+                              className="rounded-md border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/20 disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {isApproving ? <Loader2 className="h-3 w-3 animate-spin" /> : <ThumbsUp className="h-3 w-3" />}
+                              Aprovar {dayName}
+                            </button>
+                          )}
+                        </div>
+                        {dayPosts.map((p) => {
+                          const isVideoFormat = ["reel", "feed_video", "story"].includes(p.format);
+                          const rationale = buildPostRationale(p);
+                          const storyboardUrl = p.storyboardUrls?.[0];
+                          const isReady = p.mediaGenStatus === "storyboard_ready";
+                          return (
+                            <div key={p.id} className={`rounded-xl border ${isReady ? "border-primary/25 bg-primary/5" : "border-amber-400/20 bg-amber-400/5"} p-4 space-y-3`}>
+                              {/* Storyboard preview + info */}
+                              <div className="flex gap-3">
+                                {/* Thumbnail */}
+                                <div className="relative shrink-0 w-16 h-16 rounded-lg border border-border overflow-hidden bg-muted/30">
+                                  {storyboardUrl ? (
+                                    <img src={storyboardUrl} alt="storyboard" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full">
+                                      {isVideoFormat ? <Film className="h-5 w-5 text-muted-foreground/40" /> : <ImageIcon className="h-5 w-5 text-muted-foreground/40" />}
+                                    </div>
+                                  )}
+                                  {isVideoFormat && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                      <Film className="h-4 w-4 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {(() => { const meta = PLATFORM_META[p.platform]; return meta ? <meta.icon className={`h-3.5 w-3.5 ${meta.cls}`} /> : null; })()}
+                                    <span className="text-xs font-medium">{FORMAT_LABEL[p.format] ?? p.format}</span>
+                                    <span className="text-xs text-muted-foreground">·</span>
+                                    <span className="text-xs text-muted-foreground">{p.postingTime}</span>
+                                    {isVideoFormat ? (
+                                      <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                                        ✨ Após aprovação → Vídeo com clone gerado automaticamente
+                                      </span>
+                                    ) : (
+                                      <span className="rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[10px] text-green-400">
+                                        ✓ Após aprovação → Publicação automática
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-foreground leading-snug line-clamp-2">{p.caption}</p>
+                                </div>
+                              </div>
+
+                              {/* Rationale */}
+                              {rationale && (
+                                <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-xs text-muted-foreground leading-relaxed">
+                                  <span className="text-primary font-medium">🧠 Por que este post: </span>{rationale}
+                                </div>
+                              )}
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {isReady ? (
+                                  <button
+                                    onClick={() => bulkApprove([p.id], "post")}
+                                    disabled={bulkApproving.size > 0}
+                                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50 flex items-center gap-1"
+                                  >
+                                    <ThumbsUp className="h-3.5 w-3.5" />
+                                    {isVideoFormat ? "Aprovar + Gerar Vídeo" : "Aprovar + Agendar"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => openMediaDrawer(p.id)}
+                                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                  >
+                                    <Upload className="h-3.5 w-3.5" /> Melhorar imagem
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => openMediaDrawer(p.id)}
+                                  className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                >
+                                  <PenLine className="h-3.5 w-3.5" /> Editar
+                                </button>
+                                <button
+                                  onClick={() => patchPost(p.id, { status: "cancelled" })}
+                                  className="ml-auto rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
+                                >
+                                  <X className="h-3.5 w-3.5" /> Descartar
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── Outros itens na fila (rascunhos, travados, publicando) ── */}
+              {(pendingApproval.length === 0 && queueItems.length === 0) ? (
                 <div className="rounded-xl border border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
                   <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-green-400" />
-                  Nenhum post aguardando aprovação.
+                  Nenhum post aguardando aprovação. A IA está trabalhando nos storyboards desta semana.
                 </div>
-              ) : (
+              ) : queueItems.length > 0 && (
                 <div className="space-y-3">
+                  <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-400" /> Outros itens pendentes
+                  </p>
                   {stuckScheduled.length > 0 && (
                     <div className="rounded-lg border border-amber-400/30 bg-amber-400/8 px-4 py-2 text-xs text-amber-400">
-                      ⚠ {stuckScheduled.length} post{stuckScheduled.length > 1 ? "s" : ""} agendado{stuckScheduled.length > 1 ? "s" : ""} de semanas anteriores ainda não publicado{stuckScheduled.length > 1 ? "s" : ""} — adicione mídia ou publique manualmente.
+                      ⚠ {stuckScheduled.length} post{stuckScheduled.length > 1 ? "s" : ""} de semanas anteriores ainda não publicado{stuckScheduled.length > 1 ? "s" : ""} — adicione mídia ou publique manualmente.
                     </div>
                   )}
                   {queueItems.map((p) => (

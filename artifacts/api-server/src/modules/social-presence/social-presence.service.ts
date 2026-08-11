@@ -1439,12 +1439,12 @@ export async function publishDuePresencePosts(): Promise<void> {
                   await uploadBufferToGCS(buf, key, mimeType);
                   const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
                   if (isAI) {
-                    // Auto-aprovação: imagem IA real → seta mediaUrls diretamente, sem etapa manual
+                    // Storyboard IA real → aguarda aprovação do usuário (nunca auto-publica)
                     await db
                       .update(socialPresencePostsTable)
-                      .set({ mediaUrls: [serveUrl], storyboardUrls: [serveUrl], mediaGenStatus: null, errorMessage: null, status: "scheduled" })
+                      .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [serveUrl], errorMessage: null })
                       .where(eq(socialPresencePostsTable.id, postSnapshot.id));
-                    log.info({ postId: postSnapshot.id, key }, "presence: imagem IA auto-aprovada → pronta para publicar ✓");
+                    log.info({ postId: postSnapshot.id, key }, "presence: storyboard IA gerado → aguardando aprovação do usuário ✓");
                   } else {
                     await db
                       .update(socialPresencePostsTable)
@@ -1746,20 +1746,13 @@ export async function preGeneratePresenceMedia(): Promise<void> {
               );
               await uploadBufferToGCS(buf, key, mimeType);
               const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
-              if (isAI && !isVideoFormat) {
-                // Imagem IA real para post de imagem → auto-aprovação sem intervenção manual
+              if (isAI) {
+                // Storyboard IA (imagem ou vídeo) → sempre aguarda aprovação do usuário
                 await db
                   .update(socialPresencePostsTable)
-                  .set({ mediaUrls: [serveUrl], storyboardUrls: [serveUrl], mediaGenStatus: null, errorMessage: null, status: "scheduled" })
+                  .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [serveUrl], errorMessage: null })
                   .where(eq(socialPresencePostsTable.id, snap.id));
-                log.info({ postId: snap.id }, "presence: proactive storyboard IA auto-aprovado ✓ → pronto para publicar");
-              } else if (isAI && isVideoFormat) {
-                // Vídeo: storyboard de referência → usuário precisa clicar "Gerar Vídeo"
-                await db
-                  .update(socialPresencePostsTable)
-                  .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [serveUrl], errorMessage: "Storyboard pronto — abra o post e clique em 'Gerar Vídeo' para gerar o vídeo com IA." })
-                  .where(eq(socialPresencePostsTable.id, snap.id));
-                log.info({ postId: snap.id }, "presence: proactive storyboard de vídeo gerado ✓");
+                log.info({ postId: snap.id, isVideoFormat }, "presence: storyboard IA gerado → aguardando aprovação do usuário ✓");
               } else {
                 // SVG placeholder — sem IA disponível, precisa de substituição manual
                 await db
@@ -2560,6 +2553,128 @@ export async function confirmVideoAttachment(
     .where(eq(socialPresencePostsTable.id, postId))
     .returning();
   return updated;
+}
+
+// ─── Bulk Approve Storyboards ─────────────────────────────────────────────────
+// Aprovação em lote: imagens → schedule direto; vídeos → dispara geração automática.
+// "Uma decisão criativa, uma ação — sem segunda aprovação depois."
+
+export async function bulkApproveStoryboards(
+  workspaceId: string,
+  postIds: string[],
+  log: Logger,
+): Promise<{ approved: number; videoTriggered: number; skipped: number; errors: string[] }> {
+  let approved = 0;
+  let videoTriggered = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const postId of postIds) {
+    const [post] = await db
+      .select()
+      .from(socialPresencePostsTable)
+      .where(and(eq(socialPresencePostsTable.id, postId), eq(socialPresencePostsTable.workspaceId, workspaceId)))
+      .limit(1);
+
+    if (!post) { skipped++; continue; }
+    const status = post.mediaGenStatus ?? "";
+    if (!["storyboard_ready", "storyboard_draft"].includes(status)) { skipped++; continue; }
+
+    const isVideoFormat = ["reel", "feed_video", "story"].includes(post.format ?? "");
+
+    try {
+      if (isVideoFormat) {
+        // Vídeo aprovado → dispara geração automática (avatar clone ou cinematográfico)
+        await approveStoryboardGenerateVideo(workspaceId, postId, log);
+        videoTriggered++;
+      } else {
+        // Imagem aprovada → passa direto para scheduled sem nova ação
+        await approveStoryboardAsImage(workspaceId, postId, log);
+        approved++;
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${postId}: ${msg}`);
+      log.warn({ postId, err }, "bulk-approve: error on post");
+    }
+  }
+
+  log.info({ workspaceId, approved, videoTriggered, skipped, errors: errors.length }, "bulk-approve: completed");
+  return { approved, videoTriggered, skipped, errors };
+}
+
+// ─── Create Test Reel Post (agendado para 1h) ─────────────────────────────────
+
+export async function createTestReelPost(
+  workspaceId: string,
+  platform: "instagram" | "facebook" | "tiktok",
+  log: Logger,
+): Promise<SocialPresencePost> {
+  const scheduledFor = new Date(Date.now() + 60 * 60 * 1000); // 1h from now
+  const hh = String(scheduledFor.getHours()).padStart(2, "0");
+  const mm = String(scheduledFor.getMinutes()).padStart(2, "0");
+  const dayOfWeek = scheduledFor.getDay(); // 0=Sun … 6=Sat
+  const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0=Mon … 6=Sun
+  const weekStart = currentPlanWeekStart(scheduledFor);
+
+  const [post] = await db
+    .insert(socialPresencePostsTable)
+    .values({
+      workspaceId,
+      platform,
+      status: "scheduled",
+      weekStart,
+      dayIndex,
+      postingTime: `${hh}:${mm}`,
+      scheduledFor,
+      format: "reel",
+      pillar: "produto",
+      caption: [
+        "🧠 Isso é o que acontece quando a IA cuida do próprio lançamento.",
+        "",
+        "A NexOS AI está gerenciando sua própria presença digital — criando posts, agendando reels, analisando métricas e publicando automaticamente enquanto você assiste.",
+        "",
+        "Sem equipe de marketing. Sem horas perdidas. Apenas resultado.",
+        "",
+        "↓ Veja o sistema rodando ao vivo.",
+      ].join("\n"),
+      hashtags: ["nexosai", "lancamentodigital", "ia", "marketingdigital", "automacao", "empreendedorismo", "agenteia"],
+      visualDirection: [
+        "Avatar digital NexOS falando diretamente para a câmera com tom confiante e inovador.",
+        "Background tecnológico clean com partículas de dados roxas (#7C3AED).",
+        "Texto em movimento: 'A IA gerenciando o próprio lançamento'.",
+        "Corte dinâmico a cada 2s, luz environment suave, close no rosto do clone digital.",
+      ].join(" "),
+      videoScript: [
+        "Você sabe o que é mais impressionante na NexOS AI?",
+        "",
+        "Ela está gerenciando o próprio lançamento.",
+        "",
+        "Esse reel que você está assistindo agora — foi planejado, roteirizado, e agendado por uma inteligência artificial.",
+        "",
+        "Enquanto você dormia, a NexOS criou o conteúdo.",
+        "Enquanto você tomava café, ela agendou a publicação.",
+        "E enquanto você trabalha, ela analisa os resultados e ajusta a estratégia.",
+        "",
+        "Isso é o futuro do marketing digital. E ele está disponível agora.",
+        "",
+        "Clique no link da bio e comece seu lançamento com IA.",
+      ].join("\n"),
+      objective: "Demonstrar na prática o poder da automação NexOS — reel gerado e publicado pela própria IA como prova de conceito do produto.",
+      launchAligned: true,
+      aiGenerated: true,
+    })
+    .returning();
+
+  // Disparar geração de storyboard imediatamente
+  setImmediate(() => {
+    generatePostStoryboard(workspaceId, post.id, log).catch((err) => {
+      log.warn({ err, postId: post.id }, "createTestReelPost: storyboard generation failed");
+    });
+  });
+
+  log.info({ postId: post.id, platform, scheduledFor }, "createTestReelPost: reel de teste criado ✓");
+  return post;
 }
 
 // ─── Auto-Highlight: adiciona story ao Destaque após publicação ───────────────

@@ -28,6 +28,8 @@ import {
   attachUploadedMedia,
   confirmVideoAttachment,
   uploadTestMedia,
+  bulkApproveStoryboards,
+  createTestReelPost,
 } from "./social-presence.service.js";
 
 const router = Router();
@@ -355,6 +357,42 @@ router.post("/test-post", async (req, res): Promise<void> => {
   }
   const result = await publishTestPost(req.auth.workspaceId, parsed.data.platform, parsed.data.imageUrl, parsed.data.caption);
   res.status(result.success ? 200 : 422).json(result);
+});
+
+// ─── Aprovação em lote de storyboards ────────────────────────────────────────
+
+router.post("/approve-bulk", async (req, res): Promise<void> => {
+  const schema = z.object({
+    postIds: z.array(z.string().uuid()).min(1).max(100),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "postIds inválidos." });
+    return;
+  }
+  try {
+    const result = await bulkApproveStoryboards(req.auth.workspaceId, parsed.data.postIds, req.log);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Erro na aprovação em lote." });
+  }
+});
+
+// ─── Post de teste (reel com clone, agendado para 1h) ────────────────────────
+
+router.post("/posts/create-test-reel", async (req, res): Promise<void> => {
+  const schema = z.object({
+    platform: z.enum(["instagram", "facebook", "tiktok"]).optional().default("instagram"),
+  });
+  const parsed = schema.safeParse(req.body);
+  const platform = parsed.success ? parsed.data.platform : "instagram";
+  try {
+    const post = await createTestReelPost(req.auth.workspaceId, platform, req.log);
+    res.status(201).json({ post });
+  } catch (err) {
+    req.log.error({ err }, "create-test-reel: erro");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Erro ao criar post de teste." });
+  }
 });
 
 // ─── Análise de Perfil Social (pré-conexão OAuth) ────────────────────────────
