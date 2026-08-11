@@ -259,6 +259,7 @@ function CreditGauge({ balance, included, isAdmin, onTopup }: { balance: number;
 
 function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
   const [view, setView] = useState<"timeline" | "by_agent" | "by_campaign">("timeline");
+  const { isAdmin } = useAuth();
 
   const { data, isLoading } = useQuery<AgentUsageSummary>({
     queryKey: ["/api/credits/usage"],
@@ -289,15 +290,17 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="space-y-0">
       {/* Totais */}
-      <div className="grid grid-cols-3 divide-x divide-border/30 border-b border-border/30">
+      <div className={`grid divide-x divide-border/30 border-b border-border/30 ${isAdmin ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className="px-5 py-4">
           <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Total Consumido</div>
           <div className="font-mono font-bold text-2xl text-destructive">{data.totalCredits.toLocaleString("pt-BR")} <span className="text-xs font-normal text-muted-foreground">cr</span></div>
         </div>
-        <div className="px-5 py-4">
-          <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Custo Real (USD)</div>
-          <div className="font-mono font-bold text-2xl text-foreground">${parseFloat(data.totalCostUsd).toFixed(2)}</div>
-        </div>
+        {isAdmin && (
+          <div className="px-5 py-4">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Custo Real (USD)</div>
+            <div className="font-mono font-bold text-2xl text-foreground">${parseFloat(data.totalCostUsd).toFixed(2)}</div>
+          </div>
+        )}
         <div className="px-5 py-4">
           <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground mb-1">Chamadas do agente</div>
           <div className="font-mono font-bold text-2xl text-foreground">{data.entries.length}</div>
@@ -332,7 +335,7 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/30 bg-muted/10">
-                {["Agente", "Provedor", "Créditos", "Custo", "Duração", "Campanha", "Data"].map(h => (
+                {["Agente", "Provedor", "Créditos", ...(isAdmin ? ["Custo"] : []), "Duração", "Campanha", "Data"].map(h => (
                   <th key={h} className="px-4 py-2 text-left font-mono text-[11px] uppercase tracking-widest text-muted-foreground/70 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -356,9 +359,11 @@ function AgentUsageTab({ workspaceId }: { workspaceId: string }) {
                     <td className="px-4 py-3">
                       <span className="font-mono text-sm font-bold text-destructive">−{e.creditsCharged}</span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-muted-foreground">${parseFloat(e.costUsd).toFixed(4)}</span>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs text-muted-foreground">${parseFloat(e.costUsd).toFixed(4)}</span>
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs text-muted-foreground">{formatLatency(e.latencyMs)}</span>
                     </td>

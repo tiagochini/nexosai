@@ -65,6 +65,19 @@ router.get("/check/:action", async (req, res): Promise<void> => {
 router.get("/usage", async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query["limit"]) || 100, 200);
   const usage = await getAgentUsageHistory(req.auth.workspaceId, limit);
+
+  // Custo real em USD é informação interna — visível apenas para admins
+  const isAdmin = ADMIN_EMAILS_TOPUP.has(req.auth.email ?? "");
+  if (!isAdmin) {
+    const sanitized = {
+      ...usage,
+      totalCostUsd: "0",
+      entries: usage.entries.map((e) => ({ ...e, costUsd: "0" })),
+    };
+    res.json(sanitized);
+    return;
+  }
+
   res.json(usage);
 });
 
