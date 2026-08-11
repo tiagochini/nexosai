@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../auth/auth.middleware.js";
+import { analyzeSocialProfile } from "../agents/social-profile-analyzer.agent.js";
 import {
   getConfig,
   upsertConfig,
@@ -354,6 +355,35 @@ router.post("/test-post", async (req, res): Promise<void> => {
   }
   const result = await publishTestPost(req.auth.workspaceId, parsed.data.platform, parsed.data.imageUrl, parsed.data.caption);
   res.status(result.success ? 200 : 422).json(result);
+});
+
+// ─── Análise de Perfil Social (pré-conexão OAuth) ────────────────────────────
+
+router.post("/analyze-profile", async (req, res): Promise<void> => {
+  const schema = z.object({
+    platform: z.enum(["instagram", "facebook", "tiktok", "linkedin", "youtube"]),
+    handle: z.string().min(1).max(200),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "platform e handle são obrigatórios." });
+    return;
+  }
+  try {
+    const { getBusinessContextForAnalysis } = await import("./social-presence.service.js");
+    const businessContext = await getBusinessContextForAnalysis(req.auth.workspaceId);
+    const analysis = await analyzeSocialProfile(
+      parsed.data.platform,
+      parsed.data.handle,
+      businessContext,
+      req.log,
+    );
+    res.json({ analysis });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro ao analisar perfil.";
+    req.log.error({ err }, "analyze-profile: erro");
+    res.status(500).json({ error: msg });
+  }
 });
 
 // ─── Bio Optimizer ────────────────────────────────────────────────────────────

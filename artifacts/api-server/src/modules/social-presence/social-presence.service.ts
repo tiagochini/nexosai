@@ -1434,17 +1434,24 @@ export async function publishDuePresencePosts(): Promise<void> {
               fetchBusinessContextForWorkspace(postSnapshot.workspaceId).then(bctx =>
               generateStoryboardFrame(postSnapshot.visualDirection, postSnapshot.caption, postSnapshot.platform, postSnapshot.format, log, postSnapshot.videoScript ?? postSnapshot.reelScript, bctx))
                 .then(async ({ buf, mimeType, isAI }) => {
-                  const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
-                  // Upload imediatamente ao GCS — nunca armazenar base64 no banco
                   const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
                   const key = presenceStoryboardObjectKey(postSnapshot.workspaceId, postSnapshot.id, 0).replace(/\.png$/, `.${ext}`);
                   await uploadBufferToGCS(buf, key, mimeType);
                   const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
-                  await db
-                    .update(socialPresencePostsTable)
-                    .set({ mediaGenStatus: newStatus, storyboardUrls: [serveUrl], errorMessage: "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar." })
-                    .where(eq(socialPresencePostsTable.id, postSnapshot.id));
-                  log.info({ postId: postSnapshot.id, newStatus, key }, "presence: imagem auto-gerada e enviada ao GCS ✓ — aguardando aprovação");
+                  if (isAI) {
+                    // Auto-aprovação: imagem IA real → seta mediaUrls diretamente, sem etapa manual
+                    await db
+                      .update(socialPresencePostsTable)
+                      .set({ mediaUrls: [serveUrl], storyboardUrls: [serveUrl], mediaGenStatus: null, errorMessage: null, status: "scheduled" })
+                      .where(eq(socialPresencePostsTable.id, postSnapshot.id));
+                    log.info({ postId: postSnapshot.id, key }, "presence: imagem IA auto-aprovada → pronta para publicar ✓");
+                  } else {
+                    await db
+                      .update(socialPresencePostsTable)
+                      .set({ mediaGenStatus: "storyboard_draft", storyboardUrls: [serveUrl], errorMessage: "Rascunho SVG — abra para substituir por imagem real." })
+                      .where(eq(socialPresencePostsTable.id, postSnapshot.id));
+                    log.info({ postId: postSnapshot.id, key }, "presence: rascunho SVG criado — aguardando substituição manual");
+                  }
                 })
                 .catch(async (err) => {
                   log.warn({ err, postId: postSnapshot.id }, "presence: auto-geração de imagem falhou");
@@ -1731,7 +1738,6 @@ export async function preGeneratePresenceMedia(): Promise<void> {
             bctx,
           ))
             .then(async ({ buf, mimeType, isAI }) => {
-              const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
               const ext =
                 mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
               const key = presenceStoryboardObjectKey(snap.workspaceId, snap.id, 0).replace(
@@ -1740,14 +1746,28 @@ export async function preGeneratePresenceMedia(): Promise<void> {
               );
               await uploadBufferToGCS(buf, key, mimeType);
               const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
-              const readyMsg = isVideoFormat
-                ? "Storyboard pronto — abra o post e clique em 'Gerar Vídeo' para gerar o vídeo com IA."
-                : "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar.";
-              await db
-                .update(socialPresencePostsTable)
-                .set({ mediaGenStatus: newStatus, storyboardUrls: [serveUrl], errorMessage: readyMsg })
-                .where(eq(socialPresencePostsTable.id, snap.id));
-              log.info({ postId: snap.id, newStatus }, "presence: proactive storyboard generated ✓");
+              if (isAI && !isVideoFormat) {
+                // Imagem IA real para post de imagem → auto-aprovação sem intervenção manual
+                await db
+                  .update(socialPresencePostsTable)
+                  .set({ mediaUrls: [serveUrl], storyboardUrls: [serveUrl], mediaGenStatus: null, errorMessage: null, status: "scheduled" })
+                  .where(eq(socialPresencePostsTable.id, snap.id));
+                log.info({ postId: snap.id }, "presence: proactive storyboard IA auto-aprovado ✓ → pronto para publicar");
+              } else if (isAI && isVideoFormat) {
+                // Vídeo: storyboard de referência → usuário precisa clicar "Gerar Vídeo"
+                await db
+                  .update(socialPresencePostsTable)
+                  .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [serveUrl], errorMessage: "Storyboard pronto — abra o post e clique em 'Gerar Vídeo' para gerar o vídeo com IA." })
+                  .where(eq(socialPresencePostsTable.id, snap.id));
+                log.info({ postId: snap.id }, "presence: proactive storyboard de vídeo gerado ✓");
+              } else {
+                // SVG placeholder — sem IA disponível, precisa de substituição manual
+                await db
+                  .update(socialPresencePostsTable)
+                  .set({ mediaGenStatus: "storyboard_draft", storyboardUrls: [serveUrl], errorMessage: "Rascunho SVG — abra para substituir por imagem real." })
+                  .where(eq(socialPresencePostsTable.id, snap.id));
+                log.info({ postId: snap.id }, "presence: rascunho SVG proativo criado");
+              }
             })
             .catch(async (err) => {
               log.warn({ err, postId: snap.id }, "presence: proactive storyboard generation failed — resetting for retry");
@@ -1790,6 +1810,11 @@ function buildImageClient(): OpenAI {
  *   - isAI=false → "storyboard_draft" (placeholder visual, sem crédito de IA)
  */
 // ─── Helper: buscar contexto de negócio dado apenas workspaceId ─────────────
+
+/** Exportado para uso nas rotas de análise de perfil */
+export async function getBusinessContextForAnalysis(workspaceId: string): Promise<string> {
+  return fetchBusinessContextForWorkspace(workspaceId);
+}
 
 async function fetchBusinessContextForWorkspace(workspaceId: string): Promise<string> {
   try {
@@ -2093,8 +2118,6 @@ export async function generatePostStoryboard(
         post.videoScript,
         businessContext,
       );
-      // isAI=true → storyboard_ready (IA real); isAI=false → storyboard_draft (rascunho SVG)
-      const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
 
       // Upload imediatamente ao GCS — nunca armazenar base64 no banco
       const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
@@ -2102,12 +2125,30 @@ export async function generatePostStoryboard(
       await uploadBufferToGCS(imgBuf, key, mimeType);
       const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
 
-      await db
-        .update(socialPresencePostsTable)
-        .set({ mediaGenStatus: newStatus, storyboardUrls: [serveUrl] })
-        .where(eq(socialPresencePostsTable.id, postId));
+      // Determinar se o formato é de imagem (não precisa de vídeo)
+      const isVideoFmt = ["reel", "feed_video"].includes(post.format) ||
+        (post.format === "story" && (post as Record<string, unknown>).storyMediaType !== "image");
 
-      log.info({ postId, isAI, newStatus, key }, "presence: storyboard generated and uploaded to GCS");
+      if (isAI && !isVideoFmt) {
+        // Imagem IA real → auto-aprovação direta, pronto para publicar
+        await db
+          .update(socialPresencePostsTable)
+          .set({ mediaUrls: [serveUrl], storyboardUrls: [serveUrl], mediaGenStatus: null, errorMessage: null, status: "scheduled" })
+          .where(eq(socialPresencePostsTable.id, postId));
+        log.info({ postId, key }, "presence: storyboard on-demand IA auto-aprovado ✓");
+      } else if (isAI && isVideoFmt) {
+        await db
+          .update(socialPresencePostsTable)
+          .set({ mediaGenStatus: "storyboard_ready", storyboardUrls: [serveUrl] })
+          .where(eq(socialPresencePostsTable.id, postId));
+        log.info({ postId, key }, "presence: storyboard on-demand de vídeo pronto ✓");
+      } else {
+        await db
+          .update(socialPresencePostsTable)
+          .set({ mediaGenStatus: "storyboard_draft", storyboardUrls: [serveUrl] })
+          .where(eq(socialPresencePostsTable.id, postId));
+        log.info({ postId, key }, "presence: rascunho SVG on-demand criado");
+      }
     } catch (err) {
       log.warn({ err, postId }, "presence: storyboard generation failed");
       await db

@@ -7,6 +7,7 @@ import {
   Clock, AlertTriangle, X, Instagram, Facebook, Music2, Linkedin,
   CalendarDays, ListChecks, BarChart3, Lightbulb, Copy, Check,
   Rocket, PenLine, ThumbsUp, Zap, Send, Link2Off, Film, ImageIcon, Upload,
+  Search, TrendingUp, Target, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { MediaProductionDrawer } from "./MediaProductionDrawer";
 import type { MediaPresencePost } from "./MediaProductionDrawer";
@@ -143,6 +144,7 @@ export default function PresencePage() {
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [mediaDrawerPostId, setMediaDrawerPostId] = useState<string | null>(null);
+  const [showProfileAnalysis, setShowProfileAnalysis] = useState(false);
   const [socialHealth, setSocialHealth] = useState<{
     provider: string;
     accountId: string | null;
@@ -397,9 +399,14 @@ export default function PresencePage() {
                 {generating ? "Gerando semana..." : currentWeekPosts.length > 0 ? "Regenerar Semana" : "Gerar Semana"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setShowTestPost(true)} data-testid="button-test-post-header">
-                <Send className="mr-1.5 h-4 w-4" /> Testar Publicação
+                <Send className="mr-1.5 h-4 w-4" /> Testar
               </Button>
             </>
+          )}
+          {config && (
+            <Button variant="outline" size="sm" onClick={() => setShowProfileAnalysis(true)} data-testid="button-profile-analysis">
+              <Search className="mr-1.5 h-4 w-4" /> Analisar Perfil
+            </Button>
           )}
           <Button variant="outline" size="icon" onClick={() => setShowConfig(true)} aria-label="Configurações de presença" data-testid="button-presence-config">
             <Settings className="h-4 w-4" />
@@ -809,6 +816,9 @@ export default function PresencePage() {
       )}
       {showBio && config && (
         <BioModal suggestions={config.bioSuggestions ?? []} onClose={() => setShowBio(false)} />
+      )}
+      {showProfileAnalysis && (
+        <SocialProfileAnalysisPanel onClose={() => setShowProfileAnalysis(false)} />
       )}
       {mediaDrawerPostId && (() => {
         const drawerPost = posts.find((p) => p.id === mediaDrawerPostId);
@@ -1642,6 +1652,263 @@ function BioModal({ suggestions, onClose }: { suggestions: BioSuggestion[]; onCl
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Social Profile Analysis Panel ───────────────────────────────────────────
+
+interface SocialProfileAnalysis {
+  platform: string;
+  handle: string;
+  analyzedAt: string;
+  overview: { bio: string; estimatedFollowers: string; followingCount: string; postFrequency: string; accountAge: string; verified: boolean | null };
+  contentAnalysis: { dominantFormats: string[]; topThemes: string[]; avgEngagementSignal: string; bestPerformingContent: string; visualStyle: string; captionStyle: string };
+  strategicAnalysis: { strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] };
+  gapAnalysis: { alignmentScore: number; criticalGaps: string[]; quickWins: string[] };
+  actionPlan: { immediate: string[]; shortTerm: string[]; longTerm: string[]; contentCalendarHint: string };
+  searchSourced: boolean;
+}
+
+function SocialProfileAnalysisPanel({ onClose }: { onClose: () => void }) {
+  const [platform, setPlatform] = useState<"instagram" | "facebook" | "tiktok" | "linkedin" | "youtube">("instagram");
+  const [handle, setHandle] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<SocialProfileAnalysis | null>(null);
+  const [openSection, setOpenSection] = useState<string | null>("overview");
+
+  const analyze = async () => {
+    if (!handle.trim()) { setError("Informe o @ ou URL do perfil."); return; }
+    setLoading(true);
+    setError(null);
+    setAnalysis(null);
+    try {
+      const { analysis: result } = await customFetch<{ analysis: SocialProfileAnalysis }>(
+        "/api/presence/analyze-profile",
+        { method: "POST", body: JSON.stringify({ platform, handle: handle.trim() }) },
+      );
+      setAnalysis(result);
+      setOpenSection("overview");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao analisar perfil.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const PLATFORM_OPTIONS = [
+    { value: "instagram", label: "Instagram" },
+    { value: "facebook", label: "Facebook" },
+    { value: "tiktok", label: "TikTok" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "youtube", label: "YouTube" },
+  ] as const;
+
+  const scoreColor = (n: number) =>
+    n >= 8 ? "text-green-400" : n >= 5 ? "text-amber-400" : "text-destructive";
+
+  const Section = ({ id, title, icon: Icon, children }: { id: string; title: string; icon: React.ElementType; children: React.ReactNode }) => (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/30 transition-colors"
+        onClick={() => setOpenSection(openSection === id ? null : id)}
+      >
+        <span className="flex items-center gap-2"><Icon className="h-4 w-4 text-primary" />{title}</span>
+        {openSection === id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      {openSection === id && <div className="px-4 pb-4 pt-2 space-y-2">{children}</div>}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-2xl rounded-2xl border border-border bg-card flex flex-col"
+        style={{ maxHeight: "90vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
+          <div>
+            <h2 className="text-base font-semibold flex items-center gap-2">
+              <Search className="h-4 w-4 text-primary" /> Análise de Perfil Social
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              A IA pesquisa o perfil público e compara com seus objetivos comerciais
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="Fechar análise" className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted/50">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
+          {/* Input */}
+          <div className="flex gap-2">
+            <select
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value as typeof platform)}
+              className="rounded-lg border border-border bg-background px-3 py-2 text-sm shrink-0"
+            >
+              {PLATFORM_OPTIONS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !loading && analyze()}
+              placeholder="@handle ou URL do perfil"
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <button
+              onClick={analyze}
+              disabled={loading || !handle.trim()}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              {loading ? "Analisando..." : "Analisar"}
+            </button>
+          </div>
+
+          {loading && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-6 text-center space-y-2">
+              <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                A IA está pesquisando o perfil e comparando com seus objetivos comerciais...
+              </p>
+              <p className="text-xs text-muted-foreground/60">Isso pode levar 30–60 segundos</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/8 px-3 py-2.5 text-sm text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
+            </div>
+          )}
+
+          {analysis && (
+            <div className="space-y-3">
+              {/* Score badge */}
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                <div className="text-center">
+                  <div className={`text-2xl font-bold ${scoreColor(analysis.gapAnalysis.alignmentScore)}`}>
+                    {analysis.gapAnalysis.alignmentScore}/10
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Alinhamento</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">@{analysis.handle} · {analysis.platform}</p>
+                  <p className="text-xs text-muted-foreground">{analysis.overview.estimatedFollowers} seguidores · {analysis.overview.postFrequency}</p>
+                  {analysis.searchSourced && (
+                    <span className="text-[10px] text-green-400 flex items-center gap-1 mt-0.5">
+                      <CheckCircle2 className="h-3 w-3" /> Analisado via Google Search em tempo real
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Sections */}
+              <Section id="overview" title="Visão Geral do Perfil" icon={Share2}>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {[
+                    ["Bio", analysis.overview.bio],
+                    ["Seguidores", analysis.overview.estimatedFollowers],
+                    ["Frequência", analysis.overview.postFrequency],
+                    ["Estilo Visual", analysis.contentAnalysis.visualStyle],
+                    ["Engajamento", analysis.contentAnalysis.avgEngagementSignal],
+                    ["Legenda", analysis.contentAnalysis.captionStyle],
+                  ].map(([k, v]) => (
+                    <div key={k} className="rounded-lg border border-border/50 bg-background/50 px-3 py-2">
+                      <div className="text-muted-foreground mb-0.5">{k}</div>
+                      <div className="font-medium leading-snug">{v || "—"}</div>
+                    </div>
+                  ))}
+                </div>
+                {analysis.contentAnalysis.topThemes.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Temas dominantes:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {analysis.contentAnalysis.topThemes.map((t) => (
+                        <span key={t} className="rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[11px] text-primary">{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Section>
+
+              <Section id="gaps" title="Gaps vs Objetivos Comerciais" icon={Target}>
+                {analysis.gapAnalysis.criticalGaps.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-destructive mb-1.5">❌ Gaps críticos:</p>
+                    <ul className="space-y-1">
+                      {analysis.gapAnalysis.criticalGaps.map((g, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex gap-2"><span className="text-destructive shrink-0">•</span>{g}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {analysis.gapAnalysis.quickWins.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-green-400 mb-1.5">⚡ Quick wins (mudanças imediatas):</p>
+                    <ul className="space-y-1">
+                      {analysis.gapAnalysis.quickWins.map((w, i) => (
+                        <li key={i} className="text-xs text-muted-foreground flex gap-2"><span className="text-green-400 shrink-0">•</span>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </Section>
+
+              <Section id="swot" title="Análise Estratégica (SWOT)" icon={TrendingUp}>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Forças", items: analysis.strategicAnalysis.strengths, color: "text-green-400", bg: "bg-green-500/5 border-green-500/20" },
+                    { label: "Fraquezas", items: analysis.strategicAnalysis.weaknesses, color: "text-destructive", bg: "bg-destructive/5 border-destructive/20" },
+                    { label: "Oportunidades", items: analysis.strategicAnalysis.opportunities, color: "text-blue-400", bg: "bg-blue-500/5 border-blue-500/20" },
+                    { label: "Ameaças", items: analysis.strategicAnalysis.threats, color: "text-amber-400", bg: "bg-amber-500/5 border-amber-500/20" },
+                  ].map(({ label, items, color, bg }) => (
+                    <div key={label} className={`rounded-lg border px-3 py-2 ${bg}`}>
+                      <p className={`text-[11px] font-semibold mb-1.5 ${color}`}>{label}</p>
+                      <ul className="space-y-0.5">
+                        {items.slice(0, 3).map((item, i) => (
+                          <li key={i} className="text-[11px] text-muted-foreground">• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+
+              <Section id="plan" title="Plano de Ação" icon={Lightbulb}>
+                {analysis.actionPlan.contentCalendarHint && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+                    <span className="text-primary font-medium">Mix semanal ideal: </span>
+                    {analysis.actionPlan.contentCalendarHint}
+                  </div>
+                )}
+                {[
+                  { label: "📅 Esta semana (7 dias)", items: analysis.actionPlan.immediate },
+                  { label: "📆 Próximo mês (30 dias)", items: analysis.actionPlan.shortTerm },
+                  { label: "🗓️ Trimestre (90 dias)", items: analysis.actionPlan.longTerm },
+                ].map(({ label, items }) => items.length > 0 && (
+                  <div key={label}>
+                    <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">{label}:</p>
+                    <ul className="space-y-1">
+                      {items.map((item, i) => (
+                        <li key={i} className="text-xs flex gap-2"><span className="text-primary shrink-0">→</span>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </Section>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
