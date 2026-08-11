@@ -487,7 +487,9 @@ router.get("/me/persona/stock-avatars", async (req, res): Promise<void> => {
 });
 
 // POST /workspaces/me/persona/clone-avatar — receive base64 image (frame from the
-// user's recording) → HeyGen Talking Photo → save heygenAvatarId
+// user's recording) → HeyGen Photo Avatar (v3) → save heygenAvatarId (look UUID).
+// v3: POST /v3/avatars type:photo replaces deprecated /v1/talking_photo (404) and
+// the old /v1/asset upload-then-save-image_key anti-pattern.
 router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
   const schema = z.object({
     imageBase64: z.string().min(10),
@@ -505,18 +507,29 @@ router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
     return;
   }
   try {
-    const buf = Buffer.from(parsed.data.imageBase64, "base64");
-    const uploadRes = await fetch("https://upload.heygen.com/v1/asset", {
+    // v3: POST /v3/avatars type:photo — returns avatar_item.id (look UUID) synchronously.
+    // base64 file input accepted directly; no separate asset-upload step needed.
+    const avatarRes = await fetch("https://api.heygen.com/v3/avatars", {
       method: "POST",
-      headers: { "X-Api-Key": heygenKey, "Content-Type": parsed.data.mimeType },
-      body: buf,
+      headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "photo",
+        name: `Avatar NexOS ${req.auth.workspaceId.slice(0, 8)}`,
+        file: { type: "base64", data: parsed.data.imageBase64, media_type: parsed.data.mimeType },
+      }),
     });
-    if (!uploadRes.ok) {
-      const errText = await uploadRes.text();
-      throw new Error(`HeyGen upload ${uploadRes.status}: ${errText.slice(0, 300)}`);
+    if (!avatarRes.ok) {
+      const errText = await avatarRes.text();
+      throw new Error(`HeyGen photo avatar ${avatarRes.status}: ${errText.slice(0, 300)}`);
     }
-    const uploadData = (await uploadRes.json()) as { data: { image_key: string } };
-    const talkingPhotoId = uploadData.data.image_key;
+    const avatarData = (await avatarRes.json()) as {
+      data: { avatar_item?: { id: string }; avatar_group?: { id: string } };
+    };
+    // avatar_item.id is the look UUID used in POST /v3/videos as avatar_id
+    const lookId = avatarData.data.avatar_item?.id ?? avatarData.data.avatar_group?.id;
+    if (!lookId) {
+      throw new Error("HeyGen photo avatar: look ID não retornado — tente novamente");
+    }
 
     const [ws] = await db.select({ settings: workspacesTable.settings })
       .from(workspacesTable)
@@ -530,15 +543,15 @@ router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
           ...existingSettings,
           persona: {
             ...existingPersona,
-            heygenAvatarId: talkingPhotoId,
-            avatarType: "talking_photo",
+            heygenAvatarId: lookId,
+            avatarType: "photo",
             avatarUpdatedAt: new Date().toISOString(),
           },
         } as any,
       })
       .where(eq(workspacesTable.id, req.auth.workspaceId));
-    req.log.info({ workspaceId: req.auth.workspaceId, talkingPhotoId }, "Avatar clone created (talking_photo)");
-    res.json({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo", success: true });
+    req.log.info({ workspaceId: req.auth.workspaceId, lookId }, "Photo avatar created (v3 look UUID saved)");
+    res.json({ heygenAvatarId: lookId, avatarType: "photo", success: true });
   } catch (err) {
     req.log.error({ err }, "Avatar clone failed");
     res.status(500).json({ error: String(err), code: "AVATAR_CLONE_ERROR" });
@@ -616,18 +629,25 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
   }
 
   async function talkingPhotoFallback(frameBase64: string): Promise<string> {
-    const buf = Buffer.from(frameBase64, "base64");
-    const uploadRes = await fetch("https://upload.heygen.com/v1/asset", {
+    // v3 photo avatar creation — replaces deprecated /v1/talking_photo (404).
+    // Returns look UUID (avatar_item.id) for use in POST /v3/videos as avatar_id.
+    const r = await fetch("https://api.heygen.com/v3/avatars", {
       method: "POST",
-      headers: { "X-Api-Key": heygenKey!, "Content-Type": "image/jpeg" },
-      body: buf,
+      headers: { "X-Api-Key": heygenKey!, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "photo",
+        name: `Avatar NexOS ${workspaceId.slice(0, 8)}`,
+        file: { type: "base64", data: frameBase64, media_type: "image/jpeg" },
+      }),
     });
-    if (!uploadRes.ok) {
-      const t = await uploadRes.text();
-      throw new Error(`HeyGen asset upload ${uploadRes.status}: ${t.slice(0, 300)}`);
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`HeyGen photo avatar ${r.status}: ${t.slice(0, 300)}`);
     }
-    const uploadData = (await uploadRes.json()) as { data: { image_key: string } };
-    return uploadData.data.image_key;
+    const d = (await r.json()) as { data: { avatar_item?: { id: string }; avatar_group?: { id: string } } };
+    const lookId = d.data.avatar_item?.id ?? d.data.avatar_group?.id;
+    if (!lookId) throw new Error("HeyGen photo avatar: look ID não retornado");
+    return lookId;
   }
 
   try {
@@ -657,35 +677,76 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
       buildDownloadUrl(parsed.data.consentKey),
     ]);
 
-    req.log.info({ workspaceId, trainingUrl: trainingUrl.slice(0, 80) }, "Calling HeyGen Digital Twin");
+    req.log.info({ workspaceId, trainingUrl: trainingUrl.slice(0, 80) }, "Calling HeyGen Digital Twin (v3)");
 
-    // ── Attempt Digital Twin (Enterprise only) ─────────────────────────────
-    const dtRes = await fetch("https://api.heygen.com/v2/video_avatar", {
+    // ── Attempt Digital Twin via v3 API ────────────────────────────────────
+    // POST /v3/avatars type:digital_twin — replaces deprecated /v2/video_avatar (405).
+    // Consent is a separate call: POST /v3/avatars/{group_id}/consent.
+    const dtRes = await fetch("https://api.heygen.com/v3/avatars", {
       method: "POST",
       headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
       body: JSON.stringify({
-        avatar_name:           parsed.data.avatarName,
-        training_footage_url:  trainingUrl,
-        video_consent_url:     consentUrl,
+        type: "digital_twin",
+        name: parsed.data.avatarName,
+        file: { type: "url", url: trainingUrl },
       }),
     });
 
     if (dtRes.ok) {
-      const dtData      = (await dtRes.json()) as { data: { avatar_id: string } };
-      const digitalTwinId = dtData.data.avatar_id;
-      await savePersona({ digitalTwinId, avatarType: "digital_twin", avatarTrainingStatus: "pending" });
-      req.log.info({ workspaceId, digitalTwinId }, "Digital twin training started");
-      res.json({ digitalTwinId, avatarTrainingStatus: "pending", avatarType: "digital_twin", success: true });
+      const dtData = (await dtRes.json()) as {
+        data: { avatar_group?: { id: string; status?: string }; id?: string };
+      };
+      // v3 returns the avatar group (identity), not the look yet (async training)
+      const groupId = dtData.data.avatar_group?.id ?? dtData.data.id;
+      if (!groupId) throw new Error("HeyGen digital twin: group ID não retornado");
+
+      // Submit consent video (Enterprise plan) OR initiate webcam consent flow
+      let consentPageUrl: string | undefined;
+      try {
+        const consentRes = await fetch(`https://api.heygen.com/v3/avatars/${groupId}/consent`, {
+          method: "POST",
+          headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ consent_video: { type: "url", url: consentUrl } }),
+        });
+        if (!consentRes.ok) {
+          // Non-Enterprise: consent video rejected → initiate webcam consent flow
+          req.log.warn({ workspaceId, groupId, status: consentRes.status }, "Consent video upload rejected — initiating webcam consent");
+          const webcamRes = await fetch(`https://api.heygen.com/v3/avatars/${groupId}/consent`, {
+            method: "POST",
+            headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ reroute_url: `${env.APP_URL}/configuracoes/persona` }),
+          });
+          if (webcamRes.ok) {
+            const webcamData = (await webcamRes.json()) as { data: { url?: string } };
+            consentPageUrl = webcamData.data?.url;
+          }
+        } else {
+          req.log.info({ workspaceId, groupId }, "Consent video submitted (Enterprise)");
+        }
+      } catch (consentErr) {
+        req.log.warn({ err: consentErr, workspaceId, groupId }, "Consent submission error (non-fatal)");
+      }
+
+      const trainingStatus = consentPageUrl ? "pending_consent" : "pending";
+      await savePersona({ digitalTwinId: groupId, avatarType: "digital_twin", avatarTrainingStatus: trainingStatus });
+      req.log.info({ workspaceId, digitalTwinId: groupId, trainingStatus }, "Digital twin training started (v3)");
+      res.json({
+        digitalTwinId: groupId,
+        avatarTrainingStatus: trainingStatus,
+        avatarType: "digital_twin",
+        ...(consentPageUrl ? { consentUrl: consentPageUrl } : {}),
+        success: true,
+      });
       return;
     }
 
     const dtStatus  = dtRes.status;
     const dtErrText = await dtRes.text();
-    req.log.warn({ workspaceId, dtStatus, dtErrText: dtErrText.slice(0, 300) }, "Digital Twin rejected — trying talking_photo fallback");
+    req.log.warn({ workspaceId, dtStatus, dtErrText: dtErrText.slice(0, 300) }, "Digital Twin rejected — trying photo avatar fallback");
 
     if (!parsed.data.frameBase64) {
       res.status(422).json({
-        error: `HeyGen rejeitou Digital Twin (HTTP ${dtStatus}). Forneça frameBase64 para criar um avatar básico sem Enterprise.`,
+        error: `HeyGen rejeitou Digital Twin (HTTP ${dtStatus}). Forneça frameBase64 para criar um avatar de foto.`,
         code:  "HEYGEN_ENTERPRISE_REQUIRED",
         heygenStatus: dtStatus,
         heygenError:  dtErrText.slice(0, 200),
@@ -693,11 +754,11 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
       return;
     }
 
-    // ── Fallback: talking_photo from webcam frame ──────────────────────────
-    const talkingPhotoId = await talkingPhotoFallback(parsed.data.frameBase64);
-    await savePersona({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo" });
-    req.log.info({ workspaceId, talkingPhotoId }, "Avatar created via talking_photo fallback");
-    res.json({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo", fallback: true, success: true });
+    // ── Fallback: photo avatar from webcam frame (v3) ──────────────────────
+    const photoLookId = await talkingPhotoFallback(parsed.data.frameBase64);
+    await savePersona({ heygenAvatarId: photoLookId, avatarType: "photo" });
+    req.log.info({ workspaceId, photoLookId }, "Photo avatar (v3) created as fallback — look UUID saved");
+    res.json({ heygenAvatarId: photoLookId, avatarType: "photo", fallback: true, success: true });
 
   } catch (err) {
     req.log.error({ err }, "Avatar clone failed");
@@ -730,15 +791,23 @@ router.get("/me/persona/avatar-training-status", async (req, res): Promise<void>
     return;
   }
   try {
-    const statusRes = await fetch(`https://api.heygen.com/v2/video_avatar/${digitalTwinId}`, {
+    // v3: GET /v3/avatars/{group_id} — status: "pending"|"processing"|"completed"|"failed"
+    // Replaces deprecated /v2/video_avatar/{id} poll endpoint.
+    const statusRes = await fetch(`https://api.heygen.com/v3/avatars/${digitalTwinId}`, {
       headers: { "X-Api-Key": heygenKey },
     });
     if (!statusRes.ok) {
       const errText = await statusRes.text();
       throw new Error(`HeyGen status ${statusRes.status}: ${errText.slice(0, 300)}`);
     }
-    const statusData = (await statusRes.json()) as { data: { status: string } };
-    const heygenStatus = statusData.data.status; // in_progress | complete | failed
+    const statusData = (await statusRes.json()) as {
+      data: { status: string; consent_status?: string; looks_count?: number };
+    };
+    const heygenStatus = statusData.data.status; // "pending"|"processing"|"completed"|"failed"
+    // Map v3 status to legacy frontend values for backward compat
+    const legacyStatus = heygenStatus === "completed" ? "complete"
+      : heygenStatus === "processing" ? "in_progress"
+      : heygenStatus;
 
     if (heygenStatus === "failed") {
       await db.update(workspacesTable)
@@ -747,28 +816,35 @@ router.get("/me/persona/avatar-training-status", async (req, res): Promise<void>
       res.json({ status: "failed" });
       return;
     }
-    if (heygenStatus !== "complete") {
+    if (heygenStatus !== "completed") {
       await db.update(workspacesTable)
-        .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarTrainingStatus: heygenStatus } } as any })
+        .set({ settings: { ...existingSettings, persona: { ...existingPersona, avatarTrainingStatus: legacyStatus } } as any })
         .where(eq(workspacesTable.id, req.auth.workspaceId));
-      res.json({ status: heygenStatus });
+      res.json({ status: legacyStatus, consentStatus: statusData.data.consent_status });
       return;
     }
 
-    // Complete — resolve the real playable avatar_id via v3 looks lookup.
-    const looksRes = await fetch("https://api.heygen.com/v3/avatars/looks?avatar_type=digital_twin&ownership=private", {
-      headers: { "X-Api-Key": heygenKey },
-    });
+    // Completed — resolve the look UUID via v3 looks endpoint filtered by group_id.
+    // digitalTwinId IS the avatar group_id in v3 terminology.
+    // Look items have field "id" (look UUID, used in POST /v3/videos) and "group_id" (avatar identity).
+    const looksRes = await fetch(
+      `https://api.heygen.com/v3/avatars/looks?group_id=${digitalTwinId}&ownership=private&limit=50`,
+      { headers: { "X-Api-Key": heygenKey } },
+    );
     if (!looksRes.ok) {
       const errText = await looksRes.text();
       throw new Error(`HeyGen looks ${looksRes.status}: ${errText.slice(0, 300)}`);
     }
-    const looksData = (await looksRes.json()) as { data: { avatar_id: string; look_id?: string }[] };
-    const match = looksData.data.find((a) => a.avatar_id === digitalTwinId) ?? looksData.data[0];
+    const looksData = (await looksRes.json()) as { data: { id: string; group_id?: string }[] };
+    // Match by group_id first; fall back to first look if filter not supported
+    const match =
+      looksData.data.find((a) => a.group_id === digitalTwinId) ??
+      looksData.data[0];
     if (!match) {
       throw new Error("Digital twin marcado como completo mas nenhum look encontrado na HeyGen");
     }
-    const heygenAvatarId = match.avatar_id;
+    // match.id is the v3 look UUID — the correct avatar_id for POST /v3/videos
+    const heygenAvatarId = match.id;
 
     await db.update(workspacesTable)
       .set({
@@ -784,7 +860,7 @@ router.get("/me/persona/avatar-training-status", async (req, res): Promise<void>
         } as any,
       })
       .where(eq(workspacesTable.id, req.auth.workspaceId));
-    req.log.info({ workspaceId: req.auth.workspaceId, heygenAvatarId }, "Digital twin training complete");
+    req.log.info({ workspaceId: req.auth.workspaceId, heygenAvatarId, groupId: digitalTwinId }, "Digital twin complete — look UUID saved (v3)");
     res.json({ status: "complete", heygenAvatarId });
   } catch (err) {
     req.log.error({ err }, "Digital twin status check failed");
