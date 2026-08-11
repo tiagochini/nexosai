@@ -287,9 +287,25 @@ export async function autoPostApprovedContent(
 
       const platform = PROVIDER_TO_PLATFORM[providerKey] ?? "facebook_page";
 
-      // Instagram requires media — skip gracefully if none available
+      // Instagram requires media — if not yet available, create a "scheduled" row
+      // with scheduledAt = now so the 60s tick retries until the image is generated.
+      // This replaces the old silent skip that discarded the post permanently.
       if (platform === "instagram" && mediaUrls.length === 0) {
-        logger.info({ workspaceId, pieceId }, "social.autopost: Instagram skipped — no media URLs available");
+        logger.info({ workspaceId, pieceId }, "social.autopost: Instagram — no media yet, creating scheduled row for retry");
+        await db.insert(socialPostsTable).values({
+          workspaceId,
+          campaignId: campaignId || null,
+          contentPieceId: pieceId,
+          integrationId: integration.id,
+          platform: "instagram" as const,
+          postType,
+          status: "scheduled",
+          caption,
+          hashtags: [],
+          mediaUrls: [],
+          scheduledAt: new Date(), // due immediately — scheduler retries each tick
+          aiGenerated: true,
+        }).onConflictDoNothing();
         continue;
       }
 

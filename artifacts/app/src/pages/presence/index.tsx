@@ -903,7 +903,7 @@ function CalendarPostCard({
               ⚡ Story: o Instagram não exibe caption via API — use este texto como sticker de texto ou narração.
             </p>
           )}
-          {/* Thumbnail da mídia já salva */}
+          {/* Thumbnail da mídia aprovada */}
           {hasMedia && (
             <div className="rounded-lg overflow-hidden border border-green-500/20 bg-black max-h-48">
               {/\.(mp4|mov|webm)(\?|$)/i.test(post.mediaUrls[0]) ? (
@@ -912,6 +912,25 @@ function CalendarPostCard({
                 <img src={post.mediaUrls[0]} alt="Mídia do post" className="w-full max-h-48 object-contain" />
               )}
             </div>
+          )}
+          {/* Storyboard rascunho — gerado proativamente, aguardando aprovação */}
+          {!hasMedia && (post.storyboardUrls?.length ?? 0) > 0 && !isGeneratingMedia && (
+            <button
+              className="relative w-full rounded-lg overflow-hidden border border-primary/30 bg-black max-h-40 text-left group"
+              onClick={onOpenMediaDrawer}
+              title="Abrir produção de mídia para aprovar"
+            >
+              <img
+                src={post.storyboardUrls[0]}
+                alt="Storyboard rascunho"
+                className="w-full max-h-40 object-contain opacity-75 group-hover:opacity-90 transition-opacity"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent px-2 py-2">
+                <span className="text-[10px] text-primary font-medium">
+                  🎨 Rascunho pronto — clique para aprovar e publicar
+                </span>
+              </div>
+            </button>
           )}
           {post.visualDirection && (
             <p className="text-[11px] text-muted-foreground"><strong>Visual:</strong> {post.visualDirection}</p>

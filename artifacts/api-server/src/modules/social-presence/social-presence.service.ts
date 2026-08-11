@@ -1370,7 +1370,8 @@ export async function publishDuePresencePosts(): Promise<void> {
               .where(eq(socialPresencePostsTable.id, post.id));
             const videoPostSnapshot = { ...post };
             setImmediate(() => {
-              generateStoryboardFrame(videoPostSnapshot.visualDirection, videoPostSnapshot.caption, videoPostSnapshot.platform, videoPostSnapshot.format, log, videoPostSnapshot.videoScript ?? videoPostSnapshot.reelScript)
+              fetchBusinessContextForWorkspace(videoPostSnapshot.workspaceId).then(bctx =>
+              generateStoryboardFrame(videoPostSnapshot.visualDirection, videoPostSnapshot.caption, videoPostSnapshot.platform, videoPostSnapshot.format, log, videoPostSnapshot.videoScript ?? videoPostSnapshot.reelScript, bctx))
                 .then(async ({ buf, mimeType, isAI }) => {
                   const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
                   const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "png";
@@ -1430,7 +1431,8 @@ export async function publishDuePresencePosts(): Promise<void> {
             // Capturar variáveis locais para o closure
             const postSnapshot = { ...post };
             setImmediate(() => {
-              generateStoryboardFrame(postSnapshot.visualDirection, postSnapshot.caption, postSnapshot.platform, postSnapshot.format, log, postSnapshot.videoScript ?? postSnapshot.reelScript)
+              fetchBusinessContextForWorkspace(postSnapshot.workspaceId).then(bctx =>
+              generateStoryboardFrame(postSnapshot.visualDirection, postSnapshot.caption, postSnapshot.platform, postSnapshot.format, log, postSnapshot.videoScript ?? postSnapshot.reelScript, bctx))
                 .then(async ({ buf, mimeType, isAI }) => {
                   const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
                   // Upload imediatamente ao GCS — nunca armazenar base64 no banco
@@ -1718,6 +1720,7 @@ export async function preGeneratePresenceMedia(): Promise<void> {
 
         const snap = { ...post };
         setImmediate(() => {
+          fetchBusinessContextForWorkspace(snap.workspaceId).then(bctx =>
           generateStoryboardFrame(
             snap.visualDirection,
             snap.caption,
@@ -1725,7 +1728,8 @@ export async function preGeneratePresenceMedia(): Promise<void> {
             snap.format,
             log,
             snap.videoScript ?? snap.reelScript,
-          )
+            bctx,
+          ))
             .then(async ({ buf, mimeType, isAI }) => {
               const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";
               const ext =
@@ -1785,6 +1789,22 @@ function buildImageClient(): OpenAI {
  *   - isAI=true  → "storyboard_ready" (imagem real gerada por IA)
  *   - isAI=false → "storyboard_draft" (placeholder visual, sem crédito de IA)
  */
+// ─── Helper: buscar contexto de negócio dado apenas workspaceId ─────────────
+
+async function fetchBusinessContextForWorkspace(workspaceId: string): Promise<string> {
+  try {
+    const [cfg] = await db
+      .select()
+      .from(socialPresenceConfigTable)
+      .where(eq(socialPresenceConfigTable.workspaceId, workspaceId))
+      .limit(1);
+    if (cfg) return buildBusinessContext(workspaceId, cfg);
+  } catch { /* noop */ }
+  return "";
+}
+
+// ─── Geração de frame do storyboard ─────────────────────────────────────────
+
 async function generateStoryboardFrame(
   visualDirection: string,
   caption: string,
@@ -1792,16 +1812,25 @@ async function generateStoryboardFrame(
   format: string,
   log: Logger,
   videoScript?: string | null,
+  businessContext?: string | null,
 ): Promise<{ buf: Buffer; mimeType: string; isAI: boolean }> {
+  // Build a rich prompt that anchors the image to the real business context.
+  // Without this, Gemini/DALL-E invents generic stock-photo aesthetics.
+  const businessBlock = businessContext?.trim()
+    ? `Business context (use to match brand aesthetics, product, audience): ${businessContext.slice(0, 600)}`
+    : "";
+
   const prompt = [
-    `Storyboard frame for a ${platform} ${format} post.`,
+    `Create a professional ${platform} ${format} post visual.`,
+    businessBlock,
     `Visual direction: ${visualDirection || "professional, clean composition"}`,
     videoScript?.trim()
       ? `Script/narration context: ${videoScript.slice(0, 300)}`
-      : `Caption context: ${caption.slice(0, 200)}`,
-    "Cinematic composition, professional photography style.",
+      : `Caption context: ${caption.slice(0, 250)}`,
+    "Cinematic composition, professional photography or digital art style.",
+    "Match the mood, color palette and audience suggested by the business context.",
     "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
-  ].join(" ");
+  ].filter(Boolean).join(" ");
 
   // ── Tentativa 1: Gemini Image Generation via REST (Google AI Studio) ────────
   // Modelos confirmados disponíveis na conta (verificados via ListModels):
@@ -2054,12 +2083,15 @@ export async function generatePostStoryboard(
 
   setImmediate(async () => {
     try {
+      const businessContext = await fetchBusinessContextForWorkspace(workspaceId);
       const { buf: imgBuf, mimeType, isAI } = await generateStoryboardFrame(
         post.visualDirection,
         post.caption,
         post.platform,
         post.format,
         log,
+        post.videoScript,
+        businessContext,
       );
       // isAI=true → storyboard_ready (IA real); isAI=false → storyboard_draft (rascunho SVG)
       const newStatus = isAI ? "storyboard_ready" : "storyboard_draft";

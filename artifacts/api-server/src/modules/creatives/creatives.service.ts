@@ -243,8 +243,8 @@ export async function approvePreviewAndGenerateFinal(
       if (linkedPieceId && imageUrl && creative.campaignId) {
         setImmediate(async () => {
           try {
-            // Update any pending scheduled social post rows with the final image URL
-            // so the scheduler can publish at the correct scheduled time without waiting.
+            // 1. Update any pending scheduled social post rows with the final image URL
+            //    so the scheduler can publish without another round-trip to DB.
             const { eq: deq, and: dand, inArray: dInArray } = await import("drizzle-orm");
             const { db: ddb, socialPostsTable: dSocial } = await import("@workspace/db");
             await ddb
@@ -257,14 +257,19 @@ export async function approvePreviewAndGenerateFinal(
                 ),
               );
             log.info({ linkedPieceId, creativeId, imageUrl }, "Updated scheduled social posts with final media URL");
+
+            // 2. Now that the image is ready, trigger autoPostApprovedContent for the
+            //    linked piece. If a scheduled row already exists, autoPost defers to the
+            //    scheduler (which will fire within 60s). If no row exists yet, it creates
+            //    one and publishes immediately. This closes the gap where approving a
+            //    creative after content approval didn't trigger publishing.
+            const { autoPostApprovedContent } = await import("../social/social.autopost.service.js");
+            await autoPostApprovedContent(creative.workspaceId, creative.campaignId!, linkedPieceId);
+            log.info({ linkedPieceId, creativeId }, "autoPostApprovedContent triggered after creative finalUrl ready");
           } catch (updateErr) {
-            log.warn({ linkedPieceId, updateErr }, "Update scheduled posts mediaUrls failed (non-fatal)");
+            log.warn({ linkedPieceId, updateErr }, "Post-creative publish trigger failed (non-fatal)");
           }
         });
-        // A1/Bug #04: autoPostApprovedContent removed — publishing requires explicit
-        // user confirmation via POST /campaigns/:id/content/:pieceId/publish-social.
-        // The mediaUrls update above is enough: the scheduler will use the image when
-        // the user manually confirms publication, or the scheduled post fires at its time.
       }
     } catch (err) {
       log.warn({ creativeId, err }, "DALL-E HD generation failed");
