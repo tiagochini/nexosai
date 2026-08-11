@@ -213,12 +213,21 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
   }
 
   try {
+    // v3 API — migrado de v2/video/generate (sunset 2026-10-31)
     const character =
       req.avatarType === "talking_photo"
         ? { type: "talking_photo", talking_photo_id: req.avatarId, talking_photo_style: "square" }
         : { type: "avatar", avatar_id: req.avatarId, avatar_style: "normal" };
 
-    const res = await fetch("https://api.heygen.com/v2/video/generate", {
+    // v3 usa dimension (width/height) em vez de aspect_ratio
+    const dimensionMap: Record<string, { width: number; height: number }> = {
+      "9:16": { width: 720, height: 1280 },
+      "1:1":  { width: 1080, height: 1080 },
+      "16:9": { width: 1280, height: 720 },
+    };
+    const dimension = dimensionMap[req.aspectRatio ?? "16:9"] ?? { width: 1280, height: 720 };
+
+    const res = await fetch("https://api.heygen.com/v3/videos", {
       method: "POST",
       headers: {
         "X-Api-Key": heygenKey,
@@ -233,14 +242,23 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
               input_text: req.voiceoverText,
               voice_id: req.voiceId,
             },
+            background: { type: "color", value: "#000000" },
           },
         ],
-        aspect_ratio: req.aspectRatio ?? "16:9",
+        dimension,
         test: false,
       }),
     });
     if (!res.ok) {
       const errText = await res.text();
+      // Avatar not found → mensagem clara para o usuário reselecionar
+      if (res.status === 404 || errText.includes("look not found") || errText.includes("avatar not found")) {
+        return {
+          status: "failed",
+          error: "Avatar HeyGen não encontrado — o avatar configurado foi removido ou é inválido. Vá em Configurações → Persona e selecione um novo avatar.",
+          provider: "heygen",
+        };
+      }
       throw new Error(`HeyGen API error ${res.status}: ${errText}`);
     }
     const data = (await res.json()) as { data: { video_id: string } };

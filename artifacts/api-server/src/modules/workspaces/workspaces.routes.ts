@@ -410,15 +410,37 @@ router.post("/me/persona/clone-voice", async (req, res): Promise<void> => {
 
 // A small curated set of NexOS-provided ready-made HeyGen public avatars, so a
 // customer can pick a face without recording their own video.
-const STOCK_AVATARS = [
-  { id: "Daisy-inskirt-20220818", label: "Daisy — Casual", gender: "female" },
-  { id: "Kayla-inblackskirt-20220818", label: "Kayla — Executiva", gender: "female" },
-  { id: "Wayne_20240711", label: "Wayne — Profissional", gender: "male" },
-  { id: "Tyler-incasualsuit-20220721", label: "Tyler — Casual Suit", gender: "male" },
-];
-
+// Avatars obtidos dinamicamente da HeyGen API (GET /v2/avatars) —
+// nunca hardcoded, pois a HeyGen atualiza o catálogo sem aviso.
 router.get("/me/persona/stock-avatars", async (_req, res): Promise<void> => {
-  res.json({ avatars: STOCK_AVATARS });
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) {
+    res.json({ avatars: [] });
+    return;
+  }
+  try {
+    const r = await fetch("https://api.heygen.com/v2/avatars", {
+      headers: { "X-Api-Key": heygenKey },
+    });
+    if (!r.ok) throw new Error(`HeyGen avatars ${r.status}`);
+    const d = (await r.json()) as {
+      data: { avatars: { avatar_id: string; avatar_name: string; gender?: string; preview_image_url?: string }[] };
+    };
+    const avatars = (d.data?.avatars ?? [])
+      .filter((a) => a.avatar_id && a.avatar_name)
+      .slice(0, 20)
+      .map((a) => ({
+        id: a.avatar_id,
+        label: a.avatar_name,
+        gender: a.gender ?? "unknown",
+        previewUrl: a.preview_image_url ?? null,
+      }));
+    res.json({ avatars });
+  } catch (err) {
+    // Fallback: lista vazia — o usuário pode usar seu próprio avatar (talking photo)
+    res.json({ avatars: [], error: String(err) });
+  }
 });
 
 // POST /workspaces/me/persona/clone-avatar — receive base64 image (frame from the
@@ -908,7 +930,7 @@ router.post("/me/persona/select-stock-avatar", async (req, res): Promise<void> =
     voiceId: z.string().min(1).optional(),
   });
   const parsed = schema.safeParse(req.body);
-  if (!parsed.success || !STOCK_AVATARS.some((a) => a.id === parsed.data.avatarId)) {
+  if (!parsed.success) {
     res.status(400).json({ error: "avatarId inválido", code: "VALIDATION_ERROR" });
     return;
   }
