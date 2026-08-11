@@ -14,7 +14,9 @@ import {
   RefreshCw, CheckCircle2, ArrowUpRight, Percent,
   QrCode, FileText, CheckCheck, Filter, Wallet, Shield,
   X, Phone, Mail, Calendar, Tag, Layers, ChevronRight, Copy, Trash2,
-  ChevronDown, Search,
+  ChevronDown, Search, Plus, Building2, Edit3, Printer, Send,
+  CheckSquare, XCircle, FileSpreadsheet, TrendingUp as TrendUp,
+  PieChart, Banknote, Receipt, ClipboardList, User,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,6 +37,67 @@ interface CampaignCostRow {
 interface CostBreakdownResponse {
   campaigns: CampaignCostRow[];
   platformTotals: { totalCostUsd: number; totalCredits: number; totalTokens: number; totalCalls: number };
+}
+
+interface DREMonthRow {
+  month: string; label: string;
+  receitaBrutaCents: number; newClients: number;
+  impostosCents: number; receitaLiquidaCents: number;
+  aiCostUsd: number; aiCostBrlCents: number;
+  lucroBrutoCents: number; aiCalls: number;
+}
+
+interface DREResponse {
+  year: number; usdBrl: number; simplasRate: number; rows: DREMonthRow[];
+}
+
+interface CRMClient {
+  workspaceId: string; workspaceName: string; workspaceStatus: string;
+  userId: string; userName: string; email: string; phone: string | null;
+  planSlug: string | null; planName: string | null;
+  creditsBalance: number; totalRevCents: number; paymentCount: number;
+  totalCampaigns: number; createdAt: string;
+}
+
+interface Proposal {
+  id: string; clientName: string; clientEmail: string;
+  items: { desc: string; qty: number; unit: string; priceCents: number }[];
+  status: "rascunho" | "enviada" | "aceita" | "recusada";
+  notes: string; createdAt: string;
+}
+
+function loadProposals(): Proposal[] {
+  try { return JSON.parse(localStorage.getItem("nexos_admin_proposals") ?? "[]"); } catch { return []; }
+}
+function saveProposals(p: Proposal[]) {
+  localStorage.setItem("nexos_admin_proposals", JSON.stringify(p));
+}
+
+// ─── RH types ────────────────────────────────────────────────────────────────
+
+type MemberType   = "humano" | "agente_ia" | "contador" | "advogado" | "parceiro";
+type MemberStatus = "ativo" | "inativo" | "pendente";
+
+interface TeamMember {
+  id:           string;
+  name:         string;
+  email:        string;
+  role:         string;           // "CFO", "Agente Contador", "Dev", etc.
+  type:         MemberType;
+  status:       MemberStatus;
+  jurisdiction: "BR" | "AU" | "ambos";
+  proLabore:    number;           // BRL cents (0 = voluntário / IA)
+  commission:   number;           // % (0–100)
+  permissions:  string[];         // module slugs they can access
+  notes:        string;
+  createdAt:    string;
+}
+
+function loadTeam(): TeamMember[] {
+  try { return JSON.parse(localStorage.getItem("nexos_admin_team") ?? "[]"); } catch { return []; }
+}
+function saveTeam(t: TeamMember[]) {
+  localStorage.setItem("nexos_admin_team", JSON.stringify(t));
 }
 
 interface AdminPaymentRow {
@@ -381,10 +444,45 @@ const PAYMENT_STATUS: Record<string, { label: string; cls: string }> = {
 export default function AdminPage() {
   const { isAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes" | "rastreamento" | "custo">("pagamentos");
+  const [tab, setTab] = useState<"overview" | "financials" | "users" | "upsell" | "pagamentos" | "convites" | "solicitacoes" | "rastreamento" | "custo" | "crm" | "dre" | "fiscal" | "propostas" | "rh">("pagamentos");
   const [fpSearch, setFpSearch] = useState("");
   const [costWorkspaceFilter, setCostWorkspaceFilter] = useState("");
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
+
+  // CRM state
+  const [crmSearch, setCrmSearch] = useState("");
+  const [crmStages, setCrmStages]  = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem("nexos_crm_stages") ?? "{}"); } catch { return {}; }
+  });
+  const [crmNotes, setCrmNotes]    = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem("nexos_crm_notes") ?? "{}"); } catch { return {}; }
+  });
+  const [crmSelected, setCrmSelected] = useState<string | null>(null);
+  const [crmNoteEdit, setCrmNoteEdit]  = useState("");
+
+  // DRE state
+  const [dreYear, setDreYear] = useState(new Date().getFullYear());
+  const [dreExpenses, setDreExpenses] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem("nexos_dre_expenses") ?? "{}"); } catch { return {}; }
+  });
+  const [dreExpenseEdit, setDreExpenseEdit] = useState<{ month: string; val: string } | null>(null);
+
+  // RH state
+  const [team, setTeam]               = useState<TeamMember[]>(loadTeam);
+  const [rhView, setRhView]           = useState<"list" | "create" | "detail">("list");
+  const [rhSelected, setRhSelected]   = useState<TeamMember | null>(null);
+  const [rhForm, setRhForm]           = useState<Partial<TeamMember>>({
+    name: "", email: "", role: "", type: "humano", status: "pendente",
+    jurisdiction: "ambos", proLabore: 0, commission: 0, permissions: [], notes: "",
+  });
+
+  // Propostas state
+  const [proposals, setProposals] = useState<Proposal[]>(loadProposals);
+  const [proposalView, setProposalView] = useState<"list" | "create" | "detail">("list");
+  const [proposalForm, setProposalForm] = useState<Partial<Proposal>>({
+    clientName: "", clientEmail: "", items: [], status: "rascunho", notes: "",
+  });
+  const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const [fpResult, setFpResult] = useState<null | { found: boolean; record?: { fingerprint: string; userName: string; userEmail: string; userId: string; workspaceName: string; workspaceId: string; campaignId: string; campaignTitle: string | null; track: string | null; generatedAt: string; ipAddress: string | null; userAgent: string | null } }>(null);
   const [fpLoading, setFpLoading] = useState(false);
   const [payFilter, setPayFilter] = useState<"all" | "pending" | "paid">("pending");
@@ -443,6 +541,20 @@ export default function AdminPage() {
     queryKey: ["/api/admin/cost-breakdown"],
     enabled: isAdmin && tab === "custo",
     queryFn: () => customFetch<CostBreakdownResponse>("/api/admin/cost-breakdown?limit=100"),
+    staleTime: 60_000,
+  });
+
+  const { data: dreData, isLoading: loadingDRE, refetch: refetchDRE } = useQuery({
+    queryKey: ["/api/admin/dre", dreYear],
+    enabled: isAdmin && (tab === "dre" || tab === "fiscal"),
+    queryFn: () => customFetch<DREResponse>(`/api/admin/dre?year=${dreYear}`),
+    staleTime: 120_000,
+  });
+
+  const { data: crmData, isLoading: loadingCRM, refetch: refetchCRM } = useQuery({
+    queryKey: ["/api/admin/crm"],
+    enabled: isAdmin && tab === "crm",
+    queryFn: () => customFetch<{ clients: CRMClient[] }>("/api/admin/crm"),
     staleTime: 60_000,
   });
 
@@ -577,6 +689,11 @@ export default function AdminPage() {
     { id: "solicitacoes" as const, label: "📋 Solicitações" },
     { id: "rastreamento" as const, label: "🔍 Rastreamento" },
     { id: "custo" as const,        label: "💰 Custo IA" },
+    { id: "crm" as const,          label: "👥 CRM" },
+    { id: "dre" as const,          label: "📊 DRE" },
+    { id: "fiscal" as const,       label: "🧾 Fiscal" },
+    { id: "propostas" as const,    label: "📋 Propostas" },
+    { id: "rh" as const,           label: "👔 RH / Equipe" },
   ];
 
   return (
@@ -1580,6 +1697,959 @@ export default function AdminPage() {
           <FingerprintDownloadsList />
         </div>
       )}
+
+      {/* ─── TAB: CRM ──────────────────────────────────────────────────────── */}
+      {tab === "crm" && (
+        <div className="space-y-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">👥 CRM — Gestão de Clientes</h2>
+              <p className="font-mono text-xs text-muted-foreground/60 mt-1">Pipeline de relacionamento com todos os workspaces. Estágios e notas salvos localmente.</p>
+            </div>
+            <Button variant="outline" size="sm" className="rounded-none font-mono text-xs btn-weapon-outline gap-2 shrink-0" onClick={() => refetchCRM()}>
+              <RefreshCw className="h-3 w-3" /> Atualizar
+            </Button>
+          </div>
+
+          {/* Search */}
+          <div className="flex items-center gap-2 border border-border/40 bg-card/20 px-3 py-2">
+            <Search className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+            <input type="text" placeholder="Buscar por nome, email ou plano..." value={crmSearch}
+              onChange={e => setCrmSearch(e.target.value)}
+              className="flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-muted-foreground/40" />
+            {crmSearch && <button onClick={() => setCrmSearch("")}><X className="h-3.5 w-3.5 text-muted-foreground/50" /></button>}
+          </div>
+
+          {loadingCRM ? (
+            <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 rounded-none bg-muted/20" />)}</div>
+          ) : (() => {
+            const CRM_STAGES = ["Prospect", "Trial", "Ativo", "Churn Risk", "Churned"];
+            const STAGE_COLORS: Record<string, string> = {
+              Prospect: "text-blue-400 border-blue-400/30 bg-blue-400/10",
+              Trial: "text-cyan-400 border-cyan-400/30 bg-cyan-400/10",
+              Ativo: "text-green-400 border-green-400/30 bg-green-400/10",
+              "Churn Risk": "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",
+              Churned: "text-red-400/60 border-red-400/20 bg-red-400/5",
+            };
+
+            function autoStage(c: CRMClient): string {
+              if (crmStages[c.workspaceId]) return crmStages[c.workspaceId]!;
+              if (c.workspaceStatus === "suspended") return "Churn Risk";
+              if (c.totalRevCents === 0 && c.totalCampaigns === 0) return "Prospect";
+              if (c.totalRevCents === 0) return "Trial";
+              const daysSince = (Date.now() - new Date(c.createdAt).getTime()) / 86400000;
+              if (c.totalCampaigns === 0 && daysSince > 14) return "Churned";
+              return "Ativo";
+            }
+
+            const clients = (crmData?.clients ?? []).filter(c =>
+              !crmSearch ||
+              c.userName.toLowerCase().includes(crmSearch.toLowerCase()) ||
+              c.email.toLowerCase().includes(crmSearch.toLowerCase()) ||
+              (c.planSlug ?? "").toLowerCase().includes(crmSearch.toLowerCase()) ||
+              c.workspaceName.toLowerCase().includes(crmSearch.toLowerCase())
+            );
+
+            const selectedClient = crmSelected ? clients.find(c => c.workspaceId === crmSelected) ?? null : null;
+
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+                {/* Client list */}
+                <div className="space-y-1">
+                  <div className="grid grid-cols-[1fr_80px_70px_80px_100px_28px] gap-2 px-3 pb-1 border-b border-border/30">
+                    {["Cliente / Email", "Plano", "Receita", "Campanhas", "Estágio", ""].map((h,i) => (
+                      <span key={i} className={`font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 ${i > 0 ? "text-right" : ""}`}>{h}</span>
+                    ))}
+                  </div>
+                  {clients.length === 0 && (
+                    <div className="border border-border/20 p-8 text-center font-mono text-xs text-muted-foreground/40">Nenhum cliente encontrado</div>
+                  )}
+                  {clients.map(c => {
+                    const stage = autoStage(c);
+                    const isSelected = crmSelected === c.workspaceId;
+                    return (
+                      <button key={c.workspaceId} onClick={() => { setCrmSelected(isSelected ? null : c.workspaceId); setCrmNoteEdit(crmNotes[c.workspaceId] ?? ""); }}
+                        className={`w-full grid grid-cols-[1fr_80px_70px_80px_100px_28px] gap-2 px-3 py-2.5 items-center text-left border transition-colors ${isSelected ? "border-primary/40 bg-primary/5" : "border-border/20 hover:bg-white/[0.02]"}`}>
+                        <div className="min-w-0">
+                          <div className="font-mono text-sm font-bold truncate">{c.userName}</div>
+                          <div className="font-mono text-[10px] text-muted-foreground/50 truncate">{c.email}</div>
+                        </div>
+                        <span className={`font-mono text-[10px] px-1.5 py-0.5 border text-right ${c.planSlug === "agency" ? "text-green-400 border-green-400/30 bg-green-400/10" : "text-primary border-primary/30 bg-primary/10"}`}>
+                          {c.planSlug ?? "—"}
+                        </span>
+                        <span className="font-mono text-xs tabular-nums text-right text-foreground/70">
+                          {(c.totalRevCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 })}
+                        </span>
+                        <span className="font-mono text-xs tabular-nums text-right text-muted-foreground/60">{c.totalCampaigns}</span>
+                        <span className={`font-mono text-[10px] px-1.5 py-0.5 border text-center ${STAGE_COLORS[stage] ?? ""}`}>{stage}</span>
+                        <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground/30 transition-transform ${isSelected ? "rotate-90" : ""}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Detail drawer */}
+                {selectedClient && (
+                  <div className="border border-border/40 bg-card/30 p-5 space-y-4 lg:sticky lg:top-4 self-start">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-mono text-base font-bold">{selectedClient.userName}</div>
+                        <div className="font-mono text-xs text-muted-foreground/60 mt-0.5">{selectedClient.email}</div>
+                        {selectedClient.phone && <div className="font-mono text-xs text-muted-foreground/50">{selectedClient.phone}</div>}
+                      </div>
+                      <button onClick={() => setCrmSelected(null)} className="text-muted-foreground/40 hover:text-foreground">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "Receita total", val: (selectedClient.totalRevCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) },
+                        { label: "Pagamentos", val: `${selectedClient.paymentCount}×` },
+                        { label: "Campanhas", val: String(selectedClient.totalCampaigns) },
+                        { label: "Créditos", val: String(selectedClient.creditsBalance) },
+                        { label: "Plano", val: selectedClient.planName ?? "—" },
+                        { label: "Desde", val: new Date(selectedClient.createdAt).toLocaleDateString("pt-BR") },
+                      ].map(({ label, val }) => (
+                        <div key={label} className="border border-border/30 bg-card/20 px-3 py-2">
+                          <div className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">{label}</div>
+                          <div className="font-mono text-sm font-bold mt-0.5">{val}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Stage override */}
+                    <div>
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Estágio no Pipeline</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {["Prospect","Trial","Ativo","Churn Risk","Churned"].map(s => (
+                          <button key={s} onClick={() => {
+                            const updated = { ...crmStages, [selectedClient.workspaceId]: s };
+                            setCrmStages(updated);
+                            localStorage.setItem("nexos_crm_stages", JSON.stringify(updated));
+                          }} className={`font-mono text-[10px] px-2 py-1 border transition-colors ${
+                            (crmStages[selectedClient.workspaceId] ?? "Ativo") === s
+                              ? "border-primary text-primary bg-primary/10"
+                              : "border-border/40 text-muted-foreground/60 hover:border-border"
+                          }`}>{s}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-2">Notas internas</div>
+                      <textarea value={crmNoteEdit} onChange={e => setCrmNoteEdit(e.target.value)}
+                        placeholder="Contexto, histórico de conversa, próximos passos..."
+                        className="w-full h-24 bg-card/30 border border-border/40 font-mono text-xs p-2 text-foreground placeholder:text-muted-foreground/30 outline-none resize-none" />
+                      <Button size="sm" className="font-mono text-xs mt-2 w-full" onClick={() => {
+                        const updated = { ...crmNotes, [selectedClient.workspaceId]: crmNoteEdit };
+                        setCrmNotes(updated);
+                        localStorage.setItem("nexos_crm_notes", JSON.stringify(updated));
+                        toast.success("Nota salva");
+                      }}>Salvar nota</Button>
+                    </div>
+
+                    {/* Last note preview */}
+                    {crmNotes[selectedClient.workspaceId] && (
+                      <div className="border-l-2 border-primary/40 pl-3 py-1">
+                        <div className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-widest mb-1">Nota salva</div>
+                        <div className="font-mono text-xs text-muted-foreground/70 leading-relaxed whitespace-pre-wrap">{crmNotes[selectedClient.workspaceId]}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ─── TAB: DRE ──────────────────────────────────────────────────────── */}
+      {tab === "dre" && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">📊 DRE — Resultado do Exercício</h2>
+              <p className="font-mono text-xs text-muted-foreground/60 mt-1">Receita real × Impostos estimados (Simples 6%) × Custo IA = Resultado mensal</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select value={dreYear} onChange={e => setDreYear(Number(e.target.value))}
+                className="font-mono text-xs bg-card border border-border/40 px-2 py-1.5 text-foreground outline-none">
+                {[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <Button variant="outline" size="sm" className="rounded-none font-mono text-xs btn-weapon-outline gap-1.5 shrink-0" onClick={() => refetchDRE()}>
+                <RefreshCw className="h-3 w-3" /> Atualizar
+              </Button>
+            </div>
+          </div>
+
+          {loadingDRE ? (
+            <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-12 rounded-none bg-muted/20" />)}</div>
+          ) : (() => {
+            const rows = dreData?.rows ?? [];
+            const totals = rows.reduce((acc, r) => ({
+              receitaBruta: acc.receitaBruta + r.receitaBrutaCents,
+              impostos:     acc.impostos     + r.impostosCents,
+              receitaLiq:   acc.receitaLiq   + r.receitaLiquidaCents,
+              aiCost:       acc.aiCost       + r.aiCostBrlCents,
+              lucro:        acc.lucro        + r.lucroBrutoCents,
+              clientes:     acc.clientes     + r.newClients,
+              aiCalls:      acc.aiCalls      + r.aiCalls,
+            }), { receitaBruta: 0, impostos: 0, receitaLiq: 0, aiCost: 0, lucro: 0, clientes: 0, aiCalls: 0 });
+
+            const fmt = (cents: number) =>
+              (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
+            const fmtSigned = (cents: number) =>
+              `${cents >= 0 ? "+" : ""}${fmt(cents)}`;
+            const maxRev = Math.max(...rows.map(r => r.receitaBrutaCents), 1);
+
+            return (
+              <>
+                {/* Annual summary */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <MetricCard label={`Receita Bruta ${dreYear}`}  value={fmt(totals.receitaBruta)} sub={`${totals.clientes} pagamentos`} icon={Banknote}  color="text-green-400"  border="border-green-400/20" />
+                  <MetricCard label="Impostos (Simples 6%)"        value={fmt(totals.impostos)}     sub="estimativa"                        icon={Receipt}   color="text-yellow-400" border="border-yellow-400/20" />
+                  <MetricCard label="Custo IA (BRL)"               value={fmt(totals.aiCost)}       sub={`${totals.aiCalls.toLocaleString("pt-BR")} chamadas`} icon={Zap} color="text-orange-400" border="border-orange-400/20" />
+                  <MetricCard label="Resultado Bruto"              value={fmt(totals.lucro)}        sub={`${totals.receitaBruta > 0 ? ((totals.lucro / totals.receitaBruta) * 100).toFixed(1) : "0"}% margem`} icon={TrendingUp} color={totals.lucro >= 0 ? "text-primary" : "text-destructive"} border={totals.lucro >= 0 ? "border-primary/20" : "border-destructive/20"} />
+                </div>
+
+                {/* Monthly table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full font-mono text-xs">
+                    <thead>
+                      <tr className="border-b border-border/40">
+                        {["Mês","Rec. Bruta","Impostos","Rec. Líq.","Custo IA","Despesas","Resultado","Margem"].map(h => (
+                          <th key={h} className="px-3 py-2 text-right first:text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(r => {
+                        const despCents = (dreExpenses[r.month] ?? 0) * 100;
+                        const resultadoFinal = r.lucroBrutoCents - despCents;
+                        const marginPct = r.receitaBrutaCents > 0 ? (resultadoFinal / r.receitaBrutaCents) * 100 : 0;
+                        const isEditing = dreExpenseEdit?.month === r.month;
+                        return (
+                          <tr key={r.month} className={`border-b border-border/20 hover:bg-white/[0.02] ${r.receitaBrutaCents === 0 ? "opacity-40" : ""}`}>
+                            <td className="px-3 py-2.5 font-bold text-foreground/80">{r.label}</td>
+                            <td className="px-3 py-2.5 text-right text-green-400/80 tabular-nums">{fmt(r.receitaBrutaCents)}</td>
+                            <td className="px-3 py-2.5 text-right text-yellow-400/70 tabular-nums">−{fmt(r.impostosCents)}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-foreground/70">{fmt(r.receitaLiquidaCents)}</td>
+                            <td className="px-3 py-2.5 text-right text-orange-400/70 tabular-nums">−{fmt(r.aiCostBrlCents)}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums">
+                              {isEditing ? (
+                                <input autoFocus type="number" value={dreExpenseEdit.val}
+                                  onChange={e => setDreExpenseEdit({ month: r.month, val: e.target.value })}
+                                  onBlur={() => {
+                                    const v = parseFloat(dreExpenseEdit.val) || 0;
+                                    const upd = { ...dreExpenses, [r.month]: v };
+                                    setDreExpenses(upd);
+                                    localStorage.setItem("nexos_dre_expenses", JSON.stringify(upd));
+                                    setDreExpenseEdit(null);
+                                  }}
+                                  onKeyDown={e => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                                  className="w-24 bg-card border border-primary/40 text-foreground px-1 py-0.5 font-mono text-xs outline-none text-right" />
+                              ) : (
+                                <button onClick={() => setDreExpenseEdit({ month: r.month, val: String(dreExpenses[r.month] ?? 0) })}
+                                  className="text-red-400/70 hover:text-red-400 transition-colors tabular-nums">
+                                  {despCents > 0 ? `−${fmt(despCents)}` : <span className="text-muted-foreground/30">+despesa</span>}
+                                </button>
+                              )}
+                            </td>
+                            <td className={`px-3 py-2.5 text-right font-bold tabular-nums ${resultadoFinal >= 0 ? "text-primary" : "text-destructive"}`}>
+                              {fmtSigned(resultadoFinal)}
+                            </td>
+                            <td className={`px-3 py-2.5 text-right text-[11px] tabular-nums ${marginPct >= 50 ? "text-green-400" : marginPct >= 20 ? "text-yellow-400" : marginPct < 0 ? "text-destructive" : "text-muted-foreground/60"}`}>
+                              {r.receitaBrutaCents > 0 ? `${marginPct.toFixed(0)}%` : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-border/60 bg-card/20">
+                        <td className="px-3 py-3 font-bold text-foreground uppercase text-[11px] tracking-widest">TOTAL</td>
+                        <td className="px-3 py-3 text-right font-bold text-green-400 tabular-nums">{fmt(totals.receitaBruta)}</td>
+                        <td className="px-3 py-3 text-right font-bold text-yellow-400 tabular-nums">−{fmt(totals.impostos)}</td>
+                        <td className="px-3 py-3 text-right font-bold tabular-nums">{fmt(totals.receitaLiq)}</td>
+                        <td className="px-3 py-3 text-right font-bold text-orange-400 tabular-nums">−{fmt(totals.aiCost)}</td>
+                        <td className="px-3 py-3 text-right font-bold text-red-400/70 tabular-nums">
+                          {Object.values(dreExpenses).reduce((a,b) => a+b, 0) > 0
+                            ? `−${fmt(Object.values(dreExpenses).reduce((a,b) => a+b, 0) * 100)}`
+                            : "—"}
+                        </td>
+                        <td className={`px-3 py-3 text-right font-bold text-lg tabular-nums ${totals.lucro >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {fmtSigned(totals.lucro - Object.values(dreExpenses).reduce((a,b) => a+b, 0) * 100)}
+                        </td>
+                        <td className={`px-3 py-3 text-right font-bold tabular-nums ${totals.lucro >= 0 ? "text-primary" : "text-destructive"}`}>
+                          {totals.receitaBruta > 0 ? `${((totals.lucro / totals.receitaBruta) * 100).toFixed(0)}%` : "—"}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <p className="font-mono text-[10px] text-muted-foreground/40">
+                  * Impostos estimados pelo regime Simples Nacional (6% sobre receita bruta). Clique na coluna "Despesas" para registrar despesas operacionais mensais.
+                  Consulte seu contador para cálculos oficiais.
+                </p>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ─── TAB: FISCAL ───────────────────────────────────────────────────── */}
+      {tab === "fiscal" && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="font-mono text-lg uppercase tracking-widest font-bold">🧾 Fiscal — Apuração de Impostos</h2>
+              <p className="font-mono text-xs text-muted-foreground/60 mt-1">Estimativa de DAS mensal (Simples Nacional) e composição tributária. Não substitui a assessoria contábil.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select value={dreYear} onChange={e => setDreYear(Number(e.target.value))}
+                className="font-mono text-xs bg-card border border-border/40 px-2 py-1.5 text-foreground outline-none">
+                {[2024,2025,2026,2027].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <Button variant="outline" size="sm" className="rounded-none font-mono text-xs btn-weapon-outline gap-1.5 shrink-0" onClick={() => window.print()}>
+                <Printer className="h-3 w-3" /> Imprimir
+              </Button>
+            </div>
+          </div>
+
+          {/* Regime info */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="border border-primary/20 bg-primary/5 p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-primary/60 mb-1">Regime Tributário</div>
+              <div className="font-mono text-lg font-bold">Simples Nacional</div>
+              <div className="font-mono text-xs text-muted-foreground/60 mt-1">Anexo III — SaaS/Serviços de TI</div>
+            </div>
+            <div className="border border-border/30 bg-card/20 p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Alíquota Efetiva Estimada</div>
+              <div className="font-mono text-lg font-bold text-yellow-400">~6,00%</div>
+              <div className="font-mono text-xs text-muted-foreground/60 mt-1">Sobre receita bruta (1ª faixa)</div>
+            </div>
+            <div className="border border-border/30 bg-card/20 p-4">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Competência</div>
+              <div className="font-mono text-lg font-bold">{dreYear}</div>
+              <div className="font-mono text-xs text-muted-foreground/60 mt-1">DAS vence todo dia 20</div>
+            </div>
+          </div>
+
+          {/* Composição Simples Nacional Anexo III */}
+          <div className="border border-border/40 bg-card/20 p-5">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/50 mb-4">Composição Tributária — Simples Nacional Anexo III (1ª Faixa)</div>
+            <div className="space-y-2">
+              {[
+                { tributo: "IRPJ",    pct: 0.25, desc: "Imposto de Renda Pessoa Jurídica" },
+                { tributo: "CSLL",    pct: 1.15, desc: "Contribuição Social sobre Lucro Líquido" },
+                { tributo: "COFINS",  pct: 0.74, desc: "Contribuição para Fins Sociais" },
+                { tributo: "PIS/Pasep", pct: 0.13, desc: "Programa de Integração Social" },
+                { tributo: "CPP",     pct: 3.45, desc: "Contribuição Patronal Previdenciária" },
+                { tributo: "ISS",     pct: 0.30, desc: "Imposto sobre Serviços (mín. 2% — varia por município)" },
+              ].map(({ tributo, pct, desc }) => (
+                <div key={tributo} className="flex items-center gap-3">
+                  <div className="w-20 shrink-0">
+                    <span className="font-mono text-xs font-bold text-foreground">{tributo}</span>
+                  </div>
+                  <div className="flex-1 h-1.5 bg-border/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary/60 rounded-full" style={{ width: `${(pct / 6) * 100}%` }} />
+                  </div>
+                  <div className="w-12 text-right font-mono text-xs tabular-nums text-primary">{pct.toFixed(2)}%</div>
+                  <div className="font-mono text-[10px] text-muted-foreground/50 hidden md:block">{desc}</div>
+                </div>
+              ))}
+              <div className="border-t border-border/40 pt-2 flex items-center justify-between">
+                <span className="font-mono text-xs font-bold uppercase tracking-widest">Total DAS</span>
+                <span className="font-mono text-sm font-bold text-yellow-400">6,02%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly DAS table */}
+          {loadingDRE ? (
+            <Skeleton className="h-48 rounded-none bg-muted/20" />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full font-mono text-xs">
+                <thead>
+                  <tr className="border-b border-border/40">
+                    {["Mês","Rec. Bruta","Alíquota","DAS Estimado","IRPJ","CSLL","COFINS","PIS","CPP","ISS"].map(h => (
+                      <th key={h} className="px-2 py-2 text-right first:text-left font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(dreData?.rows ?? []).map(r => {
+                    const b = r.receitaBrutaCents / 100;
+                    const das     = b * 0.0602;
+                    const irpj    = b * 0.0025;
+                    const csll    = b * 0.0115;
+                    const cofins  = b * 0.0074;
+                    const pis     = b * 0.0013;
+                    const cpp     = b * 0.0345;
+                    const iss     = b * 0.0030;
+                    const fmtR = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
+                    return (
+                      <tr key={r.month} className={`border-b border-border/20 hover:bg-white/[0.02] ${r.receitaBrutaCents === 0 ? "opacity-35" : ""}`}>
+                        <td className="px-2 py-2.5 font-bold">{r.label}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-green-400/80">{fmtR(b)}</td>
+                        <td className="px-2 py-2.5 text-right text-yellow-400/70">6,02%</td>
+                        <td className="px-2 py-2.5 text-right font-bold tabular-nums text-yellow-300">{fmtR(das)}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground/60">{fmtR(irpj)}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground/60">{fmtR(csll)}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground/60">{fmtR(cofins)}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground/60">{fmtR(pis)}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground/60">{fmtR(cpp)}</td>
+                        <td className="px-2 py-2.5 text-right tabular-nums text-muted-foreground/60">{fmtR(iss)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border/60 bg-card/20 font-bold">
+                    <td className="px-2 py-3 uppercase text-[10px] tracking-widest">Total {dreYear}</td>
+                    {(() => {
+                      const totalB = (dreData?.rows ?? []).reduce((a,r) => a + r.receitaBrutaCents / 100, 0);
+                      const fmtR = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 });
+                      return <>
+                        <td className="px-2 py-3 text-right text-green-400 tabular-nums">{fmtR(totalB)}</td>
+                        <td className="px-2 py-3 text-right text-yellow-400">6,02%</td>
+                        <td className="px-2 py-3 text-right text-yellow-300 text-sm tabular-nums">{fmtR(totalB * 0.0602)}</td>
+                        <td className="px-2 py-3 text-right text-muted-foreground/60 tabular-nums">{fmtR(totalB * 0.0025)}</td>
+                        <td className="px-2 py-3 text-right text-muted-foreground/60 tabular-nums">{fmtR(totalB * 0.0115)}</td>
+                        <td className="px-2 py-3 text-right text-muted-foreground/60 tabular-nums">{fmtR(totalB * 0.0074)}</td>
+                        <td className="px-2 py-3 text-right text-muted-foreground/60 tabular-nums">{fmtR(totalB * 0.0013)}</td>
+                        <td className="px-2 py-3 text-right text-muted-foreground/60 tabular-nums">{fmtR(totalB * 0.0345)}</td>
+                        <td className="px-2 py-3 text-right text-muted-foreground/60 tabular-nums">{fmtR(totalB * 0.0030)}</td>
+                      </>;
+                    })()}
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+          <p className="font-mono text-[10px] text-muted-foreground/40">
+            ⚠️ Estimativa automática baseada no Simples Nacional Anexo III, 1ª faixa. Alíquota de ISS varia por município. Consulte seu contador para apuração oficial e emissão de NF-e/NFS-e.
+          </p>
+        </div>
+      )}
+
+      {/* ─── TAB: PROPOSTAS ────────────────────────────────────────────────── */}
+      {tab === "propostas" && (() => {
+        const statusColors: Record<Proposal["status"], string> = {
+          rascunho: "text-muted-foreground border-border/40 bg-card/20",
+          enviada:  "text-blue-400 border-blue-400/30 bg-blue-400/10",
+          aceita:   "text-green-400 border-green-400/30 bg-green-400/10",
+          recusada: "text-red-400/70 border-red-400/20 bg-red-400/5",
+        };
+
+        function saveAndUpdate(updated: Proposal[]) {
+          saveProposals(updated);
+          setProposals(updated);
+        }
+
+        function createProposal() {
+          const id = `prop_${Date.now()}`;
+          const p: Proposal = {
+            id, status: "rascunho",
+            clientName:  proposalForm.clientName  ?? "",
+            clientEmail: proposalForm.clientEmail ?? "",
+            items:       proposalForm.items        ?? [],
+            notes:       proposalForm.notes        ?? "",
+            createdAt:   new Date().toISOString(),
+          };
+          saveAndUpdate([p, ...proposals]);
+          setProposalView("list");
+          setProposalForm({ clientName: "", clientEmail: "", items: [], status: "rascunho", notes: "" });
+          toast.success("Proposta criada!");
+        }
+
+        const totalFor = (items: Proposal["items"]) =>
+          items.reduce((a, i) => a + i.qty * i.priceCents, 0);
+        const fmt = (cents: number) =>
+          (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+        return (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="font-mono text-lg uppercase tracking-widest font-bold">📋 Propostas Comerciais</h2>
+                <p className="font-mono text-xs text-muted-foreground/60 mt-1">{proposals.length} proposta(s) · salvas localmente neste navegador</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {proposalView !== "list" && (
+                  <Button variant="outline" size="sm" className="rounded-none font-mono text-xs btn-weapon-outline gap-1.5"
+                    onClick={() => { setProposalView("list"); setSelectedProposal(null); }}>
+                    <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+                  </Button>
+                )}
+                {proposalView === "list" && (
+                  <Button size="sm" className="rounded-none font-mono text-xs gap-1.5"
+                    onClick={() => setProposalView("create")}>
+                    <Plus className="h-3.5 w-3.5" /> Nova Proposta
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* List */}
+            {proposalView === "list" && (
+              proposals.length === 0 ? (
+                <div className="border border-border/20 bg-card/10 p-12 text-center space-y-3">
+                  <ClipboardList className="h-8 w-8 text-muted-foreground/30 mx-auto" />
+                  <div className="font-mono text-sm text-muted-foreground/50">Nenhuma proposta ainda.</div>
+                  <Button size="sm" className="font-mono gap-1.5" onClick={() => setProposalView("create")}>
+                    <Plus className="h-3.5 w-3.5" /> Criar primeira proposta
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {proposals.map(p => (
+                    <div key={p.id} className="border border-border/30 bg-card/20 px-4 py-3 flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-mono text-sm font-bold">{p.clientName || "—"}</span>
+                          <span className={`font-mono text-[10px] px-1.5 py-0.5 border ${statusColors[p.status]}`}>{p.status}</span>
+                        </div>
+                        <div className="font-mono text-[11px] text-muted-foreground/50">
+                          {p.clientEmail} · {p.items.length} item(s) · {fmt(totalFor(p.items))} · {new Date(p.createdAt).toLocaleDateString("pt-BR")}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Status buttons */}
+                        {p.status === "rascunho" && (
+                          <button onClick={() => saveAndUpdate(proposals.map(x => x.id === p.id ? { ...x, status: "enviada" } : x))}
+                            className="font-mono text-[10px] px-2 py-1 border border-blue-400/30 text-blue-400 hover:bg-blue-400/10 transition-colors flex items-center gap-1">
+                            <Send className="h-2.5 w-2.5" /> Marcar enviada
+                          </button>
+                        )}
+                        {p.status === "enviada" && <>
+                          <button onClick={() => saveAndUpdate(proposals.map(x => x.id === p.id ? { ...x, status: "aceita" } : x))}
+                            className="font-mono text-[10px] px-2 py-1 border border-green-400/30 text-green-400 hover:bg-green-400/10 transition-colors flex items-center gap-1">
+                            <CheckSquare className="h-2.5 w-2.5" /> Aceita
+                          </button>
+                          <button onClick={() => saveAndUpdate(proposals.map(x => x.id === p.id ? { ...x, status: "recusada" } : x))}
+                            className="font-mono text-[10px] px-2 py-1 border border-red-400/20 text-red-400/60 hover:bg-red-400/5 transition-colors flex items-center gap-1">
+                            <XCircle className="h-2.5 w-2.5" /> Recusada
+                          </button>
+                        </>}
+                        <button onClick={() => { setSelectedProposal(p); setProposalView("detail"); }}
+                          className="font-mono text-[10px] px-2 py-1 border border-border/40 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors flex items-center gap-1">
+                          <FileText className="h-2.5 w-2.5" /> Ver
+                        </button>
+                        <button onClick={() => { if (confirm("Deletar proposta?")) saveAndUpdate(proposals.filter(x => x.id !== p.id)); }}
+                          className="font-mono text-[10px] px-2 py-1 border border-red-400/10 text-red-400/40 hover:bg-red-400/5 transition-colors">
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* Create form */}
+            {proposalView === "create" && (
+              <div className="border border-border/40 bg-card/20 p-6 space-y-5 max-w-2xl">
+                <div className="font-mono text-sm font-bold uppercase tracking-widest">Nova Proposta</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Nome do Cliente</label>
+                    <input value={proposalForm.clientName} onChange={e => setProposalForm(p => ({ ...p, clientName: e.target.value }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground" placeholder="Ex: João Silva" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">E-mail</label>
+                    <input value={proposalForm.clientEmail} onChange={e => setProposalForm(p => ({ ...p, clientEmail: e.target.value }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground" placeholder="cliente@empresa.com" />
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">Itens / Serviços</label>
+                    <button onClick={() => setProposalForm(p => ({
+                      ...p, items: [...(p.items ?? []), { desc: "", qty: 1, unit: "un", priceCents: 0 }]
+                    }))} className="font-mono text-[10px] text-primary hover:underline flex items-center gap-1">
+                      <Plus className="h-3 w-3" /> Adicionar item
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {(proposalForm.items ?? []).length === 0 && (
+                      <div className="border border-dashed border-border/30 p-4 text-center font-mono text-[11px] text-muted-foreground/40">
+                        Nenhum item adicionado
+                      </div>
+                    )}
+                    {(proposalForm.items ?? []).map((item, idx) => (
+                      <div key={idx} className="grid grid-cols-[1fr_50px_50px_90px_24px] gap-2 items-center">
+                        <input value={item.desc} onChange={e => setProposalForm(p => ({
+                          ...p, items: p.items!.map((x,i) => i===idx ? { ...x, desc: e.target.value } : x)
+                        }))} placeholder="Descrição do serviço" className="bg-card border border-border/40 font-mono text-xs px-2 py-1.5 outline-none text-foreground" />
+                        <input type="number" value={item.qty} onChange={e => setProposalForm(p => ({
+                          ...p, items: p.items!.map((x,i) => i===idx ? { ...x, qty: Number(e.target.value) } : x)
+                        }))} className="bg-card border border-border/40 font-mono text-xs px-2 py-1.5 outline-none text-foreground text-center" min={1} />
+                        <input value={item.unit} onChange={e => setProposalForm(p => ({
+                          ...p, items: p.items!.map((x,i) => i===idx ? { ...x, unit: e.target.value } : x)
+                        }))} className="bg-card border border-border/40 font-mono text-xs px-2 py-1.5 outline-none text-foreground text-center" placeholder="un" />
+                        <input type="number" value={item.priceCents / 100} onChange={e => setProposalForm(p => ({
+                          ...p, items: p.items!.map((x,i) => i===idx ? { ...x, priceCents: Math.round(Number(e.target.value) * 100) } : x)
+                        }))} className="bg-card border border-border/40 font-mono text-xs px-2 py-1.5 outline-none text-foreground text-right" placeholder="0,00" step="0.01" min={0} />
+                        <button onClick={() => setProposalForm(p => ({ ...p, items: p.items!.filter((_,i) => i!==idx) }))}
+                          className="text-destructive/50 hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                      </div>
+                    ))}
+                    {(proposalForm.items ?? []).length > 0 && (
+                      <div className="flex justify-end pt-1">
+                        <span className="font-mono text-sm font-bold text-primary">
+                          Total: {fmt(totalFor(proposalForm.items ?? []))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Observações</label>
+                  <textarea value={proposalForm.notes} onChange={e => setProposalForm(p => ({ ...p, notes: e.target.value }))}
+                    className="w-full h-20 bg-card border border-border/40 font-mono text-xs p-2 outline-none text-foreground resize-none"
+                    placeholder="Condições de pagamento, validade da proposta, escopo..." />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={createProposal} className="font-mono gap-2">
+                    <FileText className="h-4 w-4" /> Criar Proposta
+                  </Button>
+                  <Button variant="outline" onClick={() => setProposalView("list")} className="font-mono">Cancelar</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Detail / Print view */}
+            {proposalView === "detail" && selectedProposal && (
+              <div className="border border-border/40 bg-card/20 p-8 max-w-2xl space-y-6 print:border-0 print:p-0">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Proposta Comercial</div>
+                    <div className="font-mono text-xl font-bold">{selectedProposal.clientName}</div>
+                    <div className="font-mono text-sm text-muted-foreground/60">{selectedProposal.clientEmail}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`font-mono text-[10px] px-2 py-1 border ${statusColors[selectedProposal.status]} inline-block mb-2`}>
+                      {selectedProposal.status.toUpperCase()}
+                    </div>
+                    <div className="font-mono text-[11px] text-muted-foreground/50 block">
+                      {new Date(selectedProposal.createdAt).toLocaleDateString("pt-BR")}
+                    </div>
+                  </div>
+                </div>
+
+                <table className="w-full font-mono text-sm">
+                  <thead>
+                    <tr className="border-b border-border/40">
+                      <th className="text-left py-2 text-[10px] uppercase tracking-widest text-muted-foreground/50">Descrição</th>
+                      <th className="text-center py-2 text-[10px] uppercase tracking-widest text-muted-foreground/50">Qtd</th>
+                      <th className="text-right py-2 text-[10px] uppercase tracking-widest text-muted-foreground/50">Unitário</th>
+                      <th className="text-right py-2 text-[10px] uppercase tracking-widest text-muted-foreground/50">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedProposal.items.map((item, i) => (
+                      <tr key={i} className="border-b border-border/20">
+                        <td className="py-2">{item.desc}</td>
+                        <td className="py-2 text-center text-muted-foreground/70">{item.qty} {item.unit}</td>
+                        <td className="py-2 text-right text-muted-foreground/70 tabular-nums">{fmt(item.priceCents)}</td>
+                        <td className="py-2 text-right font-bold tabular-nums">{fmt(item.qty * item.priceCents)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-border/60">
+                      <td colSpan={3} className="py-3 text-right font-bold uppercase text-[11px] tracking-widest">Total</td>
+                      <td className="py-3 text-right font-bold text-lg text-primary tabular-nums">{fmt(totalFor(selectedProposal.items))}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {selectedProposal.notes && (
+                  <div className="border-l-2 border-primary/40 pl-4 py-1">
+                    <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 mb-1">Observações</div>
+                    <div className="font-mono text-sm text-muted-foreground/70 whitespace-pre-wrap">{selectedProposal.notes}</div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 print:hidden">
+                  <Button variant="outline" size="sm" className="font-mono gap-1.5" onClick={() => window.print()}>
+                    <Printer className="h-3.5 w-3.5" /> Imprimir / PDF
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ─── TAB: RH / EQUIPE ─────────────────────────────────────────────── */}
+      {tab === "rh" && (() => {
+        const TYPE_META: Record<MemberType, { label: string; color: string; icon: string }> = {
+          humano:     { label: "Humano",      color: "text-foreground border-border/50 bg-card/30",        icon: "👤" },
+          agente_ia:  { label: "Agente IA",   color: "text-primary border-primary/30 bg-primary/10",      icon: "🤖" },
+          contador:   { label: "Contador",    color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10", icon: "📒" },
+          advogado:   { label: "Advogado",    color: "text-blue-400 border-blue-400/30 bg-blue-400/10",   icon: "⚖️" },
+          parceiro:   { label: "Parceiro",    color: "text-cyan-400 border-cyan-400/30 bg-cyan-400/10",   icon: "🤝" },
+        };
+        const STATUS_META: Record<MemberStatus, { label: string; color: string }> = {
+          ativo:    { label: "Ativo",    color: "text-green-400 border-green-400/30 bg-green-400/10" },
+          inativo:  { label: "Inativo",  color: "text-muted-foreground border-border/40 bg-card/20" },
+          pendente: { label: "Pendente", color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" },
+        };
+        const ALL_PERMISSIONS = [
+          { slug: "crm",       label: "CRM — Clientes" },
+          { slug: "dre",       label: "DRE — Resultado" },
+          { slug: "fiscal",    label: "Fiscal — Impostos" },
+          { slug: "propostas", label: "Propostas Comerciais" },
+          { slug: "pagamentos",label: "Pagamentos" },
+          { slug: "financials",label: "Financeiro" },
+          { slug: "custo",     label: "Custo IA" },
+          { slug: "users",     label: "Usuários (read-only)" },
+        ];
+
+        const fmtBRLm = (cents: number) =>
+          cents === 0 ? "Voluntário / IA" : (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+        function saveAndSet(t: TeamMember[]) { saveTeam(t); setTeam(t); }
+
+        function createMember() {
+          const m: TeamMember = {
+            id: `mem_${Date.now()}`,
+            name:         rhForm.name ?? "",
+            email:        rhForm.email ?? "",
+            role:         rhForm.role ?? "",
+            type:         rhForm.type ?? "humano",
+            status:       rhForm.status ?? "pendente",
+            jurisdiction: rhForm.jurisdiction ?? "ambos",
+            proLabore:    rhForm.proLabore ?? 0,
+            commission:   rhForm.commission ?? 0,
+            permissions:  rhForm.permissions ?? [],
+            notes:        rhForm.notes ?? "",
+            createdAt:    new Date().toISOString(),
+          };
+          saveAndSet([m, ...team]);
+          setRhView("list");
+          setRhForm({ name:"",email:"",role:"",type:"humano",status:"pendente",jurisdiction:"ambos",proLabore:0,commission:0,permissions:[],notes:"" });
+          toast.success("Colaborador adicionado!");
+        }
+
+        // Monthly payroll summary
+        const activeMembers   = team.filter(m => m.status === "ativo");
+        const totalProLabore  = activeMembers.reduce((a,m) => a + m.proLabore, 0);
+        const humanCount      = activeMembers.filter(m => m.type === "humano").length;
+        const aiCount         = activeMembers.filter(m => m.type === "agente_ia").length;
+
+        return (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="font-mono text-lg uppercase tracking-widest font-bold">👔 RH / Equipe — DasKapital Holdings</h2>
+                <p className="font-mono text-xs text-muted-foreground/60 mt-1">
+                  Colaboradores humanos e agentes de IA. Gerencie permissões, pró-labore e escopo de acesso.
+                  <span className="text-yellow-400/70"> · Sistema de login próprio por colaborador está na fila de implementação.</span>
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {rhView !== "list" && (
+                  <Button variant="outline" size="sm" className="rounded-none font-mono text-xs btn-weapon-outline gap-1.5"
+                    onClick={() => { setRhView("list"); setRhSelected(null); }}>
+                    <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+                  </Button>
+                )}
+                {rhView === "list" && (
+                  <Button size="sm" className="rounded-none font-mono text-xs gap-1.5"
+                    onClick={() => setRhView("create")}>
+                    <Plus className="h-3.5 w-3.5" /> Adicionar colaborador
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Summary cards */}
+            {rhView === "list" && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricCard label="Total na Equipe"    value={String(team.length)}        sub={`${activeMembers.length} ativos`} icon={Users}   color="text-foreground" />
+                <MetricCard label="Humanos Ativos"     value={String(humanCount)}         sub="pessoas"                          icon={User}    color="text-foreground" />
+                <MetricCard label="Agentes de IA"      value={String(aiCount)}            sub="autônomos"                        icon={Bot}     color="text-primary" border="border-primary/20" />
+                <MetricCard label="Pró-Labore / Mês"   value={fmtBRLm(totalProLabore)}    sub="equipe ativa"                     icon={Banknote} color="text-yellow-400" border="border-yellow-400/20" />
+              </div>
+            )}
+
+            {/* Member list */}
+            {rhView === "list" && (
+              team.length === 0 ? (
+                <div className="border border-border/20 bg-card/10 p-12 text-center space-y-3">
+                  <Users className="h-8 w-8 text-muted-foreground/30 mx-auto" />
+                  <div className="font-mono text-sm text-muted-foreground/50">Equipe vazia. Adicione o primeiro colaborador ou agente.</div>
+                  <Button size="sm" className="font-mono gap-1.5" onClick={() => setRhView("create")}>
+                    <Plus className="h-3.5 w-3.5" /> Adicionar
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Headers */}
+                  <div className="grid grid-cols-[1fr_90px_80px_90px_100px_110px_28px] gap-2 px-3 pb-1 border-b border-border/30">
+                    {["Colaborador", "Tipo", "Status", "Jurisdição", "Pró-Labore", "Permissões", ""].map((h,i) => (
+                      <span key={i} className={`font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40 ${i > 0 && i < 6 ? "text-center" : i === 6 ? "" : ""}`}>{h}</span>
+                    ))}
+                  </div>
+                  {team.map(m => {
+                    const tm = TYPE_META[m.type];
+                    const sm = STATUS_META[m.status];
+                    return (
+                      <div key={m.id} className="grid grid-cols-[1fr_90px_80px_90px_100px_110px_28px] gap-2 px-3 py-3 items-center border border-border/20 hover:bg-white/[0.02] transition-colors">
+                        <div className="min-w-0">
+                          <div className="font-mono text-sm font-bold truncate">{tm.icon} {m.name}</div>
+                          <div className="font-mono text-[10px] text-muted-foreground/50 truncate">{m.email} {m.role ? `· ${m.role}` : ""}</div>
+                        </div>
+                        <span className={`font-mono text-[10px] px-1.5 py-0.5 border text-center block truncate ${tm.color}`}>{tm.label}</span>
+                        <span className={`font-mono text-[10px] px-1.5 py-0.5 border text-center block ${sm.color}`}>{sm.label}</span>
+                        <span className="font-mono text-[10px] text-center text-muted-foreground/60">{m.jurisdiction === "ambos" ? "BR + AU" : m.jurisdiction}</span>
+                        <span className="font-mono text-[11px] text-center tabular-nums text-muted-foreground/70">
+                          {m.proLabore > 0 ? (m.proLabore / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : "—"}
+                          {m.commission > 0 ? ` +${m.commission}%` : ""}
+                        </span>
+                        <div className="flex flex-wrap gap-0.5">
+                          {m.permissions.slice(0, 3).map(p => (
+                            <span key={p} className="font-mono text-[9px] px-1 py-0.5 border border-primary/20 bg-primary/5 text-primary/70">{p}</span>
+                          ))}
+                          {m.permissions.length > 3 && <span className="font-mono text-[9px] text-muted-foreground/40">+{m.permissions.length - 3}</span>}
+                          {m.permissions.length === 0 && <span className="font-mono text-[9px] text-muted-foreground/30">sem acesso</span>}
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <button onClick={() => { setRhSelected(m); setRhView("detail"); setRhForm({ ...m }); }}
+                            className="text-muted-foreground/40 hover:text-primary transition-colors"><Edit3 className="h-3 w-3" /></button>
+                          <button onClick={() => { if (confirm("Remover colaborador?")) saveAndSet(team.filter(x => x.id !== m.id)); }}
+                            className="text-muted-foreground/30 hover:text-destructive transition-colors"><X className="h-3 w-3" /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
+
+            {/* Create / Edit form */}
+            {(rhView === "create" || (rhView === "detail" && rhSelected)) && (
+              <div className="border border-border/40 bg-card/20 p-6 space-y-5 max-w-2xl">
+                <div className="font-mono text-sm font-bold uppercase tracking-widest">
+                  {rhView === "create" ? "Novo Colaborador / Agente" : `Editar — ${rhSelected?.name}`}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Nome completo</label>
+                    <input value={rhForm.name ?? ""} onChange={e => setRhForm(f => ({ ...f, name: e.target.value }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground" placeholder="Ex: Maria Fernanda" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">E-mail / ID do Agente</label>
+                    <input value={rhForm.email ?? ""} onChange={e => setRhForm(f => ({ ...f, email: e.target.value }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground" placeholder="maria@email.com" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Cargo / Função</label>
+                    <input value={rhForm.role ?? ""} onChange={e => setRhForm(f => ({ ...f, role: e.target.value }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground" placeholder="CFO, Agente Contador, Dev..." />
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Tipo</label>
+                    <select value={rhForm.type} onChange={e => setRhForm(f => ({ ...f, type: e.target.value as MemberType }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground">
+                      {(Object.keys(TYPE_META) as MemberType[]).map(t => <option key={t} value={t}>{TYPE_META[t].icon} {TYPE_META[t].label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Status</label>
+                    <select value={rhForm.status} onChange={e => setRhForm(f => ({ ...f, status: e.target.value as MemberStatus }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground">
+                      {(Object.keys(STATUS_META) as MemberStatus[]).map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Jurisdição</label>
+                    <select value={rhForm.jurisdiction} onChange={e => setRhForm(f => ({ ...f, jurisdiction: e.target.value as TeamMember["jurisdiction"] }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground">
+                      <option value="BR">Brasil</option>
+                      <option value="AU">Austrália</option>
+                      <option value="ambos">BR + AU</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Pró-labore / Salário (R$/mês)</label>
+                    <input type="number" value={(rhForm.proLabore ?? 0) / 100} min={0} step={100}
+                      onChange={e => setRhForm(f => ({ ...f, proLabore: Math.round(Number(e.target.value) * 100) }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground" placeholder="0 = voluntário / IA" />
+                  </div>
+                  <div>
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Comissão (%)</label>
+                    <input type="number" value={rhForm.commission ?? 0} min={0} max={100} step={1}
+                      onChange={e => setRhForm(f => ({ ...f, commission: Number(e.target.value) }))}
+                      className="w-full bg-card border border-border/40 font-mono text-xs px-3 py-2 outline-none text-foreground" placeholder="0" />
+                  </div>
+                </div>
+
+                {/* Permissions */}
+                <div>
+                  <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-2">Módulos que este colaborador pode acessar</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {ALL_PERMISSIONS.map(p => {
+                      const checked = (rhForm.permissions ?? []).includes(p.slug);
+                      return (
+                        <label key={p.slug} className={`flex items-center gap-2 px-3 py-2 border cursor-pointer transition-colors ${checked ? "border-primary/40 bg-primary/10" : "border-border/30 bg-card/10 hover:border-border/60"}`}>
+                          <input type="checkbox" checked={checked} onChange={e => setRhForm(f => ({
+                            ...f, permissions: e.target.checked
+                              ? [...(f.permissions ?? []), p.slug]
+                              : (f.permissions ?? []).filter(x => x !== p.slug)
+                          }))} className="accent-primary" />
+                          <span className={`font-mono text-[11px] ${checked ? "text-primary" : "text-muted-foreground/70"}`}>{p.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="font-mono text-[10px] text-yellow-400/60 mt-2">
+                    ⚠️ Login dedicado por colaborador está na fila de implementação. Por ora, registre as permissões aqui para referência.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50 block mb-1">Notas internas</label>
+                  <textarea value={rhForm.notes ?? ""} onChange={e => setRhForm(f => ({ ...f, notes: e.target.value }))}
+                    className="w-full h-20 bg-card border border-border/40 font-mono text-xs p-2 outline-none text-foreground resize-none"
+                    placeholder="Contexto do contrato, acordo, responsabilidades, chave API do agente..." />
+                </div>
+
+                <div className="flex gap-2">
+                  {rhView === "create" ? (
+                    <Button onClick={createMember} className="font-mono gap-2">
+                      <Plus className="h-4 w-4" /> Adicionar à equipe
+                    </Button>
+                  ) : (
+                    <Button onClick={() => {
+                      const updated = team.map(m => m.id === rhSelected!.id ? { ...m, ...rhForm, id: m.id } as TeamMember : m);
+                      saveAndSet(updated);
+                      setRhView("list");
+                      toast.success("Colaborador atualizado!");
+                    }} className="font-mono gap-2">
+                      <CheckSquare className="h-4 w-4" /> Salvar alterações
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => { setRhView("list"); setRhSelected(null); }} className="font-mono">Cancelar</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ─── TAB: CUSTO IA ─────────────────────────────────────────────────── */}
       {tab === "custo" && (

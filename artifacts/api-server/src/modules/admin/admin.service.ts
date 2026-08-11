@@ -1,4 +1,4 @@
-import { eq, count, inArray, sql, sum, gte, and, desc, isNotNull } from "drizzle-orm";
+import { eq, count, inArray, sql, sum, gte, lte, and, desc, isNotNull } from "drizzle-orm";
 import {
   db,
   workspacesTable,
@@ -302,6 +302,157 @@ export async function getAdminFinancials(): Promise<AdminFinancials> {
       amountCents: r.amountCents,
       paidAt:      r.paidAt?.toISOString() ?? null,
       createdAt:   r.createdAt.toISOString(),
+    })),
+  };
+}
+
+// ─── DRE — Demonstração do Resultado do Exercício (monthly P&L) ──────────────
+
+export interface DREMonthRow {
+  month:               string;   // "YYYY-MM"
+  label:               string;   // "Jan/26"
+  receitaBrutaCents:   number;
+  newClients:          number;
+  impostosCents:       number;   // estimated Simples Nacional
+  receitaLiquidaCents: number;
+  aiCostUsd:           number;
+  aiCostBrlCents:      number;
+  lucroBrutoCents:     number;
+  aiCalls:             number;
+}
+
+export async function getAdminDRE(year: number): Promise<{
+  year: number; usdBrl: number; simplasRate: number; rows: DREMonthRow[];
+}> {
+  const start = new Date(`${year}-01-01T00:00:00Z`);
+  const end   = new Date(`${year}-12-31T23:59:59Z`);
+
+  const subPayments = await db
+    .select({
+      month:      sql<string>`to_char(${subscriptionPaymentsTable.paidAt}, 'YYYY-MM')`,
+      totalCents: sql<number>`coalesce(sum(${subscriptionPaymentsTable.amountCents}), 0)`,
+      clients:    sql<number>`count(distinct ${subscriptionPaymentsTable.workspaceId})`,
+    })
+    .from(subscriptionPaymentsTable)
+    .where(and(
+      eq(subscriptionPaymentsTable.status, "paid"),
+      isNotNull(subscriptionPaymentsTable.paidAt),
+      gte(subscriptionPaymentsTable.paidAt, start),
+      lte(subscriptionPaymentsTable.paidAt, end),
+    ))
+    .groupBy(sql`to_char(${subscriptionPaymentsTable.paidAt}, 'YYYY-MM')`);
+
+  const aiCosts = await db
+    .select({
+      month:        sql<string>`to_char(${aiProviderLogsTable.createdAt}, 'YYYY-MM')`,
+      totalCostUsd: sql<number>`coalesce(sum(cast(${aiProviderLogsTable.costUsd} as float)), 0)`,
+      totalCalls:   sql<number>`count(*)`,
+    })
+    .from(aiProviderLogsTable)
+    .where(and(gte(aiProviderLogsTable.createdAt, start), lte(aiProviderLogsTable.createdAt, end)))
+    .groupBy(sql`to_char(${aiProviderLogsTable.createdAt}, 'YYYY-MM')`);
+
+  const subMap = new Map(subPayments.map(r => [r.month, { cents: Number(r.totalCents), clients: Number(r.clients) }]));
+  const aiMap  = new Map(aiCosts.map(r   => [r.month, { usd: Number(r.totalCostUsd), calls: Number(r.totalCalls) }]));
+
+  const USD_BRL = 5.9;
+  const SIMPLES = 0.06;
+  const LABELS  = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+  const rows: DREMonthRow[] = Array.from({ length: 12 }, (_, i) => {
+    const key = `${year}-${String(i + 1).padStart(2, "0")}`;
+    const rev = subMap.get(key) ?? { cents: 0, clients: 0 };
+    const ai  = aiMap.get(key)  ?? { usd: 0, calls: 0 };
+    const receitaBrutaCents   = rev.cents;
+    const impostosCents       = Math.round(receitaBrutaCents * SIMPLES);
+    const receitaLiquidaCents = receitaBrutaCents - impostosCents;
+    const aiCostBrlCents      = Math.round(ai.usd * USD_BRL * 100);
+    return {
+      month: key, label: `${LABELS[i]}/${String(year).slice(2)}`,
+      receitaBrutaCents, newClients: rev.clients,
+      impostosCents, receitaLiquidaCents,
+      aiCostUsd: ai.usd, aiCostBrlCents,
+      lucroBrutoCents: receitaLiquidaCents - aiCostBrlCents,
+      aiCalls: ai.calls,
+    };
+  });
+
+  return { year, usdBrl: USD_BRL, simplasRate: SIMPLES, rows };
+}
+
+// ─── CRM — client list with revenue & usage data ─────────────────────────────
+
+export interface CRMClient {
+  workspaceId:     string;
+  workspaceName:   string;
+  workspaceStatus: string;
+  userId:          string;
+  userName:        string;
+  email:           string;
+  phone:           string | null;
+  planSlug:        string | null;
+  planName:        string | null;
+  creditsBalance:  number;
+  totalRevCents:   number;
+  paymentCount:    number;
+  totalCampaigns:  number;
+  createdAt:       string;
+}
+
+export async function getAdminCRM(): Promise<{ clients: CRMClient[] }> {
+  const rows = await db
+    .select({
+      workspaceId:     workspacesTable.id,
+      workspaceName:   workspacesTable.name,
+      workspaceStatus: workspacesTable.status,
+      creditsBalance:  workspacesTable.creditsBalance,
+      createdAt:       workspacesTable.createdAt,
+      userId:          usersTable.id,
+      userName:        usersTable.name,
+      email:           usersTable.email,
+      phone:           usersTable.phone,
+      planSlug:        plansTable.slug,
+      planName:        plansTable.name,
+    })
+    .from(workspacesTable)
+    .innerJoin(usersTable, eq(workspacesTable.ownerId, usersTable.id))
+    .leftJoin(plansTable, eq(workspacesTable.planId, plansTable.id))
+    .orderBy(desc(workspacesTable.createdAt));
+
+  const revenues = await db
+    .select({
+      workspaceId:   subscriptionPaymentsTable.workspaceId,
+      totalRevCents: sql<number>`coalesce(sum(${subscriptionPaymentsTable.amountCents}), 0)`,
+      paymentCount:  sql<number>`count(*)`,
+    })
+    .from(subscriptionPaymentsTable)
+    .where(eq(subscriptionPaymentsTable.status, "paid"))
+    .groupBy(subscriptionPaymentsTable.workspaceId);
+
+  const campCounts = await db
+    .select({ workspaceId: campaignsTable.workspaceId, total: sql<number>`count(*)` })
+    .from(campaignsTable)
+    .groupBy(campaignsTable.workspaceId);
+
+  const revMap  = new Map(revenues.map(r  => [r.workspaceId,   { cents: Number(r.totalRevCents), count: Number(r.paymentCount) }]));
+  const campMap = new Map(campCounts.map(r => [r.workspaceId,   Number(r.total)]));
+
+  return {
+    clients: rows.map(c => ({
+      workspaceId:     c.workspaceId,
+      workspaceName:   c.workspaceName,
+      workspaceStatus: c.workspaceStatus,
+      userId:          c.userId,
+      userName:        c.userName,
+      email:           c.email,
+      phone:           c.phone ?? null,
+      planSlug:        c.planSlug ?? null,
+      planName:        c.planName ?? null,
+      creditsBalance:  c.creditsBalance,
+      totalRevCents:   revMap.get(c.workspaceId)?.cents ?? 0,
+      paymentCount:    revMap.get(c.workspaceId)?.count ?? 0,
+      totalCampaigns:  campMap.get(c.workspaceId) ?? 0,
+      createdAt:       c.createdAt.toISOString(),
     })),
   };
 }

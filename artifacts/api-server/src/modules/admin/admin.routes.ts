@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../auth/auth.middleware.js";
-import { getAdminOverview, getAdminFinancials, getAdminPayments, getCampaignCostBreakdown } from "./admin.service.js";
+import { getAdminOverview, getAdminFinancials, getAdminPayments, getCampaignCostBreakdown, getAdminDRE, getAdminCRM } from "./admin.service.js";
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
 import { UnauthorizedError, NotFoundError } from "../../lib/errors.js";
@@ -44,6 +44,19 @@ router.get("/cost-breakdown", requireAuth, async (req, res): Promise<void> => {
   requireAdmin(req.auth.email);
   const limit = Math.min(parseInt(req.query["limit"] as string ?? "50", 10), 200);
   const data = await getCampaignCostBreakdown(limit);
+  res.json(data);
+});
+
+router.get("/dre", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const year = parseInt(req.query["year"] as string ?? String(new Date().getFullYear()), 10);
+  const data = await getAdminDRE(year);
+  res.json(data);
+});
+
+router.get("/crm", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const data = await getAdminCRM();
   res.json(data);
 });
 
