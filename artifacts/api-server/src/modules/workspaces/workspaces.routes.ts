@@ -481,13 +481,17 @@ router.post("/me/persona/clone-avatar", async (req, res): Promise<void> => {
 });
 
 // POST /workspaces/me/persona/clone-avatar-video — receive base64 training + consent videos
-// → HeyGen Digital Twin (video-based, more realistic than talking_photo) → training is async.
+// → tries HeyGen Digital Twin first (Enterprise plan); on 403 falls back to talking_photo
+//   using the frameBase64 (extracted by the client from the training video).
 router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> => {
   const schema = z.object({
     trainingVideoBase64: z.string().min(10),
     consentVideoBase64: z.string().min(10),
     mimeType: z.string().default("video/webm"),
     avatarName: z.string().max(80).default("Meu Avatar NexOS"),
+    // Optional frame extracted by the client — used as talking_photo fallback when
+    // Digital Twin is not available on the current HeyGen plan.
+    frameBase64: z.string().min(10).optional(),
   });
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) {
@@ -500,64 +504,92 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
     res.status(422).json({ error: "HeyGen não configurado — adicione HEYGEN_API_KEY", code: "PROVIDER_NOT_CONFIGURED" });
     return;
   }
-  try {
-    const { personaMediaObjectKey, uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
-    const { signAccess } = await import("../auth/auth.service.js");
-    const workspaceId = req.auth.workspaceId;
 
-    const trainingKey = personaMediaObjectKey(workspaceId, "training");
-    const consentKey = personaMediaObjectKey(workspaceId, "consent");
-    await uploadBufferToGCS(Buffer.from(parsed.data.trainingVideoBase64, "base64"), trainingKey, parsed.data.mimeType);
-    await uploadBufferToGCS(Buffer.from(parsed.data.consentVideoBase64, "base64"), consentKey, parsed.data.mimeType);
+  const workspaceId = req.auth.workspaceId;
 
-    // Short-lived media token so HeyGen can fetch the videos over plain HTTPS.
-    const mediaToken = signAccess({ userId: req.auth.userId, workspaceId, email: req.auth.email });
-    const base = env.APP_URL;
-    const trainingFile = trainingKey.split("/").pop()!;
-    const consentFile = consentKey.split("/").pop()!;
-    const trainingUrl = `${base}/api/workspaces/persona-media/${workspaceId}/${trainingFile}?token=${mediaToken}`;
-    const consentUrl = `${base}/api/workspaces/persona-media/${workspaceId}/${consentFile}?token=${mediaToken}`;
-
-    const dtRes = await fetch("https://api.heygen.com/v2/video_avatar", {
-      method: "POST",
-      headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        avatar_name: parsed.data.avatarName,
-        training_footage_url: trainingUrl,
-        video_consent_url: consentUrl,
-      }),
-    });
-    if (!dtRes.ok) {
-      const errText = await dtRes.text();
-      throw new Error(`HeyGen video_avatar create ${dtRes.status}: ${errText.slice(0, 300)}`);
-    }
-    const dtData = (await dtRes.json()) as { data: { avatar_id: string } };
-    const digitalTwinId = dtData.data.avatar_id;
-
+  // ── Helper: save avatar id to workspace persona ────────────────────────────
+  async function savePersona(fields: Record<string, unknown>) {
     const [ws] = await db.select({ settings: workspacesTable.settings })
-      .from(workspacesTable)
-      .where(eq(workspacesTable.id, workspaceId))
-      .limit(1);
+      .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
     const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
     const existingPersona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
     await db.update(workspacesTable)
-      .set({
-        settings: {
-          ...existingSettings,
-          persona: {
-            ...existingPersona,
-            digitalTwinId,
-            avatarType: "digital_twin",
-            avatarTrainingStatus: "pending",
-            avatarUpdatedAt: new Date().toISOString(),
-          },
-        } as any,
-      })
+      .set({ settings: { ...existingSettings, persona: { ...existingPersona, ...fields, avatarUpdatedAt: new Date().toISOString() } } as any })
       .where(eq(workspacesTable.id, workspaceId));
-    req.log.info({ workspaceId, digitalTwinId }, "Digital twin training started");
-    res.json({ digitalTwinId, avatarTrainingStatus: "pending", success: true });
+  }
+
+  // ── Talking photo fallback (works on any HeyGen plan) ────────────────────
+  async function talkingPhotoFallback(frameBase64: string): Promise<string> {
+    const buf = Buffer.from(frameBase64, "base64");
+    const uploadRes = await fetch("https://upload.heygen.com/v1/asset", {
+      method: "POST",
+      headers: { "X-Api-Key": heygenKey!, "Content-Type": "image/jpeg" },
+      body: buf,
+    });
+    if (!uploadRes.ok) {
+      const t = await uploadRes.text();
+      throw new Error(`HeyGen talking_photo upload ${uploadRes.status}: ${t.slice(0, 200)}`);
+    }
+    const uploadData = (await uploadRes.json()) as { data: { image_key: string } };
+    return uploadData.data.image_key;
+  }
+
+  try {
+    const { personaMediaObjectKey, uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
+    const { signAccess } = await import("../auth/auth.service.js");
+
+    // Upload training + consent videos to GCS so HeyGen can fetch via HTTPS.
+    const trainingKey = personaMediaObjectKey(workspaceId, "training");
+    const consentKey  = personaMediaObjectKey(workspaceId, "consent");
+    await Promise.all([
+      uploadBufferToGCS(Buffer.from(parsed.data.trainingVideoBase64, "base64"), trainingKey, parsed.data.mimeType),
+      uploadBufferToGCS(Buffer.from(parsed.data.consentVideoBase64,  "base64"), consentKey,  parsed.data.mimeType),
+    ]);
+
+    const mediaToken  = signAccess({ userId: req.auth.userId, workspaceId, email: req.auth.email });
+    const base        = env.APP_URL;
+    const trainingUrl = `${base}/api/workspaces/persona-media/${workspaceId}/${trainingKey.split("/").pop()!}?token=${mediaToken}`;
+    const consentUrl  = `${base}/api/workspaces/persona-media/${workspaceId}/${consentKey.split("/").pop()!}?token=${mediaToken}`;
+
+    // ── Attempt Digital Twin (Enterprise only) ─────────────────────────────
+    const dtRes = await fetch("https://api.heygen.com/v2/video_avatar", {
+      method: "POST",
+      headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar_name: parsed.data.avatarName, training_footage_url: trainingUrl, video_consent_url: consentUrl }),
+    });
+
+    if (dtRes.ok) {
+      // ── Digital Twin success path ────────────────────────────────────────
+      const dtData = (await dtRes.json()) as { data: { avatar_id: string } };
+      const digitalTwinId = dtData.data.avatar_id;
+      await savePersona({ digitalTwinId, avatarType: "digital_twin", avatarTrainingStatus: "pending" });
+      req.log.info({ workspaceId, digitalTwinId }, "Digital twin training started");
+      res.json({ digitalTwinId, avatarTrainingStatus: "pending", avatarType: "digital_twin", success: true });
+      return;
+    }
+
+    // ── Digital Twin failed — check if it's a plan restriction (403) ──────
+    const dtStatus = dtRes.status;
+    const dtErrText = await dtRes.text();
+    req.log.warn({ workspaceId, dtStatus, dtErrText: dtErrText.slice(0, 200) }, "Digital Twin not available — attempting talking_photo fallback");
+
+    if (!parsed.data.frameBase64) {
+      // No frame provided — we can't fall back; report to client
+      res.status(422).json({
+        error: "Avatar Digital Twin requer plano HeyGen Enterprise. Forneça frameBase64 para ativar o fallback automático.",
+        code: "HEYGEN_ENTERPRISE_REQUIRED",
+      });
+      return;
+    }
+
+    // ── Fallback: talking photo from extracted frame ───────────────────────
+    const talkingPhotoId = await talkingPhotoFallback(parsed.data.frameBase64);
+    await savePersona({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo" });
+    req.log.info({ workspaceId, talkingPhotoId }, "Avatar created via talking_photo fallback");
+    res.json({ heygenAvatarId: talkingPhotoId, avatarType: "talking_photo", fallback: true, success: true });
+
   } catch (err) {
-    req.log.error({ err }, "Digital twin clone failed");
+    req.log.error({ err }, "Avatar clone failed");
     res.status(500).json({ error: String(err), code: "AVATAR_CLONE_ERROR" });
   }
 });

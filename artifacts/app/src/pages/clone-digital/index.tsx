@@ -100,14 +100,46 @@ function AvatarCloneFlow({ onDone }: { onDone: () => void }) {
     setRecState("idle");
   }
 
+  // Extract a JPEG frame from the training video blob (used as talking_photo fallback).
+  async function extractFrame(): Promise<string | null> {
+    if (!trainingUrl) return null;
+    return new Promise((resolve) => {
+      const vid = document.createElement("video");
+      vid.src = trainingUrl;
+      vid.crossOrigin = "anonymous";
+      vid.muted = true;
+      vid.currentTime = 1; // seek to 1s so the frame is not black
+      vid.onloadeddata = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = vid.videoWidth || 640;
+          canvas.height = vid.videoHeight || 360;
+          canvas.getContext("2d")?.drawImage(vid, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          resolve(dataUrl.split(",")[1] ?? null);
+        } catch {
+          resolve(null);
+        }
+      };
+      vid.onerror = () => resolve(null);
+      vid.load();
+    });
+  }
+
   async function submit() {
     if (!trainingBase64 || !consentBase64) return;
     setStep("uploading");
     setError(null);
     try {
+      const frameBase64 = await extractFrame();
       await customFetch("/api/workspaces/me/persona/clone-avatar-video", {
         method: "POST",
-        body: JSON.stringify({ trainingVideoBase64: trainingBase64, consentVideoBase64: consentBase64, mimeType: videoMime }),
+        body: JSON.stringify({
+          trainingVideoBase64: trainingBase64,
+          consentVideoBase64: consentBase64,
+          mimeType: videoMime,
+          ...(frameBase64 ? { frameBase64 } : {}),
+        }),
       });
       setStep("pending");
       setTrainingStatus("pending");
