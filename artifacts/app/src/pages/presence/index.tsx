@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
+import { useAuth } from "@/lib/auth";
+import { useWorkspaceSocket } from "@/lib/socket";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -170,6 +172,7 @@ function buildPostRationale(post: PresencePost): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PresencePage() {
+  const { workspace } = useAuth();
   const [config, setConfig] = useState<PresenceConfig | null>(null);
   const [activeLaunch, setActiveLaunch] = useState<ActiveLaunch | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -206,6 +209,7 @@ export default function PresencePage() {
     metadata: Record<string, unknown>;
   }[]>([]);
   const [healthChecking, setHealthChecking] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadConfig = useCallback(async () => {
@@ -273,6 +277,36 @@ export default function PresencePage() {
       setLoading(false);
     })();
   }, [loadConfig, loadPosts, loadMetrics]);
+
+  // Relógio de 1s para countdown ao vivo
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Permissão de notificação do browser
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  // Socket: escuta publicações em tempo real → notificação push + reload
+  useWorkspaceSocket(workspace?.id, (alert) => {
+    if (alert.type === "presence_post_published") {
+      loadPosts().catch(() => {});
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          const n = new Notification("NexOS · Post publicado! 🚀", {
+            body: alert.message,
+            icon: "/icon-192.png",
+            tag: `presence-published-${alert.data?.postId ?? Date.now()}`,
+          });
+          setTimeout(() => n.close(), 8000);
+        } catch { /* browser sem suporte */ }
+      }
+    }
+  });
 
   // Poll enquanto gera
   useEffect(() => {
@@ -708,6 +742,68 @@ export default function PresencePage() {
               ))}
             </div>
           )}
+
+          {/* ── Countdown — próximas publicações ─────────────────────────── */}
+          {(() => {
+            const upcoming = posts
+              .filter(
+                (p) =>
+                  p.status === "scheduled" &&
+                  p.scheduledFor !== null &&
+                  new Date(p.scheduledFor).getTime() > nowTick,
+              )
+              .sort(
+                (a, b) =>
+                  new Date(a.scheduledFor!).getTime() - new Date(b.scheduledFor!).getTime(),
+              )
+              .slice(0, 3);
+            if (upcoming.length === 0) return null;
+
+            const fmt = (ms: number) => {
+              const s = Math.floor(ms / 1000);
+              const m = Math.floor(s / 60);
+              const h = Math.floor(m / 60);
+              if (h > 0) return `${h}h ${m % 60}m`;
+              if (m > 0) return `${m}m ${s % 60}s`;
+              return `${s}s`;
+            };
+
+            return (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
+                  <Rocket className="h-3.5 w-3.5" />
+                  Próximas publicações automáticas
+                  <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal">
+                    Você receberá uma notificação quando publicar
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {upcoming.map((p) => {
+                    const msLeft = new Date(p.scheduledFor!).getTime() - nowTick;
+                    const PlatIcon = PLATFORM_META[p.platform]?.icon ?? Share2;
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex items-center gap-3 rounded-lg border border-border bg-background/60 px-3 py-2.5"
+                      >
+                        <PlatIcon className={`h-4 w-4 shrink-0 ${PLATFORM_META[p.platform]?.cls ?? ""}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-xs font-medium capitalize">{p.format}</div>
+                          <div className="text-xs text-muted-foreground truncate">{p.postingTime}</div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="font-mono text-sm font-bold text-primary tabular-nums">
+                            {fmt(msLeft)}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">entra no ar</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Tabs */}
           <div className="flex gap-1 border-b border-border">

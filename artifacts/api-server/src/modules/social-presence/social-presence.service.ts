@@ -1600,6 +1600,20 @@ export async function publishDuePresencePosts(): Promise<void> {
             .where(eq(socialPresencePostsTable.id, post.id));
           log.info({ postId: post.id, platform: post.platform }, "presence: published");
 
+          // Notifica o frontend em tempo real para mostrar push notification e atualizar UI
+          emitWorkspaceAlert(
+            post.workspaceId,
+            "presence_post_published",
+            `✅ Post publicado no ${post.platform === "instagram" ? "Instagram" : post.platform === "facebook" ? "Facebook" : post.platform === "tiktok" ? "TikTok" : post.platform}!`,
+            {
+              postId: post.id,
+              platform: post.platform,
+              format: post.format,
+              platformPostId: result.platformPostId ?? null,
+              platformUrl: result.platformUrl ?? null,
+            },
+          );
+
           // Auto-Highlight: se é story com highlightName e foi publicado no Instagram,
           // adiciona ao Destaque automaticamente (fire-and-forget).
           const postHighlight = (post as { highlightName?: string | null }).highlightName;
