@@ -96,6 +96,8 @@ export const socialPostsTable = pgTable("social_posts", {
       clicks: 0,
     }),
   retryCount: integer("retry_count").notNull().default(0),
+  manualRetryCount: integer("manual_retry_count").notNull().default(0),
+  reelScript: text("reel_script"),
   errorMessage: text("error_message"),
   aiGenerated: boolean("ai_generated").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })

@@ -6,7 +6,7 @@ import { buildCampaignBrain, getCampaignBrain, updateBrainSection } from "../cam
 import { getCreativeIntent, getApprovedDirectionContext } from "../creative-intent/creative-intent.service.js";
 import { runStrategicAlignmentEngine } from "../campaign-brain/alignment.service.js";
 import { runMarketValidation } from "./market-validation.service.js";
-import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgent, parseAgentJSON, locationToTimezone } from "./agent.runner.js";
 import { runProfileBuilderAgent, type ProfileBuilderOutput } from "./profile-builder.agent.js";
 import { runStrategyAgent } from "./strategy.agent.js";
 import { runOfferAgent } from "./offer.agent.js";
@@ -420,6 +420,14 @@ export async function orchestrateCampaign(
   const track = (campaign.track ?? "six_digits") as CampaignTrack;
   const intakeData = (campaign.intakeData ?? {}) as Record<string, unknown>;
   const typeConfig = CAMPAIGN_TYPE_CONFIG[type] ?? CAMPAIGN_TYPE_CONFIG.launch;
+
+  // Derive campaign timezone from audience.location so agents in Australia,
+  // UK or US get the correct date/time context instead of defaulting to BRT.
+  const campaignTimezone = locationToTimezone(intakeData["audience.location"] as string | undefined);
+  // Persist derived timezone on campaign record if not already set
+  if (!campaign.timezone || campaign.timezone === "America/Sao_Paulo") {
+    await db.update(campaignsTable).set({ timezone: campaignTimezone }).where(eq(campaignsTable.id, campaignId)).catch(() => void 0);
+  }
   const hasTraffic = Boolean(
     // campaign.budget.traffic = chave atual do intake (AI conversacional)
     // campaign.trafficBudget  = chave legada (direct-form anterior)

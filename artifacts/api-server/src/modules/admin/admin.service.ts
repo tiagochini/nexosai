@@ -1,4 +1,4 @@
-import { eq, count, inArray, sql, sum, gte, and, desc } from "drizzle-orm";
+import { eq, count, inArray, sql, sum, gte, and, desc, isNotNull } from "drizzle-orm";
 import {
   db,
   workspacesTable,
@@ -304,6 +304,124 @@ export async function getAdminFinancials(): Promise<AdminFinancials> {
       createdAt:   r.createdAt.toISOString(),
     })),
   };
+}
+
+// ─── Cost breakdown per campaign (admin pricing intelligence) ─────────────────
+
+export interface CampaignCostRow {
+  campaignId: string;
+  campaignName: string | null;
+  workspaceId: string;
+  workspaceName: string | null;
+  ownerEmail: string;
+  totalCostUsd: number;
+  totalCredits: number;
+  totalTokens: number;
+  totalCalls: number;
+  /** Cost breakdown by agent type */
+  byAgent: { agentType: string; costUsd: number; credits: number; calls: number }[];
+}
+
+/**
+ * Returns real AI cost per campaign sorted by highest cost first.
+ * Used by the product owner to understand launch cost structure and set correct credit pricing.
+ */
+export async function getCampaignCostBreakdown(limitCampaigns = 50): Promise<{
+  campaigns: CampaignCostRow[];
+  platformTotals: { totalCostUsd: number; totalCredits: number; totalTokens: number; totalCalls: number };
+}> {
+  // Per-campaign totals
+  const campaignTotals = await db
+    .select({
+      campaignId:   aiProviderLogsTable.campaignId,
+      totalCostUsd: sql<number>`coalesce(sum(cast(${aiProviderLogsTable.costUsd} as float)), 0)`,
+      totalCredits: sql<number>`coalesce(sum(${aiProviderLogsTable.creditsCharged}), 0)`,
+      totalTokens:  sql<number>`coalesce(sum(${aiProviderLogsTable.totalTokens}), 0)`,
+      totalCalls:   sql<number>`count(*)`,
+    })
+    .from(aiProviderLogsTable)
+    .where(isNotNull(aiProviderLogsTable.campaignId))
+    .groupBy(aiProviderLogsTable.campaignId)
+    .orderBy(sql`sum(cast(${aiProviderLogsTable.costUsd} as float)) desc`)
+    .limit(limitCampaigns);
+
+  if (campaignTotals.length === 0) {
+    return { campaigns: [], platformTotals: { totalCostUsd: 0, totalCredits: 0, totalTokens: 0, totalCalls: 0 } };
+  }
+
+  const campaignIds = campaignTotals.map(r => r.campaignId!);
+
+  // Campaign + workspace metadata
+  const campaignMeta = await db
+    .select({
+      campaignId:    campaignsTable.id,
+      campaignName:  campaignsTable.title,
+      workspaceId:   campaignsTable.workspaceId,
+      workspaceName: workspacesTable.name,
+      ownerEmail:    usersTable.email,
+    })
+    .from(campaignsTable)
+    .leftJoin(workspacesTable, eq(campaignsTable.workspaceId, workspacesTable.id))
+    .leftJoin(usersTable, eq(workspacesTable.ownerId, usersTable.id))
+    .where(inArray(campaignsTable.id, campaignIds));
+
+  const metaMap = new Map(campaignMeta.map(r => [r.campaignId, r]));
+
+  // Per-agent breakdown for all matching campaigns
+  const agentBreakdown = await db
+    .select({
+      campaignId:  aiProviderLogsTable.campaignId,
+      agentType:   aiProviderLogsTable.agentType,
+      costUsd:     sql<number>`coalesce(sum(cast(${aiProviderLogsTable.costUsd} as float)), 0)`,
+      credits:     sql<number>`coalesce(sum(${aiProviderLogsTable.creditsCharged}), 0)`,
+      calls:       sql<number>`count(*)`,
+    })
+    .from(aiProviderLogsTable)
+    .where(inArray(aiProviderLogsTable.campaignId, campaignIds))
+    .groupBy(aiProviderLogsTable.campaignId, aiProviderLogsTable.agentType)
+    .orderBy(aiProviderLogsTable.campaignId, sql`sum(cast(${aiProviderLogsTable.costUsd} as float)) desc`);
+
+  // Group agent breakdown by campaign
+  const agentMap = new Map<string, { agentType: string; costUsd: number; credits: number; calls: number }[]>();
+  for (const row of agentBreakdown) {
+    const cid = row.campaignId ?? "";
+    if (!agentMap.has(cid)) agentMap.set(cid, []);
+    agentMap.get(cid)!.push({
+      agentType: row.agentType ?? "unknown",
+      costUsd:   Number(row.costUsd),
+      credits:   Number(row.credits),
+      calls:     Number(row.calls),
+    });
+  }
+
+  const campaigns: CampaignCostRow[] = campaignTotals.map(r => {
+    const meta = metaMap.get(r.campaignId!);
+    return {
+      campaignId:    r.campaignId!,
+      campaignName:  meta?.campaignName ?? null,
+      workspaceId:   meta?.workspaceId ?? "",
+      workspaceName: meta?.workspaceName ?? null,
+      ownerEmail:    meta?.ownerEmail ?? "",
+      totalCostUsd:  Number(r.totalCostUsd),
+      totalCredits:  Number(r.totalCredits),
+      totalTokens:   Number(r.totalTokens),
+      totalCalls:    Number(r.totalCalls),
+      byAgent:       agentMap.get(r.campaignId!) ?? [],
+    };
+  });
+
+  // Platform-wide totals
+  const platformTotals = campaigns.reduce(
+    (acc, c) => ({
+      totalCostUsd:  acc.totalCostUsd  + c.totalCostUsd,
+      totalCredits:  acc.totalCredits  + c.totalCredits,
+      totalTokens:   acc.totalTokens   + c.totalTokens,
+      totalCalls:    acc.totalCalls    + c.totalCalls,
+    }),
+    { totalCostUsd: 0, totalCredits: 0, totalTokens: 0, totalCalls: 0 },
+  );
+
+  return { campaigns, platformTotals };
 }
 
 // ─── Admin payments list ───────────────────────────────────────────────────────

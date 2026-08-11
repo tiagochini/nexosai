@@ -300,6 +300,49 @@ Se qualquer resposta for "sim" para os problemas (alucinação, genérico, inexe
 A NexOS AI opera com integridade estratégica. Entregue o que você entregaria se seu nome estivesse assinado no resultado.
 `;
 
+/**
+ * Maps the audience.location intake value to an IANA timezone.
+ * Used so that Australian, European or US campaigns get the correct
+ * date/time context in every agent prompt instead of defaulting to BRT.
+ */
+export function locationToTimezone(location: string | undefined | null): string {
+  switch (location) {
+    case "australia":       return "Australia/Sydney";
+    case "north_america":   return "America/New_York";
+    case "uk":              return "Europe/London";
+    case "europe_en":       return "Europe/Paris";
+    case "portugal":        return "Europe/Lisbon";
+    case "global_en":       return "UTC";
+    case "global_ptbr":     return "America/Sao_Paulo";
+    case "latin_america":   return "America/Sao_Paulo";
+    case "brazil_northeast":return "America/Fortaleza";
+    case "brazil_southeast":
+    case "brazil_nationwide":
+    default:                return "America/Sao_Paulo";
+  }
+}
+
+/**
+ * Maps the audience.location intake value to the human-readable country/region
+ * name suitable for use in Meta Ads demographics and agent prompts.
+ */
+export function locationToCountryLabel(location: string | undefined | null): string {
+  switch (location) {
+    case "australia":       return "Australia";
+    case "north_america":   return "United States, Canada";
+    case "uk":              return "United Kingdom";
+    case "europe_en":       return "United Kingdom, Australia, Germany, France";
+    case "portugal":        return "Portugal";
+    case "global_en":       return "Worldwide";
+    case "global_ptbr":     return "Brazil, Portugal";
+    case "latin_america":   return "Brazil, Argentina, Colombia, Mexico";
+    case "brazil_northeast":return "Brazil";
+    case "brazil_southeast":return "Brazil";
+    case "brazil_nationwide":
+    default:                return "Brazil";
+  }
+}
+
 export interface TemporalContextOpts {
   /** IANA timezone of the campaign launch region. Default: America/Sao_Paulo */
   timezone?: string;

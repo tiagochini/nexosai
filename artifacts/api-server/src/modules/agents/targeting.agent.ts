@@ -1,4 +1,4 @@
-import { runAgent, parseAgentJSON } from "./agent.runner.js";
+import { runAgent, parseAgentJSON, locationToCountryLabel } from "./agent.runner.js";
 import type { ProfileBuilderOutput, AudienceSegment } from "./profile-builder.agent.js";
 import type { Logger } from "pino";
 import { COGNITIVE_IDENTITY_TARGETING } from "./cognitive-identity-system.js";
@@ -112,11 +112,14 @@ Comportamentos de compra: ${(profile.primaryAvatar?.buyingTriggers ?? []).slice(
     || String(intakeData["product.category"] ?? "").toLowerCase().includes("fitness")
     || String(intakeData["business.hasPhysicalLocation"] ?? "").toLowerCase() === "true";
 
+  const locationSlug = String(intakeData["audience.location"] ?? "brazil_nationwide");
+  const countryLabel = locationToCountryLabel(locationSlug);
+
   return `**Produto:** ${String(intakeData["product.name"] ?? "")} — categoria: ${String(intakeData["product.category"] ?? "")}
-**Budget de tráfego pago:** R$${String(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.trafficBudget"] ?? 0)}
-**Localização principal:** ${String(intakeData["audience.location"] ?? "brazil_nationwide")}
+**Budget de tráfego pago:** ${String(intakeData["campaign.budget.traffic"] ?? intakeData["campaign.trafficBudget"] ?? 0)}
+**Localização principal:** ${countryLabel} (código: ${locationSlug})
 **Negócio físico/local:** ${isLocal ? "SIM — use geolocalização por raio" : "NÃO"}
-**Endereços físicos:** ${String(intakeData["business.locations"] ?? intakeData["audience.city"] ?? "")}
+**Endereços físicos:** ${String(intakeData["business.locations"] ?? intakeData["business.physicalCities"] ?? intakeData["audience.city"] ?? "")}
 **Nível de sofisticação:** ${String(intakeData["audience.sophisticationLevel"] ?? "solution_aware")}
 **Concorrência:** ${profile?.marketIntelligence?.competitionLevel ?? "medium"}
 ${avatarContext}
@@ -156,7 +159,7 @@ const META_CHUNK_PROMPT = `Você é o Agente de Targeting da NexOS AI — especi
       "size": "string",
       "interests": ["string"],
       "behaviors": ["string"],
-      "demographics": { "ageMin": 25, "ageMax": 55, "genders": ["all"], "locations": ["Brazil"] },
+      "demographics": { "ageMin": 25, "ageMax": 55, "genders": ["all"], "locations": ["<país real da campanha — use a Localização principal informada acima>"] },
       "exclusions": ["string"],
       "lookalikeSeed": "string ou null",
       "lookalikeSimilarity": "string ou null",

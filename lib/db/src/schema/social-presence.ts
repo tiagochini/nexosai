@@ -141,6 +141,7 @@ export const socialPresencePostsTable = pgTable("social_presence_posts", {
   hashtags: text("hashtags").array().notNull().default([]),
   visualDirection: text("visual_direction").notNull().default(""),
   videoScript: text("video_script"),
+  reelScript: text("reel_script"),
   mediaUrls: jsonb("media_urls").notNull().$type<string[]>().default([]),
   objective: text("objective").notNull().default(""),
   // Alinhamento com lançamento

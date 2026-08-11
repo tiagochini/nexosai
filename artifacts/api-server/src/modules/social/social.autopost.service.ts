@@ -313,6 +313,8 @@ export async function autoPostApprovedContent(
         platformUrl: null,
         metrics: { likes: 0, comments: 0, shares: 0, views: 0, reach: 0, impressions: 0, clicks: 0 },
         retryCount: 0,
+        manualRetryCount: 0,
+        reelScript: null,
         errorMessage: null,
         aiGenerated: true,
         createdAt: new Date(),
