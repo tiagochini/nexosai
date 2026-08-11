@@ -4,6 +4,8 @@ import { getAdminOverview, getAdminFinancials, getAdminPayments } from "./admin.
 import { queryAgentExecutionLogs, getAgentExecutionLogById, getAgentExecutionLogsSummary } from "./audit-logs.service.js";
 import { markPaymentPaid } from "../billing/billing.service.js";
 import { UnauthorizedError, NotFoundError } from "../../lib/errors.js";
+import { grantCredits } from "../credits/credits.service.js";
+import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
 import {
   db, inviteCodesTable, usersTable, workspacesTable, plansTable,
   subscriptionPaymentsTable, campaignsTable, creditTransactionsTable,
@@ -343,6 +345,85 @@ router.delete("/waitlist/:id", requireAuth, async (req, res): Promise<void> => {
   const id = req.params["id"] as string;
   await db.delete(waitlistTable).where(eq(waitlistTable.id, id));
   res.json({ ok: true });
+});
+
+// ─── Admin: adicionar créditos a qualquer workspace ──────────────────────────
+// POST /api/admin/workspaces/:workspaceId/add-credits { amount: number, note?: string }
+router.post("/workspaces/:workspaceId/add-credits", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const { workspaceId } = req.params as { workspaceId: string };
+  const { amount, note } = req.body as { amount?: number; note?: string };
+
+  if (!amount || typeof amount !== "number" || amount <= 0 || amount > 50_000) {
+    res.status(400).json({ error: "amount deve ser um número positivo até 50.000" });
+    return;
+  }
+
+  const [workspace] = await db.select({ id: workspacesTable.id, name: workspacesTable.name })
+    .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  if (!workspace) throw new NotFoundError("Workspace não encontrado");
+
+  const tx = await grantCredits(
+    workspaceId,
+    amount,
+    "admin_grant",
+    req.log,
+    note ?? `Recarga admin por ${req.auth.email}`,
+  );
+
+  req.log.info({ workspaceId, amount, grantedBy: req.auth.email, balanceAfter: tx.balanceAfter }, "admin add-credits");
+  res.json({ ok: true, workspaceName: workspace.name, credited: amount, newBalance: tx.balanceAfter });
+});
+
+// ─── Admin: forçar retry de campanha travada (ignora ownership) ────────────────
+// POST /api/admin/campaigns/:campaignId/force-retry
+router.post("/campaigns/:campaignId/force-retry", requireAuth, async (req, res): Promise<void> => {
+  requireAdmin(req.auth.email);
+  const { campaignId } = req.params as { campaignId: string };
+
+  const [campaign] = await db
+    .select({ status: campaignsTable.status, workspaceId: campaignsTable.workspaceId, brainData: (campaignsTable as any).brainData })
+    .from(campaignsTable)
+    .where(eq(campaignsTable.id, campaignId))
+    .limit(1);
+
+  if (!campaign) throw new NotFoundError("Campanha não encontrada");
+
+  if (!["analyzing", "generating"].includes(campaign.status)) {
+    res.status(400).json({
+      error: `Campanha não está travada (status: ${campaign.status}). Só é possível retry em analyzing ou generating.`,
+      code: "NOT_STUCK",
+      currentStatus: campaign.status,
+    });
+    return;
+  }
+
+  const brain = ((campaign.brainData ?? {}) as Record<string, unknown>);
+  const cp = ((brain["pipelineCheckpoint"] ?? {}) as Record<string, unknown>);
+  const contentRetry = ((brain["contentRetry"] ?? {}) as Record<string, unknown>);
+  const retryCount = (contentRetry["retryCount"] as number | undefined) ?? 0;
+
+  const clearedBrain = {
+    ...brain,
+    pipelineCheckpoint: { ...cp, lockedAt: null, lastProgressAt: null },
+    contentRetry: { ...contentRetry, retryCount: retryCount + 1, lastRetryAt: new Date().toISOString(), adminRetry: true, adminRetryBy: req.auth.email },
+  };
+
+  if (campaign.status === "analyzing") {
+    await db.update(campaignsTable)
+      .set({ status: "intake" as any, updatedAt: new Date(), brainData: clearedBrain as any })
+      .where(eq(campaignsTable.id, campaignId));
+    const result = await triggerStrategyPhase(campaignId, campaign.workspaceId, req.log);
+    req.log.info({ campaignId, adminBy: req.auth.email }, "[ADMIN FORCE-RETRY] analyzing → strategy re-enqueued");
+    res.status(202).json({ retried: true, phase: "strategy", queued: result.queued });
+  } else {
+    await db.update(campaignsTable)
+      .set({ status: "strategy_ready" as any, updatedAt: new Date(), brainData: clearedBrain as any })
+      .where(eq(campaignsTable.id, campaignId));
+    const result = await triggerContentPhase(campaignId, campaign.workspaceId, req.log);
+    req.log.info({ campaignId, adminBy: req.auth.email }, "[ADMIN FORCE-RETRY] generating → content re-enqueued");
+    res.status(202).json({ retried: true, phase: "content", queued: result.queued });
+  }
 });
 
 export default router;
