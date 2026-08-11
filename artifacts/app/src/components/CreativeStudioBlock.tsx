@@ -39,9 +39,16 @@ interface VslItem {
   campaignId?: string | null;
 }
 
-type RecordingMode = "no_face" | "partial_pip" | "own_recording";
+type RecordingMode = "no_face" | "partial_pip" | "own_recording" | "avatar_twin";
 
 const RECORDING_MODES: { id: RecordingMode; label: string; desc: string; icon: React.ElementType; badge?: string }[] = [
+  {
+    id: "avatar_twin",
+    icon: Sparkles,
+    label: "Avatar Twin — Full Auto",
+    desc: "Gera o vídeo completo com o seu avatar digital e voz clonada. Você não aparece — a IA cria tudo automaticamente.",
+    badge: "Avatar IA",
+  },
   {
     id: "no_face",
     icon: Monitor,
@@ -90,7 +97,7 @@ interface Props {
 
 export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
   const [, navigate] = useLocation();
-  const [mode, setMode] = useState<RecordingMode>("no_face");
+  const [mode, setMode] = useState<RecordingMode>("avatar_twin");
   const [creatingVideo, setCreatingVideo] = useState(false);
   const queryClient = useQueryClient();
 
@@ -116,7 +123,10 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
   // ── Mutations ─────────────────────────────────────────────────────────────
   const createVideoMutation = useMutation({
     mutationFn: async ({ vslId, format }: { vslId?: string; format?: string } = {}) => {
-      const hasUserFace = mode !== "no_face";
+      const hasUserFace = mode === "avatar_twin" || mode === "partial_pip" || mode === "own_recording";
+      const voiceStyle = mode === "avatar_twin" ? "avatar" :
+                         mode === "own_recording" ? "voice_clone" :
+                         mode === "partial_pip" ? "voice_clone" : "narrator";
       const data = await customFetch<{ project: VideoProject }>("/api/video-projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -129,9 +139,10 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
           vslId,
           config: {
             hasUserFace,
-            voiceStyle: hasUserFace ? "avatar" : "narrator",
+            voiceStyle,
             tone: "inspirational",
             rhythm: "medium",
+            avatarMode: mode === "avatar_twin",
           },
         }),
       });
@@ -305,6 +316,11 @@ export function CreativeStudioBlock({ campaignId, campaignTitle }: Props) {
               : <><Clapperboard className="h-3.5 w-3.5" />Criar Projeto de Vídeo</>}
           </Button>
 
+          {mode === "avatar_twin" && (
+            <p className="text-[10px] font-mono text-primary/70">
+              ✦ Seu avatar digital e voz clonada precisam estar configurados em <a href="/clone-digital" className="underline">Clone Digital</a>. Se ainda não configurou, faça isso primeiro.
+            </p>
+          )}
           {mode === "own_recording" && (
             <p className="text-[10px] font-mono text-primary/70">
               O botão GRAVAR no topo da tela ficará ativo. Grave suas cenas e o Agente Editor (ATLAS) monta o vídeo final.

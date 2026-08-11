@@ -611,7 +611,12 @@ export function CloneStudioPanel({ firstName = "Fundador", onComplete, onSkip }:
 
       {/* ── Linha 3: Botões — SEMPRE visíveis, nunca clipados ────────────────── */}
       {/*    Esta linha é "auto" no grid — cresce com o conteúdo, nunca some.      */}
-      <div className="border-t border-white/10 bg-[#050505] flex items-center justify-center py-5 px-4 gap-3">
+      {/*    paddingBottom usa env(safe-area-inset-bottom) para não sumir atrás    */}
+      {/*    da barra de navegação do Android/iOS.                                  */}
+      <div
+        className="border-t border-white/10 bg-[#050505] flex items-center justify-center px-4 gap-3"
+        style={{ paddingTop: 20, paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
+      >
         {actionButton}
       </div>
     </div>,
