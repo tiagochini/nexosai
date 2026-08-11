@@ -213,19 +213,10 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
   }
 
   try {
-    // v3 API — migrado de v2/video/generate (sunset 2026-10-31)
-    const character =
-      req.avatarType === "talking_photo"
-        ? { type: "talking_photo", talking_photo_id: req.avatarId, talking_photo_style: "square" }
-        : { type: "avatar", avatar_id: req.avatarId, avatar_style: "normal" };
-
-    // v3 usa dimension (width/height) em vez de aspect_ratio
-    const dimensionMap: Record<string, { width: number; height: number }> = {
-      "9:16": { width: 720, height: 1280 },
-      "1:1":  { width: 1080, height: 1080 },
-      "16:9": { width: 1280, height: 720 },
-    };
-    const dimension = dimensionMap[req.aspectRatio ?? "16:9"] ?? { width: 1280, height: 720 };
+    // v3 API — formato plano (não mais video_inputs[]).
+    // avatar_id deve ser um look UUID de /v3/avatars/looks, não o ID legado v2.
+    // aspect_ratio aceita: "9:16", "16:9", "1:1", "4:5", "5:4", "auto".
+    const aspectRatio = req.aspectRatio ?? "9:16";
 
     const res = await fetch("https://api.heygen.com/v3/videos", {
       method: "POST",
@@ -234,28 +225,27 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        video_inputs: [
-          {
-            character,
-            voice: {
-              type: "text",
-              input_text: req.voiceoverText,
-              voice_id: req.voiceId,
-            },
-            background: { type: "color", value: "#000000" },
-          },
-        ],
-        dimension,
-        test: false,
+        type: "avatar",
+        avatar_id: req.avatarId,
+        script: req.voiceoverText,
+        voice_id: req.voiceId,
+        aspect_ratio: aspectRatio,
+        resolution: "720p",
+        title: "NexOS Social Reel",
       }),
     });
     if (!res.ok) {
       const errText = await res.text();
-      // Avatar not found → mensagem clara para o usuário reselecionar
-      if (res.status === 404 || errText.includes("look not found") || errText.includes("avatar not found")) {
+      // Avatar ou look inválido → mensagem clara para o usuário reselecionar
+      if (
+        res.status === 404 ||
+        errText.includes("look not found") ||
+        errText.includes("avatar not found") ||
+        errText.includes("does not support")
+      ) {
         return {
           status: "failed",
-          error: "Avatar HeyGen não encontrado — o avatar configurado foi removido ou é inválido. Vá em Configurações → Persona e selecione um novo avatar.",
+          error: "Avatar HeyGen inválido ou expirado — vá em Configurações → Persona e selecione um novo avatar da lista atualizada.",
           provider: "heygen",
         };
       }
@@ -271,16 +261,18 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
 
 export async function pollHeyGenJob(jobId: string): Promise<VideoClipResult> {
   try {
-    const res = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${jobId}`, {
+    // v3 endpoint — GET /v3/videos/{id}
+    // data.status: "waiting" | "processing" | "completed" | "failed"
+    const res = await fetch(`https://api.heygen.com/v3/videos/${jobId}`, {
       headers: { "X-Api-Key": env.HEYGEN_API_KEY ?? "" },
     });
     if (!res.ok) throw new Error(`HeyGen poll error ${res.status}`);
-    const data = (await res.json()) as { data: { status: string; video_url?: string; error?: string } };
+    const data = (await res.json()) as { data: { status: string; video_url?: string; failure_message?: string } };
     if (data.data.status === "completed" && data.data.video_url) {
       return { status: "ready", clipUrl: data.data.video_url, provider: "heygen" };
     }
     if (data.data.status === "failed") {
-      return { status: "failed", error: data.data.error ?? "HeyGen failed", provider: "heygen" };
+      return { status: "failed", error: data.data.failure_message ?? "HeyGen failed", provider: "heygen" };
     }
     return { status: "processing", jobId, provider: "heygen" };
   } catch (err) {

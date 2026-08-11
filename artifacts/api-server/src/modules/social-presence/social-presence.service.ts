@@ -136,34 +136,15 @@ export async function upsertConfig(
 
 // ─── Contexto do negócio ─────────────────────────────────────────────────────
 
-// Strings que indicam que o businessContext foi preenchido com texto de teste/plataforma
-// e devem ser descartadas em favor dos dados reais da campanha.
-const NEXOS_PLATFORM_STRINGS = [
-  "nexos", "nexos ai", "a prova de que a nexos", "integração das redes sociais",
-  "teste de integração", "post de teste", "prova de conceito do produto",
-];
-
-function isPlaceholderContext(ctx: string): boolean {
-  const lower = ctx.toLowerCase();
-  return NEXOS_PLATFORM_STRINGS.some((s) => lower.includes(s));
-}
-
 async function buildBusinessContext(
   workspaceId: string,
   config: SocialPresenceConfig,
 ): Promise<string> {
+  // O boot cleanup (index.ts) já limpa business_context NexOS do banco em produção.
+  // Aqui: usa apenas se preenchido com conteúdo real do cliente.
   const rawCtx = config.businessContext?.trim() ?? "";
-  // Usa o businessContext configurado somente se for sobre o negócio real do cliente,
-  // não um texto de teste/plataforma NexOS que foi salvo indevidamente.
-  if (rawCtx.length > 0 && !isPlaceholderContext(rawCtx)) {
+  if (rawCtx.length > 0) {
     return rawCtx;
-  }
-
-  if (rawCtx.length > 0 && isPlaceholderContext(rawCtx)) {
-    logger.warn(
-      { workspaceId, ctx: rawCtx.slice(0, 80) },
-      "buildBusinessContext: businessContext parece texto de teste NexOS — ignorando, usando campanha real",
-    );
   }
   // Fallback: intake da campanha mais recente do workspace
   const [campaign] = await db
@@ -1385,17 +1366,49 @@ export async function publishDuePresencePosts(): Promise<void> {
           if (isVideoFormat) {
             const gs = post.mediaGenStatus;
 
-            // Vídeo ou storyboard já em geração — aguardar silenciosamente
-            if (gs === "video_generating" || gs === "storyboard_generating") {
+            // Storyboard gerando — aguardar conclusão
+            if (gs === "storyboard_generating") {
               continue;
             }
 
-            // Storyboard gerado — aguardar aprovação do usuário para gerar vídeo
-            if (gs === "storyboard_ready" || gs === "storyboard_draft") {
-              if (!post.errorMessage?.includes("Aprovação pendente")) {
+            // Vídeo em geração — polling automático no HeyGen a cada tick do scheduler
+            if (gs === "video_generating") {
+              if (post.mediaJobId) {
+                setImmediate(() =>
+                  pollPostMediaJob(post.workspaceId, post.id, log).catch((e) =>
+                    log.warn({ err: e, postId: post.id }, "presence: poll job error (non-fatal)"),
+                  ),
+                );
+              }
+              continue;
+            }
+
+            // Storyboard IA pronto — gerar vídeo automaticamente se avatar configurado
+            if (gs === "storyboard_ready") {
+              const persona = await getWorkspacePersona(post.workspaceId);
+              const effectiveVoiceId = persona.heygenVoiceId || persona.voiceCloneId;
+              if (persona.heygenAvatarId && effectiveVoiceId) {
+                log.info({ postId: post.id, platform: post.platform }, "presence: storyboard pronto + avatar configurado → gerando vídeo automaticamente");
+                setImmediate(() =>
+                  approveStoryboardGenerateVideo(post.workspaceId, post.id, log).catch((e) =>
+                    log.warn({ err: e, postId: post.id }, "presence: auto video gen error (non-fatal)"),
+                  ),
+                );
+              } else if (!post.errorMessage?.includes("Configure um avatar")) {
                 await db
                   .update(socialPresencePostsTable)
-                  .set({ errorMessage: "Storyboard pronto — abra o post e clique em 'Gerar Vídeo' para gerar o vídeo com IA." })
+                  .set({ errorMessage: "Configure um avatar em Configurações → Persona para gerar vídeos automaticamente." })
+                  .where(eq(socialPresencePostsTable.id, post.id));
+              }
+              continue;
+            }
+
+            // Rascunho SVG (storyboard_draft) — aguardar substituição ou geração IA
+            if (gs === "storyboard_draft") {
+              if (!post.errorMessage?.includes("Storyboard")) {
+                await db
+                  .update(socialPresencePostsTable)
+                  .set({ errorMessage: "Storyboard em rascunho — abra o post para gerar com IA." })
                   .where(eq(socialPresencePostsTable.id, post.id));
               }
               continue;

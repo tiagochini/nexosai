@@ -24,7 +24,7 @@ import { resumeGeneratingCampaigns } from "./modules/orchestration/orchestration
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
-import { db, campaignAgentsTable, campaignsTable, workspaceIntegrationsTable, workspacesTable, socialPresencePostsTable } from "@workspace/db";
+import { db, campaignAgentsTable, campaignsTable, workspaceIntegrationsTable, workspacesTable, socialPresencePostsTable, socialPresenceConfigTable } from "@workspace/db";
 import { eq, and, lt, sql as sqlRaw, like, inArray } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
@@ -151,6 +151,26 @@ Promise.all([
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (integration dedup) failed")),
+
+  // PRESENCE-FIX: Eliminar business_context NexOS de contas de clientes.
+  // O campo pode ter sido preenchido com texto de teste/demonstração da plataforma durante
+  // o onboarding. Clientes devem ter business_context vazio até preencherem seus próprios dados.
+  // A remoção é permanente e idempotente — na próxima geração o planner usa só o intake real.
+  db.execute(sqlRaw`
+    UPDATE social_presence_config
+    SET business_context = ''
+    WHERE business_context ILIKE '%nexos%'
+       OR business_context ILIKE '%prova de que%'
+       OR business_context ILIKE '%integração das redes sociais%'
+       OR business_context ILIKE '%teste de integração%'
+       OR business_context ILIKE '%prova de conceito%'
+  `)
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup: cleared NexOS placeholder business_context from social_presence_config");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup (presence business_context) failed")),
 
   // HEYGEN-FIX: Clear stale/invalid heygenAvatarId values from workspace persona settings.
   // HeyGen periodically retires stock avatars; workspaces that had one of these saved IDs
