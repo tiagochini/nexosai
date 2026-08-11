@@ -24,8 +24,8 @@ import { resumeGeneratingCampaigns } from "./modules/orchestration/orchestration
 import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
-import { db, campaignAgentsTable, campaignsTable, workspaceIntegrationsTable } from "@workspace/db";
-import { eq, and, lt, sql as sqlRaw } from "drizzle-orm";
+import { db, campaignAgentsTable, campaignsTable, workspaceIntegrationsTable, workspacesTable, socialPresencePostsTable } from "@workspace/db";
+import { eq, and, lt, sql as sqlRaw, like, inArray } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
 
@@ -151,6 +151,48 @@ Promise.all([
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (integration dedup) failed")),
+
+  // HEYGEN-FIX: Clear stale/invalid heygenAvatarId values from workspace persona settings.
+  // HeyGen periodically retires stock avatars; workspaces that had one of these saved IDs
+  // will get a 404 on every video generation attempt. Removing the stale ID forces the user
+  // to re-select from the live HeyGen catalog, which now loads dynamically.
+  db.execute(sqlRaw`
+    UPDATE workspaces
+    SET settings = settings #- '{persona,heygenAvatarId}'
+    WHERE settings->'persona'->>'heygenAvatarId' IN (
+      'Daisy-inskirt-20220818',
+      'Kayla-inblackskirt-20220818',
+      'Tyler-incasualsuit-20220721'
+    )
+  `)
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup: cleared stale HeyGen avatar IDs from workspace settings");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup (heygen avatar) failed")),
+
+  // HEYGEN-FIX: Reset social presence posts that failed due to the stale Daisy avatar.
+  // These posts have a valid storyboard — only the video generation step failed.
+  // Resetting them to storyboard_ready + scheduled allows the scheduler to retry
+  // automatically once the user selects a valid avatar.
+  db.execute(sqlRaw`
+    UPDATE social_presence_posts
+    SET
+      media_gen_status = 'storyboard_ready',
+      status           = 'scheduled',
+      error_message    = 'Avatar anterior inválido foi corrigido automaticamente — configure um avatar em Configurações → Persona para gerar o vídeo.',
+      updated_at       = NOW()
+    WHERE error_message LIKE '%Daisy-inskirt-20220818%'
+      AND format IN ('reel', 'feed_video', 'story')
+      AND status != 'published'
+  `)
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup: reset social presence posts blocked by stale HeyGen avatar");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup (heygen posts reset) failed")),
 
   // RC-FIX: Only reset campaigns stuck in "analyzing" for > 30 min.
   // Campaigns that JUST transitioned (e.g. fresh finalize before a restart) must NOT be reset,
