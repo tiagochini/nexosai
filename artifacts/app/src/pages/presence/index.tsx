@@ -930,8 +930,9 @@ export default function PresencePage() {
                           const rationale = buildPostRationale(p);
                           const storyboardUrl = p.storyboardUrls?.[0];
                           const isReady = p.mediaGenStatus === "storyboard_ready";
+                          const isTestReel = p.caption?.includes("cuida do próprio lançamento");
                           return (
-                            <div key={p.id} className={`rounded-xl border ${isReady ? "border-primary/25 bg-primary/5" : "border-amber-400/20 bg-amber-400/5"} p-4 space-y-3`}>
+                            <div key={p.id} className={`rounded-xl border ${isTestReel ? "border-orange-400/50 bg-orange-400/5 ring-1 ring-orange-400/30" : isReady ? "border-primary/25 bg-primary/5" : "border-amber-400/20 bg-amber-400/5"} p-4 space-y-3`}>
                               {/* Storyboard preview + info */}
                               <div className="flex gap-3">
                                 {/* Thumbnail */}
@@ -952,11 +953,24 @@ export default function PresencePage() {
 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0 space-y-1">
+                                  {isTestReel && (
+                                    <div className="flex items-center gap-1.5 rounded-md border border-orange-400/40 bg-orange-400/15 px-2 py-1 w-fit">
+                                      <span className="text-[11px] font-bold text-orange-400 uppercase tracking-wide">🧪 Este é o Reel de Teste</span>
+                                    </div>
+                                  )}
                                   <div className="flex items-center gap-2 flex-wrap">
                                     {(() => { const meta = PLATFORM_META[p.platform]; return meta ? <meta.icon className={`h-3.5 w-3.5 ${meta.cls}`} /> : null; })()}
                                     <span className="text-xs font-medium">{FORMAT_LABEL[p.format] ?? p.format}</span>
                                     <span className="text-xs text-muted-foreground">·</span>
                                     <span className="text-xs text-muted-foreground">{p.postingTime}</span>
+                                    {p.scheduledFor && (
+                                      <>
+                                        <span className="text-xs text-muted-foreground">·</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {new Date(p.scheduledFor).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} às {new Date(p.scheduledFor).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                        </span>
+                                      </>
+                                    )}
                                     {isVideoFormat ? (
                                       <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
                                         ✨ Após aprovação → Vídeo com clone gerado automaticamente
