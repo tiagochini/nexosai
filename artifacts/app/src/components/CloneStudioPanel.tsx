@@ -368,8 +368,8 @@ export function CloneStudioPanel({ firstName = "Fundador", onComplete, onSkip }:
         <div className="flex flex-col items-center gap-2">
           <Button
             onClick={stopTake}
-            className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8"
-            style={{ background: "var(--primary)", color: "black", minWidth: 240 }}
+            className="font-mono text-sm uppercase tracking-widest rounded-none gap-2 h-12 px-8 btn-weapon-primary"
+            style={{ minWidth: 240 }}
           >
             <Check className="h-4 w-4" /> Terminei de ler — Parar
           </Button>
@@ -415,8 +415,9 @@ export function CloneStudioPanel({ firstName = "Fundador", onComplete, onSkip }:
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[8000] bg-black/95"
+      className="fixed inset-x-0 top-0 z-[8000] bg-black/95"
       style={{
+        height: "100dvh",
         display: "grid",
         gridTemplateRows: "52px minmax(0, 1fr) auto",
       }}
