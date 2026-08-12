@@ -180,12 +180,15 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   }
 
   async function uploadVideoRaw(blob: Blob, kind: "training" | "consent"): Promise<string> {
-    const base = (import.meta as any).env?.BASE_URL ?? "/";
-    const url  = `${base}api/workspaces/me/persona/upload-video/${kind}`.replace("//", "/");
-    const res  = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": blob.type || videoMime },
-      credentials: "include",
+    const base  = (import.meta as any).env?.BASE_URL ?? "/";
+    const url   = `${base}api/workspaces/me/persona/upload-video/${kind}`.replace("//", "/");
+    const token = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_access_token") ?? "";
+    const res   = await fetch(url, {
+      method:  "POST",
+      headers: {
+        "Content-Type":  blob.type || videoMime,
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      },
       body: blob,
     });
     if (!res.ok) {
@@ -268,9 +271,10 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
           trainingKey = await uploadVideoRaw(trainingBlobRef.current, "training");
         } else {
           // hasTrainingInGCS: use the stable GCS key directly
-          const base = (import.meta as any).env?.BASE_URL ?? "/";
-          const meta = await fetch(`${base}api/workspaces/me/persona/avatar-recovery-status`.replace("//", "/"), {
-            credentials: "include"
+          const base  = (import.meta as any).env?.BASE_URL ?? "/";
+          const tok2  = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_access_token") ?? "";
+          const meta  = await fetch(`${base}api/workspaces/me/persona/avatar-recovery-status`.replace("//", "/"), {
+            headers: tok2 ? { Authorization: `Bearer ${tok2}` } : {},
           }).then(r => r.json()) as AvatarRecoveryStatus;
           // Stable key is known by the backend — pass sentinel
           trainingKey = "__gcs_stable__";
