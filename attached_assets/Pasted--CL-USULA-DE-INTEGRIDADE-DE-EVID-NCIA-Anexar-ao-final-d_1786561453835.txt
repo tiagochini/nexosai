@@ -1,0 +1,57 @@
+# CLÁUSULA DE INTEGRIDADE DE EVIDÊNCIA
+
+> Anexar ao final de **todo** prompt enviado a qualquer agente executor.
+> Reutilizável em qualquer projeto — não é específica de HeyGen.
+
+---
+
+## CLASSIFICAÇÃO OBRIGATÓRIA DE CADA AFIRMAÇÃO
+
+Ao final de qualquer relatório, classifique **cada** afirmação factual em um dos três níveis. Afirmação sem nível declarado é descartada.
+
+**N1 — VERIFICÁVEL PELO OPERADOR SEM INTERMEDIÁRIO.**
+O operador consegue confirmar sozinho, fora deste ambiente: painel do provedor externo, o próprio produto no navegador, o arquivo reproduzindo, o post visível na plataforma, o saldo na conta.
+
+**N2 — EVIDÊNCIA BRUTA COLADA.**
+Status HTTP + corpo cru, linha de log crua com timestamp, resultado de `SELECT` com host do banco declarado. O dado é colado na íntegra, sem edição, sem resumo, sem reconstrução de memória.
+
+**N3 — ASSERÇÃO SUA.**
+Interpretação, causa inferida, "implementei", "está correto", "não é bloqueante", "provavelmente". **N3 nunca é prova.** Se um critério de aceite depender de N3, o critério não foi atingido.
+
+---
+
+## REGRAS DE VALIDADE
+
+1. **Ambiente declarado.** Todo `SELECT` declara o host do banco. Toda chamada externa declara o ambiente de origem. Sem isso, a evidência é inválida — independentemente de estar correta.
+
+2. **Proibido "ou" em declaração de causa.** Uma frase com duas hipóteses alternativas é zero diagnóstico. Se não há como decidir, responda `INDETERMINADO` e liste exatamente o que falta para decidir. `INDETERMINADO` é resposta aceitável. Chute com vocabulário técnico não é.
+
+3. **Ausência de dado não prova causa.** "0 rows" prova que não há linha; não prova por quê. Proibido inferir causa a partir de ausência.
+
+4. **Teste de discriminação.** Para cada conclusão, responda: *"esta mesma evidência apareceria se minha conclusão fosse falsa?"* Se sim, a evidência não sustenta a conclusão. Declare isso e busque a evidência que discrimina entre as hipóteses concorrentes.
+
+5. **Autoconsistência.** Antes de enviar, releia seus próprios logs colados e confirme que eles não contradizem o que você afirmou. Contradição entre a prosa e o log colado invalida o relatório inteiro.
+
+6. **Cópia literal.** Todo dado colado vem de saída real, copiada integralmente. Proibido reconstruir de memória, abreviar no meio, ou reproduzir manualmente URL, hash ou ID.
+
+7. **Escopo de alteração provado.** Toda declaração sobre o que foi alterado vem de `git status --porcelain` e `git diff --stat`, colados. Nunca de memória.
+
+8. **Sem prova, sem conclusão.** Se a evidência exigida não pôde ser obtida, escreva `EVIDÊNCIA AUSENTE` e o motivo. Nunca preencha a lacuna com raciocínio plausível.
+
+---
+
+## FECHAMENTO OBRIGATÓRIO DO RELATÓRIO
+
+Encerre todo relatório com este bloco, preenchido:
+
+```
+AUTOAUDITORIA
+- Afirmações N1 (verificáveis pelo operador): <lista>
+- Afirmações N2 (evidência bruta colada): <lista>
+- Afirmações N3 (asserção minha, sem prova): <lista>
+- Hipóteses concorrentes que a minha evidência NÃO exclui: <lista>
+- O que eu afirmei sem ter executado: <lista, ou NADA>
+- Ambientes tocados nesta rodada: <dev / produção / externo>
+```
+
+Se a lista de N3 estiver vazia, releia — quase sempre há pelo menos uma. Um relatório sem nenhuma N3 declarada é sinal de que a autoauditoria não foi feita de verdade.
