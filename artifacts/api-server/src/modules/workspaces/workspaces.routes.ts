@@ -933,15 +933,16 @@ router.post("/me/persona/generate-avatar-demo", async (req, res): Promise<void> 
 
   const [ws] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
   const persona = (((ws?.settings ?? {}) as Record<string, unknown>)["persona"] ?? {}) as Record<string, unknown>;
-  const heygenAvatarId = persona["heygenAvatarId"] as string | undefined;
-  const heygenVoiceId  = persona["heygenVoiceId"]  as string | undefined;
+  const heygenAvatarId  = persona["heygenAvatarId"]  as string | undefined;
+  const heygenVoiceId   = persona["heygenVoiceId"]   as string | undefined;
+  const digitalTwinId   = persona["digitalTwinId"]   as string | undefined;
 
   if (!heygenAvatarId) {
     res.status(400).json({ error: "Avatar ainda não está configurado. Aguarde o término do treinamento.", code: "AVATAR_NOT_READY" });
     return;
   }
 
-  // Pre-flight: verificar se o look específico já terminou de processar no HeyGen.
+  // Pre-flight 1: verificar se o look específico já terminou de processar no HeyGen.
   // O HeyGen salva o look UUID quando o grupo fica "completed", mas o look individual
   // pode ainda estar em processamento interno por vários minutos.
   // GET /v3/avatars/looks/{lookId} retorna { data: { id, status: "processing"|"completed"|"failed" } }
@@ -954,7 +955,6 @@ router.post("/me/persona/generate-avatar-demo", async (req, res): Promise<void> 
       const lookStatus = lookStatusData.data?.status;
       req.log.info({ workspaceId, heygenAvatarId, lookStatus }, "Avatar demo: pre-flight look status check");
       if (lookStatus && lookStatus !== "completed") {
-        // Look ainda em processamento — retornar imediatamente sem chamar geração
         res.status(202).json({
           error: "O HeyGen ainda está finalizando o processamento interno do avatar. Aguarde alguns minutos e tente novamente.",
           code: "AVATAR_STILL_PROCESSING",
@@ -964,10 +964,34 @@ router.post("/me/persona/generate-avatar-demo", async (req, res): Promise<void> 
         return;
       }
     }
-    // Se /looks/{id} falhar ou retornar status desconhecido, tentar gerar mesmo assim
-    // (o erro do HeyGen será capturado por generateAvatarVideo)
   } catch (lookErr) {
     req.log.warn({ lookErr, heygenAvatarId }, "Avatar demo: pre-flight look check failed — proceeding anyway");
+  }
+
+  // Pre-flight 2: verificar se o consentimento do grupo já foi aprovado no HeyGen.
+  // Digital twins requerem que o titular grave consent via HeyGen antes de gerar vídeos.
+  // GET /v3/avatars/{group_id} retorna { data: { status, consent_status } }
+  if (digitalTwinId) {
+    try {
+      const groupRes = await fetch(`https://api.heygen.com/v3/avatars/${digitalTwinId}`, {
+        headers: { "X-Api-Key": heygenKey },
+      });
+      if (groupRes.ok) {
+        const groupData = (await groupRes.json()) as { data?: { status?: string; consent_status?: string } };
+        const consentStatus = groupData.data?.consent_status;
+        req.log.info({ workspaceId, digitalTwinId, consentStatus }, "Avatar demo: pre-flight consent status check");
+        if (consentStatus && consentStatus !== "approved") {
+          res.status(202).json({
+            error: "O consentimento do avatar ainda não foi aprovado pelo HeyGen. Grave novamente para completar o fluxo.",
+            code: "AVATAR_CONSENT_REQUIRED",
+            consentStatus,
+          });
+          return;
+        }
+      }
+    } catch (consentErr) {
+      req.log.warn({ consentErr, digitalTwinId }, "Avatar demo: pre-flight consent check failed — proceeding anyway");
+    }
   }
 
   // Resolver voice ID: usar o configurado ou buscar voz padrão PT-BR
@@ -1007,6 +1031,15 @@ router.post("/me/persona/generate-avatar-demo", async (req, res): Promise<void> 
         error: "O HeyGen ainda está finalizando o processamento interno do avatar. Aguarde alguns minutos e tente novamente.",
         code: "AVATAR_STILL_PROCESSING",
         retryAfterSeconds: 60,
+      });
+      return;
+    }
+    // Consentimento do grupo pendente — exige que o usuário re-grave o avatar para completar o consent flow
+    if (result.status === "avatar_consent_required") {
+      req.log.info({ workspaceId }, "Avatar demo: consentimento do grupo pendente no HeyGen");
+      res.status(202).json({
+        error: "O consentimento do avatar ainda não foi aprovado pelo HeyGen. Grave novamente para completar o fluxo.",
+        code: "AVATAR_CONSENT_REQUIRED",
       });
       return;
     }

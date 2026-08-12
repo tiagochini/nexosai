@@ -23,7 +23,7 @@ import { logger } from "../../lib/logger.js";
 
 const log = logger.child({ component: "video-generation" });
 
-export type VideoGenStatus = "submitted" | "processing" | "ready" | "failed" | "provider_not_configured" | "avatar_still_processing";
+export type VideoGenStatus = "submitted" | "processing" | "ready" | "failed" | "provider_not_configured" | "avatar_still_processing" | "avatar_consent_required";
 
 export interface VideoClipResult {
   status: VideoGenStatus;
@@ -252,12 +252,23 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
       // Avatar look ainda em processamento interno — erro temporário, não uma falha permanente
       if (
         errText.includes("still processing") ||
-        errText.includes("cannot be used to create") ||
-        errText.includes("invalid_parameter")
+        errText.includes("cannot be used to create")
       ) {
         return {
           status: "avatar_still_processing",
           error: "O HeyGen ainda está finalizando o processamento interno do avatar. Aguarde alguns minutos e tente novamente.",
+          provider: "heygen",
+        };
+      }
+      // Consentimento do grupo pendente — o usuário precisa completar o fluxo de consent no HeyGen
+      if (
+        errText.includes("avatar_consent_required") ||
+        errText.includes("requires consent") ||
+        errText.includes("consent to start")
+      ) {
+        return {
+          status: "avatar_consent_required",
+          error: "O HeyGen exige que o consentimento do avatar seja gravado diretamente pela plataforma deles antes de gerar vídeos.",
           provider: "heygen",
         };
       }

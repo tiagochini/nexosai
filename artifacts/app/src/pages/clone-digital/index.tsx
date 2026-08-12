@@ -366,6 +366,12 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
         }, retryMs);
         return;
       }
+      // Consentimento pendente — exige que o usuário complete o fluxo
+      if (result.code === "AVATAR_CONSENT_REQUIRED") {
+        setDemoError("Consentimento do avatar pendente no HeyGen. Clique em \"Retreinar avatar\" para completar o fluxo de consentimento.");
+        setDemoGenerating(false);
+        return;
+      }
 
       const jobId = result.jobId!;
       setDemoJobId(jobId);
@@ -388,7 +394,7 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
         } catch { /* keep polling */ }
       }, 6000);
     } catch (err: any) {
-      // customFetch throws on non-2xx — checar se o body tem code AVATAR_STILL_PROCESSING
+      // customFetch throws on non-2xx — checar se o body tem code AVATAR_STILL_PROCESSING ou AVATAR_CONSENT_REQUIRED
       const code = err?.body?.code ?? err?.code;
       if (code === "AVATAR_STILL_PROCESSING") {
         setDemoStillProcessing(true);
@@ -397,6 +403,11 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
           demoRetryRef.current = null;
           void generateDemo();
         }, 60_000);
+        return;
+      }
+      if (code === "AVATAR_CONSENT_REQUIRED") {
+        setDemoError("Consentimento do avatar pendente no HeyGen. Clique em \"Retreinar avatar\" para completar o fluxo de consentimento.");
+        setDemoGenerating(false);
         return;
       }
       setDemoError(err?.message ?? "Erro ao gerar demonstração");
@@ -769,6 +780,14 @@ export default function CloneDigitalPage() {
   const [showSnapshot, setShowSnapshot] = useState(false);
   const [retrying, setRetrying]         = useState(false);
 
+  // ── Main-page avatar demo state ────────────────────────────────────────────
+  const [mainDemoGenerating, setMainDemoGenerating]   = useState(false);
+  const [mainDemoError, setMainDemoError]             = useState<string | null>(null);
+  const [mainDemoStillProcessing, setMainDemoStillProcessing] = useState(false);
+  const [mainDemoVideoUrl, setMainDemoVideoUrl]       = useState<string | null>(null);
+  const mainDemoPollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mainDemoRetryRef = useRef<ReturnType<typeof setTimeout>  | null>(null);
+
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Loaders ────────────────────────────────────────────────────────────────
@@ -863,6 +882,74 @@ export default function CloneDigitalPage() {
       setRetrying(false);
     }
   }
+
+  // ── Main-page demo generation ─────────────────────────────────────────────
+
+  async function generateMainDemo() {
+    setMainDemoGenerating(true);
+    setMainDemoError(null);
+    setMainDemoStillProcessing(false);
+    if (mainDemoRetryRef.current) { clearTimeout(mainDemoRetryRef.current); mainDemoRetryRef.current = null; }
+    try {
+      const result = await customFetch<{ jobId?: string; error?: string; code?: string; retryAfterSeconds?: number }>(
+        "/api/workspaces/me/persona/generate-avatar-demo",
+        { method: "POST" },
+      );
+      if (result.code === "AVATAR_STILL_PROCESSING") {
+        setMainDemoStillProcessing(true);
+        setMainDemoGenerating(false);
+        mainDemoRetryRef.current = setTimeout(() => {
+          mainDemoRetryRef.current = null;
+          void generateMainDemo();
+        }, (result.retryAfterSeconds ?? 60) * 1000);
+        return;
+      }
+      if (result.code === "AVATAR_CONSENT_REQUIRED") {
+        setMainDemoError("Consentimento pendente. Clique em \"Retreinar avatar\" para completar o fluxo de consentimento no HeyGen.");
+        setMainDemoGenerating(false);
+        return;
+      }
+      const jobId = result.jobId!;
+      if (mainDemoPollRef.current) clearInterval(mainDemoPollRef.current);
+      mainDemoPollRef.current = setInterval(async () => {
+        try {
+          const poll = await customFetch<{ status: string; videoUrl?: string; error?: string }>(
+            `/api/workspaces/me/persona/avatar-demo-status?jobId=${jobId}`,
+          );
+          if (poll.status === "ready" && poll.videoUrl) {
+            clearInterval(mainDemoPollRef.current!); mainDemoPollRef.current = null;
+            setMainDemoVideoUrl(poll.videoUrl);
+            setMainDemoGenerating(false);
+          } else if (poll.status === "failed") {
+            clearInterval(mainDemoPollRef.current!); mainDemoPollRef.current = null;
+            setMainDemoError(poll.error ?? "Geração do demo falhou.");
+            setMainDemoGenerating(false);
+          }
+        } catch { /* keep polling */ }
+      }, 6000);
+    } catch (err: any) {
+      const code = err?.body?.code ?? err?.code;
+      if (code === "AVATAR_STILL_PROCESSING") {
+        setMainDemoStillProcessing(true);
+        setMainDemoGenerating(false);
+        mainDemoRetryRef.current = setTimeout(() => { mainDemoRetryRef.current = null; void generateMainDemo(); }, 60_000);
+        return;
+      }
+      if (code === "AVATAR_CONSENT_REQUIRED") {
+        setMainDemoError("Consentimento pendente. Clique em \"Retreinar avatar\" para completar o fluxo de consentimento no HeyGen.");
+        setMainDemoGenerating(false);
+        return;
+      }
+      setMainDemoError(err?.message ?? "Erro ao gerar demonstração");
+      setMainDemoGenerating(false);
+    }
+  }
+
+  // Cleanup demo refs on unmount
+  useEffect(() => () => {
+    if (mainDemoPollRef.current) clearInterval(mainDemoPollRef.current);
+    if (mainDemoRetryRef.current) clearTimeout(mainDemoRetryRef.current);
+  }, []);
 
   // ── Derived state ──────────────────────────────────────────────────────────
 
@@ -1004,6 +1091,48 @@ export default function CloneDigitalPage() {
                 <p className="font-mono text-[10px] text-muted-foreground/60 mt-1">
                   ID: {persona.heygenAvatarId.slice(0, 18)}… · {persona.avatarType ?? "avatar"}
                 </p>
+              )}
+              {/* ── Demo video section (only when avatar is active) ── */}
+              {hasAvatar && (
+                <div className="mt-3 space-y-2">
+                  {mainDemoVideoUrl ? (
+                    <div className="space-y-2">
+                      <p className="font-mono text-[10px] text-green-400 font-bold flex items-center gap-1">
+                        <Check className="h-3 w-3" /> Vídeo demonstração gerado
+                      </p>
+                      <video
+                        src={mainDemoVideoUrl}
+                        autoPlay
+                        controls
+                        playsInline
+                        className="w-full max-w-[240px] rounded-xl border border-green-500/20 shadow-lg"
+                      />
+                    </div>
+                  ) : mainDemoGenerating ? (
+                    <div className="flex items-center gap-2 py-1">
+                      <Loader2 className="h-3.5 w-3.5 text-primary animate-spin shrink-0" />
+                      <p className="font-mono text-[11px] text-muted-foreground">Gerando vídeo demonstração… ~2 min</p>
+                    </div>
+                  ) : mainDemoStillProcessing ? (
+                    <div className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <Loader2 className="h-3 w-3 text-blue-400 shrink-0 mt-0.5 animate-spin" />
+                      <p className="font-mono text-[10px] text-blue-400 leading-relaxed">
+                        Avatar em processamento final no HeyGen. Tentando novamente automaticamente em 60s…
+                      </p>
+                    </div>
+                  ) : mainDemoError ? (
+                    <div className="space-y-1.5">
+                      <p className="font-mono text-[10px] text-amber-400">{mainDemoError}</p>
+                      <Button size="sm" variant="outline" onClick={generateMainDemo} className="font-mono text-[10px] gap-1 h-6 px-2">
+                        <RotateCcw className="h-2.5 w-2.5" /> Tentar novamente
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={generateMainDemo} className="font-mono text-[10px] gap-1.5 h-7">
+                      <Video className="h-3 w-3" /> Ver demonstração do avatar
+                    </Button>
+                  )}
+                </div>
               )}
               {isTrainingPending && recovery?.digitalTwinId && (
                 <p className="font-mono text-[10px] text-primary/60 mt-1">
