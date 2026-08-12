@@ -15,14 +15,14 @@ const router = Router();
 router.use(requireAuth);
 
 const analyzeSchema = z.object({
-  productName: z.string().min(1).max(300),
-  market: z.string().min(3).max(2000),
-  productCategory: z.string().max(300).optional(),
-  knownCompetitors: z.array(z.string().max(200)).max(10).optional(),
-  currentPositioning: z.string().max(1000).optional(),
-  priceRange: z.string().max(120).optional(),
-  platforms: z.array(z.string().max(60)).max(10).optional(),
-  targetAudience: z.string().max(1000).optional(),
+  productName: z.string().min(1).max(500),
+  market: z.string().min(3).max(10000),
+  productCategory: z.string().max(500).optional(),
+  knownCompetitors: z.array(z.string().max(500)).max(20).optional(),
+  currentPositioning: z.string().max(5000).optional(),
+  priceRange: z.string().max(500).optional(),
+  platforms: z.array(z.string().max(200)).max(20).optional(),
+  targetAudience: z.string().max(5000).optional(),
   campaignId: z.string().uuid().optional(),
 });
 

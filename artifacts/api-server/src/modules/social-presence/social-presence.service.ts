@@ -1419,6 +1419,17 @@ export async function publishDuePresencePosts(): Promise<void> {
                     log.warn({ err: e, postId: post.id }, "presence: poll job error (non-fatal)"),
                   ),
                 );
+              } else {
+                // Sem mediaJobId → submissão falhou silenciosamente (ex: avatar_still_processing sem jobId)
+                // Resetar para storyboard_ready para nova tentativa no próximo tick
+                const ageMs = Date.now() - new Date(post.updatedAt ?? post.createdAt).getTime();
+                if (ageMs > 3 * 60 * 1000) { // aguardar ao menos 3 min antes de resetar
+                  log.warn({ postId: post.id, ageMs }, "presence: video_generating sem jobId há >3min — resetando para storyboard_ready");
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ mediaGenStatus: "storyboard_ready", errorMessage: null })
+                    .where(eq(socialPresencePostsTable.id, post.id));
+                }
               }
               continue;
             }
@@ -2470,7 +2481,12 @@ export async function approveStoryboardGenerateVideo(
         );
       }
 
-      if (result.status === "failed" || result.status === "provider_not_configured") {
+      if (
+        result.status === "failed" ||
+        result.status === "provider_not_configured" ||
+        result.status === "avatar_still_processing" ||
+        result.status === "avatar_consent_required"
+      ) {
         throw new Error(result.error ?? result.setupInstructions ?? "Provedor de vídeo não configurado.");
       }
 

@@ -648,7 +648,8 @@ export default function MarketIntelPage() {
           </div>
           <div className="space-y-1">
             <label className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Descreva o mercado *</label>
-            <textarea value={market} onChange={(e) => setMarket(e.target.value)} rows={3}
+            <textarea value={market} onChange={(e) => setMarket(e.target.value)} rows={4}
+              maxLength={10000}
               placeholder="O que você vende, para quem, e em qual contexto de mercado. Quanto mais detalhe, mais cirúrgica a análise."
               className="w-full bg-background border border-border/50 rounded-sm px-3 py-2 text-sm focus:outline-none focus:border-primary/50 resize-none" />
           </div>
