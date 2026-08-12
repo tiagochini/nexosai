@@ -393,11 +393,12 @@ export function CloneStudioPanel({
       toast.dismiss("voice-clone-creating");
       const msg = String(e);
       if (msg.includes("paid_plan_required") || msg.includes("instant voice cloning") || msg.includes("payment_required")) {
+        // Erro de provedor interno — não expor detalhes ao usuário
         toast.error(
-          "O plano atual do ElevenLabs não inclui clonagem de voz. Acesse elevenlabs.io e faça upgrade para o plano Starter ou superior.",
-          { duration: 10000 }
+          "Serviço de clonagem de voz temporariamente indisponível. Entre em contato com o suporte.",
+          { duration: 8000 }
         );
-        // Sessão já foi parada — ir para estado de erro definitivo, não review
+        // Sessão já foi parada — não voltar para review (evita loop de /stop 404)
         setPhase("complete");
       } else {
         toast.error("Erro ao finalizar sessão. Tente novamente.");
