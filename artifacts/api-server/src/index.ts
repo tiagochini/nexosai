@@ -63,6 +63,13 @@ process.on("uncaughtException", (err) => {
 
 const httpServer = http.createServer(app);
 
+// ── C0.6.2 TEMP — log DB host at boot (never logs password) ──────────────────
+try {
+  const dbUrl = new URL(process.env["DATABASE_URL"] ?? "");
+  logger.info({ "[C0.6.2]": true, dbHost: dbUrl.hostname, dbName: dbUrl.pathname, dbUser: dbUrl.username }, "Boot DB connection info");
+} catch { /* noop */ }
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Long-running AI requests (strategy / content / agents) can take 5-10 min.
 // Default Node.js HTTP timeout is 5 seconds — way too short. Set to 12 minutes.
 // headersTimeout must be strictly greater than keepAliveTimeout.
