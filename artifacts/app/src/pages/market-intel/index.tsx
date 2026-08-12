@@ -272,7 +272,14 @@ export default function MarketIntelPage() {
       const data = await customFetch<{ answer: string }>(`${API}/${selected.id}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history: chatMsgs.slice(-10) }),
+        body: JSON.stringify({
+          question,
+          // Truncate each history message to avoid hitting the server payload limit
+          history: chatMsgs.slice(-10).map((m) => ({
+            ...m,
+            content: m.content.slice(0, 30000),
+          })),
+        }),
       });
       setChatMsgs((m) => [...m, { role: "assistant", content: data.answer }]);
     } catch (err: unknown) {
