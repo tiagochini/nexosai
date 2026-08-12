@@ -275,8 +275,10 @@ export default function MarketIntelPage() {
         body: JSON.stringify({ question, history: chatMsgs.slice(-10) }),
       });
       setChatMsgs((m) => [...m, { role: "assistant", content: data.answer }]);
-    } catch {
-      setChatMsgs((m) => [...m, { role: "assistant", content: "Não consegui responder agora. Tente novamente em instantes." }]);
+    } catch (err: unknown) {
+      const serverMsg = (err as { data?: { error?: string } } | null)?.data?.error;
+      const fallback = "Não consegui responder agora. Tente novamente em instantes.";
+      setChatMsgs((m) => [...m, { role: "assistant", content: serverMsg ?? fallback }]);
     } finally {
       setChatSending(false);
     }

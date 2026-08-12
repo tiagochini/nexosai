@@ -128,6 +128,7 @@ router.post("/:id/chat", async (req, res): Promise<void> => {
     res.json({ answer });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Erro ao responder.";
+    req.log.warn({ err, reportId: id }, "market-intel chat: error");
     if (msg.includes("não encontrado")) {
       res.status(404).json({ error: msg });
       return;
@@ -136,7 +137,10 @@ router.post("/:id/chat", async (req, res): Promise<void> => {
       res.status(409).json({ error: msg });
       return;
     }
-    throw err;
+    // Retornar 502 com mensagem legível — nunca re-throw (causaria 500 sem corpo JSON)
+    res.status(502).json({
+      error: "O analista não conseguiu responder agora. Todos os provedores de IA falharam ou atingiram o limite. Tente novamente em instantes.",
+    });
   }
 });
 
