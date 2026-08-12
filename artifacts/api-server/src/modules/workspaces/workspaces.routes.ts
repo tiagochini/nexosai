@@ -405,6 +405,76 @@ router.post("/me/persona/clone-voice", async (req, res): Promise<void> => {
   }
 });
 
+// POST /workspaces/me/persona/clone-voice-multi
+// Receives multiple base64-encoded audio takes → ElevenLabs voices/add (multi-sample) → saves voiceCloneId.
+// Also saves sessionId to workspace.settings so the UI can confirm the session completed.
+router.post("/me/persona/clone-voice-multi", async (req, res): Promise<void> => {
+  const schema = z.object({
+    samples:   z.array(z.object({ data: z.string().min(10), mimeType: z.string().default("audio/webm") })).min(1).max(10),
+    voiceName: z.string().max(80).default("Minha Voz NexOS"),
+    sessionId: z.string().optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "samples[] obrigatório", code: "VALIDATION_ERROR" });
+    return;
+  }
+  const { env } = await import("../../lib/env.js");
+  const elKey = env.ELEVENLABS_API_KEY;
+  if (!elKey) {
+    res.status(422).json({ error: "ElevenLabs não configurado — adicione ELEVENLABS_API_KEY", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+  try {
+    const formData = new FormData();
+    formData.append("name", parsed.data.voiceName);
+    // Enviar cada take como um arquivo de amostra separado
+    for (let i = 0; i < parsed.data.samples.length; i++) {
+      const s = parsed.data.samples[i]!;
+      const buf = Buffer.from(s.data, "base64");
+      const ext = s.mimeType.includes("mp3") || s.mimeType.includes("mpeg") ? "mp3" : "webm";
+      formData.append("files", new Blob([buf], { type: s.mimeType }), `take-${i + 1}.${ext}`);
+    }
+    const response = await fetch("https://api.elevenlabs.io/v1/voices/add", {
+      method: "POST",
+      headers: { "xi-api-key": elKey },
+      body: formData,
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`ElevenLabs ${response.status}: ${errText.slice(0, 300)}`);
+    }
+    const data = (await response.json()) as { voice_id: string };
+    const voiceCloneId = data.voice_id;
+
+    // Salvar voiceCloneId + cloneSessionId no workspace
+    const workspaceId = req.auth.workspaceId;
+    const [ws] = await db.select({ settings: workspacesTable.settings })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, workspaceId))
+      .limit(1);
+    const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+    const existingPersona  = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+    await db.update(workspacesTable)
+      .set({
+        settings: {
+          ...existingSettings,
+          // Persona: salva voiceCloneId
+          persona: { ...existingPersona, voiceCloneId, voiceCloneUpdatedAt: new Date().toISOString() },
+          // Top-level: salva cloneSessionId para o painel de settings reconhecer
+          cloneSessionId: parsed.data.sessionId ?? voiceCloneId,
+          hasClone: true,
+        } as never,
+      })
+      .where(eq(workspacesTable.id, workspaceId));
+    req.log.info({ workspaceId, voiceCloneId, sampleCount: parsed.data.samples.length }, "Voice clone (multi-sample) created");
+    res.json({ voiceCloneId, success: true });
+  } catch (err) {
+    req.log.error({ err }, "Voice clone multi failed");
+    res.status(500).json({ error: String(err), code: "VOICE_CLONE_ERROR" });
+  }
+});
+
 // ── Avatar (HeyGen) endpoints ────────────────────────────────────────────────
 // NexOS-operated infra only — always env.HEYGEN_API_KEY, never a customer key.
 

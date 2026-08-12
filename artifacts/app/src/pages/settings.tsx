@@ -1649,11 +1649,15 @@ function IdentidadeTab() {
         setLsCountries(p.lifestylePreferences?.countries ?? "");
         setLsOther(p.lifestylePreferences?.other ?? "");
         if (p.voiceCloneId) setRecState("done");
-        // Load clone state from workspace metadata
-        const meta = workspace.metadata ?? {};
+        // Ler clone state de workspace.settings (onde clone-voice-multi salva)
+        // Mantém fallback para workspace.metadata por compatibilidade com sessões antigas
+        const meta = (workspace as any).settings ?? (workspace as any).metadata ?? {};
         if (meta.cloneSessionId) setCloneSessionId(meta.cloneSessionId as string);
+        // Se voiceCloneId existe na persona mas cloneSessionId não foi salvo ainda,
+        // usar o voiceCloneId como indicador de sessão concluída
+        if (!meta.cloneSessionId && p.voiceCloneId) setCloneSessionId(p.voiceCloneId);
         if (meta.videoProductionStyle === "clone" || meta.videoProductionStyle === "no_face") {
-          setVideoProductionStyle(meta.videoProductionStyle);
+          setVideoProductionStyle(meta.videoProductionStyle as "clone" | "no_face");
         }
       })
       .catch(() => {})

@@ -35,7 +35,12 @@ interface CloneTake {
   targetSecs: number;
 }
 
-const CORE_PHRASE = "Você está prestes a transformar completamente o seu negócio — e isso começa agora.";
+// Frase longa o suficiente para o ElevenLabs clonar bem a voz (~20-25 segundos ao ritmo natural)
+const CORE_PHRASE =
+  "Você está prestes a transformar completamente o seu negócio — e isso começa agora. " +
+  "Com as ferramentas certas e uma estratégia clara, você vai construir algo que realmente funciona, " +
+  "que gera resultado de verdade, e que coloca você numa posição de destaque no mercado. " +
+  "Esse é o momento de agir. Essa é a virada.";
 
 const CLONE_TAKES: CloneTake[] = [
   {
@@ -147,11 +152,13 @@ export function CloneStudioPanel({
   const startTimeRef = useRef<number>(0);
 
   // Serialised background upload queue — new uploads chain onto this Promise.
-  const uploadQueueRef      = useRef<Promise<void>>(Promise.resolve());
+  const uploadQueueRef        = useRef<Promise<void>>(Promise.resolve());
   // Recording session ID — created lazily on first take acceptance.
   const sessionRecordingIdRef = useRef<string | null>(resumeState?.recordingId ?? null);
   // Track how many takes have been queued for upload (for progress bar in finalize).
-  const uploadedCountRef = useRef<number>(resumeState?.completedTakeIds.length ?? 0);
+  const uploadedCountRef      = useRef<number>(resumeState?.completedTakeIds.length ?? 0);
+  // Tracks the mimeType chosen by the MediaRecorder at record-start time.
+  const mimeTypeRef           = useRef<string>("audio/webm");
 
   const currentTake = CLONE_TAKES[currentTakeIdx]!;
   const TakeIcon = currentTake.icon;
@@ -211,10 +218,19 @@ export function CloneStudioPanel({
   const beginRecording = () => {
     if (!streamRef.current) return;
     chunksRef.current = [];
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : "video/webm";
-    const recorder = new MediaRecorder(streamRef.current, { mimeType, videoBitsPerSecond: 2_500_000 });
+    // Gravar SOMENTE áudio — ElevenLabs só precisa de voz, não vídeo.
+    // O stream de câmera continua vivo para o preview no <video>, mas não é gravado.
+    const audioTracks = streamRef.current.getAudioTracks();
+    const audioStream = audioTracks.length > 0
+      ? new MediaStream(audioTracks)
+      : streamRef.current; // fallback: usar stream completo se não houver pista de áudio separada
+    const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : MediaRecorder.isTypeSupported("audio/webm")
+      ? "audio/webm"
+      : "video/webm"; // fallback final
+    mimeTypeRef.current = mime;
+    const recorder = new MediaRecorder(audioStream, { mimeType: mime, audioBitsPerSecond: 128_000 });
     recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     recorder.onstop = handleRecordingStop;
     recorderRef.current = recorder;
@@ -232,12 +248,25 @@ export function CloneStudioPanel({
   };
 
   const handleRecordingStop = () => {
-    const blob = new Blob(chunksRef.current, { type: "video/webm" });
+    const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
     const durationMs = Date.now() - startTimeRef.current;
     setResults(r => [...r, { takeId: currentTake.id, blob, durationMs, uploaded: false }]);
     setTakeStates(s => s.map((v, i) => i === currentTakeIdx ? "done" : v));
     setPhase("review");
   };
+
+  /** Converte um Blob para base64 de forma segura (sem stack overflow). */
+  function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        resolve(dataUrl.split(",")[1] ?? "");
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
 
   const redoTake = () => {
     setResults(r => r.filter(x => x.takeId !== currentTake.id));
@@ -261,10 +290,13 @@ export function CloneStudioPanel({
   /** Upload one take blob and save progress to the backend. Fire-and-forget safe. */
   const uploadTakeToServer = async (result: TakeResult): Promise<void> => {
     const recId = await ensureSession();
+    const authToken = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_access_token") ?? "";
     await fetch(`/api/recordings/${recId}/upload?mode=clone`, {
       method: "POST",
-      headers: { "Content-Type": "video/webm" },
-      credentials: "include",
+      headers: {
+        "Content-Type": result.blob.type || "audio/webm",
+        ...(authToken ? { "Authorization": `Bearer ${authToken}` } : {}),
+      },
       body: result.blob,
     });
     await customFetch(`/api/recordings/${recId}/events`, {
@@ -312,15 +344,36 @@ export function CloneStudioPanel({
     setPhase("uploading");
     setUploadProgress(10);
     try {
-      // Await all background uploads before stopping the session
+      // 1. Aguardar todos os uploads de take em background
       await uploadQueueRef.current;
-      setUploadProgress(90);
+      setUploadProgress(40);
 
+      // 2. Parar a sessão de recording
       const recId = await ensureSession();
       await customFetch(`/api/recordings/${recId}/stop`, { method: "POST" });
+      setUploadProgress(60);
+
+      // 3. Enviar todos os blobs de áudio para o ElevenLabs via clone-voice-multi
+      // Os blobs ainda estão em memória (results[]) — áudio-only, pequenos (~200-500 KB cada)
+      const audioTakes = results.filter(r => r.blob.size > 100);
+      if (audioTakes.length > 0) {
+        toast.loading("Criando clone de voz…", { id: "voice-clone-creating" });
+        const samples = await Promise.all(
+          audioTakes.map(async r => ({
+            data: await blobToBase64(r.blob),
+            mimeType: r.blob.type || "audio/webm",
+          }))
+        );
+        setUploadProgress(80);
+        await customFetch("/api/workspaces/me/persona/clone-voice-multi", {
+          method: "POST",
+          body: JSON.stringify({ samples, voiceName: "Minha Voz NexOS", sessionId: recId }),
+        });
+        toast.dismiss("voice-clone-creating");
+      }
       setUploadProgress(100);
 
-      // Clear voice clone progress — session complete
+      // 4. Limpar progresso salvo — sessão completa
       await customFetch("/api/workspaces/me/persona/voice-clone-progress", {
         method: "POST",
         body: JSON.stringify({ recordingId: null }),
@@ -331,6 +384,7 @@ export function CloneStudioPanel({
       onComplete(recId);
     } catch (e) {
       console.error(e);
+      toast.dismiss("voice-clone-creating");
       toast.error("Erro ao finalizar sessão. Tente novamente.");
       setPhase("review");
     }
@@ -581,14 +635,23 @@ export function CloneStudioPanel({
             </div>
           )}
 
-          {/* Recording indicator */}
+          {/* Recording indicator + teleprompter — frase visível durante toda a gravação */}
           {phase === "recording" && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 border border-red-500/40 bg-red-500/20 px-3 py-1">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="font-mono text-xs text-red-400 font-bold tabular-nums">
-                {String(Math.floor(recordingSecs / 60)).padStart(2,"0")}:{String(recordingSecs % 60).padStart(2,"0")}
-              </span>
-            </div>
+            <>
+              <div className="absolute top-3 left-3 flex items-center gap-2 border border-red-500/40 bg-red-500/20 px-3 py-1 z-10">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="font-mono text-xs text-red-400 font-bold tabular-nums">
+                  {String(Math.floor(recordingSecs / 60)).padStart(2,"0")}:{String(recordingSecs % 60).padStart(2,"0")}
+                </span>
+              </div>
+              {/* Teleprompter — frase fixada na base da câmera para o usuário ler durante a gravação */}
+              <div className="absolute bottom-0 left-0 right-0 bg-black/90 border-t border-white/10 px-4 py-3 z-10">
+                <div className="font-mono text-[9px] uppercase tracking-widest text-white/40 mb-1.5">Leia em voz alta:</div>
+                <p className="font-mono text-[13px] text-white leading-relaxed">
+                  "{CORE_PHRASE}"
+                </p>
+              </div>
+            </>
           )}
 
           {/* Review overlay — vídeo gravado, aguardando decisão */}
