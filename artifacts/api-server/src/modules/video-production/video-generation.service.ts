@@ -392,6 +392,61 @@ export async function cloneVoice(req: VoiceCloneRequest): Promise<{ voiceId?: st
   }
 }
 
+// ─── HeyGen Stock Avatar Fallback ─────────────────────────────────────────────
+// Quando o workspace não tem avatar personalizado, usa um avatar stock do HeyGen
+// (personagens prontos da plataforma) com a voz padrão daquele avatar.
+// Retorna null se a API falhar ou não houver avatares disponíveis.
+
+export interface StockAvatarResult {
+  avatarId: string;
+  voiceId: string;
+  avatarName: string;
+}
+
+// Vozes stock do HeyGen como último fallback (IDs estáveis da plataforma)
+const HEYGEN_FALLBACK_VOICE_IDS = [
+  "2d5b0e6cf36f460aa7fc47e3eee4ba54", // Josh (male, US English)
+  "1bd001e7e50f421d891986aad5158bc8", // Aria (female, US English)
+];
+
+export async function fetchRandomStockHeygenAvatar(): Promise<StockAvatarResult | null> {
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) return null;
+
+  try {
+    // Busca looks de avatares stock (ownership=platform = avatares públicos do HeyGen)
+    const res = await fetch("https://api.heygen.com/v3/avatars/looks?ownership=platform&limit=50", {
+      headers: { "X-Api-Key": heygenKey },
+    });
+    if (!res.ok) {
+      log.warn({ status: res.status }, "HeyGen stock avatar fetch failed");
+      return null;
+    }
+    const data = (await res.json()) as {
+      data?: {
+        items?: Array<{ id: string; name?: string; default_voice_id?: string; status?: string }>;
+      };
+    };
+    const items = data.data?.items ?? [];
+    // Filtrar apenas os looks que já terminaram de processar
+    const ready = items.filter((a) => !a.status || a.status === "completed");
+    if (ready.length === 0) {
+      log.warn("HeyGen: nenhum avatar stock disponível (status=completed)");
+      return null;
+    }
+    // Escolher aleatoriamente
+    const pick = ready[Math.floor(Math.random() * ready.length)];
+    const voiceId =
+      pick.default_voice_id ??
+      HEYGEN_FALLBACK_VOICE_IDS[Math.floor(Math.random() * HEYGEN_FALLBACK_VOICE_IDS.length)];
+    log.info({ avatarId: pick.id, avatarName: pick.name, voiceId }, "HeyGen: stock avatar selecionado para vídeo automático");
+    return { avatarId: pick.id, voiceId, avatarName: pick.name ?? "avatar" };
+  } catch (err) {
+    log.warn({ err }, "HeyGen: erro ao buscar avatar stock");
+    return null;
+  }
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export async function generateVideoClip(req: VideoClipRequest): Promise<VideoClipResult> {

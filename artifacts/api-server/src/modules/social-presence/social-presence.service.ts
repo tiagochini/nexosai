@@ -29,6 +29,7 @@ import {
 import {
   generateVideoClip,
   generateAvatarVideo,
+  fetchRandomStockHeygenAvatar,
   pollVideoJob,
 } from "../video-production/video-generation.service.js";
 import { env } from "../../lib/env.js";
@@ -1311,10 +1312,50 @@ export async function publishDuePresencePosts(): Promise<void> {
       )
       .catch(() => {});
 
+    // ── Pré-agendamento: iniciar geração de vídeo 10 min antes do horário ──────
+    // Reels/stories em "draft" com storyboard pronto que publicarão em até 10 min:
+    // promover para "scheduled" mantendo storyboard_ready para que o bloco de vídeo
+    // inicie a geração agora — dando tempo para o HeyGen renderizar antes da publicação.
+    const PRE_SCHEDULE_WINDOW_MS = 10 * 60 * 1000;
+    try {
+      const preScheduleWindow = new Date(now.getTime() + PRE_SCHEDULE_WINDOW_MS);
+      const preSchedulePosts = await db
+        .select()
+        .from(socialPresencePostsTable)
+        .where(
+          and(
+            eq(socialPresencePostsTable.status, "draft"),
+            inArray(socialPresencePostsTable.format as any, ["reel", "story", "feed_video"]),
+            eq(socialPresencePostsTable.mediaGenStatus as any, "storyboard_ready"),
+            lte(socialPresencePostsTable.scheduledFor, preScheduleWindow),
+            gt(socialPresencePostsTable.scheduledFor, now), // ainda não vencido (recuperação 3 cuida dos vencidos)
+          ),
+        )
+        .limit(10);
+      for (const op of preSchedulePosts) {
+        await db
+          .update(socialPresencePostsTable)
+          .set({ status: "scheduled", errorMessage: null })
+          .where(eq(socialPresencePostsTable.id, op.id))
+          .catch(() => {});
+        log.info({ postId: op.id, format: op.format, scheduledFor: op.scheduledFor }, "presence: reel pré-agendado → promovido para scheduled 10min antes (auto video gen)");
+        // Dispara geração imediata — o bloco storyboard_ready do loop seguinte cuidará
+        // do polling, mas iniciar aqui adiantado garante que o vídeo esteja pronto no horário.
+        setImmediate(() =>
+          approveStoryboardGenerateVideo(op.workspaceId, op.id, log).catch((e) =>
+            log.warn({ err: e, postId: op.id }, "presence: pre-schedule video gen error (non-fatal)"),
+          ),
+        );
+      }
+    } catch (preErr) {
+      log.warn({ err: preErr }, "presence: pré-agendamento de vídeo falhou (não-fatal)");
+    }
+
     // ── Recuperação 3: PUBLISH-NO-MATTER-WHAT ─────────────────────────────────
     // Posts em "draft" com scheduledFor vencido nunca devem ficar parados
-    // aguardando aprovação do usuário. Promove para "scheduled" e usa o
-    // storyboard disponível como mídia definitiva se já foi gerado.
+    // aguardando aprovação do usuário. Promove para "scheduled".
+    // Reels/stories: mantém storyboard_ready para que o bloco de vídeo gere com avatar stock.
+    // Imagens/carrosséis: usa storyboard como imagem definitiva (sem atraso).
     try {
       const overdraftPosts = await db
         .select()
@@ -1329,21 +1370,31 @@ export async function publishDuePresencePosts(): Promise<void> {
       for (const op of overdraftPosts) {
         // Aguardar se mídia ainda está sendo gerada neste ciclo
         if (op.mediaGenStatus === "storyboard_generating" || op.mediaGenStatus === "video_generating") continue;
-        const sbUrls =
-          Array.isArray(op.storyboardUrls) && (op.storyboardUrls as string[]).length > 0
-            ? (op.storyboardUrls as string[])
-            : null;
+
+        const isVideoFormat = ["reel", "story", "feed_video"].includes(op.format ?? "");
+        const hasStoryboard =
+          Array.isArray(op.storyboardUrls) && (op.storyboardUrls as string[]).length > 0;
+
+        let patch: Record<string, unknown>;
+        if (isVideoFormat && hasStoryboard && op.mediaGenStatus === "storyboard_ready") {
+          // Reel com storyboard pronto → manter storyboard_ready para que o bloco de vídeo
+          // inicie geração com avatar stock (não usar como imagem)
+          patch = { status: "scheduled", errorMessage: null };
+        } else if (!isVideoFormat && hasStoryboard) {
+          // Imagem/carrossel com storyboard → usar como mídia definitiva (sem esperar vídeo)
+          patch = { status: "scheduled", mediaUrls: op.storyboardUrls as string[], mediaGenStatus: null, errorMessage: null };
+        } else {
+          // Sem storyboard ainda → promover e deixar o scheduler gerar
+          patch = { status: "scheduled", errorMessage: null };
+        }
+
         await db
           .update(socialPresencePostsTable)
-          .set({
-            status: "scheduled",
-            ...(sbUrls ? { mediaUrls: sbUrls, mediaGenStatus: null } : {}),
-            errorMessage: null,
-          })
+          .set(patch as any)
           .where(eq(socialPresencePostsTable.id, op.id))
           .catch(() => {});
         log.info(
-          { postId: op.id, hadStoryboard: !!sbUrls, format: op.format },
+          { postId: op.id, format: op.format, isVideoFormat, hadStoryboard: hasStoryboard },
           "presence: draft vencido → promovido para scheduled (publish-no-matter-what)",
         );
       }
@@ -2475,21 +2526,42 @@ export async function approveStoryboardGenerateVideo(
           aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "16:9",
         });
       } else {
-        // Sem avatar HeyGen → fallback: usar storyboard como imagem (publish-no-matter-what)
-        const sbUrls = Array.isArray(post.storyboardUrls) ? (post.storyboardUrls as string[]) : [];
-        if (sbUrls.length > 0) {
-          log.info({ postId }, "presence: approveStoryboard — sem avatar → usando storyboard como imagem");
-          await db
-            .update(socialPresencePostsTable)
-            .set({ mediaGenStatus: null, mediaUrls: sbUrls, errorMessage: null })
-            .where(eq(socialPresencePostsTable.id, postId));
-          return updating; // próximo tick do scheduler publica como feed_image
+        // Sem avatar personalizado → usar avatar stock do HeyGen (personagens aleatórios)
+        // O usuário vê um vídeo com personagem genérico mas profissional.
+        log.info({ postId }, "presence: sem avatar personalizado → buscando avatar stock HeyGen");
+        const stockAvatar = await fetchRandomStockHeygenAvatar();
+        if (stockAvatar) {
+          const voiceoverText = post.videoScript?.trim()
+            ? post.videoScript
+            : `${post.caption ?? ""}\n\n${(post.hashtags ?? []).map((h: string) => `#${h}`).join(" ")}`;
+          result = await generateAvatarVideo({
+            voiceoverText,
+            avatarId: stockAvatar.avatarId,
+            voiceId: stockAvatar.voiceId,
+            avatarType: "stock",
+            aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "16:9",
+          });
+          log.info({ postId, avatarId: stockAvatar.avatarId, avatarName: stockAvatar.avatarName }, "presence: avatar stock selecionado");
+          // Notificar usuário — ele pode editar depois se quiser
+          emitWorkspaceAlert(
+            post.workspaceId,
+            "presence_stock_avatar_used",
+            `🎬 Reel gerado com personagem automático. Quer personalizar? Configure seu avatar em Configurações → Persona.`,
+            { postId, canEdit: true },
+          );
+        } else {
+          // HeyGen indisponível ou sem avatares stock — fallback para imagem do storyboard
+          const sbUrls = Array.isArray(post.storyboardUrls) ? (post.storyboardUrls as string[]) : [];
+          if (sbUrls.length > 0) {
+            log.warn({ postId }, "presence: sem avatar stock disponível → publicando storyboard como imagem");
+            await db
+              .update(socialPresencePostsTable)
+              .set({ mediaGenStatus: null, mediaUrls: sbUrls, errorMessage: null })
+              .where(eq(socialPresencePostsTable.id, postId));
+            return updating;
+          }
+          throw new Error("Configure seu avatar em Configurações → Persona para gerar reels com vídeo.");
         }
-        // Sem storyboard ainda — configuração necessária
-        const missingField = !persona.heygenAvatarId ? "avatar HeyGen" : "voz HeyGen";
-        throw new Error(
-          `Configure seu ${missingField} em Configurações → Persona para gerar reels e stories com vídeo.`,
-        );
       }
 
       if (
