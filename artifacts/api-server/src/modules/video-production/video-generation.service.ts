@@ -247,22 +247,46 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
       ? rawScript.slice(0, MAX_SCRIPT_CHARS - 3) + "..."
       : rawScript;
 
-    // v3 API — formato plano. Campo correto é "input_text" (não "script").
-    // "script" era o campo antigo v1/v2; HeyGen v3 o ignora silenciosamente,
-    // o que fazia o render falhar sem mensagem de erro clara.
+    // dimension: vertical (Reels/Stories) 9:16 → 1080×1920; horizontal (feed) 16:9 → 1280×720
+    const dimension = aspectRatio === "9:16"
+      ? { width: 1080, height: 1920 }
+      : { width: 1280, height: 720 };
+
+    // character.type: map from avatarType field
+    // digital_twin → "digital_twin"; talking_photo → "talking_photo"; stock/undefined → "avatar"
+    const characterType =
+      req.avatarType === "digital_twin" ? "digital_twin"
+      : req.avatarType === "talking_photo" ? "talking_photo"
+      : "avatar";
+
+    // v2 API — video_inputs array format comprovado com HTTP 200 na FASE 2.
+    // O endpoint v3/videos usa payload plano sem video_inputs e retornava erros silenciosos.
     const payload = {
-      avatar_id: req.avatarId,
-      voice_id: req.voiceId,
-      input_text: script,
-      aspect_ratio: aspectRatio,
-      resolution: "720p",
+      video_inputs: [
+        {
+          character: {
+            type: characterType,
+            avatar_id: req.avatarId,
+            avatar_style: "normal",
+          },
+          voice: {
+            type: "text",
+            voice_id: req.voiceId,
+            input_text: script,
+          },
+        },
+      ],
+      dimension,
       test: false,
       title: "NexOS Social Reel",
     };
 
-    log.info({ avatarId: req.avatarId, voiceId: req.voiceId, scriptLen: script.length, aspectRatio }, "HeyGen v3 video submit");
+    log.info(
+      { "[HEYGEN][REQ]": true, endpoint: "POST /v2/video/generate", avatarId: req.avatarId, voiceId: req.voiceId, scriptLen: script.length, aspectRatio, dimension, characterType },
+      "HeyGen v2 video submit",
+    );
 
-    const res = await fetch("https://api.heygen.com/v3/videos", {
+    const res = await fetch("https://api.heygen.com/v2/video/generate", {
       method: "POST",
       headers: {
         "X-Api-Key": heygenKey,
@@ -270,9 +294,13 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
       },
       body: JSON.stringify(payload),
     });
+
+    const resText = await res.text();
+    log.info({ "[HEYGEN][RES]": true, httpStatus: res.status, body: resText }, "HeyGen v2 response");
+
     if (!res.ok) {
-      const errText = await res.text();
-      log.warn({ status: res.status, errText, avatarId: req.avatarId }, "HeyGen v3 submit failed");
+      const errText = resText;
+      log.warn({ status: res.status, errText, avatarId: req.avatarId }, "HeyGen v2 submit failed");
       // Avatar ou look inválido → mensagem clara para o usuário reselecionar
       if (
         res.status === 404 ||
@@ -311,13 +339,20 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
       }
       throw new Error(`HeyGen API error ${res.status}: ${errText}`);
     }
-    const data = (await res.json()) as { data: { video_id: string } };
-    const videoId = data.data?.video_id;
-    if (!videoId) {
-      log.error({ responseBody: JSON.stringify(data) }, "HeyGen v3 submit: video_id ausente na resposta");
-      throw new Error(`HeyGen não retornou video_id. Resposta: ${JSON.stringify(data)}`);
+
+    let data: { data?: { video_id?: string }; video_id?: string };
+    try {
+      data = JSON.parse(resText);
+    } catch {
+      throw new Error(`HeyGen retornou resposta não-JSON: ${resText}`);
     }
-    log.info({ videoId }, "HeyGen v3 video submitted ✓");
+
+    const videoId = data.data?.video_id ?? data.video_id;
+    if (!videoId) {
+      log.error({ responseBody: resText }, "HeyGen v2 submit: video_id ausente na resposta");
+      throw new Error(`HeyGen não retornou video_id. Resposta: ${resText}`);
+    }
+    log.info({ videoId }, "HeyGen v2 video submitted ✓");
     return { status: "submitted", jobId: videoId, provider: "heygen" };
   } catch (err) {
     log.error({ err }, "HeyGen generation failed");

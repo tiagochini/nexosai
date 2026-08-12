@@ -1,0 +1,88 @@
+# PROMPT — C0.5 + C1 AUTORIZADO (HeyGen / NexOS)
+
+> Cole tudo abaixo da linha no agente Replit. Não edite, não resuma.
+
+---
+
+## ADVERTÊNCIA METODOLÓGICA
+
+Você já apresentou **três causas diferentes** para o mesmo fato, todas erradas ou não provadas:
+
+1. "o boot cleanup os removeu" — retirada por falta de evidência
+2. "o polling nunca foi concluído" — retirada por falta de evidência
+3. "o `db.update` falhou silenciosamente **ou** sobrescreveu com dado errado" — duas hipóteses alternativas na mesma frase, nenhuma com evidência
+
+Uma frase com "ou" no meio não é diagnóstico. **Pare de inferir causa a partir de ausência de dado.** Ausência de linha no banco prova que não há linha — não prova por quê.
+
+A causa da persona vazia será determinada em C4, por **instrumentação e execução real**, não por leitura de código. Não especule mais sobre isso.
+
+---
+
+## C0.5 — DUAS VERIFICAÇÕES READ-ONLY (entregar junto com C1)
+
+Sua premissa central é: "o `POST /v3/avatars` foi executado pelo código de produto porque os avatares têm nomes gerados pelo NexOS". Essa premissa **não está provada**. O avatar chamado `"Teste NexOS b64"` tem nome característico de script de teste, possivelmente criado por agentes anteriores via curl durante depuração — não pelo fluxo do produto.
+
+**C0.5.1 — Quantos workspaces existem?**
+
+```sql
+SELECT count(*) AS total,
+       count(*) FILTER (WHERE settings IS NULL) AS settings_null,
+       count(*) FILTER (WHERE settings->'persona' IS NULL) AS persona_null
+FROM workspaces;
+```
+
+Se o total for 0, toda a análise anterior é irrelevante. Reporte imediatamente.
+
+**C0.5.2 — Existe script de teste no repositório que cria avatar na HeyGen?**
+
+```bash
+grep -rn -i "v3/avatars\|Teste NexOS\|Meu Avatar NexOS" \
+  --include=*.ts --include=*.js --include=*.sh --include=*.py --include=*.json .
+```
+
+Responda: alguma dessas ocorrências está **fora** das rotas de produto (`workspaces.routes.ts`)? Ou seja, em script, seed, teste ou arquivo avulso? Cole arquivo:linha.
+
+Com base nas duas verificações, declare **uma** das opções, sem "ou":
+
+- `PREMISSA CONFIRMADA` — os avatares foram criados pelo fluxo de produto. Evidência: ___
+- `PREMISSA FALSA` — os avatares foram criados por script de teste, e o fluxo de produto pode nunca ter executado com sucesso. Evidência: ___
+- `INDETERMINADO` — não há evidência suficiente para afirmar nenhuma das duas. (Resposta aceitável. Chute não é.)
+
+---
+
+## C1 — CORRIGIR O PAYLOAD DE GERAÇÃO — AUTORIZADO
+
+**Escopo literal:** `video-generation.service.ts`, funções `generateAvatarVideo()` e `pollHeyGenJob()`. Nada além disso.
+
+**Alterações permitidas:**
+
+1. Submit: `POST /v2/video/generate` com `video_inputs: [{ character: {...}, voice: {...} }]` — formato comprovado com HTTP 200 na FASE 2.
+2. Status: `GET /v3/videos/{id}` — par comprovado em C0.3.
+3. `character.type` e `character.avatar_id` correspondendo ao tipo real do look (`digital_twin` → look `id` como `avatar_id`).
+4. `dimension` conforme a orientação do conteúdo:
+   - vertical (Reels/Stories): 1080×1920, look **portrait**
+   - horizontal (feed): 1280×720, look **landscape**
+   - **Proibido hardcodar uma única orientação.**
+5. Texto de teste limitado a **5 segundos de fala**. Restam 97 créditos de API e cada execução consome saldo real.
+
+**Restrições:**
+
+- Proibido refatorar, renomear ou reorganizar qualquer coisa fora do escopo.
+- Proibido antecipar C2, C3, C4 ou C5.
+- Proibido criar mock, stub, fallback ou valor default.
+- Proibido declarar sucesso sem prova externa.
+- Proibido escrever qualquer nova hipótese sobre a persona vazia.
+
+**Prova exigida:**
+
+1. Log cru `[HEYGEN][REQ]` e `[HEYGEN][RES]` de uma geração disparada **pelo serviço** — não por curl — com HTTP 200 e `video_id` retornado.
+2. `SELECT` real:
+   ```sql
+   SELECT id, media_job_id, media_job_provider, media_gen_status, media_urls, created_at
+   FROM social_presence_posts
+   ORDER BY created_at DESC LIMIT 3;
+   ```
+
+**Observação sobre a prova de C1:** se nenhum workspace tem persona salva, `generateAvatarVideo()` pode não ser alcançável pelo fluxo normal ainda. Nesse caso, é permitido — **exclusivamente para C1** — invocar a função diretamente com um look UUID real da conta HeyGen, deixando isso explícito no relatório. Não crie rota, endpoint nem UI para isso. A prova pelo fluxo completo da UI continua obrigatória no aceite final.
+
+**PARE ao final de C1. Não avance sozinho.**
