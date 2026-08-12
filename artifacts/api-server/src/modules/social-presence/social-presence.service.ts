@@ -8,6 +8,7 @@
 import { eq, and, or, desc, gte, gt, lt, lte, inArray, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Redis from "ioredis";
 import {
   db,
   socialPresenceConfigTable,
@@ -59,6 +60,54 @@ import {
   getInstagramMetrics,
   getTikTokMetrics,
 } from "../social/social.publisher.js";
+
+// ─── [C0.9] CONTENCAO — Redis-based kill-switch ──────────────────────────────
+// Flag persistida em Redis: nexos:flag:disable_video_generation
+// Alterável em <1ms via SET sem redeploy. Fail-safe: qualquer falha suprime.
+// Fallback secundário: env var DISABLE_SCHEDULED_VIDEO_GENERATION (também fail-safe).
+// NUNCA libera por ausência de dado — ausência = suprimir.
+
+let _flagRedisClient: Redis | null = null;
+
+function getFlagRedisClient(): Redis | null {
+  if (!env.REDIS_URL) return null;
+  if (!_flagRedisClient || _flagRedisClient.status === "end" || _flagRedisClient.status === "close") {
+    _flagRedisClient = new Redis(env.REDIS_URL, {
+      connectTimeout: 1000,
+      commandTimeout: 1000,
+      maxRetriesPerRequest: 0,
+      enableReadyCheck: false,
+      lazyConnect: false,
+    });
+    // Suppress unhandled error events — errors handled in shouldSuppressVideoGeneration catch
+    _flagRedisClient.on("error", () => undefined);
+  }
+  return _flagRedisClient;
+}
+
+async function shouldSuppressVideoGeneration(log?: Logger): Promise<boolean> {
+  // FAIL-SAFE: qualquer caminho de erro suprime — nunca libera por padrão.
+  try {
+    const client = getFlagRedisClient();
+    if (client) {
+      const val = await Promise.race([
+        client.get("nexos:flag:disable_video_generation"),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("redis_flag_timeout")), 800)),
+      ]);
+      if (val === "false") return false; // único caminho explícito de liberação via Redis
+      if (val === "true") return true;   // supressão explícita via Redis
+      // val === null (chave ausente) → cair para env var abaixo
+    }
+  } catch (err) {
+    // Redis inacessível, timeout ou erro inesperado → FAIL-SAFE: suprimir
+    if (log) {
+      log.warn({ err }, "[CONTENCAO] falha ao ler flag Redis — suprimindo por segurança (fail-safe)");
+    }
+    return true;
+  }
+  // Fallback: env var — também fail-safe (qualquer valor que não seja "false" suprime)
+  return process.env["DISABLE_SCHEDULED_VIDEO_GENERATION"] !== "false";
+}
 
 // Maximum number of times an operator may manually trigger "Publish Now" on a
 // failed post before it is permanently locked. Shared between publishPostNow()
@@ -1562,15 +1611,17 @@ export async function publishDuePresencePosts(): Promise<void> {
               const effectiveVoiceId = persona.heygenVoiceId || persona.voiceCloneId;
               if (persona.heygenAvatarId && effectiveVoiceId) {
                 // [C0.9 CONTENCAO] Trava de crédito HeyGen — suprime geração automática
-                // pelo scheduler quando DISABLE_SCHEDULED_VIDEO_GENERATION=true.
+                // pelo scheduler. Flag persistida em Redis (nexos:flag:disable_video_generation)
+                // — alterável em <1ms sem redeploy. Fail-safe: ausência/erro → suprimir.
+                // Fallback: env var DISABLE_SCHEDULED_VIDEO_GENERATION (também fail-safe).
                 // O botão manual "Gerar vídeo" NÃO é afetado (passa por routes.ts → approveStoryboardGenerateVideo diretamente).
                 // O continue abaixo também corrige o fall-through para linha ~1609 que
                 // sobrescrevia mediaGenStatus antes do setImmediate disparar — causando
                 // com_job_id=0 em produção (todos os 6 falhas anteriores têm essa causa).
-                if (process.env["DISABLE_SCHEDULED_VIDEO_GENERATION"] === "true") {
+                if (await shouldSuppressVideoGeneration(log)) {
                   log.info(
                     { "[CONTENCAO]": true, postId: post.id, workspaceId: post.workspaceId },
-                    "[CONTENCAO] geração de vídeo agendada suprimida por DISABLE_SCHEDULED_VIDEO_GENERATION — post não publicado",
+                    "[CONTENCAO] geração de vídeo agendada suprimida — post não publicado",
                   );
                   continue;
                 }

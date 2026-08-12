@@ -1,0 +1,55 @@
+DIAGNÓSTICO ACEITO — process.env é fixo no startup. Sua análise está
+correta e você a produziu sem ser confrontado. Registrado.
+
+PLANO DE DOIS DEPLOYS: REJEITADO.
+Furo que você não considerou: entre o deploy que sobe com "false" e o
+deploy que religa "true" existe uma janela de MINUTOS, não de 180s.
+Deploy não é instantâneo. Nesse intervalo o scheduler roda sem controle.
+E 4f398cdb (instagram/feed) vence às 22:45 UTC. O religamento
+instantâneo — que era a proteção inteira da operação — deixa de existir.
+
+ADOTAR A ALTERNATIVA QUE VOCÊ MESMO APONTOU: flag persistida.
+
+F1 — ONDE ARMAZENAR
+Avalie e recomende UMA, com arquivo:linha:
+  (a) tabela de configuração já existente no schema
+  (b) Redis/Upstash já em uso pelo BullMQ
+  (c) nova tabela mínima, se nada servir
+Critério: alterável por UPDATE/SET em milissegundos, sem deploy,
+consultada a cada tick.
+
+F2 — IMPLEMENTAÇÃO MÍNIMA
+  • ler a flag persistida a cada tick, no MESMO ponto onde hoje está
+    o check (social-presence.service.ts, linha ~1570)
+  • FAIL-SAFE OBRIGATÓRIO: se a leitura falhar por qualquer motivo —
+    erro de conexão, chave ausente, valor inválido — o comportamento
+    padrão é SUPRIMIR a geração, nunca liberar. Ausência de dado
+    jamais deve abrir a torneira.
+  • manter o env var como fallback secundário, também fail-safe
+  • log [CONTENCAO] preservado
+
+Antes de implementar: mostre o ponto exato de inserção e prove que o
+fail-safe cobre todos os caminhos de erro.
+
+F3 — DEPLOY ÚNICO
+Um deploy, com a flag persistida já em estado SUPRIMIR. Nada mais
+neste deploy. git status --porcelain e git diff --stat colados antes.
+
+F4 — VALIDAR O CONTROLE ANTES DE USAR
+Após o deploy, provar que o chaveamento funciona SEM gastar crédito:
+  1. confirmar estado suprimido — nenhuma escrita, quota 90
+  2. alterar a flag persistida para liberar
+  3. observar efeito no banco em ≤ 90s
+  4. AO PRIMEIRO SINAL: alterar de volta para suprimir, medindo o
+     tempo entre o comando e o efeito
+  5. reportar esse tempo — é a latência real de aborto da operação
+
+Se a latência de religamento for maior que um tick (60s), a operação
+não é segura. Reporte e PARE.
+
+RESTRIÇÕES
+Proibido o plano de dois deploys. Proibido gerar vídeo antes de F4
+concluído. Proibido publicar. Proibido alterar persona.
+Todo SELECT declara o host. Manter AUTOAUDITORIA.
+
+PARE ao final de F4.
