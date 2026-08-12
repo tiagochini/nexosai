@@ -1567,7 +1567,7 @@ export async function publishDuePresencePosts(): Promise<void> {
                 // O continue abaixo também corrige o fall-through para linha ~1609 que
                 // sobrescrevia mediaGenStatus antes do setImmediate disparar — causando
                 // com_job_id=0 em produção (todos os 6 falhas anteriores têm essa causa).
-                if (env.DISABLE_SCHEDULED_VIDEO_GENERATION) {
+                if (process.env["DISABLE_SCHEDULED_VIDEO_GENERATION"] === "true") {
                   log.info(
                     { "[CONTENCAO]": true, postId: post.id, workspaceId: post.workspaceId },
                     "[CONTENCAO] geração de vídeo agendada suprimida por DISABLE_SCHEDULED_VIDEO_GENERATION — post não publicado",
