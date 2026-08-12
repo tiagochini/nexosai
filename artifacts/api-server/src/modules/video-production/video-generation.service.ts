@@ -78,7 +78,7 @@ export function getAvailableVoiceProvider(): string | null {
 }
 
 const SETUP_INSTRUCTIONS = {
-  video: "Provedor de vídeo da NexOS não configurado (RUNWAY_API_KEY / FAL_API_KEY). Contate o time técnico.",
+  video: "Provedor de vídeo da NexOS não configurado (HeyGen). Configure seu avatar em Configurações → Persona.",
   avatar: "Provedor de avatar da NexOS não configurado (HEYGEN_API_KEY). Contate o time técnico.",
   voice: "Provedor de voz da NexOS não configurado (ELEVENLABS_API_KEY). Contate o time técnico.",
 };

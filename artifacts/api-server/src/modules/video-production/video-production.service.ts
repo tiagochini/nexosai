@@ -939,7 +939,7 @@ export function getVideoProviderStatus() {
     voiceProvider: process.env["ELEVENLABS_API_KEY"] ? "elevenlabs" : null,
     configured: Boolean(getAvailableVideoProvider()),
     instructions: {
-      video: "Configure RUNWAY_API_KEY (Runway ML) ou FAL_API_KEY (Kling via fal.ai)",
+      video: "Configure seu avatar HeyGen em Configurações → Persona para gerar vídeos",
       avatar: "Configure HEYGEN_API_KEY para vídeos com apresentador/avatar",
       voice: "Configure ELEVENLABS_API_KEY para clonagem de voz",
     },

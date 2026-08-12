@@ -2378,22 +2378,12 @@ export async function approveStoryboardGenerateVideo(
           aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "16:9",
         });
       } else {
-        // Fallback: vídeo cinematográfico sem avatar (Runway / Kling)
-        const script = post.videoScript?.trim() || post.reelScript?.trim();
-        const prompt = [
-          post.visualDirection,
-          script ? `Script context: ${script.slice(0, 300)}` : "",
-          `Platform: ${post.platform}, format: ${post.format}.`,
-          "High quality, cinematic, professional social media content. No text overlays.",
-        ].filter(Boolean).join(" ");
-
-        result = await generateVideoClip({
-          prompt,
-          durationSeconds: ["story", "reel"].includes(post.format) ? 10 : 8,
-          aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "1:1",
-          resolution: "1080p",
-          negativePrompt: "text, subtitles, watermark, low quality, blurry",
-        });
+        // Sem avatar HeyGen configurado → falhar com mensagem clara antes de tentar Runway/Kling
+        // Para reels/stories na presença social, HeyGen é o único provedor suportado.
+        const missingField = !persona.heygenAvatarId ? "avatar HeyGen" : "voz HeyGen";
+        throw new Error(
+          `Configure seu ${missingField} em Configurações → Persona para gerar reels e stories com vídeo.`,
+        );
       }
 
       if (result.status === "failed" || result.status === "provider_not_configured") {
