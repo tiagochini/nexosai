@@ -1,0 +1,82 @@
+# PROMPT — C0.4 + C1 (HeyGen / NexOS)
+
+> Cole tudo abaixo da linha no agente Replit. Não edite, não resuma.
+
+---
+
+## C0 ACEITO PARCIALMENTE — UMA LACUNA ANTES DE C1
+
+### C0.4 — CONTRADIÇÃO NÃO RESOLVIDA
+
+Os avatares existentes na conta HeyGen têm nomes gerados pelo próprio NexOS: "Meu Avatar NexOS" e "Teste NexOS b64". Isso prova que `POST /v3/avatars` foi executado pelo código e retornou sucesso.
+
+Portanto sua conclusão — "a persona nunca foi gravada" — só é válida se **nenhum** campo da persona estiver preenchido. Você consultou apenas `heygenAvatarId` e generalizou. Isso é insuficiente.
+
+Execute e cole o resultado cru, sem interpretação prévia:
+
+```sql
+SELECT id, name, settings->'persona' AS persona
+FROM workspaces
+WHERE settings->'persona' IS NOT NULL
+  AND settings->'persona' != '{}'::jsonb;
+```
+
+Com base **exclusivamente** no resultado, responda:
+
+- **(a)** `digitalTwinId` está preenchido em algum workspace? Cole o valor.
+- **(b)** Qualquer outro campo da persona está preenchido? Liste todos.
+- **(c)** Se `digitalTwinId` existe mas `heygenAvatarId` não, a causa real **não** é "nunca foi gravada" — é que o polling de `GET /me/persona/avatar-training-status` nunca foi concluído até o ponto que promove o `digitalTwinId` para `heygenAvatarId`.
+
+Corrija sua declaração de C0.1 conforme a evidência. Se a evidência contradisser o que você afirmou antes, diga isso explicitamente.
+
+### REGISTRAR NO BACKLOG — NÃO CORRIGIR AGORA
+
+`social-presence.service.ts:2584` executa:
+
+```
+const effectiveVoiceId = persona.heygenVoiceId || persona.voiceCloneId;
+```
+
+`voiceCloneId` é um ID da **ElevenLabs** sendo enviado para a API da **HeyGen**. São provedores distintos, com namespaces de ID incompatíveis. Esse fallback retorna HTTP 400 em 100% dos casos e nunca poderia ter funcionado.
+
+Registre. Não toque agora. Será tratado em C4.
+
+**PARE. Entregue C0.4 e aguarde.**
+
+---
+
+## C1 — CORRIGIR O PAYLOAD DE GERAÇÃO
+
+*(autorizado somente após C0.4 entregue)*
+
+**Escopo literal:** `video-generation.service.ts`, funções `generateAvatarVideo()` e `pollHeyGenJob()`. Nada além disso.
+
+**Alterações permitidas:**
+
+1. Submit: `POST /v2/video/generate` com `video_inputs: [{ character: {...}, voice: {...} }]` — formato comprovado com HTTP 200 na FASE 2.
+2. Status: `GET /v3/videos/{id}` — par comprovado em C0.3.
+3. `character.type` e `character.avatar_id` devem corresponder ao tipo real do look (`digital_twin` → usar o look `id` como `avatar_id`).
+4. `dimension` conforme a orientação do conteúdo:
+   - vertical (Reels/Stories): 1080×1920, usando o look **portrait**
+   - horizontal (feed): 1280×720, usando o look **landscape**
+   - **Proibido hardcodar uma única orientação.**
+5. Texto de teste limitado a **5 segundos de fala**. Os créditos de API são finitos (97 restantes) e cada teste consome saldo real.
+
+**Restrições:**
+
+- Proibido refatorar, renomear ou reorganizar qualquer coisa.
+- Proibido antecipar C2, C3, C4 ou C5.
+- Proibido criar mock, fallback, stub ou valor default.
+- Proibido declarar sucesso sem prova externa.
+
+**Prova exigida:**
+
+1. Log cru `[HEYGEN][REQ]` e `[HEYGEN][RES]` de uma geração disparada **pelo serviço** — não por curl — mostrando HTTP 200 e o `video_id` retornado.
+2. `SELECT` real mostrando `media_job_id` preenchido:
+   ```sql
+   SELECT id, media_job_id, media_job_provider, media_gen_status, media_urls, created_at
+   FROM social_presence_posts
+   ORDER BY created_at DESC LIMIT 3;
+   ```
+
+**PARE ao final de C1. Não avance sozinho.**
