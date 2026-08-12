@@ -1061,26 +1061,22 @@ export default function CloneDigitalPage() {
 
       <div className="space-y-5">
         {/* ── Card 1: Clone de Voz ──────────────────────────────────────────── */}
-        <div className={`rounded-2xl border p-6 transition-all ${hasVoice ? "border-green-500/30 bg-green-500/5" : "border-border/50 bg-background/40"}`}>
+        <div className={`rounded-2xl border p-6 transition-all ${hasVoice ? "border-green-500/30 bg-green-500/5" : "border-border/40 bg-background/40 opacity-70"}`}>
           <div className="flex items-start gap-4">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${hasVoice ? "bg-green-500/15 border border-green-500/30" : "bg-primary/10 border border-primary/30"}`}>
-              <Mic className={`h-5 w-5 ${hasVoice ? "text-green-400" : "text-primary"}`} />
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${hasVoice ? "bg-green-500/15 border border-green-500/30" : "bg-muted/40 border border-border/40"}`}>
+              <Mic className={`h-5 w-5 ${hasVoice ? "text-green-400" : "text-muted-foreground/50"}`} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h2 className="font-mono text-base font-bold">Clone de Voz</h2>
                 {hasVoice
                   ? <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20">Ativo</span>
-                  : canResumeVoice
-                    ? <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">{voiceResumeTakeCount}/5 takes</span>
-                    : <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">Não configurado</span>}
+                  : <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-muted/60 text-muted-foreground border border-border/40">Em breve</span>}
               </div>
               <p className="font-mono text-xs text-muted-foreground leading-relaxed">
                 {hasVoice
                   ? "Sua voz está clonada e pronta para narrar vídeos e anúncios automaticamente."
-                  : canResumeVoice
-                    ? `Você já gravou ${voiceResumeTakeCount} de 5 takes. Continue de onde parou — seus áudios estão salvos no servidor.`
-                    : "Grave 5 takes da mesma frase com emoções diferentes. Cada take é salvo automaticamente — se sair e voltar, retoma de onde parou."}
+                  : "Clone de voz estará disponível em breve."}
               </p>
               {hasVoice && persona?.voiceCloneId && (
                 <p className="font-mono text-[10px] text-muted-foreground/60 mt-1">ID: {persona.voiceCloneId.slice(0, 18)}…</p>
@@ -1088,31 +1084,13 @@ export default function CloneDigitalPage() {
             </div>
           </div>
 
-          <div className="mt-5 flex items-center gap-3 flex-wrap">
-            {hasVoice ? (
+          {hasVoice && (
+            <div className="mt-5 flex items-center gap-3 flex-wrap">
               <Button variant="outline" onClick={() => setActiveFlow("voice")} className="font-mono text-xs gap-2">
                 <RefreshCw className="h-3.5 w-3.5" /> Regravar clone de voz
               </Button>
-            ) : canResumeVoice ? (
-              <>
-                <Button onClick={() => setActiveFlow("voice")} className="font-mono gap-2 btn-weapon-primary">
-                  <Mic className="h-4 w-4" /> Retomar gravação ({voiceResumeTakeCount}/5)
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" onClick={() => setActiveFlow("voice")} className="font-mono text-xs text-muted-foreground">
-                  Começar do zero
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => setActiveFlow("voice")} className="font-mono gap-2">
-                <Mic className="h-4 w-4" /> Criar clone de voz agora
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            )}
-            {!hasVoice && !canResumeVoice && (
-              <span className="font-mono text-[11px] text-muted-foreground">≈ 5 minutos · câmera + microfone</span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* ── Card 2: Avatar Digital ────────────────────────────────────────── */}
