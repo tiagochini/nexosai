@@ -229,6 +229,30 @@ Promise.all([
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (heygen posts reset) failed")),
 
+  // V1.2-FIX: workspace 21aa4337 — swap Adriano stock voice → cloned voice + portrait look.
+  // Authorized one-time patch (snapshot taken, prompt V1.2). Self-disabling: WHERE guards old values.
+  db.execute(sqlRaw`
+    UPDATE workspaces
+    SET settings = jsonb_set(
+      jsonb_set(
+        settings,
+        '{persona,heygenVoiceId}',
+        '"6b7a93651c2b45958dc220e11a71b505"'
+      ),
+      '{persona,heygenAvatarId}',
+      '"5279d1ea433e4b9f8715a1b58c811260"'
+    )
+    WHERE id = '21aa4337-82db-4671-bd8c-acdbeb9f6495'
+      AND settings->'persona'->>'heygenVoiceId' = 'c8ac31e97555494fb8502599e6bc5461'
+      AND settings->'persona'->>'heygenAvatarId' = '7ecb72e295624b20b6b14ad98148744a'
+  `)
+    .then((result) => {
+      if (result.rowCount && result.rowCount > 0) {
+        logger.warn({ count: result.rowCount }, "Boot cleanup [V1.2]: patched workspace persona — portrait look + cloned voice");
+      }
+    })
+    .catch((err) => logger.error({ err }, "Boot cleanup [V1.2] (persona patch) failed")),
+
   // RC-FIX: Only reset campaigns stuck in "analyzing" for > 30 min.
   // Campaigns that JUST transitioned (e.g. fresh finalize before a restart) must NOT be reset,
   // or the user loses their work silently. 30 min is enough time for any real strategy run.

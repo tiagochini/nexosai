@@ -303,6 +303,7 @@ router.patch("/me/persona", async (req, res): Promise<void> => {
   const schema = z.object({
     voiceName:       z.string().max(80).optional(),
     heygenAvatarId:  z.string().max(200).optional(),
+    heygenVoiceId:   z.string().max(200).optional(),
     speakingStyle: z.object({
       energia:    z.enum(["baixa","moderada","alta","muito_alta"]).optional(),
       velocidade: z.enum(["lenta","moderada","rapida","variavel"]).optional(),
@@ -338,6 +339,7 @@ router.patch("/me/persona", async (req, res): Promise<void> => {
   const patch: Record<string, unknown> = {};
   if (parsed.data.voiceName             !== undefined) patch["voiceName"]             = parsed.data.voiceName;
   if (parsed.data.heygenAvatarId        !== undefined) patch["heygenAvatarId"]        = parsed.data.heygenAvatarId;
+  if (parsed.data.heygenVoiceId         !== undefined) patch["heygenVoiceId"]         = parsed.data.heygenVoiceId;
   if (parsed.data.speakingStyle         !== undefined) patch["speakingStyle"]         = parsed.data.speakingStyle;
   if (parsed.data.trejeitos             !== undefined) patch["trejeitos"]             = parsed.data.trejeitos;
   if (parsed.data.brandPresence         !== undefined) patch["brandPresence"]         = parsed.data.brandPresence;
