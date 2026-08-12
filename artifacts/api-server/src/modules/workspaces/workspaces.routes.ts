@@ -590,6 +590,66 @@ router.post(
   },
 );
 
+// ── In-memory chunk buffer for large video uploads ────────────────────────────
+// Keyed by `${workspaceId}:${kind}`. Cleared when all chunks received + assembled.
+const _uploadChunks = new Map<string, { chunks: (Buffer | null)[]; total: number; contentType: string }>();
+
+// POST /workspaces/me/persona/upload-chunk/:kind — chunked upload endpoint for large videos.
+// The Replit deployment proxy blocks single requests > ~32 MB (413).
+// Clients split the video into ≤8 MB pieces and POST each chunk separately.
+// Headers: X-Chunk-Index (0-based), X-Total-Chunks, optional X-Workspace-Id.
+// When the last chunk arrives the server reassembles and uploads to GCS.
+router.post(
+  "/me/persona/upload-chunk/:kind",
+  express.raw({ type: "*/*", limit: "9mb" }),
+  async (req, res): Promise<void> => {
+    const kind = req.params["kind"];
+    if (kind !== "training" && kind !== "consent") {
+      res.status(400).json({ error: "kind deve ser 'training' ou 'consent'" });
+      return;
+    }
+    const chunkIndex  = parseInt((req.headers["x-chunk-index"]  as string) ?? "0", 10);
+    const totalChunks = parseInt((req.headers["x-total-chunks"] as string) ?? "1", 10);
+    const contentType = ((req.headers["content-type"] ?? "video/webm") as string).split(";")[0]!.trim();
+    const workspaceId = req.auth.workspaceId;
+    const bufKey      = `${workspaceId}:${kind}`;
+
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ error: "Chunk vazio — envie o binário raw no body" });
+      return;
+    }
+
+    // Initialise or extend the buffer array
+    if (chunkIndex === 0 || !_uploadChunks.has(bufKey)) {
+      _uploadChunks.set(bufKey, { chunks: new Array(totalChunks).fill(null), total: totalChunks, contentType });
+    }
+    const session = _uploadChunks.get(bufKey)!;
+    session.chunks[chunkIndex] = req.body as Buffer;
+
+    const received = session.chunks.filter(Boolean).length;
+    req.log.info({ workspaceId, kind, chunkIndex, totalChunks, received, bytes: (req.body as Buffer).length }, "upload-chunk: received");
+
+    if (received < totalChunks) {
+      res.json({ chunkIndex, totalChunks, received, complete: false });
+      return;
+    }
+
+    // All chunks received — reassemble and push to GCS
+    _uploadChunks.delete(bufKey);
+    const combined = Buffer.concat(session.chunks as Buffer[]);
+    try {
+      const { personaMediaObjectKey, uploadBufferToGCS } = await import("../../lib/gcs-recordings.js");
+      const key = personaMediaObjectKey(workspaceId, kind as "training" | "consent");
+      await uploadBufferToGCS(combined, key, session.contentType);
+      req.log.info({ workspaceId, kind, bytes: combined.length, key }, "upload-chunk: GCS upload complete");
+      res.json({ key, bytes: combined.length, complete: true });
+    } catch (err) {
+      req.log.error({ err }, "upload-chunk: GCS upload failed");
+      res.status(500).json({ error: String(err), code: "GCS_UPLOAD_ERROR" });
+    }
+  },
+);
+
 // POST /workspaces/me/persona/clone-avatar-video — create HeyGen avatar from already-uploaded GCS videos.
 // Accepts { trainingKey, consentKey, frameBase64?, avatarName? } — videos must already be in GCS
 // via POST /me/persona/upload-video/:kind.  No base64 video in body (avoids 10 MB JSON limit).

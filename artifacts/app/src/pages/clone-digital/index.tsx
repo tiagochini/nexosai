@@ -229,16 +229,49 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   }
 
   async function uploadVideoRaw(blob: Blob, kind: "training" | "consent"): Promise<string> {
-    const base  = (import.meta as any).env?.BASE_URL ?? "/";
-    const url   = `${base}api/workspaces/me/persona/upload-video/${kind}`.replace("//", "/");
-    const token = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_access_token") ?? "";
-    const res   = await fetch(url, {
+    const base        = (import.meta as any).env?.BASE_URL ?? "/";
+    const token       = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_access_token") ?? "";
+    const contentType = blob.type || videoMime;
+    const authHeader  = token ? { "Authorization": `Bearer ${token}` } : {};
+
+    // Vídeos grandes (>8 MB) são enviados em chunks de 8 MB para contornar
+    // o limite de 413 do proxy do Replit em produção.
+    const CHUNK_SIZE = 8 * 1024 * 1024; // 8 MB
+
+    if (blob.size > CHUNK_SIZE) {
+      const totalChunks = Math.ceil(blob.size / CHUNK_SIZE);
+      const chunkUrl    = `${base}api/workspaces/me/persona/upload-chunk/${kind}`.replace("//", "/");
+      let finalKey      = "";
+
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const chunk = blob.slice(start, start + CHUNK_SIZE);
+        const res   = await fetch(chunkUrl, {
+          method:  "POST",
+          headers: {
+            "Content-Type":    contentType,
+            "X-Chunk-Index":   String(i),
+            "X-Total-Chunks":  String(totalChunks),
+            ...authHeader,
+          },
+          body: chunk,
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(`Upload ${kind} falhou (${res.status}): ${txt.slice(0, 200)}`);
+        }
+        const data = (await res.json()) as { key?: string; complete: boolean };
+        if (data.key) finalKey = data.key;
+      }
+      return finalKey;
+    }
+
+    // Vídeos pequenos: upload direto (caminho original)
+    const url = `${base}api/workspaces/me/persona/upload-video/${kind}`.replace("//", "/");
+    const res = await fetch(url, {
       method:  "POST",
-      headers: {
-        "Content-Type":  blob.type || videoMime,
-        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-      },
-      body: blob,
+      headers: { "Content-Type": contentType, ...authHeader },
+      body:    blob,
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
