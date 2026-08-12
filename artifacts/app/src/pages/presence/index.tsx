@@ -1180,7 +1180,7 @@ export default function PresencePage() {
         <ScheduleTestModal
           platforms={config.platforms.filter((p) => p.enabled && p.platform !== "linkedin")}
           onClose={() => setShowScheduleTest(false)}
-          onCreated={() => { void loadPosts(); setTab("queue"); }}
+          onCreated={() => { void loadPosts(); setTab("calendar"); }}
         />
       )}
       {showBio && config && (
@@ -2307,6 +2307,7 @@ function ScheduleTestModal({
   const [customMinutes, setCustomMinutes] = useState("");
   const [caption, setCaption] = useState("");
   const [creating, setCreating] = useState(false);
+  const [created, setCreated]   = useState<{ scheduledAt: string; format: FormatKey; platform: string } | null>(null);
 
   const FORMATS: { value: FormatKey; label: string; icon: string; desc: string }[] = [
     { value: "text",  label: "Texto",  icon: "📝", desc: "Sem imagem" },
@@ -2314,6 +2315,8 @@ function ScheduleTestModal({
     { value: "reel",  label: "Reel",   icon: "🎬", desc: "Vídeo + avatar" },
     { value: "story", label: "Story",  icon: "⬜", desc: "Story vertical" },
   ];
+
+  const isVideoFormat = format === "reel" || format === "story";
   const TIMINGS = [
     { label: "30 min", value: 30 },
     { label: "1 hora", value: 60 },
@@ -2333,13 +2336,9 @@ function ScheduleTestModal({
         method: "POST",
         body: JSON.stringify({ platform, format, minutesFromNow: effectiveMinutes, caption: caption.trim() || undefined }),
       });
-      toast.success(
-        format === "reel" || format === "story"
-          ? `✅ ${format === "reel" ? "Reel" : "Story"} agendado para ${scheduledAt} — aprove o storyboard quando aparecer na aba Aprovação Criativa`
-          : `✅ Publicação agendada para ${scheduledAt} — o scheduler vai publicar automaticamente`,
-      );
-      onCreated();
-      onClose();
+      // Não fecha o modal — mostra estado de confirmação com instruções claras
+      setCreated({ scheduledAt, format, platform });
+      onCreated(); // atualiza o calendário em background
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao criar publicação de teste.");
     } finally {
@@ -2360,7 +2359,80 @@ function ScheduleTestModal({
           Cria uma publicação real no calendário para provar que o scheduler publica automaticamente no horário marcado.
         </p>
 
-        {platforms.length === 0 ? (
+        {/* ── Estado de confirmação (após criar) ──────────────────────────── */}
+        {created ? (
+          <div className="mt-4 space-y-4">
+            <div className="rounded-xl border border-green-500/30 bg-green-500/8 p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                  <Check className="h-5 w-5 text-green-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-green-400">Publicação agendada! ✅</p>
+                  <p className="text-xs text-muted-foreground">
+                    {created.format === "reel" ? "Reel" : created.format === "story" ? "Story" : "Post"} em{" "}
+                    <strong className="text-foreground">{created.platform}</strong> — publicação às{" "}
+                    <strong className="text-foreground">{created.scheduledAt}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Instruções específicas por formato */}
+              {(created.format === "reel" || created.format === "story") ? (
+                <div className="space-y-2.5 rounded-lg border border-amber-500/20 bg-amber-500/8 p-3">
+                  <p className="text-xs font-semibold text-amber-400">⚠️ Ação necessária antes de publicar:</p>
+                  <ol className="space-y-1.5 text-xs text-amber-300/90">
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold shrink-0">1.</span>
+                      O sistema está gerando o storyboard do {created.format === "reel" ? "reel" : "story"} agora (~2 min)
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold shrink-0">2.</span>
+                      Quando terminar, um número aparecerá na aba <strong>"Aprovação Criativa"</strong> — clique lá para aprovar o storyboard
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold shrink-0">3.</span>
+                      Após aprovar, o HeyGen gera o vídeo e o scheduler publica automaticamente no horário
+                    </li>
+                  </ol>
+                  <p className="text-[11px] text-amber-400/70 border-t border-amber-500/20 pt-2">
+                    💡 Para um teste mais simples sem etapa de aprovação, use <strong>Texto (Facebook)</strong> — publica direto no horário sem nenhuma ação.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-primary">O que acontece agora:</p>
+                  <ol className="space-y-1 text-xs text-muted-foreground">
+                    {(created.format === "post" || created.format === "text") && created.platform === "instagram" && (
+                      <li className="flex items-start gap-2"><span className="shrink-0">•</span>A IA está gerando a imagem (~1 min)</li>
+                    )}
+                    <li className="flex items-start gap-2">
+                      <span className="shrink-0">•</span>
+                      O post aparece no <strong className="text-foreground">Calendário da Semana</strong> com um timer de contagem regressiva
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="shrink-0">•</span>
+                      Às <strong className="text-foreground">{created.scheduledAt}</strong> o scheduler publica automaticamente — sem nenhuma ação sua
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="shrink-0">•</span>
+                      Você receberá uma notificação do browser quando publicar
+                    </li>
+                  </ol>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={onClose}>
+                <CalendarDays className="mr-2 h-4 w-4" /> Ver no Calendário
+              </Button>
+              <Button variant="outline" onClick={() => setCreated(null)} className="text-xs">
+                Criar outro
+              </Button>
+            </div>
+          </div>
+        ) : platforms.length === 0 ? (
           <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-sm text-amber-400">
             Nenhuma plataforma conectada. Conecte o Instagram, Facebook ou TikTok em Configurações.
           </div>
@@ -2391,10 +2463,10 @@ function ScheduleTestModal({
                   ℹ️ Instagram não aceita texto puro — será gerado um card visual automaticamente.
                 </p>
               )}
-              {(format === "reel" || format === "story") && (
-                <p className="text-[11px] text-muted-foreground">
-                  Reels e stories precisam de avatar configurado em Configurações → Persona para gerar o vídeo.
-                </p>
+              {isVideoFormat && (
+                <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-[11px] text-amber-400">
+                  ⚠️ Reels e stories requerem aprovação do storyboard antes de publicar — não publicam sozinhos sem uma etapa manual sua. Para testar publicação automática completa, escolha <strong>Texto</strong> ou <strong>Foto</strong>.
+                </div>
               )}
             </div>
 
