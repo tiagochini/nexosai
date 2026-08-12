@@ -779,23 +779,42 @@ export default function PresencePage() {
                   {upcoming.map((p) => {
                     const msLeft = new Date(p.scheduledFor!).getTime() - nowTick;
                     const PlatIcon = PLATFORM_META[p.platform]?.icon ?? Share2;
+                    const hasIssue = !!p.errorMessage || (
+                      (p.platform === "instagram" || p.platform === "tiktok") &&
+                      (!p.mediaUrls || (p.mediaUrls as string[]).length === 0)
+                    );
                     return (
-                      <div
+                      <button
                         key={p.id}
-                        className="flex items-center gap-3 rounded-lg border border-border bg-background/60 px-3 py-2.5"
+                        onClick={() => openMediaDrawer(p.id)}
+                        className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors hover:bg-muted/40 active:scale-[0.98] ${
+                          hasIssue
+                            ? "border-amber-500/40 bg-amber-500/5"
+                            : "border-border bg-background/60"
+                        }`}
+                        title="Clique para ver o post"
                       >
                         <PlatIcon className={`h-4 w-4 shrink-0 ${PLATFORM_META[p.platform]?.cls ?? ""}`} />
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-xs font-medium capitalize">{p.format}</div>
-                          <div className="text-xs text-muted-foreground truncate">{p.postingTime}</div>
+                          <div className="flex items-center gap-1">
+                            <span className="truncate text-xs font-medium capitalize">{p.format}</span>
+                            {hasIssue && <AlertTriangle className="h-3 w-3 text-amber-400 shrink-0" />}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground truncate">
+                            {p.errorMessage
+                              ? <span className="text-amber-400">{p.errorMessage.slice(0, 40)}…</span>
+                              : p.postingTime}
+                          </div>
                         </div>
                         <div className="shrink-0 text-right">
-                          <div className="font-mono text-sm font-bold text-primary tabular-nums">
+                          <div className={`font-mono text-sm font-bold tabular-nums ${hasIssue ? "text-amber-400" : "text-primary"}`}>
                             {fmt(msLeft)}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">entra no ar</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {hasIssue ? "com problema" : "entra no ar"}
+                          </div>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
