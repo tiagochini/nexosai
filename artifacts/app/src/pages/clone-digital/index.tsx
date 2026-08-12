@@ -135,6 +135,8 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   const [demoVideoUrl, setDemoVideoUrl]   = useState<string | null>(null);
   const [demoGenerating, setDemoGenerating] = useState(false);
   const [demoError, setDemoError]         = useState<string | null>(null);
+  const [demoStillProcessing, setDemoStillProcessing] = useState(false);
+  const demoRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [videoMime, setVideoMime]     = useState("video/webm");
   const [error, setError]             = useState<string | null>(null);
   const [trainingStatus, setTrainingStatus] = useState<string | null>(null);
@@ -156,6 +158,7 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
       streamRef.current?.getTracks().forEach(t => t.stop());
       if (pollRef.current) clearInterval(pollRef.current);
       if (demoPollRef.current) clearInterval(demoPollRef.current);
+      if (demoRetryRef.current) clearTimeout(demoRetryRef.current);
     };
   }, []);
 
@@ -344,10 +347,27 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   async function generateDemo() {
     setDemoGenerating(true);
     setDemoError(null);
+    setDemoStillProcessing(false);
+    if (demoRetryRef.current) { clearTimeout(demoRetryRef.current); demoRetryRef.current = null; }
     try {
-      const { jobId } = await customFetch<{ jobId: string }>("/api/workspaces/me/persona/generate-avatar-demo", {
-        method: "POST",
-      });
+      const result = await customFetch<{ jobId?: string; error?: string; code?: string; retryAfterSeconds?: number }>(
+        "/api/workspaces/me/persona/generate-avatar-demo",
+        { method: "POST" },
+      );
+
+      // Avatar ainda em processamento interno no HeyGen — temporário, auto-retry
+      if (result.code === "AVATAR_STILL_PROCESSING") {
+        setDemoStillProcessing(true);
+        setDemoGenerating(false);
+        const retryMs = (result.retryAfterSeconds ?? 60) * 1000;
+        demoRetryRef.current = setTimeout(() => {
+          demoRetryRef.current = null;
+          void generateDemo();
+        }, retryMs);
+        return;
+      }
+
+      const jobId = result.jobId!;
       setDemoJobId(jobId);
       // Polling para URL do vídeo
       if (demoPollRef.current) clearInterval(demoPollRef.current);
@@ -368,6 +388,17 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
         } catch { /* keep polling */ }
       }, 6000);
     } catch (err: any) {
+      // customFetch throws on non-2xx — checar se o body tem code AVATAR_STILL_PROCESSING
+      const code = err?.body?.code ?? err?.code;
+      if (code === "AVATAR_STILL_PROCESSING") {
+        setDemoStillProcessing(true);
+        setDemoGenerating(false);
+        demoRetryRef.current = setTimeout(() => {
+          demoRetryRef.current = null;
+          void generateDemo();
+        }, 60_000);
+        return;
+      }
       setDemoError(err?.message ?? "Erro ao gerar demonstração");
       setDemoGenerating(false);
     }
@@ -678,6 +709,21 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
                     O HeyGen está renderizando seu avatar falando. ~2 min.
                   </p>
                 </div>
+              </div>
+            ) : demoStillProcessing ? (
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <Loader2 className="h-4 w-4 text-blue-400 shrink-0 mt-0.5 animate-spin" />
+                  <div>
+                    <p className="font-mono text-xs font-bold text-blue-300">Avatar em processamento final</p>
+                    <p className="font-mono text-[11px] text-blue-400 mt-0.5">
+                      O HeyGen ainda está preparando seu avatar internamente. Tentando novamente em 60 segundos automaticamente…
+                    </p>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={generateDemo} className="font-mono text-xs gap-1.5 w-full">
+                  <RotateCcw className="h-3.5 w-3.5" /> Tentar agora
+                </Button>
               </div>
             ) : demoError ? (
               <div className="space-y-2">

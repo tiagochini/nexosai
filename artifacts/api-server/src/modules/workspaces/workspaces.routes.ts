@@ -941,6 +941,35 @@ router.post("/me/persona/generate-avatar-demo", async (req, res): Promise<void> 
     return;
   }
 
+  // Pre-flight: verificar se o look específico já terminou de processar no HeyGen.
+  // O HeyGen salva o look UUID quando o grupo fica "completed", mas o look individual
+  // pode ainda estar em processamento interno por vários minutos.
+  // GET /v3/avatars/looks/{lookId} retorna { data: { id, status: "processing"|"completed"|"failed" } }
+  try {
+    const lookStatusRes = await fetch(`https://api.heygen.com/v3/avatars/looks/${heygenAvatarId}`, {
+      headers: { "X-Api-Key": heygenKey },
+    });
+    if (lookStatusRes.ok) {
+      const lookStatusData = (await lookStatusRes.json()) as { data?: { status?: string } };
+      const lookStatus = lookStatusData.data?.status;
+      req.log.info({ workspaceId, heygenAvatarId, lookStatus }, "Avatar demo: pre-flight look status check");
+      if (lookStatus && lookStatus !== "completed") {
+        // Look ainda em processamento — retornar imediatamente sem chamar geração
+        res.status(202).json({
+          error: "O HeyGen ainda está finalizando o processamento interno do avatar. Aguarde alguns minutos e tente novamente.",
+          code: "AVATAR_STILL_PROCESSING",
+          retryAfterSeconds: 60,
+          lookStatus,
+        });
+        return;
+      }
+    }
+    // Se /looks/{id} falhar ou retornar status desconhecido, tentar gerar mesmo assim
+    // (o erro do HeyGen será capturado por generateAvatarVideo)
+  } catch (lookErr) {
+    req.log.warn({ lookErr, heygenAvatarId }, "Avatar demo: pre-flight look check failed — proceeding anyway");
+  }
+
   // Resolver voice ID: usar o configurado ou buscar voz padrão PT-BR
   let voiceId = heygenVoiceId;
   if (!voiceId) {
@@ -969,6 +998,16 @@ router.post("/me/persona/generate-avatar-demo", async (req, res): Promise<void> 
     if (result.status === "submitted" && result.jobId) {
       req.log.info({ workspaceId, jobId: result.jobId }, "Avatar demo: geração iniciada ✓");
       res.json({ jobId: result.jobId, status: "generating" });
+      return;
+    }
+    // Avatar ainda em processamento interno no HeyGen — erro temporário, não permanente
+    if (result.status === "avatar_still_processing") {
+      req.log.info({ workspaceId }, "Avatar demo: look ainda em processamento no HeyGen");
+      res.status(202).json({
+        error: "O HeyGen ainda está finalizando o processamento interno do avatar. Aguarde alguns minutos e tente novamente.",
+        code: "AVATAR_STILL_PROCESSING",
+        retryAfterSeconds: 60,
+      });
       return;
     }
     res.status(500).json({ error: result.error ?? "Falha ao iniciar geração do demo", code: "GENERATION_FAILED" });

@@ -23,7 +23,7 @@ import { logger } from "../../lib/logger.js";
 
 const log = logger.child({ component: "video-generation" });
 
-export type VideoGenStatus = "submitted" | "processing" | "ready" | "failed" | "provider_not_configured";
+export type VideoGenStatus = "submitted" | "processing" | "ready" | "failed" | "provider_not_configured" | "avatar_still_processing";
 
 export interface VideoClipResult {
   status: VideoGenStatus;
@@ -246,6 +246,18 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
         return {
           status: "failed",
           error: "Avatar HeyGen inválido ou expirado — vá em Configurações → Persona e selecione um novo avatar da lista atualizada.",
+          provider: "heygen",
+        };
+      }
+      // Avatar look ainda em processamento interno — erro temporário, não uma falha permanente
+      if (
+        errText.includes("still processing") ||
+        errText.includes("cannot be used to create") ||
+        errText.includes("invalid_parameter")
+      ) {
+        return {
+          status: "avatar_still_processing",
+          error: "O HeyGen ainda está finalizando o processamento interno do avatar. Aguarde alguns minutos e tente novamente.",
           provider: "heygen",
         };
       }
