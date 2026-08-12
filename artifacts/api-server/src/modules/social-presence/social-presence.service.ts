@@ -1311,6 +1311,46 @@ export async function publishDuePresencePosts(): Promise<void> {
       )
       .catch(() => {});
 
+    // ── Recuperação 3: PUBLISH-NO-MATTER-WHAT ─────────────────────────────────
+    // Posts em "draft" com scheduledFor vencido nunca devem ficar parados
+    // aguardando aprovação do usuário. Promove para "scheduled" e usa o
+    // storyboard disponível como mídia definitiva se já foi gerado.
+    try {
+      const overdraftPosts = await db
+        .select()
+        .from(socialPresencePostsTable)
+        .where(
+          and(
+            eq(socialPresencePostsTable.status, "draft"),
+            lte(socialPresencePostsTable.scheduledFor, now),
+          ),
+        )
+        .limit(10);
+      for (const op of overdraftPosts) {
+        // Aguardar se mídia ainda está sendo gerada neste ciclo
+        if (op.mediaGenStatus === "storyboard_generating" || op.mediaGenStatus === "video_generating") continue;
+        const sbUrls =
+          Array.isArray(op.storyboardUrls) && (op.storyboardUrls as string[]).length > 0
+            ? (op.storyboardUrls as string[])
+            : null;
+        await db
+          .update(socialPresencePostsTable)
+          .set({
+            status: "scheduled",
+            ...(sbUrls ? { mediaUrls: sbUrls, mediaGenStatus: null } : {}),
+            errorMessage: null,
+          })
+          .where(eq(socialPresencePostsTable.id, op.id))
+          .catch(() => {});
+        log.info(
+          { postId: op.id, hadStoryboard: !!sbUrls, format: op.format },
+          "presence: draft vencido → promovido para scheduled (publish-no-matter-what)",
+        );
+      }
+    } catch (recErr) {
+      log.warn({ err: recErr }, "presence: recuperação 3 (overdue drafts) falhou (não-fatal)");
+    }
+
     const due = await db
       .select()
       .from(socialPresencePostsTable)
@@ -1394,13 +1434,32 @@ export async function publishDuePresencePosts(): Promise<void> {
                     log.warn({ err: e, postId: post.id }, "presence: auto video gen error (non-fatal)"),
                   ),
                 );
-              } else if (!post.errorMessage?.includes("Configure um avatar")) {
-                await db
-                  .update(socialPresencePostsTable)
-                  .set({ errorMessage: "Configure um avatar em Configurações → Persona para gerar vídeos automaticamente." })
-                  .where(eq(socialPresencePostsTable.id, post.id));
+              } else {
+                // Sem avatar → fallback: usar storyboard como imagem (publish-no-matter-what)
+                const sbUrls =
+                  Array.isArray(post.storyboardUrls) && (post.storyboardUrls as string[]).length > 0
+                    ? (post.storyboardUrls as string[])
+                    : null;
+                if (sbUrls) {
+                  log.info({ postId: post.id }, "presence: sem avatar → storyboard como imagem (publish-no-matter-what)");
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ mediaUrls: sbUrls, mediaGenStatus: null, errorMessage: null })
+                    .where(eq(socialPresencePostsTable.id, post.id));
+                  emitWorkspaceAlert(
+                    post.workspaceId,
+                    "presence_post_fallback_image",
+                    `📸 Reel será publicado como imagem — avatar não configurado. Configure em Configurações → Persona para vídeos.`,
+                    { postId: post.id, platform: post.platform, format: post.format, canEdit: true },
+                  );
+                } else if (!post.errorMessage?.includes("Configure um avatar")) {
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ errorMessage: "Configure um avatar em Configurações → Persona para gerar vídeos automaticamente." })
+                    .where(eq(socialPresencePostsTable.id, post.id));
+                }
+                continue;
               }
-              continue;
             }
 
             // Rascunho SVG (storyboard_draft) — aguardar substituição ou geração IA
@@ -1464,9 +1523,20 @@ export async function publishDuePresencePosts(): Promise<void> {
             if (gs === "storyboard_generating") {
               continue;
             }
-            // Gerado — aguardar aprovação do usuário
+            // Gerado — auto-aprovar: usar storyboard como mídia definitiva (publish-no-matter-what)
             if (gs === "storyboard_ready" || gs === "storyboard_draft") {
-              if (!post.errorMessage?.includes("Aprovação pendente")) {
+              const sbUrls =
+                Array.isArray(post.storyboardUrls) && (post.storyboardUrls as string[]).length > 0
+                  ? (post.storyboardUrls as string[])
+                  : null;
+              if (sbUrls) {
+                log.info({ postId: post.id }, "presence: storyboard pronto → auto-aprovado (publish-no-matter-what)");
+                await db
+                  .update(socialPresencePostsTable)
+                  .set({ mediaUrls: sbUrls, mediaGenStatus: null, errorMessage: null })
+                  .where(eq(socialPresencePostsTable.id, post.id));
+                // Publicará no próximo tick com mediaUrls preenchido
+              } else if (!post.errorMessage?.includes("Aprovação pendente")) {
                 await db
                   .update(socialPresencePostsTable)
                   .set({ errorMessage: "Aprovação pendente — abra o post e aprove a imagem gerada pela IA para publicar." })
@@ -1599,13 +1669,18 @@ export async function publishDuePresencePosts(): Promise<void> {
           contentPieceId: null,
           integrationId: integration.id,
           platform: (post.platform === "facebook" ? "facebook_page" : post.platform) as never,
-          postType: (
-            post.format === "reel" ? "reel"
-            : post.format === "story" ? "story"
-            : post.format === "carousel" ? "carousel"
-            : post.format === "feed_video" ? "feed_video"
-            : "feed_image"
-          ) as never,
+          postType: (() => {
+            // Se o formato é vídeo mas a mídia real é imagem (fallback storyboard),
+            // usar feed_image para evitar rejeição na API de Reels do Instagram.
+            const hasVideoMedia = mediaUrls.some((u) => /\.(mp4|webm|mov)(\?|$)/i.test(u));
+            if (post.format === "reel" && !hasVideoMedia) return "feed_image";
+            if (post.format === "feed_video" && !hasVideoMedia) return "feed_image";
+            if (post.format === "reel") return "reel";
+            if (post.format === "story") return "story";
+            if (post.format === "carousel") return "carousel";
+            if (post.format === "feed_video") return "feed_video";
+            return "feed_image";
+          })() as never,
           status: "publishing" as never,
           caption,
           hashtags,
@@ -2378,8 +2453,17 @@ export async function approveStoryboardGenerateVideo(
           aspectRatio: ["reel", "story"].includes(post.format) ? "9:16" : "16:9",
         });
       } else {
-        // Sem avatar HeyGen configurado → falhar com mensagem clara antes de tentar Runway/Kling
-        // Para reels/stories na presença social, HeyGen é o único provedor suportado.
+        // Sem avatar HeyGen → fallback: usar storyboard como imagem (publish-no-matter-what)
+        const sbUrls = Array.isArray(post.storyboardUrls) ? (post.storyboardUrls as string[]) : [];
+        if (sbUrls.length > 0) {
+          log.info({ postId }, "presence: approveStoryboard — sem avatar → usando storyboard como imagem");
+          await db
+            .update(socialPresencePostsTable)
+            .set({ mediaGenStatus: null, mediaUrls: sbUrls, errorMessage: null })
+            .where(eq(socialPresencePostsTable.id, postId));
+          return updating; // próximo tick do scheduler publica como feed_image
+        }
+        // Sem storyboard ainda — configuração necessária
         const missingField = !persona.heygenAvatarId ? "avatar HeyGen" : "voz HeyGen";
         throw new Error(
           `Configure seu ${missingField} em Configurações → Persona para gerar reels e stories com vídeo.`,
@@ -2991,10 +3075,14 @@ export async function processDmSequences(): Promise<void> {
         );
 
         const nextStep = seq.currentStep + 1;
-        const nextStepData = seq.steps[nextStep];
+        const nextStepData = seq.steps[nextStep] as (typeof seq.steps[number] & { triggerKeyword?: string }) | undefined;
 
         if (nextStepData) {
-          const nextStepAt = new Date(now.getTime() + nextStepData.delayMinutes * 60 * 1000);
+          // Se o próximo step tem triggerKeyword, aguardar resposta do usuário (até 7 dias)
+          // em vez de agendar por tempo. handleIncomingDmReply() avança quando keyword chega.
+          const nextStepAt = nextStepData.triggerKeyword
+            ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+            : new Date(now.getTime() + nextStepData.delayMinutes * 60 * 1000);
           await db
             .update(instagramDmSequencesTable)
             .set({ currentStep: nextStep, nextStepAt })
@@ -3102,6 +3190,60 @@ export async function handleInstagramDmTrigger(
     }
   } catch (err) {
     log.warn({ err }, "handleInstagramDmTrigger: error (non-fatal)");
+  }
+}
+
+// ─── DM Reply Handler: avança sequência quando usuário responde com keyword ──────
+/**
+ * Chamado quando o usuário responde a um DM com uma palavra-chave esperada.
+ * Implementa o fluxo: Step 0 → "SEGUINDO" → entrega conteúdo → "COMPARTILHEI" → bônus.
+ * Suporte ao requisito de Meta App Review: follow + share para desbloquear entregas.
+ */
+export async function handleIncomingDmReply(
+  igAccountId: string,
+  senderId: string,
+  messageText: string,
+): Promise<void> {
+  const log = logger.child({ component: "dm-reply-handler", igAccountId });
+  try {
+    const keyword = messageText.trim().toUpperCase();
+
+    // Buscar sequências ativas para este usuário nesta conta Instagram
+    const sequences = await db
+      .select()
+      .from(instagramDmSequencesTable)
+      .where(
+        and(
+          eq(instagramDmSequencesTable.igAccountId, igAccountId),
+          eq(instagramDmSequencesTable.recipientId, senderId),
+          isNull(instagramDmSequencesTable.completedAt),
+        ),
+      )
+      .limit(5);
+
+    for (const seq of sequences) {
+      const currentStepData = seq.steps[seq.currentStep] as
+        | (typeof seq.steps[number] & { triggerKeyword?: string })
+        | undefined;
+
+      if (!currentStepData?.triggerKeyword) continue; // step por tempo, não por keyword
+      if (currentStepData.triggerKeyword.toUpperCase() !== keyword) continue;
+
+      // Keyword confere → avançar sequência imediatamente (nextStepAt = now)
+      await db
+        .update(instagramDmSequencesTable)
+        .set({ nextStepAt: new Date() })
+        .where(eq(instagramDmSequencesTable.id, seq.id));
+
+      log.info(
+        { seqId: seq.id, keyword, step: seq.currentStep },
+        "dm-reply: keyword recebida → sequência avançada imediatamente",
+      );
+      setImmediate(() => processDmSequences().catch(() => {}));
+      return; // Só processa a primeira sequência ativa que bater
+    }
+  } catch (err) {
+    log.warn({ err }, "handleIncomingDmReply: error (non-fatal)");
   }
 }
 

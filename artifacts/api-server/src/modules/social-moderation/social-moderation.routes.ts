@@ -216,6 +216,28 @@ router.post("/webhooks/meta", (req, res): void => {
             igAccountId: entry.id,
           });
         }
+
+        // ── DM replies: avança sequência por keyword (SEGUINDO, COMPARTILHEI…) ──────
+        // Instagram envia DMs recebidos via entry.messaging[] — separado de entry.changes[].
+        // Necessário para o fluxo: comentar keyword → seguir → receber conteúdo → compartilhar → bônus.
+        for (const msgEvent of ((entry as Record<string, unknown>).messaging as unknown[] | undefined) ?? []) {
+          const me = msgEvent as Record<string, unknown>;
+          const sender = me?.sender as Record<string, string> | undefined;
+          const msg = me?.message as Record<string, unknown> | undefined;
+          const senderId = sender?.id;
+          const msgText = msg?.text as string | undefined;
+          const isEcho = msg?.is_echo as boolean | undefined;
+          if (!senderId || !msgText || isEcho) continue;
+          // Não processar eco das nossas próprias mensagens
+          if (senderId === entry.id) continue;
+          setImmediate(() =>
+            import("../social-presence/social-presence.service.js")
+              .then(({ handleIncomingDmReply }) =>
+                handleIncomingDmReply(entry.id, senderId, msgText),
+              )
+              .catch(() => {}),
+          );
+        }
       }
     } catch (err) {
       req.log.error({ err }, "Meta webhook processing error");

@@ -10,13 +10,19 @@ import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { Logger } from "pino";
 
 export interface DmResponseStep {
-  delayMinutes: number; // 0 = imediato
+  delayMinutes: number; // 0 = imediato (ignorado se triggerKeyword estiver definido)
   message: string;
+  /**
+   * Se definido, o step aguarda ESTA palavra-chave como resposta do usuário no DM
+   * (ex: "SEGUINDO", "COMPARTILHEI") — NÃO dispara por tempo.
+   * Steps sem triggerKeyword disparam por tempo (delayMinutes).
+   */
+  triggerKeyword?: string;
 }
 
 export interface DmResponseFlow {
-  triggerKeyword: string;       // ex: "QUERO"
-  triggerInstructions: string;  // texto que vai na caption: "Mande QUERO no DM"
+  triggerKeyword: string;       // palavra que o usuário comenta para iniciar (ex: "MAPA")
+  triggerInstructions: string;  // texto na caption que pede o comentário: "Comente MAPA"
   steps: DmResponseStep[];
 }
 
@@ -160,9 +166,20 @@ A única exceção é quando o próprio cliente vende produtos de IA/tecnologia 
 - highlightName: SEMPRE defina o nome do Destaque onde este story deve ser arquivado após expirar (ex: "Resultados", "Bastidores", "Ofertas", "Dicas", "Depoimentos"). Isso garante que o story viva além das 24h.
 
 **DM FLOW (quando aplicável):**
-- Se o post tiver uma CTA que induz resposta no DM (ex: "mande X no DM", "responda QUERO", "comente e te mando no DM") → preencha dmResponseFlow com a sequência de respostas automáticas planejadas
-- A triggerKeyword deve ser simples (1 palavra, maiúscula)
-- steps: mínimo 2 passos — o imediato (delayMinutes: 0) e um follow-up (ex: 60 min depois)
+- Se o post tiver uma CTA de comentário com keyword (ex: "Comente MAPA", "Digite GUIA nos comentários") → preencha dmResponseFlow com sequência de 3 steps obrigatórios.
+- A triggerKeyword deve ser 1 palavra simples, maiúscula (ex: "MAPA", "GUIA", "LISTA", "RECEITA").
+- Estrutura OBRIGATÓRIA de 3 steps para todo dmResponseFlow:
+
+  **Step 0** — Boas-vindas imediato (delayMinutes: 0, SEM triggerKeyword):
+  Mensagem calorosa que agradece o interesse, cita o conteúdo prometido, e pede UMA ação: "Para receber [o material], siga nossa conta @[handle] e responda aqui com SEGUINDO assim que fizer isso 👇"
+  O conteúdo prometido (e-book, link, checklist, receita, etc.) deve ser específico para o nicho do negócio.
+
+  **Step 1** — Entrega do conteúdo principal (triggerKeyword: "SEGUINDO"):
+  Só dispara quando o usuário responder "SEGUINDO". Entregar o conteúdo real: link, PDF, script, lista de dicas — algo de valor genuíno relacionado ao post. Encerrar com: "Para ganhar [bônus], compartilhe esse post nos seus stories e responda aqui com COMPARTILHEI 🔥"
+
+  **Step 2** — Entrega do bônus (triggerKeyword: "COMPARTILHEI"):
+  Só dispara quando o usuário responder "COMPARTILHEI". Entregar o bônus exclusivo: template, desconto, acesso antecipado, material extra. Sempre encerrar agradecendo e com uma CTA suave para seguir acompanhando o perfil.
+
 - Se o post não tem CTA de DM → dmResponseFlow: null
 
 **Retorne APENAS JSON válido:**
@@ -184,11 +201,23 @@ A única exceção é quando o próprio cliente vende produtos de IA/tecnologia 
       "videoScript": "string — mesmo conteúdo que reelScript (mantido por compatibilidade)",
       "highlightName": "string — APENAS para stories: nome do Destaque alvo",
       "dmResponseFlow": {
-        "triggerKeyword": "QUERO",
-        "triggerInstructions": "Mande QUERO no DM e te envio o link",
+        "triggerKeyword": "MAPA",
+        "triggerInstructions": "Comente MAPA e te envio o material grátis",
         "steps": [
-          { "delayMinutes": 0, "message": "Olá! Aqui está o link prometido: ..." },
-          { "delayMinutes": 60, "message": "Conseguiu acessar? Me conta o que achou!" }
+          {
+            "delayMinutes": 0,
+            "message": "Oi! Obrigado por comentar 😊 Para receber o [conteúdo específico], siga nossa conta e responda aqui com SEGUINDO assim que fizer isso 👇"
+          },
+          {
+            "triggerKeyword": "SEGUINDO",
+            "delayMinutes": 0,
+            "message": "Perfeito! Aqui está o seu [conteúdo]: [link ou material real e específico para o nicho]. Para ganhar também o [bônus exclusivo], compartilhe esse post nos seus stories e responda aqui com COMPARTILHEI 🔥"
+          },
+          {
+            "triggerKeyword": "COMPARTILHEI",
+            "delayMinutes": 0,
+            "message": "Você é incrível! Aqui está o seu bônus: [bônus exclusivo e específico para o nicho]. Obrigado por compartilhar — nos vemos no próximo conteúdo! 🙌"
+          }
         ]
       },
       "objective": "string — o que este post deve causar",

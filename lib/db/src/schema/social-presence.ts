@@ -70,13 +70,19 @@ export type PresencePostMetrics = {
 
 /** Resposta automática planejada para DM induzido por CTA no post */
 export type DmResponseStep = {
-  delayMinutes: number; // 0 = imediato
+  delayMinutes: number; // 0 = imediato (ignorado se triggerKeyword estiver definido)
   message: string;
+  /**
+   * Se definido, este step NÃO dispara por tempo — aguarda o usuário responder
+   * exatamente esta palavra-chave no DM (case-insensitive). Ex: "SEGUINDO", "COMPARTILHEI".
+   * Steps SEM triggerKeyword disparam por tempo (delayMinutes).
+   */
+  triggerKeyword?: string;
 };
 
 export type DmResponseFlow = {
-  triggerKeyword: string;      // palavra-chave que dispara o fluxo (ex: "QUERO")
-  triggerInstructions: string; // texto da CTA no post ("Mande QUERO no DM")
+  triggerKeyword: string;      // palavra-chave que dispara o fluxo (ex: "MAPA")
+  triggerInstructions: string; // texto da CTA no post ("Comente MAPA")
   steps: DmResponseStep[];
 };
 
