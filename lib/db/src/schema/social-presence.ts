@@ -78,6 +78,16 @@ export type DmResponseStep = {
    * Steps SEM triggerKeyword disparam por tempo (delayMinutes).
    */
   triggerKeyword?: string;
+  /**
+   * Mensagem de lembrete enviada automaticamente quando o tempo de espera pelo
+   * triggerKeyword expira (7 dias). Avisa o usuário que o bônus expira hoje e
+   * convida a responder o keyword para resgatar. O step principal só dispara
+   * 48h depois do lembrete, caso o keyword não chegue.
+   * Armazenado também como { reminderSent: true } no JSONB do step (sem migration).
+   */
+  reminderMessage?: string;
+  /** Interno — marcado true pelo scheduler após o lembrete ser enviado. */
+  reminderSent?: boolean;
 };
 
 export type DmResponseFlow = {

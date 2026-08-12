@@ -18,6 +18,12 @@ export interface DmResponseStep {
    * Steps sem triggerKeyword disparam por tempo (delayMinutes).
    */
   triggerKeyword?: string;
+  /**
+   * Mensagem de lembrete enviada no 7º dia quando o triggerKeyword ainda não chegou.
+   * Avisa que o bônus expira hoje e convida o usuário a responder o keyword.
+   * Após 48h adicionais, o conteúdo principal do step é enviado de qualquer forma.
+   */
+  reminderMessage?: string;
 }
 
 export interface DmResponseFlow {
@@ -179,6 +185,7 @@ A única exceção é quando o próprio cliente vende produtos de IA/tecnologia 
 
   **Step 2** — Entrega do bônus (triggerKeyword: "COMPARTILHEI"):
   Só dispara quando o usuário responder "COMPARTILHEI". Entregar o bônus exclusivo: template, desconto, acesso antecipado, material extra. Sempre encerrar agradecendo e com uma CTA suave para seguir acompanhando o perfil.
+  OBRIGATÓRIO: inclua também o campo "reminderMessage" neste step — uma mensagem curta e urgente enviada AUTOMATICAMENTE no 7º dia se o usuário ainda não tiver respondido, lembrando que o bônus expira hoje e convidando a responder COMPARTILHEI. Exemplo: "⏳ Oi! Hoje é o último dia para resgatar o seu [bônus]. Se você já compartilhou o post ou a nossa página, responda aqui com COMPARTILHEI e te envio agora 🔥"
 
 - Se o post não tem CTA de DM → dmResponseFlow: null
 
@@ -216,7 +223,8 @@ A única exceção é quando o próprio cliente vende produtos de IA/tecnologia 
           {
             "triggerKeyword": "COMPARTILHEI",
             "delayMinutes": 0,
-            "message": "Você é incrível! Aqui está o seu bônus: [bônus exclusivo e específico para o nicho]. Obrigado por compartilhar — nos vemos no próximo conteúdo! 🙌"
+            "message": "Você é incrível! Aqui está o seu bônus: [bônus exclusivo e específico para o nicho]. Obrigado por compartilhar — nos vemos no próximo conteúdo! 🙌",
+            "reminderMessage": "⏳ Oi! Hoje é o último dia para resgatar o seu [bônus exclusivo]. Se você já compartilhou o post ou a nossa página, responda aqui com COMPARTILHEI e te envio agora 🔥"
           }
         ]
       },

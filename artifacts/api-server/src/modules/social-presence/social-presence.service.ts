@@ -3060,6 +3060,53 @@ export async function processDmSequences(): Promise<void> {
 
         if (!integration) continue;
 
+        // ── Lembrete de expiração ────────────────────────────────────────────
+        // Se o step tem triggerKeyword + reminderMessage e o lembrete ainda NÃO
+        // foi enviado → o timer de 7 dias expirou sem o keyword chegar.
+        // Enviamos o lembrete e damos mais 48h; só aí entregamos o conteúdo.
+        const stepData = step as typeof step & {
+          triggerKeyword?: string;
+          reminderMessage?: string;
+          reminderSent?: boolean;
+        };
+        if (
+          stepData.triggerKeyword &&
+          stepData.reminderMessage &&
+          !stepData.reminderSent
+        ) {
+          // Enviar mensagem de lembrete
+          await fetch(
+            `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                recipient: { id: seq.recipientId },
+                message: { text: stepData.reminderMessage },
+                access_token: integration.accessToken,
+              }),
+            },
+          );
+
+          // Marcar reminderSent = true na cópia JSONB dos steps (sem migration)
+          const updatedSteps = [...seq.steps] as typeof seq.steps;
+          (updatedSteps[seq.currentStep] as Record<string, unknown>).reminderSent = true;
+
+          // Estender nextStepAt em 48h — se o keyword não chegar, entrega na marra
+          const reminderExtension = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+          await db
+            .update(instagramDmSequencesTable)
+            .set({ steps: updatedSteps, nextStepAt: reminderExtension })
+            .where(eq(instagramDmSequencesTable.id, seq.id));
+
+          log.info(
+            { seqId: seq.id, step: seq.currentStep },
+            "dm-sequence: lembrete de expiração enviado (+48h)",
+          );
+          continue; // Não avançar o step — aguardar keyword ou timeout
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         // Enviar mensagem via Graph API
         await fetch(
           `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
