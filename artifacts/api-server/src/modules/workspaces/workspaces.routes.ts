@@ -858,7 +858,13 @@ router.post("/me/persona/clone-avatar-video", async (req, res): Promise<void> =>
       }
 
       const trainingStatus = consentPageUrl ? "pending_consent" : "pending";
-      await savePersona({ digitalTwinId: groupId, avatarType: "digital_twin", avatarTrainingStatus: trainingStatus });
+      // Salvar consentUrl no persona para exibição persistente na UI
+      await savePersona({
+        digitalTwinId: groupId,
+        avatarType: "digital_twin",
+        avatarTrainingStatus: trainingStatus,
+        ...(consentPageUrl ? { heygenConsentUrl: consentPageUrl } : {}),
+      });
       req.log.info({ workspaceId, digitalTwinId: groupId, trainingStatus }, "Digital twin training started (v3)");
       res.json({
         digitalTwinId: groupId,
@@ -998,6 +1004,61 @@ router.get("/me/persona/avatar-training-status", async (req, res): Promise<void>
   }
 });
 
+// POST /workspaces/me/persona/avatar-consent-url
+// Regenera (ou recupera) o link de consentimento por webcam do HeyGen para o digital twin atual.
+// Útil quando o consentUrl foi perdido ou expirou.
+router.post("/me/persona/avatar-consent-url", async (req, res): Promise<void> => {
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) { res.status(422).json({ error: "HeyGen não configurado", code: "PROVIDER_NOT_CONFIGURED" }); return; }
+
+  const workspaceId = req.auth.workspaceId;
+  const [ws] = await db.select({ settings: workspacesTable.settings })
+    .from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  const existingSettings = (ws?.settings ?? {}) as Record<string, unknown>;
+  const persona = (existingSettings["persona"] ?? {}) as Record<string, unknown>;
+
+  const digitalTwinId = persona["digitalTwinId"] as string | undefined;
+  if (!digitalTwinId) {
+    res.status(404).json({ error: "Nenhum digital twin encontrado — grave os vídeos primeiro", code: "NO_DIGITAL_TWIN" });
+    return;
+  }
+
+  // Se já temos um URL salvo, retorná-lo diretamente
+  if (persona["heygenConsentUrl"]) {
+    res.json({ consentUrl: persona["heygenConsentUrl"], cached: true });
+    return;
+  }
+
+  try {
+    const { env: envLib } = await import("../../lib/env.js");
+    const appUrl = envLib.APP_URL ?? "https://agencianexos.vip";
+    const webcamRes = await fetch(`https://api.heygen.com/v3/avatars/${digitalTwinId}/consent`, {
+      method: "POST",
+      headers: { "X-Api-Key": heygenKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ reroute_url: `${appUrl}/configuracoes/persona` }),
+    });
+    if (!webcamRes.ok) {
+      const errText = await webcamRes.text();
+      throw new Error(`HeyGen consent ${webcamRes.status}: ${errText.slice(0, 300)}`);
+    }
+    const webcamData = (await webcamRes.json()) as { data: { url?: string } };
+    const consentUrl = webcamData.data?.url;
+    if (!consentUrl) throw new Error("HeyGen não retornou URL de consentimento");
+
+    // Salvar para não perder novamente
+    await db.update(workspacesTable)
+      .set({ settings: { ...existingSettings, persona: { ...persona, heygenConsentUrl: consentUrl } } as any })
+      .where(eq(workspacesTable.id, workspaceId));
+
+    req.log.info({ workspaceId, digitalTwinId }, "HeyGen consent URL regenerated");
+    res.json({ consentUrl, cached: false });
+  } catch (err) {
+    req.log.error({ err }, "Failed to regenerate HeyGen consent URL");
+    res.status(500).json({ error: String(err), code: "CONSENT_URL_ERROR" });
+  }
+});
+
 // GET /workspaces/me/persona/avatar-recovery-status
 // Returns full avatar state from DB + which GCS videos exist (checked independently).
 // hasTrainingVideo + hasConsentVideo let the frontend restore the correct recording step.
@@ -1023,6 +1084,7 @@ router.get("/me/persona/avatar-recovery-status", async (req, res): Promise<void>
     digitalTwinId:        persona["digitalTwinId"]         ?? null,
     avatarTrainingStatus: persona["avatarTrainingStatus"]  ?? null,
     avatarType:           persona["avatarType"]            ?? null,
+    heygenConsentUrl:     persona["heygenConsentUrl"]      ?? null,
     hasTrainingVideo,
     hasConsentVideo,
     hasGCSVideos: hasTrainingVideo || hasConsentVideo,

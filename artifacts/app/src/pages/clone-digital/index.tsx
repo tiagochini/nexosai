@@ -41,6 +41,7 @@ interface AvatarRecoveryStatus {
   digitalTwinId: string | null;
   avatarTrainingStatus: string | null;
   avatarType: string | null;
+  heygenConsentUrl: string | null;
   hasTrainingVideo: boolean;
   hasConsentVideo: boolean;
   hasGCSVideos: boolean;
@@ -232,7 +233,7 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
     const base        = (import.meta as any).env?.BASE_URL ?? "/";
     const token       = localStorage.getItem("accessToken") ?? localStorage.getItem("nexos_access_token") ?? "";
     const contentType = blob.type || videoMime;
-    const authHeader  = token ? { "Authorization": `Bearer ${token}` } : {};
+    const authHeader  = (token ? { "Authorization": `Bearer ${token}` } : {}) as Record<string, string>;
 
     // Vídeos grandes (>8 MB) são enviados em chunks de 8 MB para contornar
     // o limite de 413 do proxy do Replit em produção.
@@ -813,6 +814,29 @@ export default function CloneDigitalPage() {
   const [showSnapshot, setShowSnapshot] = useState(false);
   const [retrying, setRetrying]         = useState(false);
 
+  // ── Consent URL state (banner de consentimento pendente do HeyGen) ──────────
+  const [loadingConsentUrl, setLoadingConsentUrl]     = useState(false);
+
+  const openConsentUrl = async () => {
+    if (recovery?.heygenConsentUrl) {
+      window.open(recovery.heygenConsentUrl, "_blank");
+      return;
+    }
+    setLoadingConsentUrl(true);
+    try {
+      const data = await customFetch<{ consentUrl: string }>(
+        "/api/workspaces/me/persona/avatar-consent-url",
+        { method: "POST" }
+      );
+      window.open(data.consentUrl, "_blank");
+      await loadRecovery();
+    } catch {
+      toast.error("Não foi possível gerar o link de consentimento. Tente novamente.");
+    } finally {
+      setLoadingConsentUrl(false);
+    }
+  };
+
   // ── Main-page avatar demo state ────────────────────────────────────────────
   const [mainDemoGenerating, setMainDemoGenerating]   = useState(false);
   const [mainDemoError, setMainDemoError]             = useState<string | null>(null);
@@ -990,9 +1014,11 @@ export default function CloneDigitalPage() {
   const hasAvatar = !!persona?.heygenAvatarId;
   const firstName = persona?.firstName ?? "Fundador";
 
+  const isConsentPending  = !hasAvatar && !!recovery?.digitalTwinId &&
+    recovery?.avatarTrainingStatus === "pending_consent";
   const isTrainingPending = !hasAvatar && !!recovery?.digitalTwinId &&
     (recovery?.avatarTrainingStatus === "pending" || recovery?.avatarTrainingStatus === "in_progress");
-  const bothVideosInGCS  = !hasAvatar && !isTrainingPending && !!recovery?.hasTrainingVideo && !!recovery?.hasConsentVideo;
+  const bothVideosInGCS  = !hasAvatar && !isTrainingPending && !isConsentPending && !!recovery?.hasTrainingVideo && !!recovery?.hasConsentVideo;
   const canRetryFromGCS  = bothVideosInGCS;
 
   const voiceResumeTakeCount = voiceProgress?.completedTakeIds?.length ?? 0;
@@ -1090,36 +1116,69 @@ export default function CloneDigitalPage() {
         </div>
 
         {/* ── Card 2: Avatar Digital ────────────────────────────────────────── */}
-        <div className={`rounded-2xl border p-6 transition-all ${hasAvatar ? "border-green-500/30 bg-green-500/5" : isTrainingPending ? "border-primary/30 bg-primary/5" : "border-border/50 bg-background/40"}`}>
+        <div className={`rounded-2xl border p-6 transition-all ${
+          hasAvatar ? "border-green-500/30 bg-green-500/5"
+          : isConsentPending ? "border-orange-500/30 bg-orange-500/5"
+          : isTrainingPending ? "border-primary/30 bg-primary/5"
+          : "border-border/50 bg-background/40"
+        }`}>
           <div className="flex items-start gap-4">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${hasAvatar ? "bg-green-500/15 border border-green-500/30" : "bg-primary/10 border border-primary/30"}`}>
-              <Video className={`h-5 w-5 ${hasAvatar ? "text-green-400" : "text-primary"}`} />
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${hasAvatar ? "bg-green-500/15 border border-green-500/30" : isConsentPending ? "bg-orange-500/15 border border-orange-500/30" : "bg-primary/10 border border-primary/30"}`}>
+              <Video className={`h-5 w-5 ${hasAvatar ? "text-green-400" : isConsentPending ? "text-orange-400" : "text-primary"}`} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <h2 className="font-mono text-base font-bold">Avatar Digital</h2>
                 {hasAvatar && <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/20">Ativo</span>}
+                {isConsentPending && (
+                  <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20 flex items-center gap-1">
+                    ⚠ Consentimento pendente
+                  </span>
+                )}
                 {isTrainingPending && (
                   <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 flex items-center gap-1">
                     <RefreshCw className="h-2.5 w-2.5 animate-spin" /> Treinando…
                   </span>
                 )}
-                {!hasAvatar && !isTrainingPending && recovery?.hasTrainingVideo && !recovery.hasConsentVideo && (
+                {!hasAvatar && !isTrainingPending && !isConsentPending && recovery?.hasTrainingVideo && !recovery.hasConsentVideo && (
                   <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20">1/2 vídeos</span>
                 )}
-                {!hasAvatar && !isTrainingPending && !recovery?.hasTrainingVideo && (
+                {!hasAvatar && !isTrainingPending && !isConsentPending && !recovery?.hasTrainingVideo && (
                   <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">Não configurado</span>
                 )}
               </div>
               <p className="font-mono text-xs text-muted-foreground leading-relaxed">
                 {hasAvatar
                   ? "Seu avatar de vídeo está treinado e pronto como apresentador em vídeos gerados por IA."
-                  : isTrainingPending
-                    ? "Vídeos enviados. O HeyGen está treinando seu avatar — pode fechar e voltar depois."
-                    : recovery?.hasTrainingVideo && !recovery.hasConsentVideo
-                      ? "Vídeo de treino salvo. Abra o fluxo para gravar o consentimento e finalizar."
-                      : "Grave 2 vídeos curtos — cada um salvo automaticamente ao avançar."}
+                  : isConsentPending
+                    ? "Seus vídeos foram enviados ao HeyGen, mas é necessário completar o consentimento no site deles antes que o treinamento comece."
+                    : isTrainingPending
+                      ? "Vídeos enviados. O HeyGen está treinando seu avatar — pode fechar e voltar depois."
+                      : recovery?.hasTrainingVideo && !recovery.hasConsentVideo
+                        ? "Vídeo de treino salvo. Abra o fluxo para gravar o consentimento e finalizar."
+                        : "Grave 2 vídeos curtos — cada um salvo automaticamente ao avançar."}
               </p>
+
+              {/* ── Banner de consentimento pendente ──────────────────────── */}
+              {isConsentPending && (
+                <div className="mt-4 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">
+                  <p className="font-mono text-xs text-orange-300 leading-relaxed mb-1">
+                    <strong>O que aconteceu:</strong> seu vídeo foi gravado e salvo, mas o HeyGen rejeita consentimento por vídeo em contas não-Enterprise. É preciso completar o consentimento pelo site deles (webcam, ~30 segundos).
+                  </p>
+                  <p className="font-mono text-[11px] text-orange-400/70 mb-3">
+                    Após completar no site do HeyGen, o treinamento do avatar inicia automaticamente.
+                  </p>
+                  <Button
+                    onClick={openConsentUrl}
+                    disabled={loadingConsentUrl}
+                    className="font-mono text-xs gap-2 bg-orange-500 hover:bg-orange-600 text-white border-0"
+                  >
+                    {loadingConsentUrl
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Gerando link…</>
+                      : <><ArrowRight className="h-3.5 w-3.5" /> Completar consentimento no HeyGen</>}
+                  </Button>
+                </div>
+              )}
               {hasAvatar && persona?.heygenAvatarId && (
                 <p className="font-mono text-[10px] text-muted-foreground/60 mt-1">
                   ID: {persona.heygenAvatarId.slice(0, 18)}… · {persona.avatarType ?? "avatar"}
