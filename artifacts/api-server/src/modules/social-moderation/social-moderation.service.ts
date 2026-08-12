@@ -374,6 +374,8 @@ export async function processIncomingComment(opts: {
   authorId: string;
   commentText: string;
   accessToken: string;
+  /** IG business account ID (entry.id from webhook) — used to trigger DM keyword flows */
+  igAccountId?: string;
 }): Promise<void> {
   const {
     workspaceId,
@@ -386,6 +388,7 @@ export async function processIncomingComment(opts: {
     authorId,
     commentText,
     accessToken,
+    igAccountId,
   } = opts;
 
   // Idempotency — skip if already processed
@@ -538,6 +541,23 @@ export async function processIncomingComment(opts: {
       .where(eq(socialCommentActionsTable.id, existing.id));
   } else {
     await db.insert(socialCommentActionsTable).values(recordData);
+  }
+
+  // ── DM keyword trigger ────────────────────────────────────────────────────
+  // Quando alguém comenta uma palavra-chave configurada no post (ex: "MAPA"),
+  // envia DM automático em < 30s — exigência do Meta App Review.
+  // Funciona apenas para Instagram (DM via Messaging API).
+  // handleInstagramDmTrigger já faz deduplicação (não dispara duas vezes pro mesmo user).
+  if (platform === "instagram" && igAccountId) {
+    setImmediate(() => {
+      import("../social-presence/social-presence.service.js")
+        .then(({ handleInstagramDmTrigger }) =>
+          handleInstagramDmTrigger(igAccountId, authorId, commentText)
+        )
+        .catch((err) =>
+          logger.warn({ err, commentId, igAccountId }, "comment→DM trigger error (non-fatal)")
+        );
+    });
   }
 }
 

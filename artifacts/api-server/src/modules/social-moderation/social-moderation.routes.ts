@@ -212,6 +212,8 @@ router.post("/webhooks/meta", (req, res): void => {
             authorId,
             commentText: text,
             accessToken: workspace.accessToken,
+            // Passa o account ID do entry para o trigger de DM por keyword (ex: "MAPA")
+            igAccountId: entry.id,
           });
         }
       }
