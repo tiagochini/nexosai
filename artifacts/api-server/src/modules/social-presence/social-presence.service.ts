@@ -629,6 +629,53 @@ async function generateWeekNow(
     }
   }
 
+  // ── Salvar keywords de DM globais no workspace ────────────────────────────────
+  // Qualquer post com dmResponseFlow.triggerKeyword é persistido em
+  // workspace.settings.globalDmKeywords para que o trigger funcione
+  // mesmo em posts antigos (que não têm dmResponseFlow no DB).
+  try {
+    const allPlatformPlans: Array<{ posts: typeof plan.posts }> = [];
+    // Re-collect dm flows from the posts we just inserted
+    const newPosts = await db
+      .select({ dmResponseFlow: socialPresencePostsTable.dmResponseFlow })
+      .from(socialPresencePostsTable)
+      .where(
+        and(
+          eq(socialPresencePostsTable.workspaceId, workspaceId),
+          eq(socialPresencePostsTable.weekStart as any, weekStart),
+        ),
+      );
+    const keywordMap = new Map<string, unknown>();
+    for (const p of newPosts) {
+      const flow = p.dmResponseFlow as { triggerKeyword?: string; steps?: unknown[] } | null;
+      if (flow?.triggerKeyword && Array.isArray(flow.steps) && flow.steps.length > 0) {
+        keywordMap.set(flow.triggerKeyword.toUpperCase(), flow);
+      }
+    }
+    if (keywordMap.size > 0) {
+      const [ws] = await db
+        .select({ settings: workspacesTable.settings })
+        .from(workspacesTable)
+        .where(eq(workspacesTable.id, workspaceId))
+        .limit(1);
+      const existing = ((ws?.settings as Record<string, unknown> | null) ?? {});
+      const existingKeywords = (existing.globalDmKeywords as Array<{ keyword: string; flow: unknown }> | undefined) ?? [];
+      // Merge: manter keywords existentes, sobrescrever com as novas
+      const mergedMap = new Map(existingKeywords.map((k) => [k.keyword, k]));
+      for (const [kw, flow] of keywordMap.entries()) {
+        mergedMap.set(kw, { keyword: kw, flow, updatedAt: new Date().toISOString() });
+      }
+      const globalDmKeywords = [...mergedMap.values()];
+      await db
+        .update(workspacesTable)
+        .set({ settings: { ...existing, globalDmKeywords } as never })
+        .where(eq(workspacesTable.id, workspaceId));
+      log.info({ workspaceId, keywords: [...keywordMap.keys()] }, "presence.generateWeek: globalDmKeywords salvas no workspace");
+    }
+  } catch (dmSaveErr) {
+    log.warn({ err: dmSaveErr }, "presence.generateWeek: falha ao salvar globalDmKeywords (não-fatal)");
+  }
+
   await db
     .update(socialPresenceConfigTable)
     .set({ lastWeekGeneratedAt: new Date() })
@@ -2052,16 +2099,25 @@ async function generateStoryboardFrame(
     ? `Business context (use to match brand aesthetics, product, audience): ${businessContext.slice(0, 600)}`
     : "";
 
+  const isStoryFormat = format === "story";
+  const captionSnippet = caption.trim().slice(0, 400);
+
   const prompt = [
-    `Create a professional ${platform} ${format} post visual.`,
+    isStoryFormat
+      ? `Create a vertical 9:16 Instagram story that works as a high-converting marketing asset.`
+      : `Create a professional ${platform} ${format} ad visual that stops someone mid-scroll.`,
     businessBlock,
-    `Visual direction: ${visualDirection || "professional, clean composition"}`,
+    `Visual direction: ${visualDirection || "bold, direct, commercial advertising style"}`,
     videoScript?.trim()
-      ? `Script/narration context: ${videoScript.slice(0, 300)}`
-      : `Caption context: ${caption.slice(0, 250)}`,
-    "Cinematic composition, professional photography or digital art style.",
-    "Match the mood, color palette and audience suggested by the business context.",
-    "IMPORTANT: NO text, words, letters, numbers, subtitles, watermarks, or captions in the image.",
+      ? `Video message to match visually: ${videoScript.slice(0, 350)}`
+      : `Post message to communicate visually: ${captionSnippet}`,
+    // Stories: texto curto é legível no Gemini e crítico para comunicar a mensagem
+    isStoryFormat
+      ? `IMPORTANT: Include a short bold headline (2–5 words, readable in 2 seconds) with the MAIN BENEFIT or OFFER from the post message. Place it prominently. High contrast. The visual supports this message.`
+      : `No text or letters in the image — the caption carries the words. But the image alone must make the core offer instantly obvious to someone scrolling fast.`,
+    "Bold, attention-grabbing commercial style. NOT cinematic or abstract art. Real, direct, benefit-first visuals.",
+    "High contrast, strong focal point, professional quality. Someone who sees this for 2 seconds should immediately understand what is being offered.",
+    businessBlock ? "Match brand aesthetics and target audience from the business context." : "",
   ].filter(Boolean).join(" ");
 
   // ── Tentativa 1: Gemini Image Generation via REST (Google AI Studio) ────────
@@ -3327,12 +3383,70 @@ export async function handleInstagramDmTrigger(
         nextStepAt,
       });
 
-      log.info({ postId: post.id, keyword, recipientId }, "dm-trigger: sequência criada");
+      log.info({ postId: post.id, keyword, recipientId }, "dm-trigger: sequência criada (post-level)");
       // Processar o step 0 imediatamente se delayMinutes=0
       if ((firstStep.delayMinutes ?? 0) === 0) {
         setImmediate(() => processDmSequences().catch(() => {}));
       }
       return; // Disparou o primeiro match — sair
+    }
+
+    // ── Fallback: keyword global do workspace ──────────────────────────────────
+    // Se nenhum post publicado tem um dmResponseFlow com essa keyword,
+    // verificar workspace.settings.globalDmKeywords — salvo automaticamente
+    // pelo gerador de semana. Funciona para posts antigos ou posts sem CTA de DM.
+    const [ws] = await db
+      .select({ settings: workspacesTable.settings })
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, integration.workspaceId))
+      .limit(1);
+
+    const globalKeywords = ((ws?.settings as Record<string, unknown> | null)?.globalDmKeywords as Array<{
+      keyword: string;
+      flow: { triggerKeyword?: string; steps?: unknown[] };
+    }> | undefined) ?? [];
+
+    const globalMatch = globalKeywords.find((k) => k.keyword?.toUpperCase() === keyword);
+    if (!globalMatch || !Array.isArray(globalMatch.flow?.steps) || globalMatch.flow.steps.length === 0) {
+      log.info({ keyword, recipientId, globalKeywordsCount: globalKeywords.length }, "dm-trigger: nenhum flow encontrado para keyword (post-level nem global)");
+      return;
+    }
+
+    // Evitar duplicata de sequência ativa para o mesmo usuário
+    const existingGlobal = await db
+      .select({ id: instagramDmSequencesTable.id })
+      .from(instagramDmSequencesTable)
+      .where(
+        and(
+          eq(instagramDmSequencesTable.workspaceId, integration.workspaceId),
+          eq(instagramDmSequencesTable.igAccountId, igAccountId),
+          eq(instagramDmSequencesTable.recipientId, recipientId),
+          isNull(instagramDmSequencesTable.completedAt),
+        ),
+      )
+      .limit(1);
+
+    if (existingGlobal.length > 0) {
+      log.info({ recipientId }, "dm-trigger (global): sequência já ativa — ignorando");
+      return;
+    }
+
+    const globalFirstStep = globalMatch.flow.steps[0] as { delayMinutes?: number };
+    const globalNextStepAt = new Date(Date.now() + (globalFirstStep.delayMinutes ?? 0) * 60 * 1000);
+
+    await db.insert(instagramDmSequencesTable).values({
+      workspaceId: integration.workspaceId,
+      igAccountId,
+      recipientId,
+      postId: null as never,
+      steps: globalMatch.flow.steps as never,
+      currentStep: 0,
+      nextStepAt: globalNextStepAt,
+    });
+
+    log.info({ keyword, recipientId }, "dm-trigger: sequência criada via global keyword fallback ✓");
+    if ((globalFirstStep.delayMinutes ?? 0) === 0) {
+      setImmediate(() => processDmSequences().catch(() => {}));
     }
   } catch (err) {
     log.warn({ err }, "handleInstagramDmTrigger: error (non-fatal)");
