@@ -340,6 +340,9 @@ export function CloneStudioPanel({
   };
 
   // ── Upload & finalize ────────────────────────────────────────────────────────
+  // Evita chamar /stop duas vezes se o usuário clicar em Finalizar após um erro parcial
+  const sessionStoppedRef = useRef(false);
+
   const finalizeSession = async () => {
     setPhase("uploading");
     setUploadProgress(10);
@@ -348,9 +351,12 @@ export function CloneStudioPanel({
       await uploadQueueRef.current;
       setUploadProgress(40);
 
-      // 2. Parar a sessão de recording
+      // 2. Parar a sessão de recording (apenas uma vez)
       const recId = await ensureSession();
-      await customFetch(`/api/recordings/${recId}/stop`, { method: "POST" });
+      if (!sessionStoppedRef.current) {
+        await customFetch(`/api/recordings/${recId}/stop`, { method: "POST" });
+        sessionStoppedRef.current = true;
+      }
       setUploadProgress(60);
 
       // 3. Enviar todos os blobs de áudio para o ElevenLabs via clone-voice-multi
@@ -382,11 +388,21 @@ export function CloneStudioPanel({
       stopStream();
       setPhase("complete");
       onComplete(recId);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
       toast.dismiss("voice-clone-creating");
-      toast.error("Erro ao finalizar sessão. Tente novamente.");
-      setPhase("review");
+      const msg = String(e);
+      if (msg.includes("paid_plan_required") || msg.includes("instant voice cloning") || msg.includes("payment_required")) {
+        toast.error(
+          "O plano atual do ElevenLabs não inclui clonagem de voz. Acesse elevenlabs.io e faça upgrade para o plano Starter ou superior.",
+          { duration: 10000 }
+        );
+        // Sessão já foi parada — ir para estado de erro definitivo, não review
+        setPhase("complete");
+      } else {
+        toast.error("Erro ao finalizar sessão. Tente novamente.");
+        setPhase("review");
+      }
     }
   };
 
