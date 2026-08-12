@@ -30,6 +30,7 @@ import {
   uploadTestMedia,
   bulkApproveStoryboards,
   createTestReelPost,
+  createTestScheduledPost,
 } from "./social-presence.service.js";
 
 const router = Router();
@@ -378,8 +379,9 @@ router.post("/approve-bulk", async (req, res): Promise<void> => {
   }
 });
 
-// ─── Post de teste (reel com clone, agendado para 1h) ────────────────────────
+// ─── Posts de teste ────────────────────────────────────────────────────────────
 
+// Reel com clone NexOS — mantido para compatibilidade, mas prefira create-test-scheduled
 router.post("/posts/create-test-reel", async (req, res): Promise<void> => {
   const schema = z.object({
     platform: z.enum(["instagram", "facebook", "tiktok"]).optional().default("instagram"),
@@ -392,6 +394,30 @@ router.post("/posts/create-test-reel", async (req, res): Promise<void> => {
   } catch (err) {
     req.log.error({ err }, "create-test-reel: erro");
     res.status(500).json({ error: err instanceof Error ? err.message : "Erro ao criar post de teste." });
+  }
+});
+
+// Publicação agendada de teste — suporta text/post/reel/story com timing personalizado.
+// Para posts de imagem: gera imagem IA e auto-aprova (sem etapa de aprovação manual).
+// Para texto no Facebook: não precisa de mídia. Para Instagram texto: gera text-card automático.
+router.post("/posts/create-test-scheduled", async (req, res): Promise<void> => {
+  const schema = z.object({
+    platform: z.enum(["instagram", "facebook", "tiktok"]).default("instagram"),
+    format: z.enum(["text", "post", "reel", "story"]).default("post"),
+    minutesFromNow: z.number().min(5).max(10080).default(60),
+    caption: z.string().max(2200).optional(),
+  });
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Parâmetros inválidos", details: parsed.error.issues });
+    return;
+  }
+  try {
+    const post = await createTestScheduledPost(req.auth.workspaceId, parsed.data, req.log);
+    res.status(201).json({ post });
+  } catch (err) {
+    req.log.error({ err }, "create-test-scheduled: erro");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Erro ao criar publicação de teste." });
   }
 });
 

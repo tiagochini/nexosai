@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { customFetch } from "@workspace/api-client-react/custom-fetch";
 import { useAuth } from "@/lib/auth";
 import { useWorkspaceSocket } from "@/lib/socket";
@@ -190,7 +191,7 @@ export default function PresencePage() {
   const [publishingNow, setPublishingNow] = useState<Set<string>>(new Set());
   const [mediaDrawerPostId, setMediaDrawerPostId] = useState<string | null>(null);
   const [showProfileAnalysis, setShowProfileAnalysis] = useState(false);
-  const [creatingTestReel, setCreatingTestReel] = useState(false);
+  const [showScheduleTest, setShowScheduleTest] = useState(false);
   const [socialHealth, setSocialHealth] = useState<{
     provider: string;
     accountId: string | null;
@@ -233,26 +234,6 @@ export default function PresencePage() {
     return data;
   }, []);
 
-  const createTestReel = useCallback(async () => {
-    setActionError(null);
-    setCreatingTestReel(true);
-    try {
-      const { post } = await customFetch<{ post: PresencePost }>(
-        `${API}/posts/create-test-reel`,
-        { method: "POST", body: JSON.stringify({ platform: "instagram" }) },
-      );
-      await loadPosts();
-      setTab("queue");
-      alert(
-        `✅ Reel de teste criado!\n\nAgendado para: ${post.scheduledFor ? new Date(post.scheduledFor).toLocaleTimeString("pt-BR") : "1h"}\n\n` +
-        `Vá para a aba "Aprovação Criativa", aprove o storyboard assim que ele aparecer (~30s), e o scheduler vai disparar a geração do vídeo com seu clone e publicar automaticamente no horário marcado.`,
-      );
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Erro ao criar reel de teste.");
-    } finally {
-      setCreatingTestReel(false);
-    }
-  }, [loadPosts]);
 
   const loadMetrics = useCallback(async () => {
     const data = await customFetch<MetricsOverview>(`${API}/metrics`);
@@ -347,8 +328,18 @@ export default function PresencePage() {
     try {
       const { post } = await customFetch<{ post: PresencePost }>(`${API}/posts/${postId}/approve`, { method: "POST" });
       setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
+      const scheduledAt = post.scheduledFor
+        ? new Date(post.scheduledFor).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        : null;
+      toast.success(
+        scheduledAt
+          ? `✅ Aprovado — será publicado às ${scheduledAt}. Aparecerá na agenda.`
+          : "✅ Post aprovado e adicionado à agenda de publicação.",
+      );
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Erro ao aprovar post.");
+      const msg = err instanceof Error ? err.message : "Erro ao aprovar post.";
+      setActionError(msg);
+      toast.error(msg);
     }
   };
 
@@ -359,13 +350,22 @@ export default function PresencePage() {
     const key = postIds.join(",");
     setBulkApproving((prev) => new Set([...prev, key]));
     try {
-      await customFetch<{ approved: number; videoTriggered: number; skipped: number; errors: string[] }>(
+      const result = await customFetch<{ approved: number; videoTriggered: number; skipped: number; errors: string[] }>(
         `${API}/approve-bulk`,
         { method: "POST", body: JSON.stringify({ postIds }) },
       );
       await loadPosts();
+      const n = result.approved ?? postIds.length;
+      toast.success(
+        `✅ ${n} post${n !== 1 ? "s" : ""} aprovado${n !== 1 ? "s" : ""} — aparecerão na agenda quando publicados.`,
+      );
+      if ((result.videoTriggered ?? 0) > 0) {
+        toast.info(`🎬 ${result.videoTriggered} vídeo${result.videoTriggered !== 1 ? "s" : ""} em geração — acompanhe na seção de reels.`);
+      }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : `Erro ao aprovar ${label}.`);
+      const msg = err instanceof Error ? err.message : `Erro ao aprovar ${label}.`;
+      setActionError(msg);
+      toast.error(msg);
     } finally {
       setBulkApproving((prev) => { const s = new Set(prev); s.delete(key); return s; });
     }
@@ -522,16 +522,14 @@ export default function PresencePage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={createTestReel}
-                disabled={creatingTestReel}
-                title="Cria um reel sobre a NexOS AI agendado para 1h — para testar se o scheduler dispara automaticamente"
-                data-testid="button-create-test-reel"
+                onClick={() => setShowScheduleTest(true)}
+                title="Cria uma publicação real agendada para provar que o scheduler publica automaticamente"
+                data-testid="button-schedule-test-post"
               >
-                {creatingTestReel ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Film className="mr-1.5 h-4 w-4" />}
-                {creatingTestReel ? "Criando..." : "Criar Reel Teste (1h)"}
+                <CalendarDays className="mr-1.5 h-4 w-4" /> Agendar Teste
               </Button>
               <Button variant="outline" size="sm" onClick={() => setShowTestPost(true)} data-testid="button-test-post-header">
-                <Send className="mr-1.5 h-4 w-4" /> Publicar Teste
+                <Send className="mr-1.5 h-4 w-4" /> Publicar Agora
               </Button>
             </>
           )}
@@ -1176,6 +1174,13 @@ export default function PresencePage() {
         <TestPostPanel
           platforms={config.platforms.filter((p) => p.enabled && p.platform !== "linkedin")}
           onClose={() => setShowTestPost(false)}
+        />
+      )}
+      {showScheduleTest && config && (
+        <ScheduleTestModal
+          platforms={config.platforms.filter((p) => p.enabled && p.platform !== "linkedin")}
+          onClose={() => setShowScheduleTest(false)}
+          onCreated={() => { void loadPosts(); setTab("queue"); }}
         />
       )}
       {showBio && config && (
@@ -2279,6 +2284,205 @@ function SocialProfileAnalysisPanel({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Test Post Panel ──────────────────────────────────────────────────────────
+
+// ─── Modal: Agendar Publicação de Teste ──────────────────────────────────────
+// Substitui o botão "Criar Reel Teste (1h)". Suporta text/post/reel/story com
+// timing personalizado. Posts de imagem auto-aprovados (sem etapa manual).
+
+function ScheduleTestModal({
+  platforms,
+  onClose,
+  onCreated,
+}: {
+  platforms: PlatformConfig[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  type FormatKey = "text" | "post" | "reel" | "story";
+  const [platform, setPlatform] = useState<"instagram" | "facebook" | "tiktok">(
+    (platforms[0]?.platform ?? "instagram") as "instagram" | "facebook" | "tiktok",
+  );
+  const [format, setFormat] = useState<FormatKey>("post");
+  const [minutes, setMinutes] = useState(60);
+  const [customMinutes, setCustomMinutes] = useState("");
+  const [caption, setCaption] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const FORMATS: { value: FormatKey; label: string; icon: string; desc: string }[] = [
+    { value: "text",  label: "Texto",  icon: "📝", desc: "Sem imagem" },
+    { value: "post",  label: "Foto",   icon: "📷", desc: "Imagem por IA" },
+    { value: "reel",  label: "Reel",   icon: "🎬", desc: "Vídeo + avatar" },
+    { value: "story", label: "Story",  icon: "⬜", desc: "Story vertical" },
+  ];
+  const TIMINGS = [
+    { label: "30 min", value: 30 },
+    { label: "1 hora", value: 60 },
+    { label: "2 horas", value: 120 },
+    { label: "Personalizado", value: 0 },
+  ];
+
+  const effectiveMinutes = minutes === 0 ? Math.max(5, parseInt(customMinutes || "60", 10)) : minutes;
+  const scheduledAt = new Date(Date.now() + effectiveMinutes * 60 * 1000).toLocaleTimeString("pt-BR", {
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  const create = async () => {
+    setCreating(true);
+    try {
+      await customFetch(`${API}/posts/create-test-scheduled`, {
+        method: "POST",
+        body: JSON.stringify({ platform, format, minutesFromNow: effectiveMinutes, caption: caption.trim() || undefined }),
+      });
+      toast.success(
+        format === "reel" || format === "story"
+          ? `✅ ${format === "reel" ? "Reel" : "Story"} agendado para ${scheduledAt} — aprove o storyboard quando aparecer na aba Aprovação Criativa`
+          : `✅ Publicação agendada para ${scheduledAt} — o scheduler vai publicar automaticamente`,
+      );
+      onCreated();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao criar publicação de teste.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <CalendarDays className="h-4 w-4 text-primary" /> Agendar Publicação de Teste
+          </h2>
+          <button onClick={onClose} aria-label="Fechar"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Cria uma publicação real no calendário para provar que o scheduler publica automaticamente no horário marcado.
+        </p>
+
+        {platforms.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-400/5 p-3 text-sm text-amber-400">
+            Nenhuma plataforma conectada. Conecte o Instagram, Facebook ou TikTok em Configurações.
+          </div>
+        ) : (
+          <div className="mt-5 space-y-5">
+            {/* Formato */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Formato</label>
+              <div className="grid grid-cols-4 gap-2">
+                {FORMATS.map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setFormat(f.value)}
+                    className={`flex flex-col items-center gap-1 rounded-lg border py-3 px-1 text-center transition-all ${
+                      format === f.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/30 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span className="text-xl">{f.icon}</span>
+                    <span className="text-[11px] font-medium">{f.label}</span>
+                    <span className="text-[10px] opacity-60">{f.desc}</span>
+                  </button>
+                ))}
+              </div>
+              {format === "text" && platform === "instagram" && (
+                <p className="text-[11px] text-amber-400/80">
+                  ℹ️ Instagram não aceita texto puro — será gerado um card visual automaticamente.
+                </p>
+              )}
+              {(format === "reel" || format === "story") && (
+                <p className="text-[11px] text-muted-foreground">
+                  Reels e stories precisam de avatar configurado em Configurações → Persona para gerar o vídeo.
+                </p>
+              )}
+            </div>
+
+            {/* Plataforma */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Plataforma</label>
+              <div className="flex gap-2 flex-wrap">
+                {platforms.map((p) => {
+                  const meta = PLATFORM_META[p.platform];
+                  return (
+                    <button
+                      key={p.platform}
+                      onClick={() => setPlatform(p.platform as "instagram" | "facebook" | "tiktok")}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        platform === p.platform
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      {meta && <meta.icon className={`h-4 w-4 ${meta.cls}`} />}
+                      {meta?.label ?? p.platform}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Timing */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Publicar em</label>
+              <div className="flex gap-2 flex-wrap">
+                {TIMINGS.map((t) => (
+                  <button
+                    key={t.label}
+                    onClick={() => setMinutes(t.value)}
+                    className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                      minutes === t.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              {minutes === 0 && (
+                <input
+                  type="number"
+                  min={5}
+                  max={10080}
+                  placeholder="Minutos a partir de agora (ex: 45)"
+                  value={customMinutes}
+                  onChange={(e) => setCustomMinutes(e.target.value)}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                Publicará às <strong>{scheduledAt}</strong>
+              </p>
+            </div>
+
+            {/* Legenda opcional */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Legenda <span className="normal-case font-normal">(opcional — IA usa contexto do seu negócio)</span>
+              </label>
+              <textarea
+                rows={2}
+                maxLength={2200}
+                placeholder="Deixe em branco para a IA gerar automaticamente..."
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                className="w-full rounded-md border border-border bg-background p-2.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <Button className="w-full" onClick={create} disabled={creating} data-testid="button-create-scheduled-test">
+              {creating
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Agendando...</>
+                : <><CalendarDays className="mr-2 h-4 w-4" /> Agendar para {scheduledAt}</>
+              }
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function TestPostPanel({
   platforms,

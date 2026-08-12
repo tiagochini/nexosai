@@ -2743,6 +2743,156 @@ export async function createTestReelPost(
   return post;
 }
 
+// ─── Criar publicação de teste agendada (suporta text/post/reel/story) ──────────
+// Diferente do createTestReelPost (hardcoded NexOS), esta função usa o contexto
+// real do negócio do workspace e suporta múltiplos formatos + timing personalizado.
+
+export async function createTestScheduledPost(
+  workspaceId: string,
+  options: {
+    platform: "instagram" | "facebook" | "tiktok";
+    format: "text" | "post" | "reel" | "story";
+    minutesFromNow: number;
+    caption?: string;
+  },
+  log: Logger,
+): Promise<SocialPresencePost> {
+  const { platform, format, minutesFromNow, caption: inputCaption } = options;
+  const scheduledFor = new Date(Date.now() + Math.max(5, minutesFromNow) * 60 * 1000);
+  const hh = String(scheduledFor.getHours()).padStart(2, "0");
+  const mm = String(scheduledFor.getMinutes()).padStart(2, "0");
+  const dayOfWeek = scheduledFor.getDay();
+  const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const weekStart = currentPlanWeekStart(scheduledFor);
+
+  // Usar contexto real do negócio para a legenda de teste
+  const bctx = await fetchBusinessContextForWorkspace(workspaceId).catch(() => "");
+  const timeLabel = scheduledFor.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const defaultCaption = inputCaption?.trim() || [
+    `🧪 Publicação de teste — agendada para ${timeLabel}`,
+    "",
+    "Esta publicação foi criada para verificar que o sistema de agendamento automático está funcionando.",
+    "Se você está vendo isso publicado no horário, a automação está operando corretamente! ✅",
+  ].join("\n");
+
+  // Formato real no banco — "text" mapeia para "post" internamente
+  const dbFormat = format === "text" ? "post" : (format as "post" | "reel" | "story");
+
+  const [post] = await db
+    .insert(socialPresencePostsTable)
+    .values({
+      workspaceId,
+      platform,
+      status: "scheduled",
+      weekStart,
+      dayIndex,
+      postingTime: `${hh}:${mm}`,
+      scheduledFor,
+      format: dbFormat,
+      pillar: "autoridade",
+      caption: defaultCaption,
+      hashtags: ["teste", "publicacaoautomatica"],
+      visualDirection: "Imagem profissional representando o negócio. Tom clean e moderno.",
+      objective: "Verificar publicação automática agendada",
+      aiGenerated: true,
+    })
+    .returning();
+
+  const isTextOnly = format === "text";
+  const isVideoFormat = format === "reel" || format === "story";
+
+  // ── Texto puro no Facebook → nenhuma mídia necessária, publica direto ──────
+  if (isTextOnly && platform === "facebook") {
+    log.info({ postId: post.id, platform, scheduledFor }, "createTestScheduledPost: texto puro (Facebook) criado ✓");
+    return post;
+  }
+
+  // ── Vídeo (reel/story) → pipeline normal de storyboard → aprovação ─────────
+  if (isVideoFormat) {
+    setImmediate(() => {
+      generatePostStoryboard(workspaceId, post.id, log).catch((err) => {
+        log.warn({ err, postId: post.id }, "createTestScheduledPost: storyboard de vídeo falhou");
+      });
+    });
+    log.info({ postId: post.id, platform, format, scheduledFor }, "createTestScheduledPost: reel/story criado — storyboard iniciado ✓");
+    return post;
+  }
+
+  // ── Imagem (post ou texto→Instagram) → gerar imagem IA + auto-aprovar ──────
+  // Posts de imagem de teste pulam a etapa de aprovação manual do usuário.
+  setImmediate(() => {
+    generateAndAutoApproveTestImage(workspaceId, post.id, defaultCaption, bctx, log).catch((err) => {
+      log.warn({ err, postId: post.id }, "createTestScheduledPost: auto-aprovação de imagem falhou");
+    });
+  });
+  log.info({ postId: post.id, platform, format, scheduledFor }, "createTestScheduledPost: post de imagem criado — geração iniciada ✓");
+  return post;
+}
+
+// Gera imagem de storyboard para posts de teste e a auto-aprova como mediaUrl
+// (sem precisar da aprovação manual do usuário) para que o post publique no horário.
+async function generateAndAutoApproveTestImage(
+  workspaceId: string,
+  postId: string,
+  caption: string,
+  bctx: string,
+  log: Logger,
+): Promise<void> {
+  await db
+    .update(socialPresencePostsTable)
+    .set({ mediaGenStatus: "storyboard_generating" })
+    .where(eq(socialPresencePostsTable.id, postId));
+
+  const [post] = await db
+    .select()
+    .from(socialPresencePostsTable)
+    .where(eq(socialPresencePostsTable.id, postId))
+    .limit(1);
+  if (!post) return;
+
+  const { buf, mimeType, isAI } = await generateStoryboardFrame(
+    post.visualDirection,
+    caption,
+    post.platform,
+    post.format,
+    log,
+    undefined,
+    bctx,
+  );
+
+  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg").replace("svg+xml", "svg") ?? "jpg";
+  const key = presenceStoryboardObjectKey(workspaceId, postId, 0).replace(/\.png$/, `.${ext}`);
+  await uploadBufferToGCS(buf, key, mimeType);
+  const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(key)}`;
+
+  if (isAI) {
+    // Auto-aprovar: definir como mediaUrls diretamente (sem aprovação do usuário)
+    // O post fica status="scheduled" com mídia pronta para publicar no horário.
+    await db
+      .update(socialPresencePostsTable)
+      .set({
+        status: "scheduled",
+        mediaUrls: [serveUrl],
+        storyboardUrls: [serveUrl],
+        mediaGenStatus: null,
+        errorMessage: null,
+      })
+      .where(eq(socialPresencePostsTable.id, postId));
+    log.info({ postId, key }, "createTestScheduledPost: imagem gerada e auto-aprovada → pronto para publicar ✓");
+  } else {
+    // Fallback SVG → aguarda aprovação manual (melhor que nada)
+    await db
+      .update(socialPresencePostsTable)
+      .set({
+        mediaGenStatus: "storyboard_draft",
+        storyboardUrls: [serveUrl],
+        errorMessage: "Rascunho SVG — abra o post e aprove para publicar.",
+      })
+      .where(eq(socialPresencePostsTable.id, postId));
+    log.warn({ postId, key }, "createTestScheduledPost: gerou SVG (sem chave IA) — requer aprovação manual");
+  }
+}
+
 // ─── Auto-Highlight: adiciona story ao Destaque após publicação ───────────────
 
 async function addStoryToHighlight(
