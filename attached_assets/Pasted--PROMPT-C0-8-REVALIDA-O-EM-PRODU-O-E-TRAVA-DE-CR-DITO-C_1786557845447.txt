@@ -1,0 +1,119 @@
+# PROMPT — C0.8: REVALIDAÇÃO EM PRODUÇÃO E TRAVA DE CRÉDITO
+
+> Cole tudo abaixo da linha no agente Replit. Não edite, não resuma.
+
+---
+
+## RECONHECIMENTO
+
+Duas decisões corretas na última rodada, ambas tomadas por iniciativa própria:
+
+1. Você identificou `BANCOS DIFERENTES` a partir da evidência visual, sem precisar do deploy. C0.6.3 está **RESOLVIDA**.
+2. Você **suspendeu o deploy** ao detectar risco em produção. Essa é exatamente a postura exigida. Mantenha.
+
+---
+
+## CONSEQUÊNCIA QUE VOCÊ NÃO REGISTROU
+
+`BANCOS DIFERENTES` invalida **toda** evidência de banco produzida até agora. Declare isso formalmente e trate como nulo:
+
+| Achado anterior | Status |
+|---|---|
+| 24 workspaces, todos com `persona` nula | **INVÁLIDO** — lido em dev |
+| `heygenAvatarId` ausente em todos os workspaces | **INVÁLIDO** — lido em dev |
+| `media_job_id` vazio em todos os posts | **INVÁLIDO** — lido em dev |
+| 0 posts agendados nas próximas 6h | **INVÁLIDO** — produção tem 49 |
+| Diagnóstico "a persona nunca foi gravada" | **INVÁLIDO** — premissa vinha de dev |
+
+A UI de produção sempre esteve correta ao exibir "Avatar HeyGen configurado". O contraditório era a sua query, não a interface.
+
+**O escopo de C4 está suspenso até ser reavaliado contra o banco de produção.**
+
+Continuam válidos, porque não dependem de banco: FASE 0 (mapa de código), FASE 1 (chave, quota, avatares na HeyGen), FASE 2 (par v2 submit + v3 status comprovado), C1.1.a (vídeo `64bc1548...` gerado, `completed`), C1.1.c (v3 rejeita `video_inputs[]`).
+
+---
+
+## C0.8.1 — OBTER ACESSO DE LEITURA AO BANCO DE PRODUÇÃO
+
+Sem isso, nenhuma prova futura tem valor. Reporte qual das situações se aplica:
+
+- O `DATABASE_URL` de produção está disponível como secret separado no painel de Deployments? Se sim, informe **apenas o nome do secret**, nunca o valor.
+- Se não estiver acessível a você, declare **"ACESSO AO BANCO DE PRODUÇÃO INDISPONÍVEL"** e liste exatamente o que precisa ser fornecido.
+
+**Proibido** copiar credencial de produção para arquivo, log ou variável de dev.
+
+---
+
+## C0.8.2 — REVALIDAR EM PRODUÇÃO
+
+Assim que houver acesso, execute contra **produção** e cole cru, identificando o host consultado em cada bloco:
+
+```sql
+-- Inventário de persona
+SELECT count(*) AS total,
+       count(*) FILTER (WHERE settings ? 'persona') AS tem_chave_persona,
+       count(*) FILTER (WHERE settings->'persona'->>'heygenAvatarId' IS NOT NULL) AS tem_avatar_id,
+       count(*) FILTER (WHERE settings->'persona'->>'heygenVoiceId' IS NOT NULL) AS tem_voice_id,
+       count(*) FILTER (WHERE settings->'persona'->>'avatarType' IS NOT NULL) AS tem_avatar_type
+FROM workspaces;
+
+-- Persona real do workspace do founder
+SELECT id, name, settings->'persona' AS persona
+FROM workspaces
+WHERE settings->'persona'->>'heygenAvatarId' IS NOT NULL;
+
+-- Histórico real de geração de vídeo
+SELECT count(*) FILTER (WHERE media_job_id IS NOT NULL) AS com_job_id,
+       count(*) FILTER (WHERE media_gen_status = 'failed') AS falhados,
+       count(*) FILTER (WHERE media_gen_status = 'completed') AS completos
+FROM social_presence_posts;
+```
+
+**Regra permanente, a partir de agora:** toda prova por `SELECT` deve declarar o host do banco consultado. `SELECT` sem host declarado é prova inválida.
+
+---
+
+## C0.8.3 — TRAVA DE CRÉDITO ANTES DO DEPLOY (bloqueante)
+
+Produção tem **49 posts agendados**, alguns vencendo em minutos. Restam **97 créditos de API** na HeyGen. Se C1 subir agora, o scheduler passa a gerar vídeo de verdade em todos eles.
+
+Responda antes de qualquer deploy:
+
+- **(a)** Quantos dos 49 posts agendados são formato de vídeo (reel/story) e portanto disparariam `generateAvatarVideo()`? Cole a query e o resultado, com host declarado.
+- **(b)** Qual o custo em créditos HeyGen por vídeo, conforme a documentação oficial e o consumo observado? O vídeo `64bc1548...` teve 4,73s — compare `remaining_quota` de antes e depois para medir o consumo real:
+  ```bash
+  curl -s -H "X-Api-Key: $HEYGEN_API_KEY" https://api.heygen.com/v2/user/remaining_quota
+  ```
+- **(c)** Existe alguma variável de ambiente, feature flag ou chave de configuração que já permita **desligar o scheduler de auto-publicação** sem alterar código?
+  ```bash
+  grep -rn -i "autoPublish\|scheduler\|cron\|ENABLE_\|DISABLE_\|FEATURE_" \
+    --include=*.ts --include=*.js --include=.env.example .
+  ```
+  Se existir, informe o nome exato. Se não existir, declare **"NÃO EXISTE"**.
+
+Com base em (a), (b) e (c), proponha **uma** estratégia de contenção — não implemente:
+
+- opção A: desligar o scheduler em produção via flag existente, deployar, validar 1 post manualmente pelo botão "Tentar gerar vídeo novamente", religar em lotes
+- opção B: em produção, mover os posts agendados para rascunho ou empurrar `scheduled_at`, deployar, validar 1 post, reagendar em lotes
+- opção C: outra, descrita com precisão
+
+Indique qual é a mais segura **e por quê**, considerando que a opção B mexe em dados reais de produção e precisa ser reversível.
+
+---
+
+## DEPLOY
+
+**SUSPENSO.** Não deploye até C0.8.3 estar respondida e a estratégia de contenção aprovada.
+
+---
+
+## RESTRIÇÕES
+
+- Proibido alterar código nesta rodada.
+- Proibido deployar.
+- Proibido escrever ou apagar dados em produção.
+- Proibido antecipar C2, C3, C4 ou C5.
+- Proibido responder com "ou" em declaração de causa.
+- Todo `SELECT` deve declarar o host do banco.
+
+**PARE ao final. Não avance sozinho.**
