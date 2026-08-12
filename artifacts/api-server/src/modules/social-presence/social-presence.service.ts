@@ -1561,12 +1561,26 @@ export async function publishDuePresencePosts(): Promise<void> {
               const persona = await getWorkspacePersona(post.workspaceId);
               const effectiveVoiceId = persona.heygenVoiceId || persona.voiceCloneId;
               if (persona.heygenAvatarId && effectiveVoiceId) {
+                // [C0.9 CONTENCAO] Trava de crédito HeyGen — suprime geração automática
+                // pelo scheduler quando DISABLE_SCHEDULED_VIDEO_GENERATION=true.
+                // O botão manual "Gerar vídeo" NÃO é afetado (passa por routes.ts → approveStoryboardGenerateVideo diretamente).
+                // O continue abaixo também corrige o fall-through para linha ~1609 que
+                // sobrescrevia mediaGenStatus antes do setImmediate disparar — causando
+                // com_job_id=0 em produção (todos os 6 falhas anteriores têm essa causa).
+                if (env.DISABLE_SCHEDULED_VIDEO_GENERATION) {
+                  log.info(
+                    { "[CONTENCAO]": true, postId: post.id, workspaceId: post.workspaceId },
+                    "[CONTENCAO] geração de vídeo agendada suprimida por DISABLE_SCHEDULED_VIDEO_GENERATION — post não publicado",
+                  );
+                  continue;
+                }
                 log.info({ postId: post.id, platform: post.platform }, "presence: storyboard pronto + avatar configurado → gerando vídeo automaticamente");
                 setImmediate(() =>
                   approveStoryboardGenerateVideo(post.workspaceId, post.id, log).catch((e) =>
                     log.warn({ err: e, postId: post.id }, "presence: auto video gen error (non-fatal)"),
                   ),
                 );
+                continue; // evita fall-through para bloco de storyboard_generating abaixo
               } else {
                 // Sem avatar → fallback: usar storyboard como imagem (publish-no-matter-what)
                 const sbUrls =

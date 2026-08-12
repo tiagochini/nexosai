@@ -68,6 +68,12 @@ export const env = {
   HEYGEN_API_KEY: process.env["HEYGEN_API_KEY"] ?? "",
   // ElevenLabs — voice cloning. https://elevenlabs.io/docs/api
   ELEVENLABS_API_KEY: process.env["ELEVENLABS_API_KEY"] ?? "",
+  // DISABLE_SCHEDULED_VIDEO_GENERATION — when "true", the social-presence scheduler
+  // suppresses automatic HeyGen video generation (leaves posts in current state,
+  // does NOT publish without video). The manual "Gerar vídeo" button is unaffected.
+  // Set to "true" before deploying C1 to avoid burning HeyGen credits on 28+ posts.
+  // Remove (or set to "false") after validating one post manually. [C0.9 TEMP]
+  DISABLE_SCHEDULED_VIDEO_GENERATION: process.env["DISABLE_SCHEDULED_VIDEO_GENERATION"] === "true",
 } as const;
 
 // ─── Production guard ──────────────────────────────────────────────────────────
