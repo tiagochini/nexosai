@@ -212,11 +212,55 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
     };
   }
 
+  // ── Pre-flight: verificar se o look já terminou de processar no HeyGen ──────
+  // Igual ao endpoint de demo — evita submeter a geração para um look não pronto
+  // (que resulta em vídeo travado ou com erro silencioso no render).
   try {
-    // v3 API — formato plano (não mais video_inputs[]).
-    // avatar_id deve ser um look UUID de /v3/avatars/looks, não o ID legado v2.
-    // aspect_ratio aceita: "9:16", "16:9", "1:1", "4:5", "5:4", "auto".
+    const lookRes = await fetch(`https://api.heygen.com/v3/avatars/looks/${req.avatarId}`, {
+      headers: { "X-Api-Key": heygenKey },
+    });
+    if (lookRes.ok) {
+      const lookData = (await lookRes.json()) as { data?: { status?: string } };
+      const lookStatus = lookData.data?.status;
+      log.info({ avatarId: req.avatarId, lookStatus }, "HeyGen pre-flight look check");
+      if (lookStatus && lookStatus !== "completed") {
+        return {
+          status: "avatar_still_processing",
+          error: `O HeyGen ainda está processando o avatar (status: ${lookStatus}). Aguarde alguns minutos e tente novamente.`,
+          provider: "heygen",
+        };
+      }
+    }
+  } catch (preflightErr) {
+    // Pre-flight não bloqueante — continua mesmo se a verificação falhar
+    log.warn({ err: preflightErr, avatarId: req.avatarId }, "HeyGen pre-flight check failed — proceeding anyway");
+  }
+
+  try {
     const aspectRatio = req.aspectRatio ?? "9:16";
+
+    // Truncar o script: HeyGen tem limite de ~2500 chars por vídeo.
+    // Scripts muito longos causam falha silenciosa no render.
+    const MAX_SCRIPT_CHARS = 2000;
+    const rawScript = req.voiceoverText?.trim() ?? "";
+    const script = rawScript.length > MAX_SCRIPT_CHARS
+      ? rawScript.slice(0, MAX_SCRIPT_CHARS - 3) + "..."
+      : rawScript;
+
+    // v3 API — formato plano. Campo correto é "input_text" (não "script").
+    // "script" era o campo antigo v1/v2; HeyGen v3 o ignora silenciosamente,
+    // o que fazia o render falhar sem mensagem de erro clara.
+    const payload = {
+      avatar_id: req.avatarId,
+      voice_id: req.voiceId,
+      input_text: script,
+      aspect_ratio: aspectRatio,
+      resolution: "720p",
+      test: false,
+      title: "NexOS Social Reel",
+    };
+
+    log.info({ avatarId: req.avatarId, voiceId: req.voiceId, scriptLen: script.length, aspectRatio }, "HeyGen v3 video submit");
 
     const res = await fetch("https://api.heygen.com/v3/videos", {
       method: "POST",
@@ -224,18 +268,11 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
         "X-Api-Key": heygenKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        type: "avatar",
-        avatar_id: req.avatarId,
-        script: req.voiceoverText,
-        voice_id: req.voiceId,
-        aspect_ratio: aspectRatio,
-        resolution: "720p",
-        title: "NexOS Social Reel",
-      }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) {
       const errText = await res.text();
+      log.warn({ status: res.status, errText, avatarId: req.avatarId }, "HeyGen v3 submit failed");
       // Avatar ou look inválido → mensagem clara para o usuário reselecionar
       if (
         res.status === 404 ||
@@ -275,7 +312,13 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
       throw new Error(`HeyGen API error ${res.status}: ${errText}`);
     }
     const data = (await res.json()) as { data: { video_id: string } };
-    return { status: "submitted", jobId: data.data.video_id, provider: "heygen" };
+    const videoId = data.data?.video_id;
+    if (!videoId) {
+      log.error({ responseBody: JSON.stringify(data) }, "HeyGen v3 submit: video_id ausente na resposta");
+      throw new Error(`HeyGen não retornou video_id. Resposta: ${JSON.stringify(data)}`);
+    }
+    log.info({ videoId }, "HeyGen v3 video submitted ✓");
+    return { status: "submitted", jobId: videoId, provider: "heygen" };
   } catch (err) {
     log.error({ err }, "HeyGen generation failed");
     return { status: "failed", error: String(err), provider: "heygen" };
@@ -290,12 +333,29 @@ export async function pollHeyGenJob(jobId: string): Promise<VideoClipResult> {
       headers: { "X-Api-Key": env.HEYGEN_API_KEY ?? "" },
     });
     if (!res.ok) throw new Error(`HeyGen poll error ${res.status}`);
-    const data = (await res.json()) as { data: { status: string; video_url?: string; failure_message?: string } };
-    if (data.data.status === "completed" && data.data.video_url) {
-      return { status: "ready", clipUrl: data.data.video_url, provider: "heygen" };
+    const raw = (await res.json()) as Record<string, unknown>;
+    const videoData = (raw.data ?? raw) as Record<string, unknown>;
+
+    // Log completo para diagnóstico — removível após estabilizar
+    log.info({ jobId, status: videoData.status, keys: Object.keys(videoData) }, "HeyGen poll response");
+
+    const status = String(videoData.status ?? "");
+    // video_url pode vir como video_url ou url dependendo da versão do endpoint
+    const clipUrl = (videoData.video_url ?? videoData.url ?? videoData.download_url) as string | undefined;
+    const failureMsg = (videoData.failure_message ?? videoData.error ?? videoData.message) as string | undefined;
+
+    if (status === "completed" && clipUrl) {
+      log.info({ jobId, clipUrl }, "HeyGen video completed ✓");
+      return { status: "ready", clipUrl, provider: "heygen" };
     }
-    if (data.data.status === "failed") {
-      return { status: "failed", error: data.data.failure_message ?? "HeyGen failed", provider: "heygen" };
+    if (status === "failed") {
+      log.warn({ jobId, failureMsg, videoData: JSON.stringify(videoData) }, "HeyGen video failed");
+      return { status: "failed", error: failureMsg ?? "HeyGen video render failed", provider: "heygen" };
+    }
+    // "completed" sem URL — tratar como failed (evita loop infinito)
+    if (status === "completed" && !clipUrl) {
+      log.error({ jobId, videoData: JSON.stringify(videoData) }, "HeyGen completed but no video_url");
+      return { status: "failed", error: "HeyGen retornou completed sem URL de vídeo", provider: "heygen" };
     }
     return { status: "processing", jobId, provider: "heygen" };
   } catch (err) {

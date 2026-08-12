@@ -1413,18 +1413,29 @@ export async function publishDuePresencePosts(): Promise<void> {
 
             // Vídeo em geração — polling automático no HeyGen a cada tick do scheduler
             if (gs === "video_generating") {
+              const videoAgeMs = Date.now() - new Date(post.updatedAt ?? post.createdAt).getTime();
+              const VIDEO_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutos
+
               if (post.mediaJobId) {
-                setImmediate(() =>
-                  pollPostMediaJob(post.workspaceId, post.id, log).catch((e) =>
-                    log.warn({ err: e, postId: post.id }, "presence: poll job error (non-fatal)"),
-                  ),
-                );
+                // Timeout global: se o HeyGen não respondeu em 20 min, resetar para storyboard_ready
+                if (videoAgeMs > VIDEO_TIMEOUT_MS) {
+                  log.warn({ postId: post.id, videoAgeMs, mediaJobId: post.mediaJobId }, "presence: video_generating com jobId por >20min — resetando para storyboard_ready");
+                  await db
+                    .update(socialPresencePostsTable)
+                    .set({ mediaGenStatus: "storyboard_ready", mediaJobId: null, mediaJobProvider: null, errorMessage: null })
+                    .where(eq(socialPresencePostsTable.id, post.id));
+                } else {
+                  setImmediate(() =>
+                    pollPostMediaJob(post.workspaceId, post.id, log).catch((e) =>
+                      log.warn({ err: e, postId: post.id }, "presence: poll job error (non-fatal)"),
+                    ),
+                  );
+                }
               } else {
-                // Sem mediaJobId → submissão falhou silenciosamente (ex: avatar_still_processing sem jobId)
-                // Resetar para storyboard_ready para nova tentativa no próximo tick
-                const ageMs = Date.now() - new Date(post.updatedAt ?? post.createdAt).getTime();
-                if (ageMs > 3 * 60 * 1000) { // aguardar ao menos 3 min antes de resetar
-                  log.warn({ postId: post.id, ageMs }, "presence: video_generating sem jobId há >3min — resetando para storyboard_ready");
+                // Sem mediaJobId → submissão falhou silenciosamente
+                // Resetar para storyboard_ready após 3 min para nova tentativa
+                if (videoAgeMs > 3 * 60 * 1000) {
+                  log.warn({ postId: post.id, videoAgeMs }, "presence: video_generating sem jobId há >3min — resetando para storyboard_ready");
                   await db
                     .update(socialPresencePostsTable)
                     .set({ mediaGenStatus: "storyboard_ready", errorMessage: null })
