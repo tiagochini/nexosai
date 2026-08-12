@@ -118,11 +118,14 @@ interface AvatarFlowProps {
 
 function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = false }: AvatarFlowProps) {
   const [step, setStep]         = useState<"training" | "consent" | "uploading" | "pending" | "done">(
-    hasTrainingInGCS ? "consent" : initialStep === "consent" ? "consent" : "training",
+    hasTrainingInGCS ? "consent" : (initialStep === "consent" ? "consent" : "training"),
   );
   const [recState, setRecState] = useState<VideoRecState>("idle");
   const [trainingUrl, setTrainingUrl] = useState<string | null>(null);
   const [consentUrl, setConsentUrl]   = useState<string | null>(null);
+  // Rastreia se o upload do vídeo de treino foi confirmado no servidor
+  const [trainingSaved, setTrainingSaved] = useState(hasTrainingInGCS);
+  const [trainingUploadError, setTrainingUploadError] = useState<string | null>(null);
   const [videoMime, setVideoMime]     = useState("video/webm");
   const [error, setError]             = useState<string | null>(null);
   const [trainingStatus, setTrainingStatus] = useState<string | null>(null);
@@ -219,23 +222,58 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
     });
   }
 
-  /** Upload training video immediately when user advances — so GCS has it if they leave. */
+  /** Upload training video before advancing — bloqueante para garantir que está no GCS. */
   async function advanceToConsent() {
     setRecState("idle");
-    if (!trainingBlobRef.current || hasTrainingInGCS) {
+    setTrainingUploadError(null);
+
+    if (hasTrainingInGCS) {
+      // Já confirmado no GCS — avançar direto
+      setTrainingSaved(true);
       setStep("consent");
       return;
     }
+
+    if (!trainingBlobRef.current) {
+      setStep("consent");
+      return;
+    }
+
     setUploadingTraining(true);
     try {
       const key = await uploadVideoRaw(trainingBlobRef.current, "training");
       trainingKeyRef.current = key;
-    } catch {
-      // Non-fatal — training blob is still in memory; we'll retry at submit.
-      // The consent step proceeds regardless so the user doesn't lose their recording.
+      setTrainingSaved(true);   // Upload confirmado no servidor
+      toast.success("Vídeo de treino salvo com segurança ✓");
+      setStep("consent");
+    } catch (err: any) {
+      // NUNCA engolir silenciosamente — o usuário precisa saber
+      const msg = err?.message ?? "Erro ao salvar vídeo de treino";
+      setTrainingUploadError(msg);
+      toast.error(`Falha ao salvar vídeo: ${msg.slice(0, 120)}`);
+      // Não avança para consent — o vídeo precisa estar no servidor para não ser perdido
     } finally {
       setUploadingTraining(false);
+    }
+  }
+
+  /** Retentar upload do treino após falha. */
+  async function retryTrainingUpload() {
+    if (!trainingBlobRef.current) return;
+    setTrainingUploadError(null);
+    setUploadingTraining(true);
+    try {
+      const key = await uploadVideoRaw(trainingBlobRef.current, "training");
+      trainingKeyRef.current = key;
+      setTrainingSaved(true);
+      toast.success("Vídeo de treino salvo com segurança ✓");
       setStep("consent");
+    } catch (err: any) {
+      const msg = err?.message ?? "Erro ao salvar vídeo";
+      setTrainingUploadError(msg);
+      toast.error(`Falha ao salvar vídeo: ${msg.slice(0, 120)}`);
+    } finally {
+      setUploadingTraining(false);
     }
   }
 
@@ -342,20 +380,47 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
           {trainingUrl && (
             <div className="space-y-3">
               <video src={trainingUrl} controls className="w-full max-w-sm rounded-lg border border-border/40" />
-              <div className="flex gap-2">
-                <Button
-                  onClick={advanceToConsent}
-                  disabled={uploadingTraining}
-                  className="font-mono gap-2"
-                >
-                  {uploadingTraining
-                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Salvando…</>
-                    : <><Check className="h-4 w-4" /> Ficou bom — Próximo passo</>}
-                </Button>
-                <Button variant="outline" onClick={() => retake("training")} className="font-mono text-xs gap-1.5">
-                  <RotateCcw className="h-3.5 w-3.5" /> Regravar
-                </Button>
-              </div>
+
+              {/* Erro de upload — bloqueante, com botão de retry */}
+              {trainingUploadError && (
+                <div className="border border-destructive/40 bg-destructive/10 rounded-lg px-3 py-2.5 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-mono text-xs text-destructive font-bold">Falha ao salvar vídeo de treino</p>
+                      <p className="font-mono text-[11px] text-destructive/80 mt-0.5 break-all">{trainingUploadError.slice(0, 160)}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={retryTrainingUpload}
+                    disabled={uploadingTraining}
+                    className="font-mono text-xs gap-1.5 w-full"
+                  >
+                    {uploadingTraining
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando…</>
+                      : <><RotateCcw className="h-3.5 w-3.5" /> Tentar salvar novamente</>}
+                  </Button>
+                </div>
+              )}
+
+              {!trainingUploadError && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={advanceToConsent}
+                    disabled={uploadingTraining}
+                    className="font-mono gap-2"
+                  >
+                    {uploadingTraining
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Salvando no servidor…</>
+                      : <><Check className="h-4 w-4" /> Ficou bom — Próximo passo</>}
+                  </Button>
+                  <Button variant="outline" onClick={() => retake("training")} disabled={uploadingTraining} className="font-mono text-xs gap-1.5">
+                    <RotateCcw className="h-3.5 w-3.5" /> Regravar
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -364,13 +429,22 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
       {/* PASSO 2 — Vídeo de consentimento */}
       {step === "consent" && (
         <div className="border border-border/50 rounded-xl p-5 space-y-3 bg-background/40">
-          {/* Training saved indicator */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
-            <Check className="h-3.5 w-3.5 text-green-400 shrink-0" />
-            <span className="font-mono text-[11px] text-green-400">
-              {hasTrainingInGCS ? "Vídeo de treino já salvo ✓" : "Vídeo de treino salvo no servidor ✓"}
-            </span>
-          </div>
+          {/* Indicador de status do vídeo de treino — só mostra verde quando confirmado no servidor */}
+          {trainingSaved ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+              <Check className="h-3.5 w-3.5 text-green-400 shrink-0" />
+              <span className="font-mono text-[11px] text-green-400">
+                {hasTrainingInGCS ? "Vídeo de treino já salvo no servidor ✓" : "Vídeo de treino salvo com segurança ✓"}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <span className="font-mono text-[11px] text-amber-400">
+                Vídeo de treino pendente — volte ao passo anterior para salvar
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-primary/15 border border-primary/40 flex items-center justify-center">
               <span className="font-mono text-[11px] font-bold text-primary">2</span>
