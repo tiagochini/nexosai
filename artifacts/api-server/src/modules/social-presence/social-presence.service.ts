@@ -51,6 +51,7 @@ import {
 } from "../agents/presence-planner.agent.js";
 import { getCampaignBrain } from "../campaign-brain/campaign-brain.service.js";
 import { emitWorkspaceAlert } from "../realtime/realtime.service.js";
+import { buildSocialMarketIntelContext } from "../market-intel/market-intel.service.js";
 import {
   publishToInstagram,
   publishToFacebook,
@@ -549,6 +550,18 @@ async function generateWeekNow(
   const firstWeekSafety = configAgeMs < 7 * 24 * 60 * 60 * 1000;
 
   const businessContext = await buildBusinessContext(workspaceId, config);
+
+  // 4. Inteligência de mercado — busca relatório vinculado à campanha ativa ou
+  //    o mais recente do workspace (cobre relatórios existentes antes da integração).
+  //    Fallback silencioso: se não houver relatório, segue sem market intel.
+  const marketIntelCtx = await buildSocialMarketIntelContext(
+    workspaceId,
+    launch?.campaignId ?? null,
+  ).catch(() => null);
+  const enrichedBusinessContext = marketIntelCtx
+    ? `${businessContext}\n\n${marketIntelCtx}`
+    : businessContext;
+
   const enabled = (config.platforms ?? []).filter((p) => p.enabled);
 
   // Load lifestyle preferences once for this workspace (shared across all platforms)
@@ -569,7 +582,7 @@ async function generateWeekNow(
           preferredTimes: platform.preferredTimes ?? [],
           contentPillars: config.contentPillars ?? [],
           tone: config.tone ?? "",
-          businessContext,
+          businessContext: enrichedBusinessContext,
           weekStartISO,
           launchContext: launch?.context ?? null,
           insight,

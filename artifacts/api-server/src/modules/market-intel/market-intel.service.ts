@@ -390,6 +390,114 @@ export async function chatWithMarketIntel(
   return result.content;
 }
 
+// ─── Social presence context ─────────────────────────────────────────────────
+
+/**
+ * Monta um bloco de inteligência de mercado otimizado para geração de posts e
+ * reels de social media. Inclui campos ausentes na versão de intake:
+ * contentArbitrage, platformArbitrage, winningStrategyVsField, untappedSegments.
+ *
+ * Se campaignId for fornecido, busca o relatório vinculado à campanha.
+ * Caso contrário, usa o relatório mais recente pronto do workspace (fallback
+ * que cobre workspaces com relatório existente antes dessa integração).
+ */
+export async function buildSocialMarketIntelContext(
+  workspaceId: string,
+  campaignId?: string | null,
+): Promise<string | null> {
+  // 1) Tenta por vínculo de campanha
+  let report: MarketIntelReport | undefined;
+  if (campaignId) {
+    const [linked] = await db
+      .select()
+      .from(marketIntelReportsTable)
+      .where(
+        and(
+          eq(marketIntelReportsTable.workspaceId, workspaceId),
+          eq(marketIntelReportsTable.campaignId, campaignId),
+          eq(marketIntelReportsTable.status, "ready"),
+        ),
+      )
+      .orderBy(desc(marketIntelReportsTable.createdAt))
+      .limit(1);
+    report = linked;
+  }
+
+  // 2) Fallback: relatório mais recente pronto do workspace (cobre relatórios
+  //    existentes antes da integração ser ativada)
+  if (!report) {
+    const [latest] = await db
+      .select()
+      .from(marketIntelReportsTable)
+      .where(
+        and(
+          eq(marketIntelReportsTable.workspaceId, workspaceId),
+          eq(marketIntelReportsTable.status, "ready"),
+        ),
+      )
+      .orderBy(desc(marketIntelReportsTable.createdAt))
+      .limit(1);
+    report = latest;
+  }
+
+  if (!report?.output) return null;
+  const out = report.output as unknown as MarketIntelOutput;
+
+  const parts: string[] = [
+    `=== INTELIGÊNCIA DE MERCADO (${report.productName} / ${report.market}) ===`,
+    "Use esses dados como base factual para criar conteúdo diferenciado. NÃO mencione concorrentes pelo nome nos posts.",
+  ];
+
+  // Maturidade e tamanho
+  if (out.marketMaturity || out.marketSize) {
+    parts.push(`Maturidade do mercado: ${out.marketMaturity ?? "?"} | Tamanho: ${out.marketSize ?? "?"}`);
+  }
+
+  // Vulnerabilidades dos concorrentes → ângulos de diferenciação
+  const topCompetitors = (out.competitors ?? []).slice(0, 4);
+  if (topCompetitors.length > 0) {
+    const compLines = topCompetitors
+      .map((c) => `• ${c.name}: vulnerável em "${c.biggestVulnerability}"; preço ${c.pricingStrategy}`)
+      .join("\n");
+    parts.push(`VULNERABILIDADES DOS CONCORRENTES (use para diferenciação no conteúdo):\n${compLines}`);
+  }
+
+  // Gaps de posicionamento → ângulos de conteúdo
+  const gaps = (out.positioningGaps ?? []).slice(0, 3);
+  if (gaps.length > 0) {
+    const gapLines = gaps.map((g) => `• ${g.gap}: ${g.opportunity}`).join("\n");
+    parts.push(`GAPS DE POSICIONAMENTO (ângulos não explorados pela concorrência):\n${gapLines}`);
+  }
+
+  // Arbitragem de conteúdo → o que postar que concorrentes ignoram
+  if (out.contentArbitrage) {
+    parts.push(`ARBITRAGEM DE CONTEÚDO (o que criar que concorrentes ignoram): ${out.contentArbitrage.slice(0, 400)}`);
+  }
+
+  // Arbitragem de plataforma → onde focar
+  if (out.platformArbitrage) {
+    parts.push(`ARBITRAGEM DE PLATAFORMA (onde há menos concorrência): ${out.platformArbitrage.slice(0, 300)}`);
+  }
+
+  // Estratégia vencedora
+  if (out.winningStrategyVsField) {
+    parts.push(`ESTRATÉGIA VENCEDORA vs campo: ${out.winningStrategyVsField.slice(0, 300)}`);
+  }
+
+  // Segmentos inexplorados
+  const untapped = (out.untappedSegments ?? []).slice(0, 2);
+  if (untapped.length > 0) {
+    parts.push(`SEGMENTOS NÃO ATACADOS: ${untapped.join(" | ")}`);
+  }
+
+  // Arbitragem de preço
+  if (out.pricingArbitrage) {
+    parts.push(`ARBITRAGEM DE PREÇO: ${out.pricingArbitrage.slice(0, 250)}`);
+  }
+
+  return parts.join("\n\n").slice(0, 3000);
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function str(v: unknown): string | null {
