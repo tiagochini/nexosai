@@ -899,6 +899,110 @@ router.get("/me/persona/avatar-recovery-status", async (req, res): Promise<void>
   });
 });
 
+// ─── Demonstração do avatar: gera vídeo curto com o avatar do workspace ──────
+
+// Helper: busca o primeiro voice_id português disponível no HeyGen
+async function getDefaultHeygenVoiceId(heygenKey: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://api.heygen.com/v2/voices?limit=100", {
+      headers: { "X-Api-Key": heygenKey },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { data?: { voices?: { voice_id: string; language?: string; name?: string }[] } };
+    const voices = data.data?.voices ?? [];
+    // Preferir voz brasileira (pt-BR), depois portuguesa, depois qualquer uma
+    const ptBr = voices.find(v => v.language?.toLowerCase().includes("pt-br") || v.name?.toLowerCase().includes("brasil"));
+    const pt   = voices.find(v => v.language?.toLowerCase().includes("pt"));
+    return (ptBr ?? pt ?? voices[0])?.voice_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// POST /workspaces/me/persona/generate-avatar-demo
+// Gera um vídeo demonstração curto com o avatar digital do workspace.
+// Retorna { jobId, status: "generating" }. Frontend faz polling via avatar-demo-status.
+router.post("/me/persona/generate-avatar-demo", async (req, res): Promise<void> => {
+  const workspaceId = req.auth.workspaceId;
+  const { env } = await import("../../lib/env.js");
+  const heygenKey = env.HEYGEN_API_KEY;
+  if (!heygenKey) {
+    res.status(422).json({ error: "HeyGen não configurado (HEYGEN_API_KEY ausente)", code: "PROVIDER_NOT_CONFIGURED" });
+    return;
+  }
+
+  const [ws] = await db.select().from(workspacesTable).where(eq(workspacesTable.id, workspaceId)).limit(1);
+  const persona = (((ws?.settings ?? {}) as Record<string, unknown>)["persona"] ?? {}) as Record<string, unknown>;
+  const heygenAvatarId = persona["heygenAvatarId"] as string | undefined;
+  const heygenVoiceId  = persona["heygenVoiceId"]  as string | undefined;
+
+  if (!heygenAvatarId) {
+    res.status(400).json({ error: "Avatar ainda não está configurado. Aguarde o término do treinamento.", code: "AVATAR_NOT_READY" });
+    return;
+  }
+
+  // Resolver voice ID: usar o configurado ou buscar voz padrão PT-BR
+  let voiceId = heygenVoiceId;
+  if (!voiceId) {
+    voiceId = (await getDefaultHeygenVoiceId(heygenKey)) ?? undefined;
+  }
+  if (!voiceId) {
+    res.status(400).json({
+      error: "Voz não configurada. Vá em Configurações → Persona e selecione uma voz para o avatar.",
+      code: "VOICE_NOT_CONFIGURED",
+    });
+    return;
+  }
+
+  try {
+    const { generateAvatarVideo } = await import("../video-production/video-generation.service.js");
+    const result = await generateAvatarVideo({
+      voiceoverText:
+        "Olá! Sou seu avatar digital criado com inteligência artificial pela NexOS AI. " +
+        "Estou pronto para aparecer nos seus reels, anúncios e campanhas automaticamente — " +
+        "sem você precisar gravar cada vídeo.",
+      avatarId: heygenAvatarId,
+      voiceId,
+      aspectRatio: "9:16",
+    });
+
+    if (result.status === "submitted" && result.jobId) {
+      req.log.info({ workspaceId, jobId: result.jobId }, "Avatar demo: geração iniciada ✓");
+      res.json({ jobId: result.jobId, status: "generating" });
+      return;
+    }
+    res.status(500).json({ error: result.error ?? "Falha ao iniciar geração do demo", code: "GENERATION_FAILED" });
+  } catch (err) {
+    req.log.error({ err }, "generate-avatar-demo: erro");
+    res.status(500).json({ error: String(err), code: "INTERNAL_ERROR" });
+  }
+});
+
+// GET /workspaces/me/persona/avatar-demo-status?jobId=xxx
+// Verifica o status do vídeo demo no HeyGen. Retorna { status, videoUrl? }.
+router.get("/me/persona/avatar-demo-status", async (req, res): Promise<void> => {
+  const jobId = (req.query as { jobId?: string }).jobId ?? "";
+  if (!jobId) {
+    res.status(400).json({ error: "jobId obrigatório", code: "MISSING_PARAM" });
+    return;
+  }
+  try {
+    const { pollHeyGenJob } = await import("../video-production/video-generation.service.js");
+    const result = await pollHeyGenJob(jobId);
+    if (result.status === "ready" && result.clipUrl) {
+      res.json({ status: "ready", videoUrl: result.clipUrl });
+      return;
+    }
+    if (result.status === "failed") {
+      res.json({ status: "failed", error: result.error });
+      return;
+    }
+    res.json({ status: "generating" });
+  } catch (err) {
+    res.status(500).json({ error: String(err), code: "POLL_ERROR" });
+  }
+});
+
 // GET /workspaces/me/persona/voice-clone-progress
 // Returns in-progress voice clone session so the UI can offer "Resume (X/5 takes)" on reload.
 router.get("/me/persona/voice-clone-progress", async (req, res): Promise<void> => {

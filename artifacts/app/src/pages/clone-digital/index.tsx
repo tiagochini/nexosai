@@ -126,6 +126,15 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   // Rastreia se o upload do vídeo de treino foi confirmado no servidor
   const [trainingSaved, setTrainingSaved] = useState(hasTrainingInGCS);
   const [trainingUploadError, setTrainingUploadError] = useState<string | null>(null);
+  // Consent auto-upload state (upload para GCS imediatamente após gravação)
+  const [consentSaved, setConsentSaved]   = useState(false);
+  const [consentUploading, setConsentUploading] = useState(false);
+  const [consentUploadError, setConsentUploadError] = useState<string | null>(null);
+  // Demo avatar video state
+  const [demoJobId, setDemoJobId]         = useState<string | null>(null);
+  const [demoVideoUrl, setDemoVideoUrl]   = useState<string | null>(null);
+  const [demoGenerating, setDemoGenerating] = useState(false);
+  const [demoError, setDemoError]         = useState<string | null>(null);
   const [videoMime, setVideoMime]     = useState("video/webm");
   const [error, setError]             = useState<string | null>(null);
   const [trainingStatus, setTrainingStatus] = useState<string | null>(null);
@@ -135,17 +144,46 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   const chunksRef       = useRef<Blob[]>([]);
   const streamRef       = useRef<MediaStream | null>(null);
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null);
+  const demoPollRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const trainingBlobRef = useRef<Blob | null>(null);
   const consentBlobRef  = useRef<Blob | null>(null);
-  // GCS key for training video (set after auto-upload on advance)
+  // GCS keys (set after auto-upload)
   const trainingKeyRef  = useRef<string | null>(hasTrainingInGCS ? "already-in-gcs" : null);
+  const consentKeyRef   = useRef<string | null>(null);
 
   useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach(t => t.stop());
       if (pollRef.current) clearInterval(pollRef.current);
+      if (demoPollRef.current) clearInterval(demoPollRef.current);
     };
   }, []);
+
+  // ── Auto-upload consent immediately when recording stops ──────────────────
+  // O blob de consent é definido em recorder.onstop. Este effect dispara logo
+  // após a URL ser criada, fazendo upload para GCS antes de qualquer interação.
+  useEffect(() => {
+    if (!consentUrl || !consentBlobRef.current || consentSaved) return;
+    let cancelled = false;
+    setConsentUploading(true);
+    setConsentUploadError(null);
+    uploadVideoRaw(consentBlobRef.current, "consent")
+      .then(key => {
+        if (cancelled) return;
+        consentKeyRef.current = key;
+        setConsentSaved(true);
+        setConsentUploading(false);
+        toast.success("Vídeo de consentimento salvo com segurança ✓");
+      })
+      .catch(err => {
+        if (cancelled) return;
+        setConsentUploadError(err?.message ?? "Erro ao salvar vídeo de consentimento");
+        setConsentUploading(false);
+        toast.error("Falha ao salvar vídeo de consentimento — tente novamente");
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consentUrl]);
 
   async function startRecording(kind: "training" | "consent") {
     setError(null);
@@ -177,8 +215,13 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
   }
 
   function retake(kind: "training" | "consent") {
-    if (kind === "training") { setTrainingUrl(null); trainingBlobRef.current = null; trainingKeyRef.current = null; }
-    else                     { setConsentUrl(null);  consentBlobRef.current  = null; }
+    if (kind === "training") {
+      setTrainingUrl(null); trainingBlobRef.current = null; trainingKeyRef.current = null;
+      setTrainingSaved(false); setTrainingUploadError(null);
+    } else {
+      setConsentUrl(null); consentBlobRef.current = null; consentKeyRef.current = null;
+      setConsentSaved(false); setConsentUploadError(null); setConsentUploading(false);
+    }
     setRecState("idle");
   }
 
@@ -286,7 +329,10 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
         setTrainingStatus(res.status);
         if (res.status === "complete") {
           clearInterval(pollRef.current!); pollRef.current = null;
-          setStep("done"); toast.success("Avatar digital treinado com sucesso!"); onDone();
+          toast.success("🎉 Avatar digital treinado com sucesso!");
+          setStep("done");
+          // Gerar vídeo demo automaticamente após treinamento concluído
+          void generateDemo();
         } else if (res.status === "failed") {
           clearInterval(pollRef.current!); pollRef.current = null;
           setError("Treinamento falhou. Tente novamente."); setStep("training");
@@ -295,14 +341,51 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
     }, 8000);
   }
 
+  async function generateDemo() {
+    setDemoGenerating(true);
+    setDemoError(null);
+    try {
+      const { jobId } = await customFetch<{ jobId: string }>("/api/workspaces/me/persona/generate-avatar-demo", {
+        method: "POST",
+      });
+      setDemoJobId(jobId);
+      // Polling para URL do vídeo
+      if (demoPollRef.current) clearInterval(demoPollRef.current);
+      demoPollRef.current = setInterval(async () => {
+        try {
+          const poll = await customFetch<{ status: string; videoUrl?: string; error?: string }>(
+            `/api/workspaces/me/persona/avatar-demo-status?jobId=${jobId}`,
+          );
+          if (poll.status === "ready" && poll.videoUrl) {
+            clearInterval(demoPollRef.current!); demoPollRef.current = null;
+            setDemoVideoUrl(poll.videoUrl);
+            setDemoGenerating(false);
+          } else if (poll.status === "failed") {
+            clearInterval(demoPollRef.current!); demoPollRef.current = null;
+            setDemoError(poll.error ?? "Geração do demo falhou.");
+            setDemoGenerating(false);
+          }
+        } catch { /* keep polling */ }
+      }, 6000);
+    } catch (err: any) {
+      setDemoError(err?.message ?? "Erro ao gerar demonstração");
+      setDemoGenerating(false);
+    }
+  }
+
   async function submit() {
     const cBlob = consentBlobRef.current;
     if (!cBlob) { setError("Grave o vídeo de consentimento antes de enviar."); return; }
+    if (!consentSaved && !consentKeyRef.current) {
+      // Auto-upload ainda não terminou — aguardar um pouco ou informar
+      setError("Aguarde — o vídeo de consentimento ainda está sendo salvo no servidor. Tente novamente em alguns segundos.");
+      return;
+    }
     setStep("uploading");
     setError(null);
     try {
-      // Upload consent video (training may already be uploaded or in memory)
-      const consentKey = await uploadVideoRaw(cBlob, "consent");
+      // Consent pode já estar no GCS (auto-uploaded). Usar a chave existente.
+      const consentKey = consentKeyRef.current ?? await uploadVideoRaw(cBlob, "consent");
       let trainingKey = trainingKeyRef.current;
       if (!trainingKey || trainingKey === "already-in-gcs") {
         if (trainingBlobRef.current) {
@@ -470,11 +553,53 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
           {consentUrl && (
             <div className="space-y-3">
               <video src={consentUrl} controls className="w-full max-w-sm rounded-lg border border-border/40" />
+
+              {/* Status do upload do consentimento no GCS */}
+              {consentUploading && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                  <Loader2 className="h-3.5 w-3.5 text-primary animate-spin shrink-0" />
+                  <span className="font-mono text-[11px] text-primary">Salvando no servidor…</span>
+                </div>
+              )}
+              {consentSaved && !consentUploading && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <Check className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                  <span className="font-mono text-[11px] text-green-400">Consentimento salvo com segurança ✓</span>
+                </div>
+              )}
+              {consentUploadError && !consentUploading && (
+                <div className="border border-destructive/40 bg-destructive/10 rounded-lg px-3 py-2.5 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <p className="font-mono text-xs text-destructive break-all">{consentUploadError.slice(0, 160)}</p>
+                  </div>
+                  <Button
+                    size="sm" variant="destructive"
+                    onClick={() => {
+                      if (!consentBlobRef.current) return;
+                      setConsentUploading(true); setConsentUploadError(null);
+                      uploadVideoRaw(consentBlobRef.current, "consent")
+                        .then(key => { consentKeyRef.current = key; setConsentSaved(true); setConsentUploading(false); toast.success("Consentimento salvo ✓"); })
+                        .catch(err => { setConsentUploadError(err?.message ?? "Erro"); setConsentUploading(false); });
+                    }}
+                    className="font-mono text-xs gap-1.5 w-full"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Tentar salvar novamente
+                  </Button>
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <Button onClick={submit} className="font-mono gap-2 btn-weapon-primary">
-                  <Sparkles className="h-4 w-4" /> Enviar para treinamento
+                <Button
+                  onClick={submit}
+                  disabled={consentUploading}
+                  className="font-mono gap-2 btn-weapon-primary"
+                >
+                  {consentUploading
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Aguarde — salvando…</>
+                    : <><Sparkles className="h-4 w-4" /> Enviar para treinamento</>}
                 </Button>
-                <Button variant="outline" onClick={() => retake("consent")} className="font-mono text-xs gap-1.5">
+                <Button variant="outline" onClick={() => retake("consent")} disabled={consentUploading} className="font-mono text-xs gap-1.5">
                   <RotateCcw className="h-3.5 w-3.5" /> Regravar
                 </Button>
               </div>
@@ -507,10 +632,73 @@ function AvatarCloneFlow({ onDone, initialStep = "training", hasTrainingInGCS = 
           <div>
             <p className="font-mono text-sm font-bold">Treinando seu avatar digital…</p>
             <p className="font-mono text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              O HeyGen está processando seus vídeos. Leva alguns minutos. Você pode fechar a página — ao voltar o avatar estará pronto.
+              O HeyGen está processando seus vídeos. Leva de 5 a 15 minutos. Você pode fechar a página — ao voltar o avatar estará pronto.
             </p>
             <p className="font-mono text-[11px] text-primary/60 mt-2">Status: {trainingStatus ?? "pending"}</p>
           </div>
+        </div>
+      )}
+
+      {/* AVATAR PRONTO + DEMONSTRAÇÃO */}
+      {step === "done" && (
+        <div className="space-y-4 border border-green-500/30 rounded-xl p-5 bg-green-500/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center shrink-0">
+              <Check className="h-5 w-5 text-green-400" />
+            </div>
+            <div>
+              <p className="font-mono text-sm font-bold text-green-400">Avatar Digital Criado!</p>
+              <p className="font-mono text-xs text-muted-foreground">Seu clone está pronto para aparecer em reels e campanhas automaticamente.</p>
+            </div>
+          </div>
+
+          {/* Demo video section */}
+          <div className="border border-border/40 rounded-xl p-4 bg-background/60 space-y-3">
+            <p className="font-mono text-xs font-bold text-muted-foreground uppercase tracking-wide">Vídeo Demonstração</p>
+
+            {demoVideoUrl ? (
+              <div className="space-y-2">
+                <video
+                  src={demoVideoUrl}
+                  controls
+                  autoPlay
+                  className="w-full max-w-xs rounded-lg border border-border/40 mx-auto block"
+                  style={{ maxHeight: "420px" }}
+                />
+                <p className="font-mono text-[11px] text-green-400 text-center">
+                  ✓ Seu avatar está funcionando corretamente!
+                </p>
+              </div>
+            ) : demoGenerating ? (
+              <div className="flex items-center gap-3 py-4">
+                <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
+                <div>
+                  <p className="font-mono text-xs font-bold">Gerando vídeo demonstração…</p>
+                  <p className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                    O HeyGen está renderizando seu avatar falando. ~2 min.
+                  </p>
+                </div>
+              </div>
+            ) : demoError ? (
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="font-mono text-xs text-amber-400">{demoError}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={generateDemo} className="font-mono text-xs gap-1.5 w-full">
+                  <RotateCcw className="h-3.5 w-3.5" /> Tentar gerar demonstração novamente
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" onClick={generateDemo} className="font-mono gap-1.5 w-full">
+                <Video className="h-4 w-4" /> Gerar vídeo demonstração
+              </Button>
+            )}
+          </div>
+
+          <Button onClick={onDone} variant="outline" className="font-mono gap-1.5 w-full">
+            <Check className="h-4 w-4" /> Fechar e ir para Configurações
+          </Button>
         </div>
       )}
     </div>
