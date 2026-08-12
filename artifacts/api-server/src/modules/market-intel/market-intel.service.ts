@@ -357,6 +357,79 @@ export async function buildIntakeMarketIntelContext(
 
 const MARKET_INTEL_CHAT_PROMPT = `Você é o Market Intelligence Analyst do NexOS — especialista em inteligência competitiva para o mercado digital brasileiro. Você desmonta estratégias de concorrentes, encontra gaps e identifica arbitragens de conteúdo, plataforma e preço. Responda sempre em PT-BR. Quando analisar um mercado: foque nas vulnerabilidades exploráveis e nos gaps não ocupados — não apenas liste players. O objetivo é encontrar a posição defensável onde você para de competir. Suas respostas são diretas, específicas e acionáveis — sem enrolação.`;
 
+const DEEPDIVE_SYNTHESIS_PROMPT = `Você é o sintetizador de inteligência do NexOS. Sua função é extrair insights acionáveis de uma conversa de análise de mercado e formatá-los como um bloco de contexto que será injetado nos agentes de Social Media (presença digital) e Lançamentos para que criem conteúdo e estratégias mais precisas.
+
+Analise o histórico da conversa e extraia:
+1. Ângulos de conteúdo descobertos na conversa (o que postar, que tipo de argumento funciona)
+2. Objeções e dúvidas do mercado identificadas (use para antecipar no conteúdo)
+3. Insights de posicionamento e diferenciação descobertos
+4. Dados numéricos concretos mencionados (tamanho de mercado, preços, percentuais)
+5. Decisões estratégicas acordadas na conversa
+
+Responda em PT-BR em texto corrido, máximo 600 palavras, sem headers markdown. Seja direto e acionável — escreva como se estivesse passando um briefing para o time de conteúdo.`;
+
+export interface StoredChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  ts: string; // ISO timestamp
+}
+
+/**
+ * Retorna o histórico de chat salvo para um relatório.
+ * Retorna array vazio se não houver histórico ainda.
+ */
+export async function getChatHistory(
+  reportId: string,
+  workspaceId: string,
+): Promise<StoredChatMessage[]> {
+  const report = await getReport(reportId, workspaceId);
+  if (!report) return [];
+  const raw = report.chatHistory as unknown as StoredChatMessage[] | null;
+  return Array.isArray(raw) ? raw : [];
+}
+
+/**
+ * Sintetiza os insights da conversa de deepdive e salva em deepdiveInsights.
+ * Chamado de forma fire-and-forget após cada nova troca — roda em background.
+ */
+async function synthesizeAndSaveInsights(
+  reportId: string,
+  workspaceId: string,
+  history: StoredChatMessage[],
+  log: Logger,
+): Promise<void> {
+  try {
+    // Só sintetiza se houver pelo menos 2 trocas (4 mensagens: 2 user + 2 assistant)
+    if (history.length < 4) return;
+
+    const convo = history
+      .map((m) => `${m.role === "user" ? "Usuário" : "Analista"}: ${m.content}`)
+      .join("\n\n");
+
+    const result = await completeWithAgent(
+      "market_intel",
+      DEEPDIVE_SYNTHESIS_PROMPT,
+      [{ role: "user" as const, content: `CONVERSA DE DEEPDIVE:\n\n${convo.slice(0, 15000)}` }],
+      workspaceId,
+      log,
+    );
+
+    await db
+      .update(marketIntelReportsTable)
+      .set({ deepdiveInsights: result.content.slice(0, 3000) })
+      .where(
+        and(
+          eq(marketIntelReportsTable.id, reportId),
+          eq(marketIntelReportsTable.workspaceId, workspaceId),
+        ),
+      );
+
+    log.info({ reportId }, "market-intel: deepdive insights synthesized and saved");
+  } catch (err) {
+    log.warn({ err, reportId }, "market-intel: failed to synthesize deepdive insights (non-fatal)");
+  }
+}
+
 export async function chatWithMarketIntel(
   reportId: string,
   workspaceId: string,
@@ -374,8 +447,8 @@ export async function chatWithMarketIntel(
 
   const messages = [
     { role: "user" as const, content: contextBlock },
-    ...history.slice(-10).map((h) => ({ role: h.role, content: h.content.slice(0, 2000) })),
-    { role: "user" as const, content: question.slice(0, 2000) },
+    ...history.slice(-10).map((h) => ({ role: h.role, content: h.content.slice(0, 30000) })),
+    { role: "user" as const, content: question.slice(0, 4000) },
   ];
 
   const result = await completeWithAgent(
@@ -387,7 +460,35 @@ export async function chatWithMarketIntel(
     report.campaignId ?? undefined,
   );
 
-  return result.content;
+  const answer = result.content;
+  const now = new Date().toISOString();
+
+  // Persist the new message pair to DB
+  const existingHistory = Array.isArray(report.chatHistory)
+    ? (report.chatHistory as unknown as StoredChatMessage[])
+    : [];
+  const updatedHistory: StoredChatMessage[] = [
+    ...existingHistory,
+    { role: "user", content: question, ts: now },
+    { role: "assistant", content: answer, ts: now },
+  ];
+
+  await db
+    .update(marketIntelReportsTable)
+    .set({ chatHistory: updatedHistory as unknown as typeof marketIntelReportsTable.$inferInsert["chatHistory"] })
+    .where(
+      and(
+        eq(marketIntelReportsTable.id, reportId),
+        eq(marketIntelReportsTable.workspaceId, workspaceId),
+      ),
+    );
+
+  // Fire-and-forget: synthesize insights after every exchange (updates deepdiveInsights async)
+  setImmediate(() => {
+    synthesizeAndSaveInsights(reportId, workspaceId, updatedHistory, log).catch(() => {});
+  });
+
+  return answer;
 }
 
 // ─── Social presence context ─────────────────────────────────────────────────
@@ -495,7 +596,18 @@ export async function buildSocialMarketIntelContext(
     parts.push(`ARBITRAGEM DE PREÇO: ${out.pricingArbitrage.slice(0, 250)}`);
   }
 
-  return parts.join("\n\n").slice(0, 3000);
+  // Insights do deepdive — insights refinados da conversa com o analista.
+  // Têm prioridade máxima: representam decisões estratégicas explícitas do usuário.
+  const deepdive = typeof report.deepdiveInsights === "string" && report.deepdiveInsights.trim()
+    ? report.deepdiveInsights.trim()
+    : null;
+  if (deepdive) {
+    parts.push(
+      `=== INSIGHTS DO DEEPDIVE COM O ANALISTA (prioridade máxima — decisões explícitas do usuário) ===\n${deepdive.slice(0, 1500)}`,
+    );
+  }
+
+  return parts.join("\n\n").slice(0, 5000);
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@
  * (narrativa injetada via Campaign Brain) quando há campanha executing/live.
  */
 
-import { eq, and, desc, gte, gt, lt, lte, inArray, isNull } from "drizzle-orm";
+import { eq, and, or, desc, gte, gt, lt, lte, inArray, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
@@ -3184,7 +3184,31 @@ async function addStoryToHighlight(
   }
 }
 
+// ─── DM keyword normalization ─────────────────────────────────────────────────
+// Normaliza a mensagem recebida: remove pontuação, emojis e espaços extras,
+// depois compara com a keyword. Ex: "Quero! 🔥" → "QUERO"; keyword "QUERO" → match.
+function normalizeDmKeyword(text: string): string {
+  return text
+    .normalize("NFD")                        // decompor acentos
+    .replace(/[\u0300-\u036f]/g, "")         // remover diacríticos
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")       // substituir pontuação/emojis por espaço
+    .trim()
+    .toUpperCase();
+}
+
+// Verifica se a mensagem contém a keyword (match exato de palavra inteira)
+function messageMatchesKeyword(message: string, keyword: string): boolean {
+  const normalizedMsg = normalizeDmKeyword(message);
+  const normalizedKw = normalizeDmKeyword(keyword);
+  // Match exato OU keyword está contida na mensagem como palavra completa
+  if (normalizedMsg === normalizedKw) return true;
+  const words = normalizedMsg.split(/\s+/);
+  return words.includes(normalizedKw);
+}
+
 // ─── DM Sequences: processa steps pendentes a cada tick ──────────────────────
+
+const MAX_STEP_RETRIES = 5; // desiste após 5 falhas consecutivas no mesmo step
 
 export async function processDmSequences(): Promise<void> {
   const log = logger.child({ component: "dm-sequence-scheduler" });
@@ -3228,10 +3252,20 @@ export async function processDmSequences(): Promise<void> {
 
         if (!integration) continue;
 
+        // Desistir após MAX_STEP_RETRIES falhas consecutivas no mesmo step
+        if ((seq.retryCount ?? 0) >= MAX_STEP_RETRIES) {
+          log.error(
+            { seqId: seq.id, step: seq.currentStep, retryCount: seq.retryCount, lastError: seq.lastError },
+            "dm-sequence: step abandonado após muitas falhas — marcando sequência como concluída",
+          );
+          await db
+            .update(instagramDmSequencesTable)
+            .set({ completedAt: new Date() })
+            .where(eq(instagramDmSequencesTable.id, seq.id));
+          continue;
+        }
+
         // ── Lembrete de expiração ────────────────────────────────────────────
-        // Se o step tem triggerKeyword + reminderMessage e o lembrete ainda NÃO
-        // foi enviado → o timer de 7 dias expirou sem o keyword chegar.
-        // Enviamos o lembrete e damos mais 48h; só aí entregamos o conteúdo.
         const stepData = step as typeof step & {
           triggerKeyword?: string;
           reminderMessage?: string;
@@ -3242,8 +3276,7 @@ export async function processDmSequences(): Promise<void> {
           stepData.reminderMessage &&
           !stepData.reminderSent
         ) {
-          // Enviar mensagem de lembrete
-          await fetch(
+          const reminderRes = await fetch(
             `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
             {
               method: "POST",
@@ -3256,27 +3289,39 @@ export async function processDmSequences(): Promise<void> {
             },
           );
 
-          // Marcar reminderSent = true na cópia JSONB dos steps (sem migration)
+          if (!reminderRes.ok) {
+            const errBody = await reminderRes.text().catch(() => "(unreadable)");
+            log.error(
+              { seqId: seq.id, step: seq.currentStep, status: reminderRes.status, errBody },
+              "dm-sequence: Graph API rejeitou lembrete — NÃO avançando step",
+            );
+            await db
+              .update(instagramDmSequencesTable)
+              .set({
+                retryCount: (seq.retryCount ?? 0) + 1,
+                lastError: `HTTP ${reminderRes.status}: ${errBody.slice(0, 500)}`,
+                // Retry em 5 minutos
+                nextStepAt: new Date(now.getTime() + 5 * 60 * 1000),
+              })
+              .where(eq(instagramDmSequencesTable.id, seq.id));
+            continue;
+          }
+
           const updatedSteps = [...seq.steps] as typeof seq.steps;
           (updatedSteps[seq.currentStep] as Record<string, unknown>).reminderSent = true;
-
-          // Estender nextStepAt em 48h — se o keyword não chegar, entrega na marra
           const reminderExtension = new Date(now.getTime() + 48 * 60 * 60 * 1000);
           await db
             .update(instagramDmSequencesTable)
-            .set({ steps: updatedSteps, nextStepAt: reminderExtension })
+            .set({ steps: updatedSteps, nextStepAt: reminderExtension, retryCount: 0, lastError: null })
             .where(eq(instagramDmSequencesTable.id, seq.id));
 
-          log.info(
-            { seqId: seq.id, step: seq.currentStep },
-            "dm-sequence: lembrete de expiração enviado (+48h)",
-          );
-          continue; // Não avançar o step — aguardar keyword ou timeout
+          log.info({ seqId: seq.id, step: seq.currentStep }, "dm-sequence: lembrete enviado (+48h)");
+          continue;
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        // Enviar mensagem via Graph API
-        await fetch(
+        // Enviar mensagem principal via Graph API
+        const sendRes = await fetch(
           `https://graph.facebook.com/v22.0/${seq.igAccountId}/messages`,
           {
             method: "POST",
@@ -3289,29 +3334,52 @@ export async function processDmSequences(): Promise<void> {
           },
         );
 
+        if (!sendRes.ok) {
+          const errBody = await sendRes.text().catch(() => "(unreadable)");
+          log.error(
+            { seqId: seq.id, step: seq.currentStep, status: sendRes.status, errBody },
+            "dm-sequence: Graph API rejeitou mensagem — NÃO avançando step",
+          );
+          await db
+            .update(instagramDmSequencesTable)
+            .set({
+              retryCount: (seq.retryCount ?? 0) + 1,
+              lastError: `HTTP ${sendRes.status}: ${errBody.slice(0, 500)}`,
+              // Backoff progressivo: 5min → 15min → 30min → 1h → 2h
+              nextStepAt: new Date(
+                now.getTime() +
+                  Math.min(2 * 60, 5 * Math.pow(2, seq.retryCount ?? 0)) * 60 * 1000,
+              ),
+            })
+            .where(eq(instagramDmSequencesTable.id, seq.id));
+          continue;
+        }
+
+        // ✅ Envio bem-sucedido — avançar step e resetar retryCount
         const nextStep = seq.currentStep + 1;
         const nextStepData = seq.steps[nextStep] as (typeof seq.steps[number] & { triggerKeyword?: string }) | undefined;
 
         if (nextStepData) {
-          // Se o próximo step tem triggerKeyword, aguardar resposta do usuário (até 7 dias)
-          // em vez de agendar por tempo. handleIncomingDmReply() avança quando keyword chega.
           const nextStepAt = nextStepData.triggerKeyword
             ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-            : new Date(now.getTime() + nextStepData.delayMinutes * 60 * 1000);
+            : new Date(now.getTime() + (nextStepData.delayMinutes ?? 0) * 60 * 1000);
           await db
             .update(instagramDmSequencesTable)
-            .set({ currentStep: nextStep, nextStepAt })
+            .set({ currentStep: nextStep, nextStepAt, retryCount: 0, lastError: null })
             .where(eq(instagramDmSequencesTable.id, seq.id));
         } else {
           await db
             .update(instagramDmSequencesTable)
-            .set({ currentStep: nextStep, completedAt: new Date() })
+            .set({ currentStep: nextStep, completedAt: new Date(), retryCount: 0, lastError: null })
             .where(eq(instagramDmSequencesTable.id, seq.id));
         }
 
-        log.info({ seqId: seq.id, step: seq.currentStep }, "dm-sequence: step enviado");
+        log.info(
+          { seqId: seq.id, step: seq.currentStep, nextStep },
+          "dm-sequence: step enviado com sucesso ✓",
+        );
       } catch (err) {
-        log.warn({ err, seqId: seq.id }, "dm-sequence: step falhou (non-fatal)");
+        log.warn({ err, seqId: seq.id }, "dm-sequence: erro inesperado no step (non-fatal)");
       }
     }
   } catch (err) {
@@ -3357,11 +3425,10 @@ export async function handleInstagramDmTrigger(
       )
       .limit(50);
 
-    const keyword = messageText.trim().toUpperCase();
     for (const post of posts) {
       const flow = (post as { dmResponseFlow?: { triggerKeyword?: string; steps?: unknown[] } | null }).dmResponseFlow;
       if (!flow || !flow.triggerKeyword) continue;
-      if (flow.triggerKeyword.toUpperCase() !== keyword) continue;
+      if (!messageMatchesKeyword(messageText, flow.triggerKeyword)) continue;
       if (!Array.isArray(flow.steps) || flow.steps.length === 0) continue;
 
       // Evitar duplicatas: verificar se já existe sequência ativa para este par
@@ -3396,7 +3463,7 @@ export async function handleInstagramDmTrigger(
         nextStepAt,
       });
 
-      log.info({ postId: post.id, keyword, recipientId }, "dm-trigger: sequência criada (post-level)");
+      log.info({ postId: post.id, keyword: normalizeDmKeyword(messageText), recipientId }, "dm-trigger: sequência criada (post-level)");
       // Processar o step 0 imediatamente se delayMinutes=0
       if ((firstStep.delayMinutes ?? 0) === 0) {
         setImmediate(() => processDmSequences().catch(() => {}));
@@ -3419,9 +3486,9 @@ export async function handleInstagramDmTrigger(
       flow: { triggerKeyword?: string; steps?: unknown[] };
     }> | undefined) ?? [];
 
-    const globalMatch = globalKeywords.find((k) => k.keyword?.toUpperCase() === keyword);
+    const globalMatch = globalKeywords.find((k) => messageMatchesKeyword(messageText, k.keyword ?? ""));
     if (!globalMatch || !Array.isArray(globalMatch.flow?.steps) || globalMatch.flow.steps.length === 0) {
-      log.info({ keyword, recipientId, globalKeywordsCount: globalKeywords.length }, "dm-trigger: nenhum flow encontrado para keyword (post-level nem global)");
+      log.info({ keyword: normalizeDmKeyword(messageText), recipientId, globalKeywordsCount: globalKeywords.length }, "dm-trigger: nenhum flow encontrado para keyword (post-level nem global)");
       return;
     }
 
@@ -3457,7 +3524,7 @@ export async function handleInstagramDmTrigger(
       nextStepAt: globalNextStepAt,
     });
 
-    log.info({ keyword, recipientId }, "dm-trigger: sequência criada via global keyword fallback ✓");
+    log.info({ keyword: normalizeDmKeyword(messageText), recipientId }, "dm-trigger: sequência criada via global keyword fallback ✓");
     if ((globalFirstStep.delayMinutes ?? 0) === 0) {
       setImmediate(() => processDmSequences().catch(() => {}));
     }
@@ -3479,8 +3546,6 @@ export async function handleIncomingDmReply(
 ): Promise<void> {
   const log = logger.child({ component: "dm-reply-handler", igAccountId });
   try {
-    const keyword = messageText.trim().toUpperCase();
-
     // Buscar sequências ativas para este usuário nesta conta Instagram
     const sequences = await db
       .select()
@@ -3500,7 +3565,7 @@ export async function handleIncomingDmReply(
         | undefined;
 
       if (!currentStepData?.triggerKeyword) continue; // step por tempo, não por keyword
-      if (currentStepData.triggerKeyword.toUpperCase() !== keyword) continue;
+      if (!messageMatchesKeyword(messageText, currentStepData.triggerKeyword)) continue;
 
       // Keyword confere → avançar sequência imediatamente (nextStepAt = now)
       await db
@@ -3509,7 +3574,7 @@ export async function handleIncomingDmReply(
         .where(eq(instagramDmSequencesTable.id, seq.id));
 
       log.info(
-        { seqId: seq.id, keyword, step: seq.currentStep },
+        { seqId: seq.id, keyword: normalizeDmKeyword(messageText), step: seq.currentStep },
         "dm-reply: keyword recebida → sequência avançada imediatamente",
       );
       setImmediate(() => processDmSequences().catch(() => {}));
@@ -3518,6 +3583,29 @@ export async function handleIncomingDmReply(
   } catch (err) {
     log.warn({ err }, "handleIncomingDmReply: error (non-fatal)");
   }
+}
+
+/**
+ * Lista sequências de DM do workspace para diagnóstico.
+ * Retorna ativas + concluídas recentes (últimas 48h) com lastError e retryCount.
+ */
+export async function listDmSequences(workspaceId: string): Promise<typeof instagramDmSequencesTable.$inferSelect[]> {
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  return db
+    .select()
+    .from(instagramDmSequencesTable)
+    .where(
+      and(
+        eq(instagramDmSequencesTable.workspaceId, workspaceId),
+        // Ativas (completedAt IS NULL) OU concluídas nas últimas 48h
+        or(
+          isNull(instagramDmSequencesTable.completedAt),
+          gte(instagramDmSequencesTable.completedAt, since),
+        ),
+      ),
+    )
+    .orderBy(desc(instagramDmSequencesTable.createdAt))
+    .limit(100);
 }
 
 /**

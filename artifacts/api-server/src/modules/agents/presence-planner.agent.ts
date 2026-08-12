@@ -174,18 +174,23 @@ A única exceção é quando o próprio cliente vende produtos de IA/tecnologia 
 **DM FLOW (quando aplicável):**
 - Se o post tiver uma CTA de comentário com keyword (ex: "Comente MAPA", "Digite GUIA nos comentários") → preencha dmResponseFlow com sequência de 3 steps obrigatórios.
 - A triggerKeyword deve ser 1 palavra simples, maiúscula (ex: "MAPA", "GUIA", "LISTA", "RECEITA").
+
+**⚠️ REGRA CRÍTICA DE ENTREGA:** Cada step DEVE conter uma entrega REAL e CONCRETA. NUNCA escreva placeholders como "[link aqui]", "[material]" ou "[bônus]". Use o contexto do negócio para decidir o que entregar. Hierarquia de decisão:
+  1. Se o negócio tem uma landing page com materiais gratuitos mencionados no businessContext → use o link real.
+  2. Se não há link específico → entregue valor DENTRO da própria mensagem: um checklist redigido, 5 dicas acionáveis, um script pronto, uma lista de recursos — conteúdo que o usuário pode usar imediatamente, sem precisar clicar em nada.
+  3. Nunca prometa um "e-book" ou "PDF" que não existe no businessContext. Se não há material físico, entregue conhecimento direto na mensagem.
+
 - Estrutura OBRIGATÓRIA de 3 steps para todo dmResponseFlow:
 
   **Step 0** — Boas-vindas imediato (delayMinutes: 0, SEM triggerKeyword):
-  Mensagem calorosa que agradece o interesse, cita o conteúdo prometido, e pede UMA ação: "Para receber [o material], siga nossa conta @[handle] e responda aqui com SEGUINDO assim que fizer isso 👇"
-  O conteúdo prometido (e-book, link, checklist, receita, etc.) deve ser específico para o nicho do negócio.
+  Mensagem calorosa que agradece o interesse, cita o conteúdo que será entregue (específico para o nicho), e pede UMA ação: "Para receber [descreva o conteúdo real], siga nossa conta e responda aqui com SEGUINDO assim que fizer isso 👇"
 
   **Step 1** — Entrega do conteúdo principal (triggerKeyword: "SEGUINDO"):
-  Só dispara quando o usuário responder "SEGUINDO". Entregar o conteúdo real: link, PDF, script, lista de dicas — algo de valor genuíno relacionado ao post. Encerrar com: "Para ganhar [bônus], compartilhe esse post nos seus stories e responda aqui com COMPARTILHEI 🔥"
+  Só dispara quando o usuário responder "SEGUINDO". Entregar o conteúdo real AGORA, nesta mensagem: se é um link, coloque o link; se é conhecimento, escreva as dicas/checklist/script aqui mesmo. A mensagem deve ter substância — não envie uma mensagem vazia esperando o usuário "acessar algo depois". Encerrar com: "Para ganhar também [bônus específico], compartilhe esse post nos seus stories e responda aqui com COMPARTILHEI 🔥"
 
   **Step 2** — Entrega do bônus (triggerKeyword: "COMPARTILHEI"):
-  Só dispara quando o usuário responder "COMPARTILHEI". Entregar o bônus exclusivo: template, desconto, acesso antecipado, material extra. Sempre encerrar agradecendo e com uma CTA suave para seguir acompanhando o perfil.
-  OBRIGATÓRIO: inclua também o campo "reminderMessage" neste step — uma mensagem curta e urgente enviada AUTOMATICAMENTE no 7º dia se o usuário ainda não tiver respondido, lembrando que o bônus expira hoje e convidando a responder COMPARTILHEI. Exemplo: "⏳ Oi! Hoje é o último dia para resgatar o seu [bônus]. Se você já compartilhou o post ou a nossa página, responda aqui com COMPARTILHEI e te envio agora 🔥"
+  Só dispara quando o usuário responder "COMPARTILHEI". Entregar bônus real: outro link, conteúdo adicional escrito na mensagem, desconto com código real, acesso antecipado — algo concreto. Sempre encerrar agradecendo e com CTA suave para seguir o perfil.
+  OBRIGATÓRIO: inclua também o campo "reminderMessage" — enviado automaticamente no 7º dia se não respondeu. Exemplo: "⏳ Oi! Hoje é o último dia para resgatar o seu [bônus concreto]. Se já compartilhou, responda COMPARTILHEI agora 🔥"
 
 - Se o post não tem CTA de DM → dmResponseFlow: null
 

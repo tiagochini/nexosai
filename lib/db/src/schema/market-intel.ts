@@ -32,6 +32,11 @@ export const marketIntelReportsTable = pgTable("market_intel_reports", {
   output: jsonb("output"),
   error: text("error"),
   source: text("source").notNull().default("manual"), // "manual" | "intake"
+  // Deep-dive chat — persisted so the conversation survives page reloads
+  chatHistory: jsonb("chat_history"), // Array<{ role: "user"|"assistant", content: string, ts: string }>
+  // Synthesized insights from the deep-dive conversation — injected into social
+  // presence planner and launch agents so all teams benefit from the dialogue
+  deepdiveInsights: text("deepdive_insights"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

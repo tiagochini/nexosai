@@ -8,6 +8,7 @@ import {
   linkReportToCampaign,
   startAnalysis,
   chatWithMarketIntel,
+  getChatHistory,
   campaignBelongsToWorkspace,
 } from "./market-intel.service.js";
 
@@ -107,6 +108,12 @@ router.post("/:id/link-campaign", async (req, res): Promise<void> => {
     return;
   }
   res.json({ report });
+});
+
+router.get("/:id/chat", async (req, res): Promise<void> => {
+  const { id } = req.params as { id: string };
+  const history = await getChatHistory(id, req.auth.workspaceId);
+  res.json({ history });
 });
 
 router.post("/:id/chat", async (req, res): Promise<void> => {

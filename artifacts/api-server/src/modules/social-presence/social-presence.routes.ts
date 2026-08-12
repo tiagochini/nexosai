@@ -31,6 +31,7 @@ import {
   bulkApproveStoryboards,
   createTestReelPost,
   createTestScheduledPost,
+  listDmSequences,
 } from "./social-presence.service.js";
 
 const router = Router();
@@ -479,6 +480,28 @@ router.post("/bio/publish", async (req, res): Promise<void> => {
     const msg = err instanceof Error ? err.message : "Erro ao publicar bio.";
     res.status(500).json({ error: msg });
   }
+});
+
+// ─── Diagnóstico de sequências de DM ─────────────────────────────────────────
+// GET /api/presence/dm-sequences — lista ativas + concluídas nas últimas 48h
+// Inclui lastError e retryCount para depurar falhas silenciosas de envio.
+
+router.get("/dm-sequences", async (req, res): Promise<void> => {
+  const sequences = await listDmSequences(req.auth.workspaceId);
+  res.json({
+    sequences: sequences.map((s) => ({
+      id: s.id,
+      recipientId: s.recipientId,
+      igAccountId: s.igAccountId,
+      currentStep: s.currentStep,
+      totalSteps: Array.isArray(s.steps) ? s.steps.length : 0,
+      nextStepAt: s.nextStepAt,
+      completedAt: s.completedAt,
+      retryCount: s.retryCount,
+      lastError: s.lastError,
+      createdAt: s.createdAt,
+    })),
+  });
 });
 
 // ─── Métricas ─────────────────────────────────────────────────────────────────

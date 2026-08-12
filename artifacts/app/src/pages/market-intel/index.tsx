@@ -82,7 +82,7 @@ interface Report {
   source: string;
   createdAt: string;
 }
-interface ChatMsg { role: "user" | "assistant"; content: string }
+interface ChatMsg { role: "user" | "assistant"; content: string; ts?: string }
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   running: { label: "Analisando…", cls: "text-amber-400 border-amber-400/30 bg-amber-400/8" },
@@ -122,6 +122,7 @@ export default function MarketIntelPage() {
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  const [chatLoadingHistory, setChatLoadingHistory] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const loadReports = useCallback(async () => {
@@ -259,6 +260,17 @@ export default function MarketIntelPage() {
       setSelected(data.report);
     } catch {
       setSelected(r);
+    }
+    // Restore persisted chat history
+    try {
+      setChatLoadingHistory(true);
+      const histData = await customFetch<{ history: ChatMsg[] }>(`${API}/${r.id}/chat`);
+      if (histData.history.length > 0) {
+        setChatMsgs(histData.history);
+        setShowChat(true); // auto-open chat if there's saved history
+      }
+    } catch { /* noop — treat as empty history */ } finally {
+      setChatLoadingHistory(false);
     }
   }
 
@@ -565,14 +577,26 @@ export default function MarketIntelPage() {
                   <span className="font-mono text-xs uppercase tracking-wider flex items-center gap-2">
                     <Sparkles className="h-3.5 w-3.5 text-primary" /> Deepdive com o Analista
                   </span>
-                  <Button variant="ghost" size="sm" onClick={() => setShowChat(false)} aria-label="Fechar chat">
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {chatMsgs.length > 0 && (
+                      <span className="text-[10px] text-green-400/70 flex items-center gap-1">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400/70" />
+                        salvo
+                      </span>
+                    )}
+                    {chatLoadingHistory && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => setShowChat(false)} aria-label="Fechar chat">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                  {chatMsgs.length === 0 && (
+                  {chatMsgs.length === 0 && !chatLoadingHistory && (
                     <p className="text-xs text-muted-foreground p-2">
-                      Pergunte qualquer coisa sobre este mercado: "Como ataco a vulnerabilidade do concorrente X?", "Qual gap priorizo com orçamento baixo?"…
+                      Pergunte qualquer coisa sobre este mercado: "Como ataco a vulnerabilidade do concorrente X?", "Qual gap priorizo com orçamento baixo?"…<br/>
+                      <span className="mt-1 block text-[10px] text-muted-foreground/60">Conversa salva automaticamente e compartilhada com os agentes de Social Media e Lançamentos.</span>
                     </p>
                   )}
                   {chatMsgs.map((m, i) => (

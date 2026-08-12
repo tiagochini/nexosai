@@ -234,6 +234,10 @@ export const instagramDmSequencesTable = pgTable("instagram_dm_sequences", {
   nextStepAt: timestamp("next_step_at", { withTimezone: true }).notNull(),
   // Nulo enquanto em progresso; preenchido quando todos os steps foram enviados
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  // Último erro da Graph API (body JSON serializado) — para diagnóstico
+  lastError: text("last_error"),
+  // Quantas vezes o step atual falhou consecutivamente; reset ao avançar
+  retryCount: integer("retry_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
