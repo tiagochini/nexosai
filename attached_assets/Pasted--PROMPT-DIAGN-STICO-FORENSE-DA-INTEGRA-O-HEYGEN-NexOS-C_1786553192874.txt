@@ -1,0 +1,200 @@
+# PROMPT — DIAGNÓSTICO FORENSE DA INTEGRAÇÃO HEYGEN (NexOS)
+
+> Copie tudo abaixo da linha e cole no agente Replit. Não edite, não resuma.
+
+---
+
+## CONTEXTO
+
+A integração NexOS ↔ HeyGen nunca produziu um único vídeo. Nenhum. O resultado final é sempre `null`. Já foram feitas mais de 50 tentativas de correção, todas declaradas concluídas, todas falsas. Isso significa que o ponto real de falha **nunca foi localizado** — apenas suposto.
+
+Esta tarefa **não é corrigir**. Esta tarefa é **provar onde o fluxo morre**.
+
+## REGRAS INEGOCIÁVEIS
+
+1. **PROIBIDO alterar qualquer linha de código nas FASES 0 a 3.** Somente leitura, execução de comandos de diagnóstico e coleta de evidência.
+2. **PROIBIDO declarar qualquer coisa como funcionando, corrigido, resolvido ou concluído sem prova externa** — resposta HTTP crua, log cru, ou resultado de `SELECT` real. Sua própria afirmação não é prova.
+3. **PROIBIDO criar mock, stub, dado de exemplo, fallback, valor default ou "modo simulado".** Degradação graciosa é FALHA.
+4. **PROIBIDO engolir erro.** Nenhum `try/except` genérico, nenhum `catch` que retorna `null`.
+5. **PROIBIDO avançar de fase sem completar a anterior com evidência colada.** Uma fase por vez.
+6. Se qualquer etapa não puder ser executada ou provada: **PARE, reporte exatamente o que faltou e por quê. Não improvise, não suponha, não invente.**
+7. Toda chave de API deve aparecer mascarada nos logs (ex.: `sk-...a3f9`), mas **o status HTTP e o body cru da resposta devem ser colados integralmente**.
+
+---
+
+## FASE 0 — MAPA DO FLUXO REAL
+
+Sem alterar nada, produza o mapa real do código que toca a HeyGen.
+
+```bash
+grep -rn -i "heygen\|X-Api-Key\|talking_photo\|avatar_id\|video_status\|photo_avatar" \
+  --include=*.ts --include=*.js --include=*.py --include=*.tsx .
+```
+
+Entregue uma tabela com **todas** as ocorrências relevantes:
+
+| arquivo:linha | função | endpoint HeyGen chamado | método HTTP | onde o resultado é persistido (tabela.coluna) |
+|---|---|---|---|---|
+
+Em seguida responda, com arquivo:linha como evidência:
+
+- **A.** Qual função inicia o "treinamento do avatar" e qual endpoint da HeyGen ela chama?
+- **B.** Qual função dispara a geração de vídeo e qual endpoint ela chama?
+- **C.** Existe **polling** ou **webhook** para buscar o vídeo depois de gerado? Se sim, onde? Se não, diga explicitamente: **"NÃO EXISTE."**
+- **D.** Em quais pontos existe `try/catch` ou `try/except` que pode retornar `null` silenciosamente?
+
+---
+
+## FASE 1 — PROVA DE VIDA DA CHAVE E DA CONTA
+
+Execute **dentro do ambiente Replit em runtime** (não local, não `.env` lido manualmente — a chave que o app realmente usa).
+
+Primeiro, prove que a variável existe em runtime, sem expor o valor:
+
+```bash
+node -e "const k=process.env.HEYGEN_API_KEY; console.log('presente:', !!k, '| tamanho:', k?k.length:0, '| final:', k?k.slice(-4):'N/A')"
+```
+*(ajuste o nome exato da variável conforme encontrado na FASE 0)*
+
+Depois, três chamadas cruas. Cole **status HTTP + body completo** de cada uma:
+
+```bash
+# 1. Quota / créditos disponíveis
+curl -s -w "\n--- HTTP %{http_code} ---\n" \
+  -H "X-Api-Key: $HEYGEN_API_KEY" \
+  https://api.heygen.com/v2/user/remaining_quota
+
+# 2. Avatares existentes NA CONTA HEYGEN
+curl -s -w "\n--- HTTP %{http_code} ---\n" \
+  -H "X-Api-Key: $HEYGEN_API_KEY" \
+  https://api.heygen.com/v2/avatars
+
+# 3. Vozes disponíveis
+curl -s -w "\n--- HTTP %{http_code} ---\n" \
+  -H "X-Api-Key: $HEYGEN_API_KEY" \
+  https://api.heygen.com/v2/voices
+```
+
+Com base **exclusivamente** nas respostas acima, responda:
+
+- **E.** A chave é válida? (HTTP 200 vs 401/403)
+- **F.** Existem créditos/quota disponíveis? Cole o número.
+- **G.** **CRÍTICO:** O avatar do usuário aparece na lista de `/v2/avatars`? Cole a entrada exata (`avatar_id` ou `talking_photo_id`) ou declare: **"O AVATAR NÃO EXISTE NO LADO DA HEYGEN."**
+
+> Se o avatar não existe na HeyGen, o problema não é geração de vídeo — é que o upload/treinamento nunca chegou lá. Nesse caso, pare e vá direto para a FASE 4 focando apenas no fluxo de criação de avatar.
+
+---
+
+## FASE 2 — GERAÇÃO ISOLADA, FORA DO NEXOS
+
+Objetivo: separar definitivamente "bug do NexOS" de "limitação de conta/plano".
+
+Usando um `avatar_id` **público/padrão retornado na FASE 1** e um `voice_id` da lista de vozes, gere um vídeo por curl direto:
+
+```bash
+curl -s -w "\n--- HTTP %{http_code} ---\n" -X POST \
+  https://api.heygen.com/v2/video/generate \
+  -H "X-Api-Key: $HEYGEN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "video_inputs": [{
+      "character": {"type": "avatar", "avatar_id": "COLE_AQUI", "avatar_style": "normal"},
+      "voice": {"type": "text", "input_text": "Teste de integracao NexOS.", "voice_id": "COLE_AQUI"}
+    }],
+    "dimension": {"width": 1280, "height": 720}
+  }'
+```
+
+Capture o `video_id` retornado e faça o polling até resolver:
+
+```bash
+curl -s -w "\n--- HTTP %{http_code} ---\n" \
+  -H "X-Api-Key: $HEYGEN_API_KEY" \
+  "https://api.heygen.com/v1/video_status.get?video_id=COLE_AQUI"
+```
+
+Repita até `status` = `completed` ou `failed`. Cole **todas** as respostas.
+
+**Veredito obrigatório, escolha uma:**
+- `RESULTADO A` — curl direto gerou vídeo com URL reproduzível → **a conta funciona, o defeito é 100% do código NexOS.**
+- `RESULTADO B` — curl direto falhou → **cole o erro. O defeito é conta/plano/quota, não código.** Pare aqui e reporte.
+
+---
+
+## FASE 3 — CHECKLIST DE ARMADILHAS CONHECIDAS
+
+Para **cada** item, responda `CONFIRMADO` / `NÃO SE APLICA` **com arquivo:linha ou resposta HTTP como prova**. Resposta sem evidência é inválida.
+
+1. Header de autenticação é `X-Api-Key`? (Se o código usa `Authorization: Bearer`, está errado.)
+2. O código usa `character.type: "avatar"` + `avatar_id`, ou `character.type: "talking_photo"` + `talking_photo_id`? O tipo bate com o tipo real do avatar retornado na FASE 1?
+3. Base URL correta por endpoint: `/v2/video/generate` vs `/v1/video_status.get` vs `upload.heygen.com` para assets. Há mistura de versões?
+4. A geração é **assíncrona**. O código faz polling ou recebe webhook? Se não faz nenhum dos dois, o registro **nunca sai de "processing"** — e isso, por si só, explica o `null` permanente.
+5. O `video_id` retornado pela HeyGen é persistido no banco? Cole o `SELECT` que prova.
+6. A `video_url` da HeyGen é assinada e **expira**. O sistema baixa o arquivo ou só guarda o link?
+7. O fluxo de criação de avatar persiste o `id`/`group_id` devolvido pela HeyGen? Sem esse id, não existe avatar do lado de lá.
+8. Existe algum `catch` que converte erro HTTP 400/402 em `null` ou em objeto vazio?
+9. O webhook (se existir) aponta para a URL pública real de produção, não para a URL de dev do Replit?
+10. O plano da conta HeyGen permite clonagem de avatar **via API**? (Avatares de vídeo/instant normalmente exigem vídeo de consentimento e criação pela interface — se a arquitetura do NexOS assume upload programático de clone, pode estar assumindo uma capacidade que não existe no plano.)
+
+---
+
+## FASE 4 — INSTRUMENTAÇÃO (primeira alteração permitida)
+
+Agora, e só agora, você pode alterar código — **exclusivamente para logar**, nada mais.
+
+Em **cada** ponto de chamada à HeyGen, adicione log **antes de qualquer parse ou tratamento**:
+
+```
+[HEYGEN][REQ] <método> <url> | headers(chave mascarada) | body completo
+[HEYGEN][RES] status=<código> | body cru completo
+```
+
+Requisitos:
+- O log da resposta deve ocorrer **antes** de qualquer `catch`, `parse` ou transformação.
+- Qualquer status ≠ 2xx deve ser **persistido** em coluna de erro do registro correspondente e **propagado**, nunca convertido em `null`.
+- Nenhuma outra mudança de comportamento. Nenhuma refatoração. Nenhuma "melhoria".
+
+---
+
+## FASE 5 — REEXECUÇÃO PELO FLUXO REAL
+
+Execute o fluxo completo **pela interface do NexOS, como usuário final**. Proibido curl, proibido rota admin, proibido script de bypass — o teste é o caminho real do produto.
+
+Entregue, em blocos separados:
+
+1. **Log cru completo** de todas as linhas `[HEYGEN][REQ]` e `[HEYGEN][RES]`.
+2. **Query real e resultado real** das tabelas de avatar e de vídeo:
+   ```sql
+   SELECT id, status, heygen_avatar_id, heygen_video_id, video_url, error, created_at, updated_at
+   FROM <tabela> ORDER BY created_at DESC LIMIT 5;
+   ```
+3. **Screenshot** do estado final na UI.
+
+---
+
+## FASE 6 — DIAGNÓSTICO DE PONTO ÚNICO
+
+Escreva **uma única frase** no formato:
+
+> "O fluxo morre em `<arquivo:linha>`, na chamada `<endpoint>`, porque `<causa>` — evidência: `<status HTTP / body / linha de log / linha do SELECT>`."
+
+Sem hipóteses. Sem lista de possibilidades. Sem "pode ser que". Uma causa, uma evidência.
+
+**Pare aqui e aguarde autorização antes de corrigir.**
+
+---
+
+## FASE 7 — CORREÇÃO (somente após autorização)
+
+- Corrija **apenas** a causa provada na FASE 6. Um item por vez.
+- Reexecute a FASE 5 integralmente.
+- Critério de aceite, sem exceção: **uma `video_url` que abre e reproduz um vídeo real**, obtida pelo fluxo da UI, com o `SELECT` mostrando o registro completo e `status = completed`.
+- Qualquer outro resultado é FALHA. Não declare progresso parcial como sucesso.
+
+---
+
+## FORMATO OBRIGATÓRIO DA SUA RESPOSTA
+
+Responda **apenas** com os blocos de evidência das fases executadas, na ordem. Nada de introdução, nada de resumo otimista, nada de "implementei as melhorias". Se você não tem a evidência, escreva `EVIDÊNCIA AUSENTE` e explique o motivo.
+
+Comece pela FASE 0. Não avance sozinho.
