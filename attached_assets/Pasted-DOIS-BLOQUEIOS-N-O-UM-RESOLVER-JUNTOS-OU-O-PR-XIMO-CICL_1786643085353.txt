@@ -1,0 +1,51 @@
+DOIS BLOQUEIOS, NÃO UM. RESOLVER JUNTOS OU O PRÓXIMO CICLO SE PERDE.
+
+Bloqueio 1 — persona não atualizada (hook ausente do binário).
+Bloqueio 2 — Redis timeout em TODOS os boots. O fail-safe suprime
+             a geração de vídeo independentemente da flag. Mesmo com
+             a persona correta, nada seria gerado.
+
+FF1 — CONTRADIÇÃO SOBRE O BUILD
+Você afirmou que o Replit compila no deploy (artifact.toml com
+[services.production.build] rodando pnpm build). Mas o binário em
+produção tem builtAt 11:18:56Z e não contém o hook.
+
+Se o Replit compila do source no clique, e o hook estava no source
+desde antes das 15:15Z, ele DEVERIA estar no binário. Não está.
+
+Explique a contradição, sem "ou". Uma das afirmações é falsa:
+  (a) o Replit não compila de fato — usa dist pré-existente
+  (b) o hook não estava no source no momento do clique
+  (c) o build rodou mas a partir de um snapshot anterior
+Prove com evidência qual é.
+
+FF2 — RESOLVER O REDIS
+O timeout aparece em 15:51Z, 16:18Z, 16:46Z — todos os boots.
+  (a) qual é o timeout configurado? (social-presence.service.ts:93,
+      Promise.race com 800ms)
+  (b) o REDIS_URL de produção está definido e correto? A conexão
+      falha, ou apenas excede 800ms?
+  (c) o BullMQ usa o mesmo Redis e funciona — se sim, o problema é o
+      timeout curto, não a conexão. Prove.
+  (d) qual a menor correção: aumentar o timeout, reusar a conexão do
+      BullMQ, ou outra? Recomende uma, com justificativa.
+
+FF3 — DEPLOY ÚNICO COM TUDO
+Preparar em um só deploy:
+  1. PERSONA-FIX (já no source)
+  2. DD4 — todo log de hook de boot passa a logger.error, incluindo
+     o ramo "sem alteração" e o diagnóstico pré-UPDATE
+  3. correção do Redis conforme FF2(d)
+  4. builtAt atualizado para o instante do clique
+
+FF4 — PROTOCOLO DE DEPLOY CORRIGIDO
+Com base em FF1, escreva a sequência correta e definitiva. Se o
+Replit compila do source, o builtAt deve ser atualizado IMEDIATAMENTE
+antes do clique, não horas antes. Especifique o intervalo máximo
+aceitável entre atualizar o builtAt e clicar Deploy.
+
+PARE antes de deployar. Apresente o plano completo primeiro.
+
+RESTRIÇÕES
+Proibido gerar vídeo. Todo SELECT declara host E ambiente.
+Manter AUTOAUDITORIA.
