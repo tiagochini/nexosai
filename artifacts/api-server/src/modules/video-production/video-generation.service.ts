@@ -449,8 +449,8 @@ export async function fetchRandomStockHeygenAvatar(): Promise<StockAvatarResult 
   if (!heygenKey) return null;
 
   try {
-    // Busca looks de avatares stock (ownership=platform = avatares públicos do HeyGen)
-    const res = await fetch("https://api.heygen.com/v3/avatars/looks?ownership=platform&limit=50", {
+    // Busca looks de avatares stock (ownership=public = avatares do catálogo público do HeyGen)
+    const res = await fetch("https://api.heygen.com/v3/avatars/looks?ownership=public&limit=50", {
       headers: { "X-Api-Key": heygenKey },
     });
     if (!res.ok) {
