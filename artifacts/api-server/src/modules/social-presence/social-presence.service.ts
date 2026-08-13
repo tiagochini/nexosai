@@ -92,7 +92,7 @@ async function shouldSuppressVideoGeneration(log?: Logger): Promise<boolean> {
     if (client) {
       const val = await Promise.race([
         client.get("nexos:flag:disable_video_generation"),
-        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("redis_flag_timeout")), 800)),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("redis_flag_timeout")), 3000)),
       ]);
       if (val === "false") return false; // único caminho explícito de liberação via Redis
       if (val === "true") return true;   // supressão explícita via Redis

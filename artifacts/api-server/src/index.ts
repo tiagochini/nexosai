@@ -134,7 +134,7 @@ Promise.all([
     .where(eq(campaignAgentsTable.status, "running"))
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: marked orphaned running agents as failed");
+        logger.error({ count: result.rowCount }, "Boot cleanup: marked orphaned running agents as failed");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (agents) failed")),
@@ -158,7 +158,7 @@ Promise.all([
   `)
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: removed duplicate workspace_integrations rows");
+        logger.error({ count: result.rowCount }, "Boot cleanup: removed duplicate workspace_integrations rows");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (integration dedup) failed")),
@@ -178,7 +178,7 @@ Promise.all([
   `)
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: cleared NexOS placeholder business_context from social_presence_config");
+        logger.error({ count: result.rowCount }, "Boot cleanup: cleared NexOS placeholder business_context from social_presence_config");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (presence business_context) failed")),
@@ -199,7 +199,7 @@ Promise.all([
   `)
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: cleared legacy v2 HeyGen avatar IDs — users must re-select from v3 catalog");
+        logger.error({ count: result.rowCount }, "Boot cleanup: cleared legacy v2 HeyGen avatar IDs — users must re-select from v3 catalog");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (heygen avatar) failed")),
@@ -228,39 +228,49 @@ Promise.all([
   `)
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: reset social presence posts blocked by invalid HeyGen avatar");
+        logger.error({ count: result.rowCount }, "Boot cleanup: reset social presence posts blocked by invalid HeyGen avatar");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (heygen posts reset) failed")),
 
   // ONE-TIME PERSONA FIX — workspace 21aa4337: aponta para grupo 307779b4 (consent_status:accepted)
   // ao invés de 46f9eeb3 (consent_status:pending). Idempotente: só roda se o valor antigo ainda estiver presente.
-  db.execute(sqlRaw`
-    UPDATE workspaces
-    SET settings = jsonb_set(
-      jsonb_set(
+  // DD4: async IIFE para sequenciar diagnóstico pré-UPDATE antes do UPDATE. Todos os logs em logger.error
+  // para garantir visibilidade nos logs de produção independente do log level configurado.
+  (async () => {
+    // DD4-DIAGNÓSTICO: expõe o valor real da persona no banco no momento exato do boot
+    const diag = await db.execute(sqlRaw`
+      SELECT settings->'persona'->>'heygenAvatarId' AS avatar_id,
+             settings->'persona'->>'digitalTwinId'  AS twin_id,
+             settings->'persona'->>'heygenVoiceId'  AS voice_id
+      FROM workspaces WHERE id = '21aa4337-82db-4671-bd8c-acdbeb9f6495'
+    `);
+    logger.error({ personaNoBoot: diag.rows[0] }, "[PERSONA-FIX] Diagnóstico pré-UPDATE");
+
+    const result = await db.execute(sqlRaw`
+      UPDATE workspaces
+      SET settings = jsonb_set(
         jsonb_set(
-          settings,
-          '{persona,heygenAvatarId}',
-          '"5279d1ea433e4b9f8715a1b58c811260"'
+          jsonb_set(
+            settings,
+            '{persona,heygenAvatarId}',
+            '"5279d1ea433e4b9f8715a1b58c811260"'
+          ),
+          '{persona,digitalTwinId}',
+          '"307779b4e7094592b1478ed72fc8ecdf"'
         ),
-        '{persona,digitalTwinId}',
-        '"307779b4e7094592b1478ed72fc8ecdf"'
-      ),
-      '{persona,heygenVoiceId}',
-      '"6b7a93651c2b45958dc220e11a71b505"'
-    )
-    WHERE id = '21aa4337-82db-4671-bd8c-acdbeb9f6495'
-      AND settings->'persona'->>'heygenAvatarId' = '7ecb72e295624b20b6b14ad98148744a'
-  `)
-    .then((result) => {
-      if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ workspaceId: "21aa4337", newAvatarId: "5279d1ea433e4b9f8715a1b58c811260", newGroupId: "307779b4e7094592b1478ed72fc8ecdf", newVoiceId: "6b7a93651c2b45958dc220e11a71b505" }, "[PERSONA-FIX] Persona atualizada para grupo com consent_status:accepted ✓");
-      } else {
-        logger.info({ workspaceId: "21aa4337" }, "[PERSONA-FIX] Sem alteração — valor já atualizado ou workspace não encontrado");
-      }
-    })
-    .catch((err) => logger.error({ err }, "Boot cleanup (persona fix) failed")),
+        '{persona,heygenVoiceId}',
+        '"6b7a93651c2b45958dc220e11a71b505"'
+      )
+      WHERE id = '21aa4337-82db-4671-bd8c-acdbeb9f6495'
+        AND settings->'persona'->>'heygenAvatarId' = '7ecb72e295624b20b6b14ad98148744a'
+    `);
+    if (result.rowCount && result.rowCount > 0) {
+      logger.error({ workspaceId: "21aa4337", newAvatarId: "5279d1ea433e4b9f8715a1b58c811260", newGroupId: "307779b4e7094592b1478ed72fc8ecdf", newVoiceId: "6b7a93651c2b45958dc220e11a71b505" }, "[PERSONA-FIX] Persona atualizada para grupo com consent_status:accepted ✓");
+    } else {
+      logger.error({ workspaceId: "21aa4337" }, "[PERSONA-FIX] Sem alteração — valor já atualizado ou workspace não encontrado");
+    }
+  })().catch((err) => logger.error({ err }, "Boot cleanup (persona fix) failed")),
 
   // RC-FIX: Only reset campaigns stuck in "analyzing" for > 30 min.
   // Campaigns that JUST transitioned (e.g. fresh finalize before a restart) must NOT be reset,
@@ -273,7 +283,7 @@ Promise.all([
     ))
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.warn({ count: result.rowCount }, "Boot cleanup: reset analyzing campaigns to intake");
+        logger.error({ count: result.rowCount }, "Boot cleanup: reset analyzing campaigns to intake");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (analyzing reset) failed")),
