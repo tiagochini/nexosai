@@ -1,0 +1,49 @@
+PÓS-DEPLOY — PROVAR O BINÁRIO ANTES DE TUDO
+
+Seu achado do dist/ desatualizado é o mais importante desta sessão.
+Sem ele teríamos diagnosticado um kill-switch quebrado que nunca
+chegou a rodar.
+
+G0 — O BINÁRIO EM PRODUÇÃO É O NOVO?
+Prove, não afirme:
+  (a) timestamp de boot do processo de produção
+  (b) evidência de que o binário RODANDO contém o código Redis —
+      não o dist local, o que está em produção. Se não houver como
+      inspecionar o binário remoto, use um efeito observável:
+      shouldSuppressVideoGeneration lendo Redis produz comportamento
+      distinguível do código antigo. Descreva como você distingue.
+  (c) se não for possível provar: declare EVIDÊNCIA AUSENTE e proponha
+      a menor mudança que torne o build verificável em runtime
+      (ex.: log de BUILD_ID no boot, nível ERROR — INFO não flui).
+
+G1 — AUDITORIA RETROATIVA DOS DEPLOYS
+Se o dist não recompilou desta vez, pode não ter recompilado antes.
+Verifique se as correções anteriores estão de fato no binário atual:
+  (a) C1 — migração para POST /v2/video/generate com video_inputs[]
+  (b) o check [CONTENCAO] no scheduler
+  (c) o log de boot [C0.6.2]
+Para cada: PRESENTE NO BINÁRIO ou AUSENTE, com o comando e a saída
+crua como prova.
+
+Se C1 estiver ausente, a correção de payload nunca chegou a produção
+e todo o plano de janela precisa ser revisto.
+
+G2 — POR QUE O BUILD NÃO RODOU
+Qual comando o deploy executa? Existe passo de build configurado no
+.replit ou na config de deployment? Cole a configuração crua.
+Declare, sem "ou", a causa de o dist não ter sido regenerado.
+
+G3 — ESTADO SEGURO ATUAL
+  (a) Redis nexos:flag:disable_video_generation — valor atual, lido da fonte
+  (b) env var DISABLE_SCHEDULED_VIDEO_GENERATION em produção
+  (c) quota HeyGen
+  (d) c7fbc04f — media_gen_status, media_job_id
+  (e) published — ainda 26?
+
+SÓ APÓS G0 A G3: F4 do zero.
+
+RESTRIÇÕES
+Proibido liberar a flag antes de G0 provado. Proibido gerar vídeo.
+Proibido publicar. Todo SELECT declara o host. Manter AUTOAUDITORIA.
+
+PARE ao final de G3.
