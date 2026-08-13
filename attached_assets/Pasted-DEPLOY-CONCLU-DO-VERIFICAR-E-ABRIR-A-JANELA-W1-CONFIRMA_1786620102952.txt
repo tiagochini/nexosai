@@ -1,0 +1,51 @@
+DEPLOY CONCLUÍDO — VERIFICAR E ABRIR A JANELA
+
+W1 — CONFIRMAR BINÁRIO
+Cole a linha crua [BUILD_TAG] de produção.
+builtAt deve ser EXATAMENTE 2026-08-13T11:18:56Z, com boot posterior.
+Declare, sem "ou": BINÁRIO CONFIRMADO ou AUSENTE. Se ausente, PARE.
+
+W2 — ESTADO PRÉ-JANELA
+  (a) valor da flag persistida no Redis, lido da fonte
+  (b) env var DISABLE_SCHEDULED_VIDEO_GENERATION
+  (c) quota HeyGen — baseline esperado 90
+  (d) alvos vencidos agora, host declarado:
+      SELECT id, platform, format, media_gen_status, scheduled_for
+      FROM social_presence_posts
+      WHERE status='scheduled' AND media_gen_status='storyboard_ready'
+        AND scheduled_for <= now();
+      Se mais de 1: PARE e reporte a lista.
+  (e) persona do workspace 21aa4337 — confirmar heygenAvatarId e
+      heygenVoiceId atuais
+
+W3 — PROVAR QUE O SCHEDULER ESTÁ TICANDO
+Como na rodada anterior: chaves repeat do BullMQ criadas após o boot.
+Sem essa prova, um resultado vazio é ambíguo. Se não conseguir provar,
+declare EVIDÊNCIA AUSENTE e PARE.
+
+W4 — JANELA
+  1. registrar T0 (UTC)
+  2. flag persistida → LIBERAR
+  3. poll a cada 15s:
+     SELECT id, media_gen_status, media_job_id, media_urls, updated_at
+     FROM social_presence_posts
+     WHERE id = 'c7fbc04f-5b0e-4d1a-8267-5da7442d1411';
+     + quota HeyGen
+  4. GATILHO — o que ocorrer primeiro: media_gen_status muda,
+     media_job_id não-nulo, ou quota < 90
+  5. NO GATILHO: flag → SUPRIMIR imediatamente. Registrar T1 e o
+     tempo até o efeito ser confirmado na fonte.
+  6. limite 180s sem sinal → suprimir e reportar.
+
+W5 — PROVA FINAL
+  1. polling até completed — resposta crua
+  2. confirmar que o mp4 foi baixado e subiu para o GCS
+  3. mediaUrls contendo a URL /api/presence/media/serve?key=... —
+     NÃO a URL da HeyGen
+  4. curl -I na URL do NexOS: HTTP 200 e Content-Type: video/mp4
+  5. quota antes/depois — consumo real
+  6. confirmar published ainda em 29, nada publicado
+
+RESTRIÇÕES
+Exatamente 1 vídeo. Proibido publicar em plataforma.
+Todo SELECT declara o host. Manter AUTOAUDITORIA.
