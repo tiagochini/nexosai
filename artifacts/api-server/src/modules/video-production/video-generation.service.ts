@@ -458,11 +458,12 @@ export async function fetchRandomStockHeygenAvatar(): Promise<StockAvatarResult 
       return null;
     }
     const data = (await res.json()) as {
-      data?: {
+      data?: Array<{ id: string; name?: string; default_voice_id?: string; status?: string }> | {
         items?: Array<{ id: string; name?: string; default_voice_id?: string; status?: string }>;
       };
     };
-    const items = data.data?.items ?? [];
+    // /v3/avatars/looks retorna data como array direto (não data.items)
+    const items = Array.isArray(data.data) ? data.data : (data.data?.items ?? []);
     // Filtrar apenas os looks que já terminaram de processar
     const ready = items.filter((a) => !a.status || a.status === "completed");
     if (ready.length === 0) {
