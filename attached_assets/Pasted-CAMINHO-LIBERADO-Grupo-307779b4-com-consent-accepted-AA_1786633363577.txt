@@ -1,0 +1,52 @@
+CAMINHO LIBERADO. Grupo 307779b4 com consent accepted.
+
+AA1 — ATUALIZAR A PERSONA (escrita autorizada, uma linha)
+Workspace 21aa4337-82db-4671-bd8c-acdbeb9f6495.
+
+Passo 1 — snapshot completo de settings->'persona', colado integral.
+Sem snapshot colado, o UPDATE não está autorizado.
+
+Passo 2 — UPDATE alterando APENAS três campos, com guarda no WHERE
+contra os valores antigos:
+  heygenAvatarId → 5279d1ea433e4b9f8715a1b58c811260
+  digitalTwinId  → 307779b4e7094592b1478ed72fc8ecdf
+  heygenVoiceId  → 6b7a93651c2b45958dc220e11a71b505
+      (default_voice_id do próprio grupo, voz clonada PT-BR;
+       substitui c8ac31e9 "Adriano" stock)
+
+Passo 3 — SELECT pós-UPDATE com host e ambiente declarados,
+usando o path CORRETO: settings->'persona'->>'...'
+
+AA2 — c7fbc04f VOLTAR A storyboard_ready
+O post está em storyboard_draft. Reporte como devolvê-lo a
+storyboard_ready PELO FLUXO DO PRODUTO — qual ação na UI. Se não
+existir caminho de produto, reporte e PARE antes de qualquer
+UPDATE manual.
+
+AA3 — JANELA
+  T0 → flag LIBERAR → poll 15s → gatilho → SUPRIMIR imediato.
+  Limite 180s. Mesmo protocolo.
+
+AA4 — PROVA FINAL
+  1. polling HeyGen até completed — resposta crua
+  2. mp4 baixado e no GCS
+  3. mediaUrls com /api/presence/media/serve?key=... — não HeyGen
+  4. curl -I na URL do NexOS: HTTP 200, Content-Type: video/mp4
+  5. quota antes/depois
+  6. nada publicado em plataforma
+
+BACKLOG — registrar, não corrigir agora
+  • workspaces.routes.ts:1030 — heygenConsentUrl servido em cache
+    sem verificar validade. Causa raiz de consentimentos perdidos.
+    Deve renovar a sessão a cada solicitação.
+  • avatar-training-status não reverifica consent_status na HeyGen
+    após o treinamento completar. Um avatar sem consentimento é
+    marcado como pronto.
+  • catch "non-fatal" no fluxo de consentimento descarta erro
+    silenciosamente.
+  • grupo 46f9eeb3 (landscape) permanece pending — resolver depois,
+    com URL de consentimento renovada.
+
+RESTRIÇÕES
+Máximo 1 vídeo. Proibido publicar em plataforma.
+Todo SELECT declara host E ambiente. Manter AUTOAUDITORIA.
