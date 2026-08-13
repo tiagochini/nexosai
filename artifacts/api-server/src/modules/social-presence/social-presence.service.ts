@@ -2523,8 +2523,9 @@ export async function redirectToPresenceMedia(
   gcsKey: string,
   res: import("express").Response,
 ): Promise<void> {
-  // 1. Prefix guard — aceita presence-media/ (mídia de posts) e presence-storyboard/ (frames de IA)
-  if (!gcsKey.startsWith("presence-media/") && !gcsKey.startsWith("presence-storyboard/")) {
+  // 1. Prefix guard — aceita presence-media/ (mídia de posts), presence-storyboard/ (frames de IA)
+  //    e presence-video/ (reels gerados por HeyGen, armazenados no GCS próprio via P3)
+  if (!gcsKey.startsWith("presence-media/") && !gcsKey.startsWith("presence-storyboard/") && !gcsKey.startsWith("presence-video/")) {
     res.status(403).end();
     return;
   }
