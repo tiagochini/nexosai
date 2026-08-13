@@ -2719,6 +2719,7 @@ export async function approveStoryboardGenerateVideo(
           const buf = Buffer.from(await videoResp.arrayBuffer());
           const gcsKey = `presence-video/${workspaceId}/${postId}.mp4`;
           await uploadBufferToGCS(buf, gcsKey, "video/mp4");
+          const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(gcsKey)}`;
           // mediaJobId reutilizado como campo de auditoria pós-conclusão (polling encerrado).
           await db
             .update(socialPresencePostsTable)
@@ -2726,10 +2727,10 @@ export async function approveStoryboardGenerateVideo(
               mediaGenStatus: "video_ready",
               mediaJobId: result.clipUrl,  // auditoria: URL original HeyGen (expira)
               mediaJobProvider: null,
-              mediaUrls: [gcsKey],
+              mediaUrls: [serveUrl],
             })
             .where(eq(socialPresencePostsTable.id, postId));
-          log.info({ postId, gcsKey, heygenUrl: result.clipUrl }, "presence: vídeo (imediato) armazenado no GCS ✓");
+          log.info({ postId, gcsKey, serveUrl, heygenUrl: result.clipUrl }, "presence: vídeo (imediato) armazenado no GCS ✓");
         } catch (dlErr) {
           log.error(
             { postId, heygenUrl: result.clipUrl, err: String(dlErr) },
@@ -2808,6 +2809,7 @@ export async function pollPostMediaJob(
           .returning();
         return updated;
       }
+      const serveUrl = `${env.APP_URL}/api/presence/media/serve?key=${encodeURIComponent(gcsKey)}`;
       // mediaJobId reutilizado como campo de auditoria pós-conclusão:
       // o polling já encerrou, então o campo não é mais necessário para rastreamento de job.
       // A URL HeyGen aqui é apenas registro interno — expira em ~7 dias, nunca servida ao cliente.
@@ -2815,13 +2817,13 @@ export async function pollPostMediaJob(
         .update(socialPresencePostsTable)
         .set({
           mediaGenStatus: "video_ready",
-          mediaUrls: [gcsKey],
+          mediaUrls: [serveUrl],
           mediaJobId: result.clipUrl,  // auditoria: URL original HeyGen (expira)
           mediaJobProvider: null,
         })
         .where(eq(socialPresencePostsTable.id, postId))
         .returning();
-      log.info({ postId, gcsKey, heygenUrl: result.clipUrl }, "presence: vídeo armazenado no GCS ✓");
+      log.info({ postId, gcsKey, serveUrl, heygenUrl: result.clipUrl }, "presence: vídeo armazenado no GCS ✓");
       return updated;
     } else if (result.status === "failed") {
       const [updated] = await db
