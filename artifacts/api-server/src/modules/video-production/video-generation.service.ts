@@ -252,12 +252,11 @@ export async function generateAvatarVideo(req: AvatarVideoRequest): Promise<Vide
       ? { width: 1080, height: 1920 }
       : { width: 1280, height: 720 };
 
-    // character.type: map from avatarType field
-    // digital_twin → "digital_twin"; talking_photo → "talking_photo"; stock/undefined → "avatar"
+    // character.type: HeyGen v2 aceita SOMENTE "avatar" ou "talking_photo".
+    // digital_twin usa type:"avatar" com o look_id como avatar_id (HH1 — confirmado via HTTP 400 2026-08-13).
     const characterType =
-      req.avatarType === "digital_twin" ? "digital_twin"
-      : req.avatarType === "talking_photo" ? "talking_photo"
-      : "avatar";
+      req.avatarType === "talking_photo" ? "talking_photo"
+      : "avatar"; // digital_twin, stock e qualquer outro → "avatar"
 
     // v2 API — video_inputs array format comprovado com HTTP 200 na FASE 2.
     // O endpoint v3/videos usa payload plano sem video_inputs e retornava erros silenciosos.
