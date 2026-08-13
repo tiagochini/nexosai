@@ -1,0 +1,52 @@
+PÓS-DEPLOY — ITENS 7 A 9
+
+  7. Colher a linha [BUILD_TAG] dos logs de PRODUÇÃO, crua.
+  8. Comparar o builtAt de produção com 2026-08-13T15:20:00Z.
+     Iguais → deploy íntegro. Diferentes → deploy fantasma, PARE.
+  9. Confirmar boot posterior a 15:20:00Z.
+
+OBSERVAÇÃO SOBRE ESCOPO: git status e git diff vieram vazios porque
+o Replit auto-commita. A verificação de escopo do checklist não
+funcionou nesta rodada. Proponha, sem implementar agora, um
+substituto que funcione nesse ambiente — comparação contra o commit
+do último deploy, ou hash do dist anterior versus atual.
+
+BB1 — CONFIRMAR O BOOT-HOOK
+  (a) linha [PERSONA-FIX] nos logs de produção
+  (b) executeSql environment="production", host declarado:
+      SELECT settings->'persona'->>'heygenAvatarId' AS avatar,
+             settings->'persona'->>'digitalTwinId'  AS grupo,
+             settings->'persona'->>'heygenVoiceId'  AS voz
+      FROM workspaces WHERE id='21aa4337-82db-4671-bd8c-acdbeb9f6495';
+      Esperado: 5279d1ea..., 307779b4..., 6b7a9365...
+  Se não bater, PARE.
+
+BB2 — QUANTOS DISPARARIAM
+  SELECT id, format, media_gen_status, scheduled_for,
+         (scheduled_for <= now()) AS vencido
+  FROM social_presence_posts
+  WHERE workspace_id='21aa4337-82db-4671-bd8c-acdbeb9f6495'
+    AND status='scheduled' AND media_gen_status='storyboard_ready'
+  ORDER BY scheduled_for;
+  Declare, com arquivo:linha, se o scheduler processa apenas vencidos.
+  Se mais de 2 disparariam: reporte e PARE.
+
+BB3 — JANELA
+  T0 → SET nexos:flag:disable_video_generation "false"
+       (SET com valor "false", NUNCA DEL — DEL cai no fail-safe
+        e suprime, como já ocorreu antes)
+  poll 15s em todos os alvos de BB2 + quota
+  gatilho → SET "true" IMEDIATO
+  limite 180s
+
+BB4 — PROVA FINAL
+  1. polling HeyGen até completed — resposta crua
+  2. mp4 no GCS
+  3. mediaUrls com /api/presence/media/serve?key=...
+  4. curl -I na URL do NexOS: HTTP 200, Content-Type: video/mp4
+  5. quota antes/depois
+  6. nada publicado em plataforma
+
+RESTRIÇÕES
+Máximo 2 vídeos. Proibido publicar em plataforma.
+Todo SELECT declara host E ambiente. Manter AUTOAUDITORIA.
