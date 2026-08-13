@@ -2708,16 +2708,37 @@ export async function approveStoryboardGenerateVideo(
       }
 
       if (result.status === "ready" && result.clipUrl) {
-        // Vídeo entregue imediatamente (raro, mas possível)
-        await db
-          .update(socialPresencePostsTable)
-          .set({
-            mediaGenStatus: "video_ready",
-            mediaJobId: null,
-            mediaJobProvider: null,
-            mediaUrls: [result.clipUrl],
-          })
-          .where(eq(socialPresencePostsTable.id, postId));
+        // Vídeo entregue imediatamente (raro, mas possível).
+        // P3: Download do CDN HeyGen e upload para GCS próprio.
+        // PROIBIDO gravar URL HeyGen em mediaUrls — ela expira em ~7 dias.
+        // PROIBIDO usar URL HeyGen como fallback em nenhum caminho de erro.
+        try {
+          const videoResp = await fetch(result.clipUrl);
+          if (!videoResp.ok) throw new Error(`HeyGen CDN fetch HTTP ${videoResp.status}`);
+          const buf = Buffer.from(await videoResp.arrayBuffer());
+          const gcsKey = `presence-video/${workspaceId}/${postId}.mp4`;
+          await uploadBufferToGCS(buf, gcsKey, "video/mp4");
+          // mediaJobId reutilizado como campo de auditoria pós-conclusão (polling encerrado).
+          await db
+            .update(socialPresencePostsTable)
+            .set({
+              mediaGenStatus: "video_ready",
+              mediaJobId: result.clipUrl,  // auditoria: URL original HeyGen (expira)
+              mediaJobProvider: null,
+              mediaUrls: [gcsKey],
+            })
+            .where(eq(socialPresencePostsTable.id, postId));
+          log.info({ postId, gcsKey, heygenUrl: result.clipUrl }, "presence: vídeo (imediato) armazenado no GCS ✓");
+        } catch (dlErr) {
+          log.error(
+            { postId, heygenUrl: result.clipUrl, err: String(dlErr) },
+            "presence: GCS upload falhou (path imediato) — post marcado como failed (sem fallback para URL HeyGen)",
+          );
+          await db
+            .update(socialPresencePostsTable)
+            .set({ mediaGenStatus: "failed", errorMessage: `Upload GCS falhou: ${String(dlErr)}` })
+            .where(eq(socialPresencePostsTable.id, postId));
+        }
       } else {
         // Vídeo assíncrono: salvar job ID para polling
         await db
@@ -2764,12 +2785,42 @@ export async function pollPostMediaJob(
   try {
     const result = await pollVideoJob(post.mediaJobId, post.mediaJobProvider);
     if (result.status === "ready" && result.clipUrl) {
+      // P3: Download do CDN HeyGen e upload para GCS próprio.
+      // PROIBIDO gravar URL HeyGen em mediaUrls — ela expira em ~7 dias e quebra silenciosamente.
+      // PROIBIDO usar URL HeyGen como fallback em nenhum caminho de erro.
+      let gcsKey: string;
+      try {
+        const videoResp = await fetch(result.clipUrl);
+        if (!videoResp.ok) throw new Error(`HeyGen CDN fetch HTTP ${videoResp.status}`);
+        const buf = Buffer.from(await videoResp.arrayBuffer());
+        gcsKey = `presence-video/${post.workspaceId}/${postId}.mp4`;
+        await uploadBufferToGCS(buf, gcsKey, "video/mp4");
+      } catch (dlErr) {
+        log.error(
+          { postId, heygenUrl: result.clipUrl, err: String(dlErr) },
+          "presence: GCS upload falhou — post marcado como failed (sem fallback para URL HeyGen)",
+        );
+        const [updated] = await db
+          .update(socialPresencePostsTable)
+          .set({ mediaGenStatus: "failed", errorMessage: `Upload GCS falhou: ${String(dlErr)}` })
+          .where(eq(socialPresencePostsTable.id, postId))
+          .returning();
+        return updated;
+      }
+      // mediaJobId reutilizado como campo de auditoria pós-conclusão:
+      // o polling já encerrou, então o campo não é mais necessário para rastreamento de job.
+      // A URL HeyGen aqui é apenas registro interno — expira em ~7 dias, nunca servida ao cliente.
       const [updated] = await db
         .update(socialPresencePostsTable)
-        .set({ mediaGenStatus: "video_ready", mediaUrls: [result.clipUrl], mediaJobId: null })
+        .set({
+          mediaGenStatus: "video_ready",
+          mediaUrls: [gcsKey],
+          mediaJobId: result.clipUrl,  // auditoria: URL original HeyGen (expira)
+          mediaJobProvider: null,
+        })
         .where(eq(socialPresencePostsTable.id, postId))
         .returning();
-      log.info({ postId, url: result.clipUrl }, "presence: video ready");
+      log.info({ postId, gcsKey, heygenUrl: result.clipUrl }, "presence: vídeo armazenado no GCS ✓");
       return updated;
     } else if (result.status === "failed") {
       const [updated] = await db
