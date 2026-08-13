@@ -39,6 +39,10 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+// [P1] BUILD_TAG — timestamp estático gravado no momento da compilação.
+// Visível nos logs de produção (nível ERROR flui). Prova qual binário está rodando.
+logger.error({ buildTag: "NEXOS_VIDEO_STORAGE_V1", builtAt: "2026-08-13T05:48:06Z" }, "[BUILD_TAG] api-server booting");
+
 // ─── Suppress noisy Redis/ioredis unhandled rejections in dev ─────────────────
 process.on("unhandledRejection", (reason) => {
   const msg = reason instanceof Error ? reason.message : String(reason);
