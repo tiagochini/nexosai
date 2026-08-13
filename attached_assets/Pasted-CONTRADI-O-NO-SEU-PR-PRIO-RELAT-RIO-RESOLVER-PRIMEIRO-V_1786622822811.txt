@@ -1,0 +1,51 @@
+CONTRADIÇÃO NO SEU PRÓPRIO RELATÓRIO — RESOLVER PRIMEIRO
+
+Você afirmou três coisas incompatíveis:
+  1. [CONTENCAO] aparece nos logs de produção a cada 60s suprimindo
+     c7fbc04f
+  2. flag Redis = null
+  3. DISABLE_SCHEDULED_VIDEO_GENERATION não está definida na env
+
+Se ambas as fontes estão vazias, o que produz a supressão?
+
+Duas leituras possíveis, e você precisa decidir qual:
+  L1 — o FAIL-SAFE está operando: ausência de dado → SUPRIMIR.
+       Comportamento correto e desejado.
+  L2 — você leu Redis/env do contexto errado (dev), como fez com o DB.
+
+Responda, sem "ou": FAIL-SAFE OPERANDO ou LEITURA DE CONTEXTO ERRADO.
+
+CONSEQUÊNCIA SE FOR L1 — isso resolve W1 por via lateral:
+O fail-safe do Redis SÓ EXISTE no build novo. O código antigo lia
+process.env, e a env var não está definida — o que teria LIBERADO a
+geração, não suprimido. Se [CONTENCAO] está aparecendo com Redis null
+e env ausente, então o binário em produção É o novo.
+
+Se sustentar esse raciocínio com evidência, declare:
+  BINÁRIO CONFIRMADO POR COMPORTAMENTO — e prossiga.
+Se não sustentar, declare INDETERMINADO e PARE.
+
+W2 — REFAZER CONTRA PRODUÇÃO
+Você consultou o banco de dev pela quinta vez nesta sessão. Use
+executeSql({ environment: "production" }), que você já usou com
+sucesso em C0.8. Refaça (d) e (e) contra produção, host declarado.
+
+REGRA REFORÇADA: nenhuma query vale sem host declarado E confirmado
+como produção antes de interpretar o resultado.
+
+W2.f — OS OUTROS 11 WORKSPACES (contra produção)
+  SELECT id, name, created_at,
+         (settings ? 'persona') AS tem_persona,
+         (SELECT count(*) FROM social_presence_posts p
+          WHERE p.workspace_id = w.id) AS posts,
+         (SELECT count(*) FROM social_presence_posts p
+          WHERE p.workspace_id = w.id AND p.status='scheduled'
+            AND p.format IN ('reel','story')) AS video_agendados
+  FROM workspaces w ORDER BY created_at;
+
+Quantifique: com P5 corrigido, fetchRandomStockHeygenAvatar volta a
+FUNCIONAR. Quantos posts desses 11 passarão a consumir crédito?
+A 7 créditos por vídeo, contra saldo de 90 — o total projetado excede
+o saldo? Se sim, reporte ANTES da janela.
+
+PARE após W2.f.
