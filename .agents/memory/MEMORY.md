@@ -1,3 +1,4 @@
+- [Presence Video Serve 400](presence-video-serve-400.md) — presence-video/ tem 3 segmentos; guard parts<4 causa 400 → preview quebrado + Instagram container ERROR.
 - [HeyGen Scheduler Fall-Through Bug](heygen-scheduler-fallthrough-bug.md) — missing `continue` after setImmediate in publishDuePresencePosts caused all prod video gen to fail; dev≠prod DBs; Adriano stock voice in persona; containment flag added.
 - [HeyGen v3 Migration](heygen-v3-migration.md) — v3 uses flat payload (no video_inputs[]); avatar_id must be look UUID from /v3/avatars/looks; poll via GET /v3/videos/{id}; v2 IDs cause 400.
 - [Clone Digital Persistence](clone-digital-persistence.md) — per-take upload queue; voice resume via voice-clone-progress endpoint; avatar flow restores step from GCS; trainingKey optional in clone-avatar-video.

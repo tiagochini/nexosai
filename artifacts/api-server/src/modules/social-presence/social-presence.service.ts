@@ -2530,30 +2530,49 @@ export async function redirectToPresenceMedia(
     return;
   }
 
-  // 2. Parse: presence-media/{workspaceId}/{postId}/{filename}
+  // 2. Parse por formato:
+  //    presence-video/{workspaceId}/{postId}.mp4         → 3 partes (reels HeyGen)
+  //    presence-media/{workspaceId}/{postId}/{filename}  → 4+ partes
+  //    presence-storyboard/{workspaceId}/{filename}      → 3 partes (sem postId obrigatório)
   const parts = gcsKey.split("/");
-  if (parts.length < 4) {
-    res.status(400).end();
-    return;
+  let workspaceId: string;
+  let postId: string;
+  if (gcsKey.startsWith("presence-video/")) {
+    // presence-video/{workspaceId}/{postId}.mp4
+    if (parts.length < 3) { res.status(400).end(); return; }
+    workspaceId = parts[1]!;
+    postId      = parts[2]!.replace(/\.[^.]+$/, ""); // strip extensão
+  } else if (gcsKey.startsWith("presence-storyboard/")) {
+    // presence-storyboard/{workspaceId}/{filename} — sem postId de ownership
+    // Verificação de ownership por workspaceId não é aplicável aqui; serve direto.
+    if (parts.length < 3) { res.status(400).end(); return; }
+    workspaceId = parts[1]!;
+    postId      = ""; // sem post associado — skip ownership check abaixo
+  } else {
+    // presence-media/{workspaceId}/{postId}/{filename}
+    if (parts.length < 4) { res.status(400).end(); return; }
+    workspaceId = parts[1]!;
+    postId      = parts[2]!;
   }
-  const workspaceId = parts[1];
-  const postId      = parts[2];
 
-  // 3. Ownership check — post deve existir e não estar cancelado
-  const [row] = await db
-    .select({ id: socialPresencePostsTable.id })
-    .from(socialPresencePostsTable)
-    .where(
-      and(
-        eq(socialPresencePostsTable.id, postId),
-        eq(socialPresencePostsTable.workspaceId, workspaceId),
-      ),
-    )
-    .limit(1);
+  // 3. Ownership check — post deve existir e pertencer ao workspace.
+  //    presence-storyboard/ não tem postId; pular o check (o prefix guard já valida o tipo).
+  if (postId) {
+    const [row] = await db
+      .select({ id: socialPresencePostsTable.id })
+      .from(socialPresencePostsTable)
+      .where(
+        and(
+          eq(socialPresencePostsTable.id, postId),
+          eq(socialPresencePostsTable.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    res.status(404).end();
-    return;
+    if (!row) {
+      res.status(404).end();
+      return;
+    }
   }
 
   // 4a. Tentar GCS V4 Signed URL (requer iam.serviceAccounts.signBlob — indisponível no Replit)
