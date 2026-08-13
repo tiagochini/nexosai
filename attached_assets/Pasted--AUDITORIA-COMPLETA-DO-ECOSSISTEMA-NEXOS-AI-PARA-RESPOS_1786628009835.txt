@@ -1,0 +1,90 @@
+# AUDITORIA COMPLETA DO ECOSSISTEMA NEXOS AI — PARA RESPOSTA DO AGENTE REPLIT
+
+## Contexto e regra de evidência (leia antes de responder)
+
+Esta auditoria vai virar a base de um documento institucional apresentado a clientes. Cada afirmação aqui vira uma promessa comercial. Por isso, toda resposta segue a Cláusula de Integridade de Evidência:
+
+- **N1** — verificável externamente: resultado de SELECT real no banco, log de execução real, grep no código-fonte com caminho do arquivo, teste funcional com output colado. **Esta é a única evidência aceitável para qualquer item marcado como "Ativo".**
+- **N2** — evidência bruta anexada mas não 100% conclusiva (ex: log parcial, print de painel) — aceitável só se acompanhada de nota explicando a lacuna.
+- **N3** — afirmação sem prova ("esse agente funciona", "essa integração está pronta") — **não é aceitável para nenhum item deste documento.** Se você não tem prova N1 ou N2 de algo, marque como "NÃO VERIFICADO" — não descreva como funcionando.
+
+Não existe "degradação graciosa" aqui. Se algo falha silenciosamente, ou está incompleto, ou nunca rodou de verdade, isso é reportado como está — nunca suavizado.
+
+Para cada item abaixo, declare também o **ambiente** de onde a evidência veio (produção, staging, dev local).
+
+---
+
+## PARTE 1 — Inventário completo e definitivo de agentes
+
+Preciso da lista **real e atual** de todos os agentes existentes no código — não a lista que já documentamos antes, que ficou desatualizada.
+
+Para cada agente, entregar em formato de tabela:
+
+| Nome do agente | Arquivo/caminho no repo | Departamento/área | Status (ativo em produção / ativo parcial / em desenvolvimento / código morto) | Última execução real verificada (data + prova N1) |
+
+Inclua explicitamente, se existirem no código, os agentes que sei que foram adicionados ou expandidos nos últimos dias e que não estão na minha documentação atual:
+- Qualquer agente de **inteligência de mercado** além dos já documentados (market_intel, financial_projector, business_intelligence, traffic_intelligence, media_buyer)
+- Qualquer agente novo de **social media** além de presence_planner, presence_insight, presence_bio
+- Qualquer agente criado nos últimos dias para "aprimorar fluxos" que ainda não documentei
+- Sub-agentes dentro de agentes compostos (ex: copywriter tem 3 sub-agentes — existem outros compostos assim?)
+
+**Pergunta direta a responder com número exato:** hoje, contando tudo isso, quantos agentes distintos existem no código-fonte? Não estime — conte via grep/busca estrutural no repo e mostre o comando usado.
+
+---
+
+## PARTE 2 — Arquitetura de Social Media multiconta
+
+Preciso entender o que **existe hoje no código**, não o que está planejado, separadamente do que é plano futuro.
+
+1. O sistema hoje suporta **múltiplas contas por plataforma** (ex: 3 contas de Instagram diferentes rodando ao mesmo tempo)? Mostre o schema de banco de dados (tabela de contas conectadas) que prova isso — ou prove que hoje só existe suporte a 1 conta por plataforma.
+2. Cada conta conectada roda com **independência estrutural** (pipeline/fila/execução isolada por conta) ou todas as contas de uma plataforma compartilham o mesmo pipeline de execução? Mostre o código de roteamento/fila que prova isso.
+3. Existe algum mecanismo de **conexão entre contas** (ex: replicar post de uma conta para outra, ou análise cruzada entre contas) — e ele é opt-in (só ativa se o operador solicitar) ou automático? Mostre onde isso está implementado, se existir.
+4. Para cada plataforma abaixo, declare status real (não aspiracional):
+
+| Plataforma | Status de integração (nenhuma / OAuth apenas / publicação funcional / publicação + analytics) | Suporte multiconta (sim/não) | Prova |
+|---|---|---|---|
+| Instagram | | | |
+| Facebook | | | |
+| TikTok | | | |
+| YouTube | | | |
+| LinkedIn | | | |
+| X (Twitter) | | | |
+
+---
+
+## PARTE 3 — Camada de Integração e Automação (o ponto mais crítico desta auditoria)
+
+Esta é a parte que ficou mal documentada até agora. Preciso de duas coisas separadas:
+
+### 3A — Integrações externas (APIs e webhooks)
+
+Lista completa de toda integração externa que existe no código, com:
+
+| Integração | Tipo (API / Webhook recebido / Webhook enviado) | Direção de dados | Status (funcional em produção / configurado mas não testado / stub/placeholder) | Prova (endpoint real, log de chamada real, ou teste funcional) |
+
+Cobrir explicitamente, confirmando existência ou ausência de cada uma:
+- Meta (Instagram + Facebook) — API de publicação, webhooks de mensagem, webhook de exclusão de dados
+- TikTok API
+- YouTube API
+- LinkedIn API
+- ASAAS (gateway de pagamento) — quais eventos de webhook estão implementados (pagamento confirmado, assinatura cancelada, etc.)
+- Qualquer CRM integrado (nomear qual, se houver) — sentido da integração (NexOS envia dados pro CRM, recebe do CRM, ou os dois)
+- Qualquer outra integração externa que exista e eu não tenha listado
+
+### 3B — Automação interna entre agentes (o motor de orquestração)
+
+Esta é a pergunta mais importante do documento todo: **como um agente aciona o outro sem intervenção humana?**
+
+1. Existe um mecanismo central de orquestração (fila de eventos, state machine, scheduler) ou cada trigger entre agentes é uma chamada direta hardcoded no código?
+2. Quando o profile_builder termina, o que dispara automaticamente o próximo agente da cadeia — e isso é 100% automático hoje, ou hoje ainda depende de um passo manual/re-trigger?
+3. Existe retry automático, fila de falhas, ou dead-letter queue para quando um agente falha no meio da cadeia? Ou uma falha no meio trava o fluxo até intervenção manual?
+4. Mapeie, com prova de código, pelo menos 3 exemplos reais de "agente A termina → agente B dispara automaticamente" — nome dos dois agentes, mecanismo exato (evento, callback, polling, cron), e um log real de uma execução em produção mostrando isso acontecendo.
+5. Isso é vendável hoje como "sistema nervoso automático" ou ainda é, na prática, uma sequência de chamadas manuais/scriptadas que simula automação? Seja direto — se for o segundo caso, isso muda completamente como vou posicionar isso pro cliente.
+
+---
+
+## Formato de entrega
+
+Responda parte por parte, na ordem acima. Cada tabela precisa estar completa — não pule linhas dizendo "similar ao anterior". Onde não houver prova N1 disponível, escreva "NÃO VERIFICADO" explicitamente em vez de preencher com suposição.
+
+Não conclua com resumo otimista genérico ("o sistema está robusto e pronto para escalar"). Termine apenas listando, em uma lista separada, os itens que ficaram como NÃO VERIFICADO ou EM DESENVOLVIMENTO, para eu decidir o que investigar a seguir.
