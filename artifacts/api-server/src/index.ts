@@ -18,15 +18,15 @@ if (process.env["NODE_ENV"] !== "production") {
   };
 }
 import { initRealtime } from "./modules/realtime/realtime.service.js";
-import { getQueue, closeAllQueues, drainQueueAtBoot, QUEUE_NAMES } from "./modules/queue/queue.service.js";
+import { getQueue, closeAllQueues, QUEUE_NAMES } from "./modules/queue/queue.service.js";
 import { initOrchestrationWorker, closeOrchestrationWorker } from "./modules/orchestration/orchestration.worker.js";
 import { resumeGeneratingCampaigns } from "./modules/orchestration/orchestration.service.js";
-import { startSocialScheduler, stopSocialScheduler } from "./modules/social/social.worker.js";
+import { startSocialScheduler, startMetricsSyncScheduler, stopSocialScheduler, stopMetricsSyncScheduler } from "./modules/social/social.worker.js";
 import { startPaidMediaScheduler, stopPaidMediaScheduler } from "./modules/paid-media/paid-media.worker.js";
 import { initSequenceScheduler, closeSequenceScheduler } from "./modules/launch-sequence/sequence-scheduler.worker.js";
 import { startFunnelScheduler } from "./modules/academy/academy-funnel.service.js";
 import { cleanupDisconnectedIntegrationDuplicates } from "./modules/integrations/integration-cleanup.service.js";
-import { db, campaignAgentsTable, campaignsTable, socialPresencePostsTable, socialPresenceConfigTable } from "@workspace/db";
+import { db, campaignAgentsTable, campaignsTable, socialPresencePostsTable, socialPresenceConfigTable, socialPostsTable } from "@workspace/db";
 import { eq, and, lt, sql as sqlRaw, like, inArray } from "drizzle-orm";
 
 const rawPort = process.env["PORT"];
@@ -98,46 +98,49 @@ try {
   logger.warn({ err }, "Queue init failed — Redis may not be available, continuing without queues");
 }
 
-initOrchestrationWorker();
-startSocialScheduler();
-startPaidMediaScheduler();
-await initSequenceScheduler();
-startFunnelScheduler();
-
 // ── Boot cleanup: recover orphaned campaigns before accepting any requests ────
 // RC-007 FIX: All cleanup operations are awaited via Promise.all() before
 // httpServer.listen() is called, ensuring a consistent state on boot.
 //
-// RC-011 FINAL FIX: BullMQ queue drain added as step 0.
-// After a server restart, any BullMQ jobs that were "active" or "waiting" are
-// orphaned — their worker process was killed. Previously only the DB was cleaned
-// (campaigns reset to recoverable statuses) but the Redis queue still held stale
-// "active" jobs. On the next user action, the dedup check would see them as
-// "already running" and silently skip the new execution — leaving the user stuck
-// with a campaign that appeared to be working but was doing nothing.
-//
 // Cleanup order:
-//   0. Drain orphaned BullMQ jobs (active/waiting/delayed/failed → removed)
-//   1. Mark all "running" agents as failed (orphaned from crashed process)
-//   2. Reset campaigns stuck in "generating" → "strategy_ready" (content interrupted)
-//   3. Reset campaigns stuck in "analyzing"  → "intake"          (strategy interrupted)
+//   1. Mark only conclusively stale running agents as failed.
+//   2. Recover stale generating campaigns from their checkpoints.
+//   3. Reset campaigns stuck in "analyzing" → "intake".
 //
-// All are idempotent — safe to run on every boot even if no cleanup is needed.
-// Queue drain runs first (non-blocking, non-fatal if Redis is unavailable).
+// This process can be one of several API instances.  Queue jobs have no
+// instance-owner field, so boot must never drain them: a job may be owned by a
+// healthy sibling.  In particular, failed jobs are retained as audit evidence.
+// Agent rows do have started_at; 30 minutes is safely beyond the 12-minute HTTP
+// timeout and normal 5–10 minute AI call, so it is the only destructive recovery
+// performed here.
+const bootRecoveryCutoff = new Date(Date.now() - 30 * 60 * 1000);
+
+async function startBackgroundServices(): Promise<void> {
+  initOrchestrationWorker();
+  startSocialScheduler();
+startMetricsSyncScheduler(async () => db
+  .select({ id: socialPostsTable.id, workspaceId: socialPostsTable.workspaceId })
+  .from(socialPostsTable)
+  .where(eq(socialPostsTable.status, "published")));
+  startPaidMediaScheduler();
+  await initSequenceScheduler();
+  startFunnelScheduler();
+}
+
 Promise.all([
-  drainQueueAtBoot(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION),
-  drainQueueAtBoot(QUEUE_NAMES.AGENT_EXECUTION),
-  drainQueueAtBoot(QUEUE_NAMES.CONTENT_GENERATION),
   db.update(campaignAgentsTable)
     .set({
       status: "failed",
       errorMessage: "Servidor reiniciado — execução interrompida",
       completedAt: new Date(),
     })
-    .where(eq(campaignAgentsTable.status, "running"))
+    .where(and(
+      eq(campaignAgentsTable.status, "running"),
+      lt(campaignAgentsTable.startedAt, bootRecoveryCutoff),
+    ))
     .then((result) => {
       if (result.rowCount && result.rowCount > 0) {
-        logger.error({ count: result.rowCount }, "Boot cleanup: marked orphaned running agents as failed");
+        logger.error({ count: result.rowCount, staleBefore: bootRecoveryCutoff }, "Boot cleanup: marked stale running agents as failed");
       }
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (agents) failed")),
@@ -282,9 +285,13 @@ Promise.all([
     })
     .catch((err) => logger.error({ err }, "Boot cleanup (analyzing reset) failed")),
 ]).then(async () => {
-  // Re-enqueue generating campaigns AFTER agents are marked failed + queue drained.
-  // They will resume from the checkpoint in contentPiecesTable (skipping completed agents).
-  await resumeGeneratingCampaigns();
+  // Stale recovery is deliberately complete before explicit resume. Queue state
+  // remains untouched, and resume itself excludes campaigns with a fresh agent.
+  await resumeGeneratingCampaigns(bootRecoveryCutoff);
+
+  // Do not begin consuming jobs until stale recovery has finished. Starting
+  // workers above would let a second instance race its own boot checks.
+  await startBackgroundServices();
 
   httpServer.listen(port, (err?: Error) => {
     if (err) {
@@ -293,8 +300,11 @@ Promise.all([
     }
     logger.info({ port }, "NexOS AI API Server listening");
   });
-}).catch((err) => {
+}).catch(async (err) => {
   logger.error({ err }, "Boot cleanup failed — starting server anyway to avoid complete outage");
+  await startBackgroundServices().catch((serviceErr) =>
+    logger.error({ err: serviceErr }, "Background service startup failed after cleanup error"),
+  );
   httpServer.listen(port, () => {
     logger.info({ port }, "NexOS AI API Server listening (cleanup failed)");
   });
@@ -303,6 +313,7 @@ Promise.all([
 async function shutdown(signal: string): Promise<void> {
   logger.info({ signal }, "Shutdown signal received");
   stopSocialScheduler();
+  stopMetricsSyncScheduler();
   await closeSequenceScheduler();
   await closeOrchestrationWorker();
   await closeAllQueues();

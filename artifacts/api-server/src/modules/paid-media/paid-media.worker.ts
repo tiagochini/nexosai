@@ -3,6 +3,7 @@ import { db, paidMediaAccountsTable, paidMediaPoliciesTable, paidMediaProposalsT
 import { executeProposal } from "./actions.service.js";
 import { syncPaidMediaAccount } from "./sync.service.js";
 import { logger } from "../../lib/logger.js";
+import { registerScheduler, runSchedulerTick } from "../operations/scheduler-health.registry.js";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 async function tick() {
@@ -19,5 +20,13 @@ async function tick() {
     } catch (error) { logger.error({ accountId: account.id, err: error }, "Paid-media account scheduler failed"); }
   }));
 }
-export function startPaidMediaScheduler() { if (!timer) { timer = setInterval(() => { void tick(); }, 15 * 60_000); logger.info("Paid-media scheduler started"); } }
+export function startPaidMediaScheduler() {
+  if (!timer) {
+    registerScheduler("paid-media", 35 * 60_000);
+    timer = setInterval(() => {
+      void runSchedulerTick("paid-media", tick).catch(() => logger.error("Paid-media scheduler tick failed"));
+    }, 15 * 60_000);
+    logger.info("Paid-media scheduler started");
+  }
+}
 export function stopPaidMediaScheduler() { if (timer) { clearInterval(timer); timer = null; } }

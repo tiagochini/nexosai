@@ -810,7 +810,7 @@ export async function updatePost(
   const [updated] = await db
     .update(socialPostsTable)
     .set({ ...data, updatedAt: new Date() })
-    .where(eq(socialPostsTable.id, postId))
+    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)))
     .returning();
 
   if (!updated) throw new AppError(500, "Falha ao atualizar post", "DB_ERROR");
@@ -826,19 +826,16 @@ export async function cancelPost(workspaceId: string, postId: string): Promise<v
   await db
     .update(socialPostsTable)
     .set({ status: "cancelled", updatedAt: new Date() })
-    .where(eq(socialPostsTable.id, postId));
+    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
 }
 
 // ─── Publishing ───────────────────────────────────────────────────────────────
 
-export async function publishPost(postId: string): Promise<SocialPost> {
-  const [post] = await db
-    .select()
-    .from(socialPostsTable)
-    .where(eq(socialPostsTable.id, postId))
-    .limit(1);
-
-  if (!post) throw new NotFoundError("Post not found");
+export async function publishPost(workspaceId: string, postId: string): Promise<SocialPost> {
+  // Resolve the post before doing any state transition or credential lookup. This
+  // is deliberately workspace-scoped: post IDs must never authorize a caller to
+  // publish a post belonging to another workspace.
+  const post = await getPost(workspaceId, postId);
   if (post.status === "published") return post;
   if (!["scheduled", "draft"].includes(post.status)) {
     throw new AppError(400, `Cannot publish post in status: ${post.status}`, "INVALID_STATUS");
@@ -858,11 +855,11 @@ export async function publishPost(postId: string): Promise<SocialPost> {
   await db
     .update(socialPostsTable)
     .set({ status: "publishing", updatedAt: new Date() })
-    .where(eq(socialPostsTable.id, postId));
+    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
 
-  const integration = await getIntegration(post.workspaceId, post.integrationId);
+  const integration = await getIntegration(workspaceId, post.integrationId);
   if (!integration || integration.status !== "connected") {
-    await markFailed(postId, "Integração não conectada ou expirada");
+    await markFailed(workspaceId, postId, "Integração não conectada ou expirada");
     throw new AppError(400, "Integração não conectada", "INTEGRATION_ERROR");
   }
 
@@ -891,7 +888,7 @@ export async function publishPost(postId: string): Promise<SocialPost> {
         retryCount,
         updatedAt: new Date(),
       })
-      .where(eq(socialPostsTable.id, postId));
+      .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
     throw new AppError(500, result.error ?? "Publish failed", "PUBLISH_FAILED");
   }
 
@@ -905,23 +902,21 @@ export async function publishPost(postId: string): Promise<SocialPost> {
       errorMessage: null,
       updatedAt: new Date(),
     })
-    .where(eq(socialPostsTable.id, postId))
+    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)))
     .returning();
 
   logger.info({ postId, platform: post.platform, platformPostId: result.platformPostId }, "Post published");
   return updated!;
 }
 
-export async function syncPostMetrics(postId: string): Promise<SocialPost> {
-  const [post] = await db
-    .select()
-    .from(socialPostsTable)
-    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.status, "published")))
-    .limit(1);
+export async function syncPostMetrics(workspaceId: string, postId: string): Promise<SocialPost> {
+  // Do not fold the status into this lookup. A missing foreign post must be
+  // indistinguishable from an absent post, while a local non-published post can
+  // safely be returned without contacting a provider.
+  const post = await getPost(workspaceId, postId);
+  if (post.status !== "published" || !post.platformPostId) return post;
 
-  if (!post || !post.platformPostId) return post!;
-
-  const integration = await getIntegration(post.workspaceId, post.integrationId);
+  const integration = await getIntegration(workspaceId, post.integrationId);
   if (!integration?.accessToken) return post;
 
   let metrics;
@@ -936,7 +931,7 @@ export async function syncPostMetrics(postId: string): Promise<SocialPost> {
   const [updated] = await db
     .update(socialPostsTable)
     .set({ metrics, updatedAt: new Date() })
-    .where(eq(socialPostsTable.id, postId))
+    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)))
     .returning();
 
   return updated ?? post;
@@ -1128,11 +1123,11 @@ async function getIntegration(
     : undefined;
 }
 
-async function markFailed(postId: string, error: string): Promise<void> {
+async function markFailed(workspaceId: string, postId: string, error: string): Promise<void> {
   await db
     .update(socialPostsTable)
     .set({ status: "failed", errorMessage: error, updatedAt: new Date() })
-    .where(eq(socialPostsTable.id, postId));
+    .where(and(eq(socialPostsTable.id, postId), eq(socialPostsTable.workspaceId, workspaceId)));
 }
 
 function providerToPlatform(

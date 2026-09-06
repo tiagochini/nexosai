@@ -4,6 +4,7 @@ import {
   normalizeMetaInsights,
   normalizeTikTokAccounts,
   normalizeTikTokInsights,
+  hasConsistentRollbackOwnership,
   policyAllows,
   requiresHumanApproval,
   rollbackActionFromSnapshot,
@@ -46,6 +47,19 @@ class InMemoryExecutor {
   get(workspaceId: string, key: string) {
     const attempt = this.attempts.get(`${workspaceId}:${key}`);
     return attempt?.workspaceId === workspaceId ? attempt : undefined;
+  }
+}
+
+class InMemoryRollback {
+  public providerMutations = 0;
+  public statusWrites = 0;
+
+  rollback(workspaceId: string, attempt: { workspaceId: string; proposalId: string }, proposal: { id: string; workspaceId: string; accountId: string | null; entityId: string | null; provider: string }, account: { id: string; workspaceId: string; provider: string }, target: { id: string; workspaceId: string; accountId: string; provider: string }) {
+    if (!hasConsistentRollbackOwnership(workspaceId, attempt, proposal, account, target)) {
+      throw new Error("Rollback context ownership mismatch.");
+    }
+    this.providerMutations++;
+    this.statusWrites += 2;
   }
 }
 
@@ -93,5 +107,19 @@ const rollback = rollbackActionFromSnapshot(action, immutableBefore);
 immutableBefore.data["daily_budget"] = "999";
 assert.deepEqual(rollback.changes, { dailyBudget: "100" }, "rollback uses persisted before snapshot, not current state");
 assert.equal(rollback.idempotencyKey, "proposal-1:rollback");
+
+// A denormalized cross-workspace relationship must fail before either the
+// provider call or any status write. The matching graph still rolls back.
+const rollbackService = new InMemoryRollback();
+const rollbackAttempt = { workspaceId: "workspace-a", proposalId: "proposal-a" };
+const rollbackProposal = { id: "proposal-a", workspaceId: "workspace-a", accountId: "account-a", entityId: "entity-a", provider: "meta_ads" };
+const rollbackAccount = { id: "account-a", workspaceId: "workspace-a", provider: "meta_ads" };
+const foreignEntity = { id: "entity-a", workspaceId: "workspace-b", accountId: "account-a", provider: "meta_ads" };
+assert.throws(() => rollbackService.rollback("workspace-a", rollbackAttempt, rollbackProposal, rollbackAccount, foreignEntity), /ownership mismatch/);
+assert.equal(rollbackService.providerMutations, 0, "ownership drift makes no provider mutation");
+assert.equal(rollbackService.statusWrites, 0, "ownership drift makes no foreign DB status mutation");
+rollbackService.rollback("workspace-a", rollbackAttempt, rollbackProposal, rollbackAccount, { ...foreignEntity, workspaceId: "workspace-a" });
+assert.equal(rollbackService.providerMutations, 1, "valid ownership graph preserves rollback");
+assert.equal(rollbackService.statusWrites, 2, "valid rollback updates its scoped statuses");
 
 console.log("paid-media domain tests passed");

@@ -15,7 +15,7 @@
  * via GET /campaigns/:id/content/coherence.
  */
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, campaignsTable, contentPiecesTable } from "@workspace/db";
 import { runAgent, parseAgentJSON } from "./agent.runner.js";
 import type { CampaignEmotionalArc } from "./campaign-emotional-arc.agent.js";
@@ -195,7 +195,10 @@ export async function runEmotionalCoherenceCheck(
         brainData: campaignsTable.brainData,
       })
       .from(campaignsTable)
-      .where(eq(campaignsTable.id, campaignId))
+      .where(and(
+        eq(campaignsTable.id, campaignId),
+        eq(campaignsTable.workspaceId, workspaceId),
+      ))
       .limit(1);
 
     if (!campaign) return null;
@@ -289,7 +292,10 @@ Audite a coerência emocional desta campanha. Verifique se cada peça opera no e
     await db
       .update(campaignsTable)
       .set({ brainData: { ...currentBrain, coherenceReport: report } as any })
-      .where(eq(campaignsTable.id, campaignId));
+      .where(and(
+        eq(campaignsTable.id, campaignId),
+        eq(campaignsTable.workspaceId, workspaceId),
+      ));
 
     log.info(
       { campaignId, score: report.overallScore, verdict: report.verdict, issues: report.issues.length },

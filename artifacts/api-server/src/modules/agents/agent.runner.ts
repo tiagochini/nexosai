@@ -903,9 +903,6 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
       });
     }
 
-    const balanceBefore = ws?.creditsBalance ?? 0;
-    const balanceAfter = Math.max(0, balanceBefore - creditsCharged);
-
     if (creditsCharged > 0) {
       // Non-fatal block: FK constraint fails when workspace was deleted mid-generation
       // (e.g. stress test cleanup racing with background AI job). AI output is already
@@ -935,21 +932,32 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
             : undefined);
 
         if (idempotencyKey) {
-          // ── [C3] Atomic idempotency via INSERT ON CONFLICT DO NOTHING + db.transaction() ──
+          // ── [C3] Atomic idempotency and balance mutation ─────────────────────────
           //
           // Two concurrent executions of the same agent race through here. Both compute the same
           // idempotencyKey. Without a transaction, both could pass a SELECT check and then both
           // UPDATE the workspace balance — double-charging. Instead we:
           //   1. Open a single Postgres transaction.
-          //   2. Attempt INSERT with ON CONFLICT DO NOTHING RETURNING.
-          //      • First writer  → INSERT succeeds → claimed is defined → UPDATE balance.
-          //      • Second writer → INSERT conflicts (unique partial index) → claimed is undefined
-          //        → skip UPDATE → transaction commits as a no-op.
-          //   Postgres serialises the two INSERTs at the row level; the balance UPDATE runs
-          //   exactly once regardless of concurrency.
+          //   2. Lock the workspace row before reading its balance. Different agent keys
+          //      must serialize too, otherwise each can overwrite the other's debit.
+          //   3. Claim the key and write the balance/ledger entry in the same transaction.
           let isDuplicate = false;
+          let balanceAfter: number | undefined;
 
           await db.transaction(async (trx) => {
+            const [lockedWorkspace] = await trx
+              .select({ creditsBalance: workspacesTable.creditsBalance })
+              .from(workspacesTable)
+              .where(eq(workspacesTable.id, workspaceId))
+              .limit(1)
+              .for("update");
+
+            if (!lockedWorkspace) {
+              throw new Error(`Workspace not found while charging credits: ${workspaceId}`);
+            }
+
+            const balanceBefore = lockedWorkspace.creditsBalance;
+            balanceAfter = Math.max(0, balanceBefore - creditsCharged);
             const [claimed] = await trx
               .insert(creditTransactionsTable)
               .values({
@@ -992,23 +1000,39 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
             );
           }
         } else {
-          // No idempotency key (non-campaign agents, video, legacy) — charge directly
-          await db
-            .update(workspacesTable)
-            .set({ creditsBalance: balanceAfter })
-            .where(eq(workspacesTable.id, workspaceId));
+          // Non-campaign/legacy calls still need the row lock: they can race a
+          // keyed agent charge and must record the balance they actually debited.
+          await db.transaction(async (trx) => {
+            const [lockedWorkspace] = await trx
+              .select({ creditsBalance: workspacesTable.creditsBalance })
+              .from(workspacesTable)
+              .where(eq(workspacesTable.id, workspaceId))
+              .limit(1)
+              .for("update");
 
-          await db.insert(creditTransactionsTable).values({
-            workspaceId,
-            campaignId,
-            type: "debit",
-            action: "campaign_execution",
-            amount: creditsCharged,
-            balanceBefore,
-            balanceAfter,
-            aiProvider: result.provider,
-            tokensUsed: result.inputTokens + result.outputTokens,
-            costUsd: result.costUsd.toString(),
+            if (!lockedWorkspace) {
+              throw new Error(`Workspace not found while charging credits: ${workspaceId}`);
+            }
+
+            const balanceBefore = lockedWorkspace.creditsBalance;
+            const balanceAfter = Math.max(0, balanceBefore - creditsCharged);
+            await trx
+              .update(workspacesTable)
+              .set({ creditsBalance: balanceAfter })
+              .where(eq(workspacesTable.id, workspaceId));
+
+            await trx.insert(creditTransactionsTable).values({
+              workspaceId,
+              campaignId,
+              type: "debit",
+              action: "campaign_execution",
+              amount: creditsCharged,
+              balanceBefore,
+              balanceAfter,
+              aiProvider: result.provider,
+              tokensUsed: result.inputTokens + result.outputTokens,
+              costUsd: result.costUsd.toString(),
+            });
           });
         }
       } catch (creditErr) {

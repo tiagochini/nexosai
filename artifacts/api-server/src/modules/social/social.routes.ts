@@ -221,12 +221,12 @@ router.delete("/posts/:postId", requireAuth, async (req, res): Promise<void> => 
 });
 
 router.post("/posts/:postId/publish", requireAuth, async (req, res): Promise<void> => {
-  const post = await publishPost(req.params["postId"] as string);
+  const post = await publishPost(req.auth.workspaceId, req.params["postId"] as string);
   res.json({ post });
 });
 
 router.post("/posts/:postId/sync-metrics", requireAuth, async (req, res): Promise<void> => {
-  const post = await syncPostMetrics(req.params["postId"] as string);
+  const post = await syncPostMetrics(req.auth.workspaceId, req.params["postId"] as string);
   res.json({ post });
 });
 

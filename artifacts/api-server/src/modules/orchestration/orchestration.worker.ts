@@ -276,7 +276,10 @@ async function processExecute(job: Job<CampaignOrchestrationJob>): Promise<void>
   });
 
   // approved → executing → live
-  if (campaign.status === "approved") {
+  // The no-Redis fallback has already atomically moved approved → executing to
+  // claim the phase. Its explicit marker lets this processor perform the same
+  // bridge/activation work rather than treating its own claim as a prior run.
+  if (campaign.status === "approved" || job.data.directClaimed) {
     await transitionCampaign(campaignId, workspaceId, "executing", "launch phase activated", log, {
       executionStartedAt: new Date(),
     });
@@ -400,6 +403,11 @@ async function processComplete(job: Job<CampaignOrchestrationJob>): Promise<void
 // ── Worker factory ─────────────────────────────────────────────────────────────
 
 let worker: Worker | null = null;
+
+/** Lifecycle only; health must not expose BullMQ connection details. */
+export function isOrchestrationWorkerRunning(): boolean {
+  return worker !== null;
+}
 
 export function initOrchestrationWorker(): Worker | null {
   try {

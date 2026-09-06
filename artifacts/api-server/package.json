@@ -9,14 +9,20 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:psychology": "tsx src/scripts/test-psychology-pipeline.ts",
+    "test:credit-concurrency": "tsx src/scripts/test-credit-concurrency.ts",
+    "test:orchestration-fallback-race": "tsx src/scripts/test-orchestration-fallback-race.ts",
+    "test:content-coherence-idor": "NODE_ENV=test tsx src/scripts/test-content-coherence-idor.ts",
     "test:paid-media": "tsx src/scripts/test-paid-media.ts",
     "test:meta-app-review": "NODE_ENV=test META_WEBHOOK_ALLOW_UNSIGNED_TESTS=false tsx src/scripts/test-meta-app-review.ts",
     "test:meta-e2e-harness": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-e2e-harness.ts",
     "test:meta-webhook-retry": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-meta-webhook-retry.ts",
+    "test:social-post-ownership": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-social-post-ownership.ts",
     "test:e2e-seed": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-seed.ts",
     "test:e2e-cleanup": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/e2e-cleanup.ts",
     "test:e2e-fixtures": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-e2e-fixtures.ts",
-    "test:integration-cleanup": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-integration-cleanup.ts"
+    "test:integration-cleanup": "NODE_ENV=test META_E2E_TEST_MODE=true tsx src/scripts/test-integration-cleanup.ts",
+    "test:boot-recovery-safety": "tsx src/scripts/test-boot-recovery-safety.ts",
+    "test:operational-health": "tsx src/scripts/test-operational-health.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",

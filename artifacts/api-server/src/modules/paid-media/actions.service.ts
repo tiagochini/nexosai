@@ -1,7 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import { db, contractAcceptancesTable, mandatoryPausesTable, paidMediaAccountsTable, paidMediaActionAttemptsTable, paidMediaApprovalsTable, paidMediaEntitiesTable, paidMediaPoliciesTable, paidMediaProposalsTable } from "@workspace/db";
 import { paidMediaProvider, PaidMediaProviderError, type ProviderAction } from "./providers.js";
-import { policyAllows, requiresHumanApproval } from "./paid-media.domain.js";
+import { hasConsistentRollbackOwnership, policyAllows, requiresHumanApproval } from "./paid-media.domain.js";
 
 export async function evaluatePolicy(workspaceId: string, accountId: string, action: ProviderAction, sampleSize: number, quality: number) {
   const [account] = await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId))).limit(1);
@@ -74,13 +74,16 @@ export async function executeProposal(workspaceId: string, proposalId: string) {
 export async function rollbackAttempt(workspaceId: string, attemptId: string) {
   const [attempt] = await db.select().from(paidMediaActionAttemptsTable).where(and(eq(paidMediaActionAttemptsTable.id, attemptId), eq(paidMediaActionAttemptsTable.workspaceId, workspaceId))).limit(1);
   if (!attempt) throw new Error("Action attempt not found.");
-  const [proposal] = await db.select().from(paidMediaProposalsTable).where(eq(paidMediaProposalsTable.id, attempt.proposalId)).limit(1);
-  const [account] = proposal?.accountId ? await db.select().from(paidMediaAccountsTable).where(eq(paidMediaAccountsTable.id, proposal.accountId)).limit(1) : [];
-  const [entity] = proposal?.entityId ? await db.select().from(paidMediaEntitiesTable).where(eq(paidMediaEntitiesTable.id, proposal.entityId)).limit(1) : [];
-  if (!proposal || !account || !entity) throw new Error("Rollback context unavailable.");
+  const [proposal] = await db.select().from(paidMediaProposalsTable).where(and(eq(paidMediaProposalsTable.id, attempt.proposalId), eq(paidMediaProposalsTable.workspaceId, workspaceId))).limit(1);
+  const [account] = proposal?.accountId ? await db.select().from(paidMediaAccountsTable).where(and(eq(paidMediaAccountsTable.id, proposal.accountId), eq(paidMediaAccountsTable.workspaceId, workspaceId))).limit(1) : [];
+  const [entity] = proposal?.entityId ? await db.select().from(paidMediaEntitiesTable).where(and(eq(paidMediaEntitiesTable.id, proposal.entityId), eq(paidMediaEntitiesTable.workspaceId, workspaceId))).limit(1) : [];
+  if (!proposal || !account || !entity) throw new PaidMediaProviderError("Rollback context unavailable.", "PRECONDITION_FAILED", 409);
+  if (!hasConsistentRollbackOwnership(workspaceId, attempt, proposal, account, entity)) {
+    throw new PaidMediaProviderError("Rollback context ownership mismatch.", "PRECONDITION_FAILED", 409);
+  }
   const action = { ...(proposal.requestedChange as ProviderAction), entityId: entity.providerEntityId, entityType: entity.entityType, idempotencyKey: attempt.idempotencyKey };
   const result = await paidMediaProvider(proposal.provider).rollbackAction(workspaceId, account.providerAccountId, action, attempt.beforeSnapshot as never);
-  await db.update(paidMediaActionAttemptsTable).set({ status: "rolled_back", rollbackEvidence: result.evidence, completedAt: new Date() }).where(eq(paidMediaActionAttemptsTable.id, attempt.id));
-  await db.update(paidMediaProposalsTable).set({ status: "rolled_back" }).where(eq(paidMediaProposalsTable.id, proposal.id));
+  await db.update(paidMediaActionAttemptsTable).set({ status: "rolled_back", rollbackEvidence: result.evidence, completedAt: new Date() }).where(and(eq(paidMediaActionAttemptsTable.id, attempt.id), eq(paidMediaActionAttemptsTable.workspaceId, workspaceId)));
+  await db.update(paidMediaProposalsTable).set({ status: "rolled_back" }).where(and(eq(paidMediaProposalsTable.id, proposal.id), eq(paidMediaProposalsTable.workspaceId, workspaceId)));
   return result;
 }

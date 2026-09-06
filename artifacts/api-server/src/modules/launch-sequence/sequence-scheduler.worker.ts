@@ -20,6 +20,7 @@ import { emitSequenceEvent } from "./sequence-realtime.js";
 import { sendWeeklyReportsToAll } from "../weekly-report/weekly-report.service.js";
 import { triggerStrategyPhase, triggerContentPhase } from "../orchestration/orchestration.service.js";
 import { QUEUE_NAMES } from "../queue/queue.service.js";
+import { registerScheduler, runSchedulerTick } from "../operations/scheduler-health.registry.js";
 
 export const SEQUENCE_SCHEDULER_QUEUE_NAME = QUEUE_NAMES.SEQUENCE_SCHEDULER;
 
@@ -40,25 +41,15 @@ let fallbackInterval: NodeJS.Timeout | null = null;
 let metaRetryWatchdogInterval: NodeJS.Timeout | null = null;
 let metaRetryWatchdogPromise: Promise<void> | null = null;
 
-// A2 FIX (Bug #05) — process-level in-flight guard.
-// Prevents two concurrent calls to processScheduledItems() even if BullMQ
-// and setInterval somehow both fire at the same tick (e.g. during Redis
-// reconnect). Combined with the item-level CAS below this gives two layers
-// of idempotency: (1) only one process-level execution at a time, and
-// (2) only one process can claim each item via the atomic UPDATE.
-let processingInFlight = false;
-
 async function safeProcessScheduledItems(): Promise<void> {
   const log = logger.child({ component: "sequence-scheduler" });
-  if (processingInFlight) {
-    log.warn("A2: scheduler tick skipped — previous tick still in-flight (in-flight idempotency guard)");
-    return;
-  }
-  processingInFlight = true;
   try {
-    await processScheduledItems();
-  } finally {
-    processingInFlight = false;
+    const ran = await runSchedulerTick("sequence", processScheduledItems);
+    if (!ran) log.warn("A2: scheduler tick skipped — previous tick still in-flight (in-flight idempotency guard)");
+  } catch (err) {
+    // processScheduledItems already records actionable errors; registry errors are sanitized.
+    log.error({ err }, "Sequence scheduler tick failed");
+    throw err;
   }
 }
 
@@ -870,6 +861,7 @@ export async function initSequenceScheduler(options: SequenceSchedulerOptions = 
   const log = logger.child({ component: "sequence-scheduler" });
   if (worker || schedulerQueue || fallbackInterval || metaRetryWatchdogInterval) return;
   const schedulerEveryMs = options.schedulerEveryMs ?? 60_000;
+  registerScheduler("sequence", Math.max(schedulerEveryMs * 3, 3 * 60_000));
   const watchdogEveryMs = options.metaRetryWatchdogEveryMs ?? 10_000;
 
   // Narrow resilience path for DB-backed Meta retries only. CAS claims make

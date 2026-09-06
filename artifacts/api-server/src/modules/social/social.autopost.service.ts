@@ -508,7 +508,15 @@ export async function processScheduledSocialPosts(): Promise<void> {
         integration: workspaceIntegrationsTable,
       })
       .from(socialPostsTable)
-      .innerJoin(workspaceIntegrationsTable, eq(socialPostsTable.integrationId, workspaceIntegrationsTable.id))
+      // An integration ID alone is not authorization for a scheduler job. Keep
+      // provider credentials bound to the same workspace as the post.
+      .innerJoin(
+        workspaceIntegrationsTable,
+        and(
+          eq(socialPostsTable.integrationId, workspaceIntegrationsTable.id),
+          eq(socialPostsTable.workspaceId, workspaceIntegrationsTable.workspaceId),
+        ),
+      )
       .where(
         and(
           eq(socialPostsTable.status, "scheduled"),
@@ -526,7 +534,7 @@ export async function processScheduledSocialPosts(): Promise<void> {
         await db
           .update(socialPostsTable)
           .set({ status: "publishing" })
-          .where(eq(socialPostsTable.id, post.id));
+          .where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
 
         // Resolve media URLs — prefer piece-linked creative, then existing mediaUrls
         let mediaUrls: string[] = Array.isArray(post.mediaUrls) ? (post.mediaUrls as string[]) : [];
@@ -551,7 +559,7 @@ export async function processScheduledSocialPosts(): Promise<void> {
           await db
             .update(socialPostsTable)
             .set({ status: "scheduled" })
-            .where(eq(socialPostsTable.id, post.id));
+            .where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
           continue;
         }
 
@@ -571,7 +579,7 @@ export async function processScheduledSocialPosts(): Promise<void> {
         } else if (post.platform === "tiktok") {
           result = await publishToTikTok(mockPost as any, integration);
         } else {
-          await db.update(socialPostsTable).set({ status: "failed", errorMessage: `Unsupported platform: ${post.platform}` }).where(eq(socialPostsTable.id, post.id));
+          await db.update(socialPostsTable).set({ status: "failed", errorMessage: `Unsupported platform: ${post.platform}` }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
           continue;
         }
 
@@ -582,7 +590,7 @@ export async function processScheduledSocialPosts(): Promise<void> {
             publishedAt: new Date(),
             platformPostId: result.platformPostId ?? null,
             platformUrl: result.platformUrl ?? null,
-          }).where(eq(socialPostsTable.id, post.id));
+          }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
           log.info({ postId: post.id, platform: post.platform }, "processScheduledSocialPosts: published");
         } else {
           const retryCount = (post.retryCount ?? 0) + 1;
@@ -591,11 +599,11 @@ export async function processScheduledSocialPosts(): Promise<void> {
             status: nextStatus as any,
             retryCount,
             errorMessage: result.error ?? "Unknown error",
-          }).where(eq(socialPostsTable.id, post.id));
+          }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId)));
           log.warn({ postId: post.id, platform: post.platform, error: result.error, retryCount }, "processScheduledSocialPosts: publish failed");
         }
       } catch (itemErr) {
-        await db.update(socialPostsTable).set({ status: "scheduled" }).where(eq(socialPostsTable.id, post.id)).catch(() => {});
+        await db.update(socialPostsTable).set({ status: "scheduled" }).where(and(eq(socialPostsTable.id, post.id), eq(socialPostsTable.workspaceId, post.workspaceId))).catch(() => {});
         log.warn({ itemErr, postId: post.id }, "processScheduledSocialPosts: item error (reset to scheduled)");
       }
     }

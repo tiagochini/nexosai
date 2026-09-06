@@ -1,4 +1,4 @@
-import { eq, and, desc, gt } from "drizzle-orm";
+import { eq, and, desc, gt, lt, inArray } from "drizzle-orm";
 import {
   db,
   campaignsTable,
@@ -13,6 +13,10 @@ import {
 } from "../campaigns/campaigns.service.js";
 import { getQueue, QUEUE_NAMES, isRedisAvailable, type CampaignOrchestrationJob } from "../queue/queue.service.js";
 import { executeDirectly } from "./orchestration.worker.js";
+import {
+  reconcileAmbiguousEnqueue,
+  runKnownNoRedisFallback,
+} from "./orchestration-fallback.service.js";
 import { emitCampaignEvent } from "../realtime/realtime.service.js";
 import { NotFoundError, ValidationError } from "../../lib/errors.js";
 import { logger } from "../../lib/logger.js";
@@ -173,18 +177,34 @@ async function enqueueOrExecute(
   // even when Redis is down, so we cannot rely on queue.add() throwing.
   const redisOk = await isRedisAvailable();
   if (!redisOk) {
-    log.warn({ action: job.action }, "Redis unavailable — executing directly");
-    setImmediate(() => {
-      executeDirectly(job, logger).catch((execErr) =>
-        logger.error({ execErr, action: job.action }, "Direct execution failed"),
+    // This conditional database transition is a durable cross-instance claim;
+    // a process-local lock would not protect concurrent API instances.
+    const executed = await runKnownNoRedisFallback(
+      () => claimDirectPhase(job),
+      async () => {
+        setImmediate(() => {
+          executeDirectly({ ...job, directClaimed: true }, log).catch((execErr) =>
+            log.error({ execErr, action: job.action }, "Direct execution failed"),
+          );
+        });
+      },
+    );
+    if (!executed) {
+      log.info(
+        { campaignId: job.campaignId, action: job.action },
+        "Redis unavailable — direct execution already claimed or phase is not eligible",
       );
-    });
+      return { queued: false };
+    }
+    log.warn({ action: job.action }, "Redis unavailable — phase claimed for direct execution");
     return { queued: false };
   }
 
+  // Keep these outside the try block because the add-error reconciliation must
+  // query the exact same deterministic ID.
+  const queue = getQueue(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION);
+  const dedupJobId = `${job.campaignId}-${job.action}`;
   try {
-    const queue = getQueue(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION);
-    const dedupJobId = `${job.campaignId}-${job.action}`;
 
     // RC-DEDUP FIX: If a prior job with this jobId is in failed/completed state,
     // BullMQ's dedup silently returns the existing job without creating a new one
@@ -197,15 +217,17 @@ async function enqueueOrExecute(
     if (existingJob) {
       const state = await existingJob.getState();
       if (state === "failed") {
-        // Prior job failed AND worker didn't pick it up → execute directly, don't re-queue
-        log.warn({ dedupJobId, state, action: job.action }, "Stale failed job detected — worker unhealthy, falling back to direct execution");
+        // Clear a known failed job so this request can enqueue a fresh one. Do
+        // not execute locally here: Redis is reachable and removal/add
+        // acknowledgements can be ambiguous.
+        log.warn({ dedupJobId, state, action: job.action }, "Stale failed job detected — removing before re-enqueue");
         await existingJob.remove().catch(() => undefined);
-        setImmediate(() => {
-          executeDirectly(job, logger).catch((execErr) =>
-            logger.error({ execErr, action: job.action }, "Direct execution (stale-job fallback) failed"),
-          );
-        });
-        return { queued: false };
+        const afterRemove = await queue.getJob(dedupJobId);
+        if (afterRemove) {
+          log.warn({ dedupJobId, action: job.action }, "Failed job could not be removed — honouring existing job");
+          return { queued: true, jobId: dedupJobId };
+        }
+        // Fall through to add a fresh waiting job below.
       } else if (state === "completed") {
         // Completed jobs should have been cleaned up by removeOnComplete — remove and re-queue
         log.warn({ dedupJobId, state, action: job.action }, "Stale completed dedup job — removing before re-enqueue");
@@ -309,15 +331,68 @@ async function enqueueOrExecute(
     log.info({ jobId: bullJob.id, action: job.action }, "Orchestration job enqueued");
     return { queued: true, jobId: bullJob.id ?? undefined };
   } catch (err) {
-    // Fallback for unexpected queue errors
-    log.warn({ action: job.action }, "Queue error — executing directly");
-    setImmediate(() => {
-      executeDirectly(job, logger).catch((execErr) =>
-        logger.error({ execErr, action: job.action }, "Direct execution failed"),
+    // queue.add can persist the job and still reject when its response is lost.
+    // Reconcile the deterministic job ID. A direct fallback is never safe after
+    // an attempted enqueue: even a negative read cannot disprove a late write.
+    const reconciliation = await reconcileAmbiguousEnqueue(() => queue.getJob(dedupJobId));
+    if (reconciliation === "persisted") {
+      log.warn(
+        { err, dedupJobId, action: job.action },
+        "Queue add acknowledgement failed but job exists — honouring queued execution",
       );
-    });
-    return { queued: false };
+      return { queued: true, jobId: dedupJobId };
+    }
+
+    log.warn(
+      { err, dedupJobId, action: job.action },
+      "Queue add failed without a visible job — acknowledgement ambiguous, not executing directly",
+    );
+    return { queued: true, jobId: dedupJobId };
   }
+}
+
+/**
+ * Atomically claim a stateful phase before executing it in-process. Target
+ * states are the existing in-progress phase states, preserving the worker and
+ * campaign state-machine behaviour. Already-in-progress statuses are recovery
+ * states, not a second request's claim, and remain owned by zombie recovery.
+ */
+async function claimDirectPhase(job: CampaignOrchestrationJob): Promise<boolean> {
+  const claim = (from: string[], status: "analyzing" | "generating" | "executing") =>
+    db
+      .update(campaignsTable)
+      .set({ status, updatedAt: new Date() })
+      .where(
+        and(
+          eq(campaignsTable.id, job.campaignId),
+          eq(campaignsTable.workspaceId, job.workspaceId),
+          inArray(campaignsTable.status, from as any),
+        ),
+      );
+
+  let result: { rowCount: number | null };
+  switch (job.action) {
+    case "run_strategy":
+      result = await claim(["intake", "strategy_ready"], "analyzing");
+      break;
+    case "generate_content":
+      result = await claim(
+        ["strategy_ready", "compliance_review", "awaiting_approval", "approved", "live"],
+        "generating",
+      );
+      break;
+    case "execute":
+      result = await claim(["approved"], "executing");
+      break;
+    // These actions have no phase-start transition to use as a durable claim.
+    // Do not run them directly while Redis is unavailable.
+    case "monitor":
+    case "complete":
+    case "start_intake":
+    case "request_approval":
+      return false;
+  }
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function triggerStrategyPhase(
@@ -584,23 +659,39 @@ export async function triggerNextPhase(
 }
 
 // ── Boot: resume generating campaigns after server restart ────────────────────
-// Called from index.ts AFTER the DB boot cleanup (agents marked failed, queue
-// drained). Finds all campaigns stuck in "generating" and re-enqueues them so
-// they resume from the last checkpoint saved in contentPiecesTable.
-// Bypasses the triggerContentPhase guards (running-agent check) since at boot
-// all agents have already been set to "failed".
-export async function resumeGeneratingCampaigns(): Promise<void> {
+// Called from index.ts AFTER stale agent recovery. A boot may happen on a second
+// live API instance, so only campaigns whose own heartbeat (updated_at) is stale
+// are candidates; fresh running agents always win over recovery.
+export async function resumeGeneratingCampaigns(
+  staleBefore = new Date(Date.now() - 30 * 60 * 1000),
+): Promise<void> {
   try {
     const generating = await db
       .select({ id: campaignsTable.id, workspaceId: campaignsTable.workspaceId })
       .from(campaignsTable)
-      .where(eq(campaignsTable.status, "generating"));
+      .where(and(
+        eq(campaignsTable.status, "generating"),
+        lt(campaignsTable.updatedAt, staleBefore),
+      ));
 
     if (generating.length === 0) return;
 
-    logger.warn({ count: generating.length }, "Boot cleanup: re-enqueueing generating campaigns for checkpoint resume");
-
     for (const campaign of generating) {
+      const [freshAgent] = await db
+        .select({ id: campaignAgentsTable.id })
+        .from(campaignAgentsTable)
+        .where(and(
+          eq(campaignAgentsTable.campaignId, campaign.id),
+          eq(campaignAgentsTable.status, "running"),
+          gt(campaignAgentsTable.startedAt, staleBefore),
+        ))
+        .limit(1);
+      if (freshAgent) {
+        logger.info({ campaignId: campaign.id }, "Boot recovery: preserving campaign owned by a fresh running agent");
+        continue;
+      }
+
+      logger.warn({ campaignId: campaign.id, staleBefore }, "Boot recovery: re-enqueueing stale generating campaign from checkpoint");
       await enqueueOrExecute(
         { campaignId: campaign.id, workspaceId: campaign.workspaceId, action: "generate_content" },
         logger,

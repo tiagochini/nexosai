@@ -124,3 +124,27 @@ export function rollbackActionFromSnapshot(action: ProviderAction, before: Provi
     idempotencyKey: `${action.idempotencyKey}:rollback`,
   };
 }
+
+/**
+ * Foreign keys do not guarantee that denormalized workspace IDs remain
+ * consistent. A rollback mutates an external provider, so treat any such
+ * inconsistency as an authorization failure rather than trying to recover it.
+ */
+export function hasConsistentRollbackOwnership(
+  workspaceId: string,
+  attempt: { workspaceId: string; proposalId: string },
+  proposal: { id: string; workspaceId: string; accountId: string | null; entityId: string | null; provider: string },
+  account: { id: string; workspaceId: string; provider: string },
+  entity: { id: string; workspaceId: string; accountId: string; provider: string },
+) {
+  return attempt.workspaceId === workspaceId
+    && proposal.workspaceId === workspaceId
+    && account.workspaceId === workspaceId
+    && entity.workspaceId === workspaceId
+    && attempt.proposalId === proposal.id
+    && proposal.accountId === account.id
+    && proposal.entityId === entity.id
+    && entity.accountId === account.id
+    && proposal.provider === account.provider
+    && proposal.provider === entity.provider;
+}

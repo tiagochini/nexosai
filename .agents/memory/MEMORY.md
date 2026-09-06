@@ -72,3 +72,4 @@
 - [Product Autonomy Contract](product-autonomy-contract.md) — intraplatform optimization is autonomous; interplatform budget moves require approval; launch requires versioned acceptances.
 - [Paid Media Execution Boundary](paid-media-execution-boundary.md) — provider mutations are deterministic, snapshot-backed and verified; LLM output never calls ad APIs directly.
 - [Focused Validation Strategy](focused-validation-strategy.md) — prefer risk-focused tests, isolated fixtures and branch-only retests before one decisive E2E pass.
+- [Backend Hardening Invariants](backend-hardening-invariants.md) — tenant scope, atomic credits, fail-closed queue reconciliation and stale-only boot recovery are mandatory.

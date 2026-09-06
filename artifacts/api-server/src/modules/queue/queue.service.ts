@@ -26,8 +26,9 @@ export async function isRedisAvailable(): Promise<boolean> {
     _redisAvailableCache = { ok: false, at: now };
     return false;
   }
+  let probe: Redis | null = null;
   try {
-    const probe = new Redis(env.REDIS_URL, {
+    probe = new Redis(env.REDIS_URL, {
       connectTimeout: 2000,
       maxRetriesPerRequest: 1,
       enableReadyCheck: true,
@@ -37,7 +38,6 @@ export async function isRedisAvailable(): Promise<boolean> {
       probe.ping(),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 2000)),
     ]);
-    await probe.quit().catch(() => undefined);
     // Treat unexpected PING responses (e.g. Upstash rate-limit message) as unavailable
     if (typeof reply === "string" && reply !== "PONG") {
       logger.warn({ reply }, "Redis PING returned non-PONG — treating as unavailable");
@@ -55,6 +55,10 @@ export async function isRedisAvailable(): Promise<boolean> {
     }
     _redisAvailableCache = { ok: false, at: now };
     return false;
+  } finally {
+    // disconnect also handles a timed-out connection attempt without waiting for
+    // ioredis retries; this probe must never leave a health-check socket behind.
+    if (probe) await probe.quit().catch(() => probe?.disconnect());
   }
 }
 
@@ -105,6 +109,8 @@ export function getQueue(name: QueueName): Queue {
 export interface CampaignOrchestrationJob {
   campaignId: string;
   workspaceId: string;
+  /** Set only after the no-Redis path atomically claimed the phase in Postgres. */
+  directClaimed?: boolean;
   action:
     | "start_intake"
     | "run_strategy"
@@ -127,11 +133,14 @@ export async function enqueueCampaignOrchestration(
   opts?: { delay?: number; priority?: number },
 ): Promise<void> {
   const queue = getQueue(QUEUE_NAMES.CAMPAIGN_ORCHESTRATION);
+  const jobId = `${job.campaignId}-${job.action}`;
   // attempts: 1 for generate_content — each agent call charges AI credits.
   // Silent retries would double/triple-charge the user on LLM errors.
   // All other actions (run_strategy, execute, monitor) also use attempts:1 to
   // avoid surprise credit charges. User retries explicitly via UI.
   await queue.add(`campaign-${job.campaignId}-${job.action}`, job, {
+    // A stable ID makes retries and response-loss reconciliation idempotent.
+    jobId,
     delay: opts?.delay,
     priority: opts?.priority,
     attempts: 1,

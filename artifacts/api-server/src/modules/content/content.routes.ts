@@ -522,12 +522,15 @@ router.get("/:campaignId/content/coherence", async (req, res): Promise<void> => 
   const campaignId = req.params["campaignId"] as string;
 
   const { db, campaignsTable } = await import("@workspace/db");
-  const { eq } = await import("drizzle-orm");
+  const { and, eq } = await import("drizzle-orm");
 
   const [campaign] = await db
     .select({ brainData: campaignsTable.brainData })
     .from(campaignsTable)
-    .where(eq(campaignsTable.id, campaignId))
+    .where(and(
+      eq(campaignsTable.id, campaignId),
+      eq(campaignsTable.workspaceId, req.auth.workspaceId),
+    ))
     .limit(1);
 
   if (!campaign) {
@@ -547,6 +550,24 @@ router.post("/:campaignId/content/coherence", async (req, res): Promise<void> =>
   const { runEmotionalCoherenceCheck } = await import("../agents/emotional-coherence-checker.agent.js");
 
   try {
+    // Match the report endpoint's ownership semantics before invoking the agent.
+    // Without this guard a foreign campaign could be read and processed by the
+    // checker before it eventually returned a response.
+    const { db, campaignsTable } = await import("@workspace/db");
+    const { and, eq } = await import("drizzle-orm");
+    const [campaign] = await db
+      .select({ id: campaignsTable.id })
+      .from(campaignsTable)
+      .where(and(
+        eq(campaignsTable.id, campaignId),
+        eq(campaignsTable.workspaceId, req.auth.workspaceId),
+      ))
+      .limit(1);
+    if (!campaign) {
+      res.status(404).json({ error: "Campaign not found", code: "NOT_FOUND" });
+      return;
+    }
+
     const report = await runEmotionalCoherenceCheck(campaignId, req.auth.workspaceId, req.log);
     if (!report) {
       res.status(422).json({ error: "Não foi possível gerar o relatório. Verifique se o arco emocional e as peças de conteúdo existem.", code: "COHERENCE_UNAVAILABLE" });

@@ -56,133 +56,105 @@ export async function deductCredits(
   const cost = CREDIT_COSTS[action];
   if (cost === undefined) throw new Error(`Unknown credit action: ${action}`);
 
-  const [ws] = await db
+  const [workspace] = await db
     .select()
     .from(workspacesTable)
     .where(eq(workspacesTable.id, workspaceId))
     .limit(1);
 
-  if (!ws) throw new NotFoundError("Workspace");
+  if (!workspace) throw new NotFoundError("Workspace");
 
   // Unlimited = DB flag OR owner email is an admin email (authoritative, no flag dependency)
-  const flagUnlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true;
-  const unlimited = flagUnlimited || await isAdminWorkspace(ws.ownerId);
+  const adminWorkspace = await isAdminWorkspace(workspace.ownerId);
+  let duplicateTx: CreditTransaction | undefined;
+  let insertedTx: CreditTransaction | undefined;
+  let newBalance = workspace.creditsBalance;
+  let unlimited = false;
 
-  if (!unlimited && ws.creditsBalance < cost) {
-    throw new InsufficientCreditsError(cost, ws.creditsBalance);
-  }
+  // The workspace row lock serializes charges with different idempotency keys.
+  // An idempotency unique constraint only serializes equal keys; without this lock
+  // two distinct keys could both write a balance calculated from the same stale read.
+  await db.transaction(async (trx) => {
+    const [ws] = await trx
+      .select()
+      .from(workspacesTable)
+      .where(eq(workspacesTable.id, workspaceId))
+      .limit(1)
+      .for("update");
 
-  // For regular accounts: deduct balance. For unlimited: keep balance intact.
-  const newBalance = unlimited ? ws.creditsBalance : ws.creditsBalance - cost;
+    if (!ws) throw new NotFoundError("Workspace");
 
-  if (idempotencyKey) {
-    // ── [C3-STANDALONE] Atomic idempotency via INSERT ON CONFLICT DO NOTHING + db.transaction() ──
-    //
-    // All three mutations (tx INSERT, balance UPDATE, campaign counter UPDATE) run inside a single
-    // Postgres transaction so they are commit-or-rollback together:
-    //   • If the INSERT conflicts (duplicate key) → we return early inside the txn (nothing committed)
-    //     and fetch + return the existing transaction record after the txn closes.
-    //   • If the INSERT succeeds but balance/campaign update fails → the txn rolls back, the INSERT
-    //     is undone, and the idempotency key is released so a future retry can claim it cleanly.
-    //   • Two concurrent requests racing on the same key: only one wins the INSERT; the other gets
-    //     DO NOTHING and skips balance deduction — Postgres serialises this at the INSERT level.
-    let isDuplicate = false;
-    let insertedTx: CreditTransaction | undefined;
-
-    await db.transaction(async (trx) => {
-      const [claimed] = await trx
-        .insert(creditTransactionsTable)
-        .values({
-          workspaceId,
-          campaignId,
-          type: "debit" as const,
-          action: action as any,
-          amount: cost,
-          balanceBefore: ws.creditsBalance,
-          balanceAfter: newBalance,
-          aiProvider,
-          tokensUsed,
-          costUsd: actualCostUsd?.toString(),
-          description: unlimited ? `[∞] ${action.replace(/_/g, " ")}` : action.replace(/_/g, " "),
-          idempotencyKey,
-        })
-        .onConflictDoNothing()
-        .returning();
-
-      if (!claimed) {
-        isDuplicate = true;
-        return; // Early return — nothing mutated, txn commits as a no-op
-      }
-
-      insertedTx = claimed;
-
-      if (!unlimited) {
-        await trx
-          .update(workspacesTable)
-          .set({ creditsBalance: newBalance })
-          .where(eq(workspacesTable.id, workspaceId));
-      }
-
-      if (campaignId) {
-        await trx
-          .update(campaignsTable)
-          .set({ creditsCost: sql`${campaignsTable.creditsCost} + ${cost}` })
-          .where(eq(campaignsTable.id, campaignId));
-      }
-    });
-
-    if (isDuplicate) {
-      log.warn(
-        { workspaceId, action, idempotencyKey },
-        "[C3-STANDALONE] Credit already charged for this action — skipping duplicate deduction (idempotency guard triggered)",
-      );
-      const [existingTx] = await db
+    if (idempotencyKey) {
+      const [existing] = await trx
         .select()
         .from(creditTransactionsTable)
         .where(eq(creditTransactionsTable.idempotencyKey, idempotencyKey))
         .limit(1);
-      return existingTx!;
+      if (existing) {
+        duplicateTx = existing;
+        return;
+      }
     }
 
-    log.info({ workspaceId, action, cost, newBalance, unlimited, idempotencyKey }, "Credits deducted [idempotent]");
-    return insertedTx!;
+    unlimited = (ws.settings as Record<string, unknown>)?.unlimitedCredits === true || adminWorkspace;
+    if (!unlimited && ws.creditsBalance < cost) {
+      throw new InsufficientCreditsError(cost, ws.creditsBalance);
+    }
+
+    const balanceBefore = ws.creditsBalance;
+    newBalance = unlimited ? balanceBefore : balanceBefore - cost;
+
+    if (!unlimited) {
+      await trx
+        .update(workspacesTable)
+        .set({ creditsBalance: newBalance })
+        .where(eq(workspacesTable.id, workspaceId));
+    }
+
+    const [inserted] = await trx
+      .insert(creditTransactionsTable)
+      .values({
+        workspaceId,
+        campaignId,
+        type: "debit",
+        action: action as any,
+        amount: cost,
+        balanceBefore,
+        balanceAfter: newBalance,
+        aiProvider,
+        tokensUsed,
+        costUsd: actualCostUsd?.toString(),
+        description: unlimited ? `[∞] ${action.replace(/_/g, " ")}` : action.replace(/_/g, " "),
+        idempotencyKey,
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    // This can only occur if a caller reused a key from another workspace.
+    // Roll back the balance mutation rather than silently charging this workspace.
+    if (!inserted) {
+      throw new Error(`Credit idempotency key is already in use: ${idempotencyKey}`);
+    }
+    insertedTx = inserted;
+
+    if (campaignId) {
+      await trx
+        .update(campaignsTable)
+        .set({ creditsCost: sql`${campaignsTable.creditsCost} + ${cost}` })
+        .where(eq(campaignsTable.id, campaignId));
+    }
+  });
+
+  if (duplicateTx) {
+      log.warn(
+        { workspaceId, action, idempotencyKey },
+        "[C3-STANDALONE] Credit already charged for this action — skipping duplicate deduction (idempotency guard triggered)",
+      );
+      return duplicateTx;
   }
 
-  // ── Standard (non-idempotent) path — original behaviour preserved ──
-  if (!unlimited) {
-    await db
-      .update(workspacesTable)
-      .set({ creditsBalance: newBalance })
-      .where(eq(workspacesTable.id, workspaceId));
-  }
-
-  const [tx] = await db
-    .insert(creditTransactionsTable)
-    .values({
-      workspaceId,
-      campaignId,
-      type: "debit",
-      action: action as any,
-      amount: cost,
-      balanceBefore: ws.creditsBalance,
-      balanceAfter: newBalance,
-      aiProvider,
-      tokensUsed,
-      costUsd: actualCostUsd?.toString(),
-      description: unlimited ? `[∞] ${action.replace(/_/g, " ")}` : action.replace(/_/g, " "),
-    })
-    .returning();
-
-  // Always update per-campaign credit counter when campaignId is provided
-  if (campaignId) {
-    await db
-      .update(campaignsTable)
-      .set({ creditsCost: sql`${campaignsTable.creditsCost} + ${cost}` })
-      .where(eq(campaignsTable.id, campaignId));
-  }
-
-  log.info({ workspaceId, action, cost, newBalance, unlimited }, "Credits deducted");
-  return tx;
+  log.info({ workspaceId, action, cost, newBalance, unlimited, idempotencyKey }, "Credits deducted");
+  return insertedTx!;
 }
 
 export async function grantCredits(
